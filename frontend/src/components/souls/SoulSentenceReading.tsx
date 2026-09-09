@@ -99,7 +99,7 @@ export function SentenceReading({
           the unit of both and 615b gives them one. Prose, and outside `Fork`:
           the fork's own subtree holds the apex and the two columns and nothing
           else, which is what keeps a derived figure homeless. */}
-      <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
+      <p className="text-02 text-[oklch(var(--color-ink-subtle))]">
         {t("souls.detail.reading.sentence_circuit", { years: String(reading.circuit_years) })}
       </p>
 
@@ -129,9 +129,9 @@ export function SentenceReading({
           dividing by it would state a fraction Republic X does not. And no
           colour on either path — the two roads are plain ink and so is their
           clock. */}
-      <div className="border-t border-dashed border-[hsl(var(--color-hairline))] pt-3">
+      <div className="border-t border-dashed border-[oklch(var(--color-hairline))] pt-3">
         <div className="flex justify-between items-center">
-          <span className="text-04 text-[hsl(var(--color-ink-muted))]">
+          <span className="text-04 text-[oklch(var(--color-ink-muted))]">
             {t("souls.detail.reading.sentence_elapsed_label")}
           </span>
           {reading.elapsed_years !== null ? (
@@ -148,7 +148,7 @@ export function SentenceReading({
               field="elapsed_years"
               quantity={READING_QUANTITIES.SENTENCE.elapsed_years}
               t={t}
-              className="text-06 tabular-nums text-[hsl(var(--color-ink))]"
+              className="text-06 tabular-nums text-[oklch(var(--color-ink))]"
             >
               {t("souls.detail.reading.sentence_elapsed_years", {
                 years: String(reading.elapsed_years),
@@ -163,7 +163,7 @@ export function SentenceReading({
                all, and naming a kind there would invent one. */
             <span
               data-quantity-absent="elapsed_years"
-              className="text-06 text-[hsl(var(--color-ink-subtle))]"
+              className="text-06 text-[oklch(var(--color-ink-subtle))]"
               aria-hidden="true"
             >
               —
@@ -172,7 +172,7 @@ export function SentenceReading({
         </div>
         {reading.elapsed_years === null && (
           <>
-            <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
+            <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
               {t("souls.detail.reading.elapsed_unavailable_heading")}
             </p>
             {/* One bullet per member the backend sent, key derived from the
@@ -180,7 +180,7 @@ export function SentenceReading({
                 failure mode: a member with no copy shows its raw key rather
                 than vanishing. */}
             {reading.elapsed_missing.length > 0 && (
-              <ul className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+              <ul className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
                 {reading.elapsed_missing.map((missing) => (
                   <li key={missing}>{t(`souls.detail.reading.elapsed_missing_${missing.toLowerCase()}`)}</li>
                 ))}
@@ -209,7 +209,7 @@ interface RoadProps {
 const FORK_COLUMNS = "grid grid-cols-[1fr_10px_1fr]";
 
 /** One hairline, in the one place hairlines are allowed inside the fork. */
-const FORK_LINE = "absolute border-[hsl(var(--color-hairline))]";
+const FORK_LINE = "absolute border-[oklch(var(--color-hairline))]";
 
 // The fork itself: the rule that governs both roads, the join where they part,
 // and the two roads.
@@ -245,7 +245,7 @@ function Fork({
           615b gives both roads the same measure and this panel states it once. */}
       <p
         data-fork-rule=""
-        className="text-02 text-center text-[hsl(var(--color-ink-muted))]"
+        className="text-02 text-center text-[oklch(var(--color-ink-muted))]"
       >
         {rule}
       </p>
@@ -307,17 +307,17 @@ function Fork({
 function Road({ road, label, count, quantity, detail, t }: RoadProps & { road: string; t: TFunc }) {
   return (
     <div data-road={road} className="flex flex-col items-center text-center">
-      <span className="text-04 text-[hsl(var(--color-ink-muted))]">{label}</span>
+      <span className="text-04 text-[oklch(var(--color-ink-muted))]">{label}</span>
       <Figure
         field={road === "owed" ? "wrongs" : "benefactions"}
         quantity={quantity}
         t={t}
         numeralProps={{ "data-road-count": road }}
-        className="text-06 tabular-nums text-[hsl(var(--color-ink))]"
+        className="text-06 tabular-nums text-[oklch(var(--color-ink))]"
       >
         {count}
       </Figure>
-      <span className="text-02 text-[hsl(var(--color-ink-subtle))] mt-0.5">{detail}</span>
+      <span className="text-02 text-[oklch(var(--color-ink-subtle))] mt-0.5">{detail}</span>
     </div>
   );
 }

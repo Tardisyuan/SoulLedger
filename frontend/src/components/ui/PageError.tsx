@@ -20,16 +20,16 @@ export function PageError({ error, reset }: PageErrorProps) {
   return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="text-08 text-[hsl(var(--color-status-error))] mb-4">!</div>
-        <h2 className="text-06 text-[hsl(var(--color-ink))] mb-2">
+        <div className="text-08 text-[oklch(var(--color-status-error))] mb-4">!</div>
+        <h2 className="text-06 text-[oklch(var(--color-ink))] mb-2">
           {t("error.title")}
         </h2>
-        <p className="text-[hsl(var(--color-ink-muted))] mb-4 text-04">
+        <p className="text-[oklch(var(--color-ink-muted))] mb-4 text-04">
           {error.message || t("error.description")}
         </p>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black text-03 font-medium hover:opacity-90 transition-opacity"
+          className="px-4 py-2 bg-[oklch(var(--color-accent))] text-black text-03 font-medium hover:opacity-90 transition-opacity"
         >
           {t("error.retry")}
         </button>
@@ -73,17 +73,17 @@ export function QueryError({ onRetry, detail }: QueryErrorProps) {
       data-query-error=""
       className="flex flex-col items-center justify-center py-10 text-center"
     >
-      <p className="text-05 text-[hsl(var(--color-ink))] mb-1">
+      <p className="text-05 text-[oklch(var(--color-ink))] mb-1">
         {t("error.title")}
       </p>
-      <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-4">
+      <p className="text-03 text-[oklch(var(--color-ink-muted))] mb-4">
         {detail || t("error.description")}
       </p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="px-4 py-2 border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+          className="px-4 py-2 border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
         >
           {t("error.retry")}
         </button>

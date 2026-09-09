@@ -16,8 +16,8 @@ import { extendTailwindMerge } from "tailwind-merge"
  *
  *   cn("bg-accent text-black border-accent", "px-2 py-1 text-02")
  *     → "bg-accent border-accent px-2 py-1 text-02"      // text-black gone
- *   cn("text-01 uppercase text-[hsl(var(--color-ink-subtle))]")
- *     → "uppercase text-[hsl(var(--color-ink-subtle))]"  // text-01 gone
+ *   cn("text-01 uppercase text-[oklch(var(--color-ink-subtle))]")
+ *     → "uppercase text-[oklch(var(--color-ink-subtle))]"  // text-01 gone
  *
  * Note the second line: it happens inside a single string, so "keep them in
  * separate arguments" is not a workaround. Nor is reordering — that only

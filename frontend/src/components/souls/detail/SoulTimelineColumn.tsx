@@ -52,7 +52,7 @@ export function SoulTimelineColumn({
           放在日期问题之下、生平脊线之上,因为一个坏日期会动摇它下面每一
           条账的日与序,而生平脊线讲的是比账簿更大的故事。 */}
       {!loading && ledger && (
-        <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
+        <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
           <SoulLedgerBook records={ledger.records} />
         </div>
       )}
@@ -66,7 +66,7 @@ export function SoulTimelineColumn({
           opt-in toggle) the raw system event feed, plus dashed
           placeholder rows for stages the soul hasn't reached yet. */}
       {loading ? (
-        <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] space-y-3">
+        <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))] space-y-3">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />

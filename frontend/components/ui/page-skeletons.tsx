@@ -33,12 +33,12 @@
  * skeleton — the shape is doing the work, not the animation.
  */
 
-const BLOCK = "bg-[hsl(var(--color-hairline))] animate-pulse";
+const BLOCK = "bg-[oklch(var(--color-hairline))] animate-pulse";
 
 function PageHead({ withTabs }: { withTabs?: boolean }) {
   return (
     <>
-      <header className="border-b border-[hsl(var(--color-hairline))]">
+      <header className="border-b border-[oklch(var(--color-hairline))]">
         <div className="max-w-page mx-auto px-6 pt-10 pb-6">
           <div className="flex items-start gap-4">
             <div className={`h-10 w-64 ${BLOCK}`} />
@@ -48,7 +48,7 @@ function PageHead({ withTabs }: { withTabs?: boolean }) {
         </div>
       </header>
       {withTabs && (
-        <div className="border-b border-[hsl(var(--color-hairline))]">
+        <div className="border-b border-[oklch(var(--color-hairline))]">
           <div className="max-w-page mx-auto px-6 flex items-center gap-1">
             <div className={`h-10 w-24 ${BLOCK}`} />
             <div className={`h-10 w-24 ${BLOCK}`} />
@@ -76,12 +76,12 @@ export function TablePageSkeleton({
   withTabs?: boolean;
 }) {
   return (
-    <div className="bg-[hsl(var(--color-canvas))]">
+    <div className="bg-[oklch(var(--color-canvas))]">
       <PageHead withTabs={withTabs} />
       <div className="max-w-page mx-auto px-6 py-6">
-        <div className="border border-[hsl(var(--color-hairline))]">
+        <div className="border border-[oklch(var(--color-hairline))]">
           <div className={`h-11 ${BLOCK} opacity-70`} />
-          <div className="divide-y divide-[hsl(var(--color-hairline))]">
+          <div className="divide-y divide-[oklch(var(--color-hairline))]">
             {Array.from({ length: rows }, (_, i) => (
               <div key={i} className={`h-11 ${BLOCK}`} />
             ))}
@@ -110,7 +110,7 @@ export function CardListPageSkeleton({
   cardHeight?: string;
 }) {
   return (
-    <div className="bg-[hsl(var(--color-canvas))]">
+    <div className="bg-[oklch(var(--color-canvas))]">
       <PageHead />
       <div className="max-w-page mx-auto px-6 py-6 space-y-6">
         {Array.from({ length: sections }, (_, s) => (
@@ -119,7 +119,7 @@ export function CardListPageSkeleton({
             {Array.from({ length: cards }, (_, i) => (
               <div
                 key={i}
-                className={`${cardHeight} ${BLOCK} border border-[hsl(var(--color-hairline))]`}
+                className={`${cardHeight} ${BLOCK} border border-[oklch(var(--color-hairline))]`}
               />
             ))}
           </div>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusApi, permApi, PAGE_SIZE, type Permission } from "@soulledger/core/api";
+import { menuKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -21,6 +22,13 @@ export default function MenusPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  // Menus live under two cache roots (see `menuKeys` for why), and the sidebar's
+  // is the one nobody was invalidating: `staleTime` there is five minutes, and
+  // `AppLayout` never unmounts, so an edit made here stayed invisible in the
+  // sidebar, the breadcrumbs and the `MenuGloss` titles until it expired.
+  const invalidateMenus = () =>
+    menuKeys.invalidateAll.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }));
 
   const [page, setPage] = useState(1);
   // Recycle bin (Stage 4 §4.7): absent by default, opt-in via this toggle —
@@ -64,7 +72,7 @@ export default function MenusPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuItemFull>) => menusApi.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menus"] }),
+    onSuccess: () => invalidateMenus(),
     onError: () => showToast(t("menus.create_error") || "Failed to create menu", "error"),
   });
 
@@ -76,7 +84,7 @@ export default function MenusPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<MenuItemFull> }) =>
       menusApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["menus"] });
+      invalidateMenus();
       setEditingMenu(null);
     },
     onError: () => showToast(t("menus.update_error"), "error"),
@@ -85,7 +93,7 @@ export default function MenusPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => menusApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["menus"] });
+      invalidateMenus();
       setPendingDelete(null);
     },
     onError: () => {
@@ -195,7 +203,7 @@ export default function MenusPage() {
             checked={showDeleted}
             onChange={(e) => setShowDeleted(e.target.checked)}
           />
-          <label htmlFor="menus-show-deleted" className="text-03 text-[hsl(var(--color-ink-muted))]">
+          <label htmlFor="menus-show-deleted" className="text-03 text-[oklch(var(--color-ink-muted))]">
             {t("menus.show_deleted")}
           </label>
         </div>

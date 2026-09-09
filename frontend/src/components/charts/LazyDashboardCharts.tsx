@@ -46,19 +46,19 @@ import { prefersReducedMotion } from "@/lib/motion";
  * way the first three did.
  */
 const CHART_AXIS = {
-  tick: { fill: "hsl(var(--color-ink-muted))", fontSize: 11 },
-  axisLine: { stroke: "hsl(var(--color-hairline))" },
-  tickLine: { stroke: "hsl(var(--color-hairline))" },
+  tick: { fill: "oklch(var(--color-ink-muted))", fontSize: 11 },
+  axisLine: { stroke: "oklch(var(--color-hairline))" },
+  tickLine: { stroke: "oklch(var(--color-hairline))" },
 } as const;
 
 const CHART_TOOLTIP = {
   contentStyle: {
-    background: "hsl(var(--color-surface-2))",
-    border: "1px solid hsl(var(--color-hairline))",
+    background: "oklch(var(--color-surface-2))",
+    border: "1px solid oklch(var(--color-hairline))",
     borderRadius: 0,
-    color: "hsl(var(--color-ink))",
+    color: "oklch(var(--color-ink))",
   },
-  labelStyle: { color: "hsl(var(--color-ink-muted))" },
+  labelStyle: { color: "oklch(var(--color-ink-muted))" },
 } as const;
 
 
@@ -140,13 +140,13 @@ const LazyBarChart = dynamic(
               {showGrid && (
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="hsl(var(--color-hairline))"
+                  stroke="oklch(var(--color-hairline))"
                 />
               )}
               <XAxis
                 dataKey={nameKey}
                 tick={{
-                  fill: "hsl(var(--color-ink-muted))",
+                  fill: "oklch(var(--color-ink-muted))",
                   fontSize: 11,
                 }}
               axisLine={CHART_AXIS.axisLine}
@@ -154,7 +154,7 @@ const LazyBarChart = dynamic(
                 />
               <YAxis
                 tick={{
-                  fill: "hsl(var(--color-ink-muted))",
+                  fill: "oklch(var(--color-ink-muted))",
                   fontSize: 11,
                 }}
               axisLine={CHART_AXIS.axisLine}
@@ -162,8 +162,8 @@ const LazyBarChart = dynamic(
                 />
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--color-surface-1))",
-                  border: "1px solid hsl(var(--color-hairline))",
+                  background: "oklch(var(--color-surface-1))",
+                  border: "1px solid oklch(var(--color-hairline))",
                   borderRadius: 0,
                   fontSize: 12,
                 }}
@@ -244,8 +244,8 @@ const LazyDashboardPieChart = dynamic(
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--color-surface-2))",
-                  border: "1px solid hsl(var(--color-hairline))",
+                  background: "oklch(var(--color-surface-2))",
+                  border: "1px solid oklch(var(--color-hairline))",
                   borderRadius: 0,
                   fontSize: 12,
                 }}
@@ -253,7 +253,7 @@ const LazyDashboardPieChart = dynamic(
               <Legend
                 wrapperStyle={{ fontSize: 12 }}
                 formatter={(value) => (
-                  <span className="text-[hsl(var(--color-ink-muted))]">
+                  <span className="text-[oklch(var(--color-ink-muted))]">
                     {value}
                   </span>
                 )}
@@ -306,12 +306,12 @@ const LazySoulLineChart = dynamic(
             <LineChart data={data}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--color-hairline))"
+                stroke="oklch(var(--color-hairline))"
               />
               <XAxis
                 dataKey="date"
                 tick={{
-                  fill: "hsl(var(--color-ink-muted))",
+                  fill: "oklch(var(--color-ink-muted))",
                   fontSize: 11,
                 }}
                 axisLine={CHART_AXIS.axisLine}
@@ -320,7 +320,7 @@ const LazySoulLineChart = dynamic(
               />
               <YAxis
                 tick={{
-                  fill: "hsl(var(--color-ink-muted))",
+                  fill: "oklch(var(--color-ink-muted))",
                   fontSize: 11,
                 }}
                 axisLine={CHART_AXIS.axisLine}
@@ -329,22 +329,22 @@ const LazySoulLineChart = dynamic(
               />
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--color-surface-2))",
-                  border: "1px solid hsl(var(--color-hairline))",
+                  background: "oklch(var(--color-surface-2))",
+                  border: "1px solid oklch(var(--color-hairline))",
                   borderRadius: 0,
                   fontSize: 11,
                 }}
-                labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
+                labelStyle={{ color: "oklch(var(--color-ink-muted))" }}
               />
               <ReferenceLine
                 x={0}
-                stroke="hsl(var(--color-hairline))"
+                stroke="oklch(var(--color-hairline))"
               />
               <Line
                 type="monotone"
                 isAnimationActive={animate}
                 dataKey="cumulative"
-                stroke="hsl(var(--color-accent))"
+                stroke="oklch(var(--color-accent))"
                 strokeWidth={2}
                 dot={false}
                 name="Balance"
@@ -414,7 +414,7 @@ const LazyLifespanBarChart = dynamic(
             <BarChart data={data}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--color-hairline))"
+                stroke="oklch(var(--color-hairline))"
               />
               <XAxis
                 dataKey="label"
@@ -423,21 +423,21 @@ const LazyLifespanBarChart = dynamic(
                 tickLine={CHART_AXIS.tickLine}
               />
               <YAxis
-                tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }}
+                tick={{ fill: "oklch(var(--color-ink-muted))", fontSize: 11 }}
                 axisLine={CHART_AXIS.axisLine}
                 tickLine={CHART_AXIS.tickLine}
                 width={30}
               />
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--color-surface-2))",
-                  border: "1px solid hsl(var(--color-hairline))",
+                  background: "oklch(var(--color-surface-2))",
+                  border: "1px solid oklch(var(--color-hairline))",
                   borderRadius: 0,
                   fontSize: 11,
                 }}
-                labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
+                labelStyle={{ color: "oklch(var(--color-ink-muted))" }}
               />
-              <ReferenceLine y={0} stroke="hsl(var(--color-hairline))" />
+              <ReferenceLine y={0} stroke="oklch(var(--color-hairline))" />
               <Bar dataKey="effective" name={seriesNames.effective} stackId="w" radius={0} isAnimationActive={animate}>
                 {data.map((d) => (
                   <mod.Cell key={`eff-${d.key}`} fill={d.color} fillOpacity={0.85} />

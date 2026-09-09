@@ -5,7 +5,7 @@
 @theme {
   /* NO COLOUR TOKENS HERE, DELIBERATELY.
    *
-   * They used to be — `--color-ink: hsl(var(--color-ink))` and thirteen more —
+   * They used to be — `--color-ink: oklch(var(--color-ink))` and thirteen more —
    * and every one of them was a no-op that looked like a system. Tailwind emits
    * `@theme` variables into the `theme` layer and generates `.text-ink {
    * color: var(--color-ink) }` from them. But `:root` below, in `@layer base`,
@@ -14,23 +14,40 @@
    * not a colour, so the browser dropped the declaration.
    *
    * Measured on the production build, with a control group on one page: 10 of
-   * 10 elements written `text-[hsl(var(--color-ink-subtle))]` rendered dimmed;
+   * 10 elements written `text-[oklch(var(--color-ink-subtle))]` rendered dimmed;
    * 2 of 2 written `text-ink-subtle` rendered at FULL ink. Same page, same
    * intent, two spellings, two outcomes. `tsc`, `eslint`, 2039 tests and
    * `next build` were all green throughout — `text-ink` itself happens to look
    * right because it inherits body's ink, so the failure was invisible.
    *
    * Tailwind 3 had no collision: `tailwind.config.js` defined the utility's
-   * value as `'hsl(var(--color-ink))'` in its OWN namespace, so the wrapper
+   * value as `'oklch(var(--color-ink))'` in its OWN namespace, so the wrapper
    * lived in the class and the variable held the triple. Moving to `@theme`
    * put the wrapper into a variable of the same name. That is the bug, and it
    * arrived with the v4 migration in 8fb0da4.
    *
    * The two spellings cannot coexist under one name, so the repo now has one:
-   * `text-[hsl(var(--color-ink))]`. It also has to be that one — the raw triple
+   * `text-[oklch(var(--color-ink))]`. It also has to be that one — the raw triple
    * is what makes an alpha modifier possible at all — a triple can be written
-   * into `hsl(… / 0.2)`, a finished colour cannot — and hundreds of call sites
+   * into `oklch(… / 0.2)`, a finished colour cannot — and hundreds of call sites
    * need that alpha.
+   *
+   * TAILWIND 4 GENERATES BOTH SHAPES, MEASURED IN THE PRODUCTION STYLESHEET
+   * AND NOT ASSUMED. `text-[oklch(var(--color-accent))]` emits
+   * `color:oklch(var(--color-accent))`, and the slash opacity modifier is
+   * understood too: `text-[oklch(var(--color-accent-ink))]/80` emits a second
+   * rule of its own, `color:color-mix(in oklab, oklch(var(…)) 80%,
+   * transparent)`. (Read the whole rule before believing either way — the
+   * first attempt at this note grepped up to the first `}`, found the shared
+   * `color:` declaration Tailwind emits for the un-suffixed utility, and was
+   * about to record that the modifier did nothing.) Checked in
+   * `.next/static/chunks/*.css` after `npm run build`, because the failure
+   * mode if Tailwind had NOT understood `oklch()` as a colour is the one this
+   * whole comment is about — no utility, no error, and an element quietly
+   * inheriting its parent's ink.
+   *
+   * The alpha written INSIDE the brackets (`oklch(var(--x) / .5)`, 165 call
+   * sites) is plain CSS and never depended on Tailwind understanding anything.
    *
    * (Written without spelling a token name, because
    * cssTokenReferenceContract scans this file too and does not strip
@@ -210,9 +227,48 @@
      drawer 那一档,因为它可能在移动端抽屉打开时被唤起。
      dialog 现在压在 drawer 之上。理由是单向的:**从抽屉里开出来的确认框必须盖住
      抽屉**,而抽屉不会在对话框打开时被打开 —— 对话框是模态的。 */
+  /* 60–80 是**浮层**带,10–50 是**吸顶/布局**带,而在 2026-09-07 之前只有上面
+     那一半有名字 —— 下面这一半全站写裸数字,顺序碰巧是对的,但没有一处说明
+     为什么是这个顺序,也没有任何东西会在有人写 `z-45` 时反对。补齐的是**跨文件
+     协调的那几档**:这三个数字分别写在 PageShell.tsx 和 AppLayout.tsx 里,
+     它们必须一起看才成立,而此前读任何一个文件都看不到另一个。
+
+     **边界在这里,并且是有意的**:组件内部的层叠梯子**不进这张表**。
+     `PermissionMatrixTable`(z-10/20/30/40)与 `SoulHeaderActions`(z-10/20)
+     的数字只和自己的兄弟比 —— 前者的注释已经写明「它们是同一个上下文里的
+     兄弟」。给它们发全站 token 会反过来撒谎:那会宣称矩阵的表头和 AppLayout
+     的顶栏在同一把尺子上,而它们根本不在同一个层叠上下文里。
+     判据是:**这个数字要不要和另一个文件里的数字比对?** 要,就上表。
+     按这条判据还有一个**没收进来**的:`components/ui/data-grid/ActionsMenu.tsx`
+     的行操作菜单 `createPortal` 到 body、`position: fixed`、`z-50` —— 它确实
+     在全局带上,而且和 `--z-index-sidebar` 同值。没动它,是因为「行菜单该不该
+     压住侧栏」是一个此前没人问过的新问题,而这一轮没有任何实测能回答它;
+     发一个名字过去等于替它作答。留在这里,是为了这段边界说明不替自己开脱。
+
+     `--z-index-scrim` 与 `--z-index-masthead` 同为 40,不是笔误。遮罩
+     (AppLayout.tsx 的 `md:hidden` 那个 button)与顶栏故意同档,于是 DOM 顺序
+     决定谁在上 —— 遮罩在前、顶栏在后,顶栏因此不被压暗。两个名字而不是一个,
+     是因为「遮罩」和「顶栏」不是一样东西;同值记的是这个决定,不是这个巧合。 */
+  --z-index-filters: 30;
+  --z-index-scrim: 40;
+  --z-index-masthead: 40;
+  --z-index-sidebar: 50;
+
   --z-index-progress: 60;
   --z-index-drawer: 70;
   --z-index-dialog: 80;
+  /* Toast sits above dialog, and that direction is also single: a toast usually
+     REPORTS what a dialog just did ("saved", "could not save"), so it has to be
+     readable while the dialog is still on screen; a dialog never needs to cover
+     a toast.
+
+     Added 2026-09-07. `#toast-container` below referenced `var(--z-toast, 99999)`
+     — a name in no family (the scale is `--z-index-*`) that was never declared
+     anywhere in the repo. It therefore always resolved to the fallback, and the
+     toast layer sat at 99999, four orders of magnitude off a scale whose whole
+     point is that three numbers describe every stacking decision. Nothing
+     failed, because an undeclared custom property with a fallback is valid CSS. */
+  --z-index-toast: 90;
 
   --container-prose: 720px;
   --container-page: 1200px;
@@ -235,76 +291,167 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--color-surface-1));
+    background: oklch(var(--color-surface-1));
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--color-hairline-strong));
+    background: oklch(var(--color-hairline-strong));
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--color-accent));
+    background: oklch(var(--color-accent));
   }
 
   ::-webkit-scrollbar-corner {
-    background: hsl(var(--color-surface-1));
+    background: oklch(var(--color-surface-1));
   }
 
   /* Firefox scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--color-hairline-strong))
-      hsl(var(--color-surface-1));
+    scrollbar-color: oklch(var(--color-hairline-strong))
+      oklch(var(--color-surface-1));
   }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     EVERY COLOUR TOKEN BELOW IS AN OKLCH TRIPLE — `L C H`, NOT `H S% L%`.
+
+     READ EVERY HSL FIGURE IN THE COMMENTS BELOW AS A DERIVATION, NOT AS THE
+     VALUE IN THE FILE. Hundreds of lines of notes here argue in HSL: "S 100%
+     at L 98%", "c = S x min(L, 1-L)", "hsl(258 95% 76%) measures 7.25:1",
+     "15/255 apart". Those arguments produced the colours that are declared
+     here and they are kept verbatim, because deleting them would delete the
+     reasons. They no longer describe the SPELLING of anything. Where a note
+     names a triple like `88 30% 11%`, that is the colour this file used to
+     write and still renders — the same sRGB, in different coordinates.
+
+     THE MIGRATION MOVED NO PIXEL, AND THAT IS THE ONLY THING IT WAS ALLOWED
+     TO DO. Four pages x four cosmologies x both themes were screenshotted
+     before and after and compared channel by channel: 32/32 byte-identical,
+     with the baseline itself first proven reproducible across two runs.
+
+     WHY IT WAS WORTH DOING, in the two places HSL was actively lying:
+
+       - HSL's L is not lightness. `--color-accent` was written `38 92% 50%`,
+         which reads as a mid tone and measures 2.14:1 on white — every amber
+         heading and link in light mode fails AA, which is why
+         `--color-accent-ink`, `--color-accent-hover` and `--color-focus` all
+         exist to route around it. The same colour is `oklch(0.770351 …)`, and
+         0.77 says what it is before anyone measures.
+       - Chroma was not directly expressible. The light ramp's derivation
+         below had to hold `S x min(L, 1-L)` constant by moving saturation
+         against lightness; in OKLCH the C component IS that number.
+
+     WHAT IT COST, stated because the next person will meet it. `--civ-hue`
+     is gone. The ramp was five declarations plus one number per tenant
+     (`[--civ-hue] 47% 7%`); rotating an HSL hue at fixed S and L does NOT
+     hold OKLCH L and C fixed — across the four tenants at one plane, L
+     spreads up to 0.057 and C up to 0.010 — so a shared coordinate cannot
+     express it. The ramp is now twenty per-tenant literals
+     (`--color-civ-surface-1-cn` and siblings) redeclared per theme, which the
+     `:root[data-civ]` rules point the five planes at. That is more numbers,
+     and the invariants that used to hold by construction — the planes stay
+     ordered, the marks sit on the tenant's hue — are now held by
+     `civilizationColourContract` instead.
+     ═══════════════════════════════════════════════════════════════════════ */
 
   /* Dark theme is default - html element gets 'dark' class from ThemeContext on mount */
 
   :root {
-    /* The per-tenant surface ramp. It is NOT where civilization identity is
-     legible — that claim was measured and withdrawn; see the block above
-     --color-civ-hue-* below for the numbers and the decision. What this ramp
-     is: a near-neutral floor that shifts by a couple of RGB points per
-     tenant. Neutral 240° (the ramp's original fixed hue) is the fallback for
-     logged-out screens and any tenant this deployment doesn't map to a
-     cosmology; TenantContext overwrites this on the root element once a
-     tenant is known, via the [data-civ] rules below. Only surface-1..4 read
-     it — canvas and every semantic/status/karma/verdict token stay put
-     regardless of tenant. */
-    --civ-hue: 240;
+    /* The per-tenant surface ramp. It IS where civilization identity is
+     legible, as of the Stage 11 review — see the block above
+     --color-civ-hue-* below for the measurements and the decision that
+     replaced Stage 9's. TenantContext stamps [data-civ] on the root element
+     once a tenant is known and the `:root[data-civ]` rules below repoint all
+     five planes at that cosmology's own tokens.
+
+     THE FIVE DECLARATIONS IN THIS BLOCK RENDER NOWHERE, AND THAT IS NOT NEW.
+     They were `[--civ-hue] 82% 4%` and friends, resolved through a hue
+     every tenant overrode and the unmapped screen took from
+     `:root:not([data-civ])`; they are literals now for the reason the header
+     note gives, and they are still the branch nothing paints. They stay
+     because a fifth cosmology with tokens and no rule has to land on a real
+     colour rather than on nothing, and because `--color-surface-*` must be
+     declared at `:root` for the token-reference contract to see it at all.
+
+     240 IS NO LONGER A USABLE FALLBACK, WHICH IS WHY IT IS NOT THE FALLBACK
+     ANY MORE. At 13% saturation "neutral 240°" was neutral in fact: every
+     tenant and the logged-out screen rendered the same near-black.
+
+     STAGE 12: THAT SECOND SENTENCE IS FALSE, AND IT WAS FALSE BEFORE STAGE 11
+     TOUCHED ANYTHING. It rests on max-channel, which reported 0-6/255 across
+     the old dark ramp. Measured in CIEDE2000 on that same old ramp, the 240°
+     fallback sat 2.87-5.34 from Chinese, 4.26-7.27 from Egyptian and
+     5.36-9.40 from Greek — obvious differences, not "the same near-black".
+     Only European was genuinely indistinguishable from it (0.00-1.13), which
+     is the 8° coincidence the paragraph below is about. So a logged-out dark
+     screen already read as a colour no tenant had. The DECISION below is
+     unaffected and better supported than when it was made: the fallback needed
+     declaring outright either way, and Stage 11 turned a quiet leak into a
+     loud one rather than creating it.
+
+     At the saturations below 240° is a deep blue-violet sitting 8° from European
+     (232°), so a logged-out screen would have rendered as, to the eye,
+     the European tenant — the same defect as GREEK rendering identical to
+     logged-out, in reverse. The `:root:not([data-civ])` /
+     `.light:not([data-civ])` blocks after the [data-civ] rules restore the
+     pre-Stage-11 neutral ramp verbatim for that case. The five declarations
+     in this block are the 240° ramp written out, so removing one of those
+     blocks would leave a real colour standing rather than nothing — the same
+     safety `--civ-hue: 240` used to provide before the OKLCH migration
+     dissolved it. Nothing renders that branch.
+
+     CANVAS IS IN THE RAMP NOW, IN BOTH THEMES. It was the largest area on
+     screen and the only one that stayed neutral, so tinting the surfaces
+     alone left the tint reading as a discoloured sidebar rather than as a
+     cosmology. That sentence was true of dark only when Stage 11 wrote it —
+     `.light` kept `--color-canvas: 0 0% 100%`, flat for every tenant, which
+     Stage 12 recorded as an asymmetry and left standing because tinting a
+     light page ground is a design decision rather than a metric fix. Stage 13
+     took it; the light block above carries the derivation and the costs.
+     Semantic/status/karma/verdict tokens still stay put regardless of
+     tenant — identity tints the ground, never the meaning. */
+    /* `--civ-hue: 240` used to be declared on this line. It is gone, not
+     moved: nothing in this stylesheet can interpolate a bare hue any more.
+     `--color-civ-hue-*` further down is still declared and still per theme —
+     it is the tenant's defining hue, and `civilizationColourContract` and
+     `civIdentityInkContract` read it to hold every identity colour to it —
+     but no rule feeds it into anything now. */
     /* The mark's fallback, and it is deliberately the ink-subtle grey rather
-     than a neutral hue at the marks' saturation. --civ-hue's 240° fallback is
-     a *ramp* value, and the ramp is a near-neutral floor, so falling back
-     there costs nothing. A mark is an identity claim: an unmapped tenant
+     than a neutral hue at the marks' saturation. The ramp's own fallback is
+     the untinted `:not([data-civ])` branch below, so falling back there
+     costs nothing. A mark is an identity claim: an unmapped tenant
      rendering a coloured disc would be asserting a cosmology this deployment
      does not have. Grey says "no civilization", which is the true statement,
      and the components that draw the mark render no identity text at all in
      that case — so the disc never appears alone. */
-    --civ-mark: 215 8% 57%;
-    /* The neutral ink. `--civ-mark`'s 215 8% 57% is declared once, here, and
+    --civ-mark: 0.650852 0.016974 257.2209;
+    /* The neutral ink. `--civ-mark`'s grey (`215 8% 57%` as it was written
+     before the OKLCH migration) is declared once, here, and
      :root is the DARK block -- there is no `.light` override, so an unmapped
      tenant drew the masthead's tenant code with a value measured against a
      near-black canvas on a white one: 3.23:1 in the rail, 2.84:1 in the chip,
      both at 11px. As a 7px dot the same value is a graphical object at
      3.23:1 and passes 1.4.11, which is why the mark itself is left alone and
      only the text moves. `.light` overrides this one below. */
-    --civ-ink: 215 8% 57%;
-    --color-canvas: 240 15% 4%;
-    --color-surface-1: var(--civ-hue) 13% 7%;
-    --color-surface-2: var(--civ-hue) 12% 9%;
-    --color-surface-3: var(--civ-hue) 11% 10%;
-    --color-surface-4: var(--civ-hue) 11% 11%;
-    --color-hairline: 220 8% 18%;
-    --color-hairline-strong: 220 7% 22%;
-    --color-hairline-tertiary: 220 6% 26%;
-    --color-ink: 210 11% 96%;
-    --color-ink-muted: 213 15% 80%;
+    --civ-ink: 0.650852 0.016974 257.2209;
+    --color-canvas: 0.105027 0.045334 275.2707;
+    --color-surface-1: 0.151003 0.035935 281.2061;
+    --color-surface-2: 0.173948 0.034837 282.1628;
+    --color-surface-3: 0.187373 0.034271 282.5848;
+    --color-surface-4: 0.199936 0.03181 283.1444;
+    --color-hairline: 0.296183 0.010017 260.7091;
+    --color-hairline-strong: 0.33582 0.0097 260.7167;
+    --color-hairline-tertiary: 0.374324 0.009434 260.7214;
+    --color-ink: 0.969671 0.001713 247.8393;
+    --color-ink-muted: 0.839386 0.014711 254.6188;
     /* Floor for surface-2 and lighter (table headers, nested cards, input rest
      state) — ink-tertiary drops to 4.48:1 there, below AA. See the
      "per-surface floors" card in Stage 1: a token is not AA, a token on a
      surface is. */
-    --color-ink-subtle: 215 8% 57%;
+    --color-ink-subtle: 0.650852 0.016974 257.2209;
     /* 52% (was 50%, was 41% before that) — this is the surface-1 figure only
      (4.91:1); raising surface-1 from 7% to 8% for the elevation ramp cost
      ~0.1 of a ratio point, and 50% would have landed at 4.58:1. Nothing
@@ -314,20 +461,26 @@
      surfaces under the two warmest civilization hues — eg (44°) surface-4 at
      4.40:1 and gr (88°) surface-3/-4 at 4.50/4.36:1. cn (12°) and eu (232°)
      passed the same surfaces, which is the whole point: `--color-surface-*` is
-     `var(--civ-hue) …`, so an ink figure is not one number but one per tenant,
+     `[--civ-hue] …`, so an ink figure is not one number but one per tenant,
      and measuring against a single "the surface" hides the two that fail.
      54% clears every tenant at 4.73:1 worst (gr surface-4).
-     src/__tests__/inkOnSurfaceContract.test.ts measures all 128. */
-    --color-ink-tertiary: 215 6% 54%;
-    --color-accent: 38 92% 50%;
+     src/__tests__/inkOnSurfaceContract.test.ts measures all 160 — 128 until
+     Stage 13 put the canvas in the matrix; the dark worst is now 4.527:1, gr
+     surface-4, which is a row that has always been there and was always this
+     figure, not a regression the widening introduced. */
+    --color-ink-tertiary: 0.627711 0.013933 255.5433;
+    --color-accent: 0.770351 0.164635 70.6613;
     /* Text/links only. --color-accent (identical in both themes) measures
      2.14:1 for text against light-mode white — every amber heading and link
-     in light mode fails AA today. Buttons, fills and active-nav keep using
+     in light mode fails AA today. ("Light-mode white" is the untinted
+     `.light:not([data-civ])` ground since Stage 13; on the four tenants' own
+     tinted canvases the same token measures 1.88-2.07:1, so the conclusion is
+     unchanged and slightly worse.) Buttons, fills and active-nav keep using
      --color-accent; the KEYBOARD FOCUS RING no longer does, for the same
      reason plus one more — see --color-focus below. Anything rendering the
      brand colour AS TEXT must use this instead. */
-    --color-accent-ink: 38 92% 50%;
-    --color-accent-hover: 43 96% 58%;
+    --color-accent-ink: 0.770351 0.164635 70.6613;
+    --color-accent-hover: 0.839147 0.161515 84.3763;
     /* The keyboard focus ring. Deliberately NOT --color-accent, on two
      independent grounds, both measured rather than assumed.
 
@@ -367,31 +520,172 @@
      src/__tests__/statusTokenLayering.test.ts re-derives every ratio above
      from this file, checks both themes declare the token, and fails if the
      rule stops naming it or starts naming the accent again. */
-    --color-focus: 258 95% 76%;
+    --color-focus: 0.708407 0.166589 295.7641;
   }
 
   /* Light theme override */
   .light {
-    --color-canvas: 0 0% 100%;
-    /* Same var(--civ-hue) ramp as :root — the dark-mode surfaces already sat
-     at 10-13% saturation, in range for the retint; light mode's were flat
-     grey (0%). HSL chroma collapses toward white (c = (1-|2L-1|)*S, near
-     zero once L approaches 98%), so matching dark mode's saturation numbers
-     verbatim measured out to a ~1/255 RGB delta at surface-1 — imperceptible.
-     14/13/12/11% is the same 10-14% band the retint targets. The nudge does
-     NOT buy a visible delta, which is what this comment used to claim: the
-     four tenants' light surface-1 values span 2/255 at the widest channel,
-     less separation than dark mode's 4/255. Both are inside the band the
-     ramp is now deliberately held to — see the civilization block below. */
-    --color-surface-1: var(--civ-hue) 14% 98%;
-    --color-surface-2: var(--civ-hue) 13% 96%;
-    --color-surface-3: var(--civ-hue) 12% 94%;
-    --color-surface-4: var(--civ-hue) 11% 92%;
-    --color-hairline: 220 10% 90%;
-    --color-hairline-strong: 220 10% 85%;
-    --color-hairline-tertiary: 220 8% 80%;
-    --color-ink: 220 15% 10%;
-    --color-ink-muted: 220 10% 35%;
+    /* STAGE 13: THE LIGHT PAGE GROUND IS IN THE RAMP TOO, AND IT COST THE
+     RAMP ITS MIRROR SYMMETRY. This was `0 0% 100%` — flat white, byte-identical
+     for all four tenants, on the largest area of every light screen. Stage 11
+     wrote "CANVAS IS IN THE RAMP NOW" and Stage 12 had to append that it was
+     true of dark only. It is true of both now.
+
+     WHY IT COULD NOT SIMPLY BE TINTED IN PLACE. Chroma is c = S x min(L, 1-L),
+     so at L 100% the ceiling is EXACTLY ZERO: no saturation tints white. The
+     lightness had to come down, and the room below 100% was already spoken
+     for — surface-1..4 sat at 98/96.5/95/93.5 and surface-4 is pinned there by
+     --color-ink-tertiary (see the AA table below). A fifth plane does not fit
+     ABOVE surface-1 with usable chroma: at L 98.5% the ceiling is 0.015 and
+     the four tenants measure 3.17 ΔE00 apart at their closest, under the 3.5
+     "perceptible at a glance" rung `civilizationColourContract` holds the ramp
+     to. At 99% it is 1.64, which is invisible.
+
+     SO THE GROUND MOVED BELOW THE CARD PLANE. The light ramp is no longer the
+     mirror image of dark's (canvas at the extreme, surfaces marching away from
+     it). It reads, top to bottom:
+
+       surface-1  98%    the card plane — UNCHANGED, and deliberately so
+       canvas     96.5%  the page ground the cards sit on
+       surface-2  95.5%  was 96.5
+       surface-3  94.5%  was 95
+       surface-4  93.5%  UNCHANGED — the AA floor, see below
+
+     WHAT THAT BUYS AND WHAT IT COSTS, both measured with deltaE00Rgb (the
+     channel counts further down are kept as history; see the Stage 12 note).
+     Ranges are across the four tenants:
+
+       canvas tenant separation   0.00 -> 3.74..15.98   (was six pairs at 0.00,
+                                  and it is now the WIDEST-separating plane in
+                                  light mode, which is the right place for it:
+                                  it is 63% of the pixels. The low end read
+                                  6.42 before Chinese was rotated to 20 deg in
+                                  light and 5.62 after it — see
+                                  --color-civ-hue-cn and --color-civ-canvas-cn
+                                  in `.light` for both moves and their cost)
+       canvas -> surface-1 step   3.47..5.75 -> 2.58..3.53   (-24%, still above
+                                  the 2.0 rung at which a flat-field difference
+                                  reads at a glance, and cards also carry a
+                                  --color-hairline border at 220 10% 90% =
+                                  (227,229,232), 8-28 channel steps darker than
+                                  any light surface — the card edge was never
+                                  drawn by fill contrast alone)
+       surface-2 -> -3 -> -4      0.76..0.90 / 0.82..0.85
+                                  -> 0.61..0.78 / 0.61..0.80
+
+     THAT LAST LINE IS THE HONEST COST AND IT IS SMALLER THAN IT LOOKS: those
+     two steps were ALREADY under ΔE00 1.0, the rung at which a difference is
+     imperceptible on a flat field. Squeezing them from ~0.8 to ~0.7 moves
+     nothing a reader could see; it is recorded because the ramp is now
+     carrying five planes in the 4.5 points of lightness between the card plane
+     and the AA floor, and the next person to want a sixth should know the band
+     is full.
+
+     ONE COLLISION, NAMED RATHER THAN DISCOVERED LATER: canvas (96.5) and
+     surface-2 (95.5) measure 0.92..1.41 ΔE00 apart — one lightness point, the
+     same near-imperceptible gap surface-2/-3 and -3/-4 already have. That is
+     harmless for nesting, because surface-2 is a table header or an input
+     INSIDE a surface-1 card and is read against 98%, not against the ground —
+     surface-1 to surface-2 is 2.02..2.51 and did not move. It would stop being
+     harmless the day something paints surface-2 directly on the canvas, and
+     surface-2 has ~94 call sites, so that is a real thing to watch rather than
+     a theoretical one.
+
+     THE UNMAPPED-TENANT BRANCH STAYS WHITE. `.light:not([data-civ])` below
+     still declares `--color-canvas: 0 0% 100%` verbatim, so a logged-out or
+     unmapped screen renders exactly the pixels it did before this change —
+     the same discipline Stage 11 applied when 240° stopped being neutral.
+     That branch is also why `inkOnSurfaceContract`'s "against light-mode
+     white" claims still have a white to measure against.
+
+     THE LIGHT RAMP IS WHERE THE CONSTRAINT LIVES, AND IT IS LIGHTNESS AND
+     NOT SATURATION. HSL chroma is c = S x min(L, 1-L): at L 98% the most a
+     surface can carry is 0.02 no matter the saturation, which caps the four
+     tenants at 10/255 apart AT S 100%. So "raise the saturation to 35-40%"
+     is not a thing light mode can do — 40% at 98% lightness measures 3/255,
+     which is what the old 14/13/12/11% band was, restated.
+
+     (EVERY "/255" IN THIS FILE IS A max-channel FIGURE AND STAGE 12 STOPPED
+     TRUSTING THAT METRIC — see the Stage 12 note in the civilization identity
+     block below. The chroma ARGUMENT here survives intact, because c = S x
+     min(L, 1-L) is arithmetic and not a perception claim; what does not
+     survive is reading a small "/255" as "nobody can see it". These channel
+     counts are kept as the record of what was measured when, not as evidence
+     about what a reader can distinguish.)
+
+     Lightness has to come down with it, and that is what the light inks
+     ration. --color-ink-tertiary (220 6% 42%) is the binding pair on the
+     deepest surface. Measured across all four tenant hues:
+
+       surface-4 at L 92%  clears AA up to  S 20%   ->  8/255 apart
+       surface-4 at L 93.5% clears AA up to S ~50%  -> 15/255 apart
+       surface-4 at L 94%  clears AA up to  S 73%   -> 22/255 apart
+
+     93.5% is taken and 94% is not, because surface-4's job is also to be
+     the deepest step of an elevation ramp that starts at the page ground;
+     the ramp spans 98 -> 93.5 rather than reaching down to 92, and buying the
+     last 7/255 of hue would have cost another 1.5 points of that.
+
+     Saturation then rides the lightness. The two lightest planes run at
+     S 100% — their chroma is simply whatever their lightness permits, 0.020 at
+     surface-1 and 0.035 at the canvas — and the three below them hold 0.030,
+     so the five read as one tinted paper at five depths rather than as five
+     differently-coloured cards.
+
+     THE CANVAS IS THE ONE PLANE ALLOWED ABOVE 0.030, AND IT WAS MEASURED
+     RATHER THAN INDULGED. Holding it to 0.030 means S 86% at L 96.5, which was
+     tried: it costs 1.0 of tenant separation (5.46..14.81 instead of
+     6.42..15.98) AND 0.4-0.8 of the card step (2.20..2.69 instead of
+     2.58..3.53), because a purer ground is further from surface-1 in hue as
+     well as in lightness. Two measured losses against one tidy sentence; the
+     sentence lost. (All four figures in that comparison were measured on the
+     12-degree Chinese ramp, i.e. before the light-only rotation to 20; they
+     are kept as the pair they were measured as, not restated on a palette the
+     alternative was never measured against.)
+
+     Measured separation, widest channel, between any two tenants: canvas 24,
+     then 12 / 20 / 22 / 20 out of 255. The same five in CIEDE2000: canvas
+     15.98, then 10.01 / 14.02 / 14.95 / 14.07 for the widest pair, and canvas
+     3.74, then 2.56 / 4.16 / 4.66 / 4.18 for the NARROWEST. The narrow column
+     is the Chinese / Egyptian pair throughout, and it is the price of moving
+     the Chinese ground out of the blush region — first the 20-degree rotation
+     recorded on --color-civ-hue-cn below, then the chroma raise recorded on
+     --color-civ-canvas-cn in this block. The same column read 6.42, then
+     4.11 / 5.53 / 5.85 / 5.55 before either, and 5.62, then
+     3.30 / 4.88 / 5.68 / 4.90 between them.
+
+     TWO OF THOSE FIVE ARE UNDER "PERCEPTIBLE AT A GLANCE" AND THE SENTENCE
+     HERE USED TO SAY OTHERWISE. It read "so every light plane still separates
+     its closest two tenants past 'perceptible at a glance', the page ground
+     included" — which was already false when it was written: surface-1's
+     narrowest was 3.30 against a rung of 3.5. Nothing went red, because the
+     pin in `civilizationColourContract` is on each plane's WIDEST pair and on
+     each pair's WIDEST plane; no assertion in this repo has ever held a plane's
+     NARROWEST pair above that rung, and the 3.5 rung is not the claim the
+     stylesheet is entitled to make about surface-1. The card plane is the
+     least tinted by design and the mark carries identity there. Recorded here
+     rather than quietly corrected, because the sentence read as settled for
+     two rounds.
+
+     NO INK TOKEN MOVED FOR THIS. Every one of the 160 ink x background pairs
+     still clears AA on its own. Worst over the whole matrix is 4.527:1 (DARK
+     Greek surface-4 under --color-ink-tertiary) and worst in light mode is
+     4.554:1 (European surface-4, same ink) — both untouched by this change,
+     because neither dark nor surface-4 moved. The tightest of the 32 new
+     canvas rows is 4.849:1, light European under the same ink. That is the
+     whole reason surface-4 stopped at 93.5%; inkOnSurfaceContract measures it,
+     and as of Stage 13 its matrix counts the canvas as a background rather
+     than excluding it. */
+    --color-canvas: 0.951409 0.024099 285.9328;
+    --color-surface-1: 0.97302 0.013281 286.1503;
+    --color-surface-2: 0.947481 0.020087 286.0102;
+    --color-surface-3: 0.938735 0.021483 285.9787;
+    --color-surface-4: 0.932384 0.020169 286.0021;
+    --color-hairline: 0.921227 0.0046 258.3254;
+    --color-hairline-strong: 0.879369 0.008487 271.3181;
+    --color-hairline-tertiary: 0.841244 0.00768 260.7315;
+    --color-ink: 0.209123 0.010375 268.1867;
+    --color-ink-muted: 0.452257 0.021051 264.3395;
     /* 42%, was 50%. Every tenant × every surface failed AA in light mode —
      3.46:1 at worst (eu surface-4), 4.04:1 at best (gr surface-1), so the
      tenant hue moved it by 0.06 of a ratio point and the gap to 4.5 was not a
@@ -403,7 +697,7 @@
      and it was taken deliberately: the previous value did not meet AA anywhere
      in light mode, so the hierarchy it bought was drawn in text a reader with
      low vision could not resolve. */
-    --color-ink-subtle: 220 8% 42%;
+    --color-ink-subtle: 0.517183 0.019895 267.6262;
     /* 42%, was 60% — the largest move of the three, because it started furthest
      out: 2.41:1 to 2.82:1 across the sixteen combinations, roughly half of AA.
      ~15 real call sites. Now 4.53:1 at worst.
@@ -412,8 +706,8 @@
      mistake and not a merge: the two keep different saturations (8% vs 6%), so
      they remain distinguishable, and neither has room to be lighter. If they
      need to separate again, the room is below 42%, not above it. */
-    --color-ink-tertiary: 220 6% 42%;
-    --color-accent: 38 92% 50%;
+    --color-ink-tertiary: 0.520424 0.014972 266.5999;
+    --color-accent: 0.770351 0.164635 70.6613;
     /* 34% lightness: 5.05:1 against light-mode white, vs 2.13:1 for
      --color-accent at the same hue.
 
@@ -442,15 +736,19 @@
      34% → 31%, AND EVERY FIGURE ABOVE IS AGAINST WHITE, WHICH IS THE WRONG
      BACKGROUND. That whole argument — 34% vs 35%, 5.05 vs 4.83 — was
      conducted on `0 0% 100%`. But light surfaces are not white: surface-1..4
-     are `var(--civ-hue) 14%..11% 98%..92%`, tinted per tenant, and surface-4
-     is the darkest of them. Measured across all four civilization hues, 34%
+     are tinted per tenant (`[--civ-hue] 14%..11% 98%..92%` when this
+     paragraph was written; Stage 11 and Stage 13 have since moved them to
+     100%/67%/55%/46% at 98/95.5/94.5/93.5, and the canvas joined them), and
+     surface-4 is the darkest of them. Measured across all four hues, 34%
      lands at **4.16:1 on European surface-4** — under AA — while measuring
      5.04:1 on canvas exactly as the note claimed. The note was true and the
      token still failed, because the two sentences were about different
      backgrounds.
 
      31% is the value: 4.81:1 on the worst pairing (eu/surface-4) and 5.84:1 on
-     white. 32% would also clear AA, by 0.08.
+     white. 32% would also clear AA, by 0.08. On the tinted page grounds Stage
+     13 introduced it measures 5.13-5.65:1, comfortably clear — the canvas was
+     never the binding background for this token, surface-4 was and still is.
 
      WHY THIS SURVIVED A 128-PAIR CONTRAST MATRIX. It was excluded from it.
      `inkOnSurfaceContract.test.ts` derives the ink family by prefix and then
@@ -459,8 +757,8 @@
      it anywhere else. 33 files use it. The matrix now carries it as its own
      case; being outside the ink family is a reason to give it a row, not a
      reason to have none. */
-    --color-accent-ink: 32 92% 31%;
-    --color-accent-hover: 43 96% 58%;
+    --color-accent-ink: 0.515639 0.118906 59.7489;
+    --color-accent-hover: 0.839147 0.161515 84.3763;
     /* Same 258deg hue, dropped from 76% to 48% lightness for light surfaces.
      Declared HERE and not only in :root on purpose: a token :root declares
      and .light stays silent about inherits its DARK value through the
@@ -470,7 +768,7 @@
      anyone testing one theme. civilizationColourContract.test.ts pins the
      same both-themes rule for the civilization marks after that exact shape
      of bug; statusTokenLayering.test.ts now pins it for this token. */
-    --color-focus: 258 85% 48%;
+    --color-focus: 0.458342 0.264182 281.8858;
   }
 
   /* Semantic status colors (theme-aware).
@@ -486,62 +784,176 @@
    lightness, not the value here (e.g. --bad-equivalent tones fall to
    ~3.7:1 there and need to run closer to 74% lightness). */
   :root {
-    --color-status-alive: 150 62% 46%; /* ALIVE 存活 · ◆ · was 160 84% 39% */
-    --color-status-judging: 20 88% 58%; /* JUDGING 审判中 · ◑ · off the accent amber */
-    --color-status-disposed: 285 55% 66%; /* DISPOSED 已处置 · ■ · was a second blue */
-    --color-status-reincarnating: 195 88% 55%; /* REINCARNATING 轮回中 · ↻ */
-    --color-status-lost: 225 10% 58%; /* LOST 迷失 · ✕ · slate, not grey — grey reads as disabled */
+    --color-status-alive: 0.710064 0.160036 155.6214; /* ALIVE 存活 · ◆ · was 160 84% 39% */
+    --color-status-judging: 0.698166 0.171837 44.2374; /* JUDGING 审判中 · ◑ · off the accent amber */
+    --color-status-disposed: 0.686063 0.153568 317.1774; /* DISPOSED 已处置 · ■ · was a second blue */
+    --color-status-reincarnating: 0.751947 0.137031 226.6462; /* REINCARNATING 轮回中 · ↻ */
+    --color-status-lost: 0.650423 0.024804 269.3049; /* LOST 迷失 · ✕ · slate, not grey — grey reads as disabled */
     /* Teal reads as "concluded" without borrowing REINCARNATING's blue or
      LOST's grey, and stays neutral on outcome — SETTLED covers both Aaru
      and Ammit, Heaven and Hell alike. Not part of Stage 1's lifecycle table
      (which only names five states) — left as-is rather than guessed at. */
-    --color-status-settled: 178 55% 40%;
+    --color-status-settled: 0.63759 0.097383 191.473;
     /* 功德/罪业. Renamed from --color-merit/--color-demerit: this pair now has
      its own semantic identity distinct from the verdict palette that
      aliases it below, matching Stage 1's colorGroups split ("Verdict &
      karma" vs "Lifecycle state" are different layers even where a hue is
      shared). merit raised from 142 76% 36% for 11px CJK legibility. */
-    --color-karma-merit: 150 62% 46%;
-    --color-karma-demerit: 0 84% 62%;
+    --color-karma-merit: 0.710064 0.160036 155.6214;
+    --color-karma-demerit: 0.647001 0.198706 24.6009;
     /* PASSED/FAILED alias karma-merit/feedback-error deliberately — two reds
      30° apart would read as one colour applied inconsistently, not two
      meanings. Green, not accent amber, so a passed verdict stops rendering
      in the same colour as every button and heading. */
-    --color-verdict-passed: 150 62% 46%;
-    --color-verdict-failed: 0 84% 62%;
-    --color-verdict-purgatory: 215 80% 62%; /* takes the blue DISPOSED vacated */
-    --color-verdict-retry: 330 62% 68%; /* rose — sends work backwards. Was 270°, 15° from the new DISPOSED */
+    --color-verdict-passed: 0.710064 0.160036 155.6214;
+    --color-verdict-failed: 0.647001 0.198706 24.6009;
+    --color-verdict-purgatory: 0.656708 0.151485 257.4417; /* takes the blue DISPOSED vacated */
+    --color-verdict-retry: 0.709133 0.137376 350.1401; /* rose — sends work backwards. Was 270°, 15° from the new DISPOSED */
     /* System-layer feedback: transient chrome only (toast, inline validation,
      banner), always beside an icon — never a row, a badge or a chart. A
      separate palette from the domain layer above even where values match,
      because role+form is what keeps two same-hued reds distinguishable. */
-    --color-status-success: 150 62% 46%;
-    --color-status-error: 0 84% 62%;
-    --color-status-warning: 38 88% 60%;
-    --color-status-info: 215 80% 62%;
-    /* Civilization identity. Stage 1 §4.9 asked for it to be surface-first —
-     each tenant tinting its own ramp (--civ-hue, wired to surface-1..4
-     above) at 10-14% saturation — and the Stage 9 review measured what that
-     actually produces. At 13% saturation and 7% lightness the ramp cannot
-     express a hue at all: Chinese (12°) resolves to rgb(20,16,16) and
-     European (232°) to rgb(16,16,20), 4/255 apart at the widest channel,
-     and those two are 220° apart, the widest separation in the system and a
-     deliberately chosen one. The whole ramp, both themes, spans at most
-     6/255 between any two tenants. Every tenant renders on what is, in
-     practice, the same near-black (or the same near-white).
+    --color-status-success: 0.710064 0.160036 155.6214;
+    --color-status-error: 0.647001 0.198706 24.6009;
+    --color-status-warning: 0.803353 0.146134 77.0329;
+    --color-status-info: 0.656708 0.151485 257.4417;
+    /* Civilization identity. Stage 1 §4.9 asked for it to be surface-first.
+     Stage 9 measured the ramp as built — 13% saturation at 7% lightness —
+     found 4/255 between Chinese (12°) and European (232°), 220° apart and
+     the widest separation the palette has, and ruled that the ramp was a
+     near-neutral floor with --color-civ-mark-* carrying recognition alone.
+     (That 4/255 is a max-channel figure; the same pair measures 2.87 ΔE00 on
+     that ramp. Quiet, and not nothing. See the Stage 12 note further down.)
+     That ruling named its own successor: "raising the ramp's saturation to
+     ~35-40% ... is a design change needing its own review".
 
-     THE DECISION, taken by the owner rather than assumed here: accept the
-     ramp as a near-neutral floor and let --color-civ-mark-* carry
-     recognition on its own. Raising the ramp's saturation to ~35-40% is the
-     other way to honour §4.9 and it repaints every screen in the app, so it
-     is a design change needing its own review, not a token tweak.
-     src/__tests__/civilizationColourContract.test.ts pins both halves: the
-     ramp stays inside the band where it expresses nothing, and the marks
-     stay far enough apart to be told apart. Raise the saturation and that
-     test goes red — on purpose.
+     STAGE 11 IS THAT REVIEW, AND IT REVERSES THE RULING. What it changes:
+     canvas and surface-1..4 now carry the tenant's hue at a chroma each
+     surface's own ink floor allows, measured rather than guessed. What it
+     found on the way, which is why the ~35-40% figure was not simply
+     applied:
 
-     --color-civ-hue-* is the bare hue degree the [data-civ] rules below feed
-     into --civ-hue; --color-civ-mark-* is a full HSL triple. The mark is
+       - SATURATION WAS THE WRONG DIAL. Chroma is S x min(L, 1-L). At light
+         surface-1's 98% lightness the ceiling is 0.02 at ANY saturation —
+         S 40% there measures 3/255 between tenants, the same as the 14% it
+         replaced. ("Indistinguishable" is what this line said, and that word
+         was max-channel talking; see the Stage 12 note below. The dial being
+         wrong does not depend on it — 3/255 at S 40% and 3/255 at S 14% are
+         the SAME measurement, which is the actual argument.) The light ramp
+         needed its lightness lowered
+         (98 -> 93.5 at surface-4), and that is rationed by
+         --color-ink-tertiary, not by taste.
+       - 35-40% WOULD HAVE BROKEN AA IN DARK MODE. At surface-4's 11%
+         lightness the ink floor caps saturation at 30%. 40% measures
+         4.41:1 for --color-ink-tertiary on Greek surface-4, under the
+         4.5:1 AA floor, and inkOnSurfaceContract's failing set is asserted
+         as an exact set — it would have gone red rather than drifted.
+       - THE 240° FALLBACK BECAME A CIVILIZATION. See the note on
+         --civ-hue above and the `:not([data-civ])` blocks below.
+
+     Measured result, widest channel between any two tenants (Stage 9's
+     figure in brackets): dark canvas 17 [0], surface-1..4 17/17/17/16
+     [4/6/5/6]; light surface-1..4 10/16/15/15 [2/3/4/5]. Every one of the
+     128 ink x surface pairs still clears AA, in both themes, with no ink
+     token moved.
+
+     STAGE 13 MOVED THE LIGHT SURFACES AND THE FIGURES ABOVE ARE THE
+     PRE-STAGE-13 ONES. Light canvas went from `0 0% 100%` to
+     `[--civ-hue] 100% 96.5%` and surface-2/-3 dropped a point each to make
+     room below the card plane. The light row now reads: canvas 18,
+     surface-1..4 10/15/16/15. Dark did not move — not one declaration — and
+     the matrix is 160 pairs rather than 128, because `inkOnSurfaceContract`
+     now measures the canvas it used to exclude. The binding AA pairs are
+     unchanged: 4.527:1 dark gr surface-4 and 4.554:1 light eu surface-4, both
+     under --color-ink-tertiary, because the plane that binds AA is the one
+     Stage 13 deliberately did not touch.
+
+     STAGE 12 CHANGED NO COLOUR IN THIS FILE AND WITHDREW ONE SENTENCE OF IT.
+     Every figure above, and every "/255" anywhere in this stylesheet, is a
+     max-channel difference: the largest of the three per-channel gaps. That
+     statistic is nearly blind along the hue axis, which is the only axis this
+     palette varies. Chinese canvas is (19, 5, 2) and Egyptian canvas is
+     (19, 14, 2) — identical R, identical B — so max-channel calls them 9
+     apart, and Stage 11 wrote up that pair, and Egyptian/Greek, as beyond
+     what a reader could rely on. In CIEDE2000, ALL SIX PAIRS SEPARATE IN BOTH
+     THEMES:
+
+                            dark canvas   light surface-1
+         Chinese-Egyptian        6.04           2.56
+         Egyptian-Greek          7.03           4.25
+         Chinese-European        8.65           7.02
+         European-Egyptian      11.32           7.96
+         Chinese-Greek          13.33           6.89
+         European-Greek         14.60          10.01
+
+     against a scale on which <1 is invisible, 2-3.5 is visible at a glance
+     and >5 is obvious. Over surface-1..4 the same pairs run 2.56 to 20.87 —
+     the low end being the Chinese/Egyptian card plane, which sits in the
+     "at a glance" band rather than above it and is discussed on
+     --color-civ-canvas-cn in `.light`.
+
+     THE THREE CHINESE ROWS IN THE LIGHT COLUMN MOVED WHEN THAT TENANT'S LIGHT
+     HUE WENT TO 20 DEG, AND AGAIN WHEN ITS GROUND WAS GIVEN REAL CHROMA
+     (they read 4.11 / 5.96 / 8.41 at 12 deg, then 3.30 / 6.18 / 7.56, and
+     now 2.56 / 7.02 / 6.89; dark did not move in either round, and neither
+     did the three rows without Chinese in them). The derivation is on
+     --color-civ-hue-cn and --color-civ-canvas-cn in the `.light` block.
+
+     AND THE SAME METRIC UNDOES STAGE 9's RULING TOO, not only Stage 11's
+     footnote about it. On the pre-Stage-11 ramp (13/12/11/11) the widest pair
+     per surface measures 5.36 to 8.47 ΔE00 — visible, not "in practice the
+     same near-black". Stage 9 was entitled to reject that ramp for being too
+     quiet to carry identity; it was not entitled to say it expressed nothing.
+     Both reviews reached defensible design decisions through a measurement
+     that could not see the thing being decided.
+
+     ONE ASYMMETRY THIS BLOCK USED TO SAY OUT LOUD, AND STAGE 13 CLOSED IT.
+     "CANVAS IS IN THE RAMP NOW" was true of dark only: `.light` declared
+     --color-canvas: 0 0% 100%, flat, for every tenant — all six pairs measured
+     exactly 0.00 there — which is why the light column above starts at
+     surface-1 and why the channel list above gives dark canvas and no light
+     canvas. That was a deliberate choice (a white page ground) that had never
+     been written down beside the sentence that reads as covering both themes.
+
+     The light canvas is tinted per tenant now and the six pairs measure 3.74
+     to 15.98 there — the widest spread of any light plane, which is the right
+     place for it, the ground being 63% of the pixels. The measurement that
+     opened this file's Stage 13 round: dark screens carried the tenant's hue
+     across 99.7% of their area and light screens across 33.8%, with 62.8% of
+     light pixels byte-identical between all four cosmologies.
+
+     The cost was the light ramp's mirror symmetry: the page
+     ground no longer sits at the extreme of the ramp but one plane BELOW
+     surface-1, so light-mode cards float above the ground the way dark-mode
+     cards already do, and surface-2..4 recess below it. The derivation, the
+     AA table it is rationed by and the two costs it pays are on
+     `--color-canvas` in the `.light` block above.
+
+     `civilizationColourContract.test.ts` now runs its three ramp pins over
+     canvas as well as surface-1..4, in both themes — the widening its own
+     comment said was a design decision waiting to be taken. Reverting light
+     canvas to `0 0% 100%` reddens two of them at 0.00 rather than passing
+     quietly, which is what the old shape did.
+
+     src/__tests__/civilizationColourContract.test.ts pins the ruling in three
+     directions now. The ramp must express the tenant — in channel steps
+     against Stage 9's own threshold, which is what goes red if the ramp is
+     turned back down, AND in ΔE00, which is what goes red if a surface or a
+     pair stops being expressed at all. And the marks must still lead the ramp
+     (identity leads, the ground follows), which is now a ΔE00 MARGIN rather
+     than a multiple: a ratio of two large ΔE00 figures is not a quantity the
+     formula supports. The derivations live on the constants in that file.
+
+     --color-civ-hue-* is the tenant's defining hue, in HSL degrees. NOTHING
+     IN THIS STYLESHEET READS IT ANY MORE — it fed `--civ-hue` until the OKLCH
+     migration, and there is no bare hue left to interpolate. It stays declared
+     because it is the fact the identity colours are derived from and the only
+     place that fact is written down: `civilizationColourContract` and
+     `civIdentityInkContract` convert each tenant's mark, ink and ramp back
+     through sRGB and fail if any of them has left this hue. Delete it and
+     nothing renders differently and nothing checks the palette's coherence
+     again.
+     --color-civ-mark-* is a full OKLCH triple. The mark is
      read through lib/chart-colors.ts::CIVILIZATION_COLORS (Recharts props
      cannot read custom properties) and, as of this writing, drawn at exactly
      one place: the per-civilization swatch in app/dashboard/page.tsx. An
@@ -549,11 +961,11 @@
      list and the chart legend"; neither existed. Grep --color-civ-mark and
      CIVILIZATION_COLORS before trusting this sentence either. */
     --color-civ-hue-cn: 12;
-    --color-civ-mark-cn: 12 55% 58%;
+    --color-civ-mark-cn: 0.649703 0.124151 35.2992;
     --color-civ-hue-eu: 232;
-    --color-civ-mark-eu: 232 42% 64%;
+    --color-civ-mark-eu: 0.642606 0.10097 276.6787;
     --color-civ-hue-eg: 44;
-    --color-civ-mark-eg: 44 45% 55%;
+    --color-civ-mark-eg: 0.727725 0.100218 89.3545;
     /* GREEK 希腊冥界. 88deg, not the 138deg that maximises the gap to the other
      three: 138 sits 94deg from both neighbours but only 12deg off
      --color-karma-merit / --color-status-alive / --color-verdict-passed
@@ -566,7 +978,7 @@
      --color-accent at 50deg. Measured 7.78:1 against this tenant's own
      surface-1, hsl(88 13% 7%) -- AAA. */
     --color-civ-hue-gr: 88;
-    --color-civ-mark-gr: 88 40% 52%;
+    --color-civ-mark-gr: 0.721756 0.13753 130.0922;
     /* IDENTITY TEXT, as distinct from the identity mark. Same split, same
      reason, as --color-accent / --color-accent-ink: a fill and the text drawn
      on that fill cannot be one value. Badge's `accent` tone already carries
@@ -592,21 +1004,55 @@
      cosmology *is*, only whether its name can be read. eg/gr dark and eu
      light already cleared the bar, so their ink equals their mark -- the same
      way --color-accent-ink equals --color-accent in dark mode. Every value
-     below is >= 4.6:1 across all 32 pairs; civilizationColourContract pins
-     that floor and goes red if a value drifts.
+     below is >= 4.6:1 across all 32 pairs; civIdentityInkContract pins that
+     floor and goes red if a value drifts.
+
+     THE THREE DARK VALUES EACH ROSE ONE POINT FOR STAGE 11 (cn 65->66,
+     eu 70->71, eg 55->56). The badge is measured over the *host* tenant's
+     surface, and the tinted ramp moved that background: dark surface-4 for
+     Greek went from hsl(88 11% 11%) to hsl(88 30% 11%), which is lighter to
+     the eye at the same HSL lightness. Worst pairing before the bump was
+     cn on Greek surface-4 at 4.46:1 — still AA, under the 4.6 headroom this
+     file keeps precisely so that a surface retune shows up as a red test
+     rather than as a silent slide to 4.49. It did. This is that mechanism
+     working, not a new decision about what colour a cosmology is.
+
+     eg's ink no longer equals its mark. It did when 55% cleared the bar on
+     an untinted ramp; the sentence above about eg/gr dark and eu light is
+     now true of gr and eu only.
 
      MARK IS THE GRAPHIC, INK IS THE TEXT. Dots, rules, borders, chart series
      keep the mark (non-text, 3:1). Anything with glyphs in it takes the ink. */
-    --color-civ-ink-cn: 12 55% 65%;
-    --color-civ-ink-eu: 232 42% 70%;
-    --color-civ-ink-eg: 44 45% 55%;
-    --color-civ-ink-gr: 88 40% 52%;
+    --color-civ-ink-cn: 0.713075 0.097585 34.7247;
+    --color-civ-ink-eu: 0.712756 0.079313 277.6585;
+    --color-civ-ink-eg: 0.733236 0.098927 89.8359;
+    --color-civ-ink-gr: 0.721756 0.13753 130.0922;
+    --color-civ-canvas-cn: 0.138985 0.030107 40.9464;
+    --color-civ-canvas-eu: 0.115779 0.038134 269.1643;
+    --color-civ-canvas-eg: 0.166011 0.027969 91.255;
+    --color-civ-canvas-gr: 0.172756 0.038306 128.1128;
+    --color-civ-surface-1-cn: 0.176443 0.024099 37.9695;
+    --color-civ-surface-1-eu: 0.159487 0.030135 273.2797;
+    --color-civ-surface-1-eg: 0.200946 0.024254 92.912;
+    --color-civ-surface-1-gr: 0.204329 0.033529 129.5686;
+    --color-civ-surface-2-cn: 0.198535 0.023308 37.8241;
+    --color-civ-surface-2-eu: 0.182236 0.029186 273.9396;
+    --color-civ-surface-2-eg: 0.222683 0.023972 92.9651;
+    --color-civ-surface-2-gr: 0.226829 0.032427 127.0651;
+    --color-civ-surface-3-cn: 0.209062 0.024086 32.5441;
+    --color-civ-surface-3-eu: 0.192809 0.030479 277.3297;
+    --color-civ-surface-3-eg: 0.232717 0.022719 87.9028;
+    --color-civ-surface-3-gr: 0.238601 0.032772 129.1321;
+    --color-civ-surface-4-cn: 0.220453 0.022079 33.4025;
+    --color-civ-surface-4-eu: 0.20536 0.028054 277.3764;
+    --color-civ-surface-4-eg: 0.244184 0.022125 91.8018;
+    --color-civ-surface-4-gr: 0.248173 0.030451 127.6743;
   }
 
   /* TenantProvider stamps this on <html> once the logged-in user's tenant
    (and therefore civilization) is known — see src/contexts/TenantContext.tsx.
    No attribute (logged-out, or a tenant this deployment doesn't map to a
-   cosmology) leaves --civ-hue at its :root/.light fallback.
+   cosmology) leaves the ramp on the `:not([data-civ])` fallback below.
 
    One rule per member of CIVILIZATION_CODES (src/config/civilizations.ts) —
    a civilization with tokens but no rule here silently renders on the
@@ -614,9 +1060,20 @@
    logged-out screen. src/__tests__/civilizationColourContract.test.ts
    enumerates this list from that config and fails if the two disagree.
 
-   TWO ALIASES, NOT ONE. --civ-hue feeds the surface ramp, which Stage 9
+   TWO JOBS, NOT ONE — and since the OKLCH migration only one of them is
+   still an alias. The RAMP is repointed by the `:root[data-civ]` rules just
+   below (five planes at five per-tenant tokens, because OKLCH has no single
+   coordinate the four tenants share); --civ-mark and --civ-ink remain
+   aliases on the plain `[data-civ]` selector, and that split is deliberate
+   and load-bearing — see the note over those rules. The paragraph below is
+   about the ramp, which Stage 9
    measured as a near-neutral floor: at most 6/255 of channel difference
-   between any two tenants, in either theme. --civ-mark is the identity, and
+   between any two tenants, in either theme. (Stage 11 retinted that ramp and
+   this sentence was left standing; Stage 12 also found the metric behind it
+   hue-blind — that ramp reached 5.36-8.47 ΔE00, and today's reaches 5.46-20.87.
+   The sentence is kept because the ARGUMENT below it does not depend on it:
+   two aliases are needed because the ramp and the mark are different jobs,
+   however loud either one is.) --civ-mark is the identity, and
    until Stage 10 it had exactly one consumer — a 12px dot on the dashboard —
    reached by naming --color-civ-mark-cn directly. The masthead needs it in
    three places (expanded lockup, collapsed rail, mobile chip) and none of
@@ -626,24 +1083,131 @@
    rule paints an identity dot with no colour at all, so the contract test
    holds both aliases per prefix, not just the hue. */
   [data-civ='cn'] {
-    --civ-hue: var(--color-civ-hue-cn);
     --civ-mark: var(--color-civ-mark-cn);
     --civ-ink: var(--color-civ-ink-cn);
   }
   [data-civ='eu'] {
-    --civ-hue: var(--color-civ-hue-eu);
     --civ-mark: var(--color-civ-mark-eu);
     --civ-ink: var(--color-civ-ink-eu);
   }
   [data-civ='eg'] {
-    --civ-hue: var(--color-civ-hue-eg);
     --civ-mark: var(--color-civ-mark-eg);
     --civ-ink: var(--color-civ-ink-eg);
   }
   [data-civ='gr'] {
-    --civ-hue: var(--color-civ-hue-gr);
     --civ-mark: var(--color-civ-mark-gr);
     --civ-ink: var(--color-civ-ink-gr);
+  }
+
+  /* THE RAMP IS SCOPED TO THE ROOT ELEMENT AND THE MARK IS NOT, AND THAT
+   ASYMMETRY IS THE PRE-OKLCH BEHAVIOUR WRITTEN DOWN.
+
+   While the ramp was `[--civ-hue] 47% 7%` the split cost nothing to state:
+   a custom property's var()s are substituted at the element that DECLARES it,
+   so a nested `data-civ` — app/actors/page.tsx and app/corpus/page.tsx both
+   restamp one per section — re-pointed `--civ-hue` and moved nothing, because
+   `--color-surface-*` had already been substituted up at `:root`. That page's
+   comment records it as measured in Chromium, and the section grounds are
+   built out of `--civ-mark` precisely because the ramp could not be reached.
+
+   OKLCH has no `--civ-hue` to point at: at one HSL saturation/lightness the
+   four tenants' OKLCH L spreads 0.057 and C spreads 0.010, so the ramp is five
+   literals per tenant rather than one number. Declared on plain `[data-civ]`
+   those literals ARE reachable from a nested attribute, and /actors changed on
+   9.8% of its pixels the first time this was tried. `:root[…]` cannot match a
+   nested element, so the ramp is once again root-only.
+
+   The theme still comes for free: `var(--color-civ-canvas-cn)` is substituted
+   at `:root`, which is the element `.light` sits on, so the light block's
+   redeclaration of those per-tenant tokens is what a light screen resolves —
+   the same mechanism `--color-civ-mark-*` has always used. */
+  :root[data-civ='cn'] {
+    --color-canvas: var(--color-civ-canvas-cn);
+    --color-surface-1: var(--color-civ-surface-1-cn);
+    --color-surface-2: var(--color-civ-surface-2-cn);
+    --color-surface-3: var(--color-civ-surface-3-cn);
+    --color-surface-4: var(--color-civ-surface-4-cn);
+  }
+  :root[data-civ='eu'] {
+    --color-canvas: var(--color-civ-canvas-eu);
+    --color-surface-1: var(--color-civ-surface-1-eu);
+    --color-surface-2: var(--color-civ-surface-2-eu);
+    --color-surface-3: var(--color-civ-surface-3-eu);
+    --color-surface-4: var(--color-civ-surface-4-eu);
+  }
+  :root[data-civ='eg'] {
+    --color-canvas: var(--color-civ-canvas-eg);
+    --color-surface-1: var(--color-civ-surface-1-eg);
+    --color-surface-2: var(--color-civ-surface-2-eg);
+    --color-surface-3: var(--color-civ-surface-3-eg);
+    --color-surface-4: var(--color-civ-surface-4-eg);
+  }
+  :root[data-civ='gr'] {
+    --color-canvas: var(--color-civ-canvas-gr);
+    --color-surface-1: var(--color-civ-surface-1-gr);
+    --color-surface-2: var(--color-civ-surface-2-gr);
+    --color-surface-3: var(--color-civ-surface-3-gr);
+    --color-surface-4: var(--color-civ-surface-4-gr);
+  }
+
+  /* NO COSMOLOGY: the ramp as it stood before Stage 11 tinted it, restored
+   verbatim for the one state that has no tenant to be.
+
+   WHY THIS EXISTS AT ALL. Before Stage 11 the fallback was a *value* —
+   --civ-hue: 240 — and it was believed to work because at 13% saturation no
+   hue was visible, so "the neutral branch" and "some tenant's branch" were
+   the same pixels.
+
+   THAT BELIEF DID NOT SURVIVE BEING MEASURED PROPERLY (Stage 12). It came
+   from max-channel, which is nearly blind to a hue-only difference. In
+   CIEDE2000, on the old dark ramp, the 240° fallback was 5.36-9.40 from
+   Greek and 4.26-7.27 from Egyptian — plainly a different colour, on every
+   logged-out screen, for as long as that fallback stood. This block was
+   written to fix a defect Stage 11 was thought to have introduced; it turns
+   out to fix one that was already shipping, in a quieter form. Nothing about
+   what it does changes.
+
+   At the saturations the ramp now carries, 240° is a deep
+   blue-violet 8° from European's 232°: a logged-out screen would have read
+   as the European tenant. That is the GREEK bug — a cosmology rendering as
+   another screen's colour — with the two ends swapped, and the same
+   argument the --civ-mark fallback already makes applies here: grey says
+   "no civilization", which is the true statement.
+
+   WHY A SELECTOR AND NOT A TOKEN. Every plane in the ramp is its own colour,
+   so neutralising through one alias would have needed five aliases, or a
+   calc() the contract tests' parser cannot resolve. These two blocks say the
+   same thing in five declarations each and leave the tinted branch above
+   readable as the normal case.
+
+   (When this was written the ramp was `[--civ-hue] S% L%` and the
+   sentence gave the saturations as "47/37/33/30 dark, 100/86/60/46 light".
+   The light half of that list was already wrong — the block declares
+   100/100/67/55/46 across canvas and surface-1..4 — and after the OKLCH
+   migration there is no saturation in the file to enumerate at all, so the
+   figures are dropped rather than corrected into a second thing to keep
+   true. The ARGUMENT never depended on them: one alias cannot neutralise
+   five different colours.)
+
+   THE ORDER AND THE SPECIFICITY ARE BOTH LOAD-BEARING. Both selectors are
+   (0,2,0) and beat plain `:root` / `.light` (0,1,0) regardless of position —
+   which is exactly why the light block must come AFTER the dark one rather
+   than relying on `.light` following `:root` the way the untinted blocks do.
+   Equal specificity, so source order alone decides; swap these two and a
+   logged-out light screen renders the dark ramp. */
+  :root:not([data-civ]) {
+    --color-canvas: 0.141283 0.006557 285.5305;
+    --color-surface-1: 0.174911 0.008207 285.5205;
+    --color-surface-2: 0.194053 0.012017 285.226;
+    --color-surface-3: 0.206869 0.009839 285.5081;
+    --color-surface-4: 0.216114 0.011688 285.3808;
+  }
+  .light:not([data-civ]) {
+    --color-canvas: 1 0 0;
+    --color-surface-1: 0.982679 0.002642 286.3511;
+    --color-surface-2: 0.965001 0.003983 286.3249;
+    --color-surface-3: 0.950257 0.005333 286.2978;
+    --color-surface-4: 0.932432 0.006701 286.2691;
   }
 
   .light {
@@ -653,40 +1217,198 @@
      these at 3.95-4.47:1, under the 4.5:1 AA floor for text. Same fix as
      --color-accent-ink above — same hue, lower lightness, re-measured
      against the tinted background, not the flat swatch. */
-    --color-status-alive: 150 62% 28%; /* was 32%: 3.95:1 → 4.83:1 */
-    --color-status-judging: 20 82% 38%; /* was 42%: 3.99:1 → 4.65:1 */
-    --color-status-disposed: 285 52% 44%;
-    --color-status-reincarnating: 195 85% 31%; /* was 34%: 4.02:1 → 4.63:1 */
-    --color-status-lost: 225 10% 42%;
-    --color-status-settled: 178 55% 29%; /* was 30%: 4.47:1 → 4.70:1 */
-    --color-karma-merit: 150 62% 28%; /* was 32%: 3.95:1 → 4.83:1 */
-    --color-karma-demerit: 0 78% 44%;
-    --color-verdict-passed: 150 62% 28%; /* was 32%: 3.95:1 → 4.83:1 */
-    --color-verdict-failed: 0 78% 44%;
-    --color-verdict-purgatory: 215 78% 42%;
-    --color-verdict-retry: 330 60% 42%;
-    --color-status-success: 150 62% 28%; /* was 32%: 3.95:1 → 4.83:1 */
-    --color-status-error: 0 78% 44%;
-    --color-status-warning: 32 88% 32%; /* was 38%: 3.62:1 → 4.72:1 */
-    --color-status-info: 215 78% 42%;
-    --color-civ-hue-cn: 12;
-    --color-civ-mark-cn: 12 58% 38%;
+    --color-status-alive: 0.496252 0.108981 156.0004; /* was 32%: 3.95:1 → 4.83:1 */
+    --color-status-judging: 0.530328 0.150617 42.248; /* was 42%: 3.99:1 → 4.65:1 */
+    --color-status-disposed: 0.50637 0.187764 316.1446;
+    --color-status-reincarnating: 0.512783 0.096631 227.6554; /* was 34%: 4.02:1 → 4.63:1 */
+    --color-status-lost: 0.510868 0.026414 269.1642;
+    --color-status-settled: 0.507045 0.076416 191.4559; /* was 30%: 4.47:1 → 4.70:1 */
+    --color-karma-merit: 0.496252 0.108981 156.0004; /* was 32%: 3.95:1 → 4.83:1 */
+    --color-karma-demerit: 0.531966 0.205532 27.9789;
+    --color-verdict-passed: 0.496252 0.108981 156.0004; /* was 32%: 3.95:1 → 4.83:1 */
+    --color-verdict-failed: 0.531966 0.205532 27.9789;
+    --color-verdict-purgatory: 0.495652 0.167987 258.581;
+    --color-verdict-retry: 0.508396 0.173048 354.7345;
+    --color-status-success: 0.496252 0.108981 156.0004; /* was 32%: 3.95:1 → 4.83:1 */
+    --color-status-error: 0.531966 0.205532 27.9789;
+    --color-status-warning: 0.520805 0.117971 60.3524; /* was 38%: 3.62:1 → 4.72:1 */
+    --color-status-info: 0.495652 0.167987 258.581;
+    /* 20°, NOT THE 12° DARK USES, AND THIS IS THE ONLY TOKEN IN THE FILE WHOSE
+     HUE DIFFERS BETWEEN THE TWO THEMES. Written out because a silent split
+     between the themes is exactly the kind of thing this file exists to stop
+     someone "tidying up" without knowing what it cost to arrive at.
+
+     STAGE 13 TINTED THE LIGHT PAGE GROUND AND CHINESE CAME OUT PINK. At
+     L 96.5 the ground is `hsl(12 100% 96.5%)` = rgb(255, 241, 237), whose Lab
+     is a* +4.03 / b* +3.61 — a* leading b*, which is the definition of the
+     pink region, and "pale red" has a loaded name in a way that "pale blue"
+     (European) and "pale yellow" (Egyptian) do not. Reviewed on screen and
+     rejected: over 63% of the pixels it does not read as a warm neutral, it
+     reads as a colour with an opinion.
+
+     THE FIX HAD TO BE A HUE MOVE AND NOT A CHROMA MOVE, AND THAT WAS MEASURED
+     RATHER THAN PREFERRED. Chinese already carries the LOWEST chroma of the
+     four grounds (5.41 against European 7.75, Egyptian 6.84, Greek 9.60), so
+     "it is too loud" was never the true complaint. Turning it down anyway
+     costs the card step: light `--color-canvas` and `--color-surface-1` sit
+     1.5 lightness points apart and the rest of that step is carried by
+     chroma, so dropping this tenant's ground to S 45% takes canvas ->
+     surface-1 from 2.66 to 1.14 ΔE00 — under the rung at which a flat-field
+     difference is visible at all. Cards would stop floating, on the one
+     cosmology, in light mode only. At 20° the same step measures 2.40.
+
+     WHAT 20° COSTS, SAID PLAINLY: THE PAIR THAT WAS ALREADY THE CLOSEST.
+     Rotating toward Egyptian's 44° narrows every light plane between those
+     two — canvas 7.21 -> 5.62, surface-1 4.11 -> 3.30, surface-2..4
+     5.53/5.85/5.55 -> 4.88/5.68/4.90. All above `PERCEPTIBLE_AT_A_GLANCE`,
+     and the per-pair figure `civilizationColourContract` actually pins is the
+     widest plane, 9.91 dark and 5.68 light. It is still a real loss and 20°
+     is where it stops: 24° takes surface-1 to 2.47 and 28° takes the canvas
+     to 3.99, at which point the two grounds are one colour with a note.
+
+     AND THE OBVIOUS OTHER DIRECTION IS WRONG, MEASURED. Rotating AWAY from
+     Egyptian — 12° -> 0° or 356° — was tried first because it buys separation
+     (canvas 7.21 -> 10.20/10.58). It makes the defect worse: a* climbs to
+     +6.07/+6.24 while b* falls to +2.19/+1.71, i.e. it moves the ground
+     further INTO the pink region and raises its chroma to 6.47. More
+     separation, more pink. The axis that names this defect is a* against b*,
+     not distance from another tenant.
+
+     DARK IS DELIBERATELY LEFT AT 12°. The complaint is light-only — at
+     L 4% the same hue is oxblood, not pink — and dark's Chinese/Egyptian pair
+     is already the narrowest in that theme at 6.04 ΔE00, so importing this
+     rotation there would spend the pair for nothing. `--color-civ-hue-*` is
+     declared per theme (this block and `:root`), which is what makes a
+     theme-local answer expressible at all. */
+    --color-civ-hue-cn: 20;
+    /* Mark and ink follow the hue because they are pinned to it, by name:
+     `civilizationColourContract` ("the mark and hue tokens agree on the hue")
+     and `civIdentityInkContract` ("ink, mark and hue agree on the hue"), whose
+     comment gives the reason — an ink on a different hue is a fifth colour,
+     not the same identity made readable. `lib/chart-colors.ts`'s light
+     `CIVILIZATION_COLORS.CN_DIYU` mirrors the mark and moves with it.
+
+     THE INK DROPPED 35% -> 33% AND THAT IS THE AA MECHANISM WORKING, NOT A
+     SECOND DECISION. The civilization badge is `--civ-ink` over `mark/0.2`
+     over the HOST tenant's surface, and a yellower hue at the same lightness
+     is brighter, so the rotation alone slid the worst of those 16 pairs from
+     4.68:1 to 4.28:1 — under the 4.6 headroom `civIdentityInkContract` keeps
+     precisely so a hue move shows up as a red test rather than a quiet slide
+     toward 4.5. Same fix as every other entry in this block: hold hue and
+     saturation, move lightness away from the canvas. */
+    --color-civ-mark-cn: 0.509043 0.112189 45.2466;
     --color-civ-hue-eu: 232;
-    --color-civ-mark-eu: 232 45% 44%;
+    --color-civ-mark-eu: 0.451923 0.141689 273.0637;
     --color-civ-hue-eg: 44;
-    --color-civ-mark-eg: 44 52% 34%;
+    --color-civ-mark-eg: 0.541259 0.089289 88.9271;
     /* Same hue as dark; the mark drops to 32% lightness for light-mode
      surfaces. Measured 4.97:1 on this tenant's light surface-1,
      hsl(88 14% 98%) -- AA. */
     --color-civ-hue-gr: 88;
-    --color-civ-mark-gr: 88 46% 32%;
+    --color-civ-mark-gr: 0.525615 0.111121 130.5085;
     /* 亮色一半:同 hue/sat,朝白底反方向压暗。见 :root 的度量。 */
-    --color-civ-ink-cn: 12 58% 35%;
-    --color-civ-ink-eu: 232 45% 44%;
-    --color-civ-ink-eg: 44 52% 27%;
-    --color-civ-ink-gr: 88 46% 25%;
+    --color-civ-ink-cn: 0.461515 0.100217 45.869;
+    --color-civ-ink-eu: 0.451923 0.141689 273.0637;
+    --color-civ-ink-eg: 0.461034 0.074993 89.3085;
+    --color-civ-ink-gr: 0.442665 0.091429 130.0839;
+    /* CHINESE IS THE ONE TENANT WHOSE FIVE LIGHT PLANES ARE NOT THE HUE TOKEN
+     ABOVE DESATURATED. Every other tenant's ramp still is. The block on
+     --color-civ-hue-cn explains why the rotation to 20 deg did not settle the
+     complaint; the short form is that at these lightnesses a FAINT red is a
+     blush and only a DEFINITE warm colour is a warm neutral, so the fix had
+     to be CHROMA and the hue had to follow it out of the red. The identity
+     tokens did not move: --color-civ-mark-cn and --color-civ-ink-cn are still
+     the red the hue token names, and still pinned to it by
+     `civilizationColourContract` and `civIdentityInkContract`. The ground is
+     the paper, not the seal.
+
+     The five planes below are Lab hue 65.4..74.3 at Lab chroma 3.54..7.50,
+     against 51.3..55.2 at 2.90..5.27 before. In named-colour terms the ground
+     moved from `seashell` (255,245,238 — Lab hue 64.6, C 5.04, the canonical
+     "off-white with a pink undertone") to `linen` (250,240,230 — Lab hue 74.4,
+     C 6.25); the canvas is now (255,243,231) at hue 74.3, C 7.50. `mistyrose`
+     sits at Lab hue 28.9 for scale: the axis is real, and the ground that was
+     rejected on review sat at 55.1 — BELOW seashell on it.
+
+     THE LIGHTNESS LADDER DID NOT MOVE, AND THAT WAS TESTED RATHER THAN
+     ASSUMED. The round that produced this change was sent to unbind it: to
+     let light-mode lightness vary per tenant so Chinese could sit deeper and
+     read as terracotta instead of blush. Both halves of that plan were
+     measured and both failed.
+
+       - THERE IS ALMOST NO ROOM. --color-ink-tertiary needs a warm background
+         at OKLCH L >= 0.93292 to clear AA, and surface-4 starts at 0.949544,
+         so the whole budget is 0.0166 — 1.7 points of Lab L.
+       - AND THE ROOM IS NOT WORTH ANYTHING. Spending ALL of it moves this
+         canvas 1.33 ΔE00, from (255,243,237) to (249,237,232). The rung at
+         which a flat-field difference is visible at all is around 1.0 and
+         `PERCEPTIBLE_AT_A_GLANCE` is 3.5. A ground that reads as pink at
+         96.6 reads as pink at 94.9; it is just slightly darker pink.
+
+     So the lightness values below are the ones this ramp already had, to
+     within the sRGB rounding the higher chroma forces: the largest move is
+     the canvas at 0.15 of Lab L, and surface-2/-3/-4 move UP by 0.02..0.04.
+     Nothing here is a per-tenant lightness decision, because none was needed.
+
+     CHROMA IS THE AXIS WITH ROOM, AND THE OKLCH MIGRATION IS WHY IT CAN BE
+     REACHED. The 20-degree round ruled a chroma move out — correctly for the
+     direction it tested, which was DOWNWARD ("it is too loud"), and Chinese
+     did carry the lowest chroma of the four grounds. The corollary it did not
+     draw is that being the LOWEST-chroma ground on a red-adjacent hue is the
+     mechanism: at these lightnesses a faint red is a blush and only a
+     definite warm colour is a warm neutral. Raising it was never tried. In
+     HSL it was also barely expressible — chroma there is c = S x min(L, 1-L),
+     so "more colour" and "more lightness" are one dial. In OKLCH C is its own
+     coordinate, which is exactly the road `7db2c6e` was paving.
+
+     WHAT IT COST: the Chinese/Egyptian pair, again, and it was already the
+     one the 20-degree rotation was spending. Per plane it reads
+     canvas 3.74 / surface-1 2.56 / surface-2 4.16 / surface-3 4.66 /
+     surface-4 4.18, against 5.62 / 3.30 / 4.88 / 5.68 / 4.90. The figure
+     `civilizationColourContract` pins is the pair's WIDEST plane: 4.66, down
+     from 5.68, against a floor of 3.5.
+
+     THE CARD PLANE IS THE WORST OF THOSE AND THE TRADE THERE IS GEOMETRIC.
+     surface-1 falls from 3.30 to 2.56, and searching that plane for the value
+     that MAXIMISES Chinese/Egyptian separation subject to staying out of the
+     blush wedge returns 2.57 — so 3.30 was not available at any hue this
+     ground may now occupy. It was being bought with the pinkness. Both
+     figures are under `PERCEPTIBLE_AT_A_GLANCE` and both always were: the
+     card plane is the least tinted by design, and the mark carries the
+     distinction there, which is the argument `MARK_LEAD_MARGIN` already makes
+     (the Chinese/Egyptian lead is 15.25, up from 11.60).
+
+     WHAT IT DID NOT COST. No ink token moved, and none needed to. Every one
+     of these five is LOOSER under --color-ink-tertiary than before
+     (4.739:1 at surface-4, was 4.734:1), so `inkOnSurfaceContract`'s BELOW_AA
+     table is still empty and the row that binds the whole 160 is still the
+     one it was: 4.527:1, dark Greek surface-4. The per-plane widest pair is
+     unchanged at every plane (European/Greek throughout) and its max-channel
+     figure on surface-1 RISES from 10 to 12. The card step (canvas ->
+     surface-1) is 3.40, was 2.40. Plane order, mark lead and the badge floor
+     are untouched. */
+    --color-civ-canvas-cn: 0.970313 0.02052 67.5827;
+    --color-civ-canvas-eu: 0.957251 0.020359 276.9584;
+    --color-civ-canvas-eg: 0.985447 0.017905 89.3544;
+    --color-civ-canvas-gr: 0.989183 0.025026 126.531;
+    --color-civ-surface-1-cn: 0.983157 0.010038 58.2203;
+    --color-civ-surface-1-eu: 0.974963 0.01201 281.0864;
+    --color-civ-surface-1-eg: 0.991447 0.009763 87.4695;
+    --color-civ-surface-1-gr: 0.993514 0.014115 128.6196;
+    --color-civ-surface-2-cn: 0.964841 0.018598 62.4573;
+    --color-civ-surface-2-eu: 0.951383 0.017557 279.0574;
+    --color-civ-surface-2-eg: 0.97623 0.015128 90.2333;
+    --color-civ-surface-2-gr: 0.978766 0.021043 127.3776;
+    --color-civ-surface-3-cn: 0.956378 0.02035 62.864;
+    --color-civ-surface-3-eu: 0.942644 0.018936 279.5247;
+    --color-civ-surface-3-eg: 0.96998 0.01641 91.5504;
+    --color-civ-surface-3-gr: 0.971776 0.022686 128.7231;
+    --color-civ-surface-4-cn: 0.949816 0.018672 62.4521;
+    --color-civ-surface-4-eu: 0.936301 0.017629 279.0515;
+    --color-civ-surface-4-eg: 0.961245 0.015184 90.2353;
+    --color-civ-surface-4-gr: 0.963792 0.021123 127.3828;
     /* 亮色的中性 ink。白底上 4.66:1;暗色那条是 5.37:1。 */
-    --civ-ink: 215 8% 43%;
+    --civ-ink: 0.528745 0.017896 257.2359;
   }
 }
 
@@ -780,7 +1502,7 @@ html.theme-switching *::after {
    the rows under it, which is the exact harm this is here to report. */
 @keyframes row-changed {
   from {
-    background-color: hsl(var(--color-accent) / 0.22);
+    background-color: oklch(var(--color-accent) / 0.22);
   }
   to {
     background-color: transparent;
@@ -800,9 +1522,9 @@ html.theme-switching *::after {
 
 @layer base {
   body {
-    @apply bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))];
-    color: hsl(var(--color-ink));
-    background: hsl(var(--color-canvas));
+    @apply bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))];
+    color: oklch(var(--color-ink));
+    background: oklch(var(--color-canvas));
   }
   /* The default border colour, and why this selector list is longer than `*`.
      Tailwind v4's upgrade adds its own compatibility rule for this —
@@ -820,7 +1542,7 @@ html.theme-switching *::after {
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: hsl(var(--color-hairline));
+    border-color: oklch(var(--color-hairline));
   }
   /* hover 用 accent-ink,不是 accent。实测(2026-09-04)浅色下
      `--color-accent` 在 canvas 上是 2.13:1 —— 连非文本的 3:1 下限都不过,
@@ -830,13 +1552,13 @@ html.theme-switching *::after {
      上方 --color-accent-ink 的说明本来就写着「任何把品牌色当文本渲染的
      必须用这个」,而这里是全应用的 anchor 规则,是那句话最大的适用点。*/
   a {
-    @apply text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] transition-colors duration-state;
+    @apply text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] transition-colors duration-state;
   }
   button {
     @apply transition-colors duration-state;
   }
   input, select, textarea {
-    @apply bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))];
+    @apply bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))];
   }
 }
 
@@ -897,8 +1619,8 @@ html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
 
 /* React Flow Controls Dark Mode Override */
 .react-flow__controls {
-  background: hsl(var(--color-surface-1)) !important;
-  border: 1px solid hsl(var(--color-hairline)) !important;
+  background: oklch(var(--color-surface-1)) !important;
+  border: 1px solid oklch(var(--color-hairline)) !important;
 /* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
      system, and then handed it the one radius the system forbids
      (tailwind.config.js zeroes every step except `full` and `focus`). */
@@ -907,13 +1629,13 @@ html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
 }
 
 .react-flow__controls-button {
-  background: hsl(var(--color-surface-1)) !important;
-  border-bottom: 1px solid hsl(var(--color-hairline)) !important;
-  fill: hsl(var(--color-ink-muted)) !important;
+  background: oklch(var(--color-surface-1)) !important;
+  border-bottom: 1px solid oklch(var(--color-hairline)) !important;
+  fill: oklch(var(--color-ink-muted)) !important;
 }
 
 .react-flow__controls-button:hover {
-  background: hsl(var(--color-surface-2)) !important;
+  background: oklch(var(--color-surface-2)) !important;
 }
 
 .react-flow__controls-button:last-child {
@@ -921,15 +1643,15 @@ html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
 }
 
 .react-flow__controls-button svg {
-  fill: hsl(var(--color-ink-muted)) !important;
+  fill: oklch(var(--color-ink-muted)) !important;
   max-width: 14px !important;
   max-height: 14px !important;
 }
 
 /* React Flow minimap dark mode */
 .react-flow__minimap {
-  background: hsl(var(--color-surface-1)) !important;
-  border: 1px solid hsl(var(--color-hairline)) !important;
+  background: oklch(var(--color-surface-1)) !important;
+  border: 1px solid oklch(var(--color-hairline)) !important;
 /* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
      system, and then handed it the one radius the system forbids
      (tailwind.config.js zeroes every step except `full` and `focus`). */
@@ -937,12 +1659,12 @@ html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
 }
 
 .react-flow__minimap-mask {
-  fill: hsl(var(--color-surface-3) / 0.8) !important;
+  fill: oklch(var(--color-surface-3) / 0.8) !important;
 }
 
 /* React Flow background dots */
 .react-flow__background circle {
-  fill: hsl(var(--color-hairline)) !important;
+  fill: oklch(var(--color-hairline)) !important;
 }
 /* ── Keyboard focus ──────────────────────────────────────────────────────
    Nothing in the app defined a focus style, while 69 uses of the Tailwind
@@ -962,7 +1684,7 @@ html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
    `!important`, and which token it names — are held by
    src/__tests__/statusTokenLayering.test.ts. */
 :focus-visible {
-  outline: 2px solid hsl(var(--color-focus)) !important;
+  outline: 2px solid oklch(var(--color-focus)) !important;
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -988,16 +1710,18 @@ select:focus-visible {
 
 #nprogress .bar {
   position: fixed;
-  /* Matches the `progress` step of the named z scale in tailwind.config.js —
-     above the sticky masthead, below dialogs and drawers. The literal is
-     unavoidable here (this is raw CSS, not a utility class); the comment is
-     what keeps the two from drifting. */
+  /* Matches the `progress` step of the named z scale in this file's `@theme`
+     block (`--z-index-progress`) — above the sticky masthead
+     (`--z-index-masthead`), below dialogs and drawers. There is no
+     `tailwind.config.js` any more, which is where this comment used to point.
+     The literal is unavoidable here (this is raw CSS, not a utility class);
+     the comment is what keeps the two from drifting. */
   z-index: 60;
   top: 0;
   left: 0;
   width: 100%;
   height: 2px;
-  background: hsl(var(--color-accent));
+  background: oklch(var(--color-accent));
 }
 
 #nprogress .peg {
@@ -1008,7 +1732,7 @@ select:focus-visible {
   height: 100%;
   opacity: 1;
   transform: rotate(3deg) translate(0, -4px);
-  box-shadow: 0 0 10px hsl(var(--color-accent)), 0 0 5px hsl(var(--color-accent));
+  box-shadow: 0 0 10px oklch(var(--color-accent)), 0 0 5px oklch(var(--color-accent));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1061,7 +1785,7 @@ select:focus-visible {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-toast, 99999);
+  z-index: var(--z-index-toast);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1078,10 +1802,10 @@ select:focus-visible {
   padding: 14px 16px;
   /* 0, like every other step in the table. */
   border-radius: 0;
-  border: 1px solid hsl(var(--toast-accent) / 0.4);
-  border-left: 3px solid hsl(var(--toast-accent));
-  background: hsl(var(--color-surface-1));
-  color: hsl(var(--color-ink));
+  border: 1px solid oklch(var(--toast-accent) / 0.4);
+  border-left: 3px solid oklch(var(--toast-accent));
+  background: oklch(var(--color-surface-1));
+  color: oklch(var(--color-ink));
   /* The tokens, not a fourth spelling. `settle` is the tier for something
      arriving on screen, and `enter` is the curve for arriving. */
   animation: toast-in var(--transition-duration-settle) var(--ease-enter);
@@ -1103,9 +1827,9 @@ select:focus-visible {
   border-radius: 9999px;
   /* 10%, not 20%: the same badge-fill AA floor as the className-based badges
      (a 16% tint of --bad measured 4.37:1, below AA). */
-  background: hsl(var(--toast-accent) / 0.1);
-  color: hsl(var(--toast-accent));
-  border: 1px solid hsl(var(--toast-accent) / 0.35);
+  background: oklch(var(--toast-accent) / 0.1);
+  color: oklch(var(--toast-accent));
+  border: 1px solid oklch(var(--toast-accent) / 0.35);
   font-size: 11px;
   font-weight: bold;
 }
@@ -1125,7 +1849,7 @@ select:focus-visible {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: hsl(var(--color-ink));
+  color: oklch(var(--color-ink));
   opacity: 0.5;
   font-size: 16px;
   padding: 0;

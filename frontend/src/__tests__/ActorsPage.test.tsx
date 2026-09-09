@@ -28,6 +28,22 @@ import { render, screen, waitFor, within, fireEvent } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ActorsPage from "@/app/actors/page";
 import { actorsApi } from "@soulledger/core/api";
+import {
+  CIVILIZATION_OPTIONS,
+  CIVILIZATION_SHORT_CODES,
+} from "@soulledger/core/config/civilizations";
+import {
+  CIV_PREFIXES,
+  THEMES,
+  TOKENS_BY_THEME,
+  compositeOver,
+  deltaE00Rgb,
+  oklchTripleToRgb,
+  readCivAttrRules,
+  resolveRampForCiv,
+  type Rgb,
+  type ThemeName,
+} from "./support/globalsCssTokens";
 
 jest.mock("@soulledger/core/api", () => ({
   actorsApi: { list: jest.fn() },
@@ -351,10 +367,205 @@ describe("enum display", () => {
     // Same cap as src/__tests__/dataGridToneContract.test.ts, applied to the
     // badges this page rolls by hand instead of through the shared grid.
     const html = container.innerHTML;
-    const tints = [...html.matchAll(/bg-\[hsl\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)];
+    const tints = [...html.matchAll(/bg-\[oklch\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)];
     expect(tints.length).toBeGreaterThan(0);
     for (const [, alpha] of tints) {
       expect(Number(alpha)).toBeLessThanOrEqual(0.1);
     }
+  });
+});
+
+// ── Civilization ground ──────────────────────────────────────────────
+
+/**
+ * THE DEFECT THIS BLOCK EXISTS FOR. The whole page is four civilization
+ * accordions, and until this change every one of them rendered in the logged-in
+ * tenant's colours. The section carried `data-civilization={civ}` — the full
+ * member, `EGYPTIAN` — and `app/globals.css` has **zero** rules matching that
+ * attribute. It reads exactly like a style hook and is a test anchor;
+ * `app/corpus/page.tsx` carries both it and `data-civ`, and only the second one
+ * paints.
+ *
+ * WHAT IS BEING PINNED, and why it is not "the attribute is present". Stamping
+ * `data-civ` is necessary and nowhere near sufficient:
+ *
+ *   - A `[data-civ='xx']` rule has to exist for that prefix, and it has to
+ *     alias `--civ-mark`. A civilization with tokens but no rule renders on the
+ *     neutral grey fallback while looking, in the stylesheet, fully wired — the
+ *     way GREEK shipped invisible once already.
+ *   - The class list has to CONSUME the alias. `data-civ` on its own repoints
+ *     three custom properties and paints nothing.
+ *   - The four resulting grounds have to be far enough apart to be told apart,
+ *     measured in the space the eye reads.
+ *
+ * MEASURED IN ΔE00, NOT IN CHANNEL DELTAS. The same four grounds come out at
+ * 4-8/255 on max-channel, which reads as "basically identical" on that scale
+ * and is simply wrong: max-channel is nearly blind to a hue-only difference,
+ * and two reviews in this repository were misled by it before `deltaE00Rgb`
+ * landed (86cac4a). 3.5 is the "perceptible at a glance" rung of the published
+ * CIEDE2000 ladder — the same number, and the same derivation,
+ * `civilizationColourContract` uses for the surface ramp. It is re-declared
+ * here rather than imported because pulling an export out of another
+ * `.test.ts` would make jest run that file's cases a second time.
+ *
+ * WHY `--color-surface-1` IS THE BACKDROP. `PageSection` renders
+ * `bg-[oklch(var(--color-surface-1))]` and the section sits directly inside it.
+ * That backdrop is the HOST tenant's, not the section's: restamping `data-civ`
+ * on a descendant does not move `--color-surface-*`, because a custom
+ * property's `var()`s are substituted at the element that declares it and those
+ * are declared on `:root`. So every host tenant is measured, not just one.
+ */
+const PERCEPTIBLE_AT_A_GLANCE = 3.5;
+
+/** One principal per civilization — the four accordions, nothing else. */
+function everyCivilizationRoster(): ActorFixture[] {
+  return CIVILIZATION_OPTIONS.map((civ) => principal(`${civ}_PRINCIPAL`, civ));
+}
+
+async function renderEveryCivilization(): Promise<HTMLElement> {
+  mockedList.mockResolvedValue({ data: { results: everyCivilizationRoster() } });
+  const { container } = renderPage();
+  await waitFor(() =>
+    expect(container.querySelectorAll("[data-civilization]")).toHaveLength(
+      CIVILIZATION_OPTIONS.length
+    )
+  );
+  return container;
+}
+
+function sectionsByCivilization(container: HTMLElement): Map<string, HTMLElement> {
+  const out = new Map<string, HTMLElement>();
+  for (const el of container.querySelectorAll<HTMLElement>("[data-civilization]")) {
+    out.set(el.getAttribute("data-civilization") ?? "", el);
+  }
+  return out;
+}
+
+/**
+ * The `--civ-mark` tint alpha this section's class list actually asks for, read
+ * off the rendered DOM rather than restated here. Delete the class and this
+ * throws; change the number and every ΔE00 below moves with it.
+ */
+function groundAlpha(section: HTMLElement): number {
+  const hits = [
+    ...(section.getAttribute("class") ?? "").matchAll(
+      /bg-\[oklch\(var\(--civ-mark\)\/([\d.]+)\)\]/g
+    ),
+  ];
+  if (hits.length !== 1) {
+    throw new Error(
+      `Expected exactly one \`bg-[oklch(var(--civ-mark)/α)]\` on the ` +
+        `${section.getAttribute("data-civilization")} section, found ${hits.length}: ` +
+        `${section.getAttribute("class")}`
+    );
+  }
+  return Number(hits[0][1]);
+}
+
+/** What that section's ground rasterises to, on one host tenant, in one theme. */
+function groundRgb(theme: ThemeName, hostPrefix: string, section: HTMLElement): Rgb {
+  const civPrefix = section.getAttribute("data-civ");
+  if (!civPrefix) {
+    throw new Error(
+      `The ${section.getAttribute("data-civilization")} section carries no ` +
+        `\`data-civ\`, so nothing repoints --civ-mark and its ground falls to ` +
+        `the neutral grey fallback.`
+    );
+  }
+  const mark = TOKENS_BY_THEME[theme][`--color-civ-mark-${civPrefix}`];
+  if (mark === undefined) {
+    throw new Error(`No \`--color-civ-mark-${civPrefix}\` in the ${theme} tokens.`);
+  }
+  const backdrop = resolveRampForCiv(theme, hostPrefix, "--color-surface-1");
+  return compositeOver(
+    oklchTripleToRgb(mark),
+    oklchTripleToRgb(backdrop),
+    groundAlpha(section)
+  );
+}
+
+describe("each civilization section gets its own ground", () => {
+  it("stamps the prefix globals.css keys off, one per civilization, all distinct", async () => {
+    const container = await renderEveryCivilization();
+    const sections = sectionsByCivilization(container);
+
+    expect([...sections.keys()].sort()).toEqual([...CIVILIZATION_OPTIONS].sort());
+
+    const stamped = CIVILIZATION_OPTIONS.map((civ) =>
+      sections.get(civ)!.getAttribute("data-civ")
+    );
+    // Each section's OWN prefix — not merely "some prefix". A page that stamped
+    // the logged-in tenant's code on all four would sail through a presence
+    // check and paint one colour.
+    expect(stamped).toEqual(CIVILIZATION_OPTIONS.map((civ) => CIVILIZATION_SHORT_CODES[civ]));
+    expect(new Set(stamped).size).toBe(CIVILIZATION_OPTIONS.length);
+    expect([...stamped].sort()).toEqual([...CIV_PREFIXES].sort());
+  });
+
+  it("stamps a prefix globals.css actually aliases --civ-mark for", async () => {
+    const container = await renderEveryCivilization();
+    const rules = readCivAttrRules();
+
+    for (const section of sectionsByCivilization(container).values()) {
+      const prefix = section.getAttribute("data-civ")!;
+      // A prefix with no rule, or a rule that omits the mark, paints the
+      // neutral grey fallback — identical on all four, and silent.
+      expect(rules[prefix]?.mark).toBe(`--color-civ-mark-${prefix}`);
+    }
+  });
+
+  it("draws the rule and the ground off that alias, not off a surface token", async () => {
+    const container = await renderEveryCivilization();
+
+    for (const section of sectionsByCivilization(container).values()) {
+      const classes = section.getAttribute("class") ?? "";
+      // The 3px civilization rule, same construction as app/corpus/page.tsx.
+      expect(classes).toContain("border-t-3");
+      expect(classes).toContain("border-[oklch(var(--civ-mark))]");
+      // ABSENCE, not just presence: a `--color-surface-*` ground is the same
+      // colour on all four sections and would look entirely deliberate sitting
+      // next to the alias.
+      expect(classes).not.toMatch(/bg-\[oklch\(var\(--color-surface-\d\)/);
+      expect(groundAlpha(section)).toBeGreaterThan(0);
+    }
+  });
+
+  it("puts the four grounds a perceptible distance apart, on every host tenant and both themes", async () => {
+    const container = await renderEveryCivilization();
+    const sections = [...sectionsByCivilization(container).values()];
+    expect(sections).toHaveLength(CIVILIZATION_OPTIONS.length);
+
+    const tooClose: string[] = [];
+    let narrowest = Infinity;
+    let comparisons = 0;
+
+    for (const theme of THEMES) {
+      for (const host of CIV_PREFIXES) {
+        for (let i = 0; i < sections.length; i += 1) {
+          for (let j = i + 1; j < sections.length; j += 1) {
+            const d = deltaE00Rgb(
+              groundRgb(theme, host, sections[i]),
+              groundRgb(theme, host, sections[j])
+            );
+            comparisons += 1;
+            narrowest = Math.min(narrowest, d);
+            if (d < PERCEPTIBLE_AT_A_GLANCE) {
+              tooClose.push(
+                `${theme} on host ${host}: ` +
+                  `${sections[i].getAttribute("data-civilization")} vs ` +
+                  `${sections[j].getAttribute("data-civilization")} = ${d.toFixed(2)} ΔE00`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // A floor under the SUBJECT SET, not just under the result: an empty
+    // comparison list is the state in which this whole block passes over
+    // nothing examined.
+    expect(comparisons).toBe(THEMES.length * CIV_PREFIXES.length * 6);
+    expect(tooClose).toEqual([]);
+    expect(narrowest).toBeGreaterThanOrEqual(PERCEPTIBLE_AT_A_GLANCE);
   });
 });

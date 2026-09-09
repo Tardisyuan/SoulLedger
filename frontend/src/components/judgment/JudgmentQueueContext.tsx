@@ -55,12 +55,12 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
   ];
 
   return (
-    <section aria-labelledby="queue-identity-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
-      <h3 id="queue-identity-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
+    <section aria-labelledby="queue-identity-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+      <h3 id="queue-identity-heading" className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.identity")}
       </h3>
       <div className="flex items-center gap-2 flex-wrap mb-3">
-        <span className="text-05 font-bold text-[hsl(var(--color-ink))]">{soul.name}</span>
+        <span className="text-05 font-bold text-[oklch(var(--color-ink))]">{soul.name}</span>
         {/* The state badge carries the translated label alone. §4.6: the raw
             enum and its translation side by side ("ALIVE — 存活") is the leak
             this codebase is trying to stop, so the machine value stays in the
@@ -90,15 +90,15 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-03">
         {rows.map((row) => (
           <div key={row.label}>
-            <dt className="text-02 text-[hsl(var(--color-ink-muted))]">{row.label}</dt>
-            <dd className={row.value ? "text-[hsl(var(--color-ink))]" : "text-[hsl(var(--color-ink-tertiary))]"}>
+            <dt className="text-02 text-[oklch(var(--color-ink-muted))]">{row.label}</dt>
+            <dd className={row.value ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-tertiary))]"}>
               {row.value ?? t("judgment.queue.not_recorded")}
             </dd>
           </div>
         ))}
       </dl>
       {soul.description && (
-        <p className="mt-3 text-03 text-[hsl(var(--color-ink-muted))] whitespace-pre-line">{soul.description}</p>
+        <p className="mt-3 text-03 text-[oklch(var(--color-ink-muted))] whitespace-pre-line">{soul.description}</p>
       )}
     </section>
   );
@@ -145,8 +145,8 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
   ];
 
   return (
-    <section aria-labelledby="queue-ledger-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
-      <h3 id="queue-ledger-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
+    <section aria-labelledby="queue-ledger-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+      <h3 id="queue-ledger-heading" className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.ledger")}
       </h3>
       {/* The same three weight sums the soul detail page draws, at the moment
@@ -166,23 +166,23 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
           numeral cannot. */}
       <div className="flex gap-6 mb-4">
         <div>
-          <div className="text-02 text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.merit")}</div>
+          <div className="text-02 text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.merit")}</div>
           <Figure
             field="merit_score"
             quantity={SUMMARY_QUANTITIES.merit_score}
             t={t}
-            className="font-mono tabular-nums text-06 text-[hsl(var(--color-status-success))]"
+            className="font-mono tabular-nums text-06 text-[oklch(var(--color-status-success))]"
           >
             {signed(ledger.merit_score)}
           </Figure>
         </div>
         <div>
-          <div className="text-02 text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.demerit")}</div>
+          <div className="text-02 text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.demerit")}</div>
           <Figure
             field="demerit_score"
             quantity={SUMMARY_QUANTITIES.demerit_score}
             t={t}
-            className="font-mono tabular-nums text-06 text-[hsl(var(--color-status-error))]"
+            className="font-mono tabular-nums text-06 text-[oklch(var(--color-status-error))]"
           >
             {signed(-Math.abs(ledger.demerit_score))}
           </Figure>
@@ -214,13 +214,13 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
             expected — and the safe rendering of "which cosmology is this?" with
             no answer is the one that does not net. */}
         <div>
-          <div className="text-02 text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.balance")}</div>
+          <div className="text-02 text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.balance")}</div>
           {ledger.reading?.kind === "BALANCE" ? (
             <Figure
               field="karmic_balance"
               quantity={SUMMARY_QUANTITIES.karmic_balance}
               t={t}
-              className="font-mono tabular-nums text-06 text-[hsl(var(--color-ink))]"
+              className="font-mono tabular-nums text-06 text-[oklch(var(--color-ink))]"
             >
               {signed(ledger.karmic_balance)}
             </Figure>
@@ -285,8 +285,8 @@ export function PriorCyclesPanel({ cycles }: { cycles: QueuePriorCycle[] }) {
   ];
 
   return (
-    <section aria-labelledby="queue-cycles-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
-      <h3 id="queue-cycles-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
+    <section aria-labelledby="queue-cycles-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+      <h3 id="queue-cycles-heading" className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.prior_cycles")}
       </h3>
       <DataGrid<QueuePriorCycle>
@@ -307,17 +307,17 @@ export function RealmOptionsPanel({ realms }: { realms: QueueRealm[] }) {
   const { t } = useI18n();
 
   return (
-    <section aria-labelledby="queue-realms-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
-      <h3 id="queue-realms-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-1">
+    <section aria-labelledby="queue-realms-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+      <h3 id="queue-realms-heading" className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-1">
         {t("judgment.queue.realm_options")}
       </h3>
       {/* The verdict picks the realm, not the operator — routing is
           DispositionService's job. These are shown so the operator can see
           where each outcome leads before choosing, which is the whole reason
           §4.2 lists "applicable realm options" as decision context. */}
-      <p className="text-02 text-[hsl(var(--color-ink-subtle))] mb-3">{t("judgment.queue.realm_options_hint")}</p>
+      <p className="text-02 text-[oklch(var(--color-ink-subtle))] mb-3">{t("judgment.queue.realm_options_hint")}</p>
       {realms.length === 0 ? (
-        <p className="text-03 text-[hsl(var(--color-ink-tertiary))]">{t("judgment.queue.realms_empty")}</p>
+        <p className="text-03 text-[oklch(var(--color-ink-tertiary))]">{t("judgment.queue.realms_empty")}</p>
       ) : (
         <ul className="flex flex-wrap gap-1.5">
           {realms.map((realm) => (

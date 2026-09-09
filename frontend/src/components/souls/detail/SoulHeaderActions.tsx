@@ -105,7 +105,7 @@ export function SoulHeaderActions({
               <div
                 ref={menuRef}
                 role="menu"
-                className="absolute right-0 mt-1 w-40 z-20 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-lg py-1"
+                className="absolute right-0 mt-1 w-40 z-20 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] shadow-lg py-1"
               >
                 <button
                   ref={(el) => { itemRefs.current[0] = el; }}
@@ -115,7 +115,7 @@ export function SoulHeaderActions({
                     close(true);
                     onDelete();
                   }}
-                  className="w-full text-left px-3 py-1 text-03 text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] transition-colors"
+                  className="w-full text-left px-3 py-1 text-03 text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)] transition-colors"
                 >
                   {t("souls.detail.delete")}
                 </button>

@@ -19,7 +19,7 @@ import {
   SURFACE_TOKENS,
   THEMES,
   TOKENS_BY_THEME,
-  hslTripleToRgb,
+  oklchTripleToRgb,
   resolveRampForCiv,
   resolveTriple,
 } from "./support/globalsCssTokens";
@@ -242,7 +242,7 @@ describe("--color-focus is a token of its own, in both themes", () => {
       expect(declared).toBeDefined();
       expect(declared).not.toContain("var(");
       // Throws unless it is a bare `H S% L%`, so this is an assertion too.
-      expect(hslTripleToRgb(declared)).toHaveLength(3);
+      expect(oklchTripleToRgb(declared)).toHaveLength(3);
     }
   });
 
@@ -255,17 +255,17 @@ describe("--color-focus is a token of its own, in both themes", () => {
       const accent = TOKENS_BY_THEME[theme][ACCENT_TOKEN];
       expect(accent).toBeDefined();
       expect(focus).not.toEqual(accent);
-      expect(hslTripleToRgb(focus)).not.toEqual(hslTripleToRgb(accent));
+      expect(oklchTripleToRgb(focus)).not.toEqual(oklchTripleToRgb(accent));
     }
   });
 });
 
 describe("the focus ring-3 clears WCAG 1.4.11 on every surface it can land on", () => {
   it.each(THEMES)("%s mode: 3:1 against the canvas and every ramp step", (theme) => {
-    const ring = hslTripleToRgb(TOKENS_BY_THEME[theme][FOCUS_TOKEN]);
+    const ring = oklchTripleToRgb(TOKENS_BY_THEME[theme][FOCUS_TOKEN]);
     const measured: string[] = [];
     for (const { label, triple } of ringBackgrounds(theme)) {
-      const ratio = contrastRatio(ring, hslTripleToRgb(triple));
+      const ratio = contrastRatio(ring, oklchTripleToRgb(triple));
       measured.push(label);
       // The label rides along in the message so a failure names the surface.
       expect({ surface: label, ratio: ratio >= NON_TEXT_FLOOR }).toEqual({
@@ -281,9 +281,9 @@ describe("the focus ring-3 clears WCAG 1.4.11 on every surface it can land on", 
     // accent value ever cleared 3:1 everywhere, this goes red and someone gets
     // to re-read the argument — which is still the runtime-clobber one, and
     // survives on its own.
-    const accent = hslTripleToRgb(TOKENS_BY_THEME.light[ACCENT_TOKEN]);
+    const accent = oklchTripleToRgb(TOKENS_BY_THEME.light[ACCENT_TOKEN]);
     const failures = ringBackgrounds("light").filter(
-      ({ triple }) => contrastRatio(accent, hslTripleToRgb(triple)) < NON_TEXT_FLOOR
+      ({ triple }) => contrastRatio(accent, oklchTripleToRgb(triple)) < NON_TEXT_FLOOR
     );
     expect(failures.length).toBe(ringBackgrounds("light").length);
   });

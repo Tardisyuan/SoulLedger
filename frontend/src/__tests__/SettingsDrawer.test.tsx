@@ -3,6 +3,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
+import { HUE_READBACK_SLACK_DEG, hslHueOfOklch } from "./support/globalsCssTokens";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -198,9 +199,29 @@ describe("the accent picker writes the whole accent, not a third of it", () => {
     expect(readToken("--color-accent-ink")).not.toBe("");
     // All three must share the chosen hue — the failure being pinned is
     // exactly "the fill moved and the text did not".
-    const hueOf = (v: string) => v.trim().split(" ")[0];
-    expect(hueOf(readToken("--color-accent-hover"))).toBe(hueOf(readToken("--color-accent")));
-    expect(hueOf(readToken("--color-accent-ink"))).toBe(hueOf(readToken("--color-accent")));
+    //
+    // `v.split(" ")[0]` USED TO BE THE HUE AND IS NOW THE LIGHTNESS. The
+    // drawer wrote `H S% L%`; since the OKLCH migration it writes `L C H`, so
+    // reading component 0 compared the three tokens' LIGHTNESSES — which
+    // differ by design (hover is +8, light-mode ink is solved down for
+    // contrast) and would have reddened this on correct code. Reading
+    // component 2 instead would compare OKLCH hues, which are NOT equal for
+    // the same HSL hue at three lightnesses. `hslHueOfOklch` converts back to
+    // the coordinate `accentTokens` derives in, which is the only reading
+    // under which "all three share the chosen hue" is the same sentence it
+    // was before.
+    const accent = hslHueOfOklch(readToken("--color-accent"));
+    for (const token of ["--color-accent-hover", "--color-accent-ink"]) {
+      expect(Math.abs(hslHueOfOklch(readToken(token)) - accent)).toBeLessThan(
+        HUE_READBACK_SLACK_DEG
+      );
+    }
+    // And the lightnesses are NOT all equal, which is what makes the check
+    // above a hue check rather than a "the three strings are identical" check.
+    const lightnessOf = (v: string) => v.trim().split(" ")[0];
+    expect(lightnessOf(readToken("--color-accent-hover"))).not.toBe(
+      lightnessOf(readToken("--color-accent"))
+    );
   });
 
   it("refuses a custom hex too dark for the black label on primary buttons", () => {

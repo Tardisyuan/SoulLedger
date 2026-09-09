@@ -73,11 +73,11 @@ function SidebarMenuItemInner({
           aria-expanded={expanded}
           className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-3"} h-12 transition-colors ${
             active
-              ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-              : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
+              ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
+              : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
           }`}
         >
-          <span className={`shrink-0 w-8 h-8 flex items-center justify-center ${active ? "bg-[hsl(var(--color-accent))]/20" : ""}`}>
+          <span className={`shrink-0 w-8 h-8 flex items-center justify-center ${active ? "bg-[oklch(var(--color-accent))]/20" : ""}`}>
             {(() => {
               const IconComponent = getIconByName(menu.icon);
               return <IconComponent className="w-5 h-5" />;
@@ -120,11 +120,11 @@ function SidebarMenuItemInner({
       aria-current={active ? "page" : undefined}
       className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 transition-colors ${indent} ${
         active
-          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-          : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
+          ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
+          : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
       }`}
     >
-      <span className={`shrink-0 w-8 h-8 flex items-center justify-center ${active ? "bg-[hsl(var(--color-accent))]/20" : ""}`}>
+      <span className={`shrink-0 w-8 h-8 flex items-center justify-center ${active ? "bg-[oklch(var(--color-accent))]/20" : ""}`}>
         {(() => {
           const IconComponent = getIconByName(menu.icon);
           return <IconComponent className="w-5 h-5" />;

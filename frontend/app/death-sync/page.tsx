@@ -25,12 +25,12 @@ interface DeathRegistration {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
-  ACCEPTED: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
-  PROCESSED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
-  FAILED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
-  DUPLICATE: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
-  PARTIAL: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
+  PENDING: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))]",
+  ACCEPTED: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))]",
+  PROCESSED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
+  FAILED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]",
+  DUPLICATE: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
+  PARTIAL: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))]",
 };
 
 /**
@@ -88,11 +88,11 @@ export default function DeathSyncPage() {
         ) : (
           <div className="space-y-3">
             {registrations.map((reg: DeathRegistration) => (
-              <div key={reg.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
+              <div key={reg.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{reg.source_system}</p>
-                    <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
+                    <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{reg.source_system}</p>
+                    <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
                       {/* IdentifierChip, not dead text. This one is a genuine
                           exception to clauses 1-2 and is registered as such in
                           IDENTIFIER_POLICY_EXCEPTIONS — an external system's
@@ -113,7 +113,7 @@ export default function DeathSyncPage() {
                     className={statusBadgeClass(reg.status)}
                   />
                 </div>
-                <div className="mt-2 flex gap-4 text-02 text-[hsl(var(--color-ink-muted))]">
+                <div className="mt-2 flex gap-4 text-02 text-[oklch(var(--color-ink-muted))]">
                   <span>{t("death_sync.requested") || "Requested"}: {formatDateTime(reg.request_timestamp)}</span>
                   {/* `!= null`,不是真值判断。`processing_duration_ms` 是
                       `number | null`,值为 0 时 `0 && …` 求值为 `0`,而 React
@@ -123,7 +123,7 @@ export default function DeathSyncPage() {
                   )}
                 </div>
                 {reg.error_message && (
-                  <p className="mt-2 text-03 text-[hsl(var(--color-status-error))]">{reg.error_message}</p>
+                  <p className="mt-2 text-03 text-[oklch(var(--color-status-error))]">{reg.error_message}</p>
                 )}
               </div>
             ))}

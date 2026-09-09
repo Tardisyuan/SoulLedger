@@ -7,7 +7,8 @@ import { userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
-import { TextField } from "@/src/components/ui/Field";
+import { Button } from "@/src/components/ui/Button";
+import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 
 interface UserModalProps {
@@ -137,32 +138,46 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     }
   };
 
+  /**
+   * 保存键此前是 `bg-amber-500` —— 和 `SoulEditModal` 里那一个,是同一处缺陷的
+   * 两个副本。
+   *
+   * Tailwind 的 `amber-500` 是 `#f59e0b` = `hsl(38 92% 50%)`,而
+   * `app/globals.css:322` 写的 `--color-accent` 恰好也是 `38 92% 50%` ——
+   * **今天逐字节相同**,所以截图、对比度检查、人眼都看不出问题。
+   *
+   * 使它成为缺陷的是 `app/globals.css:334`:`--color-accent` 是**用户可在运行时
+   * 配置**的。操作员一改强调色,全站主按钮跟着走,而这两个保存键留在琥珀色上 ——
+   * 两个模态框的同一个动作,两种颜色,而没有任何东西会报红:调色板字面量追不上
+   * token,而一个今天相等的值,没有任何断言能钉住它明天不相等。
+   *
+   * 换成 `Button variant="primary"`,顺带拿到手搓 `<svg className="animate-spin">`
+   * 从来没有的 `aria-busy`、以及 190 个手搓按钮里 0 个有的 `active:` 反馈。
+   */
   const footer = (
     <div className="flex gap-3">
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onClose}
         disabled={createMutation.isPending || updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 text-03 transition-colors"
+        className="flex-1"
       >
         {t("common.cancel") || "取消"}
-      </button>
-      <button
+      </Button>
+      <Button
         type="submit"
         form="user-form"
-        disabled={createMutation.isPending || updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] text-03 font-medium text-black transition-colors"
+        variant="primary"
+        loading={createMutation.isPending || updateMutation.isPending}
+        className="flex-1"
       >
-        {createMutation.isPending || updateMutation.isPending ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            {t("common.submitting") || "提交中..."}
-          </span>
-        ) : isEditing ? (t("common.save") || "保存") : (t("common.create") || "创建")}
-      </button>
+        {createMutation.isPending || updateMutation.isPending
+          ? (t("common.submitting") || "提交中...")
+          : isEditing
+            ? (t("common.save") || "保存")
+            : (t("common.create") || "创建")}
+      </Button>
     </div>
   );
 
@@ -224,47 +239,46 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           placeholder={isEditing ? (t("users.password_edit_placeholder") || "留空则不修改") : (t("users.password_placeholder") || "输入密码")}
         />
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={roleId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}</label>
-          <select
-            id={roleId}
-            value={formData.role}
-            onChange={(e) => setFormData({ ...formData, role: e.target.value as CreateUserInput["role"] })}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-          >
-            <option value="ADMIN">{t("users.role_admin") || "管理员"}</option>
-            <option value="JUDGE">{t("users.role_judge") || "审判者"}</option>
-            <option value="GUARDIAN">{t("users.role_guardian") || "守护者"}</option>
-            <option value="VIEWER">{t("users.role_viewer") || "查看者"}</option>
-          </select>
-        </div>
+        {/* 三个字段先前搬到了 `TextField`,另外三个没有 —— 于是同一张表单里
+            两种标签写法(`text-01 uppercase` 与 `text-02`)、两套 focus 语义
+            (`focus-visible:` 与 `focus:`)并排站着。补齐的是剩下三个,不是
+            新的决定。`SelectField` 把四个 `<option>` 换成一个数组;`className`
+            落在 `Field` 的外壳上,所以 `flex-1` 仍旧是那两栏各占一半。 */}
+        <SelectField
+          id={roleId}
+          label={t("users.role") || "角色"}
+          value={formData.role}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value as CreateUserInput["role"] })}
+          disabled={createMutation.isPending || updateMutation.isPending}
+          options={[
+            { value: "ADMIN", label: t("users.role_admin") || "管理员" },
+            { value: "JUDGE", label: t("users.role_judge") || "审判者" },
+            { value: "GUARDIAN", label: t("users.role_guardian") || "守护者" },
+            { value: "VIEWER", label: t("users.role_viewer") || "查看者" },
+          ]}
+        />
 
         <div className="flex gap-3">
-          <div className="flex flex-col gap-1 flex-1">
-            <label htmlFor={firstNameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.first_name") || "名"}</label>
-            <input
-              id={firstNameId}
-              type="text"
-              value={formData.first_name}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-              placeholder={t("users.first_name_placeholder") || "名"}
-            />
-          </div>
-          <div className="flex flex-col gap-1 flex-1">
-            <label htmlFor={lastNameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.last_name") || "姓"}</label>
-            <input
-              id={lastNameId}
-              type="text"
-              value={formData.last_name}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-              placeholder={t("users.last_name_placeholder") || "姓"}
-            />
-          </div>
+          <TextField
+            id={firstNameId}
+            className="flex-1"
+            label={t("users.first_name") || "名"}
+            type="text"
+            value={formData.first_name}
+            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+            disabled={createMutation.isPending || updateMutation.isPending}
+            placeholder={t("users.first_name_placeholder") || "名"}
+          />
+          <TextField
+            id={lastNameId}
+            className="flex-1"
+            label={t("users.last_name") || "姓"}
+            type="text"
+            value={formData.last_name}
+            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            disabled={createMutation.isPending || updateMutation.isPending}
+            placeholder={t("users.last_name_placeholder") || "姓"}
+          />
         </div>
       </form>
     </BaseModal>

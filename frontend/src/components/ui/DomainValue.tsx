@@ -111,7 +111,7 @@ export function DomainEnum({ namespace, value, missingKind = "unrecorded", missi
       title={resolved.raw}
       className={
         resolved.state === "unrecognized"
-          ? `italic text-[hsl(var(--color-ink-subtle))]${className ? ` ${className}` : ""}`
+          ? `italic text-[oklch(var(--color-ink-subtle))]${className ? ` ${className}` : ""}`
           : className
       }
       data-enum-state={resolved.state}
@@ -126,8 +126,8 @@ export function DomainEnum({ namespace, value, missingKind = "unrecorded", missi
 // ---------------------------------------------------------------------------
 
 const NUMBER_TONE_INK: Record<"success" | "error" | "neutral", string> = {
-  success: "text-[hsl(var(--color-status-success))]",
-  error: "text-[hsl(var(--color-status-error))]",
+  success: "text-[oklch(var(--color-status-success))]",
+  error: "text-[oklch(var(--color-status-error))]",
   neutral: MISSING_INK.zero,
 };
 
@@ -198,16 +198,16 @@ export interface IdentifierChipProps {
 
 const IDENTIFIER_VARIANT_CLASSES: Record<"chip" | "inline", string> = {
   chip:
-    "font-mono text-02 px-1.5 py-0.5 bg-[hsl(var(--color-surface-2))] " +
-    "border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] " +
-    "text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors",
+    "font-mono text-02 px-1.5 py-0.5 bg-[oklch(var(--color-surface-2))] " +
+    "border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] " +
+    "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors",
   // No fill at all, so nothing here can approach the 0.1 badge-tint cap
   // (src/__tests__/dataGridToneContract.test.ts). The dotted underline is the
   // only affordance, and it only firms up on hover/focus.
   inline:
-    "font-mono text-inherit underline decoration-dotted decoration-[hsl(var(--color-hairline))] " +
-    "underline-offset-2 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] " +
-    "hover:decoration-[hsl(var(--color-ink-muted))] transition-colors",
+    "font-mono text-inherit underline decoration-dotted decoration-[oklch(var(--color-hairline))] " +
+    "underline-offset-2 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] " +
+    "hover:decoration-[oklch(var(--color-ink-muted))] transition-colors",
 };
 
 /**

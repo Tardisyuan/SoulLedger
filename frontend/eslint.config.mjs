@@ -15,11 +15,15 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 // **限制**,而限制在 Tailwind 里没有表达方式 —— 只能由 lint 施加。
 //
 // 为什么是 `error` 而不是 `warn`:
-//   `npm run lint` 是裸 `eslint .`,没有 `--max-warnings`;ci.yml:98 也只是
-//   `npm run lint`。ESLint 在只有 warning 时退出码是 0。所以一条 warn 级规则
-//   在这个仓库里等于零 —— CI 照常变绿,没有人会去读那几百行黄字。仓库里已经
-//   有一整条记录讲「验证机制会静默失效,失败模式是沉默」;把新守卫设成 warn
-//   就是主动再造一个。
+//   写下这条时,`npm run lint` 还是裸 `eslint .`,没有 `--max-warnings`,而 ESLint
+//   在只有 warning 时退出码是 0 —— 一条 warn 级规则在这个仓库里因此等于零:CI 照常
+//   变绿,没有人会去读那几百行黄字。仓库里已经有一整条记录讲「验证机制会静默失效,
+//   失败模式是沉默」;把新守卫设成 warn 就是主动再造一个。
+//
+//   2026-09-05 那个不对称关掉了(见下面 `--max-warnings 0` 那段),`package.json` 的
+//   `lint` 现在是 `eslint . --max-warnings 0`。**但结论不跟着变**:退出码不再是
+//   理由,而「几百行黄字没人读」仍然是。理由被推翻时要连结论一起重估一次,
+//   这里重估过了,结论保留。
 //
 //   迁移期的出路因此不是降级,而是**基线**:LEGACY 记下每个文件当前的违规
 //   条数,超出即报红,低于也报红(基线过期同样是静默失效的一种)。新文件没有
@@ -49,9 +53,13 @@ const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
 // 没有条目的文件额度是 0 —— 这就是「新文件一律 error」的实现。
 // 第三波迁移完一个文件,把对应数字改小,或整行删掉。
 //
-// 数据搬到了 BASELINE_FILE(35 个文件 / 564 条),因为这份配置本身有 500 行上限,
-// 而那 167 行是**数据**,不是逻辑 —— 读配置的人要读的是规则怎么算,不是逐行的
-// 数字。论证留在这里,理由同样明确:JSON 写不了注释,而上面那段「为什么是 error
+// 数据搬到了 BASELINE_FILE,因为这份配置本身有 500 行上限,而那一大段是**数据**,
+// 不是逻辑 —— 读配置的人要读的是规则怎么算,不是逐行的数字。
+//
+// **这里不复述条目数**:它每迁一个文件就变一次,而注释不会跟着变。此前这里写着
+// 「35 个文件 / 564 条」,而实况是 28 / 94。要数就去数 JSON。
+//
+// 论证留在这里,理由同样明确:JSON 写不了注释,而上面那段「为什么是 error
 // 不是 warn」「为什么低于基线也报红」是这套机制唯一的说明书,搬进数据文件就没了。
 // 所以分界是:**为什么**在 .mjs 里,**多少**在 .json 里。
 //
@@ -81,9 +89,9 @@ const LEGACY_TYPE = /^-?text-(?:xs|sm|base|lg|xl|[2-9]xl)$/;
 //
 // 判据是**方括号里是不是一个长度字面量**,不是有没有方括号:
 //   text-[11px] / text-[0.8rem]        → 红,写死的字号
-//   text-[hsl(var(--color-ink))]       → 绿,这是**颜色**,`text-` 前缀在 Tailwind 里
+//   text-[oklch(var(--color-ink))]       → 绿,这是**颜色**,`text-` 前缀在 Tailwind 里
 //                                        同时管字号和字色,唯一的区分就是括号里的东西
-//   text-[hsl(var(--x)/0.2)]           → 绿,同上
+//   text-[oklch(var(--x)/0.2)]           → 绿,同上
 //
 // 匹配 `chunk` 而不是 `bare`:bare 被 `split("/")[0]` 削过,会把带不透明度的颜色
 // 从斜杠处截断,于是前缀锚不住 —— 所以变体前缀与 `!` 在正则里自己处理。
@@ -138,7 +146,7 @@ const HEX = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b/g;
 
 // 真值颜色的合法例外。这三处不是疏忽,是这些库不吃 CSS 变量:
 //   - @xyflow/react 的 `markerEnd` / edge `style` 走 SVG <marker>,在一个
-//     独立的 defs 树里渲染,`hsl(var(--color-accent))` 在那里解析不到。
+//     独立的 defs 树里渲染,`oklch(var(--color-accent))` 在那里解析不到。
 //   - recharts 的 fill / stroke 是 prop 不是 class,同理。
 //   - SettingsDrawer 的强调色选择器里,十六进制**就是数据**:它被写进
 //     `--color-accent`(见该文件 hexToHsl 调用)。用 token 表达等于自指。
@@ -149,7 +157,7 @@ const HEX_ALLOW = [
   // `app/global-error.tsx` 替换的是**根布局本身** —— 它渲染在
   // `app/layout.tsx` 失败之后,而 `globals.css`(以及里面每一个
   // `--color-*` token)正是根布局 import 的。那里没有 token 可用:
-  // `hsl(var(--color-canvas))` 会解析成空,页面变成默认白底黑字,
+  // `oklch(var(--color-canvas))` 会解析成空,页面变成默认白底黑字,
   // 而这个文件存在的全部理由就是「其它一切都不可用时还能说人话」。
   //
   // 这是唯一一个「真值颜色合法」不是设计取舍、而是**运行时事实**的地方。
@@ -174,9 +182,9 @@ const literalColourAllowed = (file) => HEX_ALLOW.some((p) => file.startsWith(p))
 //
 // 判据是**方括号里有没有字面数字**,不是有没有 `hsl(`:
 //   bg-[hsl(38,92%,50%,0.2)]              → 红,写死的三元组
-//   bg-[hsl(var(--color-civ-mark-cn))]    → 绿,token,主题切换跟着走
-//   shadow-[0_0_0_1px_hsl(var(--x))]      → 绿,同上
-// 这正是 app/ 下几百处 `[hsl(var(--…))]` 的形状 —— 任意值本身不是问题,
+//   bg-[oklch(var(--color-civ-mark-cn))]    → 绿,token,主题切换跟着走
+//   shadow-[0_0_0_1px_oklch(var(--x))]      → 绿,同上
+// 这正是 app/ 下几百处 `[oklch(var(--…))]` 的形状 —— 任意值本身不是问题,
 // **任意值里锁死的颜色**才是。
 //
 // 匹配的是 `chunk`(整个空白分隔的 token)而不是 `bare`。bare 被
@@ -297,9 +305,9 @@ const designSystem = {
     "type-scale": makeGuard("type", (raw, report) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (LEGACY_TYPE.test(bare)) {
-          report(chunk, at, `\`${bare}\` 不在八档字号里。用 text-01…text-08(11/12/13/15/18/22/32/56px),见 tailwind.config.js 的 fontSize`);
+          report(chunk, at, `\`${bare}\` 不在八档字号里。用 text-01…text-08(11/12/13/15/18/22/32/56px),见 app/globals.css 的 @theme`);
         } else if (ARBITRARY_TYPE.test(chunk)) {
-          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-01…text-08(11/12/13/15/18/22/32/56px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[hsl(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
+          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-01…text-08(11/12/13/15/18/22/32/56px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
         }
       }
     }),
@@ -335,7 +343,7 @@ const designSystem = {
           // else if:一个 token 只报一次。具名色阶和任意值互斥,这里主要是把
           // 「两条分支都命中」这种将来才可能出现的形状挡在外面 —— 同一处报两条
           // 红,会让人以为要改两个地方。
-          report(chunk, at, `\`${chunk}\` 把颜色写死在任意值里。方括号绕开了具名色阶,但拿到的还是一个不随主题走的死颜色 —— 浅色模式下它不会变。写成 token:\`bg-[hsl(var(--color-accent))]\`、\`text-[hsl(var(--color-ink))]\`,带不透明度就 \`hsl(var(--color-x)/0.2)\`;真需要真值的地方(xyflow markerEnd / recharts prop / 强调色选择器数据)已在 eslint.config.mjs 的 HEX_ALLOW 里列明`);
+          report(chunk, at, `\`${chunk}\` 把颜色写死在任意值里。方括号绕开了具名色阶,但拿到的还是一个不随主题走的死颜色 —— 浅色模式下它不会变。写成 token:\`bg-[oklch(var(--color-accent))]\`、\`text-[oklch(var(--color-ink))]\`,带不透明度就 \`oklch(var(--color-x)/0.2)\`;真需要真值的地方(xyflow markerEnd / recharts prop / 强调色选择器数据)已在 eslint.config.mjs 的 HEX_ALLOW 里列明`);
         }
       }
     }),
@@ -401,7 +409,7 @@ const designSystem = {
           for (const m of raw.matchAll(HEX)) {
             context.report({
               ...locOf(context, node, m[0], m.index),
-              message: `\`${m[0]}\` 是写死的十六进制颜色。主题切换看不见它。用 hsl(var(--color-…)) 或对应的 Tailwind token;真需要真值的地方(xyflow markerEnd / recharts prop / 强调色选择器数据)已在 eslint.config.mjs 的 HEX_ALLOW 里列明`,
+              message: `\`${m[0]}\` 是写死的十六进制颜色。主题切换看不见它。用 oklch(var(--color-…)) 或对应的 Tailwind token;真需要真值的地方(xyflow markerEnd / recharts prop / 强调色选择器数据)已在 eslint.config.mjs 的 HEX_ALLOW 里列明`,
             });
           }
         };
@@ -627,7 +635,8 @@ const eslintConfig = [
     // 形态的文案、以及 `readingQuantityContract` 自留的过期正则副本。
     //
     // 第七次。`lib/**` 与 `hooks/**` 同样在名单外:`lib/` 下 34 个 `.ts`,其中
-    // `lib/chart-colors.ts` 有约 20 处在用的 `hsl()` 字面量。实证:往
+    // `lib/chart-colors.ts` 有 46 处在用的颜色字面量(写这条时是 `hsl()`,
+    // OKLCH 迁移之后是 `oklch()` —— 同样的颜色、同样的处数)。实证:往
     // `lib/utils.ts` 加 `export const NEW_ACCENT = "#ef4444";` 和一个裸调色板
     // class,`npm run lint` exit 0;同一段 hex 放进 `src/components/ui/Badge.tsx`
     // 就红。规则一直是好的,它只是没被指着那两个目录。

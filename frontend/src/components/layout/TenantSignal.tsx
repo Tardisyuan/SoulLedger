@@ -10,11 +10,32 @@ import {
 
 // ── Which cosmology am I in ─────────────────────────────────────────────
 //
-// The gap this closes: nothing in the persistent frame said which of the four
+// The gap this closed: nothing in the persistent frame said which of the four
 // tenants a screen belonged to. Stage 9 tried to answer it with the surface
 // ramp and the measurement came back at ≤6/255 of channel difference between
-// any two tenants in either theme — a floor, not a signal. The wordmark was
-// the remaining candidate and the argument for it is that it was already
+// any two tenants in either theme — a floor, not a signal.
+//
+// STAGE 11 REOPENED THAT ANSWER AND THIS COMPONENT KEEPS ITS JOB ANYWAY. The
+// ramp now separates tenants by 16-17/255 dark and 10-16/255 light, so the
+// frame does carry the cosmology — but not in words.
+//
+// THE PARENTHESIS THAT USED TO SIT HERE WAS WRONG AND IS WITHDRAWN. It read
+// "but not for every pair (Chinese/Egyptian measures 5-9/255, below what a
+// reader can rely on)". Both the ≤6/255 above and that 5-9/255 are max-channel
+// counts, and max-channel is nearly blind to a hue-only difference — Chinese
+// and Egyptian canvas are (19, 5, 2) and (19, 14, 2), identical in R and B.
+// In CIEDE2000 that pair measures 6.04 dark and 4.11 light, and every one of
+// the six pairs separates in both themes. The ramp does tell all four tenants
+// apart. Nothing about this component's colours changed; the claim about them
+// did, and the argument below never rested on it:
+//
+// four hues cannot be the sole channel for four categories whatever the four
+// hues are, and the ramp being louder — or, as it turns out, having been
+// louder all along than anyone measured — does not change the count. This
+// component still names the cosmology, and that is the load-bearing reason.
+//
+// The wordmark was the remaining candidate and the argument for it is that it
+// was already
 // spending the best position in the app on a constant: "SoulLedger" is
 // identical in all four tenants, so the top-left of every screen was carrying
 // zero bits.
@@ -47,7 +68,7 @@ import {
 // the chip. `--civ-ink` is declared in both themes. The 7px dot keeps the
 // mark: it is a graphical object at 3:1, and it passes.
 //
-// The colour comes from `hsl(var(--civ-mark))`, aliased per tenant by the
+// The colour comes from `oklch(var(--civ-mark))`, aliased per tenant by the
 // `[data-civ]` rules in globals.css exactly as `--civ-hue` is. No variant
 // looks up `--color-civ-mark-cn` by name, so none of them enumerates the four
 // members, and a fifth civilization needs one stylesheet line rather than
@@ -137,7 +158,7 @@ export function TenantSignal({
       aria-hidden="true"
       data-tenant-mark={shortCode}
       className="rounded-full shrink-0"
-      style={{ width: 7, height: 7, background: "hsl(var(--civ-mark))" }}
+      style={{ width: 7, height: 7, background: "oklch(var(--civ-mark))" }}
     />
   );
 
@@ -153,7 +174,7 @@ export function TenantSignal({
         title={civilization}
       >
         {dot}
-        <span className="text-02 leading-tight text-[hsl(var(--color-ink-muted))] truncate">
+        <span className="text-02 leading-tight text-[oklch(var(--color-ink-muted))] truncate">
           {name}
         </span>
       </span>
@@ -171,7 +192,7 @@ export function TenantSignal({
         title={civilization}
         aria-label={name}
         className="font-mono text-01 leading-none uppercase"
-        style={{ color: "hsl(var(--civ-ink))" }}
+        style={{ color: "oklch(var(--civ-ink))" }}
       >
         {shortCode}
       </span>
@@ -183,7 +204,7 @@ export function TenantSignal({
   // It goes left of the breadcrumb, inside the flex-1 region, and NOT in the
   // header's right cluster. That cluster's `shrink-0 whitespace-nowrap` carries
   // a comment recording that when it wrapped it grew past the 64px header and,
-  // the header being `sticky z-40`, the overflow landed on the page and
+  // the header being `sticky z-masthead`, the overflow landed on the page and
   // swallowed clicks — the 创建灵魂 button on /souls was unreachable at 393px
   // for exactly that. A variable-width chip there re-runs that bug.
   //
@@ -199,14 +220,14 @@ export function TenantSignal({
       className="shrink-0 inline-flex items-center justify-center gap-1 rounded-full border px-2 py-0.5"
       style={{
         width: 52,
-        borderColor: "hsl(var(--civ-mark) / 0.4)",
-        background: "hsl(var(--civ-mark) / 0.13)",
+        borderColor: "oklch(var(--civ-mark) / 0.4)",
+        background: "oklch(var(--civ-mark) / 0.13)",
       }}
     >
       {dot}
       <span
         className="font-mono text-01 leading-none uppercase"
-        style={{ color: "hsl(var(--civ-ink))" }}
+        style={{ color: "oklch(var(--civ-ink))" }}
       >
         {shortCode}
       </span>

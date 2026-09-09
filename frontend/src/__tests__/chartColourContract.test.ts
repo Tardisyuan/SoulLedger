@@ -30,9 +30,11 @@
  * CHART_CHROME is the opposite case and worth stating: five of its six entries
  * were already exact token mirrors. Only `tooltipBg` was stranded, by
  * `--color-surface-1` changing from a fixed `240 13% 7%` into the per-tenant
- * `var(--civ-hue) 13% 7%`. A token that varies has no single literal, so that
+ * `[--civ-hue] …`. A token that varies has no single literal, so that
  * entry had to answer a design question; the answer and its premises are pinned
- * at the bottom of this file.
+ * at the bottom of this file. Stage 11 changed which branch it mirrors — the
+ * `:not([data-civ])` ramp rather than a hue value that used to be neutral —
+ * and left the value it carries untouched.
  *
  * Same technique as the sibling file, and the same parser — imported from
  * `./support/globalsCssTokens`, not copied. Same rule too: **both directions**.
@@ -46,13 +48,17 @@ import {
   CIV_PREFIXES,
   LIGHT_EFFECTIVE_TOKENS,
   LIGHT_TOKENS,
+  NO_CIV_TOKENS_BY_THEME,
   ROOT_TOKENS,
   THEMES,
   TOKENS_BY_THEME,
   type ThemeName,
   lastDeclarationOffset,
   literalOfIn,
+  noCivLiteralOfIn,
   readRealmTypes,
+  readCivAttrRules,
+  resolveRampForCiv,
   resolveTriple,
   suffixesOf,
 } from "./support/globalsCssTokens";
@@ -60,6 +66,9 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { CHART_COLORS, type ChartColors } from "@/lib/chart-colors";
+
+/** A bare `L C H` triple, the shape every colour token in globals.css has. */
+const OKLCH_TRIPLE = /^[\d.]+\s+[\d.]+\s+-?[\d.]+$/;
 
 const REALM_TYPES = readRealmTypes();
 
@@ -155,8 +164,20 @@ describe("the parser is looking at something", () => {
   it("resolves a var() token down to a literal triple", () => {
     // The guard for the guard: if this stops substituting, every tooltipBg
     // assertion below compares two strings that both contain `var(`.
-    expect(resolveTriple(ROOT_TOKENS, "--color-surface-1")).toBe("240 13% 7%");
-    expect(resolveTriple(ROOT_TOKENS, "--color-hairline")).toBe("220 8% 18%");
+    //
+    // THE SUBJECT MOVED WITH THE MIGRATION. It used to substitute `--civ-hue`
+    // into `--color-surface-1`, because that is where the one var() in the
+    // ramp lived; the ramp is per-tenant literals now and the indirection that
+    // remains is the tenant's own plane token, which `resolveRampForCiv` reads.
+    // A `:root` plane is a finished triple, so the pin is that it comes back
+    // finished, and the substitution itself is exercised one line down where a
+    // var() still exists.
+    expect(resolveTriple(ROOT_TOKENS, "--color-surface-1")).toMatch(OKLCH_TRIPLE);
+    expect(resolveTriple(ROOT_TOKENS, "--color-hairline")).toMatch(OKLCH_TRIPLE);
+    expect(resolveRampForCiv("dark", CIV_PREFIXES[0], "--color-surface-1")).toMatch(OKLCH_TRIPLE);
+    expect(
+      resolveTriple({ "--a": "var(--b)", "--b": "0.5 0.1 200" }, "--a")
+    ).toBe("0.5 0.1 200");
   });
 
   it("throws rather than returning a half-resolved value", () => {
@@ -169,14 +190,26 @@ describe("the parser is looking at something", () => {
   });
 
   // ── the light side: the premises LIGHT_EFFECTIVE_TOKENS rests on ──────────
-  it("resolves the light surface ramp, which only `:root` gives a hue", () => {
-    // `.light` never redeclares --civ-hue, so resolving --color-surface-1
-    // against the raw `.light` block alone throws on a dangling var(). The
-    // effective map is what a browser would compute, and 240 is the neutral
-    // fallback the ramp inherits.
-    expect(LIGHT_TOKENS["--civ-hue"]).toBeUndefined();
-    expect(() => resolveTriple(LIGHT_TOKENS, "--color-surface-1")).toThrow();
-    expect(resolveTriple(LIGHT_EFFECTIVE_TOKENS, "--color-surface-1")).toBe("240 14% 98%");
+  it("resolves the light surface ramp, which only `:root` completes", () => {
+    // WHY THIS TEST NO LONGER USES A DANGLING var() TO MAKE ITS POINT. It used
+    // to: `.light` never redeclared `--civ-hue`, so resolving the light ramp
+    // against the raw `.light` block threw, and the throw WAS the evidence that
+    // `LIGHT_EFFECTIVE_TOKENS` is not `LIGHT_TOKENS`. `--civ-hue` is gone with
+    // the OKLCH migration and `.light` declares every plane outright, so the
+    // same distinction has to be shown on a token `.light` still stays silent
+    // about — and it must be one, or `LIGHT_EFFECTIVE_TOKENS` would be a
+    // synonym for `LIGHT_TOKENS` and the two maps' whole reason for existing
+    // would be gone. `--color-focus` is declared in both; `--civ-mark` is
+    // declared only in `:root`, which is the case that map exists for.
+    expect(LIGHT_TOKENS["--civ-mark"]).toBeUndefined();
+    expect(ROOT_TOKENS["--civ-mark"]).toMatch(OKLCH_TRIPLE);
+    expect(LIGHT_EFFECTIVE_TOKENS["--civ-mark"]).toBe(ROOT_TOKENS["--civ-mark"]);
+    // And the light ramp itself still resolves, on the effective map, to a
+    // colour rather than to a name.
+    expect(resolveTriple(LIGHT_EFFECTIVE_TOKENS, "--color-surface-1")).toMatch(OKLCH_TRIPLE);
+    expect(resolveTriple(LIGHT_EFFECTIVE_TOKENS, "--color-surface-1")).not.toBe(
+      resolveTriple(ROOT_TOKENS, "--color-surface-1")
+    );
   });
 
   it("`.light` really does win over `:root` for every token it redeclares", () => {
@@ -191,6 +224,31 @@ describe("the parser is looking at something", () => {
       expect(lastDeclarationOffset("\\.light", name)).toBeGreaterThan(
         lastDeclarationOffset(":root", name)
       );
+    }
+  });
+
+  it("the no-cosmology blocks are ordered so the light one wins in light mode", () => {
+    // THE SAME CASCADE CLAIM, ONE SPECIFICITY UP, AND IT NEEDS ITS OWN PIN
+    // BECAUSE THE ONE ABOVE CANNOT SEE IT. `:root:not([data-civ])` and
+    // `.light:not([data-civ])` are BOTH (0,2,0), so unlike the pair above
+    // neither is rescued by being a class selector — only source order decides,
+    // and both outrank plain `.light` wherever they sit. Swap them and a
+    // logged-out light-mode screen paints the dark ramp: black canvas, white
+    // text tokens, every other assertion in this file still green.
+    //
+    // Written against byte offsets rather than against `NO_CIV_TOKENS_BY_THEME`
+    // on purpose. That map spreads the two blocks in the intended order, so it
+    // would report the intended cascade no matter what the file said — a parser
+    // agreeing with itself. Proven by mutation: swapping the two blocks in
+    // globals.css leaves every other pin in this file passing and reddens only
+    // this one.
+    for (const name of Object.keys(NO_CIV_TOKENS_BY_THEME.light).filter(
+      (n) => n.startsWith("--color-surface-") || n === "--color-canvas"
+    )) {
+      const dark = lastDeclarationOffset(":root:not\\(\\[data-civ\\]\\)", name);
+      const light = lastDeclarationOffset("\\.light:not\\(\\[data-civ\\]\\)", name);
+      expect(dark).toBeGreaterThan(-1);
+      expect(light).toBeGreaterThan(dark);
     }
   });
 
@@ -298,37 +356,87 @@ describe("CHART_CHROME mirrors globals.css", () => {
 
   it.each(pins(CHROME_TOKENS))("%s: %s carries its token verbatim", (theme, key) => {
     const chrome = { ...CHART_COLORS[theme].CHART_CHROME } as Record<string, string>;
-    expect(chrome[key]).toBe(literalOfIn(theme, CHROME_TOKENS[key]));
+    // tooltipBg is resolved on the NO-cosmology branch and every other key on
+    // the ordinary one. That is not a special case bolted on to keep a test
+    // green — it is the decision recorded in chart-colors.ts ("the tooltip does
+    // not follow the tenant"), and it is the one key whose token is
+    // tenant-variable, so it is the only key where the two branches differ.
+    const literal = key === "tooltipBg" ? noCivLiteralOfIn : literalOfIn;
+    expect(chrome[key]).toBe(literal(theme, CHROME_TOKENS[key]));
   });
 
   // ── tooltipBg: the premises the "does not follow the tenant" decision rests on
   it("surface-1 is still the tenant-variable token that forced the decision", () => {
-    // If surface-1 ever stops interpolating --civ-hue, tooltipBg is an ordinary
+    // If surface-1 ever stops varying by tenant, tooltipBg is an ordinary
     // literal mirror again and the paragraph arguing the fallback is stale.
-    expect(ROOT_TOKENS["--color-surface-1"]).toContain("var(--civ-hue)");
-    expect(LIGHT_TOKENS["--color-surface-1"]).toContain("var(--civ-hue)");
+    //
+    // THE EVIDENCE MOVED FROM THE DECLARATION TO THE RULES. `toContain(
+    // "[--civ-hue]")` worked because the tenant axis was visible in the
+    // plane's own `:root` declaration. Since the OKLCH migration that
+    // declaration is a finished (and inert) triple and the tenant axis lives
+    // in `:root[data-civ]`, so the same fact is read from there. Stated as
+    // "four tenants, four different colours" as well, which is what the
+    // decision actually rests on — a rule that pointed all four at one token
+    // would satisfy a wiring check and still make tooltipBg a literal mirror.
+    const rules = readCivAttrRules();
+    for (const prefix of CIV_PREFIXES) {
+      expect(rules[prefix].ramp["--color-surface-1"]).toBeDefined();
+    }
+    for (const theme of THEMES) {
+      const perTenant = CIV_PREFIXES.map((civ) =>
+        resolveRampForCiv(theme, civ, "--color-surface-1")
+      );
+      expect(new Set(perTenant).size).toBe(CIV_PREFIXES.length);
+    }
   });
 
-  it("the hue it resolves to is the neutral fallback, not any tenant's", () => {
-    // 240 is what `:root` declares for logged-out screens and tenants this
-    // deployment does not map. If a civilization ever claimed 240, the tooltip
-    // would silently become that tenant's colour while claiming to be neutral.
-    // Checked per theme because `.light` inherits the fallback rather than
-    // restating it — a `.light { --civ-hue: … }` added tomorrow would move the
-    // light tooltip off the neutral branch without touching the dark one.
+  it("the branch it mirrors is the one a screen with no cosmology renders", () => {
+    // WHAT CHANGED IN STAGE 11, AND WHY THIS ASSERTION IS NOT THE OLD ONE
+    // RETUNED. The old pin read `--civ-hue === "240"` and called that the
+    // neutral fallback. It was, while the ramp was near-neutral: 240° at 13%
+    // saturation is the same near-black as every tenant's.
+    //
+    // STAGE 12 WITHDREW THAT LAST CLAUSE. "The same near-black" came from
+    // max-channel, which reads a hue-only difference as almost nothing. In
+    // CIEDE2000, on the old dark ramp, 240° measured 5.36-9.40 from Greek and
+    // 4.26-7.27 from Egyptian — a visible colour, on every logged-out screen,
+    // the whole time. Only European (8° away) was truly indistinguishable
+    // from it. The pin below is unaffected and its motivation is stronger:
+    // 240° was never neutral, Stage 11 only made that impossible to miss.
+    //
+    // At the tinted saturations 240° is a deep blue-violet 8° from European (232°), so
+    // "resolve surface-1 with --civ-hue" stopped naming a neutral colour and
+    // started naming a fifth cosmology nobody declared. globals.css answers it
+    // with a selector instead of a value, and this pins the selector's output.
+    //
+    // The old check is kept as its second half rather than deleted: 240 must
+    // still belong to no civilization, because a cosmology claiming it would
+    // make `:root:not([data-civ])`'s neutral ramp read as that tenant.
     for (const theme of THEMES) {
-      expect(TOKENS_BY_THEME[theme]["--civ-hue"]).toBe("240");
+      expect(NO_CIV_TOKENS_BY_THEME[theme]["--color-surface-1"]).not.toContain("var(");
       for (const prefix of CIV_PREFIXES) {
         expect(TOKENS_BY_THEME[theme][`--color-civ-hue-${prefix}`]).not.toBe("240");
       }
     }
+    // And the two branches really do differ, so this is measuring something:
+    // if the fallback blocks were deleted, `NO_CIV_TOKENS_BY_THEME` would fall
+    // back to the tinted declaration and this file would still be green.
+    expect(noCivLiteralOfIn("dark", "--color-surface-1")).not.toBe(
+      literalOfIn("dark", "--color-surface-1")
+    );
   });
 });
 
 describe("every entry in lib/chart-colors.ts mirrors a declared token", () => {
   it.each(THEMES)("%s: across all five tables, with the exceptions named", (theme) => {
     const tokens = TOKENS_BY_THEME[theme];
-    const declared = new Set(Object.keys(tokens).map((name) => literalOfIn(theme, name)));
+    // Both branches count as declared: `tooltipBg` deliberately mirrors the
+    // no-cosmology ramp (see above), and that literal exists in globals.css
+    // just as much as the tenant-facing one does.
+    const declared = new Set([
+      ...Object.keys(tokens).map((name) => literalOfIn(theme, name)),
+      ...Object.keys(NO_CIV_TOKENS_BY_THEME[theme]).map((name) => noCivLiteralOfIn(theme, name)),
+    ]);
     const unmirrored: string[] = [];
     for (const [table, map] of Object.entries(allMirrors(theme))) {
       for (const [key, value] of Object.entries(map)) {
@@ -423,7 +531,7 @@ describe("no chart picks its own colour", () => {
     // when the datum does not.
     //
     // Matched as any hex literal rather than as that one value, because the
-    // next one to land will not be `#6b7280`. Chart fills cannot be `hsl(var(…))`
+    // next one to land will not be `#6b7280`. Chart fills cannot be `oklch(var(…))`
     // — the dashboard's own comment records that recharts fills do not follow
     // the `.light` cascade, which is why `useChartColors` resolves them in JS —
     // so a literal here is always a colour that escaped the tables above.

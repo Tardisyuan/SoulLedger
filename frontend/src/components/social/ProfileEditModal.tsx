@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { Button } from "@/src/components/ui/Button";
+import { Field, TextAreaField, fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useUpdateProfile } from "@soulledger/core/hooks/useSocial";
 import type { UserProfile } from "@soulledger/core/api";
@@ -42,24 +45,35 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
     );
   }
 
+  /**
+   * The save button's hand-copy of the primary recipe had lost the hover state
+   * outright: `bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent))]`
+   * — the same value on both sides, so the button did not react to the pointer
+   * at all. That is the failure mode of copying a recipe rather than calling
+   * it: the copy is a plausible-looking string and nothing compares it to the
+   * original. `Button variant="primary"` restores hover (accent → accent-hover)
+   * and adds the `active:` nudge and `aria-busy` this never had.
+   */
   const footer = (
     <div className="flex gap-3">
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onClose}
         disabled={updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 text-03 transition-colors"
+        className="flex-1"
       >
         {t("common.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="submit"
         form="profile-edit-form"
-        disabled={updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:opacity-50 text-black text-03 font-medium transition-colors"
+        variant="primary"
+        loading={updateMutation.isPending}
+        className="flex-1"
       >
         {updateMutation.isPending ? (t("common.loading") || "Loading...") : (t("common.save") || "Save")}
-      </button>
+      </Button>
     </div>
   );
 
@@ -71,37 +85,49 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
       footer={footer}
     >
       <form id="profile-edit-form" onSubmit={handleSubmit} className="space-y-4">
-        {/* Bio */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor={bioId} className="text-02 text-[hsl(var(--color-ink-subtle))]">
-            {t("social.bio_label") || "Bio"}
-          </label>
-          <textarea
-            id={bioId}
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            disabled={updateMutation.isPending}
-            rows={3}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors resize-none"
-            placeholder={t("social.bio_placeholder") || "Tell others about yourself…"}
-          />
-        </div>
+        {/* `TextAreaField` brings one behaviour change worth naming: the bio box
+            was `resize-none` and the primitive is `resize-y`. That is the
+            primitive's call, and it is the right one here — a bio is exactly the
+            free-text field someone wants taller. The `rows={3}` starting height
+            is unchanged. */}
+        <TextAreaField
+          id={bioId}
+          label={t("social.bio_label") || "Bio"}
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          disabled={updateMutation.isPending}
+          rows={3}
+          placeholder={t("social.bio_placeholder") || "Tell others about yourself…"}
+        />
 
-        {/* Avatar URL */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor={avatarUrlId} className="text-02 text-[hsl(var(--color-ink-subtle))]">
-            {t("social.avatar_url_label") || "Avatar URL"}
-          </label>
-          <input
-            id={avatarUrlId}
-            type="url"
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-02 font-mono text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-            placeholder="https://…"
-          />
-        </div>
+        {/* NOT `TextField`, and the reason is the monospace.
+         *
+         * `TextField` owns its control's whole `className` — it `Omit`s the prop
+         * so a caller cannot bolt classes onto the input, which is what keeps 42
+         * signatures from growing back. `font-mono` on a URL field is not
+         * decoration though: it is what makes a mistyped character in a pasted
+         * link findable. So this one drops to the render-prop `Field` and
+         * composes `fieldControl()` with the one class it actually needs —
+         * every wiring guarantee (`id`/`htmlFor`, `aria-describedby`,
+         * `aria-invalid`, `role="alert"`) still comes from `Field`.
+         *
+         * Size moves text-02 → text-03: `fieldControl`'s `sm` would give the
+         * smaller type but also tighten the padding to `px-2 py-1`, which would
+         * leave this control visibly shorter than the bio box above it. The
+         * padding is the part that has to match its neighbour. */}
+        <Field id={avatarUrlId} label={t("social.avatar_url_label") || "Avatar URL"}>
+          {(control) => (
+            <input
+              {...control}
+              type="url"
+              value={avatarUrl}
+              onChange={(e) => setAvatarUrl(e.target.value)}
+              disabled={updateMutation.isPending}
+              className={cn(fieldControl(), "font-mono")}
+              placeholder="https://…"
+            />
+          )}
+        </Field>
       </form>
     </BaseModal>
   );

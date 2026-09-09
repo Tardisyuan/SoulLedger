@@ -42,6 +42,12 @@ from .serializers import (
     role_rank,
 )
 
+#: Wrong password-reset codes accepted for one address before the code itself is
+#: thrown away. Five, matching the login limiter's spirit (5 attempts / 15 min,
+#: `LoginView.post`) — the point is that a six-digit code must not be guessable
+#: at whatever rate the network allows, not to pick a clever number.
+MAX_RESET_CODE_ATTEMPTS = 5
+
 # ---------------------------------------------------------------------------
 # User Management ViewSet (Tenant Admin)
 # ---------------------------------------------------------------------------
@@ -649,10 +655,18 @@ def reset_password_request(request):
     email = serializer.validated_data["email"]
 
     # Check if user exists (but always return success for security)
-    try:
-        User.objects.get(email=email)
-    except User.DoesNotExist:
-        # Security: return success even if user doesn't exist
+    #
+    # `.filter().count()`, not `.get()`. `User.email` has no unique constraint
+    # (it is `AbstractUser`'s, and only `username` is unique), so `.get()` raises
+    # `MultipleObjectsReturned` on a duplicate — an uncaught 500. Registration is
+    # `AllowAny`, so anyone could create a second account on someone else's
+    # address and take that address's password reset offline permanently.
+    #
+    # Zero and many are both answered with the same success sentence as one: this
+    # endpoint deliberately does not disclose whether an address is registered,
+    # and "your address is ambiguous" would disclose it.
+    matches = User.objects.filter(email=email).count()
+    if matches != 1:
         return Response({"detail": "验证码已发送到邮箱"})
 
     # Rate limiting: max 3 requests per 5 minutes per email
@@ -704,14 +718,55 @@ def set_new_password(request):
     if cached_code is None:
         return Response({"error": "验证码已过期,请重新获取"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Cap the number of GUESSES, not just the number of codes sent.
+    #
+    # `reset_password_request` above limits sending to 3 per 5 minutes per
+    # address. Nothing limited *checking*: a wrong code returned 400 and left
+    # the code live for its full 5-minute TTL, so the only ceiling on guessing
+    # was `AnonRateThrottle` (60/min) — and DRF keys that on `X-Forwarded-For`
+    # when `NUM_PROXIES` is unset, which it is, so rotating one header reset it.
+    # The code is six digits; an unmetered guesser is the whole attack.
+    #
+    # On the last allowed failure the CODE IS DELETED, not merely rejected.
+    # Counting alone would leave a live code and let the attacker wait out the
+    # counter; deleting forces a new request, which is itself rate-limited.
+    attempts_key = f"pwd_reset_tries:{email}"
+    tries = cache.get(attempts_key, 0)
+    if tries >= MAX_RESET_CODE_ATTEMPTS:
+        cache.delete(f"pwd_reset:{email}")
+        cache.delete(attempts_key)
+        return Response(
+            {"error": "验证码错误次数过多,请重新获取"},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     if cached_code != code:
+        # `timeout` matches the code's own TTL: the counter must outlive the
+        # code it guards, or a guesser could simply wait for the counter to
+        # expire while the code is still valid.
+        cache.set(attempts_key, tries + 1, timeout=300)
         return Response({"error": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Correct code: the counter has no further job, and leaving it would let a
+    # previous run's failures shorten the next legitimate reset.
+    cache.delete(attempts_key)
+
     # Get user
+    #
+    # `MultipleObjectsReturned` must be caught alongside `DoesNotExist`: `email`
+    # carries no unique constraint (see reset_password_request above). Refusing
+    # is the only safe answer — with two accounts on one address there is no way
+    # to know whose password this code was meant to change, and picking `.first()`
+    # would hand one user's account to whoever else registered the address.
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
         return Response({"error": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+    except User.MultipleObjectsReturned:
+        return Response(
+            {"error": "该邮箱对应多个账号,无法重置密码,请联系管理员"},
+            status=status.HTTP_409_CONFLICT,
+        )
 
     # Validate password strength
     from django.contrib.auth.password_validation import validate_password

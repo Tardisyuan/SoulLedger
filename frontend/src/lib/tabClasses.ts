@@ -39,7 +39,7 @@
  * its container's hairline — so a tab built on it would spend its className
  * undoing the base it inherited.
  *
- * WHY THE COLOURS ARE SPELLED `text-[hsl(var(--color-ink))]` AND NEVER
+ * WHY THE COLOURS ARE SPELLED `text-[oklch(var(--color-ink))]` AND NEVER
  * `text-ink`: tailwind.config.js declares no such colour, so the shorthand
  * generates no CSS at all and nothing errors. See
  * `src/__tests__/cssTokenReferenceContract.test.ts`.
@@ -53,7 +53,7 @@ export const TAB_BASE = "px-4 py-2 text-03 font-medium transition-colors border-
  * and in light mode the bare accent (`38 92% 50%`) measures 2.13:1 on canvas.
  * The 2px rule underneath is a non-text mark and keeps the fill token.
  */
-export const TAB_ON = "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]";
+export const TAB_ON = "text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent))]";
 
 /** The unselected tabs: muted ink, no rule, hovering up to full ink. */
-export const TAB_OFF = "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]";
+export const TAB_OFF = "text-[oklch(var(--color-ink-muted))] border-transparent hover:text-[oklch(var(--color-ink))]";

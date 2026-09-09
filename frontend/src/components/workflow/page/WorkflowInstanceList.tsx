@@ -52,12 +52,12 @@ export function WorkflowInstanceList({
           <Link
             key={wf.id}
             href={`/workflow/${wf.id}`}
-            className="block bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
+            className="block bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))] hover:border-[oklch(var(--color-accent))]/50 transition-colors cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-03 font-medium text-[hsl(var(--color-ink))]">{wf.workflow_name}</div>
-                <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
+                <div className="text-03 font-medium text-[oklch(var(--color-ink))]">{wf.workflow_name}</div>
+                <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">
                   <DomainEnum namespace="workflow.case_types" value={wf.case_type} />{" · "}
                   {/* `wf.soul` is the primary key. This row used to print the
                       UUID as though it were the soul's name. */}
@@ -74,16 +74,16 @@ export function WorkflowInstanceList({
                 <Badge
                   className={
                     wf.status === "COMPLETED"
-                      ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]"
+                      ? "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]"
                       : wf.status === "IN_PROGRESS"
-                      ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-                      : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
+                      ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
+                      : "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]"
                   }
                 >
                   <DomainEnum namespace="workflow.status" value={wf.status} />
                 </Badge>
                 {wf.is_appeal && (
-                  <Badge className="bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
+                  <Badge className="bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))]">
                     {t("workflow.appeal_badge")}
                   </Badge>
                 )}

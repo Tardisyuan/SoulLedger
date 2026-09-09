@@ -4,6 +4,7 @@ REST serializers for Disposition app.
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.tenant_fields import tenant_scoped
 from apps.disposition.models import Disposition
 from apps.souls.dates import ERROR, check_term_start
 from apps.souls.fields import HistoricalDateField
@@ -17,6 +18,9 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # birth_date is — a term that began in 399 BCE is the case the three
     # columns exist for. See apps.souls.fields.HistoricalDateField.
     term_start = HistoricalDateField(prefix="term_start")
+
+    validate_judgment = tenant_scoped("judgment")
+    validate_destination_realm = tenant_scoped("destination_realm")
 
     class Meta:
         model = Disposition

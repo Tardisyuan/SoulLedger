@@ -90,7 +90,7 @@ function SelectAllCheckbox({
       /* 14px glyph, 24px target. WCAG 2.5.8's minimum is 24x24 and a bare
              `w-3.5` checkbox is 14 — a miss selects nothing, or worse, the row
              beneath. The padding grows the hit area without growing the mark. */
-            className="accent-[hsl(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content m-[-5px]"
+            className="accent-[oklch(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content m-[-5px]"
     />
   )
 }
@@ -180,7 +180,7 @@ export function DataGrid<T>({
             /* 14px glyph, 24px target. WCAG 2.5.8's minimum is 24x24 and a bare
              `w-3.5` checkbox is 14 — a miss selects nothing, or worse, the row
              beneath. The padding grows the hit area without growing the mark. */
-            className="accent-[hsl(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content m-[-5px]"
+            className="accent-[oklch(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content m-[-5px]"
           />
         </td>
         {cells}
@@ -203,17 +203,17 @@ export function DataGrid<T>({
         <div
           className={
             selectedCount > 0
-              ? "flex items-center gap-4 px-4 h-12 mb-2 bg-[hsl(var(--color-accent)/0.1)] border border-[hsl(var(--color-accent)/0.3)]"
+              ? "flex items-center gap-4 px-4 h-12 mb-2 bg-[oklch(var(--color-accent)/0.1)] border border-[oklch(var(--color-accent)/0.3)]"
               : "h-12 mb-2"
           }
           aria-hidden={selectedCount === 0}
         >
           {selectedCount > 0 && (
         <>
-          <span className="text-03 font-medium text-[hsl(var(--color-ink))]">{selection.labels.selectedCount(selectedCount)}</span>
+          <span className="text-03 font-medium text-[oklch(var(--color-ink))]">{selection.labels.selectedCount(selectedCount)}</span>
           {selection.bulkActions && (
             <>
-              <span aria-hidden="true" className="w-px h-[18px] bg-[hsl(var(--color-hairline-strong))]" />
+              <span aria-hidden="true" className="w-px h-[18px] bg-[oklch(var(--color-hairline-strong))]" />
               {selection.bulkActions}
             </>
           )}
@@ -224,13 +224,13 @@ export function DataGrid<T>({
               <button
                 type="button"
                 onClick={selection.onSelectAllMatching}
-                className="text-03 font-medium text-[hsl(var(--color-accent-ink))] hover:underline"
+                className="text-03 font-medium text-[oklch(var(--color-accent-ink))] hover:underline"
               >
                 {selection.labels.selectAllMatching(selection.totalMatchingCount)}
               </button>
             )}
           <div className="flex-1" />
-          <button type="button" onClick={selection.onClear} className="text-03 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))]">
+          <button type="button" onClick={selection.onClear} className="text-03 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]">
             {selection.labels.clearSelection}
           </button>
         </>

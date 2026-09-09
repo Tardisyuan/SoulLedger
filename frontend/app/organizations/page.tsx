@@ -73,10 +73,10 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
  * this one, and a civilization is a domain identity, not a system state.
  */
 const CATEGORY_COLORS: Record<string, string> = {
-  CHINESE: "bg-[hsl(var(--color-civ-mark-cn)/0.2)] text-[hsl(var(--color-civ-ink-cn))] border-[hsl(var(--color-civ-mark-cn)/0.4)]",
-  EUROPEAN: "bg-[hsl(var(--color-civ-mark-eu)/0.2)] text-[hsl(var(--color-civ-ink-eu))] border-[hsl(var(--color-civ-mark-eu)/0.4)]",
-  EGYPTIAN: "bg-[hsl(var(--color-civ-mark-eg)/0.2)] text-[hsl(var(--color-civ-ink-eg))] border-[hsl(var(--color-civ-mark-eg)/0.4)]",
-  GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-ink-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
+  CHINESE: "bg-[oklch(var(--color-civ-mark-cn)/0.2)] text-[oklch(var(--color-civ-ink-cn))] border-[oklch(var(--color-civ-mark-cn)/0.4)]",
+  EUROPEAN: "bg-[oklch(var(--color-civ-mark-eu)/0.2)] text-[oklch(var(--color-civ-ink-eu))] border-[oklch(var(--color-civ-mark-eu)/0.4)]",
+  EGYPTIAN: "bg-[oklch(var(--color-civ-mark-eg)/0.2)] text-[oklch(var(--color-civ-ink-eg))] border-[oklch(var(--color-civ-mark-eg)/0.4)]",
+  GREEK: "bg-[oklch(var(--color-civ-mark-gr)/0.2)] text-[oklch(var(--color-civ-ink-gr))] border-[oklch(var(--color-civ-mark-gr)/0.4)]",
 };
 
 function OrganizationsPageContent() {
@@ -120,7 +120,7 @@ function OrganizationsPageContent() {
   const renderOrg = (org: Organization, depth: number = 0) => (
     <div
       key={org.id}
-      className="flex items-center gap-3 py-2 px-3 hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+      className="flex items-center gap-3 py-2 px-3 hover:bg-[oklch(var(--color-surface-2))] transition-colors"
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
       {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
@@ -128,7 +128,7 @@ function OrganizationsPageContent() {
           reasoning. These three are chrome: OS-rendered glyphs beside a
           controlled three-family type system, drawn differently on every
           platform. */}
-      <span aria-hidden="true" className="text-[hsl(var(--color-ink-subtle))] shrink-0">
+      <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))] shrink-0">
         {depth === 0 ? (
           <Landmark className="w-5 h-5" />
         ) : depth === 1 ? (
@@ -139,12 +139,12 @@ function OrganizationsPageContent() {
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 title={org.name} className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h3>
+          <h3 title={org.name} className="text-03 font-medium text-[oklch(var(--color-ink))] truncate">{org.name}</h3>
           <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
             {org.level === 0 ? t("organization.root") : `L${org.level}`}
           </Badge>
         </div>
-        <p title={org.code} className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
+        <p title={org.code} className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] truncate">{org.code}</p>
       </div>
     </div>
   );
@@ -193,7 +193,7 @@ function OrganizationsPageContent() {
       {!isLoading && !isError && organizations.length === 0 && (
         <EmptyState title={t("organizations.title")} reason={t("organization.no_organizations")} />
       )}
-      <div className="space-y-10">
+      <div className="space-y-6">
         {Object.entries(grouped).map(([category, orgs]) => {
           const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] ?? CIVILIZATION_ICON_FALLBACK };
           const isCollapsed = collapsed[category];
@@ -210,15 +210,15 @@ function OrganizationsPageContent() {
               >
                 <span aria-hidden="true" className="text-06">{info.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span title={info.name} className="block text-06 text-[hsl(var(--color-ink))] truncate">{info.name}</span>
-                  <span className="block text-04 text-[hsl(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
+                  <span title={info.name} className="block text-06 text-[oklch(var(--color-ink))] truncate">{info.name}</span>
+                  <span className="block text-04 text-[oklch(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
                 </span>
-                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
               </Button>
 
               {/* Organization Tree */}
               {!isCollapsed && (
-                <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] overflow-hidden">
+                <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] overflow-hidden">
                   {renderTree(orgs, null, 0)}
                 </div>
               )}

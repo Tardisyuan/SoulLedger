@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useCreateSoul } from "@soulledger/core/hooks/useSouls";
 import { Button } from "@/src/components/ui/Button";
+import { SelectField, TextField } from "@/src/components/ui/Field";
 import {
   CIVILIZATION_OPTIONS,
   type CivilizationOption,
@@ -72,13 +73,13 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
           <Dialog.Popup
-            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
-              <Dialog.Title className="text-[hsl(var(--color-ink))] text-06">{title}</Dialog.Title>
+            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[oklch(var(--color-hairline))]">
+              <Dialog.Title className="text-[oklch(var(--color-ink))] text-06">{title}</Dialog.Title>
               <Dialog.Close
-                className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
+                className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] transition-colors text-06 leading-none"
                 aria-label="Close"
               >
                 ×
@@ -91,7 +92,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
 
             {/* Footer */}
             {footer && (
-              <div className="shrink-0 px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
+              <div className="shrink-0 px-6 pb-5 border-t border-[oklch(var(--color-hairline))] pt-4">
                 {footer}
               </div>
             )}
@@ -127,11 +128,14 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
 
   // Unique prefix so field/error ids never collide across multiple Modal
   // instances mounted at once (e.g. list + create modal on the same page).
+  //
+  // The two `-error` ids that used to sit beside these are gone, not lost:
+  // `Field` derives `${controlId}-error` itself and points `aria-describedby`
+  // at it, so the ids that reach the DOM are byte-for-byte the ones this file
+  // used to spell out. A second copy here would be a value nothing re-derives.
   const formId = useId();
   const nameId = `${formId}-name`;
-  const nameErrorId = `${formId}-name-error`;
   const civilizationId = `${formId}-civilization`;
-  const civilizationErrorId = `${formId}-civilization-error`;
   const birthDateId = `${formId}-birth-date`;
   const locationId = `${formId}-location`;
 
@@ -188,32 +192,42 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
     }
   }
 
+  /**
+   * `Button`, not two more spellings of it.
+   *
+   * The submit button was one of ~15 sites that re-typed `Button`'s primary
+   * recipe by hand, and the copies had already drifted apart: `px-4 py-2`
+   * against the primitive's `px-3 py-2`, and `disabled:bg-surface-3
+   * disabled:text-ink-subtle` against its `disabled:opacity-50
+   * disabled:pointer-events-none`. Neither difference was ever a decision —
+   * `ConfirmDialog` at the bottom of this same file had already moved.
+   *
+   * `loading` replaces the hand-rolled `<svg className="animate-spin">`:
+   * `Button` renders an unlabelled `<Spinner size="sm">` and sets `aria-busy`,
+   * which the inline SVG never did. It also disables the control, which is why
+   * `disabled` no longer repeats `loading ||`.
+   */
   const footer = (
     <div className="flex gap-3">
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={onClose}
         disabled={loading}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 text-03 transition-colors"
+        className="flex-1"
       >
         {t("common.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="submit"
         form="soul-create-form"
-        disabled={loading || !name.trim()}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] text-03 font-medium text-black transition-colors"
+        variant="primary"
+        loading={loading}
+        disabled={!name.trim()}
+        className="flex-1"
       >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            {t("souls.form.submitting")}
-          </span>
-        ) : t("souls.form.submit")}
-      </button>
+        {loading ? t("souls.form.submitting") : t("souls.form.submit")}
+      </Button>
     </div>
   );
 
@@ -224,79 +238,66 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       title={t("souls.create")}
       footer={footer}
     >
+      {/* `TextField` / `SelectField`, not four hand-wired label+control+error
+          triples. `Field.tsx:22-28` names *these two controls* as the reason it
+          exists: they were the only two form controls in the whole application
+          that rendered a field-level error at all, and both painted it with the
+          `red-500` palette literal rather than `--color-status-error` — which is
+          re-measured per theme (`0 84% 62%` dark, `0 78% 44%` light, the light
+          one darker specifically so error text clears AA on a light canvas).
+          `red-500` follows neither, so light mode got the dark-mode reading. The
+          primitive was written for this file and this file had never imported
+          it. The `focus:` → `focus-visible:` switch comes with it, for the
+          reason `Field.tsx:32-44` records: a mouse click into a text input still
+          matches `:focus-visible`, a mouse click on a `<select>` stops matching
+          — and the select is where the repainted border was noise. */}
       <form id="soul-create-form" onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor={nameId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
-          <input
-            id={nameId}
-            type="text"
-            autoFocus
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              clearFieldError('name')
-            }}
-            disabled={loading}
-            aria-invalid={!!getError('name')}
-            aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden disabled:opacity-50 transition-colors ${
-              getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
-            }`}
-            placeholder={t("souls.form.name_placeholder")}
-          />
-          {getError('name') && (
-            <span id={nameErrorId} role="alert" className="text-02 text-red-500">{getError('name')}</span>
-          )}
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={civilizationId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.civilization_label")}</label>
-          <select
-            id={civilizationId}
-            value={civilization}
-            onChange={(e) => {
-              setCivilization(e.target.value as typeof civilization)
-              clearFieldError('civilization')
-            }}
-            disabled={loading}
-            aria-invalid={!!getError('civilization')}
-            aria-describedby={getError('civilization') ? civilizationErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden disabled:opacity-50 transition-colors ${
-              getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
-            }`}
-          >
-            {CIVILIZATION_OPTIONS.map((civ) => (
-              <option key={civ} value={civ}>
-                {t(`souls.civilizations.${civ}`)}
-              </option>
-            ))}
-          </select>
-          {getError('civilization') && (
-            <span id={civilizationErrorId} role="alert" className="text-02 text-red-500">{getError('civilization')}</span>
-          )}
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={birthDateId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
-          <input
-            id={birthDateId}
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={locationId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_label")}</label>
-          <input
-            id={locationId}
-            type="text"
-            value={originLocation}
-            onChange={(e) => setOriginLocation(e.target.value)}
-            disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-            placeholder={t("souls.form.location_placeholder")}
-          />
-        </div>
+        <TextField
+          id={nameId}
+          label={t("souls.form.name_label")}
+          type="text"
+          autoFocus
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value)
+            clearFieldError('name')
+          }}
+          disabled={loading}
+          error={getError('name')}
+          placeholder={t("souls.form.name_placeholder")}
+        />
+        <SelectField
+          id={civilizationId}
+          label={t("souls.form.civilization_label")}
+          value={civilization}
+          onChange={(e) => {
+            setCivilization(e.target.value as typeof civilization)
+            clearFieldError('civilization')
+          }}
+          disabled={loading}
+          error={getError('civilization')}
+          options={CIVILIZATION_OPTIONS.map((civ) => ({
+            value: civ,
+            label: t(`souls.civilizations.${civ}`),
+          }))}
+        />
+        <TextField
+          id={birthDateId}
+          label={t("souls.form.birth_date_label")}
+          type="date"
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
+          disabled={loading}
+        />
+        <TextField
+          id={locationId}
+          label={t("souls.form.location_label")}
+          type="text"
+          value={originLocation}
+          onChange={(e) => setOriginLocation(e.target.value)}
+          disabled={loading}
+          placeholder={t("souls.form.location_placeholder")}
+        />
       </form>
     </BaseModal>
   );
@@ -380,12 +381,12 @@ export function ConfirmDialog({
         {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
          * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
         <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
-          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <AlertDialog.Title className="text-06 text-[hsl(var(--color-ink))] mb-2">
+              <AlertDialog.Title className="text-06 text-[oklch(var(--color-ink))] mb-2">
                 {title}
               </AlertDialog.Title>
-              <AlertDialog.Description className="text-04 text-[hsl(var(--color-ink-muted))]">
+              <AlertDialog.Description className="text-04 text-[oklch(var(--color-ink-muted))]">
                 {message}
               </AlertDialog.Description>
             </div>
