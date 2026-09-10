@@ -1,5 +1,4 @@
-import { test, expect } from "@playwright/test";
-import { mockApi, setupAuthenticatedPage } from "./fixtures";
+import { test, expect, mockApi, setupAuthenticatedPage } from "./fixtures";
 
 /**
  * Public-surface and routing checks.

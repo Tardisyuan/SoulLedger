@@ -1,5 +1,4 @@
-import { test, expect } from "@playwright/test";
-import { setupAuthenticatedPage, OPENED_JUDGMENT, SOUL_DETAIL, SOUL_LEDGER } from "./fixtures";
+import { test, expect, setupAuthenticatedPage, OPENED_JUDGMENT, SOUL_DETAIL, SOUL_LEDGER } from "./fixtures";
 
 /**
  * The judgment triage queue (BRIEF §4.2) — the loop the whole feature exists

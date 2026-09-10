@@ -69,18 +69,52 @@ import { cn } from "@/lib/utils";
  *    `app/notifications/page.tsx:277` 一个(其余 21 个 `text-01`、16 个
  *    `text-06`)。守卫只管 `<h2>`,所以守卫这一档确实只有一个样本。
  *
- *    **但这个排版本身不是孤例。** 同一天扫 `<h3>`,`text-03 font-medium` 有
- *    **5 处**,全是同一种东西 —— 列表/网格里每一行的题头,或抽屉里每一组的
- *    组头:`app/organizations/page.tsx:142`(组织卡片行)、
- *    `src/components/permissions/RolesGrid.tsx:40`(角色卡片行)、
- *    `src/components/settings/SettingsDrawer.tsx` 的 386/419/464(三个设置分组)。
- *    也就是说这个角色在仓里已经被独立地写出来六次了,只是其中五次挂在 `<h3>`
- *    上、落在守卫的取景框外。**这是支持命名而不是支持豁免的证据**:豁免表说的
- *    是「这一例不算数」,而实际情况是「这一档一直在被用,只是没有名字」。
+ *    **但这个排版本身不是孤例 —— 只是它的厚度比这里原先写的薄。**
+ *    2026-09-10 同一天扫 `<h3>` 得到 `text-03 font-medium` 五处,当时这里记的是
+ *    「全是同一种东西 …… 这个角色在仓里已经被独立地写出来六次了」。**那句话是
+ *    错的,同一天晚些的 `<h3>` 普查逐处读上下文时翻掉了它**:五处里只有两处是
+ *    列表行标题(`app/organizations/page.tsx:142` 组织树行、
+ *    `src/components/permissions/RolesGrid.tsx:40` 角色卡片行),另外三处
+ *    (`src/components/settings/SettingsDrawer.tsx` 的 386/419/464)是「主题 /
+ *    强调色 / 导航模式」三个**设置分组的组头** —— 那是区块标签,不是行标题,
+ *    它们连 `text-ink-muted` 和 `mb-3` 都和队列面板那五个 `text-01 uppercase`
+ *    的组头逐字相同,只是写成了 13px medium。已按角色改成 `text-01 uppercase`。
  *
- *    (那五处 `<h3>` 这一轮**没有动**。`<h3>` 在这份文档里还没有角色划分,
- *    给它们改标签或扩守卫都是另一件事,需要它自己的普查。写在这里是为了下次
- *    有人问「这条规则的证据有多厚」时不用重新扫一遍。)
+ *    所以这一档的证据是**三处**:`<h2>` 一处加 `<h3>` 两处,不是六处。角色本身
+ *    仍然成立(它确实被独立地写出来过,而且跨标签),但「六次」这个数只在没有
+ *    读上下文、只按字号分桶时才成立 —— 这正是本文件反复警告的形状,而它这次
+ *    发生在描述这条规则的那段散文里。
+ *
+ * 5) **`<h3>` 用的是同样的三个角色,同样的三档。** 2026-09-10 普查
+ *    (`app/` + `src/components/`,用 `PageShell.test.tsx` 自己的 `collectTsx` /
+ *    `blankComments`):**18 个 `<h3>`**,四档 —— `text-01 uppercase`、
+ *    `text-03 font-medium`、`text-04`(4 处 semibold / 1 处 medium)、`text-06`,
+ *    另有两处**一个 `text-0N` 都不写**。读上下文之后语义槽只有三个,而且**每一档
+ *    都已有逐字符吻合 `<h2>` 的 `<h3>` 见证**:区块标签(队列面板的五处
+ *    `text-01 uppercase`)、面板标题(`workflow/page/TemplatePreview.tsx:145` 的
+ *    `text-06`,它的行注释就写着「06 是区块标题那一档」)、列表行标题
+ *    (organizations 与 RolesGrid 的两处 `text-03 font-medium`)。
+ *
+ *    **档位跟着角色走,不跟着标签深度走。** 同一个行标题,页面里没有中间面板时
+ *    是 `<h2>`、在面板里就是 `<h3>`;那是文档大纲的深度,不是「这行标题该多大」。
+ *    让档位跟着标签走,等于把上面刚拆掉的耦合原样装回去。
+ *
+ *    这一轮据此改了五处,并留下五处未决:
+ *      - `AppLayout.tsx:382`(通知弹层)与 `MatrixLegend.tsx:27`(图例框)此前
+ *        **一个 `text-0N` 都没有**,字号来自祖先的工具类 —— MatrixLegend 的外层
+ *        是 `text-03`,于是那个「标题」和它下面的说明段落同为 13px。两处补成
+ *        面板标题档 `text-06` 并删掉空操作的 `font-semibold`。320px 浮层上放
+ *        22px 标题不是新定的:同宽的 `SettingsDrawer` 抽屉标题本来就是
+ *        `<h2 className="text-06">`。
+ *      - `SettingsDrawer.tsx` 386/419/464 → `text-01 uppercase`,见上一条。
+ *      - **列表行标题这一档在 `<h3>` 上没定下来。** 3 处 `text-03 font-medium`
+ *        对 5 处 `text-04`,两边**没有结构分界线**:`RolesGrid.tsx:40` 与
+ *        `app/realms/page.tsx:161` 是同一种 `xl:grid-cols-4` 卡片网格、同样的
+ *        `min-w-0 truncate` 标题加一行次要信息,一个 13px medium、一个 15px
+ *        semibold。两边各自也自洽 —— 标题都恰好比自己那张卡的第二行高一档。
+ *        没有缺陷可以拿来判,所以那五处记进 `PageShell.test.tsx` 的
+ *        `H3_ROLE_EXEMPTIONS`(会自我作废),等一个设计决定,而不是靠人数在四个
+ *        用户看得见的界面上按一条本轮才定下的规矩改版式。
  *
  *    两条推论,都是 2026-09-07 那一轮实际改动的理由:
  *      - `text-06` 上再写 `font-semibold` 是**空操作**(同一个 600),仓里有 5 处。
