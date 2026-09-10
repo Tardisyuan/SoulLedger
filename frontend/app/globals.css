@@ -227,7 +227,7 @@
      drawer 那一档,因为它可能在移动端抽屉打开时被唤起。
      dialog 现在压在 drawer 之上。理由是单向的:**从抽屉里开出来的确认框必须盖住
      抽屉**,而抽屉不会在对话框打开时被打开 —— 对话框是模态的。 */
-  /* 60–80 是**浮层**带,10–50 是**吸顶/布局**带,而在 2026-09-07 之前只有上面
+  /* 60–90 是**浮层**带,10–50 是**吸顶/布局**带,而在 2026-09-07 之前只有上面
      那一半有名字 —— 下面这一半全站写裸数字,顺序碰巧是对的,但没有一处说明
      为什么是这个顺序,也没有任何东西会在有人写 `z-45` 时反对。补齐的是**跨文件
      协调的那几档**:这三个数字分别写在 PageShell.tsx 和 AppLayout.tsx 里,
@@ -239,11 +239,17 @@
      兄弟」。给它们发全站 token 会反过来撒谎:那会宣称矩阵的表头和 AppLayout
      的顶栏在同一把尺子上,而它们根本不在同一个层叠上下文里。
      判据是:**这个数字要不要和另一个文件里的数字比对?** 要,就上表。
-     按这条判据还有一个**没收进来**的:`components/ui/data-grid/ActionsMenu.tsx`
-     的行操作菜单 `createPortal` 到 body、`position: fixed`、`z-50` —— 它确实
-     在全局带上,而且和 `--z-index-sidebar` 同值。没动它,是因为「行菜单该不该
-     压住侧栏」是一个此前没人问过的新问题,而这一轮没有任何实测能回答它;
-     发一个名字过去等于替它作答。留在这里,是为了这段边界说明不替自己开脱。
+     `components/ui/data-grid/ActionsMenu.tsx` 的行操作菜单 `createPortal` 到
+     body、`position: fixed`,按这条判据是要上表的:它脱离了行所在的层叠上下文,
+     它的数字只跟这把全局尺子比。2026-09-07 那一轮把它留成裸 `z-50` 并在这里
+     记了原因 —— 「行菜单该不该压住侧栏」当时是个没人问过的新问题,发一个名字
+     过去等于替它作答。2026-09-10 这个问题被问了并且答了:**行菜单与移动端侧栏
+     同级**,`z-50` → `z-sidebar`。同级的含义和下面 scrim/masthead 那一段完全
+     一样 —— **不是「菜单一定盖住侧栏」,是「谁在 DOM 里靠后谁在上」**。这里
+     恰好是菜单在上:`AppLayout` 的侧栏渲染在页面 children 之前,而菜单是
+     `createPortal(…, document.body)`,portal 的节点追加在 body 末尾,于是排在
+     侧栏之后。这是一个可以被改掉的事实(有人重排 body 就变了),不是一条不变式;
+     写下来是为了下次读到「同级」时不必重新推一遍。
 
      `--z-index-scrim` 与 `--z-index-masthead` 同为 40,不是笔误。遮罩
      (AppLayout.tsx 的 `md:hidden` 那个 button)与顶栏故意同档,于是 DOM 顺序
@@ -254,6 +260,14 @@
   --z-index-masthead: 40;
   --z-index-sidebar: 50;
 
+  /* 这一档 2026-09-01 命名,到 2026-09-10 **一个消费者都没有** —— 唯一该用它的
+     `#nprogress .bar` 写的是字面量 60。Tailwind 4 会摇掉无消费者的 `@theme`
+     变量,所以这个名字从来没进过构建产物:实测它在 `.next/static/chunks/*.css`
+     里出现 **0 次**,而其余七个 `--z-index-*` 全在。
+     **一个进不了构建的名字挡不住任何漂移**,它只是看起来像一把尺子。
+     2026-09-10 接上了消费者(见下面 `#nprogress .bar`),它现在真的在构建产物里,
+     60 这一档由编译器持有而不是由一段注释持有。当时另一个选项是删掉这个 token、
+     让 60 只活在那条规则里;没有选它,因为那样「浮层带的下沿在哪」就只剩注释在说。 */
   --z-index-progress: 60;
   --z-index-drawer: 70;
   --z-index-dialog: 80;
@@ -1790,13 +1804,36 @@ select:focus-visible {
 
 #nprogress .bar {
   position: fixed;
-  /* Matches the `progress` step of the named z scale in this file's `@theme`
-     block (`--z-index-progress`) — above the sticky masthead
-     (`--z-index-masthead`), below dialogs and drawers. There is no
-     `tailwind.config.js` any more, which is where this comment used to point.
-     The literal is unavoidable here (this is raw CSS, not a utility class);
-     the comment is what keeps the two from drifting. */
-  z-index: 60;
+  /* 60: above the sticky masthead (`--z-index-masthead`, 40), below drawers
+     (70) and dialogs (80). The scale is the `@theme` block at the top of this
+     file — there is no `tailwind.config.js` any more, which is where this
+     comment used to point.
+
+     THE LITERAL IS A CHOICE, NOT A CONSTRAINT, AND THE PREVIOUS VERSION OF THIS
+     NOTE GOT THAT WRONG. It said the literal was "unavoidable here (this is raw
+     CSS, not a utility class)". Raw CSS reads custom properties perfectly well,
+     and the line right below this one already does it (`oklch(var(--color-accent))`).
+     Measured 2026-09-10 by actually building it both ways: writing
+     `z-index: var(--z-index-progress)` here makes Tailwind emit
+     `--z-index-progress:60` on `:root` and the chunk ships
+     `#nprogress .bar{z-index:var(--z-index-progress);…}`. It works.
+
+     Nor is nprogress out of variable scope: the package's own stylesheet is
+     deliberately not imported (see the block note above), so nothing about
+     these rules is injected — they are authored here. What the library injects
+     is the `#nprogress` element itself, and it appends that to `document.body`,
+     which is inside `:root` where every custom property in this file is visible.
+
+     So the trade is: naming this step costs one `var()` and buys a compiler-
+     enforced tie to the scale; leaving it a literal buys one place to read 60
+     instead of two, at the price of this comment being the only thing that
+     notices if the band above ever moves. The step was named 2026-09-01 and
+     then consumed by nobody for nine days, which is how the name ended up
+     tree-shaken out of every build. **That is an argument for wiring it up, not
+     for deleting it**: a scale whose lowest overlay step is held only by prose
+     is exactly the shape this file keeps finding defects in. Wired 2026-09-10;
+     the token reaches the build now, and this rule is why. */
+  z-index: var(--z-index-progress);
   top: 0;
   left: 0;
   width: 100%;

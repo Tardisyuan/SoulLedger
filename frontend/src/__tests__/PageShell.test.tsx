@@ -13,7 +13,7 @@
  * 类名，而「该有的类名还在」在多出来的时候照样是绿的。
  *
  * 文件末尾的 `describe("PageShell density")` 里还有三条**扫源码**的守卫:一条路由
- * 里每个壳的 density 要一致、`<h2>` 的两个角色、顶层区块节奏跟着 density 走。
+ * 里每个壳的 density 要一致、`<h2>` 的三个角色、顶层区块节奏跟着 density 走。
  * 它们读文件而不是渲染树,因为那三件事都由**页面怎么写**决定,壳看不见;而且
  * jsdom 不解析自定义属性,`text-06` 的 600 在渲染断言里根本不存在。
  */
@@ -316,7 +316,8 @@ function collectTsx(dir: string, accept: (_name: string) => boolean): string[] {
  * 写出来的 `<h2>` 不再被当成一个元素。
  *
  * 这不是假想的顾虑:`src/components/ui/PageShell.tsx` 的文件头就用反引号写了
- * 四次 `<h2>` 来记录这条规矩本身,`SettingsDrawer.tsx` 的行注释里也有一处。
+ * 七次 `<h2>` 来记录这条规矩本身(2026-09-10 补第三个角色后从四次涨到七次,
+ * 这个数只会继续涨),`SettingsDrawer.tsx` 的行注释里也有一处。
  * 不剥注释的话,**这条守卫会去检查描述这条守卫的那段散文**。
  */
 function blankComments(src: string): string {
@@ -331,23 +332,25 @@ function lineAt(src: string, index: number): number {
 }
 
 /**
- * 两个角色之外的 `<h2>`,连同**不改它**的理由。键是相对 `frontend/` 的路径,
+ * 三个角色之外的 `<h2>`,连同**不改它**的理由。键是相对 `frontend/` 的路径,
  * 值是当时量到的那段排版。
  *
- * `app/notifications/page.tsx` 的这个 `<h2>` 是通知列表里**每一行**的标题
- * (`notifications.map` 里,一屏几十个),13px、和它下面那条 `<p>` 消息同一档,
- * 靠 `font-medium` 分辨。它既不是区块标签(内容是后端来的通知标题,全大写
- * 加 0.1em 字距对 CJK 是错的),也不是面板标题(22px 铺满一个列表行是另一种错)。
- * 两个角色是 2026-09-07 那次普查得出的,而那次普查**没有看到这一处** —— 所以
- * 这里记的是「规则的依据不覆盖这一例」,不是「这一例可以违规」。
+ * **现在是空的,而这正是它设计出来要发生的事。**
  *
- * 这条豁免会自己失效:下面的守卫要求每个键都真的命中一次。谁改了这一处排版,
- * 或把它从 `<h2>` 换成别的标签,这一条就变成陈旧的,守卫报红要求把它删掉 ——
- * 一份不会陈旧的白名单才是这个仓库真正怕的东西。
+ * 它此前只有一条:`app/notifications/page.tsx` 的行标题(`notifications.map`
+ * 里,一屏几十个,13px `font-medium`)。2026-09-07 定角色时那条被记成豁免,
+ * 理由写的是「规则的依据不覆盖这一例」,不是「这一例可以违规」—— 那句话把
+ * 后续动作也一起写好了:要么补上依据,要么这条永远挂着。2026-09-10 补上了
+ * 依据,`text-03 font-medium` 成为第三个角色(列表行标题,见
+ * `src/components/ui/PageShell.tsx` 文件头第 4 条),于是这条豁免自己作废,
+ * 按下面 `stale` 那段的要求删掉。
+ *
+ * 表留空而不是删掉:下一次出现「规则的依据不覆盖这一例」时,该走的仍是这条路。
+ * 空表也仍然会自我作废 —— 下面的守卫要求每个键都真的命中一次,填进来的条目
+ * 一旦被改好或改标签就会报红要求删除。一份不会陈旧的白名单才是这个仓库真正
+ * 怕的东西。
  */
-const H2_ROLE_EXEMPTIONS = new Map<string, string>([
-  ["app/notifications/page.tsx", "text-03 font-medium"],
-]);
+const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
 
 /**
  * `density` —— 统一是默认,不是唯一。
@@ -439,27 +442,41 @@ describe("PageShell density", () => {
   });
 
   /**
-   * 规则一:`<h2>` 只有两个角色,各钉一个 step。
+   * 规则一:`<h2>` 只有三个角色,各钉一个 step。
    *
-   *     区块标签 (eyebrow)  text-01 uppercase   卡片/图表/区段上方那行小字
-   *     面板标题             text-06            一整块面板/区段的标题
+   *     区块标签 (eyebrow)  text-01 uppercase     卡片/图表/区段上方那行小字
+   *     面板标题             text-06              一整块面板/区段的标题
+   *     列表行标题           text-03 font-medium  列表/信息流里每一行的题头
    *
    * 规矩本身写在 `src/components/ui/PageShell.tsx` 的文件头第 4 条 —— 壳拥有
    * `<h1>`(text-07)与 eyebrow(text-01 font-mono uppercase),`<h2>` 归页面,
    * 于是这条规矩**在壳里只是散文**,没有任何东西执行它。这条守卫是执行的那一半。
    *
-   * 三种失败各自断言,因为它们看起来一点都不像:
-   *   - 用了第三档(text-03/05 一类):同一个语义槽出现第三种字号;
+   * 四种失败各自断言,因为它们看起来一点都不像:
+   *   - 用了三档之外的(text-05 一类):同一个语义槽出现第四种字号;
    *   - `text-01` 没有 `uppercase`:11px + 0.1em 字距的正文,读起来是坏掉的标签;
    *   - `text-06` 上再写 `font-semibold`:**逐像素相同**,所以它永远不会被看出来。
    *     `--text-06--font-weight` 已经是 600。留着的坏处不是渲染,是它读起来像
-   *     「不写就不粗」—— 上一轮删掉 4 处,第 5 处(actors)是这一轮删的。
+   *     「不写就不粗」—— 上一轮删掉 4 处,第 5 处(actors)是 2026-09-07 删的。
+   *   - `text-03` **没有** `font-medium`:和上一条正好相反,这里的 weight 是
+   *     **有作用的**。`--text-03` 没有伴生的 `--text-03--font-weight`(带 weight
+   *     的只有 01/06/07/08 四个标题级),所以去掉 `font-medium` 之后,标题会和
+   *     它下面那条 `<p>` 正文同为 400 —— 一个看得见的缺陷,而不是一处空操作。
+   *     两条并排放在这里是有意的:同一个 `font-*` 类,在一档上是噪音、在另一档
+   *     上是唯一的层级信号,判据是那一档的 token 有没有自带 weight。
+   *
+   * **第三个角色是 2026-09-10 加的,加它的动作同时删掉了一条豁免。**
+   * `app/notifications/page.tsx:277` 此前是 `H2_ROLE_EXEMPTIONS` 的唯一条目,
+   * 理由写的是「规则的证据从没覆盖过这个案例」;补上角色就是补上证据,于是
+   * 那条豁免按它自己写的规矩作废了。证据的厚度记在 PageShell.tsx 那一条里:
+   * 作为 `<h2>` 只有这一个,而同一个排版在 `<h3>` 上还有 5 处。
    *
    * 扫描面覆盖 `app/` **与 `src/components/`**。2026-09-07 那次普查只扫了 `app/`,
-   * 报出 19 个 `<h2>`,实际 32 个 —— 漏掉的 13 个全在 `src/components/`,而
-   * 「漏掉」和「没有违例」在报告里长得一模一样。所以下面先断言扫描面本身。
+   * 报出 19 个 `<h2>`,实际 38 个(`d1e7ee7` 复核;当时提交信息里写的 32 也是
+   * 错的)—— 漏掉的 13 个全在 `src/components/`,而「漏掉」和「没有违例」在报告
+   * 里长得一模一样。所以下面先断言扫描面本身。
    */
-  it("pins every <h2> to one of the two roles the shell declares", () => {
+  it("pins every <h2> to one of the three roles the shell declares", () => {
     const files = ["app", path.join("src", "components")].flatMap((root) =>
       collectTsx(path.join(FRONTEND, root), () => true)
     );
@@ -500,8 +517,18 @@ describe("PageShell density", () => {
         why =
           `font-semibold on text-06 is a no-op — --text-06--font-weight is already 600, ` +
           `so this renders byte-identical and reads as "it would be light without me"`;
-      } else if (step !== "text-01" && step !== "text-06") {
-        why = `${step} is neither role (eyebrow = text-01 uppercase, panel title = text-06)`;
+      } else if (step === "text-03" && !/\bfont-medium\b/.test(h.tag)) {
+        // 与上一条相反的方向,故意挨着放:`--text-03` 没有伴生 weight,所以
+        // 这里的 font-medium 是**唯一**把行标题和它下面那条 <p> 分开的东西。
+        why =
+          `text-03 without font-medium — the list-row title role is "text-03 font-medium", ` +
+          `and unlike text-06 this weight is load-bearing: --text-03 has no companion ` +
+          `--text-03--font-weight, so without it the heading renders at the same 400 as the ` +
+          `<p> beneath it`;
+      } else if (step !== "text-01" && step !== "text-06" && step !== "text-03") {
+        why =
+          `${step} is none of the three roles (eyebrow = text-01 uppercase, ` +
+          `panel title = text-06, list-row title = text-03 font-medium)`;
       }
       if (why === null) continue;
 
@@ -524,9 +551,11 @@ describe("PageShell density", () => {
     }
     if (offenders.length > 0) {
       throw new Error(
-        `<h2> has exactly two roles and each pins one step: the eyebrow label is ` +
+        `<h2> has exactly three roles and each pins one step: the eyebrow label is ` +
           `"text-01 uppercase", the panel title is "text-06" (its 600 comes from ` +
-          `--text-06--font-weight, so font-semibold beside it is a no-op). The rule is ` +
+          `--text-06--font-weight, so font-semibold beside it is a no-op), and the ` +
+          `list-row title is "text-03 font-medium" (--text-03 has no companion weight, ` +
+          `so there the font-medium is required, not redundant). The rule is ` +
           `written in src/components/ui/PageShell.tsx's file header.\n\n` +
           offenders.join("\n")
       );
