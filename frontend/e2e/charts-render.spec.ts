@@ -38,9 +38,8 @@
  * 如果这里红了,那才是图表真的坏了。**「我在哪个环境里量的」和「我量到了什么」
  * 同样重要。**
  */
-import { expect, test } from "@playwright/test";
 
-import { LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
 
 /** 一份刻意含零值、也含多租户的统计,让两个图都有东西可画。
  *

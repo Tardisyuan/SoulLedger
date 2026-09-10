@@ -1,17 +1,4 @@
-import { test, expect } from "@playwright/test";
-import {
-  domainEnum,
-  mockApi,
-  setupAuthenticatedPage,
-  OPENED_JUDGMENT,
-  PROPOSED_DISPATCH,
-  PROPOSED_DISPATCH_DETAIL_ONLY,
-  ROLE_GRANTS,
-  ROLES,
-  SOULS,
-  TEST_USER,
-  type ApiMock,
-} from "./fixtures";
+import { test, expect, domainEnum, mockApi, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLE_GRANTS, ROLES, SOULS, TEST_USER, type ApiMock } from "./fixtures";
 
 /**
  * Three end-to-end journeys through the app's highest-stakes screens.

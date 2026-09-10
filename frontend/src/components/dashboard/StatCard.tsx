@@ -21,7 +21,14 @@ function StatCardInner({
   color?: string;
 }) {
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+    // `data-kpi-card` 是**卡片**的锚,`data-kpi` 是**值**的锚,两者的分工就是
+    // 这轮守卫的全部机制:值那一格只在数据落地后存在,所以 `[data-kpi]` 的计数
+    // 从 0 变 4 正是「加载态 → 落地态」这个跃迁,而卡片的高度在两次都量得到。
+    // 见 `e2e/kpi-row-does-not-jump-when-data-lands.spec.ts`。
+    <div
+      data-kpi-card=""
+      className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]"
+    >
       <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         // 骨架屏得和它替换的东西一样高,否则数据落地时整行会往下跳一格。
@@ -38,6 +45,14 @@ function StatCardInner({
         // **外边距**没有:骨架屏带 mt-2,这里没有,于是加载时整条 KPI 高 8px,数据
         // 到达时往上弹回去。对齐了盒子、没对齐盒子周围的空隙,留下的正是那条注释
         // 写来防止的缺陷,差在隔壁一个属性上。
+        //
+        // 这条修复曾经**无守卫**,而那句话是修复自己写下的:jsdom 没有布局引擎,
+        // 量不出「加载时高 8px」,所以任何单测都测不到它。现在有了 ——
+        // `e2e/kpi-row-does-not-jump-when-data-lands.spec.ts` 在真浏览器里把
+        // `/ledger/stats/overview/` 的响应挂起,量加载态的卡片高度,放行,再量
+        // 落地态,断言两者相等。把这里的 `mt-2` 删掉并重新 build,那条 E2E 实测
+        // 报「加载时 113.9375px,数据落地后 105.9375px —— 差 -8.00px」,
+        // chromium 与 mobile-chrome 上是同一组数(退出码 1)。
         <div data-kpi="" className={`text-08 tabular-nums mt-2 ${color}`}>
           {/* `value ?? 0` printed a confident, grouped **0** for a value the
               API did not send — the exact defect class this repo already

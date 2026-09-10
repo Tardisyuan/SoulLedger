@@ -379,7 +379,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <Popover.Popup className="w-80 origin-top-right bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] shadow-xl focus:outline-hidden transition duration-press ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
+                        {/* 弹层自己的标题 = 面板标题档 `text-06`(PageShell.tsx 文件头)。
+                            此前不写字号,它就跟着弹层继承的正文走。同宽(w-80)的
+                            `SettingsDrawer` 的抽屉标题是 `<h2 className="text-06">`
+                            —— 320px 的浮层上放 22px 标题是这里既有的做法,不是新定的。
+                            `font-semibold` 删掉:`--text-06--font-weight` 已经是 600。 */}
+                        <h3 className="text-06 text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
                         <Link href="/notifications" className="text-02 text-[oklch(var(--color-accent-ink))] hover:underline">
                           {t("notifications.view_all")}
                         </Link>

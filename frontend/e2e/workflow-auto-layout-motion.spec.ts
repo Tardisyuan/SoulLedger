@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { setupAuthenticatedPage, type ApiMock } from "./fixtures";
+import { type Page } from "@playwright/test";
+import { test, expect, setupAuthenticatedPage, type ApiMock } from "./fixtures";
 
 /**
  * The auto-layout transition, in a real browser, because jsdom cannot see it.

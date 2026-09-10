@@ -14,9 +14,8 @@
  * mock —— 一个把 socket 指到错误主机的回归对整套 e2e 不可见。
  * `interceptWebSockets` 把打开过的 URL 记下来,这里断言它们指向本机。
  */
-import { expect, test } from "@playwright/test";
 
-import { setupAuthenticatedPage } from "./fixtures";
+import { expect, test, setupAuthenticatedPage } from "./fixtures";
 
 const ROUTES = [
   "/dashboard",

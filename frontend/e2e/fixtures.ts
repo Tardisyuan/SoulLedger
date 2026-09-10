@@ -1,4 +1,4 @@
-import { type Locator, type Page, type Request } from "@playwright/test";
+import { test as base, type Locator, type Page, type Request } from "@playwright/test";
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
@@ -490,9 +490,15 @@ export class ApiMock {
   /**
    * Fail if the app called an endpoint this mock does not model.
    *
-   * Called from `setupAuthenticatedPage`'s teardown. The message names the
-   * paths, because the useful answer is "add a handler for these", not
-   * "something was unhandled".
+   * Installed by the `apiMockModelsEveryCall` auto-fixture on the `test`
+   * exported from THIS file — see the block above it. It ran nowhere until
+   * 2026-09-10: this comment used to say "called from
+   * `setupAuthenticatedPage`'s teardown", and `setupAuthenticatedPage` is a
+   * plain async function with no teardown to hang anything on. A repo-wide
+   * grep for the name matched only its own definition and two comments.
+   *
+   * The message names the paths, because the useful answer is "add a handler
+   * for these", not "something was unhandled".
    */
   assertEverythingWasHandled(): void {
     const stray = this.unexpectedUnhandled();
@@ -697,6 +703,33 @@ export class ApiMock {
     this.on("GET", "/recycle-bin/", { results: [RECYCLE_BIN_ENTRY], count: 1 });
     this.on("POST", "/recycle-bin/restore/", { restored: 1 + RECYCLE_BIN_ENTRY.dependent_count });
 
+    // ── 2026-09-10 装上 `assertEverythingWasHandled` 那一刻现形的六个端点 ──
+    //
+    // 在此之前它们**每一个都在拿一个自信的 `200 {results: []}`**,而且没有任何
+    // 东西看得见这件事:`the-api-mock-models-what-the-app-calls.spec.ts` 的
+    // `ROUTES` 是手维护的 17 条,而 `/disposition`、`/organizations`、
+    // `/cross-judgments` 三条路由**不在那张单子上** —— 那正是「按路由清单扫」
+    // 和「每个 test 都查」的差别。`/ledger/inheritance/:id/` 更进一步:它是
+    // `critical-paths.spec.ts` 里点开一份判决之后才发出的,任何只 goto 的扫描
+    // 都到不了。
+    //
+    // **为什么是登记成空,而不是塞进 `BACKGROUND_PATHS`。** 那张表说的是「这条
+    // 路径可以落到回退」,一进去就永远不会再被问起;而这六条是页面的**正文
+    // 数据**,不是通知轮询那种背景噪音。登记在这里的空列表和回退给的空列表
+    // 逐字节相同(所以现有 spec 的行为一处都没变),差别只在 `handled` ——
+    // 也就是「有人写下过这个模型」和「没人想过这件事」的差别。应用哪天调一个
+    // **新**端点,门禁照样红。
+    //
+    // 反过来也要说清楚:登记成空意味着这六个页面在 E2E 里渲染的是空态,它们
+    // 有数据时的那条路径仍然没有被走过。**这一点在装门禁之前就是如此**,门禁
+    // 没有让它变好也没有让它变坏;要走那条路径需要各自的 spec,是另一件事。
+    this.on("GET", "/disposition/", paginated([]));
+    this.on("GET", "/reincarnation/", paginated([]));
+    this.on("GET", "/events/", paginated([]));
+    this.on("GET", "/organizations/", paginated([]));
+    this.on("GET", "/dispatch/cross-tenant-judgments/", paginated([]));
+    this.on("GET", "/ledger/inheritance/:id/", paginated([]));
+
     return this;
   }
 }
@@ -739,6 +772,11 @@ export async function interceptWebSockets(page: Page, mock: ApiMock): Promise<vo
 
 /** Installs the interceptor for every `/api/v1/**` request on this page. */
 export async function mockApi(page: Page, mock: ApiMock = new ApiMock().registerDefaults()): Promise<ApiMock> {
+  // The auto-fixture reads this after the test body; see `test` below.
+  // Registering here rather than in `setupAuthenticatedPage` covers the specs
+  // that call `mockApi` directly.
+  liveMocks.push(mock);
+
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const headers = corsHeaders(request);
@@ -820,3 +858,53 @@ export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {
   await seedAuthState(page);
   return api;
 }
+
+/**
+ * **每个 spec 都要从这里 import `test`,而不是从 `@playwright/test`。**
+ *
+ * ── 为什么存在这个再导出 ──────────────────────────────────────────────────
+ * `ApiMock.assertEverythingWasHandled()` 的文档注释说它「由
+ * `setupAuthenticatedPage` 的 teardown 调用」。**那句话是假的**:2026-09-10 全仓
+ * grep `assertEverythingWasHandled` 只有三处命中 —— 它自己的定义、它自己的注释,
+ * 和另一段引用它的注释。**零个调用点。** 而 `setupAuthenticatedPage` 是一个普通
+ * 的 async 函数,不是 playwright fixture,它根本没有 teardown 可挂。
+ *
+ * (要说清楚的是:**那道门禁本身并不是没跑过。**
+ * `the-api-mock-models-what-the-app-calls.spec.ts` 逐条打开 17 条路由,直接调
+ * `api.unexpectedUnhandled()` 做同一件事,而且带着一条「守卫的守卫」。所以这里
+ * 修的不是「一道从没运行的门禁」,是**一个死方法加一句描述并不存在的安装方式的
+ * 注释**。真正的缺口是覆盖面:那条 spec 只在**打开页面**时扫,而点击「批准」、
+ * 提交工作流、触发 409 冲突这些**交互**会调到页面加载永远走不到的端点 ——
+ * 那些请求没有任何东西在看。这个 fixture 补的是这一块。)
+ *
+ * ── 为什么是 fixture,不是 `test.afterEach` ────────────────────────────────
+ * 在这个文件的模块作用域里写 `test.afterEach(...)` **会静默地只装上一半**:
+ * playwright 每个 worker 只求值一次 `fixtures.ts`,那个 afterEach 于是只挂在
+ * **第一个加载它的 spec 文件**的 suite 上,其余的一条都不挂。而「装了一半」和
+ * 「全都通过」的输出一模一样 —— 正是这个仓库反复踩的形状。
+ *
+ * `auto: true` 的 fixture 没有这个问题:它挂在 `test` 对象上,凡是用这个 `test`
+ * 的文件都拿到它。代价是每个 spec 的 import 行要改一个字符串 —— 2026-09-10 实测
+ * 全部 **11 个** spec 文件(不是四十个;四十是 test 的条数)。spec 正文一行不用动。
+ *
+ * ── 已经失败的测试不再叠加 ────────────────────────────────────────────────
+ * 测试已经红了的时候,「有个端点没建模」是噪音,而且会盖住真正的报错。
+ * `testInfo.errors.length > 0` 时直接跳过。
+ */
+const liveMocks: ApiMock[] = [];
+
+export const test = base.extend<{ apiMockModelsEveryCall: void }>({
+  apiMockModelsEveryCall: [
+    async ({}, use, testInfo) => {
+      liveMocks.length = 0;
+      await use();
+      const mocks = [...liveMocks];
+      liveMocks.length = 0;
+      if (testInfo.errors.length > 0) return;
+      for (const mock of mocks) mock.assertEverythingWasHandled();
+    },
+    { auto: true },
+  ],
+});
+
+export { expect } from "@playwright/test";

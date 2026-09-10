@@ -142,7 +142,25 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                 role="menu"
                 aria-label={menuLabel}
                 style={{ position: 'fixed', top: pos.top, right: pos.right }}
-                className="z-50 min-w-[168px] border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-4))] shadow-[0_16px_40px_-10px_oklch(0_0_0/0.6)] py-1"
+                // `z-sidebar`, not a bare `z-50`. This node is portalled to
+                // `document.body` and `position: fixed`, so it has left the
+                // row's stacking context entirely and its number is only ever
+                // compared with the numbers in AppLayout.tsx — which is exactly
+                // the criterion the z scale in globals.css writes down ("does
+                // this number have to be compared with a number in another
+                // file?"). It was left as a literal in 2026-09-07 because
+                // "should the row menu cover the mobile sidebar?" had not been
+                // asked; 2026-09-10 it was, and the answer is **same rank**.
+                //
+                // SAME RANK MEANS DOM ORDER DECIDES, NOT "THE MENU WINS" — the
+                // same reading as `--z-index-scrim` / `--z-index-masthead`,
+                // which also share a value on purpose. Here DOM order happens
+                // to put the menu on top: the sidebar renders inside AppLayout,
+                // and a `createPortal` to `document.body` appends after it. That
+                // is a fact about the current tree, not an invariant; if the
+                // menu ever has to outrank the sidebar by rule rather than by
+                // accident, it needs its own step, not a bigger literal.
+                className="z-sidebar min-w-[168px] border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-4))] shadow-[0_16px_40px_-10px_oklch(0_0_0/0.6)] py-1"
               >
                 {items.map((item, index) => (
                   <button
