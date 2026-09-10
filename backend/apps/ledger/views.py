@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
+from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.disposition.models import Disposition
 from apps.ledger.serializers import (
@@ -24,6 +25,7 @@ from apps.ledger.serializers import (
     RebirthNotApplicableSerializer,
 )
 from apps.ledger.services import LedgerService, RebirthNotApplicable
+from apps.realms.models import resolve_localized_name
 from apps.souls.models import Soul, SoulState
 
 
@@ -363,10 +365,26 @@ class LedgerOverviewStatsView(APIView):
             if tenant is None
             else Disposition.objects.filter(tenant=tenant)
         )
+        # All four name columns, resolved per row, rather than `name_en`.
+        #
+        # This aggregate answered in English for every reader — a zh-Hans user
+        # saw `First Circle - Limbo` on the ledger while the rest of the page was
+        # Chinese. `.values()` cannot call `Realm.get_localized_name`, so the
+        # columns come out and the same fallback chain is applied here.
+        #
+        # Grouping widens from one name column to four, which does not change the
+        # groups: all four are functionally dependent on `realm_code`.
+        locale = locale_from_request(request)
         souls_by_realm = [
             {
                 "realm_code": row["destination_realm__realm_code"],
-                "realm_name": row["destination_realm__name_en"],
+                "realm_name": resolve_localized_name(
+                    locale,
+                    name_local=row["destination_realm__name_local"],
+                    name_zh=row["destination_realm__name_zh"],
+                    name_en=row["destination_realm__name_en"],
+                    name_egy=row["destination_realm__name_egy"],
+                ),
                 "civilization": row["destination_realm__civilization"],
                 "count": row["count"],
             }
@@ -375,7 +393,10 @@ class LedgerOverviewStatsView(APIView):
                 .exclude(destination_realm__isnull=True)
                 .values(
                     "destination_realm__realm_code",
+                    "destination_realm__name_local",
+                    "destination_realm__name_zh",
                     "destination_realm__name_en",
+                    "destination_realm__name_egy",
                     "destination_realm__civilization",
                 )
                 .annotate(count=Count("id"))

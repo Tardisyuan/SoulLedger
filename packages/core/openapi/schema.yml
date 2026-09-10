@@ -2466,7 +2466,26 @@ paths:
   /api/v1/events/:
     get:
       operationId: v1_events_list
-      description: Read-only audit log.
+      description: |-
+        A soul's own timeline. NOT the administrative audit log.
+
+        The docstring here used to read "Read-only audit log", and that one line has
+        now caused the same question to be raised twice: why can a VIEWER read this
+        when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+
+        Because they are different things. `AuditLog` records who changed what, for
+        review. `SoulEvent` records what happened to a soul, and it is what
+        `SoulLifecycleTimeline` draws on the soul detail page — through
+        `packages/core/src/api/events.ts` → `frontend/src/components/souls/
+        SoulLifecycleTimeline.tsx`. VIEWER holds `soul.read`
+        (`apps/perm/models.py:388-394`), so VIEWER can open that page; gating this
+        endpoint behind a codename VIEWER does not hold would leave the page
+        rendering with an empty timeline and no explanation.
+
+        The payload is soul-domain facts (`{"soul_id": …, …}`,
+        `apps/events/event_bus.py:209`) — the same facts the page already shows —
+        not credentials or cross-tenant data. Tenant scoping still applies through
+        `DataScopeViewSetMixin`.
       parameters:
       - in: query
         name: actor
@@ -2575,7 +2594,26 @@ paths:
   /api/v1/events/{id}/:
     get:
       operationId: v1_events_retrieve
-      description: Read-only audit log.
+      description: |-
+        A soul's own timeline. NOT the administrative audit log.
+
+        The docstring here used to read "Read-only audit log", and that one line has
+        now caused the same question to be raised twice: why can a VIEWER read this
+        when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+
+        Because they are different things. `AuditLog` records who changed what, for
+        review. `SoulEvent` records what happened to a soul, and it is what
+        `SoulLifecycleTimeline` draws on the soul detail page — through
+        `packages/core/src/api/events.ts` → `frontend/src/components/souls/
+        SoulLifecycleTimeline.tsx`. VIEWER holds `soul.read`
+        (`apps/perm/models.py:388-394`), so VIEWER can open that page; gating this
+        endpoint behind a codename VIEWER does not hold would leave the page
+        rendering with an empty timeline and no explanation.
+
+        The payload is soul-domain facts (`{"soul_id": …, …}`,
+        `apps/events/event_bus.py:209`) — the same facts the page already shows —
+        not credentials or cross-tenant data. Tenant scoping still applies through
+        `DataScopeViewSetMixin`.
       parameters:
       - in: path
         name: id
@@ -9974,6 +10012,7 @@ components:
           readOnly: true
         realm_name:
           type: string
+          nullable: true
           readOnly: true
         memory_reset:
           $ref: '#/components/schemas/MemoryResetMechanismEnum'
@@ -12390,6 +12429,7 @@ components:
           readOnly: true
         realm_name:
           type: string
+          nullable: true
           readOnly: true
         memory_reset:
           $ref: '#/components/schemas/MemoryResetMechanismEnum'

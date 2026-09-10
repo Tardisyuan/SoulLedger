@@ -4,6 +4,7 @@ REST serializers for Realms app.
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.locale import locale_from_context
 from apps.realms.models import Realm
 
 
@@ -47,11 +48,4 @@ class RealmLocalizedSerializer(serializers.ModelSerializer):
         # nested this serializer, because nothing reachable from the schema had
         # descended into it before — the coverage of a check grows as the
         # things it checks become reachable.
-        request = self.context.get("request")
-        if request:
-            lang = request.META.get("HTTP_ACCEPT_LANGUAGE", "en")
-            # Take the primary language (before comma)
-            locale = lang.split(",")[0].strip()
-        else:
-            locale = "en"
-        return obj.get_localized_name(locale)
+        return obj.get_localized_name(locale_from_context(self.context))

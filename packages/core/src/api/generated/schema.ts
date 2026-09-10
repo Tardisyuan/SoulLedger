@@ -1016,7 +1016,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Read-only audit log. */
+        /**
+         * @description A soul's own timeline. NOT the administrative audit log.
+         *
+         *     The docstring here used to read "Read-only audit log", and that one line has
+         *     now caused the same question to be raised twice: why can a VIEWER read this
+         *     when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+         *
+         *     Because they are different things. `AuditLog` records who changed what, for
+         *     review. `SoulEvent` records what happened to a soul, and it is what
+         *     `SoulLifecycleTimeline` draws on the soul detail page — through
+         *     `packages/core/src/api/events.ts` → `frontend/src/components/souls/
+         *     SoulLifecycleTimeline.tsx`. VIEWER holds `soul.read`
+         *     (`apps/perm/models.py:388-394`), so VIEWER can open that page; gating this
+         *     endpoint behind a codename VIEWER does not hold would leave the page
+         *     rendering with an empty timeline and no explanation.
+         *
+         *     The payload is soul-domain facts (`{"soul_id": …, …}`,
+         *     `apps/events/event_bus.py:209`) — the same facts the page already shows —
+         *     not credentials or cross-tenant data. Tenant scoping still applies through
+         *     `DataScopeViewSetMixin`.
+         */
         get: operations["v1_events_list"];
         put?: never;
         post?: never;
@@ -1033,7 +1053,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Read-only audit log. */
+        /**
+         * @description A soul's own timeline. NOT the administrative audit log.
+         *
+         *     The docstring here used to read "Read-only audit log", and that one line has
+         *     now caused the same question to be raised twice: why can a VIEWER read this
+         *     when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+         *
+         *     Because they are different things. `AuditLog` records who changed what, for
+         *     review. `SoulEvent` records what happened to a soul, and it is what
+         *     `SoulLifecycleTimeline` draws on the soul detail page — through
+         *     `packages/core/src/api/events.ts` → `frontend/src/components/souls/
+         *     SoulLifecycleTimeline.tsx`. VIEWER holds `soul.read`
+         *     (`apps/perm/models.py:388-394`), so VIEWER can open that page; gating this
+         *     endpoint behind a codename VIEWER does not hold would leave the page
+         *     rendering with an empty timeline and no explanation.
+         *
+         *     The payload is soul-domain facts (`{"soul_id": …, …}`,
+         *     `apps/events/event_bus.py:209`) — the same facts the page already shows —
+         *     not credentials or cross-tenant data. Tenant scoping still applies through
+         *     `DataScopeViewSetMixin`.
+         */
         get: operations["v1_events_retrieve"];
         put?: never;
         post?: never;
@@ -4487,7 +4527,7 @@ export interface components {
             /** Format: uuid */
             destination_realm?: string | null;
             readonly realm_code: string;
-            readonly realm_name: string;
+            readonly realm_name: string | null;
             memory_reset?: components["schemas"]["MemoryResetMechanismEnum"];
             is_eternal?: boolean;
             /** @description Sentence duration in years; null = no term recorded (see is_eternal) */
@@ -5831,7 +5871,7 @@ export interface components {
             /** Format: uuid */
             destination_realm?: string | null;
             readonly realm_code?: string;
-            readonly realm_name?: string;
+            readonly realm_name?: string | null;
             memory_reset?: components["schemas"]["MemoryResetMechanismEnum"];
             is_eternal?: boolean;
             /** @description Sentence duration in years; null = no term recorded (see is_eternal) */
