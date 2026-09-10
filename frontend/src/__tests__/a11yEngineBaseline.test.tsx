@@ -911,11 +911,30 @@ describe("the engine is running, and running what we think it is", () => {
     // `link-in-text-block` is the rule for "a link inside a paragraph is
     // distinguishable from the surrounding text by something other than
     // colour". axe files it under `cat.color` because deciding it needs
-    // computed colours, so it goes off with the other two — and unlike
-    // contrast, nothing else in this repo covers it. `inkOnSurfaceContract`
-    // and `civilizationColourContract` check token *values*; neither knows
-    // which of them ends up on an `<a>` inside a `<p>`. Written down because
-    // the alternative is a reader assuming the list is boilerplate.
+    // computed colours, so it goes off with the other two.
+    //
+    // IT IS STILL IN THIS LIST AFTER SOMEONE TRIED TO TAKE IT OUT, AND THE
+    // REASON IS NOT THE ONE THE CATEGORY GIVES. Measured: even enabled, this
+    // rule NEVER RUNS under jsdom. `link-in-text-block-matches` opens with
+    // `sanitize(node.innerText)`, and jsdom does not implement `innerText`
+    // (`"innerText" in HTMLElement.prototype` is `false`), so the matcher
+    // returns false and the rule lands in `inapplicable` — moving it out of
+    // `DISABLED_RULES` changes `axe.run`'s output not at all. Force it to run
+    // by polyfilling `innerText` and it still cannot discriminate: four
+    // fixtures — colour-only link, underlined link, link the SAME colour as
+    // its paragraph, Tailwind-classes-only link — all return
+    // `violations=0 / passes=1`, because `hasPseudoContent` reads
+    // `getComputedStyle(el, ":before").content`, jsdom returns `""`, and
+    // `"" !== "none"` makes the style check bail with `undefined`.
+    //
+    // `proseLinkIsNotColourOnly.test.ts` now covers the half that can be
+    // covered without a layout engine — it reads the paragraph's ink token and
+    // its link's ink token out of the SOURCE and applies WCAG 1.4.1's 3:1
+    // itself, which is the "which token ends up on an `<a>` inside a `<p>`"
+    // question `inkOnSurfaceContract` and `civilizationColourContract` cannot
+    // ask of token values alone. That file carries the full measurement and
+    // its own limits (its subject is `<p>` only). Written down because the
+    // alternative is a reader assuming the list is boilerplate.
     expect(DISABLED_RULES).toEqual([
       "color-contrast",
       "color-contrast-enhanced",

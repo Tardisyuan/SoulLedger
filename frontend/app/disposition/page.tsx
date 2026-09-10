@@ -79,7 +79,16 @@ export default function DispositionPage() {
               <div className="min-w-0">
                 <p className="text-03 font-medium text-[oklch(var(--color-ink))]">
                   {t("disposition.soul")}:{" "}
-                  <Link href={`/souls/${d.soul}`} className="text-[oklch(var(--color-accent-ink))] hover:underline">
+                  {/* 静息态就带 `underline`,不是只在 `hover:` 上。这是本仓唯一一个
+                      **段落内**链接(周围有文字、同一行),而 WCAG 1.4.1 对这种链接
+                      的要求是:非颜色的可辨性,或者和周围文字 3:1。这里两端是
+                      `--color-accent-ink` 压 `--color-ink`,亮色 3.049:1 过,
+                      **暗色只有 1.954:1** —— 于是在暗色下它曾经只是「一段颜色略有
+                      不同的字」。`proseLinkIsNotColourOnly.test.ts` 现在盯着这一对;
+                      去掉这里的 `underline`,那条测试会打出上面那个 1.954:1。
+                      站着的链接(卡片、面包屑、返回)不在那条规则的范围内,它们
+                      周围没有文字可混淆,所以不必跟着改。 */}
+                  <Link href={`/souls/${d.soul}`} className="underline text-[oklch(var(--color-accent-ink))]">
                     {d.soul_name || d.soul}
                   </Link>
                 </p>
