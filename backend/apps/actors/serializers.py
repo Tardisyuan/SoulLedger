@@ -4,6 +4,7 @@ REST serializers for Actors app.
 from rest_framework import serializers
 
 from apps.actors.models import Actor
+from apps.core.locale import locale_from_context
 
 
 class ActorSerializer(serializers.ModelSerializer):
@@ -20,11 +21,10 @@ class ActorSerializer(serializers.ModelSerializer):
 
 
 def _locale_from_context(context):
-    request = context.get("request")
-    if request:
-        lang = request.META.get("HTTP_ACCEPT_LANGUAGE", "en")
-        return lang.split(",")[0].strip()
-    return "en"
+    """Kept as a name so this module's call sites read unchanged; the parse now
+    lives in `apps/core/locale.py`, which was extracted when a fourth and fifth
+    copy of it were about to be written."""
+    return locale_from_context(context)
 
 
 def _assessor_index(obj) -> int | None:

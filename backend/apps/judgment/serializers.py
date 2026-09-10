@@ -4,6 +4,7 @@ REST serializers for Judgment app.
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import tenant_scoped
 from apps.judgment.models import Judgment, JudgmentCitation, Statute
 from apps.ledger.serializers import LedgerSummarySerializer
@@ -20,11 +21,7 @@ def _locale_from(context) -> str:
     ones have no Chinese body at all. Resolving server-side keeps that
     fallback chain in one place (`Statute.get_localized_*`) instead of
     re-deriving it in the client."""
-    request = context.get("request")
-    if request is None:
-        return "en"
-    lang = request.META.get("HTTP_ACCEPT_LANGUAGE", "en")
-    return lang.split(",")[0].strip() or "en"
+    return locale_from_context(context)
 
 
 class StatuteSerializer(serializers.ModelSerializer):

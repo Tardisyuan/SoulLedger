@@ -106,3 +106,28 @@ def test_the_committed_schema_equals_what_this_backend_generates():
         "The frontend's generated types describe the committed version, so they "
         "are describing an API this backend no longer serves. Regenerate."
     )
+
+    # And the path BODIES, which this file did not compare until 2026-09-10.
+    #
+    # Everything above compares two *name sets* and one set of component bodies.
+    # An operation's description, its parameters, its per-status responses and
+    # its `operationId` all live under `paths`, and none of them was ever looked
+    # at. So a viewset docstring could be rewritten, the committed YAML left
+    # untouched, and this gate stayed green — which is exactly what happened to
+    # `SoulEventViewSet` in `52e177f`: its description was rewritten, the schema
+    # was never regenerated, the full suite reported 3518 passed, and the stale
+    # `description: Read-only audit log.` sat in the committed document until a
+    # *component* change (`realm_name` gaining `nullable: true`) finally forced a
+    # regeneration and made the drift visible.
+    #
+    # That is the failure mode this repo keeps meeting: the check runs, the check
+    # can go red, and its subject list is short by one. Measured when this
+    # assertion was added: 146 paths, **0 drifted** — so it costs nothing today
+    # and would have cost one line of attention three days ago.
+    drifted_paths = [p for p in sorted(live_paths) if live["paths"][p] != committed["paths"][p]]
+    assert drifted_paths == [], (
+        f"{len(drifted_paths)} path(s) differ in BODY between this backend and "
+        f"the committed schema: {drifted_paths[:10]}\n"
+        "Descriptions, parameters and per-operation responses live here — a "
+        "docstring edit is enough to cause this. Regenerate."
+    )

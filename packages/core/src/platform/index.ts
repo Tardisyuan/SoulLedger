@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, LOCALE_COOKIE } from "../config/locale";
 import type {
   KeyValueStore,
   NotifyKind,
@@ -181,6 +182,36 @@ export function setRefreshToken(value: string): void {
 
 export function getTenantId(): string {
   return adapter.persistent.get(TENANT_ID_KEY) || "";
+}
+
+/**
+ * The locale the app is currently rendering in, for `Accept-Language`.
+ *
+ * WHY THIS EXISTS. Three serializers on the backend pick a name column from
+ * `Accept-Language` — `RealmLocalizedSerializer.get_display_name`,
+ * `apps/actors/serializers.py::_locale_from_context`, and the judgment queue's
+ * `realm_options`. Measured 2026-09-10: **nothing had ever sent that header.**
+ * The interceptor below set `Authorization` and `X-Tenant-ID` and nothing else,
+ * so `lang` was always the default `"en"` and the whole `egy` branch of
+ * `Realm.get_localized_name` was unreachable over HTTP. A user reading the app
+ * in `egy` saw the message bundle's name on `/realms` and a browser-language
+ * name everywhere the API supplied one.
+ *
+ * It reads the same cookie `I18nContext` writes, through `persistent` rather
+ * than `secure`: a locale is a preference, not a credential, and `middleware.ts`
+ * already reads this cookie on the server for `<html lang>`.
+ *
+ * NOT `INTL_LOCALE`, and the difference matters. That table maps `egy` to `en`
+ * because `<html lang="egy">` tells a screen reader nothing and the egy bundle's
+ * prose is English (see `config/locale.ts`). This header answers a different
+ * question — *which name column should the database give me* — and its only
+ * consumer is our own backend comparing the string to `"egy"`. Mapping it
+ * through `INTL_LOCALE` would send `en` and re-create the exact defect.
+ * (Checked: `MIDDLEWARE` has no `LocaleMiddleware`, so nothing else in Django
+ * reacts to this header.)
+ */
+export function getLocale(): string {
+  return adapter.persistent.get(LOCALE_COOKIE) || DEFAULT_LOCALE;
 }
 
 /**

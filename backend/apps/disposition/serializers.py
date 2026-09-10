@@ -1,9 +1,11 @@
 """
 REST serializers for Disposition app.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import tenant_scoped
 from apps.disposition.models import Disposition
 from apps.souls.dates import ERROR, check_term_start
@@ -13,11 +15,25 @@ from apps.souls.fields import HistoricalDateField
 class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     realm_code = serializers.CharField(source="destination_realm.realm_code", read_only=True)
-    realm_name = serializers.CharField(source="destination_realm.name_en", read_only=True)
+    # `get_localized_name`, not `name_en`.
+    #
+    # This was `source="destination_realm.name_en"`, so every reader of a
+    # disposition saw the English realm name regardless of locale — a zh-Hans
+    # user too, not only an egy one. It is the same defect as the missing
+    # `Accept-Language` header, one layer down: the row carried a name column
+    # rather than *the* name.
+    realm_name = serializers.SerializerMethodField()
     # Backed by term_start_year/month/day (BCE-capable), the same way a soul's
     # birth_date is — a term that began in 399 BCE is the case the three
     # columns exist for. See apps.souls.fields.HistoricalDateField.
     term_start = HistoricalDateField(prefix="term_start")
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_realm_name(self, obj) -> str | None:
+        realm = obj.destination_realm
+        if realm is None:
+            return None
+        return realm.get_localized_name(locale_from_context(self.context))
 
     validate_judgment = tenant_scoped("judgment")
     validate_destination_realm = tenant_scoped("destination_realm")

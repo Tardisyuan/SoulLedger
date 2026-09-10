@@ -5,6 +5,7 @@ import {
   getApiBaseUrl,
   getRefreshToken,
   REFRESH_TOKEN_KEY,
+  getLocale,
   getTenantId,
   platform,
   setAccessToken,
@@ -106,6 +107,21 @@ api.interceptors.request.use((config) => {
   if (tenantId) {
     config.headers["X-Tenant-ID"] = tenantId;
   }
+  // The locale the user chose, not the one their browser prefers.
+  //
+  // Three serializers pick a name column from this header
+  // (`RealmLocalizedSerializer.get_display_name`, `actors/serializers.py`'s
+  // `_locale_from_context`, and the judgment queue's `realm_options`), and until
+  // 2026-09-10 **nothing sent it** — so `lang` fell to its `"en"` default and
+  // `name_egy` was unreachable over HTTP. An `egy` user read `Mekher Tepy - Aalu`
+  // on `/realms` (that page reads the bundle) and `幽冥边境` or
+  // `First Circle - Limbo` on every page fed by the API, picked by the browser.
+  //
+  // Pinned from both sides by `backend/tests/test_the_locale_header_reaches_the_name.py`:
+  // this line, and the three-locale round trip it enables. A guard on either
+  // side alone is worthless — a backend honouring a header nobody sends, or a
+  // header the backend ignores.
+  config.headers["Accept-Language"] = getLocale();
   return config;
 });
 

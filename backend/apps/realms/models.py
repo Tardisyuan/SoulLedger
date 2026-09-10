@@ -11,6 +11,35 @@ from apps.souls.models import Civilization
 from apps.tenants.managers import TenantManager
 
 
+def resolve_localized_name(
+    locale: str = "en",
+    *,
+    name_local: str = "",
+    name_zh: str = "",
+    name_en: str = "",
+    name_egy: str = "",
+) -> str:
+    """The name-column fallback chain, as a free function.
+
+    A free function and not only a model method because `apps/ledger/views.py`
+    reaches these columns through `.values()` on an aggregate, where there is no
+    model instance to call a method on. It used to read `name_en` directly and so
+    answered in English for every reader — including zh-Hans ones, who saw
+    `First Circle - Limbo` in an otherwise Chinese ledger.
+
+    The obvious repair there was to copy these three lines into the view. That is
+    how this repo acquired four copies of the client-IP parse and three of the
+    `Accept-Language` parse, both of which had to be collapsed later
+    (`apps/core/client_ip.py`, `apps/core/locale.py`). So the chain lives here
+    once and `Realm.get_localized_name` calls it too.
+    """
+    if locale.startswith("zh"):
+        return name_zh or name_en or name_local
+    if locale == "egy":
+        return name_egy or name_en or name_local
+    return name_en or name_local
+
+
 class RealmType(models.TextChoices):
     HELL = "HELL", "Hell / Punishment"
     PURGATORY = "PURGATORY", "Purgatory / Intermediate"
@@ -102,8 +131,10 @@ class Realm(AuditUserFields, models.Model):
         Return the appropriate localized name based on locale.
         locale: 'zh-Hans', 'en', 'egy'
         """
-        if locale.startswith("zh"):
-            return self.name_zh or self.name_en or self.name_local
-        if locale == "egy":
-            return self.name_egy or self.name_en or self.name_local
-        return self.name_en or self.name_local
+        return resolve_localized_name(
+            locale,
+            name_local=self.name_local,
+            name_zh=self.name_zh,
+            name_en=self.name_en,
+            name_egy=self.name_egy,
+        )
