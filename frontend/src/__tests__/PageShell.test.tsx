@@ -353,6 +353,46 @@ function lineAt(src: string, index: number): number {
 const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
 
 /**
+ * 同一张表,给 `<h3>`。键是相对 `frontend/` 的路径,值是当时量到的那段排版。
+ *
+ * **这里面的五条不是「还没来得及改」,是一次没有答案的普查结果。**
+ *
+ * 2026-09-10 用下面这条守卫自己的逻辑数了 `app/` 与 `src/components/` 的全部
+ * `<h3>`:18 个,分四档。三个角色各自都有**逐字符吻合 `<h2>` 那一档**的实例
+ * (区块标签 8、面板标题 3、列表行标题 2),所以「`<h3>` 用的是同样的三个角色」
+ * 不是从样本硬推的,是每一档都有见证。
+ *
+ * 唯一没有答案的是**列表行标题该钉哪一档**:
+ *
+ *     text-03 font-medium   2 处   organizations 树行、RolesGrid 卡片行
+ *     text-04 font-semibold 4 处   actors 卡片行 ×2、cross-judgments 行、realms 卡片行
+ *     text-04 font-medium   1 处   JudgmentGroundsPanel 条文行
+ *
+ * 两边**没有结构上的分界线**。最直接的反例是同一种东西的两种写法:
+ * `permissions/RolesGrid.tsx:40` 与 `app/realms/page.tsx:161` 都是
+ * `grid-cols-1 sm:2 lg:3 xl:4` 的卡片网格、都是 `min-w-0 truncate` 的标题加一行
+ * 次要信息,一个 13px medium、一个 15px semibold。"密集行 vs 卡片"这条线划不出来。
+ *
+ * 两边各自也都自洽:两组的标题都恰好比**自己那张卡的第二行**高一档
+ * (text-04 上面配 text-03、text-03 上面配 text-02)。所以这不是「五处写错了」,
+ * 是同一个角色的两种约定,3:5,而**任何一边都没有缺陷可以拿来判**。
+ *
+ * 按 `CLAUDE.md`「A split needs a defect to justify it, not a number」,这一轮
+ * 不靠人数把五处改掉 —— 那会在四个用户看得见的界面上按一条本轮才定下的规矩
+ * 改版式。它们记在这里,等一个设计决定。
+ *
+ * 这张表和 `H2_ROLE_EXEMPTIONS` 一样**会自我作废**:下面要求每个键都真的命中,
+ * 一旦这些 `<h3>` 被改标签、改排版或删掉,守卫就报红要求删掉对应条目。
+ * 一份不会陈旧的白名单才是这个仓库真正怕的东西。
+ */
+const H3_ROLE_EXEMPTIONS = new Map<string, string>([
+  ["app/actors/page.tsx", "text-04 font-semibold"],
+  ["app/cross-judgments/page.tsx", "text-04 font-semibold"],
+  ["app/realms/page.tsx", "text-04 font-semibold"],
+  ["src/components/judgment/JudgmentGroundsPanel.tsx", "text-04 font-medium"],
+]);
+
+/**
  * `density` —— 统一是默认,不是唯一。
  *
  * 迁移时 33 条路由都拿到同一套正文节奏 `px-6 py-6`,对一张可排序的表格那是对的:
@@ -557,6 +597,152 @@ describe("PageShell density", () => {
           `list-row title is "text-03 font-medium" (--text-03 has no companion weight, ` +
           `so there the font-medium is required, not redundant). The rule is ` +
           `written in src/components/ui/PageShell.tsx's file header.\n\n` +
+          offenders.join("\n")
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * 规则一之二:`<h3>` 用的是**同样的三个角色**,同样的三档。
+   *
+   *     区块标签 (eyebrow)  text-01 uppercase     面板/区段里每一组上方那行小字
+   *     面板标题             text-06              这一整块浮层/抽屉/callout 自己的题
+   *     列表行标题           text-03 font-medium  列表/网格里每一行的题头
+   *
+   * **为什么是同样三个,而不是「比 h2 小一级」的另一套。** 2026-09-10 用这条守卫
+   * 自己的 `collectTsx` / `blankComments` 数了 `app/` 与 `src/components/` 的全部
+   * `<h3>`:**18 个**,四档 —— text-01 uppercase、text-03 font-medium、
+   * text-04(4 处 semibold / 1 处 medium)、text-06,另有 2 处**一个 `text-0N` 都
+   * 不写**。读上下文之后,18 个落进的语义槽只有三个,而且**每一个槽都已经有
+   * 一处逐字符吻合 `<h2>` 那一档的 `<h3>`**:
+   *
+   *     区块标签    JudgmentQueueConsole:614 与 QueueContext 的四处,text-01 uppercase
+   *     面板标题    workflow/page/TemplatePreview.tsx:145,text-06(它的行注释就写着
+   *                 「06 是区块标题那一档」)
+   *     列表行标题  organizations:142 与 permissions/RolesGrid.tsx:40,text-03 font-medium
+   *
+   * 所以这套体系不是从五个样本归纳出来的 —— 每一档都有见证,而普查里**没有出现
+   * 第四种语义**。反过来说也成立:排版档跟着**角色**走,不跟着标签深度走。同一个
+   * 「列表行标题」在没有中间面板时写作 `<h2>`、在面板里写作 `<h3>`,那是文档大纲
+   * 的深度问题,不是"这行标题该多大"的问题;让档位跟着标签走,等于把 `<h2>` 这一
+   * 轮刚拆掉的耦合原样装回去。
+   *
+   * **这一轮据此改了三处、五处记进豁免。**
+   *
+   *   改了(缺陷,与选哪一档无关):
+   *     - `AppLayout.tsx:382`、`MatrixLegend.tsx:27` 此前**一个 `text-0N` 都没有**,
+   *       字号来自祖先的一个工具类(MatrixLegend 的外层是 `text-03`,于是它的
+   *       "标题"和自己下面的说明段落同为 13px)。刻度存在的全部理由就是字号从刻度
+   *       来 —— 两处都补成面板标题档 `text-06`,并删掉那句 `font-semibold`(空操作)。
+   *       320px 的浮层上放 22px 标题不是本轮新定的:同宽的 `SettingsDrawer` 抽屉
+   *       标题本来就是 `<h2 className="text-06">`。
+   *     - `SettingsDrawer.tsx` 的 386/419/464 是"主题 / 强调色 / 导航模式"三个
+   *       **设置分组的组头**,不是列表行 —— 它们和上面那五个 `text-01 uppercase`
+   *       的队列面板组头连 `text-ink-muted` 和 `mb-3` 都逐字相同,只是写成了
+   *       13px medium。改成 `text-01 uppercase`。
+   *
+   *   **这三处顺带证伪了一句已经写进 `PageShell.tsx` 的话。** 那里 2026-09-10 记着
+   *   「同一天扫 `<h3>`,`text-03 font-medium` 有 5 处,**全是同一种东西**」——
+   *   其中三处是设置抽屉的组头,是区块标签不是列表行。`<h2>` 第三个角色的证据
+   *   因此不是"六次",是**三次**(notifications 的 `<h2>` 加 organizations、
+   *   RolesGrid 两个 `<h3>`);那句话已按实测改掉。角色本身仍然成立,厚度不同。
+   *
+   *   没改(见 `H3_ROLE_EXEMPTIONS` 上方那段):列表行标题这一档在 `<h3>` 上是
+   *   3:5 的两种约定,两边都自洽、中间没有结构分界线,任何一边都没有缺陷可判。
+   *
+   * 断言顺序和 `<h2>` 那条一样:**先证明扫到了东西**,再证明没有违规 —— 正则打错
+   * 或走错目录时 `offenders` 会是干干净净的空数组。
+   */
+  it("pins every <h3> to the same three roles, and records the one step it could not settle", () => {
+    const files = ["app", path.join("src", "components")].flatMap((root) =>
+      collectTsx(path.join(FRONTEND, root), () => true)
+    );
+    expect(files.length).toBeGreaterThan(100);
+
+    const found: { file: string; line: number; tag: string; steps: string[] }[] = [];
+    for (const file of files) {
+      const src = blankComments(readFileSync(file, "utf8"));
+      const re = /<h3\b[\s\S]*?>/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src)) !== null) {
+        found.push({
+          file: path.relative(FRONTEND, file).split(path.sep).join("/"),
+          line: lineAt(src, m.index),
+          tag: m[0],
+          steps: [...new Set(m[0].match(/\btext-0[1-8]\b/g) ?? [])],
+        });
+      }
+    }
+    // 扫描面的下限。`<h3>` 比 `<h2>` 少(2026-09-10 实测 18 个,其中 13 个在
+    // `src/components/`),所以下限也低 —— 但两边都要有,因为「漏掉半棵树」和
+    // 「没有违例」在报告里长得一模一样,而 `<h2>` 那一轮就是这么漏掉 13 个的。
+    expect(found.length).toBeGreaterThanOrEqual(15);
+    expect(found.filter((h) => h.file.startsWith("src/")).length).toBeGreaterThanOrEqual(8);
+    expect(found.filter((h) => h.file.startsWith("app/")).length).toBeGreaterThanOrEqual(3);
+
+    // 三个角色**各自**都要真的在树上被看到。少了任何一档,这条守卫对那一档就是
+    // 从未运行过的,而它照样绿 —— 和下面 density 那条的 `observed` 是同一个理由。
+    const conforming = (step: string, extra: (_tag: string) => boolean) =>
+      found.filter((h) => h.steps.length === 1 && h.steps[0] === step && extra(h.tag)).length;
+    expect(conforming("text-01", (t) => /\buppercase\b/.test(t))).toBeGreaterThan(0);
+    expect(conforming("text-06", () => true)).toBeGreaterThan(0);
+    expect(conforming("text-03", (t) => /\bfont-medium\b/.test(t))).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+    const exemptionsHit = new Set<string>();
+    for (const h of found) {
+      const step = h.steps.length === 1 ? h.steps[0] : null;
+      let why: string | null = null;
+      if (step === null) {
+        // 0 档最坏:字号跟着祖先的工具类走,于是"标题"可能和它下面的正文同号。
+        // AppLayout 的通知弹层与 MatrixLegend 的图例框此前正是这样。
+        why =
+          `pins ${h.steps.length} type steps (${h.steps.join(", ") || "none"}) — ` +
+          `an <h3> declares exactly one, and a heading with none takes its size from ` +
+          `whatever utility class an ancestor happens to carry`;
+      } else if (step === "text-01" && !/\buppercase\b/.test(h.tag)) {
+        why = `text-01 without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
+      } else if (step === "text-06" && /\bfont-semibold\b/.test(h.tag)) {
+        why =
+          `font-semibold on text-06 is a no-op — --text-06--font-weight is already 600, ` +
+          `so this renders byte-identical and reads as "it would be light without me"`;
+      } else if (step === "text-03" && !/\bfont-medium\b/.test(h.tag)) {
+        why =
+          `text-03 without font-medium — the list-row title role is "text-03 font-medium", ` +
+          `and --text-03 has no companion --text-03--font-weight, so without it the heading ` +
+          `renders at the same 400 as the text beneath it`;
+      } else if (step !== "text-01" && step !== "text-06" && step !== "text-03") {
+        why =
+          `${step} is none of the three roles (eyebrow = text-01 uppercase, ` +
+          `panel title = text-06, list-row title = text-03 font-medium)`;
+      }
+      if (why === null) continue;
+
+      const exempt = H3_ROLE_EXEMPTIONS.get(h.file);
+      if (exempt !== undefined && h.tag.includes(exempt)) {
+        exemptionsHit.add(h.file);
+        continue;
+      }
+      offenders.push(`${h.file}:${h.line}  ${why}`);
+    }
+
+    const stale = [...H3_ROLE_EXEMPTIONS.keys()].filter((f) => !exemptionsHit.has(f));
+    if (stale.length > 0) {
+      throw new Error(
+        `H3_ROLE_EXEMPTIONS lists a heading that no longer exists in that shape. ` +
+          `The entry is now a claim about code that is not there — delete it (and its ` +
+          `reason) rather than leaving a white-list nobody re-derives.\n\n` +
+          stale.join("\n")
+      );
+    }
+    if (offenders.length > 0) {
+      throw new Error(
+        `<h3> carries the same three roles as <h2>, at the same three steps: the eyebrow ` +
+          `label is "text-01 uppercase", the panel title is "text-06", and the list-row ` +
+          `title is "text-03 font-medium". The step follows the ROLE, not the heading ` +
+          `depth — a row title written <h3> because it sits inside a panel is the same ` +
+          `row title. The rule is written in src/components/ui/PageShell.tsx's file header.\n\n` +
           offenders.join("\n")
       );
     }

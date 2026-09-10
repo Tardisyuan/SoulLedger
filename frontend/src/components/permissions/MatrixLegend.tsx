@@ -24,7 +24,12 @@ export function MatrixLegend({
 
   return (
     <div className="bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-4 mb-4 text-03 space-y-2">
-      <h3 className="font-semibold text-[oklch(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
+      {/* 面板标题这一档是 `text-06`,见 `src/components/ui/PageShell.tsx` 文件头。
+          此前这里一个 `text-0N` 都没写,于是标题的字号来自**外层那个 `text-03`**
+          —— 它和自己下面的说明段落同为 13px,只靠 weight 分开。字号从刻度来,
+          不从祖先的一个工具类来,这是刻度存在的全部理由。
+          `font-semibold` 一并删掉:`--text-06--font-weight` 已经是 600。 */}
+      <h3 className="text-06 text-[oklch(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
       <p className="text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.legend_intro")}</p>
       {nonSubsetPair && (
         <p className="text-[oklch(var(--color-ink-muted))]">

@@ -22,9 +22,8 @@
  * for particular copy. Matching on a phrase would pass the moment someone
  * changed the empty-state wording, and the property is that they *differ*.
  */
-import { expect, test } from "@playwright/test";
 
-import { setupAuthenticatedPage } from "./fixtures";
+import { expect, test, setupAuthenticatedPage } from "./fixtures";
 
 /** Route, and the endpoint whose failure the page must not hide.
  *

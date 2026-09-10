@@ -32,9 +32,8 @@
  * 这两条计数同时也是「扫到了东西」的断言:一个没渲染出来的页面给出的是
  * 「0 张卡」而不是「高度相等」。
  */
-import { expect, test } from "@playwright/test";
 
-import { LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
 
 /**
  * 亚像素容差,单位 CSS px。

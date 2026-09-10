@@ -22,9 +22,8 @@
  * 落在哪里取决于缓动曲线,`ease-exit` 是 `cubic-bezier(0.7, 0, 0.84, 0)`,
  * 前半程几乎不动、后半程猛冲,一枪打在中点会正好错过。
  */
-import { expect, test } from "@playwright/test";
 
-import { setupAuthenticatedPage } from "./fixtures";
+import { expect, test, setupAuthenticatedPage } from "./fixtures";
 
 /**
  * 在接下来的 `frames` 帧里,每帧记一次文档宽度与视口宽度,返回最宽的一帧。

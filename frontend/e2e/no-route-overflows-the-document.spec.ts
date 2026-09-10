@@ -16,9 +16,8 @@
  * 给出一串与文档宽度无关的答案 —— `/permissions` 上实测 127 个「超宽元素」,
  * 每一个都有 overflow-x 祖先,而文档确实是宽的。
  */
-import { expect, test } from "@playwright/test";
 
-import { setupAuthenticatedPage } from "./fixtures";
+import { expect, test, setupAuthenticatedPage } from "./fixtures";
 
 /** 共用 PageShell / 同一套布局的静态路由。动态路由([id])要另配 fixture,
  *  不在这个文件的范围内 —— 它们的容器是同一批,溢出会先在这里出现。 */

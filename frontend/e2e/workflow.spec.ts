@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { domainEnum, setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
+import { type Page } from "@playwright/test";
+import { test, expect, domainEnum, setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
 
 /**
  * Text locators here must be filtered to the visible match.
