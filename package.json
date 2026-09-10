@@ -14,7 +14,7 @@
     "_": "npm honours `overrides` only in the package it installs from — for this workspace that is the ROOT, and only this file. frontend/package.json used to carry its own copy; it was inert and read as live. Do not re-add them there.",
     "sharp": "GHSA on libheif, <0.35.4. next depends on ^0.34.5, so without this pin the advisory stays open however new next gets.",
     "@redocly/openapi-core": "Its bundled js-yaml sat at 4.3.1, inside the maxTotalMergeKeys advisory range (4.0.0-4.3.1). Nested rather than a flat `js-yaml` pin: @istanbuljs/load-nyc-config needs 3.x, and forcing 4.x on it would break jest coverage.",
-    "nwsapi": "PINNED AT 2.2.23 FOR SPEED, NOT SECURITY — and unpinning costs four minutes per test run. nwsapi is jsdom's CSS selector engine. Measured 2026-09-11 while regenerating this lockfile: at 2.2.27, `dispatchProposeValidation` + `searchSelectIsServerFiltered` took 287s and eight of their tests blew the 5s default timeout; pinned back to 2.2.23 the same two files take 0.93s. That is ~300x, and it is not a hang — with --testTimeout=90000 they pass. A CPU profile put 77% of samples in jsdom `matches` / `ownerDocument` and nwsapi `has` / `matchesNative`, which is what named the package: jsdom itself did not move (26.1.0 both sides). Only these two files are affected because only they render a form whose queries walk a large tree; 110 trivial component tests ran in 1.3s in the same slow install. Before touching this line, run those two files and read the wall time — a green suite with a raised timeout would hide it."
+    "nwsapi": "PINNED AT 2.2.25 FOR SPEED, NOT SECURITY. nwsapi is jsdom's CSS selector engine, and 2.2.26 made two jest files ~40x slower. Bisected 2026-09-11, one version at a time, each install fully re-resolved and the installed version verified before measuring (`dispatchProposeValidation.test.tsx`, --testTimeout=120000): 2.2.23 1.0s / 2.2.24 0.59s / 2.2.25 1.07s / 2.2.26 43.7s / 2.2.27 41s. The break is 2.2.26, so this pin keeps the three patch releases after 2.2.23 and stops one short of the regression. HOW IT WAS FOUND, because guessing did not work: five packages were pinned back on suspicion (@base-ui/react, @testing-library/react, the jest family, @sentry/nextjs, zod) and every one was wrong — and two of those rounds were void anyway, because the override had been removed while the lockfile still held the old version, so the 'test' measured nothing. What located it was a CPU profile: 77% of samples in jsdom `matches`/`ownerDocument` and nwsapi `has`/`matchesNative`, while jsdom itself had not moved (26.1.0 on both sides). BEFORE CHANGING THIS LINE: re-resolve fully (npm keeps a lockfile entry that lacks `resolved`, so a plain `npm install` will report 'up to date' and leave the old version in place), confirm the installed version, then run that file and read the wall time. Only two files are affected — the ones rendering a form whose queries walk a large tree; 110 trivial component tests ran in 1.3s on the slow install. A suite that is green because someone raised testTimeout is exactly what this looks like when it is not fixed."
   },
   "overrides": {
     "postcss": "^8.5.10",
@@ -23,6 +23,6 @@
     "@redocly/openapi-core": {
       "js-yaml": "^4.3.2"
     },
-    "nwsapi": "2.2.23"
+    "nwsapi": "2.2.25"
   }
 }
