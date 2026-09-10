@@ -383,7 +383,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Theme Section */}
           <div className="mb-6">
-            <h3 className="text-03 font-medium text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
+            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={toggleTheme}
@@ -416,7 +416,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Accent Color Section */}
           <div className="mb-6">
-            <h3 className="text-03 font-medium text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
+            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ACCENT_COLORS.map((color) => (
                 <button
@@ -461,7 +461,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Navigation Mode Section */}
           <div className="mb-6">
-            <h3 className="text-03 font-medium text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
+            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => onNavModeChange("classic")}
