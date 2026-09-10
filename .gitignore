@@ -1,4 +1,11 @@
-node_modules/
+# No trailing slash, deliberately: a trailing slash matches directories ONLY,
+# and git does not consider a symlink a directory. Working in a git worktree
+# means having no `node_modules` there (npm installed into the main checkout),
+# and the obvious fix is to symlink the main checkout's — at which point
+# `node_modules/` stops matching and `git status` offers to commit the symlink.
+# Measured 2026-09-10: `git check-ignore -v node_modules` returned nothing, and
+# both symlinks showed up as `??`, one `git add -A` away from being committed.
+node_modules
 __pycache__/
 *.pyc
 .env
