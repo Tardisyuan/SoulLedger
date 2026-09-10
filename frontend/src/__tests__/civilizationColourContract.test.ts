@@ -246,7 +246,8 @@ describe("civilization identity: globals.css is the authority", () => {
 // ---------------------------------------------------------------------------
 
 /**
- * THE RULE THAT WAS WRITTEN DOWN ONCE, OBEYED ONCE, AND NEVER ENFORCED.
+ * THE RULE THAT WAS WRITTEN DOWN ONCE, OBEYED ONCE, ENFORCED LATE, AND THEN
+ * ENFORCED IN THE WRONG COORDINATE.
  *
  * globals.css chose Greek's 88° over the 138° that maximises the gap to the
  * other three cosmologies, and said why on the token: 138 sits 94° from both
@@ -257,147 +258,259 @@ describe("civilization identity: globals.css is the authority", () => {
  *
  * That paragraph is the whole of the rule's existence. It was applied to the
  * one hue being chosen at the time and to no other, and prose does not fail, so
- * the tenants that were already violating it went on violating it. Measured, at
- * the moment this pin was written:
+ * the tenants that were already violating it went on violating it. The first
+ * enforcement of it measured HSL HUE ANGLE between `--color-civ-hue-*` and the
+ * semantic tokens, because degrees are the units the paragraph is written in.
  *
- *     Chinese   12° dark / 20° light    7.79° / 0.00° from --color-status-judging
- *     Egyptian  44°                     1.18°  from --color-accent-hover
- *     European 232°                    16.77°  clear
- *     Greek     88°                    45.18°  clear
+ * ===========================================================================
+ * THE HUE-ANGLE PIN IS ARCHIVED BELOW RATHER THAN KEPT, AND THIS IS WHY.
+ * ===========================================================================
  *
- * Egyptian and `--color-accent`'s hover state are, to within a degree of hue,
- * THE SAME COLOUR — a cosmology's identity and the thing a button does when you
- * point at it. That is not a near miss; it is the exact shape the Greek
- * paragraph refuses.
+ * Two things were wrong with it, and neither is a tuning problem:
+ *
+ * THE SUBJECT WAS NOT A COLOUR. `--color-civ-hue-*` is a bare number that
+ * NOTHING IN THE STYLESHEET READS ANY MORE (its own comment says so — it fed
+ * `--civ-hue` until the OKLCH migration). The pin compared that number against
+ * the hue angle of the semantic tokens. What a reader actually sees is
+ * `--color-civ-mark-*` and `--color-civ-ink-*`, full OKLCH triples, whose
+ * lightness and chroma the comparison threw away before it started.
+ *
+ * AND DEGREES ARE NOT PERCEPTUALLY UNIFORM, so "legal" and "actually
+ * distinguishable" were different sets. Both directions were measured, and
+ * both are worse than a near miss:
+ *
+ *   - FALSE NEGATIVE. Greek at 137° — the design the 12° clearance was built
+ *     to reject, one degree off — clears it: 12.79° (dark) / 12.66° (light) of
+ *     hue angle from `--color-karma-merit`, comfortably over 12. The same pair
+ *     measures 3.39 ΔE00 dark / 4.04 light. `PERCEPTIBLE_AT_A_GLANCE` is 3.5.
+ *     The hue pin was passing a Greek that is not reliably distinguishable
+ *     from the merit colour AT ALL, which is a weaker bar than the one the
+ *     rule's own prose sets, let alone the stronger one it asks for.
+ *   - FALSE POSITIVE, IN THE LIMIT. Egyptian's 1.18° from `--color-accent-hover`
+ *     was written up as "the worst violation in the palette". Rotate Egyptian
+ *     onto accent-hover's hue EXACTLY — 0.00° of clearance, the worst reading
+ *     the metric can produce — and the two colours are 13.38 ΔE00 apart in dark
+ *     and 30.56 in light. Muted gold (193,163,89) against signal yellow
+ *     (251,192,45). The metric's maximum complaint about Egyptian describes two
+ *     colours nobody would confuse.
+ *
+ * AND IT COULD NOT NAME THE RIGHT NEIGHBOUR FOR THE ONE TENANT THE RULE WAS
+ * WRITTEN FOR. In hue angle, Greek's nearest semantic token is
+ * `--color-accent-hover`, 45.18° away; `--color-karma-merit` is 61.79° off and
+ * ranks fifth. In ΔE00 Greek's nearest semantic colour IS `--color-karma-merit`
+ * (12.98 dark / 11.81 light), with accent-hover at 28.13. The token the 88°
+ * decision exists to avoid is the one the old metric ranked as not-a-concern.
  *
  * ---------------------------------------------------------------------------
- * WHY 12°, AND WHY IT IS NOT A NUMBER FITTED TO THIS PALETTE.
+ * THE ARCHIVED MEASUREMENT, KEPT WHOLE, WITH THE NEW COLUMN BESIDE IT.
  *
- * It is the figure the Greek derivation already used, taken from the case it
- * REJECTED rather than from the case it accepted: 138° was refused at 12° of
- * clearance. So the threshold is the largest clearance this repository has ever
- * called too small, which is the only kind of provenance a threshold can have
- * here. Fitting one to today's measurements would have produced 16.77 (the
- * European figure) and would have meant nothing.
+ * Left: `--color-civ-hue-*` against the nearest semantic HUE ANGLE, with the
+ * chroma floor applied (see below). Right: that tenant's MARK against the
+ * nearest semantic COLOUR in ΔE00. Every verdict in the palette flips.
+ *
+ *              old: nearest hue angle          new: nearest ΔE00
+ *   cn dark     7.79°  status-judging  VIOL     9.63  karma-demerit    clear
+ *   cn light    0.00°  status-judging  VIOL     5.73  status-judging   clear
+ *   eu dark     8.36°  status-lost   (floored)  11.10 status-info      clear
+ *   eu light    8.36°  status-lost   (floored)  8.73  status-info      clear
+ *   eg dark     1.18°  accent-hover    VIOL     11.57 status-warning   clear
+ *   eg light    1.18°  accent-hover    VIOL     14.03 status-warning   clear
+ *   gr dark    45.18°  accent-hover    clear    12.98 karma-merit      clear
+ *   gr light   45.18°  accent-hover    clear    11.81 karma-merit      clear
+ *
+ * The inks, which the old pin never looked at, are wider everywhere except
+ * where they are the same triple as the mark: cn 12.63 / 9.56, eu 11.24 / 8.73,
+ * eg 11.61 / 15.14, gr 12.98 / 12.58 (dark / light).
+ *
  * ---------------------------------------------------------------------------
- * THE SUBJECT IS SCANNED, NOT LISTED, AND THAT IS THE HALF THAT ROTS.
+ * WHAT THE ARCHIVED PIN CONCLUDED, AND WHICH OF IT SURVIVES.
  *
- * A hard-coded roster of semantic tokens is exactly the shape that goes quietly
- * stale: the eleventh `--color-status-*` lands, nobody adds it here, and the
- * pin keeps passing while the rule it names stops being checked. So the set is
- * derived by EXCLUSION from every `--color-*` the stylesheet declares — take
- * away the per-tenant `--color-civ-*` family (that is the subject, not the
- * comparison), the ramp (`--color-surface-*`, `--color-canvas`) and the
- * achromatic chrome (`--color-ink*`, `--color-hairline*`). Whatever is left
- * names a MEANING, and a new family of meanings is included the day it is
- * declared rather than the day someone remembers this file.
- * ---------------------------------------------------------------------------
- * AND THEN A CHROMA FLOOR, WHICH IS THE PART THAT WAS NOT OBVIOUS AND WHICH
- * CHANGES ONE OF THE FOUR ANSWERS.
+ * SURVIVES — EUROPEAN NEEDS NO CHANGE, and the reasoning generalises. The hue
+ * pin needed a CHROMA FLOOR at 0.04 to reach that answer: `--color-status-lost`
+ * sits at hue 223.64° with chroma 0.0248, 8.36° from European, and counting it
+ * made European a violation whose only legal band was 235.64–246.10° — which is
+ * 240° and its neighbourhood, forbidden by name in `chartColourContract` as the
+ * no-cosmology fallback hue. A rule with no legal answer. The floor was
+ * justified in prose: "hue angle is a proxy for 'the same colour' only while
+ * both colours HAVE a hue; below some chroma the angle is arithmetic on a grey."
  *
- * `--color-status-lost` sits at hue 223.64° with CHROMA 0.0248 — it is a grey,
- * deliberately (its own comment: "slate, not grey — grey reads as disabled").
- * European (232°) is 8.36° from it. For one draft of this pin that counted as a
- * violation and European was rotated to 240° to clear it. Two things were wrong
- * with that, and both are worth keeping written down:
+ * That sentence is correct, and ΔE00 makes it structural instead of a
+ * constant. Chroma is one of the three axes the formula already weighs, so a
+ * drained blue-grey is simply far from a saturated periwinkle: `status-lost`
+ * ranks 4th / 2nd / 4th / 4th (dark mark, dark ink, light mark, light ink) at
+ * 12.71 / 12.23 / 16.38 / 16.38, never nearest, and `SEMANTIC_CHROMA_FLOOR`
+ * and its `CHROMA_GAP` bimodality pin are both retired as unnecessary rather
+ * than as wrong. The pin below re-derives that instead of asserting it.
  *
- *   - 240° IS FORBIDDEN BY NAME, in `chartColourContract`: it is the hue the
- *     no-cosmology fallback ramp carries, and "a cosmology claiming it would
- *     make `:root:not([data-civ])`'s neutral ramp read as that tenant". The
- *     rotation turned that guard red. That is the guard working, and it is why
- *     the legal band 235.64–246.10° is not actually available to European.
- *   - THE VIOLATION WAS NOT REAL. The rule's own words are that a semantic
- *     clash is READ AS the wrong thing. To be read as `--color-status-lost` a
- *     colour has to be mistakable for it, and European's mark is a saturated
- *     periwinkle at chroma 0.101 against a drained blue-grey at 0.025. Hue
- *     angle is a proxy for "the same colour" only while both colours HAVE a
- *     hue; below some chroma the angle is arithmetic on a grey.
+ * REFUTED — "EGYPTIAN IS THE WORST VIOLATION IN THE PALETTE." It is the widest
+ * clearance of the four, in both themes (11.57 / 14.03). The whole apparatus
+ * built on top of that reading goes with it: the feasible set that was measured
+ * to be EMPTY (clearance needs eg >= 54.82°, `ActorsPage.test.tsx`'s /actors
+ * section grounds need eg <= 48°), the finding that chroma could not rescue it
+ * either (at 58° the light mark hits the sRGB gamut edge and renders olive),
+ * and the two-tenant escape route that was written down rather than done
+ * (move Greek to ~105°, let Egyptian take 58°). All of it was true arithmetic
+ * about a defect that the measurement never established. Egyptian does not need
+ * to move; Greek does not need to move to let it. THE /ACTORS AND GAMUT
+ * FIGURES REMAIN VALID as constraints on any FUTURE Egyptian move — they were
+ * measured, they are just no longer load-bearing for a fix nobody needs.
  *
- * So the floor is real and it changes the answer: with greys counted European
- * is a violation with no legal fix, and without them it is compliant at 232° by
- * 16.77° and needs no change at all.
+ * REFUTED — "CHINESE IS STRUCTURALLY UNFIXABLE." The argument was that red is
+ * what the cosmology is and the semantic layer owns the whole red band:
+ * `status-error` / `karma-demerit` / `verdict-failed` at 0.00° and
+ * `status-judging` at 19.79° (dark) / 20.00° (light), with 12° of clearance
+ * from each leaving nothing between them. In ΔE00 Chinese clears in both
+ * themes. Light Chinese is the tightest figure in the palette and the exact
+ * hue identity behind it is real — `--color-civ-hue-cn: 20` IS `status-judging`
+ * to two decimal places — but the mark is a deep terracotta (153,78,41) and
+ * judging is a bright amber, and the formula rates that separation 5.73.
  *
- * 0.04 IS NOT A KNIFE EDGE, AND THE PIN BELOW PROVES IT RATHER THAN ASSERTING
- * IT. The declared palette is bimodal: everything the floor excludes tops out
- * at 0.0264 (`--color-status-lost`, light) and everything it keeps starts at
- * 0.0764 (`--color-status-settled`, light). Nothing at all is declared between
- * them, so the floor could sit anywhere in a band three times its own width and
- * classify every token identically. `keeps the chroma floor out of any
- * judgement call` is what goes red if a future token lands in that gap —
- * because THEN the floor would be a judgement, and a judgement belongs in
- * review rather than in a constant.
+ * IT IS ALSO THE THINNEST MARGIN THIS PIN HOLDS: 0.73 over the threshold, on
+ * light Chinese, against `--color-status-judging`. That is stated here rather
+ * than left to be discovered, because it is the pair a future light-mode
+ * Chinese change will redden first, and because a reader is entitled to know
+ * that "all four clear" is not "all four clear comfortably".
+ *
+ * THE EXEMPTION TABLE IS GONE, AND ITS OWN SELF-INVALIDATION IS WHAT REMOVED
+ * IT. `CIV_HUE_EXEMPTIONS` carried `cn` and `eg` with a structural paragraph
+ * each and threw if a listed tenant stopped violating the rule. Carried across
+ * to this metric unchanged it throws for BOTH rows at once:
+ *
+ *     CIV_HUE_EXEMPTIONS excuses a tenant that no longer needs excusing in dark.
+ *     The entry has become a claim about a defect that is gone — delete it AND
+ *     the paragraph above it […]
+ *       cn: red is what the cosmology is, and --color-status-error (0°) plus …
+ *       eg: clearance needs >= 54.82° but the /actors section grounds need …
+ *
+ * So the mechanism did what it was built to do: it refused to let two
+ * paragraphs about defects that do not exist stay standing as live claims. The
+ * mechanism itself is retired with them — with nothing to excuse, an
+ * allow-list is a lever nobody is holding, and re-introducing one means
+ * re-introducing it deliberately with the reason attached.
+ *
+ * ===========================================================================
+ * WHY 5 ΔE00, AND WHY IT IS THE ONLY NUMBER THAT WAS AVAILABLE.
+ * ===========================================================================
+ *
+ * The band is fixed at both ends by the derivation this rule already made,
+ * re-measured in the new metric. Both ends are re-derived by the pin below
+ * rather than quoted, so neither can go stale:
+ *
+ *   - THE END IT REJECTED. Greek at 138°, built the way the original decision
+ *     imagined it — the mark's own lightness and chroma held, the hue rotated
+ *     until it reads back at 138 — is 3.26 ΔE00 from `--color-karma-merit` in
+ *     dark and 3.96 in light. The threshold has to redden that in both themes,
+ *     so it must exceed 3.96.
+ *   - THE END IT ACCEPTED. Greek at 88° is 12.98 dark / 11.81 light from the
+ *     same token. The threshold has to keep that green, so it must not exceed
+ *     11.81.
+ *
+ * Legal band: (3.96, 11.81]. Then two rules this file already lives by close it
+ * to a single value:
+ *
+ *   - A THRESHOLD COMES FROM THE PUBLISHED LADDER, NOT FROM THIS PALETTE. That
+ *     is the rule `PERCEPTIBLE_AT_A_GLANCE` and `MARK_LEAD_MARGIN` were both
+ *     chosen under. The CIEDE2000 ladder has rungs at 1 (imperceptible below),
+ *     2 (close inspection), 3.5 (at a glance) and 5 (obvious). EXACTLY ONE OF
+ *     THEM FALLS INSIDE (3.96, 11.81]. Had the band excluded 5 there would have
+ *     been no defensible number, and the honest report would have been that the
+ *     metric change needs its own review rather than a constant.
+ *   - AND IT MUST BE STRONGER THAN "AT A GLANCE", which the rule's own prose
+ *     demands: "a hue clash is hard to tell apart, a semantic clash is READ AS
+ *     the wrong thing." Being read as the wrong meaning is a stricter
+ *     requirement than being hard to tell apart, so 3.5 is a floor this
+ *     threshold has to clear, not a candidate for it. 5 — "obvious rather than
+ *     merely visible" — is the next rung up, and the pin below asserts that
+ *     ordering so the two constants cannot silently converge.
+ *
+ * WHY THE REJECTED CASE DOES NOT SUPPLY THE NUMBER THIS TIME, unlike the 12°
+ * it supplied to the archived pin. 3.26 / 3.96 straddles 3.5. Under a
+ * perceptual metric the historical rejection of 138° turns out to carry no
+ * information beyond the weakest rung this file already owns — it was refusing
+ * a design that fails "distinguishable at a glance", which nothing needed a new
+ * constant to refuse. The case still fixes the LOWER BOUND of the band, and
+ * that is the whole of what it can honestly do. The historical judgement is
+ * vindicated, not overturned: 138° really was too close, and by more than its
+ * author could show in degrees.
+ *
+ * WHY NOT 8. `PERCEPTIBILITY_FLOOR` is 8 and sits inside the band, and reusing
+ * the numeral would be the exact failure that constant's own comment names:
+ * "channel steps have no ΔE00 equivalent — a 'migrated 8' would be a new number
+ * wearing an old number's authority". 8 measures a per-channel difference out
+ * of 255. It is not a ΔE00 and cannot be spent as one.
+ *
+ * THAT 5 EQUALS `MARK_LEAD_MARGIN` IS THE SAME RUNG, NOT A COPY. That constant
+ * is a MARGIN — a subtraction between two ΔE00 figures, "the mark leads the
+ * ramp by an obvious step". This one is an ABSOLUTE distance between two
+ * colours. They agree numerically because both were taken from the same
+ * published rung for the same stated reason, which is what a ladder is for.
+ *
+ * ===========================================================================
+ * THE SUBJECT, AND WHAT IS STILL NOT IN IT.
+ * ===========================================================================
+ *
+ * MARK AND INK, both themes, against every semantic token — the things that get
+ * painted. `--color-civ-ink-*` is the identity made readable as text and is
+ * drawn on badges; it was outside the archived pin entirely because a hue token
+ * has only one number per tenant. Note that it is not always a second data
+ * point: dark Greek and light European declare ink and mark as the SAME triple.
+ *
+ * NOT THE RAMP. `--color-surface-*` and `--color-canvas` carry the tenant too,
+ * but they are grounds rather than identity, they are held by their own pins
+ * (`MARK_LEAD_MARGIN`, `inkOnSurfaceContract`), and the ramp is not pinned to
+ * the tenant hue at all: measured across all five planes it drifts 0.00–3.29°
+ * from the declared hue for seven of the eight tenant×theme combinations, and
+ * light Chinese drifts 5.00–10.00° by design (its ground is the one that is
+ * not the hue token desaturated — see `--color-civ-hue-cn` in `.light`).
+ * Judging a ground against a semantic foreground is a different claim and
+ * would need its own derivation. (An earlier note gave this range as
+ * 0.24–3.29; that was the DARK half only.)
+ *
+ * THE SCAN, NOT A ROSTER. Unchanged from the archived pin and still the half
+ * most likely to rot: the semantic set is derived by EXCLUSION from every
+ * `--color-*` the stylesheet declares — take away the per-tenant `--color-civ-*`
+ * family (that is the subject), the ramp (`--color-surface-*`, `--color-canvas`)
+ * and the achromatic chrome (`--color-ink*`, `--color-hairline*`). Whatever is
+ * left names a MEANING, and a new family of meanings is included the day it is
+ * declared rather than the day someone remembers this file. What IS new: the
+ * pin now asserts that every surviving candidate parses as a bare OKLCH triple.
+ * The archived version read chroma off each one and compared it to a floor, and
+ * `NaN >= 0.04` is false — so a token declared as `var(…)` would have been
+ * dropped from the comparison silently. Measured today: 20 candidates per
+ * theme, none of them non-triple, so nothing was in fact being dropped.
+ *
+ * ===========================================================================
+ * WHAT THIS METRIC STILL CANNOT SEE, SAID PLAINLY.
+ * ===========================================================================
+ *
+ * ΔE00 measures DISCRIMINATION — can these two be told apart, side by side,
+ * small difference — and the rule is about IDENTIFICATION: will this be read as
+ * that meaning, seen alone, from memory, in a badge the size of a word. No
+ * published metric answers the second question, and this one is fitted on
+ * exactly the regime the rule is not about. Two consequences worth holding:
+ *
+ *   - It will pass a tenant sitting on a semantic token's exact hue as long as
+ *     lightness or chroma separate them. Light Chinese IS that case today, at
+ *     0.00° and 5.73. The archived metric was right that the hue identity is
+ *     real; it was wrong that the hue identity is the whole question.
+ *   - `MARK_LEAD_MARGIN`'s comment already records that CIEDE2000 was fitted
+ *     for differences under about 5, and every figure this pin judges is above
+ *     it. The ordering is trustworthy; the exact spacing between 9.63 and 14.03
+ *     is not a claim the formula makes.
+ *
+ * The honest summary is that this metric is strictly better than the one it
+ * replaces — it has no measured false positives or false negatives here, and it
+ * removed a constant instead of adding one — and that it is still a proxy.
  */
-const SEMANTIC_CLEARANCE_DEG = 12;
+const SEMANTIC_CLASH_DELTA_E = 5;
 
-/** Below this OKLCH chroma a token has no hue to be clashed with. See above. */
-const SEMANTIC_CHROMA_FLOOR = 0.04;
+/** The mark is the identity; the ink is the identity made readable. Both are painted. */
+const IDENTITY_KINDS = ["mark", "ink"] as const;
 
-/** The empty band the floor sits in, asserted so the floor cannot become a knife edge. */
-const CHROMA_GAP: readonly [number, number] = [0.03, 0.07];
+/** The case the rule rejected, in the units it was rejected in. See above. */
+const REJECTED_GREEK_HSL_HUE = 138;
 
-/**
- * Tenants allowed to sit inside the clearance, with the reason, and the reason
- * has to be STRUCTURAL — "we have not got round to it" is what this pin exists
- * to refuse. Both entries were measured to be unfixable BY MOVING THAT TENANT,
- * which is a stronger claim than "hard" and is the only one that earns a row.
- *
- * ── CHINESE ────────────────────────────────────────────────────────────────
- * Red is what the cosmology is, and the semantic layer has claimed the whole
- * red band: `--color-status-error` / `--color-karma-demerit` /
- * `--color-verdict-failed` at 0.00° and `--color-status-judging` at 19.79°
- * (dark) / 20.00° (light). Twelve degrees of clearance from each leaves nothing
- * between them. The nearest compliant point to 12° is 348° — a 24° move that
- * lands in magenta — and the nearest above is 54.82°, which is gold. Neither is
- * "move the Chinese red off the error red"; both are "make Chinese a different
- * colour", which is a decision about the product.
- *
- * The light half is worse than the dark half and worth saying out loud: at 20°
- * Chinese is 0.00° from `--color-status-judging` — EXACTLY the judging hue, an
- * exact identity nobody had ever written down. That 20° is itself the outcome
- * of a different repair (the light page ground reading as pink, recorded on
- * `--color-civ-hue-cn` in the `.light` block), and the two constraints pull
- * opposite ways: away from the blush wedge is toward judging.
- *
- * ── EGYPTIAN ───────────────────────────────────────────────────────────────
- * 44° is 1.18° from `--color-accent-hover` and this is the worst violation in
- * the palette — but the feasible set for a fix is EMPTY, and that was measured
- * rather than assumed. Two constraints, pulling opposite ways:
- *
- *   - Clearance needs eg >= 54.82° (12° above `--color-accent-hover` at 42.82;
- *     everything from 26.04 to 54.82 is blocked by accent / accent-hover /
- *     warning, and below that by judging and error).
- *   - `ActorsPage.test.tsx` holds the four civilization SECTION GROUNDS on
- *     /actors — `--civ-mark` at α 0.16 over the host's surface-1, the one
- *     screen where all four cosmologies are visible at once — at
- *     `PERCEPTIBLE_AT_A_GLANCE`. Egyptian/Greek on that page measures 3.96 at
- *     44° and falls monotonically as Egyptian walks toward Greek's 88°:
- *     3.80 at 45, 3.58 at 47, 3.46 at 48, 2.83 at 54, 2.43 at 58. It needs
- *     eg <= 48°.
- *
- * 54.82 > 48, so no hue satisfies both. Chroma cannot rescue it either: at 58°
- * the light Egyptian mark reaches the sRGB gamut edge (blue channel clamped to
- * 0) at C ≈ 0.119 and the /actors figure plateaus at 3.21, still under 3.5,
- * with the mark by then rendering (119, 115, 0) — olive, not gold.
- *
- * THE FIX EXISTS AND IT IS NOT A ONE-TENANT MOVE. The band from 88° to 137.66°
- * is empty, so moving GREEK up to ~105° restores ~46° of Egyptian/Greek
- * separation and lets Egyptian take 58° (clearance 15.18°). That recolours a
- * tenant which is not in violation, invalidates the recorded derivation of 88°,
- * and needs its own review of every pin it touches — so it is written down here
- * rather than done quietly. Until then Egyptian is the exemption this pin most
- * wants to lose.
- *
- * THE EXEMPTIONS INVALIDATE THEMSELVES. Keyed by tenant, and a tenant listed
- * here that no longer violates the rule throws — so the day either of these
- * moves out of its crevice, the entry and its paragraph have to be deleted
- * rather than left standing as a claim about a defect that is gone.
- */
-const CIV_HUE_EXEMPTIONS: Record<string, string> = {
-  cn: "red is what the cosmology is, and --color-status-error (0°) plus --color-status-judging (19.8°/20.0°) leave no compliant red",
-  eg: "clearance needs >= 54.82° but the /actors section grounds need <= 48°; the feasible set is empty without also moving Greek off 88°",
-};
-
-describe("no civilization's identity hue is a semantic colour", () => {
+describe("no civilization's identity colour is a semantic colour", () => {
   /** Every `--color-*` that names a MEANING — derived by exclusion, never listed. */
   function semanticCandidates(tokens: Record<string, string>): string[] {
     return Object.keys(tokens)
@@ -409,19 +522,51 @@ describe("no civilization's identity hue is a semantic colour", () => {
       .sort();
   }
 
-  const chromaOf = (triple: string): number => Number(triple.split(/\s+/)[1]);
-
-  function semanticHues(theme: ThemeName): { name: string; hue: number }[] {
+  function semanticColours(theme: ThemeName): { name: string; rgb: [number, number, number] }[] {
     const tokens = TOKENS_BY_THEME[theme];
-    return semanticCandidates(tokens)
-      .filter((name) => chromaOf(tokens[name]) >= SEMANTIC_CHROMA_FLOOR)
-      .map((name) => ({ name, hue: hslHueOfOklch(tokens[name]) }));
+    return semanticCandidates(tokens).map((name) => ({
+      name,
+      rgb: oklchTripleToRgb(tokens[name]),
+    }));
+  }
+
+  /** Nearest semantic colour to one identity token, with the name kept for the failure message. */
+  function nearestSemantic(
+    theme: ThemeName,
+    prefix: string,
+    kind: string
+  ): { name: string; d: number } {
+    const rgb = oklchTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-${kind}-${prefix}`]);
+    return semanticColours(theme)
+      .map((s) => ({ name: s.name, d: deltaE00Rgb(rgb, s.rgb) }))
+      .sort((a, b) => a.d - b.d)[0];
   }
 
   /** Shortest way round the circle, so 358° and 2° are 4° apart and not 356°. */
   function hueDistance(a: number, b: number): number {
     const d = Math.abs(a - b) % 360;
     return d > 180 ? 360 - d : d;
+  }
+
+  /**
+   * The hypothetical the rule rejected, reconstructed the way its author framed
+   * it: the SAME COLOUR turned to a different hue. Lightness and chroma are the
+   * mark's own, and OKLCH hue is searched until the HSL readback — the
+   * coordinate `--color-civ-hue-*` is written in — lands on the target.
+   */
+  function rotateToHslHue(triple: string, targetHsl: number): string {
+    const [L, C] = triple.split(/\s+/).map(Number);
+    let best = triple;
+    let bestErr = Infinity;
+    for (let h = 0; h < 360; h += 0.01) {
+      const candidate = `${L} ${C} ${h}`;
+      const err = hueDistance(hslHueOfOklch(candidate), targetHsl);
+      if (err < bestErr) {
+        bestErr = err;
+        best = candidate;
+      }
+    }
+    return best;
   }
 
   // -- FIRST: the scanner found something. An empty scan and a clean palette
@@ -431,15 +576,14 @@ describe("no civilization's identity hue is a semantic colour", () => {
   it("scans a semantic palette that is actually there", () => {
     expect(THEMES).toHaveLength(2);
     for (const theme of THEMES) {
-      const hues = semanticHues(theme);
-      expect(hues.length).toBeGreaterThanOrEqual(15);
-      const names = hues.map((h) => h.name);
+      const names = semanticCandidates(TOKENS_BY_THEME[theme]);
+      expect(names.length).toBeGreaterThanOrEqual(15);
       // Named because they are the three the Greek derivation argued from, and
       // a derivation whose subject silently left the scan is worth a red run.
       expect(names).toContain("--color-karma-merit");
       expect(names).toContain("--color-status-alive");
       expect(names).toContain("--color-verdict-passed");
-      // The token Egyptian is actually colliding with.
+      // The token the archived hue metric said Egyptian was colliding with.
       expect(names).toContain("--color-accent-hover");
       // Every family the exclusion rule is supposed to keep, kept.
       for (const family of ["--color-status-", "--color-verdict-", "--color-karma-"]) {
@@ -451,94 +595,96 @@ describe("no civilization's identity hue is a semantic colour", () => {
       for (const name of names) {
         expect(name).not.toMatch(/^--color-(civ-|surface-|canvas$|ink($|-)|hairline)/);
       }
+      // And every survivor is a colour this pin can actually measure. A
+      // `var(…)` here used to fall out of the comparison without a word,
+      // because the chroma floor it met was `NaN >= 0.04`.
+      for (const name of names) {
+        expect(TOKENS_BY_THEME[theme][name].trim()).toMatch(/^[\d.]+\s+[\d.]+\s+[\d.]+$/);
+      }
     }
-    // All four cosmologies are in the comparison, in both themes.
+    // All four cosmologies are in the comparison, in both themes, both kinds.
     expect(CIV_PREFIXES.length).toBeGreaterThanOrEqual(4);
     for (const theme of THEMES) {
       for (const prefix of CIV_PREFIXES) {
-        expect(TOKENS_BY_THEME[theme][`--color-civ-hue-${prefix}`]).toMatch(/^\d+(\.\d+)?$/);
+        for (const kind of IDENTITY_KINDS) {
+          expect(TOKENS_BY_THEME[theme][`--color-civ-${kind}-${prefix}`]).toMatch(
+            /^[\d.]+\s+[\d.]+\s+[\d.]+$/
+          );
+        }
       }
     }
   });
 
-  it("keeps the chroma floor out of any judgement call", () => {
-    // Non-circular on purpose: it does not ask "is everything I excluded below
-    // the floor" (true by construction). It asks whether any declared colour
-    // sits NEAR the floor, which is the thing that would make 0.04 arbitrary.
-    const inGap: string[] = [];
+  // -- THEN: the threshold's provenance, executable. Both ends are re-measured
+  // -- from the stylesheet on every run, so a change to Greek's mark or to
+  // -- `--color-karma-merit` that invalidates the derivation reddens the
+  // -- derivation rather than quietly leaving 5 standing on a dead argument.
+  it("puts the threshold between the case the rule rejected and the case it accepted", () => {
+    // Stronger than "at a glance", because the rule's own words ask for it.
+    expect(SEMANTIC_CLASH_DELTA_E).toBeGreaterThan(PERCEPTIBLE_AT_A_GLANCE);
+
     for (const theme of THEMES) {
       const tokens = TOKENS_BY_THEME[theme];
-      for (const name of semanticCandidates(tokens)) {
-        const c = chromaOf(tokens[name]);
-        if (c >= CHROMA_GAP[0] && c <= CHROMA_GAP[1]) inGap.push(`${theme} ${name} C=${c}`);
-      }
-    }
-    expect(inGap).toEqual([]);
-    expect(SEMANTIC_CHROMA_FLOOR).toBeGreaterThan(CHROMA_GAP[0]);
-    expect(SEMANTIC_CHROMA_FLOOR).toBeLessThan(CHROMA_GAP[1]);
-    // And the floor excludes something, so it is not decoration: the grey it
-    // was written for is named, because a floor that stopped excluding
-    // `--color-status-lost` would put European in violation with no legal fix.
-    for (const theme of THEMES) {
-      expect(chromaOf(TOKENS_BY_THEME[theme]["--color-status-lost"])).toBeLessThan(
-        SEMANTIC_CHROMA_FLOOR
+      const merit = oklchTripleToRgb(tokens["--color-karma-merit"]);
+      const accepted = deltaE00Rgb(oklchTripleToRgb(tokens["--color-civ-mark-gr"]), merit);
+      const rejectedTriple = rotateToHslHue(
+        tokens["--color-civ-mark-gr"],
+        REJECTED_GREEK_HSL_HUE
       );
+      const rejected = deltaE00Rgb(oklchTripleToRgb(rejectedTriple), merit);
+
+      // The reconstruction is the colour it claims to be, in the coordinate the
+      // decision was written in — otherwise the lower bound is measured on
+      // something else entirely.
+      expect(hueDistance(hslHueOfOklch(rejectedTriple), REJECTED_GREEK_HSL_HUE)).toBeLessThan(
+        HUE_READBACK_SLACK_DEG
+      );
+      expect(Number(tokens["--color-civ-hue-gr"])).toBe(88);
+
+      expect(rejected).toBeLessThan(SEMANTIC_CLASH_DELTA_E);
+      expect(accepted).toBeGreaterThan(SEMANTIC_CLASH_DELTA_E);
     }
   });
 
   // -- THEN: no violations. Collected rather than asserted one at a time so a
   // -- red run names every offending tenant with its distance and the token it
-  // -- collided with — "eg 1.18° from --color-accent-hover" is reviewable,
-  // -- "expected 1.18 to be >= 12" is not.
-  it.each(THEMES)("%s: every tenant clears every semantic hue", (theme) => {
-    const hues = semanticHues(theme);
-    const exemptionsHit = new Set<string>();
+  // -- collided with — "eg mark 1.18 from --color-accent-hover" is reviewable,
+  // -- "expected 1.18 to be >= 5" is not.
+  it.each(THEMES)("%s: every tenant's mark and ink clears every semantic colour", (theme) => {
     const offenders: string[] = [];
-
     for (const prefix of CIV_PREFIXES) {
-      const hue = Number(TOKENS_BY_THEME[theme][`--color-civ-hue-${prefix}`]);
-      const nearest = hues
-        .map((s) => ({ ...s, d: hueDistance(hue, s.hue) }))
-        .sort((a, b) => a.d - b.d)[0];
-      if (nearest.d >= SEMANTIC_CLEARANCE_DEG) continue;
-      if (CIV_HUE_EXEMPTIONS[prefix] !== undefined) {
-        exemptionsHit.add(prefix);
-        continue;
+      for (const kind of IDENTITY_KINDS) {
+        const nearest = nearestSemantic(theme, prefix, kind);
+        if (nearest.d >= SEMANTIC_CLASH_DELTA_E) continue;
+        offenders.push(
+          `${prefix} ${kind} is ${nearest.d.toFixed(2)} ΔE00 from ${nearest.name} — ` +
+            `under the ${SEMANTIC_CLASH_DELTA_E} ΔE00 clearance`
+        );
       }
-      offenders.push(
-        `${prefix} at ${hue}° is ${nearest.d.toFixed(2)}° from ${nearest.name} ` +
-          `(${nearest.hue.toFixed(2)}°) — under the ${SEMANTIC_CLEARANCE_DEG}° clearance`
-      );
     }
     expect(offenders).toEqual([]);
-
-    const stale = Object.keys(CIV_HUE_EXEMPTIONS).filter((p) => !exemptionsHit.has(p));
-    if (stale.length > 0) {
-      throw new Error(
-        `CIV_HUE_EXEMPTIONS excuses a tenant that no longer needs excusing in ${theme}. ` +
-          `The entry has become a claim about a defect that is gone — delete it AND the ` +
-          `paragraph above it rather than leaving an allow-list nobody re-derives.\n\n` +
-          stale.map((p) => `  ${p}: ${CIV_HUE_EXEMPTIONS[p]}`).join("\n")
-      );
-    }
   });
 
-  it("names the tenants this rule is not protecting, and no others", () => {
-    // A second failure mode of allow-lists: they grow, quietly, one plausible
-    // row at a time. Asserted as an EXACT set rather than a count, so adding a
-    // third tenant is a deliberate edit here with a reason beside it — and so
-    // that a future reader can see at a glance that half this palette is
-    // exempt, which is the uncomfortable true state of it.
-    expect(Object.keys(CIV_HUE_EXEMPTIONS).sort()).toEqual(["cn", "eg"]);
-    for (const [prefix, why] of Object.entries(CIV_HUE_EXEMPTIONS)) {
-      expect(CIV_PREFIXES).toContain(prefix);
-      expect(why.length).toBeGreaterThan(30);
+  it("needs no chroma floor, because the grey that forced one is not the nearest colour", () => {
+    // Non-circular on purpose. The archived pin EXCLUDED `--color-status-lost`
+    // by a constant so that European would not be judged against a grey it
+    // happens to share a hue angle with. This asserts the thing that made the
+    // constant unnecessary: with the grey fully in the scan, the formula still
+    // ranks it behind a saturated neighbour, in both themes and for both the
+    // mark and the ink. Raise that token's chroma and this goes red — which is
+    // the point at which a floor would become a real question again.
+    for (const theme of THEMES) {
+      for (const kind of IDENTITY_KINDS) {
+        const rgb = oklchTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-${kind}-eu`]);
+        const lost = deltaE00Rgb(
+          rgb,
+          oklchTripleToRgb(TOKENS_BY_THEME[theme]["--color-status-lost"])
+        );
+        const nearest = nearestSemantic(theme, "eu", kind);
+        expect(nearest.name).not.toBe("--color-status-lost");
+        expect(lost).toBeGreaterThan(nearest.d);
+      }
     }
-    // European and Greek are the ones actually held, so they must NOT be here:
-    // if a future edit exempts everything, this rule protects nothing and the
-    // green would say the opposite.
-    expect(Object.keys(CIV_HUE_EXEMPTIONS)).not.toContain("eu");
-    expect(Object.keys(CIV_HUE_EXEMPTIONS)).not.toContain("gr");
   });
 });
 

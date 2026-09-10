@@ -964,42 +964,53 @@
     --color-civ-mark-cn: 0.649703 0.124151 35.2992;
     --color-civ-hue-eu: 232;
     --color-civ-mark-eu: 0.642606 0.10097 276.6787;
-    /* EGYPTIAN 埃及杜阿特. 44deg, AND IT IS THE WORST VIOLATION OF THE RULE THE
-     GREEK BLOCK BELOW STATES: it sits 1.18deg from --color-accent-hover
-     (42.82deg). A cosmology's identity colour and a button's hover state are,
-     to within a degree of hue, the same colour. That rule was written for
-     Greek's benefit and enforced on nothing until
-     `civilizationColourContract` grew `no civilization's identity hue is a
-     semantic colour`; Egyptian is carried there as a named exemption rather
-     than fixed, and this is why.
+    /* EGYPTIAN 埃及杜阿特. 44deg. THIS TOKEN WAS ONCE WRITTEN UP AS "THE WORST
+     VIOLATION" OF THE RULE THE GREEK BLOCK BELOW STATES, AND IT IS ACTUALLY
+     THE WIDEST CLEARANCE OF THE FOUR. Both statements come from the same
+     stylesheet; they differ only in which metric asked.
 
-     THE FEASIBLE SET IS EMPTY, MEASURED. Two constraints pull opposite ways:
+     The hue angle is real: 44 sits 1.18deg from --color-accent-hover
+     (42.82deg), and for one round `civilizationColourContract` carried
+     Egyptian as a named exemption because of it. But HSL DEGREES ARE NOT
+     PERCEPTUALLY UNIFORM, and the number they were measured against —
+     --color-civ-hue-* — is a bare hue with no lightness or chroma attached,
+     read by nothing in this stylesheet since the OKLCH migration. What is
+     painted is --color-civ-mark-eg, and in CIEDE2000 that mark's nearest
+     semantic colour is --color-status-warning at 11.57 (dark) / 14.03 (light).
+     Rotate the mark onto accent-hover's hue EXACTLY — the worst reading the
+     old metric can produce — and the pair is still 13.38 apart in dark: muted
+     gold (193,163,89) against signal yellow (251,192,45). The pin now measures
+     ΔE00 between the marks and inks and every semantic token, all four tenants
+     clear it in both themes, and there is no exemption table any more.
 
-       - Clearance needs eg >= 54.82deg. Everything from 26.04 to 54.82 is
-         blocked by --color-accent (38.04) and --color-accent-hover (42.82),
-         and everything below that by --color-status-judging (19.79/20.00) and
-         the three tokens at 0.00.
+     THE CONSTRAINTS BELOW WERE MEASURED AND STILL HOLD; WHAT COLLAPSED IS THE
+     REASON ANYONE NEEDED THEM. They bound any FUTURE move of this tenant, not
+     a repair of a defect:
+
+       - The old clearance rule wanted eg >= 54.82deg. Everything from 26.04 to
+         54.82 is blocked in hue angle by --color-accent (38.04) and
+         --color-accent-hover (42.82), and everything below that by
+         --color-status-judging (19.79/20.00) and the three tokens at 0.00.
        - `ActorsPage.test.tsx` holds the four civilization section grounds on
          /actors — `--civ-mark` at alpha 0.16 over the host tenant's surface-1,
          the one screen where all four cosmologies are visible at once — at
          PERCEPTIBLE_AT_A_GLANCE (3.5). Egyptian/Greek measures 3.96 there
          today and falls monotonically as Egyptian walks toward Greek's 88deg:
          3.80 at 45, 3.58 at 47, 3.46 at 48, 2.83 at 54, 2.43 at 58. That
-         needs eg <= 48deg.
+         needs eg <= 48deg. THIS ONE IS STILL LIVE and is the real ceiling on
+         moving Egyptian anywhere.
+       - Chroma could not have rescued the old requirement either: at 58deg the
+         light Egyptian mark hits the sRGB gamut edge (blue clamped to 0) at
+         C ~ 0.119 and the /actors figure plateaus at 3.21, still under 3.5,
+         with the mark rendering (119, 115, 0): olive, not gold.
 
-     54.82 > 48. No hue satisfies both, and CHROMA CANNOT RESCUE IT EITHER —
-     the axis that worked for the Chinese light ground is exhausted here. At
-     58deg the light Egyptian mark hits the sRGB gamut edge (blue clamped to 0)
-     at C ~ 0.119 and the /actors figure plateaus at 3.21, still under 3.5,
-     with the mark rendering (119, 115, 0): olive, not gold.
-
-     THE FIX EXISTS AND IT IS A TWO-TENANT MOVE. The band from 88 to 137.66 is
-     empty, so taking GREEK up to ~105deg restores ~46deg of Egyptian/Greek
-     separation and lets Egyptian sit at 58 with 15.18deg of clearance. That
-     recolours a tenant which is NOT in violation, retires the derivation of 88
-     recorded below, and needs its own review of every pin it touches — the
-     badge floor, the blush wedge, the ink matrix and /actors again. It is
-     written down rather than done. */
+     AND THE TWO-TENANT ESCAPE ROUTE IS RETIRED WITH IT. Taking GREEK up to
+     ~105deg to free Egyptian for 58 would have recoloured a tenant that was
+     never in violation and retired the derivation of 88 recorded below, to
+     buy clearance from a collision the perceptual metric does not find.
+     Nothing needs to move. The full argument, both directions of the old
+     metric's error, and the derivation of the ΔE00 threshold are on
+     `SEMANTIC_CLASH_DELTA_E` in `civilizationColourContract`. */
     --color-civ-hue-eg: 44;
     --color-civ-mark-eg: 0.727725 0.100218 89.3545;
     /* GREEK 希腊冥界. 88deg, not the 138deg that maximises the gap to the other
@@ -1012,16 +1023,37 @@
      already separates Chinese (12) from Egyptian (44), so this adds no
      tighter pair than the palette already had.
 
+     THE 138 REJECTION IS CONFIRMED BY THE PERCEPTUAL METRIC, AND BY MORE THAN
+     ITS AUTHOR COULD SHOW IN DEGREES. Build that hypothetical the way this
+     paragraph imagines it — this mark's own lightness and chroma, the hue
+     rotated until it reads back at 138 — and it lands 3.26 ΔE00 from
+     --color-karma-merit in dark, 3.96 in light. PERCEPTIBLE_AT_A_GLANCE is
+     3.5. The 138 Greek was not merely "close to" the merit colour; it was at
+     the edge of being distinguishable from it at all. Greek at 88 is 12.98 /
+     11.81 from the same token. Those two figures are the two ends the ΔE00
+     threshold was derived between; `civilizationColourContract` re-measures
+     both on every run so the derivation cannot go stale.
+
      THE NEAREST-STATUS-HUE FIGURE IN THIS PARAGRAPH WAS WRONG FROM THE DAY IT
-     WAS WRITTEN, TWICE OVER. It read "nearest status hue is --color-accent at
-     50deg". --color-accent is at 38.0deg, not 50; and it is not 88's nearest
-     semantic neighbour either — --color-accent-hover (42.8deg) is, at 45.2deg
-     away. Both errors flatter the conclusion they support, which is the reason
-     to correct them rather than leave them: Greek IS the tenant with the
-     widest semantic clearance of the four, and now says so with figures that
-     can be re-derived. `civilizationColourContract` measures all four against
-     every semantic hue since — the rule in this paragraph finally has an
-     executor, and it found Egyptian at 1.18deg and Chinese at 7.79/0.00deg.
+     WAS WRITTEN, AND THE FIRST CORRECTION OF IT WAS WRONG TOO. It read
+     "nearest status hue is --color-accent at 50deg"; --color-accent is at
+     38.0deg. That was corrected to --color-accent-hover at 45.2deg away, which
+     is the right answer to the question "which semantic token is nearest in
+     HSL HUE ANGLE" and the wrong answer to the question this paragraph is
+     actually asking. In ΔE00 — which weighs lightness and chroma too — Greek's
+     nearest semantic colour is --color-karma-merit itself, at 12.98 / 11.81,
+     with accent-hover back at 28.13. THE TOKEN THIS WHOLE DECISION EXISTS TO
+     AVOID IS THE ONE THE HUE METRIC RANKED FIFTH. Greek is still the tenant
+     with the widest semantic clearance of the four, in both metrics; the
+     reason to keep correcting these figures is that every error in them so
+     far has flattered the conclusion it supports.
+
+     `civilizationColourContract` measures all four tenants' marks AND inks
+     against every semantic token in ΔE00 — the rule in this paragraph has an
+     executor, and under that metric all four clear. The hue-angle round that
+     preceded it reported Egyptian at 1.18deg and Chinese at 7.79/0.00deg as
+     violations; both readings are archived there as measured-but-refuted, with
+     the false negative and false positive that retired the metric.
 
      Measured 7.78:1 against this tenant's own surface-1,
      hsl(88 13% 7%) -- AAA. */
