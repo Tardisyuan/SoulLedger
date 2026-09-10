@@ -246,6 +246,305 @@ describe("civilization identity: globals.css is the authority", () => {
 // ---------------------------------------------------------------------------
 
 /**
+ * THE RAMP'S HUE, WHICH NOTHING HELD UNTIL NOW.
+ *
+ * `--color-civ-mark-*` and `--color-civ-ink-*` are pinned back to
+ * `--color-civ-hue-*` (the pin directly above, and `civIdentityInkContract`).
+ * The five ramp planes were not pinned to anything of the kind: the note on
+ * `SEMANTIC_CLASH_DELTA_E` below used to say, correctly, that "the ramp is not
+ * pinned to the tenant hue at all", and gave the measured drift as evidence
+ * that it nonetheless tracks the hue. A measurement recorded in a comment is
+ * exactly the shape this repository keeps being bitten by: it was true when it
+ * was written and nothing re-derives it. Swap `--color-civ-surface-1-cn`'s
+ * value with `-eu`'s and every assertion in this file stays green.
+ *
+ * ===========================================================================
+ * THE THRESHOLD IS NOT A NUMBER — IT IS COMPUTED PER TOKEN, AND IT IS A PROOF.
+ * ===========================================================================
+ *
+ * The obvious shape is "drift < N degrees", and N would have had to be fitted
+ * to today's readings, which this repo forbids. It is also not needed, because
+ * the drift has ONE cause and that cause has a closed form.
+ *
+ * Every plane is authored as the tenant's HSL hue at some saturation and
+ * lightness, and then written down as an OKLCH triple. `hslHueOfOklch` reads
+ * the hue back out of the RASTERISED colour — three 8-bit integers — and at the
+ * ramp's chroma (0.0098–0.0383) one channel step is worth several degrees of
+ * hue. So the readback cannot equal the declared hue; it lands on the nearest
+ * hue the integer grid can express.
+ *
+ * MEASURED, NOT ASSUMED: the un-rounded sRGB point of every one of the forty
+ * planes reads back the SAME hue as the rounded one, to three decimals. The
+ * triples rasterise onto integers exactly, so quantisation is the whole of the
+ * discrepancy and there is no second error term to budget for.
+ *
+ * That gives the bound. If a plane's true colour has HSL hue H, its rounded
+ * form is within ±0.5 of a channel, so the hue read off the rounded form is
+ * within `hueQuantisationEnvelope(rounded)` of H — the widest hue excursion
+ * over the ±0.5 cube, evaluated at that very token. Not a tolerance chosen to
+ * fit the data: an upper bound a correct plane cannot exceed. Measured today
+ * the worst legitimate ratio is dark Greek surface-2 at 3.29° against an
+ * envelope of 3.53° (0.93), which is a plane sitting near the boundary, not a
+ * check about to go off.
+ *
+ * The envelope also relaxes itself where hue stops meaning anything: light
+ * surface-1 is nearly white (chroma 0.0098–0.0141) and its envelope is 5–6°,
+ * because at that chroma the integer grid genuinely cannot place a hue more
+ * precisely. That is the right behaviour and it falls out of the derivation
+ * rather than being written in.
+ *
+ * ===========================================================================
+ * AND THEN THERE IS LIGHT CHINESE, WHICH IS NOT A TOLERANCE PROBLEM.
+ * ===========================================================================
+ *
+ * Seven of the eight tenant×theme combinations drift 0.00–3.29°. Light Chinese
+ * drifts 5.00–10.00°, and no widening of a threshold makes that one row honest,
+ * because it is not the same KIND of number. `app/globals.css` says so in its
+ * own words, on the block that declares those five planes:
+ *
+ *     CHINESE IS THE ONE TENANT WHOSE FIVE LIGHT PLANES ARE NOT THE HUE TOKEN
+ *     ABOVE DESATURATED. Every other tenant's ramp still is.
+ *
+ * The ground was moved out of the blush region by raising chroma and letting
+ * the hue follow it out of the red — seashell to linen, in the stylesheet's own
+ * terms — while the identity tokens stayed on hue 20. So the premise of the
+ * bound above ("this plane is the declared hue, rasterised") is FALSE for those
+ * planes, by design and in writing.
+ *
+ * ===========================================================================
+ * SO THERE IS AN EXEMPTION TABLE AGAIN, ONE COMMIT AFTER ONE WAS DELETED.
+ * ===========================================================================
+ *
+ * `a838c03` removed `CIV_HUE_EXEMPTIONS` with the reasoning "when nobody is
+ * left to excuse, the exemption mechanism is a lever with no hand on it", and
+ * that reasoning is not being overridden here — it is being applied.
+ *
+ * What got deleted was a table whose rows had gone VACUOUS: carried over to the
+ * new metric, its self-invalidation threw on both rows in both themes, which is
+ * the mechanism authorising its own removal. This table's rows are OCCUPIED,
+ * and `every exemption is still needed` below re-proves that on every run by
+ * asserting each listed plane genuinely exceeds its envelope. The day light
+ * Chinese comes back onto its hue token, that test throws and names the row to
+ * delete — the same lever, in the same hand, pulling the other way.
+ *
+ * THE EXEMPTION IS NOT A HOLE, and that is the second pin's job. `every ramp
+ * plane is nearer its own tenant's hue than any other tenant's` runs over ALL
+ * forty planes, exempt ones included, and has no threshold at all. Light
+ * Chinese's canvas reads 30.00°: 10.00 from Chinese's declared 20, 14.00 from
+ * Egyptian's 44. Off its hue token, still unambiguously Chinese. That pin is
+ * what catches a plane pasted into the wrong tenant's slot, which is the defect
+ * the envelope pin cannot see on an exempted row.
+ *
+ * WHAT THIS PAIR DOES NOT CATCH, said plainly: a rotation small enough to stay
+ * inside the envelope (under ~3.5° for a dark plane), and a uniform rotation of
+ * all four tenants together, which moves every plane and every declared hue in
+ * step. Neither is a defect this pair is entitled to claim.
+ *
+ * SURFACE-1 IS DELIBERATELY ABSENT FROM THE TABLE. Light Chinese's surface-1
+ * drifts 5.00° against an envelope of 5.00° — the card plane is the least
+ * tinted of the five (chroma 0.0100), so the grid is coarse enough there that
+ * the plane is still consistent with being on hue. It passes on its own merits
+ * and listing it would be excusing something that needs no excuse.
+ */
+
+/** Circular distance between two hue angles, in degrees, 0–180. */
+function hueGap(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+/** `hslHueOfOklch`'s formula, but taking sRGB directly so it can be probed off-grid. */
+function hueOfRgb([r, g, b]: readonly number[]): number {
+  const [rr, gg, bb] = [r / 255, g / 255, b / 255];
+  const max = Math.max(rr, gg, bb);
+  const min = Math.min(rr, gg, bb);
+  if (max === min) return 0;
+  const d = max - min;
+  const h =
+    max === rr ? ((gg - bb) / d + (gg < bb ? 6 : 0)) / 6
+    : max === gg ? ((bb - rr) / d + 2) / 6
+    : ((rr - gg) / d + 4) / 6;
+  return h * 360;
+}
+
+/**
+ * How far the hue read off an 8-bit colour can sit from the hue of the true
+ * colour it was rounded from — the widest excursion over the ±0.5 cube.
+ *
+ * All 27 corners, not the axes: the worst case moves two channels at once.
+ */
+function hueQuantisationEnvelope(rgb: readonly [number, number, number]): number {
+  const centre = hueOfRgb(rgb);
+  let worst = 0;
+  for (const dr of [-0.5, 0, 0.5]) {
+    for (const dg of [-0.5, 0, 0.5]) {
+      for (const db of [-0.5, 0, 0.5]) {
+        worst = Math.max(worst, hueGap(hueOfRgb([rgb[0] + dr, rgb[1] + dg, rgb[2] + db]), centre));
+      }
+    }
+  }
+  return worst;
+}
+
+/** Declared hue, read-back hue and the envelope that bounds their difference. */
+function rampHueReading(theme: ThemeName, prefix: string, plane: string) {
+  const triple = resolveRampForCiv(theme, prefix, plane);
+  const declared = Number(TOKENS_BY_THEME[theme][`--color-civ-hue-${prefix}`]);
+  const read = hslHueOfOklch(triple);
+  return {
+    declared,
+    read,
+    drift: hueGap(read, declared),
+    envelope: hueQuantisationEnvelope(oklchTripleToRgb(triple)),
+  };
+}
+
+/**
+ * Every theme × tenant × plane.
+ *
+ * A FUNCTION AND NOT A CONSTANT, and the pins below loop rather than take
+ * `it.each(rampRows())`. `RAMP_TOKENS` is declared far below with the four pins
+ * it was written for, so reading it while this describe is being COLLECTED hits
+ * its temporal dead zone; reading it inside a test body does not. Redeclaring
+ * the plane list here to dodge that would put a second definition of the ramp
+ * in this file, which is the defect `SURFACE_TOKENS` exists to prevent.
+ * Collecting offenders into a list also reports every bad plane at once instead
+ * of stopping at the first.
+ */
+function rampRows(): [ThemeName, string, string][] {
+  return THEMES.flatMap((theme) =>
+    CIV_PREFIXES.flatMap((prefix) => RAMP_TOKENS.map((plane) => [theme, prefix, plane] as [ThemeName, string, string]))
+  );
+}
+
+/**
+ * The planes whose hue is NOT their tenant's hue token, on purpose.
+ *
+ * One design decision, four planes. See the block above; the reason is written
+ * into `app/globals.css` on `--color-civ-canvas-cn` in `.light`, not invented
+ * here. `every exemption is still needed` deletes this table for you the day it
+ * stops being true.
+ */
+const RAMP_HUE_EXEMPTIONS: { theme: ThemeName; prefix: string; plane: string }[] = [
+  { theme: "light", prefix: "cn", plane: "--color-canvas" },
+  { theme: "light", prefix: "cn", plane: "--color-surface-2" },
+  { theme: "light", prefix: "cn", plane: "--color-surface-3" },
+  { theme: "light", prefix: "cn", plane: "--color-surface-4" },
+];
+
+function isExempt(theme: ThemeName, prefix: string, plane: string): boolean {
+  return RAMP_HUE_EXEMPTIONS.some((e) => e.theme === theme && e.prefix === prefix && e.plane === plane);
+}
+
+describe("the surface ramp still belongs to its civilization", () => {
+  it("is looking at every plane of every tenant in both themes", () => {
+    // The guard for the guard. `rampRows()` feeding `it.each` an empty list
+    // produces a suite with no tests and a green run — the failure mode this
+    // whole file is built around. Derived on both sides rather than pinned to
+    // 40, so a fifth civilization or a sixth plane moves it without a diff.
+    expect(rampRows()).toHaveLength(THEMES.length * CIV_PREFIXES.length * RAMP_TOKENS.length);
+    expect(rampRows().length).toBeGreaterThan(0);
+  });
+
+  it("never lets the envelope grow wide enough to stop meaning anything", () => {
+    // `hueQuantisationEnvelope` returning something large would make the pin
+    // below vacuous rather than red — the shape a threshold check cannot report
+    // on itself. The bound is the palette's own: the two closest declared hues
+    // (Chinese 20 and Egyptian 44 in light) are 24° apart, so an envelope at or
+    // above HALF that could no longer tell one tenant's plane from another's.
+    // Measured today the widest envelope is 6.00°, on the near-white light
+    // surface-1 planes.
+    const closestPair = Math.min(
+      ...THEMES.flatMap((theme) =>
+        civPairs().map(([a, b]) =>
+          hueGap(
+            Number(TOKENS_BY_THEME[theme][`--color-civ-hue-${a}`]),
+            Number(TOKENS_BY_THEME[theme][`--color-civ-hue-${b}`])
+          )
+        )
+      )
+    );
+    const tooWide: string[] = [];
+    for (const [theme, prefix, plane] of rampRows()) {
+      const { envelope } = rampHueReading(theme, prefix, plane);
+      expect(envelope).toBeGreaterThan(0);
+      expect(envelope).toBeGreaterThan(0);
+      if (envelope >= closestPair / 2) {
+        tooWide.push(
+          `${theme} ${prefix} ${plane}: 量化包络 ${envelope.toFixed(2)}° 已经不小于最近的两个租户` +
+            `声明色相之差的一半(${(closestPair / 2).toFixed(2)}°)——在这个色度上色相读数分不出租户,` +
+            `下面两条钉子会变成废话而不是变红`
+        );
+      }
+    }
+    expect(tooWide).toEqual([]);
+  });
+
+  it("keeps every plane within its own quantisation envelope of the tenant's declared hue", () => {
+    const offenders = rampRows()
+      .filter(([theme, prefix, plane]) => !isExempt(theme, prefix, plane))
+      .map(([theme, prefix, plane]) => ({ theme, prefix, plane, ...rampHueReading(theme, prefix, plane) }))
+      .filter((row) => row.drift > row.envelope)
+      .map(
+        (row) =>
+          `${row.theme} ${row.prefix} ${row.plane}: 读回 ${row.read.toFixed(2)}°,声明 ${row.declared}° —— ` +
+          `差 ${row.drift.toFixed(2)}°,而这个颜色的 8 位量化包络只有 ${row.envelope.toFixed(2)}°`
+      );
+    // 报空列表而不是逐条断言:一次跑出所有出问题的平面,而不是停在第一个。
+    // 出现在这里的平面,意思是量化解释不了它与租户声明色相的差 —— 它已经不是
+    // 「租户色相压低色度」了。若是有意的(像 `.light` 的中国那样),加进
+    // `RAMP_HUE_EXEMPTIONS` 并把理由写进 globals.css;但先确认它不是把别的租户
+    // 的值贴错了格子。
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps every plane nearer its own tenant's hue than any other tenant's", () => {
+    // No threshold, and it runs over the exempted planes too — which is what
+    // keeps the exemption from being a hole. A plane pasted into the wrong
+    // tenant's slot fails here whether or not it is excused above.
+    const offenders: string[] = [];
+    for (const [theme, prefix, plane] of rampRows()) {
+      const { read } = rampHueReading(theme, prefix, plane);
+      const ranked = CIV_PREFIXES.map(
+        (p) => [p, hueGap(read, Number(TOKENS_BY_THEME[theme][`--color-civ-hue-${p}`]))] as [string, number]
+      ).sort((a, b) => a[1] - b[1]);
+      if (ranked[0][0] !== prefix) {
+        const own = hueGap(read, Number(TOKENS_BY_THEME[theme][`--color-civ-hue-${prefix}`]));
+        offenders.push(
+          `${theme} ${prefix} ${plane}: 读回 ${read.toFixed(2)}°,离 ${ranked[0][0]} 的声明色相 ` +
+            `${ranked[0][1].toFixed(2)}°,比离自己的 ${prefix} 的 ${own.toFixed(2)}° 还近`
+        );
+      }
+    }
+    // 出现在这里的平面认错了自己的文明。
+    expect(offenders).toEqual([]);
+  });
+
+  it("every exemption is still needed", () => {
+    // SELF-INVALIDATION. An exemption that has stopped being necessary is worse
+    // than none: it reads as a live constraint and silences a real check. Each
+    // row must genuinely exceed its envelope — if light Chinese is ever put back
+    // onto its hue token, this throws and names the line to delete.
+    expect(RAMP_HUE_EXEMPTIONS.length).toBeGreaterThan(0);
+    const stale = RAMP_HUE_EXEMPTIONS.map(({ theme, prefix, plane }) => ({
+      theme,
+      prefix,
+      plane,
+      ...rampHueReading(theme, prefix, plane),
+    }))
+      .filter((row) => row.drift <= row.envelope)
+      .map(
+        (row) =>
+          `${row.theme} ${row.prefix} ${row.plane} 已经不需要豁免了:漂移 ${row.drift.toFixed(2)}° ` +
+          `在量化包络 ${row.envelope.toFixed(2)}° 之内。把这一行从 RAMP_HUE_EXEMPTIONS 里删掉`
+      );
+    expect(stale).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/**
  * THE RULE THAT WAS WRITTEN DOWN ONCE, OBEYED ONCE, ENFORCED LATE, AND THEN
  * ENFORCED IN THE WRONG COORDINATE.
  *
@@ -456,15 +755,17 @@ describe("civilization identity: globals.css is the authority", () => {
  * point: dark Greek and light European declare ink and mark as the SAME triple.
  *
  * NOT THE RAMP. `--color-surface-*` and `--color-canvas` carry the tenant too,
- * but they are grounds rather than identity, they are held by their own pins
- * (`MARK_LEAD_MARGIN`, `inkOnSurfaceContract`), and the ramp is not pinned to
- * the tenant hue at all: measured across all five planes it drifts 0.00–3.29°
- * from the declared hue for seven of the eight tenant×theme combinations, and
- * light Chinese drifts 5.00–10.00° by design (its ground is the one that is
- * not the hue token desaturated — see `--color-civ-hue-cn` in `.light`).
- * Judging a ground against a semantic foreground is a different claim and
- * would need its own derivation. (An earlier note gave this range as
- * 0.24–3.29; that was the DARK half only.)
+ * but they are grounds rather than identity, and they are held by their own
+ * pins (`MARK_LEAD_MARGIN`, `inkOnSurfaceContract`). Judging a ground against a
+ * semantic foreground is a different claim and would need its own derivation.
+ *
+ * THE SENTENCE THAT USED TO STAND HERE — "the ramp is not pinned to the tenant
+ * hue at all" — IS NO LONGER TRUE, and it is `the surface ramp still belongs to
+ * its civilization` above that made it false. The figures it quoted (0.00–3.29°
+ * for seven tenant×theme combinations, 5.00–10.00° for light Chinese; an
+ * earlier note gave 0.24–3.29, which was the DARK half only) are now re-derived
+ * on every run against a per-token quantisation envelope instead of being
+ * recorded here. This pin's subject is still mark and ink only.
  *
  * THE SCAN, NOT A ROSTER. Unchanged from the archived pin and still the half
  * most likely to rot: the semantic set is derived by EXCLUSION from every
