@@ -32,7 +32,7 @@
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
     "lucide-react": "^0.408.0",
-    "next": "^16.2.7",
+    "next": "^16.3.4",
     "nprogress": "^0.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -64,8 +64,5 @@
     "ts-jest": "^29.4.9",
     "typescript": "^5.5.3"
   },
-  "overrides": {
-    "postcss": "$postcss",
-    "sharp": "^0.35.3"
-  }
+  "_overrides_moved_to_root": "npm honours `overrides` only in the package it installs from. Since this repo became an npm workspace (root package-lock.json is the only lockfile), that package is the ROOT — the two entries that used to sit here were inert. They looked live: `sharp` was pinned in both files and `npm ls` showed 0.35.3, but that came from the root's entry, not this one. Measured 2026-09-10 while closing a sharp advisory: bumping only this file would have changed nothing and read as done. Both pins now live in the root package.json; this key exists so the next person does not re-add them here."
 }
