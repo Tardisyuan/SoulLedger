@@ -57,10 +57,23 @@ Each case was checked by breaking the hook, before being trusted green
 * the backend gate changed to re-derive `TOUCHES_BACKEND -gt 0` instead of
   reading `RUN_BACKEND` → 1 red, the seam test. Without it the classify line
   could stay right while the gate it describes quietly drifted.
+
+From a worktree (`TestFromAWorktree`)
+-------------------------------------
+Also 2026-09-11: a push from `.claude/worktrees/*` was refused twice as "a model
+changed without a migration" by a commit that touched no model. The hook read
+`.prepush.env` from the worktree, where the gitignored file does not exist, so
+PYTHON_BIN fell back to a bare `python` without Django; the worktree has no
+`backend/.env` either, so no SECRET_KEY; and the makemigrations output went to
+/dev/null, so both read as a migration problem. These run the real hook body in
+a throwaway repository with a real worktree and a fake interpreter — no Django,
+no network, and git isolated from this machine's config (the hook runs pytest
+itself, and git may export GIT_DIR into it).
 """
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -181,3 +194,145 @@ class TestTheExistingPrefixesStillWork:
     def test_top_level_directories_outside_the_code_roots_are_not_gated(self, hook):
         """Deliberate — see the hook's comment. docs/ must not trigger a full run."""
         assert _classify(hook, ["docs/README.md", "scripts/status.sh"]) == NONE
+
+
+# Everything the hook reads from the environment, plus git's own variables:
+# none of this machine's settings may leak into the throwaway repository.
+_STRIPPED = (
+    "SKIP_PREPUSH", "PREPUSH_CHANGED", "PREPUSH_CLASSIFY_ONLY", "SECRET_KEY",
+    "DEBUG", "PYTHON_BIN", "RUFF_BIN", "DATABASE_URL", "REDIS_URL", "PYTEST_PREPUSH_ARGS",
+)
+
+
+def _clean_env(**extra) -> dict[str, str]:
+    env = {k: v for k, v in os.environ.items() if k not in _STRIPPED and not k.startswith("GIT_")}
+    env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1", **extra)
+    return env
+
+
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        cwd=cwd, env=_clean_env(), check=True, capture_output=True, text=True, timeout=60,
+    )
+
+
+@pytest.fixture
+def checkouts(tmp_path):
+    """A throwaway repository and one worktree of it — the .claude/worktrees/* shape."""
+    main = tmp_path / "main"
+    (main / "backend").mkdir(parents=True)
+    (main / "backend" / "manage.py").write_text("")
+    (main / "scripts").mkdir()
+    (main / "scripts" / "install-hooks.sh").write_text(GENERATOR.read_text(encoding="utf-8"))
+    (main / ".gitignore").write_text(".prepush.env\nbackend/.env\n")
+    _git(main, "init", "-q", "-b", "main")
+    _git(main, "add", "-A")
+    _git(main, "commit", "-q", "-m", "init")
+    wt = tmp_path / "wt"
+    _git(main, "worktree", "add", "-q", str(wt), "-b", "wt")
+    assert (wt / ".git").is_file(), "precondition: a worktree's .git is a file"
+    return main, wt
+
+
+def _fake_python(tmp_path: Path, body: str) -> str:
+    """Stands in for PYTHON_BIN. The hook's first use of it is makemigrations."""
+    path = tmp_path / "fake-python"
+    path.write_text("#!/bin/bash\n" + body)
+    path.chmod(0o755)
+    return str(path)
+
+
+def _run(hook, cwd: Path, changed: list[str], **extra) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["bash", str(hook)],
+        cwd=cwd, env=_clean_env(PREPUSH_CHANGED="\n".join(changed), **extra),
+        capture_output=True, text=True, timeout=60,
+    )
+
+
+def _backend_gate(hook, cwd: Path, python: str, **extra) -> subprocess.CompletedProcess:
+    return _run(
+        hook, cwd, ["backend/x.py"], PYTHON_BIN=python, RUFF_BIN=shutil.which("true"), **extra,
+    )
+
+
+class TestFromAWorktree:
+    def test_the_main_checkouts_prepush_env_is_loaded(self, hook, checkouts):
+        """The file is gitignored, so a worktree never has its own copy."""
+        main, wt = checkouts
+        (main / ".prepush.env").write_text('echo "MARK: main copy sourced"\n')
+        proc = _run(hook, wt, ["docs/x.md"], PREPUSH_CLASSIFY_ONLY="1")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "MARK: main copy sourced" in proc.stdout, (
+            f"a worktree push did not load the main checkout's .prepush.env:\n{proc.stdout}"
+        )
+
+    def test_a_worktrees_own_copy_still_wins(self, hook, checkouts):
+        main, wt = checkouts
+        (main / ".prepush.env").write_text('echo "MARK: main copy sourced"\n')
+        (wt / ".prepush.env").write_text('echo "MARK: worktree copy sourced"\n')
+        proc = _run(hook, wt, ["docs/x.md"], PREPUSH_CLASSIFY_ONLY="1")
+        assert "MARK: worktree copy sourced" in proc.stdout
+        assert "MARK: main copy sourced" not in proc.stdout
+
+    def test_without_backend_env_the_gates_get_cis_secret_key(self, hook, checkouts, tmp_path):
+        """No backend/.env → settings.py refuses to load. CI has no .env either."""
+        _, wt = checkouts
+        py = _fake_python(tmp_path, 'echo "SEEN SECRET_KEY=${SECRET_KEY:-unset}"; exit 1\n')
+        proc = _backend_gate(hook, wt, py)
+        assert "SEEN SECRET_KEY=ci-test-key-not-for-production" in proc.stdout, proc.stdout
+
+    def test_a_checkout_with_backend_env_is_left_to_it(self, hook, checkouts, tmp_path):
+        """The inverse: settings.py loads backend/.env itself, so nothing is exported."""
+        main, _ = checkouts
+        (main / "backend" / ".env").write_text("SECRET_KEY=from-dotenv\n")
+        py = _fake_python(tmp_path, 'echo "SEEN SECRET_KEY=${SECRET_KEY:-unset}"; exit 1\n')
+        proc = _backend_gate(hook, main, py)
+        assert "SEEN SECRET_KEY=unset" in proc.stdout, proc.stdout
+
+    def test_a_secret_key_already_set_is_not_replaced(self, hook, checkouts, tmp_path):
+        _, wt = checkouts
+        py = _fake_python(tmp_path, 'echo "SEEN SECRET_KEY=${SECRET_KEY:-unset}"; exit 1\n')
+        proc = _backend_gate(hook, wt, py, SECRET_KEY="mine")
+        assert "SEEN SECRET_KEY=mine" in proc.stdout, proc.stdout
+
+    def test_an_interpreter_without_django_is_not_called_a_missing_migration(
+        self, hook, checkouts, tmp_path
+    ):
+        """The 2026-09-11 refusal, exactly."""
+        main, _ = checkouts
+        py = _fake_python(
+            tmp_path, "echo \"ModuleNotFoundError: No module named 'django'\" >&2; exit 1\n"
+        )
+        proc = _backend_gate(hook, main, py)
+        assert proc.returncode == 1
+        assert "a model changed" not in proc.stdout, (
+            f"a failure to run was reported as a missing migration:\n{proc.stdout}"
+        )
+        assert "could not run" in proc.stdout
+        assert "ModuleNotFoundError" in proc.stdout, "the actual error was not shown"
+
+    def test_a_real_missing_migration_is_still_named_as_one(self, hook, checkouts, tmp_path):
+        """The inverse: the gate this replaced must still say what it said when true."""
+        main, _ = checkouts
+        py = _fake_python(
+            tmp_path,
+            "printf \"Migrations for 'souls':\\n  souls/migrations/0099_auto.py\\n\"; exit 1\n",
+        )
+        proc = _backend_gate(hook, main, py)
+        assert proc.returncode == 1
+        assert "a model changed without a migration" in proc.stdout, proc.stdout
+        assert "souls/migrations/0099_auto.py" in proc.stdout
+
+    def test_the_installer_runs_from_a_worktree(self, checkouts):
+        """`.git` is a file there, so `$ROOT_DIR/.git/hooks` is not a directory."""
+        main, wt = checkouts
+        proc = subprocess.run(
+            ["bash", str(wt / "scripts" / "install-hooks.sh")],
+            cwd=wt, env=_clean_env(), capture_output=True, text=True, timeout=60,
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        installed = main / ".git" / "hooks" / "pre-push"
+        assert installed.read_text(encoding="utf-8") == _hook_body()
+        assert os.access(installed, os.X_OK)
