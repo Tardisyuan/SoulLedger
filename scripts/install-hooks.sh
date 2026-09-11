@@ -6,7 +6,12 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-HOOKS_DIR="$ROOT_DIR/.git/hooks"
+# Ask git, do not assume `.git` is a directory. In a worktree (.claude/worktrees/*)
+# `.git` is a one-line FILE pointing at the main repository, so "$ROOT_DIR/.git/hooks"
+# is not a path and this script died on its first `cat >`. `--git-path hooks`
+# resolves to the shared hooks directory from either checkout and honours
+# core.hooksPath, which the hook is actually read from.
+HOOKS_DIR="$(git -C "$ROOT_DIR" rev-parse --path-format=absolute --git-path hooks)"
 
 # Create pre-commit hook
 cat > "$HOOKS_DIR/pre-commit" << 'EOF'
@@ -74,7 +79,38 @@ cd "$ROOT" || exit 1
 # Optional per-machine settings, e.g. a DATABASE_URL for a developer whose
 # default database is not usable for tests. Gitignored: it describes one
 # machine, not the project.
-[ -f "$ROOT/.prepush.env" ] && . "$ROOT/.prepush.env"
+#
+# A WORKTREE HAS NO COPY OF IT. `$ROOT` is the worktree's own top level, and a
+# gitignored file is not checked out there — so from any .claude/worktrees/*
+# checkout this found nothing, PYTHON_BIN fell back to a bare `python` (anaconda
+# base on this machine, no Django), and makemigrations below failed on
+# `ModuleNotFoundError`. The push was refused as "a model changed without a
+# migration" for a commit that touched no model (2026-09-11, twice). The main
+# checkout's copy describes the same machine, so it is the fallback; a
+# worktree's own copy still wins.
+PREPUSH_ENV=""
+if [ -f "$ROOT/.prepush.env" ]; then
+    PREPUSH_ENV="$ROOT/.prepush.env"
+else
+    MAIN_ROOT="$(cd "$(git rev-parse --path-format=absolute --git-common-dir)/.." 2>/dev/null && pwd)"
+    [ -n "$MAIN_ROOT" ] && [ -f "$MAIN_ROOT/.prepush.env" ] && PREPUSH_ENV="$MAIN_ROOT/.prepush.env"
+fi
+if [ -n "$PREPUSH_ENV" ]; then
+    echo "pre-push: per-machine settings from $PREPUSH_ENV"
+    . "$PREPUSH_ENV"
+fi
+
+# No backend/.env → no SECRET_KEY → config/settings.py refuses to load, and
+# every backend gate fails for a reason that has nothing to do with the change.
+# That is every worktree (the file is gitignored) and every fresh clone. Use the
+# same two values CI does (.github/workflows/ci.yml, which has no .env either),
+# and say so. NOT the main checkout's backend/.env: that one points DATABASE_URL
+# and REDIS_URL at the shared box.
+if [ -z "${SECRET_KEY:-}" ] && [ ! -f "$ROOT/backend/.env" ]; then
+    echo "pre-push: no backend/.env here — using CI's SECRET_KEY/DEBUG for the backend gates"
+    export SECRET_KEY="ci-test-key-not-for-production"
+    export DEBUG="true"
+fi
 
 # TEST SEAM. `PREPUSH_CHANGED` supplies the changed-file list directly (one path
 # per line) instead of reading git's stdin, and `PREPUSH_CLASSIFY_ONLY=1` prints
@@ -260,9 +296,22 @@ if [ "$RUN_BACKEND" = 1 ]; then
     #
     # It ran only in CI, and both workflows are `workflow_dispatch` now, so
     # nothing ran it at all.
+    #
+    # Say what failed only when the output says it. This used to discard the
+    # output and call EVERY non-zero exit "a model changed" — so a wrong
+    # interpreter (ModuleNotFoundError) and a missing SECRET_KEY both read as a
+    # migration problem, and the one line the push printed pointed away from the
+    # cause. makemigrations names the app when a migration is really missing.
     echo "  → makemigrations --check"
-    "$PY" manage.py makemigrations --check --dry-run >/dev/null 2>&1 \
-        || fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+    MM_OUT="$("$PY" manage.py makemigrations --check --dry-run 2>&1)"
+    MM_STATUS=$?
+    if [ "$MM_STATUS" -ne 0 ]; then
+        echo "$MM_OUT" | tail -15 | sed 's/^/    /'
+        if echo "$MM_OUT" | grep -q "^Migrations for '"; then
+            fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+        fi
+        fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
+    fi
 
     echo "  → pytest"
     # PYTEST_PREPUSH_ARGS lets one machine exclude tests its environment cannot
@@ -409,5 +458,6 @@ echo "                 makemigrations --check + pytest (backend),"
 echo "                 scoped to what the push actually changes."
 echo ""
 echo "   Per-machine settings go in .prepush.env (gitignored) — PYTHON_BIN,"
-echo "   RUFF_BIN, DATABASE_URL, PYTEST_PREPUSH_ARGS. The hook fails rather than"
-echo "   skips when a tool is missing; SKIP_PREPUSH=1 git push overrides."
+echo "   RUFF_BIN, DATABASE_URL, PYTEST_PREPUSH_ARGS. A worktree without its own"
+echo "   copy uses the main checkout's. The hook fails rather than skips when a"
+echo "   tool is missing; SKIP_PREPUSH=1 git push overrides."
