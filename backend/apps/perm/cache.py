@@ -218,10 +218,15 @@ class PermissionCache:
 
     def invalidate_all(self) -> None:
         """Clear all permission caches."""
-        # Clear Redis using SCAN (non-blocking) instead of KEYS
+        # Clear Redis using SCAN (non-blocking) instead of KEYS.
+        #
+        # Same shape as `_make_key`. This was a hard-coded "perm:*", and MATCH
+        # is whole-key, so with a non-empty prefix it deleted none of this
+        # instance's keys (a global revocation left every grant cached until
+        # the TTL) and every other process's unprefixed ones.
         if self._redis_client is not None:
             try:
-                pattern = "perm:*"
+                pattern = f"{self._key_prefix}perm:*"
                 keys = []
                 cursor = 0
                 while True:
