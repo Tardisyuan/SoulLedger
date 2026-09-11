@@ -18,6 +18,8 @@ worker B 的内存,而那份内存拿的是一份谁也清不掉的副本。它�
 这个文件断的是这两件事本身,不是它们的取值。
 """
 import time
+import uuid
+from urllib.parse import urlparse
 
 import pytest
 from django.test import override_settings
@@ -127,6 +129,82 @@ def test_the_redis_keys_carry_the_deployment_prefix():
     key = cache._make_key("JUDGE", "soul.read")
     assert key.startswith("zz-test:"), key
     assert key == "zz-test:perm:JUDGE:soul.read"
+
+
+@pytest.fixture
+def local_redis():
+    """`settings.REDIS_URL` 那台 Redis 的第 15 号库 —— 只接受本机。
+
+    **非本机就跳过。** 下面那条在修复前的代码上会删掉那台 Redis 里**所有**
+    `perm:*`,而 `.env` 的 REDIS_URL 指向共享盒子 115。这条测试只该跑在
+    一次性的 redis-server(CLAUDE.md 的 6399、pre-push 的随机端口)或 CI 的
+    `localhost` service 上。
+
+    **本机但连不上就是红,不是跳过。** 没有 Redis 时 `PermissionCache` 静默
+    降级,这条会变成一条永远不触发的检查。
+
+    **第 15 号库,不是 0 号。** 6399 是 CLAUDE.md 给每个会话的同一个端口,
+    多个 worktree 会同时跑全量;全量里每一次无前缀的 `invalidate_all_permissions()`
+    都删 0 号库的 `perm:*` —— 包括这里写的那条「别的进程的」键。
+    """
+    import redis
+    from django.conf import settings
+
+    parsed = urlparse(settings.REDIS_URL)
+    if parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        pytest.skip(f"REDIS_URL 指向 {parsed.hostname},不是本机 —— 不往共享 Redis 里写")
+    url = parsed._replace(path="/15").geturl()
+    client = redis.from_url(url, decode_responses=True)
+    try:
+        client.ping()
+    except redis.ConnectionError as e:
+        pytest.fail(f"{url} 连不上({e})—— 这条需要一台真 Redis,见 CLAUDE.md 的 6399")
+    written = []
+    yield url, client, written
+    if written:
+        client.delete(*written)
+
+
+@override_settings(CACHE_PERMISSION_KEY_PREFIX="zz-test:")
+def test_invalidate_all_clears_its_own_prefix_and_only_its_own(local_redis):
+    """`invalidate_all` 扫的必须是 `{prefix}perm:*`,和 `_make_key` 写的是同一个形状。
+
+    修复前它扫硬编码的 `"perm:*"`。Redis 的 MATCH 是整键匹配,所以前缀非空时:
+
+    1. 本实例写的 `zz-test:perm:…` **一条都不删** —— 一次全局撤销在 Redis 里
+       什么也没清,已撤销的授权被认可到 `CACHE_PERMISSION_TTL`(默认 300 秒)为止;
+    2. 别的进程写的无前缀 `perm:*` **全删** —— 前缀本来就是为了不碰它们。
+
+    默认前缀是空串,两个形状重合,所以这在默认配置下潜伏着。
+    """
+    url, client, written = local_redis
+    token = uuid.uuid4().hex[:8]
+    role = f"JUDGE-{token}"
+    foreign = f"perm:another-process-{token}:soul.read"
+
+    with override_settings(REDIS_URL=url):
+        cache = PermissionCache()
+    assert cache._redis_client is not None, "没连上 Redis —— 下面断的会是兜底字典,不是 Redis"
+
+    mine = cache._make_key(role, "soul.read")
+    written += [mine, foreign]
+    cache.set(role, "soul.read", True)
+    client.set(foreign, "1")
+    # 前提:两条键都真的在 Redis 里,且形状确实不同
+    assert mine.startswith("zz-test:perm:"), mine
+    assert client.get(mine) == "1"
+    assert client.get(foreign) == "1"
+
+    cache.invalidate_all()
+
+    assert client.exists(mine) == 0, (
+        f"{mine} 在 invalidate_all() 之后还在 —— 扫描模式没带 `{cache._key_prefix}` 前缀,"
+        f"一次全局撤销在 Redis 里什么也没清"
+    )
+    assert cache.get(role, "soul.read") is None
+    assert client.get(foreign) == "1", (
+        f"{foreign} 被删了 —— 它是别的进程的无前缀键,不属于这个实例"
+    )
 
 
 def test_an_empty_prefix_keeps_the_old_key_shape():
