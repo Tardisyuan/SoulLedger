@@ -2,6 +2,12 @@
 
 **English** | [中文](README.md)
 
+> **`README.md` (Chinese) is the authority.** This translation has drifted before — it
+> sat 50 commits behind through the npm-workspaces move, and told readers to run
+> `npm test`, which does not evaluate the coverage threshold. Both files were brought
+> level on 2026-09-11, and nothing checks that they stay level. Where they disagree,
+> believe the Chinese one, and please fix this file.
+
 SoulLedger is a working full-stack web application — Django + Next.js — that tracks
 souls through an afterlife pipeline in four different mythologies at once: the
 Chinese Diyu, the Christian and Dantean afterlives grouped here as "European," the
@@ -88,10 +94,20 @@ runs without it.
 > indistinguishable from 0 once it passes through a pipe. If `npm run lint` behaves
 > strangely, check `node --version` first.
 
+> **Install at the repository root, not inside `frontend/`.** Since 2026-09-02 this
+> is an npm workspaces repo (root + `frontend/` + `packages/*`) and the only lockfile
+> is the root `package-lock.json` — there is none under `frontend/`, so
+> `cd frontend && npm ci` simply fails.
+>
+> Also: npm honours `overrides` only in the package it installs from. The pins in the
+> root `package.json` (`sharp` closes an advisory, `nwsapi` closes a 40x test-speed
+> regression) live there for that reason, with the evidence in `_overrides_notes` in
+> the same file. Do not copy them into `frontend/package.json` — a copy used to sit
+> there, did nothing, and looked like it was working.
+
 ```bash
-cd frontend
-npm install
-npm run dev          # already pins PORT=3333
+npm install          # repository root
+npm run dev --workspace frontend   # already pins PORT=3333
 ```
 
 ### PostgreSQL + Redis (optional, matches CI)
@@ -270,8 +286,20 @@ cd backend && python -m pytest --tb=short -q     # repo-root pytest.ini: --cov=a
                                                  # suite write into the shared Redis.
                                                  # Full recipe: CLAUDE.md, Build & Test.
 cd backend && ruff check .
-cd frontend && npx tsc --noEmit && npm run lint && npm test
+cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
+# `test:coverage`, NOT `npm test`. The latter is bare jest, and jest.config.js sets
+# coverageThreshold without collectCoverage — so the threshold is only evaluated when
+# --coverage is passed. Measured: bare `npm test` prints the word "coverage" zero times.
+
+# E2E — three projects, and build first. `webServer` serves the build output
+# (`start:e2e`), not `next dev`: a dev server compiles on demand, so
+# waitForLoadState("networkidle") waits on compilation — the same code failed 3/4/2
+# specs across three runs, hitting a different route each time. CI runs all three legs,
+# so running only chromium is not "ran the E2E suite".
+cd frontend && npm run build
 cd frontend && npx playwright test --project=chromium
+cd frontend && npx playwright test --project=firefox
+cd frontend && npx playwright test --project=mobile-chrome
 ```
 
 **Backend tests live in two places** — `backend/tests/` and `test_*.py` / `tests.py`
@@ -297,8 +325,7 @@ backend/
     reincarnation/  Rebirth records
     actors/         Judges, guardians, psychopomps
     realms/         Afterlife geography
-    dispatch/       Cross-realm transfers
-    permissions/    Cross-tenant judgment authorization
+    dispatch/       Cross-realm transfers (includes cross-tenant joint judgment)
     perm/           RBAC: Permission, Role, DataScope, FieldPermission
     tenants/        Tenant model, contextvar-backed TenantManager
     authentication/ JWT auth, User model, roles
@@ -310,15 +337,32 @@ backend/
     social/         Posts, comments, reactions, follows, profiles
     org/            Organization chart
     audit/          Audit log with trace_id
-    core/           Middleware, shared viewsets/mixins, WebSocket auth, health
+    core/           Shared viewsets/mixins, permission classes, tenant scoping,
+                    WebSocket auth, health checks. NOT in INSTALLED_APPS；
+                    `apps/core/middleware.py` was deleted whole on 2026-08-28 —
+                    what survives is `request_local.py::RequestContextMiddleware`
   config/           Settings, URLs, ASGI, Celery
-  tests/            Cross-app pytest suite
+  tests/            Cross-app pytest suite (half the backend tests live in
+                    apps/*/ — see Testing & CI)
+packages/core/      The platform-independent layer. **No DOM** — its tsconfig omits
+  src/api/          One typed client per backend app (was frontend/lib/api/)
+  src/hooks/        The six data hooks (useSouls / useSocial / useJudgments /
+                    useJudgmentQueue / useDispositions / useReincarnation)
+  src/platform/     Eight host-capability ports; the web impl is in
+                    frontend/lib/platform/web.ts
+  src/config/       Domain config: the four-cosmology maps, civilizationSigil,
+                    workflow-templates
+  messages/         i18n: zh-Hans, en, egy (was frontend/messages/)
+  openapi/          schema.yml — the source of the frontend's types, with a backend
+                    gate asserting it byte-for-byte
 frontend/
-  app/              Next.js App Router pages
-  lib/api/          One typed client per backend app
-  src/hooks/        TanStack Query hooks
+  app/              Next.js App Router pages (37 page.tsx, 34 of them on PageShell)
+  src/hooks/        Only four view-layer hooks remain: useChartColors /
+                    usePermissions / useRowTransitions / useSidebarMenus
   src/components/   UI, including the RBAC gating components
-  messages/         i18n: zh-Hans, en, egy
+  src/__tests__/    The contract tests — these are the conventions that are enforced
+  components/ui/    A third source root: data-table / data-grid / page-section
+  lib/platform/     The web implementation of the platform ports
   e2e/              Playwright specs
 infrastructure/     docker-compose for PostgreSQL + Redis
 scripts/            start/stop/restart/status, DB backup/restore, git hooks
@@ -332,7 +376,7 @@ docs/               Domain research, engineering docs, design handoff — see do
 Start at [`docs/README.md`](docs/README.md), which indexes the whole folder. The
 short version:
 
-- **Domain research (Chinese-language).** ~20 files on the three afterlife
+- **Domain research (Chinese-language).** ~20 files on the four afterlife
   systems — the Ten Courts of Diyu, Dante's circles and the Norse and Greek
   underworlds, the twelve gates of the Duat and the weighing of the heart. This
   is the source material the domain model was derived from, and it is why
@@ -381,7 +425,7 @@ colour**: 功過格 is `救濟門 · 十七` (gate and article in Han numerals �
 《太微仙君功過格》 does not have); the *Inferno* is `IX · XXVI`; the Negative Confession
 is `§ 27 / 42` (**the denominator is printed** — the system means nothing unless all
 forty-two are answered); Plato is a Stephanus page, `523a`. See
-[`frontend/src/config/civilizationSigil.ts`](frontend/src/config/civilizationSigil.ts).
+[`packages/core/src/config/civilizationSigil.ts`](packages/core/src/config/civilizationSigil.ts).
 
 `/corpus` browses those 172 articles (Chinese 功過格 74, Egyptian Negative
 Confession 42, European Deadly Sins 7 + Inferno 26, Greek Gorgias 12 + Republic/Er
@@ -406,7 +450,7 @@ as red as one that exceeds it, because a stale baseline is an unwatched gap.
 
 ### Two conventions that bite
 
-**The indentation of `frontend/src/config/workflow-templates.ts` is a backend
+**The indentation of `packages/core/src/config/workflow-templates.ts` is a backend
 contract.** Three backend tests (`test_workflow_template_cast.py`,
 `test_workflow_preset_node_types.py`, `test_workflow_template_priority.py`) open
 this frontend file by hardcoded path and regex its *layout* — two-space keys,
@@ -424,7 +468,7 @@ error, no failing assertion. `src/__tests__/viewportHeightContract.test.ts` guar
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16, React 18, TypeScript 5, Tailwind CSS 3, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
+| Frontend | Next.js 16, React 18, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
 | Type | next/font + Archivo / Source Serif 4 / IBM Plex Mono; `@fontsource-variable/noto-sans-sc` and `-serif-sc` self-hosted (101 `unicode-range` slices each, so a browser fetches only what a page uses) |
 | Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
 | Database | PostgreSQL 16 (Docker/production), SQLite (local default) |
