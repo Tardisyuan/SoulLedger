@@ -81,10 +81,18 @@ Celery 需要，REST API 没有它也能运行。
 > 这套 lint 配置曾经**在加载阶段整个崩掉并返回退出码 2**，而退出码 2 经过管道之后与 0
 > 无法区分。若 `npm run lint` 行为诡异，先 `node --version`。
 
+> **在仓库根安装，不要在 `frontend/` 里。** 2026-09-02 起这是一个 npm workspaces
+> 仓库（根 + `frontend/` + `packages/*`），唯一的锁文件是根上那份 `package-lock.json`
+> —— `frontend/` 下没有 lockfile，所以 `cd frontend && npm ci` 直接失效。
+>
+> 另外：npm 只认**安装根**的 `overrides`。`package.json` 里那几条 pin（`sharp` 关一条
+> 公告、`nwsapi` 关一条 40 倍的测试性能退化）都写在根上，理由写在同文件的
+> `_overrides_notes` 里。别把它们复制到 `frontend/package.json` —— 那份曾经有过一份
+> 副本，完全不生效，而且看起来生效。
+
 ```bash
-cd frontend
-npm install
-npm run dev          # 脚本内已固定 PORT=3333
+npm install          # 仓库根
+npm run dev --workspace frontend   # 脚本内已固定 PORT=3333
 ```
 
 ### PostgreSQL + Redis（可选，与 CI 一致）
@@ -251,7 +259,14 @@ cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
 npm run --workspace packages/core typecheck   # packages/core 自己的三条门禁,
 npm run --workspace packages/core lint        # pre-push 在任何 ^packages/ 改动上全跑
 npm run --workspace packages/core test        # vitest,不是 jest
+# E2E —— 三个 project,而且要先 build。`webServer` 跑的是构建产物(`start:e2e`),
+# 不是 `next dev`:dev server 按需编译,于是 `waitForLoadState("networkidle")` 等的
+# 是「编译完没有」—— 同一份代码连跑三次失败 3/4/2 条、中招路由每次都换。
+# CI 的 matrix 三条腿都跑,所以只跑 chromium 不等于「跑过 E2E」。
+cd frontend && npm run build
 cd frontend && npx playwright test --project=chromium
+cd frontend && npx playwright test --project=firefox
+cd frontend && npx playwright test --project=mobile-chrome
 ```
 
 **后端测试分散在两处**——`backend/tests/`，以及 `backend/apps/` 各应用内的
@@ -275,8 +290,7 @@ backend/
     reincarnation/  轮回记录
     actors/         判官、守卫、引渡者
     realms/         冥界地理
-    dispatch/       跨域调度
-    permissions/    跨租户审判授权
+    dispatch/       跨域调度（含跨租户会审）
     perm/           RBAC：Permission、Role、DataScope、FieldPermission
     tenants/        Tenant 模型、contextvar 版 TenantManager
     authentication/ JWT 认证、User 模型、角色
@@ -288,15 +302,27 @@ backend/
     social/         帖子、评论、表态、关注、资料
     org/            组织架构
     audit/          带 trace_id 的审计日志
-    core/           中间件、公共 viewset/mixin、WebSocket 认证、健康检查
+    core/           公共 viewset/mixin、权限类、租户收窄、WebSocket 认证、健康检查
+                    （不在 INSTALLED_APPS 里；`apps/core/middleware.py` 2026-08-28
+                     整个删除，现存的是 `request_local.py::RequestContextMiddleware`）
   config/           settings、URL、ASGI、Celery
-  tests/            跨应用 pytest 套件
+  tests/            跨应用 pytest 套件（后端测试还有一半在 apps/*/ 里，见「测试与 CI」）
+packages/core/      平台无关层。**不含 DOM** —— 它的 tsconfig 没有 "dom"，
+  src/api/          每个后端应用一个类型安全客户端（原 frontend/lib/api/）
+  src/hooks/        六个数据 hook（useSouls / useSocial / useJudgments /
+                    useJudgmentQueue / useDispositions / useReincarnation）
+  src/platform/     八个宿主能力端口；web 实现在 frontend/lib/platform/web.ts
+  src/config/       领域配置：四文明映射、civilizationSigil、workflow-templates
+  messages/         i18n：zh-Hans、en、egy（原 frontend/messages/）
+  openapi/          schema.yml —— 前端类型的来源，后端有门禁盯着它逐字节一致
 frontend/
-  app/              Next.js App Router 页面
-  lib/api/          每个后端应用一个类型安全客户端
-  src/hooks/        TanStack Query hooks
+  app/              Next.js App Router 页面（37 个 page.tsx，其中 34 个用 PageShell）
+  src/hooks/        只剩四个视图层 hook：useChartColors / usePermissions /
+                    useRowTransitions / useSidebarMenus
   src/components/   UI，含 RBAC 门控组件
-  messages/         i18n：zh-Hans、en、egy
+  src/__tests__/    契约测试 —— 它们才是真正被执法的规范
+  components/ui/    第三个源根：data-table / data-grid / page-section / skeleton
+  lib/platform/     平台端口的 web 实现
   e2e/              Playwright 用例
 infrastructure/     PostgreSQL + Redis 的 docker-compose
 scripts/            启停/重启/状态、数据库备份恢复、git hooks
@@ -309,7 +335,7 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 
 从 [`docs/README.md`](docs/README.md) 开始，那里索引了整个目录。简版：
 
-- **神话研究（中文）**：约 20 篇关于三套死后世界体系的文档——地府十殿、但丁九圈与
+- **神话研究（中文）**：约 20 篇关于四套死后世界体系的文档——地府十殿、但丁九圈与
   希腊/北欧冥界、杜阿特十二门与心脏称量。这是领域模型的来源材料，也是
   `readings.py` 长成那样的原因。仓库根目录下的 `地府结构研究/`、`欧洲天堂地狱/`、
   `埃及冥界/` 曾是同一批文件的逐字节镜像，**2026-08-15 已去重**（`b2645e3`）：19 份
@@ -346,7 +372,7 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 **四个文明的差异化走各自的编号法，不走颜色**：功过格是 `救濟門 · 十七`（門/條 二级 +
 汉字数字，**注意不是「卷」**——《太微仙君功過格》没有卷）；地狱篇是 `IX · XXVI`；否定告白是
 `§ 27 / 42`（**分母必须印出来**，这套体系的意义在于四十二则全数应答）；柏拉图是斯特方
-页码 `523a`。见 [`frontend/src/config/civilizationSigil.ts`](frontend/src/config/civilizationSigil.ts)。
+页码 `523a`。见 [`packages/core/src/config/civilizationSigil.ts`](packages/core/src/config/civilizationSigil.ts)。
 
 `/corpus` 是浏览这 172 条语料的页面（中国功过格 74、埃及否定告白 42、
 欧洲七宗罪 7 + 地狱篇 26、希腊高尔吉亚 12 + 厄尔神话 11 —— 与
@@ -370,7 +396,7 @@ jsx-a11y，全部 `error` 级：
 
 ### 两条会咬人的约定
 
-**`frontend/src/config/workflow-templates.ts` 的缩进是后端契约。** 三个后端测试
+**`packages/core/src/config/workflow-templates.ts` 的缩进是后端契约。** 三个后端测试
 （`test_workflow_template_cast.py` / `test_workflow_preset_node_types.py` /
 `test_workflow_template_priority.py`）按硬编码路径打开这个前端文件，用正则匹配它的
 **排版**——两空格的键、四空格的字段、单行节点字面量。491 行是承重文本。**跑一遍
@@ -387,7 +413,7 @@ jsx-a11y，全部 `error` 级：
 
 | 层级 | 技术 |
 |---|---|
-| 前端 | Next.js 16、React 18、TypeScript 5、Tailwind CSS 3、TanStack Query v5、@xyflow/react（流程画布）、Recharts、class-variance-authority |
+| 前端 | Next.js 16、React 18、TypeScript 5、Tailwind CSS 4、TanStack Query v5、@xyflow/react（流程画布）、Recharts、class-variance-authority |
 | 字体 | next/font + Archivo / Source Serif 4 / IBM Plex Mono；`@fontsource-variable/noto-sans-sc`、`-serif-sc` 自托管切片（各 101 片带 `unicode-range`，浏览器只取用到的那几片） |
 | 后端 | Django 5、Django REST Framework、drf-spectacular、channels + daphne |
 | 数据库 | PostgreSQL 16（Docker/生产）、SQLite（本地默认） |
