@@ -295,20 +295,26 @@ if [ "$RUN_BACKEND" = 1 ]; then
     # here). Dropping to SQLite is a real loss, so it is announced rather than
     # silently substituted.
     #
-    # WHY THIS USES THE SHARED CACHE WHEN IT IS UP, THOUGH CLAUDE.md SAYS TO
-    # ISOLATE BOTH SERVICES. That instruction is written for someone running
-    # the suite by hand, and its stated cost is that the run "writes
-    # permission-cache keys into the real Redis". The owner confirmed on
-    # 2026-09-04 that nobody else uses that box, so the only reader of those
-    # keys is the next run on the same machine — and every cache test in this
-    # repo calls `invalidate_all_permissions()` in setUp, so it does not
-    # inherit them either.
+    # THE CACHE IS ALWAYS THROWN AWAY WHEN IT CAN BE — reachable or not.
     #
-    # Read that as a decision with a stated condition, not as a licence. If a
-    # second person or a second machine ever shares that Redis, the cost comes
-    # back and this branch should go: delete the `ok*` case below so the cache
-    # is always thrown away, and only the database keeps its probe. That is a
-    # three-line change, deliberately left easy.
+    # Until 2026-09-11 a reachable shared Redis was used as-is, on the ground
+    # that the owner had confirmed (2026-09-04) nobody else uses that box. That
+    # was a decision with a condition, and it was reversed on the owner's
+    # instruction rather than because the condition broke. What the suite writes
+    # there is not only Django-cache traffic: conftest.py swaps CACHES for
+    # LocMem, but `apps/perm/cache.py` opens its OWN client from
+    # `settings.REDIS_URL`, and so does the channels layer — the LocMem override
+    # covers neither. So every push wrote permission-cache keys into the shared
+    # Redis, and each `invalidate_all_permissions()` in the cache tests deleted
+    # every `perm:*` key in it — whoever wrote them. A throwaway redis-server is
+    # still a real Redis, so nothing
+    # the tests measure is lost, and the push no longer depends on 115's cache
+    # being up at all.
+    #
+    # The configured cache is used only when redis-server is not installed, and
+    # the run says so. Unreachable AND no redis-server is still a refusal: the
+    # permission-cache tests degrade silently without a cache and report a false
+    # red, which is the 2026-09-04 failure described above.
     # Reports one line per service: "<name> <ok|down> <detail>".
     PROBE=$(ENV_FILE="$ROOT/backend/.env" DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
 import os, re, socket
@@ -365,26 +371,22 @@ PROBE_PY
             echo "            bugs needed PostgreSQL to surface. Weaker run."
             export DATABASE_URL="sqlite:///:memory:" ;;
     esac
-    case "$RD_STATE" in
-        ok*) ;;
-        unknown*)
-            # Could not read a URL at all. Isolating is still the right action,
-            # but say that it is a blind fallback rather than a measured one.
-            echo "    → cache URL could not be read ($RD_STATE) — isolating anyway"
-            echo "      This is a blind fallback, not a reachability finding."
-            RD_STATE="down (unread)" ;;
-    esac
-    case "$RD_STATE" in
-        ok*) ;;
-        *)  echo "    → starting a throwaway redis-server"
-            command -v redis-server >/dev/null 2>&1 || fail "redis-server not found and the configured cache is unreachable. Refusing rather than running without one: the permission-cache tests degrade silently and report a false red, which is exactly the failure this probe exists to prevent."
-            RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
-            redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
-                || fail "could not start a throwaway redis-server on port $RPORT"
-            export REDIS_URL="redis://127.0.0.1:$RPORT/0"
-            export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
-            export CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2" ;;
-    esac
+    if command -v redis-server >/dev/null 2>&1; then
+        echo "    → starting a throwaway redis-server (configured cache is never used when this is possible)"
+        RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
+        redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
+            || fail "could not start a throwaway redis-server on port $RPORT"
+        export REDIS_URL="redis://127.0.0.1:$RPORT/0"
+        export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
+        export CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2"
+    else
+        case "$RD_STATE" in
+            ok*) echo "    → redis-server not installed — using the configured cache ($RD_STATE)"
+                 echo "      NOTE: this run writes permission-cache keys into it and"
+                 echo "            invalidates that cache's perm:* keys. Install redis-server to isolate." ;;
+            *)   fail "redis-server not found and the configured cache is unreachable ($RD_STATE). Refusing rather than running without one: the permission-cache tests degrade silently and report a false red, which is exactly the failure this probe exists to prevent." ;;
+        esac
+    fi
 
     "$PY" -m pytest -q --no-header ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
     PYTEST_STATUS="${PIPESTATUS[0]}"
