@@ -85,7 +85,22 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 `command not found` 反而不会把人带偏。(`ruff check .` 用 base 的那个是 exit 0。)
 
 `.git/hooks/pre-push` 不受影响:它从 gitignored 的 `.prepush.env` 读
-`PYTHON_BIN` / `RUFF_BIN`,找不到就带着「Set PYTHON_BIN in .prepush.env」拒绝。
+`PYTHON_BIN` / `RUFF_BIN`。~~找不到就带着「Set PYTHON_BIN in .prepush.env」拒绝~~
+**这句只在 PATH 上连 `python` 都没有时成立。** 2026-09-11 在 worktree 里推送:
+钩子在 worktree 根找 `.prepush.env`(gitignored,worktree 里没有),`PYTHON_BIN`
+于是退回裸 `python` —— 正是上面那个没有 Django 的 base —— 而它把
+`ModuleNotFoundError` 报成「a model changed without a migration」,拒了两次。
+现在钩子会退回主 checkout 的 `.prepush.env`,并且只在输出里真有
+`Migrations for '…'` 时才说「缺迁移」。
+
+**worktree 里还缺 `SECRET_KEY`。** `backend/.env` 同样 gitignored,
+`.claude/worktrees/*` 里没有它,`config/settings.py:14-16` 于是直接拒绝加载 ——
+每一条后端命令都先死在这里;只补 `SECRET_KEY` 还不够,`DEBUG=False` 时
+`ALLOWED_HOSTS` 也必填(2026-09-11 两个都实测撞到)。照 CI(`ci.yml:14-15`)
+在下面每条后端命令前加 `SECRET_KEY=ci-test-key-not-for-production DEBUG=true`。
+**不要**把主 checkout 的 `backend/.env` 拷过来:它的 DATABASE_URL 与 REDIS_URL
+都指向 115。钩子在没有 `backend/.env` 时自己补这两个值,并打印一行说明。
+
 复制粘贴下面的命令没有这一层 —— 要么先 activate 装了后端依赖的那个环境,
 要么照 `.prepush.env` 里 `PYTHON_BIN` 的值把 `python` 换成绝对路径。
 **这不是可有可无的注脚:这一整轮里每一条后端命令都得这样改写才能跑。**
@@ -156,7 +171,18 @@ cd frontend && npx playwright test --project=mobile-chrome
 # 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建 test_soulledger
 # 再删掉,不碰真库。`--create-db` 是必需的:陈旧的 test_soulledger 会造成上千条
 # 「环境错误」,那正是这条路径当初被判成不可用的原因。
-cd backend && python -m pytest -q --no-cov --create-db
+#
+# **只放开数据库,Redis 仍然用一次性的那台(见最上面)。** 这条命令此前什么都
+# 不覆盖,于是 REDIS_URL 也读 `.env` 指向 115 —— 最上面那段 2026-08-27 验证过的
+# 情形:`apps/perm/cache.py` 自开 Redis 客户端(conftest 的 LocMem 覆盖不到它),
+# 套件往 115 写权限缓存键,每次无前缀的 `invalidate_all_permissions()` 还会删掉
+# 那里所有 `perm:*`。`28a374a` 给 pre-push 修的是同一件事,这条漏了。
+# 另:`test_invalidate_all_clears_its_own_prefix_and_only_its_own` 在 REDIS_URL
+# 不是本机时跳过(它不往共享 Redis 写)—— 不带下面三个变量跑,skip 会多一条。
+cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
+  CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
+  CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
+  python -m pytest -q --no-cov --create-db
 ```
 
 **`tests/test_concurrency.py` 里有 4 条 `skipif(SQLITE)` 的测试,是这个仓库里唯一
