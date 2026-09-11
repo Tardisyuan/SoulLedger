@@ -76,6 +76,18 @@ cd "$ROOT" || exit 1
 # machine, not the project.
 [ -f "$ROOT/.prepush.env" ] && . "$ROOT/.prepush.env"
 
+# TEST SEAM. `PREPUSH_CHANGED` supplies the changed-file list directly (one path
+# per line) instead of reading git's stdin, and `PREPUSH_CLASSIFY_ONLY=1` prints
+# which gates would run and exits before running any of them. Both exist for
+# `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`, which is the
+# only test this hook has ever had — and this hook is the only gate in the
+# repository that runs automatically. Neither variable changes behaviour for a
+# normal push, where both are unset.
+if [ -n "${PREPUSH_CHANGED+x}" ]; then
+    CHANGED="$PREPUSH_CHANGED"
+    RANGE="(PREPUSH_CHANGED)"
+else
+
 # What is being pushed. git feeds "<local ref> <local sha> <remote ref>
 # <remote sha>" on stdin, one line per ref.
 RANGE=""
@@ -90,6 +102,7 @@ done
 [ -z "$RANGE" ] && { echo "pre-push: nothing to check"; exit 0; }
 
 CHANGED="$(git diff --name-only "$RANGE" 2>/dev/null)"
+fi
 [ -z "$CHANGED" ] && { echo "pre-push: no file changes in $RANGE"; exit 0; }
 
 TOUCHES_FRONTEND=$(echo "$CHANGED" | grep -cE '^frontend/' || true)
@@ -110,7 +123,81 @@ TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/' || true)
 # available*, which is the opposite of the thing being enforced.
 TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 
-echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files"
+# ── Root-level files ─────────────────────────────────────────────────────────
+#
+# The three prefixes above match nothing at the repository root, and several
+# files there decide what every gate below is testing. On 2026-09-11 two
+# consecutive pushes — a regenerated `package-lock.json` (`694aec9`: 182 packages
+# moved, one of them `nwsapi`, which turned eight jest tests into timeouts) and
+# the `nwsapi` pin in the root `package.json` (`c6368ea`) — went out with this
+# hook printing
+#
+#     frontend:0 backend:0 core:0 changed files
+#
+# and running nothing. The gates were run by hand both times, which is the only
+# reason the slowdown was caught before it landed.
+#
+# Three kinds, and the third is the point:
+#
+#   JS tree   package.json, package-lock.json, .nvmrc — the workspace list, the
+#             overrides, every resolved version, the node version. Runs core,
+#             and core already implies the frontend gate below.
+#   backend   pytest.ini, conftest.py — collection rules, the coverage floor,
+#             pythonpath, and the session-wide cache override. Dropping `tests.py`
+#             from `python_files` stops `apps/*/tests.py` being collected (see
+#             the comment in pytest.ini); test_collection_scope.py catches that,
+#             but only if something runs the suite — and this hook did not.
+#   unknown   any other root-level file NOT on the inert list below. Nobody can
+#             know what a file this hook has never seen affects, so every gate
+#             runs. Fail closed, as the header says — a root file added later
+#             (a tsconfig.base.json, a vitest.workspace.ts) must not inherit the
+#             blind spot this block was written to close.
+#
+# The inert list is documentation and deployment: it changes nothing a local
+# gate measures. `.pre-commit-config.yaml` is on it because nothing here reads
+# it: the `pre-commit` command is not installed (2026-09-11, `command -v` empty),
+# and the pre-commit hook this script writes above is its own ESLint hook, not
+# the framework's.
+#
+# Only root-level FILES. Top-level directories other than the three code roots
+# (docs/, infrastructure/, scripts/, .github/) are not gated, deliberately —
+# failing closed on them would put a full backend run behind every docs edit,
+# and a hook that is slow for no reason is a hook people learn to skip.
+ROOT_LEVEL=$(echo "$CHANGED" | grep -vE '/' | grep -vE '^$' || true)
+JS_ROOT_RE='^(package\.json|package-lock\.json|\.nvmrc)$'
+BACKEND_ROOT_RE='^(pytest\.ini|conftest\.py)$'
+INERT_ROOT_RE='(\.md$|^(Dockerfile|Dockerfile\.frontend|docker-compose[A-Za-z0-9._-]*\.ya?ml|\.gitignore|\.claudeignore|\.env\.example|\.pre-commit-config\.yaml)$)'
+JS_ROOT=$(echo "$ROOT_LEVEL" | grep -cE "$JS_ROOT_RE" || true)
+BACKEND_ROOT=$(echo "$ROOT_LEVEL" | grep -cE "$BACKEND_ROOT_RE" || true)
+UNKNOWN_ROOT=$(echo "$ROOT_LEVEL" | grep -vE "$JS_ROOT_RE" | grep -vE "$BACKEND_ROOT_RE" | grep -vE "$INERT_ROOT_RE" | grep -vE '^$' || true)
+
+TOUCHES_CORE=$((TOUCHES_CORE + JS_ROOT))
+TOUCHES_BACKEND=$((TOUCHES_BACKEND + BACKEND_ROOT))
+if [ -n "$UNKNOWN_ROOT" ]; then
+    echo "pre-push: root-level file(s) this hook does not recognise — running every gate:"
+    echo "$UNKNOWN_ROOT" | sed 's/^/    /'
+    echo "pre-push: if one of these cannot affect a gate, add it to INERT_ROOT_RE in scripts/install-hooks.sh."
+    TOUCHES_CORE=$((TOUCHES_CORE + 1))
+    TOUCHES_BACKEND=$((TOUCHES_BACKEND + 1))
+fi
+
+# The gate decisions, computed ONCE. Every `if` below reads these rather than
+# re-deriving them, and so does the classify-only output — so the test asserts
+# the exact values that decide what runs, not a second copy of the rule.
+RUN_CORE=0; RUN_FRONTEND=0; RUN_BACKEND=0
+[ "$TOUCHES_CORE" -gt 0 ] && RUN_CORE=1
+# `|| TOUCHES_CORE` on purpose: the frontend compiles the package's sources
+# directly rather than a built artefact, so a change under packages/ can break
+# `frontend/` type-checking while touching no file under `frontend/`.
+if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_FRONTEND=1; fi
+[ "$TOUCHES_BACKEND" -gt 0 ] && RUN_BACKEND=1
+
+echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
+
+if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
+    echo "classify: core=$RUN_CORE frontend=$RUN_FRONTEND backend=$RUN_BACKEND"
+    exit 0
+fi
 
 fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
 
@@ -119,7 +206,7 @@ need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this chec
 # Core first: it is the frontend's dependency, it is fast, and a boundary
 # failure should be the thing you read rather than the tsc error it causes 400
 # lines later.
-if [ "$TOUCHES_CORE" -gt 0 ]; then
+if [ "$RUN_CORE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
     # This tsconfig is the boundary. Running it here is the only automatic
@@ -147,10 +234,8 @@ if [ "$TOUCHES_CORE" -gt 0 ]; then
         || fail "@soulledger/core tests failed. If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
 fi
 
-# `|| TOUCHES_CORE` on purpose. The frontend compiles the package's sources
-# directly rather than a built artefact, so a change under packages/ can break
-# `frontend/` type-checking while touching no file under `frontend/`.
-if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then
+# RUN_FRONTEND already folds in TOUCHES_CORE — see where it is computed.
+if [ "$RUN_FRONTEND" = 1 ]; then
     need npx
     cd "$ROOT/frontend" || fail "frontend/ missing"
     echo "  → tsc";   npx tsc --noEmit          || fail "tsc failed"
@@ -160,7 +245,7 @@ if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then
     cd "$ROOT" || exit 1
 fi
 
-if [ "$TOUCHES_BACKEND" -gt 0 ]; then
+if [ "$RUN_BACKEND" = 1 ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
     RUFF="${RUFF_BIN:-ruff}"
     command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found. Set RUFF_BIN in .prepush.env if it lives elsewhere."
