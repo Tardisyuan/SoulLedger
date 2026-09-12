@@ -29,6 +29,7 @@
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { IDENTIFIER_POLICY_EXCEPTIONS } from "@/src/lib/domainDisplay";
 
 const FRONTEND_ROOT = path.join(__dirname, "..", "..");
@@ -75,6 +76,19 @@ const ENUM_FIELDS = [
   // list grew, and the registry was made to grow with it — which is the whole
   // mechanism this file gained after `conclusion_type`.
   "menu_type",
+  // Added 2026-09-12. `User.role` is typed through an alias (`UserRole`, itself
+  // built on `BuiltinUserRole`), and the meta-test below only recognised
+  // unions spelled inline — so `role` was never reported missing, and
+  // `UserDeleteDialog.tsx` printed `{user.role}` verbatim with every gate
+  // green (FT-03). The meta-test resolves aliases now; this entry is what it
+  // demanded the moment it could see.
+  "role",
+  // Surfaced by the same alias walk on the same day: `Statute.corpus` and
+  // `.polarity` are `StatuteCorpus` / `StatutePolarity`. Both already render
+  // through <DomainEnum> on /corpus and in JudgmentGroundsPanel; the registry
+  // had simply never been told they were enums.
+  "corpus",
+  "polarity",
 ];
 
 /** The two modules that are allowed to spell a missing value out. */
@@ -164,13 +178,129 @@ function relative(file: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * `{expr.enumField}` standing alone inside braces. The two characters before
- * the brace disqualify the non-render cases: `=` covers every JSX attribute
- * (`key={row.state}`, `value={form.node_type}`) and `$` covers template
- * interpolation (``t(`souls.states.${s.current_state}`)``), which is a lookup,
- * not a render.
+ * Walks the TypeScript AST rather than the text. Until 2026-09-12 this was a
+ * per-line regex for `{expr.enumField}` — one spelling of the defect. The same
+ * value reaches the same text node through a template literal
+ * (`{`${s.civilization}`}`), a ternary (`{x ? s.civilization : null}`), a
+ * destructuring IIFE (`{(() => { const { civilization } = s; return civilization })()}`)
+ * or braces split across lines, and the regex saw none of them: 14/14 green
+ * against every one, red only against `{s.civilization}` itself (FT-02). The
+ * live escapee was `app/dashboard/page.tsx` rendering `{action}` — a bare
+ * identifier from `Object.entries(grouped).map(([action, logs]) => …)`, which
+ * no `x.action` pattern can match.
+ *
+ * What "reaches the text node" means here. Start at a JSX *child* expression
+ * (attributes are not display — `key={row.state}` is fine) and follow every
+ * branch that can become the rendered value: both arms of `?:`, both sides of
+ * `||` / `??`, the right side of `&&`, every `${}` of a template, the returns
+ * of an immediately-invoked function. A leaf is a property access whose name
+ * is an enum field, or a bare identifier bound by destructuring to one
+ * (`const { status } = row`, `([action, n]) =>`). A call is a boundary:
+ * `t(`souls.states.${s.state}`)` is a lookup, and what it returns is the
+ * translator's business.
  */
-const RAW_ENUM_RE = new RegExp(String.raw`(^|[^=$])\{\s*([A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${ENUM_FIELDS.join("|")}))\s*\}`, "g");
+function renderedLeaves(expr: ts.Expression, out: ts.Expression[]): void {
+  if (ts.isParenthesizedExpression(expr)) {
+    renderedLeaves(expr.expression, out);
+  } else if (ts.isConditionalExpression(expr)) {
+    renderedLeaves(expr.whenTrue, out);
+    renderedLeaves(expr.whenFalse, out);
+  } else if (ts.isBinaryExpression(expr)) {
+    const op = expr.operatorToken.kind;
+    if (op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) {
+      renderedLeaves(expr.left, out);
+      renderedLeaves(expr.right, out);
+    } else if (op === ts.SyntaxKind.AmpersandAmpersandToken) {
+      renderedLeaves(expr.right, out);
+    }
+  } else if (ts.isTemplateExpression(expr)) {
+    for (const span of expr.templateSpans) renderedLeaves(span.expression, out);
+  } else if (ts.isCallExpression(expr)) {
+    const callee = ts.isParenthesizedExpression(expr.expression) ? expr.expression.expression : expr.expression;
+    if (ts.isArrowFunction(callee) || ts.isFunctionExpression(callee)) {
+      if (ts.isBlock(callee.body)) {
+        const returns = (node: ts.Node): void => {
+          if (ts.isReturnStatement(node) && node.expression) renderedLeaves(node.expression, out);
+          else if (!ts.isFunctionLike(node)) ts.forEachChild(node, returns);
+        };
+        ts.forEachChild(callee.body, returns);
+      } else {
+        renderedLeaves(callee.body, out);
+      }
+    }
+  } else if (ts.isPropertyAccessExpression(expr) || ts.isIdentifier(expr)) {
+    out.push(expr);
+  }
+}
+
+/**
+ * The destructuring that declares `id` in the nearest enclosing scope, walking
+ * outward from the identifier: the arrow it sits in, then the block, then the
+ * function around that, up to the file. Nested functions along the way are not
+ * entered — their bindings are not in scope. Null when `id` is not a
+ * destructured name at all (a plain `const label = …` carries no field name
+ * and is not this rule's subject).
+ */
+function destructuringBindingOf(id: ts.Identifier): ts.BindingElement | null {
+  for (let scope: ts.Node | undefined = id.parent; scope; scope = scope.parent) {
+    if (!(ts.isFunctionLike(scope) || ts.isBlock(scope) || ts.isSourceFile(scope))) continue;
+    let hit: ts.BindingElement | null = null;
+    const look = (node: ts.Node): void => {
+      if (hit) return;
+      if (ts.isBindingElement(node) && ts.isIdentifier(node.name) && node.name.text === id.text) {
+        hit = node;
+        return;
+      }
+      if (node !== scope && ts.isFunctionLike(node)) return;
+      ts.forEachChild(node, look);
+    };
+    look(scope);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Props are not rows. `function EmptyState({ title, action }: EmptyStateProps)`
+ * binds a name that is in ENUM_FIELDS, and `action` there is a ReactNode slot,
+ * not an audit action — a component's parameter names are its own API. The
+ * discriminator is the annotation: an object pattern on a TYPE-ANNOTATED
+ * parameter is a component boundary and is skipped. A pattern in a body
+ * (`const { civilization } = soul`), an array pattern (`([action, n]) =>`), or
+ * an unannotated callback parameter (`.map(({ status }) => …)`, contextually
+ * typed from the row) is data and counts.
+ */
+function isPropsPattern(pattern: ts.Node): boolean {
+  return ts.isObjectBindingPattern(pattern) && ts.isParameter(pattern.parent) && pattern.parent.type !== undefined;
+}
+
+/** The enum field a rendered leaf names, or null when it names none. */
+function enumFieldOf(leaf: ts.Expression): string | null {
+  if (ts.isPropertyAccessExpression(leaf)) return ENUM_FIELDS.includes(leaf.name.text) ? leaf.name.text : null;
+  if (!ts.isIdentifier(leaf)) return null;
+  const binding = destructuringBindingOf(leaf);
+  if (!binding || isPropsPattern(binding.parent)) return null;
+  const field = binding.propertyName && ts.isIdentifier(binding.propertyName) ? binding.propertyName.text : binding.name.getText();
+  return ENUM_FIELDS.includes(field) ? field : null;
+}
+
+function rawEnumViolationsIn(file: string, text: string): Violation[] {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const found: Violation[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxExpression(node) && node.expression && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) {
+      const leaves: ts.Expression[] = [];
+      renderedLeaves(node.expression, leaves);
+      for (const leaf of leaves) {
+        if (enumFieldOf(leaf) === null) continue;
+        found.push({ file, line: sf.getLineAndCharacterOfPosition(leaf.getStart(sf)).line + 1, text: leaf.getText(sf) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return found;
+}
 
 /**
  * Whole-file comment stripping, for the checks that ask "does this file
@@ -201,19 +331,7 @@ function stripComment(line: string): string {
 }
 
 function scanRawEnums(): Violation[] {
-  const found: Violation[] = [];
-  for (const file of SOURCE_FILES) {
-    const lines = readFileSync(file, "utf8").split("\n");
-    lines.forEach((line, i) => {
-      const code = stripComment(line);
-      RAW_ENUM_RE.lastIndex = 0;
-      let m: RegExpExecArray | null;
-      while ((m = RAW_ENUM_RE.exec(code)) !== null) {
-        found.push({ file: relative(file), line: i + 1, text: m[2] });
-      }
-    });
-  }
-  return found;
+  return SOURCE_FILES.flatMap((file) => rawEnumViolationsIn(relative(file), readFileSync(file, "utf8")));
 }
 
 // ---------------------------------------------------------------------------
@@ -283,11 +401,13 @@ const FK_PRIMARY_KEY_FIELDS = ["dispatched_by", "approver"];
 const IDENTIFIER_FIELD_RE = String.raw`id|uuid|pk|[a-z]\w*_id|${FK_PRIMARY_KEY_FIELDS.join("|")}`;
 
 /**
- * `{row.resource_id}` standing in a JSX text position. Same two-character
- * guard as RAW_ENUM_RE: `=` disqualifies every attribute — `key={row.id}`,
- * `id={soul.id}`, `href={…}` — and `$` disqualifies template interpolation,
- * which builds a URL rather than rendering. React keys and route segments are
- * not display and the policy does not reach them.
+ * `{row.resource_id}` standing in a JSX text position. Two-character guard:
+ * `=` disqualifies every attribute — `key={row.id}`, `id={soul.id}`,
+ * `href={…}` — and `$` disqualifies template interpolation, which builds a
+ * URL rather than rendering. React keys and route segments are not display
+ * and the policy does not reach them. (Rule 1 used the same guard as a regex
+ * until 2026-09-12; it walks the AST now. This one still reads lines, and so
+ * still has the equivalent-spelling blind spot Rule 1 no longer has.)
  */
 const RAW_IDENTIFIER_RE = new RegExp(
   String.raw`(^|[^=$])\{\s*([A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${IDENTIFIER_FIELD_RE}))\s*\}`,
@@ -393,25 +513,62 @@ function format(violations: Violation[]): string {
  * whole thing being hand-maintained without anyone saying so.
  */
 describe("the enum-field registry is not quietly behind the API types", () => {
-  /** `field: "A" | "B"` in any `packages/core/src/api/*.ts` — a field the types
-   *  themselves call an enum. The directory left `frontend` with the rest of the
-   *  API contract; this reads it where it is now, and `readdirSync` throws on a
-   *  wrong path rather than quietly scanning nothing. */
+  /** Members of a domain enum are SCREAMING_SNAKE; `"asc" | "desc"` is a sort order, not one. */
+  const isMemberLiteral = (t: ts.TypeNode): boolean =>
+    ts.isLiteralTypeNode(t) && ts.isStringLiteral(t.literal) && /^[A-Z][A-Z0-9_]*$/.test(t.literal.text);
+
+  /** A field whose type is a union of enum members, spelled inline OR through
+   *  an alias, in any `packages/core/src/api/*.ts`.
+   *
+   *  Aliases matter: until 2026-09-12 this was a regex for `field: "A" | "B"`
+   *  on one line, so `role: UserRole` — where `UserRole` is
+   *  `BuiltinUserRole | (string & {})` and `BuiltinUserRole` is the five-member
+   *  union — was invisible, and `role` never reached ENUM_FIELDS (FT-03). Alias
+   *  resolution iterates to a fixed point so an alias of an alias counts.
+   *  `readdirSync` throws on a wrong path rather than quietly scanning nothing. */
   function unionFieldsInApiTypes(): string[] {
     const dir = path.join(FRONTEND_ROOT, "..", "packages", "core", "src", "api");
-    const names = new Set<string>();
-    for (const f of readdirSync(dir)) {
-      if (!f.endsWith(".ts")) continue;
-      const src = readFileSync(path.join(dir, f), "utf8");
-      for (const m of src.matchAll(/^\s*(\w+)\??:\s*"[A-Z_]+"(?:\s*\|\s*"[A-Z_]+")+/gm)) {
-        names.add(m[1]);
+    const sources = readdirSync(dir)
+      .filter((f) => f.endsWith(".ts"))
+      .map((f) => ts.createSourceFile(f, readFileSync(path.join(dir, f), "utf8"), ts.ScriptTarget.Latest, true));
+    const aliases = new Map<string, ts.TypeNode>();
+    for (const sf of sources) {
+      sf.forEachChild((n) => {
+        if (ts.isTypeAliasDeclaration(n)) aliases.set(n.name.text, n.type);
+      });
+    }
+    const enumLike = new Set<string>();
+    const isEnumLike = (t: ts.TypeNode): boolean => {
+      if (ts.isParenthesizedTypeNode(t)) return isEnumLike(t.type);
+      if (ts.isUnionTypeNode(t)) return t.types.filter(isMemberLiteral).length >= 2 || t.types.some(isEnumLike);
+      return ts.isTypeReferenceNode(t) && ts.isIdentifier(t.typeName) && enumLike.has(t.typeName.text);
+    };
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const [name, t] of aliases) {
+        if (!enumLike.has(name) && isEnumLike(t)) {
+          enumLike.add(name);
+          grew = true;
+        }
       }
     }
+    const names = new Set<string>();
+    const visit = (n: ts.Node): void => {
+      if (ts.isPropertySignature(n) && n.type && ts.isIdentifier(n.name) && isEnumLike(n.type)) names.add(n.name.text);
+      n.forEachChild(visit);
+    };
+    for (const sf of sources) visit(sf);
     return [...names].sort();
   }
 
   it("finds union-typed fields to check, so this cannot pass on an empty set", () => {
     expect(unionFieldsInApiTypes().length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("sees a field typed through an alias, not only an inline union", () => {
+    // `User.role: UserRole` is the live case; if the alias walk regresses to
+    // inline-only, this is the assertion that says so, not a silent shrink.
+    expect(unionFieldsInApiTypes()).toContain("role");
   });
 
   it("registers every field the API types declare as a string union", () => {
@@ -431,6 +588,32 @@ describe("the enum-field registry is not quietly behind the API types", () => {
 describe("§4.6 source contract", () => {
   it("scans a non-trivial number of files (guards the walker itself)", () => {
     expect(SOURCE_FILES.length).toBeGreaterThan(30);
+  });
+
+  it("sees every spelling that reaches the text node, and none that does not", () => {
+    // The scanner's own proof. Each line below is a way the same value can
+    // reach the same text node; the regex this replaced saw only the first.
+    const probe = `
+      const V = () => (
+        <div>
+          {soul.civilization}
+          {\`\${soul.civilization}\`}
+          {ok ? soul.civilization : null}
+          {(() => { const { civilization } = soul; return civilization; })()}
+          {
+            soul.civilization
+          }
+          {label || soul.civilization}
+          {Object.entries(g).map(([action, n]) => <b key={action}>{action}</b>)}
+          {rows.map(({ status }) => <i key={status}>{status}</i>)}
+          <span title={soul.civilization} data-state={soul.status}>{t(\`souls.civ.\${soul.civilization}\`)}</span>
+          <DomainEnum namespace="x" value={soul.civilization} />
+        </div>
+      );
+      function Slot({ title, action }: { title: string; action?: React.ReactNode }) {
+        return <p>{title}{action}</p>;
+      }`;
+    expect(rawEnumViolationsIn("probe.tsx", probe).map((v) => v.line)).toEqual([4, 5, 6, 7, 9, 11, 12, 13]);
   });
 
   it("renders no raw domain enum member in JSX", () => {
