@@ -111,6 +111,12 @@ export function RoleFormModal({
             换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色模式下拿到
             的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
         {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-status-error))] text-03">{error}</p>}
+        {/* A built-in role's name is fixed: the backend compares ADMIN /
+            MODERATOR / JUDGE / GUARDIAN / VIEWER by literal and answers 400 to
+            a rename, so the field says so up front instead of letting the
+            operator type a name that will be refused. `readOnly`, not
+            `disabled`: the value still submits (the PUT sends `name` back
+            unchanged) and stays readable to assistive tech. */}
         <TextField
           id={nameId}
           label={t("permissions.role_name_label")}
@@ -118,7 +124,10 @@ export function RoleFormModal({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("permissions.role_name_placeholder")}
+          readOnly={initialData?.is_builtin === true}
+          description={initialData?.is_builtin ? t("permissions.role_name_builtin_hint") : undefined}
         />
+        {/* `description` above: the TextField wires `aria-describedby` to it. */}
         <TextField
           id={displayNameId}
           label={t("permissions.display_name_label")}

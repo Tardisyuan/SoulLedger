@@ -76,11 +76,24 @@ def create_permission(request):
     serializer = PermissionCreateUpdateSerializer(data=request.data)
     if serializer.is_valid():
         # Check duplicate codename
-        if Permission.objects.filter(codename=serializer.validated_data["codename"]).exists():
+        codename = serializer.validated_data["codename"]
+        if Permission.objects.filter(codename=codename).exists():
             return Response(
                 {"error": "Permission with this codename already exists"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # Permission is not in the recycle bin, so re-creating a deleted
+        # codename IS its restore path: revive the row and apply the new
+        # name/category, rather than shadowing it with a twin.
+        binned = (
+            Permission.all_objects.filter(codename=codename, is_deleted=True)
+            .order_by("-deleted_at")
+            .first()
+        )
+        if binned is not None:
+            binned.restore()
+            serializer = PermissionCreateUpdateSerializer(binned, data=request.data)
+            serializer.is_valid(raise_exception=True)
         permission = serializer.save()
         # Creating a Permission row moves its codename from the dict branch of
         # check_permission to the DB branch — the answer changes without any
@@ -376,14 +389,49 @@ def create_role(request):
     """
     serializer = RoleCreateUpdateSerializer(data=request.data)
     if serializer.is_valid():
-        if Role.objects.filter(name=serializer.validated_data["name"]).exists():
-            return Response(
-                {"error": "Role with this name already exists"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        taken = _role_name_taken(serializer.validated_data["name"])
+        if taken:
+            return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
         role = serializer.save()
         return Response(RoleSerializer(role).data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _role_name_taken(name):
+    """Why `name` cannot be given to a role right now, or None.
+
+    A live row is the obvious case. A binned row is the other: the conditional
+    constraint would allow a twin, but the twin and the original collide the
+    moment someone restores from the bin — so point at the bin instead.
+    Unlike Permission, Role IS in the bin (apps/perm/apps.py), so an admin
+    who wants the old grants back has a path, and one who does not can hard
+    delete after the retention window.
+    """
+    if Role.objects.filter(name=name).exists():
+        return "Role with this name already exists"
+    if Role.all_objects.filter(name=name, is_deleted=True).exists():
+        return (
+            f"A deleted role named '{name}' is in the recycle bin; restore it from "
+            "there (or hard-delete it) instead of creating a second one."
+        )
+    return None
+
+
+def _rename_role_in_menus(old_name, new_name):
+    """`Menu.roles` is a JSON list of role NAMES (apps/menus/models.py:49), so
+    a rename has to be cascaded there too or the renamed role loses its
+    navigation. Python-side because JSONField `contains` is unsupported on
+    SQLite; menus are few. Returns the number of menus touched."""
+    from apps.menus.models import Menu
+
+    touched = 0
+    for menu in Menu.all_objects.all():
+        roles = menu.roles or []
+        if old_name in roles:
+            menu.roles = [new_name if r == old_name else r for r in roles]
+            menu.save(update_fields=["roles"])
+            touched += 1
+    return touched
 
 
 @extend_schema(
@@ -411,15 +459,92 @@ def update_delete_role(request, pk):
 
     if request.method == "PUT":
         serializer = RoleCreateUpdateSerializer(role, data=request.data, partial=True)
-        if serializer.is_valid():
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        old_name = role.name
+        new_name = serializer.validated_data.get("name", old_name)
+        renaming = new_name != old_name
+        if renaming:
+            if role.is_builtin:
+                # `'ADMIN'` and the other four are compared as literals across
+                # the codebase (checker, tenant scoping, IsAdminPermission,
+                # ROLE_HIERARCHY, ROLE_PERMISSIONS, the menu views ...);
+                # renaming the row would not rename any of those.
+                return Response(
+                    {"error": f"'{old_name}' is a built-in role; its name is fixed because "
+                              "the code compares it by literal. Other fields can be changed."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            taken = _role_name_taken(new_name)
+            if taken:
+                return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
+
+        # BP-07: `User.role` is a name, not an FK. Renaming the row without
+        # cascading left every holder with a name no role had (denied
+        # everything once the 300s cache ran out) and the cache still
+        # answering for the OLD name until then. One transaction: the row,
+        # its holders, the menus that list it, and the audit row that says
+        # how many moved.
+        with transaction.atomic():
             serializer.save()
-            return Response(RoleSerializer(role).data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if renaming:
+                from apps.authentication.models import User
+
+                moved = User.all_objects.filter(role=old_name).update(role=new_name)
+                menus = _rename_role_in_menus(old_name, new_name)
+                invalidate_role_permissions(old_name)
+                invalidate_role_permissions(new_name)
+
+                from apps.audit.models import AuditAction, AuditLog
+
+                AuditLog.objects.create(
+                    tenant=getattr(request, "tenant", None),
+                    user=request.user,
+                    action=AuditAction.PERMISSION_CHANGE,
+                    resource="role",
+                    resource_id=str(role.pk),
+                    changes={
+                        "name": [old_name, new_name],
+                        "users_reassigned": moved,
+                        "menus_updated": menus,
+                    },
+                    description=f"Role {old_name} renamed to {new_name}; {moved} users re-pointed"[:500],
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                )
+        return Response(RoleSerializer(role).data)
 
     elif request.method == "DELETE":
-        # Also remove all RolePermission links (use Role object, not role.name string)
-        RolePermission.objects.filter(role=role).delete()
-        role.delete()
+        if role.is_builtin:
+            return Response(
+                {"error": f"'{role.name}' is a built-in role and cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.authentication.models import User
+
+        # Every non-deleted holder, active or not: a deactivated user still
+        # carries the name and would resurrect a phantom role on reactivation.
+        holders = User.objects.filter(role=role.name).count()
+        if holders:
+            return Response(
+                {
+                    "error": f"Role '{role.name}' is still held by {holders} user(s); "
+                             "reassign them before deleting it.",
+                    "user_count": holders,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.core.recycle_bin import cascade_soft_delete
+
+        # Grants go into the bin WITH the role under one cascade id, so a
+        # restore brings them back. The old code hard-deleted the links and
+        # soft-deleted the role: restorable in name only.
+        with transaction.atomic():
+            cascade_soft_delete(
+                role, RolePermission.objects.filter(role=role), user=request.user
+            )
+        invalidate_role_permissions(role.name)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -432,12 +557,12 @@ def init_roles(request):
     初始化默认角色（仅 ADMIN）
     """
 
+    # `revive_or_create`: a built-in sitting in the recycle bin comes back
+    # (with its grants) rather than raising against the old unique index (500)
+    # or, under the conditional constraint, gaining a twin.
     created_count = 0
     for name, display_name in DEFAULT_ROLES:
-        role, created = Role.objects.get_or_create(
-            name=name,
-            defaults={"display_name": display_name},
-        )
+        role, created = Role.revive_or_create(name, display_name=display_name)
         if created:
             created_count += 1
 
@@ -459,10 +584,7 @@ def init_role_permissions(request):
     # First ensure all permissions exist
     perm_count_before = Permission.objects.count()
     for codename, name, category in DEFAULT_PERMISSIONS:
-        Permission.objects.get_or_create(
-            codename=codename,
-            defaults={"name": name, "category": category},
-        )
+        Permission.revive_or_create(codename, name=name, category=category)
 
     # Clean up phantom permissions (test entries)
     Permission.objects.filter(codename__startswith='test.').delete()

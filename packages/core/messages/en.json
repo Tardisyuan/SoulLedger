@@ -474,6 +474,7 @@
     "role_name_label": "Role Name *",
     "role_name_placeholder": "e.g. MODERATOR",
     "role_name_required": "Role name is required",
+    "role_name_builtin_hint": "Built-in role: the name is fixed (the code compares it by literal); the display name can change",
     "display_name_label": "Display Name *",
     "display_name_placeholder": "e.g. Moderator",
     "display_name_required": "Display name is required",

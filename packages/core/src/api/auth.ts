@@ -1,9 +1,8 @@
 import { api } from "./client";
 import { getRefreshToken } from "../platform/index";
 
-/** User.role choices (backend/apps/authentication/models.py:17). */
 /**
- * `apps.authentication.models.UserRole`, all five members.
+ * The five BUILT-IN roles — `apps.authentication.models.UserRole`.
  *
  * MODERATOR WAS MISSING, AGAIN. This repository has been here before: the
  * model's own docstring records that "MODERATOR was missing here while three
@@ -11,25 +10,25 @@ import { getRefreshToken } from "../platform/index";
  * about a MODERATOR row rendering as "unrecognised value", and
  * `app/audit/page.tsx` records a MODERATOR being shown "仅管理员可查看审计"
  * for a permission the backend grants them. Each of those was fixed where it
- * was found. **This declaration — the shared type both clients now compile
- * against — was not**, and it was the last copy still short a member.
+ * was found; this shared type was the last copy still short a member.
  *
- * Found by comparing this union against
- * `components["schemas"]["UserRoleEnum"]` in the generated schema, which has
- * had five members all along. `enumsMatchTheSchema.test.ts` now holds them
- * equal, so the sixth role cannot land in the backend and stop here.
- *
- * Written as a literal union rather than an alias to the generated enum on
- * purpose: `domainDisplayContract.test.tsx` derives its subject list by
- * scanning these files for `field: "A" | "B"`, and an alias is invisible to
- * that regex. See the header of `enumsMatchTheSchema.test.ts`.
+ * Since 2026-09-12 (BP-06/07/11) these five are the roles whose NAMES are
+ * fixed — the backend compares them by literal and refuses to rename or
+ * delete them — not the set of values `User.role` can hold. That set is the
+ * role table, so `UserRole` below is `string` and the selectors on the users
+ * screen read `permApi.roles.list()` instead of restating this list. The
+ * backend no longer emits a `UserRoleEnum` component, which is why this union
+ * left `enumsMatchTheSchema.test.ts`.
  */
-export type UserRole =
+export type BuiltinUserRole =
   | "ADMIN"
   | "MODERATOR"
   | "JUDGE"
   | "GUARDIAN"
   | "VIEWER";
+
+/** `User.role`: a built-in, or the `name` of any live row in the role table. */
+export type UserRole = BuiltinUserRole | (string & {});
 
 /** The `user` object embedded in the login response (CustomTokenObtainPairSerializer). */
 export interface LoginUser {

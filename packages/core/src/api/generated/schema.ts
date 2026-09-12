@@ -6147,7 +6147,7 @@ export interface components {
             readonly username?: string;
             /** Email address */
             email?: string;
-            readonly role?: components["schemas"]["UserRoleEnum"];
+            readonly role?: string;
             first_name?: string;
             last_name?: string;
             /**
@@ -6194,7 +6194,7 @@ export interface components {
             email?: string;
             first_name?: string;
             last_name?: string;
-            role?: components["schemas"]["UserRoleEnum"];
+            role?: string;
             /**
              * Active
              * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
@@ -6645,6 +6645,7 @@ export interface components {
             organization?: number | null;
             readonly organization_name: string;
             readonly user_count: number;
+            readonly is_builtin: boolean;
             readonly version: number;
             /** Format: date-time */
             readonly update_time: string;
@@ -7074,7 +7075,7 @@ export interface components {
             readonly username: string;
             /** Email address */
             email?: string;
-            readonly role: components["schemas"]["UserRoleEnum"];
+            readonly role: string;
             first_name?: string;
             last_name?: string;
             /**
@@ -7120,7 +7121,7 @@ export interface components {
             password: string;
             first_name?: string;
             last_name?: string;
-            role?: components["schemas"]["UserRoleEnum"];
+            role?: string;
             tenant?: number | null;
             /** @description 所属组织：如 第一殿、冥王厅 */
             organization?: number | null;
@@ -7152,7 +7153,7 @@ export interface components {
             email?: string;
             first_name?: string;
             last_name?: string;
-            role?: components["schemas"]["UserRoleEnum"];
+            role?: string;
             readonly tenant: components["schemas"]["UserTenantRef"] | null;
             readonly organization: components["schemas"]["UserOrganizationRef"] | null;
             /** @description 职位：如 第一殿殿主 */
@@ -7235,15 +7236,6 @@ export interface components {
             role: string;
         };
         /**
-         * @description * `ADMIN` - Administrator (阎罗王)
-         *     * `MODERATOR` - Realm Lead (殿主)
-         *     * `JUDGE` - Judge (判官)
-         *     * `GUARDIAN` - Guardian (牛头马面)
-         *     * `VIEWER` - Viewer (访客)
-         * @enum {string}
-         */
-        UserRoleEnum: "ADMIN" | "MODERATOR" | "JUDGE" | "GUARDIAN" | "VIEWER";
-        /**
          * @description The three keys `UserManagementSerializer.get_tenant` returns.
          *
          *     Schema-only, never instantiated — the method builds the dict by hand. This
@@ -7267,7 +7259,7 @@ export interface components {
             email?: string;
             first_name?: string;
             last_name?: string;
-            role?: components["schemas"]["UserRoleEnum"];
+            role?: string;
             /**
              * Active
              * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.

@@ -12956,8 +12956,7 @@ components:
           - type: string
             maxLength: 0
         role:
-          allOf:
-          - $ref: '#/components/schemas/UserRoleEnum'
+          type: string
           readOnly: true
         first_name:
           type: string
@@ -13058,7 +13057,8 @@ components:
           type: string
           maxLength: 150
         role:
-          $ref: '#/components/schemas/UserRoleEnum'
+          type: string
+          maxLength: 20
         is_active:
           type: boolean
           title: Active
@@ -13969,6 +13969,9 @@ components:
         user_count:
           type: integer
           readOnly: true
+        is_builtin:
+          type: boolean
+          readOnly: true
         version:
           type: integer
           readOnly: true
@@ -13979,6 +13982,7 @@ components:
       required:
       - display_name
       - id
+      - is_builtin
       - name
       - organization_name
       - update_time
@@ -14852,8 +14856,7 @@ components:
           - type: string
             maxLength: 0
         role:
-          allOf:
-          - $ref: '#/components/schemas/UserRoleEnum'
+          type: string
           readOnly: true
         first_name:
           type: string
@@ -14939,7 +14942,8 @@ components:
           type: string
           maxLength: 150
         role:
-          $ref: '#/components/schemas/UserRoleEnum'
+          type: string
+          maxLength: 20
         tenant:
           type: integer
           nullable: true
@@ -15007,7 +15011,8 @@ components:
           type: string
           maxLength: 150
         role:
-          $ref: '#/components/schemas/UserRoleEnum'
+          type: string
+          maxLength: 20
         tenant:
           allOf:
           - $ref: '#/components/schemas/UserTenantRef'
@@ -15208,20 +15213,6 @@ components:
           type: string
       required:
       - role
-    UserRoleEnum:
-      enum:
-      - ADMIN
-      - MODERATOR
-      - JUDGE
-      - GUARDIAN
-      - VIEWER
-      type: string
-      description: |-
-        * `ADMIN` - Administrator (阎罗王)
-        * `MODERATOR` - Realm Lead (殿主)
-        * `JUDGE` - Judge (判官)
-        * `GUARDIAN` - Guardian (牛头马面)
-        * `VIEWER` - Viewer (访客)
     UserTenantRef:
       type: object
       description: |-
@@ -15265,7 +15256,8 @@ components:
           type: string
           maxLength: 150
         role:
-          $ref: '#/components/schemas/UserRoleEnum'
+          type: string
+          maxLength: 20
         is_active:
           type: boolean
           title: Active

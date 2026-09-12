@@ -32,7 +32,11 @@ const GENERATED = path.join(API_DIR, "generated", "schema.ts");
  *  schema 对应物 —— 它们的端点在那 27 个无法内省的 view 里,见
  *  `backend/tests/test_schema_has_no_warnings.py`。 */
 const PAIRS: { decl: string; file: string; component: string }[] = [
-  { decl: "UserRole", file: "auth.ts", component: "UserRoleEnum" },
+  // `UserRole` left this list 2026-09-12: `User.role` is validated against the
+  // role table now, the backend emits no `UserRoleEnum`, and the five fixed
+  // names live on as `BuiltinUserRole` — held to the backend's `UserRole`
+  // constants by `backend/tests/test_frontend_role_labels.py` via the
+  // `users.roles.*` bundle keys, not by a schema component.
   { decl: "StatuteCorpus", file: "judgment.ts", component: "CorpusEnum" },
   { decl: "StatutePolarity", file: "judgment.ts", component: "PolarityEnum" },
 ];
@@ -94,7 +98,7 @@ describe("这些比较有主体", () => {
   });
 
   it("要比的对子数量不为零", () => {
-    expect(PAIRS.length + INLINE.length).toBeGreaterThanOrEqual(6);
+    expect(PAIRS.length + INLINE.length).toBeGreaterThanOrEqual(5);
   });
 });
 

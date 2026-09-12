@@ -473,6 +473,7 @@
     "role_name_label": "Ren Netjer *",
     "role_name_placeholder": "Shen Medu: MODERATOR",
     "role_name_required": "Ren Netjer Her Tepy",
+    "role_name_builtin_hint": "Netjer Em Tepy: Ren Semen (Medu Khet Ren); Ren Sesen Kheper",
     "display_name_label": "Ren Sesen *",
     "display_name_placeholder": "e.g. Sethety Em Kheme",
     "display_name_required": "Ren Sesen Her Tepy",

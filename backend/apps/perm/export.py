@@ -91,20 +91,21 @@ def import_permissions(data, overwrite=False):
         RowLevelDataScope.objects.all().delete()
         RolePermission.objects.all().delete()
 
-    # Import permissions
+    # Import permissions. `revive_or_create`, not `get_or_create`: a binned
+    # row with the same natural key comes back rather than gaining a twin.
     for perm_data in data.get('permissions', []):
-        _, created = Permission.objects.get_or_create(
-            codename=perm_data['codename'],
-            defaults={'name': perm_data['name'], 'category': perm_data['category']}
+        _, created = Permission.revive_or_create(
+            perm_data['codename'],
+            name=perm_data['name'], category=perm_data['category'],
         )
         if created:
             stats['permissions'] += 1
 
     # Import roles
     for role_data in data.get('roles', []):
-        _, created = Role.objects.get_or_create(
-            name=role_data['name'],
-            defaults={'display_name': role_data['display_name'], 'scope': role_data.get('scope', 'ORG')}
+        _, created = Role.revive_or_create(
+            role_data['name'],
+            display_name=role_data['display_name'], scope=role_data.get('scope', 'ORG'),
         )
         if created:
             stats['roles'] += 1

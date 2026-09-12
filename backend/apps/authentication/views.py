@@ -17,7 +17,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-from apps.authentication.models import UserRole
+from apps.authentication.models import is_assignable_role
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
@@ -235,14 +235,13 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         """分配角色给用户"""
         user = self.get_object()
         new_role = request.data.get('role')
-        # Derived, not restated. This list and its twin below were two
-        # hand-written copies of UserRole that both missed MODERATOR, so a
-        # role the permission layer fully honoured could not be assigned
-        # through any API path.
-        valid_roles = list(UserRole.values)
-        if new_role not in valid_roles:
+        # Against the Role table, not a restated enum. This and its twin in
+        # import_csv were two hand-written copies of UserRole that both missed
+        # MODERATOR; then they were `UserRole.values`, which made every role
+        # created through /perm/roles/create/ unholdable (BP-11).
+        if not is_assignable_role(new_role):
             return Response(
-                {'error': f'Invalid role. Must be one of: {valid_roles}'},
+                {'error': f'Invalid role {new_role!r}: not a built-in role and not a live row in the role table.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         # Prevent privilege escalation: assigning user's role must be >= target role.
@@ -349,7 +348,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                         errors.append(f"Row {i+2}: invalid email '{email}'")
                         continue
 
-                if role not in UserRole.values:
+                if not is_assignable_role(role):
                     errors.append(f"Row {i+2}: invalid role '{role}'")
                     continue
 
