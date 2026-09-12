@@ -1,7 +1,8 @@
 """
 Menu views — tree structure with button resources.
 """
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -212,6 +213,26 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         return Response(accessible_menus)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "menu_id",
+                OpenApiTypes.INT,
+                OpenApiParameter.QUERY,
+                description=(
+                    "Only the buttons under this menu. Read straight from "
+                    "`query_params` in `get_queryset` rather than through a "
+                    "filterset, so drf-spectacular cannot infer it: the generated "
+                    "schema declared `query?: never`, and the frontend sent `menu` "
+                    "for months against a backend reading `menu_id` — the filter "
+                    "silently did nothing and every menu showed every button "
+                    "(FL-03). Declared here so the contract carries the name."
+                ),
+            )
+        ]
+    )
+)
 class MenuButtonViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     MenuButton CRUD — 按钮资源管理。

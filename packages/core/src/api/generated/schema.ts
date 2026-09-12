@@ -10137,6 +10137,8 @@ export interface operations {
     v1_menus_buttons_list: {
         parameters: {
             query?: {
+                /** @description Only the buttons under this menu. Read straight from `query_params` in `get_queryset` rather than through a filterset, so drf-spectacular cannot infer it: the generated schema declared `query?: never`, and the frontend sent `menu` for months against a backend reading `menu_id` — the filter silently did nothing and every menu showed every button (FL-03). Declared here so the contract carries the name. */
+                menu_id?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
