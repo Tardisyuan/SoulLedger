@@ -1,0 +1,28 @@
+# Development only. `docker compose up` reads this file automatically; the
+# `-f docker-compose.yml -f docker-compose.production.yml` pair does not, which
+# is the whole reason the ports and DEBUG are here and not in the base (IS-03).
+#
+# No `./backend:/app` mount, on purpose: it would carry the host's
+# `backend/.env` — whose DATABASE_URL and REDIS_URL point at the shared box —
+# into the container. settings.py's load_dotenv does not override variables
+# compose already set, but everything else in that file would apply. daphne
+# does not reload on edit anyway; rebuild with `docker compose up --build`.
+services:
+  backend:
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "true"
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend
+
+  celery:
+    environment:
+      DEBUG: "true"
+
+  celery-beat:
+    environment:
+      DEBUG: "true"
+
+  frontend:
+    ports:
+      - "3333:3000"

@@ -1,4 +1,27 @@
-version: "3.9"
+# Base file, production-shaped: no published ports, no host bind mounts, DEBUG
+# unset. Compose merges override files by ADDING or REPLACING keys — nothing
+# can remove one — so a port or a `./backend:/app` mount written here would
+# survive into `-f docker-compose.yml -f docker-compose.production.yml` and
+# bypass nginx with the host's source tree and its `backend/.env` (IS-03).
+# Anything dev-only lives in docker-compose.override.yml, which a bare
+# `docker compose up` reads automatically and the -f pairs do not.
+#
+# `${…}` values come from a root `.env` (see .env.example); the names are the
+# ones config/settings.py reads.
+
+x-django-env: &django-env
+  DATABASE_URL: postgres://soulledger:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/soulledger
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+  # DEBUG is deliberately absent: settings.py then refuses to start without
+  # ALLOWED_HOSTS, ENCRYPTION_KEY and a non-SQLite DATABASE_URL, which is the
+  # check a production stack wants. The dev override sets DEBUG=true.
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-0}
 
 services:
   db:
@@ -6,12 +29,9 @@ services:
     environment:
       POSTGRES_DB: soulledger
       POSTGRES_USER: soulledger
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Uncomment ports for local dev only — never expose DB in production
-    # ports:
-    #   - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U soulledger"]
@@ -21,9 +41,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    # Uncomment ports for local dev only — never expose Redis in production
-    # ports:
-    #   - "6379:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -33,8 +50,13 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: ../Dockerfile
+      # Root context: backend/Dockerfile copies `backend/…`, and .dockerignore
+      # at the root keeps `backend/.env`, `test.db` and the coverage dumps out.
+      context: .
+      dockerfile: backend/Dockerfile
+    # One image for backend, celery and celery-beat: the workers reuse this
+    # tag instead of building the same Dockerfile two more times.
+    image: soulledger-backend
     # Seeding goes through `manage.py seed_mythology`, not a standalone script.
     # This used to run `python scripts/seed_chinese_data.py`, a hand-maintained
     # second copy of the same realm and actor tables. Two copies meant every
@@ -47,21 +69,25 @@ services:
     # the unique constraint. The command matches on `all_objects`, assigns the
     # tenant, is idempotent, and is covered by tests/test_seed_mythology.py.
     # backend/tests/test_seed_entrypoint.py holds this line to the command.
+    #
+    # daphne, not `gunicorn config.wsgi`: WSGI never serves the channels
+    # WebSocket routes, so /ws/ was dead in every deployment (IS-06).
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py collectstatic --noinput &&
+             python manage.py migrate &&
              python manage.py seed_mythology &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgres://soulledger:${DB_PASSWORD}@db:5432/soulledger
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=true
+      - static_files:/app/staticfiles
+    environment: *django-env
+    healthcheck:
+      # python, not curl: python:*-slim has no curl. /health/ is the route
+      # (config/urls.py); /api/v1/health/ never existed (IS-11).
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
       db:
         condition: service_healthy
@@ -69,50 +95,43 @@ services:
         condition: service_healthy
 
   celery:
-    build:
-      context: ./backend
-      dockerfile: ../Dockerfile
+    image: soulledger-backend
     command: celery -A config.celery worker --loglevel=info
-    volumes:
-      - ./backend:/app
-    environment:
-      - DATABASE_URL=postgres://soulledger:${DB_PASSWORD}@db:5432/soulledger
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - SECRET_KEY=${SECRET_KEY}
+    environment: *django-env
+    # Healthy backend = migrations applied. Started against db/redis alone,
+    # beat raced the first migrate and died on a missing
+    # django_celery_beat table (seen 2026-09-12); the worker has the same race.
     depends_on:
-      - redis
-      - db
+      backend:
+        condition: service_healthy
 
   celery-beat:
-    build:
-      context: ./backend
-      dockerfile: ../Dockerfile
+    image: soulledger-backend
     command: celery -A config.celery beat --loglevel=info
-    volumes:
-      - ./backend:/app
-    environment:
-      - DATABASE_URL=postgres://soulledger:${DB_PASSWORD}@db:5432/soulledger
-      - CELERY_BROKER_URL=redis://redis:6379/1
+    environment: *django-env
     depends_on:
-      - redis
-      - db
+      backend:
+        condition: service_healthy
 
   frontend:
     build:
       # Root context: `frontend` is an npm workspace and its `@soulledger/core`
       # dependency lives in `packages/core`, outside `./frontend`.
       context: .
-      dockerfile: Dockerfile.frontend
-    command: npm run dev
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "3333:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
+      dockerfile: frontend/Dockerfile
+      args:
+        # Build-time: next.config.js inlines it. The browser must be able to
+        # reach this URL, so in production it is the public one behind nginx.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    healthcheck:
+      # busybox wget: node:*-alpine has no curl (IS-11). 127.0.0.1, not
+      # localhost: alpine resolves that to ::1 and Next listens on IPv4 only
+      # (measured 2026-09-12: "unhealthy" with localhost, 200 with 127.0.0.1).
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       - backend
 
@@ -139,3 +158,5 @@ services:
 
 volumes:
   postgres_data:
+  # collectstatic output; nginx mounts it read-only as /static/ (IS-14).
+  static_files:
