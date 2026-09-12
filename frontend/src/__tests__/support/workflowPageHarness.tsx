@@ -45,6 +45,9 @@ jest.mock("@soulledger/core/api", () => ({
     all: jest.fn().mockResolvedValue({ data: [] }),
     list: jest.fn().mockResolvedValue({ data: { results: [] } }),
   },
+  // TemplateDetailModal names each node's approver through RoleName, which
+  // reads the role table. Empty unless a test says otherwise.
+  permApi: { roles: { list: jest.fn().mockResolvedValue({ data: [] }) } },
 }));
 
 export const mockShowToast = jest.fn();

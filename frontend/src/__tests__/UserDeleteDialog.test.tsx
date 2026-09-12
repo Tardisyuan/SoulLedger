@@ -29,10 +29,14 @@ jest.mock("@soulledger/core/api", () => ({
   usersApi: {
     delete: jest.fn(),
   },
+  // RoleName reads the role table; empty here, so ADMIN below still resolves
+  // through DomainEnum.
+  permApi: { roles: { list: jest.fn().mockResolvedValue({ data: [] }) } },
 }));
 
 jest.mock("@soulledger/core/query_keys", () => ({
   userKeys: { all: ["users"] },
+  permissionKeys: { roles: ["permissions", "roles"] },
 }));
 
 jest.mock("@/src/components/ui/Toast", () => ({
@@ -93,6 +97,17 @@ describe("UserDeleteDialog", () => {
     expect(screen.getByText(zh("users.roles.ADMIN"))).toBeInTheDocument();
     expect(screen.getByTitle("ADMIN")).toBeInTheDocument();
     expect(screen.queryByText("ADMIN")).not.toBeInTheDocument();
+  });
+
+  it("shows a custom role by the role table's display_name, not as unrecognised", async () => {
+    const { permApi } = jest.requireMock("@soulledger/core/api");
+    permApi.roles.list.mockResolvedValue({
+      data: [{ id: 9, name: "SCRIBE", display_name: "书吏", is_builtin: false }],
+    });
+    renderDialog({ user: { ...mockUser, role: "SCRIBE" } });
+    expect(await screen.findByText("书吏")).toBeInTheDocument();
+    expect(screen.getByTitle("SCRIBE")).toBeInTheDocument();
+    expect(document.querySelector("[data-enum-state='unrecognized']")).toBeNull();
   });
 
   it("renders cancel and delete buttons", () => {

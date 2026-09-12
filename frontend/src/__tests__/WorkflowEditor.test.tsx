@@ -81,6 +81,17 @@ jest.mock("@soulledger/core/api", () => ({
       update: jest.fn().mockResolvedValue({ data: { id: "updated-1" } }),
     },
   },
+  // The node modal's approver role is a select over the role table.
+  permApi: {
+    roles: {
+      list: jest.fn().mockResolvedValue({
+        data: [
+          { id: 1, name: "JUDGE", display_name: "Judge", is_builtin: true },
+          { id: 9, name: "SCRIBE", display_name: "书吏", is_builtin: false },
+        ],
+      }),
+    },
+  },
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -100,7 +111,8 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "workflow.editor.court_placeholder": "e.g. First Court",
         "workflow.editor.approver_type": "Approver Type",
         "workflow.editor.approver_role": "Approver Role",
-        "workflow.editor.approver_placeholder": "e.g. Qinguang Wang",
+        "workflow.editor.approver_placeholder": "— select —",
+        "users.roles.JUDGE": "判官",
         "workflow.editor.new_node": "New Node",
         "workflow.editor.hint": "Double-click nodes to edit",
         "workflow.editor.saved": "Saved!",
@@ -478,7 +490,7 @@ describe("WorkflowEditor", () => {
           priority: 0,
           nodes_json: [
             { id: "A", node_name: "秦广王 · 分流", node_type: "TRIAL", court_code: "第一殿", node_order: 1, approver_type: "ROLE" },
-            { id: "B", node_name: "楚江王 · 初审", node_type: "EVALUATION", court_code: "第二殿", node_order: 2, approver_type: "ROLE" },
+            { id: "B", node_name: "楚江王 · 初审", node_type: "EVALUATION", court_code: "第二殿", node_order: 2, approver_type: "ROLE", approver_role: "OVERSEER" },
             { id: "C", node_name: "转轮王 · 终审", node_type: "FINAL", court_code: "", node_order: 3, approver_type: "ROLE" },
           ],
         }}
@@ -556,6 +568,27 @@ describe("WorkflowEditor", () => {
     // The node, not merely a node — a handler that always opened the first one
     // would satisfy "the modal opened".
     expect(screen.getByLabelText("Node Name")).toHaveValue("楚江王 · 初审");
+  });
+
+  it("offers the approver role from the role table and keeps a value the table does not know", async () => {
+    renderNamed();
+    fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
+
+    const select = screen.getByLabelText("Approver Role") as HTMLSelectElement;
+    expect(select.tagName).toBe("SELECT");
+    // The table arrives asynchronously; a built-in by its translated copy, a
+    // custom role by its display_name.
+    await waitFor(() => expect(screen.getByRole("option", { name: "书吏" })).toBeInTheDocument());
+    expect(screen.getByRole("option", { name: "判官" })).toHaveValue("JUDGE");
+    expect(screen.getByRole("option", { name: "— select —" })).toHaveValue("");
+    // What the node already carries stays selected and selectable even when
+    // the table has no such role — the free-text days left values like this
+    // behind, and a select that dropped them would rewrite the template on save.
+    expect(select.value).toBe("OVERSEER");
+    expect(screen.getByRole("option", { name: "OVERSEER" })).toHaveValue("OVERSEER");
+
+    fireEvent.change(select, { target: { value: "SCRIBE" } });
+    expect(select.value).toBe("SCRIBE");
   });
 
   it("takes an uppercase E too", () => {

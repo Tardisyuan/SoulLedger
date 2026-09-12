@@ -362,6 +362,26 @@ describe("WorkflowPage detail modal", () => {
     expect(mockedTemplateGet).toHaveBeenCalledWith("7");
   });
 
+  it("names a custom approver role by the role table's display_name, not as unrecognised", async () => {
+    const { permApi } = jest.requireMock("@soulledger/core/api");
+    permApi.roles.list.mockResolvedValue({
+      data: [{ id: 9, name: "SCRIBE", display_name: "书吏", is_builtin: false }],
+    });
+    mockedTemplates.mockResolvedValue({ data: [backendTemplate] });
+    mockedTemplateGet.mockResolvedValue({
+      data: { ...backendTemplate, nodes: [{ node_name: "Fetched node", approver_role: "SCRIBE" }] },
+    });
+    mockT.mockImplementation(tZh);
+    renderPage();
+
+    fireEvent.click(await screen.findByText("Custom Tribunal"));
+    fireEvent.click(screen.getByText(zh("workflow.view")));
+
+    expect(await screen.findByText("书吏")).toBeInTheDocument();
+    expect(screen.getByTitle("SCRIBE")).toBeInTheDocument();
+    expect(document.querySelector("[data-enum-state='unrecognized']")).toBeNull();
+  });
+
   it("falls back to the list row when the detail fetch fails, instead of showing nothing", async () => {
     mockedTemplates.mockResolvedValue({ data: [backendTemplate] });
     mockedTemplateGet.mockRejectedValue(new Error("500"));

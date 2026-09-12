@@ -580,7 +580,7 @@
       "court_placeholder": "例如: 第一殿, 真理大厅",
       "approver_type": "审批人类型",
       "approver_role": "审批角色",
-      "approver_placeholder": "例如: JUDGE, OVERSEER",
+      "approver_placeholder": "— 选择审批角色 —",
       "new_node": "新节点",
       "saved": "模板已保存",
       "save_failed": "保存失败",
