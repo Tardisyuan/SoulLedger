@@ -4,6 +4,7 @@ import { Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { RoleDiff } from "./matrixDiff";
 
 /** Three-tier save confirmation (tier 2 and tier 3 diffs). */
@@ -65,7 +66,12 @@ export function MatrixSaveConfirmModal({
         {diffs.map((diff) => (
           <div key={diff.role} className="border border-[oklch(var(--color-hairline))] p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-[oklch(var(--color-ink))] text-03">{roleMeta[diff.role]?.display_name || diff.role}</h4>
+              <h4 className="font-semibold text-[oklch(var(--color-ink))] text-03">
+                {/* A role the meta table does not know falls back to its translated
+                    built-in name, never to the raw member (§4.6; found by ENUM_FIELDS
+                    gaining `role`). */}
+                {roleMeta[diff.role]?.display_name || <DomainEnum namespace="users.roles" value={diff.role} />}
+              </h4>
               <span className="text-02 font-mono text-[oklch(var(--color-ink-muted))]">{diff.beforeCount} → {diff.afterCount}</span>
             </div>
             {diff.tier >= 2 && (
