@@ -4,6 +4,8 @@ Custom user model for SoulLedger.
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
+from django.db.models.functions import Lower
 
 from apps.core.models import AuditUserFields
 
@@ -159,6 +161,20 @@ class User(AuditUserFields, AbstractUser):
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
+        constraints = [
+            # BP-04 left the uniqueness in the serializer only, so two
+            # concurrent PATCHes could both pass the check and both write the
+            # victim's address. Soft-deleted rows are excluded so deactivating
+            # a user frees their address; "" is excluded because 97 of the 100
+            # rows on the shared box have no email at all (measured 2026-09-12,
+            # zero case-insensitive duplicates — this index can be added
+            # without a data migration).
+            models.UniqueConstraint(
+                Lower("email"),
+                condition=Q(is_deleted=False) & ~Q(email=""),
+                name="unique_user_email_among_live_rows",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.username} ({self.role})"

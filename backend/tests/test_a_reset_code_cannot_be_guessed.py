@@ -37,6 +37,7 @@ Each assertion was checked by breaking it:
 
 import pytest
 from django.core.cache import cache
+from django.db import IntegrityError, transaction
 
 from apps.authentication.views import MAX_RESET_CODE_ATTEMPTS
 
@@ -123,38 +124,56 @@ class TestResetCodeGuessing:
 class TestDuplicateEmailDoesNotCrashTheReset:
     """The other half of the same endpoint pair — see the register-side fix.
 
-    `User.email` has no unique constraint and registration is `AllowAny`, so a
-    duplicate address used to raise `MultipleObjectsReturned` out of `.get()`:
+    `User.email` carried no unique constraint and registration is `AllowAny`, so
+    a duplicate address used to raise `MultipleObjectsReturned` out of `.get()`:
     an uncaught 500 that took a real user's password reset offline permanently.
+
+    **These two tests used to create the duplicate and assert 200 / 409.** They
+    cannot any more, and that is the point: `0016_email_is_unique_among_live_rows`
+    (2026-09-12) put a partial unique index on `Lower(email)` for live rows with a
+    non-empty address, so the state they feared is no longer reachable — the
+    database refuses the second row. Both endpoints look up through
+    `User.objects` (live rows only), so the `MultipleObjectsReturned` handlers in
+    `views.py` are now backstops for rows predating the index, not live paths.
+
+    The tests therefore assert the stronger guarantee they were standing in for:
+    the second row does not come into being. Asserting 409 by mocking the
+    queryset would be a test of a branch that can no longer fire — the shape
+    CLAUDE.md names as a check that never runs.
     """
 
-    def test_requesting_a_code_for_a_duplicated_address_does_not_500(
-        self, api_client, django_user_model, cn_tenant
+    def test_a_second_account_cannot_take_a_live_address(
+        self, django_user_model, cn_tenant
     ):
-        for name in ("dup_a", "dup_b"):
+        django_user_model.objects.create_user(
+            username="dup_a", email="dup@example.com", password="OldPass!123",
+            role="VIEWER", tenant=cn_tenant,
+        )
+        with pytest.raises(IntegrityError), transaction.atomic():
             django_user_model.objects.create_user(
-                username=name, email="dup@example.com", password="OldPass!123",
+                username="dup_b", email="dup@example.com", password="OldPass!123",
                 role="VIEWER", tenant=cn_tenant,
             )
-        res = api_client.post(REQUEST_URL, {"email": "dup@example.com"}, format="json")
-        assert res.status_code == 200, res.data
 
-    def test_setting_a_password_for_a_duplicated_address_is_a_409_not_a_500(
+    def test_the_reset_still_works_for_the_one_account_that_holds_the_address(
         self, api_client, django_user_model, cn_tenant
     ):
+        """The index must not have made the ordinary reset stricter by accident."""
         cache.clear()
-        for name in ("dup_c", "dup_d"):
-            django_user_model.objects.create_user(
-                username=name, email="dup2@example.com", password="OldPass!123",
-                role="VIEWER", tenant=cn_tenant,
-            )
+        django_user_model.objects.create_user(
+            username="dup_c", email="dup2@example.com", password="OldPass!123",
+            role="VIEWER", tenant=cn_tenant,
+        )
+        requested = api_client.post(REQUEST_URL, {"email": "dup2@example.com"}, format="json")
+        assert requested.status_code == 200, requested.data
+
         cache.set("pwd_reset:dup2@example.com", "424242", timeout=300)
         res = api_client.post(
             SET_URL,
             {"email": "dup2@example.com", "code": "424242", "new_password": GOOD_PASSWORD},
             format="json",
         )
-        assert res.status_code == 409, res.data
+        assert res.status_code == 200, res.data
 
     def test_registration_refuses_an_address_that_already_exists(
         self, api_client, django_user_model, cn_tenant
