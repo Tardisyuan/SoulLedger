@@ -87,15 +87,3 @@ export function useFormValidation<T extends z.ZodType>(schema: T) {
     errors,
   }
 }
-
-// Helper to format Zod errors for display
-export function formatZodError(error: z.ZodError): Record<string, string> {
-  const fieldErrors: Record<string, string> = {}
-  error.issues.forEach((issue) => {
-    const path = issue.path.join('.')
-    if (!fieldErrors[path]) {
-      fieldErrors[path] = issue.message
-    }
-  })
-  return fieldErrors
-}

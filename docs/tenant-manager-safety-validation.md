@@ -1,5 +1,12 @@
 # Task #292 Phase 2 — TenantManager Removal Safety Validation
 
+> **历史快照（2026-09-13 加注）。** 本文写于 2026-06-09，描述的是 Task #292 当时的
+> 调查／验证过程，**其中的机制今天已不存在**：`TenantManager` 的 contextvar 隐式过滤
+> 已按本轮结论移除，`apps/tenants/managers.py` 现在只加 `is_deleted=False`；租户隔离
+> 全部在视图层 `apps/core/tenant.py::scope_to_tenant`，由 `tests/test_tenant_scoping_contract.py`
+> 的元测试钉住每个 ViewSet。文中的「GO」「Safe to commit」「Awaiting Approval」是
+> 当天的结论，不是现状；行号、测试数与文件路径按当天的树，多数已漂移。正文保留原样。
+
 **Date**: 2026-06-09
 **Status**: Validation Complete — **GO** for Option B
 

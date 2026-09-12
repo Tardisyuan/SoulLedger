@@ -17,6 +17,12 @@ db.sqlite3
 *.sqlite3
 .coverage
 backend/.coverage
+# coverage.json / coverage_summary.json (1.4MB together) and backend/test.db
+# were tracked until 2026-09-13; a pattern only stops NEW files, so they were
+# removed from the index in the same commit. `.playwright-mcp/` below had the
+# same problem: 80 log files were in the tree behind an ignore rule.
+coverage*.json
+*.db
 staticfiles/
 .pytest_cache/
 .eggs/

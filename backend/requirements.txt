@@ -25,10 +25,8 @@ channels-redis>=4.0
 # Utils
 Pillow>=10.0
 python-dotenv>=1.0
-dj-static>=0.0.6
 gunicorn>=21.0
 sentry-sdk>=2.0
-structlog>=24.0
 
 # Testing
 pytest>=7.4
