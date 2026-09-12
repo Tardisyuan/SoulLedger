@@ -1,8 +1,6 @@
 """
 URL configuration for SoulLedger project.
 """
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -50,4 +48,18 @@ urlpatterns = [
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# No `+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`.
+#
+# Neither setting is defined, so Django's defaults applied: MEDIA_URL became
+# "/" and MEDIA_ROOT the empty string — the process's working directory. Under
+# DEBUG that served `backend/` as a static tree: `GET /config/settings.py`
+# answered 200, and `GET /.env` would have handed over the database and Redis
+# credentials to anyone, unauthenticated. `docker-compose.yml` runs the dev
+# stack with DEBUG=true (BP-05).
+#
+# Nothing here uploads files: `User.avatar` is an ImageField that no serializer
+# accepts on write and no page renders. If media is ever served, it needs an
+# explicit MEDIA_ROOT pointing at a dedicated directory — never the checkout.
+
