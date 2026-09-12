@@ -212,6 +212,8 @@
       "new_identity": "Ren Tepy",
       "rebirth_form": "Pet Seth",
       "cycle": "Aru Sethet",
+      "life_number": "Life {{n}}",
+      "carried_in": "Carried in from the last life",
       "event_log": "Medew Netjer",
       "no_events": "Ma Rekhyu Medew Netjer",
       "mark_dead_confirm": "Wehem {{name}} Ru?",

@@ -489,6 +489,15 @@ export default function SoulDetailPage() {
               recordCount={ledger.record_count}
               records={ledger.records}
               inheritance={inheritanceQuery.data ?? null}
+              life={
+                soul
+                  ? {
+                      index: soul.life_index ?? 0,
+                      inheritedMerit: soul.inherited_merit,
+                      inheritedDemerit: soul.inherited_demerit,
+                    }
+                  : null
+              }
             />
           ) : (
             <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">

@@ -300,3 +300,48 @@ describe("SoulDetailPage — inheritance panel", () => {
     expect(screen.queryByText("ledger.next_life_inheritance")).not.toBeInTheDocument();
   });
 });
+
+// The ledger is per life (BD-04): `life_index`, `inherited_merit` and
+// `inherited_demerit` come off GET /souls/{id}/ and the card says which life
+// its sums belong to and what that life started from. Off the soul payload,
+// not the inheritance endpoint — that one is the *next* life's preview and is
+// null for a terminal cosmology, while a Greek soul in its third life still
+// has a carry-over behind it.
+describe("SoulDetailPage — which life the ledger belongs to", () => {
+  beforeEach(() => {
+    mockInheritance.mockRejectedValue({
+      response: { status: 409, data: { code: "REBIRTH_NOT_APPLICABLE" } },
+    });
+  });
+
+  it("shows the life number and the carry-over a reborn soul started from", async () => {
+    mockSoulsGet.mockResolvedValue({
+      data: { ...mockSoul, life_index: 1, inherited_merit: 40, inherited_demerit: 30 },
+    });
+
+    renderPage();
+
+    // `t` echoes keys and drops params, so the number itself is not visible
+    // through the copy; it is visible through the figures.
+    await screen.findByText("souls.detail.life_number");
+    expect(screen.getByText("souls.detail.carried_in")).toBeInTheDocument();
+    const merit = document.querySelector<HTMLElement>('[data-quantity-field="carried_merit"]');
+    const demerit = document.querySelector<HTMLElement>('[data-quantity-field="carried_demerit"]');
+    expect(merit?.textContent).toBe("+40");
+    expect(merit?.dataset.quantity).toBe("magnitude");
+    expect(demerit?.textContent).toBe("-30");
+    expect(demerit?.dataset.quantity).toBe("magnitude");
+  });
+
+  it("shows the life number but no carry-over for a soul in its first life", async () => {
+    mockSoulsGet.mockResolvedValue({
+      data: { ...mockSoul, life_index: 0, inherited_merit: 0, inherited_demerit: 0 },
+    });
+
+    renderPage();
+
+    await screen.findByText("souls.detail.life_number");
+    expect(screen.queryByText("souls.detail.carried_in")).not.toBeInTheDocument();
+    expect(document.querySelector('[data-quantity-field="carried_merit"]')).toBeNull();
+  });
+});

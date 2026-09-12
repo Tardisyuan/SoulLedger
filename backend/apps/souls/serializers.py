@@ -190,8 +190,13 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             # Which Inferno article a deed belongs under — see
             # SoulRecord.inferno_article and DispositionService.
             "inferno_article",
+            # Which life the deed belongs to (0 = first). Stamped by
+            # SoulRecord.save from the soul's life_index; a client writing it
+            # would put a deed in a life the reincarnation history says the
+            # soul never lived, so it is read-only.
+            "cycle",
         ]
-        read_only_fields = ["id", "recorded_at"]
+        read_only_fields = ["id", "recorded_at", "cycle"]
 
     def validate_statute_clause(self, value):
         """A citation must resolve, or it is worse than a blank.
@@ -436,6 +441,11 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
     demerit_score = serializers.SerializerMethodField()
+    # Which life this is (0 until the first rebirth) and what that life
+    # started from. All three are maintained by complete_rebirth and the
+    # ledger recalculation; accepting them on write would let the ledger and
+    # the reincarnation history disagree, so they are read-only.
+    life_index = serializers.IntegerField(read_only=True)
     # Soul-level date problems (death_before_birth, implausible_lifespan) —
     # see _soul_level_date_problems. Distinct from each record's own
     # date_problems in `records` below, which is about that record's event
@@ -451,9 +461,12 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
-            "date_problems",
+            "date_problems", "life_index", "inherited_merit", "inherited_demerit",
         ]
-        read_only_fields = ["id", "current_state", "merit_score", "demerit_score", "create_time", "update_time"]
+        read_only_fields = [
+            "id", "current_state", "merit_score", "demerit_score", "create_time", "update_time",
+            "inherited_merit", "inherited_demerit",
+        ]
 
     def validate(self, attrs):
         """Birth and death have to make sense together — see apps.souls.dates.
@@ -513,6 +526,9 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             data.pop("merit_score", None)
             data.pop("demerit_score", None)
             data.pop("karmic_balance", None)
+            # The starting point of this life is score data too.
+            data.pop("inherited_merit", None)
+            data.pop("inherited_demerit", None)
         return data
 
 

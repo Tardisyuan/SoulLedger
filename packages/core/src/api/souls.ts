@@ -107,6 +107,13 @@ export interface Soul extends SoulBase {
   update_time?: string;
   /** Nested by SoulSerializer (`records = SoulRecordSerializer(many=True)`). */
   records?: SoulRecordEntry[];
+  /** 0 until the first rebirth, N after the N-th (SoulSerializer.life_index). */
+  life_index?: number;
+  /** What the previous life handed to this one — the base every recalculation
+   * starts from (Soul.inherited_merit/inherited_demerit). Absent for VIEWER,
+   * like the scores. */
+  inherited_merit?: number;
+  inherited_demerit?: number;
 }
 
 /**
@@ -128,6 +135,8 @@ export interface SoulRecordEntry {
   is_milestone: boolean;
   evidence_json?: Record<string, unknown>;
   recorded_at: string;
+  /** Life index this deed belongs to; 0 is the first life (SoulRecord.cycle). */
+  cycle: number;
   /** This record's event date against its soul's — see SoulRecordDateProblem. */
   date_problems: SoulRecordDateProblem[];
 }
