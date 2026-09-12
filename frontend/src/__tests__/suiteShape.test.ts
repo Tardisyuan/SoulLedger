@@ -55,6 +55,7 @@ const COLLECTED_FILES = [
   "I18nContext.formatters.test.tsx",
   "I18nContext.test.tsx",
   "IconPicker.test.tsx",
+  "JudgmentDetailPage.notesDraft.test.tsx",
   "JudgmentGroundsPanel.test.tsx",
   "JudgmentQueueConsole.test.tsx",
   "LedgerPage.test.tsx",

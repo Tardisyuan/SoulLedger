@@ -185,9 +185,23 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     },
   });
 
+  /**
+   * Whether the operator has typed in the notes box. A ref, not state: it
+   * changes nothing on screen, it only decides who owns the field.
+   *
+   * The effect below runs on every new `judgment` object, and that is every
+   * refetch — a window refocus, a network recovery, the realtime layer
+   * invalidating `judgmentKeys.all` on any judgment push. Unguarded, it wrote
+   * the server's `notes` over whatever the judge was in the middle of typing
+   * (FL-06). The server is the source until the field is touched; after that
+   * the field is the operator's. `JudgmentDetailPage.notesDraft.test.tsx`
+   * holds both halves.
+   */
+  const notesTouched = useRef(false);
+
   useEffect(() => {
     if (judgment) {
-      setNotes(judgment.notes || "");
+      if (!notesTouched.current) setNotes(judgment.notes || "");
       if (judgment.verdict) {
         setSelectedVerdict(judgment.verdict);
       }
@@ -469,7 +483,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <textarea
                 id={notesId}
                 value={notes}
-                onChange={(event) => setNotes(event.target.value)}
+                onChange={(event) => {
+                  notesTouched.current = true;
+                  setNotes(event.target.value);
+                }}
                 rows={5}
                 placeholder={t("judgment.detail.notes_placeholder")}
                 className="block w-full mt-4 border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-sans text-04 text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
