@@ -5,11 +5,12 @@ from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
-from apps.core.tenant_fields import tenant_scoped
+from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.judgment.models import Judgment, JudgmentCitation, Statute
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.souls.models import SoulState
 from apps.souls.serializers import SoulSerializer
 
 
@@ -84,18 +85,31 @@ class JudgmentCitationSerializer(serializers.ModelSerializer):
     """
     statute = StatuteSerializer(read_only=True)
 
-    validate_soul = tenant_scoped("soul")
-    validate_judge = tenant_scoped("judge")
-
     class Meta:
         model = JudgmentCitation
         fields = ["id", "statute", "note", "created_at"]
 
 
 class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
+    """A proceeding. Soul and judge are the requester's own (BD-01).
+
+    `validate_soul` / `validate_judge` were declared on
+    `JudgmentCitationSerializer` above, which has neither field, so DRF never
+    called them and this class resolved bare primary keys. A cross-tenant
+    hearing is `apps.dispatch.CrossTenantJudgment`; here both parties belong
+    to the tenant that opened the case. ADMIN is exempt as everywhere else.
+
+    `verdict`, `is_final`, `concluded_at` are read-only and an attempt to write
+    them is an explicit 400 (BD-03) — a plain field write produced a "final"
+    judgment with no Disposition and a soul still JUDGING, and `conclude/`
+    then refused it as already concluded. `civilization` is read-only and
+    derived from the soul (BD-08).
+    """
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judge_name = serializers.CharField(source="judge.name", read_only=True)
     citations = JudgmentCitationSerializer(many=True, read_only=True)
+
+    validate_judge = tenant_scoped("judge")
 
     class Meta:
         model = Judgment
@@ -105,6 +119,44 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "citations",
             "is_final", "created_at", "concluded_at",
         ]
+        read_only_fields = ["civilization", "verdict", "is_final", "concluded_at"]
+
+    # Fields that only `conclude/` may write. Checked against `initial_data`
+    # (the ApprovalNodeSerializer shape) because DRF strips read-only fields
+    # before `validate` runs and would otherwise answer 200 to a forgery.
+    _DECIDED_BY_CONCLUDE = ("verdict", "is_final", "concluded_at")
+
+    def validate_soul(self, value):
+        value = same_tenant_or_404_message(value, self.context, "soul")
+        if value.current_state == SoulState.SETTLED:
+            raise serializers.ValidationError(
+                "This soul is SETTLED; its fate is final and no further case can be opened."
+            )
+        open_cases = Judgment.all_objects.filter(
+            soul=value, verdict__isnull=True, is_final=False, is_deleted=False
+        )
+        if self.instance is not None:
+            open_cases = open_cases.exclude(pk=self.instance.pk)
+        if open_cases.exists():
+            raise serializers.ValidationError(
+                "This soul already has an open case. Conclude it before opening another."
+            )
+        return value
+
+    def validate(self, attrs):
+        blocked = [f for f in self._DECIDED_BY_CONCLUDE if f in self.initial_data]
+        if blocked:
+            raise serializers.ValidationError({
+                f: (
+                    "Not settable through this endpoint. A verdict is filed through "
+                    "`conclude/`, which also creates the Disposition and moves the "
+                    "soul; a plain field write does neither."
+                )
+                for f in blocked
+            })
+        if "soul" in attrs:
+            attrs["civilization"] = attrs["soul"].civilization
+        return attrs
 
 
 class JudgmentCitationWriteSerializer(serializers.Serializer):

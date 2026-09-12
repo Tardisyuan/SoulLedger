@@ -266,21 +266,27 @@ class TestCrossTenantJudgment:
         )
         assert participant.participant_tenant == eu_tenant
         assert participant.role == "ADVISOR"
-        # Judgment should be activated by the view after add_participant returns
-        # (activation is handled in the view, not in the service)
+        # Seating a participant does not convene the court (BD-06): the
+        # initiator activates explicitly, once everyone is seated.
+        assert CrossTenantJudgment.objects.get(id=judgment.id).status == "PROPOSED"
 
-    def test_activate_after_participant(self, db, cn_tenant, eu_tenant, eu_actor):
-        """Test that judgment activates when participant joins."""
+    def test_activate_is_explicit_and_needs_a_participant(self, db, cn_tenant, eu_tenant, eu_actor):
+        """Was `test_activate_after_participant`, asserting the first
+        participant flipped the judgment ACTIVE. That side effect capped a
+        joint judgment at one participant; activation is now its own step."""
         judgment = CrossTenantJudgment.objects.create(
             title="Test",
             description="Test",
             initiating_tenant=cn_tenant,
             tenant=cn_tenant,
         )
+        with pytest.raises(ValueError, match="no participants"):
+            CrossTenantJudgmentService.activate(judgment)
         CrossTenantJudgmentService.add_participant(judgment, eu_tenant, eu_actor, "ADVISOR")
-        # Refresh from DB to get updated status
         judgment = CrossTenantJudgment.objects.get(id=judgment.id)
-        assert judgment.status == "ACTIVE"
+        assert judgment.status == "PROPOSED"
+        CrossTenantJudgmentService.activate(judgment)
+        assert CrossTenantJudgment.objects.get(id=judgment.id).status == "ACTIVE"
 
     def test_conclude_judgment(self, db, cn_tenant, eu_tenant, eu_actor, cn_admin_user):
         """Test concluding a judgment."""
@@ -292,7 +298,7 @@ class TestCrossTenantJudgment:
             # status defaults to "PROPOSED"
         )
         CrossTenantJudgmentService.add_participant(judgment, eu_tenant, eu_actor, "ADVISOR")
-        # Refresh to get updated status after activation
+        CrossTenantJudgmentService.activate(judgment)  # explicit since BD-06
         judgment = CrossTenantJudgment.objects.get(id=judgment.id)
         judgment = CrossTenantJudgmentService.conclude(judgment, "PASS", cn_admin_user)
         assert judgment.status == "CONCLUDED"

@@ -243,8 +243,12 @@ class DispatchService:
                 actor=str(executor),
             )
 
-            # Update dispatch record via state machine
-            dispatch_record.transition_to(DispatchStatus.EXECUTED, executed_at=timezone.now())
+            # Checked, not dropped (BD-16). `can_transition_to` above read the
+            # caller's in-memory row; `transition_to` locks the DB row, which
+            # may have been cancelled meanwhile. Raising inside the atomic
+            # block rolls the soul's tenant change back with it.
+            if not dispatch_record.transition_to(DispatchStatus.EXECUTED, executed_at=timezone.now()):
+                raise ValueError(f"Cannot execute dispatch in status: {dispatch_record.status}")
 
         return dispatch_record
 
@@ -310,6 +314,11 @@ class CrossTenantJudgmentService:
 
         Returns:
             CrossTenantJudgmentParticipant: Created participant record
+
+        Does NOT activate the judgment. It used to (BD-06): the first
+        participant flipped PROPOSED -> ACTIVE and the second was refused by
+        the check below, so a "joint" judgment held one participant at most.
+        The initiator convenes the bench explicitly through `activate`.
         """
         if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
@@ -338,15 +347,17 @@ class CrossTenantJudgmentService:
                 related_id=str(judgment.id),
             )
 
-        # Activate judgment after participant joins
-        CrossTenantJudgmentService.activate(judgment)
         return participant
 
     @staticmethod
     @transaction.atomic
     def activate(judgment):
         """
-        Activate a cross-tenant judgment (after participants join).
+        Convene a cross-tenant judgment: PROPOSED -> ACTIVE.
+
+        Refuses an empty bench. A hearing with no participant is not joint,
+        and once ACTIVE no participant can be added (see add_participant), so
+        activating early would strand the case.
 
         Args:
             judgment: CrossTenantJudgment to activate
@@ -354,6 +365,8 @@ class CrossTenantJudgmentService:
         Returns:
             CrossTenantJudgment: Updated judgment
         """
+        if not judgment.participants.exists():
+            raise ValueError("Cannot activate a judgment with no participants")
         if not judgment.transition_to(JudgmentStatus.ACTIVE):
             raise ValueError(f"Cannot activate judgment in status: {judgment.status}")
         return judgment

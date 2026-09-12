@@ -711,6 +711,28 @@ export interface paths {
         patch: operations["v1_dispatch_cross_tenant_judgments_partial_update"];
         trace?: never;
     };
+    "/api/v1/dispatch/cross-tenant-judgments/{id}/activate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Convene the judgment: PROPOSED -> ACTIVE. Initiating tenant only, and
+         *     only once at least one participant is seated (BD-06). Activation used
+         *     to be a side effect of the first `participate`, which capped the bench
+         *     at one.
+         */
+        post: operations["v1_dispatch_cross_tenant_judgments_activate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/cross-tenant-judgments/{id}/conclude/": {
         parameters: {
             query?: never;
@@ -737,7 +759,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Join as a participant in a cross-tenant judgment. */
+        /**
+         * @description Seat a participant on a cross-tenant judgment (initiating tenant only,
+         *     while PROPOSED). Does not activate — see `activate`.
+         */
         post: operations["v1_dispatch_cross_tenant_judgments_participate_create"];
         delete?: never;
         options?: never;
@@ -4733,12 +4758,19 @@ export interface components {
             total: number;
         };
         /**
-         * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
+         * @description A proceeding. Soul and judge are the requester's own (BD-01).
          *
-         *     The mixin checks the user's role against FieldPermission entries for the model.
-         *     If no rules exist, all fields are visible and editable (default behavior).
+         *     `validate_soul` / `validate_judge` were declared on
+         *     `JudgmentCitationSerializer` above, which has neither field, so DRF never
+         *     called them and this class resolved bare primary keys. A cross-tenant
+         *     hearing is `apps.dispatch.CrossTenantJudgment`; here both parties belong
+         *     to the tenant that opened the case. ADMIN is exempt as everywhere else.
          *
-         *     Priority: specific (field_name) > wildcard (field_name="*")
+         *     `verdict`, `is_final`, `concluded_at` are read-only and an attempt to write
+         *     them is an explicit 400 (BD-03) — a plain field write produced a "final"
+         *     judgment with no Disposition and a soul still JUDGING, and `conclude/`
+         *     then refused it as already concluded. `civilization` is read-only and
+         *     derived from the soul (BD-08).
          */
         Judgment: {
             /** Format: uuid */
@@ -4746,7 +4778,7 @@ export interface components {
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
-            civilization: components["schemas"]["CivilizationEnum"];
+            readonly civilization: components["schemas"]["CivilizationEnum"];
             /** Format: uuid */
             judge?: string | null;
             readonly judge_name: string;
@@ -4754,14 +4786,14 @@ export interface components {
             court?: string;
             evidence_json?: unknown;
             confession?: string;
-            verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations: components["schemas"]["JudgmentCitation"][];
-            is_final?: boolean;
+            readonly is_final: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
-            concluded_at?: string | null;
+            readonly concluded_at: string | null;
         };
         /**
          * @description A ground, with the article inlined.
@@ -5915,12 +5947,19 @@ export interface components {
             readonly _raw_key?: string;
         };
         /**
-         * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
+         * @description A proceeding. Soul and judge are the requester's own (BD-01).
          *
-         *     The mixin checks the user's role against FieldPermission entries for the model.
-         *     If no rules exist, all fields are visible and editable (default behavior).
+         *     `validate_soul` / `validate_judge` were declared on
+         *     `JudgmentCitationSerializer` above, which has neither field, so DRF never
+         *     called them and this class resolved bare primary keys. A cross-tenant
+         *     hearing is `apps.dispatch.CrossTenantJudgment`; here both parties belong
+         *     to the tenant that opened the case. ADMIN is exempt as everywhere else.
          *
-         *     Priority: specific (field_name) > wildcard (field_name="*")
+         *     `verdict`, `is_final`, `concluded_at` are read-only and an attempt to write
+         *     them is an explicit 400 (BD-03) — a plain field write produced a "final"
+         *     judgment with no Disposition and a soul still JUDGING, and `conclude/`
+         *     then refused it as already concluded. `civilization` is read-only and
+         *     derived from the soul (BD-08).
          */
         PatchedJudgment: {
             /** Format: uuid */
@@ -5928,7 +5967,7 @@ export interface components {
             /** Format: uuid */
             soul?: string;
             readonly soul_name?: string;
-            civilization?: components["schemas"]["CivilizationEnum"];
+            readonly civilization?: components["schemas"]["CivilizationEnum"];
             /** Format: uuid */
             judge?: string | null;
             readonly judge_name?: string;
@@ -5936,14 +5975,14 @@ export interface components {
             court?: string;
             evidence_json?: unknown;
             confession?: string;
-            verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations?: components["schemas"]["JudgmentCitation"][];
-            is_final?: boolean;
+            readonly is_final?: boolean;
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
-            concluded_at?: string | null;
+            readonly concluded_at?: string | null;
         };
         PatchedMenuButtonCreateUpdate: {
             readonly id?: number;
@@ -8618,6 +8657,28 @@ export interface operations {
                 "multipart/form-data": components["schemas"]["PatchedCrossTenantJudgment"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrossTenantJudgment"];
+                };
+            };
+        };
+    };
+    v1_dispatch_cross_tenant_judgments_activate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Cross-Tenant Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

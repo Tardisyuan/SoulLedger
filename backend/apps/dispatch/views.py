@@ -159,6 +159,23 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
 
+        # BD-02: the source tenant is the requester's, not whatever the body
+        # says. `propose()` checks that the soul belongs to `source_tenant`,
+        # and that was the only check — so a MODERATOR could name another
+        # tenant as source, its soul as the soul, and itself as target, then
+        # approve and execute as the target. Three requests, every one 2xx,
+        # and the soul was theirs. A transfer is proposed by the tenant that
+        # holds the soul; ADMIN keeps the global exemption. 403 like the party
+        # checks on approve/reject/execute below, which this is one of.
+        if getattr(request.user, "role", None) != "ADMIN":
+            requester_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+            source = validated.get("source_tenant")
+            if requester_tenant is None or source is None or source.pk != requester_tenant.pk:
+                return Response(
+                    {"error": "Only the tenant that holds the soul may propose its dispatch"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         set_current_user(request.user)
         set_current_request(request)
         try:
@@ -348,6 +365,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
     permission_codename = "cross_judgment"
     extra_permissions = {
         'participate': ['cross_judgment.create'],
+        'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],
         'create': ['cross_judgment.create'],
         'update': ['cross_judgment.create'],
@@ -439,21 +457,35 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             })
         serializer.save(tenant=tenant, initiating_tenant=tenant)
 
+    def _initiator_or_403(self, request, judgment):
+        """The initiating tenant seats the bench and convenes it; nobody else.
+
+        A participant used to be able to add participants too (BD-06). It is
+        invited; it does not extend the invitation. No ADMIN bypass here, as
+        there was none on the check this replaces: an ADMIN acts for the
+        tenant on its token (`test_uninvolved_tenant_cannot_participate` pins
+        an ADMIN of a third tenant at 403). Returns a Response to send, or None.
+        """
+        request_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        if not request_tenant:
+            return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
+        if judgment.initiating_tenant_id != request_tenant.pk:
+            return Response(
+                {"error": "Only the initiating tenant may do this"}, status=status.HTTP_403_FORBIDDEN
+            )
+        return None
+
     @action(detail=True, methods=["post"])
     def participate(self, request, pk=None):
         """
-        Join as a participant in a cross-tenant judgment.
+        Seat a participant on a cross-tenant judgment (initiating tenant only,
+        while PROPOSED). Does not activate — see `activate`.
         """
         judgment = self.get_object()
-
-        # Verify user's tenant is involved (initiating or already a participant)
-        request_tenant = getattr(request, 'tenant', None)
-        if not request_tenant:
-            return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
-        is_initiating = judgment.initiating_tenant_id == request_tenant.pk
-        is_participant = judgment.participants.filter(participant_tenant=request_tenant).exists()
-        if not is_initiating and not is_participant:
-            return Response({"error": "Not authorized to add participants"}, status=status.HTTP_403_FORBIDDEN)
+        refused = self._initiator_or_403(request, judgment)
+        if refused is not None:
+            return refused
+        request_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
 
         serializer = CrossTenantJudgmentParticipateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -477,11 +509,26 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             CrossTenantJudgmentService.add_participant(
                 judgment, tenant, actor, role
             )
-            # Activate judgment if it was proposed
-            if judgment.status == "PROPOSED":
-                CrossTenantJudgmentService.activate(judgment)
-                judgment.refresh_from_db()
+            judgment.refresh_from_db()
+            return Response(CrossTenantJudgmentSerializer(judgment).data)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(request=None, responses=CrossTenantJudgmentSerializer)
+    @action(detail=True, methods=["post"])
+    def activate(self, request, pk=None):
+        """
+        Convene the judgment: PROPOSED -> ACTIVE. Initiating tenant only, and
+        only once at least one participant is seated (BD-06). Activation used
+        to be a side effect of the first `participate`, which capped the bench
+        at one.
+        """
+        judgment = self.get_object()
+        refused = self._initiator_or_403(request, judgment)
+        if refused is not None:
+            return refused
+        try:
+            judgment = CrossTenantJudgmentService.activate(judgment)
             return Response(CrossTenantJudgmentSerializer(judgment).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

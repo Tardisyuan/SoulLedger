@@ -477,6 +477,20 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         ))
         return attrs
 
+    def create(self, validated_data):
+        """Turn `Soul.save`'s "Tenant is required" into a 400 (BD-07).
+
+        The model raises Django's ValidationError when neither the request nor
+        the user carries a tenant — the ADMIN-with-NULL-tenant case. DRF only
+        converts its own ValidationError, so that one left as a 500.
+        """
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        try:
+            return super().create(validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"tenant": exc.messages}) from exc
+
     def get_merit_score(self, obj) -> int | None:
         if _is_viewer(self.context):
             return None  # VIEWER cannot see merit score

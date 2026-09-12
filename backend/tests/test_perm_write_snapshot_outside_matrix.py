@@ -866,7 +866,11 @@ def test_cross_tenant_judgment_destroy(role_clients, snapshot_tenants, role):
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_cross_tenant_judgment_participate(role_clients, snapshot_tenants, role):
-    """dispatch.manage. Seats another realm on the bench and activates the tribunal; JUDGE/VIEWER refused."""
+    """cross_judgment.create. Seats another realm on the bench; JUDGE/VIEWER refused.
+
+    Does not activate: since BD-06 (2026-09-12) the initiator convenes the
+    tribunal through the separate `activate` action, so the row stays PROPOSED
+    whether or not the seat was taken."""
     from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, JudgmentStatus
 
     clients, _ = role_clients
@@ -885,10 +889,7 @@ def test_cross_tenant_judgment_participate(role_clients, snapshot_tenants, role)
         CrossTenantJudgmentParticipant.objects.filter(judgment=judgment, participant_tenant=other).exists()
         == joined
     )
-    # participate() also transitions PROPOSED -> ACTIVE via activate().
-    assert CrossTenantJudgment.objects.get(pk=judgment.pk).status == (
-        JudgmentStatus.ACTIVE if joined else JudgmentStatus.PROPOSED
-    )
+    assert CrossTenantJudgment.objects.get(pk=judgment.pk).status == JudgmentStatus.PROPOSED
 
 
 @pytest.mark.django_db
