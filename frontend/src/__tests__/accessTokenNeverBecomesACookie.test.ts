@@ -173,4 +173,44 @@ describe("源码里不再有把 access 写成 cookie 的那一行", () => {
       expect(code(file)).not.toMatch(/\bdocument\./);
     }
   });
+
+  it("前端树里没有任何代码写出 token 的名字 —— 登录/登出不再自己写 cookie 与 sessionStorage", () => {
+    // FL-10。`app/(auth)/login/page.tsx` 自己 `sessionStorage.setItem("soulledger_access", …)`
+    // 与 `document.cookie = "soulledger_refresh=…"`;`TenantContext.logout` 自己
+    // 清三个 cookie。两处各持一份「token 住在哪」的知识,而这份知识**只该有一份**:
+    // `lib/platform/web.ts` 决定住在哪个设施,`packages/core/src/platform/index.ts`
+    // 的 `ACCESS_TOKEN_KEY` / `REFRESH_TOKEN_KEY` 决定叫什么 —— 连 web.ts 自己
+    // 都是从那两个常量拿名字的,所以期望是**空**。分叉的代价已经收过一次 ——
+    // logout 清的是 cookie,而 access 根本不在 cookie 里(FL-02)。
+    //
+    // 空清单是这个目录里反复警告的「什么都没扫到」的形状,所以下面先断文件数
+    // 的地板;而未修的树上这条实跑是红的,点名的正是上面那两个文件。
+    //
+    // `frontend/middleware.ts` 不在扫描范围内,理由具体:它在服务端读请求上的
+    // cookie,适配器在那里不存在。它读的是名字,不写。
+    const { readdirSync } = jest.requireActual("node:fs") as typeof import("node:fs");
+    const walk = (dir: string, out: string[] = []): string[] => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== "node_modules" && entry.name !== "__tests__") walk(full, out);
+        } else if (/\.tsx?$/.test(entry.name)) {
+          out.push(full);
+        }
+      }
+      return out;
+    };
+    const files = ["frontend/app", "frontend/src", "frontend/components", "frontend/lib"]
+      .flatMap((d) => walk(path.join(REPO_ROOT, d)))
+      .map((f) => path.relative(REPO_ROOT, f));
+    expect(files.length).toBeGreaterThan(100);
+    const offenders = files.filter((rel) => {
+      const stripped = readFileSync(path.join(REPO_ROOT, rel), "utf8").replace(
+        /\/\*[\s\S]*?\*\/|\/\/.*$/gm,
+        ""
+      );
+      return /soulledger_(access|refresh)/.test(stripped);
+    });
+    expect(offenders.sort()).toEqual([]);
+  });
 });

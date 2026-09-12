@@ -12,6 +12,12 @@ import {
 import { permApi } from "@soulledger/core/api";
 import type { UserRole } from "@soulledger/core/api";
 import { CIVILIZATION_SHORT_CODE_SET } from "@soulledger/core/config/civilizations";
+import {
+  ACCESS_TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  TENANT_ID_KEY,
+  platform,
+} from "@soulledger/core/platform";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -211,12 +217,33 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /**
+   * Through the platform ports, and each store by name.
+   *
+   * This used to clear `localStorage` and three cookies by hand — and the
+   * access token is in none of those. It lives in the **session** store
+   * (`sessionStorage` on web, see `lib/platform/web.ts`), which is exactly
+   * where `api/client.ts`'s request interceptor reads it from. So "logout"
+   * left the old Bearer on every request the next screen made, for the rest
+   * of the token's 30 minutes, in the same tab (FL-02). The cookie it did
+   * clear, `soulledger_access`, is the legacy 24-hour one that
+   * `rotateRefreshToken` stopped writing — worth removing, but not the token.
+   *
+   * The same knowledge — which facility each token lives in — was held here
+   * and in the login page as a second and third copy of what the adapter
+   * knows (FL-10). Both now call the ports; `accessTokenNeverBecomesACookie`
+   * pins that no code in the frontend trees spells the token names at all.
+   */
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem(USER_KEY);
-    document.cookie = `${USER_KEY}=; Max-Age=0; path=/`;
-    document.cookie = `soulledger_access=; Max-Age=0; path=/`;
-    document.cookie = `soulledger_refresh=; Max-Age=0; path=/`;
+    const host = platform();
+    host.session.remove(ACCESS_TOKEN_KEY);
+    // The legacy cookie copy and the `soulledger_user` cookie from before the
+    // cache moved to localStorage. `persistent.remove` clears both facilities.
+    host.persistent.remove(ACCESS_TOKEN_KEY);
+    host.persistent.remove(USER_KEY);
+    host.secure.remove(REFRESH_TOKEN_KEY);
+    host.persistent.remove(TENANT_ID_KEY);
   }, [setUser]);
 
   const value = useMemo(
