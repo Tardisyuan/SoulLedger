@@ -580,7 +580,7 @@
       "court_placeholder": "e.g. First Court, Hall of Truth",
       "approver_type": "Approver Type",
       "approver_role": "Approver Role",
-      "approver_placeholder": "e.g. JUDGE, OVERSEER",
+      "approver_placeholder": "— select an approver role —",
       "new_node": "New Node",
       "saved": "Template saved",
       "save_failed": "Save failed",

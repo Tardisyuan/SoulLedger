@@ -13,6 +13,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { auditApi, ledgerApi, type LedgerStatsOverview } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { RoleName } from "@/src/components/users/RoleName";
 import { PageShell } from "@/src/components/ui/PageShell";
 import {
   Users,
@@ -320,7 +321,7 @@ export default function WelcomePage() {
             </div>
             <div>
               <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
-              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1"><DomainEnum namespace="users.roles" value={user?.role} /></div>
+              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1"><RoleName value={user?.role} /></div>
             </div>
           </div>
           <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">

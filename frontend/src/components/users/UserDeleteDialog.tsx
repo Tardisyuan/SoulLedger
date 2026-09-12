@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { usersApi, type User } from "@soulledger/core/api";
 import { userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { RoleName } from "@/src/components/users/RoleName";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/src/components/ui/Toast";
@@ -94,7 +94,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
             </p>
             <p className="text-03 text-[oklch(var(--color-ink))]">
               <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.role") || "角色"}: </span>
-              <DomainEnum namespace="users.roles" value={user.role} />
+              <RoleName value={user.role} />
             </p>
           </div>
         )}

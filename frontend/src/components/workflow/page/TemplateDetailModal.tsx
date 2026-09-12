@@ -3,6 +3,7 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { RoleName } from "@/src/components/users/RoleName";
 import { type FlowNode, type TemplatePreviewData } from "@/src/components/workflow/page/types";
 import { Landmark } from "lucide-react";
 
@@ -69,7 +70,7 @@ export function TemplateDetailModal({
                   </div>
                   {node.approver_role && (
                     <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
-                      <DomainEnum namespace="users.roles" value={node.approver_role} />
+                      <RoleName value={node.approver_role} />
                     </div>
                   )}
                 </div>

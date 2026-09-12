@@ -3,6 +3,7 @@
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
+import { useRoleOptions } from "@/src/components/users/RoleName";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
 
@@ -63,6 +64,22 @@ export function NodeEditModal({
     { value: "APPEAL", label: t("workflow.node_type.appeal") },
     { value: "FINAL", label: t("workflow.node_type.final") },
     { value: "EXECUTION", label: t("workflow.node_type.execution") },
+  ];
+  // The role table, not free text. A role name typed by hand was a
+  // contract nobody checked: the placeholder said "e.g. JUDGE, OVERSEER"
+  // and OVERSEER is not a role. A value already saved on the node that the
+  // table does not know (older templates, a role deleted since) is kept as
+  // its own option rather than silently replaced by the first one on save.
+  // `editData` is null while the modal is closed and the hook still has to
+  // run then (hooks cannot be conditional), hence the optional chain.
+  const roleOptions = useRoleOptions(t);
+  const legacyRole = editData?.approver_role ?? "";
+  const approverRoleOptions = [
+    { value: "", label: t("workflow.editor.approver_placeholder") },
+    ...roleOptions,
+    ...(legacyRole && !roleOptions.some((o) => o.value === legacyRole)
+      ? [{ value: legacyRole, label: legacyRole }]
+      : []),
   ];
 
   const approverTypeOptions = [
@@ -145,15 +162,14 @@ export function NodeEditModal({
           }
           options={approverTypeOptions}
         />
-        <TextField
+        <SelectField
           id={approverRoleId}
           label={t("workflow.editor.approver_role")}
-          type="text"
           value={editData.approver_role}
           onChange={(e) =>
             setEditData({ ...editData, approver_role: e.target.value })
           }
-          placeholder={t("workflow.editor.approver_placeholder")}
+          options={approverRoleOptions}
         />
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

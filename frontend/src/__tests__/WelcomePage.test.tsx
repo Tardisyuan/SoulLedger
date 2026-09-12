@@ -8,13 +8,18 @@
  * of real logic: the hour-of-day greeting and the relative timestamp.
  */
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WelcomePage from "@/app/welcome/page";
-import { auditApi, ledgerApi } from "@soulledger/core/api";
+import { auditApi, ledgerApi, permApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
   auditApi: { list: jest.fn() },
+  // The role card reads the role table for a custom role's display_name
+  // (RoleName); empty by default, so the built-ins below still resolve
+  // through DomainEnum.
+  permApi: { roles: { list: jest.fn() } },
 }));
 
 let mockUser: Record<string, unknown> | null = null;
@@ -42,6 +47,18 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 const mockedStats = ledgerApi.statsOverview as jest.Mock;
+const mockedRoles = permApi.roles.list as jest.Mock;
+
+// `RoleName` queries through TanStack, which the app root provides and a bare
+// render does not.
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <WelcomePage />
+    </QueryClientProvider>
+  );
+}
 
 const stats = {
   total_souls: 77,
@@ -76,14 +93,14 @@ describe("WelcomePage quick stats", () => {
     let resolve: (_v: unknown) => void = () => {};
     mockedStats.mockReturnValue(new Promise((r) => (resolve = r)));
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(screen.getAllByText("...")).toHaveLength(4);
     resolve({ data: stats });
   });
 
   it("fills each stat card from the state distribution once loaded", async () => {
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText("77")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
@@ -94,7 +111,7 @@ describe("WelcomePage quick stats", () => {
   it("falls back to a dash for a state the backend did not report", async () => {
     mockedStats.mockResolvedValue({ data: { total_souls: 9, state_distribution: [] } });
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText("9")).toBeInTheDocument();
     expect(screen.getAllByText("-")).toHaveLength(3);
@@ -103,7 +120,7 @@ describe("WelcomePage quick stats", () => {
   it("stops the loading placeholder and shows dashes when the stats call fails", async () => {
     mockedStats.mockRejectedValue(new Error("500"));
 
-    render(<WelcomePage />);
+    renderPage();
 
     await waitFor(() => expect(screen.queryAllByText("...")).toHaveLength(0));
     expect(screen.getAllByText("-")).toHaveLength(4);
@@ -121,19 +138,19 @@ describe("WelcomePage greeting", () => {
   ])("uses the %s o'clock greeting bucket", async (hour, expectedKey) => {
     hoursSpy.mockReturnValue(hour as number);
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText(new RegExp(expectedKey as string))).toBeInTheDocument();
   });
 
   it("treats midnight as night and noon as afternoon at the bucket edges", async () => {
     hoursSpy.mockReturnValue(0);
-    const { unmount } = render(<WelcomePage />);
+    const { unmount } = renderPage();
     expect(await screen.findByText(/nav\.greeting_night/)).toBeInTheDocument();
     unmount();
 
     hoursSpy.mockReturnValue(12);
-    render(<WelcomePage />);
+    renderPage();
     expect(await screen.findByText(/nav\.greeting_afternoon/)).toBeInTheDocument();
   });
 });
@@ -145,7 +162,7 @@ describe("WelcomePage identity", () => {
     mockUser = null;
     mockTranslate = tZh;
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText(/Admin/)).toBeInTheDocument();
     expect(screen.getByText("SoulLedger")).toBeInTheDocument();
@@ -160,7 +177,7 @@ describe("WelcomePage identity", () => {
   it("prefers display_name over username", async () => {
     mockUser = { display_name: "阎罗", username: "yama", role: "JUDGE" };
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText(/阎罗/)).toBeInTheDocument();
     expect(screen.queryByText(/yama/)).not.toBeInTheDocument();
@@ -169,7 +186,7 @@ describe("WelcomePage identity", () => {
   it("falls back to username when display_name is empty", async () => {
     mockUser = { display_name: "", username: "yama", role: "JUDGE" };
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText(/yama/)).toBeInTheDocument();
   });
@@ -182,13 +199,30 @@ describe("WelcomePage identity", () => {
     };
     mockTranslate = tZh;
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText("地府")).toBeInTheDocument();
     // §4.6: the translated role in the text node, the raw member only in `title`.
     expect(screen.getByText(zh("users.roles.GUARDIAN"))).toBeInTheDocument();
     expect(screen.getByTitle("GUARDIAN")).toBeInTheDocument();
     expect(screen.queryByText("GUARDIAN")).not.toBeInTheDocument();
+  });
+
+  it("shows a custom role by the role table's display_name, not as unrecognised", async () => {
+    // Same decision as the users table's badge (UsersPage.roleBadge): a role an
+    // admin created has no `users.roles.*` copy and cannot, so DomainEnum alone
+    // rendered it italic as "unrecognised" with the name hidden in `title`.
+    mockedRoles.mockResolvedValue({
+      data: [{ id: 9, name: "SCRIBE", display_name: "书吏", is_builtin: false }],
+    });
+    mockUser = { username: "yama", role: "SCRIBE" };
+    mockTranslate = tZh;
+
+    renderPage();
+
+    expect(await screen.findByText("书吏")).toBeInTheDocument();
+    expect(screen.getByTitle("SCRIBE")).toBeInTheDocument();
+    expect(document.querySelector("[data-enum-state='unrecognized']")).toBeNull();
   });
 });
 
@@ -235,7 +269,7 @@ describe("WelcomePage activity feed", () => {
       },
     });
 
-    render(<WelcomePage />);
+    renderPage();
 
     expect(await screen.findByText("真实条目 A")).toBeInTheDocument();
     expect(screen.getByText("welcome.just_now")).toBeInTheDocument();
@@ -253,7 +287,7 @@ describe("WelcomePage activity feed", () => {
       },
     });
 
-    render(<WelcomePage />);
+    renderPage();
 
     await screen.findByText("条目 1");
     expect(screen.getByText("条目 3")).toBeInTheDocument();
@@ -267,7 +301,7 @@ describe("WelcomePage activity feed", () => {
     mockUser = null;
     (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
 
-    render(<WelcomePage />);
+    renderPage();
 
     await waitFor(() => expect(ledgerApi.statsOverview).toHaveBeenCalled());
     // The audit log needs a session. Showing nothing is the honest answer to
@@ -280,7 +314,7 @@ describe("WelcomePage activity feed", () => {
     mockUser = { username: "yama", role: "JUDGE" };
     (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
 
-    render(<WelcomePage />);
+    renderPage();
 
     await waitFor(() => expect(ledgerApi.statsOverview).toHaveBeenCalled());
     for (const invented of ["soul-indexer", "ledger-decay", "judgment-assistant"]) {
@@ -293,7 +327,7 @@ describe("WelcomePage activity feed", () => {
     mockUser = { username: "yama", role: "JUDGE" };
     (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
 
-    render(<WelcomePage />);
+    renderPage();
 
     const hrefs = (await screen.findAllByRole("link")).map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual(expect.arrayContaining(["/souls", "/workflow", "/judgment", "/ledger", "/audit"]));
