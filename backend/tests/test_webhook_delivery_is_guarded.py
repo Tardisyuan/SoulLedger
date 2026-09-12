@@ -240,20 +240,39 @@ def test_a_publicly_routable_address_is_still_allowed():
         )
 
 
-def test_outbound_delivery_does_not_follow_redirects():
+@pytest.mark.django_db
+def test_outbound_delivery_does_not_follow_redirects(wired):
     """The validator only ever sees the URL it is given.
 
-    Asserted on the call rather than by standing up a redirecting server: what
-    regresses is someone dropping the keyword, and that is what this reads.
+    Asserted on the *call* `requests.post` receives, not on the source text.
+    Until 2026-09-12 this read `inspect.getsource(webhook_service)` for the
+    substring `allow_redirects=False`; the substring lives in a comment two
+    lines above the argument as well, so commenting the argument out left all
+    49 webhook tests green while `requests` went back to following redirects.
     """
-    import inspect
+    from unittest.mock import Mock
 
-    from apps.death_sync import webhook_service
+    from apps.death_sync.models import DeathRegistrationRequest, DeathRegistrationStatus
+    from apps.death_sync.webhook_service import WebhookService
+    from apps.souls.models import Soul
 
-    source = inspect.getsource(webhook_service)
-    post_call = source[source.index("requests.post(") :]
-    post_call = post_call[: post_call.index("\n            )")]
-    assert "allow_redirects=False" in post_call, (
+    tenant, hook = wired
+    hook.events = []  # deliver_webhook filters on registration.status; take everything
+    hook.save()
+    soul = Soul.objects.create(name="Redirect Probe", tenant=tenant)
+    registration = DeathRegistrationRequest.objects.create(
+        tenant=tenant, api_key=hook.api_key, idempotency_key="redir-1",
+        source_system="HOSPITAL", source_payload={}, soul=soul,
+        status=DeathRegistrationStatus.PROCESSED,
+    )
+    post = Mock(return_value=Mock(status_code=200, text=""))
+    with patch("apps.death_sync.webhook_service.requests.post", post), patch(
+        "apps.death_sync.webhook_service._validate_webhook_url", lambda url: None
+    ):
+        WebhookService.deliver_webhook(hook, registration)
+
+    assert post.call_count == 1, "delivery never reached requests.post; the probe proves nothing"
+    assert post.call_args.kwargs.get("allow_redirects") is False, (
         "requests.post follows redirects by default. A webhook on a public "
         "host answering 302 -> http://169.254.169.254/ reaches the metadata "
         "service carrying this tenant's HMAC signature, and the validator "

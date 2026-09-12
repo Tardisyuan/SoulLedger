@@ -1,12 +1,40 @@
 """
 M4: Tenant-aware Frontend Integration Tests
 
-Tests tenant isolation, login response with tenant info,
-ledger stats endpoint, and settings endpoints.
+Tests login response with tenant info, tenant isolation as the frontend sees
+it, and the ledger balance endpoint.
 
 Uses fixtures from conftest.py to avoid rate limiting on login.
+
+Rewritten 2026-09-12. The previous version of this file had, measured:
+two tests sending an ``X-Tenant-ID`` header that no backend code reads (the
+only occurrence outside tests is the CORS allow-list — the frontend sends it,
+the backend resolves the tenant from the JWT); two "isolation" tests that
+looped over an empty result set (0 actors, 0 souls) and so executed zero
+assertions; and one test whose two nested ``if``s were never entered. All of
+them were green. What replaces them creates rows in both tenants, lists as a
+non-ADMIN (ADMIN bypasses scoping), and asserts the other tenant's id is
+*absent* — the assertion that would actually turn red on a leak.
 """
-from apps.tenants.models import Tenant
+import pytest
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.actors.models import Actor
+from apps.souls.models import Soul
+
+
+def _as(api_client, user):
+    token = RefreshToken.for_user(user)
+    token["tenant_code"] = user.tenant.code
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    return api_client
+
+
+@pytest.fixture
+def eu_judge(db, django_user_model, eu_tenant):
+    return django_user_model.objects.create_user(
+        username="eu_judge_m4", password="judge123", role="JUDGE", tenant=eu_tenant
+    )
 
 
 class TestLoginTenantInfo:
@@ -52,84 +80,6 @@ class TestLoginTenantInfo:
         assert "refresh" in data
 
 
-class TestTenantHeaderInjection:
-    """Test that API endpoints respect X-Tenant-ID header for tenant isolation."""
-
-    def test_actors_respect_tenant_header(self, api_client, db, cn_tenant, eu_tenant, auth_headers):
-        """CN tenant should see CN actors, EU tenant should see EU actors."""
-        from apps.actors.models import Actor
-
-        # Create test data: one CN actor, one EU actor
-        Actor.objects.create(name="判官", civilization="CHINESE", role="JUDGE", tenant=cn_tenant)
-        Actor.objects.create(name="Hades", civilization="EUROPEAN", role="JUDGE", tenant=eu_tenant)
-
-        # Get actors for CN tenant
-        cn_resp = api_client.get(
-            "/api/v1/actors/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-            HTTP_X_TENANT_ID=str(cn_tenant.id),
-        )
-        assert cn_resp.status_code == 200
-
-        # Get actors for EU tenant
-        eu_resp = api_client.get(
-            "/api/v1/actors/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-            HTTP_X_TENANT_ID=str(eu_tenant.id),
-        )
-        assert eu_resp.status_code == 200
-
-        # Results should differ based on civilization
-        cn_actors = cn_resp.json().get("results", [])
-        eu_actors = eu_resp.json().get("results", [])
-
-        cn_civilizations = {a.get("civilization") for a in cn_actors}
-        eu_civilizations = {a.get("civilization") for a in eu_actors}
-
-        # CN actors should be CHINESE civilization
-        assert len(cn_actors) > 0, "No CN actors found"
-        assert "CHINESE" in cn_civilizations
-        # EU actors should be EUROPEAN civilization
-        assert len(eu_actors) > 0, "No EU actors found"
-        assert "EUROPEAN" in eu_civilizations
-
-    def test_realms_respect_tenant_header(self, api_client, db, cn_tenant, eu_tenant, auth_headers):
-        """Realms should be filtered by tenant civilization."""
-        from apps.realms.models import Realm
-
-        # Create test data: one CN realm, one EU realm
-        Realm.objects.create(
-            realm_code="CN_HELL", civilization="CHINESE", name_local="奈何狱",
-            realm_type="HELL", tenant=cn_tenant,
-        )
-        Realm.objects.create(
-            realm_code="EU_HEAVEN", civilization="EUROPEAN", name_local="Heaven",
-            realm_type="BLISS", tenant=eu_tenant,
-        )
-
-        cn_resp = api_client.get(
-            "/api/v1/realms/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-            HTTP_X_TENANT_ID=str(cn_tenant.id),
-        )
-        assert cn_resp.status_code == 200
-
-        eu_resp = api_client.get(
-            "/api/v1/realms/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-            HTTP_X_TENANT_ID=str(eu_tenant.id),
-        )
-        assert eu_resp.status_code == 200
-
-        cn_realms = cn_resp.json().get("results", [])
-        eu_resp.json().get("results", [])
-
-        # CN realms should have CHINESE civilization
-        assert len(cn_realms) > 0, "No CN realms found"
-        cn_civilizations = {r.get("civilization") for r in cn_realms}
-        assert "CHINESE" in cn_civilizations
-
-
 class TestLedgerStatsEndpoint:
     """Test ledger stats endpoint requires auth and returns data."""
 
@@ -162,59 +112,39 @@ class TestLedgerStatsEndpoint:
 
 
 class TestTenantIsolation:
-    """Test that tenants are properly isolated from each other."""
+    """The tenant comes from the JWT, not a header; a scoped role sees only its own rows."""
 
-    def test_cn_actors_not_in_eu_results(self, api_client, db, eu_tenant, auth_headers):
-        """CN actors should not appear in EU tenant queries."""
-        resp = api_client.get(
-            "/api/v1/actors/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-            HTTP_X_TENANT_ID=str(eu_tenant.id),
-        )
-        assert resp.status_code == 200
-        actors = resp.json().get("results", [])
+    def test_cn_actors_not_in_eu_results(self, api_client, cn_tenant, eu_tenant, eu_judge):
+        cn = Actor.objects.create(name="判官", civilization="CHINESE", role="JUDGE", tenant=cn_tenant)
+        eu = Actor.objects.create(name="Hades", civilization="EUROPEAN", role="JUDGE", tenant=eu_tenant)
 
-        # No actor should have CHINESE civilization when querying EU
-        for actor in actors:
-            assert actor.get("civilization") != "CHINESE", (
-                f"CN actor {actor.get('name')} leaked into EU results"
-            )
+        resp = _as(api_client, eu_judge).get("/api/v1/actors/")
+        assert resp.status_code == 200, resp.content
+        ids = {a["id"] for a in resp.json()["results"]}
+        assert str(eu.id) in ids
+        assert str(cn.id) not in ids, "CN actor leaked into EU results"
 
-    def test_souls_filtered_by_tenant(self, api_client, db, auth_headers):
-        """Souls should be filtered by tenant."""
-        cn_tenant = Tenant.objects.get(code="CN_DIYU")
+    def test_souls_filtered_by_tenant(self, api_client, cn_tenant, eu_tenant, judge_user):
+        cn = Soul.objects.create(name="CN Soul", tenant=cn_tenant)
+        eu = Soul.objects.create(name="EU Soul", tenant=eu_tenant)
 
-        resp = api_client.get(
-            "/api/v1/souls/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-            HTTP_X_TENANT_ID=str(cn_tenant.id),
-        )
-        assert resp.status_code == 200
-        souls = resp.json().get("results", [])
-
-        # All souls should have CHINESE civilization for CN tenant
-        for soul in souls:
-            assert soul.get("civilization") == "CHINESE", (
-                f"Non-CN soul found in CN tenant results: {soul.get('name')}"
-            )
+        resp = _as(api_client, judge_user).get("/api/v1/souls/")
+        assert resp.status_code == 200, resp.content
+        ids = {s["id"] for s in resp.json()["results"]}
+        assert str(cn.id) in ids
+        assert str(eu.id) not in ids, "EU soul leaked into CN results"
 
 
-class TestSettingsEndpoints:
-    """Test that settings-related endpoints exist."""
+class TestLedgerBalanceEndpoint:
+    """``/ledger/balance/{soul}/`` answers for the caller's own soul and 404s for another tenant's."""
 
-    def test_ledger_balance_endpoint_exists(self, api_client, db, auth_headers):
-        """Ledger balance endpoint should be accessible."""
-        # Get first soul
-        resp = api_client.get(
-            "/api/v1/souls/",
-            HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-        )
-        if resp.status_code == 200:
-            souls = resp.json().get("results", [])
-            if souls:
-                soul_id = souls[0].get("id")
-                balance_resp = api_client.get(
-                    f"/api/v1/ledger/balance/{soul_id}/",
-                    HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
-                )
-                assert balance_resp.status_code in [200, 404]
+    def test_own_soul_has_a_balance(self, api_client, cn_tenant, auth_headers):
+        soul = Soul.objects.create(name="Balanced", tenant=cn_tenant)
+        resp = api_client.get(f"/api/v1/ledger/balance/{soul.id}/", **auth_headers)
+        assert resp.status_code == 200, resp.content
+        assert "karmic_balance" in resp.json()
+
+    def test_other_tenants_soul_is_not_found(self, api_client, eu_tenant, auth_headers):
+        soul = Soul.objects.create(name="Elsewhere", tenant=eu_tenant)
+        resp = api_client.get(f"/api/v1/ledger/balance/{soul.id}/", **auth_headers)
+        assert resp.status_code == 404, resp.content
