@@ -21,13 +21,24 @@ or is listed in EXEMPT below with a reason. Adding a viewset without scoping it
 fails this test at the moment the route is registered, which is well before it
 reaches an audit.
 
-What it cannot catch. This is a static check over ``get_queryset`` source: it
-proves the helper is *called*, not that the result is used, and it says nothing
-about ``@action`` methods that build their own querysets or about write paths.
-Those still need their own tests. It closes the specific hole that kept
-reopening, not every hole.
+What it cannot catch. This is a static check over the ``get_queryset`` AST: it
+proves a *call node* to the helper exists, not that the result is used, and it
+says nothing about ``@action`` methods that build their own querysets or about
+write paths. Those still need their own tests. It closes the specific hole that
+kept reopening, not every hole.
+
+Why the AST and not the source text. Until 2026-09-12 this read
+``"scope_to_tenant" in inspect.getsource(func)``. ``apps/core/viewsets.py``
+has the words ``scope_to_tenant's own admin_bypass`` in a *comment* four lines
+above the real call, so deleting the call left the contract green
+(34 passed / 2 skipped) while Actor / Realm / Reincarnation / SoulEvent leaked
+across tenants. Deleting the comment as well was what finally turned it red.
+A guard that reads prose is guarding prose. ``test_a_judge_only_sees_its_own_
+tenant`` below is the behavioural half: the call must also *do* something.
 """
+import ast
 import inspect
+import textwrap
 
 import pytest
 from django.core.exceptions import FieldDoesNotExist
@@ -192,6 +203,24 @@ def _tenant_path(model):
     return None
 
 
+_HELPERS = frozenset({"scope_to_tenant", "scope_to_api_key"})
+
+
+def _called_names(func):
+    """Every callee name in ``func``: ``f(...)`` gives ``f``, ``x.f(...)`` gives ``f``."""
+    tree = ast.parse(textwrap.dedent(inspect.getsource(func)))
+    names = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        callee = node.func
+        if isinstance(callee, ast.Name):
+            names.add(callee.id)
+        elif isinstance(callee, ast.Attribute):
+            names.add(callee.attr)
+    return names
+
+
 def _goes_through_helper(view_cls):
     """True when the get_queryset() that actually runs reaches the helper.
 
@@ -201,18 +230,18 @@ def _goes_through_helper(view_cls):
     *lists* DataScopeViewSetMixin among its bases while fully overriding
     get_queryset — which is precisely what the two dispatch viewsets do, and
     what their EXEMPT entries are about.
+
+    Both questions — "does it call the helper" and "does it call super()" —
+    are asked of Call nodes, never of the text. See the module docstring.
     """
     for klass in view_cls.__mro__:
         func = klass.__dict__.get("get_queryset")
         if func is None:
             continue
-        try:
-            source = inspect.getsource(func)
-        except (OSError, TypeError):  # pragma: no cover - source always available here
-            return False
-        if "scope_to_tenant" in source or "scope_to_api_key" in source:
+        called = _called_names(func)
+        if called & _HELPERS:
             return True
-        if "super()" not in source:
+        if "super" not in called:
             # Terminal implementation: nothing further up the MRO runs.
             return False
     return False
@@ -335,3 +364,54 @@ def test_the_unresolvable_list_does_not_cover_a_resolvable_viewset():
         f"这些视图的模型现在解析得出来了,把它们从 MODEL_UNRESOLVABLE 里删掉,"
         f"契约才会真的对它们生效:{redundant}"
     )
+
+
+def test_the_helper_check_reads_calls_not_prose():
+    """The check must not be satisfiable by a comment or a string literal —
+    that is exactly how it was blind before (module docstring)."""
+
+    class Prose:
+        def get_queryset(self):
+            # scope_to_tenant is mentioned here and nowhere else
+            return "scope_to_tenant(qs, self.request)"
+
+    class Call:
+        def get_queryset(self):
+            return scope_to_tenant(None, None)  # noqa: F821 - never executed
+
+    assert not _goes_through_helper(Prose)
+    assert _goes_through_helper(Call)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("path", ["/api/v1/actors/", "/api/v1/realms/"])
+def test_a_judge_only_sees_its_own_tenant(path, api_client, judge_user, cn_tenant, eu_tenant):
+    """The behavioural half of the contract: the call the AST found has to
+    filter. A JUDGE (no ADMIN bypass) lists the endpoint and the other tenant's
+    row is asserted *absent*, not merely "own row present" — ``>= 1`` stays
+    green on a full cross-tenant leak."""
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    from apps.actors.models import Actor, ActorRole
+    from apps.realms.models import Realm, RealmType
+    from apps.souls.models import Civilization
+
+    if path.endswith("actors/"):
+        mine = Actor.objects.create(name="CN Actor", role=ActorRole.JUDGE,
+                                    civilization=Civilization.CHINESE, tenant=cn_tenant)
+        theirs = Actor.objects.create(name="EU Actor", role=ActorRole.JUDGE,
+                                      civilization=Civilization.EUROPEAN, tenant=eu_tenant)
+    else:
+        mine = Realm.objects.create(realm_code="CN_R", civilization=Civilization.CHINESE,
+                                    name_local="地府", realm_type=RealmType.HELL, tenant=cn_tenant)
+        theirs = Realm.objects.create(realm_code="EU_R", civilization=Civilization.EUROPEAN,
+                                      name_local="Hell", realm_type=RealmType.HELL, tenant=eu_tenant)
+
+    token = RefreshToken.for_user(judge_user)
+    token["tenant_code"] = cn_tenant.code
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    res = api_client.get(path)
+    assert res.status_code == 200, res.content
+    ids = {row["id"] for row in res.json()["results"]}
+    assert str(mine.id) in ids
+    assert str(theirs.id) not in ids, f"{path}: other tenant's row leaked to a JUDGE"
