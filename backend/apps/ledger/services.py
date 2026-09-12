@@ -257,12 +257,15 @@ class LedgerService:
             old_merit = soul.merit_score
             old_demerit = soul.demerit_score
 
-            records = soul.records.all()
+            # This life's records on top of what the last one handed down.
+            # Summing every life here is how a rebirth's carry-over used to be
+            # overwritten by the first deed after it.
+            records = soul.current_life_records()
             anchor = cls._get_decay_anchor(soul)
             rate = cls._decay_rate_for(soul)
 
-            merit = 0
-            demerit = 0
+            merit = soul.inherited_merit
+            demerit = soul.inherited_demerit
 
             for r in records:
                 years = cls._get_record_age_years(
@@ -315,12 +318,14 @@ class LedgerService:
         if cached is not None:
             return cached
 
-        records = soul.records.all().order_by("-recorded_at")
+        records = soul.current_life_records().order_by("-recorded_at")
         anchor = cls._get_decay_anchor(soul)
         rate = cls._decay_rate_for(soul)
 
-        merit = 0
-        demerit = 0
+        # Same base as recalculate_soul_ledger: the carry-over counts toward
+        # the totals but is not a deed, so it opens no pool and no count.
+        merit = soul.inherited_merit
+        demerit = soul.inherited_demerit
         # Both record counts, because two readings are reckoned in deeds rather
         # than in weight: the European one qualifies culpa with how many wrongs
         # produced it, and the Greek one counts each road's deeds because

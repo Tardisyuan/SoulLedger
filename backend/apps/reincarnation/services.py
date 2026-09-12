@@ -140,7 +140,16 @@ class ReincarnationService:
             # that too, which is why it wraps the whole block and not just the
             # count.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
-            cycle_count = soul.reincarnations.count() + 1
+
+            # Read the carry-over BEFORE the Reincarnation row exists. The
+            # ledger reads `soul.current_life_records()`, keyed on
+            # `life_index` = reincarnations.count(); once the row below is
+            # written that index moves on to the new, empty life and the
+            # inheritance would be 20% of nothing. (The reasons this goes
+            # through get_reincarnation_inheritance rather than re-deriving
+            # the arithmetic are below, where the value is applied.)
+            inheritance = LedgerService.get_reincarnation_inheritance(soul)
+            cycle_count = soul.life_index + 1
 
             # Create reincarnation record
             reincarnation = Reincarnation.objects.create(
@@ -171,7 +180,8 @@ class ReincarnationService:
             # fresh, so the endpoint could report one carryover number while
             # rebirth quietly applied another.
             #
-            # Calling get_reincarnation_inheritance() here instead of
+            # Calling get_reincarnation_inheritance() (above, before the
+            # Reincarnation row) instead of
             # re-deriving the same arithmetic makes this the same call the
             # endpoint makes — not just the same inputs, the same function —
             # so there is no way for the two to drift again, including
@@ -179,9 +189,13 @@ class ReincarnationService:
             # value (fresh or cached) the endpoint would hand back right now
             # is exactly the value applied here. A soul with no records at
             # all inherits 0/0, same as the endpoint would report for it.
-            inheritance = LedgerService.get_reincarnation_inheritance(soul)
             soul.merit_score = inheritance["inherited_merit"]
             soul.demerit_score = inheritance["inherited_demerit"]
+            # ...and the same numbers as the base the next recalculation
+            # starts from, so the first deed of this life adds to them
+            # instead of replacing them.
+            soul.inherited_merit = inheritance["inherited_merit"]
+            soul.inherited_demerit = inheritance["inherited_demerit"]
 
             # Reset soul to ALIVE with new identity
             soul.name = new_identity or soul.name
@@ -189,6 +203,8 @@ class ReincarnationService:
             soul.death_date = None
             soul.origin_location = ""
             soul.save()
+            # The cached summary describes the life that just ended.
+            LedgerService._invalidate_cache(soul)
 
             # The return value is checked, and the check is inside the
             # `atomic()` on purpose.

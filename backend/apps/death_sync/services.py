@@ -2,8 +2,9 @@
 Death Sync Service — core business logic for external death registration.
 """
 import logging
+import uuid
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.death_sync.models import (
@@ -86,27 +87,36 @@ class DeathSyncService:
             DeathRegistrationRequest instance
 
         Raises:
-            ValueError: On invalid payload or soul lookup failure
-            IntegrityError: On duplicate idempotency_key (caught and returned as 409)
+            IntegrityError: On duplicate idempotency_key. Re-raised on purpose:
+                the caller owns the answer (the single view turns it into a
+                409 with the existing row, process_batch returns that row).
         """
-        with transaction.atomic():
-            start_time = timezone.now()
-            lookup_data = payload.get("soul_lookup", {})
+        start_time = timezone.now()
+        lookup_data = payload.get("soul_lookup", {})
 
-            # Create request record (for idempotency tracking)
-            request_record = DeathRegistrationRequest(
-                tenant=tenant,
-                api_key=api_key,
-                idempotency_key=idempotency_key,
-                source_system=api_key.system_type,
-                source_reference_id=payload.get("source_reference", ""),
-                source_payload=payload,
-                source_ip=source_ip,
-                status=DeathRegistrationStatus.PENDING,
-            )
+        # Create request record (for idempotency tracking)
+        request_record = DeathRegistrationRequest(
+            tenant=tenant,
+            api_key=api_key,
+            idempotency_key=idempotency_key,
+            source_system=api_key.system_type,
+            source_reference_id=payload.get("source_reference", ""),
+            source_payload=payload,
+            source_ip=source_ip,
+            status=DeathRegistrationStatus.PENDING,
+        )
 
-            try:
-                # Lookup soul
+        # The `except` used to sit INSIDE the atomic block. After the first
+        # save() hit uniq_death_reg_idempotency the handler saved the same
+        # row again inside a transaction Django had already marked broken,
+        # which raises TransactionManagementError -- so a replayed key was a
+        # 500 on the single path (the view's `except IntegrityError` never
+        # saw an IntegrityError) and a 500 on the batch path (process_batch
+        # then saved a third row under the same key). The atomic block now
+        # covers only the work, and the failure row is written after it has
+        # rolled back; a duplicate key is left to the caller.
+        try:
+            with transaction.atomic():
                 soul = DeathSyncService.lookup_soul(tenant, lookup_data)
                 if soul is None:
                     request_record.status = DeathRegistrationStatus.FAILED
@@ -115,7 +125,6 @@ class DeathSyncService:
                     request_record.save()
                     return request_record
 
-                # Check soul state
                 if soul.current_state != SoulState.ALIVE:
                     request_record.status = DeathRegistrationStatus.FAILED
                     request_record.error_code = "SOUL_NOT_ALIVE"
@@ -125,12 +134,9 @@ class DeathSyncService:
                     return request_record
 
                 # Call soul.die() - the domain service handles state transition
-                death_date = payload.get("death_date")
-                death_location = payload.get("death_location", "")
-
                 judgment = soul.die(
-                    death_date=death_date,
-                    location=death_location,
+                    death_date=payload.get("death_date"),
+                    location=payload.get("death_location", ""),
                 )
 
                 if judgment is None:
@@ -141,7 +147,6 @@ class DeathSyncService:
                     request_record.save()
                     return request_record
 
-                # Success
                 request_record.status = DeathRegistrationStatus.PROCESSED
                 request_record.soul = soul
                 request_record.judgment = judgment
@@ -149,21 +154,25 @@ class DeathSyncService:
                     (timezone.now() - start_time).total_seconds() * 1000
                 )
                 request_record.save()
-
                 return request_record
 
-            except Exception as e:
-                logger.exception(f"Death registration failed: {e}")
-                request_record.status = DeathRegistrationStatus.FAILED
-                request_record.error_code = "INTERNAL_ERROR"
-                request_record.error_message = str(e)
-                request_record.save()
-                return request_record
+        except IntegrityError:
+            raise
+        except Exception as e:
+            logger.exception(f"Death registration failed: {e}")
+            request_record.status = DeathRegistrationStatus.FAILED
+            request_record.error_code = "INTERNAL_ERROR"
+            request_record.error_message = str(e)
+            request_record.save()
+            return request_record
 
     @staticmethod
     def process_batch(tenant, api_key, registrations, source_ip=None):
         """
         Process a batch of death registrations.
+
+        Every item goes through DeathRegistrationCreateSerializer, the same
+        gate the single endpoint applies; the batch path used to skip it.
 
         Args:
             tenant: The tenant for this batch
@@ -172,32 +181,53 @@ class DeathSyncService:
             source_ip: Client IP address
 
         Returns:
-            List of DeathRegistrationRequest instances
+            List of DeathRegistrationRequest instances, one per item, in order.
+            A client-supplied key that already owns a row yields that row.
         """
+        from apps.death_sync.serializers import DeathRegistrationCreateSerializer
+
+        # One nonce per call. The default key used to be batch_{key}_{idx},
+        # identical for item 0 of every batch this API key ever sent, so the
+        # second keyless batch collided with the first on
+        # uniq_death_reg_idempotency -- every time.
+        nonce = uuid.uuid4().hex
         results = []
         for idx, reg in enumerate(registrations):
-            idempotency_key = reg.get("idempotency_key", f"batch_{api_key.id}_{idx}")
+            payload = reg if isinstance(reg, dict) else {}
+            idempotency_key = payload.get("idempotency_key") or f"batch_{api_key.id}_{nonce}_{idx}"
             try:
-                result = DeathSyncService.register_death(
+                serializer = DeathRegistrationCreateSerializer(data=payload)
+                if serializer.is_valid():
+                    result = DeathSyncService.register_death(
+                        tenant=tenant,
+                        api_key=api_key,
+                        payload=serializer.validated_data,
+                        idempotency_key=idempotency_key,
+                        source_ip=source_ip,
+                    )
+                else:
+                    result = DeathRegistrationRequest(
+                        tenant=tenant,
+                        api_key=api_key,
+                        idempotency_key=idempotency_key,
+                        source_system=api_key.system_type,
+                        source_payload=payload,
+                        source_ip=source_ip,
+                        status=DeathRegistrationStatus.FAILED,
+                        error_code="VALIDATION_ERROR",
+                        error_message=str(serializer.errors),
+                    )
+                    result.save()
+            except IntegrityError:
+                # Same answer the single path gives as a 409: the row that
+                # owns the key. Tenant-scoped, so another tenant's row with
+                # the same key is not handed back.
+                result = DeathRegistrationRequest.objects.filter(
                     tenant=tenant,
-                    api_key=api_key,
-                    payload=reg,
-                    idempotency_key=idempotency_key,
-                    source_ip=source_ip,
-                )
-                results.append(result)
-            except Exception as e:
-                logger.exception(f"Batch item {idx} failed: {e}")
-                failed_record = DeathRegistrationRequest(
-                    tenant=tenant,
-                    api_key=api_key,
-                    idempotency_key=idempotency_key,
                     source_system=api_key.system_type,
-                    source_payload=reg,
-                    status=DeathRegistrationStatus.FAILED,
-                    error_code="INTERNAL_ERROR",
-                    error_message=str(e),
-                )
-                failed_record.save()
-                results.append(failed_record)
+                    idempotency_key=idempotency_key,
+                ).first()
+                if result is None:
+                    raise
+            results.append(result)
         return results
