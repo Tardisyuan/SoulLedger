@@ -95,6 +95,7 @@ const COLLECTED_FILES = [
   "TenantContext.test.tsx",
   "Toast.test.tsx",
   "UserDeleteDialog.test.tsx",
+  "UsersPage.roleBadge.test.tsx",
   "WebSocketContext.currentUserId.test.tsx",
   "WebSocketContext.sessionResume.test.tsx",
   "WebSocketContext.test.tsx",

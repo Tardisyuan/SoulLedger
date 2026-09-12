@@ -52,6 +52,15 @@ export default function UsersPage() {
     value: r.name,
     label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name,
   }));
+  // The same table, by name, for the badge in each row. A custom role has no
+  // `users.roles.*` entry and cannot — its name is data, not UI copy — so
+  // `DomainEnum` rendered it as "unrecognised", italic, with the name hidden in
+  // `title`. The filter above already reads `display_name` for it; the badge
+  // is the same decision one column over. `UsersPage.roleBadge.test.tsx`.
+  const customRoleLabel = (roleName: string): string | null => {
+    const role = rolesQuery.data?.find((r) => r.name === roleName);
+    return role && !role.is_builtin ? role.display_name || role.name : null;
+  };
 
   // Delete user mutation
   const deleteMutation = useMutation({
@@ -198,7 +207,9 @@ export default function UsersPage() {
                     : "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]"
                 }
               >
-                <DomainEnum namespace="users.roles" value={user.role} />
+                {customRoleLabel(user.role) ?? (
+                  <DomainEnum namespace="users.roles" value={user.role} />
+                )}
               </Badge>
             </td>
             <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
