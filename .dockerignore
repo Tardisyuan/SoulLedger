@@ -1,0 +1,32 @@
+# Both images build from the repository root (backend/Dockerfile,
+# frontend/Dockerfile), so this is the one list of what must never reach a
+# layer. Without it `backend/.env` — real database and Redis credentials —
+# `test.db` and the coverage dumps were copied by `COPY backend/ .` (IS-07).
+.git
+.github
+.claude
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.coverage
+**/coverage*.json
+**/htmlcov
+**/test.db
+**/db.sqlite3
+**/*.sqlite3
+backend/staticfiles
+frontend/.next
+frontend/coverage
+frontend/playwright-report
+frontend/test-results
+backups
+docs
+openspec
+地府结构研究
+埃及冥界
+欧洲天堂地狱
