@@ -10190,11 +10190,7 @@ components:
         is_active:
           type: boolean
       required:
-      - civilization
-      - filter_conditions
-      - is_active
       - model_name
-      - priority
       - role
       - scope_type
     ExportedFieldPermission:
@@ -10213,12 +10209,9 @@ components:
         editable:
           type: boolean
       required:
-      - editable
       - field_name
       - model_name
-      - read_only
       - role
-      - visible
     ExportedPermission:
       type: object
       properties:
@@ -10244,7 +10237,6 @@ components:
       required:
       - display_name
       - name
-      - scope
     ExportedRolePermission:
       type: object
       properties:
@@ -10254,7 +10246,6 @@ components:
           type: string
         conditions: {}
       required:
-      - conditions
       - permission
       - role
     ExternalApiKey:
@@ -13247,6 +13238,13 @@ components:
         Every member is optional because `import_permissions` reads each one with
         `data.get(key, [])`: a document carrying only `roles` imports only roles.
         The view's own check is `if not data` — an empty body, nothing narrower.
+
+        This is the serializer the view VALIDATES WITH, not just what it documents.
+        Until 2026-09-12 it was never instantiated: `overwrite` came straight off
+        `request.data`, so the string "false" was truthy and cleared every
+        RolePermission with a 200, and a permission entry missing `name` was a
+        KeyError 500 raised after the overwrite deletes had already run. See
+        tests/test_perm_import_is_validated.py.
       properties:
         version:
           type: string

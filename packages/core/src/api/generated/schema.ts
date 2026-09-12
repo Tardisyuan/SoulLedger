@@ -4616,20 +4616,20 @@ export interface components {
         EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED";
         ExportedDataScope: {
             role: string;
-            civilization: string | null;
+            civilization?: string | null;
             model_name: string;
-            filter_conditions: unknown;
+            filter_conditions?: unknown;
             scope_type: string;
-            priority: number;
-            is_active: boolean;
+            priority?: number;
+            is_active?: boolean;
         };
         ExportedFieldPermission: {
             role: string;
             model_name: string;
             field_name: string;
-            visible: boolean;
-            read_only: boolean;
-            editable: boolean;
+            visible?: boolean;
+            read_only?: boolean;
+            editable?: boolean;
         };
         ExportedPermission: {
             codename: string;
@@ -4639,12 +4639,12 @@ export interface components {
         ExportedRole: {
             name: string;
             display_name: string;
-            scope: string;
+            scope?: string;
         };
         ExportedRolePermission: {
             role: string;
             permission: string;
-            conditions: unknown;
+            conditions?: unknown;
         };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         ExternalApiKey: {
@@ -6294,6 +6294,13 @@ export interface components {
          *     Every member is optional because `import_permissions` reads each one with
          *     `data.get(key, [])`: a document carrying only `roles` imports only roles.
          *     The view's own check is `if not data` — an empty body, nothing narrower.
+         *
+         *     This is the serializer the view VALIDATES WITH, not just what it documents.
+         *     Until 2026-09-12 it was never instantiated: `overwrite` came straight off
+         *     `request.data`, so the string "false" was truthy and cleared every
+         *     RolePermission with a 200, and a permission entry missing `name` was a
+         *     KeyError 500 raised after the overwrite deletes had already run. See
+         *     tests/test_perm_import_is_validated.py.
          */
         PermissionImportRequest: {
             version?: string;
