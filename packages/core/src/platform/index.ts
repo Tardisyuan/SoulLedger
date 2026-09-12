@@ -161,8 +161,47 @@ export function getAccessToken(): string | null {
   return adapter.session.get(ACCESS_TOKEN_KEY);
 }
 
+/**
+ * Who wants to know when the access token is replaced.
+ *
+ * NOT adapter state: `resetPlatform()` swaps the host and leaves these alone,
+ * because a subscription belongs to the consumer that made it, not to the
+ * store the token lands in. Copied before iteration so a handler that
+ * unsubscribes itself mid-notification does not skip its neighbour.
+ */
+const accessTokenSubscribers = new Set<() => void>();
+
 export function setAccessToken(value: string): void {
   adapter.session.set(ACCESS_TOKEN_KEY, value);
+  // After the write, so a handler that turns round and reads the token —
+  // `WSClient.connect()` does exactly that — sees the value just stored.
+  for (const handler of [...accessTokenSubscribers]) handler();
+}
+
+/**
+ * Subscribe to the access token being replaced. Returns the unsubscribe.
+ *
+ * WHY IT EXISTS. `ws/client.ts` closes with `"failed"` on a 4001 and never
+ * retries it — correctly, see `shouldReconnectAfterClose`: the token was
+ * refused. `api/client.ts` then refreshes that token on the next 401 and
+ * carries on. Nothing joined the two, so after the access token expired
+ * mid-session the REST side healed itself on its next request and the
+ * realtime side stayed dead until a reload (FL-04). Same shape as
+ * `onSessionResume`: `WSClient.reconnect()` existed and lacked a trigger.
+ *
+ * WHY HERE AND NOT A CALL FROM `api/client.ts` INTO `ws/client.ts`. The two
+ * modules do not know each other and the API client owns no socket. What they
+ * share is this one write — the login page and `rotateRefreshToken` both go
+ * through `setAccessToken` — so the write is the event. Consumer:
+ * `frontend/src/contexts/WebSocketContext.tsx`; contract pinned by
+ * `./__tests__/accessTokenChanged.test.ts`, wiring by
+ * `WebSocketContext.tokenRefresh.test.tsx`.
+ */
+export function onAccessTokenChanged(handler: () => void): () => void {
+  accessTokenSubscribers.add(handler);
+  return () => {
+    accessTokenSubscribers.delete(handler);
+  };
 }
 
 /**
