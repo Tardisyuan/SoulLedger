@@ -167,6 +167,12 @@ export default function WorkflowPage() {
                   className="shrink-0"
                   onClick={() => {
                     setEditingTemplateId(null);
+                    // Both, not one. This cleared only the id, so "new
+                    // template" opened pre-filled with whichever preset was
+                    // last opened for editing, and saving it minted a copy of
+                    // that preset (FL-07). `onClose`/`onSave` below clear both
+                    // as well; this is the third exit that has to agree.
+                    setEditingTemplateData(null);
                     setTab("editor");
                   }}
                 >

@@ -167,6 +167,31 @@ describe("WorkflowPage editor tab", () => {
     expect(screen.getByTestId("editor-priority")).toHaveTextContent("0");
   });
 
+  /**
+   * "New template" after "edit this preset" must open EMPTY.
+   *
+   * The new-template button cleared `editingTemplateId` and not
+   * `editingTemplateData`, so the editor opened pre-filled with whichever
+   * preset was last opened for editing — name, nodes, priority, all of it —
+   * and saving it minted a copy of the preset under the impression it was a
+   * fresh template (FL-07). The stub renders `initialTemplateData.priority`
+   * as "none" when nothing is handed over, which is the absence this pins.
+   */
+  it("opens the editor empty for a new template even after a preset was opened for editing", async () => {
+    renderPage();
+
+    await screen.findByText("workflow.predefined_templates");
+    fireEvent.click(screen.getByText("common.edit"));
+    expect(screen.getByTestId("editor-priority")).toHaveTextContent("0");
+
+    fireEvent.click(screen.getByText("workflow.existing"));
+    fireEvent.click(screen.getByText("+ workflow.new_template"));
+
+    expect(screen.getByTestId("editor")).toHaveTextContent("new");
+    expect(screen.getByTestId("editor-priority")).toHaveTextContent("none");
+    expect(screen.getByTestId("editor-priority")).not.toHaveTextContent("0");
+  });
+
   it("returns to the template list when the editor tab is left", async () => {
     renderPage();
 
