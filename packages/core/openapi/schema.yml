@@ -1615,6 +1615,33 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/dispatch/cross-tenant-judgments/{id}/activate/:
+    post:
+      operationId: v1_dispatch_cross_tenant_judgments_activate_create
+      description: |-
+        Convene the judgment: PROPOSED -> ACTIVE. Initiating tenant only, and
+        only once at least one participant is seated (BD-06). Activation used
+        to be a side effect of the first `participate`, which capped the bench
+        at one.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossTenantJudgment'
+          description: ''
   /api/v1/dispatch/cross-tenant-judgments/{id}/conclude/:
     post:
       operationId: v1_dispatch_cross_tenant_judgments_conclude_create
@@ -1653,7 +1680,9 @@ paths:
   /api/v1/dispatch/cross-tenant-judgments/{id}/participate/:
     post:
       operationId: v1_dispatch_cross_tenant_judgments_participate_create
-      description: Join as a participant in a cross-tenant judgment.
+      description: |-
+        Seat a participant on a cross-tenant judgment (initiating tenant only,
+        while PROPOSED). Does not activate — see `activate`.
       parameters:
       - in: path
         name: id
@@ -10445,12 +10474,19 @@ components:
     Judgment:
       type: object
       description: |-
-        Serializer mixin that dynamically filters fields based on FieldPermission rules.
+        A proceeding. Soul and judge are the requester's own (BD-01).
 
-        The mixin checks the user's role against FieldPermission entries for the model.
-        If no rules exist, all fields are visible and editable (default behavior).
+        `validate_soul` / `validate_judge` were declared on
+        `JudgmentCitationSerializer` above, which has neither field, so DRF never
+        called them and this class resolved bare primary keys. A cross-tenant
+        hearing is `apps.dispatch.CrossTenantJudgment`; here both parties belong
+        to the tenant that opened the case. ADMIN is exempt as everywhere else.
 
-        Priority: specific (field_name) > wildcard (field_name="*")
+        `verdict`, `is_final`, `concluded_at` are read-only and an attempt to write
+        them is an explicit 400 (BD-03) — a plain field write produced a "final"
+        judgment with no Disposition and a soul still JUDGING, and `conclude/`
+        then refused it as already concluded. `civilization` is read-only and
+        derived from the soul (BD-08).
       properties:
         id:
           type: string
@@ -10463,7 +10499,9 @@ components:
           type: string
           readOnly: true
         civilization:
-          $ref: '#/components/schemas/CivilizationEnum'
+          allOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          readOnly: true
         judge:
           type: string
           format: uuid
@@ -10479,10 +10517,10 @@ components:
         confession:
           type: string
         verdict:
+          readOnly: true
           nullable: true
           oneOf:
           - $ref: '#/components/schemas/VerdictEnum'
-          - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
         notes:
           type: string
@@ -10493,6 +10531,7 @@ components:
           readOnly: true
         is_final:
           type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -10500,15 +10539,19 @@ components:
         concluded_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
       required:
       - citations
       - civilization
+      - concluded_at
       - created_at
       - id
+      - is_final
       - judge_name
       - soul
       - soul_name
+      - verdict
     JudgmentCitation:
       type: object
       description: |-
@@ -12526,12 +12569,19 @@ components:
     PatchedJudgment:
       type: object
       description: |-
-        Serializer mixin that dynamically filters fields based on FieldPermission rules.
+        A proceeding. Soul and judge are the requester's own (BD-01).
 
-        The mixin checks the user's role against FieldPermission entries for the model.
-        If no rules exist, all fields are visible and editable (default behavior).
+        `validate_soul` / `validate_judge` were declared on
+        `JudgmentCitationSerializer` above, which has neither field, so DRF never
+        called them and this class resolved bare primary keys. A cross-tenant
+        hearing is `apps.dispatch.CrossTenantJudgment`; here both parties belong
+        to the tenant that opened the case. ADMIN is exempt as everywhere else.
 
-        Priority: specific (field_name) > wildcard (field_name="*")
+        `verdict`, `is_final`, `concluded_at` are read-only and an attempt to write
+        them is an explicit 400 (BD-03) — a plain field write produced a "final"
+        judgment with no Disposition and a soul still JUDGING, and `conclude/`
+        then refused it as already concluded. `civilization` is read-only and
+        derived from the soul (BD-08).
       properties:
         id:
           type: string
@@ -12544,7 +12594,9 @@ components:
           type: string
           readOnly: true
         civilization:
-          $ref: '#/components/schemas/CivilizationEnum'
+          allOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          readOnly: true
         judge:
           type: string
           format: uuid
@@ -12560,10 +12612,10 @@ components:
         confession:
           type: string
         verdict:
+          readOnly: true
           nullable: true
           oneOf:
           - $ref: '#/components/schemas/VerdictEnum'
-          - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
         notes:
           type: string
@@ -12574,6 +12626,7 @@ components:
           readOnly: true
         is_final:
           type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -12581,6 +12634,7 @@ components:
         concluded_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
     PatchedMenuButtonCreateUpdate:
       type: object

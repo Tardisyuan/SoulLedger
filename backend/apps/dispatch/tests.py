@@ -568,22 +568,26 @@ class TestCrossTenantJudgmentParticipate:
         )
         assert resp.status_code == status.HTTP_200_OK
         jug.refresh_from_db()
-        assert jug.status == JudgmentStatus.ACTIVE
+        # Seating a participant no longer convenes the court (BD-06) — that
+        # side effect is what capped a joint judgment at one participant.
+        assert jug.status == JudgmentStatus.PROPOSED
 
-    def test_participant_tenant_can_add_others(self):
+    def test_participant_tenant_cannot_add_others(self):
+        """Was `test_participant_tenant_can_add_others`, and it accepted a 400
+        as a pass — which is what it always got, because the first
+        participant had already flipped the judgment ACTIVE. A participant is
+        invited; it does not extend the invitation (BD-06)."""
         jug = self._create_judgment()
-        # First, add tenant_b as participant
         CrossTenantJudgmentService.add_participant(
             jug, self.tenant_b, None, "ADVISOR",
         )
-        # Now tenant_b should be able to add tenant_b again (already participant)
         resp = self.client_b.post(
             f"{BASE}/cross-tenant-judgments/{jug.pk}/participate/",
             {"participant_tenant": self.tenant_b.pk, "role": "CHAIRMAN"},
             format="json",
         )
-        # This may fail due to unique constraint, but auth should pass
-        assert resp.status_code in (status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert jug.participants.count() == 1
 
     def test_uninvolved_tenant_cannot_participate(self):
         tenant_c = Tenant.objects.get_or_create(
@@ -631,6 +635,7 @@ class TestCrossTenantJudgmentConclude:
         CrossTenantJudgmentService.add_participant(
             jug, self.tenant_b, None, "CO_JUDGE",
         )
+        CrossTenantJudgmentService.activate(jug)  # explicit since BD-06
         jug.refresh_from_db()
         assert jug.status == JudgmentStatus.ACTIVE
         return jug

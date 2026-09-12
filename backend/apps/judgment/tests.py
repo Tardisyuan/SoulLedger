@@ -134,9 +134,12 @@ class JudgmentAPITest(TestCase):
 
     def test_create_judgment_admin(self):
         """Admin can create judgments"""
+        # A fresh soul: `self.soul` already carries `pending_judgment`, and a
+        # soul with an open case is refused a second one (BD-08).
+        fresh = Soul.objects.create(name="Fresh Soul", current_state=SoulState.ALIVE, tenant=self.tenant_cn)
         self.client.force_authenticate(user=self.admin_user)
         response = self.client.post("/api/v1/judgment/", {
-            "soul": str(self.soul.id),
+            "soul": str(fresh.id),
             "civilization": "CHINESE",
             "court": "第二殿",
         }, format='json')
