@@ -1,44 +1,27 @@
 /**
- * Tests for UserDeleteDialog component
+ * Tests for UserDeleteDialog component.
+ *
+ * A REAL QueryClient, not a stubbed `useMutation`. Until 2026-09-12 this file
+ * mocked `@tanstack/react-query` with a `mutate` that ignored `mutationFn` and
+ * called `onSuccess` unconditionally — so the dialog could delete the wrong
+ * user (`mutate("0")`) or never call the API at all and all eight tests stayed
+ * green (FT-04). The doubles here are the API and the toast; what sits between
+ * the click and `usersApi.delete` is the code under test.
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
-import type { User } from "@soulledger/core/api";
+import { usersApi, type User } from "@soulledger/core/api";
+import { showToast } from "@/src/components/ui/Toast";
+import { tZh, zh } from "./support/zhBundle";
+
+const mockTranslate = jest.fn(tZh);
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "users.delete_title": "确认删除",
-        "users.delete_confirm": "确定要删除以下用户吗？此操作无法撤销。",
-        "users.delete_success": "用户已删除",
-        "users.delete_error": "用户删除失败",
-        "users.username": "用户名",
-        "users.email": "邮箱",
-        "users.role": "角色",
-        "common.cancel": "取消",
-        "common.delete": "删除",
-        "common.submitting": "提交中...",
-      };
-      return map[key] ?? key;
-    },
-    locale: "en",
+    t: (key: string, params?: Record<string, string>) => mockTranslate(key, params),
+    locale: "zh-Hans",
     hydrated: true,
-  }),
-}));
-
-jest.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({
-    invalidateQueries: jest.fn(),
-  }),
-  useMutation: ({ onSuccess }: { onSuccess?: () => void; onError?: () => void }) => ({
-    mutate: jest.fn((_id: string) => {
-      // Simulate successful deletion synchronously for tests
-      if (onSuccess) {
-        onSuccess();
-      }
-    }),
-    isPending: false,
   }),
 }));
 
@@ -56,76 +39,109 @@ jest.mock("@/src/components/ui/Toast", () => ({
   showToast: jest.fn(),
 }));
 
+const mockedDelete = usersApi.delete as jest.Mock;
+const mockedToast = showToast as jest.Mock;
+
 const mockUser: User = {
   id: 1,
   username: "testuser",
   email: "test@example.com",
-  role: "admin",
+  role: "ADMIN",
   is_active: true,
 };
 
+type Props = Parameters<typeof UserDeleteDialog>[0];
+
+function renderDialog(props: Partial<Props> = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const invalidate = jest.spyOn(queryClient, "invalidateQueries");
+  const utils = render(
+    <QueryClientProvider client={queryClient}>
+      <UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} {...props} />
+    </QueryClientProvider>
+  );
+  return { ...utils, invalidate };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedDelete.mockResolvedValue({ data: undefined });
+});
+
 describe("UserDeleteDialog", () => {
   it("renders nothing when isOpen is false", () => {
-    const { container } = render(
-      <UserDeleteDialog user={mockUser} isOpen={false} onClose={jest.fn()} />
-    );
+    const { container } = renderDialog({ isOpen: false });
     expect(container.querySelector("[role='dialog']")).not.toBeInTheDocument();
   });
 
   it("renders the dialog when isOpen is true", () => {
-    render(
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} />
-    );
-    expect(screen.getByText("确认删除")).toBeInTheDocument();
+    renderDialog();
+    expect(screen.getByText(zh("users.delete_title"))).toBeInTheDocument();
   });
 
   it("renders the confirmation message", () => {
-    render(
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} />
-    );
-    expect(screen.getByText("确定要删除以下用户吗？此操作无法撤销。")).toBeInTheDocument();
+    renderDialog();
+    expect(screen.getByText(zh("users.delete_confirm"))).toBeInTheDocument();
   });
 
-  it("renders user details when user is provided", () => {
-    render(
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} />
-    );
+  it("renders user details, with the role translated and the raw member only in title", () => {
+    renderDialog();
     expect(screen.getByText("testuser")).toBeInTheDocument();
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
-    expect(screen.getByText("admin")).toBeInTheDocument();
+    // §4.6: `{user.role}` used to print the member verbatim, and this test
+    // pinned it (`admin`) as correct.
+    expect(screen.getByText(zh("users.roles.ADMIN"))).toBeInTheDocument();
+    expect(screen.getByTitle("ADMIN")).toBeInTheDocument();
+    expect(screen.queryByText("ADMIN")).not.toBeInTheDocument();
   });
 
   it("renders cancel and delete buttons", () => {
-    render(
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} />
-    );
-    expect(screen.getByText("取消")).toBeInTheDocument();
-    expect(screen.getByText("删除")).toBeInTheDocument();
+    renderDialog();
+    expect(screen.getByText(zh("common.cancel"))).toBeInTheDocument();
+    expect(screen.getByText(zh("common.delete"))).toBeInTheDocument();
   });
 
   it("calls onClose when cancel button is clicked", () => {
     const onClose = jest.fn();
-    render(
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={onClose} />
-    );
-    fireEvent.click(screen.getByText("取消"));
+    renderDialog({ onClose });
+    fireEvent.click(screen.getByText(zh("common.cancel")));
     expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockedDelete).not.toHaveBeenCalled();
   });
 
-  it("calls deleteMutation.mutate when delete button is clicked", () => {
+  it("deletes THIS user: the id the dialog was given is what reaches usersApi.delete", async () => {
     const onClose = jest.fn();
-    render(
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={onClose} />
-    );
-    fireEvent.click(screen.getByText("删除"));
-    expect(onClose).toHaveBeenCalled();
+    const onConfirm = jest.fn();
+    const { invalidate } = renderDialog({ user: { ...mockUser, id: 42 }, onClose, onConfirm });
+
+    fireEvent.click(screen.getByText(zh("common.delete")));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(mockedDelete).toHaveBeenCalledTimes(1);
+    expect(mockedDelete).toHaveBeenCalledWith("42");
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(mockedToast).toHaveBeenCalledWith(zh("users.delete_success"), "success");
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["users"] });
   });
 
-  it("renders nothing when user is null", () => {
-    render(
-      <UserDeleteDialog user={null} isOpen={true} onClose={jest.fn()} />
-    );
-    expect(screen.getByText("确认删除")).toBeInTheDocument();
-    expect(screen.queryByText("用户名:")).not.toBeInTheDocument();
+  it("stays open and says so when the delete fails", async () => {
+    mockedDelete.mockRejectedValue(new Error("500"));
+    const onClose = jest.fn();
+    const onConfirm = jest.fn();
+    const { invalidate } = renderDialog({ onClose, onConfirm });
+
+    fireEvent.click(screen.getByText(zh("common.delete")));
+
+    await waitFor(() => expect(mockedToast).toHaveBeenCalledWith(zh("users.delete_error"), "error"));
+    expect(mockedDelete).toHaveBeenCalledWith("1");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("renders nothing about the user when user is null", () => {
+    renderDialog({ user: null });
+    expect(screen.getByText(zh("users.delete_title"))).toBeInTheDocument();
+    expect(screen.queryByText(`${zh("users.username")}:`)).not.toBeInTheDocument();
   });
 });

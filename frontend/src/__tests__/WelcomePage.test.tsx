@@ -10,6 +10,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import WelcomePage from "@/app/welcome/page";
 import { auditApi, ledgerApi } from "@soulledger/core/api";
+import { tZh, zh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
@@ -22,10 +23,17 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
 
+// Key-echo by default — most assertions here are about WHICH key the page
+// chose. The identity tests swap in `tZh` (the real zh-Hans bundle) because a
+// `<DomainEnum>` under an echoing `t` renders every member as "unrecognised",
+// which is how `ADMIN` and `GUARDIAN` came to be pinned as correct output.
+const keyEcho = (key: string, params?: Record<string, string>) =>
+  params ? `${key}(${Object.values(params).join(",")})` : key;
+let mockTranslate: typeof keyEcho = keyEcho;
+
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}(${Object.values(params).join(",")})` : key,
+    t: (key: string, params?: Record<string, string>) => mockTranslate(key, params),
     formatDate: () => "FORMATTED_DATE",
     formatDateTime: () => "FORMATTED_DATETIME",
     locale: "en",
@@ -49,6 +57,7 @@ let hoursSpy: jest.SpyInstance;
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = null;
+  mockTranslate = keyEcho;
   mockedStats.mockResolvedValue({ data: stats });
   // A default so tests that are not about the feed do not have to configure
   // it. The feed tests override this with what they actually assert on.
@@ -134,12 +143,18 @@ describe("WelcomePage greeting", () => {
 describe("WelcomePage identity", () => {
   it("renders for an anonymous visitor without redirecting or crashing", async () => {
     mockUser = null;
+    mockTranslate = tZh;
 
     render(<WelcomePage />);
 
     expect(await screen.findByText(/Admin/)).toBeInTheDocument();
     expect(screen.getByText("SoulLedger")).toBeInTheDocument();
-    expect(screen.getByText("ADMIN")).toBeInTheDocument();
+    // No user means no role. `{user?.role || "ADMIN"}` used to show a visitor
+    // the administrator label; the cell is a missing value now.
+    const roleCell = screen.getByText(zh("welcome.user_role")).nextElementSibling as HTMLElement;
+    expect(roleCell.querySelector("[data-missing='unrecorded']")).not.toBeNull();
+    expect(roleCell).not.toHaveTextContent("ADMIN");
+    expect(screen.queryByText(zh("users.roles.ADMIN"))).not.toBeInTheDocument();
   });
 
   it("prefers display_name over username", async () => {
@@ -165,11 +180,15 @@ describe("WelcomePage identity", () => {
       role: "GUARDIAN",
       tenant: { display_name: "地府" },
     };
+    mockTranslate = tZh;
 
     render(<WelcomePage />);
 
     expect(await screen.findByText("地府")).toBeInTheDocument();
-    expect(screen.getByText("GUARDIAN")).toBeInTheDocument();
+    // §4.6: the translated role in the text node, the raw member only in `title`.
+    expect(screen.getByText(zh("users.roles.GUARDIAN"))).toBeInTheDocument();
+    expect(screen.getByTitle("GUARDIAN")).toBeInTheDocument();
+    expect(screen.queryByText("GUARDIAN")).not.toBeInTheDocument();
   });
 });
 

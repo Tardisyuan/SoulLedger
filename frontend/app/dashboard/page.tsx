@@ -444,10 +444,15 @@ function DashboardContent() {
                       {Object.entries(grouped).map(([action, logs]) => (
                         <div key={action}>
                           <div className="flex items-center gap-2 mb-2">
-                            <span className={`text-02 px-2 py-1 border font-medium ${actionColors[action] || actionColors.OTHER}`}>
-                              {action}
-                            </span>
-                            <span className="text-02 text-[oklch(var(--color-ink-muted))]">{logs.length} {logs.length === 1 ? "action" : "actions"}</span>
+                            {/* `OTHER` is this block's own bucket for rows with no action, not a
+                                member the backend emits — so it goes to the screen as a missing
+                                value, not as an unrecognised one. */}
+                            <DomainEnum
+                              namespace="audit.actions"
+                              value={action === "OTHER" ? null : action}
+                              className={`text-02 px-2 py-1 border font-medium ${actionColors[action] || actionColors.OTHER}`}
+                            />
+                            <span className="text-02 text-[oklch(var(--color-ink-muted))]">{t("dashboard.activity_count", { count: String(logs.length) })}</span>
                           </div>
                           <div className="space-y-1 pl-2 border-l-2 border-[oklch(var(--color-hairline))]">
                             {logs.map((log) => (

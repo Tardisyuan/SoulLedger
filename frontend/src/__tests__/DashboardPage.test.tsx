@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "@/app/dashboard/page";
 import { ledgerApi } from "@soulledger/core/api";
+import { tZh, zh } from "./support/zhBundle";
 
 const mockReplace = jest.fn();
 let mockSearch = new URLSearchParams();
@@ -29,7 +30,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 const mockShowToast = jest.fn();
-const mockT = jest.fn((key: string) => key);
+const mockT = jest.fn((key: string, _params?: Record<string, string>) => key);
 let mockUser: { role: string; permissions?: string[] } | null = { role: "ADMIN" };
 
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -42,7 +43,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string) => mockT(key),
+    t: (key: string, params?: Record<string, string>) => mockT(key, params),
     formatDateTime: (v: string) => `dt(${v})`,
     locale: "en",
     hydrated: true,
@@ -192,14 +193,25 @@ describe("DashboardPage overview", () => {
     expect(await screen.findByText("dashboard.no_realm_data")).toBeInTheDocument();
   });
 
-  it("groups recent activity by action and pluralises the count", async () => {
+  it("groups recent activity by action and counts each group in bundle copy", async () => {
+    // Real zh-Hans here, not key-echo: with an echoing `t` every enum member
+    // renders as "unrecognised", and this test used to pin `CREATE` — the raw
+    // member — as the correct output (FT-01, 2026-09-12).
+    mockT.mockImplementation(tZh);
     renderPage();
 
-    expect(await screen.findByText("CREATE")).toBeInTheDocument();
-    expect(screen.getByText("WEIRD_ACTION")).toBeInTheDocument();
-    // The two CREATE rows collapse into one group labelled with the plural.
-    expect(screen.getByText("2 actions")).toBeInTheDocument();
-    expect(screen.getByText("1 action")).toBeInTheDocument();
+    // §4.6: translated copy in the text node, the raw member only in `title`.
+    expect(await screen.findByText(zh("audit.actions.CREATE"))).toBeInTheDocument();
+    expect(screen.getByTitle("CREATE")).toBeInTheDocument();
+    expect(screen.queryByText("CREATE")).not.toBeInTheDocument();
+    // A member the bundle does not know is "unrecognised", never verbatim.
+    expect(screen.getByTitle("WEIRD_ACTION")).toHaveTextContent(zh("common.value.unrecognized"));
+    expect(screen.queryByText("WEIRD_ACTION")).not.toBeInTheDocument();
+    // The two CREATE rows collapse into one group. The count was English-only
+    // (`"action" : "actions"`) inline in the page; it is bundle copy now.
+    expect(screen.getByText(zh("dashboard.activity_count", { count: "2" }))).toBeInTheDocument();
+    expect(screen.getByText(zh("dashboard.activity_count", { count: "1" }))).toBeInTheDocument();
+    expect(screen.queryByText("2 actions")).not.toBeInTheDocument();
   });
 
   it("falls back to the resource name when an activity row has no description", async () => {

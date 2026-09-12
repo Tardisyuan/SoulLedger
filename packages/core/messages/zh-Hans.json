@@ -718,6 +718,7 @@
     "recent_activity": "最近活动",
     "export_stats": "导出统计",
     "souls_by_realm": "地域分布",
+    "activity_count": "{{count}} 条",
     "no_activity": "暂无最近活动",
     "no_realm_data": "暂无地域数据",
     "error_load": "加载统计数据失败",
