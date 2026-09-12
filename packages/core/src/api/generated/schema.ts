@@ -181,7 +181,7 @@ export interface paths {
          *         action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
          *         start_date: 开始日期 (YYYY-MM-DD)
          *         end_date: 结束日期 (YYYY-MM-DD)
-         *         limit: 返回条数 (默认 50)
+         *         limit: 返回条数 (默认 50,上限 TIMELINE_MAX_LIMIT;非正整数 400)
          */
         get: operations["v1_audit_logs_timeline_list"];
         put?: never;
