@@ -13,6 +13,12 @@ import { CIVILIZATION_OPTIONS } from '../config/civilizations'
 // cheaper than keeping unchecked claims: there is no registration form in this
 // app at all, and `app/profile/page.tsx` validates its password change by hand
 // against different rules than these stated.
+//
+// Six more went the same way on 2026-09-13 (soulTransition, judgmentConclude,
+// workflowAdvance, workflowApprove, reincarnationReborn, ledgerRecord): each
+// had exactly one reference in the tree, its own `export`. What is left is
+// what a form imports, plus `judgmentCreateSchema`, which
+// `civilizationMapCoverage.test.ts` pins to the four civilizations.
 
 export const loginSchema = z.object({
   username: z.string().min(1, '请输入用户名'),
@@ -45,21 +51,12 @@ export const soulUpdateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
   birth_date: z.string().optional().nullable(),
   origin_location: z.string().max(200, '地点最多200位').optional(),
-  // Includes SETTLED even though nothing lets an operator pick it (see
-  // soulTransitionSchema below): this schema validates the edit form, which
-  // round-trips whatever state the soul already has. A soul already at
+  // Includes SETTLED even though nothing lets an operator pick it (it is the
+  // terminal state the backend assigns when a terminal disposition executes,
+  // never a manual transition target): this schema validates the edit form,
+  // which round-trips whatever state the soul already has. A soul already at
   // SETTLED must still pass validation so the rest of the form stays usable.
   current_state: z.enum(['ALIVE', 'JUDGING', 'DISPOSED', 'REINCARNATING', 'LOST', 'SETTLED']).optional(),
-})
-
-export const soulTransitionSchema = z.object({
-  // SETTLED is deliberately absent — it's a terminal state the backend
-  // assigns when a terminal disposition executes, never a manual transition
-  // target.
-  target_state: z.enum(['ALIVE', 'JUDGING', 'DISPOSED', 'REINCARNATING', 'LOST'], {
-    error: '请选择有效目标状态',
-  }),
-  reason: z.string().max(500, '原因最多500位').optional(),
 })
 
 // ── Judgment ─────────────────────────────────────────
@@ -73,41 +70,6 @@ export const judgmentCreateSchema = z.object({
   civilization: z.enum(CIVILIZATION_OPTIONS, {
     error: '请选择文明',
   }),
-})
-
-export const judgmentConcludeSchema = z.object({
-  verdict: z.enum(['PASSED', 'FAILED', 'PURGATORY', 'RETRY'], {
-    error: '请选择裁决',
-  }),
-  notes: z.string().max(1000, '备注最多1000位').optional(),
-})
-
-// ── Workflow ──────────────────────────────────────────
-
-export const workflowAdvanceSchema = z.object({
-  notes: z.string().max(500, '备注最多500位').optional(),
-})
-
-export const workflowApproveSchema = z.object({
-  verdict: z.enum(['APPROVED', 'REJECTED', 'RETURNED'], {
-    error: '请选择裁决',
-  }),
-  notes: z.string().max(1000, '备注最多1000位').optional(),
-})
-
-// ── Reincarnation ────────────────────────────────────
-
-export const reincarnationRebornSchema = z.object({
-  soul_id: z.string().uuid('无效的灵魂ID'),
-  target_realm_id: z.string().uuid('无效的目标领域ID'),
-  // 六道 (docs/07_六道轮回详解.md): 三善道 DIVINE/HUMAN/ASURA, then 三恶道
-  // ANIMAL/HUNGRY_GHOST/HELL_BEING. OTHER is legacy-only — kept so existing
-  // records validate, not offered for new rebirths.
-  rebirth_form: z.enum(
-    ['DIVINE', 'HUMAN', 'ASURA', 'ANIMAL', 'HUNGRY_GHOST', 'HELL_BEING', 'OTHER'],
-    { error: '请选择轮回形态' }
-  ),
-  new_identity: z.string().max(100, '新身份最多100位').optional(),
 })
 
 // ── Disposition ──────────────────────────────────────
@@ -129,28 +91,9 @@ export const reincarnationRebornSchema = z.object({
 // surface as a failure. Reinstate one only alongside a form that submits it,
 // and derive its fields from the serializer.
 
-// ── Ledger Record ────────────────────────────────────
-
-export const ledgerRecordSchema = z.object({
-  soul_id: z.string().uuid('无效的灵魂ID'),
-  record_type: z.enum(['MERIT', 'DEMERIT'], {
-    error: '请选择记录类型',
-  }),
-  category: z.string().min(1, '请选择类别'),
-  description: z.string().min(1, '请输入描述').max(500, '描述最多500位'),
-  weight: z.number().min(0, '权重不能为负'),
-  event_date: z.string().optional().nullable(),
-})
-
 // ── Type inference ───────────────────────────────────
 
 export type LoginInput = z.infer<typeof loginSchema>
 export type SoulCreateInput = z.infer<typeof soulCreateSchema>
 export type SoulUpdateInput = z.infer<typeof soulUpdateSchema>
-export type SoulTransitionInput = z.infer<typeof soulTransitionSchema>
 export type JudgmentCreateInput = z.infer<typeof judgmentCreateSchema>
-export type JudgmentConcludeInput = z.infer<typeof judgmentConcludeSchema>
-export type WorkflowAdvanceInput = z.infer<typeof workflowAdvanceSchema>
-export type WorkflowApproveInput = z.infer<typeof workflowApproveSchema>
-export type ReincarnationRebornInput = z.infer<typeof reincarnationRebornSchema>
-export type LedgerRecordInput = z.infer<typeof ledgerRecordSchema>

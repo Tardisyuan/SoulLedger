@@ -76,13 +76,19 @@ copies fork on the first correction — the problem raised in
 **希腊已经不在这一组里了。** 这一节的分档是研究阶段的分法；代码此后把希腊拆成了第四个
 文明——`Civilization.GREEK`，租户 `GR_HADES`，语料是柏拉图的两个神话（《高尔吉亚》12 条 +
 《理想国》厄尔 11 条）。所以 `04_希腊冥界详解.md` 虽然仍归档在这一节，它喂的是 `GREEK`
-而不是 `EUROPEAN`。`EUROPEAN` 现在是基督教与北欧两支合一个租户，仍是产品上的取舍。
+而不是 `EUROPEAN`。**北欧也不在系统里了**：`EUROPEAN` 只剩基督教一支——北欧神话没有
+审判环节（去向取决于死法而非裁决），`backend/apps/actors/management/commands/
+consolidate_eu_pantheon.py` 记录了把它整个移出而不是降级的决定。`05_北欧死后世界.md`
+仍归档在这里，只作研究材料，不喂任何租户。
 *Greek is no longer in this group.* The filing here is the research-phase split; the
 code has since made Greek the fourth civilization — `Civilization.GREEK`, tenant
 `GR_HADES`, its corpus Plato's two myths (Gorgias 12 + Republic/Er 11). So
 `04_希腊冥界详解.md` still lives in this section but feeds `GREEK`, not `EUROPEAN`.
-`EUROPEAN` now groups the Christian and Norse material, and that is still a product
-compromise rather than a claim that they are one system.
+**Norse is out of the system as well.** `EUROPEAN` is the Christian material only:
+Norse has no judgment step (destination follows the manner of death, not a verdict),
+and `backend/apps/actors/management/commands/consolidate_eu_pantheon.py` records the
+decision to remove it outright rather than demote it. `05_北欧死后世界.md` stays here as
+research material and feeds no tenant.
 
 ### 埃及冥界 / Egyptian Duat
 

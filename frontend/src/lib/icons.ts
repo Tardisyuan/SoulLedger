@@ -90,11 +90,4 @@ export function getIconByName(name: string | null | undefined): LucideIcon {
   return ICON_LOOKUP[name] || DEFAULT_ICON;
 }
 
-/**
- * Get all available icon displayNames (for autocomplete, validation, etc.)
- */
-export function getAllIconNames(): string[] {
-  return Object.keys(ICON_LOOKUP).sort();
-}
-
 export { DEFAULT_ICON };

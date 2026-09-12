@@ -99,15 +99,3 @@ class FieldPermissionMixin:
         # Remove invisible fields
         for field_name in fields_to_remove:
             del self.fields[field_name]
-
-
-class FieldPermissionSerializerMixin(FieldPermissionMixin):
-    """
-    Alias for FieldPermissionMixin — for explicit naming in ViewSets.
-
-    Usage:
-        class SoulViewSet(viewsets.ModelViewSet):
-            serializer_class = SoulSerializer
-            # The serializer automatically applies field permissions
-    """
-    pass

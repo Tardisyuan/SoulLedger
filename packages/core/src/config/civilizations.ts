@@ -108,10 +108,6 @@ export function getCivilizationFromTenantCode(code: string): string {
   return TENANT_CODE_TO_CIVILIZATION[code] || code;
 }
 
-export function getTenantCodeFromCivilization(civ: string): string {
-  return CIVILIZATION_CODES[civ as keyof typeof CIVILIZATION_CODES] || civ;
-}
-
 export function getDisplayNameForTenant(tenantCode: string): string {
   return CIVILIZATION_DISPLAY_NAMES[tenantCode] || tenantCode;
 }

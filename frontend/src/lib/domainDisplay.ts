@@ -291,11 +291,6 @@ export function isColumnUninformative<T>(rows: readonly T[], hasValue: (row: T) 
   return rows.length > 0 && !rows.some(hasValue);
 }
 
-/** `hasValue` for the common case of "any non-empty scalar". */
-export function isPresent(value: unknown): boolean {
-  return value !== null && value !== undefined && value !== "";
-}
-
 // ---------------------------------------------------------------------------
 // Signed numbers
 // ---------------------------------------------------------------------------
