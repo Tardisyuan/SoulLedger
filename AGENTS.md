@@ -17,14 +17,15 @@ design-system 规则。`DESIGN.md` 只解释决定，不定义数值 —— 它�
 ### 1.1 颜色只有一种拼法
 
 ```
-text-[hsl(var(--color-ink))]              ✅ 唯一正确
-bg-[hsl(var(--color-status-error)/0.1)]   ✅ 带 alpha
+text-[oklch(var(--color-ink))]              ✅ 唯一正确
+bg-[oklch(var(--color-status-error)/0.1)]   ✅ 带 alpha
 text-ink                                  ❌ 裸形
 ```
 
 Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 `:root` 里同名的
-变量存的是**裸 HSL 三元组**，于是裸形生成非颜色值 —— **静默失效，不报错**。
-`globals.css:5-39` 记录了这次事故：同一页面里 10 个写 `text-[hsl(var(--color-ink-subtle))]`
+变量存的是**裸 OKLCH 三元组**（`L C H`，`7db2c6e` 起；此前是 HSL），于是裸形生成非颜色值 —— **静默失效，不报错**。
+照旧文档写 `hsl(var(--color-ink))` 同样静默失效：得到 `hsl(0.97 0.0017 247.8)`，亮度被钳到 100%，是白字。
+`globals.css:5-39` 记录了这次事故：同一页面里 10 个写 `text-[oklch(var(--color-ink-subtle))]`
 的元素正常变暗，2 个写 `text-ink-subtle` 的以全亮度渲染，而 lint / tsc / build 全绿。
 `text-ink` 本身"看起来是对的"，因为它继承了 body 的 ink —— 失败是不可见的。
 
@@ -236,7 +237,10 @@ t("nav.greeting", { username: user.username })
    不提版本的 `SyntaxError: … styleText`。
 1. `npm run build` — 必须 RC 0
 2. 清除 `.next` 缓存：`rm -rf .next`
-3. 重启前端服务：`fuser -k 3333/tcp && bash scripts/start-frontend.sh`
+3. 重启前端服务：`bash scripts/stop-frontend.sh && bash scripts/start-frontend.sh`
+   （不要写 `fuser -k 3333/tcp && …`：macOS 的 `fuser` 没有 `-k`，`&&` 短路后启动脚本
+   根本不执行。`start-frontend.sh` 自己会用 lsof 清端口；`restart-*.sh` 被 `.gitignore:84`
+   忽略，clone 下来没有。）
 4. Playwright 手动验证（或描述验证步骤）
 
 ### 后端
@@ -351,6 +355,7 @@ SoulLedger/
 └── scripts/
     ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
     ├── start-frontend.sh
+    ├── stop-frontend.sh
     └── start-backend.sh
 ```
 

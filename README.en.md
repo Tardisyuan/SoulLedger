@@ -178,8 +178,13 @@ Redis 7                            →  :6379   (channel layer + Celery broker)
 **Multi-tenancy.** A `Tenant` is an administrative record; a civilization is a
 claim about what happens to the dead. The mapping between them lives in exactly
 one place, `TENANT_CIVILIZATION` in `backend/apps/souls/models.py`. Row-level
-isolation is enforced by a `TenantManager` backed by `contextvars` (not
-`threading.local`, so it survives Celery workers and async code).
+isolation is **not** in the ORM: `TenantManager` in `apps/tenants/managers.py`
+filters soft deletes only (`is_deleted=False`); the name is a leftover. Isolation
+lives entirely in the view layer, in `apps/core/tenant.py::scope_to_tenant`
+(non-ADMIN requests are narrowed to `request.tenant`, a missing field denies),
+and the meta-test in `tests/test_tenant_scoping_contract.py` pins every ViewSet to it.
+The `contextvars` tenant exists so `apps/audit/signals.py` can attribute a
+write, not so queries filter themselves.
 
 **Permissions.** Four roles (ADMIN / JUDGE / GUARDIAN / VIEWER) over
 codename-based permissions, plus `DataScope` for row visibility and
@@ -486,6 +491,12 @@ Implemented: JWT and API-key authentication, RBAC with data and field scoping,
 Fernet encryption for webhook secrets and PII payloads, atomic Redis rate
 limiting, SSRF validation on webhook URLs, CSP/HSTS/X-Frame-Options, and an audit
 trail on mutations.
+
+The Fernet encryption **depends on `ENCRYPTION_KEY`** (`config/settings.py`):
+with `DEBUG=False` and no key the process refuses to start; with `DEBUG=True`
+and no key it only warns, and `WebhookConfig.signing_secret` plus
+`DeathRegistrationRequest.source_payload` are **stored in plaintext**. If you see
+that warning in development, those two columns are plaintext.
 
 That list describes what the code does, not a security guarantee. See
 [`SECURITY.md`](SECURITY.md) for how to report a problem.

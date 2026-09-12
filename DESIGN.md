@@ -63,13 +63,15 @@ soul's confession, the grounds of a judgment. The serif is not decoration; it
 marks quoted speech. Do not spend it anywhere else.
 
 **One spelling for a colour token, and it is the bracketed one.**
-`text-[hsl(var(--color-ink))]`, never `text-ink`. The bare form silently
+`text-[oklch(var(--color-ink))]`, never `text-ink`. The bare form silently
 generated no CSS after the Tailwind v4 migration — the `@theme` wrapper and the
 `:root` triple collided on one name and `@layer base` won, leaving
-`color: 210 11% 96%`, which is not a colour. 450 call sites shipped that way
+`color: 0.97 0.0017 247.8`, which is not a colour. 450 call sites shipped that way
 with every gate green. `cssTokenReferenceContract.test.ts` now fails the build
 if a bare form comes back. The raw triple has to stay raw: it is what makes
-`hsl(… / 0.2)` possible, and hundreds of sites need the alpha.
+`oklch(… / 0.2)` possible, and hundreds of sites need the alpha. The triple is
+OKLCH since `7db2c6e` (2026-09-09); wrapping it in `hsl()` the old way clamps
+lightness to 100% and paints white, with every gate green.
 
 **Four cosmologies, and they number their own scripture.**
 `frontend/src/config/civilizationSigil.ts` is the idea: an Egyptian article is

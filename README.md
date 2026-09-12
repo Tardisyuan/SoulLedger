@@ -159,8 +159,11 @@ Redis 7                        →  :6379   （Channel Layer + Celery broker）
 
 **多租户**：`Tenant` 是一条管理记录，而「文明」是一项关于死者去向的主张。两者的映射
 只写在一个地方——`backend/apps/souls/models.py` 中的 `TENANT_CIVILIZATION`。行级隔离
-由基于 `contextvars`（而非 `threading.local`）的 `TenantManager` 强制执行，因此在
-Celery worker 与异步代码中依然有效。
+**不在 ORM 层**：`apps/tenants/managers.py` 的 `TenantManager` 只过滤软删除
+（`is_deleted=False`），名字是历史遗留。隔离全部在视图层，由
+`apps/core/tenant.py::scope_to_tenant` 收口（非 ADMIN 强制按 `request.tenant` 过滤，
+缺字段则拒绝），`tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet 都走它。
+`contextvars` 里的当前租户只供 `apps/audit/signals.py` 归属写操作，不用于过滤。
 
 **权限**：四种角色（ADMIN / JUDGE / GUARDIAN / VIEWER）叠加 codename 权限，再加
 `DataScope`（行可见性）与 `FieldPermission`（字段可见性）。API 侧由
@@ -430,6 +433,11 @@ jsx-a11y，全部 `error` 级：
 已实现：JWT 与 API Key 认证、带数据与字段范围的 RBAC、webhook secret 与 PII 载荷的
 Fernet 加密、基于 Redis 的原子限流、webhook URL 的 SSRF 校验、CSP/HSTS/X-Frame-Options，
 以及写操作的审计轨迹。
+
+Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=False` 且未设置时
+拒绝启动；`DEBUG=True` 且未设置时只打一条 warning，`WebhookConfig.signing_secret` 与
+`DeathRegistrationRequest.source_payload` **明文落库**。开发环境看到那条 warning 时，
+库里的这两列就是明文。
 
 这份清单描述的是代码做了什么，不是一份安全保证。报告问题的方式见
 [`SECURITY.md`](SECURITY.md)。

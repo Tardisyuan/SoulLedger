@@ -163,7 +163,7 @@ class TestRootLevelFiles:
 
     @pytest.mark.parametrize(
         "name",
-        ["README.md", "CLAUDE.md", "Dockerfile", "docker-compose.yml", ".gitignore"],
+        ["README.md", "CLAUDE.md", ".dockerignore", "docker-compose.yml", ".gitignore"],
     )
     def test_documentation_and_deployment_files_run_nothing(self, hook, name):
         """The inverse assertion. A hook that runs ten minutes of tests for a

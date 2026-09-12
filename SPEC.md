@@ -26,6 +26,11 @@
 >   外加一个声明为空的 `HELL_LAW`。以
 >   `backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE` 为准。
 > - **CI 现在只有 `workflow_dispatch` 手动触发**，没有任何自动触发（Actions 额度耗尽）。
+- **`TenantManager` 不再自动过滤租户。** §2 的架构图、§9 验收表的「TenantManager ✅ 自动过滤
+  QuerySet」与 ADR-004 的「双重隔离」都是当时的设计；现在 `apps/tenants/managers.py` 只过滤
+  软删除，租户隔离**单层**、全在视图层 `apps/core/tenant.py::scope_to_tenant`，
+  由 `tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet。隐式过滤被移除的原因见
+  `managers.py` 头部与 `docs/tenant-contextvar-investigation.md`（历史快照）。
 
 ---
 
