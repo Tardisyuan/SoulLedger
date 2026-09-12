@@ -21,13 +21,19 @@ services:
           memory: 256m
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1
+    # A tag that exists. `1.23.1` never did (Docker Hub has `v1.23.1-p0..p3`),
+    # so this merge could not start — measured 2026-09-13, "manifest unknown".
+    image: edoburu/pgbouncer:v1.24.1-p1
     environment:
       DATABASE_URL: postgres://soulledger:${DB_PASSWORD}@db:5432/soulledger
       MAX_CLIENT_CONN: 200
       DEFAULT_POOL_SIZE: 20
       POOL_MODE: transaction
       ADMIN_USERS: soulledger
+      # postgres:16 stores passwords as scram-sha-256; the image's default
+      # md5 fails the server login with "wrong password type" and the backend
+      # restart-loops on migrate (measured 2026-09-13).
+      AUTH_TYPE: scram-sha-256
     restart: always
     depends_on:
       db:
@@ -105,10 +111,10 @@ services:
       - "443:443"
     volumes:
       # A complete nginx.conf (events{} + http{}), so it replaces the main file.
-      # This used to mount a root `./nginx.conf` that does not exist — docker
-      # then creates an empty directory of that name and nginx dies on it —
-      # and into conf.d/, where a file with events{} is a syntax error (IS-09).
-      - ./infrastructure/nginx.conf:/etc/nginx/nginx.conf:ro
+      # A bind-mount source that does not exist becomes an empty directory and
+      # nginx dies on it; a file with events{} under conf.d/ is a syntax error
+      # (IS-09). tests/test_production.py checks the source exists.
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - static_files:/var/www/static:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:

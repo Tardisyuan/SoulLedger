@@ -83,7 +83,14 @@ services:
     healthcheck:
       # python, not curl: python:*-slim has no curl. /health/ is the route
       # (config/urls.py); /api/v1/health/ never existed (IS-11).
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')"]
+      # X-Forwarded-Proto: with DEBUG unset Django redirects plain http to
+      # https (SECURE_SSL_REDIRECT), urllib follows the 301 to
+      # https://127.0.0.1:8000 and hangs in a TLS handshake against plaintext
+      # daphne until the 10s timeout — "unhealthy" forever, and celery, which
+      # waits for a healthy backend, never starts (measured 2026-09-13 on the
+      # production merge). SECURE_PROXY_SSL_HEADER makes the header count as
+      # https, so the probe reaches the view.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/health/', headers={'X-Forwarded-Proto': 'https'}))"]
       interval: 30s
       timeout: 10s
       retries: 3

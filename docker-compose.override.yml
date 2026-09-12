@@ -8,6 +8,17 @@
 # compose already set, but everything else in that file would apply. daphne
 # does not reload on edit anyway; rebuild with `docker compose up --build`.
 services:
+  # Published so Django/Next.js can run on the host against just these two:
+  # `docker compose up -d db redis` replaces the postgres+redis-only stack that
+  # used to live in infrastructure/.
+  db:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
   backend:
     ports:
       - "8000:8000"

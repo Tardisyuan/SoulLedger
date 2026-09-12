@@ -444,7 +444,8 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 8. **`SECRET_KEY` 的环境变量名。** `settings.py:14` 读 `SECRET_KEY`、`ci.yml:14` 也是；
    但 `infrastructure/docker-compose.prod.yml:43-44,64` 注入 `DJANGO_SECRET_KEY`，
    `tests/test_production.py:161` 钉的也是 `DJANGO_SECRET_KEY`。**没找到映射。**
-   静态观察，未起容器验证。
+   静态观察，未起容器验证。（IS-05 已修；`infrastructure/` 那套 2026-09-13 整个删除，
+   只留根的 compose 三件套与 `nginx.conf`。）
 9. **pip-audit 命令。** `CLAUDE.md:81` 不带 `-r`（全环境）vs CI 带 `-r requirements.txt`。
 10. **`backend/AGENTS.md` 不是规范文档。** 它自述为"2026-05-12 那一次优化的记录，
     不是现状描述"（`:1,8`）。今天仍成立的只有两条：contextvar、`apps/permissions` 已删。

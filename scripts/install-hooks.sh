@@ -196,7 +196,7 @@ TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 # the framework's.
 #
 # Only root-level FILES. Top-level directories other than the three code roots
-# (docs/, infrastructure/, scripts/, .github/) are not gated, deliberately —
+# (docs/, scripts/, .github/) are not gated, deliberately —
 # failing closed on them would put a full backend run behind every docs edit,
 # and a hook that is slow for no reason is a hook people learn to skip.
 ROOT_LEVEL=$(echo "$CHANGED" | grep -vE '/' | grep -vE '^$' || true)
