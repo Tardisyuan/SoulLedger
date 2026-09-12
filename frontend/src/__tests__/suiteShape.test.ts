@@ -66,6 +66,7 @@ const COLLECTED_FILES = [
   "PermissionDenied.test.tsx",
   "PermissionFormModal.test.tsx",
   "PermissionsMatrixDiff.test.ts",
+  "PermissionsPage.roleRename.test.tsx",
   "PostCard.test.tsx",
   "paginatedPagesCanBePaged.test.ts",
   "permissionGatesActuallyWithhold.test.tsx",

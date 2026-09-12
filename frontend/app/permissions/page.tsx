@@ -163,15 +163,41 @@ export default function PermissionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matrixReady, roleNames, rolePermsUpdatedKey]);
 
-  // Populate the editable `checked` state from the loaded baseline exactly
-  // once. After a save, individual roles are patched in place (see
-  // runSave) rather than re-deriving from `baseline` here, so in-progress
-  // edits to OTHER roles are never clobbered by one role's save landing.
+  // Populate the editable `checked` state from the loaded baseline once, then
+  // keep its KEY SET in step with the baseline's. After a save, individual
+  // roles are patched in place (see runSave) rather than re-deriving from
+  // `baseline` here, so in-progress edits to OTHER roles are never clobbered
+  // by one role's save landing.
+  //
+  // THE KEY SET HAS TO FOLLOW, AND THIS WAS THE HOLE. `checked` is keyed by
+  // role name. Rename a custom role (the backend cascades it, `3ecd5af`) and
+  // the roles query comes back with the new name: `baseline` is rebuilt under
+  // that key, `checked` still holds the old one, and `checked[newName]` is
+  // undefined — which `useMatrixSave` reads as an empty set. The live diff
+  // for the renamed role was therefore "remove all N grants", tier 3, and
+  // confirming it really stripped the role (FL-05). A role that appears in
+  // `baseline` but not in `checked` is seeded from the baseline; one that has
+  // left `baseline` is dropped. Roles present in both are left exactly as the
+  // operator has them, which is what the once-only rule was protecting.
+  // Pinned by `PermissionsPage.roleRename.test.tsx`.
   useEffect(() => {
-    if (baseline && checked === null) {
-      setChecked(cloneGrantMap(baseline));
-    }
-  }, [baseline, checked]);
+    if (!baseline) return;
+    setChecked((prev) => {
+      if (prev === null) return cloneGrantMap(baseline);
+      const next: GrantMap = {};
+      let changed = false;
+      for (const role of Object.keys(baseline)) {
+        if (prev[role]) {
+          next[role] = prev[role];
+        } else {
+          next[role] = new Set(baseline[role]);
+          changed = true;
+        }
+      }
+      if (Object.keys(prev).some((role) => !(role in baseline))) changed = true;
+      return changed ? next : prev;
+    });
+  }, [baseline]);
 
   function toggleCell(role: string, permId: number) {
     if (isSaving) return;
