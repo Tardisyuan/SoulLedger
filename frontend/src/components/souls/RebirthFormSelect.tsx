@@ -65,10 +65,14 @@ interface RebirthFormSelectProps {
 export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSelectProps) {
   // `tf` (translate, or show this literal) came down as a prop from the soul
   // detail page through SoulActionsCard; it is on the i18n context now. This is
-  // the one of the four that did not already call `useI18n` — the six form
-  // names ship in messages/*.json under `reincarnation.forms.*`, but the two
-  // group headings and `reincarnation.form_label` do not, so half of what this
-  // component renders comes out of the fallbacks written below.
+  // the one of the four that did not already call `useI18n`. The six form
+  // names shipped in the message bundles under `reincarnation.forms.*` from
+  // the start; the two group headings and `reincarnation.form_label` did NOT
+  // until DF-02, so an `en` reader got the Chinese fallbacks below. All three
+  // are in every bundle now, and `notifyKeysExistInTheBundles.test.ts` scans
+  // `tf(` literals — the glob in the previous version of this very comment is
+  // what its regex-based comment stripper choked on, hiding the two group
+  // calls from the scan.
   const { tf } = useI18n();
   const groups = [
     {

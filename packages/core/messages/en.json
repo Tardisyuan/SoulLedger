@@ -284,7 +284,40 @@
           "event_after_death": "Event after death"
         }
       },
-      "delete_to_recycle_bin": "Moved to the recycle bin"
+      "delete_to_recycle_bin": "Moved to the recycle bin",
+      "more_actions": "More actions",
+      "timeline": {
+        "title": "Soul ledger page",
+        "tab_all": "All",
+        "tab_karma": "Karma only",
+        "tab_judgment": "Verdicts only",
+        "tab_system": "Include system events",
+        "empty": "No records match the filter",
+        "expand": "Expand",
+        "open_in_queue": "Open in the judgment queue",
+        "years": "years",
+        "cycle_band": "Life {{n}}",
+        "born": "Born in {{location}}",
+        "born_unknown_place": "Born",
+        "died": "Died",
+        "entered_judgment": "Entered judgment{{court}}",
+        "awaiting_judgment": "Judgment · awaiting verdict",
+        "awaiting_judgment_hint": "The soul is in the judgment queue, awaiting a verdict",
+        "verdict": "Verdict · {{verdict}}",
+        "disposed": "Disposition carried out · {{realm}}",
+        "reborn": "Reborn as {{name}}",
+        "original": "Raw {{sign}}{{n}}",
+        "terminal_flush": "── no one remains",
+        "terminal_filled": "◉ someone remains",
+        "stage_judging": "Judgment",
+        "stage_judging_hint": "Not started · the soul enters the judgment queue after death",
+        "stage_disposed": "Disposition",
+        "stage_disposed_hint": "Not started · assigned by the verdict once judged",
+        "stage_reincarnating": "Rebirth",
+        "stage_reincarnating_hint": "Not started · disposition must complete first",
+        "stage_next_life": "Next life",
+        "stage_next_life_hint": "Settled once disposition and rebirth complete"
+      }
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -732,7 +765,14 @@
       "empty": "No entries recorded."
     },
     "series_effective": "Effective",
-    "series_decayed": "Decayed away"
+    "series_decayed": "Decayed away",
+    "raw_vs_decayed": "Raw / decayed",
+    "raw_merit": "Raw merit",
+    "raw_demerit": "Raw demerit",
+    "decayed_merit": "Decayed merit",
+    "decayed_demerit": "Decayed demerit",
+    "raw_balance_sr": "Raw balance {{n}}",
+    "advisory_disclaimer": "For the bench's reference only · karma is not part of the verdict calculation; the judge decides"
   },
   "judgment": {
     "title": "Judgment",
@@ -1445,6 +1485,7 @@
   "reincarnation": {
     "reborn_success": "Reincarnation started",
     "reborn_error": "Failed to start reincarnation",
+    "form_label": "Rebirth form",
     "forms": {
       "DIVINE": "Deva",
       "HUMAN": "Human",
@@ -1453,6 +1494,10 @@
       "HUNGRY_GHOST": "Hungry Ghost",
       "HELL_BEING": "Hell Being",
       "OTHER": "Unclassified"
+    },
+    "groups": {
+      "THREE_GOOD_PATHS": "Three good paths",
+      "THREE_EVIL_PATHS": "Three evil paths"
     }
   },
   "social": {

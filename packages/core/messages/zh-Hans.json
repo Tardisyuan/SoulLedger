@@ -284,7 +284,40 @@
           "event_after_death": "事件晚于死亡"
         }
       },
-      "delete_to_recycle_bin": "已移至回收站"
+      "delete_to_recycle_bin": "已移至回收站",
+      "more_actions": "更多操作",
+      "timeline": {
+        "title": "灵魂账页",
+        "tab_all": "全部",
+        "tab_karma": "仅业力",
+        "tab_judgment": "仅裁决",
+        "tab_system": "含系统事件",
+        "empty": "没有符合筛选条件的记录",
+        "expand": "展开",
+        "open_in_queue": "在审判队列中打开",
+        "years": "年",
+        "cycle_band": "第 {{n}} 世",
+        "born": "生于 {{location}}",
+        "born_unknown_place": "出生",
+        "died": "身故",
+        "entered_judgment": "进入审判{{court}}",
+        "awaiting_judgment": "审判 · 等待裁决",
+        "awaiting_judgment_hint": "灵魂正在审判队列中，等待裁决",
+        "verdict": "裁决 · {{verdict}}",
+        "disposed": "处置执行 · {{realm}}",
+        "reborn": "转生为 {{name}}",
+        "original": "原始 {{sign}}{{n}}",
+        "terminal_flush": "── 其人已无",
+        "terminal_filled": "◉ 尚有其人",
+        "stage_judging": "审判",
+        "stage_judging_hint": "尚未开始 · 灵魂身故后进入审判队列",
+        "stage_disposed": "处置",
+        "stage_disposed_hint": "尚未开始 · 裁决后按判定结果分配去向",
+        "stage_reincarnating": "轮回",
+        "stage_reincarnating_hint": "尚未开始 · 需先完成处置",
+        "stage_next_life": "下一世",
+        "stage_next_life_hint": "待处置与轮回完成后确定"
+      }
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
@@ -732,7 +765,14 @@
       "empty": "尚无账目。"
     },
     "series_effective": "现值",
-    "series_decayed": "已衰减"
+    "series_decayed": "已衰减",
+    "raw_vs_decayed": "原始 / 衰减后",
+    "raw_merit": "原始 功德",
+    "raw_demerit": "原始 罪业",
+    "decayed_merit": "衰减后 功德",
+    "decayed_demerit": "衰减后 罪业",
+    "raw_balance_sr": "原始余额 {{n}}",
+    "advisory_disclaimer": "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出"
   },
   "judgment": {
     "title": "审判",
@@ -1445,6 +1485,7 @@
   "reincarnation": {
     "reborn_success": "轮回已启动",
     "reborn_error": "启动轮回失败",
+    "form_label": "轮回形态",
     "forms": {
       "DIVINE": "天道",
       "HUMAN": "人道",
@@ -1453,6 +1494,10 @@
       "HUNGRY_GHOST": "饿鬼道",
       "HELL_BEING": "地狱道",
       "OTHER": "未分类"
+    },
+    "groups": {
+      "THREE_GOOD_PATHS": "三善道",
+      "THREE_EVIL_PATHS": "三恶道"
     }
   },
   "social": {
