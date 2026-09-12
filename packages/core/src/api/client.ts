@@ -199,6 +199,9 @@ export async function rotateRefreshToken(refresh: string): Promise<string> {
   // storage mechanism (see ../platform/types.ts): "session vs persistent" is a
   // sentence this package can state and check, and "sessionStorage vs cookie"
   // is not.
+  // `setAccessToken` also notifies `onAccessTokenChanged` subscribers — the
+  // realtime provider re-opens a socket that 4001'd on the old token. See the
+  // doc on that port in `../platform/index.ts` (FL-04).
   setAccessToken(data.access);
   // The removal below is not tidiness — a browser that has been through the old
   // code still has that cookie, and a persistent-first reader would keep

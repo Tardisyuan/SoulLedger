@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { WSClient, type WSStatus, type WSMessage } from "@soulledger/core/ws/client";
-import { onSessionResume } from "@soulledger/core/platform";
+import { onAccessTokenChanged, onSessionResume } from "@soulledger/core/platform";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
@@ -163,6 +163,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
    * cleanup: this listener sits on `window`, which outlives the tree.
    */
   useEffect(() => onSessionResume(() => clientRef.current?.reconnect()), []);
+
+  /**
+   * A refreshed access token re-opens a socket the client had given up on.
+   *
+   * The other trigger `WSClient.reconnect()` was missing. A 4001 close is the
+   * one the client refuses to retry — the token was refused, and retrying a
+   * refused token is a loop, so `shouldReconnectAfterClose` says no and
+   * `WebSocketContext.test.tsx` pins that it stays no. `api/client.ts` then
+   * refreshes the same token on the next 401 and every REST call heals; this
+   * socket stayed `"failed"` until a reload (FL-04). `setAccessToken` is the
+   * one write both the login page and `rotateRefreshToken` go through, so
+   * that write is the signal.
+   *
+   * Same argument as above for the absence of a status guard: `connect()`
+   * returns early over an OPEN or CONNECTING socket, so a refresh landing on a
+   * healthy link — which is every refresh on a healthy session, once per
+   * thirty minutes — opens nothing and closes nothing. Counted rather than
+   * assumed, in `WebSocketContext.tokenRefresh.test.tsx`. Empty deps and
+   * `clientRef` at call time, for the reasons the resume subscription gives.
+   */
+  useEffect(() => onAccessTokenChanged(() => clientRef.current?.reconnect()), []);
 
   const send = useCallback((data: WSMessage) => {
     clientRef.current?.send(data);
