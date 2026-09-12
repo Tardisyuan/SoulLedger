@@ -18,6 +18,7 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 from apps.authentication.models import is_assignable_role
+from apps.core.csv_safe import csv_safe
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
@@ -39,6 +40,7 @@ from .serializers import (
     UserRoleSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    email_already_registered,
     role_rank,
 )
 
@@ -47,6 +49,13 @@ from .serializers import (
 #: `LoginView.post`) — the point is that a six-digit code must not be guessable
 #: at whatever rate the network allows, not to pick a clever number.
 MAX_RESET_CODE_ATTEMPTS = 5
+
+#: Reset codes that may be *requested* for one address per window. Paired with
+#: `PasswordResetThrottle` (3 per 5 minutes per IP): this one bounds how often
+#: a single mailbox can be flooded, the throttle bounds how many addresses one
+#: client can test. Neither alone is the limit that matters.
+MAX_RESET_REQUESTS_PER_ADDRESS = 3
+RESET_REQUEST_WINDOW_SECONDS = 300
 
 # ---------------------------------------------------------------------------
 # User Management ViewSet (Tenant Admin)
@@ -293,11 +302,18 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         writer.writerow(['username', 'email', 'role', 'is_active', 'tenant', 'create_time'])
         for user in qs:
             writer.writerow([
-                user.username,
-                user.email,
-                user.role,
+                # `csv_safe` on every free-text cell (apps/core/csv_safe.py).
+                # `username` is picked by whoever registers — `/auth/register/`
+                # is AllowAny — and `email` by whoever edits their own profile,
+                # while this file is opened by an administrator on their own
+                # machine. The ledger export has neutralised formula cells
+                # since 2026-08-29; this one was written without that guard
+                # and nothing pointed the two at a shared rule (DB-02).
+                csv_safe(user.username),
+                csv_safe(user.email),
+                csv_safe(user.role),
                 user.is_active,
-                user.tenant.code if user.tenant else '',
+                csv_safe(user.tenant.code if user.tenant else ''),
                 user.create_time.isoformat() if hasattr(user, 'create_time') else '',
             ])
         return response
@@ -354,6 +370,13 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
 
                 if User.objects.filter(username=username, tenant=tenant).exists():
                     errors.append(f"Row {i+2}: username '{username}' already exists")
+                    continue
+
+                # Same rule as every other write path (BP-04). Checked per row
+                # rather than once: rows are created as they are read, so the
+                # second of two rows carrying one address sees the first.
+                if email_already_registered(email):
+                    errors.append(f"Row {i+2}: email '{email}' already belongs to another account")
                     continue
 
                 # Require password in CSV
@@ -648,10 +671,41 @@ def reset_password_request(request):
     Forgot password — generate 6-digit code and send to email.
     Stores code in Redis cache with 5-minute TTL.
     """
+    from django.core.cache import cache
+
+    from .throttles import PasswordResetThrottle
+
+    # BOTH limits run BEFORE the lookup, and both refuse identically.
+    #
+    # The address counter used to sit *below* the `matches != 1` early return,
+    # so only a registered address was ever counted: ask four times and a
+    # registered address answered 429 while an unregistered one answered 200
+    # forever. The limiter was a registration oracle — for exactly the question
+    # the comment below says this endpoint refuses to answer (BP-03).
+    #
+    # The per-IP half is new. An address counter bounds how often one mailbox
+    # is flooded; it does nothing about one client walking a list of addresses,
+    # which is the enumeration itself. `PasswordResetThrottle` is keyed by
+    # `apps/core/client_ip.py`, so rotating `X-Forwarded-For` does not reset it.
+    too_frequent = Response(
+        {"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS
+    )
+    if not PasswordResetThrottle().allow_request(request, None):
+        return too_frequent
+
     serializer = ResetPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
     email = serializer.validated_data["email"]
+
+    # Normalised, so a case variant is not a fresh bucket. The lookup below
+    # stays exact, as does the code's own key — `set_new_password` reads it
+    # back under the address as typed.
+    rate_limit_key = f"pwd_reset_rate:{email.strip().lower()}"
+    attempts = cache.get(rate_limit_key, 0)
+    if attempts >= MAX_RESET_REQUESTS_PER_ADDRESS:
+        return too_frequent
+    cache.set(rate_limit_key, attempts + 1, timeout=RESET_REQUEST_WINDOW_SECONDS)
 
     # Check if user exists (but always return success for security)
     #
@@ -659,31 +713,20 @@ def reset_password_request(request):
     # (it is `AbstractUser`'s, and only `username` is unique), so `.get()` raises
     # `MultipleObjectsReturned` on a duplicate — an uncaught 500. Registration is
     # `AllowAny`, so anyone could create a second account on someone else's
-    # address and take that address's password reset offline permanently.
+    # address and take that address's password reset offline permanently. Every
+    # write path now refuses a duplicate (BP-04), but rows predating that are
+    # still possible, so both counts stay handled here.
     #
     # Zero and many are both answered with the same success sentence as one: this
     # endpoint deliberately does not disclose whether an address is registered,
     # and "your address is ambiguous" would disclose it.
-    matches = User.objects.filter(email=email).count()
-    if matches != 1:
-        return Response({"detail": "验证码已发送到邮箱"})
+    if User.objects.filter(email=email).count() == 1:
+        # Generate secure 6-digit code, stored in the cache with a 5-minute TTL
+        code = f"{secrets.randbelow(900000) + 100000:06d}"
+        cache.set(f"pwd_reset:{email}", code, timeout=300)
 
-    # Rate limiting: max 3 requests per 5 minutes per email
-    from django.core.cache import cache
-    rate_limit_key = f"pwd_reset_rate:{email}"
-    attempts = cache.get(rate_limit_key, 0)
-    if attempts >= 3:
-        return Response({"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-    cache.set(rate_limit_key, attempts + 1, timeout=300)
-
-    # Generate secure 6-digit code
-    code = f"{secrets.randbelow(900000) + 100000:06d}"
-
-    # Store in Redis cache, 5 minutes TTL
-    cache.set(f"pwd_reset:{email}", code, timeout=300)
-
-    # In production, send email here (DO NOT log the code):
-    # send_mail("密码重置验证码", f"您的验证码: {code}", ...)
+        # In production, send email here (DO NOT log the code):
+        # send_mail("密码重置验证码", f"您的验证码: {code}", ...)
 
     return Response({"detail": "验证码已发送到邮箱"})
 
@@ -722,9 +765,11 @@ def set_new_password(request):
     # `reset_password_request` above limits sending to 3 per 5 minutes per
     # address. Nothing limited *checking*: a wrong code returned 400 and left
     # the code live for its full 5-minute TTL, so the only ceiling on guessing
-    # was `AnonRateThrottle` (60/min) — and DRF keys that on `X-Forwarded-For`
-    # when `NUM_PROXIES` is unset, which it is, so rotating one header reset it.
-    # The code is six digits; an unmetered guesser is the whole attack.
+    # was `AnonRateThrottle` (60/min) — which, until IS-01, DRF keyed on the
+    # client's own `X-Forwarded-For`, so rotating one header reset it. The code
+    # is six digits; an unmetered guesser is the whole attack. (That throttle
+    # now keys on `apps/core/client_ip.py`; this counter is still the limit
+    # that matters, because it is per address rather than per client.)
     #
     # On the last allowed failure the CODE IS DELETED, not merely rejected.
     # Counting alone would leave a live code and let the attacker wait out the

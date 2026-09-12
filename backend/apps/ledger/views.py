@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
+from apps.core.csv_safe import csv_safe
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.disposition.models import Disposition
@@ -27,28 +28,6 @@ from apps.ledger.serializers import (
 from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.realms.models import resolve_localized_name
 from apps.souls.models import Soul, SoulState
-
-
-def _csv_safe(value):
-    """Neutralise a spreadsheet formula hiding in a data cell.
-
-    `csv.writer` quotes a cell that contains commas or quotes; it does not
-    care what the cell *starts* with. Excel and LibreOffice do: a cell whose
-    first character is one of ``= + - @`` (or a leading tab/CR, which some
-    versions strip before deciding) is parsed as a formula on open. Measured
-    2026-08-29: a soul named ``=HYPERLINK("http://evil","click")`` produced a
-    row that evaluates on open.
-
-    The name in that cell comes from an external death-registration feed, and
-    this export is a file a person opens on their own machine -- so the writer
-    of the value and the reader of the file need not be the same tenant.
-
-    A leading apostrophe is the fix spreadsheets themselves use: it makes the
-    cell literal text and is not shown. Applied to the rendered string, so the
-    ints and ISO timestamps in this row pass through untouched.
-    """
-    text = "" if value is None else str(value)
-    return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
 
 
 def _format_death_date(soul: Soul) -> str:
@@ -510,14 +489,15 @@ class LedgerExportStatsView(APIView):
         for soul in qs.iterator(chunk_size=1000):
             writer.writerow([
                 str(soul.id),
-                # `_csv_safe` on every free-text cell. `name` is the one an
-                # external system supplies, but `civilization` and
-                # `current_state` are strings too and a whitelist that has to
-                # be re-checked whenever a column is added is the kind of
-                # guard that silently stops covering things.
-                _csv_safe(soul.name),
-                _csv_safe(soul.civilization),
-                _csv_safe(soul.current_state),
+                # `csv_safe` on every free-text cell (apps/core/csv_safe.py —
+                # shared with the user export, which had no such guard at all
+                # until DB-02). `name` is the one an external system supplies,
+                # but `civilization` and `current_state` are strings too, and a
+                # whitelist that has to be re-checked whenever a column is
+                # added is the kind of guard that silently stops covering things.
+                csv_safe(soul.name),
+                csv_safe(soul.civilization),
+                csv_safe(soul.current_state),
                 soul.merit_score,
                 soul.demerit_score,
                 soul.karmic_balance,
@@ -525,7 +505,7 @@ class LedgerExportStatsView(APIView):
                 # for BCE deaths, so build the CSV cell from the raw
                 # year/month/day instead — e.g. "-612-03" for a
                 # year+month-only BCE record.
-                _csv_safe(_format_death_date(soul)),
+                csv_safe(_format_death_date(soul)),
                 soul.create_time.isoformat(),
             ])
 
