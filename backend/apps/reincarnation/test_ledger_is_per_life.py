@@ -136,3 +136,63 @@ def test_the_backfill_files_old_rows_under_the_life_the_soul_is_in_now():
     other.refresh_from_db()
     assert old.cycle == 2
     assert other.cycle == 0
+
+
+@pytest.mark.django_db
+class TestDateChecksAreAlsoPerLife:
+    """The date checks read the same all-lives queryset the ledger used to.
+
+    After a rebirth the soul carries the new life's birth and death, but its
+    first-life deeds are still dated in the first life. Compared against the
+    new dates they are "before birth" (an ERROR) — so a reborn soul is flagged
+    on the list, matched by ?has_date_problem=true, and its old records show
+    problems on the detail page, all for dates that were right when written.
+    The previous life's dates are not stored, so its records cannot be judged
+    at all: they are left out, not re-judged.
+    """
+
+    @pytest.fixture
+    def reborn_with_a_later_birth(self, reborn_soul):
+        Soul.objects.filter(pk=reborn_soul.pk).update(birth_year=2010)
+        return (
+            Soul.objects.select_related("tenant")
+            .prefetch_related("records", "reincarnations")
+            .get(pk=reborn_soul.pk)
+        )
+
+    def test_the_list_row_is_not_flagged_for_the_previous_lifes_deeds(self, reborn_with_a_later_birth):
+        from apps.souls.serializers import SoulListSerializer
+
+        data = SoulListSerializer(reborn_with_a_later_birth, context={}).data
+        assert data["has_record_error"] is False
+        assert data["has_date_warning"] is False
+
+    def test_the_filter_does_not_match_the_previous_lifes_deeds(self, reborn_with_a_later_birth):
+        from apps.souls.filters import SoulFilter
+
+        matched = SoulFilter({"has_date_problem": "true"}, queryset=Soul.objects.all()).qs
+        assert reborn_with_a_later_birth not in matched
+        unmatched = SoulFilter({"has_date_problem": "false"}, queryset=Soul.objects.all()).qs
+        assert reborn_with_a_later_birth in unmatched
+
+    def test_a_previous_lifes_record_reports_no_problems(self, reborn_with_a_later_birth):
+        from apps.souls.serializers import SoulRecordSerializer
+
+        old = reborn_with_a_later_birth.records.order_by("recorded_at").first()
+        assert old.cycle == 0
+        assert SoulRecordSerializer(old, context={}).data["date_problems"] == []
+
+    def test_this_lifes_record_is_still_judged(self, reborn_with_a_later_birth):
+        """The scoping must not switch the check off for the current life."""
+        from apps.souls.serializers import SoulListSerializer
+
+        _record(reborn_with_a_later_birth, "MERIT", 1, "dated before this birth", event_year=2005)
+        soul = Soul.objects.prefetch_related("records", "reincarnations").get(pk=reborn_with_a_later_birth.pk)
+        assert SoulListSerializer(soul, context={}).data["has_record_error"] is True
+
+    def test_editing_a_previous_lifes_record_date_is_not_refused_by_this_lifes_dates(self, reborn_with_a_later_birth):
+        from apps.souls.serializers import SoulRecordSerializer
+
+        old = reborn_with_a_later_birth.records.order_by("recorded_at").first()
+        serializer = SoulRecordSerializer(old, data={"event_date": "2001-06-01"}, partial=True)
+        assert serializer.is_valid(), serializer.errors

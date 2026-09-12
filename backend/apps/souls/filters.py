@@ -7,6 +7,7 @@ from django.db.models.functions import Coalesce
 
 from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
+from apps.souls.serializers import _this_lifes_records
 
 
 class SoulFilter(filters.FilterSet):
@@ -144,7 +145,7 @@ class SoulFilter(filters.FilterSet):
         """
         if value is None:
             return queryset
-        scoped = queryset.prefetch_related("records")
+        scoped = queryset.prefetch_related("records", "reincarnations")
         matching_ids = []
         for soul in scoped:
             birth = (soul.birth_year, soul.birth_month, soul.birth_day)
@@ -152,7 +153,8 @@ class SoulFilter(filters.FilterSet):
             if check_soul_dates(birth, death):
                 matching_ids.append(soul.pk)
                 continue
-            for record in soul.records.all():
+            # This life's deeds only — see serializers._this_lifes_records.
+            for record in _this_lifes_records(soul):
                 event = (record.event_year, record.event_month, record.event_day)
                 problems = check_record_date(
                     event, birth, death,

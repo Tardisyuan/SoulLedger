@@ -44,6 +44,21 @@ class RecordDateProblemSerializer(SoulDateProblemSerializer):
     acknowledged_at = serializers.DateTimeField(allow_null=True)
 
 
+def _this_lifes_records(soul):
+    """The records the soul's current dates can be judged against.
+
+    A rebirth rewrites birth and death for the new life; the previous life's
+    deeds keep their dates and its dates are not stored anywhere. Checked
+    against the new birth they all read "before birth", so a reborn soul was
+    flagged on the list, matched by ?has_date_problem=true and showed problems
+    on every old record — for dates that were right when written. Filtered
+    in Python so the viewset's `records` prefetch is reused; `life_index`
+    reads `reincarnations`, which the viewset prefetches for the same reason.
+    """
+    index = soul.life_index
+    return [r for r in soul.records.all() if r.cycle == index]
+
+
 def _is_viewer(context) -> bool:
     """Check if the current user has VIEWER role."""
     request = context.get("request")
@@ -252,6 +267,10 @@ class SoulRecordSerializer(serializers.ModelSerializer):
     @extend_schema_field(RecordDateProblemSerializer(many=True))
     def get_date_problems(self, obj):
         soul = obj.soul
+        if obj.cycle != soul.life_index:
+            # A previous life's deed; that life's dates are gone, so there
+            # is nothing to judge it against (see _this_lifes_records).
+            return []
         event = (obj.event_year, obj.event_month, obj.event_day)
         birth = (soul.birth_year, soul.birth_month, soul.birth_day)
         death = (soul.death_year, soul.death_month, soul.death_day)
@@ -395,6 +414,10 @@ class SoulRecordSerializer(serializers.ModelSerializer):
 
     def _check_against_soul(self, attrs, soul) -> None:
         if not _touches_dates(attrs, self.instance, "event"):
+            return
+        if self.instance is not None and self.instance.cycle != soul.life_index:
+            # Editing a previous life's deed: the soul's current dates say
+            # nothing about it. New records always land in the current life.
             return
         _reject_errors(check_record_date(
             _date_after_write(attrs, self.instance, "event"),
@@ -579,7 +602,7 @@ class SoulListSerializer(serializers.ModelSerializer):
     def get_has_date_warning(self, obj) -> bool:
         birth = (obj.birth_year, obj.birth_month, obj.birth_day)
         death = (obj.death_year, obj.death_month, obj.death_day)
-        for record in obj.records.all():
+        for record in _this_lifes_records(obj):
             event = (record.event_year, record.event_month, record.event_day)
             problems = check_record_date(
                 event, birth, death,
@@ -592,7 +615,7 @@ class SoulListSerializer(serializers.ModelSerializer):
     def get_has_record_error(self, obj) -> bool:
         birth = (obj.birth_year, obj.birth_month, obj.birth_day)
         death = (obj.death_year, obj.death_month, obj.death_day)
-        for record in obj.records.all():
+        for record in _this_lifes_records(obj):
             event = (record.event_year, record.event_month, record.event_day)
             problems = check_record_date(
                 event, birth, death,
