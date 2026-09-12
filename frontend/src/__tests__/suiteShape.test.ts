@@ -49,6 +49,8 @@ const COLLECTED_FILES = [
   "CorpusPage.test.tsx",
   "DashboardPage.test.tsx",
   "DataGrid.test.tsx",
+  "DeathSyncPage.pagination.test.tsx",
+  "DispositionPage.pagination.test.tsx",
   "DataTable.test.tsx",
   "EmptyState.test.tsx",
   "Field.test.tsx",

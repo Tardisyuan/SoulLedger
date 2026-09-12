@@ -1,10 +1,12 @@
 "use client";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { api } from "@soulledger/core/api";
+import { api, PAGE_SIZE } from "@soulledger/core/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/src/components/ui/Pagination";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
@@ -58,10 +60,15 @@ export default function DeathSyncPage() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
 
+  // Page in the key and on the wire — `DeathRegistrationReadViewSet` is a DRF
+  // ReadOnlyModelViewSet and paginates at PAGE_SIZE; this read one page and
+  // offered no way to the rest (FL-09). Same shape as `app/dispatch/page.tsx`.
+  const [page, setPage] = useState(1);
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["death-sync", "registrations"],
-    queryFn: () => api.get("/death-sync/registrations/").then(r => r.data),
+    queryKey: ["death-sync", "registrations", page],
+    queryFn: () => api.get("/death-sync/registrations/", { params: { page: String(page) } }).then(r => r.data),
     enabled: !!user,
+    placeholderData: (previous) => previous,
   });
   const registrations = data?.results ?? [];
 
@@ -128,6 +135,14 @@ export default function DeathSyncPage() {
               </div>
             ))}
           </div>
+        )}
+        {!isError && !isLoading && registrations.length > 0 && (
+          <Pagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil((data?.count ?? 0) / PAGE_SIZE))}
+            count={data?.count ?? 0}
+            onPageChange={setPage}
+          />
         )}
       </PageSection>
     </PageShell>
