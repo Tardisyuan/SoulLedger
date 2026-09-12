@@ -6,31 +6,24 @@ class AuditConfig(AppConfig):
     name = 'apps.audit'
 
     def ready(self):
-        # Connect audit signals to all models inheriting from AuditUserFields
+        # THE ONE PLACE audit signals are wired. `connect_audit_signals` decides
+        # which models are audited and which receivers each gets (pre_save for
+        # the diff, post_save, post_delete, plus the permission-cache handler
+        # on Role / RolePermission).
+        #
+        # Until 2026-09-12 (BP-10 / DB-01) there were two mechanisms: this
+        # loop, which connected post_save/post_delete only, and a lazy
+        # `_auto_connect_signals` receiver on *every* post_save in signals.py
+        # that added pre_save on a model's first save and excluded
+        # Role / RolePermission / SoulEvent. This loop bypassed those
+        # exclusions and never connected pre_save for Role, so a role rename
+        # produced an UPDATE audit row with `changes=None`.
+        import logging
+
         from django.apps import apps
-        from django.db.models.signals import post_delete, post_save
 
-        from apps.audit.signals import _on_post_delete, _on_post_save
-        from apps.core.models import AuditUserFields
+        from apps.audit.signals import connect_audit_signals
 
-        connected = 0
-        for model in apps.get_models():
-            if model is AuditUserFields or not issubclass(model, AuditUserFields):
-                continue
-            if model._meta.abstract:
-                continue
-            # Skip AuditLog itself to avoid infinite loops during migrations
-            if model._meta.label.split('.')[-1].startswith('Audit'):
-                continue
-            # Also explicitly skip the AuditLog model
-            from apps.audit.models import AuditLog
-            if model is AuditLog:
-                continue
-
-            post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{model.__name__}_post_save")
-            post_delete.connect(_on_post_delete, sender=model, dispatch_uid=f"audit_{model.__name__}_post_delete")
-            connected += 1
-
+        connected = sum(1 for model in apps.get_models() if connect_audit_signals(model))
         if connected:
-            import logging
             logging.getLogger(__name__).debug(f"Connected audit signals to {connected} models")

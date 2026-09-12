@@ -116,21 +116,24 @@ def test_a_failure_mid_import_rolls_the_overwrite_back(seeded, monkeypatch):
     在第二个 Permission 建到一半时抛错。没有 `transaction.atomic()`,overwrite 那
     三条 delete 早已提交,而回应是 500 —— 授权没了、没人知道。
     """
-    from apps.perm import export as export_module
-
     client = _client_for(seeded["admin"], seeded["tenant"])
     before = _grants_of(seeded["role"])
 
-    real_get_or_create = Permission.objects.get_or_create
+    # Patch the call the import loop actually makes. This was
+    # `Permission.objects.get_or_create` until 3ecd5af switched the loop to
+    # `Permission.revive_or_create`; the patch then intercepted nothing, the
+    # simulated failure never fired, and this test went red with
+    # "DID NOT RAISE" — the right outcome for a test whose subject moved.
+    real_revive_or_create = Permission.revive_or_create
     calls = {"n": 0}
 
-    def exploding_get_or_create(*args, **kwargs):
+    def exploding_revive_or_create(codename, **defaults):
         calls["n"] += 1
         if calls["n"] == 2:
             raise RuntimeError("simulated failure half-way through the import")
-        return real_get_or_create(*args, **kwargs)
+        return real_revive_or_create(codename, **defaults)
 
-    monkeypatch.setattr(export_module.Permission.objects, "get_or_create", exploding_get_or_create)
+    monkeypatch.setattr(Permission, "revive_or_create", exploding_revive_or_create)
 
     payload = {
         "overwrite": True,
