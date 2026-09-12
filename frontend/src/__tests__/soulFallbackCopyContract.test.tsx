@@ -91,6 +91,17 @@ function rawKeysIn(container: HTMLElement): string[] {
  * expectation out of the thing under test endorses whatever the thing under
  * test says. The list is also the floor for the absence scan below — with it
  * empty, "no raw key on screen" would pass over a card that drew nothing.
+ *
+ * SINCE DF-02 THESE KEYS ARE IN ALL THREE BUNDLES, with zh-Hans carrying
+ * exactly the copy written here. So under the provider's default locale the
+ * bundle and the fallback agree, and these zh-Hans cases no longer separate
+ * "the bundle answered" from "the literal did" — the `en` case at the bottom
+ * of this file is what does. What the zh-Hans cases still hold: the copy an
+ * operator reads, and that no raw key reaches the screen. The keys were kept
+ * out of the bundles for a while on purpose (see `RebirthFormSelect.tsx`'s
+ * note); `notifyKeysExistInTheBundles.test.ts` now refuses a literal `tf` key
+ * that no bundle has, so the fallback branch is a rollout safety net rather
+ * than a place copy is allowed to live.
  */
 const CARD_FALLBACKS: Array<[key: string, copy: string]> = [
   ["ledger.raw_vs_decayed", "原始 / 衰减后"],
@@ -102,7 +113,7 @@ const CARD_FALLBACKS: Array<[key: string, copy: string]> = [
 ];
 
 describe("SoulKarmaLedgerCard — copy comes out of tf, against the real bundles", () => {
-  it("draws the written fallback for every key no bundle carries", () => {
+  it("draws the zh-Hans copy for every key — the same words the fallback carries", () => {
     expect(CARD_FALLBACKS.length).toBeGreaterThanOrEqual(6);
 
     const { container } = renderCard(BALANCE_READING, INHERITANCE);
@@ -174,9 +185,9 @@ const concludedJudgment: Judgment = {
   concluded_at: "2019-02-01T00:00:00Z",
 };
 
-function renderTimeline(judgments: Judgment[] = []) {
+function renderTimeline(judgments: Judgment[] = [], locale: "zh-Hans" | "en" = "zh-Hans") {
   return render(
-    <I18nProvider>
+    <I18nProvider initialLocale={locale}>
       <SoulLifecycleTimeline
         soul={baseSoul()}
         judgments={judgments}
@@ -191,7 +202,7 @@ function renderTimeline(judgments: Judgment[] = []) {
 }
 
 describe("SoulLifecycleTimeline — copy comes out of tf, against the real bundles", () => {
-  it("draws the written fallback for stage copy no bundle carries", () => {
+  it("draws the zh-Hans stage copy — the same words the fallback carries", () => {
     renderTimeline();
 
     expect(screen.getByText("灵魂账页")).toBeInTheDocument();
@@ -212,14 +223,37 @@ describe("SoulLifecycleTimeline — copy comes out of tf, against the real bundl
     // The direction a "does the fallback fire" test cannot see, and the one
     // that stayed green under the `if (true)` mutation. The verdict row is
     // `tf("souls.detail.timeline.verdict", "裁决 · {{verdict}}", { verdict:
-    // tf("souls.detail.verdict_passed", "PASSED") })` — the outer key is in no
-    // bundle and the inner one is in all three ("善行通过" in zh-Hans, the
-    // provider's default locale). So the row proves both branches at once, in
-    // one string.
+    // tf("souls.detail.verdict_passed", "PASSED") })` — the inner literal is
+    // the raw member `PASSED`, and the bundle's "善行通过" (zh-Hans, the
+    // provider's default locale) must beat it. The outer key is in the bundles
+    // too since DF-02, so this line reads two bundle values, not one and a
+    // fallback; the absence assertion is what still carries the proof.
     renderTimeline([concludedJudgment]);
 
     expect(screen.getByText("裁决 · 善行通过")).toBeInTheDocument();
     // Absence, not just presence: the raw member must not be what is shown.
     expect(screen.queryByText("裁决 · PASSED")).not.toBeInTheDocument();
+  });
+
+  /**
+   * An `en` reader gets English, not the Chinese written beside the key.
+   *
+   * This is DF-02 itself. Every `tf` fallback in this component is Chinese —
+   * it is what a zh reader should see — and with the keys in no bundle, an
+   * `en` or `egy` reader got that Chinese on every stage row. The zh-Hans
+   * cases above cannot see this: there the bundle copy and the fallback are
+   * the same words. Only a second locale separates "the bundle answered" from
+   * "the literal did".
+   */
+  it("renders the en bundle's copy for an en reader — not the Chinese fallback", async () => {
+    renderTimeline([], "en");
+
+    // `await`: every bundle but zh-Hans is a lazy chunk (`LAZY_BUNDLES` in
+    // I18nContext), so the first paint answers from the default bundle and
+    // the English lands a tick later. The absence assertions run after it has.
+    expect(await screen.findByText("Soul ledger page")).toBeInTheDocument();
+    expect(screen.getByText("Not started · the soul enters the judgment queue after death")).toBeInTheDocument();
+    expect(screen.queryByText("灵魂账页")).not.toBeInTheDocument();
+    expect(screen.queryByText("尚未开始 · 灵魂身故后进入审判队列")).not.toBeInTheDocument();
   });
 });

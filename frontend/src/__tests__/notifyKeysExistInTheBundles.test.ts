@@ -105,7 +105,57 @@ const SOURCE_FILES = SCANNED_DIRS.flatMap((dir) => walk(path.join(ROOT, dir)));
  * prose.
  */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  // A one-pass scanner, not two regexes — and this is the reason, measured.
+  //
+  // The previous version was `replace(/\/\*[\s\S]*?\*\//g, "")` followed by a
+  // line-comment regex. `RebirthFormSelect.tsx:69` has `messages/*.json`
+  // inside a `//` comment; the block regex ran first, took that `/*` as an
+  // opener, and deleted everything up to the next real `*/` — thirty lines of
+  // live code, including two `tf("reincarnation.groups.…")` calls whose keys
+  // were in no bundle. The scan reported nothing for them. A stripper that can
+  // delete code is the quiet form of the failure this file exists to catch.
+  //
+  // Strings and template literals are tracked so a `//` in a URL literal or a
+  // `/*` in a glob string does not open a comment. Regex literals are not
+  // tracked; none in the scanned trees contains `//` or `/*` unescaped, and
+  // the floors below are what would notice if one appeared and hid calls.
+  let out = "";
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const c = source[i];
+    const next = source[i + 1];
+    if (c === "/" && next === "/") {
+      while (i < n && source[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && next === "*") {
+      const end = source.indexOf("*/", i + 2);
+      i = end === -1 ? n : end + 2;
+      out += " ";
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      out += c;
+      i++;
+      while (i < n && source[i] !== quote) {
+        if (source[i] === "\\") {
+          out += source[i] + (source[i + 1] ?? "");
+          i += 2;
+          continue;
+        }
+        out += source[i];
+        i++;
+      }
+      out += source[i] ?? "";
+      i++;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
 }
 
 const CALL_SITES: Array<{ file: string; key: string }> = [];
@@ -145,7 +195,7 @@ for (const file of SOURCE_FILES) {
   const source = stripComments(readFileSync(file, "utf8"));
   // Either quote. `components/ui/data-table.tsx` writes `t('table.empty')`;
   // a double-quote-only scan would have passed it without reading it.
-  for (const match of source.matchAll(/(?<![\w.$])(t)\(\s*(["'])([^"']+)\2\s*(?!\+)/g)) {
+  for (const match of source.matchAll(/(?<![\w.$])(tf?)\(\s*(["'])([^"']+)\2\s*(?!\+)/g)) {
     TRANSLATE_CALL_SITES.push({ file: path.relative(ROOT, file), fn: match[1], key: match[3] });
   }
 }
@@ -218,6 +268,12 @@ describe("every literal key `t` or `tf` is given is a key the bundles have", () 
     // collapse, which is what a regex that stopped matching would look like.
     expect(TRANSLATE_CALL_SITES.length).toBeGreaterThan(800);
     expect(TRANSLATE_CALL_SITES.some(({ fn }) => fn === "t")).toBe(true);
+    expect(TRANSLATE_CALL_SITES.some(({ fn }) => fn === "tf")).toBe(true);
+    // The two calls the regex stripper used to swallow. Named, so the scanner
+    // above cannot regress back to "clean because it read nothing there".
+    expect(TRANSLATE_CALL_SITES.map(({ key }) => key)).toEqual(
+      expect.arrayContaining(["reincarnation.groups.THREE_GOOD_PATHS", "reincarnation.groups.THREE_EVIL_PATHS"])
+    );
   });
 
   it.each(BUNDLES)("%s has all of them", (locale, bundle) => {
