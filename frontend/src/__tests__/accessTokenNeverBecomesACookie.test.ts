@@ -156,7 +156,6 @@ describe("源码里不再有把 access 写成 cookie 的那一行", () => {
     for (const file of [
       "packages/core/src/api/client.ts",
       "packages/core/src/ws/client.ts",
-      "packages/core/src/ws/social-client.ts",
     ]) {
       const writes = code(file)
         .split("\n")

@@ -1,6 +1,6 @@
 /**
  * The `notify` port: that a message **key** reaches a real, translated toast on
- * web, and that the seven hooks actually go through it.
+ * web, and that the six hooks actually go through it.
  *
  * WHAT THIS IS GUARDING AGAINST, specifically. The redirection is invisible
  * from outside — the same banner appears either way, so every page test stays
@@ -17,8 +17,8 @@
  *      something, not just declared, and the host really is the translator;
  *   2. a hook drives it with a probe adapter installed and no toast module
  *      mocked at all — so the redirection is real at run time;
- *   3. the seven hook files are pinned by name and may not name `useToast` —
- *      so a regression in the six this file does not exercise still fails.
+ *   3. the six hook files are pinned by name and may not name `useToast` —
+ *      so a regression in the five this file does not exercise still fails.
  */
 import { render, renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
@@ -237,17 +237,18 @@ describe("a hook drives the port, not the context", () => {
   });
 });
 
-describe("all seven hooks, pinned by name", () => {
+describe("all six hooks, pinned by name", () => {
   // The list, not a scan for offenders: a scan is clean when it scans nothing.
-  // These are the seven files commit 750ea1a recorded as blocked on
+  // These are six of the seven files commit 750ea1a recorded as blocked on
   // ToastContext.
   //
-  // SIX OF THEM ARE NO LONGER IN `frontend/`. Dropping the toast dependency and
+  // NONE OF THEM IS IN `frontend/` ANY MORE. Dropping the toast dependency and
   // then `t()` is what let them move to `packages/core/src/hooks`, so the paths
-  // are relative to the repository root now rather than to `frontend/`. The
-  // seventh, `useSocialEventBus`, stays: it depends on `useTenant`, which is
-  // real React state and a genuine view-layer binding. It also lives in
-  // `frontend/hooks`, NOT `frontend/src/hooks` — a second, older hook tree.
+  // are relative to the repository root rather than to `frontend/`. The
+  // seventh, `frontend/hooks/useSocialEventBus.ts`, was the one that stayed
+  // behind (it depended on `useTenant`) — and it is gone now: it had no
+  // consumer, and the provider it exported held a second socket to the same
+  // endpoint as `WebSocketProvider` (FL-01, `oneRealtimeSocketPerSession.test.ts`).
   const HOOKS = [
     "packages/core/src/hooks/useDispositions.ts",
     "packages/core/src/hooks/useJudgmentQueue.ts",
@@ -255,7 +256,6 @@ describe("all seven hooks, pinned by name", () => {
     "packages/core/src/hooks/useReincarnation.ts",
     "packages/core/src/hooks/useSocial.ts",
     "packages/core/src/hooks/useSouls.ts",
-    "frontend/hooks/useSocialEventBus.ts",
   ];
   const ROOT = path.join(__dirname, "..", "..", "..");
   const sources = HOOKS.map((file) => ({
@@ -266,8 +266,8 @@ describe("all seven hooks, pinned by name", () => {
     source: readFileSync(path.join(ROOT, file), "utf8"),
   }));
 
-  it("reads seven real files", () => {
-    expect(sources).toHaveLength(7);
+  it("reads six real files", () => {
+    expect(sources).toHaveLength(6);
     expect(sources.every(({ source }) => source.length > 200)).toBe(true);
   });
 
@@ -277,9 +277,8 @@ describe("all seven hooks, pinned by name", () => {
   });
 
   it("none of them calls showToast directly", () => {
-    // `showToast:` as an object key is allowed — `useSocialEventBus` still fills
-    // `EventContext.showToast`, which is the event registry's field name and
-    // not a call into the toast module.
+    // `showToast:` as an object key is allowed — it is the event registry's
+    // field name (`EventContext.showToast`), not a call into the toast module.
     const offenders = sources.filter(({ source }) =>
       /(?<![:\w])showToast\s*\(/.test(source)
     );
@@ -287,11 +286,10 @@ describe("all seven hooks, pinned by name", () => {
   });
 
   it("every one of them reaches the port instead", () => {
-    // Two spellings of one import, because the list now straddles the package
-    // boundary: the six inside `packages/core` reach the port relatively
-    // (`../platform/index`), and `useSocialEventBus`, outside it, by package
-    // specifier. Accepting both is not looseness — a hook that imported neither
-    // is what this is looking for.
+    // Two spellings of one import are accepted: the relative one the six use
+    // from inside `packages/core` (`../platform/index`), and the package
+    // specifier a hook outside it would use. Accepting both is not looseness —
+    // a hook that imported neither is what this is looking for.
     const missing = sources.filter(
       ({ source }) =>
         !/notify[\s\S]{0,80}from "(?:@soulledger\/core|\.\.)\/platform(?:\/index)?"/.test(source)
@@ -303,14 +301,12 @@ describe("all seven hooks, pinned by name", () => {
     // Step 2's claim, in the same shape as the `useToast` one above. `t()` was
     // the hooks' last binding to the web tree: all 26 `t(` calls in
     // `src/hooks` were `notify` arguments, so removing this import is what
-    // makes the six movable at all. `useSocialEventBus` never had it and stays
-    // in the list, because a list that drops its passing members stops being a
-    // pinned set.
+    // makes the six movable at all.
     const offenders = sources.filter(({ source }) => source.includes("useI18n"));
     expect(offenders.map(({ file }) => file)).toEqual([]);
   });
 
-  it("the six that moved import nothing from the web tree", () => {
+  it("none of them imports anything from the web tree", () => {
     // Step 3's claim. `packages/core`'s tsconfig catches a DOM *type*, and
     // `domBoundary.test.ts` catches a DOM *name*; neither says anything about
     // an import of `@/…`, which is the Next path alias and resolves to

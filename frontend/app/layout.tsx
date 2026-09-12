@@ -13,7 +13,6 @@ import { BCP47_FOR_LOCALE, isLocale, LOCALE_COOKIE } from "@soulledger/core/conf
 import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
-import { SocialEventBusProvider } from "@/hooks/useSocialEventBus";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
 import { PlatformProvider } from "@/src/components/providers/PlatformProvider";
 import { Suspense } from "react";
@@ -90,19 +89,23 @@ export default async function RootLayout({
           <I18nProvider initialLocale={locale}>
             <ThemeProvider>
               <TenantProvider>
+                {/* ONE realtime provider. `SocialEventBusProvider` used to sit
+                    inside this one, holding a second `SocialWSClient` to the
+                    same `/ws/notifications/` endpoint and routing every push
+                    through the same event registry — two toasts and two
+                    refetches per event. It had no consumer; it is deleted, and
+                    `oneRealtimeSocketPerSession.test.ts` pins the count. */}
                 <WebSocketProvider>
-                  <SocialEventBusProvider>
-                    <ToastProvider>
-                      {/* useSearchParams needs a Suspense boundary or the whole
-                          tree opts out of static rendering. */}
-                      <Suspense fallback={null}>
-                        <RouteProgress />
-                      </Suspense>
+                  <ToastProvider>
+                    {/* useSearchParams needs a Suspense boundary or the whole
+                        tree opts out of static rendering. */}
+                    <Suspense fallback={null}>
+                      <RouteProgress />
+                    </Suspense>
                     <AppLayoutWrapper>
                       {children}
                     </AppLayoutWrapper>
                   </ToastProvider>
-                  </SocialEventBusProvider>
                 </WebSocketProvider>
               </TenantProvider>
             </ThemeProvider>
