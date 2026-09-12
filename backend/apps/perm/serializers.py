@@ -174,7 +174,7 @@ class ExportedPermissionSerializer(serializers.Serializer):
 class ExportedRoleSerializer(serializers.Serializer):
     name = serializers.CharField()
     display_name = serializers.CharField()
-    scope = serializers.CharField()
+    scope = serializers.CharField(required=False)
 
 
 class ExportedRolePermissionSerializer(serializers.Serializer):
@@ -183,26 +183,45 @@ class ExportedRolePermissionSerializer(serializers.Serializer):
     # different database has different ids.
     role = serializers.CharField()
     permission = serializers.CharField()
-    conditions = serializers.JSONField()
+    # Optional members below mirror the `.get(key, default)` reads in
+    # `import_permissions` exactly: this serializer now VALIDATES the import
+    # body (it used to be documentation only), so anything it marks required
+    # is a 400 for a hand-written document the importer would have accepted.
+    conditions = serializers.JSONField(required=False)
 
 
 class ExportedFieldPermissionSerializer(serializers.Serializer):
     role = serializers.CharField()
     model_name = serializers.CharField()
     field_name = serializers.CharField()
-    visible = serializers.BooleanField()
-    read_only = serializers.BooleanField()
-    editable = serializers.BooleanField()
+    visible = serializers.BooleanField(required=False)
+    read_only = serializers.BooleanField(required=False)
+    editable = serializers.BooleanField(required=False)
 
 
 class ExportedDataScopeSerializer(serializers.Serializer):
     role = serializers.CharField()
-    civilization = serializers.CharField(allow_null=True)
+    civilization = serializers.CharField(allow_null=True, required=False)
     model_name = serializers.CharField()
-    filter_conditions = serializers.JSONField()
+    filter_conditions = serializers.JSONField(required=False)
     scope_type = serializers.CharField()
-    priority = serializers.IntegerField()
-    is_active = serializers.BooleanField()
+    priority = serializers.IntegerField(required=False)
+    is_active = serializers.BooleanField(required=False)
+
+
+class StrictBooleanField(serializers.BooleanField):
+    """A JSON boolean and nothing else.
+
+    DRF's BooleanField reads "false", "0", "no" as False — which is friendlier
+    than the bug it replaces, but `overwrite` deletes every grant in the
+    database, and a client that sends a string here has already misread the
+    contract once. Refuse rather than guess.
+    """
+
+    def to_internal_value(self, data):
+        if isinstance(data, bool):
+            return data
+        raise serializers.ValidationError("Must be a JSON boolean (true or false).")
 
 
 class PermissionExportSerializer(serializers.Serializer):
@@ -226,6 +245,13 @@ class PermissionImportRequestSerializer(serializers.Serializer):
     Every member is optional because `import_permissions` reads each one with
     `data.get(key, [])`: a document carrying only `roles` imports only roles.
     The view's own check is `if not data` — an empty body, nothing narrower.
+
+    This is the serializer the view VALIDATES WITH, not just what it documents.
+    Until 2026-09-12 it was never instantiated: `overwrite` came straight off
+    `request.data`, so the string "false" was truthy and cleared every
+    RolePermission with a 200, and a permission entry missing `name` was a
+    KeyError 500 raised after the overwrite deletes had already run. See
+    tests/test_perm_import_is_validated.py.
     """
 
     version = serializers.CharField(required=False)
@@ -236,7 +262,7 @@ class PermissionImportRequestSerializer(serializers.Serializer):
     data_scopes = ExportedDataScopeSerializer(many=True, required=False)
     # Deletes FieldPermission / RowLevelDataScope / RolePermission wholesale
     # before importing. Read off the same body as the document itself.
-    overwrite = serializers.BooleanField(required=False, default=False)
+    overwrite = StrictBooleanField(required=False, default=False)
 
 
 class PermissionImportStatsSerializer(serializers.Serializer):

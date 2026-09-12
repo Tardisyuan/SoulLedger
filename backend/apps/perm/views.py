@@ -541,9 +541,26 @@ def import_permissions(request):
             {"error": "No data provided"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    # A JSON list parses fine and then `.get` is an AttributeError 500.
+    if not isinstance(data, dict):
+        return Response(
+            {"error": "Body must be a JSON object (the export document)."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    overwrite = request.data.get('overwrite', False)
-    stats = do_import(data, overwrite=overwrite)
+    # Validate the whole document BEFORE touching a row. `overwrite` is three
+    # `.all().delete()` calls; the shape errors this catches used to surface as
+    # a KeyError after those had already run.
+    serializer = PermissionImportRequestSerializer(data=data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    document = serializer.validated_data
+    overwrite = document["overwrite"]
+
+    # One transaction: an overwrite that fails half-way rolls its deletes back
+    # instead of answering 500 over an empty grant table.
+    with transaction.atomic():
+        stats = do_import(document, overwrite=overwrite)
 
     # An import rewrites permissions and grants wholesale.
     invalidate_all_permissions()
