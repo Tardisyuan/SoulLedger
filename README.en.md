@@ -113,9 +113,12 @@ npm run dev --workspace frontend   # already pins PORT=3333
 ### PostgreSQL + Redis (optional, matches CI)
 
 ```bash
-cd infrastructure
-docker compose up -d   # postgres:16-alpine on :5432, redis:7-alpine on :6379
+docker compose up -d db redis   # postgres:16-alpine on :5432, redis:7-alpine on :6379
 ```
+
+The ports are published by `docker-compose.override.yml`, which a bare
+`docker compose up` reads on its own; `DB_PASSWORD` comes from the root `.env`
+(see `.env.example`).
 
 Then point the backend at it, e.g.
 `DATABASE_URL=postgres://soulledger:devpassword@localhost:5432/soulledger`.
@@ -369,7 +372,7 @@ frontend/
   components/ui/    A third source root: data-table / data-grid / page-section
   lib/platform/     The web implementation of the platform ports
   e2e/              Playwright specs
-infrastructure/     docker-compose for PostgreSQL + Redis
+nginx.conf          the nginx main config the production merge mounts
 scripts/            start/stop/restart/status, DB backup/restore, git hooks
 docs/               Domain research, engineering docs, design handoff — see docs/README.md
 ```

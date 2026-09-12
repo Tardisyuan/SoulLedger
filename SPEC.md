@@ -268,8 +268,8 @@ SoulLedger/
 │       ├── zh-Hans.json
 │       ├── en.json
 │       └── egy.json
-├── infrastructure/
-│   └── docker-compose.yml
+├── docker-compose.yml          # + override (dev) / staging / production
+├── nginx.conf                  # production 合并里 nginx 挂载的主配置
 ├── scripts/
 ├── openspec/
 │   └── changes/

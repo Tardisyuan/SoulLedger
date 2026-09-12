@@ -24,11 +24,15 @@ from django.test import Client
 # backend/tests/test_production.py -> backend/tests -> backend -> repo root
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-COMPOSE_PROD = os.path.join(REPO_ROOT, "infrastructure", "docker-compose.prod.yml")
+# One production stack: docker-compose.yml + docker-compose.production.yml.
+# infrastructure/docker-compose.prod.yml was a second, independent copy; every
+# fix in this file had to land twice and each copy broke on its own, so it was
+# deleted (2026-09-13). nginx.conf moved to the root next to the files that
+# mount it.
 COMPOSE_BASE = os.path.join(REPO_ROOT, "docker-compose.yml")
 COMPOSE_ROOT_PROD = os.path.join(REPO_ROOT, "docker-compose.production.yml")
 COMPOSE_STAGING = os.path.join(REPO_ROOT, "docker-compose.staging.yml")
-NGINX_CONF = os.path.join(REPO_ROOT, "infrastructure", "nginx.conf")
+NGINX_CONF = os.path.join(REPO_ROOT, "nginx.conf")
 ENV_EXAMPLE = os.path.join(REPO_ROOT, ".env.example")
 BACKEND_DOCKERFILE = os.path.join(REPO_ROOT, "backend", "Dockerfile")
 FRONTEND_DOCKERFILE = os.path.join(REPO_ROOT, "frontend", "Dockerfile")
@@ -36,9 +40,24 @@ FRONTEND_DOCKERFILE = os.path.join(REPO_ROOT, "frontend", "Dockerfile")
 APP_SERVICES = ["backend", "celery", "celery-beat", "frontend"]
 
 
-def _load_compose(path=COMPOSE_PROD):
+def _load_compose(path):
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def _production_services():
+    """The production merge as compose sees it: override keys win, and a
+    service only in the override (nginx, pgbouncer) is added."""
+    services = _load_compose(COMPOSE_BASE)['services']
+    for name, override in _load_compose(COMPOSE_ROOT_PROD)['services'].items():
+        merged = dict(services.get(name, {}))
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+        services[name] = merged
+    return services
 
 
 def _read(path):
@@ -118,30 +137,42 @@ class TestProductionSettings:
 
 
 class TestDockerConfiguration:
-    """Validate docker-compose.prod.yml structure"""
+    """Validate the production merge (base + docker-compose.production.yml)"""
 
-    def test_docker_compose_file_exists(self):
-        """docker-compose.prod.yml should exist"""
-        assert os.path.exists(COMPOSE_PROD), f"Expected {COMPOSE_PROD} to exist"
+    def test_docker_compose_files_exist(self):
+        for path in [COMPOSE_BASE, COMPOSE_ROOT_PROD]:
+            assert os.path.exists(path), f"Expected {path} to exist"
 
     def test_docker_compose_has_required_services(self):
         """All required services should be defined"""
-        services = _load_compose().get('services', {})
-        required = ['postgres', 'redis', 'backend', 'frontend', 'nginx']
+        services = _production_services()
+        required = ['db', 'redis', 'pgbouncer', 'backend', 'celery', 'frontend', 'nginx']
         for svc in required:
             assert svc in services, f"Missing service: {svc}"
 
     def test_docker_compose_has_healthchecks(self):
-        """postgres and redis should have healthchecks"""
-        services = _load_compose().get('services', {})
-        for svc in ['postgres', 'redis']:
+        """db and redis should have healthchecks"""
+        services = _production_services()
+        for svc in ['db', 'redis']:
             assert 'healthcheck' in services[svc], f"{svc} missing healthcheck"
 
     def test_docker_compose_restart_policies(self):
         """Services should have restart policies"""
-        services = _load_compose().get('services', {})
-        for svc in ['postgres', 'redis', 'backend', 'nginx']:
+        services = _production_services()
+        for svc in ['db', 'redis', 'backend', 'nginx']:
             assert services[svc].get('restart') in ['unless-stopped', 'always', 'on-failure']
+
+    def test_pgbouncer_transaction_pool_disables_server_side_cursors(self):
+        """pgbouncer in transaction mode cannot keep a server-side cursor
+        alive across statements, and `.iterator()` opens one (IS-13). Every
+        Django service behind the pool must say so, and settings.py only
+        reads the flag from the environment."""
+        services = _production_services()
+        assert services['pgbouncer']['environment']['POOL_MODE'] == 'transaction'
+        for name in ['backend', 'celery', 'celery-beat']:
+            env = services[name]['environment']
+            assert 'pgbouncer' in env['DATABASE_URL'], f"{name} bypasses the pool"
+            assert env.get('DISABLE_SERVER_SIDE_CURSORS') == 'true', name
 
     def test_nginx_config_exists(self):
         """nginx.conf should exist"""
@@ -180,11 +211,11 @@ class TestDockerConfiguration:
         )
 
     def test_prod_compose_passes_the_names_settings_reads(self):
-        """settings.py reads SECRET_KEY and ALLOWED_HOSTS. This file passed
-        DJANGO_SECRET_KEY / DJANGO_ALLOWED_HOSTS — read by nothing — so the
-        backend refused to start; the old version of this test pinned the
-        wrong names (IS-05)."""
-        env = _load_compose()['services']['backend']['environment']
+        """settings.py reads SECRET_KEY and ALLOWED_HOSTS. The deleted
+        infrastructure/ stack passed DJANGO_SECRET_KEY / DJANGO_ALLOWED_HOSTS
+        — read by nothing — so the backend refused to start; the old version
+        of this test pinned the wrong names (IS-05)."""
+        env = _production_services()['backend']['environment']
         assert 'SECRET_KEY' in env
         assert 'ALLOWED_HOSTS' in env
         assert 'ENCRYPTION_KEY' in env
@@ -193,7 +224,7 @@ class TestDockerConfiguration:
     def test_prod_compose_mounts_a_file_that_exists(self):
         """A bind-mount source that does not exist is created by docker as
         an empty directory — for nginx.conf that means nginx dies (IS-09)."""
-        for path in [COMPOSE_PROD, COMPOSE_ROOT_PROD]:
+        for path in [COMPOSE_ROOT_PROD]:
             nginx = _load_compose(path)['services']['nginx']
             for vol in nginx['volumes']:
                 src = vol.split(':')[0]
@@ -245,14 +276,14 @@ class TestRootComposeShape:
             assert 'ENCRYPTION_KEY' in env, f"{name} does not receive ENCRYPTION_KEY"
             assert 'ALLOWED_HOSTS' in env, f"{name} does not receive ALLOWED_HOSTS"
 
-    @pytest.mark.parametrize("path", [COMPOSE_BASE, COMPOSE_ROOT_PROD, COMPOSE_PROD])
+    @pytest.mark.parametrize("path", [COMPOSE_BASE, COMPOSE_ROOT_PROD])
     def test_backend_runs_an_asgi_server(self, path):
         """gunicorn on config.wsgi never serves the channels routes (IS-06)."""
         command = _load_compose(path)['services']['backend']['command']
         assert 'config.asgi' in command, f"{path}: {command}"
         assert 'wsgi' not in command
 
-    @pytest.mark.parametrize("path", [COMPOSE_BASE, COMPOSE_PROD])
+    @pytest.mark.parametrize("path", [COMPOSE_BASE])
     def test_healthchecks_use_a_route_and_a_binary_that_exist(self, path):
         """`curl` is in neither python:*-slim nor node:*-alpine, and
         /api/v1/health/ was never a route — the check could only ever be red
@@ -279,7 +310,7 @@ class TestEnvExample:
         require DJANGO_SECRET_KEY — the name that made the stack exit 1."""
         content = _read(ENV_EXAMPLE)
         referenced = set()
-        for path in [COMPOSE_BASE, COMPOSE_ROOT_PROD, COMPOSE_STAGING, COMPOSE_PROD]:
+        for path in [COMPOSE_BASE, COMPOSE_ROOT_PROD, COMPOSE_STAGING]:
             referenced |= set(re.findall(r"\$\{([A-Z_]+)", _read(path)))
         documented = set(re.findall(r"^([A-Z_]+)=", content, flags=re.M))
         assert referenced <= documented, f"undocumented: {referenced - documented}"

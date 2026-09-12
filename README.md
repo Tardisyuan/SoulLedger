@@ -98,9 +98,11 @@ npm run dev --workspace frontend   # 脚本内已固定 PORT=3333
 ### PostgreSQL + Redis（可选，与 CI 一致）
 
 ```bash
-cd infrastructure
-docker compose up -d   # postgres:16-alpine :5432，redis:7-alpine :6379
+docker compose up -d db redis   # postgres:16-alpine :5432，redis:7-alpine :6379
 ```
+
+端口由 `docker-compose.override.yml` 发布（`docker compose up` 自动读它）；
+`DB_PASSWORD` 需在根 `.env` 里（见 `.env.example`）。
 
 随后让后端指向它，例如
 `DATABASE_URL=postgres://soulledger:devpassword@localhost:5432/soulledger`。
@@ -327,7 +329,7 @@ frontend/
   components/ui/    第三个源根：data-table / data-grid / page-section / skeleton
   lib/platform/     平台端口的 web 实现
   e2e/              Playwright 用例
-infrastructure/     PostgreSQL + Redis 的 docker-compose
+nginx.conf          production 合并里 nginx 的主配置
 scripts/            启停/重启/状态、数据库备份恢复、git hooks
 docs/               神话研究、工程文档、设计交付包——见 docs/README.md
 ```
