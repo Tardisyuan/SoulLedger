@@ -96,7 +96,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
             self.user = user
             self.tenant = getattr(user, "tenant", None)
-            self.permissions = await self._resolve_permissions()
+            # Write the identity back into the scope, and the permissions INTO
+            # the set the middleware put there -- not `self.permissions = ...`.
+            # BP-08 (2026-09-12): this branch set `self.permissions` only, while
+            # the gate in `realtime_event` reads `self.scope["permissions"]`,
+            # which still held the empty set `PermissionMiddleware` computed for
+            # AnonymousUser. The `connected` frame listed 21 codenames and every
+            # gated event was dropped. See `_apply_permissions`.
+            self.scope["user"] = user
+            self.scope["tenant"] = self.tenant
+            self._apply_permissions(await self._resolve_permissions())
 
             await self._join_groups()
             await self._send_connected()
@@ -116,19 +125,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({"type": "pong"}))
 
         elif msg_type == "permission.refresh":
-            # Unreachable on the main authentication path: `PermissionMiddleware`
-            # intercepts `permission.refresh` in `wrapped_receive` and never
-            # forwards it here. Kept for the query-token-less path where the
-            # consumer authenticates itself, and it now writes through to the
-            # scope so the gate above sees the same set.
-            fresh = await self._resolve_permissions()
-            # In place, for the same reason the middleware does it that way:
-            # the scope is shallow-copied between here and whoever else holds
-            # a reference to this set.
-            current = self.scope.setdefault("permissions", set())
-            current.clear()
-            current.update(fresh)
-            self.permissions = current
+            # The only handler for refresh, on both authentication paths.
+            # `PermissionMiddleware` used to intercept this message in a
+            # `wrapped_receive` closure that had captured the connect-time
+            # user -- AnonymousUser on the first-frame path -- so a refresh
+            # after first-frame auth emptied the set. Now the middleware only
+            # computes the initial set and this branch, which knows the real
+            # `self.user`, re-resolves through the same function.
+            self._apply_permissions(await self._resolve_permissions())
             await self.send(text_data=json.dumps({
                 "type": "permission.refreshed",
                 "permissions": sorted(self.permissions),
@@ -223,28 +227,28 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             logger.exception("NotificationConsumer: error authenticating token")
             return None
 
+    def _apply_permissions(self, fresh):
+        """Replace the permission set IN PLACE and point `self.permissions` at it.
+
+        In place because the scope is shallow-copied between the middleware and
+        here: every copy holds the same set object, so mutating it is what makes
+        the change visible to `realtime_event`'s gate. Rebinding the key would
+        update one copy and leave the gate reading another.
+        """
+        current = self.scope.setdefault("permissions", set())
+        current.clear()
+        current.update(fresh)
+        self.permissions = current
+
     @database_sync_to_async
     def _resolve_permissions(self):
         """Re-resolve the current user's permission codenames.
 
-        See ``apps/core/ws_permissions.py::PermissionMiddleware._resolve_permissions``
-        for why this goes through ``apps.perm.services.get_role_permission_codenames``
-        rather than ``user.rbac_role.get_inherited_permissions()``: the two
-        disagreed for every role except ADMIN, and any user with no
-        ``rbac_role`` set got nothing back regardless of what their ``role``
-        actually granted.
+        Same function as the middleware's connect-time set --
+        ``apps.core.ws_permissions.resolve_permissions_for`` -- so the two
+        paths cannot disagree, and it re-reads the user row so a demotion
+        after connect is seen.
         """
-        user = self.user
-        if not user or not getattr(user, "is_authenticated", False):
-            return set()
+        from apps.core.ws_permissions import resolve_permissions_for
 
-        role = getattr(user, "role", None)
-        if not role:
-            return set()
-
-        try:
-            from apps.perm.services import get_role_permission_codenames
-            return set(get_role_permission_codenames(role))
-        except Exception:
-            logger.exception("NotificationConsumer: error resolving permissions")
-            return set()
+        return resolve_permissions_for(self.user)
