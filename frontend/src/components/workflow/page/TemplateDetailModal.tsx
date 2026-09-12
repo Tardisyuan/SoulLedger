@@ -69,7 +69,7 @@ export function TemplateDetailModal({
                   </div>
                   {node.approver_role && (
                     <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
-                      {node.approver_role}
+                      <DomainEnum namespace="users.roles" value={node.approver_role} />
                     </div>
                   )}
                 </div>

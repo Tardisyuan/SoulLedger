@@ -718,6 +718,7 @@
     "recent_activity": "Recent Activity",
     "export_stats": "Export Stats",
     "souls_by_realm": "Souls by Realm",
+    "activity_count": "{{count}} action(s)",
     "no_activity": "No recent activity",
     "no_realm_data": "No realm data available",
     "error_load": "Failed to load statistics",

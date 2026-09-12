@@ -320,7 +320,7 @@ export default function WelcomePage() {
             </div>
             <div>
               <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
-              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1">{user?.role || "ADMIN"}</div>
+              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1"><DomainEnum namespace="users.roles" value={user?.role} /></div>
             </div>
           </div>
           <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">

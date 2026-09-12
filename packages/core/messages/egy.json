@@ -718,6 +718,7 @@
     "recent_activity": "Khedu Sethet",
     "export_stats": "Wehem Medew Seth",
     "souls_by_realm": "Aba Seth Per Ahet",
+    "activity_count": "{{count}} Khedu",
     "no_activity": "Ma Khedu Sethet",
     "no_realm_data": "Ma Medew Ahet",
     "error_load": "Ma Khemut Medew",

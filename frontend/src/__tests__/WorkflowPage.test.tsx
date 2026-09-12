@@ -22,11 +22,13 @@ import {
   installWorkflowPageHarness,
   mockSession,
   mockShowToast,
+  mockT,
   mockedTemplateDelete,
   mockedTemplateGet,
   mockedTemplates,
   renderPage,
 } from "./support/workflowPageHarness";
+import { tZh, zh } from "./support/zhBundle";
 
 installWorkflowPageHarness();
 
@@ -345,13 +347,18 @@ describe("WorkflowPage detail modal", () => {
     mockedTemplateGet.mockResolvedValue({
       data: { ...backendTemplate, nodes: [{ node_name: "Fetched node", approver_role: "JUDGE" }] },
     });
+    // Real bundle: under key-echo the role renders as "unrecognised" and this
+    // test pinned the raw `JUDGE` as the correct output (FT-01).
+    mockT.mockImplementation(tZh);
     renderPage();
 
     fireEvent.click(await screen.findByText("Custom Tribunal"));
-    fireEvent.click(screen.getByText("workflow.view"));
+    fireEvent.click(screen.getByText(zh("workflow.view")));
 
     expect(await screen.findByText("Fetched node")).toBeInTheDocument();
-    expect(screen.getByText("JUDGE")).toBeInTheDocument();
+    expect(screen.getByText(zh("users.roles.JUDGE"))).toBeInTheDocument();
+    expect(screen.getByTitle("JUDGE")).toBeInTheDocument();
+    expect(screen.queryByText("JUDGE")).not.toBeInTheDocument();
     expect(mockedTemplateGet).toHaveBeenCalledWith("7");
   });
 
