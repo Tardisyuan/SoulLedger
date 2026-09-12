@@ -4,8 +4,10 @@ Audit signals for automatic operation logging.
 When a model inheriting from AuditUserFields is created/updated/deleted,
 this signal automatically creates an AuditLog entry.
 
-Signals are connected via Django's class_prepared signal when models are
-registered, so audit logging starts working before any model is saved.
+Wired ONCE, from `apps/audit/apps.py::ready()` through `connect_audit_signals`
+below. There used to be a second mechanism in this module — a receiver on
+every `post_save` that connected a model's signals on its first save — and
+the two disagreed about which models were excluded. See `connect_audit_signals`.
 """
 import logging
 
@@ -14,7 +16,6 @@ from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
 
-_connected_models = set()
 _in_migration = False  # Guard: skip audit log creation during migrations
 
 
@@ -34,7 +35,14 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
     if _is_migration_context():
         return
 
+    # The row as it stood before this save, taken by `_on_pre_save` (same
+    # wiring, see connect_audit_signals). None on create, on post_delete, and
+    # when the snapshot could not be taken.
+    before = getattr(instance, _AUDIT_SNAPSHOT, None)
+    deleting = kwargs.get('signal') is post_delete
+
     role_name = None
+    role_names_to_invalidate = []
     old_permissions = []
     new_permissions = []
     changes = None
@@ -43,6 +51,12 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
     if model_name == 'Role':
         role_name = instance.name
         resource_id = str(instance.pk) if instance.pk else ''
+        # BP-07: a rename must drop the OLD name's cached answers too. Until
+        # 2026-09-12 only the new name was invalidated, so the old name kept
+        # passing checks for the rest of the 300s TTL.
+        role_names_to_invalidate = [role_name]
+        if before is not None and before.name != role_name:
+            role_names_to_invalidate.append(before.name)
 
         # This branch cannot report a permissions diff, and pretending
         # otherwise was the previous shape:
@@ -54,7 +68,7 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
         # `instance.permissions.all()` two lines below -- the same query on the
         # same pk, `old == new` unconditionally, no audit row ever.
         #
-        # A pre_save snapshot does not fix it either, and that was tried and
+        # The pre_save snapshot does not fix it either, and that was tried and
         # measured: by the time anything calls `role.save()`, the RolePermission
         # rows have **already** been changed by whatever changed them, so the
         # "before" is not inside this save's scope at all. Measured snapshot:
@@ -72,17 +86,16 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
         # writing this: two `PERMISSION_CHANGE resource=role` rows for one
         # assignment.
         #
-        # The cache invalidation below still runs; that is the other half of
-        # this receiver's job and it does not need a diff.
-        new_permissions = sorted([
-            rp.permission.codename
-            for rp in instance.permissions.all()
-        ]) if hasattr(instance, 'permissions') else []
+        # The field-level diff of the Role row itself (name, display_name, …)
+        # is the generic UPDATE row `_on_post_save` writes from the same
+        # snapshot. The cache invalidation below still runs; that is the other
+        # half of this receiver's job and it does not need a diff.
 
     elif model_name == 'RolePermission':
         # RolePermission was modified - get the role name
         role_name = instance.role.name if hasattr(instance, 'role') and instance.role else None
         resource_id = str(instance.pk) if instance.pk else ''
+        role_names_to_invalidate = [role_name] if role_name else []
 
         # Get permission codename
         perm_codename = instance.permission.codename if hasattr(instance, 'permission') and instance.permission else ''
@@ -96,48 +109,46 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
                 }
             }
             new_permissions = [perm_codename]
+        elif deleting or (hasattr(instance, 'is_deleted') and instance.is_deleted):
+            # Hard delete (post_delete: the instance still carries its data)
+            # or soft delete — either way the grant is gone.
+            old_permissions = [perm_codename]
+            new_permissions = []
+            changes = {
+                "permissions": {
+                    "old": old_permissions,
+                    "new": []
+                }
+            }
         else:
-            # Check for soft delete first
-            is_soft_delete = hasattr(instance, 'is_deleted') and instance.is_deleted
-            if is_soft_delete:
-                # Permission was soft-deleted (removed from role)
-                old_permissions = [perm_codename]
-                new_permissions = []
+            # An update. BP-20: this used to `sender.objects.get(pk=...)` here,
+            # in post_save, and so read the NEW row -- old == new on every
+            # save, a row of fake diff written each time. The snapshot is the
+            # only "before" there is; a save that did not move the permission
+            # (conditions edited, or nothing at all) writes no PERMISSION_CHANGE
+            # row -- the generic UPDATE row carries whatever else changed.
+            old_codename = (
+                before.permission.codename
+                if before is not None and getattr(before, 'permission_id', None)
+                else None
+            )
+            if old_codename is not None and old_codename != perm_codename:
+                old_permissions = [old_codename]
+                new_permissions = [perm_codename]
                 changes = {
                     "permissions": {
                         "old": old_permissions,
-                        "new": []
+                        "new": new_permissions
                     }
                 }
-            else:
-                # For updates, query the old state
-                try:
-                    old_rp = sender.objects.get(pk=instance.pk)
-                    old_permissions = [old_rp.permission.codename]
-                    new_permissions = [perm_codename]
-                    changes = {
-                        "permissions": {
-                            "old": old_permissions,
-                            "new": new_permissions
-                        }
-                    }
-                except Exception:
-                    # For hard deletes, instance still has the data
-                    old_permissions = [perm_codename]
-                    changes = {
-                        "permissions": {
-                            "old": old_permissions,
-                            "new": []
-                        }
-                    }
 
     # Invalidate cache
-    if role_name:
+    for name in role_names_to_invalidate:
         try:
-            invalidate_role_permissions(role_name)
-            logger.debug(f"Invalidated permission cache for role={role_name}")
+            invalidate_role_permissions(name)
+            logger.debug(f"Invalidated permission cache for role={name}")
         except Exception as e:
-            logger.warning(f"Failed to invalidate permission cache for role={role_name}: {e}")
+            logger.warning(f"Failed to invalidate permission cache for role={name}: {e}")
 
     # Create audit log if there are changes
     if changes and model_name in ('Role', 'RolePermission'):
@@ -475,9 +486,6 @@ def _on_pre_save(sender, instance, **kwargs):
 
 def _on_post_save(sender, instance, created, **kwargs):
     """Handle post_save - log CREATE or UPDATE (or DELETE for soft deletes)."""
-    # Skip SoulEvent - it creates its own events via EventService and should not generate AuditLogs
-    if sender._meta.label.split('.')[-1] == 'SoulEvent':
-        return
     from apps.audit.models import AuditAction
 
     # Detect soft delete: is_deleted changed from False to True
@@ -504,9 +512,6 @@ def _on_post_save(sender, instance, created, **kwargs):
 
 def _on_post_delete(sender, instance, **kwargs):
     """Handle post_delete - log DELETE."""
-    # Skip SoulEvent - it creates its own events via EventService and should not generate AuditLogs
-    if sender._meta.label.split('.')[-1] == 'SoulEvent':
-        return
     from apps.audit.models import AuditAction
     _create_audit_log(AuditAction.DELETE, instance)
 
@@ -601,83 +606,53 @@ def create_batch_audit_log(action, instances, changes=None):
         _swallow_or_log(e, "Failed to create batch audit log")
 
 
-def _connect_model_signals(model):
-    """Connect audit signals to a single model."""
-    if model in _connected_models:
-        return
-    if model._meta.abstract:
-        return
-    # Skip the audit log itself — auditing the audit trail recurses.
-    #
-    # Was `label.startswith('Audit')`. Only `AuditLog` matches that today, so
-    # the over-wide prefix is latent rather than live; but an `AuditPolicy` or
-    # `AuditRetention` added later would silently get no audit rows at all,
-    # and "no rows" is not a shape anyone goes looking for. Identity, not
-    # spelling.
+def is_audited_model(model) -> bool:
+    """Which concrete models get audit rows. One list, consulted once.
+
+    - Must inherit `AuditUserFields`; abstract classes are skipped.
+    - Not `AuditLog` itself — auditing the audit trail recurses. Identity, not
+      a `label.startswith('Audit')` prefix: an `AuditPolicy` added later would
+      silently get no rows at all, and "no rows" is not a shape anyone goes
+      looking for.
+    - Not `SoulEvent`: it is the soul's own event log, written by EventService,
+      and mirroring it into AuditLog doubled every entry.
+
+    Role and RolePermission ARE audited. The old lazy connector excluded them
+    "to avoid duplicate CREATE/UPDATE logs" next to the PERMISSION_CHANGE
+    rows, but `apps.py` connected them anyway, so the exclusion never held —
+    and it was the reason no `pre_save` ever ran for Role, i.e. why a role
+    rename was recorded with `changes=None` (BP-10 / DB-01). The two kinds
+    of row answer different questions (what changed on the row vs. which
+    grant moved) and both are wanted.
+    """
     from apps.audit.models import AuditLog
+    from apps.core.models import AuditUserFields
 
-    if model is AuditLog:
-        return
-    # Skip SoulEvent (internal event log, creates SoulEvent entries which should not generate AuditLogs)
-    if model._meta.label.split('.')[-1] == 'SoulEvent':
-        return
-    # Skip Role and RolePermission — they have dedicated handler _invalidate_permission_cache
-    # which creates PERMISSION_CHANGE audit logs (avoids duplicate CREATE/UPDATE logs)
+    if model is AuditUserFields or not issubclass(model, AuditUserFields):
+        return False
+    if model._meta.abstract or model is AuditLog:
+        return False
+    return model._meta.label.split('.')[-1] != 'SoulEvent'
+
+
+def connect_audit_signals(model) -> bool:
+    """Wire every receiver an audited model gets. Returns whether it was one.
+
+    `dispatch_uid` makes this idempotent, so calling it twice for a model
+    (tests, `apps.py` re-entry) connects nothing twice.
+    """
+    if not is_audited_model(model):
+        return False
+    name = model.__name__
+    # pre_save is what makes `changes` on an UPDATE row real: it takes the
+    # row as it stood before the write. See `_on_pre_save`.
+    pre_save.connect(_on_pre_save, sender=model, dispatch_uid=f"audit_{name}_pre_save")
+    post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{name}_post_save")
+    post_delete.connect(_on_post_delete, sender=model, dispatch_uid=f"audit_{name}_post_delete")
     if model._meta.label.split('.')[-1] in ('Role', 'RolePermission'):
-        return
-
-    pre_save.connect(_on_pre_save, sender=model, dispatch_uid=f"audit_{model.__name__}_pre_save")
-    post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{model.__name__}_post_save")
-    post_delete.connect(_on_post_delete, sender=model, dispatch_uid=f"audit_{model.__name__}_post_delete")
-    _connected_models.add(model)
-    logger.debug(f"Connected audit signals for {model.__name__}")
-
-
-# Track models that have permission cache invalidation connected
-_permission_cache_connected_models = set()
-
-
-def _connect_permission_cache_signals(model):
-    """
-    Connect permission cache invalidation signals for Role and RolePermission models.
-    """
-    model_name = model._meta.label.split('.')[-1]
-
-    if model_name in _permission_cache_connected_models:
-        return
-    if model._meta.abstract:
-        return
-
-    # Only connect for Role and RolePermission
-    if model_name not in ('Role', 'RolePermission'):
-        return
-
-    post_save.connect(_invalidate_permission_cache, sender=model,
-                      dispatch_uid=f"perm_cache_{model.__name__}_post_save")
-    post_delete.connect(_invalidate_permission_cache, sender=model,
-                        dispatch_uid=f"perm_cache_{model.__name__}_post_delete")
-    _permission_cache_connected_models.add(model_name)
-    logger.debug(f"Connected permission cache signals for {model.__name__}")
-
-
-@receiver(post_save)
-def _auto_connect_signals(sender, **kwargs):
-    """
-    Auto-connect signals on first save.
-    Uses dispatch_uid to avoid duplicate connections.
-    """
-    _connect_model_signals(sender)
-    _connect_permission_cache_signals(sender)
-
-
-# Pre-connect permission cache signals for known models at module load
-# This ensures signals fire on first save, not just subsequent saves
-def _ensure_permission_cache_signals():
-    """Ensure permission cache signals are connected for Role and RolePermission."""
-    from apps.perm.models import Role, RolePermission
-    _connect_permission_cache_signals(Role)
-    _connect_permission_cache_signals(RolePermission)
-
-# Call after function is defined to set up signals
-# Note: We import inside to avoid circular imports
-_ensure_permission_cache_signals()
+        post_save.connect(_invalidate_permission_cache, sender=model,
+                          dispatch_uid=f"perm_cache_{name}_post_save")
+        post_delete.connect(_invalidate_permission_cache, sender=model,
+                            dispatch_uid=f"perm_cache_{name}_post_delete")
+    logger.debug(f"Connected audit signals for {name}")
+    return True
