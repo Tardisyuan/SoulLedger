@@ -66,7 +66,6 @@ import { TenantProvider, useTenant, type AuthUser } from "@/src/contexts/TenantC
 import { ThemeProvider, useTheme } from "@/src/contexts/ThemeContext";
 import { ToastProvider, useToast } from "@/src/contexts/ToastContext";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
-import { SocialEventBusProvider, useSocialEventBus } from "@/hooks/useSocialEventBus";
 import { usePermissions } from "@/src/hooks/usePermissions";
 
 // One client for the whole file, created outside every render path: a fresh
@@ -205,20 +204,6 @@ describe("context values survive a parent re-render", () => {
       <QueryClientProvider client={queryClient}>
         <TenantProvider>
           <WebSocketProvider>{c}</WebSocketProvider>
-        </TenantProvider>
-      </QueryClientProvider>
-    ));
-    const before = probe.renders();
-    forceParentRenders();
-    expect(probe.renders()).toBe(before);
-  });
-
-  it("SocialEventBusProvider", () => {
-    const probe = makeProbe(useSocialEventBus);
-    const { forceParentRenders } = mountUnderForcibleParent(probe.element, (c) => (
-      <QueryClientProvider client={queryClient}>
-        <TenantProvider>
-          <SocialEventBusProvider>{c}</SocialEventBusProvider>
         </TenantProvider>
       </QueryClientProvider>
     ));

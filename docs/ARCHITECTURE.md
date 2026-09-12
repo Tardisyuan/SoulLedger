@@ -110,7 +110,6 @@ JWT
 Frontend
 
 WebSocketProvider
-→ SocialEventBusProvider
 → React Query Cache
 
 ---
