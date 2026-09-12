@@ -1196,6 +1196,10 @@
     "no_participants": "No participants yet",
     "verdict": "Verdict",
     "failed_to_load": "Failed to load",
+    "activate": "Activate judgment",
+    "activate_hint": "The initiator activates once participants are seated; none can be added afterwards",
+    "activated_success": "Judgment activated",
+    "activate_error": "Failed to activate",
     "states": {
       "PROPOSED": "Proposed",
       "ACTIVE": "Active",
