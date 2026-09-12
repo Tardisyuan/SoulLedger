@@ -250,6 +250,18 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         default=0,
         validators=[MinValueValidator(0)],
     )
+    # What the previous life handed to this one. `complete_rebirth` writes
+    # the carried-over share here as well as into merit_score/demerit_score,
+    # because the latter two are re-derived by every recalculation: without a
+    # base to start from, the first deed of the new life reset the score to
+    # that deed alone (or, before records carried a life index, to the whole
+    # previous life again). 0/0 for a soul never reborn.
+    inherited_merit = models.IntegerField(
+        default=0, validators=[MinValueValidator(0)],
+    )
+    inherited_demerit = models.IntegerField(
+        default=0, validators=[MinValueValidator(0)],
+    )
 
     tenant = models.ForeignKey(
         'tenants.Tenant',
@@ -404,6 +416,17 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     @death_date.setter
     def death_date(self, value):
         self.death_year, self.death_month, self.death_day = parse_historical_date(value)
+
+    @property
+    def life_index(self) -> int:
+        """0 until the first rebirth, N after the N-th. Equals the
+        `cycle_count` of the Reincarnation that began this life."""
+        return self.reincarnations.count()
+
+    def current_life_records(self):
+        """This life's records only. The ledger, the summary endpoint and the
+        routing helpers all read through here; `self.records` is every life."""
+        return self.records.filter(cycle=self.life_index)
 
     def can_transition_to(self, new_state: str) -> bool:
         """

@@ -117,17 +117,21 @@ class TestJudgmentQueueCursor:
         assert response.data["position"] == 1
 
     def test_carries_the_whole_decision_surface(self, admin_client, soul, cn_tenant):
-        SoulRecord.objects.create(
-            soul=soul,
-            record_type="MERIT",
-            description="修桥铺路",
-            weight=30,
-        )
+        # The prior cycle first, then the deed: the ledger is per life
+        # (SoulRecord.cycle, souls/0034), so a deed written before the
+        # Reincarnation row would belong to a life that has ended and the
+        # queue's ledger card -- this life's -- would rightly show 0.
         Reincarnation.objects.create(
             soul=soul,
             target_realm="DY_COURT_10_ZHUANLUN",
             cycle_count=1,
             tenant=cn_tenant,
+        )
+        SoulRecord.objects.create(
+            soul=soul,
+            record_type="MERIT",
+            description="修桥铺路",
+            weight=30,
         )
         Realm.objects.create(
             realm_code="DY_01_HEAVEN",

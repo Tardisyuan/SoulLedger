@@ -482,7 +482,7 @@ class DispositionService:
 
         codes = [
             code
-            for code in soul.records.filter(record_type="DEMERIT").values_list(
+            for code in soul.current_life_records().filter(record_type="DEMERIT").values_list(
                 "inferno_article", flat=True
             )
             if code

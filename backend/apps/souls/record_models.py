@@ -160,6 +160,17 @@ class SoulRecord(AuditUserFields, models.Model):
     # that used it. The condition text is verbatim from 正統道藏; it changes
     # only when the reading of the source changes, which is exactly when a
     # reference to it *should* break rather than quietly follow.
+    # Which life this deed belongs to: `Soul.life_index` at the time it was
+    # written, stamped in save(). The ledger sums one life at a time, so a
+    # rebirth's 20% carry-over is not overwritten by the next recalculation
+    # re-adding the whole previous life. Rows written before this column
+    # existed were assigned to the life their soul was in at migration time
+    # (souls/0034): the only assignment that leaves every score exactly as it
+    # was that day.
+    cycle = models.PositiveIntegerField(
+        default=0,
+        help_text="Life index this record belongs to; 0 is the first life.",
+    )
     statute_clause = models.CharField(
         max_length=200, blank=True, default="",
         help_text=(
@@ -393,6 +404,12 @@ class SoulRecord(AuditUserFields, models.Model):
         # the mapping instead of two.
         if self.soul_id is not None:
             self.civilization = self.soul.civilization
+            # Stamp the life on insert. A caller may pass cycle explicitly;
+            # 0 is also the default, so 0 on a reborn soul means "unspecified"
+            # and is filled in -- there is no write path that files a deed
+            # under a life that already ended.
+            if is_new and self.cycle == 0:
+                self.cycle = self.soul.life_index
         super().save(*args, **kwargs)
         if is_new:
             depth, souls = _BATCH.get()
