@@ -496,4 +496,32 @@ describe('API Client — @soulledger/core/api', () => {
       expect(mockInstance.get).toHaveBeenCalledWith('/workflow/templates/', { params: undefined });
     });
   });
+
+  // ── menuButtonsApi ───────────────────────────────────────────────────────
+  describe('menuButtonsApi', () => {
+
+    const { menuButtonsApi } = require('@soulledger/core/api');
+
+    // The parameter the backend reads is `menu_id`
+    // (apps/menus/views.py::MenuButtonViewSet.get_queryset). This sent `menu`,
+    // which DRF ignores, so the menu picker on /menus/buttons filtered nothing
+    // and every menu showed every button (FL-03). The absence half matters: a
+    // client that sent both would pass a presence-only check while still
+    // carrying the dead one.
+    it('list(menuId, page) sends `menu_id`, not `menu`', () => {
+      mockInstance.get.mockResolvedValueOnce({ data: { results: [] } });
+      menuButtonsApi.list(5, 2);
+      expect(mockInstance.get).toHaveBeenCalledWith('/menus/buttons/', {
+        params: { menu_id: 5, page: 2 },
+      });
+      const sent = mockInstance.get.mock.calls.at(-1)?.[1]?.params;
+      expect(sent).not.toHaveProperty('menu');
+    });
+
+    it('list() with no menu sends no filter at all', () => {
+      mockInstance.get.mockResolvedValueOnce({ data: { results: [] } });
+      menuButtonsApi.list(undefined, 1);
+      expect(mockInstance.get).toHaveBeenCalledWith('/menus/buttons/', { params: { page: 1 } });
+    });
+  });
 });
