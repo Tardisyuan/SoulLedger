@@ -1351,6 +1351,7 @@
     "code_placeholder": "renu add, edit, delete, export",
     "permission_placeholder": "renu soul.create, judgment.delete",
     "create_error": "Ma Kheper Sekhem Seth",
+    "update_error": "Failed to update button",
     "delete_error": "Ma Wehem Sekhem Seth",
     "gates_note": "Aha Sekhem Ahet — Ankh. Sah, Sidebar, Sekhem Ren Djewet Em It Seth:",
     "permission_mismatch_warning": "\"{{codename}}\" Ma Rekhyu Sekhem Ahet — Ma Hem Maa Sekhem Seth"

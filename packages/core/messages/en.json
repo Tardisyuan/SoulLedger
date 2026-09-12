@@ -1415,6 +1415,7 @@
     "code_placeholder": "e.g. add, edit, delete, export",
     "permission_placeholder": "e.g. soul.create, judgment.delete",
     "create_error": "Failed to create button",
+    "update_error": "Failed to update button",
     "delete_error": "Failed to delete button",
     "gates_note": "This button only has one visibility gate — Active. Roles, sidebar visibility, and the permission-codename ambiguity all live on the parent menu:",
     "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role"

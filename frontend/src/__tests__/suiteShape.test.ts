@@ -143,6 +143,7 @@ const COLLECTED_FILES = [
   "middlewareAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
   "matrixPartialSave.test.tsx",
+  "MenuButtonsPage.editFailure.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",

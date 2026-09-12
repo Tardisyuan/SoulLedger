@@ -79,6 +79,21 @@ export default function MenuButtonsPage() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingButton, setEditingButton] = useState<MenuButton | null>(null);
+
+  // The edit path had no mutation: `await menuButtonsApi.update(...)` inline in
+  // the submit handler, so a refused save was an unhandled rejection — no
+  // toast, no invalidation, the modal left open with nothing said (FL-08).
+  // Create and delete on this same form had mutations; `app/menus/page.tsx`
+  // already closed the identical gap. `MenuButtonsPage.editFailure.test.tsx`.
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<MenuButton> }) =>
+      menuButtonsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menu-buttons"] });
+      setEditingButton(null);
+    },
+    onError: () => showToast(t("menu_buttons.update_error"), "error"),
+  });
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -108,9 +123,7 @@ export default function MenuButtonsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingButton) {
-      await menuButtonsApi.update(editingButton.id, form);
-      queryClient.invalidateQueries({ queryKey: ["menu-buttons"] });
-      setEditingButton(null);
+      updateMutation.mutate({ id: editingButton.id, data: form });
     } else {
       await createMutation.mutateAsync(form);
       setIsCreateModalOpen(false);

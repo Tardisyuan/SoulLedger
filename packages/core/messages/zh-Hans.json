@@ -1415,6 +1415,7 @@
     "code_placeholder": "如 add、edit、delete、export",
     "permission_placeholder": "如 soul.create、judgment.delete",
     "create_error": "创建按钮失败",
+    "update_error": "更新按钮失败",
     "delete_error": "删除按钮失败",
     "gates_note": "这个按钮只有一个可见性开关——「激活」。角色、侧边栏可见性、权限码推导的歧义，都属于它所在的父级菜单：",
     "permission_mismatch_warning": "“{{codename}}” 不对应任何真实权限——此按钮将对所有非管理员角色静默隐藏"
