@@ -139,8 +139,19 @@ class TestWhatReachesTheColumn:
 
     def test_a_value_written_before_any_key_still_reads_back(self, webhook):
         """Legacy plaintext rows must survive turning encryption on — that is
-        the whole reason `InvalidToken` is caught rather than left to raise."""
-        config = webhook(self.SECRET)  # no key configured: stored in the clear
+        the whole reason `InvalidToken` is caught rather than left to raise.
+
+        The "before" state is set explicitly. It used to be ambient — the write
+        below simply inherited whatever `ENCRYPTION_KEY` the developer's
+        `backend/.env` carried, which was nothing on the machine this was
+        written on. The moment someone followed `.env.example` and configured a
+        key, this row was written encrypted under *their* key, read back under
+        the generated one on the next line, and the InvalidToken fallback
+        returned ciphertext — a red that points at encryption and not at the
+        test's own assumption. CI has no `.env`, so it would have stayed green.
+        """
+        with override_settings(ENCRYPTION_KEY=""):
+            config = webhook(self.SECRET)  # no key configured: stored in the clear
         with override_settings(ENCRYPTION_KEY=Fernet.generate_key().decode()):
             config.refresh_from_db()
             assert config.signing_secret == self.SECRET
