@@ -1,9 +1,11 @@
 """
 Audit views - AuditLog ViewSet with filtering support.
 """
+from django.utils.dateparse import parse_date
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
@@ -20,7 +22,41 @@ from .serializers import (
 
 #: `/audit-logs/timeline/?limit=` 的上界。没有它,`?limit=999999999` 是一次全表
 #: 扫描,而它返回 **200** —— 一个「成功」的响应,是最不容易被发现的拒绝服务面。
+#:
+#: 2026-08-29 台账 M29 记「已修 1b882b7」,那次 diff 只加了这个常量,没有一处
+#: 引用它 —— 记为已修、实际未落地,直到 2026-09-12(BP-02)`_parse_limit` 用上它。
 TIMELINE_MAX_LIMIT = 500
+TIMELINE_DEFAULT_LIMIT = 50
+
+
+def _parse_date_param(params, name):
+    """`?start_date=垃圾` 曾经直接进 `timestamp__date__gte`,Django 抛 ValidationError,
+    DRF 不认它 → 500。DRF 自己的 ValidationError 才是 400。"""
+    raw = params.get(name)
+    if not raw:
+        return None
+    value = parse_date(raw)
+    if value is None:
+        raise ValidationError({name: f"'{raw}' is not a date (expected YYYY-MM-DD)."})
+    return value
+
+
+def _parse_limit(params):
+    """Positive integer, clamped to TIMELINE_MAX_LIMIT; anything else is a 400.
+
+    `int(...)` alone was `abc` → 500, `-1` → a negative slice Django refuses → 500,
+    and `999999999` → the whole table with a 200.
+    """
+    raw = params.get("limit")
+    if raw is None:
+        return TIMELINE_DEFAULT_LIMIT
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = 0
+    if value < 1:
+        raise ValidationError({"limit": f"'{raw}' is not a positive integer."})
+    return min(value, TIMELINE_MAX_LIMIT)
 
 
 class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -98,11 +134,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if resource_id:
             qs = qs.filter(resource_id=resource_id)
 
-        start_date = self.request.query_params.get('start_date')
+        start_date = _parse_date_param(self.request.query_params, 'start_date')
         if start_date:
             qs = qs.filter(timestamp__date__gte=start_date)
 
-        end_date = self.request.query_params.get('end_date')
+        end_date = _parse_date_param(self.request.query_params, 'end_date')
         if end_date:
             qs = qs.filter(timestamp__date__lte=end_date)
 
@@ -203,7 +239,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
-            limit: 返回条数 (默认 50)
+            limit: 返回条数 (默认 50,上限 TIMELINE_MAX_LIMIT;非正整数 400)
         """
         qs = AuditLog.objects.select_related("user").all()
 
@@ -215,10 +251,15 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             else:
                 return Response([])
 
-        # Permission-related resource types
+        # Permission-related resource types. LOWERCASE: every write path derives
+        # `resource` from `_meta.label_lower` and migration 0009 folded the old
+        # CamelCase rows to match — so this list, still spelled 'Role',
+        # 'RolePermission', matched nothing on a case-sensitive `IN` and the
+        # default timeline (no `?resource=`) was empty. Found 2026-09-12 by the
+        # limit test seeding 'role' rows and getting 0 back.
         permission_resources = [
-            'Role', 'RolePermission', 'Menu', 'MenuButton',
-            'FieldPermission', 'RowLevelDataScope', 'DataScope', 'Permission'
+            'role', 'rolepermission', 'menu', 'menubutton',
+            'fieldpermission', 'rowleveldatascope', 'datascope', 'permission'
         ]
 
         resource_filter = request.query_params.get('resource')
@@ -232,15 +273,15 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if action_filter:
             qs = qs.filter(action=action_filter.upper())
 
-        start_date = request.query_params.get('start_date')
+        start_date = _parse_date_param(request.query_params, 'start_date')
         if start_date:
             qs = qs.filter(timestamp__date__gte=start_date)
 
-        end_date = request.query_params.get('end_date')
+        end_date = _parse_date_param(request.query_params, 'end_date')
         if end_date:
             qs = qs.filter(timestamp__date__lte=end_date)
 
-        limit = int(request.query_params.get('limit', 50))
+        limit = _parse_limit(request.query_params)
         qs = qs.order_by('-timestamp')[:limit]
 
         serializer = AuditLogSerializer(qs, many=True)
