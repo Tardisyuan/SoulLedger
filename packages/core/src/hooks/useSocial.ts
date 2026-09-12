@@ -2,7 +2,7 @@
 
 import { drfNonFieldError } from "../validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { socialApi, type UserProfile } from "../api/index";
+import { socialApi, type PaginatedResponse, type UserProfile } from "../api/index";
 import { notify, type NotifyMessage } from "../platform/index";
 import { socialKeys } from "../query_keys";
 
@@ -119,13 +119,40 @@ export function useDeletePost() {
 
 // ── Comments ─────────────────────────────────────────────────────────
 
+type ListParams = Record<string, string | number | undefined>;
+
+/**
+ * Every page of a list, flattened into the shape of one.
+ *
+ * `CommentThread` builds a tree from `results` and `ReactionBar` looks the
+ * signed-in user up in it; both read ONE page — the server's 20 — so the 21st
+ * comment was never in the thread and a post with more than twenty reactions
+ * showed the operator's own as not pressed (FL-09). Following `next` here,
+ * inside the hook, keeps both consumers reading `data.results` exactly as
+ * before. The first request is sent with the caller's params untouched so the
+ * scoping is unchanged; later pages carry `page`. Not `fetchAllPages` from
+ * `../api/client`: that walks a path, and these go through `socialApi` so the
+ * existing call-site assertions stay true.
+ */
+async function everyPage<T>(
+  fetchPage: (params?: ListParams) => Promise<{ data: PaginatedResponse<T> }>,
+  params?: ListParams
+): Promise<PaginatedResponse<T>> {
+  const first = await fetchPage(params);
+  const results = [...first.data.results];
+  let next = first.data.next;
+  for (let page = 2; next; page++) {
+    const res = await fetchPage({ ...(params ?? {}), page: String(page) });
+    results.push(...res.data.results);
+    next = res.data.next;
+  }
+  return { ...first.data, next: null, previous: null, results };
+}
+
 export function useComments(postId: string) {
   return useQuery({
     queryKey: socialKeys.comments.list({ post: postId }),
-    queryFn: async () => {
-      const res = await socialApi.listComments({ post: postId });
-      return res.data;
-    },
+    queryFn: () => everyPage((p) => socialApi.listComments(p), { post: postId }),
     enabled: !!postId,
     staleTime: 30_000,
   });
@@ -161,13 +188,10 @@ export function useDeleteComment() {
 
 // ── Reactions ────────────────────────────────────────────────────────
 
-export function useReactions(params?: Record<string, string | number | undefined>) {
+export function useReactions(params?: ListParams) {
   return useQuery({
     queryKey: [...socialKeys.reactions.all, params] as const,
-    queryFn: async () => {
-      const res = await socialApi.listReactions(params);
-      return res.data;
-    },
+    queryFn: () => everyPage((p) => socialApi.listReactions(p), params),
     staleTime: 30_000,
   });
 }

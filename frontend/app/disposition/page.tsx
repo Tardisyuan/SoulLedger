@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { dispositionApi, type Disposition } from "@soulledger/core/api";
+import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/src/components/ui/Pagination";
 import { DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
@@ -23,11 +24,18 @@ export default function DispositionPage() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [showExecuteModal, setShowExecuteModal] = useState<string | null>(null);
+  // Page in the key and on the wire. `list()` was called with no `page` and
+  // nothing offered another one, so everything past the server's twentieth
+  // disposition was invisible and unreachable, and nothing said so (FL-09).
+  // `app/dispatch/page.tsx` is the sibling this copies; the execute mutation
+  // below invalidates `["dispositions"]`, which prefix-matches every page.
+  const [page, setPage] = useState(1);
 
   const { data: dispositionsResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: ["dispositions"],
-    queryFn: () => dispositionApi.list().then(r => r.data),
+    queryKey: ["dispositions", page],
+    queryFn: () => dispositionApi.list({ page: String(page) }).then(r => r.data),
     enabled: !!user,
+    placeholderData: (previous) => previous,
   });
 
   // /disposition/ is a paginated ModelViewSet list, so `results` is always
@@ -121,6 +129,12 @@ export default function DispositionPage() {
           </div>
         ))}
       </div>
+      <Pagination
+        page={page}
+        totalPages={Math.max(1, Math.ceil((dispositionsResponse?.count ?? 0) / PAGE_SIZE))}
+        count={dispositionsResponse?.count ?? 0}
+        onPageChange={setPage}
+      />
 
       {/* The second hand-rolled `fixed inset-0` — same missing apparatus as
           `app/recycle-bin`: no `role="dialog"`, no `aria-modal`, no focus

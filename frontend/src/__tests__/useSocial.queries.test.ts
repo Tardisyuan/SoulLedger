@@ -292,6 +292,55 @@ describe("useReactions", () => {
   });
 });
 
+// ── Every page, not the first (FL-09) ────────────────────────────────
+//
+// `CommentThread` builds a tree out of `data.results` and `ReactionBar` looks
+// the signed-in user up in it. Both read one page of twenty: the 21st comment
+// was never in the thread, and a post with more than twenty reactions showed
+// the operator's own as not pressed. The server paginates; these two hooks
+// now follow `next` until it is null and hand back one flattened page.
+//
+// The first call is asserted UNCHANGED (`{ post: "p1" }`, no page) so the two
+// scoping tests above keep meaning what they say; every later call carries
+// the page number.
+
+function page<T>(results: T[], next: string | null) {
+  return { data: { count: 0, next, previous: null, results } };
+}
+
+describe("useComments walks every page", () => {
+  it("concatenates page 2 onto page 1 and asks for it by number", async () => {
+    (socialApi.listComments as jest.Mock)
+      .mockResolvedValueOnce(page([{ id: "c1" }], "http://x/api/v1/social/comments/?post=p1&page=2"))
+      .mockResolvedValueOnce(page([{ id: "c2" }], null));
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useComments("p1"), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect((result.current.data?.results as Array<{ id: string }>).map((c) => c.id)).toEqual(["c1", "c2"]);
+    expect(socialApi.listComments).toHaveBeenNthCalledWith(1, { post: "p1" });
+    expect(socialApi.listComments).toHaveBeenNthCalledWith(2, { post: "p1", page: "2" });
+    expect(socialApi.listComments).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useReactions walks every page", () => {
+  it("concatenates page 2 onto page 1 and asks for it by number", async () => {
+    (socialApi.listReactions as jest.Mock)
+      .mockResolvedValueOnce(page([{ id: "r1" }], "http://x/api/v1/social/reactions/?post=p1&page=2"))
+      .mockResolvedValueOnce(page([{ id: "r2" }], null));
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useReactions({ post: "p1" }), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect((result.current.data?.results as Array<{ id: string }>).map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(socialApi.listReactions).toHaveBeenNthCalledWith(2, { post: "p1", page: "2" });
+    expect(socialApi.listReactions).toHaveBeenCalledTimes(2);
+  });
+});
+
 // ── Follows ──────────────────────────────────────────────────────────
 
 describe("useToggleFollow", () => {
