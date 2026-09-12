@@ -178,7 +178,13 @@ class Command(BaseCommand):
             death = (soul.death_year, soul.death_month, soul.death_day)
 
             problems = [(None, p) for p in check_soul_dates(birth, death)]
+            life_index = soul.life_index
             for record in soul.checked_records:
+                # A previous life's deed cannot be judged against this life's
+                # dates (serializers._this_lifes_records); reporting it here
+                # would send the operator to fix a date that is right.
+                if record.cycle != life_index:
+                    continue
                 record_count += 1
                 event = (record.event_year, record.event_month, record.event_day)
                 problems += [

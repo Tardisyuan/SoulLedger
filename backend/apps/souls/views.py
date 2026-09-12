@@ -57,7 +57,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'archive': ['soul.delete'],
         'correct_settlement': ['soul.correct_settlement'],
     }
-    queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
+    # `reincarnations` because life_index counts them, and the date checks on
+    # every list row read it (serializers._this_lifes_records).
+    queryset = Soul.objects.select_related("tenant").prefetch_related("records", "reincarnations").all()
     filterset_class = SoulFilter
     search_fields = SoulFilter.search_fields
     ordering_fields = SoulFilter.ordering_fields
@@ -68,7 +70,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         Applies tenant isolation + DataScope filtering for non-ADMIN users.
         """
         from apps.souls.querysets import SoulQuerySet
-        qs = SoulQuerySet(Soul).select_related("tenant").prefetch_related("records")
+        qs = SoulQuerySet(Soul).select_related("tenant").prefetch_related("records", "reincarnations")
         # SoulQuerySet(Soul) instantiates the raw queryset directly rather
         # than going through SoulManager.get_queryset(), so — unlike almost
         # every other viewset in this codebase — it does NOT pick up the
