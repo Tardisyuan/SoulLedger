@@ -92,12 +92,12 @@ This file is not.」
 
 ### 2.1 颜色
 
-`:root` 是 dark（`:264-371`），`.light` 是 light（`:374-474`）。值是**裸 HSL 三元组**
-`H S% L%`，消费方式：
+`:root` 是 dark（`:376-540`），`.light` 是 light（`:541-799`）。值是**裸 OKLCH 三元组**
+`L C H`（`7db2c6e` 起，此前是 HSL；旧拼法 `hsl(var(--color-ink))` 会把亮度钳到 100%，静默变白字），消费方式：
 
 ```
-text-[hsl(var(--color-ink))]              ✅ 唯一正确拼法
-bg-[hsl(var(--color-status-error)/0.1)]   ✅ 带 alpha
+text-[oklch(var(--color-ink))]              ✅ 唯一正确拼法
+bg-[oklch(var(--color-status-error)/0.1)]   ✅ 带 alpha
 text-ink                                  ❌ Tailwind 4 的 @theme 与 :root 同名冲突，
                                              裸形会生成非颜色值
 ```
@@ -417,7 +417,7 @@ tf("x.y", "中文兜底")         // ✅ 真的会兜底。现存 52 处
 | 规则 | 执法 |
 |---|---|
 | **jsx-a11y recommended 全套 34 条 + `label-has-associated-control`，全部 `error`** | `[eslint]`（测试文件除外；`no-autofocus` 仅对 4 个对话框文件关闭） |
-| 全局 `:focus-visible { outline: 2px solid hsl(var(--color-focus)) !important }`。**不得用 `--color-accent`** —— 用户可运行时改写它，且浅色下只有 2.14:1，不过 WCAG 1.4.11 | **`[test:focusRingContract]`** 断言规则存在、带 `!important`、只点名 focus token、在全部表面上 ≥3:1 |
+| 全局 `:focus-visible { outline: 2px solid oklch(var(--color-focus)) !important }`。**不得用 `--color-accent`** —— 用户可运行时改写它，且浅色下只有 2.14:1，不过 WCAG 1.4.11 | **`[test:focusRingContract]`** 断言规则存在、带 `!important`、只点名 focus token、在全部表面上 ≥3:1 |
 | `prefers-reduced-motion: reduce` 下动画/过渡收敛到 **1ms，不是 `none`**（Base UI 等靠 `transitionend` 卸载）。spinner 不豁免 | **`[test:reducedMotionContract]`** 断言不含 `none` 且仍有动效可压 |
 | JS 驱动的动效（gsap / recharts）在 `lib/motion.ts::prefersReducedMotion()` 读偏好 | `[test:workflowAutoLayoutMotion]` + `[e2e]` |
 | 所有文字 ≥ AA 4.5:1 | `[test:inkOnSurfaceContract]`（4 主题 × 租户 × 表面 × ink = **128 对**）、`[test:civIdentityInkContract]`（32 对）、`[test:dataGridToneContract]`（badge 填充 ≤0.1 alpha） |

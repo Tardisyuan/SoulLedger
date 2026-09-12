@@ -3,13 +3,18 @@
 ## Quick Start
 
 ```bash
-# Backend
-cd backend && pip install -r requirements.txt
+# Backend — settings.py refuses to load without SECRET_KEY, so copy the
+# example env first. Its DATABASE_URL points at a local PostgreSQL; with none,
+# set DATABASE_URL=sqlite:///db.sqlite3 in .env (DEBUG=true allows SQLite)
+cd backend && cp .env.example .env && pip install -r requirements.txt
 python manage.py migrate && python manage.py runserver
 
-# Frontend
-cd frontend && npm install && npm run dev
+# Frontend — install at the REPO ROOT, not in frontend/: this is an npm
+# workspaces repo and the only lockfile is the root package-lock.json
+nvm use && npm ci && npm run dev --workspace frontend
 ```
+
+Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
 
 ## Development Workflow
 
@@ -37,9 +42,10 @@ cd frontend && npm install && npm run dev
 - Use `PageShell` for page layouts (33 of 37 routes do; `PageSection` is for
   sub-blocks within a page. `TableSkeleton` has zero callers under `app/` —
   table loading goes through `<DataTable isLoading>`)
-- Colours have exactly one spelling: `text-[hsl(var(--color-ink))]`. The bare
-  `text-ink` form silently renders the wrong value — see
-  `docs/CONVENTIONS-frontend.md` §2
+- Colours have exactly one spelling: `text-[oklch(var(--color-ink))]`. The bare
+  `text-ink` form silently renders the wrong value, and so does the pre-`7db2c6e`
+  `hsl(var(...))` form (the tokens are OKLCH triples now; `hsl()` clamps the
+  lightness to 100% and paints white) — see `docs/CONVENTIONS-frontend.md` §2
 - Use TanStack Query for API calls with proper query keys
 
 ### Git Commits

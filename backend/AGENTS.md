@@ -243,7 +243,8 @@ const mutation = useMutation({
 
 ```bash
 python manage.py migrate perm
-python -c "from apps.perm.models import DataScope; print('OK')"
+# `python -c` 不 setup Django，实跑报 ImproperlyConfigured: Requested setting AUTH_USER_MODEL
+python manage.py shell -c "from apps.perm.models import DataScope; print('OK')"
 ```
 
 ---
