@@ -1,9 +1,10 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -80,6 +81,40 @@ export default function CrossJudgmentDetailPage() {
       t("crossJudgments.failed_to_load")
     : "";
 
+  /**
+   * ACTIVATION IS A BUTTON, NOT A SIDE EFFECT (BD-06, 2026-09-12).
+   *
+   * The backend used to flip PROPOSED -> ACTIVE the moment the first
+   * participant was seated, and then refused the second one — so a "joint"
+   * judgment could hold one participant. Now the initiating tenant convenes
+   * the bench explicitly. The button shows only when this tenant *can*: it
+   * initiated the case, the case is still PROPOSED, and someone is seated —
+   * the same three conditions the server enforces (403 / 400 otherwise), so
+   * a visible button is one that will succeed.
+   *
+   * `initiating_tenant_code` against `user.tenant.code`: both are the tenant
+   * code string, and the detail serializer carries the code precisely so a
+   * client does not need the numeric id to answer "is this mine".
+   */
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const activateMutation = useMutation({
+    mutationFn: () => crossTenantJudgmentsApi.activate(id as string),
+    onSuccess: () => {
+      showToast(t("crossJudgments.activated_success"), "success");
+      queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+    },
+    onError: () => {
+      showToast(t("crossJudgments.activate_error"), "error");
+    },
+  });
+  const canActivate =
+    !!judgment &&
+    judgment.status === "PROPOSED" &&
+    !!user?.tenant?.code &&
+    user.tenant.code === judgment.initiating_tenant_code &&
+    judgment.participants.length > 0;
+
   /* The back control is a <Button variant="ghost">, not a bare `←`: it calls
      router.back() rather than navigating to a known route, so it is a control
      and not a link, and PageShell's own note asks for one of the two. */
@@ -117,11 +152,23 @@ export default function CrossJudgmentDetailPage() {
         loading ? (
           <Skeleton className="h-6 w-20" />
         ) : (
-          <DomainEnum
-            namespace="crossJudgments.states"
-            value={judgment?.status}
-            className={badgeVariants({ tone: STATUS_TONES[judgment?.status ?? ""] ?? "neutral" })}
-          />
+          <div className="flex items-center gap-3">
+            {canActivate && (
+              <Button
+                size="sm"
+                title={t("crossJudgments.activate_hint")}
+                loading={activateMutation.isPending}
+                onClick={() => activateMutation.mutate()}
+              >
+                {t("crossJudgments.activate")}
+              </Button>
+            )}
+            <DomainEnum
+              namespace="crossJudgments.states"
+              value={judgment?.status}
+              className={badgeVariants({ tone: STATUS_TONES[judgment?.status ?? ""] ?? "neutral" })}
+            />
+          </div>
         )
       }
     >

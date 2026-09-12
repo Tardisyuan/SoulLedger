@@ -116,6 +116,7 @@ const COLLECTED_FILES = [
   "dispatchApproveConfirms.test.tsx",
   "dispatchProposeValidation.test.tsx",
   "contextValueIdentity.test.tsx",
+  "crossJudgmentActivate.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
   "dataGridToneContract.test.ts",
   "dialogsAreNotHandRolled.test.ts",

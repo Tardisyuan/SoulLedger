@@ -1196,6 +1196,10 @@
     "no_participants": "暂无参与者",
     "verdict": "裁决",
     "failed_to_load": "加载失败",
+    "activate": "激活联审",
+    "activate_hint": "参与方就位后由发起方激活;激活后不能再添加参与方",
+    "activated_success": "联审已激活",
+    "activate_error": "激活失败",
     "states": {
       "PROPOSED": "已提议",
       "ACTIVE": "进行中",

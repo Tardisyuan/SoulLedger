@@ -115,11 +115,13 @@ export const crossTenantJudgmentsApi = {
   create: (data: { title: string; description: string }) => api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
   participate: (id: string, data: { participant_tenant: number; participant_actor?: number; role?: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/participate/`, data),
-  // `activate` was deleted 2026-08-31. `CrossTenantJudgmentViewSet` declares
-  // only `participate` and `conclude`, so the call 404'd — and the comment
-  // above it **said so**, in the file, next to the code, for as long as it
-  // existed. A method that documents its own uselessness is still a method the
-  // next person will call.
+  // `activate` was deleted 2026-08-31 because the backend had no such route
+  // and the call 404'd. It is back 2026-09-12 with a real route behind it:
+  // activation used to be a side effect of the first `participate`, which
+  // capped the bench at one participant (BD-06). Now the initiating tenant
+  // convenes explicitly, once at least one participant is seated. 403 for any
+  // other tenant, 400 on an empty bench or a judgment past PROPOSED.
+  activate: (id: string) => api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/activate/`),
   conclude: (id: string, data: { conclusion_type: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/conclude/`, data),
 };

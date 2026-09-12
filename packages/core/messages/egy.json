@@ -1196,6 +1196,10 @@
     "no_participants": "Ma Rekhyu Netjeru",
     "verdict": "Unemu",
     "failed_to_load": "Ma Khemut Seth",
+    "activate": "Activate judgment",
+    "activate_hint": "The initiator activates once participants are seated; none can be added afterwards",
+    "activated_success": "Judgment activated",
+    "activate_error": "Failed to activate",
     "states": {
       "PROPOSED": "Em Djed",
       "ACTIVE": "Em Iri",
