@@ -7,6 +7,7 @@ import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import { authApi } from "@soulledger/core/api";
+import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { loginSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -48,13 +49,15 @@ export default function LoginPage() {
       const res = await authApi.login(form.username, form.password);
 
       const tokens = res.data;
-      // Store access token in sessionStorage (not cookie) to limit XSS exposure
-      sessionStorage.setItem("soulledger_access", tokens.access);
-      // `Secure` only over https — it is dropped on plain http, which is what
-      // `npm run dev` and the e2e suite serve. Same rule as the refresh
-      // interceptor's; see packages/core/src/api/client.ts::refreshCookie.
-      const secure = location.protocol === "https:" ? "; Secure" : "";
-      document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax${secure}`;
+      // Through the ports, the same way `rotateRefreshToken` writes them. This
+      // page used to `sessionStorage.setItem` and `document.cookie =` directly
+      // — a second copy of where each token lives, and `TenantContext.logout`
+      // was a third; the third one was wrong (FL-02). `lib/platform/web.ts` is
+      // the one place that knows the access token is session-scoped and the
+      // refresh token a `SameSite=Lax` cookie with `Secure` keyed on the page
+      // protocol; nothing about those attributes changed.
+      setAccessToken(tokens.access);
+      setRefreshToken(tokens.refresh);
 
       // Populate TenantContext so downstream components have tenant/user info
       if (tokens.user) {

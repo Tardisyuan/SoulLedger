@@ -8,11 +8,13 @@
  * usePermissions tests all mock useTenant() wholesale, which is exactly why
  * they wouldn't catch the list arriving empty and staying empty.
  */
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
 import { CIVILIZATION_CODES } from "@soulledger/core/config/civilizations";
 import { permApi } from "@soulledger/core/api";
+import { getAccessToken, getRefreshToken, getTenantId } from "@soulledger/core/platform";
+import { installWebPlatform } from "@/lib/platform/web";
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: {
@@ -217,5 +219,55 @@ describe("TenantContext [data-civ] stamp", () => {
     renderHook(() => useTenant(), { wrapper });
 
     expect(document.documentElement.dataset.civ).toBeUndefined();
+  });
+});
+
+/**
+ * Logout has to revoke the credential the API client actually sends.
+ *
+ * `logout` cleared `localStorage` and three cookies — and the access token is
+ * in NONE of those. It lives in `sessionStorage` (see `lib/platform/web.ts`),
+ * which is where `api/client.ts`'s request interceptor reads it from. So after
+ * "logging out" the interceptor kept attaching the old Bearer for the rest of
+ * its 30-minute life, in the same tab, to every request the next screen made.
+ * `tenant_id` stayed too.
+ *
+ * The real web adapter is installed for this block, not a probe: the claim is
+ * about which browser facilities are emptied, and only the adapter knows.
+ */
+describe("logout clears the session, not just the cookies", () => {
+  beforeEach(() => {
+    installWebPlatform();
+    localStorage.clear();
+    sessionStorage.clear();
+    mockMyRolePermissions.mockReset();
+    mockMyRolePermissions.mockResolvedValue({ data: { role: "JUDGE", permissions: [] } });
+  });
+
+  it("the access token, the refresh token and the tenant id are all gone", async () => {
+    seedStoredUser();
+    sessionStorage.setItem("soulledger_access", "LIVE-BEARER");
+    document.cookie = "soulledger_refresh=LIVE-REFRESH; path=/";
+    localStorage.setItem("tenant_id", "7");
+
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    await waitFor(() => expect(result.current.user).not.toBeNull());
+    // Prove the seed is readable through the port before asserting its absence,
+    // or the assertions below would pass against a store nothing ever filled.
+    expect(getAccessToken()).toBe("LIVE-BEARER");
+    expect(getRefreshToken()).toBe("LIVE-REFRESH");
+    expect(getTenantId()).toBe("7");
+
+    act(() => result.current.logout());
+
+    expect(result.current.user).toBeNull();
+    expect(getAccessToken()).toBeNull();
+    // The raw facility as well as the port: the port could be re-pointed.
+    expect(sessionStorage.getItem("soulledger_access")).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(document.cookie).not.toContain("soulledger_refresh=LIVE-REFRESH");
+    expect(getTenantId()).toBe("");
+    expect(localStorage.getItem("tenant_id")).toBeNull();
+    expect(localStorage.getItem(USER_KEY)).toBeNull();
   });
 });
