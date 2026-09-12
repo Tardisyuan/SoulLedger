@@ -220,6 +220,8 @@
       "new_identity": "New Identity",
       "rebirth_form": "Rebirth Form",
       "cycle": "Cycle",
+      "life_number": "Life {{n}}",
+      "carried_in": "Carried in from the last life",
       "event_log": "Event Log",
       "no_events": "No events yet",
       "mark_dead_confirm": "Mark {{name}} as dead?",

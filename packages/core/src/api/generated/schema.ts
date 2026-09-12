@@ -6123,6 +6123,9 @@ export interface components {
             readonly update_time?: string;
             readonly records?: components["schemas"]["SoulRecord"][];
             readonly date_problems?: components["schemas"]["SoulDateProblem"][];
+            readonly life_index?: number;
+            readonly inherited_merit?: number;
+            readonly inherited_demerit?: number;
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -6802,6 +6805,9 @@ export interface components {
             readonly update_time: string;
             readonly records: components["schemas"]["SoulRecord"][];
             readonly date_problems: components["schemas"]["SoulDateProblem"][];
+            readonly life_index: number;
+            readonly inherited_merit: number;
+            readonly inherited_demerit: number;
         };
         /**
          * @description The shape `_soul_level_date_problems` returns, for the schema only.
@@ -6907,6 +6913,8 @@ export interface components {
             occurrence_count?: number | null;
             /** @description Which Inferno article this deed belongs under, as a Statute code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves the European router on its culpa ladder for this deed. */
             inferno_article?: string;
+            /** @description Life index this record belongs to; 0 is the first life. */
+            readonly cycle: number;
         };
         /**
          * @description * `CHARITY` - Charity / Generosity

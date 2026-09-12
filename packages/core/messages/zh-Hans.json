@@ -220,6 +220,8 @@
       "new_identity": "新身份",
       "rebirth_form": "轮回形态",
       "cycle": "轮回次数",
+      "life_number": "第 {{n}} 世",
+      "carried_in": "承自前世",
       "event_log": "事件日志",
       "no_events": "暂无事件",
       "mark_dead_confirm": "确认将 {{name}} 标记为死亡？",

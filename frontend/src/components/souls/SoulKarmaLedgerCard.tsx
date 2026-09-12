@@ -40,6 +40,11 @@ interface SoulKarmaLedgerCardProps {
   recordCount: number;
   records: LedgerRecord[];
   inheritance: LedgerInheritance | null;
+  /** Which life this is and what it started from, off the soul payload
+   * (life_index / inherited_merit / inherited_demerit). Optional so the figure
+   * inventory `renderCard` pins in ledgerQuantityContract.render stays what it
+   * was; the page always passes it. */
+  life?: { index: number; inheritedMerit?: number; inheritedDemerit?: number } | null;
 }
 
 /** Year-only label for the x-axis — full formatHistoricalDate also appends
@@ -97,6 +102,7 @@ export function SoulKarmaLedgerCard({
   recordCount,
   records,
   inheritance,
+  life,
 }: SoulKarmaLedgerCardProps) {
   // Every `tf` key this card passes — all seven of them — is absent from all
   // three bundles, so the fallback branch is what renders here in every
@@ -114,6 +120,39 @@ export function SoulKarmaLedgerCard({
       {/* 业力总账 */}
       <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
         <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+
+        {/* Which life the totals below belong to, and — after a rebirth — the
+            carry-over they started from. The ledger is per life (BD-04), so a
+            reader comparing these sums with the timeline's older deeds needs
+            to know the deeds of a life that ended are not in them. The two
+            numerals are the same magnitudes the next-life preview draws, so
+            they take that table's kinds. */}
+        {life && (
+          <div className="mb-3 flex justify-between items-baseline gap-2 text-02 text-[oklch(var(--color-ink-muted))]">
+            <span>{t("souls.detail.life_number", { n: String(life.index + 1) })}</span>
+            {life.index > 0 && life.inheritedMerit !== undefined && life.inheritedDemerit !== undefined && (
+              <span className="inline-flex items-baseline gap-2">
+                <span>{t("souls.detail.carried_in")}</span>
+                <Figure
+                  field="carried_merit"
+                  quantity={INHERITANCE_QUANTITIES.inherited_merit}
+                  t={t}
+                  className="tabular-nums text-[oklch(var(--color-karma-merit))]"
+                >
+                  +{life.inheritedMerit}
+                </Figure>
+                <Figure
+                  field="carried_demerit"
+                  quantity={INHERITANCE_QUANTITIES.inherited_demerit}
+                  t={t}
+                  className="tabular-nums text-[oklch(var(--color-karma-demerit))]"
+                >
+                  -{life.inheritedDemerit}
+                </Figure>
+              </span>
+            )}
+          </div>
+        )}
 
         <SoulReadingPanel
           reading={reading}

@@ -12930,6 +12930,15 @@ components:
           items:
             $ref: '#/components/schemas/SoulDateProblem'
           readOnly: true
+        life_index:
+          type: integer
+          readOnly: true
+        inherited_merit:
+          type: integer
+          readOnly: true
+        inherited_demerit:
+          type: integer
+          readOnly: true
     PatchedUser:
       type: object
       description: |-
@@ -14299,6 +14308,15 @@ components:
           items:
             $ref: '#/components/schemas/SoulDateProblem'
           readOnly: true
+        life_index:
+          type: integer
+          readOnly: true
+        inherited_merit:
+          type: integer
+          readOnly: true
+        inherited_demerit:
+          type: integer
+          readOnly: true
       required:
       - civilization
       - create_time
@@ -14306,7 +14324,10 @@ components:
       - date_problems
       - demerit_score
       - id
+      - inherited_demerit
+      - inherited_merit
       - karmic_balance
+      - life_index
       - merit_score
       - name
       - records
@@ -14555,8 +14576,13 @@ components:
             girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves
             the European router on its culpa ladder for this deed.
           maxLength: 32
+        cycle:
+          type: integer
+          readOnly: true
+          description: Life index this record belongs to; 0 is the first life.
       required:
       - civilization
+      - cycle
       - date_problems
       - description
       - id
