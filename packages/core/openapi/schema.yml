@@ -3730,6 +3730,16 @@ paths:
 
         绑定到 Menu 上的操作按钮，每个按钮关联一个 permission codename。
       parameters:
+      - in: query
+        name: menu_id
+        schema:
+          type: integer
+        description: 'Only the buttons under this menu. Read straight from `query_params`
+          in `get_queryset` rather than through a filterset, so drf-spectacular cannot
+          infer it: the generated schema declared `query?: never`, and the frontend
+          sent `menu` for months against a backend reading `menu_id` — the filter
+          silently did nothing and every menu showed every button (FL-03). Declared
+          here so the contract carries the name.'
       - name: ordering
         required: false
         in: query
