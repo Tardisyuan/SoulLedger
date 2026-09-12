@@ -30,6 +30,14 @@ export interface Role {
    */
   user_count: number;
   /**
+   * One of the five `UserRole` constants the backend compares by literal
+   * (`role === "ADMIN"` in the checker, tenant scoping, IsAdminPermission…).
+   * The server refuses to rename or delete these (400), so the role form makes
+   * `name` read-only for them. A custom role is renameable; the backend
+   * cascades the new name into every `User.role` that held the old one.
+   */
+  is_builtin: boolean;
+  /**
    * Optimistic-lock counter, bumped by AuditUserFields on every save. Send
    * the value the matrix loaded back as `expected_version` on
    * assign_role_permissions — a mismatch means another admin's save landed

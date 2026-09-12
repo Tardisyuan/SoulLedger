@@ -2,6 +2,7 @@
 Custom user model for SoulLedger.
 """
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import AuditUserFields
@@ -15,7 +16,16 @@ class SoftDeleteUserManager(UserManager):
 
 
 class UserRole(models.TextChoices):
-    """The roles a `User.role` may hold.
+    """The BUILT-IN roles — constants the code compares against directly.
+
+    Since 2026-09-12 (BP-06/07/11) this is no longer the set of values
+    `User.role` may hold: that is "any built-in, or any non-deleted row in
+    `perm.Role`" — see `validate_assignable_role`. These five stay as an enum
+    because the code compares them as literals (`role == 'ADMIN'` in the
+    checker, the tenant scoping, IsAdminPermission, ROLE_HIERARCHY, ...), which
+    is exactly why `PUT /perm/roles/<pk>/` refuses to rename them and DELETE
+    refuses to bin them. A custom role has none of those comparisons and can
+    be renamed freely, with `User.role` cascaded.
 
     MODERATOR was missing here while three other places already knew about it:
     `apps/perm/models.py::ROLE_PERMISSIONS` grants it a strictly larger set
@@ -47,6 +57,41 @@ class UserRole(models.TextChoices):
     VIEWER = "VIEWER", "Viewer (访客)"
 
 
+def is_assignable_role(name) -> bool:
+    """Whether `name` is a role a user may hold right now.
+
+    A built-in (constant, cannot be deleted or renamed) or a `perm.Role` row
+    that is not soft-deleted. The default manager already hides deleted rows,
+    so a role sitting in the recycle bin is not assignable — the other half of
+    "validated against the table".
+
+    The built-ins are accepted without a query on purpose: they are the roles
+    `check_permission` can answer for from `ROLE_PERMISSIONS` even before the
+    table is seeded, and every fixture in this repo creates ADMIN/JUDGE users
+    long before any Role row exists.
+    """
+    if not name:
+        return False
+    if name in UserRole.values:
+        return True
+    from apps.perm.models import Role
+
+    return Role.objects.filter(name=name).exists()
+
+
+def validate_assignable_role(value):
+    """Model-field validator for `User.role` — picked up by every
+    ModelSerializer built on `User`, so UserCreate/UserUpdate get it for free.
+
+    Replaces `choices=UserRole.choices`, which made a role created through
+    `POST /perm/roles/create/` unholdable by anyone (BP-11)."""
+    if not is_assignable_role(value):
+        raise ValidationError(
+            f"'{value}' is not a role: built-in roles are {', '.join(UserRole.values)}; "
+            "a custom role must exist in the role table and not be deleted."
+        )
+
+
 class User(AuditUserFields, AbstractUser):
     """
     Custom user with role field.
@@ -57,10 +102,11 @@ class User(AuditUserFields, AbstractUser):
         default="",
         help_text="Display name shown in the navbar (e.g. 系统管理员)",
     )
+    # No `choices`: the value set is the Role table (see validate_assignable_role).
     role = models.CharField(
         max_length=20,
-        choices=UserRole.choices,
         default=UserRole.VIEWER,
+        validators=[validate_assignable_role],
     )
     # RBAC role FK — bridges to the full perm.Role model with hierarchy/inheritance.
     # Once fully migrated, `role` CharField can be deprecated.

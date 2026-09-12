@@ -55,14 +55,20 @@ class RoleSerializer(serializers.ModelSerializer):
     # guard: "N users are affected" is what turns a grant/removal from an
     # abstract diff into a consequence worth reading before confirming.
     user_count = serializers.SerializerMethodField()
+    # True for the five `UserRole` constants: the role form makes `name`
+    # read-only for these, because the server refuses to rename or bin them.
+    is_builtin = serializers.SerializerMethodField()
 
     class Meta:
         model = Role
         fields = [
             "id", "name", "display_name", "scope", "organization", "organization_name",
-            "user_count", "version", "update_time",
+            "user_count", "is_builtin", "version", "update_time",
         ]
         read_only_fields = ["version", "update_time"]
+
+    def get_is_builtin(self, obj) -> bool:
+        return obj.is_builtin
 
     # `-> int` is load-bearing for the document, not decoration. This method
     # was invisible to drf-spectacular for as long as `list_roles` was an

@@ -8,7 +8,7 @@
 export { api, getApiBaseUrl, PAGE_SIZE } from "./client";
 
 // Auth
-export { authApi, type UserRole, type LoginUser, type LoginResponse, type AuthProfile } from "./auth";
+export { authApi, type UserRole, type BuiltinUserRole, type LoginUser, type LoginResponse, type AuthProfile } from "./auth";
 
 // Souls
 export { soulsApi, type SoulInput, type Soul, type SoulListItem, type SoulRecord, type SoulRecordEntry } from "./souls";

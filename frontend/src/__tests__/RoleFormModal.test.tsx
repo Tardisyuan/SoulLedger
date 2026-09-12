@@ -16,6 +16,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "permissions.role_name_placeholder": "请输入角色名称",
         "permissions.display_name_label": "显示名称",
         "permissions.display_name_placeholder": "请输入显示名称",
+        "permissions.role_name_builtin_hint": "内置角色,名称固定",
       };
       return map[key] ?? key;
     },
@@ -86,21 +87,42 @@ describe("RoleFormModal", () => {
     expect(screen.getByText("提交中...")).toBeInTheDocument();
   });
 
+  const adminRole: Role = {
+    id: 1,
+    name: "ADMIN",
+    display_name: "管理员",
+    scope: "global",
+    organization: null,
+    organization_name: null,
+    user_count: 0,
+    is_builtin: true,
+    version: 1,
+    update_time: "2026-01-01T00:00:00Z",
+  };
+
   it("populates form fields with initialData", () => {
-    const initialData: Role = {
-      id: 1,
-      name: "ADMIN",
-      display_name: "管理员",
-      scope: "global",
-      organization: null,
-      organization_name: null,
-      user_count: 0,
-      version: 1,
-      update_time: "2026-01-01T00:00:00Z",
-    };
-    render(<RoleFormModal {...defaultProps} initialData={initialData} />);
+    render(<RoleFormModal {...defaultProps} initialData={adminRole} />);
     expect(screen.getByDisplayValue("ADMIN")).toBeInTheDocument();
     expect(screen.getByDisplayValue("管理员")).toBeInTheDocument();
+  });
+
+  it("makes a built-in role's name read-only and says why; a custom role's stays editable", () => {
+    const { unmount } = render(<RoleFormModal {...defaultProps} initialData={adminRole} />);
+    const builtinName = screen.getByDisplayValue("ADMIN");
+    expect(builtinName).toHaveAttribute("readonly");
+    expect(screen.getByText("内置角色,名称固定")).toBeInTheDocument();
+    // Read-only, not disabled: the value still submits and stays readable.
+    expect(builtinName).not.toBeDisabled();
+    unmount();
+
+    render(
+      <RoleFormModal {...defaultProps} initialData={{ ...adminRole, id: 2, name: "SCRIBE", display_name: "书记", is_builtin: false }} />
+    );
+    const customName = screen.getByDisplayValue("SCRIBE");
+    expect(customName).not.toHaveAttribute("readonly");
+    expect(screen.queryByText("内置角色,名称固定")).not.toBeInTheDocument();
+    fireEvent.change(customName, { target: { value: "ARCHIVIST" } });
+    expect(customName).toHaveValue("ARCHIVIST");
   });
 
   it("updates input values when user types", () => {

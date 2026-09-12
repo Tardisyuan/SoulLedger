@@ -68,19 +68,23 @@ def test_no_bundle_invents_a_role(bundle):
     )
 
 
-def test_the_role_filter_offers_every_role():
-    """The dropdown is a fourth copy of the enum, and it is hand-written.
+@pytest.mark.parametrize(
+    "rel",
+    ["app/users/page.tsx", "src/components/users/UserModal.tsx"],
+)
+def test_the_role_selectors_read_the_role_table_not_a_restated_list(rel):
+    """Neither role dropdown restates the enum any more.
 
-    Reading the source rather than rendering it: what regresses is someone
-    adding a role to the enum and not to this list, and that is visible in the
-    text.
+    This used to assert the opposite — that `app/users/page.tsx` carried an
+    `<option value="…">` for every `UserRole` member — because the dropdown was
+    a hand-written fourth copy of the enum and MODERATOR had been left out of
+    it. Since 2026-09-12 `User.role` is validated against the role table (a
+    role created on the permissions screen can be held), so ANY list written
+    into the page is wrong the moment an admin creates one. Both selectors now
+    read `permApi.roles.list()`; what this pins is that no literal role option
+    creeps back in beside it.
     """
-    page = (FRONTEND / "app" / "users" / "page.tsx").read_text(encoding="utf-8")
-    assert 'option value="ADMIN"' in page, (
-        "the role filter's shape has changed; this test is reading for a "
-        "pattern that no longer exists rather than checking anything"
-    )
-    missing = [r for r in UserRole.values if f'option value="{r}"' not in page]
-    assert not missing, (
-        f"app/users/page.tsx has no filter option for {missing}"
-    )
+    page = (FRONTEND / rel).read_text(encoding="utf-8")
+    assert "permApi.roles.list()" in page, f"{rel} no longer reads the role table"
+    restated = [r for r in UserRole.values if f'value="{r}"' in page or f'value: "{r}"' in page]
+    assert not restated, f"{rel} restates role option(s) {restated} beside the table-driven list"

@@ -474,6 +474,7 @@
     "role_name_label": "角色名称 *",
     "role_name_placeholder": "如: MODERATOR",
     "role_name_required": "角色名称不能为空",
+    "role_name_builtin_hint": "内置角色,名称固定(代码按字面量比较);显示名称可改",
     "display_name_label": "显示名称 *",
     "display_name_placeholder": "如: 审核员",
     "display_name_required": "显示名称不能为空",

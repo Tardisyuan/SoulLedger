@@ -12,17 +12,62 @@ class Permission(AuditUserFields):
     """
     权限定义，如 soul.read, judgment.execute
     """
-    codename = models.CharField(max_length=100, unique=True)
+    # Unique among LIVE rows only — see Role.name for why. Was `unique=True`.
+    codename = models.CharField(max_length=100)
     name = models.CharField(max_length=200)
     category = models.CharField(max_length=50)  # soul, ledger, judgment, system
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["codename"],
+                condition=models.Q(is_deleted=False),
+                name="unique_permission_codename_alive",
+            ),
+        ]
         verbose_name = "Permission"
         verbose_name_plural = "Permissions"
         ordering = ["category", "codename"]
 
     def __str__(self):
         return f"{self.codename} ({self.name})"
+
+    @classmethod
+    def revive_or_create(cls, codename, **defaults):
+        """`get_or_create`, except a soft-deleted row with this codename is
+        restored instead of shadowed by a second one. Returns (row, newly_alive)."""
+        return _revive_or_create(cls, "codename", codename, defaults)
+
+
+def _revive_or_create(model, key, value, defaults):
+    """Shared by Role and Permission — the two soft-deletable rows with a
+    conditionally-unique natural key.
+
+    A live row wins. Otherwise the most recently deleted one comes back
+    (with its cascade, so a role's grants return with it); only when neither
+    exists is a row created. `get_or_create` on the default manager cannot see
+    the deleted row and would create a twin — legal under the conditional
+    constraint, but the twin and the binned original then collide the moment
+    someone restores from the bin.
+    """
+    live = model.objects.filter(**{key: value}).first()
+    if live is not None:
+        return live, False
+    binned = (
+        model.all_objects.filter(**{key: value}, is_deleted=True)
+        .order_by("-deleted_at")
+        .first()
+    )
+    if binned is not None:
+        from apps.core.recycle_bin import restore_cascade
+
+        if binned.delete_cascade_id:
+            restore_cascade(binned.delete_cascade_id)
+        else:
+            binned.restore()
+        binned.refresh_from_db()
+        return binned, True
+    return model.objects.create(**{key: value}, **defaults), True
 
 
 class DataScope(AuditUserFields):
@@ -59,7 +104,12 @@ class Role(AuditUserFields):
     支持层级继承，子角色继承父角色的权限
     新增 scope 字段：GLOBAL=全局权限，ORG=组织级权限
     """
-    name = models.CharField(max_length=20, unique=True)
+    # Unique among LIVE rows only. This was `unique=True` on a soft-deletable
+    # model (BP-06, 2026-09-12): deleting VIEWER kept the row, so `roles/init/`
+    # hit IntegrityError (500) and `roles/create/` answered "already exists"
+    # (400) — and Role was not registered with the recycle bin, so there was
+    # no path back. Same shape as RolePermission's constraint below.
+    name = models.CharField(max_length=20)
     display_name = models.CharField(max_length=100)
     # 父角色，用于层级继承
     parent = models.ForeignKey(
@@ -91,12 +141,36 @@ class Role(AuditUserFields):
     )
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name"],
+                condition=models.Q(is_deleted=False),
+                name="unique_role_name_alive",
+            ),
+        ]
         verbose_name = "Role"
         verbose_name_plural = "Roles"
         ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({self.display_name})"
+
+    @property
+    def is_builtin(self) -> bool:
+        """One of the five `UserRole` constants the code compares by literal.
+
+        Its `name` cannot change and the row cannot be binned — see
+        `apps/authentication/models.py::UserRole` for the reason and
+        `apps/perm/views.py::update_delete_role` for the enforcement.
+        """
+        from apps.authentication.models import UserRole
+
+        return self.name in UserRole.values
+
+    @classmethod
+    def revive_or_create(cls, name, **defaults):
+        """See `_revive_or_create`. Restoring a binned role restores its grants too."""
+        return _revive_or_create(cls, "name", name, defaults)
 
     def get_inherited_permissions(self, _visited=None):
         """

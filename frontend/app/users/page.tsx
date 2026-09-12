@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
-import { userKeys } from "@soulledger/core/query_keys";
+import { usersApi, permApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
+import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
@@ -39,6 +39,19 @@ export default function UsersPage() {
       return res.data;
     },
   });
+
+  // The filter's options come from the role table (see UserModal for why a
+  // fixed list is wrong now that custom roles can be held). Built-ins keep
+  // their translated label via `users.roles.*`; a custom role shows its
+  // server-side display_name, which is data rather than UI copy.
+  const rolesQuery = useQuery({
+    queryKey: permissionKeys.roles,
+    queryFn: async () => (await permApi.roles.list()).data,
+  });
+  const roleFilterOptions = (rolesQuery.data ?? []).map((r) => ({
+    value: r.name,
+    label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name,
+  }));
 
   // Delete user mutation
   const deleteMutation = useMutation({
@@ -122,16 +135,14 @@ export default function UsersPage() {
             className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
           >
             <option value="">{t("users.all_roles")}</option>
-            <option value="ADMIN">{t("users.roles.ADMIN")}</option>
-            {/* MODERATOR was missing from this list and from all three message
-                bundles, while the backend granted it a larger permission set
-                than JUDGE. A MODERATOR's row rendered as "unrecognised value"
-                and the filter could not select them. The bundles agreed with
-                each other, so the key-parity guard stayed green throughout. */}
-            <option value="MODERATOR">{t("users.roles.MODERATOR")}</option>
-            <option value="JUDGE">{t("users.roles.JUDGE")}</option>
-            <option value="GUARDIAN">{t("users.roles.GUARDIAN")}</option>
-            <option value="VIEWER">{t("users.roles.VIEWER")}</option>
+            {/* Was five literal <option>s — and before that four: MODERATOR
+                was missing here and from all three message bundles while the
+                backend granted it a larger set than JUDGE, so its rows
+                rendered as "unrecognised value" and could not be filtered.
+                A list restated here drifts; the role table cannot. */}
+            {roleFilterOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
           </select>
         </>
       }

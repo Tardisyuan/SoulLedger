@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
-import { userKeys } from "@soulledger/core/query_keys";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usersApi, permApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
+import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -109,6 +109,29 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null);
   useSubmitErrorFocus(Object.keys(fieldErrors).length > 0, formRef);
+
+  /**
+   * The role list comes from the role table, not from a restated enum.
+   *
+   * This select used to hard-code four options — and was missing MODERATOR,
+   * the fourth copy of that omission this repo has recorded. Since 2026-09-12
+   * `User.role` is validated against `perm.Role` (a role created on the
+   * permissions screen can be held), so any fixed list here is wrong the
+   * moment an admin creates one. `display_name` is server data, not UI copy.
+   *
+   * While the list is loading (or if it fails) the current value is kept as
+   * the only option so the form never shows a blank select and a save never
+   * silently changes the role.
+   */
+  const rolesQuery = useQuery({
+    queryKey: permissionKeys.roles,
+    queryFn: async () => (await permApi.roles.list()).data,
+    enabled: isOpen,
+  });
+  const roleOptions =
+    rolesQuery.data && rolesQuery.data.length > 0
+      ? rolesQuery.data.map((r) => ({ value: r.name, label: r.display_name || r.name }))
+      : [{ value: formData.role ?? "VIEWER", label: formData.role ?? "VIEWER" }];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,14 +271,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           id={roleId}
           label={t("users.role") || "角色"}
           value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value as CreateUserInput["role"] })}
-          disabled={createMutation.isPending || updateMutation.isPending}
-          options={[
-            { value: "ADMIN", label: t("users.role_admin") || "管理员" },
-            { value: "JUDGE", label: t("users.role_judge") || "审判者" },
-            { value: "GUARDIAN", label: t("users.role_guardian") || "守护者" },
-            { value: "VIEWER", label: t("users.role_viewer") || "查看者" },
-          ]}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          disabled={createMutation.isPending || updateMutation.isPending || rolesQuery.isPending}
+          options={roleOptions}
         />
 
         <div className="flex gap-3">
