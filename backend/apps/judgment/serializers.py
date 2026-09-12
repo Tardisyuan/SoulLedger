@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
+from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.judgment.models import Judgment, JudgmentCitation, Statute
 from apps.ledger.serializers import LedgerSummarySerializer
@@ -128,6 +129,13 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
 
     def validate_soul(self, value):
         value = same_tenant_or_404_message(value, self.context, "soul")
+        # ADMIN is exempt from the two rules below as well, not only from
+        # tenant ownership: it is the role that repairs data, and the states
+        # these rules refuse are exactly the ones that need repairing. The
+        # exemption is a user decision (2026-09-12), not an oversight.
+        request = self.context.get("request")
+        if request is not None and is_tenant_exempt(getattr(request, "user", None)):
+            return value
         if value.current_state == SoulState.SETTLED:
             raise serializers.ValidationError(
                 "This soul is SETTLED; its fate is final and no further case can be opened."
