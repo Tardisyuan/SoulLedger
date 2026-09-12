@@ -1,17 +1,15 @@
-version: "3.9"
-
-# Staging overrides
+# Staging overrides: production settings (DEBUG unset in the base) but no
+# nginx and no TLS, so the two services publish their own ports and Django's
+# https redirect is switched off — with it on and nothing terminating TLS,
+# every request would be redirected to an https that nobody answers (IS-04).
+# ALLOWED_HOSTS, ENCRYPTION_KEY, SENTRY_DSN come from the root `.env`.
 services:
   backend:
+    ports:
+      - "8000:8000"
     environment:
-      - DEBUG=false
-      - SENTRY_DSN=${SENTRY_DSN}
-    command: >
-      sh -c "python manage.py migrate &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+      SECURE_SSL_REDIRECT: "false"
 
   frontend:
-    environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-      - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN}
-    command: npm run start
+    ports:
+      - "3000:3000"

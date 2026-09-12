@@ -15,7 +15,12 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable must be set in production")
 
-DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+
+def _env_bool(name, default):
+    return os.getenv(name, default).lower() in ("true", "1", "yes")
+
+
+DEBUG = _env_bool("DEBUG", "False")
 
 if DEBUG:
     # In DEBUG mode, allow localhost by default
@@ -158,6 +163,13 @@ DATABASES = {
         DATABASE_URL, conn_max_age=600, conn_health_checks=True
     )
 }
+# pgbouncer in transaction pool mode cannot hold a server-side cursor across
+# statements, and every `.iterator()` in apps/ opens one. The production
+# compose sets this; it is off by default because without a server-side cursor
+# `.iterator()` loads the whole result set client-side (IS-13).
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = _env_bool(
+    "DISABLE_SERVER_SIDE_CURSORS", "false"
+)
 
 AUTH_USER_MODEL = "authentication.User"
 
@@ -352,7 +364,11 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True
+    # On by default. Staging runs DEBUG=False with nothing terminating TLS in
+    # front of it, and a redirect to an https nobody answers is a dead stack;
+    # its compose file sets this to false. The production compose passed
+    # this variable for months while nothing read it (IS-04).
+    SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", "true")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
