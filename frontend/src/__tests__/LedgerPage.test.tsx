@@ -13,6 +13,28 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LedgerPage from "@/app/ledger/page";
 import { ledgerApi } from "@soulledger/core/api";
+import zhHans from "@soulledger/core/messages/zh-Hans.json";
+
+/**
+ * The zh-Hans sentence behind a key — and a throw, not a fallback, when the
+ * bundle has no such key.
+ *
+ * WHY THIS EXISTS. Two tests below used to assert
+ * `findByText("ledger.no_state_distribution")` — the raw key — because `mockT`
+ * echoes keys. That pinned the DEFECT: the key was in no bundle, so the screen
+ * really did show `ledger.no_state_distribution`, and the test called that
+ * correct (DF-01). An assertion on the raw key cannot tell a missing key from
+ * an echoing mock. This helper can: it reads the shipped bundle, so the test
+ * is red the day the key is absent again, and the assertion is on the words
+ * an operator would read.
+ */
+function zh(key: string): string {
+  const value = key
+    .split(".")
+    .reduce<unknown>((node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined), zhHans);
+  if (typeof value !== "string") throw new Error(`zh-Hans bundle has no "${key}" — the page would render the raw key`);
+  return value;
+}
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
@@ -310,17 +332,28 @@ describe("LedgerPage failure handling", () => {
       );
       // 缺席断言,而且是这一整条的要害:空的 <ul> 正是缺陷的长相。
       expect(container.querySelector("ul")).toBeNull();
-      expect(screen.queryByText("ledger.no_state_distribution")).not.toBeInTheDocument();
+      expect(screen.queryByText(zh("ledger.no_state_distribution"))).not.toBeInTheDocument();
     });
 
-    it("真的一条都没有时说出来,而不是留一片空白", async () => {
+    it("真的一条都没有时说出来,而不是留一片空白 —— 说的是译文,不是 key", async () => {
+      // 这两条此前断的是原始 key `ledger.no_state_distribution`,而那个 key 三份
+      // 语言包里都没有 —— 屏幕上真的就是那串 key,测试却把它钉成了预期(DF-01)。
+      // 这里让 `t` 走真实的 zh-Hans 包,断句子本身;`zh()` 在 key 缺席时直接抛。
+      mockT.mockImplementation((key: string) => {
+        try {
+          return zh(key);
+        } catch {
+          return key;
+        }
+      });
       mockedStats.mockResolvedValue({
         data: { ...fullStats, state_distribution: [] },
       });
 
       renderPage();
 
-      expect(await screen.findByText("ledger.no_state_distribution")).toBeInTheDocument();
+      expect(await screen.findByText(zh("ledger.no_state_distribution"))).toBeInTheDocument();
+      expect(screen.queryByText("ledger.no_state_distribution")).not.toBeInTheDocument();
     });
 
     it("首次加载失败时,两个原本被 length>0 门住的分区也报错", async () => {

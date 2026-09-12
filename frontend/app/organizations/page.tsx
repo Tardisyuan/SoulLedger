@@ -189,9 +189,13 @@ function OrganizationsPageContent() {
           nothing, so a successful query with no rows produced a heading and
           blank space — the case `PageError.tsx:59` already recorded about this
           page ("organizations was worse still: no empty state either") and
-          which that round fixed only the error half of. */}
+          which that round fixed only the error half of.
+
+          `organization.`, singular — the namespace the rest of this page reads.
+          The title said `organizations.title`, a key in no bundle, so the empty
+          state's title rendered as that raw key (DF-01). */}
       {!isLoading && !isError && organizations.length === 0 && (
-        <EmptyState title={t("organizations.title")} reason={t("organization.no_organizations")} />
+        <EmptyState title={t("organization.title")} reason={t("organization.no_organizations")} />
       )}
       <div className="space-y-6">
         {Object.entries(grouped).map(([category, orgs]) => {
