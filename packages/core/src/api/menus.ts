@@ -66,10 +66,14 @@ export const menusApi = {
 };
 
 export const menuButtonsApi = {
+  // `menu_id`, which is the name `MenuButtonViewSet.get_queryset` reads
+  // (backend/apps/menus/views.py). This sent `menu`; DRF ignores an unknown
+  // query parameter, so the menu picker on /menus/buttons never narrowed the
+  // list and nothing failed to say so (FL-03). Pinned by `api.test.ts`.
   list: (menuId?: number, page?: number) =>
     api.get<PaginatedResponse<MenuButton>>("/menus/buttons/", {
       params: {
-        ...(menuId ? { menu: menuId } : {}),
+        ...(menuId ? { menu_id: menuId } : {}),
         ...(page ? { page } : {}),
       },
     }),
