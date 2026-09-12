@@ -69,6 +69,7 @@ const SCANNED_DIRS = [
   "frontend/hooks",
   "frontend/lib",
   "frontend/src/components",
+  "frontend/components",
   "frontend/app",
 ];
 
@@ -115,6 +116,37 @@ for (const file of SOURCE_FILES) {
   }
   for (const match of source.matchAll(/\bnotify\(\s*\{\s*key:\s*"([^"]+)"/g)) {
     CALL_SITES.push({ file: path.relative(ROOT, file), key: match[1] });
+  }
+}
+
+/**
+ * `t("a.b.c"` and `tf("a.b.c"`, literal keys only.
+ *
+ * THE GAP THIS CLOSES. This file scanned `notify(` alone, and three bare
+ * `t()` keys shipped with no bundle behind them — `ledger.no_state_distribution`
+ * (the sentence sat under `dashboard.`), `organizations.title` (the namespace is
+ * `organization`), `souls.balance_withheld` (never written) — so those screens
+ * rendered the raw key, and `LedgerPage.test.tsx` had pinned the raw key as the
+ * expected text (DF-01). Forty-odd `tf()` keys were missing too; `tf` hides
+ * that with a code-level fallback, which is Chinese, so an `en` or `egy` reader
+ * got Chinese there (DF-02). Both defects have the same shape as the `notify`
+ * one the header describes, and the same guard.
+ *
+ * WHAT IS DELIBERATELY NOT MATCHED. A template literal — `t(\`x.${y}\`)`, the
+ * dynamic-prefix families the enum renderers use — starts with a backtick and
+ * never enters this regex; a variable key never does either. A literal followed
+ * by `+` would be a prefix, not a key, and is skipped by the lookahead (none
+ * exist today; the floor below is what notices if that changes the count). A
+ * `tf` key that IS in the bundles is fine; the point of `tf` was never to be
+ * exempt from the bundles, only to survive a rollout where a key lands late.
+ */
+const TRANSLATE_CALL_SITES: Array<{ file: string; fn: string; key: string }> = [];
+for (const file of SOURCE_FILES) {
+  const source = stripComments(readFileSync(file, "utf8"));
+  // Either quote. `components/ui/data-table.tsx` writes `t('table.empty')`;
+  // a double-quote-only scan would have passed it without reading it.
+  for (const match of source.matchAll(/(?<![\w.$])(t)\(\s*(["'])([^"']+)\2\s*(?!\+)/g)) {
+    TRANSLATE_CALL_SITES.push({ file: path.relative(ROOT, file), fn: match[1], key: match[3] });
   }
 }
 
@@ -176,5 +208,26 @@ describe("every key `notify` is given is a key the bundles have", () => {
     // narrower rule so the failure names the real problem.
     const sentences = CALL_SITES.filter(({ key }) => /\s/.test(key) || !key.includes("."));
     expect(sentences.map(({ file, key }) => `${file}: ${key}`)).toEqual([]);
+  });
+});
+
+describe("every literal key `t` or `tf` is given is a key the bundles have", () => {
+  it("scanned real call sites", () => {
+    // Measured 2026-09-12: 1216 literal calls across the scanned trees. A floor
+    // well under that, because the number moves with every screen; it must not
+    // collapse, which is what a regex that stopped matching would look like.
+    expect(TRANSLATE_CALL_SITES.length).toBeGreaterThan(800);
+    expect(TRANSLATE_CALL_SITES.some(({ fn }) => fn === "t")).toBe(true);
+  });
+
+  it.each(BUNDLES)("%s has all of them", (locale, bundle) => {
+    const missing = [
+      ...new Set(
+        TRANSLATE_CALL_SITES.filter(({ key }) => lookup(bundle, key) === null).map(
+          ({ file, fn, key }) => `${locale}: ${fn}("${key}") (${file})`
+        )
+      ),
+    ];
+    expect(missing).toEqual([]);
   });
 });

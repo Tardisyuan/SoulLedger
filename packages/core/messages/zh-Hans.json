@@ -288,6 +288,7 @@
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
+    "balance_withheld": "余额未提供 — 本角色不可见",
     "date_problem_marker": {
       "error": "日期错误 — 详见灵魂详情",
       "warning": "日期警告 — 详见灵魂详情"
@@ -678,7 +679,6 @@
     "reincarnating": "轮回中",
     "lost": "失踪",
     "state_distribution": "灵魂状态分布",
-    "no_state_distribution": "还没有任何灵魂落在生命周期状态里。",
     "souls_by_civilization": "各文明灵魂数",
     "balance_distribution": "功过分布",
     "per_civilization_breakdown": "各文明明细",
@@ -708,6 +708,7 @@
     "decay_factor": "衰减系数",
     "years_elapsed": "已逝年份",
     "state_distribution": "状态分布",
+    "no_state_distribution": "还没有任何灵魂落在生命周期状态里。",
     "balance_distribution": "功过分布",
     "souls_by_realm": "各领域灵魂数",
     "recent_activity": "最近活动",
