@@ -182,8 +182,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+# The default is localhost only. It used to name `http://192.168.2.115:3333`,
+# one particular machine on one particular LAN — a default that ships a
+# specific host's address to every checkout and every deployment that does not
+# override it (BP-18). That box is reachable via `CORS_ALLOWED_ORIGINS` in its
+# own environment, and under DEBUG `CORS_ALLOW_ALL_ORIGINS` above makes the
+# list moot anyway.
 CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3333,http://192.168.2.115:3333"
+    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3333"
 ).split(",")
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -215,13 +221,21 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # NOT `rest_framework.throttling.AnonRateThrottle`. DRF's keys on the
+    # client's own `X-Forwarded-For` whenever `NUM_PROXIES` is unset — which it
+    # is here — so one extra header reset the only default rate limit in the
+    # project. The subclass keys on `apps/core/client_ip.py`, the same answer
+    # the audit log, `ExternalApiKey.allowed_ips` and the login limiter use
+    # (IS-01). `NUM_PROXIES` is deliberately still unset: `TRUSTED_PROXY_COUNT`
+    # is the one setting that says how many proxies are in front of us.
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
+        "apps.core.throttling.AnonRateThrottle",
     ],
+    # `login` (10/minute) is gone with `LoginThrottle`: nothing referenced
+    # either, and `LoginView.post` enforces a stricter counter of its own.
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/minute",
         "register": "5/hour",
-        "login": "10/minute",
         "password_reset": "3/5minute",
     },
 }
@@ -407,8 +421,48 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
-# Encryption key for Fernet (death sync webhook secrets)
+# Encryption key for Fernet — `WebhookConfig.signing_secret` (the HMAC secret
+# that authenticates our outgoing webhooks) and
+# `DeathRegistrationRequest.source_payload` (PII from an external feed).
+#
+# Empty means those two columns hold PLAINTEXT: `apps/death_sync/fields.py`
+# treats a missing key as "encryption is optional" and stores the value as-is.
+# That was the default, README and SECURITY both described the columns as
+# encrypted, and nothing said otherwise at runtime (IS-02). So: required
+# outside DEBUG, warned about inside it, and validated either way — a key that
+# is not a real Fernet key would otherwise fail on every write instead of here.
+from django.core.exceptions import ImproperlyConfigured  # noqa: E402
+
+_KEY_HELP = (
+    'Generate one with: python -c "from cryptography.fernet import Fernet; '
+    'print(Fernet.generate_key().decode())"'
+)
+
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "")
+if ENCRYPTION_KEY:
+    from cryptography.fernet import Fernet  # noqa: E402
+
+    try:
+        Fernet(ENCRYPTION_KEY.encode())
+    except (ValueError, TypeError) as exc:
+        raise ImproperlyConfigured(
+            f"ENCRYPTION_KEY is not a valid Fernet key (32 url-safe base64 bytes). {_KEY_HELP}"
+        ) from exc
+elif not DEBUG:
+    raise ImproperlyConfigured(
+        "ENCRYPTION_KEY must be set when DEBUG=False: without it "
+        "WebhookConfig.signing_secret and DeathRegistrationRequest.source_payload "
+        f"are written to the database in plaintext. {_KEY_HELP}"
+    )
+else:
+    import warnings  # noqa: E402
+
+    warnings.warn(
+        "ENCRYPTION_KEY is not set: death-sync webhook secrets and death "
+        "registration payloads will be stored UNENCRYPTED. Allowed because "
+        f"DEBUG=True; refused when DEBUG=False. {_KEY_HELP}",
+        stacklevel=2,
+    )
 
 # Sentry integration
 import sentry_sdk

@@ -63,6 +63,51 @@ def role_rank(role):
     return ROLE_HIERARCHY.get(role, _UNRANKED_ROLE)
 
 
+# ---------------------------------------------------------------------------
+# Email uniqueness — one rule, every write path (BP-04)
+#
+# `User.email` carries no unique constraint (it is `AbstractUser`'s field; only
+# `username` is unique). Registration checked for duplicates; nothing else did.
+# So any logged-in user could `PATCH /auth/profile/ {"email": <a victim's>}`
+# and get 200 — and from then on the victim's password reset answered "code
+# sent" and sent nothing, because `reset_password_request` issues a code only
+# when exactly one account holds the address and deliberately reports success
+# either way. Silent, permanent, and invisible to the victim.
+#
+# Case-insensitive: an address differing only in case is the same mailbox, and
+# the registration check was already `iexact`.
+#
+# NOT a database constraint, for the reason `RegisterSerializer` records: a
+# `unique=True` migration would have to run against a column that may already
+# hold duplicates and holds `""` for every account created without an address.
+# This closes the paths that create NEW duplicates; a constraint needs a data
+# migration first, and two requests racing can still both pass this check.
+# ---------------------------------------------------------------------------
+
+
+def email_already_registered(email, *, exclude_pk=None) -> bool:
+    """Whether an account other than `exclude_pk` already holds `email`.
+
+    Blank is never a duplicate: `create_user` defaults `email` to `""`, so
+    counting empty strings would reject every account after the first one
+    created without an address.
+    """
+    if not email:
+        return False
+    qs = User.objects.filter(email__iexact=email)
+    if exclude_pk is not None:
+        qs = qs.exclude(pk=exclude_pk)
+    return qs.exists()
+
+
+def validate_email_is_unclaimed(value, instance=None):
+    """Shared body for `validate_email` — excludes the record being edited, so
+    re-saving (or re-casing) one's own address is not a collision."""
+    if email_already_registered(value, exclude_pk=getattr(instance, "pk", None)):
+        raise serializers.ValidationError("该邮箱已被注册")
+    return value
+
+
 class TenantInfoSerializer(serializers.Serializer):
     """Nested tenant info in login response."""
     code = serializers.CharField()
@@ -156,28 +201,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         """Refuse an address that already has an account.
 
-        `User.email` carries no unique constraint — it is `AbstractUser`'s field
-        and only `username` is unique — and this endpoint is `AllowAny`. So
-        anyone could register a second account on someone else's address, and
-        `reset_password_request` / `set_new_password` both looked that address up
-        with `.get()`: `MultipleObjectsReturned`, an uncaught 500. One anonymous
-        registration took a real user's password reset offline permanently.
-
-        Enforced here rather than by a migration on purpose: `unique=True` would
-        have to be applied to a column that may already hold duplicates (and
-        holds `""` for every account created without an address), so the
-        migration could fail on real data. This stops NEW duplicates; the two
-        reset views handle any that already exist.
-
-        Blank stays legal, and blank is not a duplicate: `create_user` defaults
-        `email` to `""`, so a uniqueness test that counted empty strings would
-        reject every registration after the first one that omitted an address.
+        This endpoint is `AllowAny`, so without the check anyone could register
+        a second account on someone else's address and take that address's
+        password reset offline permanently. The rule itself now lives in
+        `validate_email_is_unclaimed` above, because this was the only write
+        path that had it — profile, admin create/update and CSV import all let
+        a duplicate through (BP-04).
         """
-        if not value:
-            return value
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("该邮箱已被注册")
-        return value
+        return validate_email_is_unclaimed(value, self.instance)
 
     def create(self, validated_data):
         # role is always VIEWER on registration — never user-controlled
@@ -215,6 +246,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name", "organization", "position"]
         read_only_fields = ["id", "is_active", "username", "role"]
+
+    def validate_email(self, value):
+        """See `validate_email_is_unclaimed`. This is the path the attack used:
+        `email` was writable here with no check at all."""
+        return validate_email_is_unclaimed(value, self.instance)
 
     def validate_organization(self, value):
         """Refuse an organization belonging to somebody else's tenant.
@@ -287,6 +323,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active']
 
+    def validate_email(self, value):
+        """See `validate_email_is_unclaimed` (BP-04)."""
+        return validate_email_is_unclaimed(value, self.instance)
+
     def validate(self, attrs):
         request = self.context.get('request')
         caller = getattr(request, 'user', None) if request is not None else None
@@ -328,6 +368,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'first_name', 'last_name', 'role', 'is_active', 'organization', 'position']
+
+    def validate_email(self, value):
+        """See `validate_email_is_unclaimed` (BP-04). `self.instance` is the
+        user being edited, so keeping their own address is not a collision."""
+        return validate_email_is_unclaimed(value, self.instance)
 
     def validate_role(self, value):
         request = self.context.get('request')
