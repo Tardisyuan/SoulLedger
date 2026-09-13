@@ -538,30 +538,11 @@ class TestAuditApiEndpoint:
         assert isinstance(response.data["results"], list)
         assert len(response.data["results"]) > 0
 
-    def test_filter_by_action(self, auth_client):
-        """GET /api/v1/audit-logs/?action=CREATE filters by action type.
-
-        BT-09 (2026-09-13): an UPDATE row is seeded and asserted absent --
-        without it, "every result is CREATE" was also true of an unfiltered
-        list. (The note explaining this lived on a same-named test in
-        `TestAuditLogViewSet` above, since merged into
-        `apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_action`.)
-        """
-        # Create a soul (CREATE), then update it (UPDATE).
-        response = auth_client.post("/api/v1/souls/", {
-            "name": "Action Filter Test",
-            "birth_date": "1990-01-01",
-        })
-        assert response.status_code == 201
-        soul_id = response.data["id"]
-        response = auth_client.patch(f"/api/v1/souls/{soul_id}/", {"name": "Action Filter Test Renamed"})
-        assert response.status_code == 200
-
-        # Filter by CREATE action
-        response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
-        assert response.status_code == 200
-        actions = {log["action"] for log in response.data["results"]}
-        assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
+    # `test_filter_by_action` stood here until 2026-09-14 and is merged into
+    # apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_action. It
+    # was the only copy whose API writes produced real audit rows (this class
+    # is transaction=True; that one was not), which that test now reproduces
+    # with django_capture_on_commit_callbacks(execute=True).
 
     def test_filter_by_resource(self, auth_client):
         """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
