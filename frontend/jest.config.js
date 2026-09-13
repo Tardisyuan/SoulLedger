@@ -20,10 +20,19 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
+  // `components/**` and `middleware.ts` were missing until 2026-09-14 (audit
+  // FT-10) — both inside rootDir, so unlike packages/core (see below) nothing
+  // stopped them being measured; they were simply never named. That is eleven
+  // shared primitives, data-table and data-grid among them, and the route gate
+  // every request passes through. `app/**/*.ts` picks up `app/fonts.ts`.
+  // (The audit also named `hooks/`: there is no top-level `hooks/` directory;
+  // `src/hooks/**` is already covered by `src/**`.)
   collectCoverageFrom: [
     'lib/**/*.ts',
     'src/**/*.{ts,tsx}',
-    'app/**/*.tsx',
+    'app/**/*.{ts,tsx}',
+    'components/**/*.{ts,tsx}',
+    'middleware.ts',
     '!src/**/*.d.ts',
     '!src/__tests__/**',
   ],

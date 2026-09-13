@@ -143,13 +143,11 @@ class PermissionAPITest(TestCase):
     #
     # 2026-09-13: six tests in this class and RoleAPITest had a same-named twin
     # in tests/test_perm_api.py and were merged into it (each merged test names
-    # what it took from here). `test_list_permissions_unauthenticated` stayed:
-    # it is the same request and assertion as its twin, so no mutation could
-    # show the merge lost nothing, and deleting without that proof was ruled out.
-
-    def test_list_permissions_unauthenticated(self):
-        response = self.client.get("/api/v1/perm/permissions/")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    # what it took from here). 2026-09-14: the seventh,
+    # `test_list_permissions_unauthenticated`, was deleted from here outright —
+    # a fresh APIClient, the same GET, the same 401, and this class's setUp
+    # seeds nothing an unauthenticated request reaches. Its twin in
+    # tests/test_perm_api.py is the only copy.
 
     # -- create_permission --
 
@@ -233,16 +231,10 @@ class PermissionAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     # -- assign_role_permissions --
-
-    def test_assign_role_permissions(self):
-        perm = Permission.objects.create(codename="test.assign", name="Assign", category="test")
-        role, _ = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post("/api/v1/perm/role-permissions/assign/", {
-            "role": "VIEWER", "permission_ids": [perm.pk]
-        }, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["assigned_count"], 1)
+    #
+    # `test_assign_role_permissions` (tenantless ADMIN, VIEWER, assigned_count)
+    # was merged 2026-09-14 into
+    # tests/test_perm_api.py::TestRolePermissionAPI::test_assign_permissions_to_role.
 
     def test_assign_role_permissions_invalid_role(self):
         self.client.force_authenticate(user=self.admin)

@@ -147,7 +147,7 @@ function TenantsPageContent() {
             >
               <div className="min-w-0">
                 <p title={tenant.display_name} className="text-03 font-medium text-[oklch(var(--color-ink))] truncate">{tenant.display_name}</p>
-                <p className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] mt-1 truncate">
+                <p title={tenant.code} className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] mt-1 truncate">
                   {t("tenants.code") || "Code"}: {tenant.code}
                 </p>
               </div>

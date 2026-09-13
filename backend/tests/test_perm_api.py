@@ -7,9 +7,9 @@ Six tests here absorbed a same-named twin from ``apps/perm/tests.py``
 the response body, the other the database row; one asked as a JUDGE, the other
 as a VIEWER; one as an ADMIN carrying a tenant claim, the other as an ADMIN with
 no tenant at all. Each merged test says which half came from where.
-``test_list_permissions_unauthenticated`` still has its twin there: the two are
-the same request and the same assertion, so no mutation can tell them apart,
-and the rule for this merge was "no proof, no deletion".
+``test_list_permissions_unauthenticated`` kept its twin there until 2026-09-14,
+when that copy was deleted: same request, same assertion, and nothing in the
+other class's setUp is reachable without authentication.
 """
 import pytest
 from rest_framework.test import APIClient
@@ -141,8 +141,17 @@ class TestRoleAPI:
 class TestRolePermissionAPI:
     """Test /api/v1/perm/role-permissions/ endpoints."""
 
-    def test_assign_permissions_to_role(self, api_client, admin_user, cn_tenant):
-        """POST /api/v1/perm/role-permissions/assign/ assigns permissions."""
+    def test_assign_permissions_to_role(
+        self, api_client, admin_user, cn_tenant, django_user_model
+    ):
+        """POST /api/v1/perm/role-permissions/assign/ assigns permissions.
+
+        Merged 2026-09-14 with ``apps/perm/tests.py::test_assign_role_permissions``
+        (a different name for the same request): the row exists (this file),
+        the response's ``assigned_count`` is right and an ADMIN with no tenant
+        may assign too (that file). ``assigned_count`` was asserted nowhere
+        else in either test file.
+        """
         from rest_framework_simplejwt.tokens import RefreshToken
         token = RefreshToken.for_user(admin_user)
         if admin_user.tenant:
@@ -156,6 +165,18 @@ class TestRolePermissionAPI:
         }, format="json")
         assert response.status_code == 200
         assert RolePermission.objects.filter(role=role, permission=perm).exists()
+        assert response.data["assigned_count"] == 1
+
+        viewer, _ = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})
+        other = Permission.objects.create(codename="test.assign", name="Assign", category="test")
+        response = _tenantless_admin_client(django_user_model).post(
+            "/api/v1/perm/role-permissions/assign/",
+            {"role": "VIEWER", "permission_ids": [other.pk]},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.data["assigned_count"] == 1
+        assert RolePermission.objects.filter(role=viewer, permission=other).exists()
 
     def test_init_role_permissions(self, api_client, admin_user, cn_tenant):
         """POST /api/v1/perm/role-permissions/init/ initializes default permissions.
@@ -187,29 +208,9 @@ class TestPermissionExportImport:
         assert response.status_code == 200
 
 
-@pytest.mark.django_db
-class TestPermissionRoleMatrix:
-    """Test permission enforcement across roles."""
-
-    def test_admin_can_manage_permissions(self, api_client, admin_user, cn_tenant):
-        """ADMIN role can access permission management endpoints."""
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = RefreshToken.for_user(admin_user)
-        if admin_user.tenant:
-            token["tenant_code"] = admin_user.tenant.code
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-        response = api_client.get("/api/v1/perm/permissions/")
-        assert response.status_code == 200
-
-    def test_judge_cannot_manage_permissions(self, api_client, judge_user, cn_tenant):
-        """JUDGE role cannot create permissions."""
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = RefreshToken.for_user(judge_user)
-        if judge_user.tenant:
-            token["tenant_code"] = judge_user.tenant.code
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-        response = api_client.post("/api/v1/perm/permissions/create/", {
-            "codename": "test.create",
-            "name": "Test",
-        }, format="json")
-        assert response.status_code == 403
+# `TestPermissionRoleMatrix` stood here until 2026-09-14 with two tests, each a
+# copy of one above: `test_admin_can_manage_permissions` was the first request
+# of TestPermissionAPI::test_list_permissions_authenticated (same ADMIN JWT,
+# same GET, same 200), and `test_judge_cannot_manage_permissions` was the JUDGE
+# half of TestPermissionAPI::test_create_permission_non_admin (same JWT, same
+# POST, same 403; only the `name` in the body differed).

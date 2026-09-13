@@ -53,10 +53,13 @@ def test_the_committed_schema_exists_and_is_not_a_stub():
 def test_the_generated_typescript_exists_and_covers_the_components():
     """The .ts is the artifact the frontend actually compiles.
 
-    Checked by component count rather than by re-running openapi-typescript,
-    which would put a node toolchain in the middle of a Python test. Counting
-    catches the case this is really guarding: someone regenerates the YAML and
-    forgets the second command.
+    NAMES ONLY — a coarse early warning for backend-only runs, not the check.
+    Adding a field to a serializer and regenerating only the YAML leaves every
+    component name in place, so this stays green (measured 2026-09-14, BT-08).
+    The byte-for-byte comparison is
+    `packages/core/src/api/__tests__/generatedSchemaIsCurrent.test.ts`, which
+    runs openapi-typescript on the committed YAML in the package's own vitest
+    gate (pre-push on any `^packages/` change, and CI).
     """
     assert GENERATED_TS.exists(), f"{GENERATED_TS} is missing — run `npm run schema:generate`."
     ts = GENERATED_TS.read_text(encoding="utf-8")

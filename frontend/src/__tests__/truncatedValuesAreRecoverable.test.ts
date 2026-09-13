@@ -74,11 +74,18 @@ const FILES = ROOTS.filter((r) => {
 }).flatMap(tsxFiles);
 
 /**
- * 一行里同时有 `truncate` 和一个 `{表达式}` 内容,却没有 `title=`。
+ * 一个带 `truncate` 的 JSX 元素,内容里有 `{表达式}`,开标签上却没有 `title=`。
  *
- * 按行而不是按 AST:这些都是单行 JSX 元素,而一个 AST 版本要理解 className
- * 里的模板串、`cn()` 调用和展开属性 —— 那是一个大得多的东西,为了同一个答案。
- * 代价写明:跨行写开的元素这条规则看不见。
+ * ~~按行而不是按 AST……代价写明:跨行写开的元素这条规则看不见。~~
+ * 2026-09-14(审计 FT-07)实测那个代价不是边角:prettier 会把稍长的元素拆成
+ * 开标签一行、内容一行,于是 `ProfileCard.tsx` 的用户名、`judgment/[id]` 的
+ * 主审·结案时间、`profile` 页的五个字段、`tenants` 的代码行、顶栏的问候语、
+ * `SoulLifecycleTimeline` 的两行明细全部漏网 —— 11 处,而规则是绿的。
+ *
+ * 现在不看换行:在去掉注释的源码里,从每个 `truncate` 往回找最近的 `<Tag`,
+ * 按花括号深度与引号向前走到开标签的 `>`,确认类名确实落在这个开标签里;
+ * 内容取到下一个 `</` 为止。仍然不是 AST —— 上限写明:类名若先存进变量再
+ * `className={X}` 传入,这里看不见(今天没有这种写法)。
  */
 /**
  * `truncate` **和** `line-clamp-N`。
@@ -89,9 +96,11 @@ const FILES = ROOTS.filter((r) => {
  *
  * 规则的主体清单选窄了,和这个仓库记过的其它几次一样。
  */
-const TRUNCATING_VALUE = /truncate|line-clamp-\d/;
-const HAS_EXPRESSION = /\{[A-Za-z_]/;
-const HAS_TITLE = /title=/;
+const TRUNCATING_VALUE = /\btruncate\b|\bline-clamp-\d/;
+const HAS_EXPRESSION = /\{[A-Za-z_(]/;
+const HAS_TITLE = /\btitle=/;
+/** `{t("some.key")}` alone is copy, not data: static text truncated is layout. */
+const STATIC_COPY = /\{\s*tf?\(\s*(["'])[^"']*\1\s*\)\s*\}/g;
 
 /** 按行为豁免的位置。加一项要写理由。 */
 const EXEMPT = [
@@ -99,23 +108,64 @@ const EXEMPT = [
     file: "src/components/layout/SidebarMenuItem.tsx",
     why: "同一轮已经给这两处加了 `aria-label={label}` —— 同一串字,再加 title 是第三份拷贝",
   },
+  {
+    file: "src/components/layout/TenantSignal.tsx",
+    why:
+      "被截断的是文明的译名,外层 span 带 `title={civilization}`(原始成员,§4.6 刻意的分工)。" +
+      "在内层再加 title 会在悬停时盖掉原始成员 —— 正是那段注释要防的形状",
+  },
 ];
 
-function offenders(): string[] {
+/** Comments blanked to spaces, so offsets and line numbers survive. */
+function blankComments(source: string): string {
+  const blank = (m: string) => m.replace(/[^\n]/g, " ");
+  return source.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/(?<![:\w])\/\/[^\n]*/g, blank);
+}
+
+/** The JSX opening tag that contains `idx`, brace- and quote-aware; null if none. */
+function openingTagAround(src: string, idx: number): { start: number; end: number } | null {
+  let start = src.lastIndexOf("<", idx);
+  while (start !== -1 && !/[A-Za-z]/.test(src[start + 1] ?? "")) start = src.lastIndexOf("<", start - 1);
+  if (start === -1) return null;
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = start + 1; i < src.length; i++) {
+    const c = src[i];
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = null;
+    } else if (c === '"' || c === "'" || c === "`") quote = c;
+    else if (c === "{") depth++;
+    else if (c === "}") depth--;
+    else if (depth === 0 && c === ">") return i > idx ? { start, end: i } : null;
+  }
+  return null;
+}
+
+function offendersIn(rel: string, raw: string): string[] {
+  const src = blankComments(raw);
   const found: string[] = [];
-  for (const full of FILES) {
-    const rel = path.relative(path.join(__dirname, "..", ".."), full);
-    if (EXEMPT.some((e) => rel === e.file)) continue;
-    const lines = readFileSync(full, "utf8").split("\n");
-    lines.forEach((line, i) => {
-      if (line.trimStart().startsWith("//") || line.trimStart().startsWith("*")) return;
-      if (!TRUNCATING_VALUE.test(line)) return;
-      if (!HAS_EXPRESSION.test(line)) return;
-      if (HAS_TITLE.test(line)) return;
-      found.push(`${rel}:${i + 1}`);
-    });
+  const seen = new Set<number>();
+  for (const m of src.matchAll(new RegExp(TRUNCATING_VALUE, "g"))) {
+    const tag = openingTagAround(src, m.index ?? 0);
+    if (!tag || seen.has(tag.start)) continue;
+    seen.add(tag.start);
+    if (src[tag.end - 1] === "/") continue; // self-closing: no content to lose
+    const open = src.slice(tag.start, tag.end + 1);
+    const content = src.slice(tag.end + 1, src.indexOf("</", tag.end));
+    if (!HAS_EXPRESSION.test(content.replace(STATIC_COPY, ""))) continue;
+    if (HAS_TITLE.test(open)) continue;
+    found.push(`${rel}:${src.slice(0, tag.start).split("\n").length}`);
   }
   return found;
+}
+
+function offenders(): string[] {
+  return FILES.flatMap((full) => {
+    const rel = path.relative(path.join(__dirname, "..", ".."), full);
+    if (EXEMPT.some((e) => rel === e.file)) return [];
+    return offendersIn(rel, readFileSync(full, "utf8"));
+  });
 }
 
 describe("the scan is looking at something", () => {
@@ -127,6 +177,23 @@ describe("the scan is looking at something", () => {
     // 45 today. A floor: a rule with no subjects is a rule that cannot fail.
     const truncating = FILES.filter((f) => TRUNCATING_VALUE.test(readFileSync(f, "utf8")));
     expect(truncating.length).toBeGreaterThanOrEqual(15);
+  });
+});
+
+describe("the scanner does not depend on line breaks", () => {
+  it("sees an element whose content sits on the next line", () => {
+    const src = '<h2\n  className="text-06 truncate"\n>\n  {profile.username}\n</h2>';
+    expect(offendersIn("x.tsx", src)).toEqual(["x.tsx:1"]);
+  });
+
+  it("accepts a title on the opening tag, copy-only content, and self-closing tags", () => {
+    expect(offendersIn("x.tsx", '<h2 title={u}\n className="truncate">\n{u}\n</h2>')).toEqual([]);
+    expect(offendersIn("x.tsx", '<h3 className="truncate">\n{t("a.b")}\n</h3>')).toEqual([]);
+    expect(offendersIn("x.tsx", '<Skeleton className={cn("truncate", x)} />')).toEqual([]);
+  });
+
+  it("ignores the class named in a comment", () => {
+    expect(offendersIn("x.tsx", '{/* `truncate` here */}\n<p>{value}</p>')).toEqual([]);
   });
 });
 

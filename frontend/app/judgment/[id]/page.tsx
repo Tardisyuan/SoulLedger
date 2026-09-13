@@ -322,7 +322,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
               </p>
               {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
-              <p className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] mt-2 truncate">
+              <p
+                className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] mt-2 truncate"
+                title={
+                  [judgment.judge_name, judgment.concluded_at && formatDateTime(judgment.concluded_at)]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
+                }
+              >
                 <DomainText value={judgment.judge_name} />
                 <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-tertiary))]">·</span>
                 {judgment.concluded_at ? (

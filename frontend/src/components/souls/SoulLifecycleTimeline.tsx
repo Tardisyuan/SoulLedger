@@ -305,6 +305,14 @@ export function SoulLifecycleTimeline({
             const isLast = idx === visibleRows.length - 1;
             if (row.kind === "karma") {
               const positive = row.effectiveSigned >= 0;
+              const detail = [
+                row.type === "MERIT" ? t("souls.detail.merit") : t("souls.detail.demerit"),
+                `${tf(`souls.categories.${row.category_code}`, row.category_code)} ${row.category_code}`,
+                tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
+                  sign: row.originalSigned >= 0 ? "+" : "",
+                  n: String(row.originalSigned),
+                }),
+              ].join(" · ");
               return (
                 <RowShell
                   key={row.id}
@@ -324,17 +332,12 @@ export function SoulLifecycleTimeline({
                     </div>
                   }
                 >
-                  <div className="text-03 text-[oklch(var(--color-ink))] truncate">
+                  <div className="text-03 text-[oklch(var(--color-ink))] truncate" title={row.title}>
                     {row.isMilestone && <span className="text-[oklch(var(--color-accent-ink))]">★ </span>}
                     {row.title}
                   </div>
-                  <div className="text-02 text-[oklch(var(--color-ink-muted))] truncate">
-                    {row.type === "MERIT" ? t("souls.detail.merit") : t("souls.detail.demerit")} ·{" "}
-                    {tf(`souls.categories.${row.category_code}`, row.category_code)} {row.category_code} ·{" "}
-                    {tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
-                      sign: row.originalSigned >= 0 ? "+" : "",
-                      n: String(row.originalSigned),
-                    })}
+                  <div className="text-02 text-[oklch(var(--color-ink-muted))] truncate" title={detail}>
+                    {detail}
                   </div>
                 </RowShell>
               );
