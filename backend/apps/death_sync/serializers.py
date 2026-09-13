@@ -7,7 +7,6 @@ from apps.death_sync.models import (
     DeathRegistrationRequest,
     ExternalApiKey,
     WebhookConfig,
-    WebhookDeliveryLog,
 )
 
 
@@ -76,18 +75,6 @@ class WebhookConfigSerializer(serializers.ModelSerializer):
             'timeout_seconds', 'create_time',
         ]
         read_only_fields = ['create_time']
-
-
-class WebhookDeliveryLogSerializer(serializers.ModelSerializer):
-    """Serializer for WebhookDeliveryLog. Same create_time/created_at note
-    as WebhookConfigSerializer above — this one crashed identically."""
-    class Meta:
-        model = WebhookDeliveryLog
-        fields = [
-            'id', 'status', 'attempt', 'http_status_code',
-            'error_message', 'duration_ms', 'next_retry_at', 'create_time',
-        ]
-        read_only_fields = fields
 
 
 class HealthSerializer(serializers.Serializer):

@@ -121,6 +121,8 @@ class EventWebhookDelivery(AuditUserFields, models.Model):
     `events.retry_pending_webhooks` 会把它捡起来。这是它比「发不出去就算了」
     强的全部地方。
 
+    (2026-09-13 起 `death_sync.WebhookDeliveryLog` 已随那条无入口的管线删除,
+    下面这段只解释当初为什么没合表。)
     与 `death_sync.WebhookDeliveryLog` 分开而不是复用:那张表的 `registration`
     是**非空外键**,而 EventBus 送的是一个 `EventEnvelope`,没有登记行。
     强行合并要把那个外键改成可空,让两个主体挤在一张表里——两边都读不清楚。

@@ -6,17 +6,8 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.death_sync.models import (
-    DeathRegistrationRequest,
-    DeathRegistrationStatus,
-    ExternalApiKey,
-    WebhookConfig,
-    WebhookDeliveryLog,
-    WebhookDeliveryStatus,
-)
+from apps.death_sync.models import ExternalApiKey, WebhookConfig
 from apps.death_sync.signing import is_timestamp_fresh, sign_payload, verify_signature
-from apps.death_sync.webhook_service import WebhookService
-from apps.souls.models import Soul
 from apps.tenants.models import Tenant
 
 
@@ -42,31 +33,6 @@ def api_key(cn_tenant):
         # the right default and was previously read by nothing; a suite about
         # webhook CRUD needs the capability it is exercising.
         can_manage_webhooks=True,
-    )
-
-
-@pytest.fixture
-def webhook_config(cn_tenant, api_key):
-    return WebhookConfig.objects.create(
-        tenant=cn_tenant,
-        api_key=api_key,
-        url="https://example.com/webhook",
-        signing_secret="test_secret_123",
-        is_active=True,
-    )
-
-
-@pytest.fixture
-def registration(cn_tenant, api_key):
-    soul = Soul.objects.create(name="Webhook Soul", tenant=cn_tenant)
-    return DeathRegistrationRequest.objects.create(
-        tenant=cn_tenant,
-        api_key=api_key,
-        idempotency_key="webhook-test-1",
-        source_system="HOSPITAL",
-        source_payload={"test": True},
-        status=DeathRegistrationStatus.PROCESSED,
-        soul=soul,
     )
 
 
@@ -99,55 +65,6 @@ class TestSigning:
 
     def test_is_timestamp_fresh_invalid(self):
         assert is_timestamp_fresh("not_a_number") is False
-
-
-# ── Webhook Service Tests ────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestWebhookService:
-    def test_deliver_webhook_creates_log(self, cn_tenant, api_key, registration):
-        """Webhook delivery creates a delivery log."""
-        # Use a non-routable URL that will fail
-        webhook = WebhookConfig.objects.create(
-            tenant=cn_tenant,
-            api_key=api_key,
-            url="http://192.0.2.1:99999/webhook",
-            signing_secret="test_secret",
-            timeout_seconds=1,
-        )
-        WebhookService.deliver_webhook(webhook, registration)
-
-        # Check that a delivery log was created
-        log = WebhookDeliveryLog.objects.filter(
-            webhook=webhook,
-            registration=registration,
-        ).first()
-        assert log is not None
-        assert log.status == WebhookDeliveryStatus.FAILED
-
-    def test_schedule_retry(self, webhook_config, registration):
-        """Retry scheduling increments attempt and sets next_retry_at."""
-        log = WebhookDeliveryLog.objects.create(
-            webhook=webhook_config,
-            registration=registration,
-            status=WebhookDeliveryStatus.FAILED,
-            attempt=1,
-        )
-        updated = WebhookService.schedule_retry(log)
-        assert updated.attempt == 2
-        assert updated.status == WebhookDeliveryStatus.RETRYING
-        assert updated.next_retry_at is not None
-
-    def test_max_retries_exceeded(self, webhook_config, registration):
-        """After max retries, delivery is marked FAILED."""
-        log = WebhookDeliveryLog.objects.create(
-            webhook=webhook_config,
-            registration=registration,
-            status=WebhookDeliveryStatus.FAILED,
-            attempt=5,  # max_retries = 5
-        )
-        updated = WebhookService.schedule_retry(log)
-        assert updated.status == WebhookDeliveryStatus.FAILED
 
 
 # ── Webhook Config Tests ────────────────────────────────────────────
@@ -274,7 +191,7 @@ class TestWebhookConfigSerializerFieldName:
     soon as DRF builds the serializer's field list, which happens for
     every action, so list/retrieve/create were all broken independent of
     the permission fix above. Fixed by renaming to 'create_time' in both
-    WebhookConfigSerializer and WebhookDeliveryLogSerializer — no
+    WebhookConfigSerializer and the (since removed) WebhookDeliveryLogSerializer — no
     source= alias to keep 'created_at' on the wire, since these endpoints
     never successfully served a request before this fix, so there is no
     real external caller depending on that JSON key.
