@@ -235,8 +235,9 @@ reachable.
 
 ## API surface
 
-Everything is under `/api/v1/`. Tenant-scoped endpoints expect an `X-Tenant-ID`
-header; authenticated ones expect `Authorization: Bearer <access>`.
+Everything is under `/api/v1/`. Authenticated endpoints expect
+`Authorization: Bearer <access>`; the tenant is read from that JWT's
+`tenant_code` claim, and there is no separate tenant header.
 
 | Prefix | App |
 |---|---|

@@ -38,8 +38,6 @@ export const ACCESS_TOKEN_KEY = "soulledger_access";
  * whose "persistent" is plaintext on disk.
  */
 export const REFRESH_TOKEN_KEY = "soulledger_refresh";
-/** The key the active tenant is stored under, in the **persistent** store. */
-export const TENANT_ID_KEY = "tenant_id";
 /**
  * The key the judgment queue's held verdict is stored under, in the
  * **persistent** store.
@@ -217,10 +215,6 @@ export function getRefreshToken(): string | null {
 
 export function setRefreshToken(value: string): void {
   adapter.secure.set(REFRESH_TOKEN_KEY, value);
-}
-
-export function getTenantId(): string {
-  return adapter.persistent.get(TENANT_ID_KEY) || "";
 }
 
 /**

@@ -204,8 +204,8 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 
 ## API 一览
 
-全部挂在 `/api/v1/` 下。租户相关接口需要 `X-Tenant-ID` 头，需认证的接口需要
-`Authorization: Bearer <access>`。
+全部挂在 `/api/v1/` 下。需认证的接口需要 `Authorization: Bearer <access>`；
+租户取自该 JWT 里的 `tenant_code` claim，没有单独的租户请求头。
 
 | 前缀 | 应用 |
 |---|---|

@@ -6,7 +6,6 @@ import {
   getRefreshToken,
   REFRESH_TOKEN_KEY,
   getLocale,
-  getTenantId,
   platform,
   setAccessToken,
   setRefreshToken,
@@ -67,8 +66,8 @@ interface TokenRefreshResponse {
 /**
  * WHERE THE FOUR BROWSER HELPERS WENT.
  *
- * `getCookie`, `getTenantId`, `getAccessToken`, `clearAccessCookie` and
- * `refreshCookie` used to be defined right here, reading `document.cookie`,
+ * `getCookie`, `getTenantId` (since deleted, FL-12), `getAccessToken`,
+ * `clearAccessCookie` and `refreshCookie` used to be defined right here, reading `document.cookie`,
  * `localStorage` and `sessionStorage` directly. They are now the two stores in
  * `../platform`, and the web build supplies them from
  * `frontend/lib/platform/web.ts`.
@@ -96,16 +95,19 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Add JWT token and tenant ID to every request
+// Add the JWT and the locale to every request.
+//
+// No tenant header. Until 2026-09-13 this also sent `X-Tenant-ID` from a
+// `tenant_id` key that nothing in the app wrote, to a backend that never read
+// it: the tenant comes from the JWT's `tenant_code` claim
+// (`backend/apps/tenants/middleware.py`), and the header's only backend
+// occurrence was the CORS allow-list (FL-12). `api.test.ts` asserts it stays
+// absent even when a legacy `tenant_id` is still sitting in a browser.
 api.interceptors.request.use((config) => {
   config.baseURL = getApiBaseUrl();
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  }
-  const tenantId = getTenantId();
-  if (tenantId) {
-    config.headers["X-Tenant-ID"] = tenantId;
   }
   // The locale the user chose, not the one their browser prefers.
   //
@@ -330,4 +332,3 @@ export async function fetchAllPages<T>(url: string, params: Record<string, strin
   return results;
 }
 
-export { getTenantId };

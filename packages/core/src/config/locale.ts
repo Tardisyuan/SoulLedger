@@ -27,7 +27,7 @@ export type Locale = "zh-Hans" | "en" | "egy";
  * (edge,`request.cookies`)、`frontend/app/layout.tsx`(server component,
  * `await cookies()`)、`frontend/src/contexts/I18nContext.tsx`(`document.cookie`)。
  * 常量本身不假设任何存储机制,它只是个键。`platform/index.ts` 里的
- * `TENANT_ID_KEY` / `ACCESS_TOKEN_KEY` 是同样的东西,住在同样的位置。
+ * `REFRESH_TOKEN_KEY` / `ACCESS_TOKEN_KEY` 是同样的东西,住在同样的位置。
  *
  * 二、**搬到 persistent 端口后面会真的坏掉,不是保守而是不能。** 端口是模块级
  * 单例(`platform/index.ts` 的 `adapter`),由 `PlatformProvider` 这个

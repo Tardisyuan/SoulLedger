@@ -22,10 +22,9 @@
  */
 import {
   REFRESH_TOKEN_KEY,
-  TENANT_ID_KEY,
   configurePlatform,
+  getLocale,
   getRefreshToken,
-  getTenantId,
   onSessionResume,
   onSessionSuspend,
   resetPlatform,
@@ -33,6 +32,7 @@ import {
   type KeyValueStore,
   type PlatformAdapter,
 } from "@soulledger/core/platform";
+import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { installWebPlatform } from "@/lib/platform/web";
 
 /** A store that records what it was given and knows nothing about any other. */
@@ -109,13 +109,15 @@ describe("the refresh token is routed to `secure`", () => {
     expect(getRefreshToken()).toBe("CURRENT");
   });
 
-  it("leaves the tenant id in `persistent` — the split is not a move of everything", () => {
+  // Was the tenant id; that key and its reader were deleted with `X-Tenant-ID`
+  // (FL-12). The locale is the persistent-store value that is still read.
+  it("leaves the locale in `persistent` — the split is not a move of everything", () => {
     const { adapter, persistent, secure } = probeAdapter();
     configurePlatform(adapter);
-    persistent.data.set(TENANT_ID_KEY, "tenant-a");
+    persistent.data.set(LOCALE_COOKIE, "egy");
 
-    expect(getTenantId()).toBe("tenant-a");
-    expect(secure.data.has(TENANT_ID_KEY)).toBe(false);
+    expect(getLocale()).toBe("egy");
+    expect(secure.data.has(LOCALE_COOKIE)).toBe(false);
   });
 
   it("an adapter with no `secure` store reads nothing rather than throwing", () => {

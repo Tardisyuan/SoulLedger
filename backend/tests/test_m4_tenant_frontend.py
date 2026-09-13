@@ -8,8 +8,8 @@ Uses fixtures from conftest.py to avoid rate limiting on login.
 
 Rewritten 2026-09-12. The previous version of this file had, measured:
 two tests sending an ``X-Tenant-ID`` header that no backend code reads (the
-only occurrence outside tests is the CORS allow-list — the frontend sends it,
-the backend resolves the tenant from the JWT); two "isolation" tests that
+only occurrence outside tests was the CORS allow-list — the frontend sent it,
+the backend resolves the tenant from the JWT; header deleted end to end, FL-12); two "isolation" tests that
 looped over an empty result set (0 actors, 0 souls) and so executed zero
 assertions; and one test whose two nested ``if``s were never entered. All of
 them were green. What replaces them creates rows in both tenants, lists as a
