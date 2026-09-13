@@ -257,7 +257,11 @@ export default function SoulDetailPage() {
       // (apps/souls/models.py), so creating one here unconditionally left every
       // soul with a duplicate pending judgment alongside the real one. Reuse
       // the open judgment if there is one.
-      const open = judgments.find((j) => !j.is_final);
+      //
+      // Asked of the server, not found in `judgments`: that is page one (20
+      // rows) of this soul's judgments, so an open one on page two was missed
+      // and a duplicate created. `JudgmentFilter` takes `is_final`. (FL-19)
+      const open = (await judgmentApi.list({ soul: soul.id, is_final: "false" })).data.results[0];
       const id = open
         ? open.id
         : (await judgmentApi.create({ soul: soul.id, civilization: soul.civilization })).data.id;

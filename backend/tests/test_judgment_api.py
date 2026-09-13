@@ -446,3 +446,30 @@ class TestJudgmentAPI:
         courts = {j["court"] for j in results}
         assert "第一殿" in courts
         assert "Hall of Two Truths" in courts
+
+
+@pytest.mark.django_db
+def test_is_final_false_finds_the_open_judgment_beyond_the_first_page(api_client, admin_user, cn_tenant):
+    """FL-19:灵魂详情页「开始审判」用 `?soul=X&is_final=false` 找未结案。
+
+    前端测试只能对着 stub 断言它发了这个请求;这条断言后端真的按它过滤。
+    21 条判决里只有最早那条未结案 —— 按默认排序它不在第一页(PAGE_SIZE=20)。
+    """
+    soul = Soul.objects.create(name="多判之魂", current_state=SoulState.JUDGING, tenant=cn_tenant)
+    open_one = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn_tenant)
+    for _ in range(20):
+        Judgment.objects.create(
+            soul=soul, civilization=soul.civilization, tenant=cn_tenant,
+            verdict=Verdict.PASSED, is_final=True, concluded_at=timezone.now(),
+        )
+    api_client.force_authenticate(user=admin_user)
+
+    first_page = api_client.get("/api/v1/judgment/", {"soul": str(soul.id)}).data
+    assert first_page["count"] == 21
+    assert str(open_one.id) not in {j["id"] for j in first_page["results"]}, (
+        "未结案那条落在了第一页 —— 这个夹具没有复现「第二页才有」,下面的断言证明不了什么"
+    )
+
+    response = api_client.get("/api/v1/judgment/", {"soul": str(soul.id), "is_final": "false"})
+    assert response.status_code == 200
+    assert [j["id"] for j in response.data["results"]] == [str(open_one.id)]
