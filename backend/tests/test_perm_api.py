@@ -7,9 +7,9 @@ Six tests here absorbed a same-named twin from ``apps/perm/tests.py``
 the response body, the other the database row; one asked as a JUDGE, the other
 as a VIEWER; one as an ADMIN carrying a tenant claim, the other as an ADMIN with
 no tenant at all. Each merged test says which half came from where.
-``test_list_permissions_unauthenticated`` still has its twin there: the two are
-the same request and the same assertion, so no mutation can tell them apart,
-and the rule for this merge was "no proof, no deletion".
+``test_list_permissions_unauthenticated`` kept its twin there until 2026-09-14,
+when that copy was deleted: same request, same assertion, and nothing in the
+other class's setUp is reachable without authentication.
 """
 import pytest
 from rest_framework.test import APIClient
