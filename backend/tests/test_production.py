@@ -225,6 +225,25 @@ class TestDockerConfiguration:
         assert "proxy_set_header Upgrade $http_upgrade" in ws
         assert 'proxy_set_header Connection "upgrade"' in ws
 
+    def test_nginx_csp_allows_the_sources_the_frontend_connects_to(self):
+        """`connect-src 'self'` alone blocked what the browser really opens
+        (IS-22): the notifications socket (wss to the same host — `'self'`
+        matching ws/wss is not something every browser has done), Sentry's
+        ingest host when NEXT_PUBLIC_SENTRY_DSN is set, and the replay
+        integration `instrumentation-client.ts` lazy-loads from Sentry's CDN
+        and runs in a blob: worker. The API itself is same-origin via nginx."""
+        csp = re.search(r'Content-Security-Policy "([^"]+)"', _read(NGINX_CONF)).group(1)
+        directives = {
+            d.split()[0]: d.split()[1:] for d in csp.split(";") if d.strip()
+        }
+        assert "'self'" in directives["connect-src"]
+        assert "wss://$host" in directives["connect-src"]
+        assert "https://*.sentry.io" in directives["connect-src"]
+        assert "https://browser.sentry-cdn.com" in directives["script-src"]
+        assert "blob:" in directives["worker-src"]
+        # Not a blanket scheme: `wss:` or `https:` would allow any host.
+        assert not {"wss:", "https:", "*"} & set(directives["connect-src"])
+
     def test_nginx_does_not_log_the_websocket_token(self):
         """The browser client connects to `/ws/notifications/?token=<jwt>`.
         `$request` (and `$request_uri`, `$args`, `$query_string`) carry the
