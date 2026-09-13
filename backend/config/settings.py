@@ -369,6 +369,11 @@ if not DEBUG:
     # its compose file sets this to false. The production compose passed
     # this variable for months while nothing read it (IS-04).
     SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", "true")
+    # `/health/` answers load balancers and uptime probes, which speak plain http
+    # to port 80 and read a 301 as "down". It returns only {"status": "ok"}.
+    # `/health/detailed/` is deliberately NOT exempt: it needs an ADMIN session,
+    # and a session over plain http is what this redirect exists to prevent.
+    SECURE_REDIRECT_EXEMPT = [r"^health/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
