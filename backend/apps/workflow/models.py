@@ -182,6 +182,15 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from django.utils import timezone
 
         with transaction.atomic():
+            # The workflow row first (BD-09), then the node. Only the node was
+            # locked, and this instance was whatever the caller loaded before
+            # the transaction: two decisions on *different* nodes never
+            # contended, each picked the next node from rows the other had not
+            # committed, and the `save()` below -- which sat outside this block
+            # -- let the last writer land a stale state. A stale copy could also
+            # pass the terminal check below and overwrite a REJECTED workflow.
+            # Same order (workflow, then node) in `escalate_current_node`.
+            self._lock_and_reload()
             # Locked and re-checked inside the transaction. The view's
             # `node.status != PENDING` guard runs outside any lock, so two
             # judges deciding the same node both passed it and both wrote.
@@ -313,9 +322,13 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                     self.current_node = None
                     self.status = ApprovalWorkflowStatus.COMPLETED
                     self.completed_at = timezone.now()
-        self.save()
+            self.save()
 
         return True
+
+    def _lock_and_reload(self):
+        """Take this workflow's row lock and re-read it. Call inside atomic()."""
+        self.refresh_from_db(from_queryset=ApprovalWorkflow._base_manager.select_for_update())
 
     def advance_to_next(self) -> bool:
         """Move `current_node` on to the next pending node, if there is one.
@@ -367,6 +380,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from django.utils import timezone
 
         with transaction.atomic():
+            self._lock_and_reload()
             # "The node we are stuck on" is `get_current_node()`, not
             # `current_node`: that column is only populated by
             # `_create_nodes`/`complete_node`, and a workflow whose nodes were
