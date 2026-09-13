@@ -99,6 +99,36 @@ class TestHealthEndpoints:
         resp = client.get('/health/detailed/')
         assert resp.status_code in [200, 503]
 
+    def test_health_detailed_accepts_a_bearer_token(self, db, django_user_model):
+        """BP-16: the API authenticates with JWT, and this view only read the
+        session — an ADMIN's `Authorization: Bearer` got 401. The role gate
+        must survive the change: VIEWER with a valid token is still 403, and
+        a garbage token is still 401."""
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        def bearer(user):
+            return {"HTTP_AUTHORIZATION": f"Bearer {AccessToken.for_user(user)}"}
+
+        admin = django_user_model.objects.create_user(
+            username="bp16_admin", password="x", role="ADMIN"
+        )
+        viewer = django_user_model.objects.create_user(
+            username="bp16_viewer", password="x", role="VIEWER"
+        )
+        client = Client()
+
+        resp = client.get('/health/detailed/', **bearer(admin))
+        assert resp.status_code in [200, 503], (
+            f"ADMIN with a valid Bearer token got {resp.status_code}"
+        )
+        assert set(resp.json()) == {"database", "redis", "status"}
+
+        assert client.get('/health/detailed/', **bearer(viewer)).status_code == 403
+        assert client.get(
+            '/health/detailed/', HTTP_AUTHORIZATION="Bearer not-a-token"
+        ).status_code == 401
+        assert client.get('/health/detailed/').status_code == 401
+
     def test_health_endpoint_no_auth_required(self, api_client):
         """Basic /health/ should be accessible without auth"""
         resp = api_client.get('/health/')

@@ -2,6 +2,12 @@ from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 from django.views import View
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from apps.core.permissions import IsAdminPermission
 
 
 class HealthCheck(View):
@@ -11,18 +17,22 @@ class HealthCheck(View):
         return JsonResponse({"status": "ok"})
 
 
-class HealthCheckDetailed(View):
-    """GET /health/detailed/ - Detailed health with DB + Redis (authenticated only)"""
+class HealthCheckDetailed(APIView):
+    """GET /health/detailed/ - Detailed health with DB + Redis (ADMIN only)
+
+    A DRF view so it authenticates the way the API does. As a plain Django
+    `View` it read only the session, and an ADMIN calling with
+    `Authorization: Bearer` got 401 (BP-16). Session stays accepted for the
+    browsable/admin case. Unauthenticated -> 401 (JWT is first, so DRF answers
+    NotAuthenticated with a WWW-Authenticate header); non-ADMIN -> 403.
+    """
+
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAdminPermission]
+    # Not an API resource; keep it out of the committed OpenAPI document.
+    schema = None
 
     def get(self, request):
-        # Require authentication for detailed health check
-        if not request.user or not request.user.is_authenticated:
-            return JsonResponse({"error": "Authentication required"}, status=401)
-
-        # Only ADMIN users can see detailed health
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            return JsonResponse({"error": "Admin access required"}, status=403)
-
         checks = {"database": "ok", "redis": "ok", "status": "ok"}
         status_code = 200
 
@@ -46,4 +56,4 @@ class HealthCheckDetailed(View):
             checks["status"] = "degraded"
             status_code = 503
 
-        return JsonResponse(checks, status=status_code)
+        return Response(checks, status=status_code)
