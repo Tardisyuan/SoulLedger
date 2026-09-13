@@ -15,7 +15,6 @@ import { CIVILIZATION_SHORT_CODE_SET } from "@soulledger/core/config/civilizatio
 import {
   ACCESS_TOKEN_KEY,
   REFRESH_TOKEN_KEY,
-  TENANT_ID_KEY,
   platform,
 } from "@soulledger/core/platform";
 
@@ -243,7 +242,6 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     host.persistent.remove(ACCESS_TOKEN_KEY);
     host.persistent.remove(USER_KEY);
     host.secure.remove(REFRESH_TOKEN_KEY);
-    host.persistent.remove(TENANT_ID_KEY);
   }, [setUser]);
 
   const value = useMemo(

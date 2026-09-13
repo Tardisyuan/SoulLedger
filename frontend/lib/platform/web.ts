@@ -62,11 +62,12 @@ const session: KeyValueStore = {
  * not have been modelled as "one storage API" — the two halves differ in who
  * can read them, not just in how long they last.
  *
- * WHY `localStorage` IS STILL ON THE READ PATH. `tenant_id` is written by
- * `src/contexts/TenantContext.tsx` into `localStorage`, and was read as
- * `localStorage.getItem("tenant_id") || getCookie("tenant_id")`. Checking
- * `localStorage` first and falling through to the cookie preserves that exactly
- * — the refresh token is never in `localStorage`, so it always falls through.
+ * WHY `localStorage` IS STILL ON THE READ PATH. Everything `set` below writes
+ * that is not the refresh token goes to `localStorage` (the locale is read the
+ * same way), so `get` checks there first and falls through to the cookie —
+ * the refresh token is never in `localStorage`, so it always falls through.
+ * (This note used to say `TenantContext` wrote `tenant_id` there. Nothing did;
+ * the key and the `X-Tenant-ID` header it fed were deleted, FL-12.)
  *
  * `set` BRANCHES ON THE KEY, and the note that used to be here said why it
  * would have to: "the attributes below are the refresh token's… if that ever
@@ -77,9 +78,9 @@ const session: KeyValueStore = {
  *
  * The refresh token keeps the cookie, for the middleware reason above and for
  * no other. Everything else goes to `localStorage`, which is where a persistent
- * non-credential already belonged: `tenant_id` has always been written there by
- * `TenantContext` directly, and `get` above has always read `localStorage`
- * first — so this makes `set` agree with the `get` it was already paired with.
+ * non-credential already belonged, and `get` above has always read
+ * `localStorage` first — so this makes `set` agree with the `get` it was
+ * already paired with.
  *
  * The alternative, leaving it as one cookie write, is worse in three ways that
  * are all specific rather than stylistic: a held verdict (a soul's name, a
@@ -98,8 +99,7 @@ const persistent: KeyValueStore = {
   },
   set(key, value) {
     // Not the refresh token: `localStorage`, and nothing leaves the browser.
-    // `get` reads there first, so this round-trips through the same path the
-    // tenant id already uses.
+    // `get` reads there first, so this round-trips.
     if (key !== REFRESH_TOKEN_KEY) {
       if (typeof localStorage === "undefined") return;
       localStorage.setItem(key, value);

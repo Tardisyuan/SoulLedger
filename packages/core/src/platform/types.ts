@@ -15,7 +15,7 @@
  *                same cookie, for the middleware reason above)
  *
  * That split is not incidental. The access token lives in `session`, the
- * refresh token in `secure`, and the tenant id and the judgment queue's held
+ * refresh token in `secure`, and the locale and the judgment queue's held
  * verdict in `persistent` (see `PlatformAdapter.persistent` for why a verdict
  * is not in `secure`), and the whole of
  * the commentary in `../api/client.ts` is about what went wrong the one time
@@ -346,11 +346,12 @@ export interface PlatformAdapter {
   /** Cleared when the session ends. Holds the access token, and nothing else. */
   session: KeyValueStore;
   /**
-   * Survives a restart, holds nothing secret. Holds the tenant id, and the
-   * judgment queue's held verdict.
+   * Survives a restart, holds nothing secret. Holds the locale and the
+   * judgment queue's held verdict. (It also held a tenant id whose only reader sent
+   * a header the backend never read; both deleted, FL-12.)
    *
    * WHY A HELD VERDICT IS HERE AND NOT IN `secure`, since it is plainly more
-   * sensitive than a tenant id — a verdict, a note and a soul's name. Three
+   * sensitive than a locale — a verdict, a note and a soul's name. Three
    * reasons, and the first is the one that decides it:
    *
    *  1. `secure`'s documented native shape is `expo-secure-store` / Keychain,

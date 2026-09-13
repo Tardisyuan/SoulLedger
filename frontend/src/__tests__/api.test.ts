@@ -132,26 +132,6 @@ describe('API Client — @soulledger/core/api', () => {
     });
   });
 
-  // ── getTenantId (tested via request interceptor) ─────────────────────────
-  describe('getTenantId (via request interceptor)', () => {
-    it('should read tenant_id from localStorage first', () => {
-      localStorage.setItem('tenant_id', 'egypt-tenant');
-      const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
-      expect((config.headers as Record<string, string>)['X-Tenant-ID']).toBe('egypt-tenant');
-    });
-
-    it('should fall back to cookie if localStorage is empty', () => {
-      document.cookie = 'tenant_id=greek-underworld; path=/';
-      const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
-      expect((config.headers as Record<string, string>)['X-Tenant-ID']).toBe('greek-underworld');
-    });
-
-    it('should not set X-Tenant-ID when tenant is unknown', () => {
-      const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
-      expect((config.headers as Record<string, string | undefined>)['X-Tenant-ID']).toBeUndefined();
-    });
-  });
-
   // ── Request interceptor: Authorization ───────────────────────────────────
   describe('request interceptor — Authorization', () => {
     it('should add Bearer token from sessionStorage', () => {
@@ -180,12 +160,19 @@ describe('API Client — @soulledger/core/api', () => {
     });
   });
 
-  // ── Request interceptor: X-Tenant-ID ─────────────────────────────────────
-  describe('request interceptor — X-Tenant-ID', () => {
-    it('should add X-Tenant-ID from localStorage', () => {
+  // ── Request interceptor: no tenant header ────────────────────────────────
+  // The four tests that stood here pinned `X-Tenant-ID` being sent — a header
+  // no backend code reads (the tenant is the JWT's `tenant_code` claim). They
+  // were guarding dead code (FL-12). What is worth pinning is the absence,
+  // with a legacy `tenant_id` still present in both facilities a browser may
+  // have kept it in, so re-adding a reader turns this red.
+  describe('request interceptor — no tenant header', () => {
+    it('sends no X-Tenant-ID even when a legacy tenant_id is stored', () => {
       localStorage.setItem('tenant_id', 'chinese-ten-courts');
+      document.cookie = 'tenant_id=greek-underworld; path=/';
       const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
-      expect((config.headers as Record<string, string>)['X-Tenant-ID']).toBe('chinese-ten-courts');
+      const headers = config.headers as Record<string, string | undefined>;
+      expect(Object.keys(headers).map((k) => k.toLowerCase())).not.toContain('x-tenant-id');
     });
   });
 

@@ -746,7 +746,7 @@ function corsHeaders(request: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": request.headers()["origin"] ?? "*",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "authorization,content-type,x-tenant-id",
+    "Access-Control-Allow-Headers": "authorization,content-type",
     "Access-Control-Max-Age": "86400",
   };
 }

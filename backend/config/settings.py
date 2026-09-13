@@ -210,7 +210,6 @@ CORS_ALLOW_HEADERS = [
     "content-type",
     "origin",
     "user-agent",
-    "x-tenant-id",
     "x-requested-with",
 ]
 

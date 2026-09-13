@@ -13,7 +13,7 @@ import { createElement } from "react";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
 import { CIVILIZATION_CODES } from "@soulledger/core/config/civilizations";
 import { permApi } from "@soulledger/core/api";
-import { getAccessToken, getRefreshToken, getTenantId } from "@soulledger/core/platform";
+import { getAccessToken, getRefreshToken } from "@soulledger/core/platform";
 import { installWebPlatform } from "@/lib/platform/web";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -244,11 +244,10 @@ describe("logout clears the session, not just the cookies", () => {
     mockMyRolePermissions.mockResolvedValue({ data: { role: "JUDGE", permissions: [] } });
   });
 
-  it("the access token, the refresh token and the tenant id are all gone", async () => {
+  it("the access token and the refresh token are both gone", async () => {
     seedStoredUser();
     sessionStorage.setItem("soulledger_access", "LIVE-BEARER");
     document.cookie = "soulledger_refresh=LIVE-REFRESH; path=/";
-    localStorage.setItem("tenant_id", "7");
 
     const { result } = renderHook(() => useTenant(), { wrapper });
     await waitFor(() => expect(result.current.user).not.toBeNull());
@@ -256,7 +255,6 @@ describe("logout clears the session, not just the cookies", () => {
     // or the assertions below would pass against a store nothing ever filled.
     expect(getAccessToken()).toBe("LIVE-BEARER");
     expect(getRefreshToken()).toBe("LIVE-REFRESH");
-    expect(getTenantId()).toBe("7");
 
     act(() => result.current.logout());
 
@@ -266,8 +264,6 @@ describe("logout clears the session, not just the cookies", () => {
     expect(sessionStorage.getItem("soulledger_access")).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(document.cookie).not.toContain("soulledger_refresh=LIVE-REFRESH");
-    expect(getTenantId()).toBe("");
-    expect(localStorage.getItem("tenant_id")).toBeNull();
     expect(localStorage.getItem(USER_KEY)).toBeNull();
   });
 });
