@@ -4168,6 +4168,10 @@ paths:
         mark_read: POST /api/v1/notifications/{id}/mark_read/ - Mark single notification as read
         mark_all_read: POST /api/v1/notifications/mark_all_read/ - Mark all notifications as read
       parameters:
+      - in: query
+        name: is_read
+        schema:
+          type: boolean
       - name: ordering
         required: false
         in: query

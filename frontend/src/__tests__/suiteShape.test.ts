@@ -172,6 +172,7 @@ const COLLECTED_FILES = [
   "tenantSignalContract.test.tsx",
   "themeSwapTransition.test.tsx",
   "truncatedValuesAreRecoverable.test.ts",
+  "unreadBadgeCountsTheWholeInbox.test.tsx",
   "useDispositions.test.ts",
   "useJudgmentQueue.test.tsx",
   "useJudgments.test.ts",
