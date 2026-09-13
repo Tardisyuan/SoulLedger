@@ -203,7 +203,8 @@ describe("WSClient send", () => {
 
     client.send({ type: "ping", n: 1 });
 
-    expect(lastSocket().sent).toEqual(['{"type":"ping","n":1}']);
+    // sent[0] is the auth frame the client writes on open.
+    expect(lastSocket().sent).toEqual(['{"type":"auth","token":"tok-123"}', '{"type":"ping","n":1}']);
   });
 
   it("drops the payload when the socket is not OPEN", () => {
@@ -232,7 +233,7 @@ describe("WSClient heartbeat", () => {
 
     jest.advanceTimersByTime(2000);
 
-    expect(lastSocket().sent).toEqual(['{"type":"heartbeat"}', '{"type":"heartbeat"}']);
+    expect(lastSocket().sent).toEqual(['{"type":"auth","token":"tok-123"}', '{"type":"heartbeat"}', '{"type":"heartbeat"}']);
     expect(client.getStatus()).not.toBe("failed");
   });
 

@@ -82,8 +82,9 @@ class JWTAuthMiddleware(BaseMiddleware):
                     # later message was answered "not authenticated".
                     #
                     # Two blocks of a 219-line consumer that looked like they
-                    # were working. The front end only uses the `?token=` query
-                    # string, which is why nothing surfaced.
+                    # were working. The front end then only used the `?token=`
+                    # query string, which is why nothing surfaced. (It now
+                    # authenticates through this path: packages/core/src/ws/client.ts.)
                     #
                     # The middleware's `auth.success` is gone with it: the
                     # consumer answers `connected` once it has actually joined

@@ -1,7 +1,14 @@
 /**
  * WebSocket client for SoulLedger real-time notifications.
  *
- * Connects to ws://host/ws/notifications/?token=<jwt>
+ * Connects to ws://host/ws/notifications/ and authenticates with the first
+ * frame, `{"type":"auth","token":"<jwt>"}` — never with a `?token=` query
+ * string. nginx's error_log writes the full request line when the upstream
+ * fails, and that format cannot be changed, so a token in the URL is a token
+ * in a log file. The server answers `connected` (status becomes "connected")
+ * or an `error` frame and close 4001 (see `apps/core/ws_auth.py`,
+ * `apps/notifications/consumers.py`). The server still accepts `?token=` for
+ * older clients; this one does not send it.
  * Handles reconnection with exponential backoff + jitter.
  * Proper state machine: CONNECTING → CONNECTED → DISCONNECTED → RECONNECTING → FAILED
  */
@@ -131,15 +138,19 @@ export class WSClient {
     this.setStatus("connecting");
 
     try {
-      this.ws = new WebSocket(`${getWebSocketUrl()}?token=${encodeURIComponent(token)}`);
+      this.ws = new WebSocket(getWebSocketUrl());
     } catch {
       this.setStatus("disconnected");
       return;
     }
 
+    const socket = this.ws;
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
       this.heartbeatMissed = 0;
+      // First frame, before the heartbeat can send anything: the server closes
+      // 4001 on any other first frame ("Token required as first message").
+      socket.send(JSON.stringify({ type: "auth", token }));
       this.startHeartbeat();
     };
 

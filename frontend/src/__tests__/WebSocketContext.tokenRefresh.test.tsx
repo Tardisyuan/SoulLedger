@@ -150,8 +150,9 @@ describe("WebSocketProvider reconnects after a successful token refresh", () => 
     await refreshSucceeds();
 
     expect(FakeWebSocket.instances).toHaveLength(2);
-    expect(lastSocket().url).toContain("token=jwt-refreshed");
-    expect(lastSocket().url).not.toContain("token=jwt-token");
+    expect(status()).toBe("connecting");
+    act(() => lastSocket().open());
+    expect(lastSocket().sent).toEqual([JSON.stringify({ type: "auth", token: "jwt-refreshed" })]);
     expect(status()).toBe("connecting");
   });
 
