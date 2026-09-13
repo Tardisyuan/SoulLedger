@@ -155,7 +155,9 @@ describe("WebSocketProvider authentication gating", () => {
     renderProvider();
 
     expect(FakeWebSocket.instances).toHaveLength(1);
-    expect(lastSocket().url).toContain("token=jwt-token");
+    expect(lastSocket().url).not.toContain("jwt-token");
+    act(() => lastSocket().open());
+    expect(lastSocket().sent[0]).toBe(JSON.stringify({ type: "auth", token: "jwt-token" }));
     expect(status()).toBe("connecting");
   });
 

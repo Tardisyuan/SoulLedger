@@ -154,7 +154,8 @@ describe("WSClient — a close with no code", () => {
     const client = new WSClient();
     client.connect();
     expect(FakeWebSocket.instances).toHaveLength(1);
-    expect(lastSocket().url).toContain("token=tok-123");
+    // The token travels in the first frame, not the URL (see client.ts header).
+    expect(lastSocket().url).not.toContain("tok-123");
     client.close();
   });
 

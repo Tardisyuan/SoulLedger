@@ -40,13 +40,25 @@ describe("WSClient authentication gate", () => {
     expect(onStatusChange).not.toHaveBeenCalledWith("connecting");
   });
 
+  /* WHERE THE TOKEN GOES. It used to be the query string
+   * (`/ws/notifications/?token=<jwt>`). nginx's access log for `/ws/` was
+   * changed not to print query strings (`0331f70`), but when the upstream
+   * fails nginx's error_log still writes the full request line, and that
+   * format cannot be changed — so a bearer token landed in a log file every
+   * time daphne was down. The backend has always accepted the token as the
+   * first frame instead (`apps/core/ws_auth.py`, `{"type":"auth","token":…}`),
+   * and since `7edf590` that path gates events the same way the query path
+   * does. The client now uses it. */
+  const authFrame = (socket: FakeWebSocket) => JSON.parse(socket.sent[0] ?? "null");
+
   it("takes the token from sessionStorage", () => {
     setToken(null);
     sessionStorage.setItem("soulledger_access", "session-tok");
 
     new WSClient().connect();
+    lastSocket().open();
 
-    expect(lastSocket().url).toContain("token=session-tok");
+    expect(authFrame(lastSocket())).toEqual({ type: "auth", token: "session-tok" });
   });
 
   it("ignores a stale soulledger_access cookie", () => {
@@ -58,9 +70,10 @@ describe("WSClient authentication gate", () => {
     setLegacyCookieToken("cookie-tok");
 
     new WSClient().connect();
+    lastSocket().open();
 
-    expect(lastSocket().url).toContain("token=session-tok");
-    expect(lastSocket().url).not.toContain("cookie-tok");
+    expect(authFrame(lastSocket()).token).toBe("session-tok");
+    expect(lastSocket().sent.join("")).not.toContain("cookie-tok");
   });
 
   it("没有 token 时不开 socket —— **断存在的反面**", () => {
@@ -69,17 +82,43 @@ describe("WSClient authentication gate", () => {
     expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
-  it("percent-encodes the token into the query string", () => {
+  it("puts no token in the URL — not as a parameter, not as a value", () => {
     setToken("a b+c/d");
     new WSClient().connect();
 
-    expect(lastSocket().url).toContain(`token=${encodeURIComponent("a b+c/d")}`);
+    expect(lastSocket().url).toBe("ws://localhost:8000/ws/notifications/");
+    expect(lastSocket().url).not.toContain("token");
+    expect(lastSocket().url).not.toContain(encodeURIComponent("a b+c/d"));
+  });
+
+  it("sends the auth frame first, on open, and nothing before open", () => {
+    setToken("a b+c/d");
+    new WSClient().connect();
+    expect(lastSocket().sent).toEqual([]);
+
+    lastSocket().open();
+
+    // JSON carries the token verbatim; no percent-encoding in a frame.
+    expect(lastSocket().sent).toEqual([JSON.stringify({ type: "auth", token: "a b+c/d" })]);
+  });
+
+  it("an auth rejection (error frame, then close 4001) ends in failed and never retries", () => {
+    const client = new WSClient();
+    client.connect();
+    lastSocket().open();
+
+    lastSocket().receive({ type: "error", code: 4001, message: "Invalid token" });
+    lastSocket().serverClose(4001);
+    jest.advanceTimersByTime(120_000);
+
+    expect(client.getStatus()).toBe("failed");
+    expect(FakeWebSocket.instances).toHaveLength(1);
   });
 
   it("derives a ws:// URL from the http API base", () => {
     new WSClient().connect();
 
-    expect(lastSocket().url.startsWith("ws://localhost:8000/ws/notifications/?token=")).toBe(true);
+    expect(lastSocket().url.startsWith("ws://localhost:8000/ws/notifications/")).toBe(true);
   });
 
   it("stays disconnected when the WebSocket constructor throws", () => {

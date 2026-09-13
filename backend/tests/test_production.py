@@ -245,7 +245,8 @@ class TestDockerConfiguration:
         assert not {"wss:", "https:", "*"} & set(directives["connect-src"])
 
     def test_nginx_does_not_log_the_websocket_token(self):
-        """The browser client connects to `/ws/notifications/?token=<jwt>`.
+        """Older clients connect to `/ws/notifications/?token=<jwt>` (the
+        browser client now sends the token as its first frame instead).
         `$request` (and `$request_uri`, `$args`, `$query_string`) carry the
         query string, so the `main` format wrote a live 30-minute access
         token into access.log on every connect (IS-10). The /ws/ location

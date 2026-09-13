@@ -15,7 +15,7 @@
  * `interceptWebSockets` 把打开过的 URL 记下来,这里断言它们指向本机。
  */
 
-import { expect, test, setupAuthenticatedPage } from "./fixtures";
+import { MOCK_ACCESS_TOKEN, expect, test, setupAuthenticatedPage } from "./fixtures";
 
 const ROUTES = [
   "/dashboard",
@@ -90,6 +90,9 @@ test.describe("WebSocket 不再逃过 fixture", () => {
     const expected = api.apiOrigin!.replace(/^http/, "ws");
     for (const url of api.socketUrls) {
       expect(url, `socket 连到了 ${url},而 API 在 ${api.apiOrigin}`).toContain(expected);
+      // token 走首帧,不走 URL:nginx 的 error_log 在上游出错时会写出完整请求行。
+      expect(url, `socket URL 带了凭据:${url}`).not.toContain(MOCK_ACCESS_TOKEN);
+      expect(url, `socket URL 带了 token 参数:${url}`).not.toMatch(/[?&]token=/);
     }
   });
 });
