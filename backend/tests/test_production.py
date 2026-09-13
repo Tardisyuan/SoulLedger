@@ -225,6 +225,22 @@ class TestDockerConfiguration:
         assert "proxy_set_header Upgrade $http_upgrade" in ws
         assert 'proxy_set_header Connection "upgrade"' in ws
 
+    def test_nginx_does_not_log_the_websocket_token(self):
+        """The browser client connects to `/ws/notifications/?token=<jwt>`.
+        `$request` (and `$request_uri`, `$args`, `$query_string`) carry the
+        query string, so the `main` format wrote a live 30-minute access
+        token into access.log on every connect (IS-10). The /ws/ location
+        must log with a format that has none of them."""
+        content = _read(NGINX_CONF)
+        formats = dict(re.findall(r"log_format\s+(\w+)\s+(.*?);", content, flags=re.S))
+        ws = content[content.index("location /ws/"):]
+        ws = ws[:ws.index("}")]
+        match = re.search(r"^\s*access_log\s+\S+\s+(\w+)\s*;", ws, flags=re.M)
+        assert match, "location /ws/ inherits the server-wide access_log format"
+        fmt = formats[match.group(1)]
+        for var in ("$request ", '$request"', "$request_uri", "$args", "$query_string", "$arg_"):
+            assert var not in fmt, f"/ws/ log format {match.group(1)} contains {var.strip()}"
+
     def test_nginx_does_not_listen_on_tls_without_a_certificate(self):
         """`listen 443 ssl` with no ssl_certificate is a fatal config error,
         which is how nginx never started (IS-09). Both directives live on
