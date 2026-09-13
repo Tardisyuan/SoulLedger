@@ -116,6 +116,8 @@ docker compose up    # 根目录 docker-compose.yml：db、redis、backend、cel
 需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入四种
 文明的领域与角色。
 
+生产栈（nginx、TLS 证书首签与续期、备份与恢复）见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
+
 ### 种子数据
 
 根 compose 的启动顺序是 `python manage.py migrate` 再 `python manage.py

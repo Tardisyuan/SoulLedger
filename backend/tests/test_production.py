@@ -300,6 +300,24 @@ class TestDockerConfiguration:
         script = _read(os.path.join(REPO_ROOT, "scripts", "backup-db.sh"))
         assert 'PGHOST="${PGHOST:-' in script
 
+    def test_certbot_renews_into_the_webroot_nginx_serves(self):
+        """Renewal is only real if the three pieces meet: certbot writes the
+        challenge where nginx's /.well-known/acme-challenge/ location reads it
+        (a shared volume — nginx.conf named /var/www/certbot while nothing
+        mounted it), the renewal marker certbot touches is the one nginx
+        watches to reload, and a failure can turn the healthcheck red."""
+        services = _production_services()
+        certbot, nginx = services['certbot'], services['nginx']
+        script = certbot['command'][0]
+        assert 'certbot renew' in script and '--webroot -w /var/www/certbot' in script
+        assert "FAILED" in script
+        assert certbot['healthcheck']['test']
+        assert re.search(r"location /\.well-known/acme-challenge/ \{\s*root /var/www/certbot;", _read(NGINX_CONF))
+        shared = {v.split(':')[0] for v in certbot['volumes'] if ':/var/www/certbot' in v}
+        assert shared and shared == {v.split(':')[0] for v in nginx['volumes'] if ':/var/www/certbot' in v}
+        marker = re.search(r"--deploy-hook 'touch (\S+)'", script).group(1)
+        assert marker in nginx['command'][-1] and 'nginx -s reload' in nginx['command'][-1]
+
     def test_prod_compose_mounts_a_file_that_exists(self):
         """A bind-mount source that does not exist is created by docker as
         an empty directory — for nginx.conf that means nginx dies (IS-09)."""
