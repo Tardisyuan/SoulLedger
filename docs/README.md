@@ -142,6 +142,7 @@ research material and feeds no tenant.
 | [CONVENTIONS.md](CONVENTIONS.md) | 已入库 | ~~前后端编码规约~~ **已被上面两份取代**（2026-09-06），停在 2026-08-14，保留作历史 |
 | [API.md](API.md) | 已入库 | API 手写索引。**权威来源是运行中的 `/api/docs/`（drf-spectacular）** |
 | [TECHNICAL_DOCS.md](TECHNICAL_DOCS.md) | 已入库 | 权限系统与项目结构说明 |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 已入库 | 生产栈:TLS 证书首签与续期、数据库备份与恢复 |
 
 **带日期的报告 / Dated reports** — 这些是某一天的快照，写下之后不再更新。当历史读，
 不要当现状读。*Snapshots of one day's state, never updated afterwards. Read them as

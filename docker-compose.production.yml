@@ -143,6 +143,42 @@ services:
         condition: service_healthy
     restart: always
 
+  # Let's Encrypt renewal (webroot). First issuance is a manual step that
+  # needs the real domain — docs/DEPLOYMENT.md. Every 12 hours `certbot renew`;
+  # a renewal that deploys a new certificate touches /etc/letsencrypt/.deployed
+  # and nginx (below) reloads when it sees that marker.
+  #
+  # Failure is visible: the exit code is logged (`docker compose logs certbot`,
+  # "certbot renew FAILED exit=N"), and the healthcheck is unhealthy when there
+  # is no certificate at all or the last successful `renew` is over 25 hours
+  # old. The container keeps running on failure on purpose: a restart loop
+  # would retry validation into Let's Encrypt's failed-validation rate limit.
+  certbot:
+    image: certbot/certbot:v5.8.0
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        trap exit TERM
+        while :; do
+          certbot renew --non-interactive --webroot -w /var/www/certbot --deploy-hook 'touch /etc/letsencrypt/.deployed'
+          rc=$$?
+          if [ "$$rc" -eq 0 ]; then
+            touch /etc/letsencrypt/.renew-ok
+          else
+            echo "certbot renew FAILED exit=$$rc" >&2
+          fi
+          sleep 43200 & wait $$!
+        done
+    healthcheck:
+      test: ["CMD-SHELL", "ls /etc/letsencrypt/live/*/fullchain.pem >/dev/null 2>&1 && find /etc/letsencrypt/.renew-ok -mmin -1500 | grep -q ."]
+      interval: 5m
+      timeout: 10s
+      start_period: 5m
+    restart: always
+
   nginx:
     image: nginx:alpine
     ports:
@@ -156,6 +192,23 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - static_files:/var/www/static:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      # ACME challenges certbot writes; nginx.conf serves them from here.
+      - certbot_www:/var/www/certbot:ro
+    # nginx plus a watcher: reload once certbot's deploy-hook has touched the
+    # marker, so a renewed certificate is served without a manual step.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        touch /tmp/.reloaded
+        while :; do
+          sleep 300
+          if [ /etc/letsencrypt/.deployed -nt /tmp/.reloaded ]; then
+            echo "certificate renewed; reloading nginx"
+            nginx -s reload && touch /tmp/.reloaded
+          fi
+        done &
+        exec nginx -g 'daemon off;'
     depends_on:
       - frontend
       - backend
@@ -164,3 +217,6 @@ services:
       resources:
         limits:
           memory: 256m
+
+volumes:
+  certbot_www:
