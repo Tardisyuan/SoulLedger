@@ -92,9 +92,6 @@ class SoulManager(TenantManager):
     def exclude_orphaned(self):
         return self.get_queryset().exclude_orphaned()
 
-    def filter_by_civilization(self, civilization: str):
-        return self.get_queryset().filter_by_civilization(civilization)
-
     def filter_by_state(self, state: str):
         return self.get_queryset().filter_by_state(state)
 
