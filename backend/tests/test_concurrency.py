@@ -442,6 +442,144 @@ class TestWorkflowDecisionConcurrency:
 
 
 # ---------------------------------------------------------------------------
+# BD-15: `POST /disposition/{id}/execute/` ran the service outside its own lock.
+#
+# The view locked the disposition, checked `is_executed`, and let the
+# `atomic()` block end at `disposition = locked` — then called
+# `DispositionService.execute` with the lock already released, under a comment
+# saying the check "has to happen under the lock". Two executors could both
+# pass the check; what stopped a double execution was only `transition_to`'s
+# own soul-row lock, and the loser was told 409 ("soul not in a state this
+# disposition can act on") instead of 400 ("Already executed").
+# ---------------------------------------------------------------------------
+
+
+def _executable_disposition(tenant):
+    from apps.disposition.models import Disposition
+
+    soul = Soul.objects.create(
+        name="BD-15 probe", tenant=tenant, current_state=SoulState.DISPOSED
+    )
+    return Disposition.objects.create(soul=soul, tenant=tenant)
+
+
+def _admin_client(tenant, username):
+    from rest_framework.test import APIClient
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    user = User.objects.create_user(
+        username=username, password="x", role="ADMIN", tenant=tenant
+    )
+    token = RefreshToken.for_user(user)
+    token["tenant_code"] = tenant.code
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    return client
+
+
+@pytest.mark.django_db(transaction=True)
+class TestDispositionExecuteHoldsItsLock:
+    def test_the_service_runs_inside_the_views_locked_transaction(self, db, cn_tenant):
+        """Serial, so it runs on every engine.
+
+        `transaction=True` means nothing outside the view is in a transaction,
+        so `in_atomic_block` at the moment the service is entered answers
+        exactly "is the view's `select_for_update` block still open".
+        """
+        from unittest.mock import patch
+
+        from django.db import transaction
+
+        from apps.disposition.services import DispositionService
+
+        disposition = _executable_disposition(cn_tenant)
+        client = _admin_client(cn_tenant, "bd15_serial")
+        real_execute = DispositionService.execute
+        seen = []
+
+        def spy(d):
+            seen.append(transaction.get_connection().in_atomic_block)
+            return real_execute(d)
+
+        with patch.object(DispositionService, "execute", spy):
+            response = client.post(
+                f"/api/v1/disposition/{disposition.id}/execute/", {}, format="json"
+            )
+
+        assert response.status_code == 200, response.data
+        assert seen == [True], (
+            f"DispositionService.execute ran with in_atomic_block={seen}: the "
+            "disposition row lock was already released, so a second executor "
+            "could pass the is_executed check before this one wrote it"
+        )
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_a_second_executor_waits_and_is_told_already_executed(self, db, cn_tenant):
+        """The same thing with two real connections.
+
+        A enters the service and lingers; B, arriving meanwhile, must wait on
+        the disposition row lock and then see `is_executed=True` (400). With
+        the lock released early B does not wait at all: it executes first and
+        A gets the 409.
+        """
+        import time
+        from unittest.mock import patch
+
+        from django.db import connections
+
+        from apps.disposition.services import DispositionService
+
+        disposition = _executable_disposition(cn_tenant)
+        clients = {
+            "a": _admin_client(cn_tenant, "bd15_a"),
+            "b": _admin_client(cn_tenant, "bd15_b"),
+        }
+        real_execute = DispositionService.execute
+        a_inside = threading.Event()
+        results = {}
+        b_waited = {"seconds": None}
+
+        def lingering_execute(d):
+            if threading.current_thread().name == "a":
+                a_inside.set()
+                time.sleep(1.0)
+            return real_execute(d)
+
+        def post(label):
+            try:
+                if label == "b":
+                    assert a_inside.wait(timeout=10), "A never reached the service"
+                    started = time.monotonic()
+                response = clients[label].post(
+                    f"/api/v1/disposition/{disposition.id}/execute/", {}, format="json"
+                )
+                results[label] = response.status_code
+                if label == "b":
+                    b_waited["seconds"] = time.monotonic() - started
+            except Exception as exc:  # surfaced in the assertions below
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        with patch.object(DispositionService, "execute", lingering_execute):
+            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=30)
+
+        assert results == {"a": 200, "b": 400}, (
+            f"{results}: the first executor should win and the second should be "
+            f"told 'Already executed' after waiting for it, not race it"
+        )
+        assert b_waited["seconds"] is not None and b_waited["seconds"] > 0.5, (
+            f"B did not wait on A's lock ({b_waited})"
+        )
+        disposition.refresh_from_db()
+        assert disposition.is_executed is True
+
+
+# ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
 
@@ -494,6 +632,12 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # lock to wait on. Its serial counterpart,
         # test_a_stale_copy_cannot_undo_a_refusal, runs on every engine.
         "test_a_decision_blocked_on_the_lock_does_not_undo_a_refusal",
+        # BD-15 (2026-09-13): a second disposition executor must WAIT on the
+        # disposition row lock the first still holds. SQLite has no row lock
+        # to wait on. Its serial counterpart,
+        # test_the_service_runs_inside_the_views_locked_transaction, runs on
+        # every engine.
+        "test_a_second_executor_waits_and_is_told_already_executed",
         "test_concurrent_approve_and_reject",
         "test_concurrent_approve_only_one_succeeds",
         "test_concurrent_die_only_one_succeeds",
