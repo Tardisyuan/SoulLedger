@@ -68,3 +68,38 @@ class TestAutoConcludeStaleForTenantIsolation:
         assert "Flagged as stale" not in (self.judgment_b.notes or "")
         assert result["flagged"] == 1
         assert result["tenant"] == self.tenant_a.code
+
+
+@pytest.mark.django_db
+class TestStaleFlagIsWrittenOnce:
+    """BD-14 / PQ-02: re-running the task must not append a second flag line,
+    and the rows are written in bulk rather than one `.save()` per judgment."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.create(code="JDG_ONCE", display_name="Once")
+        stale_created = timezone.now() - timedelta(days=60)
+        self.judgments = []
+        for i in range(3):
+            soul = Soul.objects.create(name=f"Once {i}", tenant=self.tenant, birth_year=1900, death_year=1950)
+            j = Judgment.objects.create(soul=soul, tenant=self.tenant, civilization="EUROPEAN", is_final=False, notes="kept")
+            self.judgments.append(j)
+        Judgment.objects.filter(tenant=self.tenant).update(created_at=stale_created)
+
+    def test_second_run_adds_no_second_flag(self):
+        first = auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        second = auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        assert first["flagged"] == 3
+        assert second["flagged"] == 0
+        for j in self.judgments:
+            j.refresh_from_db()
+            assert j.notes.startswith("kept"), "the existing notes were overwritten"
+            assert j.notes.count("[SYSTEM] Flagged as stale") == 1, j.notes
+
+    def test_rows_are_not_saved_one_by_one(self, django_assert_max_num_queries):
+        # Measured with these 3 rows: per-row `.save()` was 11 queries (tenant,
+        # select, then UPDATE + audit pre-save read + audit insert per row);
+        # bulk is 4 (tenant, select, one bulk UPDATE, one batch audit row) and
+        # does not grow with the row count.
+        with django_assert_max_num_queries(5):
+            auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
