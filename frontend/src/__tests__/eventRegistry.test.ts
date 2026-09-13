@@ -67,15 +67,26 @@ describe("soul events", () => {
     });
   });
 
-  it("invalidates the specific soul detail on STATE_CHANGED", () => {
+  it("invalidates souls (which prefix-matches the soul detail cache too) on STATE_CHANGED", () => {
+    // FL-16 (2026-09-13): this handler used to fire a SECOND, explicit
+    // `soulKeys.detail(id)` invalidation here. It was dead weight — that key
+    // is `[...soulKeys.all, "detail", id]`, a prefix extension of `souls`,
+    // and `invalidateQueries` matches by prefix (default `exact: false`), so
+    // the single `souls` call below already invalidates any cached detail
+    // query. Two calls and one produced the same real invalidation; only the
+    // count of `invalidateQueries` calls changed, which is what this test
+    // used to pin.
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent({ domain: "soul", event: "STATE_CHANGED", soul_id: "s7" } as EventPayload, ctx);
 
-    expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]', '["souls","detail","s7"]']);
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]']);
   });
 
-  it("skips the detail invalidation when STATE_CHANGED carries no soul_id", () => {
+  it("invalidates the same way when STATE_CHANGED carries no soul_id", () => {
+    // Before FL-16's cleanup this was the control case for the now-removed
+    // conditional `soul_id` branch; kept as a control that behavior does not
+    // depend on `soul_id` being present.
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent({ domain: "soul", event: "STATE_CHANGED" } as unknown as EventPayload, ctx);

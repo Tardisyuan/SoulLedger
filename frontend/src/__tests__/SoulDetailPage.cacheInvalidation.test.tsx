@@ -189,12 +189,14 @@ describe("SoulDetailPage is on the query cache", () => {
     expect(document.querySelector('[title="JUDGING"]')).not.toBeNull();
     expect(document.querySelector('[title="ALIVE"]')).toBeNull();
     // Not pinned to an exact number on purpose. `handleSoulStateChanged` fires
-    // TWO invalidations — `soulKeys.all` and `soulKeys.detail(id)` — and both
-    // prefix-match this query, so the real count today is 3, not 2. That 3 is a
-    // fact about how TanStack coalesces two invalidations in one tick, not
-    // about this page; pinning it would make a library detail able to fail a
-    // test whose subject is the page. The claim being made is "it refetched",
-    // and the control case below is what says it does not refetch for nothing.
+    // one invalidation — `soulKeys.all` — which prefix-matches both this
+    // page's query and `soulKeys.detail(id)` (a redundant explicit call for
+    // the latter was removed as dead code: `all` already covers it). The exact
+    // resulting refetch count is a fact about how TanStack coalesces
+    // invalidations in one tick, not about this page; pinning it would make a
+    // library detail able to fail a test whose subject is the page. The claim
+    // being made is "it refetched", and the control case below is what says it
+    // does not refetch for nothing.
     expect(mockSoulsGet.mock.calls.length).toBeGreaterThan(1);
   });
 

@@ -63,10 +63,11 @@ class RoleModelTest(TestCase):
         self.assertIn("ORG", dict(Role.SCOPE_CHOICES).keys())
 
     def test_role_parent_inheritance(self):
+        # `get_inherited_permissions()` assertion removed 2026-09-13 (BP-09):
+        # the method was deleted as dead code (see `apps/perm/models.py`).
         parent_role = Role.objects.create(name="PARENT_ROLE", display_name="Parent Role", scope="GLOBAL")
         child_role = Role.objects.create(name="CHILD_ROLE", display_name="Child Role", scope="GLOBAL", parent=parent_role)
         self.assertEqual(child_role.parent, parent_role)
-        self.assertIsInstance(child_role.get_inherited_permissions(), set)
 
     def test_role_get_ancestors(self):
         parent = Role.objects.create(name="PARENT", display_name="Parent", scope="GLOBAL")

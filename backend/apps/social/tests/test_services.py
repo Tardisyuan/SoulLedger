@@ -382,8 +382,7 @@ class TestPostServiceTenantScoping:
     (correct or not) could move another tenant's counter. `tenant` is now an
     optional kwarg: omitted, behavior is unchanged (existing callers with no
     tenant in scope keep working); supplied and mismatched, the update is a
-    silent no-op — mirroring the explicit tenant_id check in
-    apps.ledger.tasks.recalculate_soul_ledger_task.
+    silent no-op.
     """
 
     @pytest.fixture(autouse=True)

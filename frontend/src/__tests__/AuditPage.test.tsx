@@ -296,11 +296,16 @@ describe("AuditPage table states", () => {
   });
 
   it("sends an ordering param when a sortable column header is activated", async () => {
+    // FT-12 (2026-09-13): `toBeDefined()` passed for any string, including
+    // one that named the wrong column or the wrong direction. `nextSort` in
+    // `data-table.tsx` starts an unsorted column at `direction: 'asc'`, which
+    // `audit/page.tsx` serializes with no leading `-`, so a first click on
+    // the timestamp header must produce exactly "timestamp".
     renderPage();
     await screen.findByText("created a soul");
 
     fireEvent.click(screen.getByText("audit.timestamp"));
 
-    await waitFor(() => expect(lastParams().ordering).toBeDefined());
+    await waitFor(() => expect(lastParams().ordering).toBe("timestamp"));
   });
 });

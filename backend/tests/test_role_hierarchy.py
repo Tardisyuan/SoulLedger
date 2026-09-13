@@ -1,52 +1,31 @@
 """
-Tests for Role Hierarchy Inheritance
-验证角色层级继承功能
+Tests for Role Hierarchy (ancestors/descendants) — the `Role.parent` chain.
+
+2026-09-13 (BP-09): this file used to be mostly about `get_inherited_permissions()`
+and `PermissionCache.has_permission()`, both deleted as dead code — full-repo
+grep found only test callers, and `apps/core/ws_permissions.py`'s docstring
+already recorded that `Role.parent` inheritance "is not reproduced ... and is
+not load-bearing: nothing seeded ever sets it." What is real and stays tested
+below is `get_ancestors()` / `get_descendants()` and the `parent` FK itself —
+`PermissionCache.invalidate_role()` uses `get_descendants()` in production to
+cascade cache invalidation to child roles.
 """
 import pytest
 
-from apps.perm.models import Permission, Role, RolePermission
+from apps.perm.models import Role
 
 
 @pytest.mark.django_db
 class TestRoleHierarchy:
-    """Test role hierarchy and permission inheritance"""
+    """Test the role hierarchy chain itself: parent/children/ancestors/descendants."""
 
     @pytest.fixture(autouse=True)
     def setup_data(self):
-        """Setup test data"""
-        # Create permissions
-        self.perm_read = Permission.objects.create(
-            codename='test.read',
-            name='Test Read',
-            category='test'
-        )
-        self.perm_write = Permission.objects.create(
-            codename='test.write',
-            name='Test Write',
-            category='test'
-        )
-        self.perm_delete = Permission.objects.create(
-            codename='test.delete',
-            name='Test Delete',
-            category='test'
-        )
-        self.perm_admin = Permission.objects.create(
-            codename='test.admin',
-            name='Test Admin',
-            category='test'
-        )
+        """4-level chain: TEST_ADMIN -> MANAGER -> STAFF -> JUNIOR.
 
-        # Create role hierarchy: TEST_ADMIN -> MANAGER -> STAFF -> JUNIOR
-        #
-        # The top of this chain used to be called plain 'ADMIN'. perm migration
-        # 0017 seeds the five real Role rows, so that name now collides on
-        # perm_role.name — and reusing the seeded row instead would drag its
-        # real grants (workflow.*, menu.read) down the whole chain, turning the
-        # exact inherited-permission counts below into whatever 0017 happens to
-        # grant. Every role here is synthetic (MANAGER/STAFF/JUNIOR are not real
-        # roles either) and carries only synthetic test.* permissions, so the
-        # name is just a label for "top of the chain" — keep it out of the real
-        # role namespace.
+        Synthetic names (not real seeded roles — see git history for why
+        'ADMIN' collides with perm migration 0017's seed data).
+        """
         self.role_admin = Role.objects.create(
             name='TEST_ADMIN',
             display_name='Test Administrator'
@@ -66,85 +45,7 @@ class TestRoleHierarchy:
             display_name='Junior',
             parent=self.role_staff
         )
-
-        # ADMIN has all permissions directly
-        RolePermission.objects.create(role=self.role_admin, permission=self.perm_read)
-        RolePermission.objects.create(role=self.role_admin, permission=self.perm_write)
-        RolePermission.objects.create(role=self.role_admin, permission=self.perm_delete)
-        RolePermission.objects.create(role=self.role_admin, permission=self.perm_admin)
-
-        # MANAGER has read and write (inherits admin's permissions via ADMIN)
-        RolePermission.objects.create(role=self.role_manager, permission=self.perm_read)
-        RolePermission.objects.create(role=self.role_manager, permission=self.perm_write)
-
-        # STAFF only has read
-        RolePermission.objects.create(role=self.role_staff, permission=self.perm_read)
-
-        # JUNIOR has no direct permissions
-
         yield
-
-    def test_direct_permissions(self):
-        """Test that direct permissions are correctly assigned"""
-        admin_perms = self.role_admin.get_inherited_permissions()
-        assert 'test.read' in admin_perms
-        assert 'test.write' in admin_perms
-        assert 'test.delete' in admin_perms
-        assert 'test.admin' in admin_perms
-
-        # MANAGER has only 2 direct permissions (read, write)
-        # but inherits delete and admin from ADMIN
-        manager_direct = set(
-            rp.permission.codename
-            for rp in RolePermission.objects.filter(role=self.role_manager)
-        )
-        assert 'test.read' in manager_direct
-        assert 'test.write' in manager_direct
-        assert 'test.delete' not in manager_direct  # Not directly assigned
-        assert 'test.admin' not in manager_direct  # Not directly assigned
-
-        # But MANAGER inherits delete and admin from ADMIN
-        manager_perms = self.role_manager.get_inherited_permissions()
-        assert 'test.read' in manager_perms
-        assert 'test.write' in manager_perms
-        assert 'test.delete' in manager_perms  # Inherited from ADMIN
-        assert 'test.admin' in manager_perms  # Inherited from ADMIN
-
-    def test_child_inherits_parent_permissions(self):
-        """Test that child role inherits parent role's permissions"""
-        # MANAGER inherits from ADMIN
-        manager_perms = self.role_manager.get_inherited_permissions()
-        assert 'test.read' in manager_perms  # Direct
-        assert 'test.write' in manager_perms  # Direct
-        assert 'test.delete' in manager_perms  # Inherited from ADMIN
-        assert 'test.admin' in manager_perms  # Inherited from ADMIN
-
-    def test_grandchild_inherits_grandparent_permissions(self):
-        """Test that grandchild inherits from grandparent (multi-level inheritance)"""
-        # STAFF inherits from MANAGER which inherits from ADMIN
-        staff_perms = self.role_staff.get_inherited_permissions()
-        assert 'test.read' in staff_perms  # Direct
-        assert 'test.write' in staff_perms  # Inherited from MANAGER
-        assert 'test.delete' in staff_perms  # Inherited from ADMIN via MANAGER
-        assert 'test.admin' in staff_perms  # Inherited from ADMIN via MANAGER
-
-    def test_great_grandchild_inheritance(self):
-        """Test 4-level hierarchy: ADMIN -> MANAGER -> STAFF -> JUNIOR"""
-        # JUNIOR inherits all the way up
-        junior_perms = self.role_junior.get_inherited_permissions()
-        assert 'test.read' in junior_perms  # Direct on JUNIOR (none) -> STAFF
-        assert 'test.write' in junior_perms  # Inherited from MANAGER
-        assert 'test.delete' in junior_perms  # Inherited from ADMIN
-        assert 'test.admin' in junior_perms  # Inherited from ADMIN
-
-    def test_direct_permission_overrides_inherited(self):
-        """Test that direct permission assignment works even if parent denies"""
-        # Create a scenario where we can test override behavior
-        # For now, note that direct permissions ADD to inherited, not override
-
-        junior_perms = self.role_junior.get_inherited_permissions()
-        # JUNIOR has no direct permissions, but inherits all from ancestors
-        assert len(junior_perms) == 4  # All 4 permissions inherited
 
     def test_get_ancestors(self):
         """Test getting all ancestors of a role"""
@@ -202,53 +103,25 @@ class TestRoleHierarchy:
     def test_no_parent_role(self):
         """Test role with no parent"""
         assert self.role_admin.parent is None
-        admin_perms = self.role_admin.get_inherited_permissions()
-        # ADMIN only has its direct permissions
-        assert len(admin_perms) == 4
-
-    def test_permission_cache_has_permission(self):
-        """Test PermissionCache.has_permission with role inheritance"""
-        from apps.perm.cache import get_permission_cache
-
-        cache = get_permission_cache()
-        cache.invalidate_all()
-
-        # TEST_ADMIN has test.read
-        assert cache.has_permission('TEST_ADMIN', 'test.read') is True
-        # TEST_ADMIN does not have nonexistent permission
-        assert cache.has_permission('TEST_ADMIN', 'nonexistent') is False
-
-        # MANAGER inherits test.delete and test.admin from ADMIN
-        assert cache.has_permission('MANAGER', 'test.delete') is True
-        assert cache.has_permission('MANAGER', 'test.admin') is True
-
-        # JUNIOR inherits everything from ancestors
-        assert cache.has_permission('JUNIOR', 'test.read') is True
-        assert cache.has_permission('JUNIOR', 'test.write') is True
-        assert cache.has_permission('JUNIOR', 'test.delete') is True
-        assert cache.has_permission('JUNIOR', 'test.admin') is True
 
 
 @pytest.mark.django_db
 class TestRoleHierarchyEdgeCases:
-    """Test edge cases in role hierarchy"""
+    """Test edge cases in the ancestor/descendant chain."""
 
     def test_circular_reference_prevention(self):
-        """Test that we handle potential circular references gracefully"""
-        # Create a simple chain
+        """get_descendants() terminates and reports correctly on a simple chain."""
         role_a = Role.objects.create(name='ROLE_A', display_name='Role A')
         role_b = Role.objects.create(name='ROLE_B', display_name='Role B', parent=role_a)
 
-        # Verify hierarchy
         assert role_b.parent == role_a
         assert role_a.get_descendants() == [role_b]
 
     def test_deep_hierarchy(self):
-        """Test a deep role hierarchy (10 levels)"""
+        """get_descendants() walks a deep hierarchy (10 levels) without stopping early."""
         roles = []
         previous_role = None
 
-        # Create 10-level hierarchy
         for i in range(10):
             role = Role.objects.create(
                 name=f'LEVEL_{i}',
@@ -256,25 +129,14 @@ class TestRoleHierarchyEdgeCases:
                 parent=previous_role
             )
             roles.append(role)
-
-            # Add a unique permission at each level
-            perm = Permission.objects.create(
-                codename=f'level_{i}.read',
-                name=f'Level {i} Read',
-                category='test'
-            )
-            RolePermission.objects.create(role=role, permission=perm)
             previous_role = role
 
-        # Verify deepest role inherits all permissions
-        deepest = roles[-1]
-        inherited = deepest.get_inherited_permissions()
-        assert len(inherited) == 10  # All 10 unique permissions
-        for i in range(10):
-            assert f'level_{i}.read' in inherited
+        # The root sees all 9 roles below it; the leaf sees none.
+        assert len(roles[0].get_descendants()) == 9
+        assert len(roles[-1].get_descendants()) == 0
 
     def test_empty_hierarchy(self):
-        """Test role with no permissions and no parent"""
+        """A role with no parent and no children has no ancestors or descendants."""
         role = Role.objects.create(name='EMPTY', display_name='Empty Role')
-        perms = role.get_inherited_permissions()
-        assert len(perms) == 0
+        assert role.get_ancestors() == []
+        assert role.get_descendants() == []

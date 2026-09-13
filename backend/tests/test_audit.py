@@ -374,20 +374,31 @@ class TestAuditLogViewSet:
         assert len(response.data["results"]) > 0
 
     def test_filter_by_action(self, auth_client):
-        """GET /api/v1/audit-logs/?action=CREATE filters by action type."""
+        """GET /api/v1/audit-logs/?action=CREATE filters by action type.
 
-        # Create a soul
+        BT-09 (2026-09-13): the test data used to be CREATE rows only, so a
+        `?action=CREATE` filter that did nothing (returned every row) would
+        have passed this just as happily -- "every result is CREATE" is true
+        of an unfiltered list when nothing else was ever logged. A PATCH
+        (UPDATE) row is seeded and asserted absent from the filtered set, so
+        an inert filter now has something to disagree with.
+        """
+        # Create a soul (CREATE), then update it (UPDATE) -- two action types
+        # to actually discriminate between.
         response = auth_client.post("/api/v1/souls/", {
             "name": "Filter Test Soul",
             "birth_date": "1990-01-01",
         })
         assert response.status_code == 201
+        soul_id = response.data["id"]
+        response = auth_client.patch(f"/api/v1/souls/{soul_id}/", {"name": "Filter Test Soul Renamed"})
+        assert response.status_code == 200
 
         # Filter by CREATE action
         response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
         assert response.status_code == 200
-        for log in response.data["results"]:
-            assert log["action"] == "CREATE"
+        actions = {log["action"] for log in response.data["results"]}
+        assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
 
     def test_filter_by_resource(self, auth_client):
         """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
@@ -584,20 +595,27 @@ class TestAuditApiEndpoint:
         assert len(response.data["results"]) > 0
 
     def test_filter_by_action(self, auth_client):
-        """GET /api/v1/audit-logs/?action=CREATE filters by action type."""
+        """GET /api/v1/audit-logs/?action=CREATE filters by action type.
 
-        # Create a soul
+        BT-09 (2026-09-13): see the twin of this test in `TestAuditLogViewSet`
+        above for why an UPDATE row is seeded and asserted absent -- without
+        it, "every result is CREATE" was also true of an unfiltered list.
+        """
+        # Create a soul (CREATE), then update it (UPDATE).
         response = auth_client.post("/api/v1/souls/", {
             "name": "Action Filter Test",
             "birth_date": "1990-01-01",
         })
         assert response.status_code == 201
+        soul_id = response.data["id"]
+        response = auth_client.patch(f"/api/v1/souls/{soul_id}/", {"name": "Action Filter Test Renamed"})
+        assert response.status_code == 200
 
         # Filter by CREATE action
         response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
         assert response.status_code == 200
-        for log in response.data["results"]:
-            assert log["action"] == "CREATE"
+        actions = {log["action"] for log in response.data["results"]}
+        assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
 
     def test_filter_by_resource(self, auth_client):
         """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
