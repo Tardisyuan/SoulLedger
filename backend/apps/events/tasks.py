@@ -7,9 +7,8 @@ import hashlib
 import hmac
 import json
 import logging
-import urllib.error
-import urllib.request
 
+import requests
 from celery import shared_task
 from django.utils import timezone
 
@@ -71,7 +70,8 @@ def deliver_event_webhook(self, delivery_id):
         )
 
         _reject_if_not_publicly_routable(webhook.url)
-        request = urllib.request.Request(
+        timeout = getattr(webhook, "timeout_seconds", None) or 10
+        response = requests.post(
             webhook.url,
             data=payload,
             headers={
@@ -81,11 +81,17 @@ def deliver_event_webhook(self, delivery_id):
                 "X-SoulLedger-Signature": _sign(secret, payload),
                 "X-SoulLedger-Delivery": str(delivery.id),
             },
-            method="POST",
+            timeout=timeout,
+            # 与 `apps/death_sync/webhook_service.py` 同一个洞:上面的校验器只看过
+            # 这一个 URL。从前这里是 `urllib.request.urlopen`,默认 opener 跟随
+            # 302,于是一个公网端点答 `302 -> http://169.254.169.254/` 就能让
+            # 服务端带着租户的 HMAC 签名去请求内网。
+            allow_redirects=False,
         )
-        timeout = getattr(webhook, "timeout_seconds", None) or 10
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            delivery.response_status = getattr(response, "status", None)
+        delivery.response_status = response.status_code
+        if not 200 <= response.status_code < 300:
+            # 3xx 不抛异常(没跟随),4xx/5xx 在 requests 里也不抛 —— 都得自己判。
+            raise RuntimeError(f"HTTP {response.status_code}")
         delivery.status = EventWebhookStatus.SUCCESS
         delivery.delivered_at = timezone.now()
         delivery.error = ""
@@ -97,8 +103,6 @@ def deliver_event_webhook(self, delivery_id):
     except Exception as exc:  # noqa: BLE001 — 记下来再决定重试
         delivery.status = EventWebhookStatus.FAILED
         delivery.error = f"{type(exc).__name__}: {exc}"[:2000]
-        if isinstance(exc, urllib.error.HTTPError):
-            delivery.response_status = exc.code
         delivery.save(update_fields=[
             "status", "attempt", "response_status", "error", "update_time",
         ])

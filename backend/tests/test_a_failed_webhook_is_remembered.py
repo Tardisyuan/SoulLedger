@@ -76,10 +76,10 @@ def test_a_failure_is_recorded_not_swallowed(hook):
     """**这是这次改动买到的东西。** 从前失败只留一行 debug 日志。"""
     row = _record(_envelope())[0]
 
-    def boom(req, timeout=None):
+    def boom(*args, **kwargs):
         raise OSError("connection refused")
 
-    with patch("urllib.request.urlopen", side_effect=boom), patch(
+    with patch("apps.events.tasks.requests.post", side_effect=boom), patch(
         "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
         lambda url: None,
     ):
@@ -120,7 +120,7 @@ def test_a_delivered_one_is_not_sent_twice(hook):
     row.save(update_fields=["status"])
 
     sent = []
-    with patch("urllib.request.urlopen", side_effect=lambda *a, **k: sent.append(1)):
+    with patch("apps.events.tasks.requests.post", side_effect=lambda *a, **k: sent.append(1)):
         deliver_event_webhook.apply(args=[str(row.id)])
     assert sent == []
 

@@ -119,21 +119,15 @@ def _run_delivery_task(delivery):
 
     sent = []
 
-    def fake_urlopen(req, timeout=None):
-        sent.append(req)
+    def fake_post(url, data=None, headers=None, **kwargs):
+        sent.append({"url": url, "data": data, "headers": headers, **kwargs})
 
         class _R:
-            status = 200
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *a):
-                return False
+            status_code = 200
 
         return _R()
 
-    with patch("urllib.request.urlopen", side_effect=fake_urlopen), patch(
+    with patch("apps.events.tasks.requests.post", side_effect=fake_post), patch(
         "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
         lambda url: None,
     ):
@@ -150,8 +144,8 @@ def test_a_delivery_is_signed_with_the_configured_secret(wired):
     sent = _run_delivery_task(recorded[0])
     assert len(sent) == 1, "任务没有发出请求"
 
-    body = sent[0].data
-    header = sent[0].headers["X-soulledger-signature"]
+    body = sent[0]["data"]
+    header = sent[0]["headers"]["X-SoulLedger-Signature"]
     with_real = "sha256=" + hmac.new(
         b"the-real-secret", body, hashlib.sha256
     ).hexdigest()
@@ -365,3 +359,90 @@ def test_a_key_without_can_query_status_is_refused_the_health_view(keys):
     )
     with_cap = _api_client(keys(can_query_status=True))
     assert with_cap.get("/api/v1/death-sync/health/").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# EventBus 投递也不许跟随重定向(2026-09-13)。
+#
+# 修之前 `apps/events/tasks.py` 用 `urllib.request.urlopen` 发投递,而 urllib 的
+# 默认 opener 带 `HTTPRedirectHandler`:302 被跟随,签名头原样带到第二个地址,
+# 而 `_reject_if_not_publicly_routable` 只看过第一个 URL。死亡登记事件从 BD-11
+# 起也走这条路,所以那不是一条冷路径。未修时这条测试的失败行是
+# 「302 被跟随了:重定向目标收到 1 次请求,带着签名头 'sha256=…'」。
+#
+# 用两台真的本机 HTTP 服务断言,不 mock 客户端:mock 掉 HTTP 客户端就把
+# 「会不会跟随」这件事本身也 mock 掉了 —— 所以换客户端不需要改这条测试。
+# ---------------------------------------------------------------------------
+
+@contextmanager
+def _http_server(respond):
+    import http.server
+    import threading
+
+    hits = []
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802 — BaseHTTPRequestHandler 的命名约定
+            hits.append({k.lower(): v for k, v in self.headers.items()})
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            respond(self)
+
+        # 303 / 旧式 302 处理会把 POST 改成 GET;两个都要数到。
+        do_GET = do_POST  # noqa: N815
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}/", hits
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def _answer(status, **headers):
+    def respond(handler):
+        handler.send_response(status)
+        for name, value in headers.items():
+            handler.send_header(name, value)
+        handler.send_header("Content-Length", "0")
+        handler.end_headers()
+
+    return respond
+
+
+@pytest.mark.django_db
+def test_an_event_bus_delivery_does_not_follow_a_redirect(wired):
+    from apps.events.models import EventWebhookStatus
+    from apps.events.tasks import deliver_event_webhook
+
+    _, hook = wired
+    with _http_server(_answer(200)) as (inner_url, inner_hits), _http_server(
+        _answer(302, Location=inner_url)
+    ) as (outer_url, outer_hits):
+        hook.url = outer_url
+        hook.max_retries = 1
+        hook.save(update_fields=["url", "max_retries"])
+        recorded = _record(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync"))
+        assert len(recorded) == 1, "handler 没有记下投递;探针什么都证明不了"
+
+        with patch(
+            "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
+            lambda url: None,
+        ):
+            deliver_event_webhook.apply(args=[str(recorded[0].id)])
+
+    assert len(outer_hits) >= 1, "第一个地址一次都没收到 —— 投递根本没发出去"
+    assert inner_hits == [], (
+        f"302 被跟随了:重定向目标收到 {len(inner_hits)} 次请求,带着签名头 "
+        f"{inner_hits[0].get('x-soulledger-signature')!r} —— 一个地址校验器"
+        "从没见过的地址。"
+    )
+    row = recorded[0]
+    row.refresh_from_db()
+    assert row.status != EventWebhookStatus.SUCCESS, (
+        "302 被记成了投递成功 —— 接收方其实什么都没收到"
+    )
+    assert row.response_status == 302, row.response_status
