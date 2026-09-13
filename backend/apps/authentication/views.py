@@ -212,6 +212,22 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.save(update_fields=['password'])
         return Response({'password': new_password})
 
+    def _batch_targets(self, user_ids):
+        """The users a batch toggle may touch (BP-17).
+
+        Was `User.objects.filter(id__in=ids, tenant=request.tenant)`: for an
+        ADMIN with no tenant claim that is `tenant IS NULL` — the other ADMINs
+        and the caller, and none of the tenant users actually selected. Now the
+        ids go through `get_queryset()` (the scope `/users/{id}/deactivate/`
+        uses), and a batch never includes an ADMIN account or the caller;
+        toggling an ADMIN stays a deliberate single-user action.
+        """
+        return (
+            User.objects.filter(pk__in=self.get_queryset().filter(id__in=user_ids).values('pk'))
+            .exclude(role='ADMIN')
+            .exclude(pk=self.request.user.pk)
+        )
+
     @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_activate(self, request):
@@ -219,7 +235,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user_ids = request.data.get('user_ids', [])
         if not user_ids:
             return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
-        updated = User.objects.filter(id__in=user_ids, tenant=self.request.tenant).update(is_active=True)
+        updated = self._batch_targets(user_ids).update(is_active=True)
         return Response({'updated': updated})
 
     @extend_schema(responses=UserBatchUpdateResultSerializer)
@@ -229,7 +245,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user_ids = request.data.get('user_ids', [])
         if not user_ids:
             return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
-        updated = User.objects.filter(id__in=user_ids, tenant=self.request.tenant).update(is_active=False)
+        updated = self._batch_targets(user_ids).update(is_active=False)
         return Response({'updated': updated})
 
     @extend_schema(responses=UserRoleSerializer)
