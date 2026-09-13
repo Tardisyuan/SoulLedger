@@ -302,12 +302,70 @@ describe('API Client — @soulledger/core/api', () => {
     });
 
     it('should redirect to login when no refresh token exists', async () => {
-      const error = {
-        response: { status: 401 },
-        config: { _retry: false, url: '/souls/', headers: {} },
-      };
-      await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
-      expect(axios.post).not.toHaveBeenCalled();
+      /* FL-20. This test used to assert only "no refresh was attempted" under
+         this title, and the interceptor did not hand over to `onUnauthorized`
+         at all when there was no refresh token: every query went red and the
+         user stayed on a dead page. The title was the claim; nothing checked it. */
+      const { webPlatform } = require('../../lib/platform/web');
+      const onUnauthorized = jest.spyOn(webPlatform, 'onUnauthorized').mockImplementation(() => {});
+      sessionStorage.setItem('soulledger_access', 'expired-access');
+      try {
+        const error = {
+          response: { status: 401 },
+          config: { _retry: false, url: '/souls/', headers: {} },
+        };
+        await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
+        expect(axios.post).not.toHaveBeenCalled();
+        expect(onUnauthorized).toHaveBeenCalledTimes(1);
+        expect(sessionStorage.getItem('soulledger_access')).toBeNull();
+      } finally {
+        onUnauthorized.mockRestore();
+      }
+    });
+
+    it('a 401 from an auth endpoint does not hand over to onUnauthorized', async () => {
+      // A wrong password on /login is a 401 too; it must stay on the form.
+      const { webPlatform } = require('../../lib/platform/web');
+      const onUnauthorized = jest.spyOn(webPlatform, 'onUnauthorized').mockImplementation(() => {});
+      try {
+        const error = {
+          response: { status: 401 },
+          config: { _retry: false, url: '/auth/login/', headers: {} },
+        };
+        await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
+        expect(onUnauthorized).not.toHaveBeenCalled();
+      } finally {
+        onUnauthorized.mockRestore();
+      }
+    });
+
+    it('the web adapter does not send /login to /login', () => {
+      /* With FL-20 fixed, a 401 with no refresh token now reaches onUnauthorized
+         from any page — including /login itself, where TenantContext re-fetches
+         permissions for a cached user envelope. Navigating there again would
+         reload the page, re-fire the request, and loop. jsdom reports every
+         attempted navigation through console.error; the second half proves the
+         probe can see one, so the first half's silence means something. */
+      const { webPlatform } = require('../../lib/platform/web');
+      const attemptedNavigation = () =>
+        consoleSpy.mock.calls.some((c) => String(c[0]).includes('navigation'));
+
+      // With a query string on purpose: jsdom treats assigning the *identical*
+      // URL as a no-op, which a real browser does not (it reloads). Measured —
+      // on bare '/login' this assertion was green with no guard at all.
+      window.history.pushState({}, '', '/login?next=%2Fsouls');
+      consoleSpy.mockClear();
+      webPlatform.onUnauthorized();
+      const fromLogin = attemptedNavigation();
+
+      window.history.pushState({}, '', '/souls');
+      consoleSpy.mockClear();
+      webPlatform.onUnauthorized();
+      const fromSouls = attemptedNavigation();
+      window.history.pushState({}, '', '/');
+
+      expect(fromSouls).toBe(true);
+      expect(fromLogin).toBe(false);
     });
 
     it('should skip refresh for register endpoint', async () => {
