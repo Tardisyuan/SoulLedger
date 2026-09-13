@@ -11,13 +11,15 @@ services:
   # Published so Django/Next.js can run on the host against just these two:
   # `docker compose up -d db redis` replaces the postgres+redis-only stack that
   # used to live in infrastructure/.
+  # Loopback only: a bare "5432:5432" listens on 0.0.0.0, which put this
+  # Postgres and a password-less Redis on the whole LAN (IS-21).
   db:
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   redis:
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   backend:
     ports:
