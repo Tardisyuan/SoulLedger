@@ -94,6 +94,8 @@ scripts/restart-*.sh
 backend/scripts/backups/
 
 # Docker data directories
+# pg_dump output of the production `backup` service (bind-mounted ./backups).
+/backups/
 docker/postgres/
 docker/redis/
 
