@@ -544,21 +544,10 @@ class TestAuditApiEndpoint:
     # is transaction=True; that one was not), which that test now reproduces
     # with django_capture_on_commit_callbacks(execute=True).
 
-    def test_filter_by_resource(self, auth_client):
-        """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
-
-        # Create a soul
-        response = auth_client.post("/api/v1/souls/", {
-            "name": "Resource Filter Test",
-            "birth_date": "1990-01-01",
-        })
-        assert response.status_code == 201
-
-        # Filter by resource
-        response = auth_client.get("/api/v1/audit-logs/?resource=soul")
-        assert response.status_code == 200
-        for log in response.data["results"]:
-            assert "soul" in log["resource"].lower()
+    # `test_filter_by_resource` likewise, merged 2026-09-14 into
+    # apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_resource
+    # (its soul POST and 201 moved there; that fixture's judgment row is what
+    # the filter can actually fail on, which this copy never had).
 
     def test_filter_by_date_range(self, auth_client):
         """GET /api/v1/audit-logs/?date_from=&date_to= filters by date range."""
