@@ -5012,6 +5012,27 @@ export interface components {
          */
         LoginLogStatusEnum: "SUCCESS" | "FAILED";
         /**
+         * @description Doc-only: the 200 body of `LoginView` — simplejwt's `access`/`refresh`
+         *     plus the `user` that `CustomTokenObtainPairSerializer.validate` adds.
+         *
+         *     The view inherits `serializer_class = CustomTokenObtainPairSerializer`, so
+         *     without this the schema published that serializer's *input* fields
+         *     (username/password) as the response.
+         */
+        LoginResponse: {
+            access: string;
+            refresh: string;
+            user: components["schemas"]["UserWithTenant"];
+        };
+        /**
+         * @description Schema-only: the two keys `UserWithTenantSerializer.get_tenant` returns
+         *     (no `id`, unlike `UserTenantRefSerializer`).
+         */
+        LoginTenantRef: {
+            code: string;
+            display_name: string;
+        };
+        /**
          * @description Body of POST /auth/logout/.
          *
          *     `required=False` is not a courtesy: `logout_view` reads
@@ -6583,6 +6604,11 @@ export interface components {
         /**
          * @description `count` is the length of `results`, not a paginated total — this
          *     endpoint is unpaginated and returns the whole bin.
+         *
+         *     `many=False` because drf-spectacular treats any response on a ViewSet's
+         *     `list` action as a list and wrapped this envelope in an array: the schema
+         *     said `[{results, count}]` while `list()` returns one `{results, count}`
+         *     (measured 2026-09-14 over the test client).
          */
         RecycleBinList: {
             results: components["schemas"]["RecycleBinEntry"][];
@@ -7278,6 +7304,19 @@ export interface components {
             /** @description 职位：如 第一殿殿主 */
             position?: string;
         };
+        /** @description User serializer with tenant info + role permissions for login response. */
+        UserWithTenant: {
+            readonly id: number;
+            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+            username: string;
+            /** Email address */
+            email?: string;
+            role?: string;
+            readonly tenant: components["schemas"]["LoginTenantRef"] | null;
+            /** @description Display name shown in the navbar (e.g. 系统管理员) */
+            display_name?: string;
+            readonly permissions: string[];
+        };
         /**
          * @description * `PASSED` - Passed / Saved
          *     * `FAILED` - Failed / Condemned
@@ -7803,7 +7842,23 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CustomTokenObtainPair"];
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -11388,7 +11443,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecycleBinList"][];
+                    "application/json": components["schemas"]["RecycleBinList"];
                 };
             };
         };

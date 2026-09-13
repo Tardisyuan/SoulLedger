@@ -224,7 +224,10 @@ def _deref(schema):
 
 
 def _contract(method, path):
-    """(kind, item_schema, label) for the 2xx JSON response, or None."""
+    """(kind, item_schema, label) for the 2xx JSON response, or None.
+
+    kind is "list" (a bare array), "page" (a `{count, results}` envelope) or
+    "object"."""
     # Segment-exact: `:id` pairs with `{id}` and a literal only with itself, so
     # `/dispatch/records/:id/` cannot pick up `/dispatch/records/proposed/`.
     wanted = "/api/v1" + re.sub(r":\w+", "{}", path)
@@ -244,54 +247,31 @@ def _contract(method, path):
                 return "list", _deref(schema["items"]), label
             props = schema.get("properties", {})
             if set(props) >= {"count", "results"} and props["results"].get("type") == "array":
-                return "list", _deref(props["results"]["items"]), label
+                return "page", _deref(props["results"]["items"]), label
             return "object", schema, label
     return None
-
-
-#: Handlers whose contract is not what the committed schema says, named with
-#: the measured reason. A new entry needs one; the test below keeps the list
-#: from outliving its reason.
-SCHEMA_IS_WRONG_HERE = {
-    ("GET", "/recycle-bin/"): (
-        "RecycleBinViewSet.list returns {'results': [...], 'count': n} "
-        "(apps/core/recycle_bin_views.py), but extend_schema(responses=RecycleBinListSerializer) "
-        "on a ViewSet.list is rendered as an array OF that envelope. The entries are still "
-        "compared, against RecycleBinList.results.items."
-    ),
-}
-
-#: Handlers the committed schema has no 200 body for, so there is nothing to
-#: compare against. Named, not skipped silently.
-NO_RESPONSE_CONTRACT = {
-    ("POST", "/auth/login/"): (
-        "CustomTokenObtainPair in the schema is the request (username/password); "
-        "LoginView's {access, refresh, user} response is not described"
-    ),
-}
 
 
 def _problems():
     problems, compared = [], []
     for method, path, body in _handlers():
         contract = _contract(method, path)
-        if contract is None or (method, path) in NO_RESPONSE_CONTRACT:
+        if contract is None:
             continue
         kind, item_schema, label = contract
-        misrendered = (method, path) in SCHEMA_IS_WRONG_HERE
-        if misrendered:
-            item_schema = _deref(item_schema["properties"]["results"]["items"])
         props = set(item_schema.get("properties", {}))
         for shape_kind, value in _shapes(body):
-            if shape_kind == "object" and misrendered and "results" in value:
-                shape_kind, value = "list", [
+            if shape_kind == "object" and kind == "page" and "results" in value:
+                # An envelope written out by hand (`{ results: [...], count }`)
+                # rather than through `paginated(...)`: compare its entries.
+                shape_kind, value = "page", [
                     s for k, v in _shapes(value["results"]) if k == "list" for s in v
                 ]
             served_list = shape_kind in ("list", "page")
-            if served_list != (kind == "list"):
+            if served_list != (kind != "object"):
                 problems.append(
                     f"{method} {path}: serves a {'list' if served_list else 'single object'}, "
-                    f"but {label} is {'a list' if kind == 'list' else 'one object'}"
+                    f"but {label} is {'one object' if kind == 'object' else 'a list'}"
                 )
                 continue
             objects = value if served_list else [("object", value)]
@@ -335,19 +315,6 @@ def test_the_walk_compares_a_real_number_of_handlers():
     )
     for must in (("GET", "/dispatch/records/"), ("GET", "/souls/:id/"), ("GET", "/workflows/"), ("GET", "/users/")):
         assert must in distinct, f"{must} is not compared"
-
-
-def test_the_contract_exceptions_are_still_exceptions():
-    for method, path in SCHEMA_IS_WRONG_HERE:
-        contract = _contract(method, path)
-        assert contract is not None and contract[0] == "list" and "results" in contract[1].get("properties", {}), (
-            f"{method} {path} no longer renders as a list of envelopes; drop its exception"
-        )
-    for method, path in NO_RESPONSE_CONTRACT:
-        contract = _contract(method, path)
-        assert contract is not None and not {"access", "user"} & set(contract[1].get("properties", {})), (
-            f"{method} {path} now has a described response; drop its exception so it is compared"
-        )
 
 
 def test_a_fixture_carries_no_field_its_serializer_does_not_send():

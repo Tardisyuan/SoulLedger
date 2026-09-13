@@ -114,6 +114,14 @@ class TenantInfoSerializer(serializers.Serializer):
     display_name = serializers.CharField()
 
 
+class LoginTenantRefSerializer(serializers.Serializer):
+    """Schema-only: the two keys `UserWithTenantSerializer.get_tenant` returns
+    (no `id`, unlike `UserTenantRefSerializer`)."""
+
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
 class UserWithTenantSerializer(serializers.ModelSerializer):
     """User serializer with tenant info + role permissions for login response."""
     tenant = serializers.SerializerMethodField()
@@ -123,11 +131,13 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions"]
 
+    @extend_schema_field(LoginTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):
         if obj.tenant:
             return {"code": obj.tenant.code, "display_name": obj.tenant.display_name}
         return None
 
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_permissions(self, obj):
         """What the server will actually allow this user, asked of the checker.
 
@@ -162,6 +172,20 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         """
         from apps.perm.services import get_role_permission_codenames
         return get_role_permission_codenames(obj.role)
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    """Doc-only: the 200 body of `LoginView` — simplejwt's `access`/`refresh`
+    plus the `user` that `CustomTokenObtainPairSerializer.validate` adds.
+
+    The view inherits `serializer_class = CustomTokenObtainPairSerializer`, so
+    without this the schema published that serializer's *input* fields
+    (username/password) as the response.
+    """
+
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    user = UserWithTenantSerializer()
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

@@ -10,7 +10,7 @@ codebase otherwise reserves for ADMIN (menu.manage, user.manage, ...), and
 there is no scoped-down "restore only my tenant's souls" need described in
 the design doc.
 """
-from drf_spectacular.utils import extend_schema, extend_schema_field
+from drf_spectacular.utils import extend_schema, extend_schema_field, extend_schema_serializer
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -67,9 +67,16 @@ class RecycleBinEntrySerializer(serializers.Serializer):
     hard_delete_eligible = serializers.BooleanField()
 
 
+@extend_schema_serializer(many=False)
 class RecycleBinListSerializer(serializers.Serializer):
     """`count` is the length of `results`, not a paginated total — this
-    endpoint is unpaginated and returns the whole bin."""
+    endpoint is unpaginated and returns the whole bin.
+
+    `many=False` because drf-spectacular treats any response on a ViewSet's
+    `list` action as a list and wrapped this envelope in an array: the schema
+    said `[{results, count}]` while `list()` returns one `{results, count}`
+    (measured 2026-09-14 over the test client).
+    """
 
     results = RecycleBinEntrySerializer(many=True)
     count = serializers.IntegerField()
