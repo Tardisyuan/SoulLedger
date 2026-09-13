@@ -570,7 +570,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CustomTokenObtainPair'
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/v1/auth/login-logs/:
     get:
@@ -5318,9 +5330,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RecycleBinList'
+                $ref: '#/components/schemas/RecycleBinList'
           description: ''
   /api/v1/recycle-bin/hard-delete/:
     post:
@@ -10988,6 +10998,39 @@ components:
       description: |-
         * `SUCCESS` - 成功
         * `FAILED` - 失败
+    LoginResponse:
+      type: object
+      description: |-
+        Doc-only: the 200 body of `LoginView` — simplejwt's `access`/`refresh`
+        plus the `user` that `CustomTokenObtainPairSerializer.validate` adds.
+
+        The view inherits `serializer_class = CustomTokenObtainPairSerializer`, so
+        without this the schema published that serializer's *input* fields
+        (username/password) as the response.
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserWithTenant'
+      required:
+      - access
+      - refresh
+      - user
+    LoginTenantRef:
+      type: object
+      description: |-
+        Schema-only: the two keys `UserWithTenantSerializer.get_tenant` returns
+        (no `id`, unlike `UserTenantRefSerializer`).
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+      required:
+      - code
+      - display_name
     LogoutRequest:
       type: object
       description: |-
@@ -13849,6 +13892,11 @@ components:
       description: |-
         `count` is the length of `results`, not a paginated total — this
         endpoint is unpaginated and returns the whole bin.
+
+        `many=False` because drf-spectacular treats any response on a ViewSet's
+        `list` action as a list and wrapped this envelope in an array: the schema
+        said `[{results, count}]` while `list()` returns one `{results, count}`
+        (measured 2026-09-14 over the test client).
       properties:
         results:
           type: array
@@ -15311,6 +15359,49 @@ components:
           type: string
           description: 职位：如 第一殿殿主
           maxLength: 100
+    UserWithTenant:
+      type: object
+      description: User serializer with tenant info + role permissions for login response.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          title: Email address
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        role:
+          type: string
+          maxLength: 20
+        tenant:
+          allOf:
+          - $ref: '#/components/schemas/LoginTenantRef'
+          nullable: true
+          readOnly: true
+        display_name:
+          type: string
+          description: Display name shown in the navbar (e.g. 系统管理员)
+          maxLength: 100
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - id
+      - permissions
+      - tenant
+      - username
     VerdictEnum:
       enum:
       - PASSED

@@ -29,6 +29,7 @@ from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     LoginLogSerializer,
+    LoginResponseSerializer,
     LogoutRequestSerializer,
     PasswordResetResultSerializer,
     RegisterSerializer,
@@ -484,6 +485,15 @@ class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=CustomTokenObtainPairSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            # simplejwt's AuthenticationFailed: {"detail": "No active account ..."}
+            401: DetailResponseSerializer,
+            429: ErrorResponseSerializer,
+        },
+    )
     def post(self, request, *args, **kwargs):
         # Set request context for audit logging before any database operations
         from apps.core.request_local import set_current_request
