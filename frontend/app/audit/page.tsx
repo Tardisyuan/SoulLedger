@@ -75,12 +75,15 @@ export default function AuditPage() {
   const [ordering, setOrdering] = useState("");
   const [compact, setCompact] = useState(false);
 
-  const { dateFrom, dateTo } = useMemo(() => {
-    if (!datePreset) return { dateFrom: "", dateTo: "" };
+  // Presets are always "N days ago through now" — there is no end bound to
+  // compute, so this only ever produces `dateFrom` (`end_date` was dead: the
+  // corresponding value was hardcoded "" on every branch).
+  const dateFrom = useMemo(() => {
+    if (!datePreset) return "";
     const days = datePreset === "7d" ? 7 : 30;
     const from = new Date();
     from.setDate(from.getDate() - days);
-    return { dateFrom: from.toISOString().slice(0, 10), dateTo: "" };
+    return from.toISOString().slice(0, 10);
   }, [datePreset]);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -95,7 +98,6 @@ export default function AuditPage() {
       if (actionFilter) params.action = actionFilter;
       if (resourceFilter) params.resource = resourceFilter;
       if (dateFrom) params.start_date = dateFrom;
-      if (dateTo) params.end_date = dateTo;
       if (ordering) params.ordering = ordering;
 
       const res = await auditApi.list(params);

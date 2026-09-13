@@ -114,11 +114,12 @@ export function handleSoulCreated(payload: SoulEventPayload, ctx: EventContext):
   return { success: true, invalidatedKeys: ["souls"], toastMessage: msg };
 }
 
-export function handleSoulStateChanged(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+export function handleSoulStateChanged(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+  // `soulKeys.detail(id)` is `[...soulKeys.all, "detail", id]` — a prefix
+  // extension of `soulKeys.all`. `invalidateQueries` matches by prefix (default
+  // `exact: false`), so invalidating `all` already covers every `detail(id)`;
+  // a separate call for `payload.soul_id` was redundant.
   ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
-  if (payload.soul_id) {
-    ctx.queryClient.invalidateQueries({ queryKey: soulKeys.detail(payload.soul_id) });
-  }
   return { success: true, invalidatedKeys: ["souls"] };
 }
 
@@ -173,9 +174,11 @@ export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventCon
   const label = EVENT_LABELS[payload.event] || "Dispatch update";
   const soulName = payload.soul_name || "";
   const toastMsg = soulName ? `${label} — ${soulName}` : label;
-  const toastType: "success" | "error" | "info" = ["DISPATCH_REJECTED", "DISPATCH_CANCELLED"].includes(payload.event)
-    ? "error"
-    : "info";
+  // `DISPATCH_CANCELLED` is not a registered event (see `event_registry.ts` —
+  // the table has CREATED/APPROVED/REJECTED/EXECUTED/STATUS_CHANGED only, and
+  // the backend never emits it either), so checking for it here was dead.
+  const toastType: "success" | "error" | "info" =
+    payload.event === "DISPATCH_REJECTED" ? "error" : "info";
   ctx.showToast(toastMsg, toastType, 6000);
 
   return {
