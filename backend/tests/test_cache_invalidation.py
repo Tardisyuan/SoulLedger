@@ -1,10 +1,23 @@
 """
 Tests for permission cache invalidation.
+
+Rewritten 2026-09-13 (BP-09): these used to drive the cache through
+`PermissionCache.has_permission`, which is now deleted (it recomputed
+permission from `Role.get_inherited_permissions` — inheritance the real
+enforcement path, `apps.perm.checker.check_permission`, never considers — and
+wrote the result under the same cache key `checker.py` uses, which is the
+drift BP-09 removed). `test_cache_hit_after_grant` / `test_cache_hit_after_revoke`
+were dropped outright rather than rewritten: they asserted grant/revoke
+behavior that duplicates `apps/perm/test_checker_grants.py::test_a_grant_grants`
+/ `test_a_revocation_revokes`, which exercise the actual production path.
+What remains here is `invalidate_role` / `invalidate_all` mechanics — those are
+real (`apps/perm/views.py` calls them on every grant/revoke) — tested directly
+against `get`/`set`, the two methods `checker.py` actually calls.
 """
 import pytest
 
 from apps.perm.cache import PermissionCache
-from apps.perm.models import Permission, Role, RolePermission
+from apps.perm.models import Role
 
 
 @pytest.mark.django_db
@@ -14,86 +27,51 @@ class TestPermissionCacheInvalidation:
     def test_invalidate_role_clears_cache(self):
         """invalidate_role() should clear cached permissions for a role."""
         cache = PermissionCache()
-        role, _ = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
-        perm, _ = Permission.objects.get_or_create(codename="soul.read", defaults={"name": "Soul Read"})
-        RolePermission.objects.get_or_create(role=role, permission=perm)
-        # Populate cache
-        cache.has_permission("JUDGE", "soul.read")
-        # Invalidate
+        Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
+        cache.set("JUDGE", "soul.read", True)
+        assert cache.get("JUDGE", "soul.read") is True
+
         cache.invalidate_role("JUDGE")
-        # After invalidation, re-check should query DB (not stale cache)
-        result = cache.has_permission("JUDGE", "soul.read")
-        assert result is True  # Should still have permission from DB
+
+        assert cache.get("JUDGE", "soul.read") is None
 
     def test_invalidate_all_clears_entire_cache(self):
-        """invalidate_all() should clear all cached permissions."""
+        """invalidate_all() should clear all cached permissions, for every role."""
         cache = PermissionCache()
-        role_j, _ = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
-        role_a, _ = Role.objects.get_or_create(name="ADMIN", defaults={"display_name": "Admin"})
-        perm, _ = Permission.objects.get_or_create(codename="soul.read", defaults={"name": "Soul Read"})
-        RolePermission.objects.get_or_create(role=role_j, permission=perm)
-        RolePermission.objects.get_or_create(role=role_a, permission=perm)
-        # Populate cache
-        cache.has_permission("JUDGE", "soul.read")
-        cache.has_permission("ADMIN", "soul.read")
-        # Invalidate all
+        Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
+        Role.objects.get_or_create(name="ADMIN", defaults={"display_name": "Admin"})
+        cache.set("JUDGE", "soul.read", True)
+        cache.set("ADMIN", "soul.read", True)
+
         cache.invalidate_all()
-        # Both should still work (re-queries DB)
-        assert cache.has_permission("JUDGE", "soul.read") is True
-        assert cache.has_permission("ADMIN", "soul.read") is True
 
-    def test_cache_hit_after_grant(self):
-        """After granting a permission, cache should reflect the change."""
-        cache = PermissionCache()
-        role = Role.objects.create(name="TEST_CACHE", display_name="Test Cache")
-        perm = Permission.objects.create(codename="test.cache", name="Test Cache")
-
-        # Initially no permission
-        assert cache.has_permission("TEST_CACHE", "test.cache") is False
-
-        # Grant permission
-        RolePermission.objects.create(role=role, permission=perm)
-
-        # Invalidate cache
-        cache.invalidate_role("TEST_CACHE")
-
-        # Now should have permission
-        assert cache.has_permission("TEST_CACHE", "test.cache") is True
-
-    def test_cache_hit_after_revoke(self):
-        """After revoking a permission, cache should reflect the change."""
-        cache = PermissionCache()
-        role = Role.objects.create(name="TEST_REVOKE", display_name="Test Revoke")
-        perm = Permission.objects.create(codename="test.revoke", name="Test Revoke")
-
-        # Grant permission
-        RolePermission.objects.create(role=role, permission=perm)
-        assert cache.has_permission("TEST_REVOKE", "test.revoke") is True
-
-        # Revoke permission
-        RolePermission.objects.filter(role=role, permission=perm).delete()
-
-        # Invalidate cache
-        cache.invalidate_role("TEST_REVOKE")
-
-        # Should no longer have permission
-        assert cache.has_permission("TEST_REVOKE", "test.revoke") is False
+        assert cache.get("JUDGE", "soul.read") is None
+        assert cache.get("ADMIN", "soul.read") is None
 
     def test_invalidate_role_clears_descendants(self):
         """invalidate_role() should clear cache for descendant roles too."""
         cache = PermissionCache()
         parent = Role.objects.create(name="PARENT", display_name="Parent")
         Role.objects.create(name="CHILD", display_name="Child", parent=parent)
-        perm = Permission.objects.create(codename="test.inherit", name="Test Inherit")
+        cache.set("PARENT", "test.inherit", True)
+        cache.set("CHILD", "test.inherit", True)
 
-        # Grant to parent
-        RolePermission.objects.create(role=parent, permission=perm)
-
-        # Child inherits from parent
-        assert cache.has_permission("CHILD", "test.inherit") is True
-
-        # Invalidate parent
         cache.invalidate_role("PARENT")
 
-        # Child should still have permission (re-queries DB)
-        assert cache.has_permission("CHILD", "test.inherit") is True
+        # Absence, not just the parent's: this is the "cascades to
+        # descendants" behavior `get_descendants()` exists for.
+        assert cache.get("PARENT", "test.inherit") is None
+        assert cache.get("CHILD", "test.inherit") is None
+
+    def test_invalidate_role_does_not_clear_unrelated_role(self):
+        """A control case: invalidating one role must not clear another's cache."""
+        cache = PermissionCache()
+        Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
+        Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})
+        cache.set("JUDGE", "soul.read", True)
+        cache.set("VIEWER", "soul.read", False)
+
+        cache.invalidate_role("JUDGE")
+
+        assert cache.get("JUDGE", "soul.read") is None
+        assert cache.get("VIEWER", "soul.read") is False

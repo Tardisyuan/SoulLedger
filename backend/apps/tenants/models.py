@@ -24,40 +24,15 @@ class Tenant(AuditUserFields, models.Model):
         return self.code
 
 
-class Notification(AuditUserFields, models.Model):
-    """In-app notification for dispatch invitations, judgment results, etc. (SPEC §7.7)."""
-
-    recipient = models.ForeignKey(
-        "authentication.User",
-        on_delete=models.CASCADE,
-        related_name="notifications",
-    )
-    notification_type = models.CharField(
-        max_length=50,
-        choices=[
-            ("DISPATCH_PROPOSED", "外派提议"),
-            ("DISPATCH_APPROVED", "外派批准"),
-            ("DISPATCH_REJECTED", "外派拒绝"),
-            ("CROSS_JUDGMENT_INVITED", "联合审判邀请"),
-            ("JUDGMENT_CONCLUDED", "审判结束"),
-            ("KARMA_THRESHOLD", "业力阈值"),
-            ("SYSTEM", "系统消息"),
-        ],
-    )
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-    is_read = models.BooleanField(default=False)
-    related_object_id = models.CharField(max_length=100, blank=True, default="")
-    related_object_type = models.CharField(max_length=50, blank=True, default="")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-        verbose_name = "Notification"
-        verbose_name_plural = "Notifications"
-        indexes = [
-            models.Index(fields=["recipient", "is_read"], name="idx_notif_recip_read"),
-        ]
+    # `Notification` (in-app notification for dispatch invitations, judgment
+    # results, etc.) lived here — deleted 2026-09-13 (BP-13). It had four
+    # writers, all in `apps/dispatch/services.py`, and no reader anywhere in
+    # the repository: no serializer, no view, no consumer, no test besides the
+    # one that pinned its row count at 0. `apps.notifications.UserNotification`
+    # is the model actually served (serializer + viewset + WS consumer + page).
+    # See `backend/tests/test_a_dispatch_notification_reaches_a_reader.py` for
+    # the incident this model was the cause of, and migration 0010 for the
+    # table drop.
 
     def __str__(self):
         return f"[{self.notification_type}] {self.title}"
