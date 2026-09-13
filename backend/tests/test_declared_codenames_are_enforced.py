@@ -22,6 +22,7 @@ import pytest
 from django.urls import get_resolver
 
 from apps.core.permissions import CodenamePermission
+from apps.core.viewsets import CodenameViewSetMixin
 
 
 def _routed_views():
@@ -54,14 +55,36 @@ def test_the_walk_finds_something():
     assert len(views) > 20, f"only {len(views)} routed views found"
 
 
+def _declares_own_get_required_permissions(cls):
+    """A plain APIView declares codenames by defining this method itself.
+
+    `CodenamePermission` reads `get_required_permissions()`. Viewsets inherit
+    it from `CodenameViewSetMixin`, which derives it from
+    `permission_codename` -- the attribute checked below. The ledger APIViews
+    write the method by hand and set neither attribute, so a filter on the
+    attributes alone never saw them: removing `CodenamePermission` from
+    `LedgerBalanceView` left this test green (measured 2026-09-14).
+    """
+    impl = getattr(cls, "get_required_permissions", None)
+    return (
+        impl is not None
+        and impl is not CodenameViewSetMixin.get_required_permissions
+    )
+
+
 def test_every_view_declaring_a_codename_also_enforces_it():
     unenforced = []
     declared = 0
+    by_method = 0
     for cls, route in _routed_views().items():
         codename = getattr(cls, "permission_codename", None)
         extra = getattr(cls, "extra_permissions", None)
-        if not codename and not extra:
+        own_method = _declares_own_get_required_permissions(cls)
+        if not codename and not extra and not own_method:
             continue
+        if own_method and not codename and not extra:
+            by_method += 1
+            codename = "get_required_permissions()"
         declared += 1
         classes = getattr(cls, "permission_classes", []) or []
         if any(issubclass(c, CodenamePermission) for c in classes):
@@ -78,6 +101,11 @@ def test_every_view_declaring_a_codename_also_enforces_it():
     assert declared > 10, (
         f"only {declared} views declare a codename -- the filter is wrong, "
         f"not the codebase"
+    )
+    # Six ledger APIViews today. Zero would mean the method branch above has
+    # gone blind again, and the assertion below would be vacuous for them.
+    assert by_method >= 6, (
+        f"only {by_method} views declare codenames via get_required_permissions()"
     )
     assert unenforced == [], (
         f"{len(unenforced)} view(s) declare a permission codename and attach "
