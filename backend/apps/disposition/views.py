@@ -105,6 +105,13 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         # nothing**: two executions, two events, `executed_at` written twice.
         # A guard that reads before the row is locked answers a question about
         # the past.
+        #
+        # AND THE EXECUTION HAS TO HAPPEN UNDER IT TOO (BD-15). The block used to
+        # end at `disposition = locked`, so the service ran with the lock
+        # released: a second executor passed the check above before the first
+        # wrote `is_executed`, and only `transition_to`'s soul-row lock stopped
+        # a double execution — reported as 409 instead of "Already executed".
+        # Measured on postgres:16: {'b': 200, 'a': 409}; now {'a': 200, 'b': 400}.
         from django.db import transaction
 
         with transaction.atomic():
@@ -120,8 +127,9 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                     {"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST
                 )
             disposition = locked
+            executed = DispositionService.execute(disposition)
 
-        if not DispositionService.execute(disposition):
+        if not executed:
             # `execute` now returns False, and writes nothing, when the soul is
             # not in a state the disposition can act on. It used to return True
             # unconditionally after having already saved `is_executed` -- the
