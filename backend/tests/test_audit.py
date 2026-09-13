@@ -377,13 +377,10 @@ class TestAuditLogViewSet:
     # test_resources_endpoint stood here and had same-named twins in
     # apps/audit/tests.py. Merged there on 2026-09-13 (that fixture writes the
     # rows it filters); each merged test names what it took from here.
-
-    def test_stats_endpoint_admin_only(self, auth_client, admin_user):
-        """GET /api/v1/audit-logs/stats/ requires admin role."""
-        response = auth_client.get("/api/v1/audit-logs/stats/")
-        assert response.status_code == 200
-        assert "action_distribution" in response.data
-        assert "total_logs" in response.data
+    # `test_stats_endpoint_admin_only` followed on 2026-09-14 into
+    # apps/audit/tests.py::TestAuditLogActions::test_stats_endpoint, which now
+    # also makes its force_authenticate (no tenant claim) request. Despite the
+    # name, it never asked as a non-admin.
 
 
 @pytest.mark.django_db
