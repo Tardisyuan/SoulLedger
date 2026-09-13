@@ -19,7 +19,6 @@ from apps.death_sync.models import (
     DeathRegistrationStatus,
     ExternalApiKey,
     WebhookConfig,
-    WebhookDeliveryLog,
 )
 from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
@@ -359,16 +358,15 @@ class DeathSyncHealthView(APIView):
             request_timestamp__gte=cutoff_24h,
         ).count()
 
-        # Count failed webhooks in last 24h. WebhookDeliveryLog has no direct
-        # tenant field, only transitively via webhook__tenant — same pattern
-        # as retry_failed_webhooks_for_tenant (apps/death_sync/tasks.py).
-        # Also fixes a pre-existing FieldError here: WebhookDeliveryLog (via
-        # AuditUserFields) has create_time, not created_at — this query
-        # raised a 500 on every call before either fix, tenant filter or not.
-        from apps.death_sync.models import WebhookDeliveryStatus
-        failed_webhooks = WebhookDeliveryLog.objects.filter(
+        # Failed webhook deliveries in the last 24h, by the webhook's tenant.
+        # BD-11: this read `WebhookDeliveryLog`, a table nothing in production
+        # writes, so it said 0 whatever happened. Deliveries are
+        # `EventWebhookDelivery` rows (apps/events/tasks.py); FAILED is a try
+        # that will be retried, ABANDONED one that will not.
+        from apps.events.models import EventWebhookDelivery, EventWebhookStatus
+        failed_webhooks = EventWebhookDelivery.objects.filter(
             webhook__tenant=tenant,
-            status=WebhookDeliveryStatus.FAILED,
+            status__in=[EventWebhookStatus.FAILED, EventWebhookStatus.ABANDONED],
             create_time__gte=cutoff_24h,
         ).count()
 

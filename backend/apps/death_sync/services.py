@@ -154,6 +154,24 @@ class DeathSyncService:
                     (timezone.now() - start_time).total_seconds() * 1000
                 )
                 request_record.save()
+                # BD-11: the only thing that ever tells the tenant's webhooks.
+                # Published inside the transaction on purpose: the EventBus
+                # webhook handler writes the delivery row here and enqueues it
+                # once the transaction is committed, so a rolled-back
+                # registration announces nothing.
+                from apps.events.event_bus import event_bus
+
+                event_bus.publish_deathsync(
+                    "DEATH_SYNC_PROCESSED",
+                    {
+                        "registration_id": str(request_record.id),
+                        "soul_id": str(soul.id),
+                        "judgment_id": str(judgment.id),
+                        "source_system": request_record.source_system,
+                        "source_reference_id": request_record.source_reference_id,
+                    },
+                    tenant_code=tenant.code,
+                )
                 return request_record
 
         except IntegrityError:
