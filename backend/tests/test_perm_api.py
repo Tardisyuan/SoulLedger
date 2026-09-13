@@ -191,15 +191,10 @@ class TestPermissionExportImport:
 class TestPermissionRoleMatrix:
     """Test permission enforcement across roles."""
 
-    def test_admin_can_manage_permissions(self, api_client, admin_user, cn_tenant):
-        """ADMIN role can access permission management endpoints."""
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = RefreshToken.for_user(admin_user)
-        if admin_user.tenant:
-            token["tenant_code"] = admin_user.tenant.code
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-        response = api_client.get("/api/v1/perm/permissions/")
-        assert response.status_code == 200
+    # `test_admin_can_manage_permissions` stood here until 2026-09-14: the same
+    # ADMIN-with-tenant JWT and the same GET as the first request of
+    # TestPermissionAPI::test_list_permissions_authenticated, asserting the
+    # same 200. Deleted; that test is the only copy.
 
     def test_judge_cannot_manage_permissions(self, api_client, judge_user, cn_tenant):
         """JUDGE role cannot create permissions."""
