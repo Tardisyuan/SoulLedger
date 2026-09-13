@@ -24,9 +24,10 @@
    `workflow_dispatch`。凡标 `[CI]` 的都是"有人手动点了才跑"。
 2. **真正每次都跑的是 `.git/hooks/pre-push`**，且仅在跑过 `scripts/install-hooks.sh`
    的机器上，`SKIP_PREPUSH=1` 可绕过（`.git/hooks/pre-push:18-27`）。
-3. **`.pre-commit-config.yaml` 整份是死的。** `pre-commit` 框架不在 PATH，
-   `.git/hooks/pre-commit` 是 `install-hooks.sh` 写的手写 bash。它声明的
-   `ruff --fix` + `ruff-format`（`.pre-commit-config.yaml:12-19`）**从未执行过** ——
+3. **没有 `pre-commit` 框架。** `.git/hooks/pre-commit` 是 `install-hooks.sh` 写的
+   手写 bash（只跑暂存前端文件的 ESLint）。曾经的 `.pre-commit-config.yaml` 是死配置
+   —— 框架从未安装，它声明的 `ruff --fix` + `ruff-format` **从未执行过**，规则还与
+   真钩子相左 —— 已删除（IS-23）。所以 ruff format 不是门禁：
    【实跑】`ruff format --check .` → **622 files would be reformatted, 78 already
    formatted**，exit 1。
 
@@ -403,7 +404,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 | 每个 `RunPython` 都可逆 | 只有 4 个具名迁移 |
 | docstring 规则 | **任何文档都没写**，select 无 `D` |
 | 后端命名（snake_case） | **仓库文档没写**。ruff `N` 部分覆盖，N805/N806 被 ignore |
-| `.pre-commit-config.yaml` 全部条目 | 框架未装 |
+| `ruff format` | 无任何执行点（`.pre-commit-config.yaml` 框架从未安装，文件已删，IS-23） |
 | 一切标 `[CI]` 的门 | workflow 只有 `workflow_dispatch` |
 
 ---
