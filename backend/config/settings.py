@@ -485,6 +485,32 @@ else:
         stacklevel=2,
     )
 
+# Email — the password-reset code is the only thing sent today (BP-12).
+# DEBUG prints mail to the console; otherwise SMTP from EMAIL_* variables.
+# No EMAIL_HOST outside DEBUG is a startup warning, not a refusal: the app
+# works without mail except for reset, and the reset endpoint answers the same
+# either way so a send failure never becomes a registration oracle.
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", "False")
+EMAIL_USE_SSL = _env_bool("EMAIL_USE_SSL", "False")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@soulledger.local")
+if not DEBUG and not os.getenv("EMAIL_HOST"):
+    import warnings  # noqa: E402
+
+    warnings.warn(
+        "EMAIL_HOST is not set (DEBUG=False): password-reset codes will be "
+        "attempted against SMTP on localhost:25 and, if that fails, never arrive.",
+        stacklevel=2,
+    )
+
 # Sentry integration
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration

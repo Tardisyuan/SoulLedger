@@ -5,6 +5,7 @@ import logging
 import secrets
 
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
@@ -741,8 +742,20 @@ def reset_password_request(request):
         code = f"{secrets.randbelow(900000) + 100000:06d}"
         cache.set(f"pwd_reset:{email}", code, timeout=300)
 
-        # In production, send email here (DO NOT log the code):
-        # send_mail("密码重置验证码", f"您的验证码: {code}", ...)
+        # BP-12: this was a comment, so no reset could ever be completed.
+        # The code goes to the mailbox only — never the log, never the
+        # response. A send failure is logged without the code and answered
+        # like success: a 500 only for registered addresses would disclose
+        # exactly what the identical responses above exist to hide.
+        try:
+            send_mail(
+                "SoulLedger 密码重置验证码",
+                f"您的验证码: {code}\n5 分钟内有效。如非本人操作,请忽略本邮件。",
+                None,
+                [email],
+            )
+        except Exception:
+            logger.error("password reset mail could not be sent", exc_info=False)
 
     return Response({"detail": "验证码已发送到邮箱"})
 
