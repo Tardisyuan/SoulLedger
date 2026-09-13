@@ -461,6 +461,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   href="/profile"
                   className="hidden sm:block max-w-40 truncate text-[oklch(var(--color-ink-muted))] text-03 hover:text-[oklch(var(--color-accent-ink))] transition-colors"
+                  title={user.display_name || user.username}
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>

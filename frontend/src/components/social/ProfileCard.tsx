@@ -53,7 +53,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-06 text-[oklch(var(--color-ink))] truncate">
+            <h2 className="text-06 text-[oklch(var(--color-ink))] truncate" title={profile.username}>
               {profile.username}
             </h2>
             {isOwnProfile ? (
