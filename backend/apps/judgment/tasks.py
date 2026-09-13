@@ -6,6 +6,19 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
+STALE_MARKER = "[SYSTEM] Flagged as stale"
+STALE_CHUNK = 500
+
+
+def _flush_stale(chunk):
+    from apps.audit.models import AuditAction
+    from apps.audit.signals import create_batch_audit_log
+    from apps.judgment.models import Judgment
+
+    Judgment.objects.bulk_update(chunk, ["notes"])
+    create_batch_audit_log(AuditAction.BATCH_UPDATE, chunk, {"field": "notes", "reason": "stale judgment flag"})
+    return len(chunk)
+
 
 @shared_task(name="judgment.auto_conclude_stale")
 def auto_conclude_stale_judgments(days_threshold: int = 30):
@@ -49,20 +62,31 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
     # apps.tenants.middleware does per-request for HTTP.
     set_current_tenant(tenant)
     try:
-        threshold = timezone.now() - timedelta(days=days_threshold)
+        now = timezone.now()
+        threshold = now - timedelta(days=days_threshold)
+        # `.exclude(marker)`: this runs on a schedule, and without it every run
+        # appended another flag line to every judgment still stale (BD-14).
         stale_judgments = Judgment.objects.filter(
             tenant_id=tenant_id,
             is_final=False,
             verdict__isnull=True,
             created_at__lt=threshold,
-        ).select_related("soul")
+        ).exclude(notes__contains=STALE_MARKER).only("id", "notes")
 
+        # Chunked bulk_update instead of one `.save()` per row (PQ-02). That
+        # also skips the per-row post_save audit rows, so each chunk gets one
+        # batch audit row instead — same attribution, via the contextvar above.
+        stamp = f"\n{STALE_MARKER} on {now.isoformat()}"
         flagged = 0
-        for judgment in stale_judgments:
-            # Log the stale judgment for admin review
-            judgment.notes = (judgment.notes or "") + f"\n[SYSTEM] Flagged as stale on {timezone.now().isoformat()}"
-            judgment.save(update_fields=["notes"])
-            flagged += 1
+        chunk = []
+        for judgment in stale_judgments.iterator(chunk_size=STALE_CHUNK):
+            judgment.notes = (judgment.notes or "") + stamp
+            chunk.append(judgment)
+            if len(chunk) == STALE_CHUNK:
+                flagged += _flush_stale(chunk)
+                chunk = []
+        if chunk:
+            flagged += _flush_stale(chunk)
 
         return {
             "tenant": tenant.code,
