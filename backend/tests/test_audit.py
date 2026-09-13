@@ -654,7 +654,7 @@ class TestAuditApiEndpoint:
             "that refuses everyone would satisfy the assertions above"
         )
 
-    def test_unauthenticated_cannot_access(self, api_client):
-        """Unauthenticated users cannot access /api/v1/audit-logs/ endpoint."""
-        response = api_client.get("/api/v1/audit-logs/")
-        assert response.status_code == 401
+    # `test_unauthenticated_cannot_access` stood here until 2026-09-14: a fresh
+    # APIClient, GET /api/v1/audit-logs/, 401 -- the same request and assertion
+    # as apps/audit/tests.py::TestAuditLogListRetrieve::test_list_audit_logs_unauthenticated,
+    # which is now the only copy.
