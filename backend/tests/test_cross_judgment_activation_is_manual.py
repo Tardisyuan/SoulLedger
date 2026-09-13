@@ -194,3 +194,30 @@ def test_conclusion_still_needs_an_active_court(bench):
     j.refresh_from_db()
     assert j.status == JudgmentStatus.PROPOSED
     assert j.conclusion_type is None
+
+
+@pytest.mark.django_db
+def test_the_detail_view_does_not_query_once_per_participant(bench, django_assert_max_num_queries):
+    """PQ-01: the participant serializer reads `participant_tenant.code` and
+    `participant_actor.name`. With only `prefetch_related("participants")`
+    each seated tenant cost its own queries (measured 5 queries for one
+    participant, 14 for ten). The count with four seats must equal the count
+    with one."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    j = bench["judgment"]
+    _seat(j, bench["eu"])
+    url = f"{BASE}{j.pk}/"
+    with CaptureQueriesContext(connection) as one_seat:
+        assert bench["initiator"].get(url).status_code == 200
+
+    for code in ("GR_HADES", "PQ01_X", "PQ01_Y"):
+        t = Tenant.objects.get_or_create(code=code, defaults={"display_name": code})[0]
+        _seat(j, t)
+    assert j.participants.count() == 4
+
+    with django_assert_max_num_queries(len(one_seat)):
+        resp = bench["initiator"].get(url)
+    assert resp.status_code == 200
+    assert len(resp.data["participants"]) == 4
