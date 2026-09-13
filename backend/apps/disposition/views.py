@@ -128,6 +128,25 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                 )
             disposition = locked
             executed = DispositionService.execute(disposition)
+            if executed:
+                # Souls whose cosmology has a next life go on to be reborn. The
+                # call is unconditional on cosmology on purpose:
+                # `ReincarnationService.execute` answers False for the terminal
+                # ones rather than this view holding a second copy of that
+                # list. It used to write REINCARNATION_TRIGGERED for every soul
+                # including those -- see its docstring.
+                #
+                # INSIDE THE BLOCK, for BD-15's reason one call further down.
+                # It ran after the block ended, with the soul already committed
+                # as REINCARNATING and unlocked, so `/reincarnation/reborn/`
+                # could complete the rebirth in the gap. Measured on
+                # postgres:16: events [COMPLETED, TRIGGERED], {'a': 200,
+                # 'b': 201} -- "triggered" logged for a soul already ALIVE.
+                # Now the rebirth waits on the soul row and the trigger comes
+                # first.
+                from apps.reincarnation.services import ReincarnationService
+
+                ReincarnationService.execute(disposition)
 
         if not executed:
             # `execute` now returns False, and writes nothing, when the soul is
@@ -146,15 +165,6 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                 },
                 status=status.HTTP_409_CONFLICT,
             )
-
-        # Souls whose cosmology has a next life go on to be reborn. The call is
-        # unconditional here on purpose: `ReincarnationService.execute` answers
-        # False for the terminal cosmologies rather than this view holding a
-        # second copy of that list. It used to write
-        # REINCARNATION_TRIGGERED for every soul including those -- see its
-        # docstring.
-        from apps.reincarnation.services import ReincarnationService
-        ReincarnationService.execute(disposition)
 
         return Response(DispositionSerializer(disposition).data)
 
