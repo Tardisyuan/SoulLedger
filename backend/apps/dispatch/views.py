@@ -2,6 +2,7 @@
 REST views for dispatch app.
 """
 from django.db import IntegrityError
+from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -12,7 +13,7 @@ from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
-from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus
+from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, DispatchStatus
 from apps.dispatch.permissions import CrossJudgmentPartyPermission, DispatchPartyPermission
 from apps.dispatch.serializers import (
     CrossTenantJudgmentConcludeSerializer,
@@ -333,6 +334,16 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def _participants_with_names():
+    """The participant serializer reads `participant_tenant.code` and
+    `participant_actor.name`; a bare `prefetch_related("participants")` paid one
+    query per seat for each (PQ-01)."""
+    return Prefetch(
+        "participants",
+        queryset=CrossTenantJudgmentParticipant.objects.select_related("participant_tenant", "participant_actor"),
+    )
+
+
 class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
                                  DataScopeViewSetMixin, viewsets.ModelViewSet):
     """
@@ -378,7 +389,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
     }
     queryset = CrossTenantJudgment.objects.select_related(
         "initiating_tenant"
-    ).prefetch_related("participants").all()
+    ).prefetch_related(_participants_with_names()).all()
     serializer_class = CrossTenantJudgmentSerializer
     filterset_class = None  # Cross-tenant queries use Q-filter expansion, not standard filtering
     ordering_fields = ["create_time", "status"]
@@ -415,7 +426,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # every non-ADMIN caller.
         qs = CrossTenantJudgment._base_manager.filter(is_deleted=False).select_related(
             "initiating_tenant"
-        ).prefetch_related("participants")
+        ).prefetch_related(_participants_with_names())
         user = self.request.user
         if getattr(user, "role", None) == "ADMIN":
             return qs
