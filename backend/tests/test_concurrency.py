@@ -724,6 +724,130 @@ class TestReincarnationTriggerHoldsTheDispositionLock:
 # ---------------------------------------------------------------------------
 
 
+def _sqlite_skipped_tests(tree):
+    """Qualified names of the tests in one module that SQLite skips.
+
+    A skip counts if its condition names the engine: a module-level flag
+    assigned from `connection.vendor` (`SQLITE = connection.vendor == ...`),
+    or `connection.vendor` / "sqlite" written inline. The mark itself may be a
+    decorator, a module-level alias of the mark (`NEEDS_ROW_LOCKS =
+    pytest.mark.skipif(SQLITE, ...)`), a class decorator, or a `pytestmark`
+    at module or class level (a single mark or a list of them).
+    """
+    import ast
+
+    def mentions_engine(expr, flags):
+        return any(
+            (isinstance(n, ast.Name) and n.id in flags)
+            or (isinstance(n, ast.Attribute) and n.attr == "vendor")
+            or (isinstance(n, ast.Constant) and n.value == "sqlite")
+            for n in ast.walk(expr)
+        )
+
+    flags, aliases = set(), set()
+
+    def is_sqlite_skip(expr):
+        if isinstance(expr, ast.Name):
+            return expr.id in aliases
+        if isinstance(expr, ast.List | ast.Tuple):
+            return any(is_sqlite_skip(e) for e in expr.elts)
+        return (
+            isinstance(expr, ast.Call)
+            and isinstance(expr.func, ast.Attribute)
+            and expr.func.attr == "skipif"
+            and bool(expr.args)
+            and mentions_engine(expr.args[0], flags)
+        )
+
+    for stmt in tree.body:  # module level, in order, so aliases see flags
+        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+            target = stmt.targets[0]
+            if not isinstance(target, ast.Name):
+                continue
+            if is_sqlite_skip(stmt.value):
+                aliases.add(target.id)
+            elif mentions_engine(stmt.value, flags):
+                flags.add(target.id)
+
+    def pytestmark_of(body):
+        return any(
+            isinstance(s, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in s.targets)
+            and is_sqlite_skip(s.value)
+            for s in body
+        )
+
+    found = []
+
+    def visit(body, prefix, inherited):
+        for node in body:
+            if isinstance(node, ast.ClassDef):
+                marked = inherited or pytestmark_of(node.body) or any(
+                    is_sqlite_skip(d) for d in node.decorator_list
+                )
+                visit(node.body, f"{prefix}{node.name}::", marked)
+            elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                if node.name.startswith("test_") and (
+                    inherited or any(is_sqlite_skip(d) for d in node.decorator_list)
+                ):
+                    found.append(prefix + node.name)
+
+    visit(tree.body, "", pytestmark_of(tree.body))
+    return found
+
+
+def test_the_pg_only_scanner_sees_every_spelling():
+    """The scanner's own positive control, one spelling per case.
+
+    Without it, a scanner that silently stopped recognising a form would make
+    the set assertion below agree with itself by omission.
+    """
+    import ast
+    import textwrap
+
+    src = textwrap.dedent('''
+        import pytest
+        from django.db import connection
+        SQLITE = connection.vendor == "sqlite"
+        REASON = "not a mark"
+        ALIAS = pytest.mark.skipif(SQLITE, reason=REASON)
+
+        @pytest.mark.skipif(SQLITE, reason=REASON)
+        def test_literal(): pass
+
+        @ALIAS
+        def test_alias(): pass
+
+        @pytest.mark.skipif(connection.vendor == "sqlite", reason="x")
+        def test_inline(): pass
+
+        @pytest.mark.skipif(True, reason="unrelated")
+        def test_unrelated_skip(): pass
+
+        def test_plain(): pass
+
+        class TestClassMark:
+            pytestmark = [pytest.mark.django_db, ALIAS]
+            def test_in_marked_class(self): pass
+
+        @ALIAS
+        class TestDecoratedClass:
+            def test_in_decorated_class(self): pass
+
+        class TestPlain:
+            def test_method(self): pass
+    ''')
+    assert sorted(_sqlite_skipped_tests(ast.parse(src))) == sorted([
+        "test_literal",
+        "test_alias",
+        "test_inline",
+        "TestClassMark::test_in_marked_class",
+        "TestDecoratedClass::test_in_decorated_class",
+    ])
+    module_mark = "import pytest\nS = 'sqlite'\npytestmark = pytest.mark.skipif(S == 'sqlite', reason='x')\ndef test_a(): pass\n"
+    assert _sqlite_skipped_tests(ast.parse(module_mark)) == ["test_a"]
+
+
 def test_the_postgres_only_set_is_the_set_we_think_it_is():
     """哪些测试只在 PostgreSQL 上跑,写成一条会红的断言。
 
@@ -752,44 +876,58 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
     # 这类启发式,返回**空集** —— 而空集会让 `assert pg_only == expected` 报出
     # 一个看起来像「集合变了」的失败,掩盖掉真正的原因是扫描器坏了。
     # 这个仓库栽在「扫描器看的不是它以为在看的东西」上,这是第六次。
-    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    #
+    # 第二版(2026-09-14,BT-06)仍只扫本文件、只认装饰器里字面写着
+    # `skipif(SQLITE…)` 的写法。`test_two_judges_cannot_both_decide_one_node.py`
+    # 用的正是别名 `NEEDS_ROW_LOCKS = pytest.mark.skipif(SQLITE, …)`,于是那条
+    # PostgreSQL-only 测试从来不在下面的名单里。现在:扫整个 backend 的测试文件,
+    # 并认得别名、类装饰器、模块级与类级 `pytestmark`。
+    backend = Path(__file__).resolve().parents[1]
     pg_only = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+    scanned = 0
+    for path in sorted(backend.rglob("*.py")):
+        if not (path.name.startswith("test_") or path.name == "tests.py"):
             continue
-        for dec in node.decorator_list:
-            src = ast.dump(dec)
-            if "skipif" in src and "SQLITE" in src:
-                pg_only.append(node.name)
-                break
+        scanned += 1
+        pg_only.extend(
+            f"{path.relative_to(backend).as_posix()}::{name}"
+            for name in _sqlite_skipped_tests(ast.parse(path.read_text(encoding="utf-8")))
+        )
+    assert scanned > 100, f"只扫到 {scanned} 个测试文件 —— 扫描器坏了,不是集合变了"
     pg_only = sorted(pg_only)
 
     #: 实测得来,不是按审计文字抄的 —— 第一版这份名单是我按账本描述猜的,
     #: 里面两个名字在这个文件里根本不存在。
-    expected = [
+    here = "tests/test_concurrency.py::"
+    expected = sorted([
         # BD-09 (2026-09-13): a decision that waits on the workflow row lock
         # and must re-read the workflow once it has it. SQLite has no row
         # lock to wait on. Its serial counterpart,
         # test_a_stale_copy_cannot_undo_a_refusal, runs on every engine.
-        "test_a_decision_blocked_on_the_lock_does_not_undo_a_refusal",
+        here + "TestWorkflowDecisionConcurrency::test_a_decision_blocked_on_the_lock_does_not_undo_a_refusal",
         # 2026-09-13, the BD-15 shape one call further down: a rebirth
         # requested while the disposition's execution is still logging its
         # rebirth trigger must WAIT on the soul row lock. SQLite has no row
         # lock to wait on. Its serial counterpart,
         # test_the_rebirth_trigger_runs_inside_the_views_locked_transaction,
         # runs on every engine.
-        "test_a_rebirth_cannot_complete_between_execution_and_its_trigger",
+        here + "TestReincarnationTriggerHoldsTheDispositionLock::test_a_rebirth_cannot_complete_between_execution_and_its_trigger",
         # BD-15 (2026-09-13): a second disposition executor must WAIT on the
         # disposition row lock the first still holds. SQLite has no row lock
         # to wait on. Its serial counterpart,
         # test_the_service_runs_inside_the_views_locked_transaction, runs on
         # every engine.
-        "test_a_second_executor_waits_and_is_told_already_executed",
-        "test_concurrent_approve_and_reject",
-        "test_concurrent_approve_only_one_succeeds",
-        "test_concurrent_die_only_one_succeeds",
-        "test_concurrent_state_transition_to_disposed",
-    ]
+        here + "TestDispositionExecuteHoldsItsLock::test_a_second_executor_waits_and_is_told_already_executed",
+        here + "TestDispatchApprovalConcurrency::test_concurrent_approve_and_reject",
+        here + "TestDispatchApprovalConcurrency::test_concurrent_approve_only_one_succeeds",
+        here + "TestSoulStateTransitionConcurrency::test_concurrent_die_only_one_succeeds",
+        here + "TestSoulStateTransitionConcurrency::test_concurrent_state_transition_to_disposed",
+        # Two judges racing complete_node on one node. Marked through the alias
+        # NEEDS_ROW_LOCKS, which the file-local, literal-decorator scanner
+        # before 2026-09-14 could not see -- it was PostgreSQL-only all along.
+        "tests/test_two_judges_cannot_both_decide_one_node.py::"
+        "test_only_one_of_two_simultaneous_decisions_is_recorded",
+    ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
         f"期望:{expected}\n"
