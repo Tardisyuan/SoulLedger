@@ -47,9 +47,19 @@ function pageFiles(dir: string): string[] {
   return out;
 }
 
+/**
+ * Block and line comments out, `://` spared. The pages here carry case-history
+ * comments that quote the very markup the rules look for — organizations'
+ * docstring names `<QueryError` — so a rule reading prose passes a page on
+ * the strength of its own history.
+ */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(?<![:\w])\/\/[^\n]*/g, "");
+}
+
 const PAGES = pageFiles(APP_ROOT).map((full) => ({
   label: path.relative(path.join(APP_ROOT, ".."), full),
-  source: readFileSync(full, "utf8"),
+  source: stripComments(readFileSync(full, "utf8")),
 }));
 
 /** Renders an empty state of any kind. */
@@ -85,9 +95,28 @@ const RENDERS_EMPTY = /<EmptyState|empty=\{/;
  *    cannot match the way the codebase actually writes the thing is the
  *    never-fires shape this repo has a note about, in a rule rather than in a
  *    check.
+ *
+ * NARROWED 2026-09-14 (audit FT-06) TO "A FAILURE IS RENDERED". The list above
+ * still accepted `!isError`, `isError &&` and `isError ?` on their own — the
+ * *exclusion* of the empty state, not the *rendering* of a failure — and it
+ * read the whole file, comments included. Measured: deleting
+ * `{isError && <QueryError … />}` from `app/organizations/page.tsx` left the
+ * rule green, on the `!isError &&` that guards its EmptyState. That page then
+ * shows a heading over nothing when the request fails — silence instead of a
+ * lie, and still not the fact.
+ *
+ * So what counts now, on comment-stripped code, is an element that says the
+ * request failed:
+ *  - a dedicated failure element: `<QueryError`, `<SectionError`,
+ *    `role="alert"`, `data-query-error`;
+ *  - the grid prop `isError={…}` (DataTable renders the error row itself);
+ *  - JSX rendered under a POSITIVE error condition — `isError && <…`,
+ *    `error ? (<…` — which is how `app/corpus/page.tsx` draws its
+ *    `common.error` EmptyState. The lookbehind refuses `!isError && (<…`,
+ *    which is the empty branch, not the failure branch.
  */
 const DISTINGUISHES_FAILURE =
-  /<QueryError|<SectionError|role="alert"|data-query-error|isError=|isError\s*\?|isError\s*&&|!isError|if \(isError\)|if \(error\)|error\s*\?\s*\(/;
+  /<QueryError|<SectionError|role="alert"|data-query-error|isError=\{|(?<![!\w.])(?:isError|error)\s*(?:\?|&&)\s*\(?\s*</;
 
 const RENDERS_GRID = /<DataTable|<DataGrid/;
 const PASSES_IS_ERROR = /isError=/;
@@ -103,6 +132,16 @@ describe("the scan is looking at something", () => {
   it("finds pages for both rules to judge", () => {
     expect(PAGES.filter((p) => RENDERS_EMPTY.test(p.source)).length).toBeGreaterThanOrEqual(15);
     expect(PAGES.filter((p) => RENDERS_GRID.test(p.source)).length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("the failure pattern refuses an exclusion that renders nothing", () => {
+    // The exact shape that passed before 2026-09-14: the empty state guarded
+    // by `!isError`, and no failure branch anywhere.
+    const excludesOnly =
+      "{!isLoading && !isError && rows.length === 0 && (\n  <EmptyState title={t('x')} />\n)}";
+    expect(DISTINGUISHES_FAILURE.test(excludesOnly)).toBe(false);
+    expect(DISTINGUISHES_FAILURE.test("{isError && <QueryError onRetry={r} />}")).toBe(true);
+    expect(DISTINGUISHES_FAILURE.test("{isError ? (\n  <EmptyState title={t('common.error')} />")).toBe(true);
   });
 
   it("the failure pattern does not simply match every page", () => {

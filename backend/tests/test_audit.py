@@ -377,13 +377,10 @@ class TestAuditLogViewSet:
     # test_resources_endpoint stood here and had same-named twins in
     # apps/audit/tests.py. Merged there on 2026-09-13 (that fixture writes the
     # rows it filters); each merged test names what it took from here.
-
-    def test_stats_endpoint_admin_only(self, auth_client, admin_user):
-        """GET /api/v1/audit-logs/stats/ requires admin role."""
-        response = auth_client.get("/api/v1/audit-logs/stats/")
-        assert response.status_code == 200
-        assert "action_distribution" in response.data
-        assert "total_logs" in response.data
+    # `test_stats_endpoint_admin_only` followed on 2026-09-14 into
+    # apps/audit/tests.py::TestAuditLogActions::test_stats_endpoint, which now
+    # also makes its force_authenticate (no tenant claim) request. Despite the
+    # name, it never asked as a non-admin.
 
 
 @pytest.mark.django_db
@@ -538,46 +535,16 @@ class TestAuditApiEndpoint:
         assert isinstance(response.data["results"], list)
         assert len(response.data["results"]) > 0
 
-    def test_filter_by_action(self, auth_client):
-        """GET /api/v1/audit-logs/?action=CREATE filters by action type.
+    # `test_filter_by_action` stood here until 2026-09-14 and is merged into
+    # apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_action. It
+    # was the only copy whose API writes produced real audit rows (this class
+    # is transaction=True; that one was not), which that test now reproduces
+    # with django_capture_on_commit_callbacks(execute=True).
 
-        BT-09 (2026-09-13): an UPDATE row is seeded and asserted absent --
-        without it, "every result is CREATE" was also true of an unfiltered
-        list. (The note explaining this lived on a same-named test in
-        `TestAuditLogViewSet` above, since merged into
-        `apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_action`.)
-        """
-        # Create a soul (CREATE), then update it (UPDATE).
-        response = auth_client.post("/api/v1/souls/", {
-            "name": "Action Filter Test",
-            "birth_date": "1990-01-01",
-        })
-        assert response.status_code == 201
-        soul_id = response.data["id"]
-        response = auth_client.patch(f"/api/v1/souls/{soul_id}/", {"name": "Action Filter Test Renamed"})
-        assert response.status_code == 200
-
-        # Filter by CREATE action
-        response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
-        assert response.status_code == 200
-        actions = {log["action"] for log in response.data["results"]}
-        assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
-
-    def test_filter_by_resource(self, auth_client):
-        """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
-
-        # Create a soul
-        response = auth_client.post("/api/v1/souls/", {
-            "name": "Resource Filter Test",
-            "birth_date": "1990-01-01",
-        })
-        assert response.status_code == 201
-
-        # Filter by resource
-        response = auth_client.get("/api/v1/audit-logs/?resource=soul")
-        assert response.status_code == 200
-        for log in response.data["results"]:
-            assert "soul" in log["resource"].lower()
+    # `test_filter_by_resource` likewise, merged 2026-09-14 into
+    # apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_resource
+    # (its soul POST and 201 moved there; that fixture's judgment row is what
+    # the filter can actually fail on, which this copy never had).
 
     def test_filter_by_date_range(self, auth_client):
         """GET /api/v1/audit-logs/?date_from=&date_to= filters by date range."""
@@ -687,7 +654,7 @@ class TestAuditApiEndpoint:
             "that refuses everyone would satisfy the assertions above"
         )
 
-    def test_unauthenticated_cannot_access(self, api_client):
-        """Unauthenticated users cannot access /api/v1/audit-logs/ endpoint."""
-        response = api_client.get("/api/v1/audit-logs/")
-        assert response.status_code == 401
+    # `test_unauthenticated_cannot_access` stood here until 2026-09-14: a fresh
+    # APIClient, GET /api/v1/audit-logs/, 401 -- the same request and assertion
+    # as apps/audit/tests.py::TestAuditLogListRetrieve::test_list_audit_logs_unauthenticated,
+    # which is now the only copy.

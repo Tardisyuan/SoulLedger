@@ -90,36 +90,70 @@ class TestAuditLogListRetrieve:
         resp = self.admin_client.get(f"{BASE}/99999/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_filter_by_resource(self):
+    def test_filter_by_resource(self, django_capture_on_commit_callbacks):
         """Merged: the per-row check is the ``tests/test_audit.py`` twin's; this
         fixture's ``judgment`` row is what it can fail on. ``results``
         non-empty is new: it keeps the loop from passing on an empty page.
+
+        2026-09-14: the second twin, ``TestAuditApiEndpoint::test_filter_by_resource``,
+        is merged too. What it had that this did not was an API write -- a
+        soul POSTed and answered 201 -- ahead of the filter. That write now
+        happens here, with its on_commit audit row executed (this class is not
+        transactional; see test_filter_by_action), and the soul's own row must
+        be in the page, which neither copy asserted before.
         """
+        with django_capture_on_commit_callbacks(execute=True):
+            created = self.admin_client.post("/api/v1/souls/", {
+                "name": "Resource Filter Test",
+                "birth_date": "1990-01-01",
+            })
+        assert created.status_code == 201
+
         resp = self.admin_client.get(f"{BASE}/", {"resource": "soul"})
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["results"]
         for log in resp.data["results"]:
             assert "soul" in log["resource"].lower()
+        assert str(created.data["id"]) in {str(log["resource_id"]) for log in resp.data["results"]}
 
-    def test_filter_by_action(self):
+    def test_filter_by_action(self, django_capture_on_commit_callbacks):
         """Merged: the API-produced CREATE/UPDATE and the exact-set assertion
         are the ``tests/test_audit.py`` twin's (BT-09 there: with CREATE rows
         only, an inert filter passed). This fixture's UPDATE row discriminates
-        too."""
-        resp = self.admin_client.post("/api/v1/souls/", {
-            "name": "Filter Test Soul",
-            "birth_date": "1990-01-01",
-        })
+        too.
+
+        2026-09-14: the second twin, ``TestAuditApiEndpoint::test_filter_by_action``,
+        is merged here as well, and it exposed that the merge above was only
+        half real. This class is ``django_db`` without ``transaction=True``, so
+        the audit signal's ``on_commit`` callbacks never ran: the POST and
+        PATCH wrote no audit rows at all, and the assertions passed on the
+        fixture rows alone. Measured: with the CREATE branch of
+        ``_on_post_save`` made to ``return``, this test stayed green and only
+        the twin went red. ``django_capture_on_commit_callbacks(execute=True)``
+        makes the API writes real, and the soul's own CREATE row is now
+        required in the filtered page.
+        """
+        with django_capture_on_commit_callbacks(execute=True):
+            resp = self.admin_client.post("/api/v1/souls/", {
+                "name": "Filter Test Soul",
+                "birth_date": "1990-01-01",
+            })
         assert resp.status_code == 201
-        resp = self.admin_client.patch(
-            f"/api/v1/souls/{resp.data['id']}/", {"name": "Filter Test Soul Renamed"}
-        )
+        soul_id = str(resp.data["id"])
+        with django_capture_on_commit_callbacks(execute=True):
+            resp = self.admin_client.patch(
+                f"/api/v1/souls/{soul_id}/", {"name": "Filter Test Soul Renamed"}
+            )
         assert resp.status_code == 200
 
         resp = self.admin_client.get(f"{BASE}/", {"action": "CREATE"})
         assert resp.status_code == status.HTTP_200_OK
         actions = {log["action"] for log in resp.data["results"]}
         assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
+        assert soul_id in {str(log["resource_id"]) for log in resp.data["results"]}, (
+            "the API-created soul's CREATE row is not in the page -- the "
+            "filter is being checked against fixture rows only"
+        )
 
     def test_filter_by_user_id(self):
         """Merged: the per-row check is the ``tests/test_audit.py`` twin's.
@@ -189,10 +223,18 @@ class TestAuditLogActions:
         assert "judgment" in resp.data
 
     def test_stats_endpoint(self):
-        resp = self.admin_client.get(f"{BASE}/stats/")
-        assert resp.status_code == status.HTTP_200_OK
-        assert "action_distribution" in resp.data
-        assert "total_logs" in resp.data
+        """Merged 2026-09-14 with ``tests/test_audit.py::TestAuditLogViewSet::
+        test_stats_endpoint_admin_only`` -- same assertions, different caller.
+        That one authenticated the ADMIN with ``force_authenticate``, so the
+        request carried no JWT ``tenant_code`` and ``request.tenant`` was None;
+        this one's JWT sets it. Both callers are kept."""
+        forced = APIClient()
+        forced.force_authenticate(user=self.admin)
+        for client in (self.admin_client, forced):
+            resp = client.get(f"{BASE}/stats/")
+            assert resp.status_code == status.HTTP_200_OK
+            assert "action_distribution" in resp.data
+            assert "total_logs" in resp.data
 
     def test_timeline_endpoint(self):
         resp = self.admin_client.get(f"{BASE}/timeline/")

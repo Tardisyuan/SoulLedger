@@ -39,16 +39,40 @@ FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
 CATALOGUE = {codename for codename, _, _ in DEFAULT_PERMISSIONS}
 GRANTED = {c for codenames in ROLE_PERMISSIONS.values() for c in codenames}
 
-# `permissions="x"`, `permissions={"x"}`, `permissions={["x", "y"]}`
-_PROP = re.compile(r'permissions=\{?\[?((?:\s*["\'][^"\']+["\']\s*,?)+)\]?\}?')
+REPO = FRONTEND.parent
+
+# `permissions="x"`, `permissions={"x"}`, `permissions={["x", "y"]}`, and the
+# singular `permission=` that <RequireButton> takes.
+_PROP = re.compile(r'permissions?=\{?\[?((?:\s*["\'][^"\']+["\']\s*,?)+)\]?\}?')
+# `hasPermission("x")`, `hasAnyPermission(["x", "y"])`, `hasAllPermissions([...])`.
+# The prop was the only spelling this guard read until 2026-09-14 (BT-07); four
+# gates in pages and the judgment queue call the hook directly, and a typo in
+# any of them made the gate ADMIN-only with this test green.
+_CALL = re.compile(
+    r'has(?:Any|All)?Permissions?\(\s*\[?((?:\s*["\'][^"\']+["\']\s*,?)+)\]?\s*\)'
+)
 _STRING = re.compile(r'["\']([^"\']+)["\']')
 
 
+#: Every tree that ships code calling the permission hook or the RBAC
+#: components. `packages/core` is included because hooks move there
+#: (six did on 2026-09-04) and a guard rooted in `frontend/` would lose them.
+_ROOTS = (
+    FRONTEND / "app",
+    FRONTEND / "src",
+    FRONTEND / "components",
+    FRONTEND / "lib",
+    REPO / "packages" / "core" / "src",
+)
+
+
 def _sources():
-    for root in ("app", "src"):
-        for path in (FRONTEND / root).rglob("*.tsx"):
+    for root in _ROOTS:
+        for path in root.rglob("*.ts*"):
+            if path.suffix not in (".ts", ".tsx"):
+                continue
             # Test files may name a codename that does not exist on purpose.
-            if "__tests__" in path.parts:
+            if "__tests__" in path.parts or ".test." in path.name:
                 continue
             yield path
 
@@ -72,11 +96,12 @@ def _usages():
     found = {}
     for path in _sources():
         text = _strip_comments(path.read_text(encoding="utf-8"))
-        for match in _PROP.finditer(text):
-            for name in _STRING.findall(match.group(1)):
-                found.setdefault(name, set()).add(
-                    str(path.relative_to(FRONTEND))
-                )
+        for pattern in (_PROP, _CALL):
+            for match in pattern.finditer(text):
+                for name in _STRING.findall(match.group(1)):
+                    found.setdefault(name, set()).add(
+                        str(path.relative_to(REPO))
+                    )
     return found
 
 
@@ -92,6 +117,21 @@ def test_the_scan_finds_something():
         f"only {len(usages)} permission strings found across the frontend -- "
         f"the pattern has stopped matching, not the codebase stopped using them"
     )
+
+
+def test_the_scan_reads_hook_calls_as_well_as_props():
+    """The direct `hasPermission("...")` gates, named, so the call pattern
+    cannot silently stop matching while the prop pattern keeps
+    `test_the_scan_finds_something` above its floor."""
+    usages = _usages()
+    for name, path in (
+        ("system.settings", "frontend/app/permissions/page.tsx"),
+        ("audit.read", "frontend/app/audit/page.tsx"),
+        ("judgment.execute", "frontend/src/components/judgment/JudgmentQueueConsole.tsx"),
+    ):
+        assert path in usages.get(name, set()), (
+            f"hasPermission({name!r}) in {path} is not seen by the scan"
+        )
 
 
 def test_every_permission_string_names_a_real_codename():
