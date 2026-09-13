@@ -143,13 +143,11 @@ class PermissionAPITest(TestCase):
     #
     # 2026-09-13: six tests in this class and RoleAPITest had a same-named twin
     # in tests/test_perm_api.py and were merged into it (each merged test names
-    # what it took from here). `test_list_permissions_unauthenticated` stayed:
-    # it is the same request and assertion as its twin, so no mutation could
-    # show the merge lost nothing, and deleting without that proof was ruled out.
-
-    def test_list_permissions_unauthenticated(self):
-        response = self.client.get("/api/v1/perm/permissions/")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    # what it took from here). 2026-09-14: the seventh,
+    # `test_list_permissions_unauthenticated`, was deleted from here outright —
+    # a fresh APIClient, the same GET, the same 401, and this class's setUp
+    # seeds nothing an unauthenticated request reaches. Its twin in
+    # tests/test_perm_api.py is the only copy.
 
     # -- create_permission --
 
