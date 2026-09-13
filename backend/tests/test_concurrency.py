@@ -580,6 +580,146 @@ class TestDispositionExecuteHoldsItsLock:
 
 
 # ---------------------------------------------------------------------------
+# The same shape one call further down: `ReincarnationService.execute`.
+#
+# BD-15 moved `DispositionService.execute` under the disposition lock and left
+# the very next line, `ReincarnationService.execute(disposition)`, after the
+# `atomic()` block. By then the soul was committed as REINCARNATING with its
+# row lock released, so a rebirth could run to completion in the gap and
+# `REINCARNATION_TRIGGERED` was logged *after* `REINCARNATION_COMPLETED`, for a
+# soul that was already ALIVE again. The soul used is a real Chinese one
+# (`CN_DIYU`): this file's `cn_tenant` resolves to no civilization, which would
+# send the disposition to SETTLED and never reach the rebirth path.
+# ---------------------------------------------------------------------------
+
+
+def _rebirth_capable_disposition():
+    from apps.disposition.models import Disposition
+
+    tenant, _ = Tenant.objects.get_or_create(
+        code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
+    )
+    soul = Soul.objects.create(
+        name="rebirth probe", tenant=tenant, current_state=SoulState.DISPOSED
+    )
+    return tenant, Disposition.objects.create(soul=soul, tenant=tenant)
+
+
+@pytest.mark.django_db(transaction=True)
+class TestReincarnationTriggerHoldsTheDispositionLock:
+    def test_the_rebirth_trigger_runs_inside_the_views_locked_transaction(self, db):
+        """Serial, so it runs on every engine. Same probe as BD-15's."""
+        from unittest.mock import patch
+
+        from django.db import transaction
+
+        from apps.reincarnation.services import ReincarnationService
+
+        tenant, disposition = _rebirth_capable_disposition()
+        client = _admin_client(tenant, "rt_serial")
+        real_execute = ReincarnationService.execute
+        seen = []
+
+        def spy(d):
+            seen.append(transaction.get_connection().in_atomic_block)
+            return real_execute(d)
+
+        with patch.object(ReincarnationService, "execute", spy):
+            response = client.post(
+                f"/api/v1/disposition/{disposition.id}/execute/", {}, format="json"
+            )
+
+        assert response.status_code == 200, response.data
+        assert seen == [True], (
+            f"ReincarnationService.execute ran with in_atomic_block={seen}: the "
+            "disposition's execution had already committed and released the "
+            "soul, so a rebirth could complete before the trigger was logged"
+        )
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_a_rebirth_cannot_complete_between_execution_and_its_trigger(self, db):
+        """Two real connections.
+
+        A executes the disposition and lingers inside the rebirth trigger; B,
+        arriving meanwhile, asks `/reincarnation/reborn/` for the same soul.
+        B must wait on the soul row A still holds, and the event log must say
+        TRIGGERED before anything says COMPLETED. (B then gets 409: it read
+        the soul as DISPOSED before waiting, and REINCARNATING -> REINCARNATING
+        is not a move. A retry succeeds. That answer is incidental and not
+        asserted here.) With the trigger outside the lock B does not wait: it
+        completes the rebirth first and A logs TRIGGERED afterwards.
+        """
+        import time
+        from unittest.mock import patch
+
+        from django.db import connections
+
+        from apps.events.models import SoulEvent
+        from apps.reincarnation.services import ReincarnationService
+
+        tenant, disposition = _rebirth_capable_disposition()
+        soul_id = disposition.soul_id
+        clients = {
+            "a": _admin_client(tenant, "rt_a"),
+            "b": _admin_client(tenant, "rt_b"),
+        }
+        real_execute = ReincarnationService.execute
+        a_inside = threading.Event()
+        results = {}
+        b_waited = {"seconds": None}
+
+        def lingering_execute(d):
+            if threading.current_thread().name == "a":
+                a_inside.set()
+                time.sleep(1.0)
+            return real_execute(d)
+
+        def post(label):
+            try:
+                if label == "a":
+                    response = clients["a"].post(
+                        f"/api/v1/disposition/{disposition.id}/execute/", {}, format="json"
+                    )
+                else:
+                    assert a_inside.wait(timeout=10), "A never reached the trigger"
+                    started = time.monotonic()
+                    response = clients["b"].post(
+                        "/api/v1/reincarnation/reborn/",
+                        {"soul_id": str(soul_id)},
+                        format="json",
+                    )
+                    b_waited["seconds"] = time.monotonic() - started
+                results[label] = response.status_code
+            except Exception as exc:  # surfaced in the assertions below
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        with patch.object(ReincarnationService, "execute", lingering_execute):
+            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=30)
+
+        order = list(
+            SoulEvent.all_objects.filter(
+                soul_id=soul_id, event_type__startswith="REINCARNATION_"
+            )
+            .order_by("create_time")
+            .values_list("event_type", flat=True)
+        )
+        assert results.get("a") == 200, results
+        assert order[:1] == ["REINCARNATION_TRIGGERED"], (
+            f"events {order} (results {results}): the rebirth completed before "
+            f"the execution that triggered it was logged"
+        )
+        assert b_waited["seconds"] is not None and b_waited["seconds"] > 0.5, (
+            f"B did not wait on A's soul lock ({b_waited}, results {results})"
+        )
+
+
+# ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
 
@@ -632,6 +772,13 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # lock to wait on. Its serial counterpart,
         # test_a_stale_copy_cannot_undo_a_refusal, runs on every engine.
         "test_a_decision_blocked_on_the_lock_does_not_undo_a_refusal",
+        # 2026-09-13, the BD-15 shape one call further down: a rebirth
+        # requested while the disposition's execution is still logging its
+        # rebirth trigger must WAIT on the soul row lock. SQLite has no row
+        # lock to wait on. Its serial counterpart,
+        # test_the_rebirth_trigger_runs_inside_the_views_locked_transaction,
+        # runs on every engine.
+        "test_a_rebirth_cannot_complete_between_execution_and_its_trigger",
         # BD-15 (2026-09-13): a second disposition executor must WAIT on the
         # disposition row lock the first still holds. SQLite has no row lock
         # to wait on. Its serial counterpart,
