@@ -45,7 +45,12 @@ export default defineConfig({
    * cannot; `retries: 2` below stays as a backstop. Any NEW text assertion in
    * these specs should go through the same helpers.
    *
-   * Current state, all three projects, 2026-08-14: 37/37 each.
+   * That count is stale on its own terms: 2026-08-14 predates the switch
+   * (below) from the dev server to a build, which changed both the numbers
+   * and what a failure means. CLAUDE.md carries the current measurement
+   * (108 passed per project, 2026-09-05) — trust that over a comment here,
+   * since a count copied into two places is exactly the kind of record this
+   * repo has watched drift before.
    */
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
@@ -53,7 +58,7 @@ export default defineConfig({
     { name: "mobile-chrome", use: { ...devices["Pixel 5"] } },
   ],
   /**
-   * Only the Next.js dev server — there is no Django here. Every request to
+   * There is no Django here, dev server or build alike. Every request to
    * `/api/v1/**` is answered by Playwright route mocks (see e2e/fixtures.ts),
    * which is what keeps this suite runnable in CI without Postgres or Redis.
    */

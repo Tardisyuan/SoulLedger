@@ -14,7 +14,6 @@ import pytest
 
 from apps.ledger.tasks import (
     recalculate_all_ledgers,
-    recalculate_soul_ledger_task,
     recalculate_tenant_ledgers,
 )
 from apps.souls.models import Soul
@@ -61,26 +60,7 @@ class TestRecalculateTenantLedgersIsolation:
         assert result["updated"] == 1
 
 
-@pytest.mark.django_db
-class TestRecalculateSingleTenantValidation:
-    @pytest.fixture(autouse=True)
-    def setup(self, db):
-        self.tenant_a = Tenant.objects.create(code="LDG_SINGLE_A", display_name="Tenant A")
-        self.tenant_b = Tenant.objects.create(code="LDG_SINGLE_B", display_name="Tenant B")
-        self.soul = Soul.objects.create(name="Soul", tenant=self.tenant_a, birth_year=1900, death_year=1950)
-
-    def test_no_tenant_id_recalculates_as_before(self):
-        with patch("apps.ledger.services.LedgerService.recalculate_soul_ledger") as mock_recalc:
-            recalculate_soul_ledger_task(str(self.soul.id))
-        mock_recalc.assert_called_once_with(self.soul)
-
-    def test_matching_tenant_id_recalculates(self):
-        with patch("apps.ledger.services.LedgerService.recalculate_soul_ledger") as mock_recalc:
-            recalculate_soul_ledger_task(str(self.soul.id), tenant_id=str(self.tenant_a.id))
-        mock_recalc.assert_called_once_with(self.soul)
-
-    def test_a_mismatched_tenant_id_is_refused(self):
-        with patch("apps.ledger.services.LedgerService.recalculate_soul_ledger") as mock_recalc:
-            result = recalculate_soul_ledger_task(str(self.soul.id), tenant_id=str(self.tenant_b.id))
-        mock_recalc.assert_not_called()
-        assert "error" in result
+# `TestRecalculateSingleTenantValidation` removed 2026-09-13 (DB-03): it tested
+# `recalculate_soul_ledger_task` (celery name `ledger.recalculate_single`),
+# deleted as dead code — no scheduler and no production caller anywhere in
+# the tree (see `apps/ledger/tasks.py`).

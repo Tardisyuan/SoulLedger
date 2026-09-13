@@ -118,26 +118,7 @@ def test_the_proposer_is_not_notified_of_their_own_proposal(
     )
 
 
-def test_no_dispatch_notification_is_written_to_the_unread_model(
-    db, cn_tenant, target_tenant, proposer, target_operator, soul
-):
-    """The old table must stay empty.
-
-    Kept as a distinct assertion rather than folded into the first: a
-    dual-write would make the first test pass and leave the defect in place,
-    growing a table with no reader.
-    """
-    from apps.tenants.models import Notification as UnreadNotification
-
-    DispatchService.propose(
-        source_tenant=cn_tenant,
-        target_tenant=target_tenant,
-        soul=soul,
-        dispatcher=proposer,
-        reason="Judged under the wrong cosmology.",
-    )
-
-    assert UnreadNotification.objects.count() == 0, (
-        "apps.tenants.Notification was written again. Nothing reads that "
-        "model; a row there is a message nobody receives."
-    )
+# `test_no_dispatch_notification_is_written_to_the_unread_model` removed
+# 2026-09-13 (BP-13): it pinned `apps.tenants.Notification`'s row count at 0.
+# The model itself is now deleted (migration 0010 in `apps/tenants`), so the
+# table it guarded against a dual-write into no longer exists to write to.

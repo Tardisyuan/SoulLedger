@@ -78,6 +78,15 @@ test.describe("WebSocket 不再逃过 fixture", () => {
     await page.waitForTimeout(1500);
 
     expect(api.apiOrigin, "一条 API 请求都没记到,下面的比较无从谈起").not.toBeNull();
+    // 守卫的守卫(FT-12,2026-09-13):`for (const url of api.socketUrls)` 在
+    // 一个 socket 都没连上时零迭代、零断言,和「全部都同源」输出一模一样——
+    // 这正是本文件顶部说的「把 socket 指到错误主机的回归对整套 e2e 不可见」
+    // 那个陷阱本身,只是换了个位置。/notifications 页按设计应当开一个通知
+    // socket(见 packages/core 的 WS 客户端),先断言真的连了。
+    expect(
+      api.socketUrls.length,
+      "/notifications 应当打开至少一个 WebSocket 连接;零连接意味着下面的同源检查从未真正比较过任何东西"
+    ).toBeGreaterThan(0);
     const expected = api.apiOrigin!.replace(/^http/, "ws");
     for (const url of api.socketUrls) {
       expect(url, `socket 连到了 ${url},而 API 在 ${api.apiOrigin}`).toContain(expected);

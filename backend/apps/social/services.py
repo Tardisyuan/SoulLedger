@@ -19,11 +19,9 @@ class PostService:
         `tenant` is optional but should be supplied by any caller that has
         one in scope — when present, a post_id belonging to a different
         tenant is silently skipped (the filter simply matches nothing)
-        rather than updated, mirroring the explicit tenant_id check in
-        apps.ledger.tasks.recalculate_soul_ledger_task. Optional because
-        some callers (e.g. tests exercising the counter directly) have no
-        tenant in scope and the old untenanted behavior must keep working
-        for them.
+        rather than updated. Optional because some callers (e.g. tests
+        exercising the counter directly) have no tenant in scope and the
+        old untenanted behavior must keep working for them.
         """
         qs = Post.objects.filter(pk=post_id)
         if tenant is not None:

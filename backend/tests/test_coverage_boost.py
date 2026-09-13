@@ -585,42 +585,10 @@ class TestPermissionCache:
         c.set("ADMIN", "test.perm", True)
         assert c.get("ADMIN", "test.perm") is True
 
-    def test_has_permission_db_lookup(self, db):
-        from apps.perm.models import Permission, Role, RolePermission
-        role, _ = Role.objects.get_or_create(
-            name="JUDGE", defaults={"display_name": "Judge"}
-        )
-        perm, _ = Permission.objects.get_or_create(
-            codename="judgment.execute", defaults={
-                "name": "Execute Judgment", "category": "judgment"
-            }
-        )
-        RolePermission.objects.get_or_create(role=role, permission=perm)
-        with patch("apps.perm.cache.PermissionCache._connect_redis"):
-            c = PermissionCache()
-            c._redis_client = None
-            result = c.has_permission("JUDGE", "judgment.execute")
-            assert result is True
-
-    def test_has_permission_inherited(self, db):
-        from apps.perm.models import Permission, Role, RolePermission
-        parent, _ = Role.objects.get_or_create(
-            name="PARENT_ROLE", defaults={"display_name": "Parent"}
-        )
-        child, _ = Role.objects.get_or_create(
-            name="CHILD_ROLE", defaults={"display_name": "Child", "parent": parent}
-        )
-        perm, _ = Permission.objects.get_or_create(
-            codename="test.inherit", defaults={
-                "name": "Test Inherit", "category": "test"
-            }
-        )
-        RolePermission.objects.get_or_create(role=parent, permission=perm)
-        with patch("apps.perm.cache.PermissionCache._connect_redis"):
-            c = PermissionCache()
-            c._redis_client = None
-            result = c.has_permission("CHILD_ROLE", "test.inherit")
-            assert result is True
+    # `test_has_permission_db_lookup` / `test_has_permission_inherited` removed
+    # 2026-09-13 (BP-09): `PermissionCache.has_permission()` was deleted as dead
+    # code (only test callers repo-wide; it duplicated `checker.py`'s cache key
+    # with different, inheritance-aware semantics `checker.py` never applies).
 
 
 # =============================================================================
@@ -882,11 +850,22 @@ class TestEventBusReachesTheChannelLayer:
         assert mock_cl.group_send.call_count >= 1
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_no_channel_layer(self, mock_get_cl):
+    def test_publish_no_channel_layer(self, mock_get_cl, caplog):
+        # BT-09 (2026-09-13): used to call `publish` and assert nothing —
+        # "did not raise" was the only claim, and that was true whether this
+        # returned early (the correct behaviour) or fell all the way through
+        # to `WebSocketHandler`'s outer `except Exception: logger.debug(...)`
+        # (a different, unintended path that happens to also not raise).
+        # Asserting the debug log's absence tells those two apart.
         mock_get_cl.return_value = None
-        event_bus.publish(
-            domain="workflow", event_type="TEST",
-            payload={}, tenant_code="CN_DIYU",
+        with caplog.at_level("DEBUG", logger="apps.events.handlers.websocket_handler"):
+            event_bus.publish(
+                domain="workflow", event_type="TEST",
+                payload={}, tenant_code="CN_DIYU",
+            )
+        assert not caplog.records, (
+            "no channel layer configured is not a failure; it should return "
+            "quietly rather than falling through to the failure-logging path"
         )
 
     @patch("channels.layers.get_channel_layer")
@@ -911,14 +890,30 @@ class TestEventBusReachesTheChannelLayer:
         assert message["data"]["_permission"] == "workflow.read"
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_exception_handling(self, mock_get_cl):
+    def test_publish_exception_handling(self, mock_get_cl, django_capture_on_commit_callbacks, caplog):
+        # BT-09 (2026-09-13): used to call `publish` and assert nothing, AND
+        # — separately from the weak assertion — never actually ran the code
+        # under test. `WebSocketHandler.handle` defers delivery to
+        # `transaction.on_commit` (see `test_publish_with_user_ids` above for
+        # why), and `@pytest.mark.django_db` never commits; without
+        # `django_capture_on_commit_callbacks(execute=True)` the deferred
+        # `_publish` closure — where `group_send`'s side_effect actually
+        # fires — was simply discarded on rollback. The failure path this
+        # test's name claims to cover ran zero times.
         mock_cl = MagicMock()
-        mock_cl.group_send.side_effect = Exception("Channel layer down")
+        mock_cl.group_send = AsyncMock(side_effect=Exception("Channel layer down"))
         mock_get_cl.return_value = mock_cl
-        event_bus.publish(
-            domain="workflow", event_type="TEST",
-            payload={}, tenant_code="CN_DIYU",
-        )
+        with (
+            caplog.at_level("DEBUG", logger="apps.events.handlers.websocket_handler"),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            event_bus.publish(
+                domain="workflow", event_type="TEST",
+                payload={}, tenant_code="CN_DIYU",
+            )
+        assert any(
+            "publish failed for workflow.TEST" in r.getMessage() for r in caplog.records
+        ), "the swallowed exception should still be logged, not silent"
 
     def test_channel_naming_tenant_group(self):
         assert ChannelNaming.tenant_group("CN_DIYU") == "rt_tenant_CN_DIYU"
@@ -1313,31 +1308,19 @@ class TestPermissionChecker:
                 result = check_permission(user, "soul.read")
                 assert result is True
 
-    def test_check_permission_cache_miss_db_lookup(self):
-        user = MagicMock()
-        user.is_authenticated = True
-        user.role = "JUDGE"
-        with patch("apps.perm.checker._permission_cache") as mock_cache:
-            mock_cache.get.return_value = None
-            with patch("apps.perm.models.Permission.objects") as mock_perm_objs:
-                mock_perm_objs.filter.return_value.exists.return_value = True
-                with patch("apps.perm.models.RolePermission.objects") as mock_rp:
-                    mock_rp.filter.return_value.exists.return_value = True
-                    result = check_permission(user, "judgment.execute")
-                    assert result is True
-
-    def test_check_permission_cache_miss_db_no_perm(self):
-        user = MagicMock()
-        user.is_authenticated = True
-        user.role = "VIEWER"
-        with patch("apps.perm.checker._permission_cache") as mock_cache:
-            mock_cache.get.return_value = None
-            with patch("apps.perm.models.Permission.objects") as mock_perm_objs:
-                mock_perm_objs.filter.return_value.exists.return_value = True
-                with patch("apps.perm.models.RolePermission.objects") as mock_rp:
-                    mock_rp.filter.return_value.exists.return_value = False
-                    result = check_permission(user, "soul.delete")
-                    assert result is False
+    # `test_check_permission_cache_miss_db_lookup` / `_db_no_perm` removed
+    # 2026-09-13 (BT-09): both mocked `RolePermission.objects.filter(...)
+    # .exists()` wholesale, so they could not see WHAT `check_permission`
+    # filtered on — only that `.exists()` returned whatever the mock was told
+    # to. `checker.py`'s own comment documents the exact bug this shape once
+    # hid: the DB branch filtered `role=role` (a string into the FK's `id`
+    # column) and raised on every call, silently falling through to the dict
+    # fallback via a bare `except`, so "no RolePermission row ever granted
+    # anything" went unnoticed for months. A mock that stands in for
+    # `RolePermission.objects` is blind to exactly that class of defect.
+    # `apps/perm/test_checker_grants.py` covers the real path (`test_a_grant_
+    # grants` / `test_a_revocation_revokes`) against actual `RolePermission`
+    # rows, which would have caught it.
 
     def test_check_permissions_require_all(self):
         user = MagicMock()
@@ -1354,16 +1337,20 @@ class TestPermissionChecker:
         assert result is True
 
     def test_check_permissions_require_all_fails(self):
+        # Rewritten 2026-09-13 (BT-09): the mocked version patched
+        # `RolePermission.objects` wholesale, which is blind to what the real
+        # query filters on (see the removed tests above this one for the bug
+        # that shape hid). An unseeded, undicted codename reaches
+        # `check_permission`'s ROLE_PERMISSIONS-dict fallback without
+        # touching RolePermission at all, so this exercises `require_all`'s
+        # aggregation (mixed True/False must be False) against the real DB
+        # (class-level `@pytest.mark.django_db` above), no mock needed.
         user = MagicMock()
         user.is_authenticated = True
         user.role = "VIEWER"
         with patch("apps.perm.checker._permission_cache") as mock_cache:
             mock_cache.get.return_value = None
-            with patch("apps.perm.models.Permission.objects") as mock_perm_objs:
-                mock_perm_objs.filter.return_value.exists.return_value = True
-                with patch("apps.perm.models.RolePermission.objects") as mock_rp:
-                    mock_rp.filter.return_value.exists.return_value = False
-                    result = check_permissions(
-                        user, ["soul.read", "soul.delete"], require_all=True
-                    )
-                    assert result is False
+            result = check_permissions(
+                user, ["soul.read", "coverage_boost.unseeded_and_undicted"], require_all=True
+            )
+            assert result is False

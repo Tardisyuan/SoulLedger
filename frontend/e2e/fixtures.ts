@@ -5,7 +5,9 @@ import { test as base, type Locator, type Page, type Request } from "@playwright
  * REST API.
  *
  * ── Why the API is mocked ─────────────────────────────────────────────────
- * playwright.config.ts starts ONE server: `npm run dev` (Next.js on :3333).
+ * playwright.config.ts starts ONE server: `npm run start:e2e` (a Next.js
+ * build served on :3333 — see playwright.config.ts's `webServer` for why
+ * this is a build and not `next dev`).
  * Nothing starts Django, and packages/core/src/api/client.ts points at
  * NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1" — so in CI every XHR
  * this app makes is a connection refused. These specs therefore intercept
