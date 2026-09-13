@@ -99,6 +99,14 @@ jobs:
         run: npm run typecheck --workspace @soulledger/core
       - name: Lint @soulledger/core
         run: npm run lint --workspace @soulledger/core
+      # The third core gate, missing here until 2026-09-14 (audit IS-16) while
+      # `.git/hooks/pre-push` ran it. Not covered by the other two:
+      # `domBoundary.test.ts` / `nodeGlobals.test.ts` assert that DOM and Node
+      # globals stay unresolvable (typecheck passes on empty interfaces), and
+      # `generatedSchemaIsCurrent.test.ts` is the only check that
+      # `src/api/generated/schema.ts` matches the committed OpenAPI document.
+      - name: Test @soulledger/core
+        run: npm run test --workspace @soulledger/core
       - name: TypeScript check
         run: |
           cd frontend
