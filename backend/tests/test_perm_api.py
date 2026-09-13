@@ -187,24 +187,9 @@ class TestPermissionExportImport:
         assert response.status_code == 200
 
 
-@pytest.mark.django_db
-class TestPermissionRoleMatrix:
-    """Test permission enforcement across roles."""
-
-    # `test_admin_can_manage_permissions` stood here until 2026-09-14: the same
-    # ADMIN-with-tenant JWT and the same GET as the first request of
-    # TestPermissionAPI::test_list_permissions_authenticated, asserting the
-    # same 200. Deleted; that test is the only copy.
-
-    def test_judge_cannot_manage_permissions(self, api_client, judge_user, cn_tenant):
-        """JUDGE role cannot create permissions."""
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = RefreshToken.for_user(judge_user)
-        if judge_user.tenant:
-            token["tenant_code"] = judge_user.tenant.code
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-        response = api_client.post("/api/v1/perm/permissions/create/", {
-            "codename": "test.create",
-            "name": "Test",
-        }, format="json")
-        assert response.status_code == 403
+# `TestPermissionRoleMatrix` stood here until 2026-09-14 with two tests, each a
+# copy of one above: `test_admin_can_manage_permissions` was the first request
+# of TestPermissionAPI::test_list_permissions_authenticated (same ADMIN JWT,
+# same GET, same 200), and `test_judge_cannot_manage_permissions` was the JUDGE
+# half of TestPermissionAPI::test_create_permission_non_admin (same JWT, same
+# POST, same 403; only the `name` in the body differed).
