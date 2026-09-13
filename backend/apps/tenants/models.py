@@ -33,6 +33,3 @@ class Tenant(AuditUserFields, models.Model):
     # See `backend/tests/test_a_dispatch_notification_reaches_a_reader.py` for
     # the incident this model was the cause of, and migration 0010 for the
     # table drop.
-
-    def __str__(self):
-        return f"[{self.notification_type}] {self.title}"
