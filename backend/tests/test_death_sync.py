@@ -179,6 +179,47 @@ class TestDeathSyncService:
         assert result.status == DeathRegistrationStatus.FAILED
         assert result.error_code == "SOUL_NOT_ALIVE"
 
+    def test_a_processed_registration_is_queued_for_the_tenants_webhooks(self, cn_tenant, api_key, soul):
+        """BD-11: nothing ever started a delivery for a registration.
+
+        `WebhookService.deliver_webhook` was called only by the *retry* task,
+        and nothing created the first delivery row for it to retry, so a
+        registered webhook never heard about a death. The delivery now goes
+        through the EventBus webhook path (recorded row, signed, bounded
+        retries in `apps/events/tasks.py`) instead of a second pipeline.
+        """
+        from apps.death_sync.models import WebhookConfig
+        from apps.events.models import EventWebhookDelivery
+
+        key, _ = api_key
+        WebhookConfig.objects.create(
+            tenant=cn_tenant, api_key=key, url="https://example.invalid/hook",
+            signing_secret="s", events=["DEATH_SYNC_PROCESSED"],
+        )
+        result = DeathSyncService.register_death(
+            tenant=cn_tenant, api_key=key,
+            payload={"soul_lookup": {"soul_id": str(soul.id)}, "death_date": "2026-06-01"},
+            idempotency_key="bd11-1",
+        )
+        assert result.status == DeathRegistrationStatus.PROCESSED
+
+        deliveries = list(EventWebhookDelivery.objects.filter(event_type="DEATH_SYNC_PROCESSED"))
+        assert len(deliveries) == 1, "no delivery was recorded for a processed registration"
+        data = deliveries[0].payload_json["payload"]
+        assert data["registration_id"] == str(result.id)
+        assert data["soul_id"] == str(soul.id)
+
+    def test_a_failed_registration_announces_nothing(self, cn_tenant, api_key):
+        from apps.events.models import EventWebhookDelivery
+
+        key, _ = api_key
+        DeathSyncService.register_death(
+            tenant=cn_tenant, api_key=key,
+            payload={"soul_lookup": {"name": "Nonexistent"}, "death_date": "2026-06-01"},
+            idempotency_key="bd11-2",
+        )
+        assert not EventWebhookDelivery.objects.filter(event_type="DEATH_SYNC_PROCESSED").exists()
+
 
 # ── Authentication Tests ─────────────────────────────────────────────
 
@@ -399,7 +440,7 @@ class TestDeathSyncHealthTenantIsolation:
 
     @pytest.fixture(autouse=True)
     def setup(self, db, cn_tenant, eu_tenant):
-        from apps.death_sync.models import WebhookConfig, WebhookDeliveryLog, WebhookDeliveryStatus
+        from apps.death_sync.models import WebhookConfig
 
         self.cn_tenant = cn_tenant
         self.eu_tenant = eu_tenant
@@ -432,12 +473,14 @@ class TestDeathSyncHealthTenantIsolation:
             tenant=eu_tenant, api_key=self.eu_key, url="https://example.com/eu",
             signing_secret="eu_secret",
         )
-        eu_registration = DeathRegistrationRequest.objects.create(
-            tenant=eu_tenant, api_key=self.eu_key, idempotency_key="eu-webhook-src",
-            source_system="HOSPITAL", source_payload={}, status=DeathRegistrationStatus.PROCESSED,
-        )
-        WebhookDeliveryLog.objects.create(
-            webhook=eu_webhook, registration=eu_registration, status=WebhookDeliveryStatus.FAILED,
+        # BD-11: deliveries are EventWebhookDelivery rows now. This fixture used
+        # to plant a WebhookDeliveryLog, a table production never writes, so
+        # the count it pinned was one no real failure could ever raise.
+        from apps.events.models import EventWebhookDelivery, EventWebhookStatus
+
+        EventWebhookDelivery.objects.create(
+            webhook=eu_webhook, tenant=eu_tenant, domain="deathsync",
+            event_type="DEATH_SYNC_PROCESSED", payload_json={}, status=EventWebhookStatus.FAILED,
         )
 
     def _call_health_view(self, raw_key):
