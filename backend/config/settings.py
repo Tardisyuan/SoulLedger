@@ -384,9 +384,9 @@ if not DEBUG:
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "json": {
-                "format": '{"time": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
-            },
+            # A real encoder, not a JSON-shaped `%` template: that one broke
+            # on any quote or newline in a message (IS-22).
+            "json": {"()": "config.json_logging.JsonFormatter"},
         },
         "handlers": {
             "console": {
