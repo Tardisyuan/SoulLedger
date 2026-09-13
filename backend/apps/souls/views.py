@@ -111,18 +111,16 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         ordering = self.request.query_params.get('ordering', '').strip()
         if ordering in ('karmic_balance', '-karmic_balance'):
             qs = qs.order_by_karma(descending=ordering.startswith('-'))
-            self._skip_filter_ordering = True
+            # `_skip_filter_ordering` used to be set here and read by an
+            # overridden `filter_queryset` below — removed 2026-09-13 (BD-17):
+            # both of that method's branches returned the same
+            # `super().filter_queryset(queryset)` result, so the flag never
+            # actually skipped DRF's ordering filter; it was pure dead
+            # bookkeeping around a passthrough. Whether karma ordering
+            # surviving DRF's OrderingFilter is itself correct is a
+            # behavior question, not a cleanup one — see BD-17 in the audit
+            # ledger.
 
-        return qs
-
-    def filter_queryset(self, queryset):
-        """Apply FilterSet filtering, skip DRF ordering if karma ordering already applied."""
-        # Apply FilterSet filtering (search, filters, etc.)
-        qs = super().filter_queryset(queryset)
-        # Skip DRF ordering if karma ordering already applied
-        if getattr(self, '_skip_filter_ordering', False):
-            self._skip_filter_ordering = False
-            return qs
         return qs
 
     def get_serializer_class(self):
