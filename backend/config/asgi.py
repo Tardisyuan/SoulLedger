@@ -16,6 +16,7 @@ django_asgi_app = get_asgi_application()
 from channels.routing import ProtocolTypeRouter, URLRouter
 
 from apps.core.ws_auth import JWTAuthMiddleware
+from apps.core.ws_origin import CorsOriginValidator
 from apps.core.ws_permissions import PermissionMiddleware
 from apps.core.ws_routing import websocket_urlpatterns
 from apps.core.ws_tenant import TenantMiddleware
@@ -28,8 +29,9 @@ def _build_ws_middleware_chain():
         <- PermissionMiddleware
         <- TenantMiddleware
         <- JWTAuthMiddleware
+        <- CorsOriginValidator   (refuses a foreign browser origin before auth)
     """
-    return (
+    return CorsOriginValidator(
         JWTAuthMiddleware(
             TenantMiddleware(
                 PermissionMiddleware(
