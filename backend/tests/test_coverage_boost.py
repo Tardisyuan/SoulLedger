@@ -850,11 +850,22 @@ class TestEventBusReachesTheChannelLayer:
         assert mock_cl.group_send.call_count >= 1
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_no_channel_layer(self, mock_get_cl):
+    def test_publish_no_channel_layer(self, mock_get_cl, caplog):
+        # BT-09 (2026-09-13): used to call `publish` and assert nothing —
+        # "did not raise" was the only claim, and that was true whether this
+        # returned early (the correct behaviour) or fell all the way through
+        # to `WebSocketHandler`'s outer `except Exception: logger.debug(...)`
+        # (a different, unintended path that happens to also not raise).
+        # Asserting the debug log's absence tells those two apart.
         mock_get_cl.return_value = None
-        event_bus.publish(
-            domain="workflow", event_type="TEST",
-            payload={}, tenant_code="CN_DIYU",
+        with caplog.at_level("DEBUG", logger="apps.events.handlers.websocket_handler"):
+            event_bus.publish(
+                domain="workflow", event_type="TEST",
+                payload={}, tenant_code="CN_DIYU",
+            )
+        assert not caplog.records, (
+            "no channel layer configured is not a failure; it should return "
+            "quietly rather than falling through to the failure-logging path"
         )
 
     @patch("channels.layers.get_channel_layer")
@@ -879,14 +890,30 @@ class TestEventBusReachesTheChannelLayer:
         assert message["data"]["_permission"] == "workflow.read"
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_exception_handling(self, mock_get_cl):
+    def test_publish_exception_handling(self, mock_get_cl, django_capture_on_commit_callbacks, caplog):
+        # BT-09 (2026-09-13): used to call `publish` and assert nothing, AND
+        # — separately from the weak assertion — never actually ran the code
+        # under test. `WebSocketHandler.handle` defers delivery to
+        # `transaction.on_commit` (see `test_publish_with_user_ids` above for
+        # why), and `@pytest.mark.django_db` never commits; without
+        # `django_capture_on_commit_callbacks(execute=True)` the deferred
+        # `_publish` closure — where `group_send`'s side_effect actually
+        # fires — was simply discarded on rollback. The failure path this
+        # test's name claims to cover ran zero times.
         mock_cl = MagicMock()
-        mock_cl.group_send.side_effect = Exception("Channel layer down")
+        mock_cl.group_send = AsyncMock(side_effect=Exception("Channel layer down"))
         mock_get_cl.return_value = mock_cl
-        event_bus.publish(
-            domain="workflow", event_type="TEST",
-            payload={}, tenant_code="CN_DIYU",
-        )
+        with (
+            caplog.at_level("DEBUG", logger="apps.events.handlers.websocket_handler"),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            event_bus.publish(
+                domain="workflow", event_type="TEST",
+                payload={}, tenant_code="CN_DIYU",
+            )
+        assert any(
+            "publish failed for workflow.TEST" in r.getMessage() for r in caplog.records
+        ), "the swallowed exception should still be logged, not silent"
 
     def test_channel_naming_tenant_group(self):
         assert ChannelNaming.tenant_group("CN_DIYU") == "rt_tenant_CN_DIYU"
