@@ -320,6 +320,128 @@ class TestSoulStateTransitionConcurrency:
 
 
 # ---------------------------------------------------------------------------
+# BD-09: two decisions on *different* nodes of one workflow.
+#
+# `complete_node` decided the workflow's next state from the in-memory copy the
+# caller loaded before the transaction, and its `self.save()` sat outside the
+# atomic block. A copy loaded before somebody else's refusal passed the terminal
+# check and wrote IN_PROGRESS over REJECTED.
+#
+# Measured on PostgreSQL 16 while writing this: the node's `select_for_update()`
+# already blocked the second decision, because `ApprovalNode.Meta.ordering`
+# includes `workflow__created_at` and the resulting JOIN makes `FOR UPDATE` lock
+# the workflow row too. So the rows were serialised *by accident of an ordering
+# clause*, and the stale copy still won once it got the lock. The workflow lock
+# is now explicit and the copy is re-read under it.
+# ---------------------------------------------------------------------------
+
+
+def _three_node_workflow(tenant):
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+
+    soul = Soul.objects.create(name="Two Benches", tenant=tenant, current_state=SoulState.JUDGING)
+    wf = ApprovalWorkflow.objects.create(
+        workflow_name="two benches", soul=soul, tenant=tenant, status=ApprovalWorkflowStatus.IN_PROGRESS,
+    )
+    nodes = [
+        ApprovalNode.objects.create(workflow=wf, node_name=f"n{i}", node_order=i, node_type="TRIAL", status=NodeStatus.PENDING)
+        for i in (1, 2, 3)
+    ]
+    wf.current_node = nodes[0]
+    wf.save()
+    return wf, nodes
+
+
+@pytest.mark.django_db(transaction=True)
+class TestWorkflowDecisionConcurrency:
+    def test_a_stale_copy_cannot_undo_a_refusal(self, db, cn_tenant):
+        """The serial shape of the defect, so it is checked on every engine.
+
+        Two requests load the workflow; the first refuses node 1 (the workflow is
+        now REJECTED); the second, holding the copy it loaded before that, decides
+        node 2. Unfixed, the terminal check read the stale in-memory status and
+        the save overwrote REJECTED with IN_PROGRESS — the refusal erased.
+        """
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+        wf, (n1, n2, _) = _three_node_workflow(cn_tenant)
+        first = ApprovalWorkflow.objects.get(pk=wf.pk)
+        second = ApprovalWorkflow.objects.get(pk=wf.pk)
+
+        assert first.complete_node(n1.id, "FAILED", "refused") is True
+        assert second.complete_node(n2.id, "PASSED", "stale copy") is False
+
+        wf.refresh_from_db()
+        assert wf.status == ApprovalWorkflowStatus.REJECTED
+        assert wf.current_node_id is None
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_a_decision_blocked_on_the_lock_does_not_undo_a_refusal(self, db, cn_tenant):
+        """The same thing with the second decision actually waiting on the lock.
+
+        A refuses node 1 and keeps its transaction open for a moment; B, whose
+        copy predates A's commit, decides node 2 and has to wait.
+        """
+        import time
+        from unittest.mock import patch
+
+        from django.db import connections
+
+        from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus
+
+        wf, (n1, n2, _) = _three_node_workflow(cn_tenant)
+        results = {}
+        both_have_copies = threading.Barrier(2, timeout=10)
+        a_decided = threading.Event()
+        b_waited = {"seconds": None}
+        real_save = ApprovalNode.save
+
+        def save_then_linger(node, *args, **kwargs):
+            real_save(node, *args, **kwargs)
+            if threading.current_thread().name == "a":
+                a_decided.set()
+                time.sleep(1.0)  # still inside A's atomic block
+
+        def decide(node, verdict):
+            label = threading.current_thread().name
+            try:
+                copy = ApprovalWorkflow.objects.get(pk=wf.pk)
+                both_have_copies.wait()
+                if label == "b":
+                    assert a_decided.wait(timeout=10), "A never reached its decision"
+                    started = time.monotonic()
+                results[label] = copy.complete_node(node.id, verdict, f"by {label}")
+                if label == "b":
+                    b_waited["seconds"] = time.monotonic() - started
+            except Exception as exc:  # surfaced in the assertions below
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        with patch.object(ApprovalNode, "save", save_then_linger):
+            threads = [
+                threading.Thread(target=decide, args=(n1, "FAILED"), name="a"),
+                threading.Thread(target=decide, args=(n2, "PASSED"), name="b"),
+            ]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=30)
+
+        assert b_waited["seconds"] is not None and b_waited["seconds"] > 0.5, (
+            f"B did not wait on A's lock ({b_waited}, {results}); the harness never "
+            f"produced the overlap, so a green here would prove nothing"
+        )
+        assert results == {"a": True, "b": False}, (
+            f"{results}: B's copy predates A's refusal and must be refused once it "
+            f"gets the lock, not recorded on top of it"
+        )
+        wf.refresh_from_db()
+        assert wf.status == ApprovalWorkflowStatus.REJECTED
+        assert wf.current_node_id is None
+
+
+# ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
 
@@ -367,6 +489,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
     #: 实测得来,不是按审计文字抄的 —— 第一版这份名单是我按账本描述猜的,
     #: 里面两个名字在这个文件里根本不存在。
     expected = [
+        # BD-09 (2026-09-13): a decision that waits on the workflow row lock
+        # and must re-read the workflow once it has it. SQLite has no row
+        # lock to wait on. Its serial counterpart,
+        # test_a_stale_copy_cannot_undo_a_refusal, runs on every engine.
+        "test_a_decision_blocked_on_the_lock_does_not_undo_a_refusal",
         "test_concurrent_approve_and_reject",
         "test_concurrent_approve_only_one_succeeds",
         "test_concurrent_die_only_one_succeeds",
