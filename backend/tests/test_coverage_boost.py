@@ -1281,31 +1281,19 @@ class TestPermissionChecker:
                 result = check_permission(user, "soul.read")
                 assert result is True
 
-    def test_check_permission_cache_miss_db_lookup(self):
-        user = MagicMock()
-        user.is_authenticated = True
-        user.role = "JUDGE"
-        with patch("apps.perm.checker._permission_cache") as mock_cache:
-            mock_cache.get.return_value = None
-            with patch("apps.perm.models.Permission.objects") as mock_perm_objs:
-                mock_perm_objs.filter.return_value.exists.return_value = True
-                with patch("apps.perm.models.RolePermission.objects") as mock_rp:
-                    mock_rp.filter.return_value.exists.return_value = True
-                    result = check_permission(user, "judgment.execute")
-                    assert result is True
-
-    def test_check_permission_cache_miss_db_no_perm(self):
-        user = MagicMock()
-        user.is_authenticated = True
-        user.role = "VIEWER"
-        with patch("apps.perm.checker._permission_cache") as mock_cache:
-            mock_cache.get.return_value = None
-            with patch("apps.perm.models.Permission.objects") as mock_perm_objs:
-                mock_perm_objs.filter.return_value.exists.return_value = True
-                with patch("apps.perm.models.RolePermission.objects") as mock_rp:
-                    mock_rp.filter.return_value.exists.return_value = False
-                    result = check_permission(user, "soul.delete")
-                    assert result is False
+    # `test_check_permission_cache_miss_db_lookup` / `_db_no_perm` removed
+    # 2026-09-13 (BT-09): both mocked `RolePermission.objects.filter(...)
+    # .exists()` wholesale, so they could not see WHAT `check_permission`
+    # filtered on — only that `.exists()` returned whatever the mock was told
+    # to. `checker.py`'s own comment documents the exact bug this shape once
+    # hid: the DB branch filtered `role=role` (a string into the FK's `id`
+    # column) and raised on every call, silently falling through to the dict
+    # fallback via a bare `except`, so "no RolePermission row ever granted
+    # anything" went unnoticed for months. A mock that stands in for
+    # `RolePermission.objects` is blind to exactly that class of defect.
+    # `apps/perm/test_checker_grants.py` covers the real path (`test_a_grant_
+    # grants` / `test_a_revocation_revokes`) against actual `RolePermission`
+    # rows, which would have caught it.
 
     def test_check_permissions_require_all(self):
         user = MagicMock()
@@ -1322,16 +1310,20 @@ class TestPermissionChecker:
         assert result is True
 
     def test_check_permissions_require_all_fails(self):
+        # Rewritten 2026-09-13 (BT-09): the mocked version patched
+        # `RolePermission.objects` wholesale, which is blind to what the real
+        # query filters on (see the removed tests above this one for the bug
+        # that shape hid). An unseeded, undicted codename reaches
+        # `check_permission`'s ROLE_PERMISSIONS-dict fallback without
+        # touching RolePermission at all, so this exercises `require_all`'s
+        # aggregation (mixed True/False must be False) against the real DB
+        # (class-level `@pytest.mark.django_db` above), no mock needed.
         user = MagicMock()
         user.is_authenticated = True
         user.role = "VIEWER"
         with patch("apps.perm.checker._permission_cache") as mock_cache:
             mock_cache.get.return_value = None
-            with patch("apps.perm.models.Permission.objects") as mock_perm_objs:
-                mock_perm_objs.filter.return_value.exists.return_value = True
-                with patch("apps.perm.models.RolePermission.objects") as mock_rp:
-                    mock_rp.filter.return_value.exists.return_value = False
-                    result = check_permissions(
-                        user, ["soul.read", "soul.delete"], require_all=True
-                    )
-                    assert result is False
+            result = check_permissions(
+                user, ["soul.read", "coverage_boost.unseeded_and_undicted"], require_all=True
+            )
+            assert result is False
