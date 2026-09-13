@@ -276,6 +276,9 @@ export const webPlatform: PlatformAdapter = {
     // The one line in the old `lib/api/client.ts` that assumed a browser with a
     // URL bar. A native client resets its navigator here instead.
     if (typeof window === "undefined") return;
+    // Already there: a 401 with no refresh token now lands here from /login
+    // too (FL-20), and navigating again would reload and re-fire it forever.
+    if (window.location.pathname === "/login") return;
     window.location.href = "/login";
   },
 };

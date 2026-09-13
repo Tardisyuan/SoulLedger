@@ -211,6 +211,18 @@ export async function rotateRefreshToken(refresh: string): Promise<string> {
   return data.access;
 }
 
+/**
+ * Clear the tokens and hand the host the decision about where the user goes.
+ * `window.location.href = "/login"` was the one line in this file that assumed
+ * a browser with a URL bar; a native client resets its navigator instead.
+ */
+function endSession(): void {
+  platform().session.remove(ACCESS_TOKEN_KEY);
+  platform().persistent.remove(ACCESS_TOKEN_KEY);
+  platform().persistent.remove(REFRESH_TOKEN_KEY);
+  platform().onUnauthorized();
+}
+
 // Handle 401 → redirect to login (skip for auth endpoints which handle their own errors)
 api.interceptors.response.use(
   (res) => res,
@@ -222,7 +234,12 @@ api.interceptors.response.use(
 
       error.config._retry = true;
       const refresh = getRefreshToken();
-      if (refresh) {
+      if (!refresh) {
+        // FL-20: nothing to refresh with. This branch used to fall through to
+        // the rejection below without telling the host, so every query went
+        // red and the user stayed on a page that could no longer load anything.
+        endSession();
+      } else {
         try {
           // Whoever gets here first starts the rotation; everyone else waits on
           // the same promise rather than starting a second one.
@@ -235,14 +252,7 @@ api.interceptors.response.use(
           error.config.headers.Authorization = `Bearer ${access}`;
           return api(error.config);
         } catch {
-          // Refresh failed — clear tokens and hand the host the decision about
-          // where the user goes. `window.location.href = "/login"` was the one
-          // line in this file that assumed a browser with a URL bar; a native
-          // client resets its navigator instead.
-          platform().session.remove(ACCESS_TOKEN_KEY);
-          platform().persistent.remove(ACCESS_TOKEN_KEY);
-          platform().persistent.remove(REFRESH_TOKEN_KEY);
-          platform().onUnauthorized();
+          endSession();
         }
       }
     }
