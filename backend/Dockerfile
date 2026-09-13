@@ -15,8 +15,13 @@ FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+# The lock, not requirements.txt: every `>=` there resolved to whatever was
+# newest on the day of the build, so two builds of one commit differed (IS-17).
+# --no-deps installs exactly the lock; `pip check` fails the build if the lock
+# is missing something a locked package needs.
+COPY backend/requirements.lock .
+RUN pip install --no-cache-dir --no-deps --prefix=/install -r requirements.lock \
+    && PYTHONPATH=$(echo /install/lib/python3.*/site-packages) pip check
 
 # ---- Runtime ----
 FROM base AS production
@@ -31,5 +36,5 @@ RUN mkdir -p /app/staticfiles && chown appuser:appuser /app/staticfiles
 USER appuser
 EXPOSE 8000
 # ASGI, not `gunicorn config.wsgi`: WSGI never serves the channels WebSocket
-# routes (IS-06). daphne is the ASGI server requirements.txt already pins.
+# routes (IS-06). daphne is the ASGI server requirements.lock already pins.
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
