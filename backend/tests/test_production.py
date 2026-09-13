@@ -364,6 +364,15 @@ class TestRootComposeShape:
         assert services['frontend']['ports']
         assert services['backend']['environment']['DEBUG'] == 'true'
 
+    def test_dev_database_and_redis_listen_on_loopback_only(self):
+        """`"5432:5432"` publishes on 0.0.0.0: the dev Postgres and a Redis
+        with no password were reachable from the whole LAN (IS-21). The host
+        processes that use them connect to localhost."""
+        services = _load_compose(os.path.join(REPO_ROOT, "docker-compose.override.yml"))['services']
+        for name in ('db', 'redis'):
+            for port in services[name]['ports']:
+                assert str(port).startswith('127.0.0.1:'), f"{name} publishes {port}"
+
     def test_base_does_not_set_debug(self):
         """DEBUG absent means settings.py demands ALLOWED_HOSTS, ENCRYPTION_KEY
         and a real database — the production merge must inherit that."""
