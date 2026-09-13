@@ -1,6 +1,6 @@
 # Django
-Django>=5.0,<6.0
-djangorestframework>=3.14,<4.0
+Django>=5.2.17,<6.0
+djangorestframework>=3.17.2,<4.0
 djangorestframework-simplejwt>=5.3
 django-filter>=23.0
 django-cors-headers>=4.3
@@ -23,7 +23,7 @@ daphne>=4.0
 channels-redis>=4.0
 
 # Utils
-Pillow>=10.0
+Pillow>=12.3.0
 python-dotenv>=1.0
 gunicorn>=21.0
 sentry-sdk>=2.0
