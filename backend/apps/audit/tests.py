@@ -223,10 +223,18 @@ class TestAuditLogActions:
         assert "judgment" in resp.data
 
     def test_stats_endpoint(self):
-        resp = self.admin_client.get(f"{BASE}/stats/")
-        assert resp.status_code == status.HTTP_200_OK
-        assert "action_distribution" in resp.data
-        assert "total_logs" in resp.data
+        """Merged 2026-09-14 with ``tests/test_audit.py::TestAuditLogViewSet::
+        test_stats_endpoint_admin_only`` -- same assertions, different caller.
+        That one authenticated the ADMIN with ``force_authenticate``, so the
+        request carried no JWT ``tenant_code`` and ``request.tenant`` was None;
+        this one's JWT sets it. Both callers are kept."""
+        forced = APIClient()
+        forced.force_authenticate(user=self.admin)
+        for client in (self.admin_client, forced):
+            resp = client.get(f"{BASE}/stats/")
+            assert resp.status_code == status.HTTP_200_OK
+            assert "action_distribution" in resp.data
+            assert "total_logs" in resp.data
 
     def test_timeline_endpoint(self):
         resp = self.admin_client.get(f"{BASE}/timeline/")
