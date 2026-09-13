@@ -373,66 +373,10 @@ class TestAuditLogViewSet:
         assert "results" in response.data
         assert len(response.data["results"]) > 0
 
-    def test_filter_by_action(self, auth_client):
-        """GET /api/v1/audit-logs/?action=CREATE filters by action type.
-
-        BT-09 (2026-09-13): the test data used to be CREATE rows only, so a
-        `?action=CREATE` filter that did nothing (returned every row) would
-        have passed this just as happily -- "every result is CREATE" is true
-        of an unfiltered list when nothing else was ever logged. A PATCH
-        (UPDATE) row is seeded and asserted absent from the filtered set, so
-        an inert filter now has something to disagree with.
-        """
-        # Create a soul (CREATE), then update it (UPDATE) -- two action types
-        # to actually discriminate between.
-        response = auth_client.post("/api/v1/souls/", {
-            "name": "Filter Test Soul",
-            "birth_date": "1990-01-01",
-        })
-        assert response.status_code == 201
-        soul_id = response.data["id"]
-        response = auth_client.patch(f"/api/v1/souls/{soul_id}/", {"name": "Filter Test Soul Renamed"})
-        assert response.status_code == 200
-
-        # Filter by CREATE action
-        response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
-        assert response.status_code == 200
-        actions = {log["action"] for log in response.data["results"]}
-        assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
-
-    def test_filter_by_resource(self, auth_client):
-        """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
-        response = auth_client.get("/api/v1/audit-logs/?resource=soul")
-        assert response.status_code == 200
-        for log in response.data["results"]:
-            assert "soul" in log["resource"].lower()
-
-    def test_filter_by_user_id(self, auth_client, admin_user):
-        """GET /api/v1/audit-logs/?user_id=<id> filters by user."""
-        response = auth_client.get(f"/api/v1/audit-logs/?user_id={admin_user.id}")
-        assert response.status_code == 200
-        for log in response.data["results"]:
-            assert str(log.get("user")) == str(admin_user.id) or log.get("user_display") == admin_user.username
-
-    def test_actions_endpoint(self, auth_client):
-        """GET /api/v1/audit-logs/actions/ returns all action types."""
-        response = auth_client.get("/api/v1/audit-logs/actions/")
-        assert response.status_code == 200
-        actions = [a["value"] for a in response.data]
-
-        # Verify new action types are present
-        assert "VIEW" in actions
-        assert "EXPORT" in actions
-        assert "IMPORT" in actions
-        assert "BATCH_CREATE" in actions
-        assert "BATCH_UPDATE" in actions
-        assert "BATCH_DELETE" in actions
-
-    def test_resources_endpoint(self, auth_client):
-        """GET /api/v1/audit-logs/resources/ returns distinct resource types."""
-        response = auth_client.get("/api/v1/audit-logs/resources/")
-        assert response.status_code == 200
-        assert isinstance(response.data, list)
+    # test_filter_by_action / _resource / _user_id, test_actions_endpoint and
+    # test_resources_endpoint stood here and had same-named twins in
+    # apps/audit/tests.py. Merged there on 2026-09-13 (that fixture writes the
+    # rows it filters); each merged test names what it took from here.
 
     def test_stats_endpoint_admin_only(self, auth_client, admin_user):
         """GET /api/v1/audit-logs/stats/ requires admin role."""
@@ -597,9 +541,11 @@ class TestAuditApiEndpoint:
     def test_filter_by_action(self, auth_client):
         """GET /api/v1/audit-logs/?action=CREATE filters by action type.
 
-        BT-09 (2026-09-13): see the twin of this test in `TestAuditLogViewSet`
-        above for why an UPDATE row is seeded and asserted absent -- without
-        it, "every result is CREATE" was also true of an unfiltered list.
+        BT-09 (2026-09-13): an UPDATE row is seeded and asserted absent --
+        without it, "every result is CREATE" was also true of an unfiltered
+        list. (The note explaining this lived on a same-named test in
+        `TestAuditLogViewSet` above, since merged into
+        `apps/audit/tests.py::TestAuditLogListRetrieve::test_filter_by_action`.)
         """
         # Create a soul (CREATE), then update it (UPDATE).
         response = auth_client.post("/api/v1/souls/", {
