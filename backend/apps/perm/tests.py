@@ -140,11 +140,12 @@ class PermissionAPITest(TestCase):
                     RolePermission.objects.get_or_create(role=role, permission=perm)
 
     # -- list_permissions --
-
-    def test_list_permissions_authenticated(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.get("/api/v1/perm/permissions/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #
+    # 2026-09-13: six tests in this class and RoleAPITest had a same-named twin
+    # in tests/test_perm_api.py and were merged into it (each merged test names
+    # what it took from here). `test_list_permissions_unauthenticated` stayed:
+    # it is the same request and assertion as its twin, so no mutation could
+    # show the merge lost nothing, and deleting without that proof was ruled out.
 
     def test_list_permissions_unauthenticated(self):
         response = self.client.get("/api/v1/perm/permissions/")
@@ -152,27 +153,12 @@ class PermissionAPITest(TestCase):
 
     # -- create_permission --
 
-    def test_create_permission_admin(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post("/api/v1/perm/permissions/create/", {
-            "codename": "custom.perm", "name": "Custom Perm", "category": "custom"
-        }, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["codename"], "custom.perm")
-
     def test_create_permission_duplicate(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.post("/api/v1/perm/permissions/create/", {
             "codename": "soul.read", "name": "Dup", "category": "soul"
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_create_permission_non_admin(self):
-        self.client.force_authenticate(user=self.viewer)
-        response = self.client.post("/api/v1/perm/permissions/create/", {
-            "codename": "test.x", "name": "Test", "category": "test"
-        }, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     # -- update_delete_permission --
 
@@ -285,7 +271,8 @@ class PermissionAPITest(TestCase):
     # thing that broke.
     #
     # The endpoint was removed on 2026-08-30;
-    # `POST /perm/role-permissions/init/` (test_init_role_permissions below)
+    # `POST /perm/role-permissions/init/` (test_init_role_permissions, now in
+    # tests/test_perm_api.py)
     # seeds rows *and* grants and is the only entry point. The property that
     # matters -- no admin action leaves a codename seeded-but-ungranted -- is
     # asserted in tests/test_perm_init_does_not_revoke.py, against effective
@@ -296,12 +283,6 @@ class PermissionAPITest(TestCase):
         response = self.client.post("/api/v1/perm/roles/init/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreater(response.json()["total"], 0)
-
-    def test_init_role_permissions(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post("/api/v1/perm/role-permissions/init/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("roles", response.json())
 
 
 class WorkflowPermissionMigrationTest(TestCase):
@@ -834,18 +815,8 @@ class RoleAPITest(TestCase):
         self.admin = User.objects.create_user(username="admin2", password="admin123", role="ADMIN")
         self.viewer = User.objects.create_user(username="viewer2", password="viewer123", role="VIEWER")
 
-    def test_list_roles(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.get("/api/v1/perm/roles/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_create_role(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post("/api/v1/perm/roles/create/", {
-            "name": "TESTER", "display_name": "Tester"
-        }, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["name"], "TESTER")
+    # test_list_roles / test_create_role: merged into tests/test_perm_api.py
+    # (2026-09-13, see PermissionAPITest).
 
     def test_create_role_duplicate(self):
         self.client.force_authenticate(user=self.admin)

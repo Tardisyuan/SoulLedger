@@ -1,6 +1,14 @@
 """
 Tests for audit app - AuditLog views.
 Uses JWT auth with tenant_code so TenantMiddleware sets request.tenant.
+
+Five tests here absorbed a same-named twin from ``tests/test_audit.py``
+(2026-09-13; the "7 + 5 duplicate tests" finding of the 2026-09-12 audit).
+They were kept here rather than there because this fixture writes the rows it
+filters -- a CREATE and an UPDATE, a ``soul`` and a ``judgment`` -- so a filter
+assertion is checked against rows the test itself put in the table. The twins'
+resource and user filters wrote nothing and ran against whatever other writes
+had left there. Each merged test says which half came from where.
 """
 import pytest
 from django.contrib.auth import get_user_model
@@ -83,16 +91,51 @@ class TestAuditLogListRetrieve:
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_filter_by_resource(self):
+        """Merged: the per-row check is the ``tests/test_audit.py`` twin's; this
+        fixture's ``judgment`` row is what it can fail on. ``results``
+        non-empty is new: it keeps the loop from passing on an empty page.
+        """
         resp = self.admin_client.get(f"{BASE}/", {"resource": "soul"})
         assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["results"]
+        for log in resp.data["results"]:
+            assert "soul" in log["resource"].lower()
 
     def test_filter_by_action(self):
+        """Merged: the API-produced CREATE/UPDATE and the exact-set assertion
+        are the ``tests/test_audit.py`` twin's (BT-09 there: with CREATE rows
+        only, an inert filter passed). This fixture's UPDATE row discriminates
+        too."""
+        resp = self.admin_client.post("/api/v1/souls/", {
+            "name": "Filter Test Soul",
+            "birth_date": "1990-01-01",
+        })
+        assert resp.status_code == 201
+        resp = self.admin_client.patch(
+            f"/api/v1/souls/{resp.data['id']}/", {"name": "Filter Test Soul Renamed"}
+        )
+        assert resp.status_code == 200
+
         resp = self.admin_client.get(f"{BASE}/", {"action": "CREATE"})
         assert resp.status_code == status.HTTP_200_OK
+        actions = {log["action"] for log in resp.data["results"]}
+        assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
 
     def test_filter_by_user_id(self):
+        """Merged: the per-row check is the ``tests/test_audit.py`` twin's.
+
+        The viewer's row is new: every fixture row is the admin's, so without
+        it an inert ``user_id`` filter satisfies the loop (measured 2026-09-13:
+        row removed + filter made inert -> still passed).
+        """
+        AuditLog.objects.create(
+            tenant=self.tenant, user=self.viewer, action=AuditAction.VIEW,
+            resource="soul", description="viewer's log"
+        )
         resp = self.admin_client.get(f"{BASE}/", {"user_id": self.admin.pk})
         assert resp.status_code == status.HTTP_200_OK
+        for log in resp.data["results"]:
+            assert str(log.get("user")) == str(self.admin.id) or log.get("user_display") == self.admin.username
 
 
 @pytest.mark.django_db
@@ -122,14 +165,26 @@ class TestAuditLogActions:
         )
 
     def test_actions_endpoint(self):
+        """Merged: the six newer action types are the ``tests/test_audit.py``
+        twin's."""
         resp = self.admin_client.get(f"{BASE}/actions/")
         assert resp.status_code == status.HTTP_200_OK
         assert isinstance(resp.data, list)
         assert any(a["value"] == "CREATE" for a in resp.data)
+        actions = [a["value"] for a in resp.data]
+        assert "VIEW" in actions
+        assert "EXPORT" in actions
+        assert "IMPORT" in actions
+        assert "BATCH_CREATE" in actions
+        assert "BATCH_UPDATE" in actions
+        assert "BATCH_DELETE" in actions
 
     def test_resources_endpoint(self):
+        """Merged: ``isinstance(list)`` is the ``tests/test_audit.py`` twin's --
+        ``in`` alone is also true of a dict keyed by resource."""
         resp = self.admin_client.get(f"{BASE}/resources/")
         assert resp.status_code == status.HTTP_200_OK
+        assert isinstance(resp.data, list)
         assert "soul" in resp.data
         assert "judgment" in resp.data
 
