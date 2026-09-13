@@ -216,6 +216,11 @@ export const PROPOSED_DISPATCH = {
   executed_at: null,
 };
 
+/** Served from the same *list* endpoint as PROPOSED_DISPATCH, so it gets the
+ * same field set. It spread PROPOSED_DISPATCH and then added `reason` and
+ * `decided_at` straight back -- the two list-absent fields that fixture's
+ * docstring records removing. Caught 2026-09-14 when
+ * `test_e2e_fixtures_match_the_serializers.py` stopped reading a hand list. */
 export const EXECUTED_DISPATCH = {
   ...PROPOSED_DISPATCH,
   id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -224,17 +229,29 @@ export const EXECUTED_DISPATCH = {
   source_tenant_code: "EU_HEAVEN_HELL",
   target_tenant_code: "CN_DIYU",
   status: "EXECUTED",
-  reason: "已完成移交。",
-  decided_at: "2026-08-05T02:00:00Z",
   executed_at: "2026-08-06T02:00:00Z",
 };
 
 /**
  * GET /souls/{id}/ — SoulSerializer. Sits in JUDGING so the detail page
  * offers the "开始审判" action.
+ *
+ * Written out rather than `...SOULS[0]`: that spread carried
+ * `has_date_warning` / `has_record_error`, which only `SoulListSerializer`
+ * computes. The detail serializer does not send them.
  */
 export const SOUL_DETAIL = {
-  ...SOULS[0],
+  id: SOULS[0].id,
+  name: SOULS[0].name,
+  civilization: SOULS[0].civilization,
+  current_state: SOULS[0].current_state,
+  birth_date: SOULS[0].birth_date,
+  death_date: SOULS[0].death_date,
+  merit_score: SOULS[0].merit_score,
+  demerit_score: SOULS[0].demerit_score,
+  karmic_balance: SOULS[0].karmic_balance,
+  tenant_code: SOULS[0].tenant_code,
+  date_problems: SOULS[0].date_problems,
   birth_name: "孟氏",
   origin_location: "钱塘",
   description: "首位在忘川边留下姓名的魂。",
@@ -257,6 +274,21 @@ export const SOUL_LEDGER = {
     merit: 120,
     demerit: 78,
   },
+};
+
+/** GET /ledger/inheritance/{soul_id}/ — LedgerInheritance, one object.
+ *
+ * Was `paginated([])`: a page envelope from an object endpoint. The soul page
+ * treats any 200 body as the inheritance (`inheritance && …`), so the card
+ * rendered `→ undefined` over NaN-width bars -- a state no response produces.
+ * SOULS[0] is Chinese, which has a next life, so 200 is the honest reply;
+ * the rates are the backend's (0.2 merit, 1.0 unripened demerit). */
+export const SOUL_INHERITANCE = {
+  soul_id: SOULS[0].id,
+  inherited_merit: 24,
+  inherited_demerit: 78,
+  inheritance_merit_rate: 0.2,
+  inheritance_demerit_rate: 1.0,
 };
 
 /** The judgment POST /judgment/ opens for a soul already in JUDGING. */
@@ -555,8 +587,6 @@ export class ApiMock {
         current_state: "ALIVE",
         death_date: null,
         date_problems: [],
-        has_date_warning: false,
-        has_record_error: false,
       },
     }));
 
@@ -650,20 +680,40 @@ export class ApiMock {
     // green through any regression in what the page renders.
     // `e2e/the-api-mock-models-what-the-app-calls.spec.ts` is what found them,
     // and is what stops the seventh from being added silently.
+    //
+    // 2026-09-14: the bodies below are trimmed to what their serializers send.
+    // `/users/` (UserManagementSerializer) has no `display_name` or
+    // `last_login`; `/auth/profile/` (UserSerializer) has no `tenant`;
+    // RealmListSerializer has no `name_zh` / `is_eternal`; ActorListSerializer
+    // has no `name_zh` / `name_en`. All were spread in or copied from other
+    // shapes, and `test_e2e_fixtures_match_the_serializers.py` now reads these
+    // handlers rather than a hand list, which is how it saw them.
     this.on("GET", "/users/", paginated([
-      { ...TEST_USER, is_active: true, last_login: "2026-08-30T10:00:00Z" },
+      {
+        id: TEST_USER.id,
+        username: TEST_USER.username,
+        email: TEST_USER.email,
+        role: TEST_USER.role,
+        tenant: TEST_USER.tenant,
+        is_active: true,
+      },
       {
         id: 2,
         username: "test_judge",
-        display_name: "测试判官",
         email: "judge@soulledger.test",
         role: "JUDGE",
         tenant: TEST_USER.tenant,
         is_active: true,
-        last_login: null,
       },
     ]));
-    this.on("GET", "/auth/profile/", { ...TEST_USER, is_active: true });
+    this.on("GET", "/auth/profile/", {
+      id: TEST_USER.id,
+      username: TEST_USER.username,
+      display_name: TEST_USER.display_name,
+      email: TEST_USER.email,
+      role: TEST_USER.role,
+      is_active: true,
+    });
     this.on("GET", "/tenants/", paginated([
       { id: 1, code: "CN_DIYU", display_name: "中国地府", is_active: true },
       { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱", is_active: true },
@@ -672,20 +722,16 @@ export class ApiMock {
       {
         id: 1,
         realm_code: "DY_01",
-        name_zh: "第一殿",
         name_en: "First Court",
         civilization: "CHINESE",
         realm_type: "PURGATORY",
         tier: 1,
-        is_eternal: false,
       },
     ]));
     this.on("GET", "/actors/", paginated([
       {
         id: 1,
         name: "阎罗王",
-        name_zh: "阎罗王",
-        name_en: "Yama King",
         role: "JUDGE",
         civilization: "CHINESE",
         is_active: true,
@@ -730,7 +776,9 @@ export class ApiMock {
     this.on("GET", "/events/", paginated([]));
     this.on("GET", "/organizations/", paginated([]));
     this.on("GET", "/dispatch/cross-tenant-judgments/", paginated([]));
-    this.on("GET", "/ledger/inheritance/:id/", paginated([]));
+    // Not a list endpoint: see SOUL_INHERITANCE. (The paragraph above still
+    // holds for the other five.)
+    this.on("GET", "/ledger/inheritance/:id/", SOUL_INHERITANCE);
 
     return this;
   }
