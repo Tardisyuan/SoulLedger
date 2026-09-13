@@ -24,6 +24,7 @@ from apps.dispatch.serializers import (
     DispatchRejectSerializer,
 )
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
+from apps.perm.filters import DataScopeFilter
 from apps.tenants.models import Tenant
 
 
@@ -127,9 +128,12 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if getattr(user, "role", None) == "ADMIN":
             return qs
         tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
-        return qs.none()
+        if not tenant:
+            return qs.none()
+        # RowLevelDataScope too (BD-10): the mixin this viewset lists never
+        # runs, because this method replaces it rather than calling super().
+        qs = qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
+        return DataScopeFilter.filter_queryset(self.request, qs, DispatchRecord)
 
     def get_serializer_class(self):
         if self.action == "list":

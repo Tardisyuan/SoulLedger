@@ -10,6 +10,7 @@ from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.perm.filters import DataScopeFilter
 from apps.workflow.filters import WorkflowFilter
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
 from apps.workflow.serializers import (
@@ -57,7 +58,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # explicitly rather than going back to `objects`, which would
         # reintroduce the contextvar problem this override exists to solve.
         qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related("tenant")
-        return scope_to_tenant(qs, self.request)
+        return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), WorkflowTemplate)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -98,7 +99,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         qs = ApprovalWorkflow._base_manager.select_related(
             "soul", "soul__tenant", "tenant", "current_node", "coordinating_realm"
         ).prefetch_related("nodes").all()
-        return scope_to_tenant(qs, self.request)
+        return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), ApprovalWorkflow)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -375,4 +376,5 @@ class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUser
         """Fresh queryset to avoid stale TenantManager contextvar filters.
         Filters by workflow__tenant since ApprovalNode has no direct tenant field."""
         qs = ApprovalNode._base_manager.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
-        return scope_to_tenant(qs, self.request, field="workflow__tenant")
+        qs = scope_to_tenant(qs, self.request, field="workflow__tenant")
+        return DataScopeFilter.filter_queryset(self.request, qs, ApprovalNode)
