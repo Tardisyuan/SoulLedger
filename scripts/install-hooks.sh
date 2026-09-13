@@ -190,10 +190,9 @@ TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 #             blind spot this block was written to close.
 #
 # The inert list is documentation and deployment: it changes nothing a local
-# gate measures. `.pre-commit-config.yaml` is on it because nothing here reads
-# it: the `pre-commit` command is not installed (2026-09-11, `command -v` empty),
-# and the pre-commit hook this script writes above is its own ESLint hook, not
-# the framework's.
+# gate measures. (`.pre-commit-config.yaml` was on it until the file was deleted
+# (IS-23): the `pre-commit` framework was never installed, and the pre-commit
+# hook this script writes above is its own ESLint hook, not the framework's.)
 #
 # Only root-level FILES. Top-level directories other than the three code roots
 # (docs/, scripts/, .github/) are not gated, deliberately —
@@ -202,7 +201,7 @@ TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 ROOT_LEVEL=$(echo "$CHANGED" | grep -vE '/' | grep -vE '^$' || true)
 JS_ROOT_RE='^(package\.json|package-lock\.json|\.nvmrc)$'
 BACKEND_ROOT_RE='^(pytest\.ini|conftest\.py)$'
-INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example|\.pre-commit-config\.yaml)$)'
+INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)'
 JS_ROOT=$(echo "$ROOT_LEVEL" | grep -cE "$JS_ROOT_RE" || true)
 BACKEND_ROOT=$(echo "$ROOT_LEVEL" | grep -cE "$BACKEND_ROOT_RE" || true)
 UNKNOWN_ROOT=$(echo "$ROOT_LEVEL" | grep -vE "$JS_ROOT_RE" | grep -vE "$BACKEND_ROOT_RE" | grep -vE "$INERT_ROOT_RE" | grep -vE '^$' || true)

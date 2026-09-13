@@ -577,7 +577,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 - **`text-white` 那一处**是基线里的债，不是决定
 | i18n key 前缀 / 新增 key 三份同加 | `AGENTS.md:161-168,349-355`。无 key 集 parity 的独立测试 |
 | 文案不得烙进布局宽度 / n=0,1,10000 都要成立 | `BRIEF.md:287-291,313-315` |
-| `.pre-commit-config.yaml` 的 prettier / eslint-mirror | 框架未装，prettier 不在任何 devDependencies，无 `.prettierrc` |
+| prettier 格式化 | 无执行点：prettier 不在任何 devDependencies，无 `.prettierrc`；唯一声明它的 `.pre-commit-config.yaml` 框架从未安装，文件已删（IS-23） |
 | coverageThreshold | 只在手动触发的 CI 评估；pre-push 用 `--coverage=false` |
 | E2E 三 project | pre-push 不跑，CI 手动 —— **唯一的自动执行点为空** |
 
