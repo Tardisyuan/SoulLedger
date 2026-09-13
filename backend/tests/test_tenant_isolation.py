@@ -81,11 +81,26 @@ class TestTenantIsolationAPI:
         assert resp.status_code == 404
 
     def test_cross_tenant_ledger_access_denied(self, django_user_model):
-        """Ledger endpoint denies access to soul from another tenant."""
-        self._create_user("cn_ledger_user", "ADMIN", self.cn, django_user_model)
+        """Ledger endpoint denies access to soul from another tenant.
+
+        BT-09 (2026-09-13): this used to check only the negative case, so a
+        ledger endpoint that 404'd for *everyone* -- misconfigured routing,
+        a broken queryset, the isolation filter over-applied to same-tenant
+        requests too -- would have passed just as happily as the real fix.
+        The positive control below (the CN user reading their own tenant's
+        soul) is what tells "isolation works" apart from "the endpoint is
+        just broken".
+        """
+        cn_user = self._create_user("cn_ledger_user", "ADMIN", self.cn, django_user_model)
         eu_user = self._create_user("eu_ledger_user", "ADMIN", self.eu, django_user_model)
 
         cn_soul = self._create_soul("CN Soul Ledger", self.cn)
+
+        # Positive control: the owning tenant's user can read it.
+        cn_client = APIClient()
+        cn_headers = self._get_auth_headers(cn_client, cn_user)
+        resp = cn_client.get(f"/api/v1/ledger/balance/{cn_soul.id}/", **cn_headers)
+        assert resp.status_code == 200
 
         # EU client trying to access CN soul ledger
         eu_client = APIClient()
