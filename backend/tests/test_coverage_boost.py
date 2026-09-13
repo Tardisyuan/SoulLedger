@@ -585,42 +585,10 @@ class TestPermissionCache:
         c.set("ADMIN", "test.perm", True)
         assert c.get("ADMIN", "test.perm") is True
 
-    def test_has_permission_db_lookup(self, db):
-        from apps.perm.models import Permission, Role, RolePermission
-        role, _ = Role.objects.get_or_create(
-            name="JUDGE", defaults={"display_name": "Judge"}
-        )
-        perm, _ = Permission.objects.get_or_create(
-            codename="judgment.execute", defaults={
-                "name": "Execute Judgment", "category": "judgment"
-            }
-        )
-        RolePermission.objects.get_or_create(role=role, permission=perm)
-        with patch("apps.perm.cache.PermissionCache._connect_redis"):
-            c = PermissionCache()
-            c._redis_client = None
-            result = c.has_permission("JUDGE", "judgment.execute")
-            assert result is True
-
-    def test_has_permission_inherited(self, db):
-        from apps.perm.models import Permission, Role, RolePermission
-        parent, _ = Role.objects.get_or_create(
-            name="PARENT_ROLE", defaults={"display_name": "Parent"}
-        )
-        child, _ = Role.objects.get_or_create(
-            name="CHILD_ROLE", defaults={"display_name": "Child", "parent": parent}
-        )
-        perm, _ = Permission.objects.get_or_create(
-            codename="test.inherit", defaults={
-                "name": "Test Inherit", "category": "test"
-            }
-        )
-        RolePermission.objects.get_or_create(role=parent, permission=perm)
-        with patch("apps.perm.cache.PermissionCache._connect_redis"):
-            c = PermissionCache()
-            c._redis_client = None
-            result = c.has_permission("CHILD_ROLE", "test.inherit")
-            assert result is True
+    # `test_has_permission_db_lookup` / `test_has_permission_inherited` removed
+    # 2026-09-13 (BP-09): `PermissionCache.has_permission()` was deleted as dead
+    # code (only test callers repo-wide; it duplicated `checker.py`'s cache key
+    # with different, inheritance-aware semantics `checker.py` never applies).
 
 
 # =============================================================================

@@ -172,30 +172,16 @@ class Role(AuditUserFields):
         """See `_revive_or_create`. Restoring a binned role restores its grants too."""
         return _revive_or_create(cls, "name", name, defaults)
 
-    def get_inherited_permissions(self, _visited=None):
-        """
-        获取继承的权限（包含自己的权限和所有祖先的权限）
-        通过递归获取父角色权限形成继承链
-        """
-        if _visited is None:
-            _visited = set()
-        if self.pk in _visited:
-            return set()  # Cycle detection
-        _visited.add(self.pk)
-
-        # 获取自己的直接权限
-        own_permissions = set(
-            rp.permission.codename
-            for rp in self.permissions.all()
-        )
-
-        # 递归获取父角色权限
-        inherited_permissions = set()
-        if self.parent:
-            inherited_permissions = self.parent.get_inherited_permissions(_visited)
-
-        # 合并：自己的权限 + 继承的权限
-        return own_permissions | inherited_permissions
+    # `get_inherited_permissions` lived here (own permissions ∪ parent's,
+    # recursive) — deleted 2026-09-13 (BP-09), full-repo grep found only test
+    # callers plus `PermissionCache.has_permission` (also dead, deleted below).
+    # The real enforcement path is `apps.perm.checker.check_permission`, which
+    # does NOT consider `parent` at all; `ws_permissions.py`'s docstring
+    # already documents that `Role.parent` inheritance "is not reproduced ...
+    # and is not load-bearing: nothing seeded ever sets it." `parent` itself
+    # stays — `get_ancestors`/`get_descendants` below are real (the latter is
+    # used by `PermissionCache.invalidate_role` to cascade cache clears to
+    # descendant roles), so removing the field is a separate, larger change.
 
     def get_ancestors(self):
         """

@@ -137,38 +137,15 @@ class PermissionCache:
         # Fallback to memory cache with timestamp
         self._fallback_cache[(role, codename)] = (has_permission, time.time())
 
-    def has_permission(self, role_name: str, permission_codename: str) -> bool | None:
-        """
-        Check if a role has a specific permission, considering role hierarchy inheritance.
-
-        This method checks both direct permissions and inherited permissions from parent roles.
-
-        Args:
-            role_name: The role name to check
-            permission_codename: The permission codename to check for
-
-        Returns:
-            True if permission granted, False if denied, None if not cached.
-        """
-        # Try cache first
-        cached = self.get(role_name, permission_codename)
-        if cached is not None:
-            return cached
-
-        # Cache miss - need to compute from database
-        try:
-            from apps.perm.models import Role
-
-            role = Role.objects.prefetch_related('permissions', 'parent').get(name=role_name)
-            inherited_perms = role.get_inherited_permissions()
-            has_perm = permission_codename in inherited_perms
-
-            # Cache the result
-            self.set(role_name, permission_codename, has_perm)
-            return has_perm
-        except Exception as e:
-            logger.warning(f"PermissionCache: has_permission check failed: {e}")
-            return None
+    # `has_permission()` lived here — deleted 2026-09-13 (BP-09). It computed
+    # permission via `Role.get_inherited_permissions()` (also deleted) and
+    # cached the result under the SAME `perm:{role}:{codename}` key that
+    # `apps.perm.checker.check_permission` reads and writes via `get`/`set`
+    # below — but the checker does NOT consider inheritance. Two writers of
+    # one key computing different things is exactly the drift this repo has
+    # been bitten by before; grepping the full tree found no caller of
+    # `has_permission` outside tests. `get`/`set` stay: `checker.py` is their
+    # only real caller and it is unaffected.
 
     def invalidate_role(self, role: str) -> None:
         """Clear all cached permissions for a role and its descendants."""
