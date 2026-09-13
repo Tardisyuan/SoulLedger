@@ -213,3 +213,24 @@ class TestSoulFiltering:
         for soul in results:
             assert soul["civilization"] == "CHINESE"
             assert soul["karmic_balance"] >= 70
+
+
+def test_every_soul_manager_shortcut_has_a_queryset_method_behind_it():
+    """BD-12: `SoulManager` forwards by name to `SoulQuerySet`.
+
+    `filter_by_civilization` was deleted from the queryset on 2026-08-31 and its
+    manager forwarder was left behind, so `Soul.objects.filter_by_civilization(x)`
+    raised AttributeError. It had no callers and was removed; this keeps the
+    next half-deleted pair from compiling silently.
+    """
+    import inspect
+
+    from apps.souls.querysets import SoulManager, SoulQuerySet
+
+    forwarded = [
+        name for name, fn in vars(SoulManager).items()
+        if inspect.isfunction(fn) and not name.startswith("_") and name != "get_queryset"
+    ]
+    assert forwarded, "the scan found nothing — it would pass on any class"
+    missing = [name for name in forwarded if not hasattr(SoulQuerySet, name)]
+    assert missing == [], f"SoulManager forwards to methods SoulQuerySet does not have: {missing}"
