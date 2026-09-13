@@ -177,9 +177,6 @@ class DeathRegistrationRequest(AuditUserFields, models.Model):
     retry_count = models.IntegerField(default=0)
     max_retries = models.IntegerField(default=3)
 
-    # Webhook delivery
-    webhook_delivered = models.BooleanField(default=False)
-
     # Request metadata
     source_ip = models.GenericIPAddressField(null=True)
     request_timestamp = models.DateTimeField(auto_now_add=True)
@@ -260,49 +257,3 @@ class WebhookConfig(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.url} [{', '.join(self.events) or 'all'}]"
-
-
-class WebhookDeliveryStatus(models.TextChoices):
-    PENDING = "PENDING"
-    SUCCESS = "SUCCESS"
-    FAILED = "FAILED"
-    RETRYING = "RETRYING"
-
-
-class WebhookDeliveryLog(AuditUserFields, models.Model):
-    """
-    Immutable log of webhook delivery attempts.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    webhook = models.ForeignKey(
-        'death_sync.WebhookConfig',
-        on_delete=models.CASCADE,
-        related_name='delivery_logs',
-    )
-    registration = models.ForeignKey(
-        'death_sync.DeathRegistrationRequest',
-        on_delete=models.CASCADE,
-        related_name='webhook_deliveries',
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=WebhookDeliveryStatus.choices,
-        default=WebhookDeliveryStatus.PENDING,
-    )
-    attempt = models.IntegerField(default=1)
-    http_status_code = models.IntegerField(null=True)
-    request_body = models.JSONField(default=dict)
-    response_body = models.TextField(blank=True, default="")
-    error_message = models.TextField(blank=True, default="")
-    duration_ms = models.IntegerField(null=True)
-    next_retry_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ["-create_time"]
-        verbose_name = "Webhook Delivery Log"
-        verbose_name_plural = "Webhook Delivery Logs"
-        indexes = [
-            models.Index(fields=["webhook", "status"]),
-            models.Index(fields=["registration"]),
-        ]

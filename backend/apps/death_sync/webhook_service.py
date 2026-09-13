@@ -1,27 +1,17 @@
 """
-Webhook delivery service — handles webhook sending, signing, and retry logic.
+Outbound webhook URL validation (SSRF guard).
+
+The death_sync delivery pipeline that used to live here (`WebhookService`,
+its retry tasks and `WebhookDeliveryLog`) was removed on 2026-09-13: death
+registrations announce themselves through the EventBus since BD-11, and
+nothing called the old path. Deliveries are `apps/events/tasks.py`, which
+calls `_validate_webhook_url` below through `_reject_if_not_publicly_routable`.
 """
 import ipaddress
-import json
-import logging
 import socket
-import time
 from urllib.parse import urlparse
 
-import requests
 from django.conf import settings
-from django.utils import timezone
-
-from apps.death_sync.models import (
-    WebhookDeliveryLog,
-    WebhookDeliveryStatus,
-)
-from apps.death_sync.signing import sign_payload
-
-logger = logging.getLogger(__name__)
-
-# Retry delays in seconds (exponential backoff)
-RETRY_DELAYS = [30, 120, 600, 3600, 21600]  # 30s, 2m, 10m, 1h, 6h
 
 # SSRF: private/loopback IP ranges to block
 _BLOCKED_NETWORKS = [
@@ -74,144 +64,3 @@ def _validate_webhook_url(url):
                 raise ValueError(
                     f"Webhook URL resolves to a private/loopback IP: {ip}"
                 )
-
-
-class WebhookService:
-    """
-    Handles webhook delivery with HMAC signing and retry logic.
-    """
-
-    @staticmethod
-    def deliver_webhook(webhook, registration):
-        """
-        Deliver a webhook payload to a registered endpoint.
-
-        Args:
-            webhook: WebhookConfig instance
-            registration: DeathRegistrationRequest instance
-
-        Returns:
-            WebhookDeliveryLog instance
-        """
-        # Check event filter
-        if webhook.events and registration.status not in webhook.events:
-            return None
-
-        # Build payload
-        payload = {
-            "event": "DEATH_REGISTERED",
-            "timestamp": timezone.now().isoformat(),
-            "tenant": str(registration.tenant_id),
-            "data": {
-                "registration_id": str(registration.id),
-                "soul_id": str(registration.soul_id) if registration.soul_id else None,
-                "status": registration.status,
-                "source_system": registration.source_system,
-            },
-        }
-
-        payload_bytes = json.dumps(payload).encode()
-        timestamp = str(int(time.time()))
-
-        # SSRF protection: validate URL before sending
-        try:
-            _validate_webhook_url(webhook.url)
-        except ValueError as e:
-            logger.warning(f"SSRF validation failed for webhook {webhook.id}: {e}")
-            delivery_log = WebhookDeliveryLog.objects.create(
-                webhook=webhook,
-                registration=registration,
-                status=WebhookDeliveryStatus.FAILED,
-                request_body=payload,
-                error_message=str(e),
-            )
-            return delivery_log
-
-        # Create delivery log
-        delivery_log = WebhookDeliveryLog.objects.create(
-            webhook=webhook,
-            registration=registration,
-            status=WebhookDeliveryStatus.PENDING,
-            request_body=payload,
-        )
-
-        try:
-            # Sign payload
-            signature = sign_payload(payload_bytes, webhook.signing_secret, timestamp)
-
-            # Send request
-            headers = {
-                "Content-Type": "application/json",
-                "X-SoulLedger-Signature": f"sha256={signature}",
-                "X-SoulLedger-Timestamp": timestamp,
-                "X-SoulLedger-Event": "DEATH_REGISTERED",
-                "X-SoulLedger-Delivery": str(delivery_log.id),
-            }
-
-            start_time = time.time()
-            response = requests.post(
-                webhook.url,
-                data=payload_bytes,
-                headers=headers,
-                timeout=webhook.timeout_seconds,
-                # `requests` follows redirects by default, and
-                # `_validate_webhook_url` only ever saw the URL we were given.
-                # A webhook pointed at a public host that answers
-                # `302 -> http://169.254.169.254/latest/meta-data/` reached the
-                # metadata service, carrying this tenant's HMAC signature.
-                # The validator never saw the second URL.
-                allow_redirects=False,
-            )
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Update delivery log
-            delivery_log.http_status_code = response.status_code
-            delivery_log.response_body = response.text[:1000]
-            delivery_log.duration_ms = duration_ms
-
-            if 200 <= response.status_code < 300:
-                delivery_log.status = WebhookDeliveryStatus.SUCCESS
-            else:
-                delivery_log.status = WebhookDeliveryStatus.FAILED
-                delivery_log.error_message = f"HTTP {response.status_code}"
-
-            delivery_log.save()
-            return delivery_log
-
-        except requests.Timeout:
-            delivery_log.status = WebhookDeliveryStatus.FAILED
-            delivery_log.error_message = "Request timed out"
-            delivery_log.save()
-            return delivery_log
-
-        except requests.RequestException as e:
-            delivery_log.status = WebhookDeliveryStatus.FAILED
-            delivery_log.error_message = str(e)
-            delivery_log.save()
-            return delivery_log
-
-    @staticmethod
-    def schedule_retry(delivery_log):
-        """
-        Schedule a retry for a failed delivery with exponential backoff.
-
-        Args:
-            delivery_log: WebhookDeliveryLog instance
-
-        Returns:
-            Updated WebhookDeliveryLog instance
-        """
-        if delivery_log.attempt >= delivery_log.webhook.max_retries:
-            delivery_log.status = WebhookDeliveryStatus.FAILED
-            delivery_log.save()
-            return delivery_log
-
-        delay_index = min(delivery_log.attempt, len(RETRY_DELAYS) - 1)
-        delay = RETRY_DELAYS[delay_index]
-
-        delivery_log.attempt += 1
-        delivery_log.status = WebhookDeliveryStatus.RETRYING
-        delivery_log.next_retry_at = timezone.now() + timezone.timedelta(seconds=delay)
-        delivery_log.save()
-
-        return delivery_log

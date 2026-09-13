@@ -28,7 +28,9 @@ carrying `{"soul_id": ..., "verdict": "GUILTY"}`.
 **Redirects were followed.** `requests.post` defaults to following them and
 `_validate_webhook_url` only ever saw the URL we were handed, so a public host
 answering `302 -> http://169.254.169.254/...` reached the metadata service
-carrying the tenant's signature.
+carrying the tenant's signature. That was the death_sync pipeline, removed
+2026-09-13; the EventBus task had the same hole through urllib and is guarded
+by `test_an_event_bus_delivery_does_not_follow_a_redirect` at the bottom.
 """
 import hashlib
 import hmac
@@ -232,46 +234,6 @@ def test_a_publicly_routable_address_is_still_allowed():
         assert not any(ip in net for net in _BLOCKED_NETWORKS), (
             f"{public} is blocked; the list has stopped distinguishing"
         )
-
-
-@pytest.mark.django_db
-def test_outbound_delivery_does_not_follow_redirects(wired):
-    """The validator only ever sees the URL it is given.
-
-    Asserted on the *call* `requests.post` receives, not on the source text.
-    Until 2026-09-12 this read `inspect.getsource(webhook_service)` for the
-    substring `allow_redirects=False`; the substring lives in a comment two
-    lines above the argument as well, so commenting the argument out left all
-    49 webhook tests green while `requests` went back to following redirects.
-    """
-    from unittest.mock import Mock
-
-    from apps.death_sync.models import DeathRegistrationRequest, DeathRegistrationStatus
-    from apps.death_sync.webhook_service import WebhookService
-    from apps.souls.models import Soul
-
-    tenant, hook = wired
-    hook.events = []  # deliver_webhook filters on registration.status; take everything
-    hook.save()
-    soul = Soul.objects.create(name="Redirect Probe", tenant=tenant)
-    registration = DeathRegistrationRequest.objects.create(
-        tenant=tenant, api_key=hook.api_key, idempotency_key="redir-1",
-        source_system="HOSPITAL", source_payload={}, soul=soul,
-        status=DeathRegistrationStatus.PROCESSED,
-    )
-    post = Mock(return_value=Mock(status_code=200, text=""))
-    with patch("apps.death_sync.webhook_service.requests.post", post), patch(
-        "apps.death_sync.webhook_service._validate_webhook_url", lambda url: None
-    ):
-        WebhookService.deliver_webhook(hook, registration)
-
-    assert post.call_count == 1, "delivery never reached requests.post; the probe proves nothing"
-    assert post.call_args.kwargs.get("allow_redirects") is False, (
-        "requests.post follows redirects by default. A webhook on a public "
-        "host answering 302 -> http://169.254.169.254/ reaches the metadata "
-        "service carrying this tenant's HMAC signature, and the validator "
-        "never sees the second URL."
-    )
 
 
 def test_the_url_validator_rejects_a_loopback_target():
