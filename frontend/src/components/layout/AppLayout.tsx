@@ -104,15 +104,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return out;
   }, [menus]);
 
-  const { data: notifications = [] } = useQuery({
+  // `count`, not `results.length`: results is one page (PAGE_SIZE 20), so with
+  // 21 unread the badge said 20. `count` is the whole unread inbox. (FL-15)
+  const { data: unread } = useQuery({
     queryKey: notificationKeys.unreadCount,
     queryFn: async () => {
       const res = await notificationsApi.list({ is_read: "false" });
-      return res.data.results;
+      return { count: res.data.count, results: res.data.results };
     },
     staleTime: 30000, // 30 seconds
     enabled: !!user,
   });
+  const unreadCount = unread?.count ?? 0;
+  const notifications = unread?.results ?? [];
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarWidth = collapsed ? "w-16" : "w-56";
@@ -359,8 +363,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Popover.Trigger
                   className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors p-1"
                   aria-label={
-                    notifications.length > 0
-                      ? `${t("notifications.title")} (${notifications.length})`
+                    unreadCount > 0
+                      ? `${t("notifications.title")} (${unreadCount})`
                       : t("notifications.title")
                   }
                 >
@@ -368,9 +372,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
-                  {notifications.length > 0 && (
+                  {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-[oklch(var(--color-accent))] text-black text-01 rounded-full flex items-center justify-center">
-                      {notifications.length > 9 ? "9+" : notifications.length}
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </Popover.Trigger>

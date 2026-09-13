@@ -300,3 +300,33 @@ class TestNotificationEdgeCases:
         assert response.status_code == 200
         data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
         assert data == []
+
+
+@pytest.mark.django_db
+def test_is_read_false_filters_and_count_is_the_whole_unread_inbox(auth_client, admin_user):
+    """FL-15:铃铛徽章读 `?is_read=false` 的 `count`。
+
+    两件事都得成立,徽章才是真的未读数:过滤器真的生效(否则已读的也被数进去),
+    `count` 是全部未读而不是第一页(PAGE_SIZE=20)的长度。25 条未读 + 3 条已读,
+    所以第一页装不下,已读的若混进来也会让数字对不上。
+    """
+    from apps.notifications.models import NotificationType, UserNotification
+
+    for i in range(25):
+        UserNotification.objects.create(
+            user=admin_user, title=f"u{i}", message="m",
+            notification_type=NotificationType.SYSTEM,
+        )
+    for i in range(3):
+        UserNotification.objects.create(
+            user=admin_user, title=f"r{i}", message="m", is_read=True,
+            notification_type=NotificationType.SYSTEM,
+        )
+
+    response = auth_client.get("/api/v1/notifications/", {"is_read": "false"})
+
+    assert response.status_code == 200
+    assert response.data["count"] == 25, (
+        f"count={response.data['count']}:`is_read=false` 没有生效,已读的也被数进了未读"
+    )
+    assert all(n["is_read"] is False for n in response.data["results"])

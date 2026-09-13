@@ -10495,6 +10495,7 @@ export interface operations {
     v1_notifications_list: {
         parameters: {
             query?: {
+                is_read?: boolean;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */

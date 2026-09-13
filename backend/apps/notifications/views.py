@@ -65,6 +65,11 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
     }
     serializer_class = UserNotificationSerializer
     # pagination_class = None  # Removed: paginate to prevent large payloads
+    # `DjangoFilterBackend` is a default filter backend, but it filters only on
+    # fields a viewset declares. This one declared none, so `?is_read=false` —
+    # what the masthead badge and the inbox's "unread" tab both send — was
+    # silently ignored and read notifications were counted as unread. (FL-15)
+    filterset_fields = ["is_read"]
 
     def get_serializer_class(self):
         if self.action == "list":
