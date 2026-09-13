@@ -21,6 +21,15 @@
 #
 # To change a version: move the range in requirements.txt if needed, then
 # rerun the command against an environment where the suite passes with it.
+#
+# 2026-09-14 security upgrade: pip-audit on this file reported 46 known
+# vulnerabilities in 8 packages. Those 8 were raised to their fix versions in
+# the constraints (click 8.3.3, cryptography 50.0.0, django 5.2.17,
+# djangorestframework 3.17.2, idna 3.15, pillow 12.3.0, sqlparse 0.6.0,
+# urllib3 2.7.0) and the same command re-run. pyopenssl was dropped from the
+# constraints because 26.3.0 requires cryptography<50; it resolves to 26.4.0.
+# No other line moved. The suite was run in a Python 3.11 venv built from
+# this file, not in the environment above, which still has the old versions.
 amqp==5.3.1
 asgiref==3.12.1
 asttokens==3.0.1
@@ -36,22 +45,22 @@ cffi==2.0.0
 channels==4.3.2
 channels-redis==4.3.0
 charset-normalizer==3.4.7
-click==8.3.2
+click==8.3.3
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
 constantly==23.10.4
 coverage==7.15.2
 cron-descriptor==1.4.5
-cryptography==49.0.0
+cryptography==50.0.0
 daphne==4.2.3
 dj-database-url==3.1.2
-django==5.2.16
+django==5.2.17
 django-celery-beat==2.9.0
 django-cors-headers==4.9.0
 django-filter==26.1
 django-timezone-field==7.2.2
-djangorestframework==3.17.1
+djangorestframework==3.17.2
 djangorestframework-simplejwt==5.5.1
 drf-spectacular==0.30.0
 executing==2.2.1
@@ -59,7 +68,7 @@ factory-boy==3.3.3
 faker==40.36.0
 gunicorn==26.0.0
 hyperlink==21.0.0
-idna==3.11
+idna==3.15
 incremental==24.11.0
 inflection==0.5.1
 iniconfig==2.3.0
@@ -74,7 +83,7 @@ msgpack==1.2.1
 packaging==26.0
 parso==0.8.6
 pexpect==4.9.0
-pillow==12.2.0
+pillow==12.3.0
 pluggy==1.6.0
 prompt-toolkit==3.0.52
 psutil==7.2.2
@@ -84,7 +93,7 @@ pure-eval==0.2.3
 pycparser==3.0
 pygments==2.20.0
 pyjwt==2.13.0
-pyopenssl==26.3.0
+pyopenssl==26.4.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
@@ -100,7 +109,7 @@ rpds-py==0.30.0
 sentry-sdk==2.66.1
 service-identity==26.1.0
 six==1.17.0
-sqlparse==0.5.5
+sqlparse==0.6.0
 stack-data==0.6.3
 tomli==2.4.1
 traitlets==5.14.3
@@ -111,7 +120,7 @@ tzdata==2026.1
 tzlocal==5.4.4
 ujson==5.13.0
 uritemplate==4.2.0
-urllib3==2.6.3
+urllib3==2.7.0
 vine==5.1.0
 wcwidth==0.6.0
 zope-interface==8.5
