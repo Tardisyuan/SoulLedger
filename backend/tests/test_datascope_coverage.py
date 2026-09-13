@@ -116,3 +116,65 @@ class TestWorkflowTemplateDataScope:
         )
 
         _assert_only_mine(_auth(api_client, judge_user), "/api/v1/workflow/templates/", mine, theirs)
+
+
+# ---------------------------------------------------------------------------
+# BD-10: the RowLevelDataScope rule layer, not just the tenant layer.
+#
+# The viewsets below list DataScopeViewSetMixin but override `get_queryset`
+# with a `_base_manager` query plus tenant scoping only, so the mixin never
+# runs and a JUDGE scope rule on these models was silently ignored. Every
+# tenant test above stays green through that: both rows here sit in the
+# caller's own tenant, and only the rule separates them.
+# ---------------------------------------------------------------------------
+def _judge_rule(model_name, conditions, role_name="JUDGE"):
+    from apps.perm.models import Role, RowLevelDataScope
+
+    role, _ = Role.objects.get_or_create(name=role_name)
+    RowLevelDataScope.objects.create(
+        role=role, model_name=model_name, filter_conditions=conditions,
+        scope_type="READ", is_active=True,
+    )
+
+
+@pytest.mark.django_db
+class TestWorkflowRowLevelRules:
+    def test_template_rule_applies(self, api_client, judge_user, cn_tenant):
+        _judge_rule("workflowtemplate", {"case_type": "ROUTINE"})
+        mine = WorkflowTemplate.objects.create(name="Routine", civilization="CHINESE", case_type="ROUTINE", tenant=cn_tenant)
+        ruled_out = WorkflowTemplate.objects.create(name="Special", civilization="CHINESE", case_type="SPECIAL", tenant=cn_tenant)
+        _assert_only_mine(_auth(api_client, judge_user), "/api/v1/workflow/templates/", mine, ruled_out)
+
+    def _workflows(self, cn_tenant):
+        from apps.workflow.models import ApprovalNode, ApprovalWorkflow
+
+        soul = Soul.objects.create(name="WF Soul", tenant=cn_tenant)
+        soul2 = Soul.objects.create(name="WF Soul 2", tenant=cn_tenant)
+        pending = ApprovalWorkflow.objects.create(soul=soul, workflow_name="p", case_type="ROUTINE", status="PENDING", tenant=cn_tenant)
+        rejected = ApprovalWorkflow.objects.create(soul=soul2, workflow_name="r", case_type="ROUTINE", status="REJECTED", tenant=cn_tenant)
+        n_pending = ApprovalNode.objects.create(workflow=pending, node_name="a", node_order=1, node_type="TRIAL", status="PENDING")
+        n_rejected = ApprovalNode.objects.create(workflow=rejected, node_name="b", node_order=1, node_type="TRIAL", status="REJECTED")
+        return pending, rejected, n_pending, n_rejected
+
+    def test_workflow_rule_applies(self, api_client, judge_user, cn_tenant):
+        _judge_rule("approvalworkflow", {"status": "PENDING"})
+        pending, rejected, _, _ = self._workflows(cn_tenant)
+        _assert_only_mine(_auth(api_client, judge_user), "/api/v1/workflows/", pending, rejected)
+
+    def test_node_rule_applies(self, api_client, judge_user, cn_tenant):
+        _judge_rule("approvalnode", {"status": "PENDING"})
+        _, _, n_pending, n_rejected = self._workflows(cn_tenant)
+        _assert_only_mine(_auth(api_client, judge_user), "/api/v1/nodes/", n_pending, n_rejected)
+
+    def test_dispatch_record_rule_applies(self, api_client, django_user_model, cn_tenant, eu_tenant):
+        # Same root cause one app over: DispatchRecordViewSet also lists the
+        # mixin and fully overrides get_queryset. JUDGE holds no dispatch.read,
+        # so this one probes as MODERATOR.
+        from apps.dispatch.models import DispatchRecord
+
+        moderator = django_user_model.objects.create_user(username="bd10_mod", password="x", role="MODERATOR", tenant=cn_tenant)
+        _judge_rule("dispatchrecord", {"status": "PROPOSED"}, role_name="MODERATOR")
+        soul = Soul.objects.create(name="D Soul", tenant=cn_tenant)
+        proposed = DispatchRecord.objects.create(source_tenant=cn_tenant, target_tenant=eu_tenant, soul=soul, reason="x", tenant=cn_tenant)
+        rejected = DispatchRecord.objects.create(source_tenant=cn_tenant, target_tenant=eu_tenant, soul=soul, reason="y", tenant=cn_tenant, status="REJECTED")
+        _assert_only_mine(_auth(api_client, moderator), "/api/v1/dispatch/records/", proposed, rejected)
