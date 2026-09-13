@@ -104,6 +104,44 @@ services:
         limits:
           memory: 512m
 
+  # Nightly pg_dump. It lived in the base file behind `profiles: [production]`,
+  # and nothing — scripts/deploy.sh included — ever passed `--profile`, so it
+  # never started; had it started, the script read DB_HOST instead of the
+  # PGHOST passed here and dumped from localhost (IS-15). Being in this file
+  # is what makes it production-only now.
+  #
+  # Failure is visible three ways: the first backup runs at start and a
+  # failure exits the container (restart loop in `docker compose ps`); cron
+  # output goes to the container's stdout (`docker compose logs backup`); and
+  # the healthcheck turns unhealthy when the newest good dump is older than
+  # 26 hours — the signal an external monitor should watch.
+  backup:
+    image: postgres:16-alpine
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: soulledger
+      PGUSER: soulledger
+      PGPASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        /scripts/backup-db.sh /backups &&
+        echo '0 2 * * * /scripts/backup-db.sh /backups > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
+        exec crond -f -l 8
+    healthcheck:
+      test: ["CMD-SHELL", "find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q ."]
+      interval: 5m
+      timeout: 10s
+      start_period: 5m
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
   nginx:
     image: nginx:alpine
     ports:

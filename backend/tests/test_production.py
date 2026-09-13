@@ -267,6 +267,20 @@ class TestDockerConfiguration:
         assert 'ENCRYPTION_KEY' in env
         assert not [k for k in env if k.startswith('DJANGO_')]
 
+    def test_backup_runs_in_the_production_merge(self):
+        """The backup service sat behind `profiles: [production]` and nothing
+        ever passed `--profile`, so the production merge never started it
+        (IS-15). It must be a plain production service, absent from the dev
+        stack, with a healthcheck that can go red, and it must pass the libpq
+        names scripts/backup-db.sh reads."""
+        assert 'backup' not in _load_compose(COMPOSE_BASE)['services']
+        backup = _production_services()['backup']
+        assert 'profiles' not in backup
+        assert backup['healthcheck']['test']
+        assert {'PGHOST', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'} <= set(backup['environment'])
+        script = _read(os.path.join(REPO_ROOT, "scripts", "backup-db.sh"))
+        assert 'PGHOST="${PGHOST:-' in script
+
     def test_prod_compose_mounts_a_file_that_exists(self):
         """A bind-mount source that does not exist is created by docker as
         an empty directory — for nginx.conf that means nginx dies (IS-09)."""
