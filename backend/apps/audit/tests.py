@@ -101,25 +101,44 @@ class TestAuditLogListRetrieve:
         for log in resp.data["results"]:
             assert "soul" in log["resource"].lower()
 
-    def test_filter_by_action(self):
+    def test_filter_by_action(self, django_capture_on_commit_callbacks):
         """Merged: the API-produced CREATE/UPDATE and the exact-set assertion
         are the ``tests/test_audit.py`` twin's (BT-09 there: with CREATE rows
         only, an inert filter passed). This fixture's UPDATE row discriminates
-        too."""
-        resp = self.admin_client.post("/api/v1/souls/", {
-            "name": "Filter Test Soul",
-            "birth_date": "1990-01-01",
-        })
+        too.
+
+        2026-09-14: the second twin, ``TestAuditApiEndpoint::test_filter_by_action``,
+        is merged here as well, and it exposed that the merge above was only
+        half real. This class is ``django_db`` without ``transaction=True``, so
+        the audit signal's ``on_commit`` callbacks never ran: the POST and
+        PATCH wrote no audit rows at all, and the assertions passed on the
+        fixture rows alone. Measured: with the CREATE branch of
+        ``_on_post_save`` made to ``return``, this test stayed green and only
+        the twin went red. ``django_capture_on_commit_callbacks(execute=True)``
+        makes the API writes real, and the soul's own CREATE row is now
+        required in the filtered page.
+        """
+        with django_capture_on_commit_callbacks(execute=True):
+            resp = self.admin_client.post("/api/v1/souls/", {
+                "name": "Filter Test Soul",
+                "birth_date": "1990-01-01",
+            })
         assert resp.status_code == 201
-        resp = self.admin_client.patch(
-            f"/api/v1/souls/{resp.data['id']}/", {"name": "Filter Test Soul Renamed"}
-        )
+        soul_id = str(resp.data["id"])
+        with django_capture_on_commit_callbacks(execute=True):
+            resp = self.admin_client.patch(
+                f"/api/v1/souls/{soul_id}/", {"name": "Filter Test Soul Renamed"}
+            )
         assert resp.status_code == 200
 
         resp = self.admin_client.get(f"{BASE}/", {"action": "CREATE"})
         assert resp.status_code == status.HTTP_200_OK
         actions = {log["action"] for log in resp.data["results"]}
         assert actions == {"CREATE"}, f"expected only CREATE rows, got {actions}"
+        assert soul_id in {str(log["resource_id"]) for log in resp.data["results"]}, (
+            "the API-created soul's CREATE row is not in the page -- the "
+            "filter is being checked against fixture rows only"
+        )
 
     def test_filter_by_user_id(self):
         """Merged: the per-row check is the ``tests/test_audit.py`` twin's.
