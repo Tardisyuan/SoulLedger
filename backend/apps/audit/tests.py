@@ -90,16 +90,31 @@ class TestAuditLogListRetrieve:
         resp = self.admin_client.get(f"{BASE}/99999/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_filter_by_resource(self):
+    def test_filter_by_resource(self, django_capture_on_commit_callbacks):
         """Merged: the per-row check is the ``tests/test_audit.py`` twin's; this
         fixture's ``judgment`` row is what it can fail on. ``results``
         non-empty is new: it keeps the loop from passing on an empty page.
+
+        2026-09-14: the second twin, ``TestAuditApiEndpoint::test_filter_by_resource``,
+        is merged too. What it had that this did not was an API write -- a
+        soul POSTed and answered 201 -- ahead of the filter. That write now
+        happens here, with its on_commit audit row executed (this class is not
+        transactional; see test_filter_by_action), and the soul's own row must
+        be in the page, which neither copy asserted before.
         """
+        with django_capture_on_commit_callbacks(execute=True):
+            created = self.admin_client.post("/api/v1/souls/", {
+                "name": "Resource Filter Test",
+                "birth_date": "1990-01-01",
+            })
+        assert created.status_code == 201
+
         resp = self.admin_client.get(f"{BASE}/", {"resource": "soul"})
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["results"]
         for log in resp.data["results"]:
             assert "soul" in log["resource"].lower()
+        assert str(created.data["id"]) in {str(log["resource_id"]) for log in resp.data["results"]}
 
     def test_filter_by_action(self, django_capture_on_commit_callbacks):
         """Merged: the API-produced CREATE/UPDATE and the exact-set assertion
