@@ -306,7 +306,7 @@ export default function ProfilePage() {
             <Skeleton className="h-5 w-20" />
           ) : (
             <Badge tone={ROLE_TONES[role] ?? "neutral"}>
-              {t(`users.roles.${role}`) || role}
+              {t(`users.roles.${role}`)}
             </Badge>
           )}
         </div>
