@@ -62,28 +62,11 @@ def recalculate_tenant_ledgers(tenant_id: str):
     finally:
         clear_current_tenant()
 
-
-@shared_task(name="ledger.recalculate_single")
-def recalculate_soul_ledger_task(soul_id: str, tenant_id: str | None = None):
-    """
-    Recalculate the ledger for a single soul by ID.
-
-    `tenant_id` is optional but should be supplied by any caller that has
-    one — when present, a soul_id belonging to a different tenant is
-    refused rather than silently recalculated. Optional because this task
-    has no current caller passing untrusted input (soul_id today only ever
-    comes from server-side code, not a client-supplied task argument), but
-    the check costs nothing and closes the gap for whenever one is added.
-    """
-    from apps.ledger.services import LedgerService
-    from apps.souls.models import Soul
-
-    try:
-        soul = Soul.objects.get(id=soul_id)
-    except Soul.DoesNotExist:
-        return {"error": "Soul not found", "soul_id": soul_id}
-
-    if tenant_id is not None and str(soul.tenant_id) != str(tenant_id):
-        return {"error": "Soul does not belong to the given tenant", "soul_id": soul_id}
-
-    return LedgerService.recalculate_soul_ledger(soul)
+# `recalculate_soul_ledger_task` (celery name `ledger.recalculate_single`)
+# lived here — deleted 2026-09-13 (DB-03). Its own docstring said "this task
+# has no current caller"; grepping the tree confirmed it, and no
+# `setup_ledger_tasks`/PeriodicTask schedule ever pointed at
+# `ledger.recalculate_single` either (only `ledger.recalculate_all` is
+# scheduled). `LedgerService.recalculate_soul_ledger` — the logic this task
+# only wrapped — is unaffected and is still what `recalculate_tenant_ledgers`
+# above calls per soul.
