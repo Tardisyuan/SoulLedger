@@ -56,7 +56,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
+          pip install --no-deps -r requirements.lock
       - name: Check migrations
         run: |
           cd backend
@@ -71,7 +71,9 @@ jobs:
           cd backend
           pip install ruff
           ruff check .
-      # Blocks. Scoped to requirements.txt rather than the whole environment,
+      # Blocks. Scoped to requirements.lock — what the image installs; auditing
+      # requirements.txt resolved its `>=` to today's newest releases (IS-17) —
+      # rather than the whole environment,
       # which is what makes blocking viable: the bare `pip-audit --strict` this
       # replaces also swept in pip and setuptools from the runner image, and
       # the one standing finding (PYSEC-2026-3447, sdist MANIFEST.in exclusions
@@ -89,7 +91,7 @@ jobs:
         run: |
           cd backend
           pip install pip-audit
-          pip-audit --strict --desc -r requirements.txt
+          pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
 
   frontend:
     runs-on: ubuntu-latest
