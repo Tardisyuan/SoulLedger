@@ -141,8 +141,17 @@ class TestRoleAPI:
 class TestRolePermissionAPI:
     """Test /api/v1/perm/role-permissions/ endpoints."""
 
-    def test_assign_permissions_to_role(self, api_client, admin_user, cn_tenant):
-        """POST /api/v1/perm/role-permissions/assign/ assigns permissions."""
+    def test_assign_permissions_to_role(
+        self, api_client, admin_user, cn_tenant, django_user_model
+    ):
+        """POST /api/v1/perm/role-permissions/assign/ assigns permissions.
+
+        Merged 2026-09-14 with ``apps/perm/tests.py::test_assign_role_permissions``
+        (a different name for the same request): the row exists (this file),
+        the response's ``assigned_count`` is right and an ADMIN with no tenant
+        may assign too (that file). ``assigned_count`` was asserted nowhere
+        else in either test file.
+        """
         from rest_framework_simplejwt.tokens import RefreshToken
         token = RefreshToken.for_user(admin_user)
         if admin_user.tenant:
@@ -156,6 +165,18 @@ class TestRolePermissionAPI:
         }, format="json")
         assert response.status_code == 200
         assert RolePermission.objects.filter(role=role, permission=perm).exists()
+        assert response.data["assigned_count"] == 1
+
+        viewer, _ = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})
+        other = Permission.objects.create(codename="test.assign", name="Assign", category="test")
+        response = _tenantless_admin_client(django_user_model).post(
+            "/api/v1/perm/role-permissions/assign/",
+            {"role": "VIEWER", "permission_ids": [other.pk]},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.data["assigned_count"] == 1
+        assert RolePermission.objects.filter(role=viewer, permission=other).exists()
 
     def test_init_role_permissions(self, api_client, admin_user, cn_tenant):
         """POST /api/v1/perm/role-permissions/init/ initializes default permissions.

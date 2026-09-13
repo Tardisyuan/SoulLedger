@@ -231,16 +231,10 @@ class PermissionAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     # -- assign_role_permissions --
-
-    def test_assign_role_permissions(self):
-        perm = Permission.objects.create(codename="test.assign", name="Assign", category="test")
-        role, _ = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post("/api/v1/perm/role-permissions/assign/", {
-            "role": "VIEWER", "permission_ids": [perm.pk]
-        }, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["assigned_count"], 1)
+    #
+    # `test_assign_role_permissions` (tenantless ADMIN, VIEWER, assigned_count)
+    # was merged 2026-09-14 into
+    # tests/test_perm_api.py::TestRolePermissionAPI::test_assign_permissions_to_role.
 
     def test_assign_role_permissions_invalid_role(self):
         self.client.force_authenticate(user=self.admin)
