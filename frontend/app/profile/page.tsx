@@ -147,7 +147,10 @@ export default function ProfilePage() {
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
-            <span className="text-04 text-[oklch(var(--color-ink))] font-medium truncate">
+            <span
+              className="text-04 text-[oklch(var(--color-ink))] font-medium truncate"
+              title={profile?.username || user?.username}
+            >
               {profile?.username || user?.username}
             </span>
           )}
@@ -179,7 +182,10 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-48" />
               ) : (
-                <span className="text-04 text-[oklch(var(--color-ink))] truncate">
+                <span
+                  className="text-04 text-[oklch(var(--color-ink))] truncate"
+                  title={profile?.email || user?.email || undefined}
+                >
                   {profile?.email || user?.email || "-"}
                 </span>
               )}
@@ -227,7 +233,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-[oklch(var(--color-ink))] truncate">
+                <span className="text-04 text-[oklch(var(--color-ink))] truncate" title={profile?.first_name || undefined}>
                   {profile?.first_name || "-"}
                 </span>
               )}
@@ -275,7 +281,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-[oklch(var(--color-ink))] truncate">
+                <span className="text-04 text-[oklch(var(--color-ink))] truncate" title={profile?.last_name || undefined}>
                   {profile?.last_name || "-"}
                 </span>
               )}
@@ -319,7 +325,10 @@ export default function ProfilePage() {
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
-            <span className="text-04 text-[oklch(var(--color-ink))] truncate">
+            <span
+              className="text-04 text-[oklch(var(--color-ink))] truncate"
+              title={user?.tenant?.display_name || user?.tenant?.code || undefined}
+            >
               {/* /auth/profile/ is UserSerializer, which has no `tenant`
                   field at all — the two leading branches this expression
                   used to start with were dead. */}
