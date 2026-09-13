@@ -7,12 +7,28 @@ name: Security Scan
 on:
   workflow_dispatch:
 
+# Least privilege for the job token (audit IS-19, 2026-09-14). Nothing here
+# writes to the repository, comments, or publishes: every job checks out, runs
+# a gate, and (e2e) uploads an artifact, which uses the Actions runtime token,
+# not GITHUB_TOKEN. Measured 2026-09-14, the repository default is already
+# `read` (`gh api repos/Tardisyuan/SoulLedger/actions/permissions/workflow`),
+# so this changes nothing today. It is here so the answer lives in the file:
+# a settings toggle, a fork, or a copy of this workflow into another repository
+# would otherwise hand every step a write token without any diff to review.
+#
+# Actions are pinned to the commit their major tag pointed at when this was
+# written (resolved via `gh api repos/<action>/git/ref/tags/<major>`), with the
+# exact release beside it. A tag can be moved; a SHA cannot. Bump by resolving
+# again, not by editing the comment.
+permissions:
+  contents: read
+
 jobs:
   frontend-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -44,8 +60,8 @@ jobs:
   backend-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
           cache: 'pip'
