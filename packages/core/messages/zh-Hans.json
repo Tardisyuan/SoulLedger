@@ -1415,7 +1415,10 @@
     "edit_profile": "编辑资料",
     "bio_label": "简介",
     "bio_placeholder": "介绍一下自己…",
-    "avatar_url_label": "头像链接",
+    "avatar_upload_label": "头像",
+    "avatar_upload_hint": "PNG、JPEG 或 WebP,不超过 5 MB",
+    "avatar_uploaded": "头像已更新",
+    "avatar_upload_error": "头像上传失败",
     "profile_updated": "资料已更新",
     "profile_update_error": "资料更新失败",
     "visibility": {

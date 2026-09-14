@@ -3,6 +3,9 @@
  * UserProfileUpdateSerializer (backend/apps/social/serializers.py), which
  * already had a working PATCH /social/profiles/{id}/ endpoint and an unused
  * useUpdateProfile hook but no UI caller.
+ *
+ * Since 2026-09-14 the avatar is an upload, not a link: the form has a file
+ * control that posts to /social/profiles/me/avatar/, and no URL field at all.
  */
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { ProfileCard } from "@/src/components/social/ProfileCard";
@@ -22,8 +25,10 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 const mockUpdateMutate = jest.fn();
+const mockUploadMutate = jest.fn();
 jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useUpdateProfile: () => ({ mutate: mockUpdateMutate, isPending: false }),
+  useUploadAvatar: () => ({ mutate: mockUploadMutate, isPending: false }),
   useToggleFollow: () => ({ mutate: jest.fn(), isPending: false }),
   useFollowing: () => ({ data: [] }),
 }));
@@ -33,7 +38,7 @@ const ownProfile: UserProfile = {
   user: "user-1",
   username: "selfuser",
   bio: "Existing bio",
-  avatar_url: "https://example.com/avatar.png",
+  avatar: "http://localhost:8000/media/avatars/2026/09/abc.png",
   followers_count: 3,
   following_count: 5,
   post_count: 10,
@@ -57,14 +62,39 @@ describe("ProfileCard edit profile UI", () => {
     expect(screen.queryByText("social.edit_profile")).not.toBeInTheDocument();
   });
 
-  it("opens the edit form pre-filled with the current bio and avatar url", () => {
-    render(<ProfileCard profile={ownProfile} />);
-    fireEvent.click(screen.getByText("social.edit_profile"));
-    expect(screen.getByDisplayValue("Existing bio")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("https://example.com/avatar.png")).toBeInTheDocument();
+  it("renders the uploaded avatar, and the initial when there is none", () => {
+    const { rerender } = render(<ProfileCard profile={ownProfile} />);
+    expect(screen.getByAltText("selfuser")).toHaveAttribute("src", ownProfile.avatar);
+    rerender(<ProfileCard profile={{ ...ownProfile, avatar: null }} />);
+    expect(screen.queryByAltText("selfuser")).not.toBeInTheDocument();
+    expect(screen.getByText("S")).toBeInTheDocument();
   });
 
-  it("submits the edited bio and avatar url via useUpdateProfile", async () => {
+  it("opens the edit form with the bio and an image upload control — no URL field", () => {
+    render(<ProfileCard profile={ownProfile} />);
+    fireEvent.click(screen.getByText("social.edit_profile"));
+    const dialog = screen.getByRole("dialog");
+    expect(screen.getByDisplayValue("Existing bio")).toBeInTheDocument();
+    const file = within(dialog).getByLabelText("social.avatar_upload_label");
+    expect(file).toHaveAttribute("type", "file");
+    expect(file).toHaveAttribute("accept", "image/png,image/jpeg,image/webp");
+    expect(dialog.querySelector('input[type="url"]')).toBeNull();
+    expect(screen.queryByDisplayValue(ownProfile.avatar as string)).not.toBeInTheDocument();
+  });
+
+  it("uploads a chosen image as multipart field `avatar`", () => {
+    render(<ProfileCard profile={ownProfile} />);
+    fireEvent.click(screen.getByText("social.edit_profile"));
+    const picked = new File([new Uint8Array([137, 80, 78, 71])], "me.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("social.avatar_upload_label"), { target: { files: [picked] } });
+    expect(mockUploadMutate).toHaveBeenCalledTimes(1);
+    const body = mockUploadMutate.mock.calls[0][0];
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get("avatar")).toBe(picked);
+    expect(mockUpdateMutate).not.toHaveBeenCalled();
+  });
+
+  it("submits only the bio via useUpdateProfile", async () => {
     render(<ProfileCard profile={ownProfile} />);
     fireEvent.click(screen.getByText("social.edit_profile"));
 
@@ -75,10 +105,7 @@ describe("ProfileCard edit profile UI", () => {
     fireEvent.click(within(dialog).getByText("common.save"));
 
     await waitFor(() => expect(mockUpdateMutate).toHaveBeenCalledWith(
-      {
-        id: "profile-1",
-        data: { bio: "Updated bio", avatar_url: "https://example.com/avatar.png" },
-      },
+      { id: "profile-1", data: { bio: "Updated bio" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     ));
   });

@@ -61,7 +61,8 @@ export interface UserProfile {
   user: string;
   username: string;
   bio: string;
-  avatar_url: string;
+  /** Absolute URL of the account's uploaded avatar on this site, or null. */
+  avatar: string | null;
   followers_count: number;
   following_count: number;
   post_count: number;
@@ -117,4 +118,17 @@ export const socialApi = {
   updateProfile: (id: string, data: Partial<UserProfile>) =>
     api.patch<UserProfile>(`/social/profiles/${id}/`, data),
   myProfile: () => api.get<UserProfile>("/social/profiles/me/"),
+  /**
+   * `body` is a multipart body the HOST builds — `FormData` with the image
+   * under `avatar`, on the web and on React Native alike. This package cannot
+   * name that type: it compiles without the DOM lib, and `FormData` is on the
+   * domBoundary banned list. The explicit Content-Type matters: the client's
+   * default is application/json, and axios serializes a FormData body to JSON
+   * under that header — the file would be dropped. With multipart set, the
+   * browser adapter replaces it with the boundary-carrying header itself.
+   */
+  uploadAvatar: (body: object) =>
+    api.post<UserProfile>("/social/profiles/me/avatar/", body, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };

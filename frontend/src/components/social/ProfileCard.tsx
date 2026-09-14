@@ -39,9 +39,9 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className="w-16 h-16 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-06 text-[oklch(var(--color-accent-ink))] overflow-hidden shrink-0">
-          {profile.avatar_url ? (
+          {profile.avatar ? (
             <img
-              src={profile.avatar_url}
+              src={profile.avatar}
               alt={profile.username}
               className="w-full h-full object-cover"
             />

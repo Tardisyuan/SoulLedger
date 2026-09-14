@@ -1415,7 +1415,10 @@
     "edit_profile": "Edit profile",
     "bio_label": "Bio",
     "bio_placeholder": "Tell others about yourself…",
-    "avatar_url_label": "Avatar URL",
+    "avatar_upload_label": "Avatar",
+    "avatar_upload_hint": "PNG, JPEG or WebP, up to 5 MB",
+    "avatar_uploaded": "Avatar updated",
+    "avatar_upload_error": "Failed to upload avatar",
     "profile_updated": "Profile updated",
     "profile_update_error": "Failed to update profile",
     "visibility": {

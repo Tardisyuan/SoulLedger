@@ -1415,7 +1415,10 @@
     "edit_profile": "Khemen Aha Pepi",
     "bio_label": "Medu Aha",
     "bio_placeholder": "Djed Aha Netjer...",
-    "avatar_url_label": "Wenut Twt",
+    "avatar_upload_label": "Twt",
+    "avatar_upload_hint": "PNG, JPEG, WebP — 5 MB",
+    "avatar_uploaded": "Twt Kheme Seth",
+    "avatar_upload_error": "Ma Kheme Twt Seth",
     "profile_updated": "Aha Pepi Kheme Seth",
     "profile_update_error": "Ma Kheme Aha Pepi Seth",
     "visibility": {
