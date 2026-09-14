@@ -127,10 +127,14 @@ jobs:
       # `generatedSchemaIsCurrent.test.ts` is the only check that
       # `src/api/generated/schema.ts` matches the committed OpenAPI document.
       #
-      # `test:coverage` also enforces the coverage floor in
-      # packages/core/vitest.config.ts; bare `test` would never evaluate it.
+      # Plain `test`, not `test:coverage`: core no longer carries its own
+      # coverage floor (that gate measured only the ~7 files core has its own
+      # vitest tests for — 9%, because the denominator was core's whole
+      # source). Core's real coverage is now measured by the frontend jest run
+      # below, which as of 2026-09-14 has `rootDir` at the repo root and can
+      # see `packages/core/src` — see `frontend/jest.config.js`.
       - name: Test @soulledger/core
-        run: npm run test:coverage --workspace @soulledger/core
+        run: npm run test --workspace @soulledger/core
       - name: TypeScript check
         run: |
           cd frontend
