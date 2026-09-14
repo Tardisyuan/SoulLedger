@@ -75,10 +75,23 @@ This file is not.」
 `const el: HTMLElement = {}` 能编译过。**只有那份测试在执法"平台无关"这个断言。**
 而 `ci.yml:98-101` 只跑 core 的 typecheck+lint，**不跑 core 的 vitest** —— pre-push 三条都跑。
 
-**代码搬进 `packages/core` = 搬出 jest 覆盖率分母。** `jest.config.js:4-18` 用
-`moduleNameMapper` 直接映射到源码；实测把 `'../packages/core/src/**'` 加进
-`collectCoverageFrom` 后，覆盖率数字**逐字节不变、文件一个都不出现**。仍被测试，
-但不再被度量。这一点没有任何报错提示你。
+**2026-09-14 前:代码搬进 `packages/core` = 搬出 jest 覆盖率分母。** jest 只对
+`rootDir` 之内的文件计量,而 `rootDir` 当时是 `frontend/`,`packages/core` 是它的
+同级目录 —— 把 `'../packages/core/src/**'` 加进 `collectCoverageFrom` 后,覆盖率
+数字**逐字节不变、文件一个都不出现**。仍被测试(经 `moduleNameMapper` 映射到源码
+跑同一批用例),但不再被度量。这一点没有任何报错提示你。
+
+**现在:`jest.config.js` 的 `rootDir` 提到了仓库根**,`roots: ['<rootDir>/frontend']`
+保持用例发现范围不变,`collectCoverageFrom` 现在能名副其实地指到
+`<rootDir>/packages/core/src/**`。`coverageThreshold` 里 core 有独立的路径阈值
+(键是 `packages/core/src/` 目录的绝对路径,不是 glob —— jest 对 glob 键按**单文件**
+逐个校验阈值,对目录路径键按**聚合**校验,二者语义不同),81/74/66/82,与前端
+global 的 67/58/57/67 互不影响。2026-09-14 实测:前端 global
+69.11/60.78/59.50/69.98,core 83.44/76.65/68.10/84.39(153 suites / 2810 tests,
+`npm run test:coverage`,exit 0)。`packages/core` 自己的 vitest `test:coverage`
+门禁已撤:分母是 core 全部源码、分子只有 core 自己 7 个 vitest 文件覆盖的部分,
+数字（9/7/4/9)量的是"core 有多少自己的测试"而不是"core 被测了多少"——
+后者现在由这里的 jest 门禁量。
 
 **已失效的路径引用**（根 `AGENTS.md:149-150,317-323,343,359`）：`src/middleware.ts`
 （实为 `frontend/middleware.ts`）、`lib/api.ts`（已进 `packages/core/src/api/*`）、

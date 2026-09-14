@@ -20,38 +20,23 @@ import { defineConfig } from "vitest/config";
  * `types: []` tsconfig without adding an ambient types entry, which is the
  * same boundary argument the package is built on.
  *
- * COVERAGE (`npm run test:coverage`; the pre-push hook and CI run that, not
- * bare `test`). `coverage.include` names every source file, not only the ones
- * a test imports — without it v8 reports on loaded files alone and an untested
- * module simply is not in the denominator. The numbers are therefore LOW, and
- * that is the honest reading: most of this package (the hooks, the API
- * modules) is exercised by the frontend's jest suites through the
- * `@soulledger/core` mapping, and jest instruments nothing outside its
- * `rootDir` (see the long note in `frontend/jest.config.js`). This gate
- * measures what *this package's own* tests reach.
- *
- * Measured 2026-09-14 (7 files / 34 tests):
- *   statements 11.15 / branches 9.14 / functions 6.86 / lines 11.73
- * Thresholds are measured minus 2, rounded down — a floor that catches a real
- * regression without failing on ordinary work. Ratchet up as tests land.
+ * NO COVERAGE GATE HERE (removed 2026-09-14; was `npm run test:coverage`,
+ * `coverage.include`/`coverage.thresholds` below, 9/7/4/9). Its denominator
+ * was this package's whole source but its numerator only the ~7 files this
+ * package has its own vitest tests for — 11% at the time it was removed. It
+ * measured "how much of core has its own tests", not "how much of core is
+ * tested": most of core (the hooks, the API modules) is exercised by the
+ * frontend's jest suites through the `@soulledger/core` mapping, which this
+ * runner cannot see. That gap is now closed the other way: as of 2026-09-14
+ * `frontend/jest.config.js` moves its `rootDir` to the repo root specifically
+ * so it can instrument `packages/core/src` too, with its own path-scoped
+ * `coverageThreshold` there (see the long note in that file). This config
+ * goes back to running the suite, nothing else.
  */
 export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
     exclude: ["**/node_modules/**", "src/api/generated/**"],
-    coverage: {
-      provider: "v8",
-      // text-summary only: no report directory is written into the package.
-      reporter: ["text-summary"],
-      include: ["src/**/*.ts"],
-      exclude: ["src/api/generated/**", "src/**/*.test.ts", "src/**/*.d.ts"],
-      thresholds: {
-        statements: 9,
-        branches: 7,
-        functions: 4,
-        lines: 9,
-      },
-    },
   },
 });
