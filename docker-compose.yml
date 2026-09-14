@@ -22,6 +22,9 @@ x-django-env: &django-env
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
   SENTRY_DSN: ${SENTRY_DSN:-}
   TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-0}
+  # Uploaded avatars. The backend mounts the media_files volume here; in
+  # production nginx mounts the same volume read-only and serves it as /media/.
+  MEDIA_ROOT: /app/media
 
 services:
   db:
@@ -80,6 +83,7 @@ services:
              daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
       - static_files:/app/staticfiles
+      - media_files:/app/media
     environment: *django-env
     healthcheck:
       # python, not curl: python:*-slim has no curl. /health/ is the route
@@ -147,3 +151,6 @@ volumes:
   postgres_data:
   # collectstatic output; nginx mounts it read-only as /static/ (IS-14).
   static_files:
+  # Uploaded avatars (MEDIA_ROOT); nginx mounts it read-only as /media/.
+  # Unlike static_files this is user data — back it up with the database.
+  media_files:

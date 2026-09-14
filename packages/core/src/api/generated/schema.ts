@@ -2947,6 +2947,7 @@ export interface paths {
          *     update:     PUT    /api/v1/social/profiles/{id}/
          *     partial:    PATCH  /api/v1/social/profiles/{id}/
          *     me:         GET    /api/v1/social/profiles/me/ — current user's profile
+         *     avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
          */
         get: operations["v1_social_profiles_list"];
         put?: never;
@@ -2972,6 +2973,7 @@ export interface paths {
          *     update:     PUT    /api/v1/social/profiles/{id}/
          *     partial:    PATCH  /api/v1/social/profiles/{id}/
          *     me:         GET    /api/v1/social/profiles/me/ — current user's profile
+         *     avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
          */
         get: operations["v1_social_profiles_retrieve"];
         /**
@@ -2982,6 +2984,7 @@ export interface paths {
          *     update:     PUT    /api/v1/social/profiles/{id}/
          *     partial:    PATCH  /api/v1/social/profiles/{id}/
          *     me:         GET    /api/v1/social/profiles/me/ — current user's profile
+         *     avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
          */
         put: operations["v1_social_profiles_update"];
         post?: never;
@@ -2996,6 +2999,7 @@ export interface paths {
          *     update:     PUT    /api/v1/social/profiles/{id}/
          *     partial:    PATCH  /api/v1/social/profiles/{id}/
          *     me:         GET    /api/v1/social/profiles/me/ — current user's profile
+         *     avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
          */
         patch: operations["v1_social_profiles_partial_update"];
         trace?: never;
@@ -3011,6 +3015,30 @@ export interface paths {
         get: operations["v1_social_profiles_me_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social/profiles/me/avatar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Replace the current user's avatar with an uploaded image.
+         *
+         *     Writes `User.avatar` — the account's one avatar — not anything on the
+         *     profile. Validation and re-encoding are AvatarUploadSerializer's; the
+         *     previous file is deleted once the new one is saved, so replacing an
+         *     avatar does not leave an orphan in MEDIA_ROOT.
+         */
+        post: operations["v1_social_profiles_me_avatar_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6200,12 +6228,14 @@ export interface components {
             /** Format: date-time */
             readonly created_at?: string;
         };
-        /** @description Serializer for updating profile bio and avatar. */
+        /**
+         * @description Serializer for updating the profile bio. The avatar has its own upload
+         *     endpoint (AvatarUploadSerializer).
+         */
         PatchedUserProfileUpdate: {
             /** Format: uuid */
             readonly id?: string;
             bio?: string;
-            avatar_url?: string;
         };
         /**
          * @description User serializer for updates (email, role, is_active, organization, position).
@@ -7248,17 +7278,20 @@ export interface components {
             readonly user: number;
             readonly username: string;
             bio?: string;
-            avatar_url?: string;
+            /** Format: uri */
+            readonly avatar: string | null;
             readonly followers_count: number;
             readonly following_count: number;
             readonly post_count: number;
         };
-        /** @description Serializer for updating profile bio and avatar. */
+        /**
+         * @description Serializer for updating the profile bio. The avatar has its own upload
+         *     endpoint (AvatarUploadSerializer).
+         */
         UserProfileUpdate: {
             /** Format: uuid */
             readonly id: string;
             bio?: string;
-            avatar_url?: string;
         };
         /**
          * @description `{"role": "..."}` — the single-role body `own_roles` returns.
@@ -12341,6 +12374,32 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+        };
+    };
+    v1_social_profiles_me_avatar_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    avatar: string;
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {

@@ -318,10 +318,11 @@ class TestUserProfileModel:
         assert profile.following_count == 0
         assert profile.post_count == 0
 
-    def test_default_bio_and_avatar(self):
+    def test_default_bio_and_no_avatar(self):
         profile = UserProfile.objects.create(user=self.user)
         assert profile.bio == ""
-        assert profile.avatar_url == ""
+        # The avatar is the account's (`User.avatar`), not the profile's.
+        assert not profile.user.avatar
 
     def test_one_to_one_constraint(self):
         UserProfile.objects.create(user=self.user)

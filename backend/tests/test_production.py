@@ -469,3 +469,45 @@ class TestFrontendDockerfile:
         """Dockerfile should use alpine for small image"""
         content = _read(FRONTEND_DOCKERFILE)
         assert 'alpine' in content.lower()
+
+
+class TestUploadedMediaIsServedInProduction:
+    """Avatars are uploaded (2026-09-14). Under DEBUG Django serves /media/;
+    in production nothing does unless four pieces meet — the same shape as the
+    certbot test above: settings write to MEDIA_ROOT, compose mounts one volume
+    there on the backend AND read-only on nginx, nginx.conf aliases /media/ to
+    that mount, and the image leaves the directory writable by the app user.
+    Any one missing is an avatar that uploads fine and 404s forever."""
+
+    def _media_root(self):
+        return _load_compose(COMPOSE_BASE)['x-django-env']['MEDIA_ROOT']
+
+    def test_backend_and_nginx_share_the_media_volume_at_the_paths_each_side_uses(self):
+        services = _production_services()
+        backend, nginx = services['backend'], services['nginx']
+        mounts = [v for v in backend['volumes'] if v.split(':')[1] == self._media_root()]
+        assert len(mounts) == 1, f"backend mounts nothing at MEDIA_ROOT: {backend['volumes']}"
+        vol = mounts[0].split(':')[0]
+        assert not vol.startswith(('.', '/')), "media must be a named volume, not a host path"
+        assert vol in _load_compose(COMPOSE_BASE)['volumes']
+        on_nginx = [v for v in nginx['volumes'] if v.split(':')[0] == vol]
+        assert len(on_nginx) == 1 and on_nginx[0].endswith(':ro'), on_nginx
+        served_from = on_nginx[0].split(':')[1].rstrip('/')
+        assert re.search(
+            r"location /media/ \{\s*alias " + re.escape(served_from) + r"/;", _read(NGINX_CONF)
+        ), f"nginx.conf does not alias /media/ to {served_from}/"
+
+    def test_the_image_leaves_media_root_writable_by_the_app_user(self):
+        """A named volume mounted over a path the image lacks is created
+        root-owned — and daphne runs as appuser."""
+        root = re.escape(self._media_root())
+        assert re.search(rf"mkdir -p [^\n]*{root}[^\n]*&& chown appuser:appuser [^\n]*{root}", _read(BACKEND_DOCKERFILE))
+
+    def test_nginx_accepts_an_avatar_as_large_as_the_api_does(self):
+        """nginx's default client_max_body_size is 1m and the avatar limit is
+        larger, so without this an upload the API accepts dies as a 413."""
+        from apps.social.serializers import AVATAR_MAX_BYTES
+
+        m = re.search(r"location /api/ \{[^}]*client_max_body_size (\d+)m;", _read(NGINX_CONF))
+        assert m, "no client_max_body_size in the /api/ location"
+        assert int(m.group(1)) * 1024 * 1024 > AVATAR_MAX_BYTES

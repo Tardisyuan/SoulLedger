@@ -26,8 +26,9 @@ TenantPermission plus an object-level owner check
 IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
 from drf_spectacular.utils import extend_schema
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from apps.core.permissions import TenantPermission
@@ -41,6 +42,7 @@ from apps.social.permissions import (
     IsReactionOwnerOrReadOnly,
 )
 from apps.social.serializers import (
+    AvatarUploadSerializer,
     CommentCreateSerializer,
     CommentListSerializer,
     CommentSerializer,
@@ -377,7 +379,14 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
             return Response({"following": True})
 
 
-class UserProfileViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class UserProfileViewSet(
+    CodenameViewSetMixin,
+    AuditUserViewSetMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     User profile management.
 
@@ -386,12 +395,17 @@ class UserProfileViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.M
     update:     PUT    /api/v1/social/profiles/{id}/
     partial:    PATCH  /api/v1/social/profiles/{id}/
     me:         GET    /api/v1/social/profiles/me/ — current user's profile
+    avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
     """
+    # No create / destroy mixins, rather than a ModelViewSet with POST filtered
+    # out by `http_method_names`: the avatar upload needs POST, and allowing
+    # POST on a ModelViewSet would also route `POST /profiles/` to `create`.
+    # A profile is made by `me`'s get_or_create, never by a client.
     permission_classes = [TenantPermission, IsProfileOwnerOrReadOnly]
     # EXEMPT — see the module note at the top of this file.
     permission_codename = None
     queryset = UserProfile.objects.select_related("user").all()
-    http_method_names = ["get", "put", "patch", "head", "options"]
+    http_method_names = ["get", "post", "put", "patch", "head", "options"]
 
     def get_serializer_class(self):
         if self.action in ("update", "partial_update"):
@@ -415,5 +429,40 @@ class UserProfileViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.M
     def me(self, request):
         """Return or create the current user's profile."""
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        serializer = UserProfileSerializer(profile)
+        serializer = UserProfileSerializer(profile, context=self.get_serializer_context())
         return Response(serializer.data)
+
+    # The request body is spelled out rather than taken from
+    # AvatarUploadSerializer: spectacular renders a request FileField as
+    # `format: uri` unless COMPONENT_SPLIT_REQUEST is on, which would tell the
+    # generated client to send a link — the exact thing this endpoint replaced.
+    @extend_schema(
+        request={"multipart/form-data": {
+            "type": "object",
+            "properties": {"avatar": {"type": "string", "format": "binary"}},
+            "required": ["avatar"],
+        }},
+        responses={200: UserProfileSerializer},
+    )
+    @action(
+        detail=False, methods=["post"], url_path="me/avatar",
+        parser_classes=[MultiPartParser], serializer_class=AvatarUploadSerializer,
+    )
+    def avatar(self, request):
+        """Replace the current user's avatar with an uploaded image.
+
+        Writes `User.avatar` — the account's one avatar — not anything on the
+        profile. Validation and re-encoding are AvatarUploadSerializer's; the
+        previous file is deleted once the new one is saved, so replacing an
+        avatar does not leave an orphan in MEDIA_ROOT.
+        """
+        upload = AvatarUploadSerializer(data=request.data)
+        upload.is_valid(raise_exception=True)
+        user = request.user
+        previous = user.avatar.name if user.avatar else None
+        user.avatar.save(upload.validated_data["avatar"].name, upload.validated_data["avatar"], save=False)
+        user.save(update_fields=["avatar"])
+        if previous:
+            user.avatar.storage.delete(previous)
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        return Response(UserProfileSerializer(profile, context=self.get_serializer_context()).data)

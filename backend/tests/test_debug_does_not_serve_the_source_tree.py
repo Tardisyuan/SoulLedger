@@ -8,9 +8,11 @@ read from `backend/`: `GET /config/settings.py` answered 200, and `GET /.env`
 would have answered with the database and Redis credentials. The dev
 `docker-compose.yml` runs with `DEBUG=true`.
 
-Nothing uploads a file: `User.avatar` is an `ImageField` that no serializer
-accepts on write and no frontend renders. So the route is removed rather than
-pointed somewhere safer.
+At the time nothing uploaded a file, so the route was removed. Since
+2026-09-14 avatars are uploaded (`POST /api/v1/social/profiles/me/avatar/`),
+and the route is back — with MEDIA_URL "/media/" and a MEDIA_ROOT of its own.
+The first test below still holds the source tree to 404; the last one holds
+/media/ to MEDIA_ROOT and nothing beside it.
 
 Why a subprocess: `static()` returns `[]` unless DEBUG is true *when the
 URLconf is imported*, and pytest-django forces DEBUG off before that happens.
@@ -86,3 +88,53 @@ def test_nothing_in_settings_reintroduces_a_media_root_at_the_code():
     assert not str(BACKEND).startswith(root.rstrip("/")), (
         f"MEDIA_ROOT {root!r} contains the source tree"
     )
+
+
+MEDIA_PROBE = """
+import django, json
+django.setup()
+from django.test import Client
+c = Client()
+out = {}
+for p in ["/media/avatars/2026/09/ok.png", "/media/manage.py", "/media/.env",
+          "/media/../manage.py", "/media/%2e%2e/manage.py", "/media/..%2fmanage.py",
+          "/media/%2e%2e/.env", "/manage.py", "/.env", "/health/"]:
+    r = c.get(p)
+    body = b"".join(r.streaming_content) if getattr(r, "streaming", False) else r.content
+    out[p] = [r.status_code, body.decode("latin-1")[:40]]
+print(json.dumps(out))
+"""
+
+
+def test_media_serves_media_root_and_nothing_outside_it(tmp_path):
+    """Avatars are uploaded now (2026-09-14), so DEBUG serves `/media/` again —
+    from an explicit MEDIA_ROOT. This is the other side of the BP-05 hole: the
+    route exists, and it must reach that one directory and nothing beside it.
+
+    A `.env` and a `manage.py` are planted one level ABOVE the media root, so a
+    traversal that escaped would find a real file and answer 200 — a 404 here
+    is the guard working, not an absent target.
+    """
+    import json
+
+    media = tmp_path / "media"
+    (media / "avatars" / "2026" / "09").mkdir(parents=True)
+    (media / "avatars" / "2026" / "09" / "ok.png").write_bytes(b"PNG-BYTES-FROM-MEDIA")
+    (tmp_path / ".env").write_text("SECRET=leaked")
+    (tmp_path / "manage.py").write_text("LEAKED-MANAGE")
+
+    env = _child_env()
+    env["MEDIA_ROOT"] = str(media)
+    proc = subprocess.run(
+        [sys.executable, "-c", MEDIA_PROBE], cwd=BACKEND, env=env,
+        capture_output=True, text=True, timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr[-3000:]
+    got = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert got.pop("/health/")[0] == 200, got
+    assert got.pop("/media/avatars/2026/09/ok.png") == [200, "PNG-BYTES-FROM-MEDIA"], got
+    for path, (code, body) in got.items():
+        # 400 is Django refusing a `..` segment outright (SuspiciousFileOperation),
+        # 404 is the file not being under MEDIA_ROOT. Both are refusals.
+        assert code in (400, 404), (path, code, body)
+        assert "LEAKED" not in body and "SECRET" not in body, (path, body)

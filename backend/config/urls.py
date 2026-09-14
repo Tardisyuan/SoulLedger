@@ -1,6 +1,8 @@
 """
 URL configuration for SoulLedger project.
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -50,16 +52,20 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ]
 
-# No `+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`.
+# Uploaded avatars under DEBUG. `static()` returns [] unless DEBUG is on; in
+# production nginx serves /media/ from the shared volume and this adds nothing.
 #
-# Neither setting is defined, so Django's defaults applied: MEDIA_URL became
-# "/" and MEDIA_ROOT the empty string — the process's working directory. Under
-# DEBUG that served `backend/` as a static tree: `GET /config/settings.py`
-# answered 200, and `GET /.env` would have handed over the database and Redis
-# credentials to anyone, unauthenticated. `docker-compose.yml` runs the dev
-# stack with DEBUG=true (BP-05).
-#
-# Nothing here uploads files: `User.avatar` is an ImageField that no serializer
-# accepts on write and no page renders. If media is ever served, it needs an
-# explicit MEDIA_ROOT pointing at a dedicated directory — never the checkout.
+# THIS LINE WAS ONCE THE HOLE (BP-05). It used to sit here with neither setting
+# defined, so Django's defaults applied: MEDIA_URL "/" and MEDIA_ROOT "" — the
+# process's working directory. Under DEBUG that served `backend/` as a static
+# tree: `GET /config/settings.py` answered 200, and `GET /.env` would have
+# handed over the database and Redis credentials, unauthenticated. It was
+# removed, and came back on 2026-09-14 only together with an explicit
+# MEDIA_URL "/media/" and a MEDIA_ROOT of its own (config/settings.py).
+# tests/test_debug_does_not_serve_the_source_tree.py runs a DEBUG child process
+# and asserts both halves: the source tree is 404, and /media/ reaches
+# MEDIA_ROOT and nothing beside it (django.views.static.serve joins with
+# safe_join, so `..` cannot climb out).
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
