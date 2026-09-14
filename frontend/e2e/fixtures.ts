@@ -385,6 +385,23 @@ export const RECYCLE_BIN_ENTRY = {
   hard_delete_eligible: false,
 };
 
+/**
+ * UserProfileSerializer (backend/apps/social/serializers.py) for the signed-in
+ * user's own profile — `user` is TEST_USER.id, which is what
+ * ProfileCard.tsx's `isOwnProfile` check compares against, so the mock always
+ * renders the "Edit profile" button rather than a follow button.
+ */
+export const SOCIAL_PROFILE = {
+  id: "profile-test-admin",
+  user: TEST_USER.id,
+  username: TEST_USER.username,
+  bio: "",
+  avatar: null as string | null,
+  followers_count: 0,
+  following_count: 0,
+  post_count: 0,
+};
+
 // ── Mock engine ───────────────────────────────────────────────────────────
 
 export interface RecordedCall {
@@ -462,6 +479,11 @@ export class ApiMock {
   readonly roleVersions: Record<string, number> = Object.fromEntries(
     ROLES.map((r) => [r.name, r.version])
   );
+
+  /** The signed-in user's avatar URL, so a successful upload is visible on
+   *  the next GET of the same profile — same live-state shape as
+   *  `roleVersions` above. */
+  currentAvatar: string | null = null;
 
   /**
    * Register a handler. `reply` may be a function or a plain value, in which
@@ -750,6 +772,17 @@ export class ApiMock {
     // ── Recycle bin ──
     this.on("GET", "/recycle-bin/", { results: [RECYCLE_BIN_ENTRY], count: 1 });
     this.on("POST", "/recycle-bin/restore/", { restored: 1 + RECYCLE_BIN_ENTRY.dependent_count });
+
+    // ── Social profile / avatar upload ──
+    // `currentAvatar` is live state (see the field above), so a successful
+    // upload shows up on the GET a query invalidation triggers right after.
+    this.on("GET", "/social/profiles/:id/", () => ({
+      body: { ...SOCIAL_PROFILE, avatar: this.currentAvatar },
+    }));
+    this.on("POST", "/social/profiles/me/avatar/", () => {
+      this.currentAvatar = "https://soulledger.test/media/avatars/uploaded.png";
+      return { body: { ...SOCIAL_PROFILE, avatar: this.currentAvatar } };
+    });
 
     // ── 2026-09-10 装上 `assertEverythingWasHandled` 那一刻现形的六个端点 ──
     //
