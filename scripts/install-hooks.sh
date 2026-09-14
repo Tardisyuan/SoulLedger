@@ -88,11 +88,11 @@ cd "$ROOT" || exit 1
 # migration" for a commit that touched no model (2026-09-11, twice). The main
 # checkout's copy describes the same machine, so it is the fallback; a
 # worktree's own copy still wins.
+MAIN_ROOT="$(cd "$(git rev-parse --path-format=absolute --git-common-dir)/.." 2>/dev/null && pwd)"
 PREPUSH_ENV=""
 if [ -f "$ROOT/.prepush.env" ]; then
     PREPUSH_ENV="$ROOT/.prepush.env"
 else
-    MAIN_ROOT="$(cd "$(git rev-parse --path-format=absolute --git-common-dir)/.." 2>/dev/null && pwd)"
     [ -n "$MAIN_ROOT" ] && [ -f "$MAIN_ROOT/.prepush.env" ] && PREPUSH_ENV="$MAIN_ROOT/.prepush.env"
 fi
 if [ -n "$PREPUSH_ENV" ]; then
@@ -285,11 +285,43 @@ fi
 
 if [ "$RUN_BACKEND" = 1 ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
-    RUFF="${RUFF_BIN:-ruff}"
-    command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found. Set RUFF_BIN in .prepush.env if it lives elsewhere."
+    # THE INTERPRETER IS THE PROJECT VENV, `backend/.venv` — Python 3.11 with
+    # exactly `requirements.lock`, the set the image and CI install.
+    #
+    # It used to be PYTHON_BIN from .prepush.env, else a bare `python` on PATH.
+    # On the machine this hook was written for, PYTHON_BIN named the shared
+    # conda `vision` environment: Python 3.12 and the dependency versions from
+    # before `d561340` upgraded the lock, so a green push measured a different
+    # set of packages from the one that ships. The bare-`python` fallback was
+    # the 2026-09-11 refusal described above (anaconda base, no Django). There
+    # is no PATH fallback any more: no venv is a refusal that says how to make one.
+    #
+    # A worktree has no `.venv` (gitignored), so the main checkout's is used,
+    # exactly as for .prepush.env; a worktree's own still wins. PYTHON_BIN /
+    # RUFF_BIN still override, and the run says when they do — a .prepush.env
+    # that still names another environment would otherwise win silently.
+    VENV_BIN=""
+    for r in "$ROOT" "$MAIN_ROOT"; do
+        if [ -n "$r" ] && [ -x "$r/backend/.venv/bin/python" ]; then VENV_BIN="$r/backend/.venv/bin"; break; fi
+    done
+    MAKE_VENV="cd backend && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt"
+    if [ -n "${PYTHON_BIN:-}" ]; then
+        PY="$PYTHON_BIN"; echo "    python: $PY (PYTHON_BIN override; backend/.venv not used)"
+    elif [ -n "$VENV_BIN" ]; then
+        PY="$VENV_BIN/python"; echo "    python: $PY (backend/.venv)"
+    else
+        fail "no backend/.venv (looked under $ROOT${MAIN_ROOT:+ and $MAIN_ROOT}). Create it, from the repository root:  $MAKE_VENV"
+    fi
+    if [ -n "${RUFF_BIN:-}" ]; then
+        RUFF="$RUFF_BIN"; echo "    ruff:   $RUFF (RUFF_BIN override)"
+    elif [ -n "$VENV_BIN" ] && [ -x "$VENV_BIN/ruff" ]; then
+        RUFF="$VENV_BIN/ruff"; echo "    ruff:   $RUFF (backend/.venv)"
+    else
+        fail "no ruff in backend/.venv — it is pinned in backend/requirements-dev.txt, which CI installs too. From the repository root:  $MAKE_VENV"
+    fi
+    command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found or not executable."
+    command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found or not executable."
     echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
-    PY="${PYTHON_BIN:-python}"
-    command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found. Set PYTHON_BIN in .prepush.env if it lives elsewhere."
     # `makemigrations --check` BEFORE pytest, because it is the cheap one and
     # because it catches a class the suite does not: a model `choices` list
     # losing a member alters a field, and Django notices while every test that
@@ -459,7 +491,12 @@ echo "                 (frontend, also on packages/ changes) / ruff +"
 echo "                 makemigrations --check + pytest (backend),"
 echo "                 scoped to what the push actually changes."
 echo ""
-echo "   Per-machine settings go in .prepush.env (gitignored) — PYTHON_BIN,"
-echo "   RUFF_BIN, DATABASE_URL, PYTEST_PREPUSH_ARGS. A worktree without its own"
-echo "   copy uses the main checkout's. The hook fails rather than skips when a"
-echo "   tool is missing; SKIP_PREPUSH=1 git push overrides."
+echo "   Backend gates run in backend/.venv (Python 3.11 + requirements.lock +"
+echo "   requirements-dev.txt). Without it the hook refuses and prints the"
+echo "   one-line command that creates it."
+echo ""
+echo "   Per-machine settings go in .prepush.env (gitignored) — DATABASE_URL,"
+echo "   PYTEST_PREPUSH_ARGS, and PYTHON_BIN / RUFF_BIN only to override the venv."
+echo "   A worktree without its own copy (or venv) uses the main checkout's. The"
+echo "   hook fails rather than skips when a tool is missing; SKIP_PREPUSH=1 git"
+echo "   push overrides."

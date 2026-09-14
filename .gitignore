@@ -6,6 +6,10 @@
 # Measured 2026-09-10: `git check-ignore -v node_modules` returned nothing, and
 # both symlinks showed up as `??`, one `git add -A` away from being committed.
 node_modules
+# backend/.venv — the project interpreter (CLAUDE.md, Build & Test). `uv venv`
+# writes its own `*` .gitignore inside, `python -m venv` does not; this covers
+# both. No trailing slash, for the same symlink reason as node_modules above.
+.venv
 __pycache__/
 *.pyc
 .env

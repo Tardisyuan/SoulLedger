@@ -1,0 +1,6 @@
+# Development tools that are not runtime dependencies, pinned so the local gate
+# and CI run the same version. Installed into backend/.venv next to
+# requirements.lock (see CLAUDE.md, Build & Test) and by .github/workflows/ci.yml.
+# 0.12.0 is the ruff every local pre-push has used; CI installed an unpinned
+# latest until 2026-09-14.
+ruff==0.12.0

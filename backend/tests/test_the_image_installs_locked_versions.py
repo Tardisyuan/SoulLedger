@@ -58,3 +58,22 @@ def test_the_dockerfile_and_ci_install_from_the_lock():
         text = (REPO_ROOT / ".github" / "workflows" / workflow).read_text()
         assert "pip install -r requirements.txt" not in text, workflow
         assert "-r requirements.lock" in text, workflow
+
+
+def test_ruff_has_one_pin_and_ci_installs_it():
+    """Local gates run ruff from `backend/.venv`, installed from
+    requirements-dev.txt; CI installed an unpinned `pip install ruff`. Two
+    sources for one linter drift silently — the same shape as IS-17."""
+    (ruff,) = [Requirement(line) for line in _lines(BACKEND / "requirements-dev.txt") if _norm(Requirement(line).name) == "ruff"]
+    (spec,) = list(ruff.specifier)
+    assert spec.operator == "==", f"ruff is not pinned: {ruff}"
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    assert "-r requirements-dev.txt" in ci
+    assert not re.search(r"pip install ruff\b", ci), "ci.yml installs its own, unpinned ruff"
+
+
+def test_the_local_venv_never_reaches_the_image():
+    """`backend/.venv` sits inside the build context, and `COPY backend/ .`
+    would carry a macOS interpreter into a Linux image."""
+    patterns = _lines(REPO_ROOT / ".dockerignore")
+    assert "**/.venv" in patterns

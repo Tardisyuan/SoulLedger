@@ -72,26 +72,40 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 `SyntaxError: 'node:util' does not provide an export named 'styleText'`。
 2026-09-04 实测:v18.20.8 下这两条红,v20.19.5 与 v22.22.1 下都绿。
 
-**下面的后端命令里的 `python` 几乎肯定不是你要的那个。** 2026-09-05 同一天内
-这台机器上量到两种情况,而**第二种更坏**:
+**后端的解释器是 `backend/.venv`,不是 PATH 上的任何 `python`。**
+Python **3.11** + `requirements.lock` + `requirements-dev.txt`(只有钉死的 ruff)——
+与镜像(`backend/Dockerfile`)和 CI(`ci.yml`)装的是**同一份**。建法,在仓库根:
 
-    早些时候   python / ruff / pip-audit 三个 command -v 全空(只有 python3)
-    之后       /opt/anaconda3/bin 上了 PATH:python 与 ruff 有了,
-               pip-audit 与 psql 仍然没有
+    cd backend && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
 
-第二种坏在:`python` 存在,但它是 anaconda **base**,里面没有 Django。
-`python -m pytest` 于是退出 **4** 并报 `ModuleNotFoundError: No module named
-'django'` —— 那句话指向「缺依赖」,而真正的原因是「解释器选错了」。
-`command not found` 反而不会把人带偏。(`ruff check .` 用 base 的那个是 exit 0。)
+(没有 uv:`python3.11 -m venv backend/.venv` 后用 `backend/.venv/bin/pip install
+--no-deps -r …` 装同样两份。)`.venv` 被 `.gitignore` 与 `.dockerignore` 挡住。
 
-`.git/hooks/pre-push` 不受影响:它从 gitignored 的 `.prepush.env` 读
-`PYTHON_BIN` / `RUFF_BIN`。~~找不到就带着「Set PYTHON_BIN in .prepush.env」拒绝~~
-**这句只在 PATH 上连 `python` 都没有时成立。** 2026-09-11 在 worktree 里推送:
-钩子在 worktree 根找 `.prepush.env`(gitignored,worktree 里没有),`PYTHON_BIN`
-于是退回裸 `python` —— 正是上面那个没有 Django 的 base —— 而它把
-`ModuleNotFoundError` 报成「a model changed without a migration」,拒了两次。
-现在钩子会退回主 checkout 的 `.prepush.env`,并且只在输出里真有
-`Migrations for '…'` 时才说「缺迁移」。
+为什么不再用别的环境(2026-09-14 用户决定):此前本地命令与钩子用的是共享的 conda
+`vision` 环境 —— Python 3.12,依赖停在 `d561340` 升级之前,即仍是 pip-audit 报
+46 个已知漏洞的那批版本。**本地绿测的是另一套依赖**,而它和线上那套只在
+「碰巧兼容」时一致。不要往 `vision` 里装东西去「对齐」:它是共享环境,里面有别的项目。
+
+PATH 上的 `python` 仍然**几乎肯定不是你要的那个**:这台机器上它是 anaconda
+**base**,没有 Django,`python -m pytest` 退出 **4** 并报 `ModuleNotFoundError:
+No module named 'django'` —— 那句话指向「缺依赖」,真正的原因是「解释器选错了」。
+所以下面的命令都写 `.venv/bin/python` / `.venv/bin/ruff`。先
+`.venv/bin/python -c "import django"` 问一句,比读一条 pytest 的 collection error 快;
+`.venv` 不存在时 shell 会直接说 `no such file or directory`,照上面那行建。
+
+`.git/hooks/pre-push`(由 `scripts/install-hooks.sh` 生成)**优先用 `backend/.venv`**;
+worktree 里没有 `.venv`(gitignored),就用主 checkout 的,和 `.prepush.env` 的
+退回规则一样。两个都没有就**拒绝**并打印上面那行建法 —— 不再退回裸 `python`:
+2026-09-11 在 worktree 里推送,正是那个裸 `python`(base,无 Django)让钩子把
+`ModuleNotFoundError` 报成「a model changed without a migration」拒了两次。
+`.prepush.env` 里的 `PYTHON_BIN` / `RUFF_BIN` 仍可**覆盖** venv,且运行时会打印
+`python: … (PYTHON_BIN override; backend/.venv not used)`。**旧的 `.prepush.env`
+若还写着 vision 的路径,覆盖会赢** —— 看钩子输出里那一行,或删掉那两行。
+**改了 `scripts/install-hooks.sh` 要在主 checkout 重跑 `bash scripts/install-hooks.sh`**:
+钩子是生成出来的副本,源文件变了它不会跟着变。
+
+pip-audit 不装进 venv(CI 也是临时装):`cd backend && uvx pip-audit --strict --desc
+-r requirements.lock --no-deps --disable-pip`,与 CI 同一条参数。
 
 **worktree 里还缺 `SECRET_KEY`。** `backend/.env` 同样 gitignored,
 `.claude/worktrees/*` 里没有它,`config/settings.py:14-16` 于是直接拒绝加载 ——
@@ -101,14 +115,11 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 **不要**把主 checkout 的 `backend/.env` 拷过来:它的 DATABASE_URL 与 REDIS_URL
 都指向 115。钩子在没有 `backend/.env` 时自己补这两个值,并打印一行说明。
 
-复制粘贴下面的命令没有这一层 —— 要么先 activate 装了后端依赖的那个环境,
-要么照 `.prepush.env` 里 `PYTHON_BIN` 的值把 `python` 换成绝对路径。
-**这不是可有可无的注脚:这一整轮里每一条后端命令都得这样改写才能跑。**
-而且 PATH 会在同一天里变,所以「上次能跑」不是「这次能跑」的证据 —— 先
-`python -c "import django"` 问一句,比读一条 pytest 的 collection error 快。
+worktree 里的 `.venv`:它是 gitignored 的,所以 worktree 里没有;直接用主 checkout 的
+绝对路径(`<主 checkout>/backend/.venv/bin/python`),或在 worktree 里照上面那行另建一个。
 
 ```bash
-# Backend — matches CI pipeline exactly
+# Backend — matches CI pipeline exactly (same interpreter version, same lock)
 # ISOLATE BOTH BACKING SERVICES. `.env` points DATABASE_URL *and* REDIS_URL at
 # the shared box (192.168.2.115). Overriding only the database still lets the
 # suite write permission-cache keys into the real Redis — verified 2026-08-27.
@@ -117,10 +128,10 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
-  python -m pytest --tb=short -q
-cd backend && DATABASE_URL="sqlite:///:memory:" python manage.py makemigrations --check --dry-run
-cd backend && ruff check .
-cd backend && pip-audit --strict --desc
+  .venv/bin/python -m pytest --tb=short -q
+cd backend && DATABASE_URL="sqlite:///:memory:" .venv/bin/python manage.py makemigrations --check --dry-run
+cd backend && .venv/bin/ruff check .
+cd backend && uvx pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
 
 # Frontend — matches CI pipeline exactly
 cd frontend && npx tsc --noEmit
@@ -184,7 +195,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
-  python -m pytest -q --no-cov --create-db
+  .venv/bin/python -m pytest -q --no-cov --create-db
 ```
 
 **`tests/test_concurrency.py` 里有 4 条 `skipif(SQLITE)` 的测试,是这个仓库里唯一
@@ -213,11 +224,11 @@ cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
 **这台机器上没有 `psql`**(2026-09-05 实测 `command -v psql` 为空),所以上面那条
 按原样跑不了。用 Django 自己的连接参数问同一个问题:
 
-    # 用你环境里的解释器(这台机器上就是 `.prepush.env` 的 PYTHON_BIN 指的那个)。
+    # 解释器是 backend/.venv(psycopg2-binary 在 requirements.lock 里)。
     # **不要 source `.prepush.env`**:它的职责就是把 DATABASE_URL 覆盖成 SQLite,
     # 一旦 source,下面这段会去连本地 socket 而不是 115 —— 问错了数据库,
     # 而它会安静地失败在「连不上」而不是「查不到」。2026-09-05 两种都试过。
-    cd backend && <你的 python> -c "
+    cd backend && .venv/bin/python -c "
     import os, django; os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings'); django.setup()
     from django.db import connection as c; import psycopg2
     d=c.settings_dict

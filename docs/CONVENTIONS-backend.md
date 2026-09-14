@@ -35,23 +35,25 @@
 
 ## 1. 环境（先读这节，否则下面的命令都跑不了）
 
-`CLAUDE.md` 里的后端命令写的 `python` / `ruff` / `pip-audit` **在这台机器上不是你要的那个**。
-`python` 若解析到 anaconda base，`python -m pytest` 会 exit 4 报
-`ModuleNotFoundError: No module named 'django'` —— 那句话指向"缺依赖"，真实原因是
-"解释器选错了"。
-
-本机正确值在 gitignored 的 `.prepush.env`：
-
-```
-PYTHON_BIN="/opt/anaconda3/envs/vision/bin/python"
-RUFF_BIN="/opt/anaconda3/bin/ruff"
-```
-
-pre-push 从这里读，复制粘贴的命令没有这一层。跑任何后端命令前先问一句：
+后端解释器是项目专属的 **`backend/.venv`**：Python 3.11 + `requirements.lock` +
+`requirements-dev.txt`（钉死的 ruff），与镜像、CI 同一套。完整说明在 `CLAUDE.md` 的
+Build & Test；建法（仓库根）：
 
 ```bash
-/opt/anaconda3/envs/vision/bin/python -c "import django; print(django.VERSION)"
+cd backend && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
 ```
+
+PATH 上的 `python` 不是它：这台机器上是 anaconda base，`python -m pytest` 会 exit 4 报
+`ModuleNotFoundError: No module named 'django'` —— 那句话指向"缺依赖"，真实原因是
+"解释器选错了"。2026-09-14 之前本地用的是共享 conda `vision` 环境（Python 3.12、
+`d561340` 升级前的依赖版本），**已弃用，不要往里装东西**。跑任何后端命令前先问一句：
+
+```bash
+backend/.venv/bin/python -c "import django; print(django.VERSION)"
+```
+
+pre-push 优先用 `backend/.venv`（worktree 退回主 checkout 的）；gitignored 的
+`.prepush.env` 里的 `PYTHON_BIN` / `RUFF_BIN` 只作覆盖，覆盖生效时钩子会打印出来。
 
 **不要 `source .prepush.env`** 去查 115 上的残留库：它会把 `DATABASE_URL` 覆写成
 SQLite，探针于是连本地 socket，失败在"连不上"而不是"查不到"。
@@ -271,7 +273,7 @@ def recalculate_for_tenant(tenant_id):
 redis-server --port 6399 --daemonize yes --save '' --appendonly no
 cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
-  /opt/anaconda3/envs/vision/bin/python -m pytest --tb=short -q
+  .venv/bin/python -m pytest --tb=short -q
 ```
 
 **SQLite 藏起一整类缺陷，而这套测试默认只在 SQLite 上跑。** 两条已发货的 bug 是在
@@ -285,7 +287,7 @@ cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:639
 两条都**不可能**在 SQLite 上测出来。碰事务、约束、列宽之前，先在 PG 上跑一遍：
 
 ```bash
-cd backend && /opt/anaconda3/envs/vision/bin/python -m pytest -q --no-cov --create-db
+cd backend && .venv/bin/python -m pytest -q --no-cov --create-db
 ```
 
 `--create-db` 是必需的：陈旧的 `test_soulledger` 会造成上千条"环境错误"。
@@ -343,7 +345,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 | webhook 投递必须在 `on_commit` 之后 | — | `[test:test_webhooks_are_not_delivered_inside_the_transaction]` |
 | `X-Forwarded-For` 必须校验 | — | `[test:test_client_ip_is_validated]`（含 PG-only 的一半） |
 | CSV 导出不得携带公式 | — | `[test:test_ledger_export_cannot_carry_a_formula]` |
-| 依赖审计 | `pip-audit --strict --desc -r requirements.txt` | `[CI]`。**注意 `-r`**：`CLAUDE.md:81` 写的是全环境版，会报 conda `vision` 环境自带的 starlette/torch/tornado/urllib3 —— 那是环境噪音不是项目发现 |
+| 依赖审计 | `pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip` | `[CI]`。审锁文件而不是运行环境（IS-17）；本地 `uvx pip-audit` 同参数（2026-09-14 实跑 exit 0，"No known vulnerabilities found"） |
 | 密钥不入库 | `.gitignore:4-8` | `[gitignore]`。**无 secret scanner，ruff 无 `S` 规则** |
 | 禁止在代码中输出 API Key / Token | 根 `AGENTS.md:270` | **`[文字]`** |
 | `manage.py check --deploy` | — | **任何地方都不跑** |
@@ -447,7 +449,8 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
    `tests/test_production.py:161` 钉的也是 `DJANGO_SECRET_KEY`。**没找到映射。**
    静态观察，未起容器验证。（IS-05 已修；`infrastructure/` 那套 2026-09-13 整个删除，
    只留根的 compose 三件套与 `nginx.conf`。）
-9. **pip-audit 命令。** `CLAUDE.md:81` 不带 `-r`（全环境）vs CI 带 `-r requirements.txt`。
+9. ~~**pip-audit 命令。** `CLAUDE.md:81` 不带 `-r`（全环境）vs CI 带 `-r requirements.txt`。~~
+   2026-09-14 已统一：两处都是 `-r requirements.lock --no-deps --disable-pip`。
 10. **`backend/AGENTS.md` 不是规范文档。** 它自述为"2026-05-12 那一次优化的记录，
     不是现状描述"（`:1,8`）。今天仍成立的只有两条：contextvar、`apps/permissions` 已删。
 11. **里程碑状态。** 根 `AGENTS.md:366-377` 把 M4–M7 标"待开始"，同一文件 `:509-510`
@@ -487,7 +490,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 
 ```bash
 cd /Users/tardis/Downloads/SoulLedger/backend
-RUFF=/opt/anaconda3/bin/ruff
+RUFF=.venv/bin/ruff
 $RUFF check . >/dev/null 2>&1; echo "check exit: $?"
 $RUFF format --check . 2>&1 | tail -1
 grep -rn "class .*(.*AuditUserFields" apps --include='*.py' | grep -v migrations | wc -l

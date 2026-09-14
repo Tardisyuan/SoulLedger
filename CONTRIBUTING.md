@@ -6,8 +6,13 @@
 # Backend — settings.py refuses to load without SECRET_KEY, so copy the
 # example env first. Its DATABASE_URL points at a local PostgreSQL; with none,
 # set DATABASE_URL=sqlite:///db.sqlite3 in .env (DEBUG=true allows SQLite)
-cd backend && cp .env.example .env && pip install -r requirements.txt
-python manage.py migrate && python manage.py runserver
+#
+# The interpreter is a project venv, backend/.venv: Python 3.11 and exactly
+# requirements.lock (what the image and CI install) plus requirements-dev.txt
+# (the pinned ruff). The pre-push hook uses it and refuses without it.
+cd backend && cp .env.example .env
+uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
+.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
 
 # Frontend — install at the REPO ROOT, not in frontend/: this is an npm
 # workspaces repo and the only lockfile is the root package-lock.json
