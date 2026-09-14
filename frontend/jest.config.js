@@ -108,12 +108,24 @@ module.exports = {
   // denominator, 34 new tests joined the run, and the numerator grew because
   // code that had never been rendered now is. Ratcheted to ~1 point under, per
   // the rule two paragraphs down.
+  //
+  // AND THEN IT SAT TEN POINTS BELOW THE REAL NUMBER. The four values stayed at
+  // 59/51/50/60 while the suite grew to 153 suites / 2805 tests. Measured
+  // 2026-09-14 on `91c698d`, `npm run test:coverage`, exit 0:
+  //
+  //   statements 69.07 / branches 60.69 / functions 59.38 / lines 69.95
+  //
+  // Ratcheted to measured minus 2, rounded down (the user's call for this
+  // pass — 2 rather than the ~1 above, for the same reason given there: a gate
+  // that fails on ordinary work gets deleted). Ten points of slack was a
+  // gate that could not have caught anything smaller than a thousand lines of
+  // untested code.
   coverageThreshold: {
     global: {
-      branches: 51,
-      functions: 50,
-      lines: 60,
-      statements: 59,
+      branches: 58,
+      functions: 57,
+      lines: 67,
+      statements: 67,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
