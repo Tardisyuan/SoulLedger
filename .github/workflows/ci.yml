@@ -66,10 +66,13 @@ jobs:
           cd backend
           python manage.py migrate
           python -m pytest --tb=short -q
+      # ruff's version comes from requirements-dev.txt — the same pin the local
+      # backend/.venv and the pre-push hook use. This used to install ruff
+      # unpinned, i.e. whatever was newest on the day of the run.
       - name: Lint
         run: |
           cd backend
-          pip install ruff
+          pip install --no-deps -r requirements-dev.txt
           ruff check .
       # Blocks. Scoped to requirements.lock — what the image installs; auditing
       # requirements.txt resolved its `>=` to today's newest releases (IS-17) —

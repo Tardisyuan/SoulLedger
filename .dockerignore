@@ -9,6 +9,9 @@
 **/.env.*
 !**/.env.example
 **/node_modules
+# The local backend/.venv (macOS interpreter + site-packages) is inside the
+# build context; the image installs requirements.lock itself.
+**/.venv
 **/__pycache__
 **/*.pyc
 **/.pytest_cache

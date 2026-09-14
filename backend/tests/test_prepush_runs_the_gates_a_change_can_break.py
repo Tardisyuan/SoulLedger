@@ -336,3 +336,81 @@ class TestFromAWorktree:
         installed = main / ".git" / "hooks" / "pre-push"
         assert installed.read_text(encoding="utf-8") == _hook_body()
         assert os.access(installed, os.X_OK)
+
+
+def _fake_venv(checkout: Path, python_body: str) -> Path:
+    """A `backend/.venv` whose python prints a marker; its ruff always passes."""
+    bin_dir = checkout / "backend" / ".venv" / "bin"
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "python").write_text("#!/bin/bash\n" + python_body)
+    (bin_dir / "ruff").write_text("#!/bin/bash\nexit 0\n")
+    for exe in ("python", "ruff"):
+        (bin_dir / exe).chmod(0o755)
+    return bin_dir
+
+
+def _path_with_a_bare_python(tmp_path: Path) -> str:
+    """PATH with a `python` on it that announces itself — the interpreter the
+    hook used to fall back to, and must not reach for any more."""
+    bare = tmp_path / "bare-bin"
+    bare.mkdir()
+    (bare / "python").write_text('#!/bin/bash\necho "BARE PYTHON USED"; exit 1\n')
+    (bare / "python").chmod(0o755)
+    return f"{bare}:{os.environ.get('PATH', '')}"
+
+
+class TestTheProjectVenv:
+    """The backend gates run in `backend/.venv` (user decision, 2026-09-14).
+
+    Before, the interpreter was `PYTHON_BIN` from `.prepush.env`, else a bare
+    `python` on PATH. On this machine that was the shared conda `vision`
+    environment — Python 3.12 and the dependency versions from before
+    `d561340` — while the image and CI install `requirements.lock` on 3.11. A
+    green push measured a different dependency set from the one that ships;
+    and the bare-`python` fallback is the 2026-09-11 refusal above.
+    """
+
+    def test_the_checkouts_venv_is_used_without_any_setting(self, hook, checkouts, tmp_path):
+        main, _ = checkouts
+        _fake_venv(main, 'echo "SEEN VENV PYTHON"; exit 1\n')
+        proc = _run(hook, main, ["backend/x.py"], PATH=_path_with_a_bare_python(tmp_path))
+        assert "SEEN VENV PYTHON" in proc.stdout, proc.stdout + proc.stderr
+        assert "BARE PYTHON USED" not in proc.stdout
+        assert "backend/.venv" in proc.stdout, "the run does not say which interpreter it used"
+
+    def test_a_worktree_uses_the_main_checkouts_venv(self, hook, checkouts, tmp_path):
+        """`.venv` is gitignored, so a worktree has none — same as `.prepush.env`."""
+        main, wt = checkouts
+        _fake_venv(main, 'echo "SEEN MAIN VENV PYTHON"; exit 1\n')
+        proc = _run(hook, wt, ["backend/x.py"], PATH=_path_with_a_bare_python(tmp_path))
+        assert "SEEN MAIN VENV PYTHON" in proc.stdout, proc.stdout + proc.stderr
+
+    def test_a_worktrees_own_venv_wins(self, hook, checkouts, tmp_path):
+        main, wt = checkouts
+        _fake_venv(main, 'echo "SEEN MAIN VENV PYTHON"; exit 1\n')
+        _fake_venv(wt, 'echo "SEEN WORKTREE VENV PYTHON"; exit 1\n')
+        proc = _run(hook, wt, ["backend/x.py"])
+        assert "SEEN WORKTREE VENV PYTHON" in proc.stdout, proc.stdout
+        assert "SEEN MAIN VENV PYTHON" not in proc.stdout
+
+    def test_python_bin_still_overrides_the_venv_and_says_so(self, hook, checkouts, tmp_path):
+        main, _ = checkouts
+        _fake_venv(main, 'echo "SEEN VENV PYTHON"; exit 1\n')
+        py = _fake_python(tmp_path, 'echo "SEEN OVERRIDE PYTHON"; exit 1\n')
+        proc = _backend_gate(hook, main, py)
+        assert "SEEN OVERRIDE PYTHON" in proc.stdout, proc.stdout
+        assert "SEEN VENV PYTHON" not in proc.stdout
+        assert "PYTHON_BIN" in proc.stdout, "an override that is not announced is invisible"
+
+    def test_no_venv_and_no_override_refuses_with_the_command_that_builds_one(
+        self, hook, checkouts, tmp_path
+    ):
+        main, _ = checkouts
+        proc = _run(hook, main, ["backend/x.py"], PATH=_path_with_a_bare_python(tmp_path))
+        assert proc.returncode == 1, proc.stdout
+        assert "BARE PYTHON USED" not in proc.stdout, (
+            f"the hook fell back to whatever `python` is on PATH:\n{proc.stdout}"
+        )
+        assert "backend/.venv" in proc.stdout
+        assert "uv venv --python 3.11" in proc.stdout
+        assert "requirements.lock" in proc.stdout
