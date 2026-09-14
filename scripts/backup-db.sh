@@ -15,6 +15,13 @@
 #
 # Exits non-zero on any failure, and a failed dump leaves no file matching
 # soulledger_*.sql.gz: the compose healthcheck counts those files.
+#
+# MEDIA_DIR (optional): if set, also tars that directory to
+# soulledger_media_<timestamp>.tar.gz alongside the db dump, same partial-
+# then-rename and non-zero-exit-on-failure behavior. The production compose
+# `backup` service mounts the media_files volume read-only at /media and sets
+# MEDIA_DIR=/media, since uploaded avatars are user data the db dump doesn't
+# cover.
 
 set -eu
 
@@ -64,8 +71,28 @@ fi
 mv "$PARTIAL" "$BACKUP_FILE"
 echo "Backup complete: ${BACKUP_FILE} ($(du -h "$BACKUP_FILE" | cut -f1))"
 
+if [ -n "${MEDIA_DIR:-}" ]; then
+    MEDIA_FILE="${BACKUP_DIR}/soulledger_media_${TIMESTAMP}.tar.gz"
+    MEDIA_PARTIAL="${MEDIA_FILE}.partial"
+
+    echo "Backing up media (${MEDIA_DIR})..."
+    if ! tar -czf "$MEDIA_PARTIAL" -C "$MEDIA_DIR" .; then
+        rm -f "$MEDIA_PARTIAL"
+        echo "ERROR: media backup failed; no media backup written" >&2
+        exit 1
+    fi
+    if ! gzip -t "$MEDIA_PARTIAL" || [ ! -s "$MEDIA_PARTIAL" ]; then
+        rm -f "$MEDIA_PARTIAL"
+        echo "ERROR: media backup file is empty or corrupt" >&2
+        exit 1
+    fi
+    mv "$MEDIA_PARTIAL" "$MEDIA_FILE"
+    echo "Media backup complete: ${MEDIA_FILE} ($(du -h "$MEDIA_FILE" | cut -f1))"
+fi
+
 # Clean up old backups
 echo "Cleaning up backups older than ${RETENTION_DAYS} days..."
 find "$BACKUP_DIR" -name "soulledger_*.sql.gz" -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "soulledger_media_*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
 
 echo "Done."
