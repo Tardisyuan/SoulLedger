@@ -58,17 +58,20 @@ SoulLedger 是一个可运行的全栈 Web 应用（Django + Next.js），在同
 
 ## 快速启动
 
-**环境要求**：Python 3.11+、Node.js 20+；如需本地 PostgreSQL 与 Redis 则需要 Docker。
+**环境要求**：Python 3.11+（含 `uv`）、Node.js 20+；如需本地 PostgreSQL 与 Redis 则需要 Docker。
 
 ### 后端
 
 ```bash
 cd backend
 cp .env.example .env
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py runserver 0.0.0.0:8000
 ```
+
+没有 `uv`：`python3.11 -m venv .venv` 后用 `.venv/bin/pip install --no-deps -r requirements.lock -r requirements-dev.txt` 装同样两份。
 
 未设置 `DATABASE_URL` 时 Django 回落到 SQLite（`backend/db.sqlite3`），因此不依赖任何
 外部服务即可跑起来（`DEBUG=False` 时会直接拒绝 SQLite）。Redis 只有 WebSocket 与
