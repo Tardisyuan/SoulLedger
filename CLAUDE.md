@@ -160,9 +160,16 @@ cd frontend && npm run test:coverage
 # they are empty interfaces, so `const el: HTMLElement = {}` compiles.
 npm run --workspace packages/core typecheck
 npm run --workspace packages/core lint
-# `test:coverage` = the same vitest run plus the coverage floor in
-# `packages/core/vitest.config.ts` (pre-push and CI run this one).
-npm run --workspace packages/core test:coverage
+npm run --workspace packages/core test
+# No `test:coverage` here anymore (removed 2026-09-14): the vitest coverage
+# floor it used to run measured only the ~7 files core has its own tests for
+# (9%), against a denominator of core's whole source — most of core (hooks,
+# API modules) is exercised by the frontend's jest suites instead, which
+# vitest cannot see. `frontend/jest.config.js` now has `rootDir` at the repo
+# root and a path-scoped `coverageThreshold` for `packages/core/src`
+# (81/74/66/82; 2026-09-14: 83.44/76.65/68.10/84.39), so that command —
+# `cd frontend && npm run test:coverage` above — is where core's coverage is
+# actually gated now.
 
 # E2E —— **三个 project,不是一个,而且要先 build**。
 # `playwright.config.ts:51-53` 定义 chromium / firefox / mobile-chrome,而
