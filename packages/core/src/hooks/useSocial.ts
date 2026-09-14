@@ -1,6 +1,6 @@
 "use client";
 
-import { drfNonFieldError } from "../validations/drfErrors";
+import { drfFieldErrors, drfNonFieldError } from "../validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { socialApi, type PaginatedResponse, type UserProfile } from "../api/index";
 import { notify, type NotifyMessage } from "../platform/index";
@@ -298,6 +298,27 @@ export function useUpdateProfile() {
     },
     onError: (error) => {
       notify(serverSaidOr(error, "social.profile_update_error"), "error");
+    },
+  });
+}
+
+/**
+ * Upload the current user's avatar. `body` is the host's multipart body
+ * (see `socialApi.uploadAvatar`). A rejected file comes back as a FIELD error
+ * on `avatar` ("Avatar must be at most 5 MB.", "Upload a PNG, JPEG or WebP
+ * image."), which `serverSaidOr` alone would not read — so that is tried first.
+ */
+export function useUploadAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: object) => socialApi.uploadAvatar(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: socialKeys.profiles.all });
+      notify("social.avatar_uploaded", "success");
+    },
+    onError: (error) => {
+      const said = drfFieldErrors(error).avatar;
+      notify(said ? { text: said } : serverSaidOr(error, "social.avatar_upload_error"), "error");
     },
   });
 }

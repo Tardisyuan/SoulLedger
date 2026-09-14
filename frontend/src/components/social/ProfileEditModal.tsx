@@ -4,9 +4,8 @@ import { useState, useEffect, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { Field, TextAreaField, fieldControl } from "@/src/components/ui/Field";
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useUpdateProfile } from "@soulledger/core/hooks/useSocial";
+import { useUpdateProfile, useUploadAvatar } from "@soulledger/core/hooks/useSocial";
 import type { UserProfile } from "@soulledger/core/api";
 
 interface ProfileEditModalProps {
@@ -18,21 +17,20 @@ interface ProfileEditModalProps {
 export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalProps) {
   const { t } = useI18n();
   const updateMutation = useUpdateProfile();
+  const uploadMutation = useUploadAvatar();
 
   // Unique prefix so field ids never collide across multiple
   // ProfileEditModal instances mounted at once.
   const formId = useId();
   const bioId = `${formId}-bio`;
-  const avatarUrlId = `${formId}-avatar-url`;
+  const avatarId = `${formId}-avatar`;
 
   const [bio, setBio] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
 
   // Populate form when the profile changes or the modal opens
   useEffect(() => {
     if (isOpen) {
       setBio(profile.bio || "");
-      setAvatarUrl(profile.avatar_url || "");
     }
   }, [isOpen, profile]);
 
@@ -40,9 +38,24 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
     e.preventDefault();
 
     updateMutation.mutate(
-      { id: profile.id, data: { bio: bio.trim(), avatar_url: avatarUrl.trim() } },
+      { id: profile.id, data: { bio: bio.trim() } },
       { onSuccess: () => onClose() }
     );
+  }
+
+  /**
+   * The avatar uploads the moment a file is picked, separately from Save: it
+   * is its own endpoint writing the account's avatar, and the card behind the
+   * modal refreshes with it (the hook invalidates the profile queries). The
+   * input is cleared afterwards so picking the same file again still fires.
+   */
+  function handleAvatarPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const body = new FormData();
+    body.append("avatar", file);
+    uploadMutation.mutate(body);
+    e.target.value = "";
   }
 
   /**
@@ -100,31 +113,25 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           placeholder={t("social.bio_placeholder") || "Tell others about yourself…"}
         />
 
-        {/* NOT `TextField`, and the reason is the monospace.
-         *
-         * `TextField` owns its control's whole `className` — it `Omit`s the prop
-         * so a caller cannot bolt classes onto the input, which is what keeps 42
-         * signatures from growing back. `font-mono` on a URL field is not
-         * decoration though: it is what makes a mistyped character in a pasted
-         * link findable. So this one drops to the render-prop `Field` and
-         * composes `fieldControl()` with the one class it actually needs —
-         * every wiring guarantee (`id`/`htmlFor`, `aria-describedby`,
-         * `aria-invalid`, `role="alert"`) still comes from `Field`.
-         *
-         * Size moves text-02 → text-03: `fieldControl`'s `sm` would give the
-         * smaller type but also tighten the padding to `px-2 py-1`, which would
-         * leave this control visibly shorter than the bio box above it. The
-         * padding is the part that has to match its neighbour. */}
-        <Field id={avatarUrlId} label={t("social.avatar_url_label") || "Avatar URL"}>
+        {/* An upload, not a link (2026-09-14). This was a URL field, and the
+         * production CSP (`img-src 'self' data:`) blocked every avatar it could
+         * produce. The render-prop `Field` still supplies the label wiring and
+         * `aria-describedby` for the format/size hint; `accept` only filters
+         * the picker — the server decodes the file and is the actual check. */}
+        <Field
+          id={avatarId}
+          label={t("social.avatar_upload_label") || "Avatar"}
+          description={t("social.avatar_upload_hint") || "PNG, JPEG or WebP, up to 5 MB"}
+        >
           {(control) => (
             <input
               {...control}
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              disabled={updateMutation.isPending}
-              className={cn(fieldControl(), "font-mono")}
-              placeholder="https://…"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleAvatarPicked}
+              disabled={uploadMutation.isPending}
+              aria-busy={uploadMutation.isPending || undefined}
+              className={fieldControl()}
             />
           )}
         </Field>

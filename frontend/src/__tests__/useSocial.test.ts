@@ -9,7 +9,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useToggleReaction, useCreateComment, useUpdateProfile } from "@soulledger/core/hooks/useSocial";
+import { useToggleReaction, useCreateComment, useUpdateProfile, useUploadAvatar } from "@soulledger/core/hooks/useSocial";
 import { socialKeys } from "@soulledger/core/query_keys";
 import { socialApi } from "@soulledger/core/api";
 
@@ -20,6 +20,7 @@ jest.mock("@soulledger/core/api", () => ({
     addReaction: jest.fn().mockResolvedValue({ data: {} }),
     createComment: jest.fn().mockResolvedValue({ data: {} }),
     updateProfile: jest.fn().mockResolvedValue({ data: {} }),
+    uploadAvatar: jest.fn().mockResolvedValue({ data: {} }),
   },
 }));
 
@@ -208,5 +209,51 @@ describe("useUpdateProfile behavior", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith("social.profile_update_error", "error");
+  });
+});
+
+describe("useUploadAvatar behavior", () => {
+  it("posts the body, invalidates profile queries and shows a success toast", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useUploadAvatar(), { wrapper });
+    const body = new FormData();
+    await act(async () => {
+      result.current.mutate(body);
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(socialApi.uploadAvatar).toHaveBeenCalledWith(body);
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["social", "profiles"] })
+    );
+    expect(mockShowToast).toHaveBeenCalledWith("social.avatar_uploaded", "success");
+  });
+
+  it("shows the server's reason for a rejected file — a FIELD error, not a non-field one", async () => {
+    // The backend answers `{"avatar": ["Avatar must be at most 5 MB."]}`.
+    // `serverSaidOr` reads only non_field_errors/detail, so without reading the
+    // field the user would get a generic "upload failed" for a file that was
+    // simply too big.
+    (socialApi.uploadAvatar as jest.Mock).mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 400, data: { avatar: ["Avatar must be at most 5 MB."] } },
+    });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useUploadAvatar(), { wrapper });
+    await act(async () => {
+      result.current.mutate(new FormData());
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith({ text: "Avatar must be at most 5 MB." }, "error");
+  });
+
+  it("falls back to the generic key when the error has no usable shape", async () => {
+    (socialApi.uploadAvatar as jest.Mock).mockRejectedValueOnce(networkError());
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useUploadAvatar(), { wrapper });
+    await act(async () => {
+      result.current.mutate(new FormData());
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith("social.avatar_upload_error", "error");
   });
 });
