@@ -264,9 +264,12 @@ if [ "$RUN_CORE" = 1 ]; then
     # hand-copy, which would drift) and asserts those names stay unresolvable.
     # Without this line it would be a guard nobody runs — which is the exact
     # defect the `packages/` gate above was added to fix.
-    echo "  → core vitest"
-    npm run --workspace packages/core test --silent \
-        || fail "@soulledger/core tests failed. If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
+    # `test:coverage`, not `test`: the same suite plus the coverage floor in
+    # vitest.config.ts, which only `--coverage` evaluates (the frontend's jest
+    # threshold had exactly this blind spot under bare `npm test`).
+    echo "  → core vitest (with coverage threshold)"
+    npm run --workspace packages/core test:coverage --silent \
+        || fail "@soulledger/core tests failed (or coverage fell below the vitest.config.ts thresholds — the summary above says which). If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
 fi
 
 # RUN_FRONTEND already folds in TOUCHES_CORE — see where it is computed.

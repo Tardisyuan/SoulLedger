@@ -149,7 +149,9 @@ cd frontend && npm run test:coverage
 # they are empty interfaces, so `const el: HTMLElement = {}` compiles.
 npm run --workspace packages/core typecheck
 npm run --workspace packages/core lint
-npm run --workspace packages/core test
+# `test:coverage` = the same vitest run plus the coverage floor in
+# `packages/core/vitest.config.ts` (pre-push and CI run this one).
+npm run --workspace packages/core test:coverage
 
 # E2E —— **三个 project,不是一个,而且要先 build**。
 # `playwright.config.ts:51-53` 定义 chromium / firefox / mobile-chrome,而
