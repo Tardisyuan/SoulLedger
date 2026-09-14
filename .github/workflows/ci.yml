@@ -123,8 +123,11 @@ jobs:
       # globals stay unresolvable (typecheck passes on empty interfaces), and
       # `generatedSchemaIsCurrent.test.ts` is the only check that
       # `src/api/generated/schema.ts` matches the committed OpenAPI document.
+      #
+      # `test:coverage` also enforces the coverage floor in
+      # packages/core/vitest.config.ts; bare `test` would never evaluate it.
       - name: Test @soulledger/core
-        run: npm run test --workspace @soulledger/core
+        run: npm run test:coverage --workspace @soulledger/core
       - name: TypeScript check
         run: |
           cd frontend
