@@ -288,6 +288,12 @@ class Follow(AuditUserFields, models.Model):
 class UserProfile(models.Model):
     """
     Extended profile for social features. One-to-one with User.
+
+    No avatar of its own: the avatar is `User.avatar`, uploaded through
+    `POST /api/v1/social/profiles/me/avatar/`. There was an `avatar_url` here,
+    a free-text link to anywhere — blocked by the production CSP
+    (`img-src 'self' data:`) and a tracking pixel wherever it was not. One
+    account, one avatar; social migration 0005 removed the column.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
@@ -296,7 +302,6 @@ class UserProfile(models.Model):
         related_name="social_profile",
     )
     bio = models.TextField(blank=True, default="")
-    avatar_url = models.URLField(blank=True, default="")
     followers_count = models.PositiveIntegerField(default=0)
     following_count = models.PositiveIntegerField(default=0)
     post_count = models.PositiveIntegerField(default=0)

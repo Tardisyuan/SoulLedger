@@ -6443,6 +6443,7 @@ paths:
         update:     PUT    /api/v1/social/profiles/{id}/
         partial:    PATCH  /api/v1/social/profiles/{id}/
         me:         GET    /api/v1/social/profiles/me/ — current user's profile
+        avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
       parameters:
       - name: ordering
         required: false
@@ -6484,6 +6485,7 @@ paths:
         update:     PUT    /api/v1/social/profiles/{id}/
         partial:    PATCH  /api/v1/social/profiles/{id}/
         me:         GET    /api/v1/social/profiles/me/ — current user's profile
+        avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
       parameters:
       - in: path
         name: id
@@ -6513,6 +6515,7 @@ paths:
         update:     PUT    /api/v1/social/profiles/{id}/
         partial:    PATCH  /api/v1/social/profiles/{id}/
         me:         GET    /api/v1/social/profiles/me/ — current user's profile
+        avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
       parameters:
       - in: path
         name: id
@@ -6553,6 +6556,7 @@ paths:
         update:     PUT    /api/v1/social/profiles/{id}/
         partial:    PATCH  /api/v1/social/profiles/{id}/
         me:         GET    /api/v1/social/profiles/me/ — current user's profile
+        avatar:     POST   /api/v1/social/profiles/me/avatar/ — upload own avatar
       parameters:
       - in: path
         name: id
@@ -6589,6 +6593,38 @@ paths:
       description: Return or create the current user's profile.
       tags:
       - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+  /api/v1/social/profiles/me/avatar/:
+    post:
+      operationId: v1_social_profiles_me_avatar_create
+      description: |-
+        Replace the current user's avatar with an uploaded image.
+
+        Writes `User.avatar` — the account's one avatar — not anything on the
+        profile. Validation and re-encoding are AvatarUploadSerializer's; the
+        previous file is deleted once the new one is saved, so replacing an
+        avatar does not leave an orphan in MEDIA_ROOT.
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+              required:
+              - avatar
       security:
       - jwtAuth: []
       responses:
@@ -13085,7 +13121,9 @@ components:
           readOnly: true
     PatchedUserProfileUpdate:
       type: object
-      description: Serializer for updating profile bio and avatar.
+      description: |-
+        Serializer for updating the profile bio. The avatar has its own upload
+        endpoint (AvatarUploadSerializer).
       properties:
         id:
           type: string
@@ -13093,13 +13131,6 @@ components:
           readOnly: true
         bio:
           type: string
-        avatar_url:
-          oneOf:
-          - type: string
-            format: uri
-            maxLength: 200
-          - type: string
-            maxLength: 0
     PatchedUserUpdate:
       type: object
       description: |-
@@ -15247,13 +15278,11 @@ components:
           readOnly: true
         bio:
           type: string
-        avatar_url:
-          oneOf:
-          - type: string
-            format: uri
-            maxLength: 200
-          - type: string
-            maxLength: 0
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
         followers_count:
           type: integer
           readOnly: true
@@ -15264,6 +15293,7 @@ components:
           type: integer
           readOnly: true
       required:
+      - avatar
       - followers_count
       - following_count
       - id
@@ -15272,7 +15302,9 @@ components:
       - username
     UserProfileUpdate:
       type: object
-      description: Serializer for updating profile bio and avatar.
+      description: |-
+        Serializer for updating the profile bio. The avatar has its own upload
+        endpoint (AvatarUploadSerializer).
       properties:
         id:
           type: string
@@ -15280,13 +15312,6 @@ components:
           readOnly: true
         bio:
           type: string
-        avatar_url:
-          oneOf:
-          - type: string
-            format: uri
-            maxLength: 200
-          - type: string
-            maxLength: 0
       required:
       - id
     UserRole:

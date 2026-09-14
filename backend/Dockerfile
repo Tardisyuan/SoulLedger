@@ -32,7 +32,7 @@ COPY --chown=appuser:appuser backend/ .
 # imports settings, which refuse to load without SECRET_KEY, so the old
 # `RUN collectstatic || true` collected nothing and hid that. The directory
 # is a volume nginx serves as /static/ (IS-14).
-RUN mkdir -p /app/staticfiles && chown appuser:appuser /app/staticfiles
+RUN mkdir -p /app/staticfiles /app/media && chown appuser:appuser /app/staticfiles /app/media
 USER appuser
 EXPOSE 8000
 # ASGI, not `gunicorn config.wsgi`: WSGI never serves the channels WebSocket

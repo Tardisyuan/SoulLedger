@@ -104,3 +104,6 @@ docker/postgres/
 docker/redis/
 
 .prepush.env
+
+# Uploaded files under the default local MEDIA_ROOT (backend/config/settings.py).
+/media/

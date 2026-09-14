@@ -190,6 +190,16 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = []
 
+# Uploaded files (user avatars). Both are set explicitly because Django's
+# defaults — MEDIA_URL "/" and MEDIA_ROOT "" (the working directory) — are
+# exactly what served `backend/` itself under DEBUG (BP-05). MEDIA_ROOT is a
+# directory of its own: never the checkout, never `backend/`
+# (tests/test_debug_does_not_serve_the_source_tree.py). Locally that is
+# `<repo>/media` (gitignored); the compose stack sets MEDIA_ROOT to the
+# `media_files` volume, which nginx serves at /media/ in production.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT") or BASE_DIR.parent / "media")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS

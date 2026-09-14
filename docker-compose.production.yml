@@ -191,6 +191,8 @@ services:
       # (IS-09). tests/test_production.py checks the source exists.
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - static_files:/var/www/static:ro
+      # Uploaded avatars, written by the backend at MEDIA_ROOT (/app/media).
+      - media_files:/var/www/media:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       # ACME challenges certbot writes; nginx.conf serves them from here.
       - certbot_www:/var/www/certbot:ro
