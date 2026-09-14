@@ -68,18 +68,21 @@ affected rows with ⊘/△ and offers a one-click filter for them.
 
 ## Quick start
 
-**Prerequisites:** Python 3.11+, Node.js 20+, and Docker if you want PostgreSQL
-and Redis locally.
+**Prerequisites:** Python 3.11+ (with `uv`), Node.js 20+, and Docker if you want
+PostgreSQL and Redis locally.
 
 ### Backend
 
 ```bash
 cd backend
 cp .env.example .env
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py runserver 0.0.0.0:8000
 ```
+
+No `uv`: `python3.11 -m venv .venv`, then `.venv/bin/pip install --no-deps -r requirements.lock -r requirements-dev.txt`.
 
 With no `DATABASE_URL` set, Django falls back to SQLite at `backend/db.sqlite3`,
 so this works with nothing else running. (SQLite is rejected outright when
