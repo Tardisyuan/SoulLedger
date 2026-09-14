@@ -114,19 +114,26 @@ services:
   # Failure is visible three ways: the first backup runs at start and a
   # failure exits the container (restart loop in `docker compose ps`); cron
   # output goes to the container's stdout (`docker compose logs backup`); and
-  # the healthcheck turns unhealthy when the newest good dump is older than
-  # 26 hours — the signal an external monitor should watch.
+  # the healthcheck turns unhealthy when the newest good dump (db or media) is
+  # older than 26 hours — the signal an external monitor should watch.
+  #
+  # media_files is mounted read-only here too: uploaded avatars are user data
+  # a db dump doesn't cover, and MEDIA_DIR tells backup-db.sh to tar it
+  # alongside the db dump, same partial-then-rename and non-zero-exit-on-
+  # failure behavior, same retention.
   backup:
     image: postgres:16-alpine
     volumes:
       - ./scripts:/scripts:ro
       - ./backups:/backups
+      - media_files:/media:ro
     environment:
       PGHOST: db
       PGPORT: "5432"
       PGDATABASE: soulledger
       PGUSER: soulledger
       PGPASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MEDIA_DIR: /media
     entrypoint: ["sh", "-c"]
     command:
       - >
@@ -134,7 +141,7 @@ services:
         echo '0 2 * * * /scripts/backup-db.sh /backups > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
         exec crond -f -l 8
     healthcheck:
-      test: ["CMD-SHELL", "find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q ."]
+      test: ["CMD-SHELL", "find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q . && find /backups -name 'soulledger_media_*.tar.gz' -mmin -1560 | grep -q ."]
       interval: 5m
       timeout: 10s
       start_period: 5m

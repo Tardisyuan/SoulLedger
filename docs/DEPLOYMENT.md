@@ -63,3 +63,20 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   2026-09-14 在生产合并上实跑过 dropdb / createdb / restore 这三步(只起 db 与 backup):
   非空库上恢复 → `restore FAILED and was rolled back`;重建空库后 → `Restore complete.`,
   行数与备份前一致。
+
+### 媒体(头像)备份与恢复
+
+- 同一个 `backup` 服务、同一轮 cron、同一份 `RETENTION_DAYS`:`backup-db.sh` 在
+  db dump 之后把只读挂进来的 `media_files` 卷(`/media`)打包成
+  `soulledger_media_<timestamp>.tar.gz`,失败(打包或校验)非零退出、不留 `.partial`
+  文件,和 db dump 的失败语义一致。healthcheck 现在同时要求 db 与 media 两份备份
+  都在 26 小时以内,任一过期都转 unhealthy。
+- 恢复(先按上面的步骤停 backend,避免边写边解包):
+
+  ```bash
+  docker run --rm \
+    -v "$(docker volume ls -q --filter name=media_files)":/media \
+    -v "$(pwd)/backups:/backups:ro" \
+    alpine sh -c "rm -rf /media/* && tar xzf /backups/soulledger_media_YYYYMMDD_HHMMSS.tar.gz -C /media"
+  $DC start pgbouncer backend celery celery-beat
+  ```
