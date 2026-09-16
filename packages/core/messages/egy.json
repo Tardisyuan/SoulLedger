@@ -55,7 +55,7 @@
       "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Iaru",
       "GREEK": "Khemet Wedja, Sesh Er, Mu Lethe"
     },
-    "your_realm": "Your realm"
+    "your_realm": "Per Ahet Ek"
   },
   "footer": {
     "version": "Medew Aba Hemsu Seth v0.1"
@@ -87,7 +87,7 @@
     },
     "events": {
       "SOUL_CREATED": "Aba Seshem Seth",
-      "SETTLEMENT_CORRECTED": "Settlement corrected",
+      "SETTLEMENT_CORRECTED": "Wedja Khemen Seth",
       "SOUL_DIED": "Mut Aba Sesh Seth",
       "STATE_CHANGED": "Set Medu Khemen Seth",
       "RECORD_ADDED": "Sesh Seth Wehem",
@@ -169,7 +169,7 @@
       "verdict_passed": "Sethet",
       "verdict_failed": "Ma Sethet",
       "verdict_purgatory": "Khet Her Tepy",
-      "verdict_retry": "Retry",
+      "verdict_retry": "Khemu",
       "reincarnate": "Aru Her Tepy →",
       "reincarnate_success": "Aru Her Tepy Seth",
       "being_reborn": "Aba Em Aru Her Tepy...",
@@ -178,8 +178,8 @@
       "memory_reset": "Unemu Seth",
       "eternal": "Em Tepy Seth",
       "cycle": "Aru Sethet",
-      "life_number": "Life {{n}}",
-      "carried_in": "Carried in from the last life",
+      "life_number": "Aru {{n}}",
+      "carried_in": "Ini Em Aru Tepy",
       "mark_dead_confirm": "Wehem {{name}} Ru?",
       "confirm_delete": "Sesen Wehem Seth",
       "cancel_delete": "Iri",
@@ -235,39 +235,39 @@
           "event_after_death": "Medew Kher Wepet Ru"
         }
       },
-      "delete_to_recycle_bin": "Moved to the recycle bin",
-      "more_actions": "More actions",
+      "delete_to_recycle_bin": "Nehem Ma Per Wehem Seth",
+      "more_actions": "Aha Seth Wer",
       "timeline": {
-        "title": "Soul ledger page",
-        "tab_all": "All",
-        "tab_karma": "Karma only",
-        "tab_judgment": "Verdicts only",
-        "tab_system": "Include system events",
-        "empty": "No records match the filter",
-        "expand": "Expand",
-        "open_in_queue": "Open in the judgment queue",
-        "years": "years",
-        "cycle_band": "Life {{n}}",
-        "born": "Born in {{location}}",
-        "born_unknown_place": "Born",
-        "died": "Died",
-        "entered_judgment": "Entered judgment{{court}}",
-        "awaiting_judgment": "Judgment · awaiting verdict",
-        "awaiting_judgment_hint": "The soul is in the judgment queue, awaiting a verdict",
-        "verdict": "Verdict · {{verdict}}",
-        "disposed": "Disposition carried out · {{realm}}",
-        "reborn": "Reborn as {{name}}",
-        "original": "Raw {{sign}}{{n}}",
-        "terminal_flush": "── no one remains",
-        "terminal_filled": "◉ someone remains",
-        "stage_judging": "Judgment",
-        "stage_judging_hint": "Not started · the soul enters the judgment queue after death",
-        "stage_disposed": "Disposition",
-        "stage_disposed_hint": "Not started · assigned by the verdict once judged",
-        "stage_reincarnating": "Rebirth",
-        "stage_reincarnating_hint": "Not started · disposition must complete first",
-        "stage_next_life": "Next life",
-        "stage_next_life_hint": "Settled once disposition and rebirth complete"
+        "title": "Medjat Sesh Aba",
+        "tab_all": "Wetu",
+        "tab_karma": "Maat Isfet Wa",
+        "tab_judgment": "Unemu Wa",
+        "tab_system": "Her Medew Kehat",
+        "empty": "Ma Rekhyu Medu Sethet Em Shesep",
+        "expand": "Wep",
+        "open_in_queue": "Wep Em Sheemtet Wu",
+        "years": "renpet",
+        "cycle_band": "Aru {{n}}",
+        "born": "Mesi Em {{location}}",
+        "born_unknown_place": "Mesi",
+        "died": "Mut",
+        "entered_judgment": "Aq Em Sheemtet{{court}}",
+        "awaiting_judgment": "Sheemtet · Em Set Unemu",
+        "awaiting_judgment_hint": "Aba Em Sheemtet Wu, Em Set Unemu",
+        "verdict": "Unemu · {{verdict}}",
+        "disposed": "Wetep Seth Iri Seth · {{realm}}",
+        "reborn": "Aru Her Tepy Em {{name}}",
+        "original": "Tepy {{sign}}{{n}}",
+        "terminal_flush": "── Ma Rekhyu Wedja",
+        "terminal_filled": "◉ Wedja Em Khet",
+        "stage_judging": "Sheemtet Seth",
+        "stage_judging_hint": "Ma Shesep · Aba Aq Em Sheemtet Wu Kher Mut",
+        "stage_disposed": "Wetep Seth",
+        "stage_disposed_hint": "Ma Shesep · Unemu Setep Kher Sheemtet",
+        "stage_reincarnating": "Aru Her Tepy",
+        "stage_reincarnating_hint": "Ma Shesep · Wetep Seth Em Tepy",
+        "stage_next_life": "Aru Tepy",
+        "stage_next_life_hint": "Em Hotep Kher Wetep Seth we Aru Her Tepy"
       }
     },
     "balance_range": "Redu Unemu",
@@ -275,7 +275,7 @@
     "balance_min": "Neken",
     "date_problem_filter": "Aba Ma Sethet Wu",
     "balance_not_applicable": "Ma Unemu — Nau Aba Hemsu",
-    "balance_withheld": "Balance withheld — not visible to this role",
+    "balance_withheld": "Unemu Imen — Ma Maa Em Ami Pen",
     "date_problem_marker": {
       "error": "Ma Sethet Hru — Nau Aba Hemsu",
       "warning": "Khet Hru — Nau Aba Hemsu"
@@ -310,14 +310,14 @@
       "id_copy_failed": "Ma Sesh",
       "copied": "Em Sesh ✓"
     },
-    "field_required": "This field is required",
+    "field_required": "Medu Pen Em Tepy",
     "dismiss": "Khetem"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} ({{count}} medu)",
-    "first": "First page",
-    "last": "Last page",
-    "jump": "Jump to page"
+    "first": "Per Tepy",
+    "last": "Per Pehwy",
+    "jump": "Shem Er Per"
   },
   "menus": {
     "title": "Iri Menu",
@@ -385,7 +385,7 @@
     "delete_confirm_title": "Nehem Ma Per Wehem?",
     "delete_confirm_message": "\"{{name}}\" Nehem Ma Per Wehem. Sesen Kheme Wehem {{days}} Hru; Em Metu Set, Hem Ahet Wehem Djet.",
     "delete_confirm_action": "Nehem Ma Per Wehem",
-    "update_error": "Failed to update menu"
+    "update_error": "Ma Khemen Menu Seth"
   },
   "recycle_bin": {
     "title": "Per Wehem Seth",
@@ -512,7 +512,7 @@
       "court_placeholder": "Shen Medu: Hemsu Tepy, Per Ma'at",
       "approver_type": "Aset Netjer Sesen",
       "approver_role": "Ami Sesen",
-      "approver_placeholder": "— select an approver role —",
+      "approver_placeholder": "— Setep Ami Sesen —",
       "new_node": "Mekher Werpet",
       "saved": "Pet Sethety Pedet Seth",
       "save_failed": "Ma Pedet Seth",
@@ -556,8 +556,8 @@
       "advance": "Khemen Seth",
       "completed": "Em Kheme Seth Seth",
       "completed_message": "Em Kheme Seth Seth Abuf.",
-      "completed_with_rejection": "Rejected",
-      "completed_with_rejection_message": "This approval flow ended with a rejection.",
+      "completed_with_rejection": "Wehem Seth",
+      "completed_with_rejection_message": "Em Her Tepy Seth Pen Wetep Em Wehem.",
       "nodes": "Mekher Wu",
       "history": "Medew Sethet",
       "current": "Em Tepy",
@@ -568,14 +568,14 @@
       "approve_error": "Ma Sesen Mekher Seth",
       "advance_success": "Em Kheme Seth Khemen",
       "advance_error": "Ma Khemen Em Kheme Seth",
-      "advance_no_movement": "The workflow did not move — it is still on the same node",
-      "escalate": "Escalate past this node",
-      "escalate_reason_label": "Reason (required, recorded in the audit log)",
-      "escalate_reason_placeholder": "Why this node is being skipped",
-      "escalate_success": "Escalated; the reason has been recorded",
-      "escalate_error": "Escalation failed",
-      "escalate_needs_reason": "Escalation requires a written reason",
-      "approver_name_absent": "the node carries the approver's primary key; the backend sends no name"
+      "advance_no_movement": "Em Kheme Seth Ma Khemen — Em Mekher Wa",
+      "escalate": "Seshem Hery Her Mekher Pen",
+      "escalate_reason_label": "Medu (Em Tepy, Sesh Em Medew Sethet)",
+      "escalate_reason_placeholder": "Her Ma Iri Tepy Mekher Pen",
+      "escalate_success": "Seshem Hery; Medu Sesh Seth",
+      "escalate_error": "Ma Seshem Hery Seth",
+      "escalate_needs_reason": "Seshem Hery Em Tepy Medu Sesh",
+      "approver_name_absent": "Mekher Ini Ren Aa Netjer; Ma Ren Em Wetjes"
     },
     "verdicts": {
       "passed": "Sethet",
@@ -621,7 +621,7 @@
     "nodes_count": "{{count}} Mekher",
     "view_to_see_nodes": "Wenu er Ma Mekheru",
     "delete_error": "Ma Wehem Seth",
-    "view_error": "Failed to load",
+    "view_error": "Ma Khemut Seth",
     "status": {
       "PENDING": "Em Set Medu",
       "IN_PROGRESS": "Em Sheemtet",
@@ -692,15 +692,15 @@
       "total": "Dema",
       "empty": "Nen medu."
     },
-    "series_effective": "Effective",
-    "series_decayed": "Decayed away",
-    "raw_vs_decayed": "Raw / decayed",
-    "raw_merit": "Raw merit",
-    "raw_demerit": "Raw demerit",
-    "decayed_merit": "Decayed merit",
-    "decayed_demerit": "Decayed demerit",
-    "raw_balance_sr": "Raw balance {{n}}",
-    "advisory_disclaimer": "For the bench's reference only · karma is not part of the verdict calculation; the judge decides"
+    "series_effective": "Em Iri",
+    "series_decayed": "Em Sebekhet",
+    "raw_vs_decayed": "Tepy / Sebekhet",
+    "raw_merit": "Maat Tepy",
+    "raw_demerit": "Isfet Tepy",
+    "decayed_merit": "Maat Sebekhet",
+    "decayed_demerit": "Isfet Sebekhet",
+    "raw_balance_sr": "Wedja Tepy {{n}}",
+    "advisory_disclaimer": "Medu Ahet En Hemsu Wa · Maat Isfet Ma Em Unemu; Hemsu Seth Wedja"
   },
   "judgment": {
     "title": "Sheemtet Seth",
@@ -749,7 +749,7 @@
       "stale_discarded": "Sheemtet tepy nen hab; sep aq er set khery",
       "delivery_landed": "Sheemtet tepy hab",
       "delivery_unverified": "Sheemtet tepy hab? Ma rekhyu. Maa sep",
-      "skew_discarded": "The device clock moved, so a verdict left by an earlier session could not be placed in its undo window; it was not sent and the case is back in the queue",
+      "skew_discarded": "Hru En Khet Khemen, Unemu En Aru Tepy Ma Setep; Ma Wetjes, Sethet Em Sheemtet Wu",
       "restore_deferred": "Ini sep-u sedjer",
       "stat_decided": "{{n}} sheemtet",
       "stat_deferred": "{{n}} sedjer",
@@ -789,7 +789,7 @@
       "key_restore": "Ini sep-u sedjer neb",
       "key_help": "Sesh / imen sesh en djed-tep",
       "key_leave": "Per em set (shu sesh-per tepy)",
-      "key_notes": "Focus the notes field",
+      "key_notes": "Smen Medu Seth",
       "undo_unavailable": "Nen khemu — sheemtet tepy hab. Shabu er wat en heka-sesh en neb-per."
     },
     "detail": {
@@ -822,28 +822,28 @@
     "conclude_error": "Ma Wetep Sheemtet Seth",
     "no_evidence": "Ma Medu Sethet Em Khemen Seth",
     "grounds": {
-      "title": "Cited grounds",
-      "count": "{{n}} cited",
-      "empty": "No articles were cited for this verdict.",
-      "note": "Applied",
-      "source": "Source",
-      "derived": "Derived from",
-      "caveat": "Source note:"
+      "title": "Medu Sethet Djed",
+      "count": "{{n}} Djed",
+      "empty": "Ma Rekhyu Medu Djed Em Unemu Pen.",
+      "note": "Iri Seth",
+      "source": "Medu Ahet",
+      "derived": "Ini Em",
+      "caveat": "Medu Ahet:"
     },
     "statute_corpus": {
       "HELL_LAW": "Hell Law (Diyu)",
-      "GONGGUOGE": "Ledger of Merit and Demerit",
-      "NEGATIVE_CONFESSION": "Declaration of Innocence",
-      "DEADLY_SIN": "Deadly Sins",
-      "INFERNO": "Circles of the Inferno",
-      "GORGIAS": "Gorgias — the Judgement",
-      "REPUBLIC_ER": "Republic X — the Myth of Er"
+      "GONGGUOGE": "Sesh Nefer Bin",
+      "NEGATIVE_CONFESSION": "Medu-ib Nen Isfet",
+      "DEADLY_SIN": "Isfet Mut",
+      "INFERNO": "Duat en Dante",
+      "GORGIAS": "Gorgias — Wedja",
+      "REPUBLIC_ER": "Sesh Er"
     },
     "statute_polarity": {
-      "OFFENCE": "Offence",
-      "MERIT": "Merit",
-      "DENIAL": "Denial",
-      "PROCEDURE": "Rule of the court"
+      "OFFENCE": "Isfet",
+      "MERIT": "Maat",
+      "DENIAL": "Nen Isfet",
+      "PROCEDURE": "Medu Hemsu"
     },
     "corpus": {
       "title": "Medu Sesh",
@@ -896,7 +896,7 @@
       "BATCH_UPDATE": "Khemen Seth Wu",
       "BATCH_DELETE": "Wehem Seth Wu"
     },
-    "needs_audit_read": "Requires the audit.read permission"
+    "needs_audit_read": "Em Tepy Sekhem audit.read"
   },
   "profile": {
     "title": "Aha Pepi",
@@ -918,7 +918,7 @@
     "profile_updated": "Pepi em Wepet",
     "profile_update_failed": "Pepi em Hedj",
     "avatar": "Wer Aha",
-    "load_failed": "Could not load the latest profile — the values below may be out of date"
+    "load_failed": "Ma Khemut Aha Pepi — Medu Kher Em Aru Tepy"
   },
   "notifications": {
     "title": "Mes Neteru",
@@ -1009,7 +1009,7 @@
       "DY_COURT_09_PINGDENG": "Qedi 9 - Pingdeng",
       "DY_COURT_10_ZHUANLUN": "Qedi 10 - Zhuanlun",
       "EU_HEAVEN": "Heaven",
-      "EU_PURGATORY": "Purgatory",
+      "EU_PURGATORY": "Purgatorium",
       "EU_PURGATORY_T1_PRIDE": "Superbia",
       "EU_PURGATORY_T2_ENVY": "Invidia",
       "EU_PURGATORY_T3_WRATH": "Ira",
@@ -1135,9 +1135,9 @@
       "EXECUTED": "Iri Sethet",
       "CANCELLED": "Ma Iri Seth"
     },
-    "confirm_approve": "Approve this cross-tenant dispatch?",
-    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log.",
-    "proposer_account_removed": "the proposing account has been deleted, so no name is available"
+    "confirm_approve": "Sesen Pert Abuf Em Kehat Seth?",
+    "approve_warning": "Per Hemes Setep Seth Ini Wetep Seth Her Aba Pen. Sesh Em Medew Sethet.",
+    "proposer_account_removed": "Netjer Sesen Wehem Seth; Ma Rekhyu Ren"
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
@@ -1149,10 +1149,10 @@
     "no_participants": "Ma Rekhyu Netjeru",
     "verdict": "Unemu",
     "failed_to_load": "Ma Khemut Seth",
-    "activate": "Activate judgment",
-    "activate_hint": "The initiator activates once participants are seated; none can be added afterwards",
-    "activated_success": "Judgment activated",
-    "activate_error": "Failed to activate",
+    "activate": "Sesen Em Khet Sheemtet",
+    "activate_hint": "Sesen Abuf Sesen Em Khet Kher Netjeru Hemset; Ma Her Netjeru Kher",
+    "activated_success": "Sheemtet Em Khet",
+    "activate_error": "Ma Sesen Em Khet Seth",
     "states": {
       "PROPOSED": "Em Djed",
       "ACTIVE": "Em Iri",
@@ -1191,7 +1191,7 @@
     "actions": "Aha Seth",
     "roles": {
       "ADMIN": "Netjer Em Tepy",
-      "MODERATOR": "Realm Lead",
+      "MODERATOR": "Heri-tep Per Ahet",
       "JUDGE": "Hemsu Seth",
       "GUARDIAN": "Smen Khet",
       "VIEWER": "Smen Pepy"
@@ -1237,8 +1237,8 @@
       "red": "Desher",
       "rose": "Desher Nedjes"
     },
-    "accent_hex_invalid": "Enter a 6-digit hex colour, e.g. #ff5500",
-    "accent_hex_too_dark": "Too dark — the black label on primary buttons would be unreadable"
+    "accent_hex_invalid": "Shesep Medu 6 Hex, renu #ff5500",
+    "accent_hex_too_dark": "Kem Wer — Medu Kem Her Sekhem Tepy Ma Maa"
   },
   "menu_buttons": {
     "title": "Sekhem Menu",
@@ -1255,7 +1255,7 @@
     "code_placeholder": "renu add, edit, delete, export",
     "permission_placeholder": "renu soul.create, judgment.delete",
     "create_error": "Ma Kheper Sekhem Seth",
-    "update_error": "Failed to update button",
+    "update_error": "Ma Khemen Sekhem Seth",
     "delete_error": "Ma Wehem Sekhem Seth",
     "gates_note": "Aha Sekhem Ahet — Ankh. Sah, Sidebar, Sekhem Ren Djewet Em It Seth:",
     "permission_mismatch_warning": "\"{{codename}}\" Ma Rekhyu Sekhem Ahet — Ma Hem Maa Sekhem Seth"
@@ -1365,7 +1365,7 @@
   "reincarnation": {
     "reborn_success": "Aru Her Tepy Shesep Seth",
     "reborn_error": "Ma Shesep Aru Her Tepy",
-    "form_label": "Rebirth form",
+    "form_label": "Kheperu Aru",
     "forms": {
       "DIVINE": "Neter Pet",
       "HUMAN": "Remetch",
@@ -1376,8 +1376,8 @@
       "OTHER": "Ky Seth"
     },
     "groups": {
-      "THREE_GOOD_PATHS": "Three good paths",
-      "THREE_EVIL_PATHS": "Three evil paths"
+      "THREE_GOOD_PATHS": "Khemet Wat Nefer",
+      "THREE_EVIL_PATHS": "Khemet Wat Bin"
     }
   },
   "social": {
@@ -1389,7 +1389,7 @@
     "post_not_found": "Ma Rekhyu Sesh",
     "post_created": "Sesh Kheme Seth",
     "post_error": "Ma Kheme Sesh Seth",
-    "post_delete_error": "Failed to delete post",
+    "post_delete_error": "Ma Wehem Sesh Seth",
     "no_posts": "Ma Rekhyu Sesh Wu",
     "user_posts": "Sesh Wu Netjer",
     "view_all_posts": "Smen Wetu Sesh Wu",
@@ -1399,7 +1399,7 @@
     "add_comment": "Sesh Djed...",
     "no_comments": "Ma Rekhyu Djed Wu",
     "comment_error": "Ma Kheme Djed Seth",
-    "comment_delete_error": "Failed to delete comment",
+    "comment_delete_error": "Ma Wehem Djed Seth",
     "reaction_error": "Ma Kheme Nefer Seth",
     "follow": "Shemsu",
     "follows": "Shemsu Wu",
@@ -1429,11 +1429,11 @@
       "PRIVATE": "Imen"
     },
     "visibility_label": "Set Medu Maa",
-    "follow_error": "Follow action failed"
+    "follow_error": "Ma Shemsu Seth"
   },
   "tenants": {
-    "active": "Active",
-    "inactive": "Inactive",
+    "active": "Em Iri",
+    "inactive": "Ma Em Iri",
     "title": "Per Hemes",
     "subtitle": "Per Hemes Aset Ahamet",
     "list": "Wu Per Hemes",
@@ -1487,11 +1487,11 @@
     }
   },
   "connection": {
-    "connected": "Connected",
-    "connecting": "Connecting…",
-    "reconnecting": "Reconnecting…",
-    "disconnected": "Disconnected",
-    "failed": "Connection failed",
-    "retry": "Reconnect"
+    "connected": "Em Sema",
+    "connecting": "Em Sema…",
+    "reconnecting": "Em Sema Wehem…",
+    "disconnected": "Ma Sema",
+    "failed": "Ma Sema Seth",
+    "retry": "Sema Wehem"
   }
 }
