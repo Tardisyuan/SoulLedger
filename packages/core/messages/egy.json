@@ -587,6 +587,7 @@
     "case_types": {
       "HEART_WEIGHING": "Unemu Ib",
       "DIVINE_TRIAL": "Sheemtet Netjer",
+      "REBIRTH_APPLICATION": "Sepr Wehem Ankh",
       "ROUTINE": "Sheemtet Tepy",
       "CROSS_REALM": "Sheemtet Em Kehat",
       "CANONIZATION": "Smen Netjer",
@@ -1194,7 +1195,8 @@
       "MODERATOR": "Heri-tep Per Ahet",
       "JUDGE": "Hemsu Seth",
       "GUARDIAN": "Smen Khet",
-      "VIEWER": "Smen Pepy"
+      "VIEWER": "Smen Pepy",
+      "SOUL": "Ba"
     },
     "password_empty": "Ra Her Tepy",
     "username_empty": "Ren Her Tepy",

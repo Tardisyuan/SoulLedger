@@ -1530,6 +1530,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/life/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_life_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/password/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_password_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/past-lives/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_past_lives_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/rebirth-applications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_rebirth_applications_retrieve"];
+        put?: never;
+        post: operations["v1_me_rebirth_applications_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/rebirth-applications/{application_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_rebirth_applications_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/rebirth-applications/{application_id}/appeal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_rebirth_applications_appeal_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/menus/": {
         parameters: {
             query?: never;
@@ -3216,6 +3328,319 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/soul-accounts/accounts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 账号链:`GET /soul-accounts/accounts/?soul=<uuid>` 按 cycle 升序给出该灵魂各世账号。 */
+        get: operations["v1_soul_accounts_accounts_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/accounts/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 账号链:`GET /soul-accounts/accounts/?soul=<uuid>` 按 cycle 升序给出该灵魂各世账号。 */
+        get: operations["v1_soul_accounts_accounts_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/accounts/{id}/reset-credential/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 账号链:`GET /soul-accounts/accounts/?soul=<uuid>` 按 cycle 升序给出该灵魂各世账号。 */
+        post: operations["v1_soul_accounts_accounts_reset_credential_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/accounts/provision/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 手动开通。本世已有账号时幂等返回 200,不重发密码;要新密码用 reset_credential。 */
+        post: operations["v1_soul_accounts_accounts_provision_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/credentials/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 待交付:`GET /soul-accounts/credentials/?status=PENDING`。 */
+        get: operations["v1_soul_accounts_credentials_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/credentials/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 待交付:`GET /soul-accounts/credentials/?status=PENDING`。 */
+        get: operations["v1_soul_accounts_credentials_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/credentials/{id}/mark-delivered/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 待交付:`GET /soul-accounts/credentials/?status=PENDING`。 */
+        post: operations["v1_soul_accounts_credentials_mark_delivered_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/credentials/{id}/retry/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 待交付:`GET /soul-accounts/credentials/?status=PENDING`。 */
+        post: operations["v1_soul_accounts_credentials_retry_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/credentials/{id}/reveal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 待交付:`GET /soul-accounts/credentials/?status=PENDING`。 */
+        post: operations["v1_soul_accounts_credentials_reveal_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/rebirth-applications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Mixin that auto-generates the codenames a request must carry.
+         *
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
+         *
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
+         */
+        get: operations["v1_soul_accounts_rebirth_applications_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/rebirth-applications/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Mixin that auto-generates the codenames a request must carry.
+         *
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
+         *
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
+         */
+        get: operations["v1_soul_accounts_rebirth_applications_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/rebirth-applications/{id}/cross-civilization/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Mixin that auto-generates the codenames a request must carry.
+         *
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
+         *
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
+         */
+        post: operations["v1_soul_accounts_rebirth_applications_cross_civilization_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-auth/login/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 同一个后端、另一个端点,而不是官员登录按客户端区分:两者签发的令牌**类型**不同,
+         *     一个端点按请求头分支签两种令牌,等于把分界交给了客户端自报的一个字段。
+         */
+        post: operations["v1_soul_auth_login_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-auth/logout/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_soul_auth_logout_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-auth/refresh/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_soul_auth_refresh_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/souls/": {
         parameters: {
             query?: never;
@@ -4360,11 +4785,16 @@ export interface components {
          *     * `HERESY_TRIAL` - 异端审判
          *     * `HEART_WEIGHING` - 心脏称重
          *     * `DIVINE_TRIAL` - 神判
+         *     * `REBIRTH_APPLICATION` - 转生申请
          * @enum {string}
          */
-        CaseTypeEnum: "ROUTINE" | "APPEAL" | "CROSS_REALM" | "SPECIAL" | "CANONIZATION" | "PURGATORY_REVIEW" | "HERESY_TRIAL" | "HEART_WEIGHING" | "DIVINE_TRIAL";
+        CaseTypeEnum: "ROUTINE" | "APPEAL" | "CROSS_REALM" | "SPECIAL" | "CANONIZATION" | "PURGATORY_REVIEW" | "HERESY_TRIAL" | "HEART_WEIGHING" | "DIVINE_TRIAL" | "REBIRTH_APPLICATION";
         /** @description Serializer for changing password with old password verification. */
         ChangePassword: {
+            old_password: string;
+            new_password: string;
+        };
+        ChangePasswordRequest: {
             old_password: string;
             new_password: string;
         };
@@ -4431,6 +4861,9 @@ export interface components {
          * @enum {string}
          */
         CorpusEnum: "HELL_LAW" | "GONGGUOGE" | "NEGATIVE_CONFESSION" | "DEADLY_SIN" | "INFERNO" | "GORGIAS" | "REPUBLIC_ER";
+        CrossCivilizationDecision: {
+            cross_civilization: boolean;
+        };
         /**
          * @description Serializer for CrossTenantJudgment.
          *
@@ -4581,6 +5014,16 @@ export interface components {
             failed_registrations_24h: number;
             failed_webhooks_24h: number;
         };
+        /**
+         * @description * `DIVINE` - Deva (Heaven Path)
+         *     * `HUMAN` - Human (Human Path)
+         *     * `ASURA` - Asura (Demigod Path)
+         *     * `ANIMAL` - Animal (Beast Path)
+         *     * `HUNGRY_GHOST` - Hungry Ghost
+         *     * `HELL_BEING` - Hell Being
+         * @enum {string}
+         */
+        DesiredRebirthFormEnum: "DIVINE" | "HUMAN" | "ASURA" | "ANIMAL" | "HUNGRY_GHOST" | "HELL_BEING";
         /** @description `{"detail": "..."}` — the success/notice body DRF's own convention uses. */
         DetailResponse: {
             detail: string;
@@ -4750,9 +5193,14 @@ export interface components {
          *     * `USER_FOLLOWED` - User Followed
          *     * `USER_UNFOLLOWED` - User Unfollowed
          *     * `NOTIFICATION_CREATED` - Notification Created
+         *     * `SOUL_ACCOUNT_CREATED` - Soul Account Created
+         *     * `SOUL_ACCOUNT_RETIRED` - Soul Account Retired
+         *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
+         *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
+         *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED";
         ExportedDataScope: {
             role: string;
             civilization?: string | null;
@@ -4896,6 +5344,45 @@ export interface components {
             message: string;
             total: number;
         };
+        /** @description **没有 secret。** 明文只经 `reveal` 动作出去一次。 */
+        InitialCredential: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly account: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_code: string;
+            readonly soul_name: string;
+            readonly cycle: number;
+            /** @description EMAIL / SMS;空表示没有可用渠道 */
+            readonly channel: string;
+            readonly status: components["schemas"]["InitialCredentialStatusEnum"];
+            /** Format: date-time */
+            readonly expires_at: string;
+            readonly attempts: number;
+            readonly last_error: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly sent_at: string | null;
+            /** Format: date-time */
+            readonly revealed_at: string | null;
+            readonly revealed_by: string | null;
+            /** Format: date-time */
+            readonly delivered_at: string | null;
+            readonly delivered_by: string | null;
+        };
+        /**
+         * @description * `QUEUED` - 待发送
+         *     * `SENT` - 已发送
+         *     * `PENDING` - 待交付
+         *     * `REVEALED` - 已查看
+         *     * `DELIVERED` - 已线下交付
+         *     * `VOID` - 已作废
+         * @enum {string}
+         */
+        InitialCredentialStatusEnum: "QUEUED" | "SENT" | "PENDING" | "REVEALED" | "DELIVERED" | "VOID";
         /**
          * @description A proceeding. Soul and judge are the requester's own (BD-01).
          *
@@ -5191,6 +5678,154 @@ export interface components {
         MarkAllReadResult: {
             marked_read: number;
         };
+        MeAccount: {
+            /** @description 这个账号属于第几世;0 是第一世。 */
+            cycle: number;
+            must_change_password?: boolean;
+            /** Format: date-time */
+            initial_password_expires_at?: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /** @description 当前所在节点:只有节点类型与**角色**,不含审批人是谁(2026-09-14 决定 2)。 */
+        MeCurrentStep: {
+            node_type: string;
+            approver_role: string;
+            is_appeal: boolean;
+        };
+        MeDisposition: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            judgment_id: string | null;
+            destination_realm: components["schemas"]["MeRealm"] | null;
+            memory_reset: string;
+            is_eternal: boolean;
+            sentence_years: number | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            readonly term_start: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            is_executed: boolean;
+            /** Format: date-time */
+            executed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MeJudge: {
+            name: string;
+            name_zh: string;
+            title: string;
+        };
+        MeJudgment: {
+            /** Format: uuid */
+            id: string;
+            court: string;
+            judge: components["schemas"]["MeJudge"] | null;
+            judgment_method: string;
+            verdict: string | null;
+            is_final: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            concluded_at: string | null;
+        };
+        MeLife: {
+            cycle: number;
+            records: components["schemas"]["MeRecord"][];
+            judgments: components["schemas"]["MeJudgment"][];
+            dispositions: components["schemas"]["MeDisposition"][];
+            rebirth_applications: components["schemas"]["MeRebirthApplication"][];
+            reincarnation: components["schemas"]["MeReincarnation"] | null;
+        };
+        /** @description instance 是灵魂;本世账号经 context["account"] 传入。 */
+        MeProfile: {
+            soul_code: string;
+            name: string;
+            birth_name: string;
+            civilization: string;
+            tenant: components["schemas"]["MeTenant"];
+            current_state: string;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            readonly birth_date: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            readonly death_date: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            origin_location: string;
+            merit_score: number;
+            demerit_score: number;
+            readonly account: components["schemas"]["MeAccount"];
+        };
+        MeRealm: {
+            realm_code: string;
+            name_local: string;
+            name_zh: string;
+            name_en: string;
+        };
+        MeRebirthApplication: {
+            /** Format: uuid */
+            readonly id: string;
+            cycle: number;
+            desired_form: components["schemas"]["RebirthFormEnum"];
+            statement?: string;
+            appeal_statement?: string;
+            status: components["schemas"]["RebirthApplicationStatusEnum"];
+            cross_civilization?: boolean | null;
+            rejection_reason?: string;
+            /** Format: date-time */
+            decided_at?: string | null;
+            readonly current_step: components["schemas"]["MeCurrentStep"] | null;
+            readonly can_appeal: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        MeRebirthApplicationList: {
+            can_apply: boolean;
+            reason: string | null;
+            /** Format: date-time */
+            cooldown_until: string | null;
+            results: components["schemas"]["MeRebirthApplication"][];
+        };
+        MeRecord: {
+            /** Format: uuid */
+            id: string;
+            record_type: string;
+            category: string;
+            description: string;
+            weight: number;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            readonly event_date: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            is_milestone: boolean;
+            /** Format: date-time */
+            recorded_at: string;
+        };
+        /** @description 结束这一世的那次转世。**没有 new_identity、没有 notes。** */
+        MeReincarnation: {
+            cycle_count: number;
+            rebirth_form: string;
+            target_realm: string;
+            /** Format: date-time */
+            reincarnated_at: string;
+        };
+        MeTenant: {
+            code: string;
+            display_name: string;
+        };
         /**
          * @description * `MENGPO` - 孟婆汤 (Mengpo Soup)
          *     * `LETHE` - 忘川 (Lethe)
@@ -5338,6 +5973,33 @@ export interface components {
         NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED";
         /** @enum {unknown} */
         NullEnum: null;
+        OfficerRebirthApplication: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_code: string;
+            readonly soul_name: string;
+            /** Format: uuid */
+            readonly account: string;
+            readonly cycle: number;
+            readonly desired_form: components["schemas"]["RebirthFormEnum"];
+            readonly statement: string;
+            readonly appeal_statement: string;
+            readonly status: components["schemas"]["RebirthApplicationStatusEnum"];
+            /** Format: uuid */
+            readonly workflow: string;
+            /** Format: uuid */
+            readonly appeal_workflow: string | null;
+            readonly cross_civilization: boolean | null;
+            readonly rejection_reason: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
         Organization: {
             readonly id: number;
             /** @description 组织名称：如 第一殿、冥王厅 */
@@ -5369,6 +6031,13 @@ export interface components {
          * @enum {string}
          */
         OrganizationCategoryEnum: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "GREEK";
+        /**
+         * @description * `DEATH_SYNC` - 死亡同步自动开通
+         *     * `OFFICER` - 官员手动开通
+         *     * `BACKFILL` - 存量补齐
+         * @enum {string}
+         */
+        OriginEnum: "DEATH_SYNC" | "OFFICER" | "BACKFILL";
         PaginatedActorListList: {
             /** @example 123 */
             count: number;
@@ -5534,6 +6203,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Follow"][];
         };
+        PaginatedInitialCredentialList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["InitialCredential"][];
+        };
         PaginatedJudgmentList: {
             /** @example 123 */
             count: number;
@@ -5593,6 +6277,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Menu"][];
+        };
+        PaginatedOfficerRebirthApplicationList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["OfficerRebirthApplication"][];
         };
         PaginatedOrganizationList: {
             /** @example 123 */
@@ -5668,6 +6367,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Reincarnation"][];
+        };
+        PaginatedSoulAccountList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SoulAccount"][];
         };
         PaginatedSoulEventList: {
             /** @example 123 */
@@ -6574,6 +7288,12 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
         };
+        ProvisionRequest: {
+            /** Format: uuid */
+            soul_id: string;
+            contact_email?: string;
+            contact_phone?: string;
+        };
         Reaction: {
             /** Format: uuid */
             readonly id: string;
@@ -6683,6 +7403,24 @@ export interface components {
          * @enum {string}
          */
         RealmTypeEnum: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL";
+        RebirthAppeal: {
+            /** @default  */
+            statement: string;
+        };
+        RebirthApplicationCreate: {
+            desired_form: components["schemas"]["DesiredRebirthFormEnum"];
+            /** @default  */
+            statement: string;
+        };
+        /**
+         * @description * `UNDER_REVIEW` - 审批中
+         *     * `REJECTED` - 已驳回
+         *     * `APPEALING` - 申诉中
+         *     * `APPEAL_REJECTED` - 申诉被驳回
+         *     * `APPROVED` - 已批准
+         * @enum {string}
+         */
+        RebirthApplicationStatusEnum: "UNDER_REVIEW" | "REJECTED" | "APPEALING" | "APPEAL_REJECTED" | "APPROVED";
         /**
          * @description * `DIVINE` - Deva (Heaven Path)
          *     * `HUMAN` - Human (Human Path)
@@ -6843,6 +7581,16 @@ export interface components {
         ResetPassword: {
             /** Format: email */
             email: string;
+        };
+        ResetRequest: {
+            contact_email?: string;
+            contact_phone?: string;
+        };
+        RevealedCredential: {
+            soul_code: string;
+            password: string;
+            /** Format: date-time */
+            expires_at: string;
         };
         Role: {
             readonly id: number;
@@ -7053,6 +7801,31 @@ export interface components {
             readonly inherited_merit: number;
             readonly inherited_demerit: number;
         };
+        SoulAccount: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_code: string;
+            readonly soul_name: string;
+            /** @description 这个账号属于第几世;0 是第一世。 */
+            readonly cycle: number;
+            /** Format: uuid */
+            readonly previous_account: string | null;
+            readonly origin: components["schemas"]["OriginEnum"];
+            readonly username: string;
+            readonly must_change_password: boolean;
+            /** Format: date-time */
+            readonly initial_password_expires_at: string | null;
+            /** Format: date-time */
+            readonly retired_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly last_login: string | null;
+            readonly contact_email_masked: string;
+            readonly contact_phone_masked: string;
+        };
         /**
          * @description The shape `_soul_level_date_problems` returns, for the schema only.
          *
@@ -7070,6 +7843,11 @@ export interface components {
             severity: components["schemas"]["SeverityEnum"];
             code: string;
             message: string;
+        };
+        /** @description 所有业务拒绝的形状。`code` 稳定,App 按它分支;`detail` 是给人看的中文。 */
+        SoulError: {
+            detail: string;
+            code: string;
         };
         SoulEvent: {
             /** Format: uuid */
@@ -7112,6 +7890,16 @@ export interface components {
             readonly date_problems: components["schemas"]["SoulDateProblem"][];
             readonly has_date_warning: boolean;
             readonly has_record_error: boolean;
+        };
+        SoulLoginRequest: {
+            soul_code: string;
+            password: string;
+        };
+        SoulLoginResponse: {
+            access: string;
+            refresh: string;
+            soul_code: string;
+            account: components["schemas"]["MeAccount"];
         };
         SoulRecord: {
             /** Format: uuid */
@@ -7177,6 +7965,9 @@ export interface components {
          * @enum {string}
          */
         SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
+        SoulRefreshRequest: {
+            refresh: string;
+        };
         /**
          * @description `label` is the raw state member today, same value as `state` — the
          *     view assigns `"label": s` beside `"state": s`. Localising is the
@@ -7186,6 +7977,10 @@ export interface components {
             state: string;
             label: string;
             count: number;
+        };
+        SoulTokenPair: {
+            access: string;
+            refresh: string;
         };
         /** @description Executed, non-archived dispositions with a destination realm. */
         SoulsByRealm: {
@@ -9655,8 +10450,13 @@ export interface operations {
                  *     * `USER_FOLLOWED` - User Followed
                  *     * `USER_UNFOLLOWED` - User Unfollowed
                  *     * `NOTIFICATION_CREATED` - Notification Created
+                 *     * `SOUL_ACCOUNT_CREATED` - Soul Account Created
+                 *     * `SOUL_ACCOUNT_RETIRED` - Soul Account Retired
+                 *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
+                 *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
+                 *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SETTLEMENT_CORRECTED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -10290,6 +11090,268 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerError"];
+                };
+            };
+        };
+    };
+    v1_me_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeProfile"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_life_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeLife"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_password_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChangePasswordRequest"];
+                "multipart/form-data": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulTokenPair"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_past_lives_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeLife"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_rebirth_applications_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeRebirthApplicationList"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_rebirth_applications_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RebirthApplicationCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["RebirthApplicationCreate"];
+                "multipart/form-data": components["schemas"]["RebirthApplicationCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeRebirthApplication"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_rebirth_applications_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeRebirthApplication"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_rebirth_applications_appeal_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RebirthAppeal"];
+                "application/x-www-form-urlencoded": components["schemas"]["RebirthAppeal"];
+                "multipart/form-data": components["schemas"]["RebirthAppeal"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeRebirthApplication"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
                 };
             };
         };
@@ -12939,6 +14001,504 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    v1_soul_accounts_accounts_list: {
+        parameters: {
+            query?: {
+                cycle?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSoulAccountList"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_accounts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this soul account. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulAccount"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_accounts_reset_credential_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this soul account. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ResetRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResetRequest"];
+                "multipart/form-data": components["schemas"]["ResetRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitialCredential"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_accounts_provision_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProvisionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProvisionRequest"];
+                "multipart/form-data": components["schemas"]["ProvisionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulAccount"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulAccount"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_credentials_list: {
+        parameters: {
+            query?: {
+                account?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `QUEUED` - 待发送
+                 *     * `SENT` - 已发送
+                 *     * `PENDING` - 待交付
+                 *     * `REVEALED` - 已查看
+                 *     * `DELIVERED` - 已线下交付
+                 *     * `VOID` - 已作废
+                 */
+                status?: "DELIVERED" | "PENDING" | "QUEUED" | "REVEALED" | "SENT" | "VOID";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedInitialCredentialList"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_credentials_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this initial credential. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitialCredential"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_credentials_mark_delivered_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this initial credential. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitialCredential"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_credentials_retry_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this initial credential. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitialCredential"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_credentials_reveal_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this initial credential. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevealedCredential"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_rebirth_applications_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `UNDER_REVIEW` - 审批中
+                 *     * `REJECTED` - 已驳回
+                 *     * `APPEALING` - 申诉中
+                 *     * `APPEAL_REJECTED` - 申诉被驳回
+                 *     * `APPROVED` - 已批准
+                 */
+                status?: "APPEALING" | "APPEAL_REJECTED" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOfficerRebirthApplicationList"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_rebirth_applications_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this rebirth application. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerRebirthApplication"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_rebirth_applications_cross_civilization_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this rebirth application. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrossCivilizationDecision"];
+                "application/x-www-form-urlencoded": components["schemas"]["CrossCivilizationDecision"];
+                "multipart/form-data": components["schemas"]["CrossCivilizationDecision"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerRebirthApplication"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_auth_login_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulLoginRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulLoginRequest"];
+                "multipart/form-data": components["schemas"]["SoulLoginRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulLoginResponse"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_auth_logout_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulRefreshRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulRefreshRequest"];
+                "multipart/form-data": components["schemas"]["SoulRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_soul_auth_refresh_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulRefreshRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulRefreshRequest"];
+                "multipart/form-data": components["schemas"]["SoulRefreshRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulTokenPair"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
             };
         };
     };

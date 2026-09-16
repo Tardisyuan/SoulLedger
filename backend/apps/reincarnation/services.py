@@ -224,6 +224,12 @@ class ReincarnationService:
                     f"reborn from there. Nothing was written."
                 )
 
+            # 上一世的灵魂账号在这里停用,**与转世同一个事务**:转世回滚,停用也回滚;
+            # 转世提交,前世账号就永不可再登录。下一世的账号等下一次死亡登记再开。
+            from apps.soul_accounts.services import retire_account_for_rebirth
+
+            retire_account_for_rebirth(soul, ended_cycle=cycle_count - 1)
+
         EventService.log(
             soul,
             "REINCARNATION_COMPLETED",

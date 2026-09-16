@@ -927,6 +927,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # before 2026-09-14 could not see -- it was PostgreSQL-only all along.
         "tests/test_two_judges_cannot_both_decide_one_node.py::"
         "test_only_one_of_two_simultaneous_decisions_is_recorded",
+        # 2026-09-17 灵魂端:两次并发死亡同步必须在灵魂行锁上排队,第二个看见第一个
+        # 开的账号而不是再开一个、再发一份密码。SQLite 没有行锁可等。串行版本
+        # test_death_sync_opens_the_account_and_mails_the_password_once 每个引擎都跑。
+        "tests/test_concurrent_death_sync_opens_one_account.py::"
+        "test_two_simultaneous_death_syncs_open_one_account_and_issue_one_password",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

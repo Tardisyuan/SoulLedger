@@ -57,6 +57,13 @@ class UserRole(models.TextChoices):
     JUDGE = "JUDGE", "Judge (判官)"
     GUARDIAN = "GUARDIAN", "Guardian (牛头马面)"
     VIEWER = "VIEWER", "Viewer (访客)"
+    # 灵魂本人(灵魂端 App)。不是官职:**不可分配**(`is_assignable_role` 对它答
+    # False,于是用户管理的创建 / 更新 / assign_roles / CSV 导入都拒绝它),
+    # 只由 `apps/soul_accounts/services.py::provision_account` 创建;
+    # `check_permission` 对它恒答 False;默认认证类
+    # (`apps/soul_accounts/authentication.py::OfficerJWTAuthentication`)把它挡在
+    # 全部官员接口之外;不在 ROLE_HIERARCHY 里,于是排名低于 VIEWER。
+    SOUL = "SOUL", "Soul (灵魂)"
 
 
 def is_assignable_role(name) -> bool:
@@ -72,7 +79,7 @@ def is_assignable_role(name) -> bool:
     table is seeded, and every fixture in this repo creates ADMIN/JUDGE users
     long before any Role row exists.
     """
-    if not name:
+    if not name or name == UserRole.SOUL:
         return False
     if name in UserRole.values:
         return True

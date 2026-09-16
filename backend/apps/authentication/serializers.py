@@ -193,6 +193,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     @classmethod
     def get_token(cls, user):
+        # 灵魂账号不能登录 Web 后台(2026-09-17 用户决定)。放在 get_token 而不是
+        # validate 之后:密码已校验通过,但令牌与 last_login 都还没写。
+        # 答的是与「密码错」同一句话 —— 这个端点不替人确认某个灵魂账号的密码是对的。
+        if getattr(user, "role", None) == "SOUL":
+            from rest_framework.exceptions import AuthenticationFailed
+
+            raise AuthenticationFailed(
+                cls.default_error_messages["no_active_account"], "no_active_account"
+            )
         token = super().get_token(user)
         if user.tenant:
             token["tenant_code"] = user.tenant.code

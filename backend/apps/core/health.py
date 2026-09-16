@@ -5,9 +5,9 @@ from django.views import View
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.core.permissions import IsAdminPermission
+from apps.soul_accounts.authentication import OfficerJWTAuthentication
 
 
 class HealthCheck(View):
@@ -27,7 +27,7 @@ class HealthCheckDetailed(APIView):
     NotAuthenticated with a WWW-Authenticate header); non-ADMIN -> 403.
     """
 
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    authentication_classes = [OfficerJWTAuthentication, SessionAuthentication]
     permission_classes = [IsAdminPermission]
     # Not an API resource; keep it out of the committed OpenAPI document.
     schema = None

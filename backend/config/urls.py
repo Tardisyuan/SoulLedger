@@ -11,6 +11,7 @@ from rest_framework.routers import DefaultRouter
 from apps.authentication.views import UserViewSet
 from apps.core.health import HealthCheck, HealthCheckDetailed
 from apps.core.recycle_bin_views import RecycleBinViewSet
+from apps.soul_accounts import urls as soul_account_urls
 
 # User management router (registered at api/v1/users/ via path)
 user_router = DefaultRouter()
@@ -48,6 +49,11 @@ urlpatterns = [
     path("api/v1/organizations/", include("apps.org.urls")),
     path("api/v1/social/", include("apps.social.urls")),
     path("api/v1/scheduler/", include("apps.scheduler.urls")),
+    # 灵魂端(2026-09-17)。三段前缀对应三种调用者:官员管理灵魂账号、灵魂换令牌、
+    # 灵魂读写本人数据。认证分界见 apps/soul_accounts/authentication.py。
+    path("api/v1/soul-accounts/", include(soul_account_urls.officer_urlpatterns)),
+    path("api/v1/soul-auth/", include(soul_account_urls.soul_auth_urlpatterns)),
+    path("api/v1/me/", include(soul_account_urls.me_urlpatterns)),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

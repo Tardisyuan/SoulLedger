@@ -362,6 +362,13 @@ DEFAULT_PERMISSIONS = [
     # 否则矩阵里无法建 RolePermission。
     ("scheduler.read", "查看定时任务", "scheduler"),
     ("scheduler.manage", "管理定时任务", "scheduler"),
+    # soul_account 权限(灵魂端账号,2026-09-17)。read 看账号链、脱敏联系方式、
+    # 待交付列表;manage 开通、重置初始密码、查看一次待交付明文、标记交付、重试发送。
+    # 默认 ADMIN 与 MODERATOR(殿主)持有:两者都是能管本租户灵魂的角色;
+    # JUDGE / GUARDIAN / VIEWER 不持有 —— 联系方式是个人信息,待交付明文是登录凭据,
+    # 按最小可见。perm 迁移 0022 播种这两行。
+    ("soul_account.read", "查看灵魂账号", "soul_account"),
+    ("soul_account.manage", "管理灵魂账号", "soul_account"),
 ]
 
 
@@ -382,6 +389,7 @@ ROLE_PERMISSIONS = {
         "system.settings", "user.manage", "menu.read", "menu.manage",
         "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",
         "scheduler.read", "scheduler.manage",
+        "soul_account.read", "soul_account.manage",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
         # ["workflow.escalate"]) — this static list had drifted from that intent
@@ -451,6 +459,7 @@ ROLE_PERMISSIONS = {
         "realms.read", "actors.read", "dashboard.read",
         "org.read", "org.manage",
         "audit.read", "notification.read", "menu.read",
+        "soul_account.read", "soul_account.manage",
     ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
