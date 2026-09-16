@@ -43,6 +43,26 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 手动验证续期路径:
   `$DC run --rm --no-deps --entrypoint certbot certbot renew --dry-run --webroot -w /var/www/certbot`
 
+## 定时任务(celery beat)
+
+- 调度存在数据库里(`DatabaseScheduler`),清单在 `backend/apps/scheduler/registry.py`。
+  backend 的启动命令每次都会跑 `python manage.py setup_scheduled_tasks`:按
+  (任务 × 活跃租户) 补齐缺失的 PeriodicTask 行,任务名与参数以清单为准,**保留**运维
+  改过的启停 / cron / 时区;删掉旧的扇出行(`ledger.recalculate_all` 等)与已停用租户的行。
+  要把 cron 也恢复成默认:`$DC exec backend python manage.py setup_scheduled_tasks --reset`。
+  新建租户时由 `Tenant` 的 post_save 自动补行,不用等下次启动。
+- 页面 `/scheduler`(权限码 `scheduler.read` / `scheduler.manage`,默认只 ADMIN)可以
+  启停、改 cron、手动运行、看执行记录;「重建」等于再跑一遍上面的命令。
+- 执行记录(`scheduler_taskrun`)保留 `SCHEDULER_RUN_RETENTION_DAYS`(默认 30)天,每个
+  任务至少留 `SCHEDULER_RUN_KEEP_MIN`(默认 20)条;卡死的 RUNNING 超过任务的 max_runtime、
+  或 PENDING 超过 `SCHEDULER_PENDING_GRACE_SECONDS`(默认 900)没被取走,都由每 5 分钟的
+  `scheduler.reap_stale_runs` 标成 LOST;worker 重启时它名下遗留的 RUNNING 也标 LOST。
+- **beat 挂了怎么发现:** `GET /health/detailed/`(ADMIN)在有任务「该跑却没跑」
+  (超过 cron 应触发时间 `SCHEDULER_OVERDUE_GRACE_SECONDS`,默认 600 秒)时返回 503,
+  `scheduler_overdue` 列出任务名。外部探针盯这个;不要只靠站内通知 —— 发通知的检测任务
+  自己也是 beat 派发的。设置了 `SENTRY_DSN` 时,每个 beat 派发的任务同时向 Sentry Crons
+  报到(`CeleryIntegration(monitor_beat_tasks=True)`)。
+
 ## 数据库备份与恢复
 
 - `backup` 服务启动时先备份一次(失败则容器退出、在 `$DC ps` 里反复重启),之后每天

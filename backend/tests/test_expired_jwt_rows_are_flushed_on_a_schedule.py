@@ -7,6 +7,7 @@
 定时任务的方向已定为 django-celery-beat + DatabaseScheduler,所以这里要的是:
 一个 celery 任务真的删掉过期行、一个幂等命令把它登记成 PeriodicTask、而且登记的
 任务名是 worker 真能认领的名字(beat 会安静地往一个没人应答的名字派发)。
+登记命令现在是 `setup_scheduled_tasks`(apps/scheduler/registry.py 是任务清单)。
 """
 from datetime import timedelta
 
@@ -46,8 +47,10 @@ def test_the_task_deletes_expired_rows_and_keeps_live_ones():
 
 @pytest.mark.django_db
 def test_the_setup_command_registers_one_task_however_often_it_runs():
-    call_command("setup_token_flush_task")
-    call_command("setup_token_flush_task")
+    # `setup_scheduled_tasks` (apps/scheduler) replaced `setup_token_flush_task`
+    # on 2026-09-17; the row it writes is still named by the task name.
+    call_command("setup_scheduled_tasks")
+    call_command("setup_scheduled_tasks")
 
     tasks = PeriodicTask.objects.filter(task=TASK_NAME)
     assert tasks.count() == 1
@@ -69,4 +72,4 @@ def test_the_deploy_command_registers_the_schedule(services):
             backend = yaml.safe_load(f)["services"]["backend"]
     else:
         backend = _production_services()["backend"]
-    assert "manage.py setup_token_flush_task" in backend["command"]
+    assert "manage.py setup_scheduled_tasks" in backend["command"]

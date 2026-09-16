@@ -10,6 +10,6 @@ def flush_expired_tokens():
     Every refresh rotates and blacklists, so the simplejwt outstanding and
     blacklisted tables gain a row pair per refresh and nothing removed them.
     Blacklisted rows cascade from their outstanding row. Scheduled by
-    `manage.py setup_token_flush_task`.
+    `manage.py setup_scheduled_tasks` (apps/scheduler/registry.py).
     """
     call_command("flushexpiredtokens")
