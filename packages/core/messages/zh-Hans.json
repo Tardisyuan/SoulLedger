@@ -621,6 +621,7 @@
     "template_detail": "模板详情",
     "no_node_data": "暂无节点数据",
     "delete_error": "删除失败",
+    "view_error": "查看失败",
     "status": {
       "PENDING": "待审批",
       "IN_PROGRESS": "审批中",

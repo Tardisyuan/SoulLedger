@@ -285,8 +285,13 @@ export default function WorkflowPage() {
                                     setViewingTemplate(res.data);
                                     setViewModalOpen(true);
                                   } catch (e) {
-                                    setViewingTemplate(tmpl);
-                                    setViewModalOpen(true);
+                                    // FL-14: this used to fall back to `tmpl`
+                                    // (the list row, no `nodes`/`nodes_json`)
+                                    // and open the modal anyway — a failed
+                                    // fetch rendered as a successfully opened,
+                                    // merely-empty detail view, with nothing
+                                    // on screen to say the request failed.
+                                    showToast(t("workflow.view_error"), "error");
                                   }
                                 }}
                               >

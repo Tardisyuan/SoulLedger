@@ -621,6 +621,7 @@
     "template_detail": "Template Detail",
     "no_node_data": "No node data",
     "delete_error": "Failed to delete",
+    "view_error": "Failed to load",
     "status": {
       "PENDING": "Pending",
       "IN_PROGRESS": "In Progress",
