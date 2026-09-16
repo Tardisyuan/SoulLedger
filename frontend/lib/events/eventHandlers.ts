@@ -42,6 +42,7 @@
  */
 import {
   notificationKeys,
+  schedulerKeys,
   socialKeys,
   soulKeys,
   workflowKeys,
@@ -54,6 +55,7 @@ import type {
   EventPayload,
   HandlerResult,
   NotificationEventPayload,
+  SchedulerEventPayload,
   SocialEventPayload,
   SoulEventPayload,
   WorkflowEventPayload,
@@ -280,6 +282,21 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
     invalidatedKeys: invalidated,
     toastMessage: toastMsg,
   };
+}
+
+/**
+ * All three scheduler events invalidate the whole scheduler root, silently.
+ *
+ * Silently: a 5-minutely job emits a RUNNING and a SUCCESS every 5 minutes for
+ * every ADMIN; a toast per frame would bury the page. The page's rows are the
+ * notification. The whole root rather than per-event keys: a run changes both
+ * the job row's `last_run` and the runs list, and the drawer's list is keyed by
+ * filters the handler cannot know. At most a jobs array and a few run pages are
+ * ever cached, and nothing is cached at all unless /scheduler is open.
+ */
+export function handleSchedulerEvent(_payload: SchedulerEventPayload, ctx: EventContext): HandlerResult {
+  ctx.queryClient.invalidateQueries({ queryKey: schedulerKeys.all });
+  return { success: true, invalidatedKeys: ["scheduler"] };
 }
 
 export function handleUnknownEvent(payload: EventPayload, _ctx: EventContext): HandlerResult {

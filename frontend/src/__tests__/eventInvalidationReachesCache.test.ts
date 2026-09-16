@@ -46,6 +46,7 @@ import {
 import {
   judgmentKeys,
   notificationKeys,
+  schedulerKeys,
   socialKeys,
   soulKeys,
   workflowKeys,
@@ -92,6 +93,14 @@ const CACHED: { label: string; owner: string; key: readonly unknown[] }[] = [
   { label: "followers list", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.follows.followers },
   { label: "following list", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.follows.following },
   { label: "profile detail", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.profiles.detail("u2") },
+  { label: "scheduler jobs", owner: "packages/core/src/hooks/useScheduler.ts", key: schedulerKeys.jobs },
+  // Keyed with a filter object the way the runs drawer keys it — the handler
+  // cannot know the filters, which is why it invalidates the root.
+  {
+    label: "scheduler runs page",
+    owner: "packages/core/src/hooks/useScheduler.ts",
+    key: schedulerKeys.runs.list({ job: 3, status: "FAILURE", page: 2 }),
+  },
 ];
 
 function seededClient() {
@@ -178,6 +187,11 @@ describe("a realtime push reaches the cache", () => {
         following_id: "u2",
       } as EventPayload,
       reaches: ["followers list", "following list", "profile detail"],
+    },
+    {
+      name: "SCHEDULER_RUN_UPDATED refreshes the job rows and an open runs page",
+      payload: { domain: "scheduler", event: "SCHEDULER_RUN_UPDATED", job_id: 3, run_id: 9 } as EventPayload,
+      reaches: ["scheduler jobs", "scheduler runs page"],
     },
   ];
 
@@ -293,7 +307,7 @@ describe("no source file caches under a singular form of a factory family", () =
       const src = readFileSync(resolved, "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/(^|[^:])\/\/.*$/gm, "$1");
-      expect(src).toMatch(/\b(soulKeys|workflowKeys|judgmentKeys|notificationKeys|socialKeys)\b/);
+      expect(src).toMatch(/\b(soulKeys|workflowKeys|judgmentKeys|notificationKeys|socialKeys|schedulerKeys)\b/);
     }
   );
 
