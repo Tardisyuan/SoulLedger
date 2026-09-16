@@ -1,16 +1,23 @@
 """Celery lifecycle → TaskRun rows; Tenant lifecycle → schedule rows.
 
-EVERY RECEIVER HERE IS WRAPPED. Celery already logs and swallows exceptions
-raised by signal receivers (celery.utils.dispatch.Signal.send), so a broken
-receiver cannot fail the task — but "already" is a property of the library,
-not of this code, and the `_safe` decorator makes the contract local: a
-bookkeeping error is a log line, never a task outcome.
+A BROKEN RECEIVER CANNOT FAIL THE TASK, AND THAT IS CELERY'S DOING, NOT OURS.
+`celery.utils.dispatch.Signal.send` catches whatever a receiver raises, logs
+it ("Signal handler %r raised: %r") and carries on. A `_safe` try/except
+decorator used to wrap every receiver here as a local restatement of that
+contract; a mutation proof (make it re-raise) could not turn any test red,
+because the layer below already swallows. It was removed rather than kept as
+decoration. The property itself is pinned by
+tests/test_scheduler_runs_and_recovery.py::test_a_broken_receiver_does_not_
+fail_the_task, which breaks `resolve_job` and asserts SUCCESS — if a celery
+upgrade ever changed `send`, that test is where it shows.
+
+The lock gate in task_base.py is different: it is not a signal receiver, so
+its try/except is load-bearing and its mutation does go red.
 
 Header lookup handles both shapes celery produces: a real worker flattens
 custom headers into `task.request` (protocol 2), while `Task.apply()` — the
 eager path tests drive — leaves them nested under `request.headers`.
 """
-import functools
 import logging
 
 from celery import signals as celery_signals
@@ -22,17 +29,6 @@ from apps.scheduler import services
 from apps.scheduler.models import FINAL_STATUSES, RunStatus, RunTrigger, TaskRun
 
 logger = logging.getLogger(__name__)
-
-
-def _safe(fn):
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        try:
-            return fn(*args, **kwargs)
-        except Exception:  # noqa: BLE001 — see module docstring
-            logger.exception("scheduler: %s failed; task outcome unaffected", fn.__name__)
-
-    return wrapper
 
 
 def _header(request, name):
@@ -54,7 +50,6 @@ def _trigger_from(request) -> str:
 # ---------------------------------------------------------------------------
 
 @celery_signals.before_task_publish.connect
-@_safe
 def on_before_publish(sender=None, headers=None, body=None, **_):
     """A PENDING row from the publishing side, so "the broker lost it" is
     detectable: a row that stays PENDING past the grace is what the reaper
@@ -86,7 +81,6 @@ def on_before_publish(sender=None, headers=None, body=None, **_):
 # ---------------------------------------------------------------------------
 
 @celery_signals.task_prerun.connect
-@_safe
 def on_prerun(sender=None, task_id=None, task=None, args=None, kwargs=None, **_):
     resolved = services.resolve_job(sender.name, args or (), kwargs or {})
     if resolved is None:
@@ -112,7 +106,6 @@ def on_prerun(sender=None, task_id=None, task=None, args=None, kwargs=None, **_)
 
 
 @celery_signals.task_failure.connect
-@_safe
 def on_failure(sender=None, task_id=None, exception=None, einfo=None, **_):
     """Traceback tail onto the row. postrun (below) sets the status; this only
     adds the detail the UI's "expand error" wants, so the two are idempotent
@@ -128,7 +121,6 @@ def on_failure(sender=None, task_id=None, exception=None, einfo=None, **_):
 
 
 @celery_signals.task_postrun.connect
-@_safe
 def on_postrun(sender=None, task_id=None, retval=None, state=None, **_):
     run = TaskRun.objects.filter(celery_task_id=str(task_id)).select_related("job", "job__periodic_task").first()
     if run is None or run.status in FINAL_STATUSES:
@@ -151,7 +143,6 @@ def on_postrun(sender=None, task_id=None, retval=None, state=None, **_):
 # ---------------------------------------------------------------------------
 
 @celery_signals.worker_ready.connect
-@_safe
 def on_worker_ready(sender=None, **_):
     hostname = getattr(sender, "hostname", None)
     if hostname:
