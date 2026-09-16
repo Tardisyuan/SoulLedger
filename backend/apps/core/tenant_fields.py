@@ -35,6 +35,8 @@ fallback this check would be silently inert in half the suite.
 
 from rest_framework import serializers
 
+from apps.core.tenant import is_tenant_exempt
+
 
 def same_tenant_or_404_message(value, context, what: str):
     """Raise unless `value` belongs to the requester's tenant.
@@ -49,7 +51,7 @@ def same_tenant_or_404_message(value, context, what: str):
 
     request = context.get("request")
     user = getattr(request, "user", None)
-    if getattr(user, "role", None) == "ADMIN":
+    if is_tenant_exempt(user):
         return value
 
     tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)

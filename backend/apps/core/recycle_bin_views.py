@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from apps.core import recycle_bin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.schema import ErrorResponseSerializer
+from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import CodenameViewSetMixin
 
 # ── Doc-only shapes ──────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         every tenant's rows (matching every other ADMIN-bypass list in this
         codebase); a non-ADMIN sees only their own tenant's."""
         user = request.user
-        is_admin = getattr(user, "role", None) == "ADMIN"
+        is_admin = is_tenant_exempt(user)
         tenant = getattr(request, "tenant", None)
         entries = recycle_bin.list_bin_entries(tenant=tenant, is_admin=is_admin)
         return Response({"results": entries, "count": len(entries)})

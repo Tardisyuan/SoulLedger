@@ -3,6 +3,7 @@ Serializers for workflow app.
 """
 from rest_framework import serializers
 
+from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
 from apps.workflow.node_shape import normalize_template_node
@@ -241,7 +242,7 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
         """
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if getattr(user, "role", None) == "ADMIN":
+        if is_tenant_exempt(user):
             return value
         tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
         if tenant is None or value.tenant_id != tenant.pk:
