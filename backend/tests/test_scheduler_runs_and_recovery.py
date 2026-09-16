@@ -59,6 +59,27 @@ def _job(key, tenant=None, **pt_fields):
     return ScheduledJob.objects.create(periodic_task=pt, job_key=key, tenant=tenant)
 
 
+def test_the_task_base_is_ours():
+    """Every task in this process must be a SchedulerTask, in this process.
+
+    Not a tautology. Until config/__init__.py imported the Celery app, whether
+    a shared task got our base depended on whether some earlier test had
+    happened to import config.celery: `test_a_broken_receiver_does_not_fail_
+    the_task` passed alone (gate never ran, nothing to catch) and
+    `test_a_held_lock_...` failed when run right after it in one process
+    (measured 2026-09-17). Pinned by name so the order dependence cannot
+    come back unnoticed.
+    """
+    from celery import current_app
+
+    from apps.authentication.tasks import flush_expired_tokens
+    from apps.scheduler.task_base import SchedulerTask
+
+    assert current_app.main == "soulledger"
+    for task in (_ok_task, flush_expired_tokens):
+        assert isinstance(task._get_current_object(), SchedulerTask), task.name
+
+
 # ---------------------------------------------------------------------------
 # Recording
 # ---------------------------------------------------------------------------
@@ -294,20 +315,26 @@ def test_prune_keeps_the_newest_m_per_job_and_never_touches_open_rows(db, settin
     for i in range(12):
         TaskRun.objects.create(job=busy, task_name=busy.job_key, celery_task_id=f"busy{i}", status=RunStatus.SUCCESS, queued_at=old - timedelta(hours=i))
     TaskRun.objects.create(job=busy, task_name=busy.job_key, celery_task_id="busy-running", status=RunStatus.RUNNING, queued_at=old - timedelta(days=1), started_at=old)
-    TaskRun.objects.create(job=busy, task_name=busy.job_key, celery_task_id="busy-recent", status=RunStatus.FAILURE, queued_at=now - timedelta(days=1))
+    # Six recent closed rows: more than the keep floor, so the floor is filled
+    # by rows the retention window already protects. That is what separates
+    # "kept because recent" from "kept because floor" — with only one recent
+    # row the two rules are indistinguishable (a mutation ignoring the cutoff
+    # stayed green against the first version of this test).
+    for i in range(6):
+        TaskRun.objects.create(job=busy, task_name=busy.job_key, celery_task_id=f"recent{i}", status=RunStatus.FAILURE, queued_at=now - timedelta(days=1, hours=i))
     for i in range(3):
         TaskRun.objects.create(job=quiet, task_name=quiet.job_key, celery_task_id=f"quiet{i}", status=RunStatus.SUCCESS, queued_at=old - timedelta(days=i))
     TaskRun.objects.create(job=None, task_name="gone", celery_task_id="orphan", status=RunStatus.SUCCESS, queued_at=old)
 
     deleted = services.prune_runs(now, batch_size=4)
 
-    # busy: 12 old closed + 1 old RUNNING (the oldest row) + 1 recent. The keep
-    # floor of 5 is the newest by queued_at: recent, busy0..busy3 → busy4..busy11
-    # (8) are deleted; the RUNNING row is older than all of them and survives
-    # only because it is open, which is the assertion.
-    assert deleted == 8 + 1
+    # busy: 12 old closed + 1 old RUNNING (the oldest row) + 6 recent. The keep
+    # floor of 5 is filled by recent rows, so all 12 old closed rows go; the
+    # RUNNING row is older than all of them and survives only because it is
+    # open; the 6th recent row survives only because it is inside retention.
+    assert deleted == 12 + 1
     kept = set(TaskRun.objects.filter(job=busy).values_list("celery_task_id", flat=True))
-    assert kept == {"busy-recent", "busy-running", "busy0", "busy1", "busy2", "busy3"}
+    assert kept == {"busy-running", *(f"recent{i}" for i in range(6))}
     # quiet: 3 old rows, all under the floor — nothing deleted.
     assert TaskRun.objects.filter(job=quiet).count() == 3
     assert not TaskRun.objects.filter(celery_task_id="orphan").exists()
