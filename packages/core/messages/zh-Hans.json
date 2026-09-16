@@ -1643,6 +1643,12 @@
       "no_jobs": "还没有登记任何定时任务",
       "no_jobs_reason": "由 setup_scheduled_tasks 或「重建调度」生成",
       "no_match": "没有符合筛选条件的任务"
+    },
+    "readable": {
+      "every_n_minutes": "每 {{interval}} 分钟",
+      "hourly": "每小时第 {{minute}} 分",
+      "daily": "每天 {{time}}",
+      "weekly": "每{{weekday}} {{time}}"
     }
   }
 }

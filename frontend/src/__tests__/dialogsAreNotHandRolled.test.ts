@@ -61,6 +61,7 @@ const ALLOWED: Record<string, string> = {
   "src/components/ui/Modal.tsx": "the primitive; `fixed inset-0` belongs here",
   "src/components/layout/AppLayout.tsx": "navigation drawer scrim, keyboard handled by useDrawerA11y",
   "src/components/settings/SettingsDrawer.tsx": "settings drawer scrim, keyboard handled by useDrawerA11y",
+  "src/components/scheduler/TaskRunsDrawer.tsx": "run-history drawer scrim, keyboard handled by useDrawerA11y (same pattern as SettingsDrawer)",
   "src/components/souls/detail/SoulHeaderActions.tsx":
     "transparent aria-hidden click-catcher behind a role=menu with Escape and focus return — a menu, not a dialog",
 };

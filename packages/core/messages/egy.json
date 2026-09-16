@@ -1643,6 +1643,12 @@
       "no_jobs": "Ma Seth Ahet Sesh djer",
       "no_jobs_reason": "Seshem em setup_scheduled_tasks er «Seshem Ahet Wehem»",
       "no_match": "Ma Seth en Setep pen"
+    },
+    "readable": {
+      "every_n_minutes": "At {{interval}} Neb",
+      "hourly": "Unut Neb em At {{minute}}",
+      "daily": "Hru Neb em {{time}}",
+      "weekly": "{{weekday}} Neb em {{time}}"
     }
   }
 }

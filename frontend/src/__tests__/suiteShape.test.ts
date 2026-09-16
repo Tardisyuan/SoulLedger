@@ -78,6 +78,7 @@ const COLLECTED_FILES = [
   "RebirthFormSelect.test.tsx",
   "RequireButton.test.tsx",
   "RequirePermission.test.tsx",
+  "SchedulerPage.test.tsx",
   "RoleFormModal.test.tsx",
   "selectionIsNotColourOnly.test.tsx",
   "SettingsDrawer.test.tsx",
