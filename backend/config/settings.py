@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "apps.org",
     "apps.death_sync",
     "apps.social",
+    "apps.scheduler",
 ]
 
 MIDDLEWARE = [
@@ -350,6 +351,20 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# apps.scheduler — TaskRun history and the "did it run" detection.
+# Retention: delete finished runs older than this many days ...
+SCHEDULER_RUN_RETENTION_DAYS = int(os.getenv("SCHEDULER_RUN_RETENTION_DAYS", "30"))
+# ... but always keep the newest N per job, so a monthly job's history is not
+# emptied by a daily sweep.
+SCHEDULER_RUN_KEEP_MIN = int(os.getenv("SCHEDULER_RUN_KEEP_MIN", "20"))
+# A PENDING run not picked up by a worker within this many seconds is LOST
+# (the broker dropped it, or no worker is consuming). 15 minutes: long enough
+# for a real backlog, short enough that the next daily job is not blamed.
+SCHEDULER_PENDING_GRACE_SECONDS = int(os.getenv("SCHEDULER_PENDING_GRACE_SECONDS", "900"))
+# A job whose schedule should have fired this many seconds ago with no run
+# recorded is "overdue". 10 minutes = two missed ticks of the 5-minutely job.
+SCHEDULER_OVERDUE_GRACE_SECONDS = int(os.getenv("SCHEDULER_OVERDUE_GRACE_SECONDS", "600"))
+
 # Logging
 LOGGING = {
     "version": 1,
@@ -448,6 +463,15 @@ SPECTACULAR_SETTINGS = {
         # imports the class rather than restating the four values — the comment
         # there says why — so there is exactly one set with two routes to it.
         "MemoryResetMechanismEnum": "apps.disposition.models.MemoryResetMechanism.choices",
+        # apps.scheduler: `status` and `scope` are both names other components
+        # already use for different choice sets. Naming only the new set is not
+        # enough — the collision check counts every set under the field name,
+        # so Role.scope's until-then-unique `ScopeEnum` would be renamed to a
+        # hashed `ScopeE81Enum`. Pinning it under its existing name keeps the
+        # generated TypeScript identifier unchanged.
+        "TaskRunStatusEnum": "apps.scheduler.models.RunStatus.choices",
+        "ScheduledJobScopeEnum": "apps.scheduler.models.JobScope.choices",
+        "ScopeEnum": "apps.perm.models.Role.SCOPE_CHOICES",
     },
 }
 
@@ -522,6 +546,7 @@ if not DEBUG and not os.getenv("EMAIL_HOST"):
 
 # Sentry integration
 import sentry_sdk
+from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
@@ -535,7 +560,17 @@ if not SENTRY_DSN and not DEBUG:
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
+        integrations=[
+            DjangoIntegration(),
+            # Sentry Crons check-ins for every beat-dispatched task. Verified
+            # against the installed sources (sentry-sdk 2.66.1, django-celery-
+            # beat 2.9.0): the integration patches `celery.beat.Scheduler.
+            # apply_entry`, and DatabaseScheduler subclasses Scheduler without
+            # overriding apply_entry, so it is covered; `_get_monitor_config`
+            # accepts any `crontab` subclass, which TzAwareCrontab is, and reads
+            # its `.tz`. Monitor slug = PeriodicTask.name.
+            CeleryIntegration(monitor_beat_tasks=True),
+        ],
         traces_sample_rate=0.1,
         send_default_pii=False,
     )
