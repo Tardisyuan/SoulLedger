@@ -382,7 +382,14 @@ describe("WorkflowPage detail modal", () => {
     expect(document.querySelector("[data-enum-state='unrecognized']")).toBeNull();
   });
 
-  it("falls back to the list row when the detail fetch fails, instead of showing nothing", async () => {
+  /**
+   * FL-14: the `catch` used to swallow the failed detail fetch and open the
+   * modal anyway with the list row (which carries no `nodes`/`nodes_json`),
+   * so a failed request looked like a successfully opened, merely-empty
+   * template. Correct behavior is to toast the error and leave the modal
+   * closed — the incomplete detail view must never render.
+   */
+  it("toasts and skips the modal when the detail fetch fails, instead of faking success", async () => {
     mockedTemplates.mockResolvedValue({ data: [backendTemplate] });
     mockedTemplateGet.mockRejectedValue(new Error("500"));
     renderPage();
@@ -390,8 +397,11 @@ describe("WorkflowPage detail modal", () => {
     fireEvent.click(await screen.findByText("Custom Tribunal"));
     fireEvent.click(screen.getByText("workflow.view"));
 
-    expect(await screen.findByText("workflow.no_node_data")).toBeInTheDocument();
-    expect(screen.getAllByText("Custom Tribunal").length).toBeGreaterThan(1);
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("workflow.view_error", "error"));
+    // Absence: the old behavior opened the dialog with the list row as a
+    // stand-in, showing "no node data" as if that were a legitimate detail.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("workflow.no_node_data")).not.toBeInTheDocument();
   });
 
   /**

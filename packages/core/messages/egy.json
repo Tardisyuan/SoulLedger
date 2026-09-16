@@ -621,6 +621,7 @@
     "nodes_count": "{{count}} Mekher",
     "view_to_see_nodes": "Wenu er Ma Mekheru",
     "delete_error": "Ma Wehem Seth",
+    "view_error": "Failed to load",
     "status": {
       "PENDING": "Em Set Medu",
       "IN_PROGRESS": "Em Sheemtet",
