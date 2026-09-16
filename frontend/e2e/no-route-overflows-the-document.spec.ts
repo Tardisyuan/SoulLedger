@@ -48,6 +48,7 @@ const ROUTES = [
   "/profile",
   "/recycle-bin",
   "/death-sync",
+  "/scheduler",
 ];
 
 test.describe("文档不比视口宽", () => {

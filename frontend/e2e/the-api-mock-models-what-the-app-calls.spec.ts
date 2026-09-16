@@ -35,6 +35,7 @@ const ROUTES = [
   "/social",
   "/profile",
   "/death-sync",
+  "/scheduler",
 ];
 
 test.describe("ApiMock 覆盖了应用真的会调的东西", () => {
