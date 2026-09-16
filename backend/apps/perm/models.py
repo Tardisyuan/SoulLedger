@@ -356,6 +356,12 @@ DEFAULT_PERMISSIONS = [
     ("recycle_bin.read", "查看回收站", "system"),
     ("recycle_bin.restore", "恢复已删除项", "system"),
     ("recycle_bin.hard_delete", "永久删除", "system"),
+    # scheduler 权限(read/manage 二元)。默认只 ADMIN 持有,可在权限矩阵授予别的
+    # 角色 —— 授予后该角色只看/管自己租户的行,全局行仍只有 ADMIN 可见
+    # (apps/scheduler/views.py)。perm 迁移 0021 播种这两条 Permission 行,
+    # 否则矩阵里无法建 RolePermission。
+    ("scheduler.read", "查看定时任务", "scheduler"),
+    ("scheduler.manage", "管理定时任务", "scheduler"),
 ]
 
 
@@ -375,6 +381,7 @@ ROLE_PERMISSIONS = {
         "org.read", "org.manage",
         "system.settings", "user.manage", "menu.read", "menu.manage",
         "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",
+        "scheduler.read", "scheduler.manage",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
         # ["workflow.escalate"]) — this static list had drifted from that intent
