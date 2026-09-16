@@ -1,5 +1,13 @@
 # SoulLedger V2 Plan Gap Analysis
 
+> **历史快照（2026-09-16 加注）。** 本文写于 2026-05-27，逐条对照
+> `docs/archive/ROADMAP_V2.md`(下方仍按当天路径写作 `ROADMAP_V2.md`)找出的
+> 缺口。该路线图已于 2026-08-14 标记 **SUPERSEDED**(见该文件顶部说明：与
+> `README.md` 的项目定位冲突,未部署、无真实用户,抢购/防刷等设计解的是一个
+> 不存在的问题)。本文分析的前提随之失效——文中的 P0/P1/P2 缺口清单、
+> 「Top 3 Blockers」是针对一份已废弃路线图的差距分析,不是当前系统的待办。
+> 保留仅作历史记录,不代表现状。
+
 **Date**: 2026-05-27
 **Analyzed by**: V2 Plan Analyst
 **Sources**: ROADMAP_V2.md, MILESTONES.md, current codebase models
