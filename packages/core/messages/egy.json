@@ -1475,7 +1475,8 @@
       "group_social": "Sesh Sethet",
       "group_settings": "Sethet Aat",
       "corpus": "Medu Sesh",
-      "ledger": "Sesh Maat"
+      "ledger": "Sesh Maat",
+      "scheduler": "Seth Ahet"
     }
   },
   "tenant": {
@@ -1493,5 +1494,155 @@
     "disconnected": "Ma Sema",
     "failed": "Ma Sema Seth",
     "retry": "Sema Wehem"
+  },
+  "scheduler": {
+    "title": "Seth Ahet",
+    "subtitle": "Seth Ahet en Per Hemes: Ahet, Sekhem, Iri Emu, Medew Iri",
+    "refresh": "Ma'a Wehem",
+    "rebuild": "Seshem Ahet Wehem",
+    "rebuild_confirm_title": "Seshem Ahet Neb Wehem?",
+    "rebuild_confirm_message": "Sesh Ahet ma wenen en Per Hemes neb em Sesh Tepy; wehem Seth ma wenen em Sesh Tepy. Sekhem, Ahet Medu em Ahet Sepat en Iri-Seth smen.",
+    "rebuild_done": "Wetep: {{created}} Seshem, {{updated}} Khemen, {{removed}} Wehem, {{legacy_removed}} Seth Tepy Wehem",
+    "rebuild_failed": "Ma Wetep Seshem Wehem",
+    "manage_hint": "Sekhem, Khemen Ahet, Iri Emu: scheduler.manage em Tepy",
+    "groups": {
+      "global": "Seth Ahet en Ta Neb",
+      "tenant": "Per Hemes {{code}}",
+      "count": "{{count}} Seth"
+    },
+    "filters": {
+      "label": "Setep",
+      "all": "Neb",
+      "disabled": "Ma Sekhem Wa",
+      "overdue": "Ahet Sesh Ma Iri",
+      "failing": "Ma Sethet Wehem"
+    },
+    "fields": {
+      "schedule": "Ahet Medu",
+      "timezone": "Ahet Sepat",
+      "last_run": "Iri Pehwy",
+      "next_run": "Iri Em Khet",
+      "enabled": "Sekhem"
+    },
+    "jobs": {
+      "ledger_recalculate_tenant": "Hesb Sesh Maat Wehem",
+      "judgment_auto_conclude_stale_for_tenant": "Sheemtet Wedja Wetep Djes",
+      "death_sync_cleanup_old_requests_for_tenant": "Wehem Medew Wepet Ru Tepy",
+      "authentication_flush_expired_tokens": "Wehem Menf Pehwy",
+      "events_retry_pending_webhooks": "Send Medu Kheper Khemu",
+      "scheduler_reap_stale_runs": "Wetep Iri Ma Wetep",
+      "scheduler_check_overdue": "Maa Ahet Sesh Ma Iri",
+      "scheduler_prune_runs": "Wehem Medew Iri Tepy"
+    },
+    "status": {
+      "PENDING": "Em Smen",
+      "RUNNING": "Em Kheme Seth",
+      "SUCCESS": "Wetep Seth",
+      "FAILURE": "Ma Sethet",
+      "RETRY": "Em Khemu",
+      "SKIPPED": "Sheta Seth",
+      "LOST": "Ter Seth"
+    },
+    "trigger": {
+      "SCHEDULE": "Em Ahet",
+      "MANUAL": "Em Djeret"
+    },
+    "flags": {
+      "disabled": "Ma Sekhem",
+      "overdue": "Ahet Sesh Ma Iri",
+      "overdue_detail": "Ahet {{time}} em Tepy; ma Medew Iri djer-es",
+      "failures": "{{count}} Ma Sethet Wehem",
+      "never_run": "Ma Iri Djer",
+      "not_scheduled": "Ma Sekhem, ma Iri"
+    },
+    "duration": {
+      "ms": "{{value}} ms",
+      "s": "{{value}} s"
+    },
+    "actions": {
+      "run_now": "Iri Emu",
+      "edit": "Khemen Ahet",
+      "runs": "Medew Iri",
+      "toggle": "Sekhem «{{job}}»"
+    },
+    "run": {
+      "confirm_title": "Iri Emu?",
+      "confirm_message": "Smen Iri Em Djeret wa en «{{job}}» Emu. Ahet Medu ma Khemen.",
+      "queued": "Em Smen; Medu Iri Ma'a Wehem djes-ef",
+      "locked": "Iri wa Em Kheme Seth; Khemu em Khet Wetep-ef",
+      "enqueue_failed": "Ma Smen: Smen Seth ma wenen, Khemu em Khet",
+      "failed": "Ma Sethet Iri Emu"
+    },
+    "toggle": {
+      "enabled": "Em Sekhem",
+      "disabled": "Ma Sekhem",
+      "failed": "Ma Sethet Sekhem"
+    },
+    "editor": {
+      "title": "Khemen Ahet · {{job}}",
+      "preset": "Ahet Sep",
+      "presets": {
+        "every_n_minutes": "At Neb N",
+        "hourly": "Unut Neb",
+        "daily": "Hru Neb",
+        "weekly": "Sefekh Hru Neb",
+        "custom": "Ahet Djes"
+      },
+      "interval": "Ahet At",
+      "minute": "At",
+      "hour": "Unut",
+      "weekday": "Hru en Sefekh",
+      "weekdays": {
+        "0": "Hru Ra",
+        "1": "Hru Iah",
+        "2": "Hru Heru Desher",
+        "3": "Hru Sebeg",
+        "4": "Hru Heru Wepesh",
+        "5": "Hru Sebau",
+        "6": "Hru Heru Ka Pet"
+      },
+      "advanced": "Sesh Ahet Medu em Djeret",
+      "cron_fields": {
+        "minute": "At",
+        "hour": "Unut",
+        "day_of_month": "Hru",
+        "month_of_year": "Abed",
+        "day_of_week": "Hru Sefekh"
+      },
+      "cron_hint": "Ahet Medu Diu: At Unut Hru Abed Hru-Sefekh (Hru Ra em 0)",
+      "timezone": "Ahet Sepat",
+      "timezone_search": "Hehy Ahet Sepat",
+      "timezone_common": "Ahet Sepat Tepy",
+      "timezone_all": "Ahet Sepat Neb",
+      "timezone_none": "Ma Ahet Sepat Gem",
+      "preview": "Iri Khemt Em Khet",
+      "preview_invalid": "Ahet Medu ma Rekh; ma Maa",
+      "preview_none": "Ma Iri em Renpet",
+      "saved": "Ahet Serudj",
+      "save_failed": "Ma Serudj"
+    },
+    "runs": {
+      "title": "Medew Iri · {{job}}",
+      "status_filter": "Medu Iri",
+      "all_statuses": "Medu Iri Neb",
+      "empty": "Ma Medew Iri djer",
+      "empty_filtered": "Ma Medew Iri en Medu pen",
+      "queued_at": "Smen",
+      "started_at": "Tepy Iri",
+      "finished_at": "Wetep",
+      "duration": "Petep Seth",
+      "worker": "Hem Seth",
+      "triggered_by": "Iri-en",
+      "error": "Sethet",
+      "show_error": "Wen Sethet",
+      "hide_error": "Hap Sethet",
+      "copy_error": "Sesh Sethet",
+      "error_copied": "Sethet Em Sesh"
+    },
+    "empty": {
+      "no_jobs": "Ma Seth Ahet Sesh djer",
+      "no_jobs_reason": "Seshem em setup_scheduled_tasks er «Seshem Ahet Wehem»",
+      "no_match": "Ma Seth en Setep pen"
+    }
   }
 }

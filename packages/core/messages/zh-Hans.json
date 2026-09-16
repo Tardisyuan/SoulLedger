@@ -1475,7 +1475,8 @@
       "group_social": "社交",
       "group_settings": "系统设置",
       "corpus": "语料条文",
-      "ledger": "功过格"
+      "ledger": "功过格",
+      "scheduler": "定时任务"
     }
   },
   "tenant": {
@@ -1493,5 +1494,155 @@
     "disconnected": "已断开",
     "failed": "连接失败",
     "retry": "重连"
+  },
+  "scheduler": {
+    "title": "定时任务",
+    "subtitle": "按租户登记的定时任务：调度、启停、手动运行与执行记录",
+    "refresh": "刷新",
+    "rebuild": "重建调度",
+    "rebuild_confirm_title": "重建全部调度？",
+    "rebuild_confirm_message": "按注册表为每个活跃租户补齐缺失的调度行，清理已不在注册表中的行。运维改过的启停、cron 与时区会保留。",
+    "rebuild_done": "重建完成：新建 {{created}}，更新 {{updated}}，移除 {{removed}}，清理旧行 {{legacy_removed}}",
+    "rebuild_failed": "重建失败",
+    "manage_hint": "需要 scheduler.manage 权限才能启停、编辑或运行",
+    "groups": {
+      "global": "全局任务",
+      "tenant": "租户 {{code}}",
+      "count": "{{count}} 项"
+    },
+    "filters": {
+      "label": "筛选",
+      "all": "全部",
+      "disabled": "只看已停用",
+      "overdue": "超时未跑",
+      "failing": "连续失败"
+    },
+    "fields": {
+      "schedule": "调度",
+      "timezone": "时区",
+      "last_run": "上次运行",
+      "next_run": "下次运行",
+      "enabled": "启用"
+    },
+    "jobs": {
+      "ledger_recalculate_tenant": "重算功过格",
+      "judgment_auto_conclude_stale_for_tenant": "自动结案久悬审判",
+      "death_sync_cleanup_old_requests_for_tenant": "清理过期死亡登记请求",
+      "authentication_flush_expired_tokens": "清理过期令牌",
+      "events_retry_pending_webhooks": "重试待投递的 Webhook",
+      "scheduler_reap_stale_runs": "收尾卡死的执行记录",
+      "scheduler_check_overdue": "检测超时未跑的任务",
+      "scheduler_prune_runs": "清理过期执行记录"
+    },
+    "status": {
+      "PENDING": "排队中",
+      "RUNNING": "运行中",
+      "SUCCESS": "成功",
+      "FAILURE": "失败",
+      "RETRY": "重试中",
+      "SKIPPED": "已跳过",
+      "LOST": "已丢失"
+    },
+    "trigger": {
+      "SCHEDULE": "定时",
+      "MANUAL": "手动"
+    },
+    "flags": {
+      "disabled": "已停用",
+      "overdue": "超时未跑",
+      "overdue_detail": "应于 {{time}} 运行，至今没有执行记录",
+      "failures": "连续失败 {{count}} 次",
+      "never_run": "从未运行",
+      "not_scheduled": "已停用，不会运行"
+    },
+    "duration": {
+      "ms": "{{value}} 毫秒",
+      "s": "{{value}} 秒"
+    },
+    "actions": {
+      "run_now": "立即运行",
+      "edit": "编辑调度",
+      "runs": "执行记录",
+      "toggle": "启用「{{job}}」"
+    },
+    "run": {
+      "confirm_title": "立即运行？",
+      "confirm_message": "将立即为「{{job}}」入队一次手动运行，不影响原有调度。",
+      "queued": "已入队，运行状态会自动刷新",
+      "locked": "已有一次运行在进行中，请等它结束后再试",
+      "enqueue_failed": "入队失败：任务队列暂不可用，请稍后重试",
+      "failed": "运行请求失败"
+    },
+    "toggle": {
+      "enabled": "已启用",
+      "disabled": "已停用",
+      "failed": "启停失败"
+    },
+    "editor": {
+      "title": "编辑调度 · {{job}}",
+      "preset": "频率",
+      "presets": {
+        "every_n_minutes": "每 N 分钟",
+        "hourly": "每小时",
+        "daily": "每天",
+        "weekly": "每周",
+        "custom": "自定义"
+      },
+      "interval": "间隔（分钟）",
+      "minute": "分钟",
+      "hour": "小时",
+      "weekday": "星期",
+      "weekdays": {
+        "0": "星期日",
+        "1": "星期一",
+        "2": "星期二",
+        "3": "星期三",
+        "4": "星期四",
+        "5": "星期五",
+        "6": "星期六"
+      },
+      "advanced": "高级：直接编辑 cron",
+      "cron_fields": {
+        "minute": "分",
+        "hour": "时",
+        "day_of_month": "日",
+        "month_of_year": "月",
+        "day_of_week": "周"
+      },
+      "cron_hint": "五段 cron：分 时 日 月 周（周日为 0）",
+      "timezone": "时区",
+      "timezone_search": "搜索时区",
+      "timezone_common": "常用",
+      "timezone_all": "全部时区",
+      "timezone_none": "没有匹配的时区",
+      "preview": "接下来 3 次运行",
+      "preview_invalid": "cron 无法解析，无法预览",
+      "preview_none": "一年内不会运行",
+      "saved": "调度已保存",
+      "save_failed": "保存失败"
+    },
+    "runs": {
+      "title": "执行记录 · {{job}}",
+      "status_filter": "状态",
+      "all_statuses": "全部状态",
+      "empty": "还没有执行记录",
+      "empty_filtered": "没有该状态的执行记录",
+      "queued_at": "入队",
+      "started_at": "开始",
+      "finished_at": "结束",
+      "duration": "耗时",
+      "worker": "Worker",
+      "triggered_by": "触发人",
+      "error": "错误",
+      "show_error": "展开错误",
+      "hide_error": "收起错误",
+      "copy_error": "复制错误",
+      "error_copied": "错误已复制"
+    },
+    "empty": {
+      "no_jobs": "还没有登记任何定时任务",
+      "no_jobs_reason": "由 setup_scheduled_tasks 或「重建调度」生成",
+      "no_match": "没有符合筛选条件的任务"
+    }
   }
 }
