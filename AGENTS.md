@@ -370,7 +370,7 @@ SoulLedger/
 2. `serializers.py` — 定义序列化器，包含 tenant
 3. `views.py` — ViewSet，`perform_create` 必须设置 `tenant`
 4. `urls.py` — 注册路由
-5. Migration：`python manage.py makemigrations`
+5. Migration：`cd backend && .venv/bin/python manage.py makemigrations`（解释器是 `backend/.venv`，不是 PATH 上的 `python`；建法与原因见 `CLAUDE.md` 的 Build & Test）
 
 **前端**：
 1. `lib/api.ts` — 添加 API 方法（JWT Authorization）
