@@ -56,13 +56,47 @@ def menu_is_visible_to(menu, user) -> bool:
     to an endpoint that enforces its own codename — ``/corpus`` is
     ``judgment.read`` — so this is about not advertising a door somebody cannot
     open, not about the lock on it.
+
+    Three ways in, any one suffices (2026-09-17, for the scheduler page):
+
+    1. ``roles`` admits the caller's role — the original rule, unchanged,
+       including "empty means everyone".
+    2. ``menu.permission`` is set and the caller HOLDS that codename. This is
+       what makes a grant in the permission matrix show up in the sidebar
+       without also editing the menu row: ``/scheduler`` carries
+       ``roles=["ADMIN"]`` and ``permission="scheduler.read"``, so a VIEWER
+       given ``scheduler.read`` sees it and a VIEWER without it does not.
+       ``permission`` had been written on rows since 0013 and read by nothing
+       on the visibility path; this is its first consumer. Rows whose
+       ``permission`` is empty are unaffected — no codename, no second door.
+    3. A DIRECTORY is visible when any active child is, so a page you may see
+       is never orphaned behind a group you may not. Only the directory
+       itself is admitted this way — its *other* children are still judged
+       one by one (``get_children`` / ``tree`` filter each through this same
+       function), so opening ``系统设置`` for one page does not open ``/users``.
+
+    Every seeded row today has ``permission`` empty or held by exactly the
+    roles already in ``roles``, so on the current data this changes nothing
+    (asserted by tests/test_menu_visibility_follows_the_codename.py).
     """
     if is_menu_admin(user):
         return True
     if not menu.roles:
         return True
     role = getattr(user, "role", None)
-    return bool(role) and role in menu.roles
+    if bool(role) and role in menu.roles:
+        return True
+    if menu.permission:
+        from apps.core.permissions import user_has_permission
+
+        if user_has_permission(user, menu.permission):
+            return True
+    if menu.menu_type == "DIRECTORY":
+        # `children.all()` off the prefetched manager where the caller
+        # prefetched (`_MENU_PREFETCH` in views.py); one query per directory
+        # otherwise — six directories, reference data.
+        return any(child.is_active and menu_is_visible_to(child, user) for child in menu.children.all())
+    return False
 
 
 def visible_menus(queryset, user):
