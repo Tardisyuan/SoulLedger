@@ -1475,7 +1475,8 @@
       "group_social": "Social",
       "group_settings": "System Settings",
       "corpus": "Corpus",
-      "ledger": "Merit Ledger"
+      "ledger": "Merit Ledger",
+      "scheduler": "Scheduled Tasks"
     }
   },
   "tenant": {
@@ -1493,5 +1494,155 @@
     "disconnected": "Disconnected",
     "failed": "Connection failed",
     "retry": "Reconnect"
+  },
+  "scheduler": {
+    "title": "Scheduled Tasks",
+    "subtitle": "Registered periodic jobs per tenant: schedule, enable, run now, and history",
+    "refresh": "Refresh",
+    "rebuild": "Rebuild schedules",
+    "rebuild_confirm_title": "Rebuild all schedules?",
+    "rebuild_confirm_message": "Fills in missing schedule rows for every active tenant from the registry and removes rows no longer in it. Operator changes to enabled, cron and time zone are kept.",
+    "rebuild_done": "Rebuilt: {{created}} created, {{updated}} updated, {{removed}} removed, {{legacy_removed}} legacy rows cleared",
+    "rebuild_failed": "Rebuild failed",
+    "manage_hint": "Enabling, editing or running a job needs scheduler.manage",
+    "groups": {
+      "global": "Global jobs",
+      "tenant": "Tenant {{code}}",
+      "count": "{{count}} jobs"
+    },
+    "filters": {
+      "label": "Filter",
+      "all": "All",
+      "disabled": "Disabled only",
+      "overdue": "Overdue",
+      "failing": "Failing"
+    },
+    "fields": {
+      "schedule": "Schedule",
+      "timezone": "Time zone",
+      "last_run": "Last run",
+      "next_run": "Next run",
+      "enabled": "Enabled"
+    },
+    "jobs": {
+      "ledger_recalculate_tenant": "Recalculate merit ledgers",
+      "judgment_auto_conclude_stale_for_tenant": "Auto-conclude stale judgments",
+      "death_sync_cleanup_old_requests_for_tenant": "Clean up old death-sync requests",
+      "authentication_flush_expired_tokens": "Flush expired tokens",
+      "events_retry_pending_webhooks": "Retry pending webhooks",
+      "scheduler_reap_stale_runs": "Close out stuck runs",
+      "scheduler_check_overdue": "Detect overdue jobs",
+      "scheduler_prune_runs": "Prune old run history"
+    },
+    "status": {
+      "PENDING": "Queued",
+      "RUNNING": "Running",
+      "SUCCESS": "Succeeded",
+      "FAILURE": "Failed",
+      "RETRY": "Retrying",
+      "SKIPPED": "Skipped",
+      "LOST": "Lost"
+    },
+    "trigger": {
+      "SCHEDULE": "Scheduled",
+      "MANUAL": "Manual"
+    },
+    "flags": {
+      "disabled": "Disabled",
+      "overdue": "Overdue",
+      "overdue_detail": "Due at {{time}}; no run has been recorded since",
+      "failures": "{{count}} failures in a row",
+      "never_run": "Never run",
+      "not_scheduled": "Disabled, will not run"
+    },
+    "duration": {
+      "ms": "{{value}} ms",
+      "s": "{{value}} s"
+    },
+    "actions": {
+      "run_now": "Run now",
+      "edit": "Edit schedule",
+      "runs": "Run history",
+      "toggle": "Enable “{{job}}”"
+    },
+    "run": {
+      "confirm_title": "Run now?",
+      "confirm_message": "Queues one manual run of “{{job}}” right away. The schedule is not changed.",
+      "queued": "Queued; status will refresh on its own",
+      "locked": "A run is already in progress; try again once it finishes",
+      "enqueue_failed": "Could not queue the run: the task queue is unavailable, try again shortly",
+      "failed": "Run request failed"
+    },
+    "toggle": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "failed": "Could not change enabled state"
+    },
+    "editor": {
+      "title": "Edit schedule · {{job}}",
+      "preset": "Frequency",
+      "presets": {
+        "every_n_minutes": "Every N minutes",
+        "hourly": "Hourly",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "custom": "Custom"
+      },
+      "interval": "Interval (minutes)",
+      "minute": "Minute",
+      "hour": "Hour",
+      "weekday": "Day of week",
+      "weekdays": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "advanced": "Advanced: edit cron directly",
+      "cron_fields": {
+        "minute": "Minute",
+        "hour": "Hour",
+        "day_of_month": "Day",
+        "month_of_year": "Month",
+        "day_of_week": "Weekday"
+      },
+      "cron_hint": "Five-field cron: minute hour day month weekday (Sunday is 0)",
+      "timezone": "Time zone",
+      "timezone_search": "Search time zones",
+      "timezone_common": "Common",
+      "timezone_all": "All time zones",
+      "timezone_none": "No matching time zone",
+      "preview": "Next 3 runs",
+      "preview_invalid": "Cron cannot be parsed; no preview",
+      "preview_none": "Will not run within a year",
+      "saved": "Schedule saved",
+      "save_failed": "Save failed"
+    },
+    "runs": {
+      "title": "Run history · {{job}}",
+      "status_filter": "Status",
+      "all_statuses": "All statuses",
+      "empty": "No runs recorded yet",
+      "empty_filtered": "No runs with this status",
+      "queued_at": "Queued",
+      "started_at": "Started",
+      "finished_at": "Finished",
+      "duration": "Duration",
+      "worker": "Worker",
+      "triggered_by": "Triggered by",
+      "error": "Error",
+      "show_error": "Show error",
+      "hide_error": "Hide error",
+      "copy_error": "Copy error",
+      "error_copied": "Error copied"
+    },
+    "empty": {
+      "no_jobs": "No scheduled jobs are registered",
+      "no_jobs_reason": "They are created by setup_scheduled_tasks or “Rebuild schedules”",
+      "no_match": "No jobs match these filters"
+    }
   }
 }

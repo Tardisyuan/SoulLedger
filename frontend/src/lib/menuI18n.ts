@@ -42,6 +42,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/audit": "breadcrumb.menu.audit",
   "/tenants": "breadcrumb.menu.tenants",
   "/organizations": "breadcrumb.menu.organizations",
+  // backend/apps/menus/migrations/0015_add_scheduler_menu.py
+  "/scheduler": "breadcrumb.menu.scheduler",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {
