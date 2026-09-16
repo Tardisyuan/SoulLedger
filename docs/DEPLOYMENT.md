@@ -58,10 +58,14 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   或 PENDING 超过 `SCHEDULER_PENDING_GRACE_SECONDS`(默认 900)没被取走,都由每 5 分钟的
   `scheduler.reap_stale_runs` 标成 LOST;worker 重启时它名下遗留的 RUNNING 也标 LOST。
 - **beat 挂了怎么发现:** `GET /health/detailed/`(ADMIN)在有任务「该跑却没跑」
-  (超过 cron 应触发时间 `SCHEDULER_OVERDUE_GRACE_SECONDS`,默认 600 秒)时返回 503,
-  `scheduler_overdue` 列出任务名。外部探针盯这个;不要只靠站内通知 —— 发通知的检测任务
-  自己也是 beat 派发的。设置了 `SENTRY_DSN` 时,每个 beat 派发的任务同时向 Sentry Crons
-  报到(`CeleryIntegration(monitor_beat_tasks=True)`)。
+  (超过 cron 应触发时间 `SCHEDULER_OVERDUE_GRACE_SECONDS`,默认 600 秒)时,
+  `scheduler` 字段为 `"overdue"`、`scheduler_overdue` 列出任务名;**状态码仍是 200、
+  `status` 仍是 `"ok"`** —— 503 留给数据库/Redis 故障(那是这个进程自己的问题),
+  beat 没跑是另一个容器的问题,探针要读 `scheduler` 字段而不是状态码。
+  不要只靠站内通知 —— 发通知的检测任务自己也是 beat 派发的。设置了 `SENTRY_DSN` 时,
+  每个 beat 派发的任务同时向 Sentry Crons 报到(`CeleryIntegration(monitor_beat_tasks=True)`)。
+- 执行状态与调度变更通过既有 WebSocket 管道推送(domain `scheduler`,权限门
+  `scheduler.read`;租户行只进该租户分组,全局行只到 ADMIN)。
 
 ## 数据库备份与恢复
 

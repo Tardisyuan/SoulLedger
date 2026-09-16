@@ -253,6 +253,8 @@ def test_health_detailed_exposes_overdue_jobs(client, admin_user, synced):
     PeriodicTask.objects.filter(pk=job.periodic_task_id).update(date_changed=long_ago)
 
     bad = client.get("/health/detailed/", **_bearer(admin_user))
-    assert bad.status_code == 503
-    assert bad.json()["scheduler"] == "overdue" and bad.json()["status"] == "degraded"
+    # 200 and status "ok" on purpose: overdue is reported, not escalated —
+    # database/redis keep their 503 semantics, a dead beat is not this process.
+    assert bad.status_code == 200
+    assert bad.json()["scheduler"] == "overdue" and bad.json()["status"] == "ok"
     assert bad.json()["scheduler_overdue"] == ["authentication.flush_expired_tokens"]

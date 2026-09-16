@@ -59,24 +59,25 @@ class HealthCheckDetailed(APIView):
         # Scheduled jobs whose cron should have fired and no run was recorded.
         # Read-time computation (apps/scheduler/services.py::overdue_jobs), so
         # a dead beat — which also kills the beat-driven overdue task — is
-        # still visible to an external probe. Degraded, not "error": the API
-        # itself is fine; something downstream of it is not running.
+        # still visible to an external probe.
+        #
+        # INFORMATIONAL ONLY: never touches `status` or the status code (user
+        # decision 2026-09-17). "database" / "redis" are about whether this
+        # process can serve requests, and 503 tells an orchestrator to act on
+        # the process; a job that beat has not fired is a different fault in a
+        # different container, so it is reported in its own two fields and a
+        # probe reads `scheduler` rather than the status code.
         try:
             from apps.scheduler.services import overdue_jobs
 
             overdue = [job.periodic_task.name for job in overdue_jobs()]
         except Exception:
-            overdue = None
-        if overdue is None:
             checks["scheduler"] = "error"
-            checks["status"] = "degraded"
-            status_code = 503
-        elif overdue:
-            checks["scheduler"] = "overdue"
-            checks["scheduler_overdue"] = overdue
-            checks["status"] = "degraded"
-            status_code = 503
         else:
-            checks["scheduler"] = "ok"
+            if overdue:
+                checks["scheduler"] = "overdue"
+                checks["scheduler_overdue"] = overdue
+            else:
+                checks["scheduler"] = "ok"
 
         return Response(checks, status=status_code)
