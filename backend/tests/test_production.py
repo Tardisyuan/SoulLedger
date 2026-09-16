@@ -121,7 +121,9 @@ class TestHealthEndpoints:
         assert resp.status_code in [200, 503], (
             f"ADMIN with a valid Bearer token got {resp.status_code}"
         )
-        assert set(resp.json()) == {"database", "redis", "status"}
+        # `scheduler` since 2026-09-17 (apps/scheduler): "ok" | "overdue" | "error";
+        # `scheduler_overdue` (a list of names) appears only when it is "overdue".
+        assert set(resp.json()) - {"scheduler_overdue"} == {"database", "redis", "status", "scheduler"}
 
         assert client.get('/health/detailed/', **bearer(viewer)).status_code == 403
         assert client.get(
