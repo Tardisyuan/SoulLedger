@@ -75,6 +75,15 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         null=True,
     )
 
+    # 第几世。与 SoulRecord.cycle 同义:0 是第一世。灵魂端「前世」按
+    # (soul, cycle) 一次查出各世数据,不沿账号链递归
+    # (docs/ARCHITECTURE-soul-app-and-domain-split.md 2026-09-17「实施约束」)。
+    # 由 save() 在创建时盖章;存量行由迁移按转世时间回填。
+    cycle = models.PositiveIntegerField(
+        default=0,
+        help_text="Life index this row belongs to; 0 is the first life.",
+    )
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Judgment"
@@ -84,10 +93,18 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
             models.Index(fields=["tenant", "created_at"]),
             models.Index(fields=["verdict"]),
             models.Index(fields=["is_final"]),
+            models.Index(fields=["soul", "cycle"]),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
+
+    def save(self, *args, **kwargs):
+        # 创建时盖上当前是第几世;显式给了非 0 值的调用方(迁移、测试)不覆盖。
+        # 与 SoulRecord.save 同一写法。
+        if self._state.adding and self.cycle == 0 and self.soul_id is not None:
+            self.cycle = self.soul.life_index
+        super().save(*args, **kwargs)
 
     def __str__(self):
         v = self.verdict or "PENDING"
