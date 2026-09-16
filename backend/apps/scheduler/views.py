@@ -25,7 +25,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
-from apps.scheduler import services
+from apps.scheduler import realtime, services
 from apps.scheduler.models import ScheduledJob, TaskRun
 from apps.scheduler.registry import CRON_FIELDS
 from apps.scheduler.serializers import (
@@ -108,6 +108,7 @@ class ScheduledJobViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             description=f"UPDATE schedule {pt.name}",
             changes={k: {"old": before.get(k), "new": after[k]} for k in after if before.get(k) != after[k]},
         )
+        realtime.emit_job_updated(job, reason="patch")
         return Response(ScheduledJobSerializer(job).data)
 
     @extend_schema(
@@ -140,6 +141,7 @@ class ScheduledJobViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         stats = services.sync_schedules()
         result = {k: stats.get(k, 0) for k in ("created", "updated", "removed", "legacy_removed")}
         _audit(request, "EXECUTE", resource_id="rebuild", description="EXECUTE scheduler rebuild", changes=result)
+        realtime.emit_jobs_rebuilt(result)
         return Response(RebuildResultSerializer(result).data)
 
 
