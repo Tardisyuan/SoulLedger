@@ -407,6 +407,8 @@ def _role_name_taken(name):
     who wants the old grants back has a path, and one who does not can hard
     delete after the retention window.
     """
+    if name == "SOUL":
+        return "'SOUL' is reserved for soul accounts and cannot be a role table row"
     if Role.objects.filter(name=name).exists():
         return "Role with this name already exists"
     if Role.all_objects.filter(name=name, is_deleted=True).exists():

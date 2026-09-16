@@ -139,7 +139,10 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
     queryset = User.objects.all()
 
     def get_queryset(self):
-        qs = User.objects.select_related('tenant').all()
+        # 灵魂账号不归用户管理:它们的开通 / 重置走 `/api/v1/soul-accounts/`,
+        # 那里有 72 小时、首登改密、只发一次三道保护;这里的 reset_password 会
+        # 把明文直接交给官员,绕过全部三道。
+        qs = User.objects.select_related('tenant').exclude(role='SOUL')
 
         # ADMIN is the only global-scope role (apps/perm/models.py Role.scope);
         # every other role is tenant-scoped and must never see another

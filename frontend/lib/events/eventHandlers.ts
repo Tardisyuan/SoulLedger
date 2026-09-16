@@ -105,6 +105,13 @@ export const EVENT_LABELS: Record<string, string> = {
   REACTION_REMOVED: "Reaction removed",
   USER_FOLLOWED: "New follower",
   USER_UNFOLLOWED: "Unfollowed",
+
+  // Soul account events
+  SOUL_ACCOUNT_CREATED: "Soul account opened",
+  SOUL_ACCOUNT_RETIRED: "Soul account retired",
+  REBIRTH_APPLICATION_SUBMITTED: "Rebirth application submitted",
+  REBIRTH_STATUS_CHANGED: "Rebirth application updated",
+  REBIRTH_CROSS_CIV_DECIDED: "Cross-civilization rebirth decided",
 };
 
 // ── Pure Handler Functions ─────────────────────────────────────────────

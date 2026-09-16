@@ -47,6 +47,10 @@ class CaseType(models.TextChoices):
     # Egyptian
     HEART_WEIGHING = "HEART_WEIGHING", "心脏称重"
     DIVINE_TRIAL = "DIVINE_TRIAL", "神判"
+    # 灵魂端发起的转生申请(apps/soul_accounts/rebirth.py)。不进
+    # VALID_CASE_TYPES_BY_CIVILIZATION / WORKFLOW_TEMPLATES:它不是审判流程,
+    # 不能从 create_from_judgment 建,模板也不按文明分(节点按角色,不按神祇)。
+    REBIRTH_APPLICATION = "REBIRTH_APPLICATION", "转生申请"
 
 
 class NodeStatus(models.TextChoices):

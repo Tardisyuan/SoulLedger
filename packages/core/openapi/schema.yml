@@ -2556,9 +2556,14 @@ paths:
           - POST_UPDATED
           - REACTION_ADDED
           - REACTION_REMOVED
+          - REBIRTH_APPLICATION_SUBMITTED
+          - REBIRTH_CROSS_CIV_DECIDED
+          - REBIRTH_STATUS_CHANGED
           - RECORD_ADDED
           - REINCARNATION_TRIGGERED
           - SETTLEMENT_CORRECTED
+          - SOUL_ACCOUNT_CREATED
+          - SOUL_ACCOUNT_RETIRED
           - SOUL_CREATED
           - STATE_CHANGED
           - USER_FOLLOWED
@@ -2598,6 +2603,11 @@ paths:
           * `USER_FOLLOWED` - User Followed
           * `USER_UNFOLLOWED` - User Unfollowed
           * `NOTIFICATION_CREATED` - Notification Created
+          * `SOUL_ACCOUNT_CREATED` - Soul Account Created
+          * `SOUL_ACCOUNT_RETIRED` - Soul Account Retired
+          * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
+          * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
+          * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
       - name: ordering
         required: false
         in: query
@@ -3533,6 +3543,234 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LedgerError'
+          description: ''
+  /api/v1/me/:
+    get:
+      operationId: v1_me_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeProfile'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/life/:
+    get:
+      operationId: v1_me_life_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeLife'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/password/:
+    post:
+      operationId: v1_me_password_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulTokenPair'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/past-lives/:
+    get:
+      operationId: v1_me_past_lives_list
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeLife'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/rebirth-applications/:
+    get:
+      operationId: v1_me_rebirth_applications_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeRebirthApplicationList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+    post:
+      operationId: v1_me_rebirth_applications_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RebirthApplicationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RebirthApplicationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RebirthApplicationCreate'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeRebirthApplication'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/rebirth-applications/{application_id}/:
+    get:
+      operationId: v1_me_rebirth_applications_detail
+      parameters:
+      - in: path
+        name: application_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeRebirthApplication'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/rebirth-applications/{application_id}/appeal/:
+    post:
+      operationId: v1_me_rebirth_applications_appeal_create
+      parameters:
+      - in: path
+        name: application_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RebirthAppeal'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RebirthAppeal'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RebirthAppeal'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeRebirthApplication'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
           description: ''
   /api/v1/menus/:
     get:
@@ -7003,6 +7241,611 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/soul-accounts/accounts/:
+    get:
+      operationId: v1_soul_accounts_accounts_list
+      description: 账号链:`GET /soul-accounts/accounts/?soul=<uuid>` 按 cycle 升序给出该灵魂各世账号。
+      parameters:
+      - in: query
+        name: cycle
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoulAccountList'
+          description: ''
+  /api/v1/soul-accounts/accounts/{id}/:
+    get:
+      operationId: v1_soul_accounts_accounts_retrieve
+      description: 账号链:`GET /soul-accounts/accounts/?soul=<uuid>` 按 cycle 升序给出该灵魂各世账号。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this soul account.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulAccount'
+          description: ''
+  /api/v1/soul-accounts/accounts/{id}/reset-credential/:
+    post:
+      operationId: v1_soul_accounts_accounts_reset_credential_create
+      description: 账号链:`GET /soul-accounts/accounts/?soul=<uuid>` 按 cycle 升序给出该灵魂各世账号。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this soul account.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialCredential'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/accounts/provision/:
+    post:
+      operationId: v1_soul_accounts_accounts_provision_create
+      description: 手动开通。本世已有账号时幂等返回 200,不重发密码;要新密码用 reset_credential。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProvisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProvisionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulAccount'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulAccount'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/credentials/:
+    get:
+      operationId: v1_soul_accounts_credentials_list
+      description: 待交付:`GET /soul-accounts/credentials/?status=PENDING`。
+      parameters:
+      - in: query
+        name: account
+        schema:
+          type: string
+          format: uuid
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - DELIVERED
+          - PENDING
+          - QUEUED
+          - REVEALED
+          - SENT
+          - VOID
+        description: |-
+          * `QUEUED` - 待发送
+          * `SENT` - 已发送
+          * `PENDING` - 待交付
+          * `REVEALED` - 已查看
+          * `DELIVERED` - 已线下交付
+          * `VOID` - 已作废
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInitialCredentialList'
+          description: ''
+  /api/v1/soul-accounts/credentials/{id}/:
+    get:
+      operationId: v1_soul_accounts_credentials_retrieve
+      description: 待交付:`GET /soul-accounts/credentials/?status=PENDING`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this initial credential.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialCredential'
+          description: ''
+  /api/v1/soul-accounts/credentials/{id}/mark-delivered/:
+    post:
+      operationId: v1_soul_accounts_credentials_mark_delivered_create
+      description: 待交付:`GET /soul-accounts/credentials/?status=PENDING`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this initial credential.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialCredential'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/credentials/{id}/retry/:
+    post:
+      operationId: v1_soul_accounts_credentials_retry_create
+      description: 待交付:`GET /soul-accounts/credentials/?status=PENDING`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this initial credential.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialCredential'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/credentials/{id}/reveal/:
+    post:
+      operationId: v1_soul_accounts_credentials_reveal_create
+      description: 待交付:`GET /soul-accounts/credentials/?status=PENDING`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this initial credential.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevealedCredential'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '410':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/rebirth-applications/:
+    get:
+      operationId: v1_soul_accounts_rebirth_applications_list
+      description: |-
+        Mixin that auto-generates the codenames a request must carry.
+
+        Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+        codenames like "soul.read", "soul.create" from the current DRF action.
+
+        Custom actions are mapped via `extra_permissions` dict:
+            extra_permissions = {
+                'die': ['soul.die'],
+                'karma': ['soul.read'],
+            }
+
+        `apps/core/permissions.py::CodenamePermission` calls
+        get_required_permissions() from `APIView.initial()`. It has to be there
+        and not in middleware: the answer depends on `self.action`, which DRF sets
+        in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+        this docstring used to name ran in the request phase, read a
+        `request.view` attribute nothing sets, and took its `view is None` early
+        return on every request ever made. It was deleted 2026-08-28.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPEALING
+          - APPEAL_REJECTED
+          - APPROVED
+          - REJECTED
+          - UNDER_REVIEW
+        description: |-
+          * `UNDER_REVIEW` - 审批中
+          * `REJECTED` - 已驳回
+          * `APPEALING` - 申诉中
+          * `APPEAL_REJECTED` - 申诉被驳回
+          * `APPROVED` - 已批准
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfficerRebirthApplicationList'
+          description: ''
+  /api/v1/soul-accounts/rebirth-applications/{id}/:
+    get:
+      operationId: v1_soul_accounts_rebirth_applications_retrieve
+      description: |-
+        Mixin that auto-generates the codenames a request must carry.
+
+        Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+        codenames like "soul.read", "soul.create" from the current DRF action.
+
+        Custom actions are mapped via `extra_permissions` dict:
+            extra_permissions = {
+                'die': ['soul.die'],
+                'karma': ['soul.read'],
+            }
+
+        `apps/core/permissions.py::CodenamePermission` calls
+        get_required_permissions() from `APIView.initial()`. It has to be there
+        and not in middleware: the answer depends on `self.action`, which DRF sets
+        in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+        this docstring used to name ran in the request phase, read a
+        `request.view` attribute nothing sets, and took its `view is None` early
+        return on every request ever made. It was deleted 2026-08-28.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this rebirth application.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerRebirthApplication'
+          description: ''
+  /api/v1/soul-accounts/rebirth-applications/{id}/cross-civilization/:
+    post:
+      operationId: v1_soul_accounts_rebirth_applications_cross_civilization_create
+      description: |-
+        Mixin that auto-generates the codenames a request must carry.
+
+        Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+        codenames like "soul.read", "soul.create" from the current DRF action.
+
+        Custom actions are mapped via `extra_permissions` dict:
+            extra_permissions = {
+                'die': ['soul.die'],
+                'karma': ['soul.read'],
+            }
+
+        `apps/core/permissions.py::CodenamePermission` calls
+        get_required_permissions() from `APIView.initial()`. It has to be there
+        and not in middleware: the answer depends on `self.action`, which DRF sets
+        in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+        this docstring used to name ran in the request phase, read a
+        `request.view` attribute nothing sets, and took its `view is None` early
+        return on every request ever made. It was deleted 2026-08-28.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this rebirth application.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossCivilizationDecision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CrossCivilizationDecision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CrossCivilizationDecision'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerRebirthApplication'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-auth/login/:
+    post:
+      operationId: v1_soul_auth_login_create
+      description: |-
+        同一个后端、另一个端点,而不是官员登录按客户端区分:两者签发的令牌**类型**不同,
+        一个端点按请求头分支签两种令牌,等于把分界交给了客户端自报的一个字段。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulLoginRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulLoginResponse'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-auth/logout/:
+    post:
+      operationId: v1_soul_auth_logout_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulRefreshRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/soul-auth/refresh/:
+    post:
+      operationId: v1_soul_auth_refresh_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulRefreshRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulTokenPair'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/souls/:
     get:
       operationId: v1_souls_list
@@ -9648,6 +10491,7 @@ components:
       - HERESY_TRIAL
       - HEART_WEIGHING
       - DIVINE_TRIAL
+      - REBIRTH_APPLICATION
       type: string
       description: |-
         * `ROUTINE` - 常规审判
@@ -9659,6 +10503,7 @@ components:
         * `HERESY_TRIAL` - 异端审判
         * `HEART_WEIGHING` - 心脏称重
         * `DIVINE_TRIAL` - 神判
+        * `REBIRTH_APPLICATION` - 转生申请
     ChangePassword:
       type: object
       description: Serializer for changing password with old password verification.
@@ -9669,6 +10514,19 @@ components:
         new_password:
           type: string
           writeOnly: true
+          minLength: 8
+      required:
+      - new_password
+      - old_password
+    ChangePasswordRequest:
+      type: object
+      properties:
+        old_password:
+          type: string
+          maxLength: 128
+        new_password:
+          type: string
+          maxLength: 128
           minLength: 8
       required:
       - new_password
@@ -9812,6 +10670,13 @@ components:
         * `INFERNO` - Inferno — the Circles of Dante's Hell (European)
         * `GORGIAS` - Gorgias — the Judgement of the Dead (Greek)
         * `REPUBLIC_ER` - Republic X — the Myth of Er (Greek)
+    CrossCivilizationDecision:
+      type: object
+      properties:
+        cross_civilization:
+          type: boolean
+      required:
+      - cross_civilization
     CrossTenantJudgment:
       type: object
       description: |-
@@ -10140,6 +11005,22 @@ components:
       - failed_webhooks_24h
       - pending_registrations_24h
       - status
+    DesiredRebirthFormEnum:
+      enum:
+      - DIVINE
+      - HUMAN
+      - ASURA
+      - ANIMAL
+      - HUNGRY_GHOST
+      - HELL_BEING
+      type: string
+      description: |-
+        * `DIVINE` - Deva (Heaven Path)
+        * `HUMAN` - Human (Human Path)
+        * `ASURA` - Asura (Demigod Path)
+        * `ANIMAL` - Animal (Beast Path)
+        * `HUNGRY_GHOST` - Hungry Ghost
+        * `HELL_BEING` - Hell Being
     DetailResponse:
       type: object
       description: '`{"detail": "..."}` — the success/notice body DRF''s own convention
@@ -10449,6 +11330,11 @@ components:
       - USER_FOLLOWED
       - USER_UNFOLLOWED
       - NOTIFICATION_CREATED
+      - SOUL_ACCOUNT_CREATED
+      - SOUL_ACCOUNT_RETIRED
+      - REBIRTH_APPLICATION_SUBMITTED
+      - REBIRTH_STATUS_CHANGED
+      - REBIRTH_CROSS_CIV_DECIDED
       type: string
       description: |-
         * `SOUL_CREATED` - Soul Created
@@ -10481,6 +11367,11 @@ components:
         * `USER_FOLLOWED` - User Followed
         * `USER_UNFOLLOWED` - User Unfollowed
         * `NOTIFICATION_CREATED` - Notification Created
+        * `SOUL_ACCOUNT_CREATED` - Soul Account Created
+        * `SOUL_ACCOUNT_RETIRED` - Soul Account Retired
+        * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
+        * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
+        * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
     ExportedDataScope:
       type: object
       properties:
@@ -10771,6 +11662,110 @@ components:
       required:
       - message
       - total
+    InitialCredential:
+      type: object
+      description: '**没有 secret。** 明文只经 `reveal` 动作出去一次。'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        account:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+        channel:
+          type: string
+          readOnly: true
+          description: EMAIL / SMS;空表示没有可用渠道
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InitialCredentialStatusEnum'
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        attempts:
+          type: integer
+          readOnly: true
+        last_error:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revealed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revealed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        delivered_by:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - account
+      - attempts
+      - channel
+      - created_at
+      - cycle
+      - delivered_at
+      - delivered_by
+      - expires_at
+      - id
+      - last_error
+      - revealed_at
+      - revealed_by
+      - sent_at
+      - soul
+      - soul_code
+      - soul_name
+      - status
+    InitialCredentialStatusEnum:
+      enum:
+      - QUEUED
+      - SENT
+      - PENDING
+      - REVEALED
+      - DELIVERED
+      - VOID
+      type: string
+      description: |-
+        * `QUEUED` - 待发送
+        * `SENT` - 已发送
+        * `PENDING` - 待交付
+        * `REVEALED` - 已查看
+        * `DELIVERED` - 已线下交付
+        * `VOID` - 已作废
     Judgment:
       type: object
       description: |-
@@ -11340,6 +12335,431 @@ components:
           type: integer
       required:
       - marked_read
+    MeAccount:
+      type: object
+      properties:
+        cycle:
+          type: integer
+          minimum: 0
+          description: 这个账号属于第几世;0 是第一世。
+        must_change_password:
+          type: boolean
+        initial_password_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - cycle
+    MeCurrentStep:
+      type: object
+      description: 当前所在节点:只有节点类型与**角色**,不含审批人是谁(2026-09-14 决定 2)。
+      properties:
+        node_type:
+          type: string
+        approver_role:
+          type: string
+        is_appeal:
+          type: boolean
+      required:
+      - approver_role
+      - is_appeal
+      - node_type
+    MeDisposition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        judgment_id:
+          type: string
+          format: uuid
+          nullable: true
+        destination_realm:
+          allOf:
+          - $ref: '#/components/schemas/MeRealm'
+          nullable: true
+        memory_reset:
+          type: string
+        is_eternal:
+          type: boolean
+        sentence_years:
+          type: integer
+          nullable: true
+        term_start:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+          readOnly: true
+        is_executed:
+          type: boolean
+        executed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - destination_realm
+      - executed_at
+      - id
+      - is_eternal
+      - is_executed
+      - judgment_id
+      - memory_reset
+      - sentence_years
+      - term_start
+    MeJudge:
+      type: object
+      properties:
+        name:
+          type: string
+        name_zh:
+          type: string
+        title:
+          type: string
+      required:
+      - name
+      - name_zh
+      - title
+    MeJudgment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        court:
+          type: string
+        judge:
+          allOf:
+          - $ref: '#/components/schemas/MeJudge'
+          nullable: true
+        judgment_method:
+          type: string
+        verdict:
+          type: string
+          nullable: true
+        is_final:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        concluded_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - concluded_at
+      - court
+      - created_at
+      - id
+      - is_final
+      - judge
+      - judgment_method
+      - verdict
+    MeLife:
+      type: object
+      properties:
+        cycle:
+          type: integer
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeRecord'
+        judgments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeJudgment'
+        dispositions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeDisposition'
+        rebirth_applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeRebirthApplication'
+        reincarnation:
+          allOf:
+          - $ref: '#/components/schemas/MeReincarnation'
+          nullable: true
+      required:
+      - cycle
+      - dispositions
+      - judgments
+      - rebirth_applications
+      - records
+      - reincarnation
+    MeProfile:
+      type: object
+      description: instance 是灵魂;本世账号经 context["account"] 传入。
+      properties:
+        soul_code:
+          type: string
+        name:
+          type: string
+        birth_name:
+          type: string
+        civilization:
+          type: string
+        tenant:
+          $ref: '#/components/schemas/MeTenant'
+        current_state:
+          type: string
+        birth_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+          readOnly: true
+        death_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+          readOnly: true
+        origin_location:
+          type: string
+        merit_score:
+          type: integer
+        demerit_score:
+          type: integer
+        account:
+          allOf:
+          - $ref: '#/components/schemas/MeAccount'
+          readOnly: true
+      required:
+      - account
+      - birth_date
+      - birth_name
+      - civilization
+      - current_state
+      - death_date
+      - demerit_score
+      - merit_score
+      - name
+      - origin_location
+      - soul_code
+      - tenant
+    MeRealm:
+      type: object
+      properties:
+        realm_code:
+          type: string
+        name_local:
+          type: string
+        name_zh:
+          type: string
+        name_en:
+          type: string
+      required:
+      - name_en
+      - name_local
+      - name_zh
+      - realm_code
+    MeRebirthApplication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        cycle:
+          type: integer
+          minimum: 0
+        desired_form:
+          $ref: '#/components/schemas/RebirthFormEnum'
+        statement:
+          type: string
+          maxLength: 2000
+        appeal_statement:
+          type: string
+          maxLength: 2000
+        status:
+          $ref: '#/components/schemas/RebirthApplicationStatusEnum'
+        cross_civilization:
+          type: boolean
+          nullable: true
+        rejection_reason:
+          type: string
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+        current_step:
+          allOf:
+          - $ref: '#/components/schemas/MeCurrentStep'
+          nullable: true
+          readOnly: true
+        can_appeal:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - can_appeal
+      - created_at
+      - current_step
+      - cycle
+      - desired_form
+      - id
+      - status
+      - updated_at
+    MeRebirthApplicationList:
+      type: object
+      properties:
+        can_apply:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeRebirthApplication'
+      required:
+      - can_apply
+      - cooldown_until
+      - reason
+      - results
+    MeRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        weight:
+          type: integer
+        event_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+          readOnly: true
+        is_milestone:
+          type: boolean
+        recorded_at:
+          type: string
+          format: date-time
+      required:
+      - category
+      - description
+      - event_date
+      - id
+      - is_milestone
+      - record_type
+      - recorded_at
+      - weight
+    MeReincarnation:
+      type: object
+      description: 结束这一世的那次转世。**没有 new_identity、没有 notes。**
+      properties:
+        cycle_count:
+          type: integer
+        rebirth_form:
+          type: string
+        target_realm:
+          type: string
+        reincarnated_at:
+          type: string
+          format: date-time
+      required:
+      - cycle_count
+      - rebirth_form
+      - reincarnated_at
+      - target_realm
+    MeTenant:
+      type: object
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+      required:
+      - code
+      - display_name
     MemoryResetMechanismEnum:
       enum:
       - MENGPO
@@ -11661,6 +13081,91 @@ components:
     NullEnum:
       enum:
       - null
+    OfficerRebirthApplication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        account:
+          type: string
+          format: uuid
+          readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+        desired_form:
+          allOf:
+          - $ref: '#/components/schemas/RebirthFormEnum'
+          readOnly: true
+        statement:
+          type: string
+          readOnly: true
+        appeal_statement:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/RebirthApplicationStatusEnum'
+          readOnly: true
+        workflow:
+          type: string
+          format: uuid
+          readOnly: true
+        appeal_workflow:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        cross_civilization:
+          type: boolean
+          readOnly: true
+          nullable: true
+        rejection_reason:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - account
+      - appeal_statement
+      - appeal_workflow
+      - created_at
+      - cross_civilization
+      - cycle
+      - decided_at
+      - desired_form
+      - id
+      - rejection_reason
+      - soul
+      - soul_code
+      - soul_name
+      - statement
+      - status
+      - updated_at
+      - workflow
     Organization:
       type: object
       properties:
@@ -11716,6 +13221,16 @@ components:
         * `EUROPEAN` - 欧洲天堂地狱
         * `EGYPTIAN` - 埃及冥界
         * `GREEK` - 希腊冥界
+    OriginEnum:
+      enum:
+      - DEATH_SYNC
+      - OFFICER
+      - BACKFILL
+      type: string
+      description: |-
+        * `DEATH_SYNC` - 死亡同步自动开通
+        * `OFFICER` - 官员手动开通
+        * `BACKFILL` - 存量补齐
     PaginatedActorListList:
       type: object
       required:
@@ -11969,6 +13484,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Follow'
+    PaginatedInitialCredentialList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InitialCredential'
     PaginatedJudgmentList:
       type: object
       required:
@@ -12061,6 +13599,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Menu'
+    PaginatedOfficerRebirthApplicationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfficerRebirthApplication'
     PaginatedOrganizationList:
       type: object
       required:
@@ -12176,6 +13737,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Reincarnation'
+    PaginatedSoulAccountList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulAccount'
     PaginatedSoulEventList:
       type: object
       required:
@@ -13820,6 +15404,27 @@ components:
       - content
       - create_time
       - id
+    ProvisionRequest:
+      type: object
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+        contact_email:
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+        contact_phone:
+          oneOf:
+          - type: string
+            maxLength: 20
+            pattern: ^\+?[1-9]\d{6,14}$
+          - type: string
+            maxLength: 0
+      required:
+      - soul_id
     Reaction:
       type: object
       properties:
@@ -14043,6 +15648,38 @@ components:
         * `PURGATORY` - Purgatory / Intermediate
         * `BLISS` - Heaven / Bliss
         * `NEUTRAL` - Neutral / Between
+    RebirthAppeal:
+      type: object
+      properties:
+        statement:
+          type: string
+          default: ''
+          maxLength: 2000
+    RebirthApplicationCreate:
+      type: object
+      properties:
+        desired_form:
+          $ref: '#/components/schemas/DesiredRebirthFormEnum'
+        statement:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - desired_form
+    RebirthApplicationStatusEnum:
+      enum:
+      - UNDER_REVIEW
+      - REJECTED
+      - APPEALING
+      - APPEAL_REJECTED
+      - APPROVED
+      type: string
+      description: |-
+        * `UNDER_REVIEW` - 审批中
+        * `REJECTED` - 已驳回
+        * `APPEALING` - 申诉中
+        * `APPEAL_REJECTED` - 申诉被驳回
+        * `APPROVED` - 已批准
     RebirthFormEnum:
       enum:
       - DIVINE
@@ -14365,6 +16002,36 @@ components:
           format: email
       required:
       - email
+    ResetRequest:
+      type: object
+      properties:
+        contact_email:
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+        contact_phone:
+          oneOf:
+          - type: string
+            maxLength: 20
+            pattern: ^\+?[1-9]\d{6,14}$
+          - type: string
+            maxLength: 0
+    RevealedCredential:
+      type: object
+      properties:
+        soul_code:
+          type: string
+        password:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - expires_at
+      - password
+      - soul_code
     Role:
       type: object
       properties:
@@ -14857,6 +16524,83 @@ components:
       - tenant
       - tenant_code
       - update_time
+    SoulAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+          description: 这个账号属于第几世;0 是第一世。
+        previous_account:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        origin:
+          allOf:
+          - $ref: '#/components/schemas/OriginEnum'
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        must_change_password:
+          type: boolean
+          readOnly: true
+        initial_password_expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        retired_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        contact_email_masked:
+          type: string
+          readOnly: true
+        contact_phone_masked:
+          type: string
+          readOnly: true
+      required:
+      - contact_email_masked
+      - contact_phone_masked
+      - created_at
+      - cycle
+      - id
+      - initial_password_expires_at
+      - last_login
+      - must_change_password
+      - origin
+      - previous_account
+      - retired_at
+      - soul
+      - soul_code
+      - soul_name
+      - username
     SoulDateProblem:
       type: object
       description: |-
@@ -14882,6 +16626,17 @@ components:
       - code
       - message
       - severity
+    SoulError:
+      type: object
+      description: 所有业务拒绝的形状。`code` 稳定,App 按它分支;`detail` 是给人看的中文。
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
     SoulEvent:
       type: object
       properties:
@@ -15006,6 +16761,34 @@ components:
       - karmic_balance
       - name
       - tenant_code
+    SoulLoginRequest:
+      type: object
+      properties:
+        soul_code:
+          type: string
+          maxLength: 32
+        password:
+          type: string
+          maxLength: 128
+      required:
+      - password
+      - soul_code
+    SoulLoginResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        soul_code:
+          type: string
+        account:
+          $ref: '#/components/schemas/MeAccount'
+      required:
+      - access
+      - account
+      - refresh
+      - soul_code
     SoulRecord:
       type: object
       properties:
@@ -15141,6 +16924,13 @@ components:
         * `BLASPHEMY` - Blasphemy / Impiety
         * `MURDER` - Murder / Killing
         * `OTHER` - Other
+    SoulRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+      required:
+      - refresh
     SoulStateDistribution:
       type: object
       description: |-
@@ -15158,6 +16948,16 @@ components:
       - count
       - label
       - state
+    SoulTokenPair:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
     SoulsByRealm:
       type: object
       description: Executed, non-archived dispositions with a destination realm.
@@ -16288,6 +18088,10 @@ components:
       description: External-system API key, as `ApiKey <raw_key>`. The raw key is
         never stored — `ExternalApiKey.key_hash` holds its SHA-256.
     jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    soulJwtAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT

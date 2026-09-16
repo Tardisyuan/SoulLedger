@@ -45,6 +45,13 @@ class DeathRegistrationCreateSerializer(serializers.Serializer):
     death_location = serializers.CharField(max_length=500, required=False, default="")
     cause_of_death = serializers.CharField(max_length=500, required=False, default="")
     source_reference = serializers.CharField(max_length=200, required=False, default="")
+    # 灵魂端初始密码的投递渠道(2026-09-17)。都可选;没有就进「待交付」。
+    # 与 Soul 上的字段同一套校验:EmailField,手机号 7-15 位数字可带 +。
+    contact_email = serializers.EmailField(required=False, default="")
+    contact_phone = serializers.RegexField(
+        r"^\+?[1-9]\d{6,14}$", max_length=20, required=False, default="",
+        error_messages={"invalid": "手机号须为 7-15 位数字,可带 + 前缀"},
+    )
     metadata = serializers.DictField(required=False, default=dict)
 
     def validate_soul_lookup(self, value):

@@ -75,6 +75,13 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     // superseded state, which is precisely what the event was added to
     // prevent (see the docstring on that method).
     SETTLEMENT_CORRECTED: handleSoulStateChanged,
+    // Soul accounts & rebirth applications (apps/soul_accounts). They land on
+    // the soul's timeline, so they invalidate what handleSoulEvent invalidates.
+    SOUL_ACCOUNT_CREATED: handleSoulEvent,
+    SOUL_ACCOUNT_RETIRED: handleSoulEvent,
+    REBIRTH_APPLICATION_SUBMITTED: handleSoulEvent,
+    REBIRTH_STATUS_CHANGED: handleSoulEvent,
+    REBIRTH_CROSS_CIV_DECIDED: handleSoulEvent,
   },
 
   // Workflow domain
@@ -218,6 +225,10 @@ export const BACKEND_EVENT_TYPES = [
   "USER_FOLLOWED", "USER_UNFOLLOWED",
   // Notification
   "NOTIFICATION_CREATED",
+  // Soul accounts
+  "SOUL_ACCOUNT_CREATED", "SOUL_ACCOUNT_RETIRED",
+  "REBIRTH_APPLICATION_SUBMITTED", "REBIRTH_STATUS_CHANGED",
+  "REBIRTH_CROSS_CIV_DECIDED",
 ] as const;
 
 /**

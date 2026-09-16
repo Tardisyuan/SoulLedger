@@ -609,6 +609,7 @@
       "SPECIAL": "Special Trial",
       "HEART_WEIGHING": "Heart Weighing",
       "DIVINE_TRIAL": "Divine Trial",
+      "REBIRTH_APPLICATION": "Rebirth Application",
       "CANONIZATION": "Canonization",
       "PURGATORY_REVIEW": "Purgatory Review",
       "HERESY_TRIAL": "Heresy Trial"
@@ -1212,7 +1213,8 @@
       "MODERATOR": "Realm Lead",
       "JUDGE": "Judge",
       "GUARDIAN": "Guardian",
-      "VIEWER": "Viewer"
+      "VIEWER": "Viewer",
+      "SOUL": "Soul"
     },
     "delete_title": "Delete user",
     "delete_confirm": "Delete this user?"

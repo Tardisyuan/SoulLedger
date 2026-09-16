@@ -38,6 +38,10 @@ def check_permission(user, codename):
     # ADMIN bypasses all permission checks
     if role == 'ADMIN':
         return True
+    # 灵魂不持有任何官员权限,也不能经权限矩阵被授予 —— 即使有人建了一行叫
+    # SOUL 的 Role 并挂上 RolePermission。
+    if role == 'SOUL':
+        return False
 
     # Check cache first
     cached = _permission_cache.get(role, codename)

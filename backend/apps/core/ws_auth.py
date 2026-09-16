@@ -178,6 +178,11 @@ class JWTAuthMiddleware(BaseMiddleware):
                     "JWTAuthMiddleware: user %s is deactivated", user_id
                 )
                 return None
+            # 灵魂令牌的类型是 soul_access,上面的 AccessToken(...) 已经拒了它;
+            # 这一行挡的是「写着 SOUL 用户 id 的 access 型令牌」,与 HTTP 侧
+            # OfficerJWTAuthentication.get_user 同一条规则。
+            if user.role == "SOUL":
+                return None
             return user
         except (TokenError, InvalidToken):
             logger.debug("JWTAuthMiddleware: invalid token")

@@ -63,6 +63,16 @@ class EventType(models.TextChoices):
     # incomplete list was this one, which is the direction nobody checks.
     NOTIFICATION_CREATED = "NOTIFICATION_CREATED"
 
+    # Soul account events (灵魂端,2026-09-17;apps/soul_accounts)
+    #
+    # 都记在灵魂自己的时间线上(EventService.log),payload 里没有密码、没有联系方式。
+    # 跨文明转生只发 REBIRTH_CROSS_CIV_DECIDED,不写目标文明的数据。
+    SOUL_ACCOUNT_CREATED = "SOUL_ACCOUNT_CREATED"
+    SOUL_ACCOUNT_RETIRED = "SOUL_ACCOUNT_RETIRED"
+    REBIRTH_APPLICATION_SUBMITTED = "REBIRTH_APPLICATION_SUBMITTED"
+    REBIRTH_STATUS_CHANGED = "REBIRTH_STATUS_CHANGED"
+    REBIRTH_CROSS_CIV_DECIDED = "REBIRTH_CROSS_CIV_DECIDED"
+
 
 class SoulEvent(AuditUserFields, models.Model):
     """

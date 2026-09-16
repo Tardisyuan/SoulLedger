@@ -609,6 +609,7 @@
       "SPECIAL": "特案审判",
       "HEART_WEIGHING": "心脏称重",
       "DIVINE_TRIAL": "神判",
+      "REBIRTH_APPLICATION": "转生申请",
       "CANONIZATION": "封圣审查",
       "PURGATORY_REVIEW": "炼狱复核",
       "HERESY_TRIAL": "异端审判"
@@ -1212,7 +1213,8 @@
       "MODERATOR": "殿主",
       "JUDGE": "审判者",
       "GUARDIAN": "守护者",
-      "VIEWER": "查看者"
+      "VIEWER": "查看者",
+      "SOUL": "灵魂"
     },
     "delete_title": "删除用户",
     "delete_confirm": "确认删除该用户?"

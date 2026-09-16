@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "apps.death_sync",
     "apps.social",
     "apps.scheduler",
+    "apps.soul_accounts",
 ]
 
 MIDDLEWARE = [
@@ -238,7 +239,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # 只认官员令牌;灵魂令牌与 SOUL 角色一律 403。见该模块文档。
+        "apps.soul_accounts.authentication.OfficerJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -472,6 +474,11 @@ SPECTACULAR_SETTINGS = {
         "TaskRunStatusEnum": "apps.scheduler.models.RunStatus.choices",
         "ScheduledJobScopeEnum": "apps.scheduler.models.JobScope.choices",
         "ScopeEnum": "apps.perm.models.Role.SCOPE_CHOICES",
+        # apps.soul_accounts:`status` 与 `desired_form` 两个字段名在别处已有别的选项集。
+        # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。
+        "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
+        "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
+        "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
     },
 }
 
