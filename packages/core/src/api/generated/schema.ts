@@ -2614,6 +2614,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scheduler/jobs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Registered scheduled jobs, one row per (job, tenant); global rows are ADMIN-only. */
+        get: operations["v1_scheduler_jobs_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduler/jobs/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Registered scheduled jobs, one row per (job, tenant); global rows are ADMIN-only. */
+        get: operations["v1_scheduler_jobs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Change enabled / cron / timezone. Never edits the shared CrontabSchedule
+         *     row in place: it get_or_creates the schedule the new fields describe and
+         *     re-points this PeriodicTask at it, so the other rows sharing the old
+         *     schedule keep theirs.
+         */
+        patch: operations["v1_scheduler_jobs_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/scheduler/jobs/{id}/run/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueue one execution now. 409 while another run holds the lock. */
+        post: operations["v1_scheduler_jobs_run_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduler/jobs/rebuild/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Re-run the registry sync (what the boot command does). ADMIN only:
+         *     it touches every tenant's rows, which no tenant-scoped role may.
+         */
+        post: operations["v1_scheduler_jobs_rebuild_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduler/runs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Execution history, newest first. Filter by job / status / tenant / task_name / trigger. */
+        get: operations["v1_scheduler_runs_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduler/runs/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Execution history, newest first. Filter by job / status / tenant / task_name / trigger. */
+        get: operations["v1_scheduler_runs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social/comments/": {
         parameters: {
             query?: never;
@@ -5603,6 +5714,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Statute"][];
         };
+        PaginatedTaskRunList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TaskRun"][];
+        };
         PaginatedTenantList: {
             /** @example 123 */
             count: number;
@@ -6123,6 +6249,22 @@ export interface components {
             readonly reincarnated_at?: string;
         };
         /**
+         * @description PATCH body. Partial: any subset of enabled, the five cron fields, timezone.
+         *
+         *     Validation is the real parsers': celery's `crontab(...)` for the fields,
+         *     `zoneinfo` for the name — what beat will do with the value is the only
+         *     definition of "valid" that matters.
+         */
+        PatchedScheduledJobUpdate: {
+            enabled?: boolean;
+            minute?: string;
+            hour?: string;
+            day_of_month?: string;
+            month_of_year?: string;
+            day_of_week?: string;
+            timezone?: string;
+        };
+        /**
          * @description Soul detail. Field access is enforced in two layers, deliberately.
          *
          *     The hardcoded VIEWER checks below are the floor. FieldPermissionMixin
@@ -6557,6 +6699,12 @@ export interface components {
             civilization: string;
             detail: string;
         };
+        RebuildResult: {
+            created: number;
+            updated: number;
+            removed: number;
+            legacy_removed: number;
+        };
         /**
          * @description An AuditLog row flattened. `user` is the username or the literal
          *     string "System" for a row with no user — not null.
@@ -6769,6 +6917,39 @@ export interface components {
             expected_version: number;
             current_version: number;
         };
+        ScheduledJob: {
+            readonly id: number;
+            readonly job_key: string;
+            readonly periodic_task_name: string;
+            readonly task_name: string;
+            readonly scope: components["schemas"]["ScheduledJobScopeEnum"];
+            readonly tenant: number | null;
+            readonly tenant_code: string | null;
+            readonly description_key: string;
+            readonly enabled: boolean;
+            readonly minute: string | null;
+            readonly hour: string | null;
+            readonly day_of_month: string | null;
+            readonly month_of_year: string | null;
+            readonly day_of_week: string | null;
+            readonly timezone: string;
+            readonly max_runtime_seconds: number;
+            /** Format: date-time */
+            readonly next_run_at: string | null;
+            readonly last_run: components["schemas"]["TaskRunSummary"] | null;
+            readonly overdue: boolean;
+            /** Format: date-time */
+            readonly expected_at: string | null;
+            readonly consecutive_failures: number;
+            /** Format: date-time */
+            readonly last_alerted_at: string | null;
+        };
+        /**
+         * @description * `TENANT` - Tenant
+         *     * `GLOBAL` - Global
+         * @enum {string}
+         */
+        ScheduledJobScopeEnum: "TENANT" | "GLOBAL";
         /**
          * @description * `GLOBAL` - 全局
          *     * `ORG` - 组织级
@@ -7062,6 +7243,50 @@ export interface components {
          * @enum {string}
          */
         SystemTypeEnum: "GOVERNMENT" | "HOSPITAL" | "POLICE" | "MESSAGE_BUS" | "CUSTOM";
+        TaskRun: {
+            readonly id: number;
+            readonly job: number | null;
+            readonly task_name: string;
+            readonly celery_task_id: string;
+            readonly tenant: number | null;
+            readonly trigger: components["schemas"]["TriggerEnum"];
+            readonly status: components["schemas"]["TaskRunStatusEnum"];
+            /** Format: date-time */
+            readonly queued_at: string;
+            /** Format: date-time */
+            readonly started_at: string | null;
+            /** Format: date-time */
+            readonly finished_at: string | null;
+            readonly duration_ms: number | null;
+            readonly worker_hostname: string;
+            readonly error: string;
+            readonly result: string;
+            readonly triggered_by: number | null;
+            readonly triggered_by_username: string | null;
+        };
+        /**
+         * @description * `PENDING` - Pending
+         *     * `RUNNING` - Running
+         *     * `SUCCESS` - Success
+         *     * `FAILURE` - Failure
+         *     * `RETRY` - Retry
+         *     * `SKIPPED` - Skipped
+         *     * `LOST` - Lost
+         * @enum {string}
+         */
+        TaskRunStatusEnum: "PENDING" | "RUNNING" | "SUCCESS" | "FAILURE" | "RETRY" | "SKIPPED" | "LOST";
+        TaskRunSummary: {
+            readonly id: number;
+            readonly status: components["schemas"]["TaskRunStatusEnum"];
+            readonly trigger: components["schemas"]["TriggerEnum"];
+            /** Format: date-time */
+            readonly queued_at: string;
+            /** Format: date-time */
+            readonly started_at: string | null;
+            /** Format: date-time */
+            readonly finished_at: string | null;
+            readonly duration_ms: number | null;
+        };
         Tenant: {
             readonly id: number;
             readonly code: string;
@@ -7102,6 +7327,12 @@ export interface components {
             readonly access: string;
             refresh: string;
         };
+        /**
+         * @description * `SCHEDULE` - Schedule
+         *     * `MANUAL` - Manual
+         * @enum {string}
+         */
+        TriggerEnum: "SCHEDULE" | "MANUAL";
         /**
          * @description kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
          *     ledger gets no reading rather than a guessed one. `reason_code` is a
@@ -11765,6 +11996,205 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Reincarnation"];
+                };
+            };
+        };
+    };
+    v1_scheduler_jobs_list: {
+        parameters: {
+            query?: {
+                job_key?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                tenant?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledJob"][];
+                };
+            };
+        };
+    };
+    v1_scheduler_jobs_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this scheduled job. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledJob"];
+                };
+            };
+        };
+    };
+    v1_scheduler_jobs_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this scheduled job. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedScheduledJobUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedScheduledJobUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedScheduledJobUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledJob"];
+                };
+            };
+        };
+    };
+    v1_scheduler_jobs_run_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this scheduled job. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskRun"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
+    v1_scheduler_jobs_rebuild_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebuildResult"];
+                };
+            };
+        };
+    };
+    v1_scheduler_runs_list: {
+        parameters: {
+            query?: {
+                job?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /**
+                 * @description * `PENDING` - Pending
+                 *     * `RUNNING` - Running
+                 *     * `SUCCESS` - Success
+                 *     * `FAILURE` - Failure
+                 *     * `RETRY` - Retry
+                 *     * `SKIPPED` - Skipped
+                 *     * `LOST` - Lost
+                 */
+                status?: "FAILURE" | "LOST" | "PENDING" | "RETRY" | "RUNNING" | "SKIPPED" | "SUCCESS";
+                task_name?: string;
+                tenant?: number;
+                /**
+                 * @description * `SCHEDULE` - Schedule
+                 *     * `MANUAL` - Manual
+                 */
+                trigger?: "MANUAL" | "SCHEDULE";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTaskRunList"];
+                };
+            };
+        };
+    };
+    v1_scheduler_runs_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this task run. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskRun"];
                 };
             };
         };
