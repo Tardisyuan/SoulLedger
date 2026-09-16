@@ -422,6 +422,30 @@ def test_overdue_is_computed_in_the_schedules_own_timezone(db, settings):
 
 
 @pytest.mark.django_db
+def test_next_fire_is_exact_across_a_local_midnight(db):
+    """Fixed instants, no wall clock. Reference 23:10 Asia/Shanghai on a
+    Tuesday, cron `40 23 * * *`: the answer is 23:40 the same evening.
+    celery's `crontab.remaining_delta` answered 23:40 the *next* day here
+    (it only looks for a later slot 'today' when the reference is on its own
+    now()'s date), which is how the tz test above went red once at 23:5x
+    Shanghai during a full-suite run on 2026-09-17."""
+    from datetime import datetime
+
+    tz = ZoneInfo("Asia/Shanghai")
+    schedule = CrontabSchedule.objects.create(minute="40", hour="23", timezone="Asia/Shanghai")
+    pt = PeriodicTask.objects.create(name="midnight", task="tests.scheduler_ok", crontab=schedule)
+    reference = datetime(2026, 9, 15, 23, 10, tzinfo=tz)  # a Tuesday
+    assert services.next_fire_after(pt, reference) == datetime(2026, 9, 15, 23, 40, tzinfo=tz)
+    # Strictly after: a reference sitting exactly on the slot rolls to tomorrow.
+    assert services.next_fire_after(pt, datetime(2026, 9, 15, 23, 40, tzinfo=tz)) == datetime(2026, 9, 16, 23, 40, tzinfo=tz)
+    # Weekday sets use celery's Sunday == 0 convention.
+    weekdays = CrontabSchedule.objects.create(minute="0", hour="9", day_of_week="1-5", timezone="UTC")
+    pt_wd = PeriodicTask.objects.create(name="weekdays", task="tests.scheduler_ok", crontab=weekdays)
+    friday_noon = datetime(2026, 9, 18, 12, 0, tzinfo=ZoneInfo("UTC"))
+    assert services.next_fire_after(pt_wd, friday_noon) == datetime(2026, 9, 21, 9, 0, tzinfo=ZoneInfo("UTC"))  # Monday
+
+
+@pytest.mark.django_db
 def test_a_run_clears_overdue_and_a_disabled_job_is_never_overdue(db, settings):
     settings.SCHEDULER_OVERDUE_GRACE_SECONDS = 600
     now = timezone.now()
