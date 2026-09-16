@@ -79,6 +79,14 @@ def menu_is_visible_to(menu, user) -> bool:
     roles already in ``roles``, so on the current data this changes nothing
     (asserted by tests/test_menu_visibility_follows_the_codename.py).
     """
+    # First, and before the ADMIN short-circuit: `Menu._default_manager` is the
+    # unfiltered `all_objects`, so every reverse `children` manager (and the
+    # prefetch built on it) still yields binned rows. Measured 2026-09-17 on
+    # main: `/menus/` and `/menus/list-public/` listed a soft-deleted child to
+    # ADMIN and VIEWER alike. ADMIN's `?show_deleted=true` does not come
+    # through here -- `visible_menus` returns its queryset untouched.
+    if getattr(menu, "is_deleted", False):
+        return False
     if is_menu_admin(user):
         return True
     if not menu.roles:

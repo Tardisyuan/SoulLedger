@@ -109,6 +109,26 @@ def test_a_codename_free_admin_row_is_not_opened_by_an_unrelated_grant(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("exit_url", MENU_EXITS)
+def test_a_soft_deleted_child_does_not_hold_its_directory_open(
+    api_client, viewer_user, system_settings, grant_viewer_scheduler_read, exit_url
+):
+    """`Menu._default_manager` is the unfiltered `all_objects`, so
+    `menu.children.all()` still yields soft-deleted rows. A binned page the
+    caller holds the codename for must not keep an otherwise-empty directory
+    in the sidebar."""
+    grant_viewer_scheduler_read()
+    # Every `/scheduler` row: menus/0015 seeds one alongside the fixture's copy,
+    # and a live one would keep the seeded directory open for its own reason.
+    for page in Menu.objects.filter(path="/scheduler"):
+        page.soft_delete()
+    names = _names(_client(api_client, viewer_user).get(exit_url).json())
+    assert "系统设置" not in names
+    assert "定时任务" not in names
+    assert "动态" in names  # the walk is not vacuous
+
+
+@pytest.mark.django_db
 def test_the_seeded_rows_are_unchanged_by_the_new_doors(viewer_user, judge_user):
     """On the real seeded data the codename door admits nobody `roles` did not
     already admit: every seeded `permission` is empty or held exactly by the
