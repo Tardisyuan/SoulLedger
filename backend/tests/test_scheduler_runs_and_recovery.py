@@ -115,7 +115,11 @@ def test_a_broken_receiver_does_not_fail_the_task(db, monkeypatch):
     def explode(*_a, **_k):
         raise RuntimeError("bookkeeping is broken")
 
+    # Both bookkeeping paths: the signal receivers (resolve_job) and the lock
+    # gate in SchedulerTask.__call__ (tenant_id_from_call). Celery itself
+    # swallows receiver exceptions; the gate's try/except is ours alone.
     monkeypatch.setattr(signals.services, "resolve_job", explode)
+    monkeypatch.setattr(signals.services, "tenant_id_from_call", explode)
     result = _ok_task.apply(task_id=str(uuid.uuid4()))
 
     assert result.state == "SUCCESS" and result.get() == {"ran": True}
