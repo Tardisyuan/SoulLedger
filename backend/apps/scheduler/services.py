@@ -8,7 +8,7 @@ import json
 import logging
 import uuid
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -264,21 +264,38 @@ def trigger_manual(job: ScheduledJob, user) -> TaskRun:
 def next_fire_after(periodic_task: PeriodicTask, reference):
     """The first time this row's schedule fires strictly after `reference`.
 
-    Uses celery's own `crontab.remaining_delta`, so the answer is the one beat
-    would compute, in the schedule's own timezone. `remaining_delta` returns
-    (start, forward-delta, now); `start + delta` is the fire time and does not
-    depend on the `now` it also returns, which is what makes this a pure
-    function of (schedule, reference) and testable without freezing clocks.
+    Uses celery's *parsed* crontab (the `minute` / `hour` / `day_of_week` /
+    `day_of_month` / `month_of_year` sets on the TzAwareCrontab, so "*/5" and
+    "1-5" mean what beat thinks they mean) but NOT `crontab.remaining_delta`.
+    That method decides "is there a later slot this hour / today" by comparing
+    the reference's date with *its own* `now()`, because beat only ever calls
+    it with a reference a few seconds old. Called with yesterday's last run at
+    23:10 against `40 23 * * *`, it answers tomorrow 23:40 — measured
+    2026-09-17 when the full suite ran at 23:5x Asia/Shanghai and the tz test
+    went red. A day-by-day search over the parsed sets has no such assumption.
+
+    Bounded: 367 days is enough for any month/day-of-month combination that
+    exists; a cron that never matches (e.g. Feb 30) returns None.
     """
     if periodic_task.crontab_id is not None:
         schedule = periodic_task.crontab.schedule
-        # `remaining_delta` reads .hour/.minute off the datetime it is given
-        # and does NOT convert to the schedule's tz (TzAwareCrontab does that in
-        # is_due, one level up) — so an aware UTC reference against an
-        # Asia/Shanghai cron would be read as a UTC wall clock. Convert first.
-        local_reference = reference.astimezone(getattr(schedule, "tz", None) or ZoneInfo("UTC"))
-        start, delta, _ = schedule.remaining_delta(local_reference)
-        return (start + delta).astimezone(ZoneInfo("UTC"))
+        tz = getattr(schedule, "tz", None) or ZoneInfo("UTC")
+        local = reference.astimezone(tz)
+        hours, minutes = sorted(schedule.hour), sorted(schedule.minute)
+        for day_offset in range(367):
+            day = local.date() + timedelta(days=day_offset)
+            if (
+                day.month not in schedule.month_of_year
+                or day.day not in schedule.day_of_month
+                or (day.isoweekday() % 7) not in schedule.day_of_week  # celery: Sunday == 0
+            ):
+                continue
+            for hour in hours:
+                for minute in minutes:
+                    candidate = datetime(day.year, day.month, day.day, hour, minute, tzinfo=tz)
+                    if candidate > local:
+                        return candidate.astimezone(ZoneInfo("UTC"))
+        return None
     if periodic_task.interval_id is not None:
         return reference + periodic_task.interval.schedule.run_every
     return None
