@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from apps.actors.models import Actor
 from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
+from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, DispatchStatus
@@ -126,7 +127,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             "source_tenant", "target_tenant", "soul", "dispatched_by"
         )
         user = self.request.user
-        if getattr(user, "role", None) == "ADMIN":
+        if is_tenant_exempt(user):
             return qs
         tenant = getattr(self.request, "tenant", None)
         if not tenant:
@@ -172,7 +173,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         # and the soul was theirs. A transfer is proposed by the tenant that
         # holds the soul; ADMIN keeps the global exemption. 403 like the party
         # checks on approve/reject/execute below, which this is one of.
-        if getattr(request.user, "role", None) != "ADMIN":
+        if not is_tenant_exempt(request.user):
             requester_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
             source = validated.get("source_tenant")
             if requester_tenant is None or source is None or source.pk != requester_tenant.pk:
@@ -428,7 +429,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             "initiating_tenant"
         ).prefetch_related(_participants_with_names())
         user = self.request.user
-        if getattr(user, "role", None) == "ADMIN":
+        if is_tenant_exempt(user):
             return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:

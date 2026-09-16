@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .access import menu_is_visible_to, visible_menus
@@ -114,7 +115,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
     @action(detail=False, methods=["get"], pagination_class=None)
     def all(self, request):
         """GET /api/v1/menus/all/ - Get all menus (ADMIN only)"""
-        if request.user.role != "ADMIN":
+        if not is_tenant_exempt(request.user):
             return Response(
                 {"error": "Only ADMIN can view all menus"},
                 status=status.HTTP_403_FORBIDDEN

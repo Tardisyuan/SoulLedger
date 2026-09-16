@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
+from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
 from apps.disposition.models import Disposition
 from apps.souls.dates import ERROR, check_term_start
@@ -86,7 +87,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             # rules still apply; there is no tenant to check against.
             return value
         user = getattr(request, "user", None)
-        if getattr(user, "role", None) == "ADMIN":
+        if is_tenant_exempt(user):
             return value
         tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
         if tenant is None or value.tenant_id != tenant.pk:

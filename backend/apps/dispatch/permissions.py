@@ -44,6 +44,7 @@ existing is to be cross-tenant. That fact was recorded and never carried over
 to the object layer.
 """
 from apps.core.permissions import TenantPermission
+from apps.core.tenant import is_tenant_exempt
 
 
 class DispatchPartyPermission(TenantPermission):
@@ -64,7 +65,7 @@ class DispatchPartyPermission(TenantPermission):
     def has_object_permission(self, request, view, obj):
         if not request.user or not request.user.is_authenticated:
             return False
-        if getattr(request.user, "role", None) == "ADMIN":
+        if is_tenant_exempt(request.user):
             return True
         tenant = getattr(request, "tenant", None)
         if tenant is None:
@@ -83,7 +84,7 @@ class CrossJudgmentPartyPermission(TenantPermission):
     def has_object_permission(self, request, view, obj):
         if not request.user or not request.user.is_authenticated:
             return False
-        if getattr(request.user, "role", None) == "ADMIN":
+        if is_tenant_exempt(request.user):
             return True
         tenant = getattr(request, "tenant", None)
         if tenant is None:
