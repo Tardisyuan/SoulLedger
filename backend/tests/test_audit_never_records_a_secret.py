@@ -58,7 +58,7 @@ Each assertion was checked by breaking it, before being trusted green:
 """
 
 import pytest
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import get_hasher, make_password
 
 from apps.audit.models import AuditLog
 from apps.audit.signals import (
@@ -110,7 +110,9 @@ class TestSecretsNeverReachAuditRows:
             blob = str(row.changes)
             assert old_hash not in blob, f"old password hash present in {row.changes}"
             assert new_hash not in blob, f"new password hash present in {row.changes}"
-            assert "pbkdf2_" not in blob, f"a Django password hash is present in {row.changes}"
+            # The configured hasher's prefix, not a literal: the suite hashes with MD5
+            # (conftest.py), so `pbkdf2_` could never appear and would pass vacuously.
+            assert f"{get_hasher().algorithm}$" not in blob, f"a Django password hash is present in {row.changes}"
 
     def test_the_field_name_survives_redaction(self, cn_tenant):
         """A redacted entry, not a dropped one: the event must stay auditable."""

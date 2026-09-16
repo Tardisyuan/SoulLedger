@@ -30,6 +30,19 @@ def _isolate_cache_from_redis():
         yield
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _fast_password_hasher():
+    """MD5 instead of PBKDF2 (1,000,000 iterations) for every hash the suite makes.
+
+    Measured 2026-09-16, same tree, SQLite, --no-cov: full suite 545s -> 253s,
+    3767 passed both ways. Tests only; production hashing is untouched. A test
+    that inspects a hash's prefix must read `get_hasher().algorithm`, not a
+    literal `pbkdf2_` -- that literal can never match under this override.
+    """
+    with override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"]):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache_between_tests(_isolate_cache_from_redis):
     """LocMem persists for the life of the process, so reset it per test.
