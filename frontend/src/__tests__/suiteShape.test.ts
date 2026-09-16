@@ -180,6 +180,7 @@ const COLLECTED_FILES = [
   "usePermissions.test.ts",
   "useReincarnation.test.ts",
   "useRowTransitions.test.ts",
+  "useScheduler.test.tsx",
   "useSidebarMenus.test.tsx",
   "useSocial.queries.test.ts",
   "useSocial.test.ts",

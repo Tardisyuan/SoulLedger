@@ -106,6 +106,21 @@ export const notificationKeys = {
   unreadCount: ["notifications-unread-count"] as const,
 };
 
+/**
+ * One root for both resources, because scheduler writes touch both: a manual
+ * run adds a TaskRun AND changes the job row's `last_run`; a PATCH or rebuild
+ * changes rows whose runs the drawer may be showing. The realtime handler
+ * invalidates `all`; `jobs` / `runs.list` are what the reads key under.
+ */
+export const schedulerKeys = {
+  all: ["scheduler"] as const,
+  jobs: ["scheduler", "jobs"] as const,
+  runs: {
+    all: ["scheduler", "runs"] as const,
+    list: (params: Record<string, string | number | undefined>) => ["scheduler", "runs", "list", params] as const,
+  },
+};
+
 export const socialKeys = {
   all: ["social"] as const,
   posts: {
