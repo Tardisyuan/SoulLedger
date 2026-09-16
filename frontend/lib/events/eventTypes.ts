@@ -76,7 +76,18 @@ export interface SocialEventPayload extends BaseEventPayload {
   following_id?: string;
 }
 
+/** `backend/apps/scheduler/realtime.py`. The payload identifies a row but is
+ *  never a full row, so a handler invalidates rather than patches. */
+export interface SchedulerEventPayload extends BaseEventPayload {
+  domain: "scheduler";
+  job_id?: number | null;
+  run_id?: number;
+  status?: string;
+  tenant_id?: number | null;
+}
+
 export type EventPayload =
+  | SchedulerEventPayload
   | SoulEventPayload
   | WorkflowEventPayload
   | NotificationEventPayload

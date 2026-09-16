@@ -18,6 +18,7 @@ import {
   handleDeathSyncEvent,
   handleDispatchEvent,
   handleNotificationEvent,
+  handleSchedulerEvent,
   handleSocialEvent,
   handleSoulCreated,
   handleSoulEvent,
@@ -36,6 +37,7 @@ export type {
   EventPayload,
   HandlerResult,
   NotificationEventPayload,
+  SchedulerEventPayload,
   SocialEventPayload,
   SoulEventPayload,
   WorkflowEventPayload,
@@ -114,6 +116,13 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     REACTION_REMOVED: handleSocialEvent,
     USER_FOLLOWED: handleSocialEvent,
     USER_UNFOLLOWED: handleSocialEvent,
+  },
+
+  // Scheduler domain (backend/apps/scheduler/realtime.py)
+  scheduler: {
+    SCHEDULER_RUN_UPDATED: handleSchedulerEvent,
+    SCHEDULER_JOB_UPDATED: handleSchedulerEvent,
+    SCHEDULER_JOBS_REBUILT: handleSchedulerEvent,
   },
 };
 
@@ -212,6 +221,25 @@ export const BACKEND_EVENT_TYPES = [
 ] as const;
 
 /**
+ * Events the backend publishes on the realtime bus by string, which are NOT
+ * members of `apps.events.models.EventType` — so they cannot go in the array
+ * above, whose backend contract test (`test_frontend_event_types_track_the_
+ * backend.py`) rejects anything the enum lacks.
+ *
+ * Not an exemption list: the authority for these is
+ * `backend/apps/scheduler/realtime.py`'s module constants, and
+ * `eventRegistry.test.ts` reads that file and requires this array to equal
+ * them. Whether they should also become EventType members (the route
+ * NOTIFICATION_CREATED took) is a backend decision, raised in the 2026-09-17
+ * scheduler frontend report.
+ */
+export const REALTIME_ONLY_EVENT_TYPES = [
+  "SCHEDULER_RUN_UPDATED",
+  "SCHEDULER_JOB_UPDATED",
+  "SCHEDULER_JOBS_REBUILT",
+] as const;
+
+/**
  * Check for event drift between frontend registry and backend events.
  */
 export function detectEventDrift(): {
@@ -225,10 +253,11 @@ export function detectEventDrift(): {
     }
   }
 
-  const backendSet = new Set<string>(BACKEND_EVENT_TYPES as readonly string[]);
+  const backendEvents: readonly string[] = [...BACKEND_EVENT_TYPES, ...REALTIME_ONLY_EVENT_TYPES];
+  const backendSet = new Set<string>(backendEvents);
 
   return {
-    missingInFrontend: (BACKEND_EVENT_TYPES as readonly string[]).filter((e) => !registeredEvents.has(e)),
+    missingInFrontend: backendEvents.filter((e) => !registeredEvents.has(e)),
     extraInFrontend: [...registeredEvents].filter((e) => !backendSet.has(e)),
   };
 }

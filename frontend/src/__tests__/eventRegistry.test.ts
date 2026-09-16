@@ -14,10 +14,13 @@ import {
   getRegisteredEvents,
   isEventRegistered,
   BACKEND_EVENT_TYPES,
+  REALTIME_ONLY_EVENT_TYPES,
   type EventContext,
   type EventPayload,
 } from "@/lib/events/event_registry";
 import type { QueryClient } from "@tanstack/react-query";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 function makeContext() {
   const invalidateQueries = jest.fn();
@@ -278,6 +281,41 @@ describe("death sync events", () => {
   });
 });
 
+// ── Scheduler domain ─────────────────────────────────────────────────
+
+describe("scheduler events", () => {
+  it.each(["SCHEDULER_RUN_UPDATED", "SCHEDULER_JOB_UPDATED", "SCHEDULER_JOBS_REBUILT"])(
+    "%s invalidates the scheduler root, and toasts nothing",
+    (event) => {
+      const { ctx, invalidateQueries, showToast } = makeContext();
+
+      const result = dispatchEvent(
+        { domain: "scheduler", event, job_id: 3, run_id: 9, status: "RUNNING" } as EventPayload,
+        ctx
+      );
+
+      expect(result.success).toBe(true);
+      expect(invalidatedKeys(invalidateQueries)).toEqual(['["scheduler"]']);
+      expect(showToast).not.toHaveBeenCalled();
+    }
+  );
+
+  it("mirrors exactly the event constants backend/apps/scheduler/realtime.py publishes", () => {
+    // The authority is the backend module, not this repo's copy of it: an
+    // event renamed or added there must turn this red, not fall through to
+    // the unknown-event handler (which invalidates nothing) in production.
+    const source = readFileSync(
+      path.join(__dirname, "..", "..", "..", "backend", "apps", "scheduler", "realtime.py"),
+      "utf8"
+    );
+    expect(/^DOMAIN = "(\w+)"$/m.exec(source)?.[1]).toBe("scheduler");
+    const published = [...source.matchAll(/^[A-Z_]+ = "(SCHEDULER_[A-Z_]+)"$/gm)].map((m) => m[1]).sort();
+    expect(published.length).toBeGreaterThanOrEqual(3);
+    expect([...REALTIME_ONLY_EVENT_TYPES].sort()).toEqual(published);
+    expect(getRegisteredEvents("scheduler").sort()).toEqual(published);
+  });
+});
+
 // ── Social domain ────────────────────────────────────────────────────
 
 describe("social events", () => {
@@ -516,6 +554,7 @@ describe("registry introspection", () => {
       "deathsync",
       "dispatch",
       "notification",
+      "scheduler",
       "social",
       "soul",
       "workflow",
@@ -549,7 +588,7 @@ describe("event drift", () => {
   });
 
   it("dispatches every backend event type to a real handler, never the unknown fallback", () => {
-    for (const event of BACKEND_EVENT_TYPES) {
+    for (const event of [...BACKEND_EVENT_TYPES, ...REALTIME_ONLY_EVENT_TYPES]) {
       const domain = getRegisteredDomains().find((d) => isEventRegistered(d, event));
       expect(domain).toBeDefined();
 
