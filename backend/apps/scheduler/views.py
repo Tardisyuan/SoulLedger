@@ -94,7 +94,10 @@ class ScheduledJobViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
                 try:
                     pt.crontab, _ = CrontabSchedule.objects.get_or_create(**fields, timezone=tz)
                 except DjangoValidationError as exc:
-                    raise ValidationError({"cron": exc.messages}) from exc
+                    # TimeZoneField.to_python refuses an unknown zone name here;
+                    # the cron fields were already parsed by the serializer, so
+                    # a rejection at this layer is the timezone's.
+                    raise ValidationError({"timezone": exc.messages}) from exc
             if "enabled" in data:
                 pt.enabled = data["enabled"]
             pt.save()

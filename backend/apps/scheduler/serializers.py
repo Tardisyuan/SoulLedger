@@ -4,8 +4,6 @@ Every computed field carries `@extend_schema_field`: `test_schema_has_no_
 warnings.py` fails the build on any field drf-spectacular has to type as
 `string`, and the generated client in packages/core is only as right as this.
 """
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
 from celery.schedules import crontab
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
@@ -106,9 +104,16 @@ class ScheduledJobSerializer(serializers.ModelSerializer):
 class ScheduledJobUpdateSerializer(serializers.Serializer):
     """PATCH body. Partial: any subset of enabled, the five cron fields, timezone.
 
-    Validation is the real parsers': celery's `crontab(...)` for the fields,
-    `zoneinfo` for the name — what beat will do with the value is the only
-    definition of "valid" that matters.
+    Cron validation is celery's own `crontab(...)` parser — what beat will do
+    with the value is the only definition of "valid" that matters. Nothing
+    else checks it: django_celery_beat's CrontabSchedule validators run only
+    under full_clean(), not on get_or_create, so "25" would be stored.
+
+    The timezone is deliberately NOT validated here. CrontabSchedule.timezone
+    is a TimeZoneField whose to_python() rejects an unknown name on the way
+    into get_or_create, and the view maps that to a 400 under "timezone". A
+    zoneinfo check here was written first and removed after a mutation proof
+    showed it could not be made to fail — the layer below already refuses.
     """
 
     enabled = serializers.BooleanField(required=False)
@@ -118,13 +123,6 @@ class ScheduledJobUpdateSerializer(serializers.Serializer):
     month_of_year = serializers.CharField(required=False, max_length=64)
     day_of_week = serializers.CharField(required=False, max_length=64)
     timezone = serializers.CharField(required=False, max_length=63)
-
-    def validate_timezone(self, value):
-        try:
-            ZoneInfo(value)
-        except (ZoneInfoNotFoundError, ValueError) as exc:
-            raise serializers.ValidationError(f"unknown timezone {value!r}") from exc
-        return value
 
     def validate(self, attrs):
         if any(name in attrs for name in CRON_FIELDS):
