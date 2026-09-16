@@ -343,7 +343,13 @@ def configure_default_handlers() -> None:
     handler_registry.register_domain("notification", NotificationHandler())
 
     # All domains — WebSocket real-time push
-    for domain in ("workflow", "notification", "dispatch", "deathsync", "social"):
+    #
+    # "scheduler" (2026-09-17): TaskRun status changes and schedule edits, see
+    # apps/scheduler/realtime.py. Deliberately NOT added to the WebhookHandler
+    # list below: those are tenant-facing business events; a run heartbeat
+    # every five minutes is operator telemetry, not something an external
+    # webhook subscribed to.
+    for domain in ("workflow", "notification", "dispatch", "deathsync", "social", "scheduler"):
         handler_registry.register_domain(domain, WebSocketHandler())
 
     # All domains — webhook delivery (filters by tenant internally)

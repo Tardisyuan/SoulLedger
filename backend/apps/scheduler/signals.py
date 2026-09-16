@@ -150,6 +150,24 @@ def on_worker_ready(sender=None, **_):
 
 
 # ---------------------------------------------------------------------------
+# TaskRun status → realtime event (one place for all seven statuses)
+# ---------------------------------------------------------------------------
+
+@receiver(post_save, sender=TaskRun, dispatch_uid="scheduler_run_realtime")
+def on_run_saved(sender, instance, created=False, update_fields=None, raw=False, **_):
+    """Every writer of a status — prerun, postrun, the lock gate's SKIPPED, the
+    reaper's and worker_ready's LOST, the manual API's PENDING — goes through
+    `save()`, so the one hook that sees them all is here. A save that touches
+    only `error` (task_failure) is not a status change and emits nothing."""
+    if raw:
+        return
+    if created or update_fields is None or "status" in update_fields:
+        from apps.scheduler.realtime import emit_run_updated
+
+        emit_run_updated(instance)
+
+
+# ---------------------------------------------------------------------------
 # Tenants
 # ---------------------------------------------------------------------------
 
