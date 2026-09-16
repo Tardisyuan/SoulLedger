@@ -369,6 +369,7 @@ export const MENUS = [
   { id: 2, name: "调度管理", path: "/dispatch", icon: "send", order: 2, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
   { id: 3, name: "权限管理", path: "/permissions", icon: "shield", order: 3, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
   { id: 4, name: "回收站", path: "/recycle-bin", icon: "trash", order: 4, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  { id: 5, name: "定时任务", path: "/scheduler", icon: "Clock", order: 5, component: "scheduler", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
 ];
 
 export const RECYCLE_BIN_ENTRY = {
@@ -400,6 +401,162 @@ export const SOCIAL_PROFILE = {
   followers_count: 0,
   following_count: 0,
   post_count: 0,
+};
+
+/**
+ * `/scheduler/jobs/` — ScheduledJobSerializer, a bare array (pagination_class
+ * = None). One global row and one row per tenant, so the page has three
+ * groups; one of them failing twice in a row with a FAILURE last run.
+ */
+export const SCHEDULER_JOBS = [
+  {
+    id: 1,
+    job_key: "events.retry_pending_webhooks",
+    periodic_task_name: "events.retry_pending_webhooks",
+    task_name: "events.retry_pending_webhooks",
+    scope: "GLOBAL",
+    tenant: null as number | null,
+    tenant_code: null as string | null,
+    description_key: "scheduler.jobs.events_retry_pending_webhooks",
+    enabled: true,
+    minute: "*/5",
+    hour: "*",
+    day_of_month: "*",
+    month_of_year: "*",
+    day_of_week: "*",
+    timezone: "UTC",
+    max_runtime_seconds: 240,
+    next_run_at: "2026-09-17T08:05:00Z",
+    last_run: {
+      id: 11,
+      status: "SUCCESS",
+      trigger: "SCHEDULE",
+      queued_at: "2026-09-17T08:00:00Z",
+      started_at: "2026-09-17T08:00:01Z",
+      finished_at: "2026-09-17T08:00:02Z",
+      duration_ms: 812,
+    },
+    overdue: false,
+    expected_at: "2026-09-17T08:05:00Z",
+    consecutive_failures: 0,
+    last_alerted_at: null as string | null,
+  },
+  {
+    id: 2,
+    job_key: "ledger.recalculate_tenant",
+    periodic_task_name: "ledger.recalculate_tenant@CN_DIYU",
+    task_name: "ledger.recalculate_tenant",
+    scope: "TENANT",
+    tenant: 1,
+    tenant_code: "CN_DIYU",
+    description_key: "scheduler.jobs.ledger_recalculate_tenant",
+    enabled: true,
+    minute: "0",
+    hour: "0",
+    day_of_month: "*",
+    month_of_year: "*",
+    day_of_week: "*",
+    timezone: "UTC",
+    max_runtime_seconds: 3600,
+    next_run_at: "2026-09-18T00:00:00Z",
+    last_run: {
+      id: 12,
+      status: "FAILURE",
+      trigger: "SCHEDULE",
+      queued_at: "2026-09-17T00:00:00Z",
+      started_at: "2026-09-17T00:00:01Z",
+      finished_at: "2026-09-17T00:00:04Z",
+      duration_ms: 3120,
+    },
+    overdue: false,
+    expected_at: "2026-09-18T00:00:00Z",
+    consecutive_failures: 2,
+    last_alerted_at: "2026-09-16T00:00:05Z" as string | null,
+  },
+  {
+    id: 3,
+    job_key: "judgment.auto_conclude_stale_for_tenant",
+    periodic_task_name: "judgment.auto_conclude_stale_for_tenant@EU_HEAVEN_HELL",
+    task_name: "judgment.auto_conclude_stale_for_tenant",
+    scope: "TENANT",
+    tenant: 2,
+    tenant_code: "EU_HEAVEN_HELL",
+    description_key: "scheduler.jobs.judgment_auto_conclude_stale_for_tenant",
+    enabled: false,
+    minute: "0",
+    hour: "1",
+    day_of_month: "*",
+    month_of_year: "*",
+    day_of_week: "*",
+    timezone: "Europe/Rome",
+    max_runtime_seconds: 1800,
+    next_run_at: null as string | null,
+    last_run: null,
+    overdue: false,
+    expected_at: null as string | null,
+    consecutive_failures: 0,
+    last_alerted_at: null as string | null,
+  },
+];
+
+/** `/scheduler/runs/` items — TaskRunSerializer. The failure carries a traceback tail. */
+export const SCHEDULER_RUNS = [
+  {
+    id: 12,
+    job: 2,
+    task_name: "ledger.recalculate_tenant",
+    celery_task_id: "0b7f2d6e-5b1c-4d7e-9a53-6c2f1e0d9a12",
+    tenant: 1,
+    trigger: "SCHEDULE",
+    status: "FAILURE",
+    queued_at: "2026-09-17T00:00:00Z",
+    started_at: "2026-09-17T00:00:01Z",
+    finished_at: "2026-09-17T00:00:04Z",
+    duration_ms: 3120,
+    worker_hostname: "celery@worker-1",
+    error: 'Traceback (most recent call last):\n  File "apps/ledger/tasks.py", line 88, in recalculate_tenant\nValueError: ledger row 42 has no soul',
+    result: "",
+    triggered_by: null as number | null,
+    triggered_by_username: null as string | null,
+  },
+  {
+    id: 10,
+    job: 2,
+    task_name: "ledger.recalculate_tenant",
+    celery_task_id: "5c1e8a90-2f3b-4c6d-8e7f-9a0b1c2d3e4f",
+    tenant: 1,
+    trigger: "MANUAL",
+    status: "SUCCESS",
+    queued_at: "2026-09-16T09:00:00Z",
+    started_at: "2026-09-16T09:00:01Z",
+    finished_at: "2026-09-16T09:00:03Z",
+    duration_ms: 2040,
+    worker_hostname: "celery@worker-1",
+    error: "",
+    result: "recalculated 12 souls",
+    triggered_by: TEST_USER.id as number | null,
+    triggered_by_username: TEST_USER.username as string | null,
+  },
+];
+
+/** POST `/scheduler/jobs/:id/run/` → 202, a PENDING manual TaskRun. */
+export const SCHEDULER_MANUAL_RUN = {
+  id: 13,
+  job: 2,
+  task_name: "ledger.recalculate_tenant",
+  celery_task_id: "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+  tenant: 1,
+  trigger: "MANUAL",
+  status: "PENDING",
+  queued_at: "2026-09-17T08:10:00Z",
+  started_at: null as string | null,
+  finished_at: null as string | null,
+  duration_ms: null as number | null,
+  worker_hostname: "",
+  error: "",
+  result: "",
+  triggered_by: TEST_USER.id,
+  triggered_by_username: TEST_USER.username,
 };
 
 // ── Mock engine ───────────────────────────────────────────────────────────
@@ -812,6 +969,20 @@ export class ApiMock {
     // Not a list endpoint: see SOUL_INHERITANCE. (The paragraph above still
     // holds for the other five.)
     this.on("GET", "/ledger/inheritance/:id/", SOUL_INHERITANCE);
+
+    // ── Scheduler (backend/apps/scheduler/views.py) ──
+    this.on("GET", "/scheduler/jobs/", SCHEDULER_JOBS);
+    // PATCH answers with the whole row (ScheduledJobSerializer), changed fields applied.
+    this.on("PATCH", "/scheduler/jobs/:id/", (call) => {
+      const id = Number(call.path.split("/")[3]);
+      const row = SCHEDULER_JOBS.find((job) => job.id === id);
+      return row ? { body: { ...row, ...call.body } } : { status: 404, body: { detail: "Not found." } };
+    });
+    this.on("POST", "/scheduler/jobs/:id/run/", () => ({ status: 202, body: SCHEDULER_MANUAL_RUN }));
+    // Registered after `/scheduler/jobs/:id/` for the reason given on
+    // `/dispatch/records/proposed/` above, though the methods differ today.
+    this.on("POST", "/scheduler/jobs/rebuild/", { created: 0, updated: 3, removed: 0, legacy_removed: 0 });
+    this.on("GET", "/scheduler/runs/", paginated(SCHEDULER_RUNS));
 
     return this;
   }
