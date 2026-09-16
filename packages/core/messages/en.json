@@ -1643,6 +1643,12 @@
       "no_jobs": "No scheduled jobs are registered",
       "no_jobs_reason": "They are created by setup_scheduled_tasks or “Rebuild schedules”",
       "no_match": "No jobs match these filters"
+    },
+    "readable": {
+      "every_n_minutes": "Every {{interval}} minutes",
+      "hourly": "Hourly at :{{minute}}",
+      "daily": "Daily at {{time}}",
+      "weekly": "{{weekday}}s at {{time}}"
     }
   }
 }
