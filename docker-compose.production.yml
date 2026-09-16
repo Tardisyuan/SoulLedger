@@ -60,7 +60,7 @@ services:
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate &&
-             python manage.py setup_token_flush_task &&
+             python manage.py setup_scheduled_tasks &&
              daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     restart: always
     deploy:

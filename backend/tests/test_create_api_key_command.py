@@ -1,7 +1,7 @@
 """Smoke test for `manage.py create_api_key` (DB-07).
 
 Nothing in the suite exercised this command before this file. Unlike
-`seed_tenants` / `setup_ledger_tasks` / `setup_token_flush_task`, this
+`seed_tenants` / `setup_scheduled_tasks`, this
 command is not idempotent by design — it has no `get_or_create` and every
 invocation provisions one more key (that is the intended behavior: an
 operator runs it once per external system that needs a credential). So this
