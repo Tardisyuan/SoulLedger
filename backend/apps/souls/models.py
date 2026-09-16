@@ -4,7 +4,7 @@ Soul core model + state machine.
 import logging
 import uuid
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils import timezone
 
@@ -268,6 +268,24 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         on_delete=models.CASCADE,
         related_name='souls',
         null=True,
+    )
+
+    # 灵魂编号 —— 灵魂端 App 的登录名(docs/ARCHITECTURE-soul-app-and-domain-split.md
+    # 2026-09-17「登录名」)。此前 Soul 上没有任何稳定的业务编号(只有 UUID 主键),
+    # 所以新增。全局唯一而非租户内唯一:登录请求不带租户,身份是全局的(同文档 §3)。
+    # 可空:只在第一次开通账号时分配(apps/soul_accounts/services.py),分配后不再变,
+    # 所以不需要为存量灵魂回填 —— 从没开过号的灵魂没有登录名也不需要。
+    soul_code = models.CharField(
+        max_length=16, unique=True, null=True, blank=True, editable=False,
+        help_text="灵魂编号:灵魂端登录名,首次开通账号时分配,之后不变。",
+    )
+    # 联系方式:只用于投递初始密码。个人信息 —— 不在 SoulSerializer 的字段里
+    # (官员侧只能经 soul_account.read 看到脱敏值),审计 diff 里值被遮蔽
+    # (apps/audit/signals.py::PII_FIELD_NAMES)。
+    contact_email = models.EmailField(blank=True, default="")
+    contact_phone = models.CharField(
+        max_length=20, blank=True, default="",
+        validators=[RegexValidator(r"^\+?[1-9]\d{6,14}$", "手机号须为 7-15 位数字,可带 + 前缀")],
     )
 
     class Meta:

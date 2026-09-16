@@ -303,6 +303,11 @@ SECRET_FIELD_NAMES = frozenset({
 #: next `webhook_secret` or `reset_token` without anyone remembering to come here.
 SECRET_NAME_HINTS = ('password', 'secret', 'token', 'api_key', 'private_key')
 
+#: 个人信息字段:与密钥同样只记「改了」,不记值。`AuditLog.changes` 对持有
+#: `audit.read` 的角色(ADMIN、MODERATOR)可读,而灵魂的联系方式按最小可见
+#: 只给 `soul_account.read`。审计日志是一条绕过那道门的旁路,所以在这里堵上。
+PII_FIELD_NAMES = frozenset({'contact_email', 'contact_phone'})
+
 
 def _is_secret_field(field) -> bool:
     """Three independent tests, because any one of them alone decays.
@@ -313,7 +318,7 @@ def _is_secret_field(field) -> bool:
     matter what the column is named.
     """
     name = field.name.lower()
-    if name in SECRET_FIELD_NAMES:
+    if name in SECRET_FIELD_NAMES or name in PII_FIELD_NAMES:
         return True
     if any(hint in name for hint in SECRET_NAME_HINTS):
         return True

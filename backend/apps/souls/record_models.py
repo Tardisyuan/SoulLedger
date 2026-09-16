@@ -322,6 +322,7 @@ class SoulRecord(AuditUserFields, models.Model):
             models.Index(fields=["tenant", "recorded_at"], name="idx_soulrecord_tenant_date"),
             models.Index(fields=["record_type"], name="idx_soulrecord_type"),
             models.Index(fields=["civilization"], name="idx_soulrecord_civ"),
+            models.Index(fields=["soul", "cycle"], name="idx_soulrecord_soul_cycle"),
         ]
 
     def __str__(self):
