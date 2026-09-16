@@ -64,13 +64,49 @@ def _private_permission_cache_prefix():
     yield
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _private_channel_layer_prefix():
+    """Same collision on the channel layer: group names are `tenant.code` and
+    user ids, which every test process's fresh database hands out identically.
+
+    Measured 2026-09-16 under `pytest -n 8`: another worker's ungated event to
+    the `CN` tenant group reached this worker's socket, and
+    `test_refresh_after_first_frame_auth_reads_the_real_user` failed with
+    "降权之后带门事件仍然送达". channels drops its cached layers when
+    CHANNEL_LAYERS changes, so overriding the setting is enough.
+    """
+    import copy
+    import os
+
+    from django.conf import settings
+
+    layers = copy.deepcopy(settings.CHANNEL_LAYERS)
+    for layer in layers.values():
+        if layer.get("BACKEND", "").startswith("channels_redis"):
+            layer.setdefault("CONFIG", {})["prefix"] = f"pytest-{os.getpid()}"
+    with override_settings(CHANNEL_LAYERS=layers):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache_between_tests(_isolate_cache_from_redis):
     """LocMem persists for the life of the process, so reset it per test.
 
     Rate-limit counters and the permission cache are both keyed in a way that
     would otherwise carry state from one test into the next.
+
+    The permission cache is not in `cache` -- it is its own Redis client -- so
+    it is cleared separately. Without that, a test that creates a Permission
+    row but grants it to nobody caches `(VIEWER, soul.read) = False` for 300s;
+    the database rolls back, Redis does not, and the next test that relies on
+    the ROLE_PERMISSIONS fallback gets 403. Reproduced 2026-09-16:
+    `test_perm_prefix_discloses_only_the_catalogue.py` followed by
+    `test_viewer_can_read_souls` fails every time.
     """
+    from apps.perm.cache import invalidate_all_permissions
+
     cache.clear()
+    invalidate_all_permissions()
     yield
     cache.clear()
+    invalidate_all_permissions()
