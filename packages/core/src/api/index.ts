@@ -79,5 +79,19 @@ export { dispatchApi, crossTenantJudgmentsApi, type DispatchRecord, type CrossTe
 // Social
 export { socialApi, type Post, type Comment, type Reaction, type Follow, type UserProfile } from "./social";
 
+// Scheduler
+export {
+  schedulerApi,
+  type ScheduledJob,
+  type ScheduledJobScope,
+  type ScheduledJobUpdate,
+  type TaskRun,
+  type TaskRunFilters,
+  type TaskRunStatus,
+  type TaskRunSummary,
+  type TaskRunTrigger,
+  type RebuildResult,
+} from "./scheduler";
+
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";

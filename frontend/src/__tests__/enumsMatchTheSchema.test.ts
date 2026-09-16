@@ -39,6 +39,9 @@ const PAIRS: { decl: string; file: string; component: string }[] = [
   // `users.roles.*` bundle keys, not by a schema component.
   { decl: "StatuteCorpus", file: "judgment.ts", component: "CorpusEnum" },
   { decl: "StatutePolarity", file: "judgment.ts", component: "PolarityEnum" },
+  { decl: "TaskRunStatus", file: "scheduler.ts", component: "TaskRunStatusEnum" },
+  { decl: "TaskRunTrigger", file: "scheduler.ts", component: "TriggerEnum" },
+  { decl: "ScheduledJobScope", file: "scheduler.ts", component: "ScheduledJobScopeEnum" },
 ];
 
 /** 内联在某个字段上的联合(没有具名 type),按 `组件.字段` 定位。 */

@@ -89,6 +89,11 @@ const ENUM_FIELDS = [
   // had simply never been told they were enums.
   "corpus",
   "polarity",
+  // Added 2026-09-17 with `packages/core/src/api/scheduler.ts`: TaskRun's
+  // `trigger` (SCHEDULE/MANUAL) and ScheduledJob's `scope` (TENANT/GLOBAL).
+  // Its `status` was already here. The meta-test below demanded both.
+  "trigger",
+  "scope",
 ];
 
 /** The two modules that are allowed to spell a missing value out. */
