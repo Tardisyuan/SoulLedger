@@ -43,6 +43,27 @@ def _fast_password_hasher():
         yield
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _private_permission_cache_prefix():
+    """Give this process's permission-cache singleton its own Redis key prefix.
+
+    `apps/perm/cache.py` opens its own Redis client, so LocMem above does not
+    cover it, and the default prefix is "". Any other process on the same Redis
+    -- a second test run, or another xdist worker -- that calls
+    `invalidate_all_permissions()` then deletes this process's `perm:*` keys
+    mid-test. Reproduced 2026-09-16: deleting `perm:*` in a loop from another
+    process turned `test_a_warm_read_does_not_touch_the_database_per_codename`
+    red 1 run in 5 ("56 not less than 46"). The singleton is built at import
+    time, before any settings override could reach it, hence the attribute.
+    """
+    import os
+
+    from apps.perm.cache import get_permission_cache
+
+    get_permission_cache()._key_prefix = f"pytest-{os.getpid()}:"
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache_between_tests(_isolate_cache_from_redis):
     """LocMem persists for the life of the process, so reset it per test.
