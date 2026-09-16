@@ -1688,6 +1688,11 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
     seeded = set(Permission.objects.values_list("codename", flat=True))
     assert seeded == {
         "menu.read",
+        # perm/0021 (2026-09-17). Not one of the three families this file
+        # measures, so the dict-vs-DB split below is unaffected; listed here
+        # because this assertion is exact on purpose.
+        "scheduler.manage",
+        "scheduler.read",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",
