@@ -6251,9 +6251,16 @@ export interface components {
         /**
          * @description PATCH body. Partial: any subset of enabled, the five cron fields, timezone.
          *
-         *     Validation is the real parsers': celery's `crontab(...)` for the fields,
-         *     `zoneinfo` for the name — what beat will do with the value is the only
-         *     definition of "valid" that matters.
+         *     Cron validation is celery's own `crontab(...)` parser — what beat will do
+         *     with the value is the only definition of "valid" that matters. Nothing
+         *     else checks it: django_celery_beat's CrontabSchedule validators run only
+         *     under full_clean(), not on get_or_create, so "25" would be stored.
+         *
+         *     The timezone is deliberately NOT validated here. CrontabSchedule.timezone
+         *     is a TimeZoneField whose to_python() rejects an unknown name on the way
+         *     into get_or_create, and the view maps that to a 400 under "timezone". A
+         *     zoneinfo check here was written first and removed after a mutation proof
+         *     showed it could not be made to fail — the layer below already refuses.
          */
         PatchedScheduledJobUpdate: {
             enabled?: boolean;
