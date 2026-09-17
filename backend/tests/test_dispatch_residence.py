@@ -361,3 +361,28 @@ def test_an_application_rejected_before_the_dispatch_can_be_appealed_during_resi
     assert appealed.status_code == 200 and appealed.data["status"] == "APPEALING"
     application.refresh_from_db()
     assert application.appeal_workflow.tenant_id == cn.pk
+
+
+# ── API 契约:/me 与官员灵魂详情 ──────────────────────────────────────────
+
+
+def test_me_reports_home_and_residence(cn, eg):
+    account, client = ready_soul(cn)
+    at_home = client.get("/api/v1/me/").data
+    assert at_home["is_residing"] is False
+    assert at_home["home_tenant"] == at_home["tenant"] == {"code": "CN_DIYU", "display_name": "CN_DIYU 名"}
+
+    _dispatch(account.soul, eg)
+    away = client.get("/api/v1/me/").data
+    assert away["is_residing"] is True
+    assert away["tenant"] == {"code": "EG_DUAT", "display_name": "EG_DUAT 名"}
+    assert away["home_tenant"] == {"code": "CN_DIYU", "display_name": "CN_DIYU 名"}
+    assert (away["civilization"], away["home_civilization"]) == ("EGYPTIAN", "CHINESE")
+
+
+def test_officer_soul_detail_reports_home_and_residence(cn, eg):
+    soul, _ = _residing(cn, eg)
+    data = officer_client(_officer("eg_judge", "JUDGE", eg)).get(f"/api/v1/souls/{soul.pk}/").data
+    assert (data["tenant_code"], data["civilization"]) == ("EG_DUAT", "EGYPTIAN")
+    assert data["home_tenant"] == {"code": "CN_DIYU", "display_name": "CN_DIYU 名"}
+    assert data["home_civilization"] == "CHINESE" and data["is_residing"] is True

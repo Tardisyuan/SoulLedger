@@ -65,6 +65,11 @@ class MeProfileSerializer(serializers.Serializer):
     birth_name = serializers.CharField()
     civilization = serializers.CharField()
     tenant = MeTenantSerializer()
+    # 2026-09-17:调拨是暂居。`tenant` / `civilization` 是此刻管辖(暂居地);
+    # `home_tenant` / `home_civilization` 是原属 —— App 按它换肤,显示「暂居 X · 原属 Y」。
+    home_tenant = MeTenantSerializer()
+    home_civilization = serializers.CharField()
+    is_residing = serializers.BooleanField()
     current_state = serializers.CharField()
     birth_date = HistoricalDateField(prefix="birth", read_only=True)
     death_date = HistoricalDateField(prefix="death", read_only=True)
