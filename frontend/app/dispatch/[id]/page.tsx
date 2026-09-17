@@ -146,9 +146,15 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       showToast(t("dispatch.return_home_success"), "success");
       queryClient.invalidateQueries({ queryKey: ["dispatch"] });
     },
-    onError: () => {
+    onError: (err: unknown) => {
       setShowReturnModal(false);
-      showToast(t("dispatch.return_home_error"), "error");
+      // 2026-09-18:灵魂仍有未结案审判时后端答 409 + code=open_judgment。说清原因,
+      // 否则官员只看到「失败」,会一直重试。
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      showToast(
+        t(code === "open_judgment" ? "dispatch.return_home_blocked_open_judgment" : "dispatch.return_home_error"),
+        "error",
+      );
     },
   });
 

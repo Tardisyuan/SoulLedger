@@ -98,6 +98,28 @@ describe("ending a residence", () => {
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("dispatch.return_home_success", "success"));
   });
 
+  it("says why when an open judgment blocks the return", async () => {
+    mockedReturn.mockRejectedValueOnce({ response: { status: 409, data: { code: "open_judgment", error: "x" } } });
+    renderPage("EXECUTED");
+    fireEvent.click(await screen.findByRole("button", { name: "dispatch.return_home" }));
+    fireEvent.change(screen.getByLabelText("dispatch.return_home_reason"), { target: { value: "送回" } });
+    const buttons = screen.getAllByRole("button", { name: "dispatch.return_home" });
+    fireEvent.click(buttons[buttons.length - 1]);
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith("dispatch.return_home_blocked_open_judgment", "error"));
+    expect(mockShowToast).not.toHaveBeenCalledWith("dispatch.return_home_error", "error");
+  });
+
+  it("keeps the generic message for any other failure", async () => {
+    mockedReturn.mockRejectedValueOnce({ response: { status: 409, data: { error: "not ongoing" } } });
+    renderPage("EXECUTED");
+    fireEvent.click(await screen.findByRole("button", { name: "dispatch.return_home" }));
+    fireEvent.change(screen.getByLabelText("dispatch.return_home_reason"), { target: { value: "送回" } });
+    const buttons = screen.getAllByRole("button", { name: "dispatch.return_home" });
+    fireEvent.click(buttons[buttons.length - 1]);
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("dispatch.return_home_error", "error"));
+  });
+
   it("is not offered without dispatch.return", async () => {
     mockHeld = new Set(["dispatch.execute"]);
     renderPage("EXECUTED");
