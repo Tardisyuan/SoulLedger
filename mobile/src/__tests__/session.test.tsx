@@ -10,7 +10,7 @@ import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
-import { RootNavigator } from "../navigation";
+import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { paletteFor } from "../theme";
@@ -67,6 +67,7 @@ describe("login", () => {
     });
     renderApp();
     await signIn(true);
+    expect(navigationRef.getRootState()?.routeNames).toEqual(["ChangePassword"]);
     expect(screen.queryByText("本世")).toBeNull();
     expect(screen.queryByText("前世")).toBeNull();
     expect(screen.queryByTestId("login-submit")).toBeNull();
@@ -114,6 +115,18 @@ describe("a stored session", () => {
     renderApp();
     await screen.findByTestId("login-submit");
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
+  });
+
+  it("a 401 on a LATER request (not the boot /me/) also returns to login — that path is onUnauthorized alone", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 401, data: { code: "token_not_valid" } },
+      "/soul-auth/refresh/": { status: 401, data: { code: "token_not_valid" } },
+    });
+    renderApp();
+    await screen.findByTestId("login-submit");
+    expect(screen.queryByTestId("profile-card")).toBeNull();
   });
 
   it("offline at start-up → a retry screen, and the session is kept", async () => {
