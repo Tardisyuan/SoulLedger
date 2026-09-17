@@ -419,6 +419,16 @@ export default function SoulDetailPage() {
           </span>
         </>
       )}
+      {/* 暂居(2026-09-17:调拨不是迁籍)。上面的文明是此刻管辖的文明;原属写在这里,
+          因为转生资格按它算 —— 只看页头的文明会以为这个灵魂没有下一世。 */}
+      {soul?.is_residing && soul.home_tenant && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span data-testid="soul-residing" title={soul.home_tenant.code}>
+            {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: soul.home_tenant.display_name })}
+          </span>
+        </>
+      )}
       {(!soul?.birth_name || soul.birth_name === soul.name) && dateRangeText && (
         <>
           <span aria-hidden="true">·</span>

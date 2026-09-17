@@ -261,3 +261,34 @@ describe("SoulDetailPage is on the query cache", () => {
     expect(screen.queryByText(FIRST_NAME)).not.toBeInTheDocument();
   });
 });
+
+describe("SoulDetailPage shows a residence", () => {
+  /* A dispatch is a residence, not a change of citizenship (2026-09-17). The
+   * header's civilization is the one that holds the soul now; the home tenant is
+   * shown beside it because rebirth eligibility is decided by home. */
+  it("names the home tenant while the soul is residing away", async () => {
+    mockSoulsGet.mockResolvedValue({
+      data: {
+        ...soulNamed(FIRST_NAME, "DISPOSED"),
+        civilization: "EGYPTIAN",
+        is_residing: true,
+        home_tenant: { code: "CN_DIYU", display_name: "中国地府" },
+        home_civilization: "CHINESE",
+      },
+    });
+    renderPage();
+    const residing = await screen.findByTestId("soul-residing");
+    expect(residing).toHaveTextContent("中国地府");
+    expect(residing).toHaveAttribute("title", "CN_DIYU");
+  });
+
+  it("says nothing about residence for a soul at home", async () => {
+    mockSoulsGet.mockResolvedValue({
+      data: { ...soulNamed(FIRST_NAME), is_residing: false, home_tenant: { code: "CN_DIYU", display_name: "中国地府" } },
+    });
+    renderPage();
+    await screen.findByText(FIRST_NAME);
+    expect(screen.queryByTestId("soul-residing")).toBeNull();
+    expect(screen.queryByText(/中国地府/)).toBeNull();
+  });
+});

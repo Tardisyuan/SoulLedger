@@ -726,8 +726,14 @@ class DispositionService:
             # nothing, when the soul cannot make that move".
             return False
 
+        if soul.is_residing:
+            return DispositionService._execute_during_residence(disposition, soul)
+
         with transaction.atomic():
-            if soul.civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
+            # 原属文明,不是管辖文明:暂居不改变灵魂有没有下一世。暂居中的灵魂走
+            # 上面那条分支,到这里的灵魂 home 与 tenant 相同 —— 除非是迁移 0036
+            # 之前被单程调拨过的存量灵魂,那时两者已经被回填成同一个。
+            if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
                 moved = soul.transition_to(
                     SoulState.REINCARNATING, "Disposition executed"
                 )
@@ -744,4 +750,45 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
+        return True
+
+    @staticmethod
+    def _execute_during_residence(disposition: Disposition, soul) -> bool:
+        """暂居中的灵魂:在暂居租户受罚完毕 → 回归原文明(2026-09-17 用户决定)。
+
+        **不推进灵魂的生命周期状态**,灵魂保持 DISPOSED 回到原属租户。下一步
+        (转生 REINCARNATING 还是终局 SETTLED)由原文明按自己的宇宙观决定 ——
+        「先在 A 受罚、再到 B」的设想里,原文明可能还有自己的处置没执行;若在这里
+        按原属文明推到 REINCARNATING,原文明那份处置就再也执行不了。
+
+        拒绝(返回 False,什么都不写):
+        * 处置不属于暂居租户 —— 原租户在灵魂离开期间执行自己的处置,会在灵魂
+          不在场时把它推进终局或轮回;
+        * 灵魂不在 DISPOSED —— 与原路径「状态不允许就不记执行」同一个契约。
+
+        永久刑期(`is_eternal`):记为已执行,**不自动回归** —— 刑期永不结束。
+        原租户或 ADMIN 仍可手动结束暂居(保守默认,待用户确认)。
+        """
+        from django.db import transaction
+        from django.utils import timezone
+
+        from apps.dispatch.services import DispatchService
+        from apps.souls.models import Soul, SoulState
+
+        with transaction.atomic():
+            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            if (
+                locked.is_deleted or not locked.is_residing
+                or disposition.tenant_id != locked.tenant_id
+                or locked.current_state != SoulState.DISPOSED
+            ):
+                return False
+            disposition.is_executed = True
+            disposition.executed_at = timezone.now()
+            disposition.save()
+            if not disposition.is_eternal:
+                DispatchService.end_residence(
+                    soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
+                    reason=f"disposition {disposition.pk} executed",
+                )
         return True

@@ -65,6 +65,11 @@ class MeProfileSerializer(serializers.Serializer):
     birth_name = serializers.CharField()
     civilization = serializers.CharField()
     tenant = MeTenantSerializer()
+    # 2026-09-17:调拨是暂居。`tenant` / `civilization` 是此刻管辖(暂居地);
+    # `home_tenant` / `home_civilization` 是原属 —— App 按它换肤,显示「暂居 X · 原属 Y」。
+    home_tenant = MeTenantSerializer()
+    home_civilization = serializers.CharField()
+    is_residing = serializers.BooleanField()
     current_state = serializers.CharField()
     birth_date = HistoricalDateField(prefix="birth", read_only=True)
     death_date = HistoricalDateField(prefix="death", read_only=True)
@@ -142,8 +147,8 @@ class MeRebirthApplicationSerializer(serializers.ModelSerializer):
         model = RebirthApplication
         fields = [
             "id", "cycle", "desired_form", "statement", "appeal_statement", "status",
-            "cross_civilization", "rejection_reason", "decided_at", "current_step", "can_appeal",
-            "created_at", "updated_at",
+            "cross_civilization", "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at",
+            "current_step", "can_appeal", "created_at", "updated_at",
         ]
 
     @extend_schema_field(MeCurrentStepSerializer(allow_null=True))
@@ -288,14 +293,16 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
     current_step = serializers.SerializerMethodField()
     can_appeal = serializers.SerializerMethodField()
     cooldown_until = serializers.SerializerMethodField()
+    can_decide_cross_civilization = serializers.SerializerMethodField()
 
     class Meta:
         model = RebirthApplication
         fields = [
             "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement",
             "appeal_statement", "status", "workflow", "appeal_workflow", "cross_civilization",
-            "rejection_reason", "decided_at", "current_step", "can_appeal", "cooldown_until",
-            "created_at", "updated_at",
+            "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at",
+            "current_step", "can_appeal", "cooldown_until",
+            "can_decide_cross_civilization", "created_at", "updated_at",
         ]
         read_only_fields = fields
 
@@ -316,6 +323,13 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
         from apps.soul_accounts.rebirth import cooldown_until
 
         return cooldown_until(obj)
+
+    def get_can_decide_cross_civilization(self, obj) -> bool:
+        """与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为 False。"""
+        from apps.soul_accounts.rebirth import cross_civilization_refusal
+
+        request = self.context.get("request")
+        return request is not None and cross_civilization_refusal(obj, request.user) is None
 
 
 class CrossCivilizationDecisionSerializer(serializers.Serializer):

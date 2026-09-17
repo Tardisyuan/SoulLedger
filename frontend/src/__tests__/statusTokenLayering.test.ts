@@ -229,7 +229,7 @@ const ENUM_MAPS_STILL_ON_FEEDBACK_TOKENS: Record<string, string> = {
     "than fixed because the argument for moving it is weak, not absent: it is " +
     "still rendered as a badge on a row.",
   "app/dispatch/[id]/page.tsx::STATUS_COLORS":
-    "PROPOSED/APPROVED/REJECTED/EXECUTED/CANCELLED — same shape as death-sync: " +
+    "PROPOSED/APPROVED/REJECTED/EXECUTED/RETURNED/CANCELLED — same shape as death-sync: " +
     "the state of a request being processed, not a judgement about a soul.",
   "app/workflow/[id]/page.tsx::STATUS_COLORS":
     "PENDING/APPROVED/REJECTED/SKIPPED/ESCALATED are approval-step states. " +

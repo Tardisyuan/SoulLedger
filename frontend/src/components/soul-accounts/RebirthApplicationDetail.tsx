@@ -5,8 +5,6 @@ import type { OfficerRebirthApplication } from "@soulledger/core/api";
 import { classifySoulAccountError, useDecideCrossCivilization } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { useTenant } from "@/src/contexts/TenantContext";
-import { usePermissions } from "@/src/hooks/usePermissions";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
@@ -17,44 +15,16 @@ interface Props {
   onClose: () => void;
 }
 
-/** The first node of a rebirth workflow (`rebirth.REBIRTH_NODES[0]`: 判官初审, EVALUATION, by ROLE). */
-const INITIAL_REVIEW_NODE_TYPE = "EVALUATION";
-
-/**
- * Whether this user may be offered the cross-civilization choice: the
- * application is in its initial review (not an appeal), the current step is
- * the EVALUATION node, and that step names this user's role.
- *
- * Read off the application's own `current_step` — no extra workflow request.
- * Mirrors `rebirth.decide_cross_civilization` + `ApprovalNode.can_approve`
- * (ROLE branch; every rebirth node is ROLE). It only decides whether the
- * control is shown — the backend decides whether the write lands, and a
- * 403/409 is reported, not hidden.
- */
-export function mayDecideCrossCivilization(
-  application: Pick<OfficerRebirthApplication, "status" | "current_step">,
-  userRole: string | undefined,
-  hasApprove: boolean
-): boolean {
-  const step = application.current_step;
-  return (
-    hasApprove &&
-    application.status === "UNDER_REVIEW" &&
-    step !== null &&
-    !step.is_appeal &&
-    step.node_type === INITIAL_REVIEW_NODE_TYPE &&
-    !!step.approver_role &&
-    step.approver_role === userRole
-  );
-}
-
 export function RebirthApplicationDetail({ application: a, onClose }: Props) {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
-  const { user } = useTenant();
-  const { hasPermission } = usePermissions();
   const decide = useDecideCrossCivilization();
-  const canDecide = mayDecideCrossCivilization(a, user?.role, hasPermission("workflow.approve"));
+  /* The backend's answer, not a local reconstruction. It is computed by the same
+   * function the `cross-civilization/` endpoint runs (`rebirth.cross_civilization_refusal`),
+   * so the control cannot be offered where the write would be refused. This used to
+   * rebuild the rule here from `current_step.node_type === "EVALUATION"` plus the role —
+   * a second copy that nothing kept in step with the first. */
+  const canDecide = a.can_decide_cross_civilization;
   const step = a.current_step;
 
   const setCross = (value: boolean) =>

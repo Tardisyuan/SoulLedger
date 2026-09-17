@@ -15,6 +15,10 @@
   简报只写了「申诉被驳回后」;未申诉的驳回也算,是更保守的读法 —— 否则
   「被驳回就换一份重新提交」可以绕过申诉与冷却(见报告「待用户确认」);
 * 只有本世账号能提交 / 申诉;前世申请只读。
+
+**一律按原属文明**(2026-09-17:跨文明调拨是暂居)。暂居他乡的中国灵魂仍可申请;
+工作流建在原属租户、由原属租户的判官与阎罗审批;冷却天数读原属租户的设置。
+调拨前提交的申请照常可申诉 —— `can_appeal` 本来就不看租户。
 """
 from datetime import timedelta
 
@@ -62,7 +66,7 @@ def eligibility(account):
     soul = account.soul
     if account.retired_at is not None:
         return False, "account_retired", None
-    if soul.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+    if soul.home_civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
         return False, "terminal_cosmology", None
     if soul.current_state not in SOUL_STATES_THAT_MAY_APPLY:
         return False, "soul_state", None
@@ -73,7 +77,7 @@ def eligibility(account):
         return False, "application_approved", None
     last = mine.filter(status__in=FINAL_REJECTIONS, decided_at__isnull=False).order_by("-decided_at").first()
     if last is not None:
-        until = last.decided_at + timedelta(days=cooldown_days(soul.tenant))
+        until = last.decided_at + timedelta(days=cooldown_days(soul.home_tenant))
         if until > timezone.now():
             return False, "cooldown", until
     return True, None, None
@@ -101,7 +105,7 @@ def _create_workflow(soul, nodes, *, name, original=None):
     workflow = ApprovalWorkflow.objects.create(
         soul=soul, workflow_name=name, case_type=CaseType.REBIRTH_APPLICATION,
         status=ApprovalWorkflowStatus.PENDING, is_appeal=original is not None,
-        original_workflow=original, tenant=soul.tenant,
+        original_workflow=original, tenant=soul.home_tenant,
     )
     created = [
         ApprovalNode.objects.create(
@@ -118,7 +122,7 @@ def _create_workflow(soul, nodes, *, name, original=None):
 
 
 def _lock_account(account):
-    return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
+    return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "soul__home_tenant", "user").get(pk=account.pk)
 
 
 def submit(account, desired_form, statement=""):
@@ -175,6 +179,9 @@ def appeal(account, application_id, statement=""):
         application.appeal_workflow = workflow
         application.appeal_statement = statement
         application.status = RebirthApplicationStatus.APPEALING
+        # 首次驳回留档,再清空「最近一次决定」两列给申诉结论用(见模型上的注释)。
+        application.first_rejection_reason = application.rejection_reason
+        application.first_decided_at = application.decided_at
         application.rejection_reason = ""
         application.decided_at = None
         application.save()
@@ -230,7 +237,7 @@ def cooldown_until(application):
     """这份申请的终局驳回引起的冷却截止时刻;不在冷却中为 None。"""
     if application.status not in FINAL_REJECTIONS or application.decided_at is None:
         return None
-    until = application.decided_at + timedelta(days=cooldown_days(application.soul.tenant))
+    until = application.decided_at + timedelta(days=cooldown_days(application.soul.home_tenant))
     return until if until > timezone.now() else None
 
 
@@ -291,6 +298,29 @@ def _announce_status(application, old_status):
     )
 
 
+def cross_civilization_refusal(application, user):
+    """`user` 此刻能不能决定这份申请是否跨文明。None = 能;否则是拒绝它的 SoulAccountError。
+
+    **唯一一处判定。** `decide_cross_civilization`(`cross-civilization/` 端点)在行锁下调用它,
+    官员侧序列化器的 `can_decide_cross_civilization` 也调用它 —— 前端按钮只读那个字段,
+    不再自己拼「node_type == EVALUATION 且角色相同」。两处各写一份,就会有一天按钮亮着而端点 403。
+    """
+    from apps.perm.checker import check_permission
+
+    workflow = application.workflow
+    first = workflow.nodes.order_by("node_order").first()
+    if (
+        application.status != RebirthApplicationStatus.UNDER_REVIEW or application.appeal_workflow_id is not None
+        or first is None or workflow.current_node_id != first.pk or first.status != "PENDING"
+    ):
+        return SoulAccountError("初审已结束,不能再决定是否跨文明。", "not_in_initial_review", 409)
+    if not check_permission(user, "workflow.approve"):
+        return SoulAccountError("没有审批权限。", "missing_permission", 403)
+    if not first.can_approve(user):
+        return SoulAccountError("只有初审节点指定的审批人可以决定。", "not_the_approver", 403)
+    return None
+
+
 def decide_cross_civilization(application_id, user, value: bool):
     """判官初审决定是否跨文明。只在初审节点仍待决、且调用者正是该节点指定的审批人时可写。
     跨文明时只发事件 —— 本服务不去写目标文明的任何数据(分库约束)。"""
@@ -301,15 +331,10 @@ def decide_cross_civilization(application_id, user, value: bool):
             RebirthApplication.objects.select_for_update(of=("self",))
             .select_related("workflow__current_node", "soul__tenant").get(pk=application_id)
         )
+        refusal = cross_civilization_refusal(application, user)
+        if refusal is not None:
+            raise refusal
         workflow = application.workflow
-        first = workflow.nodes.order_by("node_order").first()
-        if (
-            application.status != RebirthApplicationStatus.UNDER_REVIEW
-            or first is None or workflow.current_node_id != first.pk or first.status != "PENDING"
-        ):
-            raise SoulAccountError("初审已结束,不能再决定是否跨文明。", "not_in_initial_review", 409)
-        if not first.can_approve(user):
-            raise SoulAccountError("只有初审节点指定的审批人可以决定。", "not_the_approver", 403)
         application.cross_civilization = value
         application.save(update_fields=["cross_civilization", "updated_at"])
         workflow.cross_civilization = value

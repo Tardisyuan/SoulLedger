@@ -269,6 +269,23 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         related_name='souls',
         null=True,
     )
+    # 原属租户(2026-09-17 用户决定:跨文明调拨是**暂居**,不是迁籍)。
+    #
+    # `tenant` 是「此刻由谁管辖」:审判、处置、功过读法、官员可见性都跟它走,
+    # 调拨执行时它切到目标租户,目标文明的官员据此执行处置 —— 租户隔离沿用现状。
+    # `home_tenant` 是「属于哪个文明」:转生资格、转生申请与申诉、灵魂账号都跟它走,
+    # 调拨不改它。`tenant != home_tenant` 就是暂居;处置执行完毕或官员手动结束暂居时
+    # `tenant` 回到 `home_tenant`(apps/dispatch/services.py::DispatchService.end_residence)。
+    #
+    # 可空只因为 `tenant` 可空;新建时由 save() 置为 tenant,迁移 0036 把存量回填为当前 tenant。
+    home_tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='home_souls',
+        null=True,
+        editable=False,
+        help_text="原属租户:调拨暂居期间不变;转生资格按它的文明计算。",
+    )
 
     # 灵魂编号 —— 灵魂端 App 的登录名(docs/ARCHITECTURE-soul-app-and-domain-split.md
     # 2026-09-17「登录名」)。此前 Soul 上没有任何稳定的业务编号(只有 UUID 主键),
@@ -340,6 +357,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         if is_new and self.tenant_id is None:
             from django.core.exceptions import ValidationError
             raise ValidationError("Tenant is required when creating a Soul.")
+        if is_new and self.home_tenant_id is None:
+            self.home_tenant_id = self.tenant_id
 
         super().save(*args, **kwargs)
 
@@ -363,6 +382,21 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         if self.tenant_id is None:
             return UNKNOWN_CIVILIZATION
         return TENANT_CIVILIZATION.get(self.tenant.code, UNKNOWN_CIVILIZATION)
+
+    @property
+    def home_civilization(self) -> str:
+        """原属文明:转生资格只问这个(暂居不改变灵魂属于哪个宇宙观)。
+        `civilization` 仍是管辖文明 —— 审判方法、处置路由、功过读法按它。"""
+        if self.home_tenant_id is None:
+            # 只有绕过 save() 的写法(bulk_create)会留下空值;那样的灵魂从未被调拨过,
+            # 退回管辖文明,而不是把它判成「未知文明、没有转生」。
+            return self.civilization
+        return TENANT_CIVILIZATION.get(self.home_tenant.code, UNKNOWN_CIVILIZATION)
+
+    @property
+    def is_residing(self) -> bool:
+        """被调拨到别的文明暂居中。"""
+        return self.home_tenant_id is not None and self.tenant_id != self.home_tenant_id
 
     @property
     def karmic_balance(self) -> int:
@@ -528,17 +562,28 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # The check belongs here rather than on the action, because "which
             # doors have the gate" is the question that produced the hole. Any
             # future writer of this edge inherits it.
+            # 暂居中不进轮回、也不进终局(2026-09-17:调拨是暂居)。下一世还是终局,
+            # 由原文明在灵魂回归之后决定;暂居租户替它决定,等于把迁籍从后门做回来。
+            if locked_soul.is_residing and new_state in (SoulState.REINCARNATING, SoulState.SETTLED):
+                logger.warning(
+                    "Refused %s for %s: the soul is residing away from its home tenant.",
+                    new_state,
+                    self.pk,
+                )
+                return False
+
             if new_state == SoulState.REINCARNATING:
                 from apps.ledger.services import (
                     REBIRTH_CAPABLE_CIVILIZATIONS,
                 )
 
-                if self.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+                # 原属文明:暂居不改变灵魂有没有下一世。
+                if locked_soul.home_civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
                     logger.warning(
                         "Refused REINCARNATING for %s: %s is a terminal "
                         "cosmology.",
                         self.pk,
-                        self.civilization,
+                        locked_soul.home_civilization,
                     )
                     return False
 

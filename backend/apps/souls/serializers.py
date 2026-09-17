@@ -426,6 +426,11 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         ))
 
 
+class SoulHomeTenantSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
 class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     """Soul detail. Field access is enforced in two layers, deliberately.
 
@@ -460,6 +465,11 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # clients that read a soul then POST a judgment (which requires
     # `civilization`) got a 400 back.
     civilization = serializers.CharField(read_only=True)
+    # 2026-09-17:调拨是暂居。`tenant` / `civilization` 是此刻管辖;`home_tenant` 是原属,
+    # 转生资格按它。`is_residing` = 两者不同。与 /api/v1/me/ 同名同形。
+    home_tenant = SoulHomeTenantSerializer(read_only=True)
+    home_civilization = serializers.CharField(read_only=True)
+    is_residing = serializers.BooleanField(read_only=True)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -481,6 +491,7 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         model = Soul
         fields = [
             "id", "name", "current_state", "tenant_code", "tenant", "civilization",
+            "home_tenant", "home_civilization", "is_residing",
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",

@@ -61,6 +61,12 @@ class ReincarnationService:
         to look at where the soul is now.
         """
         soul = disposition.soul
+        # 暂居租户写的处置(2026-09-17:调拨是暂居)。它执行完毕时灵魂已经回到原属
+        # (DispositionService._execute_during_residence),下一世由原文明决定 ——
+        # 这里若照常推 DISPOSED → REINCARNATING,就是暂居租户替原文明做了决定。
+        # 实测:没有这一行时,埃及官员执行暂居处置的那一次请求把回归的中国灵魂推进了轮回。
+        if soul.home_tenant_id is not None and disposition.tenant_id != soul.home_tenant_id:
+            return False
         if soul.current_state != SoulState.REINCARNATING:
             soul.transition_to(
                 SoulState.REINCARNATING,

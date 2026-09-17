@@ -12,7 +12,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import RebirthApplicationsPage from "@/app/rebirth-applications/page";
-import { mayDecideCrossCivilization } from "@/src/components/soul-accounts/RebirthApplicationDetail";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -56,6 +55,9 @@ function application(over: Record<string, unknown> = {}) {
     current_step: INITIAL_STEP as typeof INITIAL_STEP | null,
     can_appeal: false,
     cooldown_until: null as string | null,
+    can_decide_cross_civilization: false,
+    first_rejection_reason: "",
+    first_decided_at: null as string | null,
     created_at: "2026-09-17T00:00:00Z",
     updated_at: "2026-09-17T00:00:00Z",
     ...over,
@@ -179,9 +181,15 @@ it("an appealed application says the one appeal is used and labels the step as a
 });
 
 describe("cross-civilization", () => {
-  it("offered to the role named by the initial-review step, and it posts", async () => {
+  /* The dialog offers the decision exactly when the backend says
+   * `can_decide_cross_civilization` — the field is computed by the same function the
+   * endpoint runs. Nothing here may re-derive it from the step or the role. */
+  it("offered when the backend says so, and it posts", async () => {
     as("JUDGE", "workflow.read", "workflow.approve");
-    soulAccountsApi.decideCrossCivilization.mockResolvedValue({ data: application({ cross_civilization: true }) });
+    soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ can_decide_cross_civilization: true })]));
+    soulAccountsApi.decideCrossCivilization.mockResolvedValue({
+      data: application({ cross_civilization: true, can_decide_cross_civilization: true }),
+    });
     renderPage();
     const dialog = await openDetail();
     const decision = within(dialog).getByTestId("cross-civilization-decision");
@@ -190,43 +198,32 @@ describe("cross-civilization", () => {
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.rebirth.cross_saved"), "success"));
   });
 
-  it("not offered without workflow.approve", async () => {
-    as("JUDGE", "workflow.read");
+  it("not offered when the backend says no, even to the initial-review role holding workflow.approve", async () => {
+    as("JUDGE", "workflow.read", "workflow.approve");
     renderPage();
     const dialog = await openDetail();
     expect(within(dialog).queryByTestId("cross-civilization-decision")).toBeNull();
   });
 
+  it("does not read the step's node type: offered on a non-EVALUATION step when the backend allows it", async () => {
+    as("VIEWER", "workflow.read");
+    soulAccountsApi.rebirthApplications.mockResolvedValue(
+      page([application({ can_decide_cross_civilization: true, current_step: { node_type: "TRIAL", approver_role: "ADMIN", is_appeal: false } })])
+    );
+    renderPage();
+    const dialog = await openDetail();
+    expect(within(dialog).getByTestId("cross-civilization-decision")).toBeInTheDocument();
+  });
+
   it("a 403 from the backend is reported, not swallowed", async () => {
     as("JUDGE", "workflow.read", "workflow.approve");
+    soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ can_decide_cross_civilization: true })]));
     soulAccountsApi.decideCrossCivilization.mockRejectedValue(http(403, { detail: "x", code: "not_the_approver" }));
     renderPage();
     const dialog = await openDetail();
     const decision = within(dialog).getByTestId("cross-civilization-decision");
     fireEvent.click(within(decision).getByRole("button", { name: tZh("soul_accounts.rebirth.cross.no") }));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.rebirth.cross_not_approver"), "error"));
-  });
-
-  it.each([
-    ["another role", { role: "ADMIN" }],
-    ["past the initial review (FINAL step)", { step: { node_type: "FINAL", approver_role: "ADMIN", is_appeal: false }, role: "ADMIN" }],
-    ["an appeal step", { step: { node_type: "EVALUATION", approver_role: "JUDGE", is_appeal: true } }],
-    ["no current step", { step: null }],
-    ["not under review", { status: "REJECTED" }],
-    ["no workflow.approve", { approve: false }],
-  ] as const)("mayDecideCrossCivilization: false for %s", (_label, over) => {
-    const o = over as { role?: string; step?: typeof INITIAL_STEP | null; status?: string; approve?: boolean };
-    expect(
-      mayDecideCrossCivilization(
-        { status: (o.status ?? "UNDER_REVIEW") as never, current_step: o.step === undefined ? INITIAL_STEP : o.step },
-        o.role ?? "JUDGE",
-        o.approve ?? true
-      )
-    ).toBe(false);
-  });
-
-  it("mayDecideCrossCivilization: true for the matching role on the initial-review step", () => {
-    expect(mayDecideCrossCivilization({ status: "UNDER_REVIEW", current_step: INITIAL_STEP }, "JUDGE", true)).toBe(true);
   });
 });
 
