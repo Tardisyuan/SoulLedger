@@ -4,13 +4,13 @@
  * item is the civilization's emblem in its mark colour with a 2px rule on top.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Emblem, Icon, type IconName } from "./emblems";
 import { useAskLogout } from "./feedback";
 import { useI18n } from "./i18n";
-import { GUTTER, Txt, useTheme } from "./ui";
+import { Txt, useLayout, useTheme } from "./ui";
 
 export function AppHeader({
   title,
@@ -26,9 +26,10 @@ export function AppHeader({
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
   const askLogout = useAskLogout();
+  const { compact } = useLayout();
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: t.s0, borderBottomWidth: 1, borderBottomColor: t.hair }}>
-      <View style={styles.bar}>
+      <View style={[styles.bar, compact && styles.barCompact]}>
         {onBack ? (
           <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
             <Icon name="back" size={17} color={t.inkMuted} strokeWidth={1.4} />
@@ -61,10 +62,16 @@ const TAB_ICONS: Record<string, IconName> = { Life: "ledger", PastLives: "lock",
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  // Handoff 1g rule 五: at 200% system text, labels go and the emblem + accessible name stay.
-  const labelsFit = useWindowDimensions().fontScale < 2;
+  // Handoff 2d (supersedes 1g rule 五): at ≥ 1.7× text the three items become three
+  // rows — same component, same selected state — instead of dropping their labels.
+  const { stack } = useLayout();
   return (
-    <View style={[styles.tabs, { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View
+      style={[
+        stack ? styles.tabsStacked : styles.tabs,
+        { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: Math.max(insets.bottom, 8) },
+      ]}
+    >
       {state.routes.map((route, index) => {
         const selected = state.index === index;
         const label = descriptors[route.key].options.title ?? route.name;
@@ -80,9 +87,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!selected && !event.defaultPrevented) navigation.navigate(route.name, route.params);
             }}
-            style={styles.tab}
+            style={stack ? [styles.tabRow, { borderBottomColor: t.hair }] : styles.tab}
           >
-            <View style={[styles.tabRule, { backgroundColor: selected ? t.mark : "transparent" }]} />
+            <View style={[stack ? styles.tabRuleSide : styles.tabRule, { backgroundColor: selected ? t.mark : "transparent" }]} />
             <View style={styles.tabIcon}>
               {selected ? (
                 <Emblem civ={t.civ} size={24} stroke={t.mark} strokeWidth={2.2} />
@@ -90,11 +97,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={18} color={t.inkSubtle} strokeWidth={1.2} />
               )}
             </View>
-            {labelsFit ? (
-              <Txt variant="label" numberOfLines={2} style={[styles.tabLabel, { color }]}>
-                {label}
-              </Txt>
-            ) : null}
+            <Txt variant="label" numberOfLines={2} style={[styles.tabLabel, { color }]}>
+              {label}
+            </Txt>
           </Pressable>
         );
       })}
@@ -104,10 +109,14 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
 const styles = StyleSheet.create({
   bar: { minHeight: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: 6 },
+  barCompact: { minHeight: 46, paddingHorizontal: 2 },
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   title: { flex: 1, paddingHorizontal: 4 },
   tabs: { flexDirection: "row", borderTopWidth: 1 },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: GUTTER / 4, paddingVertical: 6 },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 5, paddingVertical: 6 },
+  tabsStacked: { flexDirection: "column", borderTopWidth: 1 },
+  tabRow: { minHeight: 80, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
+  tabRuleSide: { position: "absolute", top: 0, bottom: 0, left: 0, width: 2 },
   tabRule: { position: "absolute", top: -1, left: 0, right: 0, height: 2 },
   tabIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
   tabLabel: { fontSize: 11, letterSpacing: 0.6, textAlign: "center" },

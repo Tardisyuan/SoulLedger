@@ -1916,7 +1916,9 @@
       "record_count": "共 {{count}} 条记录",
       "copy_code": "复制灵魂编号",
       "code_copied": "灵魂编号已复制",
-      "code_copy_failed": "复制失败"
+      "code_copy_failed": "复制失败",
+      "residing": "暂居 {{current}} · 原属 {{home}}",
+      "record_count_short": "共 {{count}} 条"
     },
     "past_lives": {
       "title": "前世",
@@ -1986,7 +1988,7 @@
       "account_retired": "账号已停用",
       "application_open": "已有一份进行中的转生申请",
       "cooldown": "驳回后的冷却期内不能重新申请",
-      "terminal_cosmology": "你所属的文明没有转生",
+      "terminal_cosmology": "你所属的文明没有转生。此处的去向是终局。",
       "soul_state": "当前状态不能申请转生",
       "application_approved": "本世的转生申请已获批准",
       "appeal_used": "这份申请已经申诉过",
@@ -2002,8 +2004,28 @@
     },
     "lexicon": {
       "eg": {
-        "merit": "心之重",
-        "demerit": "羽之重"
+        "merit": "羽侧",
+        "demerit": "心侧",
+        "merit_entry": "羽",
+        "demerit_entry": "心",
+        "records": "羽侧与心侧记录",
+        "judgments": "称心",
+        "court": "审理厅",
+        "judging": "称心中",
+        "past_read_only": "前世记录只读。杜阿特不受理申请与申诉。",
+        "no_past_lives": "杜阿特没有前世。你只有这一世，此后不再入簿。",
+        "no_rebirth_title": "杜阿特没有转生",
+        "no_rebirth_body": "这里不会有申请，现在没有，以后也不会有。称心之后你的去向即为终局，不经此页。"
+      },
+      "default": {
+        "no_rebirth_title": "你所属的文明没有转生",
+        "no_rebirth_body": "这里不会有申请，现在没有，以后也不会有。此处的去向即为终局，不经此页。"
+      },
+      "eu": {
+        "past_read_only": "前世记录只读。天堂与地狱不受理申请与申诉。",
+        "no_past_lives": "天堂与地狱没有前世。你只有这一世，此后不再入簿。",
+        "no_rebirth_title": "天堂与地狱没有转生",
+        "no_rebirth_body": "这里不会有申请，现在没有，以后也不会有。审判之后你的去向即为终局，不经此页。"
       }
     },
     "logout": {
@@ -2021,11 +2043,14 @@
     },
     "timeline": {
       "submitted": "提交",
-      "rejected": "驳回",
       "appealed": "申诉",
-      "appeal_open": "可申诉",
-      "outcome_pending": "结论 · 待定",
-      "in_progress": "进行中"
+      "decided": "决定 · {{status}}",
+      "appeal_once": "可申诉一次",
+      "under_review": "审批中",
+      "appeal_review": "申诉复核中",
+      "no_time": "无时间戳",
+      "decision": "决定",
+      "pending": "待定"
     }
   }
 }

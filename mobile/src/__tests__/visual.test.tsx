@@ -99,6 +99,7 @@ describe("a past life has no action in it", () => {
         sealed
         onOpenApplication={onOpen}
         onToggle={jest.fn()}
+        lex="cn"
         life={life(0, { rebirth_applications: [application({ cycle: 0, status: "REJECTED", can_appeal: true })] }) as never}
       />
     );
@@ -110,6 +111,7 @@ describe("a past life has no action in it", () => {
     wrap(
       <LifeSections
         onOpenApplication={jest.fn()}
+        lex="cn"
         life={life(1, { rebirth_applications: [application({ id: "a9" })] }) as never}
       />
     );

@@ -13,10 +13,10 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Icon } from "../emblems";
+import { Emblem, Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, formatStamp, timelineOf, type TimelineStep } from "../rules";
+import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, type FlowStep } from "../rules";
 import {
   Block,
   Button,
@@ -38,14 +38,40 @@ import {
   enumText,
   useReloadOnRefocus,
   useRemote,
+  useLayout,
   useTheme,
 } from "../ui";
+import { useResidence } from "./life";
 
 export type AppStackParams = {
   Tabs: undefined;
   NewApplication: undefined;
   ApplicationDetail: { id: string };
 };
+
+/**
+ * The server's `terminal_cosmology`: this soul's (home) civilization has no
+ * rebirth. The entry stays — permanently disabled, with the fixed reason — and
+ * the empty list says why it will stay empty (handoff 2a/2f).
+ */
+export const TERMINAL_REASON = "terminal_cosmology";
+
+function TerminalEmpty() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const { home } = useResidence();
+  return (
+    <View testID="terminal-empty" style={styles.terminal}>
+      <Emblem civ={home} size={24} stroke={theme.hair2} strokeWidth={2} />
+      <Txt variant="nav" style={styles.center}>
+        {t(lexiconKey(home, "no_rebirth_title"))}
+      </Txt>
+      <Txt variant="caption" tone="subtle" style={styles.center}>
+        {t(lexiconKey(home, "no_rebirth_body"))}
+      </Txt>
+    </View>
+  );
+}
 
 /**
  * Whether the "apply" entry is offered. The server decides (`can_apply`), and
@@ -82,12 +108,13 @@ export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationL
 
 function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => void }) {
   const theme = useTheme();
+  const { gutter } = useLayout();
   return (
     <Pressable
       testID={`open-${a.id}`}
       accessibilityRole="button"
       onPress={onOpen}
-      style={({ pressed }) => [styles.appRow, { borderBottomColor: theme.hair }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
     >
       <View style={styles.fill}>
         <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
@@ -124,7 +151,13 @@ export function ApplicationsScreen() {
       ) : (
         <FadeIn>
           <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} />
-          {list.data.results.length === 0 ? <Empty text={t("soul_app.applications.empty")} /> : null}
+          {list.data.results.length === 0 ? (
+            list.data.reason === TERMINAL_REASON ? (
+              <TerminalEmpty />
+            ) : (
+              <Empty text={t("soul_app.applications.empty")} />
+            )
+          ) : null}
           {list.data.results.map((a) => (
             <ApplicationRow key={a.id} a={a} onOpen={() => navigation.navigate("ApplicationDetail", { id: a.id })} />
           ))}
@@ -137,6 +170,7 @@ export function ApplicationsScreen() {
 function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; selected: boolean; onPick: () => void }) {
   const theme = useTheme();
   const { t } = useI18n();
+  const { compact } = useLayout();
   return (
     <Pressable
       testID={`form-${form}`}
@@ -153,7 +187,8 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
         {selected ? <View style={[styles.dotFill, { backgroundColor: theme.mark }]} /> : null}
       </View>
       <View style={styles.fill}>
-        <View style={styles.formName}>
+        {/* 320pt: the enum member moves under the name (handoff 2c). */}
+        <View style={compact ? undefined : styles.formName}>
           <Txt variant="bodyLg">{t(`reincarnation.forms.${form}`)}</Txt>
           <Txt variant="value" tone="subtle" style={styles.formCode}>
             {form}
@@ -244,15 +279,19 @@ export function NewApplicationScreen() {
   );
 }
 
-function Timeline({ steps }: { steps: TimelineStep[] }) {
+/**
+ * The flow (handoff 2e): done = solid mark with its time; now = hollow accent,
+ * no time; todo = 1px empty box. The rail joins what has happened; after the
+ * current step it is dashed, because how many steps follow is unknown. At
+ * large text the rail goes and the boxes grow to 16.
+ */
+/** A namespace, not a key: messages.test harvests quoted `soul_app.*` literals as keys, and covers this namespace separately. */
+const STATUS_NAMESPACE = ["soul_app", "status"].join(".");
+
+function Flow({ steps }: { steps: FlowStep[] }) {
   const theme = useTheme();
   const { t, enumLabel } = useI18n();
-  const label = (step: TimelineStep) => {
-    if ("key" in step.label) return t(step.label.key);
-    const node = enumText(enumLabel("workflow.node_type", step.label.node), t);
-    const role = enumText(enumLabel("users.roles", step.label.role), t);
-    return [node, role, step.label.appeal ? t("soul_app.detail.appeal_round") : null].filter(Boolean).join(" · ");
-  };
+  const { stack } = useLayout();
   return (
     <View testID="timeline">
       {steps.map((step, i) => {
@@ -263,20 +302,39 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
             : step.state === "now"
               ? { backgroundColor: theme.s0, borderColor: theme.accent, borderWidth: 2 }
               : { backgroundColor: "transparent", borderColor: theme.hair2, borderWidth: 1 };
-        const when = step.at ? formatStamp(step.at) : step.state === "now" ? t("soul_app.timeline.in_progress") : null;
+        const name = step.name.status
+          ? t(step.name.key, { status: enumText(enumLabel(STATUS_NAMESPACE, step.name.status), t) })
+          : t(step.name.key);
+        const sub = [step.role ? enumText(enumLabel("users.roles", step.role), t) : null, step.note ? t(step.note) : null]
+          .filter(Boolean)
+          .join(" · ");
         return (
           <View key={step.key} testID={`step-${step.key}`} style={styles.step}>
-            <View style={styles.rail}>
-              <View testID={`step-${step.key}-${step.state}`} style={[styles.stepDot, dot]} />
-              {last ? null : <View style={[styles.stepLine, { backgroundColor: theme.hair }]} />}
+            <View style={[styles.rail, stack && styles.railStacked]}>
+              <View testID={`step-${step.key}-${step.state}`} style={[stack ? styles.stepDotLarge : styles.stepDot, dot]} />
+              {last || stack ? null : (
+                <View
+                  testID={step.dashedAfter ? `step-${step.key}-dashed` : undefined}
+                  style={
+                    step.dashedAfter
+                      ? [styles.stepLineDashed, { borderColor: theme.hair2 }]
+                      : [styles.stepLine, { backgroundColor: theme.hair }]
+                  }
+                />
+              )}
             </View>
             <View style={[styles.fill, !last && styles.stepGap]}>
               <Txt variant="bodyLg" tone={step.state === "todo" ? "subtle" : "ink"} style={styles.stepName}>
-                {label(step)}
+                {name}
               </Txt>
-              {when ? (
+              {step.at ? (
                 <Txt variant="value" tone="subtle" style={styles.stepWhen}>
-                  {when}
+                  {formatStamp(step.at)}
+                </Txt>
+              ) : null}
+              {sub ? (
+                <Txt variant="caption" tone="subtle" style={styles.stepWhen}>
+                  {sub}
                 </Txt>
               ) : null}
             </View>
@@ -370,7 +428,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
           <Txt variant="section" style={styles.heading}>
             {t("soul_app.detail.flow")}
           </Txt>
-          <Timeline steps={timelineOf(a)} />
+          <Flow steps={buildFlow(a)} />
         </Block>
 
         {a.statement ? (
@@ -461,6 +519,11 @@ const styles = StyleSheet.create({
   rail: { width: 22, alignItems: "center" },
   stepDot: { width: 11, height: 11, marginTop: 5 },
   stepLine: { flex: 1, width: 1, marginVertical: 4 },
+  stepLineDashed: { flex: 1, width: 0, marginVertical: 4, borderLeftWidth: 1, borderStyle: "dashed" },
+  stepDotLarge: { width: 16, height: 16, marginTop: 3 },
+  railStacked: { width: 16 },
+  terminal: { alignItems: "center", gap: 12, paddingHorizontal: 28, paddingVertical: 40 },
+  center: { textAlign: "center" },
   stepGap: { paddingBottom: 22 },
   stepName: { fontSize: 14, lineHeight: 21 },
   stepWhen: { fontSize: 12, marginTop: 3 },
