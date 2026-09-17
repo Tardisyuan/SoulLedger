@@ -21,7 +21,8 @@ from tests.soul_account_support import dead_soul, ready_soul, soul_client
 pytestmark = pytest.mark.django_db
 
 PROFILE_KEYS = {
-    "soul_code", "name", "birth_name", "civilization", "tenant", "current_state", "birth_date", "death_date",
+    "soul_code", "name", "birth_name", "civilization", "tenant", "home_tenant", "home_civilization", "is_residing",
+    "current_state", "birth_date", "death_date",
     "origin_location", "merit_score", "demerit_score", "account",
 }
 ACCOUNT_KEYS = {"cycle", "must_change_password", "initial_password_expires_at", "created_at"}

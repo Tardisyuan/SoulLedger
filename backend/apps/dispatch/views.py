@@ -24,6 +24,7 @@ from apps.dispatch.serializers import (
     DispatchRecordListSerializer,
     DispatchRecordSerializer,
     DispatchRejectSerializer,
+    DispatchReturnSerializer,
 )
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
 from apps.perm.filters import DataScopeFilter
@@ -87,6 +88,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         'approve': ['dispatch.approve'],
         'reject': ['dispatch.reject'],
         'execute': ['dispatch.execute'],
+        'return_home': ['dispatch.return'],
         'create': ['dispatch.manage'],
         'update': ['dispatch.manage'],
         'partial_update': ['dispatch.manage'],
@@ -320,7 +322,9 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):
         """
-        Execute an approved dispatch.
+        Execute an approved dispatch: the soul starts residing in the target
+        tenant. Not a change of citizenship — it returns home automatically when
+        its disposition there is executed, or through `return-home`.
         """
         dispatch_record = self.get_object()
         # S-C1: Verify executor is from target tenant
@@ -333,6 +337,42 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return Response(DispatchRecordSerializer(dispatch_record).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(request=DispatchReturnSerializer, responses=DispatchRecordSerializer)
+    @action(detail=True, methods=["post"], url_path="return-home")
+    def return_home(self, request, pk=None):
+        """
+        End a residence early: the soul goes back to its home tenant.
+
+        Only the soul's home tenant (or ADMIN) may do this. The residence tenant
+        cannot send a soul home on its own say-so — that is what executing its
+        disposition does — and a third tenant never sees the record at all.
+        """
+        dispatch_record = self.get_object()
+        soul = dispatch_record.soul
+        if not is_tenant_exempt(request.user):
+            requester_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+            if requester_tenant is None or requester_tenant.pk != soul.home_tenant_id:
+                return Response(
+                    {"error": "Only the soul's home tenant may end its residence"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        if dispatch_record.status != DispatchStatus.EXECUTED or soul.tenant_id != dispatch_record.target_tenant_id:
+            return Response(
+                {"error": "This dispatch is not an ongoing residence"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        body = DispatchReturnSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            DispatchService.end_residence(
+                soul, actor=request.user, trigger=DispatchService.RETURN_MANUAL,
+                reason=body.validated_data["reason"],
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
+        dispatch_record.refresh_from_db()
+        return Response(DispatchRecordSerializer(dispatch_record).data)
 
 
 def _participants_with_names():

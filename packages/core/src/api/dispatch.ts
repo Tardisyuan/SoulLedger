@@ -37,6 +37,8 @@ export interface DispatchRecord {
   proposed_at: string;
   decided_at: string | null;
   executed_at: string | null;
+  /** When the residence ended and the soul went back to its home tenant (status RETURNED). */
+  returned_at: string | null;
   create_time: string;
   update_time: string;
 }
@@ -95,6 +97,12 @@ export const dispatchApi = {
   approve: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/approve/`),
   reject: (id: string, reason?: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/reject/`, { reason }),
   execute: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/execute/`),
+  // A dispatch is a residence, not a change of citizenship (2026-09-17). An
+  // EXECUTED record is an ongoing residence; the soul goes home by itself when
+  // its disposition there is executed. This ends it early. Home tenant or ADMIN
+  // only (403 otherwise); `reason` is required and lands in the audit log.
+  returnHome: (id: string, reason: string) =>
+    api.post<DispatchRecord>(`/dispatch/records/${id}/return-home/`, { reason }),
   // `/dispatch/records/proposed/`, not the list filtered by status. The list
   // returns both sides of a transfer — `Q(source_tenant=…) | Q(target_tenant=…)`
   // — while `approve` refuses anyone but the target. So filtering the list by

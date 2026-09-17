@@ -1664,6 +1664,9 @@ def test_seeding_actually_moved_those_codenames_onto_the_db_path(
         "dispatch.manage",
         "dispatch.read",
         "dispatch.reject",
+        # 2026-09-17(调拨改为暂居):结束暂居。与同族其余五条一样不由迁移播种,
+        # 走 ROLE_PERMISSIONS 字典路径。
+        "dispatch.return",
         "notification.read",
         "reincarnation.complete",
         "reincarnation.manage",

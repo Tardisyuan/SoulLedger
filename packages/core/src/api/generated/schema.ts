@@ -851,7 +851,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Execute an approved dispatch. */
+        /**
+         * @description Execute an approved dispatch: the soul starts residing in the target
+         *     tenant. Not a change of citizenship — it returns home automatically when
+         *     its disposition there is executed, or through `return-home`.
+         */
         post: operations["v1_dispatch_records_execute_create"];
         delete?: never;
         options?: never;
@@ -870,6 +874,29 @@ export interface paths {
         put?: never;
         /** @description Reject a proposed dispatch. */
         post: operations["v1_dispatch_records_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/records/{id}/return-home/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description End a residence early: the soul goes back to its home tenant.
+         *
+         *     Only the soul's home tenant (or ADMIN) may do this. The residence tenant
+         *     cannot send a soul home on its own say-so — that is what executing its
+         *     disposition does — and a third tenant never sees the record at all.
+         */
+        post: operations["v1_dispatch_records_return_home_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5134,6 +5161,8 @@ export interface components {
             /** Format: date-time */
             readonly executed_at: string | null;
             /** Format: date-time */
+            readonly returned_at: string | null;
+            /** Format: date-time */
             readonly create_time: string;
             /** Format: date-time */
             readonly update_time: string;
@@ -5154,16 +5183,23 @@ export interface components {
             readonly proposed_at: string;
             /** Format: date-time */
             executed_at?: string | null;
+            /** Format: date-time */
+            returned_at?: string | null;
+        };
+        /** @description 手动结束暂居。理由必填:这是一次越过「处置执行完毕」的决定,审计里要说得清为什么。 */
+        DispatchReturn: {
+            reason: string;
         };
         /**
          * @description * `PROPOSED` - 待审批
          *     * `APPROVED` - 已批准
          *     * `REJECTED` - 已拒绝
          *     * `EXECUTED` - 已执行
+         *     * `RETURNED` - 已回归
          *     * `CANCELLED` - 已取消
          * @enum {string}
          */
-        DispatchStatusEnum: "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "CANCELLED";
+        DispatchStatusEnum: "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "RETURNED" | "CANCELLED";
         /**
          * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
          *
@@ -5796,6 +5832,9 @@ export interface components {
             birth_name: string;
             civilization: string;
             tenant: components["schemas"]["MeTenant"];
+            home_tenant: components["schemas"]["MeTenant"];
+            home_civilization: string;
+            is_residing: boolean;
             current_state: string;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             readonly birth_date: {
@@ -5832,6 +5871,9 @@ export interface components {
             rejection_reason?: string;
             /** Format: date-time */
             decided_at?: string | null;
+            first_rejection_reason?: string;
+            /** Format: date-time */
+            first_decided_at?: string | null;
             readonly current_step: components["schemas"]["MeCurrentStep"] | null;
             readonly can_appeal: boolean;
             /** Format: date-time */
@@ -6066,10 +6108,15 @@ export interface components {
             readonly rejection_reason: string;
             /** Format: date-time */
             readonly decided_at: string | null;
+            readonly first_rejection_reason: string;
+            /** Format: date-time */
+            readonly first_decided_at: string | null;
             readonly current_step: components["schemas"]["MeCurrentStep"] | null;
             readonly can_appeal: boolean;
             /** Format: date-time */
             readonly cooldown_until: string | null;
+            /** @description 与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为 False。 */
+            readonly can_decide_cross_civilization: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -6844,6 +6891,8 @@ export interface components {
             /** Format: date-time */
             readonly executed_at?: string | null;
             /** Format: date-time */
+            readonly returned_at?: string | null;
+            /** Format: date-time */
             readonly create_time?: string;
             /** Format: date-time */
             readonly update_time?: string;
@@ -7095,6 +7144,9 @@ export interface components {
             readonly tenant_code?: string;
             readonly tenant?: number;
             readonly civilization?: string;
+            readonly home_tenant?: components["schemas"]["SoulHomeTenant"];
+            readonly home_civilization?: string;
+            readonly is_residing?: boolean;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             birth_date?: {
                 year: number;
@@ -7887,6 +7939,9 @@ export interface components {
             readonly tenant_code: string;
             readonly tenant: number;
             readonly civilization: string;
+            readonly home_tenant: components["schemas"]["SoulHomeTenant"];
+            readonly home_civilization: string;
+            readonly is_residing: boolean;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             birth_date?: {
                 year: number;
@@ -7975,6 +8030,10 @@ export interface components {
             actor?: string;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        SoulHomeTenant: {
+            code: string;
+            display_name: string;
         };
         /** @description Lightweight serializer for list views. */
         SoulList: {
@@ -10014,9 +10073,10 @@ export interface operations {
                  *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
                  *     * `EXECUTED` - 已执行
+                 *     * `RETURNED` - 已回归
                  *     * `CANCELLED` - 已取消
                  */
-                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED";
+                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
                 target_tenant?: number;
             };
             header?: never;
@@ -10243,6 +10303,34 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_records_return_home_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Dispatch Record. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchReturn"];
+                "application/x-www-form-urlencoded": components["schemas"]["DispatchReturn"];
+                "multipart/form-data": components["schemas"]["DispatchReturn"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchRecord"];
+                };
+            };
+        };
+    };
     v1_dispatch_records_history_list: {
         parameters: {
             query?: {
@@ -10261,9 +10349,10 @@ export interface operations {
                  *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
                  *     * `EXECUTED` - 已执行
+                 *     * `RETURNED` - 已回归
                  *     * `CANCELLED` - 已取消
                  */
-                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED";
+                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
                 target_tenant?: number;
             };
             header?: never;
@@ -10300,9 +10389,10 @@ export interface operations {
                  *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
                  *     * `EXECUTED` - 已执行
+                 *     * `RETURNED` - 已回归
                  *     * `CANCELLED` - 已取消
                  */
-                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED";
+                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
                 target_tenant?: number;
             };
             header?: never;

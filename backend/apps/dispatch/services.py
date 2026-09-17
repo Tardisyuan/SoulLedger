@@ -40,6 +40,14 @@ class DispatchService:
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
+        # 暂居中的灵魂不再转调(保守默认,待用户确认)。调拨由原租户发起;暂居租户若能
+        # 再把它送往第三个文明,「处置执行完毕回归原文明」就要回答「回到哪一站」,
+        # 而暂居链上的每一站都会成为新的回归点。先回归,再由原租户发起下一段。
+        if soul.is_residing:
+            raise ValueError(
+                "Soul is residing away from its home tenant; it must return home "
+                "before its home tenant can dispatch it again"
+            )
 
         # Check no active dispatch exists for this soul.
         # _base_manager is the unfiltered manager, used here (not objects) so this
@@ -207,27 +215,30 @@ class DispatchService:
     @staticmethod
     def execute(dispatch_record, executor):
         """
-        Execute an approved dispatch: transfer soul to target tenant.
+        Execute an approved dispatch: the soul starts residing in the target tenant.
 
-        Args:
-            dispatch_record: DispatchRecord to execute
-            executor: User executing the dispatch
-
-        Returns:
-            DispatchRecord: Updated dispatch record
+        暂居开始。`soul.tenant` 切到目标租户 —— 目标文明的官员据此审判、执行处置,
+        租户隔离沿用现状;`soul.home_tenant` 不动。回归见 `end_residence`。
 
         Raises:
-            ValueError: If dispatch is not in APPROVED status
+            ValueError: If dispatch is not in APPROVED status, or the soul is no
+                longer where the proposal found it.
         """
+        from apps.souls.models import Soul
+
         if not dispatch_record.can_transition_to(DispatchStatus.EXECUTED):
             raise ValueError(f"Cannot execute dispatch in status: {dispatch_record.status}")
 
         with transaction.atomic():
-            # Transfer soul to target tenant
-            soul = dispatch_record.soul
+            soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=dispatch_record.soul_id)
+            # 提议时 propose() 检查过这两条;批准到执行之间灵魂可能已经不在源租户
+            # (例如被另一条路径调走又没回来)。在行锁下再问一次。
+            if soul.tenant_id != dispatch_record.source_tenant_id or soul.is_residing:
+                raise ValueError("Soul is no longer held by the source tenant at its home")
             old_tenant = soul.tenant
             soul.tenant = dispatch_record.target_tenant
             soul.save()
+            dispatch_record.soul = soul
 
             # Create soul event
             SoulEvent.objects.create(
@@ -238,6 +249,7 @@ class DispatchService:
                     "action": "DISPATCH_EXECUTED",
                     "from_tenant": old_tenant.code,
                     "to_tenant": dispatch_record.target_tenant.code,
+                    "home_tenant": soul.home_tenant.code,
                     "dispatch_id": str(dispatch_record.id),
                 },
                 actor=str(executor),
@@ -268,6 +280,68 @@ class DispatchService:
             raise ValueError(f"Cannot cancel dispatch in status: {dispatch_record.status}")
 
         return dispatch_record
+
+    RETURN_ON_DISPOSITION = "DISPOSITION_EXECUTED"
+    RETURN_MANUAL = "MANUAL"
+
+    @staticmethod
+    def end_residence(soul, *, actor, trigger, reason=""):
+        """暂居结束:`soul.tenant` 回到 `soul.home_tenant`,暂居记录 EXECUTED → RETURNED。
+
+        两个调用方:`DispositionService.execute`(暂居租户的处置执行完毕,与之同一事务)
+        与 `DispatchRecordViewSet.return_home`(原租户或 ADMIN 手动结束)。
+        灵魂行在锁下读;SoulEvent 与 AuditLog 在同一事务里写,回滚一起回滚。
+
+        暂居记录可能不存在(数据修正过的灵魂);那样仍然回归,返回 None。
+
+        Raises:
+            ValueError: 灵魂没有在暂居。
+        """
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.souls.models import Soul
+
+        with transaction.atomic():
+            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            if not locked.is_residing:
+                raise ValueError("Soul is not residing away from its home tenant")
+            residence = locked.tenant
+            record = (
+                DispatchRecord._base_manager.select_for_update(of=("self",))
+                .filter(soul_id=locked.pk, status=DispatchStatus.EXECUTED,
+                        target_tenant_id=locked.tenant_id, is_deleted=False)
+                .order_by("-executed_at").first()
+            )
+            locked.tenant_id = locked.home_tenant_id
+            locked.save()
+            home = locked.home_tenant
+            if record is not None and not record.transition_to(DispatchStatus.RETURNED, returned_at=timezone.now()):
+                raise ValueError(f"Cannot return dispatch in status: {record.status}")
+
+            payload = {
+                "action": "DISPATCH_RETURNED",
+                "trigger": trigger,
+                "from_tenant": residence.code,
+                "to_tenant": home.code,
+                "dispatch_id": str(record.id) if record else None,
+                "reason": reason,
+            }
+            SoulEvent.objects.create(
+                tenant=home, soul=locked, event_type=EventType.STATE_CHANGED,
+                payload=payload, actor=str(actor),
+            )
+            AuditLog.objects.create(
+                tenant=home,
+                user=actor if getattr(actor, "is_authenticated", False) else None,
+                action=AuditAction.UPDATE,
+                resource="dispatch_record",
+                resource_id=str(record.id) if record else str(locked.pk),
+                changes={"soul_tenant": [residence.code, home.code], "trigger": trigger},
+                description=f"暂居结束({trigger}):{locked.name} {residence.code} → {home.code} {reason}"[:500],
+            )
+
+        # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。
+        soul.tenant_id = locked.tenant_id
+        return record
 
 
 class CrossTenantJudgmentService:

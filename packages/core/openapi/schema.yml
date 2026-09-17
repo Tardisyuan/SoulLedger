@@ -1777,11 +1777,13 @@ paths:
           - EXECUTED
           - PROPOSED
           - REJECTED
+          - RETURNED
         description: |-
           * `PROPOSED` - 待审批
           * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
           * `EXECUTED` - 已执行
+          * `RETURNED` - 已回归
           * `CANCELLED` - 已取消
       - in: query
         name: target_tenant
@@ -1986,7 +1988,10 @@ paths:
   /api/v1/dispatch/records/{id}/execute/:
     post:
       operationId: v1_dispatch_records_execute_create
-      description: Execute an approved dispatch.
+      description: |-
+        Execute an approved dispatch: the soul starts residing in the target
+        tenant. Not a change of citizenship — it returns home automatically when
+        its disposition there is executed, or through `return-home`.
       parameters:
       - in: path
         name: id
@@ -2043,6 +2048,46 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/DispatchRecord'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchRecord'
+          description: ''
+  /api/v1/dispatch/records/{id}/return-home/:
+    post:
+      operationId: v1_dispatch_records_return_home_create
+      description: |-
+        End a residence early: the soul goes back to its home tenant.
+
+        Only the soul's home tenant (or ADMIN) may do this. The residence tenant
+        cannot send a soul home on its own say-so — that is what executing its
+        disposition does — and a third tenant never sees the record at all.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Dispatch Record.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchReturn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DispatchReturn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DispatchReturn'
         required: true
       security:
       - jwtAuth: []
@@ -2111,11 +2156,13 @@ paths:
           - EXECUTED
           - PROPOSED
           - REJECTED
+          - RETURNED
         description: |-
           * `PROPOSED` - 待审批
           * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
           * `EXECUTED` - 已执行
+          * `RETURNED` - 已回归
           * `CANCELLED` - 已取消
       - in: query
         name: target_tenant
@@ -2200,11 +2247,13 @@ paths:
           - EXECUTED
           - PROPOSED
           - REJECTED
+          - RETURNED
         description: |-
           * `PROPOSED` - 待审批
           * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
           * `EXECUTED` - 已执行
+          * `RETURNED` - 已回归
           * `CANCELLED` - 已取消
       - in: query
         name: target_tenant
@@ -11237,6 +11286,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         create_time:
           type: string
           format: date-time
@@ -11254,6 +11308,7 @@ components:
       - id
       - proposed_at
       - reason
+      - returned_at
       - soul
       - soul_name
       - source_tenant
@@ -11296,6 +11351,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          nullable: true
       required:
       - id
       - proposed_at
@@ -11305,12 +11364,22 @@ components:
       - source_tenant_code
       - target_tenant
       - target_tenant_code
+    DispatchReturn:
+      type: object
+      description: 手动结束暂居。理由必填:这是一次越过「处置执行完毕」的决定,审计里要说得清为什么。
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+      required:
+      - reason
     DispatchStatusEnum:
       enum:
       - PROPOSED
       - APPROVED
       - REJECTED
       - EXECUTED
+      - RETURNED
       - CANCELLED
       type: string
       description: |-
@@ -11318,6 +11387,7 @@ components:
         * `APPROVED` - 已批准
         * `REJECTED` - 已拒绝
         * `EXECUTED` - 已执行
+        * `RETURNED` - 已回归
         * `CANCELLED` - 已取消
     Disposition:
       type: object
@@ -12646,6 +12716,12 @@ components:
           type: string
         tenant:
           $ref: '#/components/schemas/MeTenant'
+        home_tenant:
+          $ref: '#/components/schemas/MeTenant'
+        home_civilization:
+          type: string
+        is_residing:
+          type: boolean
         current_state:
           type: string
         birth_date:
@@ -12708,6 +12784,9 @@ components:
       - current_state
       - death_date
       - demerit_score
+      - home_civilization
+      - home_tenant
+      - is_residing
       - merit_score
       - name
       - origin_location
@@ -12755,6 +12834,12 @@ components:
         rejection_reason:
           type: string
         decided_at:
+          type: string
+          format: date-time
+          nullable: true
+        first_rejection_reason:
+          type: string
+        first_decided_at:
           type: string
           format: date-time
           nullable: true
@@ -13292,6 +13377,14 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        first_rejection_reason:
+          type: string
+          readOnly: true
+        first_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         current_step:
           allOf:
           - $ref: '#/components/schemas/MeCurrentStep'
@@ -13304,6 +13397,11 @@ components:
           type: string
           format: date-time
           nullable: true
+          readOnly: true
+        can_decide_cross_civilization:
+          type: boolean
+          description: 与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为
+            False。
           readOnly: true
         created_at:
           type: string
@@ -13318,6 +13416,7 @@ components:
       - appeal_statement
       - appeal_workflow
       - can_appeal
+      - can_decide_cross_civilization
       - cooldown_until
       - created_at
       - cross_civilization
@@ -13325,6 +13424,8 @@ components:
       - cycle
       - decided_at
       - desired_form
+      - first_decided_at
+      - first_rejection_reason
       - id
       - rejection_reason
       - soul
@@ -14539,6 +14640,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         create_time:
           type: string
           format: date-time
@@ -15009,6 +15115,16 @@ components:
           readOnly: true
         civilization:
           type: string
+          readOnly: true
+        home_tenant:
+          allOf:
+          - $ref: '#/components/schemas/SoulHomeTenant'
+          readOnly: true
+        home_civilization:
+          type: string
+          readOnly: true
+        is_residing:
+          type: boolean
           readOnly: true
         birth_date:
           type: object
@@ -16668,6 +16784,16 @@ components:
         civilization:
           type: string
           readOnly: true
+        home_tenant:
+          allOf:
+          - $ref: '#/components/schemas/SoulHomeTenant'
+          readOnly: true
+        home_civilization:
+          type: string
+          readOnly: true
+        is_residing:
+          type: boolean
+          readOnly: true
         birth_date:
           type: object
           nullable: true
@@ -16760,9 +16886,12 @@ components:
       - current_state
       - date_problems
       - demerit_score
+      - home_civilization
+      - home_tenant
       - id
       - inherited_demerit
       - inherited_merit
+      - is_residing
       - karmic_balance
       - life_index
       - merit_score
@@ -16914,6 +17043,16 @@ components:
       - id
       - soul
       - soul_name
+    SoulHomeTenant:
+      type: object
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+      required:
+      - code
+      - display_name
     SoulList:
       type: object
       description: Lightweight serializer for list views.

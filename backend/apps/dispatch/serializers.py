@@ -64,6 +64,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "proposed_at",
             "decided_at",
             "executed_at",
+            "returned_at",
             "create_time",
             "update_time",
         ]
@@ -84,6 +85,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "proposed_at",
             "decided_at",
             "executed_at",
+            "returned_at",
             "create_time",
             "update_time",
         ]
@@ -149,6 +151,7 @@ class DispatchRecordListSerializer(serializers.ModelSerializer):
             "status",
             "proposed_at",
             "executed_at",
+            "returned_at",
         ]
 
 
@@ -172,6 +175,11 @@ class DispatchApproveSerializer(serializers.Serializer):
 class DispatchRejectSerializer(serializers.Serializer):
     """Serializer for rejecting a dispatch."""
     reason = serializers.CharField(max_length=1000, required=False, default="")
+
+
+class DispatchReturnSerializer(serializers.Serializer):
+    """手动结束暂居。理由必填:这是一次越过「处置执行完毕」的决定,审计里要说得清为什么。"""
+    reason = serializers.CharField(max_length=1000)
 
 
 class DispatchExecuteSerializer(serializers.Serializer):

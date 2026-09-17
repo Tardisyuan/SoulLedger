@@ -25,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
   APPROVED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
   REJECTED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]",
   EXECUTED: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))]",
+  RETURNED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
   CANCELLED: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
 };
 
@@ -33,6 +34,7 @@ const STATUS_LABELS: Record<string, string> = {
   APPROVED: "Approved",
   REJECTED: "Rejected",
   EXECUTED: "Executed",
+  RETURNED: "Returned home",
   CANCELLED: "Cancelled",
 };
 
@@ -69,6 +71,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
 
   const { data: dispatch, isLoading, isError, refetch } = useQuery({
     queryKey: ["dispatch", "detail", id],
@@ -134,6 +138,20 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     },
   });
 
+  const returnMutation = useMutation({
+    mutationFn: () => dispatchApi.returnHome(id, returnReason.trim()),
+    onSuccess: () => {
+      setShowReturnModal(false);
+      setReturnReason("");
+      showToast(t("dispatch.return_home_success"), "success");
+      queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+    },
+    onError: () => {
+      setShowReturnModal(false);
+      showToast(t("dispatch.return_home_error"), "error");
+    },
+  });
+
   /* The back control goes in PageShell's `backLink` slot as a real <Link>.
      It was a bare `←` glued to the label in a flex row above the title; the
      slot puts it on the same line as the eyebrow, where every detail page's
@@ -179,6 +197,11 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
   const isProposed = dispatch.status === "PROPOSED";
   const isApproved = dispatch.status === "APPROVED";
+  // EXECUTED is an ongoing residence (2026-09-17: a dispatch is not a change of
+  // citizenship). The backend decides who may end it — home tenant or ADMIN —
+  // and a 403 is reported, not hidden; the codename gate only avoids offering
+  // it to roles that never could.
+  const isResiding = dispatch.status === "EXECUTED";
   // STATUS_LABELS is real copy and beats the convention's generic
   // "unrecognized" wording, but the raw member is never the fallback (§4.6).
   const statusResolved = resolveEnumDisplay(t, "dispatch.states", dispatch.status);
@@ -267,6 +290,12 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
               <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
             </div>
           )}
+          {dispatch.returned_at && (
+            <div>
+              <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.returned_at")}</p>
+              <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.returned_at)}</p>
+            </div>
+          )}
         </div>
 
         {dispatch.reason && (
@@ -313,6 +342,17 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           <RequirePermission permissions="dispatch.execute">
             <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
               {t("dispatch.execute")}
+            </Button>
+          </RequirePermission>
+        </div>
+      )}
+
+      {isResiding && (
+        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
+          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+          <RequirePermission permissions="dispatch.return">
+            <Button type="button" variant="secondary" onClick={() => setShowReturnModal(true)}>
+              {t("dispatch.return_home")}
             </Button>
           </RequirePermission>
         </div>
@@ -407,6 +447,42 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         <p className="text-04 text-[oklch(var(--color-ink-muted))]">
           {t("dispatch.execute_warning")}
         </p>
+      </BaseModal>
+
+      <BaseModal
+        isOpen={showReturnModal}
+        onClose={() => { setShowReturnModal(false); setReturnReason(""); }}
+        title={t("dispatch.confirm_return_home")}
+        footer={
+          <div className="flex gap-3 justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setShowReturnModal(false); setReturnReason(""); }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => returnMutation.mutate()}
+              loading={returnMutation.isPending}
+              disabled={!returnReason.trim()}
+            >
+              {t("dispatch.return_home")}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-04 text-[oklch(var(--color-ink-muted))] mb-3">
+          {t("dispatch.return_home_warning")}
+        </p>
+        <TextAreaField
+          label={t("dispatch.return_home_reason")}
+          value={returnReason}
+          onChange={e => setReturnReason(e.target.value)}
+          rows={3}
+        />
       </BaseModal>
     </PageShell>
   );
