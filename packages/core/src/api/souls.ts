@@ -114,6 +114,11 @@ export interface Soul extends SoulBase {
    * like the scores. */
   inherited_merit?: number;
   inherited_demerit?: number;
+  /** 原属租户(2026-09-17:调拨是暂居)。`tenant` / `civilization` 是此刻管辖;转生资格按原属。 */
+  home_tenant?: { code: string; display_name: string };
+  home_civilization?: string;
+  /** True while the soul is dispatched away from its home tenant. */
+  is_residing?: boolean;
 }
 
 /**

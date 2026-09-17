@@ -34,6 +34,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   APPROVED: "success",
   REJECTED: "error",
   EXECUTED: "info",
+  RETURNED: "success",
   CANCELLED: "neutral",
 };
 
