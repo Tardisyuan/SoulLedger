@@ -23,6 +23,13 @@ interface BaseModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /**
+   * `false` keeps an outside click from closing the dialog (Escape and the
+   * close button still do). For content that cannot be shown again — the
+   * one-time password in `RevealCredentialDialog` — a stray click on the
+   * backdrop would destroy it.
+   */
+  dismissOnOutsideClick?: boolean;
 }
 
 /**
@@ -46,9 +53,13 @@ interface BaseModalProps {
  * `onOpenChange`, and the animation hooks move from headlessui's `transition`
  * prop to Base UI's `data-starting-style` / `data-ending-style` attributes.
  */
-export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps) {
+export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true }: BaseModalProps) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog.Root
+      open={isOpen}
+      disablePointerDismissal={!dismissOnOutsideClick}
+      onOpenChange={(open) => { if (!open) onClose(); }}
+    >
       <Dialog.Portal>
         {/* Backdrop */}
         <Dialog.Backdrop

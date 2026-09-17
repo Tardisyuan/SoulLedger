@@ -84,6 +84,7 @@ const COLLECTED_FILES = [
   "SettingsDrawer.test.tsx",
   "Skeleton.test.tsx",
   "SocialProfilePage.test.tsx",
+  "SoulCredentialsPage.test.tsx",
   "SoulHeaderActions.test.tsx",
   "SoulDetailPage.cacheInvalidation.test.tsx",
   "SoulDetailPage.inheritance.test.tsx",
