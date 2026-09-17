@@ -133,10 +133,16 @@ class DeathSyncService:
                     request_record.save()
                     return request_record
 
+                # 联系方式先落库:开号发生在 die() 的状态转换里,投递渠道在那一刻选。
+                from apps.soul_accounts.services import apply_contacts
+
+                apply_contacts(soul, payload.get("contact_email", ""), payload.get("contact_phone", ""))
+
                 # Call soul.die() - the domain service handles state transition
                 judgment = soul.die(
                     death_date=payload.get("death_date"),
                     location=payload.get("death_location", ""),
+                    account_origin="DEATH_SYNC",
                 )
 
                 if judgment is None:
@@ -154,16 +160,6 @@ class DeathSyncService:
                     (timezone.now() - start_time).total_seconds() * 1000
                 )
                 request_record.save()
-                # 灵魂账号:登记成功即开通并签发初始密码(2026-09-17 用户决定)。
-                # 在这个事务里开,密码在事务提交后才发;开号失败不回滚登记,
-                # 见 provision_after_death_sync。
-                from apps.soul_accounts.services import provision_after_death_sync
-
-                provision_after_death_sync(
-                    soul,
-                    contact_email=payload.get("contact_email", ""),
-                    contact_phone=payload.get("contact_phone", ""),
-                )
                 # BD-11: the only thing that ever tells the tenant's webhooks.
                 # Published inside the transaction on purpose: the EventBus
                 # webhook handler writes the delivery row here and enqueues it

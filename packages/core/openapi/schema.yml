@@ -9578,13 +9578,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowNodeAction'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowNodeAction'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowNodeAction'
         required: true
       security:
       - jwtAuth: []
@@ -12998,6 +12998,20 @@ components:
         * `DIRECTORY` - 目录
         * `MENU` - 菜单
         * `BUTTON` - 按钮
+    NodeDecisionVerdictEnum:
+      enum:
+      - PASSED
+      - FAILED
+      - CONFIRMED
+      - REJECTED
+      - SKIPPED
+      type: string
+      description: |-
+        * `PASSED` - PASSED
+        * `FAILED` - FAILED
+        * `CONFIRMED` - CONFIRMED
+        * `REJECTED` - REJECTED
+        * `SKIPPED` - SKIPPED
     NonFungible:
       type: object
       description: |-
@@ -13083,6 +13097,9 @@ components:
       - null
     OfficerRebirthApplication:
       type: object
+      description: |-
+        官员侧。`current_step` / `can_appeal` 与 /me 同一个函数算(rebirth.py),
+        `rejection_reason` 就是审批人驳回时填的「给灵魂的理由」,节点内部备注不在这里。
       properties:
         id:
           type: string
@@ -13140,6 +13157,19 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        current_step:
+          allOf:
+          - $ref: '#/components/schemas/MeCurrentStep'
+          nullable: true
+          readOnly: true
+        can_appeal:
+          type: boolean
+          readOnly: true
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -13152,8 +13182,11 @@ components:
       - account
       - appeal_statement
       - appeal_workflow
+      - can_appeal
+      - cooldown_until
       - created_at
       - cross_civilization
+      - current_step
       - cycle
       - decided_at
       - desired_form
@@ -17875,6 +17908,21 @@ components:
       - create_time
       - id
       - url
+    WorkflowNodeAction:
+      type: object
+      description: Serializer for node approval action.
+      properties:
+        verdict:
+          $ref: '#/components/schemas/NodeDecisionVerdictEnum'
+        notes:
+          type: string
+          default: ''
+        rejection_reason_for_soul:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - verdict
     WorkflowStats:
       type: object
       description: |-

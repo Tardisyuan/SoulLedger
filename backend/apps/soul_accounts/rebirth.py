@@ -118,7 +118,7 @@ def _create_workflow(soul, nodes, *, name, original=None):
 
 
 def _lock_account(account):
-    return SoulAccount.objects.select_for_update().select_related("soul__tenant", "user").get(pk=account.pk)
+    return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
 
 
 def submit(account, desired_form, statement=""):
@@ -204,6 +204,36 @@ def active_workflow(application):
     return application.appeal_workflow if application.appeal_workflow_id else application.workflow
 
 
+# ── 两边序列化器共用的派生字段(/me 与官员侧必须给出同一个答案)──────────────
+
+
+def current_step(application):
+    """当前节点的类型与**角色**;不含审批人是谁。申请已终结时为 None。"""
+    if application.status not in OPEN_APPLICATION_STATUSES:
+        return None
+    node = active_workflow(application).current_node
+    if node is None:
+        return None
+    return {"node_type": node.node_type, "approver_role": node.approver_role,
+            "is_appeal": application.appeal_workflow_id is not None}
+
+
+def can_appeal(application, account) -> bool:
+    """本世的、被驳回的、还没申诉过的申请。`account` 是当前(未停用)账号。"""
+    return bool(
+        account is not None and account.retired_at is None and application.cycle == account.cycle
+        and application.status == RebirthApplicationStatus.REJECTED and application.appeal_workflow_id is None
+    )
+
+
+def cooldown_until(application):
+    """这份申请的终局驳回引起的冷却截止时刻;不在冷却中为 None。"""
+    if application.status not in FINAL_REJECTIONS or application.decided_at is None:
+        return None
+    until = application.decided_at + timedelta(days=cooldown_days(application.soul.tenant))
+    return until if until > timezone.now() else None
+
+
 def sync_from_workflow(workflow_id):
     """工作流任何一次保存提交之后调用(signals.py)。状态没变什么也不做。"""
     with transaction.atomic():
@@ -221,13 +251,27 @@ def sync_from_workflow(workflow_id):
         application.status = new
         if new in (RebirthApplicationStatus.APPROVED, *FINAL_REJECTIONS):
             application.decided_at = timezone.now()
-        if new in FINAL_REJECTIONS:
-            rejected = active_workflow(application).nodes.filter(status="REJECTED").order_by("-decided_at").first()
-            # 驳回理由 = 驳回节点上审批人写的备注。它会被灵魂看到(简报 §4)。
-            application.rejection_reason = (rejected.notes if rejected else "")[:2000]
+        # 驳回理由不在这里取:它是审批人另填的「给灵魂的理由」,由 approve_node 在同一事务里
+        # 写进 rejection_reason(record_reason_for_soul)。节点 notes 是内部备注,灵魂看不到。
         application.save()
     _announce_status(application, old)
     return application
+
+
+PASSING_VERDICTS = ("PASSED", "CONFIRMED")
+
+
+def requires_reason_for_soul(workflow, verdict) -> bool:
+    """这次决定是不是在驳回一份转生申请(complete_node 把非 PASSED/CONFIRMED 都当驳回)。"""
+    from apps.workflow.models import CaseType
+
+    return workflow.case_type == CaseType.REBIRTH_APPLICATION and verdict not in PASSING_VERDICTS
+
+
+def record_reason_for_soul(workflow, reason):
+    RebirthApplication.objects.filter(Q(workflow=workflow) | Q(appeal_workflow=workflow)).update(
+        rejection_reason=reason[:2000]
+    )
 
 
 def _announce_status(application, old_status):
@@ -254,7 +298,7 @@ def decide_cross_civilization(application_id, user, value: bool):
 
     with transaction.atomic():
         application = (
-            RebirthApplication.objects.select_for_update()
+            RebirthApplication.objects.select_for_update(of=("self",))
             .select_related("workflow__current_node", "soul__tenant").get(pk=application_id)
         )
         workflow = application.workflow

@@ -24,7 +24,6 @@ from django.utils import timezone
 from apps.soul_accounts.delivery import pick_delivery
 from apps.soul_accounts.models import (
     SECRET_BEARING_STATUSES,
-    AccountOrigin,
     CredentialStatus,
     InitialCredential,
     SoulAccount,
@@ -117,7 +116,7 @@ def provision_account(soul, origin, *, actor=None, request=None):
 
     caller_copy = soul
     with transaction.atomic():
-        soul = Soul.all_objects.select_for_update().select_related("tenant").get(pk=soul.pk)
+        soul = Soul.all_objects.select_for_update(of=("self",)).select_related("tenant").get(pk=soul.pk)
         if soul.current_state == SoulState.ALIVE:
             raise SoulAccountError("灵魂尚在世,不能开通灵魂账号。", "soul_alive")
         cycle = soul.life_index
@@ -156,7 +155,7 @@ def reset_credential(account, *, actor=None, request=None):
     """官员重置:新密码、新 72 小时,之前所有未完结的凭据作废。**从不重发旧密码** ——
     旧的明文在发出时就已抹掉,这里也拿不到。"""
     with transaction.atomic():
-        account = SoulAccount.objects.select_for_update().select_related("soul__tenant", "user").get(pk=account.pk)
+        account = SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
         if account.retired_at is not None:
             raise SoulAccountError("该账号已随转世停用,不能重置。", "account_retired")
         _void_open_credentials(account)
@@ -199,7 +198,7 @@ def send_credential(credential_id):
     """
     with transaction.atomic():
         credential = (
-            InitialCredential.objects.select_for_update()
+            InitialCredential.objects.select_for_update(of=("self",))
             .select_related("soul", "account").filter(pk=credential_id).first()
         )
         if credential is None or credential.status not in SECRET_BEARING_STATUSES:
@@ -263,7 +262,7 @@ def reveal_credential(credential_id, *, actor, request=None):
     """待交付明文**只能被看一次**。锁行、读出、抹掉、写审计,同一事务。"""
     with transaction.atomic():
         credential = (
-            InitialCredential.objects.select_for_update()
+            InitialCredential.objects.select_for_update(of=("self",))
             .select_related("soul__tenant", "account").get(pk=credential_id)
         )
         # 过期作废要落库,所以先提交再抛:在 atomic 里抛会把作废一起回滚。
@@ -287,7 +286,7 @@ def reveal_credential(credential_id, *, actor, request=None):
 def mark_delivered(credential_id, *, actor, request=None):
     with transaction.atomic():
         credential = (
-            InitialCredential.objects.select_for_update().select_related("soul__tenant").get(pk=credential_id)
+            InitialCredential.objects.select_for_update(of=("self",)).select_related("soul__tenant").get(pk=credential_id)
         )
         expired = _expire_if_due(credential)
         if not expired and credential.status == CredentialStatus.REVEALED:
@@ -392,7 +391,7 @@ def retire_account_for_rebirth(soul, ended_cycle):
     """转世完成时调用,**在转世的同一事务里**。本世账号停用,永不可再登录。
     没有账号(这一世从没开过号)就什么也不做。"""
     account = (
-        SoulAccount.objects.select_for_update().select_related("user")
+        SoulAccount.objects.select_for_update(of=("self",)).select_related("user")
         .filter(soul=soul, cycle=ended_cycle, retired_at__isnull=True).first()
     )
     if account is None:
@@ -410,25 +409,25 @@ def retire_account_for_rebirth(soul, ended_cycle):
     return account
 
 
-def provision_after_death_sync(soul, contact_email="", contact_phone=""):
-    """死亡同步登记成功后调用(在它的事务里)。联系方式有就更新,然后开号。
+def apply_contacts(soul, contact_email="", contact_phone=""):
+    """有值才写;save 而不是 update,走审计信号,值由 PII_FIELD_NAMES 遮蔽。"""
+    updates = {f: v for f, v in (("contact_email", contact_email), ("contact_phone", contact_phone)) if v}
+    for field, value in updates.items():
+        setattr(soul, field, value)
+    if updates:
+        soul.save(update_fields=list(updates))
 
-    开号失败**不**让死亡登记回滚:登记是外部系统的事实,账号是派生物,缺了由
-    `backfill_soul_accounts` 补。失败写 error 日志。
+
+def provision_on_death(soul, origin):
+    """`Soul.transition_to` 在 ALIVE -> JUDGING 的同一事务里调用。所有登记死亡的途径
+    都经过那里,所以这是开号的唯一自动入口。
+
+    开号失败**不**让死亡回滚:死亡是事实,账号是派生物,缺了由 `backfill_soul_accounts`
+    补。失败在保存点里回滚(PostgreSQL 上外层事务不会因此中止),写 error 日志。
     """
-    updates = {}
-    if contact_email:
-        updates["contact_email"] = contact_email
-    if contact_phone:
-        updates["contact_phone"] = contact_phone
     try:
         with transaction.atomic():
-            if updates:
-                for field, value in updates.items():
-                    setattr(soul, field, value)
-                # save 而不是 update:走审计信号,值由 PII_FIELD_NAMES 遮蔽。
-                soul.save(update_fields=list(updates))
-            return provision_account(soul, AccountOrigin.DEATH_SYNC)[0]
+            return provision_account(soul, origin)[0]
     except Exception:
-        logger.error("soul account provisioning after death sync failed for soul %s", soul.pk, exc_info=True)
+        logger.error("soul account provisioning on death failed for soul %s", soul.pk, exc_info=True)
         return None

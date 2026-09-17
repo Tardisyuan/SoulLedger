@@ -479,6 +479,11 @@ SPECTACULAR_SETTINGS = {
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
+        # approve_node 的请求体(WorkflowNodeActionSerializer)写进文档之后,它的 verdict 与
+        # judgment 的 Verdict 撞名;不钉住,既有的 `VerdictEnum` 会被改成带哈希的名字,
+        # frontend 的 enumsMatchTheSchema 测试按名字找它。
+        "VerdictEnum": "apps.judgment.models.Verdict.choices",
+        "NodeDecisionVerdictEnum": "apps.workflow.serializers.NODE_DECISION_VERDICTS",
     },
 }
 
