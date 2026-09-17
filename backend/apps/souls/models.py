@@ -477,7 +477,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         }
         return new_state in valid_transitions.get(self.current_state, [])
 
-    def transition_to(self, new_state: str, reason: str = "", **kwargs) -> bool:
+    def transition_to(self, new_state: str, reason: str = "", *, account_origin: str = "OFFICER", **kwargs) -> bool:
         """
         Attempt state transition with pessimistic locking to prevent race conditions.
         Returns True if successful.
@@ -584,6 +584,15 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
             locked_soul.save()
 
+            # 进入死亡(ALIVE -> JUDGING)的**唯一**一个关口:`die()`(死亡同步、
+            # `souls/{id}/die`)、`souls/{id}/transition`、建审判时的自动转入,全部走到
+            # 这里。灵魂账号在这里开,与状态变化同一个事务:状态回滚,账号也回滚;
+            # 密码在事务提交后才发。开号失败不回滚死亡本身 —— 见 provision_on_death。
+            if old_state == SoulState.ALIVE and new_state == SoulState.JUDGING:
+                from apps.soul_accounts.services import provision_on_death
+
+                provision_on_death(locked_soul, account_origin)
+
         # Log outside the transaction to avoid holding locks during external calls
         log_soul_state_change(locked_soul, old_state, new_state, reason)
         # Sync back to self instance. Copy the raw year/month/day (not via
@@ -634,7 +643,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         self.current_state = locked_soul.current_state
         return True
 
-    def die(self, death_date=None, location: str = "") -> "Judgment | None":
+    def die(self, death_date=None, location: str = "", account_origin: str = "OFFICER") -> "Judgment | None":
         """Mark soul as dead, transition to JUDGING, and create a Judgment record."""
         from django.db import transaction
 
@@ -645,6 +654,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             result = self.transition_to(
                 SoulState.JUDGING,
                 "Death recorded, judgment initiated",
+                account_origin=account_origin,
                 death_date=death_date or timezone.now().date(),
                 **({"origin_location": location} if location else {}),
             )

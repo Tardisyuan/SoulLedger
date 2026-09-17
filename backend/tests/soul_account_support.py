@@ -52,3 +52,26 @@ def password_in_last_mail():
     match = re.search(r"初始密码:(\S+)", mail.outbox[-1].body)
     assert match, mail.outbox[-1].body
     return match.group(1)
+
+
+def soul_login_rate_keys():
+    """缓存里所有灵魂登录限流键的原始键名。测试环境是 LocMem,生产是 Redis,两种都认。"""
+    from django.core.cache import cache
+
+    store = cache._cache
+    if hasattr(store, "get_client"):
+        return [k.decode() for k in store.get_client().scan_iter(match="*soul_login_rate:*")]
+    return [k for k in list(store.keys()) if "soul_login_rate:" in k]
+
+
+def clear_soul_login_counters():
+    """失败计数在进程内跨测试累积。只删本模块的键,不 clear 整个缓存。"""
+    from django.core.cache import cache
+
+    store = cache._cache
+    for key in soul_login_rate_keys():
+        if hasattr(store, "get_client"):
+            store.get_client(write=True).delete(key)
+        else:
+            store.pop(key, None)
+            cache._expire_info.pop(key, None)

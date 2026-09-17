@@ -1,6 +1,7 @@
 """
 REST views for workflow app.
 """
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -181,6 +182,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         return Response(ApprovalWorkflowSerializer(workflow).data)
 
+    @extend_schema(request=WorkflowNodeActionSerializer, responses=ApprovalWorkflowSerializer)
     @action(detail=True, methods=["post"])
     def approve_node(self, request, pk=None):
         """
@@ -255,9 +257,26 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
+        soul_reason = serializer.validated_data.get("rejection_reason_for_soul", "")
+
+        # 转生申请:驳回必须附一段给灵魂看的理由(2026-09-17 用户决定)。节点 notes 是内部备注。
+        from apps.soul_accounts import rebirth
+
+        if rebirth.requires_reason_for_soul(workflow, verdict) and not soul_reason.strip():
+            return Response(
+                {
+                    "error": "rejection_reason_for_soul is required",
+                    "detail": "驳回转生申请必须填写给灵魂的驳回理由(rejection_reason_for_soul);内部备注写在 notes。",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            success = workflow.complete_node(node.id, verdict, notes, user=request.user)
+            # 决定与给灵魂的理由同一事务:申请状态的同步挂在 on_commit 上,提交时理由已在。
+            with transaction.atomic():
+                success = workflow.complete_node(node.id, verdict, notes, user=request.user)
+                if success and rebirth.requires_reason_for_soul(workflow, verdict):
+                    rebirth.record_reason_for_soul(workflow, soul_reason.strip())
         except ValueError as exc:
             # `complete_node` raises when the node declares
             # `required_verdicts` and this verdict is not in it. A 400 rather

@@ -9578,13 +9578,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowNodeAction'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowNodeAction'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowNodeAction'
         required: true
       security:
       - jwtAuth: []
@@ -11815,7 +11815,7 @@ components:
           readOnly: true
           nullable: true
           oneOf:
-          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/JudgmentVerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
         notes:
           type: string
@@ -11955,6 +11955,18 @@ components:
       - skipped
       - soul
       - total
+    JudgmentVerdictEnum:
+      enum:
+      - PASSED
+      - FAILED
+      - PURGATORY
+      - RETRY
+      type: string
+      description: |-
+        * `PASSED` - Passed / Saved
+        * `FAILED` - Failed / Condemned
+        * `PURGATORY` - Purgatory / Intermediate
+        * `RETRY` - Retry / Appeal
     KarmaBucket:
       type: object
       description: |-
@@ -14555,7 +14567,7 @@ components:
           readOnly: true
           nullable: true
           oneOf:
-          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/JudgmentVerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
         notes:
           type: string
@@ -17813,18 +17825,6 @@ components:
       - permissions
       - tenant
       - username
-    VerdictEnum:
-      enum:
-      - PASSED
-      - FAILED
-      - PURGATORY
-      - RETRY
-      type: string
-      description: |-
-        * `PASSED` - Passed / Saved
-        * `FAILED` - Failed / Condemned
-        * `PURGATORY` - Purgatory / Intermediate
-        * `RETRY` - Retry / Appeal
     VisibilityEnum:
       enum:
       - PUBLIC
@@ -17875,6 +17875,35 @@ components:
       - create_time
       - id
       - url
+    WorkflowNodeAction:
+      type: object
+      description: Serializer for node approval action.
+      properties:
+        verdict:
+          $ref: '#/components/schemas/WorkflowNodeActionVerdictEnum'
+        notes:
+          type: string
+          default: ''
+        rejection_reason_for_soul:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - verdict
+    WorkflowNodeActionVerdictEnum:
+      enum:
+      - PASSED
+      - FAILED
+      - CONFIRMED
+      - REJECTED
+      - SKIPPED
+      type: string
+      description: |-
+        * `PASSED` - PASSED
+        * `FAILED` - FAILED
+        * `CONFIRMED` - CONFIRMED
+        * `REJECTED` - REJECTED
+        * `SKIPPED` - SKIPPED
     WorkflowStats:
       type: object
       description: |-

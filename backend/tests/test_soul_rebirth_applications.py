@@ -1,4 +1,5 @@
 """转生申请:复用审批工作流;一份进行中、申诉一次、冷却、前世只读、跨文明由判官初审决定。"""
+import json
 from datetime import timedelta
 
 import pytest
@@ -21,13 +22,16 @@ def cn_admin(cn_tenant):
     return User.objects.create_user(username="yanluo", password="x", role="ADMIN", tenant=cn_tenant)
 
 
-def _decide(officer, application, verdict, *, appeal=False, notes="", capture):
-    """用官员的真实接口走完当前节点。"""
+def _decide(officer, application, verdict, *, appeal=False, notes="", reason="", capture):
+    """用官员的真实接口走完当前节点。驳回默认附一段给灵魂的理由。"""
     application.refresh_from_db()
     workflow = application.appeal_workflow if appeal else application.workflow
+    if verdict not in ("PASSED", "CONFIRMED") and not reason:
+        reason = "默认给灵魂的理由"
     with capture(execute=True):
         response = officer_client(officer).post(
-            f"/api/v1/workflows/{workflow.pk}/approve_node/", {"verdict": verdict, "notes": notes}, format="json"
+            f"/api/v1/workflows/{workflow.pk}/approve_node/",
+            {"verdict": verdict, "notes": notes, "rejection_reason_for_soul": reason}, format="json",
         )
     assert response.status_code == 200, response.data
     application.refresh_from_db()
@@ -103,11 +107,13 @@ def test_approval_flows_through_the_workflow_and_notifies_the_soul(cn_tenant, ju
 def test_appeal_once_then_cooldown(cn_tenant, judge_user, cn_admin, django_capture_on_commit_callbacks):
     account, client = ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
-    application = _decide(judge_user, application, "FAILED", notes="业障未消",
+    application = _decide(judge_user, application, "FAILED", notes="内部备注:此魂可疑", reason="业障未消",
                           capture=django_capture_on_commit_callbacks)
     assert application.status == "REJECTED" and application.rejection_reason == "业障未消"
     detail = client.get(f"{APPLY}{application.pk}/").data
     assert detail["can_appeal"] is True and detail["rejection_reason"] == "业障未消"
+    for url in (f"{APPLY}{application.pk}/", APPLY, "/api/v1/me/life/"):
+        assert "内部备注" not in json.dumps(client.get(url).data, ensure_ascii=False, default=str), url
     # 驳回后立即重新提交:冷却中。
     again = _submit(client, django_capture_on_commit_callbacks)
     assert again.status_code == 409 and again.data["code"] == "cooldown"
@@ -123,9 +129,10 @@ def test_appeal_once_then_cooldown(cn_tenant, judge_user, cn_admin, django_captu
     second_appeal = client.post(f"{APPLY}{application.pk}/appeal/", {}, format="json")
     assert second_appeal.status_code == 409 and second_appeal.data["code"] == "appeal_used"
 
-    application = _decide(judge_user, application, "FAILED", appeal=True, notes="维持原判",
-                          capture=django_capture_on_commit_callbacks)
+    application = _decide(judge_user, application, "FAILED", appeal=True, notes="内部备注:申诉无新证",
+                          reason="维持原判", capture=django_capture_on_commit_callbacks)
     assert application.status == "APPEAL_REJECTED" and application.rejection_reason == "维持原判"
+    assert "内部备注" not in json.dumps(client.get(f"{APPLY}{application.pk}/").data, ensure_ascii=False)
     third = client.post(f"{APPLY}{application.pk}/appeal/", {}, format="json")
     assert third.status_code == 409 and third.data["code"] == "appeal_used"
 
@@ -195,3 +202,35 @@ def test_officer_rebirth_list_is_tenant_scoped(cn_tenant, eu_tenant, judge_user,
     rows = officer_client(judge_user).get("/api/v1/soul-accounts/rebirth-applications/").data
     rows = rows["results"] if isinstance(rows, dict) else rows
     assert len(rows) == 1
+
+
+def test_rejecting_a_rebirth_application_requires_a_reason_for_the_soul(cn_tenant, judge_user,
+                                                                      django_capture_on_commit_callbacks):
+    account, client = ready_soul(cn_tenant)
+    application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
+    url = f"/api/v1/workflows/{application.workflow_id}/approve_node/"
+    for body in ({"verdict": "FAILED", "notes": "只有内部备注"},
+                 {"verdict": "REJECTED", "rejection_reason_for_soul": "   "}):
+        response = officer_client(judge_user).post(url, body, format="json")
+        assert response.status_code == 400, body
+    application.refresh_from_db()
+    assert application.status == "UNDER_REVIEW"
+    assert application.workflow.nodes.get(node_order=1).status == "PENDING", "被拒的请求不能留下决定"
+    # 通过不需要理由。
+    with django_capture_on_commit_callbacks(execute=True):
+        assert officer_client(judge_user).post(url, {"verdict": "PASSED"}, format="json").status_code == 200
+
+
+def test_other_workflows_do_not_require_the_soul_reason(cn_tenant, judge_user):
+    from apps.souls.models import Soul
+    from apps.workflow.models import ApprovalNode, NodeStatus
+
+    soul = Soul.objects.create(name="普通案件", tenant=cn_tenant, current_state="JUDGING")
+    workflow = ApprovalWorkflow.objects.create(soul=soul, workflow_name="x", tenant=cn_tenant, status="IN_PROGRESS")
+    node = ApprovalNode.objects.create(workflow=workflow, node_name="n", node_order=1, approver_type="ROLE",
+                                       approver_role="JUDGE", status=NodeStatus.PENDING)
+    workflow.current_node = node
+    workflow.save()
+    response = officer_client(judge_user).post(f"/api/v1/workflows/{workflow.pk}/approve_node/",
+                                               {"verdict": "FAILED"}, format="json")
+    assert response.status_code == 200, response.data

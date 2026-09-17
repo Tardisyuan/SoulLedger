@@ -15,6 +15,7 @@ from apps.soul_accounts import services as svc
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_accounts.me_views import SoulAPIView
 from tests.soul_account_support import (
+    clear_soul_login_counters,
     dead_soul,
     officer_client,
     provision_with_password,
@@ -28,11 +29,9 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def _fresh_soul_login_counter():
     """默认缓存是真 Redis(本地一次性实例),失败次数跨测试累积;不清会让后面的登录撞 429。"""
-    from django.core.cache import cache
-
-    cache.delete("soul_login_rate:127.0.0.1")
+    clear_soul_login_counters()
     yield
-    cache.delete("soul_login_rate:127.0.0.1")
+    clear_soul_login_counters()
 
 #: 各种形状的官员接口:ViewSet 列表、详情动作、函数视图、权限模块、AllowAny 的登录。
 OFFICER_ENDPOINTS = [
@@ -244,12 +243,54 @@ def test_a_wrong_password_and_an_unknown_code_answer_identically(cn_tenant):
     assert a.data == b.data
 
 
-def test_soul_login_is_rate_limited_per_ip(cn_tenant):
-    client = APIClient()
-    for _ in range(5):
-        client.post("/api/v1/soul-auth/login/", {"soul_code": "ZZZZZZZZZZ", "password": "x"}, format="json")
-    response = client.post("/api/v1/soul-auth/login/", {"soul_code": "ZZZZZZZZZZ", "password": "x"}, format="json")
-    assert response.status_code == 429 and response.data["code"] == "rate_limited"
+def test_soul_login_is_limited_to_5_failures_per_soul_code(cn_tenant):
+    account, password = provision_with_password(dead_soul(cn_tenant))
+    code = account.soul.soul_code
+    for i in range(5):
+        # 各次来自不同 IP:编号这一层不看 IP。
+        APIClient(REMOTE_ADDR=f"10.0.0.{i + 1}").post("/api/v1/soul-auth/login/",
+                                                      {"soul_code": code, "password": "wrong"}, format="json")
+    blocked = APIClient(REMOTE_ADDR="10.0.0.99").post("/api/v1/soul-auth/login/",
+                                                      {"soul_code": code, "password": password}, format="json")
+    assert blocked.status_code == 429 and blocked.data["code"] == "rate_limited"
+    # 别的编号不受影响;大小写/空白变体算同一个编号。
+    other, other_password = provision_with_password(dead_soul(cn_tenant, name="乙"))
+    ok = APIClient(REMOTE_ADDR="10.0.0.99").post("/api/v1/soul-auth/login/",
+                                                 {"soul_code": other.soul.soul_code, "password": other_password},
+                                                 format="json")
+    assert ok.status_code == 200
+    variant = APIClient(REMOTE_ADDR="10.0.0.98").post("/api/v1/soul-auth/login/",
+                                                      {"soul_code": f" {code.lower()} ", "password": password},
+                                                      format="json")
+    assert variant.status_code == 429
+
+
+def test_soul_login_is_limited_to_50_failures_per_ip(cn_tenant):
+    client = APIClient(REMOTE_ADDR="10.9.9.9")
+    for i in range(50):
+        # 每次换一个编号:编号层永远到不了 5,拦下来的只能是 IP 层。
+        response = client.post("/api/v1/soul-auth/login/", {"soul_code": f"NOPE{i:06d}", "password": "x"},
+                               format="json")
+        assert response.status_code == 401, i
+    account, password = provision_with_password(dead_soul(cn_tenant))
+    blocked = client.post("/api/v1/soul-auth/login/", {"soul_code": account.soul.soul_code, "password": password},
+                          format="json")
+    assert blocked.status_code == 429 and blocked.data["code"] == "rate_limited"
+    ok = APIClient(REMOTE_ADDR="10.9.9.10").post("/api/v1/soul-auth/login/",
+                                                 {"soul_code": account.soul.soul_code, "password": password},
+                                                 format="json")
+    assert ok.status_code == 200
+
+
+def test_the_rate_limit_keys_do_not_carry_the_soul_code(cn_tenant):
+    from tests.soul_account_support import soul_login_rate_keys
+
+    account, _ = provision_with_password(dead_soul(cn_tenant))
+    code = account.soul.soul_code
+    APIClient().post("/api/v1/soul-auth/login/", {"soul_code": code, "password": "wrong"}, format="json")
+    keys = soul_login_rate_keys()
+    assert any(":code:" in k for k in keys) and any(":ip:" in k for k in keys), keys
+    assert not [k for k in keys if code in k or code.lower() in k], keys
 
 
 def test_login_is_logged(cn_tenant):
