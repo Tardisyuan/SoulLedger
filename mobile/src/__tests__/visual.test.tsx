@@ -11,11 +11,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
+import { FONT_ASSETS, quoteFamily } from "../fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
 import { themeFor } from "../theme";
-import { Button, DataRow, EnumBadge, ThemeContext } from "../ui";
+import { Button, DataRow, EnumBadge, Quote, ThemeContext } from "../ui";
 import { application, life } from "./stubApi";
 
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
@@ -75,6 +76,29 @@ describe("soul-state badges", () => {
     const badge = screen.getByTestId("b");
     expect(within(badge).getByText("未识别取值")).toBeTruthy();
     expect(within(badge).getByText("ASCENDED")).toBeTruthy();
+  });
+});
+
+describe("the Han serif", () => {
+  it("quoted Chinese uses the bundled Noto Serif SC; Latin-only quotes keep Source Serif 4", () => {
+    expect(quoteFamily("功过相权，尚有一过未清")).toBe("NotoSerifSC_400");
+    expect(quoteFamily("Merit and demerit have been weighed")).toBe("SourceSerif4_400Regular");
+    expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_400");
+    expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_600");
+  });
+
+  it("each bundled weight stays within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
+    const fs = jest.requireActual<typeof import("fs")>("fs");
+    const path = jest.requireActual<typeof import("path")>("path");
+    for (const weight of ["400", "600"]) {
+      const file = path.join(__dirname, "..", "..", "assets", "fonts", `NotoSerifSC-Subset-${weight}.ttf`);
+      expect([weight, fs.statSync(file).size <= 1_500_000]).toEqual([weight, true]);
+    }
+  });
+
+  it("renders a rejection reason in it", () => {
+    wrap(<Quote testID="q" text="人道可期，然非此时。" tone="rejection" />);
+    expect(flat(screen.getByTestId("q")).fontFamily).toBe("NotoSerifSC_400");
   });
 });
 
