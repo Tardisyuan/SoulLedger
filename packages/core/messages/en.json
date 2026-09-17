@@ -1348,6 +1348,178 @@
       "PARTIAL": "Partial"
     }
   },
+  "soul_accounts": {
+    "refresh": "Refresh",
+    "life": "Life {{n}}",
+    "fields": {
+      "soul": "Soul",
+      "soul_code": "Soul code",
+      "cycle": "Life",
+      "reason": "Reason",
+      "expires_at": "Valid until",
+      "status": "Status"
+    },
+    "credential_status": {
+      "QUEUED": "Queued",
+      "SENT": "Sent",
+      "PENDING": "Awaiting delivery",
+      "REVEALED": "Viewed, awaiting delivery",
+      "DELIVERED": "Delivered in person",
+      "VOID": "Void"
+    },
+    "rebirth_status": {
+      "UNDER_REVIEW": "Under review",
+      "REJECTED": "Rejected",
+      "APPEALING": "Under appeal",
+      "APPEAL_REJECTED": "Appeal rejected",
+      "APPROVED": "Approved"
+    },
+    "origin": {
+      "DEATH_SYNC": "Opened by death sync",
+      "OFFICER": "Opened by an officer",
+      "BACKFILL": "Backfilled"
+    },
+    "credentials": {
+      "title": "Initial passwords awaiting delivery",
+      "subtitle": "Soul passwords that could not be sent: view once, deliver in person, or retry sending",
+      "manage_hint": "soul_account.manage is required to view, mark delivered or retry",
+      "filters": {
+        "label": "Filter by status",
+        "PENDING": "Awaiting delivery",
+        "REVEALED": "Viewed, awaiting delivery",
+        "DELIVERED": "Delivered in person",
+        "VOID": "Void",
+        "all": "All"
+      },
+      "reason": {
+        "no_contact": "No usable contact",
+        "send_failed": "Sending failed ({{error}}) after {{attempts}} attempt(s)",
+        "channel": "Sent via {{channel}}",
+        "expired": "Initial password expired",
+        "voided": "Voided by a reset, a password change or rebirth"
+      },
+      "revealed_by": "Viewed by {{by}} at {{time}}",
+      "delivered_by": "Delivered by {{by}} at {{time}}",
+      "expired": "Expired",
+      "expired_go_reset": "This initial password has expired; reset it on the soul's page",
+      "actions": {
+        "reveal": "View password",
+        "retry": "Retry sending",
+        "mark_delivered": "Mark delivered",
+        "go_reset": "Go reset"
+      },
+      "retry_sent": "Sent",
+      "retry_failed": "Retry failed",
+      "retry_not_pending": "This item is no longer awaiting delivery",
+      "delivered_ok": "Marked as delivered in person",
+      "deliver_failed": "Could not mark as delivered",
+      "deliver_not_revealed": "Only a viewed item can be marked delivered",
+      "empty": {
+        "pending": "No initial passwords awaiting delivery",
+        "pending_reason": "Souls with a contact get their password sent automatically and never appear here",
+        "filtered": "Nothing with this status"
+      }
+    },
+    "reveal": {
+      "confirm_title": "View the initial password?",
+      "confirm_body": "The plaintext can be viewed once. The server erases it as soon as you confirm, and nobody can see it again after this window closes. Only continue if you can hand it to {{name}} (code {{code}}, life {{n}}) in person now.",
+      "confirm": "I'm ready, show it",
+      "shown_title": "Initial password (shown once)",
+      "shown_warning": "This cannot be viewed again after closing. Deliver it in person now; the soul must change it at first sign-in.",
+      "password_label": "Initial password",
+      "copy": "Copy password",
+      "copied": "Copied to clipboard",
+      "copy_failed": "Copy failed; write it down by hand",
+      "close": "I have it, close",
+      "deliver_and_close": "Delivered, mark and close",
+      "already_revealed": "This password was already viewed (perhaps by another officer) and cannot be shown again; reset it on the soul's page to deliver",
+      "failed": "Could not view the password; try again"
+    },
+    "account": {
+      "title": "Soul account",
+      "none": "No account for this life yet",
+      "alive_no_account": "The soul is alive; an account opens after its death is registered",
+      "origin_label": "Opened by",
+      "password_label": "Password",
+      "must_change": "Must change at first sign-in",
+      "password_set": "Set by the soul",
+      "initial_expired": "Initial password expired",
+      "initial_expires_at": "Initial password expires",
+      "initial_expires_na": "The soul has changed its password; no initial password applies",
+      "state_label": "Account state",
+      "active": "Can sign in",
+      "retired": "Retired",
+      "last_login": "Last sign-in",
+      "never_logged_in": "Never signed in",
+      "contact_email": "Contact email",
+      "contact_phone": "Contact phone",
+      "contact_hint": "Leave blank to keep the contact on file",
+      "chain": "Account chain (every life)",
+      "created_at": "Opened {{time}}",
+      "retired_at": "retired {{time}}",
+      "pending_link": "See passwords awaiting delivery",
+      "actions": {
+        "provision": "Open this life's account",
+        "reset": "Reset initial password"
+      },
+      "provision_title": "Open this life's account for {{name}}?",
+      "provision_body": "A random initial password is generated (valid 72 hours, must be changed at first sign-in). It is sent to a contact if there is one; otherwise it waits in the delivery list.",
+      "reset_title": "Reset the initial password for {{name}}?",
+      "reset_body": "Any undelivered password is voided now; the new one is valid 72 hours and must be changed at sign-in. It is sent to a contact if there is one; otherwise it waits in the delivery list.",
+      "provisioned": "Account opened for this life",
+      "provision_existing": "This life already has an account; no password was re-sent. Reset it for a new one",
+      "reset_queued": "Reset; the new password will be sent to the contact",
+      "reset_pending": "Reset; no usable contact, so the new password is waiting in the delivery list",
+      "retired_cannot_reset": "This account was retired at rebirth and cannot be reset",
+      "soul_alive": "The soul is alive; no soul account can be opened",
+      "soul_not_found": "Soul not found",
+      "failed": "Something went wrong; try again"
+    },
+    "rebirth": {
+      "title": "Rebirth applications",
+      "subtitle": "Applications filed by souls: review progress, appeals and the cross-civilization decision",
+      "filters": {
+        "label": "Filter by status",
+        "all": "All"
+      },
+      "view": "Details",
+      "detail_title": "Rebirth application · {{name}}",
+      "fields": {
+        "desired_form": "Desired form",
+        "current_step": "Current step",
+        "cross_civilization": "Cross-civilization",
+        "appeal": "Appeal",
+        "decided_at": "Decided at",
+        "created_at": "Filed",
+        "statement": "Soul's statement",
+        "appeal_statement": "Appeal statement",
+        "rejection_reason": "Rejection reason"
+      },
+      "cross": {
+        "undecided": "Not decided",
+        "yes": "Cross-civilization",
+        "no": "Within this civilization"
+      },
+      "appeal": {
+        "none": "No appeal",
+        "available": "One appeal available (unused)",
+        "used": "Appealed (one per application)"
+      },
+      "no_current_node": "The application is closed; no step is pending",
+      "workflow_load_failed": "Could not load review progress",
+      "cooldown_note": "A final rejection starts a cooldown counted from the decision time, in days set per tenant (default 30); the soul cannot apply again until it ends",
+      "statement_empty": "Left blank by the soul",
+      "open_workflow": "Open the approval workflow",
+      "cross_title": "Cross-civilization (initial review decides)",
+      "cross_hint": "Set only while the initial review step is pending, by the approver that step names",
+      "cross_saved": "Saved",
+      "cross_failed": "Could not save",
+      "cross_not_approver": "Only the approver named by the initial review step can decide",
+      "cross_not_in_initial": "The initial review is over; cross-civilization can no longer be decided",
+      "empty": "No rebirth applications yet",
+      "empty_filtered": "No applications with this status"
+    }
+  },
   "disposition": {
     "title": "Dispositions",
     "subtitle": "Where souls go once judgment concludes",

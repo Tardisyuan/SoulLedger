@@ -1348,6 +1348,178 @@
       "PARTIAL": "Herep Seth"
     }
   },
+  "soul_accounts": {
+    "refresh": "Ma'a Wehem",
+    "life": "Ankh {{n}}",
+    "fields": {
+      "soul": "Ba",
+      "soul_code": "Ren Ba",
+      "cycle": "Ankh",
+      "reason": "Khet Medu",
+      "expires_at": "Wetep Ahet",
+      "status": "Kheper"
+    },
+    "credential_status": {
+      "QUEUED": "Em Smen",
+      "SENT": "Em Send Seth",
+      "PENDING": "Em Ankh Djeret",
+      "REVEALED": "Maa Seth, Em Ankh Djeret",
+      "DELIVERED": "Djeret Wetep",
+      "VOID": "Ma Aper"
+    },
+    "rebirth_status": {
+      "UNDER_REVIEW": "Em Maa Seth",
+      "REJECTED": "Wehem Seth",
+      "APPEALING": "Em Nehet",
+      "APPEAL_REJECTED": "Nehet Wehem Seth",
+      "APPROVED": "Hesy Seth"
+    },
+    "origin": {
+      "DEATH_SYNC": "Iri em Medew Mut",
+      "OFFICER": "Iri em Djeret Hemsu",
+      "BACKFILL": "Iri em Sesh Tepy"
+    },
+    "credentials": {
+      "title": "Medu Sekhem Em Ankh Djeret",
+      "subtitle": "Medu Sekhem Ba ma Send: Maa Wa, Djeret Ankh, Send Wehem",
+      "manage_hint": "Maa, Djeret, Send Wehem: soul_account.manage em Tepy",
+      "filters": {
+        "label": "Setep em Kheper",
+        "PENDING": "Em Ankh Djeret",
+        "REVEALED": "Maa Seth, Em Ankh Djeret",
+        "DELIVERED": "Djeret Wetep",
+        "VOID": "Ma Aper",
+        "all": "Neb"
+      },
+      "reason": {
+        "no_contact": "Ma Wat Medu",
+        "send_failed": "Ma Send ({{error}}), {{attempts}} Iri",
+        "channel": "Send em {{channel}}",
+        "expired": "Ahet Medu Sekhem Wetep",
+        "voided": "Ma Aper em Wehem, Khemen Ba, em Ankh Wehem"
+      },
+      "revealed_by": "{{by}} Maa em {{time}}",
+      "delivered_by": "{{by}} Djeret em {{time}}",
+      "expired": "Ahet Wetep",
+      "expired_go_reset": "Ahet Medu Sekhem Wetep; Wehem em Per Ba",
+      "actions": {
+        "reveal": "Maa Medu Sekhem",
+        "retry": "Send Wehem",
+        "mark_delivered": "Sesh Djeret Wetep",
+        "go_reset": "Shem Wehem"
+      },
+      "retry_sent": "Send Wetep",
+      "retry_failed": "Ma Send Wehem",
+      "retry_not_pending": "Ma Em Ankh Djeret Wa; ma Send Wehem",
+      "delivered_ok": "Sesh Djeret Wetep",
+      "deliver_failed": "Ma Sesh Djeret",
+      "deliver_not_revealed": "Maa Seth Tepy, Sesh Djeret em Khet",
+      "empty": {
+        "pending": "Ma Medu Sekhem Em Ankh Djeret",
+        "pending_reason": "Ba em Wat Medu: Medu Sekhem Send Djes-ef, ma Kheper Dy",
+        "filtered": "Ma Neb em Kheper Pen"
+      }
+    },
+    "reveal": {
+      "confirm_title": "Maa Medu Sekhem?",
+      "confirm_body": "Maa Wa Djer: Per Medu Wehem Medu em Ahet Pen; Khet Seba ma Maa Neb. Djeret n Ba {{name}} (Ren {{code}}, Ankh {{n}}) Emu.",
+      "confirm": "Smen Seth, Maa",
+      "shown_title": "Medu Sekhem (Wa Djer)",
+      "shown_warning": "Khet Seba ma Maa Wehem. Djeret Emu; Ba Khemen Medu em Aq Tepy.",
+      "password_label": "Medu Sekhem",
+      "copy": "Sesh Medu Sekhem",
+      "copied": "Em Sesh ✓",
+      "copy_failed": "Ma Sesh; Sesh em Djeret",
+      "close": "Sesh Seth, Seba",
+      "deliver_and_close": "Djeret Wetep, Sesh, Seba",
+      "already_revealed": "Maa Seth Tepy (Hemsu Ky); ma Maa Wehem. Wehem em Per Ba",
+      "failed": "Ma Maa; Iri Wehem"
+    },
+    "account": {
+      "title": "Aq Ba",
+      "none": "Ma Aq em Ankh Pen",
+      "alive_no_account": "Ba em Ankh; Aq Iri Khet Sesh Mut",
+      "origin_label": "Iri em",
+      "password_label": "Medu Sekhem",
+      "must_change": "Khemen em Aq Tepy",
+      "password_set": "Ba Iri Medu Sekhem-ef",
+      "initial_expired": "Ahet Medu Sekhem Wetep",
+      "initial_expires_at": "Wetep Medu Sekhem",
+      "initial_expires_na": "Ba Khemen Seth; Medu Sekhem Tepy ma Aper",
+      "state_label": "Kheper Aq",
+      "active": "Aq Sekhem",
+      "retired": "Aq Wetep",
+      "last_login": "Aq Pehwy",
+      "never_logged_in": "Ma Aq Djer",
+      "contact_email": "Wat Sesh",
+      "contact_phone": "Wat Medu",
+      "contact_hint": "Ma Sesh: Wat Tepy Smen",
+      "chain": "Nehh Aq (Ankh Neb)",
+      "created_at": "Iri em {{time}}",
+      "retired_at": "Wetep em {{time}}",
+      "pending_link": "Maa Medu Em Ankh Djeret",
+      "actions": {
+        "provision": "Iri Aq Ankh Pen",
+        "reset": "Wehem Medu Sekhem"
+      },
+      "provision_title": "Iri Aq Ankh Pen n {{name}}?",
+      "provision_body": "Medu Sekhem Iri (72 Wenut, Khemen em Aq Tepy). Wat Medu em: Send Djes-ef; Ma Wat: Em Ankh Djeret.",
+      "reset_title": "Wehem Medu Sekhem n {{name}}?",
+      "reset_body": "Medu Tepy Ma Aper Emu; Medu Ma 72 Wenut, Khemen em Aq. Wat Medu em: Send Djes-ef; Ma Wat: Em Ankh Djeret.",
+      "provisioned": "Aq Ankh Pen Iri Seth",
+      "provision_existing": "Aq Ankh Pen em Tepy; ma Send Wehem. Wehem n Medu Ma",
+      "reset_queued": "Wehem Seth; Medu Ma Send em Wat",
+      "reset_pending": "Wehem Seth; Ma Wat, Medu Ma Em Ankh Djeret",
+      "retired_cannot_reset": "Aq Wetep em Ankh Wehem; ma Wehem",
+      "soul_alive": "Ba em Ankh; ma Iri Aq Ba",
+      "soul_not_found": "Ma Ba",
+      "failed": "Ma Sethet; Iri Wehem"
+    },
+    "rebirth": {
+      "title": "Nehet Ankh Wehem",
+      "subtitle": "Nehet Ba: Maa Seth, Nehet Sen, Ta Ky",
+      "filters": {
+        "label": "Setep em Kheper",
+        "all": "Neb"
+      },
+      "view": "Maa",
+      "detail_title": "Nehet Ankh Wehem · {{name}}",
+      "fields": {
+        "desired_form": "Iru Mer",
+        "current_step": "Sba Emu",
+        "cross_civilization": "Ta Ky",
+        "appeal": "Nehet Sen",
+        "decided_at": "Wedja Ahet",
+        "created_at": "Sesh em",
+        "statement": "Medu Ba",
+        "appeal_statement": "Medu Nehet Sen",
+        "rejection_reason": "Khet Wehem"
+      },
+      "cross": {
+        "undecided": "Ma Wedja",
+        "yes": "Ta Ky",
+        "no": "Ta Pen"
+      },
+      "appeal": {
+        "none": "Ma Nehet Sen",
+        "available": "Nehet Sen Wa (Ma Iri)",
+        "used": "Nehet Sen Seth (Wa Djer)"
+      },
+      "no_current_node": "Nehet Wetep; ma Sba Emu",
+      "workflow_load_failed": "Ma Maa Sba",
+      "cooldown_note": "Khet Wehem Wetep: Ahet Qebeh em Wedja Ahet (Hru em Per Hemes, 30 Tepy); Ba ma Nehet Wehem",
+      "statement_empty": "Ba ma Sesh",
+      "open_workflow": "Wen Sba Hesy",
+      "cross_title": "Ta Ky (Maa Tepy Wedja)",
+      "cross_hint": "Sba Tepy em Smen: Hemsu Sba Pen Iri",
+      "cross_saved": "Smen Seth",
+      "cross_failed": "Ma Smen",
+      "cross_not_approver": "Hemsu Sba Tepy Wa Wedja",
+      "cross_not_in_initial": "Maa Tepy Wetep; ma Wedja Ta Ky",
+      "empty": "Ma Nehet Ankh Wehem",
+      "empty_filtered": "Ma Nehet em Kheper Pen"
+    }
+  },
   "disposition": {
     "title": "Iri Wetep Seth",
     "subtitle": "Per Djewet Aba Hemsu Kher Sheemtet Wetep Seth",
