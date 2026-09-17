@@ -5412,7 +5412,7 @@ export interface components {
             court?: string;
             evidence_json?: unknown;
             confession?: string;
-            readonly verdict: (components["schemas"]["JudgmentVerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations: components["schemas"]["JudgmentCitation"][];
             readonly is_final: boolean;
@@ -5483,14 +5483,6 @@ export interface components {
             prior_cycles: components["schemas"]["Reincarnation"][];
             realm_options: components["schemas"]["RealmLocalized"][];
         };
-        /**
-         * @description * `PASSED` - Passed / Saved
-         *     * `FAILED` - Failed / Condemned
-         *     * `PURGATORY` - Purgatory / Intermediate
-         *     * `RETRY` - Retry / Appeal
-         * @enum {string}
-         */
-        JudgmentVerdictEnum: "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
          *     computes with are not emitted. The end buckets are unbounded, so the
@@ -5936,6 +5928,15 @@ export interface components {
          * @enum {string}
          */
         MenuTypeEnum: "DIRECTORY" | "MENU" | "BUTTON";
+        /**
+         * @description * `PASSED` - PASSED
+         *     * `FAILED` - FAILED
+         *     * `CONFIRMED` - CONFIRMED
+         *     * `REJECTED` - REJECTED
+         *     * `SKIPPED` - SKIPPED
+         * @enum {string}
+         */
+        NodeDecisionVerdictEnum: "PASSED" | "FAILED" | "CONFIRMED" | "REJECTED" | "SKIPPED";
         /**
          * @description `offset_within_classes` — 功過有不可折者, netted per class.
          *
@@ -6880,7 +6881,7 @@ export interface components {
             court?: string;
             evidence_json?: unknown;
             confession?: string;
-            readonly verdict?: (components["schemas"]["JudgmentVerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations?: components["schemas"]["JudgmentCitation"][];
             readonly is_final?: boolean;
@@ -8400,6 +8401,14 @@ export interface components {
             readonly permissions: string[];
         };
         /**
+         * @description * `PASSED` - Passed / Saved
+         *     * `FAILED` - Failed / Condemned
+         *     * `PURGATORY` - Purgatory / Intermediate
+         *     * `RETRY` - Retry / Appeal
+         * @enum {string}
+         */
+        VerdictEnum: "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
+        /**
          * @description * `PUBLIC` - Public
          *     * `TENANT` - Tenant Only
          *     * `FOLLOWERS` - Followers Only
@@ -8436,21 +8445,12 @@ export interface components {
         };
         /** @description Serializer for node approval action. */
         WorkflowNodeAction: {
-            verdict: components["schemas"]["WorkflowNodeActionVerdictEnum"];
+            verdict: components["schemas"]["NodeDecisionVerdictEnum"];
             /** @default  */
             notes: string;
             /** @default  */
             rejection_reason_for_soul: string;
         };
-        /**
-         * @description * `PASSED` - PASSED
-         *     * `FAILED` - FAILED
-         *     * `CONFIRMED` - CONFIRMED
-         *     * `REJECTED` - REJECTED
-         *     * `SKIPPED` - SKIPPED
-         * @enum {string}
-         */
-        WorkflowNodeActionVerdictEnum: "PASSED" | "FAILED" | "CONFIRMED" | "REJECTED" | "SKIPPED";
         /**
          * @description The dict `WorkflowService.get_workflow_stats` builds.
          *
