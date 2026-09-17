@@ -108,6 +108,7 @@ const COLLECTED_FILES = [
   "WebSocketContext.test.tsx",
   "WebSocketContext.tokenRefresh.test.tsx",
   "WelcomePage.test.tsx",
+  "WorkflowDetailPage.reasonForSoul.test.tsx",
   "WorkflowEditor.test.tsx",
   "WorkflowPage.instances.test.tsx",
   "WorkflowPage.test.tsx",

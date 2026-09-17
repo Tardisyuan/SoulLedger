@@ -44,7 +44,7 @@ export { realmsApi, type Realm } from "./realms";
 export { actorsApi, type Actor } from "./actors";
 
 // Workflow
-export { workflowApi, type ApprovalWorkflow, type ApprovalWorkflowListItem, type ApprovalNode, type WorkflowTemplate, type WorkflowTemplateListItem, type WorkflowTemplateNode } from "./workflow";
+export { workflowApi, requiresReasonForSoul, REBIRTH_APPLICATION_CASE_TYPE, REJECTION_REASON_FOR_SOUL_MAX, type ApprovalWorkflow, type ApprovalWorkflowListItem, type ApprovalNode, type WorkflowTemplate, type WorkflowTemplateListItem, type WorkflowTemplateNode } from "./workflow";
 
 // Disposition
 export { dispositionApi, type Disposition } from "./disposition";
@@ -103,6 +103,7 @@ export {
   type RebirthApplicationFilters,
   type RebirthApplicationForm,
   type RebirthApplicationStatus,
+  type RebirthCurrentStep,
   type RevealedCredential,
   type SoulAccount,
   type SoulAccountErrorBody,

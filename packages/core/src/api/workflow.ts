@@ -132,6 +132,23 @@ export interface WorkflowTemplate extends WorkflowTemplateListItem {
   tenant?: number;
 }
 
+/** `CaseType.REBIRTH_APPLICATION` — a soul's rebirth application (backend/apps/soul_accounts/rebirth.py). */
+export const REBIRTH_APPLICATION_CASE_TYPE = "REBIRTH_APPLICATION";
+
+/** The cap on `rejection_reason_for_soul` (WorkflowNodeActionSerializer, max_length=2000). */
+export const REJECTION_REASON_FOR_SOUL_MAX = 2000;
+
+/**
+ * Whether a node decision needs `rejection_reason_for_soul`: the workflow is a
+ * rebirth application (by its `case_type`, never its name) and a verdict is
+ * chosen that is not PASSED / CONFIRMED — `complete_node` treats every other
+ * verdict as a rejection. Mirrors `rebirth.requires_reason_for_soul`; the
+ * backend still decides, with a 400 `error="rejection_reason_for_soul is required"`.
+ */
+export function requiresReasonForSoul(caseType: string | null | undefined, verdict: string): boolean {
+  return caseType === REBIRTH_APPLICATION_CASE_TYPE && verdict !== "" && verdict !== "PASSED" && verdict !== "CONFIRMED";
+}
+
 export const workflowApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<ApprovalWorkflowListItem>>("/workflows/", { params }),
   get: (id: string) => api.get<ApprovalWorkflow>(`/workflows/${id}/`),
@@ -159,8 +176,11 @@ export const workflowApi = {
    * (WorkflowNodeActionSerializer only validates `verdict`/`notes`; `node_id`
    * is read separately from `request.data`), not by a URL segment.
    */
-  approveNode: (workflowId: string, nodeId: string, data: { verdict: string; notes?: string }) =>
-    api.post<ApprovalWorkflow>(`/workflows/${workflowId}/approve_node/`, { node_id: nodeId, ...data }),
+  approveNode: (
+    workflowId: string,
+    nodeId: string,
+    data: { verdict: string; notes?: string; rejection_reason_for_soul?: string }
+  ) => api.post<ApprovalWorkflow>(`/workflows/${workflowId}/approve_node/`, { node_id: nodeId, ...data }),
   templates: {
     // WorkflowTemplateViewSet is the one view in the project that sets
     // pagination_class = None (backend/apps/workflow/views.py:45), so this
