@@ -5981,6 +5981,10 @@ export interface components {
         NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED";
         /** @enum {unknown} */
         NullEnum: null;
+        /**
+         * @description 官员侧。`current_step` / `can_appeal` 与 /me 同一个函数算(rebirth.py),
+         *     `rejection_reason` 就是审批人驳回时填的「给灵魂的理由」,节点内部备注不在这里。
+         */
         OfficerRebirthApplication: {
             /** Format: uuid */
             readonly id: string;
@@ -6003,6 +6007,10 @@ export interface components {
             readonly rejection_reason: string;
             /** Format: date-time */
             readonly decided_at: string | null;
+            readonly current_step: components["schemas"]["MeCurrentStep"] | null;
+            readonly can_appeal: boolean;
+            /** Format: date-time */
+            readonly cooldown_until: string | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */

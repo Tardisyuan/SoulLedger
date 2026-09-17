@@ -148,20 +148,14 @@ class MeRebirthApplicationSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(MeCurrentStepSerializer(allow_null=True))
     def get_current_step(self, obj):
-        from apps.soul_accounts.rebirth import active_workflow
+        from apps.soul_accounts.rebirth import current_step
 
-        node = active_workflow(obj).current_node
-        if node is None or obj.status not in ("UNDER_REVIEW", "APPEALING"):
-            return None
-        return {"node_type": node.node_type, "approver_role": node.approver_role,
-                "is_appeal": obj.appeal_workflow_id is not None}
+        return current_step(obj)
 
     def get_can_appeal(self, obj) -> bool:
-        account = self.context.get("account")
-        return bool(
-            account is not None and obj.cycle == account.cycle
-            and obj.status == "REJECTED" and obj.appeal_workflow_id is None
-        )
+        from apps.soul_accounts.rebirth import can_appeal
+
+        return can_appeal(obj, self.context.get("account"))
 
 
 class MeReincarnationSerializer(serializers.Serializer):
@@ -286,17 +280,42 @@ class RevealedCredentialSerializer(serializers.Serializer):
 
 
 class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
+    """官员侧。`current_step` / `can_appeal` 与 /me 同一个函数算(rebirth.py),
+    `rejection_reason` 就是审批人驳回时填的「给灵魂的理由」,节点内部备注不在这里。"""
+
     soul_code = serializers.CharField(source="soul.soul_code", read_only=True)
     soul_name = serializers.CharField(source="soul.name", read_only=True)
+    current_step = serializers.SerializerMethodField()
+    can_appeal = serializers.SerializerMethodField()
+    cooldown_until = serializers.SerializerMethodField()
 
     class Meta:
         model = RebirthApplication
         fields = [
             "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement",
             "appeal_statement", "status", "workflow", "appeal_workflow", "cross_civilization",
-            "rejection_reason", "decided_at", "created_at", "updated_at",
+            "rejection_reason", "decided_at", "current_step", "can_appeal", "cooldown_until",
+            "created_at", "updated_at",
         ]
         read_only_fields = fields
+
+    @extend_schema_field(MeCurrentStepSerializer(allow_null=True))
+    def get_current_step(self, obj):
+        from apps.soul_accounts.rebirth import current_step
+
+        return current_step(obj)
+
+    def get_can_appeal(self, obj) -> bool:
+        from apps.soul_accounts.rebirth import can_appeal
+        from apps.soul_accounts.services import current_account_of
+
+        return can_appeal(obj, current_account_of(obj.soul))
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_until(self, obj):
+        from apps.soul_accounts.rebirth import cooldown_until
+
+        return cooldown_until(obj)
 
 
 class CrossCivilizationDecisionSerializer(serializers.Serializer):

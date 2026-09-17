@@ -234,3 +234,45 @@ def test_other_workflows_do_not_require_the_soul_reason(cn_tenant, judge_user):
     response = officer_client(judge_user).post(f"/api/v1/workflows/{workflow.pk}/approve_node/",
                                                {"verdict": "FAILED"}, format="json")
     assert response.status_code == 200, response.data
+
+
+OFFICER_KEYS = {
+    "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement", "appeal_statement",
+    "status", "workflow", "appeal_workflow", "cross_civilization", "rejection_reason", "decided_at",
+    "current_step", "can_appeal", "cooldown_until", "created_at", "updated_at",
+}
+
+
+def test_officer_view_carries_the_same_derived_fields_as_me(cn_tenant, judge_user,
+                                                            django_capture_on_commit_callbacks):
+    account, client = ready_soul(cn_tenant)
+    application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
+    officer_url = f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/"
+    officer = officer_client(judge_user)
+
+    under_review = officer.get(officer_url).data
+    assert set(under_review) == OFFICER_KEYS
+    assert under_review["current_step"] == client.get(f"{APPLY}{application.pk}/").data["current_step"] == {
+        "node_type": "EVALUATION", "approver_role": "JUDGE", "is_appeal": False}
+    assert under_review["can_appeal"] is False and under_review["cooldown_until"] is None
+
+    application = _decide(judge_user, application, "FAILED", notes="内部备注:不给灵魂看", reason="给灵魂的理由",
+                          capture=django_capture_on_commit_callbacks)
+    rejected = officer.get(officer_url).data
+    me = client.get(f"{APPLY}{application.pk}/").data
+    assert rejected["can_appeal"] is me["can_appeal"] is True
+    assert rejected["current_step"] is None and me["current_step"] is None
+    assert rejected["rejection_reason"] == "给灵魂的理由"
+    assert "内部备注" not in json.dumps(rejected, ensure_ascii=False, default=str)
+    until = rejected["cooldown_until"]
+    assert until is not None and timedelta(days=29, hours=23) < until - timezone.now() <= timedelta(days=30)
+
+    cn_tenant.settings = {"soul_rebirth_cooldown_days": 0}
+    cn_tenant.save()
+    assert officer.get(officer_url).data["cooldown_until"] is None
+
+    with django_capture_on_commit_callbacks(execute=True):
+        client.post(f"{APPLY}{application.pk}/appeal/", {}, format="json")
+    appealing = officer.get(officer_url).data
+    assert appealing["can_appeal"] is False
+    assert appealing["current_step"] == {"node_type": "APPEAL", "approver_role": "JUDGE", "is_appeal": True}
