@@ -194,6 +194,7 @@
       "generation": "Aru {{n}}",
       "previous_identity": "Aru Tepy {{name}}",
       "residing": "Kehat · Per Tepy {{tenant}}",
+      "residing_read_only": "Kehat {{tenant}} · Maa",
       "birth_of": "Wepet ({{name}})",
       "copy_id_aria": "Sesh Medu Aba",
       "reading": {
@@ -1125,6 +1126,7 @@
     "return_home_reason": "Medu Seneb Kehat",
     "return_home_success": "Seth Iyi Er Per Tepy",
     "return_home_error": "Ma Seneb Kehat",
+    "return_home_blocked_open_judgment": "Wedja Ma Kheper; Ma Seneb Kehat",
     "approve": "Sesen",
     "reject": "Wehem",
     "execute": "Iri Seth",
