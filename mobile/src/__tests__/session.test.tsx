@@ -13,7 +13,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
-import { paletteFor } from "../theme";
+import { themeFor } from "../theme";
 import { PROFILE, application, life, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -156,8 +156,12 @@ describe("a stored session", () => {
     renderApp();
     const card = await screen.findByTestId("profile-card");
     const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(style).toMatchObject({ backgroundColor: paletteFor("EGYPTIAN", "light").surface1 }); // jest reports a light colour scheme
-    expect(paletteFor("EGYPTIAN", "light").surface1).not.toBe(paletteFor(null, "light").surface1);
+    expect(style).toMatchObject({ backgroundColor: themeFor("EGYPTIAN", "light").s0 }); // jest reports a light colour scheme
+    expect(themeFor("EGYPTIAN", "light").s0).not.toBe(themeFor(null, "light").s0);
+    // …and relabels the two scores from Egypt's lexicon, keeping the server's numbers.
+    expect(screen.getByText("心之重")).toBeTruthy();
+    expect(screen.queryByText("功")).toBeNull();
+    expect(screen.getByText(String(PROFILE.merit_score))).toBeTruthy();
   });
 
   it("returning to the life tab reloads it — an application submitted elsewhere shows up", async () => {
@@ -174,10 +178,13 @@ describe("a stored session", () => {
       },
     });
     renderApp();
+    // The applications section starts collapsed (only merits/demerits open by default).
+    fireEvent.press(await screen.findByTestId("section-applications-toggle"));
     await screen.findByText("这一世没有转生申请");
-    fireEvent.press(screen.getAllByText("转生申请").at(-1)!); // the tab, not the section heading
+    // By testID: the tab label also appears as the header title and a section heading.
+    fireEvent.press(screen.getByTestId("tab-Applications"));
     await screen.findByTestId("eligibility");
-    fireEvent.press(screen.getByText("本世"));
+    fireEvent.press(screen.getByTestId("tab-Life"));
     await screen.findByText("审批中");
     expect(screen.queryByText("这一世没有转生申请")).toBeNull();
   });
@@ -191,6 +198,10 @@ describe("a stored session", () => {
     });
     renderApp();
     fireEvent.press(await screen.findByTestId("logout"));
+    // Signing out asks first; nothing is cleared until the choice is confirmed.
+    await screen.findByTestId("confirm-sheet");
+    expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R");
+    fireEvent.press(screen.getByTestId("logout-confirm"));
     await screen.findByTestId("login-submit");
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
     await waitFor(() => expect(calls.some((c) => c.url === "/soul-auth/logout/")).toBe(true));

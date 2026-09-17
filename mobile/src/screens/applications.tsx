@@ -5,15 +5,41 @@ import {
   soulCodeMessage,
   soulErrorMessage,
   type DesiredRebirthForm,
+  type MeRebirthApplication,
   type MeRebirthApplicationList,
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
-import { View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { formatDateTime, useI18n } from "../i18n";
-import { Body, Button, Card, EnumText, ErrorText, Failure, Field, Heading, Input, Loading, Screen, useReloadOnRefocus, useRemote } from "../ui";
+import { Icon } from "../emblems";
+import { useToast } from "../feedback";
+import { useI18n } from "../i18n";
+import { APPLICATION_BADGES, formatStamp, timelineOf, type TimelineStep } from "../rules";
+import {
+  Block,
+  Button,
+  DataRow,
+  DataRows,
+  Empty,
+  EnumBadge,
+  EnumValue,
+  FadeIn,
+  GUTTER,
+  Input,
+  Interp,
+  Notice,
+  Quote,
+  Screen,
+  ScreenError,
+  Skeleton,
+  Txt,
+  enumText,
+  useReloadOnRefocus,
+  useRemote,
+  useTheme,
+} from "../ui";
 
 export type AppStackParams = {
   Tabs: undefined;
@@ -23,66 +49,128 @@ export type AppStackParams = {
 
 /**
  * Whether the "apply" entry is offered. The server decides (`can_apply`), and
- * a refusal is always explained — the reason code, and the cooling-off end
- * date when there is one — rather than a button that silently does nothing.
+ * a refusal is always explained under the disabled button — the reason code,
+ * and the cooling-off end date when there is one.
  */
 export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationList; onApply: () => void }) {
-  const { t, locale } = useI18n();
-  const until = formatDateTime(list.cooldown_until, locale);
+  const { t } = useI18n();
   const reason = list.reason ? soulCodeMessage(list.reason) : null;
+  const until = formatStamp(list.cooldown_until);
   return (
-    <Card testID="eligibility">
-      {list.can_apply ? null : (
-        <>
-          <Body>{t("soul_app.applications.cannot_apply")}</Body>
-          {/* A reason, not a failure: muted text, not the error colour. */}
-          {reason ? <Body muted testID="eligibility-reason">{t(reason.key, reason.params)}</Body> : null}
-          {until ? <Body muted>{t("soul_app.applications.cooldown_until", { date: until })}</Body> : null}
-        </>
-      )}
-      <Button testID="apply" title={t("soul_app.applications.new")} onPress={onApply} disabled={!list.can_apply} />
-    </Card>
+    <Block testID="eligibility">
+      <Button
+        testID="apply"
+        title={t("soul_app.applications.new")}
+        onPress={onApply}
+        disabled={!list.can_apply}
+        reasonTestID="eligibility-reason"
+        reason={reason ? t(reason.key, reason.params) : t("soul_app.applications.cannot_apply")}
+      />
+      {!list.can_apply && until ? (
+        <Interp
+          testID="cooldown-until"
+          variant="caption"
+          tone="muted"
+          style={styles.cooldown}
+          text={t("soul_app.applications.cooldown_until")}
+          parts={{ date: <Txt variant="value" tone="muted">{until}</Txt> }}
+        />
+      ) : null}
+    </Block>
+  );
+}
+
+function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => void }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      testID={`open-${a.id}`}
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => [styles.appRow, { borderBottomColor: theme.hair }, pressed && styles.pressed]}
+    >
+      <View style={styles.fill}>
+        <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+        <View style={styles.gap10}>
+          <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="bodyLg" />
+        </View>
+        <Txt variant="value" tone="subtle" style={styles.gap4}>
+          {formatStamp(a.created_at)}
+        </Txt>
+      </View>
+      <Icon name="chevron" size={15} color={theme.inkSubtle} />
+    </Pressable>
   );
 }
 
 export function ApplicationsScreen() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const list = useRemote(soulApi.applications);
   useReloadOnRefocus(list.reload);
+  if (list.error && !list.data) {
+    return (
+      <Screen scroll={false} edges={["left", "right"]}>
+        <ScreenError error={soulErrorMessage(list.error)} onRetry={list.reload} />
+      </Screen>
+    );
+  }
   return (
-    <Screen refreshing={list.loading} onRefresh={list.reload}>
-      {list.error ? (
-        <Failure error={soulErrorMessage(list.error)} onRetry={list.reload} />
-      ) : !list.data ? (
-        <Loading />
+    <Screen refreshing={list.loading && !!list.data} onRefresh={list.reload} edges={["left", "right"]}>
+      {!list.data ? (
+        <Block>
+          <Skeleton lines={3} />
+        </Block>
       ) : (
-        <>
+        <FadeIn>
           <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} />
-          {list.data.results.length === 0 ? <Body muted>{t("soul_app.applications.empty")}</Body> : null}
+          {list.data.results.length === 0 ? <Empty text={t("soul_app.applications.empty")} /> : null}
           {list.data.results.map((a) => (
-            <Card key={a.id}>
-              <Body>
-                <EnumText namespace="reincarnation.forms" value={a.desired_form} /> ·{" "}
-                <EnumText namespace="soul_app.status" value={a.status} />
-              </Body>
-              <Body muted>{t("soul_app.applications.created_at", { date: formatDateTime(a.created_at, locale) ?? "" })}</Body>
-              <Button
-                kind="secondary"
-                testID={`open-${a.id}`}
-                title={t("soul_app.applications.view")}
-                onPress={() => navigation.navigate("ApplicationDetail", { id: a.id })}
-              />
-            </Card>
+            <ApplicationRow key={a.id} a={a} onOpen={() => navigation.navigate("ApplicationDetail", { id: a.id })} />
           ))}
-        </>
+        </FadeIn>
       )}
     </Screen>
   );
 }
 
-export function NewApplicationScreen() {
+function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; selected: boolean; onPick: () => void }) {
+  const theme = useTheme();
   const { t } = useI18n();
+  return (
+    <Pressable
+      testID={`form-${form}`}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      onPress={onPick}
+      style={({ pressed }) => [
+        styles.formCard,
+        { backgroundColor: theme.s0, borderLeftColor: selected ? theme.mark : "transparent" },
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={[styles.dot, { borderColor: selected ? theme.mark : theme.hair2 }]}>
+        {selected ? <View style={[styles.dotFill, { backgroundColor: theme.mark }]} /> : null}
+      </View>
+      <View style={styles.fill}>
+        <View style={styles.formName}>
+          <Txt variant="bodyLg">{t(`reincarnation.forms.${form}`)}</Txt>
+          <Txt variant="value" tone="subtle" style={styles.formCode}>
+            {form}
+          </Txt>
+        </View>
+        <Txt variant="caption" tone="subtle">
+          {t(`soul_app.form_notes.${form}`)}
+        </Txt>
+      </View>
+    </Pressable>
+  );
+}
+
+export function NewApplicationScreen() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const toast = useToast();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const [form, setForm] = useState<DesiredRebirthForm | null>(null);
   const [statement, setStatement] = useState("");
@@ -95,6 +183,7 @@ export function NewApplicationScreen() {
     setError(null);
     try {
       const created = await soulApi.submitApplication(form, statement);
+      toast(t("soul_app.applications.submitted"));
       navigation.goBack();
       navigation.navigate("ApplicationDetail", { id: created.id });
     } catch (e) {
@@ -105,54 +194,127 @@ export function NewApplicationScreen() {
 
   return (
     <Screen>
-      <Card>
-        <Heading>{t("soul_app.applications.desired_form")}</Heading>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {DESIRED_REBIRTH_FORMS.map((f) => (
-            <View key={f} style={{ minWidth: "30%", flexGrow: 1 }}>
-              <Button
-                testID={`form-${f}`}
-                kind={form === f ? "primary" : "secondary"}
-                title={t(`reincarnation.forms.${f}`)}
-                onPress={() => setForm(f)}
-              />
-            </View>
-          ))}
+      <Block last style={styles.stack}>
+        <View style={[styles.note, { borderLeftColor: theme.hair2 }]}>
+          <Interp
+            variant="caption"
+            tone="muted"
+            text={t("soul_app.applications.expectation")}
+            parts={{ hope: <Txt variant="caption">{t("soul_app.applications.expectation_word")}</Txt> }}
+          />
         </View>
-        <Input
-          testID="statement"
-          label={t("soul_app.applications.statement")}
-          value={statement}
-          onChangeText={setStatement}
-          multiline
-          maxLength={2000}
-          style={{ minHeight: 96, textAlignVertical: "top" }}
-        />
-        <ErrorText testID="new-application-error" error={error} />
+        <View>
+          <Txt variant="section" style={styles.heading}>
+            {t("soul_app.applications.desired_form")}
+          </Txt>
+          <View accessibilityRole="radiogroup" style={[styles.forms, { backgroundColor: theme.hair }]}>
+            {DESIRED_REBIRTH_FORMS.map((f) => (
+              <FormCard key={f} form={f} selected={form === f} onPick={() => setForm(f)} />
+            ))}
+          </View>
+        </View>
+        <View style={styles.statement}>
+          <Input
+            testID="statement"
+            label={t("soul_app.applications.statement")}
+            hint={t("soul_app.applications.statement_hint")}
+            value={statement}
+            onChangeText={setStatement}
+            multiline
+            maxLength={2000}
+          />
+        </View>
+        {error ? (
+          <Notice tone="neg" testID="new-application-error">
+            {t(error.key, error.params)}
+          </Notice>
+        ) : null}
         <Button
           testID="submit-application"
           title={t(busy ? "soul_app.applications.submitting" : "soul_app.applications.submit")}
           onPress={submit}
-          disabled={busy}
+          busy={busy}
+          disabled={!form}
+          reason={t("soul_app.applications.choose_form")}
+          reasonTestID="submit-application-reason"
         />
-      </Card>
+        <Button kind="secondary" title={t("soul_app.common.cancel")} onPress={() => navigation.goBack()} />
+      </Block>
     </Screen>
   );
 }
 
+function Timeline({ steps }: { steps: TimelineStep[] }) {
+  const theme = useTheme();
+  const { t, enumLabel } = useI18n();
+  const label = (step: TimelineStep) => {
+    if ("key" in step.label) return t(step.label.key);
+    const node = enumText(enumLabel("workflow.node_type", step.label.node), t);
+    const role = enumText(enumLabel("users.roles", step.label.role), t);
+    return [node, role, step.label.appeal ? t("soul_app.detail.appeal_round") : null].filter(Boolean).join(" · ");
+  };
+  return (
+    <View testID="timeline">
+      {steps.map((step, i) => {
+        const last = i === steps.length - 1;
+        const dot =
+          step.state === "done"
+            ? { backgroundColor: theme.mark, borderColor: theme.mark, borderWidth: 1 }
+            : step.state === "now"
+              ? { backgroundColor: theme.s0, borderColor: theme.accent, borderWidth: 2 }
+              : { backgroundColor: "transparent", borderColor: theme.hair2, borderWidth: 1 };
+        const when = step.at ? formatStamp(step.at) : step.state === "now" ? t("soul_app.timeline.in_progress") : null;
+        return (
+          <View key={step.key} testID={`step-${step.key}`} style={styles.step}>
+            <View style={styles.rail}>
+              <View testID={`step-${step.key}-${step.state}`} style={[styles.stepDot, dot]} />
+              {last ? null : <View style={[styles.stepLine, { backgroundColor: theme.hair }]} />}
+            </View>
+            <View style={[styles.fill, !last && styles.stepGap]}>
+              <Txt variant="bodyLg" tone={step.state === "todo" ? "subtle" : "ink"} style={styles.stepName}>
+                {label(step)}
+              </Txt>
+              {when ? (
+                <Txt variant="value" tone="subtle" style={styles.stepWhen}>
+                  {when}
+                </Txt>
+              ) : null}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export function ApplicationDetailScreen({ id }: { id: string }) {
-  const { t, locale } = useI18n();
+  const theme = useTheme();
+  const { t } = useI18n();
+  const toast = useToast();
   const fetcher = useCallback(() => soulApi.application(id), [id]);
   const app = useRemote(fetcher);
   const [appeal, setAppeal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
 
-  if (app.error) return <Screen><Failure error={soulErrorMessage(app.error)} onRetry={app.reload} /></Screen>;
-  if (!app.data) return <Screen><Loading /></Screen>;
+  if (app.error && !app.data) {
+    return (
+      <Screen scroll={false}>
+        <ScreenError error={soulErrorMessage(app.error)} onRetry={app.reload} />
+      </Screen>
+    );
+  }
+  if (!app.data) {
+    return (
+      <Screen>
+        <Block>
+          <Skeleton lines={5} />
+        </Block>
+      </Screen>
+    );
+  }
   const a = app.data;
   const reason = rejectionReasonOf(a);
-  const unrecorded = t("common.value.unrecorded");
 
   const submitAppeal = async () => {
     setBusy(true);
@@ -160,6 +322,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
     try {
       await soulApi.appeal(a.id, appeal);
       setAppeal("");
+      toast(t("soul_app.detail.appealed"));
       await app.reload();
     } catch (e) {
       setError(soulErrorMessage(e));
@@ -170,47 +333,137 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
 
   return (
     <Screen refreshing={app.loading} onRefresh={app.reload}>
-      <Card testID="application-detail">
-        <Field label={t("soul_app.detail.status")}>
-          <EnumText namespace="soul_app.status" value={a.status} />
-        </Field>
-        <Field label={t("soul_app.detail.desired_form")}>
-          <EnumText namespace="reincarnation.forms" value={a.desired_form} />
-        </Field>
-        {a.statement ? <Field label={t("soul_app.detail.statement")}>{a.statement}</Field> : null}
-        {a.current_step ? (
-          <Field label={t("soul_app.detail.current_step")}>
-            <EnumText namespace="workflow.node_type" value={a.current_step.node_type} /> ·{" "}
-            <EnumText namespace="users.roles" value={a.current_step.approver_role} />
-            {a.current_step.is_appeal ? ` · ${t("soul_app.detail.appeal_round")}` : ""}
-          </Field>
+      <FadeIn>
+        <Block testID="application-detail">
+          <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+          <View style={styles.formTitle}>
+            <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="display" />
+          </View>
+          <DataRows style={styles.facts}>
+            <DataRow label={t("soul_app.detail.created_at")} mono>
+              {formatStamp(a.created_at) ?? t("common.value.unrecorded")}
+            </DataRow>
+            {a.decided_at ? (
+              <DataRow label={t("soul_app.detail.decided_at")} mono>
+                {formatStamp(a.decided_at) ?? t("common.value.unrecorded")}
+              </DataRow>
+            ) : null}
+            {a.current_step ? (
+              <>
+                <DataRow label={t("soul_app.detail.current_step")}>
+                  <EnumValue namespace="workflow.node_type" value={a.current_step.node_type} />
+                </DataRow>
+                <DataRow label={t("soul_app.detail.approver_role")}>
+                  <EnumValue namespace="users.roles" value={a.current_step.approver_role} />
+                </DataRow>
+              </>
+            ) : null}
+            <DataRow label={t("soul_app.detail.cross_civilization")}>
+              {a.cross_civilization === null || a.cross_civilization === undefined
+                ? t("soul_app.detail.cross_undecided")
+                : t(a.cross_civilization ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}
+            </DataRow>
+          </DataRows>
+        </Block>
+
+        <Block>
+          <Txt variant="section" style={styles.heading}>
+            {t("soul_app.detail.flow")}
+          </Txt>
+          <Timeline steps={timelineOf(a)} />
+        </Block>
+
+        {a.statement ? (
+          <Block>
+            <Txt variant="section" style={styles.headingTight}>
+              {t("soul_app.detail.statement")}
+            </Txt>
+            <Quote text={a.statement} />
+          </Block>
         ) : null}
-        <Field label={t("soul_app.detail.cross_civilization")}>
-          {a.cross_civilization === null || a.cross_civilization === undefined
-            ? t("soul_app.detail.cross_undecided")
-            : t(a.cross_civilization ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}
-        </Field>
-        {a.decided_at ? <Field label={t("soul_app.detail.decided_at")}>{formatDateTime(a.decided_at, locale) ?? unrecorded}</Field> : null}
-        {reason ? <Field label={t("soul_app.detail.rejection_reason")}>{reason}</Field> : null}
-        {a.appeal_statement ? <Field label={t("soul_app.detail.appeal_statement")}>{a.appeal_statement}</Field> : null}
-      </Card>
-      {a.can_appeal ? (
-        <Card testID="appeal">
-          <Heading>{t("soul_app.detail.appeal")}</Heading>
-          <Body muted>{t("soul_app.detail.appeal_hint")}</Body>
-          <Input
-            testID="appeal-statement"
-            label={t("soul_app.detail.appeal_statement")}
-            value={appeal}
-            onChangeText={setAppeal}
-            multiline
-            maxLength={2000}
-            style={{ minHeight: 96, textAlignVertical: "top" }}
-          />
-          <ErrorText error={error} />
-          <Button testID="submit-appeal" title={t("soul_app.detail.appeal_submit")} onPress={submitAppeal} disabled={busy} />
-        </Card>
-      ) : null}
+
+        {reason ? (
+          <Block style={{ backgroundColor: theme.s1 }} testID="rejection">
+            <View style={styles.headingRow}>
+              <Txt variant="section">{t("soul_app.detail.rejection_reason")}</Txt>
+              {a.status === "REJECTED" && a.decided_at ? (
+                <Txt variant="value" tone="subtle" style={styles.meta}>
+                  {formatStamp(a.decided_at)}
+                </Txt>
+              ) : null}
+            </View>
+            <Quote text={reason} tone="rejection" />
+          </Block>
+        ) : null}
+
+        {a.appeal_statement ? (
+          <Block>
+            <Txt variant="section" style={styles.headingTight}>
+              {t("soul_app.detail.appeal_statement")}
+            </Txt>
+            <Quote text={a.appeal_statement} tone="appeal" />
+          </Block>
+        ) : null}
+
+        {a.can_appeal ? (
+          <Block last testID="appeal" style={styles.appealBlock}>
+            <View>
+              <Txt variant="section">{t("soul_app.detail.appeal")}</Txt>
+              <Txt variant="caption" tone="subtle" style={styles.hint}>
+                {t("soul_app.detail.appeal_hint")}
+              </Txt>
+            </View>
+            <Input
+              testID="appeal-statement"
+              label={t("soul_app.detail.appeal_statement")}
+              value={appeal}
+              onChangeText={setAppeal}
+              multiline
+              maxLength={2000}
+            />
+            {error ? <Notice tone="neg">{t(error.key, error.params)}</Notice> : null}
+            <Button
+              testID="submit-appeal"
+              title={t(busy ? "soul_app.applications.submitting" : "soul_app.detail.appeal_submit")}
+              onPress={submitAppeal}
+              busy={busy}
+            />
+          </Block>
+        ) : null}
+      </FadeIn>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  pressed: { opacity: 0.8 },
+  gap4: { marginTop: 4 },
+  gap10: { marginTop: 10 },
+  cooldown: { marginTop: 6, marginLeft: 22 },
+  appRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: GUTTER, paddingVertical: 18, borderBottomWidth: 1 },
+  stack: { gap: 22 },
+  note: { borderLeftWidth: 2, paddingLeft: 12 },
+  heading: { marginBottom: 12 },
+  headingTight: { marginBottom: 11 },
+  headingRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 8, marginBottom: 12 },
+  meta: { fontSize: 11 },
+  forms: { gap: 1 },
+  formCard: { flexDirection: "row", alignItems: "flex-start", gap: 13, paddingVertical: 15, paddingHorizontal: 14, borderLeftWidth: 2 },
+  dot: { width: 16, height: 16, marginTop: 4, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  dotFill: { width: 8, height: 8, borderRadius: 999 },
+  formName: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 8 },
+  formCode: { fontSize: 11, letterSpacing: 1.1 },
+  statement: { marginTop: 4 },
+  formTitle: { marginTop: 14 },
+  facts: { marginTop: 16 },
+  step: { flexDirection: "row", columnGap: 14 },
+  rail: { width: 22, alignItems: "center" },
+  stepDot: { width: 11, height: 11, marginTop: 5 },
+  stepLine: { flex: 1, width: 1, marginVertical: 4 },
+  stepGap: { paddingBottom: 22 },
+  stepName: { fontSize: 14, lineHeight: 21 },
+  stepWhen: { fontSize: 12, marginTop: 3 },
+  hint: { marginTop: 8 },
+  appealBlock: { gap: 14, paddingBottom: 34 },
+});

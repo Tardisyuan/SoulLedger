@@ -1838,7 +1838,9 @@
       "retry": "Retry",
       "cancel": "Cancel",
       "empty": "None",
-      "language": "Language"
+      "language": "Language",
+      "show": "Show",
+      "hide": "Hide"
     },
     "login": {
       "title": "Soul sign-in",
@@ -1846,13 +1848,14 @@
       "soul_code": "Soul code",
       "password": "Password",
       "submit": "Sign in",
-      "submitting": "Signing in…",
-      "required": "Enter your soul code and password"
+      "submitting": "Checking…",
+      "required": "Enter your soul code and password",
+      "soul_code_hint": "10 letters and digits",
+      "verifying": "Checking your soul code and password. Stay on this page."
     },
     "change_password": {
       "title": "Change your initial password",
       "intro": "Set your own password before continuing. The initial password is valid for 72 hours.",
-      "expires_at": "Initial password valid until {{date}}",
       "old_password": "Initial password",
       "new_password": "New password",
       "confirm_password": "Repeat new password",
@@ -1861,7 +1864,13 @@
       "too_short": "Use at least 8 characters",
       "mismatch": "The two new passwords differ",
       "success": "Password updated",
-      "back_to_login": "Back to sign-in"
+      "back_to_login": "Back to sign-in",
+      "expires_label": "Initial password valid until",
+      "hours_left": "{{hours}} hours left",
+      "hours_left_consequence": "{{hours}} hours left · after that an officer must reset it",
+      "under_hour_consequence": "Less than an hour left · after that an officer must reset it",
+      "expired_consequence": "Expired · an officer must reset it",
+      "new_hint": "At least 8 characters"
     },
     "tabs": {
       "life": "This life",
@@ -1884,8 +1893,8 @@
       "dispositions": "Dispositions",
       "applications": "Rebirth applications",
       "no_records": "No merits or demerits recorded in this life",
-      "no_judgments": "No judgment in this life yet",
-      "no_dispositions": "No disposition in this life yet",
+      "no_judgments": "No case opened yet. It is entered here once a court is assigned.",
+      "no_dispositions": "No disposition yet. It is entered here once judgment ends.",
       "no_applications": "No rebirth application in this life",
       "milestone": "Milestone",
       "merit_entry": "Merit",
@@ -1898,13 +1907,26 @@
       "sentence_years": "{{years}} years",
       "executed": "Carried out",
       "not_executed": "Not carried out",
-      "logout": "Sign out"
+      "logout": "Sign out",
+      "verdict": "Verdict",
+      "realm": "Destination",
+      "sentence": "Term",
+      "execution": "Execution",
+      "birth_name": "Born as {{name}}",
+      "record_count": "{{count}} records",
+      "copy_code": "Copy soul code",
+      "code_copied": "Soul code copied",
+      "code_copy_failed": "Copy failed"
     },
     "past_lives": {
       "title": "Past lives",
       "empty": "No past lives recorded",
-      "read_only": "Past lives are read-only",
-      "reincarnated": "Reborn as {{form}} on {{date}}"
+      "read_only": "Past lives are read-only. A sealed record cannot be applied from or appealed.",
+      "reborn_as": "Reborn as {{form}}",
+      "reborn_on": "Reborn {{date}}",
+      "sealed": "SEALED",
+      "no_actions": "This life's record is read-only; there is nothing to act on.",
+      "end": "The record ends here. Earlier lives are not in the ledger."
     },
     "applications": {
       "title": "Rebirth applications",
@@ -1919,7 +1941,10 @@
       "cannot_apply": "A new application cannot be submitted right now",
       "cooldown_until": "Cooling-off period ends {{date}}",
       "created_at": "Submitted {{date}}",
-      "view": "View"
+      "view": "View",
+      "expectation": "What you state here is a {{hope}}. The judges decide where you go, and the first review decides whether you cross civilizations.",
+      "expectation_word": "wish",
+      "statement_hint": "Your own words, passed to the judges as written."
     },
     "status": {
       "UNDER_REVIEW": "Under review",
@@ -1946,7 +1971,9 @@
       "appeal": "Appeal",
       "appeal_hint": "Each application can be appealed once",
       "appeal_submit": "Submit appeal",
-      "appealed": "Appeal submitted"
+      "appealed": "Appeal submitted",
+      "created_at": "Submitted",
+      "flow": "Progress"
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
@@ -1968,7 +1995,37 @@
       "not_found": "Not found",
       "network": "Cannot reach the server. Check your connection and retry",
       "validation": "Some fields are invalid",
-      "unknown": "Something went wrong ({{code}})"
+      "unknown": "Something went wrong ({{code}})",
+      "screen_title": "Could not reach the ledger",
+      "screen_body": "Your record is still there. It just cannot be fetched right now.",
+      "section": "This part could not be loaded. The rest is shown as usual."
+    },
+    "lexicon": {
+      "eg": {
+        "merit": "Weight of the heart",
+        "demerit": "Weight of the feather"
+      }
+    },
+    "logout": {
+      "title": "Sign out?",
+      "body": "Signing in again takes your soul code and the password you set. The initial password no longer works.",
+      "cancel": "Stay signed in"
+    },
+    "form_notes": {
+      "DIVINE": "Great fortune, but it runs out.",
+      "HUMAN": "Joy and pain in equal part; the path goes on.",
+      "ASURA": "Strong, and given to strife.",
+      "ANIMAL": "Without speech, in service.",
+      "HUNGRY_GHOST": "Always wanting, never having.",
+      "HELL_BEING": "A fixed term, with no way out before it ends."
+    },
+    "timeline": {
+      "submitted": "Submitted",
+      "rejected": "Rejected",
+      "appealed": "Appealed",
+      "appeal_open": "Appeal available",
+      "outcome_pending": "Outcome · pending",
+      "in_progress": "In progress"
     }
   }
 }
