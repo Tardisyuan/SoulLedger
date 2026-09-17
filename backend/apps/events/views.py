@@ -43,6 +43,9 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     permission_codename = None
     queryset = SoulEvent.objects.select_related("soul", "tenant").all()
     serializer_class = SoulEventSerializer
+    # 暂居只读例外(apps/core/tenant.py):原属租户看得到暂居地的时间线,
+    # 包括回归被拦下的 DISPATCH_RETURN_BLOCKED。
+    residence_read_actions = ("list", "retrieve")
     filterset_fields = ["soul", "event_type", "actor"]
     # `create_time`, not `created_at` — `SoulEvent` has no `created_at`.
     # DRF's OrderingFilter silently drops an unknown field, so

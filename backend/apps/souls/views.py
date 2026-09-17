@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import is_tenant_exempt, scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
@@ -61,6 +61,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     # every list row read it (serializers._this_lifes_records).
     queryset = Soul.objects.select_related("tenant", "home_tenant").prefetch_related("records", "reincarnations").all()
     filterset_class = SoulFilter
+    # 暂居只读例外(apps/core/tenant.py):原属租户读得到暂居在外的灵魂。只列 GET 动作。
+    residence_read_actions = ("list", "retrieve", "karma", "records")
     search_fields = SoulFilter.search_fields
     ordering_fields = SoulFilter.ordering_fields
 
@@ -100,7 +102,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         if not user.is_authenticated:
             return qs.none()
         if not is_tenant_exempt(user):
-            qs = scope_to_tenant(qs, self.request)
+            qs = scope_to_tenant(qs, self.request, residence_read=residence_read_allowed(self))
             # Apply DataScope filtering — ADMIN bypasses both, hence the
             # early branch rather than letting the helper handle the bypass.
             from apps.perm.filters import DataScopeFilter

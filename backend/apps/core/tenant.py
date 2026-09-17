@@ -31,7 +31,11 @@ viewset and fails if a tenant-bearing model's queryset does not pass through
 this module.
 """
 
+from django.db.models import Q
+
 ADMIN_ROLE = "ADMIN"
+
+SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
 
 
 def is_tenant_exempt(user) -> bool:
@@ -52,6 +56,7 @@ def scope_to_tenant(
     field: str = "tenant",
     admin_bypass: bool = True,
     missing_field: str = "deny",
+    residence_read: bool = False,
 ):
     """Narrow ``qs`` to the tenant on ``request``. Fails closed.
 
@@ -74,6 +79,10 @@ def scope_to_tenant(
             all, and filtering it used to raise ``FieldError`` on every
             non-ADMIN request. Callers must opt into ``"allow"``; the default
             is the safe answer.
+        residence_read: 暂居只读例外,见 ``residence_read_q``。只在 ``field`` 是默认的
+            ``"tenant"``、请求是安全方法、模型是灵魂或经 ``soul`` 外键挂在灵魂上时
+            生效;任何其他情况都照常只按 ``tenant`` 过滤。调用方用
+            ``residence_read_allowed(view)`` 求这个值,不要自己写 True。
 
     Returns:
         The scoped queryset. ``qs.none()`` for an unauthenticated user, for a
@@ -103,7 +112,87 @@ def scope_to_tenant(
     # lookup does not — `Tenant.objects.filter(pk=<Tenant>)` raises TypeError
     # rather than coercing. Pass the pk when scoping Tenant against itself.
     value = tenant.pk if root == "pk" else tenant
+    if residence_read and field == "tenant" and getattr(request, "method", None) in SAFE_METHODS:
+        residence = residence_read_q(qs.model, tenant)
+        if residence is not None:
+            return qs.filter(Q(tenant=tenant) | residence)
     return qs.filter(**{field: value})
+
+
+# ---------------------------------------------------------------------------
+# 暂居只读例外(2026-09-18 用户决定)
+#
+# 跨文明调拨是暂居:`Soul.tenant` 是暂居地,`Soul.home_tenant` 是原属。暂居期间原属
+# 租户的官员对这个灵魂**只读**可见 —— 灵魂本身,以及暂居地对它的审判、处置、事件。
+# 这是租户隔离唯一的放宽,所以写在这里一次:
+#
+# * 放宽只作用于读。`scope_to_tenant` 只在安全方法上加这个 OR;对象级的
+#   `TenantPermission.has_object_permission` 用 `residence_readable` 做同一个判定。
+#   写路径(POST/PUT/PATCH/DELETE,以及 GET 之外的一切自定义动作)照旧只按 tenant,
+#   原属租户拿到 404。
+# * 每个视图显式声明哪些动作纳入:`residence_read_actions`。没有声明就没有例外。
+#   纳入清单与理由见 tests/test_tenant_scoping_contract.py::RESIDENCE_READABLE。
+# * 暂居结束(`tenant` 回到 `home_tenant`)例外自然失效:暂居地那些行不再满足
+#   「这一行属于灵魂此刻所在的租户」。
+# ---------------------------------------------------------------------------
+
+
+def residence_read_allowed(view) -> bool:
+    """这个视图的当前动作是否声明为暂居只读例外。方法检查在 ``scope_to_tenant`` 里。"""
+    request = getattr(view, "request", None)
+    return (
+        getattr(request, "method", None) in SAFE_METHODS
+        and getattr(view, "action", None) in getattr(view, "residence_read_actions", ())
+    )
+
+
+def _soul_path(model):
+    """``""`` 对 Soul 本身,``"soul__"`` 对经 ``soul`` 外键挂在灵魂上的模型,否则 None。"""
+    from django.core.exceptions import FieldDoesNotExist
+
+    from apps.souls.models import Soul
+
+    if model is Soul:
+        return ""
+    try:
+        field = model._meta.get_field("soul")
+    except FieldDoesNotExist:
+        return None
+    return "soul__" if getattr(field, "related_model", None) is Soul and field.many_to_one else None
+
+
+def residence_read_q(model, tenant):
+    """原属租户 ``tenant`` 经暂居例外额外可读的行;模型不适用时 None。
+
+    灵魂:原属是 ``tenant``。
+    挂在灵魂上的行:灵魂原属是 ``tenant``,**且这一行属于灵魂此刻所在的租户** ——
+    第三个租户的行、上一段暂居留下的别处的行,都不放宽。
+
+    不需要再写「此刻在别处」:灵魂在原属时,这两个条件选出的行本来就是原属租户自己的,
+    与 ``Q(tenant=tenant)`` 重合 —— 所以暂居结束后例外自然失效,不必另判。
+    """
+    from django.db.models import F
+
+    path = _soul_path(model)
+    if path is None:
+        return None
+    away = Q(**{f"{path}home_tenant": tenant}) & Q(**{f"{path}tenant__isnull": False})
+    if path:
+        away &= Q(tenant=F(f"{path}tenant"))
+    return away
+
+
+def residence_readable(obj, tenant) -> bool:
+    """对象级的同一个判定,给 ``TenantPermission.has_object_permission`` 用。"""
+    path = _soul_path(type(obj))
+    if path is None or tenant is None:
+        return False
+    soul = obj if not path else obj.soul
+    return (
+        soul.home_tenant_id == tenant.pk
+        and soul.tenant_id is not None
+        and obj.tenant_id == soul.tenant_id
+    )
 
 
 def scope_to_api_key(qs, request):
@@ -196,8 +285,6 @@ def tenant_aggregate_filter(request, *, field: str) -> "Q":
         and for a non-ADMIN with no resolvable tenant. Never an unfiltered
         aggregate for someone who cannot see the rows.
     """
-    from django.db.models import Q
-
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return Q(pk__in=[])

@@ -397,16 +397,166 @@ def test_a_pending_residence_disposition_holds_the_soul_after_withdrawal(cn, eg)
 # ── 暂居期间的租户可见性 ──────────────────────────────────────────────────
 
 
-def test_while_residing_only_the_residence_tenant_sees_the_soul(cn, eg, eu):
-    """原租户在暂居期间**看不到**灵魂本身(保守默认:租户隔离沿用现状);
-    它经调拨记录看得到暂居,并能手动结束暂居。"""
+def test_while_residing_the_home_tenant_reads_the_soul_and_an_uninvolved_tenant_does_not(cn, eg, eu):
+    """暂居只读例外(2026-09-18 用户决定):原属租户读得到,无关租户照旧 404。"""
     soul, record = _residing(cn, eg)
     url = f"/api/v1/souls/{soul.pk}/"
     assert officer_client(_officer("eg_judge", "JUDGE", eg)).get(url).status_code == 200
-    assert officer_client(_officer("cn_judge", "JUDGE", cn)).get(url).status_code == 404
+    home = officer_client(_officer("cn_judge", "JUDGE", cn))
+    detail = home.get(url)
+    assert detail.status_code == 200
+    assert detail.data["is_residing"] is True and detail.data["tenant_code"] == "EG_DUAT"
     assert officer_client(_officer("eu_judge", "JUDGE", eu)).get(url).status_code == 404
     home_mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
     assert home_mod.get(f"/api/v1/dispatch/records/{record.pk}/").status_code == 200
+
+
+# ── 暂居只读例外:读 ─────────────────────────────────────────────────────
+
+
+def _ids(response):
+    assert response.status_code == 200, getattr(response, "data", None)
+    return {str(row["id"]) for row in _rows(response)}
+
+
+@pytest.fixture
+def away(cn, eg):
+    """暂居埃及的中国灵魂,带暂居地的一份审判、一份处置、一条功过记录。"""
+    from apps.judgment.models import Judgment
+    from apps.souls.record_models import SoulRecord
+
+    soul, record = _residing(cn, eg)
+    judgment = Judgment.objects.create(soul=soul, tenant=eg, civilization=soul.civilization,
+                                       verdict="FAILED", is_final=True)
+    disposition = _disposition(soul, eg)
+    deed = SoulRecord.objects.create(soul=soul, tenant=eg, record_type="DEMERIT", category="x",
+                                     description="暂居地记下的过", weight=3)
+    return {"soul": soul, "record": record, "judgment": judgment, "disposition": disposition, "deed": deed}
+
+
+def test_the_home_tenant_reads_the_residence_judgment_disposition_events_and_records(cn, eg, away):
+    soul = away["soul"]
+    home = officer_client(_officer("cn_judge", "JUDGE", cn))
+
+    assert str(soul.pk) in _ids(home.get("/api/v1/souls/"))
+    assert home.get(f"/api/v1/souls/{soul.pk}/karma/").status_code == 200
+    records = home.get(f"/api/v1/souls/{soul.pk}/records/")
+    assert records.status_code == 200 and str(away["deed"].pk) in {str(r["id"]) for r in records.data}
+
+    assert str(away["judgment"].pk) in _ids(home.get(f"/api/v1/judgment/?soul={soul.pk}"))
+    assert home.get(f"/api/v1/judgment/{away['judgment'].pk}/").status_code == 200
+    assert home.get(f"/api/v1/judgment/{away['judgment'].pk}/citations/").status_code == 200
+
+    assert str(away["disposition"].pk) in _ids(home.get(f"/api/v1/disposition/?soul={soul.pk}"))
+    assert home.get(f"/api/v1/disposition/{away['disposition'].pk}/").status_code == 200
+
+    executed = [e for e in SoulEvent.objects.filter(soul=soul) if e.payload.get("action") == "DISPATCH_EXECUTED"]
+    assert executed and executed[0].tenant_id == eg.pk
+    assert str(executed[0].pk) in _ids(home.get(f"/api/v1/events/?soul={soul.pk}"))
+    assert home.get(f"/api/v1/events/{executed[0].pk}/").status_code == 200
+
+
+def test_an_uninvolved_tenant_still_reads_nothing(eu, away):
+    soul = away["soul"]
+    other = officer_client(_officer("eu_judge", "JUDGE", eu))
+    assert str(soul.pk) not in _ids(other.get("/api/v1/souls/"))
+    for url in (f"/api/v1/souls/{soul.pk}/karma/", f"/api/v1/judgment/{away['judgment'].pk}/",
+                f"/api/v1/disposition/{away['disposition'].pk}/"):
+        assert other.get(url).status_code == 404, url
+    assert _ids(other.get(f"/api/v1/judgment/?soul={soul.pk}")) == set()
+    assert _ids(other.get(f"/api/v1/events/?soul={soul.pk}")) == set()
+
+
+def test_the_pending_queue_does_not_offer_the_home_tenant_a_residence_case(cn, eg):
+    soul, _ = _residing(cn, eg, state=SoulState.JUDGING)
+    case = _open_judgment(soul, eg)
+    eg_queue = officer_client(_officer("eg_judge", "JUDGE", eg)).get("/api/v1/judgment/next/")
+    assert eg_queue.status_code == 200 and eg_queue.data["judgment"]["id"] == str(case.pk)
+    cn_queue = officer_client(_officer("cn_judge", "JUDGE", cn)).get("/api/v1/judgment/next/")
+    assert cn_queue.status_code == 200 and cn_queue.data["judgment"] is None
+
+
+# ── 暂居只读例外:写一律拒绝 ─────────────────────────────────────────────
+
+
+def test_the_home_tenant_cannot_write_to_the_residing_soul_or_its_residence_rows(cn, eg, away):
+    """MODERATOR 持有下面每个动作的权限码,所以 404 来自租户隔离,不是 403 权限码。"""
+    soul = away["soul"]
+    home = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    writes = [
+        ("patch", f"/api/v1/souls/{soul.pk}/", {"name": "改名"}),
+        ("post", f"/api/v1/souls/{soul.pk}/die/", {}),
+        ("post", f"/api/v1/souls/{soul.pk}/transition/", {"new_state": "LOST"}),
+        ("post", f"/api/v1/souls/{soul.pk}/add_record/", {"record_type": "MERIT", "category": "x", "weight": 1}),
+        ("patch", f"/api/v1/judgment/{away['judgment'].pk}/", {"notes": "改"}),
+        ("post", f"/api/v1/judgment/{away['judgment'].pk}/archive/", {"reason": "x"}),
+        ("post", f"/api/v1/disposition/{away['disposition'].pk}/execute/", {}),
+        ("patch", f"/api/v1/disposition/{away['disposition'].pk}/", {"notes": "改"}),
+        ("delete", f"/api/v1/disposition/{away['disposition'].pk}/", {}),
+    ]
+    for method, url, body in writes:
+        response = getattr(home, method)(url, body, format="json")
+        assert response.status_code == 404, (method, url, response.status_code)
+
+    opened = home.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json")
+    assert opened.status_code == 400 and "soul" in opened.data
+
+    soul.refresh_from_db()
+    away["disposition"].refresh_from_db()
+    away["judgment"].refresh_from_db()
+    assert soul.name == "客魂" and soul.tenant_id == eg.pk and soul.current_state == SoulState.DISPOSED
+    assert away["disposition"].is_executed is False and away["judgment"].notes == ""
+    assert not away["judgment"].is_archived
+
+
+def test_the_home_tenant_cannot_withdraw_a_pending_residence_case(cn, eg):
+    soul, _ = _residing(cn, eg)
+    case = _open_judgment(soul, eg)
+    home = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    assert home.delete(f"/api/v1/judgment/{case.pk}/").status_code == 404
+    assert home.post(f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "PASSED"}, format="json").status_code == 404
+    case.refresh_from_db()
+    assert case.is_deleted is False and case.verdict is None
+
+
+# ── 暂居只读例外:边界 ───────────────────────────────────────────────────
+
+
+def test_the_exception_ends_with_the_residence(cn, eg, away):
+    soul = away["soul"]
+    DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_MANUAL)
+    soul.refresh_from_db()
+    home = officer_client(_officer("cn_judge", "JUDGE", cn))
+    assert home.get(f"/api/v1/souls/{soul.pk}/").status_code == 200  # 回到本土,普通隔离
+    assert home.get(f"/api/v1/judgment/{away['judgment'].pk}/").status_code == 404
+    assert home.get(f"/api/v1/disposition/{away['disposition'].pk}/").status_code == 404
+    assert _ids(home.get(f"/api/v1/judgment/?soul={soul.pk}")) == set()
+    eg_judge = officer_client(_officer("eg_judge", "JUDGE", eg))
+    assert eg_judge.get(f"/api/v1/souls/{soul.pk}/").status_code == 404
+
+
+def test_the_exception_does_not_reach_a_soul_that_is_not_residing(cn, eg):
+    native = Soul.objects.create(name="埃及本土", tenant=eg, current_state=SoulState.DISPOSED)
+    eg_case = _disposition(native, eg)
+    home = officer_client(_officer("cn_judge", "JUDGE", cn))
+    assert home.get(f"/api/v1/souls/{native.pk}/").status_code == 404
+    assert home.get(f"/api/v1/disposition/{eg_case.pk}/").status_code == 404
+    assert str(native.pk) not in _ids(home.get("/api/v1/souls/"))
+
+
+def test_the_exception_does_not_reach_a_third_tenants_row_on_the_residing_soul(cn, eg, eu, away):
+    """暂居在埃及的灵魂身上挂着一条欧洲租户的处置(比如上一段暂居留下的):原属不放宽到它。"""
+    stray = _disposition(away["soul"], eu)
+    home = officer_client(_officer("cn_judge", "JUDGE", cn))
+    assert home.get(f"/api/v1/disposition/{stray.pk}/").status_code == 404
+    assert str(stray.pk) not in _ids(home.get(f"/api/v1/disposition/?soul={away['soul'].pk}"))
+
+
+def test_the_residence_tenant_does_not_gain_the_home_tenants_rows(cn, eg, away):
+    """例外只朝原属一个方向放宽:暂居地看不到原属租户在这个灵魂上的处置。"""
+    home_row = _disposition(away["soul"], cn)
+    eg_judge = officer_client(_officer("eg_judge", "JUDGE", eg))
+    assert eg_judge.get(f"/api/v1/disposition/{home_row.pk}/").status_code == 404
 
 
 # ── 转生资格、申请与申诉按原属文明 ───────────────────────────────────────
