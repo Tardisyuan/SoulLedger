@@ -575,7 +575,10 @@
       "escalate_success": "Escalated; the reason has been recorded",
       "escalate_error": "Escalation failed",
       "escalate_needs_reason": "Escalation requires a written reason",
-      "approver_name_absent": "the node carries the approver's primary key; the backend sends no name"
+      "approver_name_absent": "the node carries the approver's primary key; the backend sends no name",
+      "reason_for_soul": "Rejection reason for the soul",
+      "reason_for_soul_hint": "The soul will see this reason; internal notes stay hidden. Up to 2000 characters.",
+      "reason_for_soul_required": "Rejecting a rebirth application requires a reason for the soul"
     },
     "verdicts": {
       "passed": "Passed",
@@ -1493,7 +1496,8 @@
         "created_at": "Filed",
         "statement": "Soul's statement",
         "appeal_statement": "Appeal statement",
-        "rejection_reason": "Rejection reason"
+        "rejection_reason": "Rejection reason",
+        "cooldown": "Cooldown"
       },
       "cross": {
         "undecided": "Not decided",
@@ -1506,8 +1510,6 @@
         "used": "Appealed (one per application)"
       },
       "no_current_node": "The application is closed; no step is pending",
-      "workflow_load_failed": "Could not load review progress",
-      "cooldown_note": "A final rejection starts a cooldown counted from the decision time, in days set per tenant (default 30); the soul cannot apply again until it ends",
       "statement_empty": "Left blank by the soul",
       "open_workflow": "Open the approval workflow",
       "cross_title": "Cross-civilization (initial review decides)",
@@ -1517,7 +1519,9 @@
       "cross_not_approver": "Only the approver named by the initial review step can decide",
       "cross_not_in_initial": "The initial review is over; cross-civilization can no longer be decided",
       "empty": "No rebirth applications yet",
-      "empty_filtered": "No applications with this status"
+      "empty_filtered": "No applications with this status",
+      "cooldown_until": "Cooling down until {{time}}; the soul cannot apply again before then",
+      "step_appeal": "(appeal)"
     }
   },
   "disposition": {
@@ -1650,7 +1654,9 @@
       "group_settings": "System Settings",
       "corpus": "Corpus",
       "ledger": "Merit Ledger",
-      "scheduler": "Scheduled Tasks"
+      "scheduler": "Scheduled Tasks",
+      "soul_credentials": "Initial Passwords Awaiting Delivery",
+      "rebirth_applications": "Rebirth Applications"
     }
   },
   "tenant": {

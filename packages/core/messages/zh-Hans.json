@@ -575,7 +575,10 @@
       "escalate_success": "已越级推进，理由已记入审计",
       "escalate_error": "越级推进失败",
       "escalate_needs_reason": "越级推进必须写明理由",
-      "approver_name_absent": "节点只带审批人主键,后端未返回姓名"
+      "approver_name_absent": "节点只带审批人主键,后端未返回姓名",
+      "reason_for_soul": "给灵魂的驳回理由",
+      "reason_for_soul_hint": "此理由对灵魂可见;内部备注不可见。最多 2000 字。",
+      "reason_for_soul_required": "驳回转生申请必须填写给灵魂的驳回理由"
     },
     "verdicts": {
       "passed": "通过",
@@ -1493,7 +1496,8 @@
         "created_at": "提交于",
         "statement": "灵魂陈述",
         "appeal_statement": "申诉陈述",
-        "rejection_reason": "驳回理由"
+        "rejection_reason": "驳回理由",
+        "cooldown": "冷却"
       },
       "cross": {
         "undecided": "尚未决定",
@@ -1506,8 +1510,6 @@
         "used": "已申诉（每份申请仅一次）"
       },
       "no_current_node": "申请已结束，没有待审节点",
-      "workflow_load_failed": "审批进度加载失败",
-      "cooldown_note": "终局驳回后有冷却期，自终局时间起算，天数按租户配置（默认 30 天）；期内灵魂不能重新申请",
       "statement_empty": "灵魂未填写",
       "open_workflow": "打开审批流程",
       "cross_title": "是否跨文明（初审决定）",
@@ -1517,7 +1519,9 @@
       "cross_not_approver": "只有初审节点指定的审批人可以决定",
       "cross_not_in_initial": "初审已结束，不能再决定是否跨文明",
       "empty": "还没有转生申请",
-      "empty_filtered": "该状态下没有申请"
+      "empty_filtered": "该状态下没有申请",
+      "cooldown_until": "冷却至 {{time}},期内灵魂不能重新申请",
+      "step_appeal": "(申诉)"
     }
   },
   "disposition": {
@@ -1650,7 +1654,9 @@
       "group_settings": "系统设置",
       "corpus": "语料条文",
       "ledger": "功过格",
-      "scheduler": "定时任务"
+      "scheduler": "定时任务",
+      "soul_credentials": "待交付初始密码",
+      "rebirth_applications": "转生申请"
     }
   },
   "tenant": {
