@@ -5822,6 +5822,9 @@ export interface components {
             rejection_reason?: string;
             /** Format: date-time */
             decided_at?: string | null;
+            first_rejection_reason?: string;
+            /** Format: date-time */
+            first_decided_at?: string | null;
             readonly current_step: components["schemas"]["MeCurrentStep"] | null;
             readonly can_appeal: boolean;
             /** Format: date-time */
@@ -6047,6 +6050,9 @@ export interface components {
             readonly rejection_reason: string;
             /** Format: date-time */
             readonly decided_at: string | null;
+            readonly first_rejection_reason: string;
+            /** Format: date-time */
+            readonly first_decided_at: string | null;
             readonly current_step: components["schemas"]["MeCurrentStep"] | null;
             readonly can_appeal: boolean;
             /** Format: date-time */

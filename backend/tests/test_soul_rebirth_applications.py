@@ -59,7 +59,8 @@ def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, ju
                                              "is_appeal": False}
     assert set(response.data) == {
         "id", "cycle", "desired_form", "statement", "appeal_statement", "status", "cross_civilization",
-        "rejection_reason", "decided_at", "current_step", "can_appeal", "created_at", "updated_at"}
+        "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at", "current_step", "can_appeal",
+        "created_at", "updated_at"}
     assert set(response.data["current_step"]) == {"node_type", "approver_role", "is_appeal"}
     assert SoulEvent.objects.filter(soul=account.soul, event_type="REBIRTH_APPLICATION_SUBMITTED").exists()
 
@@ -239,6 +240,7 @@ def test_other_workflows_do_not_require_the_soul_reason(cn_tenant, judge_user):
 OFFICER_KEYS = {
     "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement", "appeal_statement",
     "status", "workflow", "appeal_workflow", "cross_civilization", "rejection_reason", "decided_at",
+    "first_rejection_reason", "first_decided_at",
     "current_step", "can_appeal", "cooldown_until", "can_decide_cross_civilization", "created_at", "updated_at",
 }
 
@@ -326,3 +328,61 @@ def test_can_decide_cross_civilization_agrees_with_the_endpoint(stage, who, expe
 
 def _rows(data):
     return data["results"] if isinstance(data, dict) and "results" in data else data
+
+
+def test_appeal_keeps_the_first_rejection_and_cooldown_starts_from_the_latest(
+        cn_tenant, judge_user, cn_admin, django_capture_on_commit_callbacks):
+    """申诉时首次驳回的理由与时间留档;申诉被驳回后两次理由都在;冷却起点是最近一次终局驳回。"""
+    from django.utils.dateparse import parse_datetime
+
+    account, client = ready_soul(cn_tenant)
+    application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
+    application = _decide(judge_user, application, "FAILED", reason="业障未消",
+                          capture=django_capture_on_commit_callbacks)
+    first_at = timezone.now() - timedelta(days=10)
+    RebirthApplication.objects.filter(pk=application.pk).update(decided_at=first_at)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        appealed = client.post(f"{APPLY}{application.pk}/appeal/", {"statement": "请复核"}, format="json")
+    assert appealed.status_code == 200
+    officer_url = f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/"
+    for data in (client.get(f"{APPLY}{application.pk}/").data, officer_client(judge_user).get(officer_url).data):
+        assert data["status"] == "APPEALING"
+        assert data["first_rejection_reason"] == "业障未消" and parse_datetime(data["first_decided_at"]) == first_at
+        assert data["rejection_reason"] == "" and data["decided_at"] is None
+
+    application = _decide(judge_user, application, "FAILED", appeal=True, reason="维持原判",
+                          capture=django_capture_on_commit_callbacks)
+    for data in (client.get(f"{APPLY}{application.pk}/").data, officer_client(judge_user).get(officer_url).data):
+        assert data["status"] == "APPEAL_REJECTED"
+        assert (data["first_rejection_reason"], data["rejection_reason"]) == ("业障未消", "维持原判")
+        assert parse_datetime(data["first_decided_at"]) == first_at < parse_datetime(data["decided_at"])
+    until = officer_client(judge_user).get(officer_url).data["cooldown_until"]
+    # 从申诉驳回算起约 30 天;若从首次驳回(10 天前)算,只剩约 20 天。
+    assert timedelta(days=29, hours=23) < until - timezone.now() <= timedelta(days=30)
+    listing = client.get(APPLY).data
+    assert listing["reason"] == "cooldown" and listing["cooldown_until"] == until
+
+
+def test_backfill_restores_the_first_decision_time_of_existing_appeals(cn_tenant, judge_user,
+                                                                        django_capture_on_commit_callbacks):
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    migration = importlib.import_module("apps.soul_accounts.migrations.0002_rebirth_first_rejection")
+    account, client = ready_soul(cn_tenant)
+    application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
+    application = _decide(judge_user, application, "FAILED", capture=django_capture_on_commit_callbacks)
+    with django_capture_on_commit_callbacks(execute=True):
+        client.post(f"{APPLY}{application.pk}/appeal/", {}, format="json")
+    # 模拟旧代码留下的行:首次驳回没有留档。
+    RebirthApplication.objects.filter(pk=application.pk).update(first_decided_at=None, first_rejection_reason="")
+    application.refresh_from_db()
+
+    migration.backfill(django_apps, None)
+
+    application.refresh_from_db()
+    assert application.workflow.completed_at is not None
+    assert application.first_decided_at == application.workflow.completed_at
+    assert application.first_rejection_reason == ""

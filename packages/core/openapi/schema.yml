@@ -12716,6 +12716,12 @@ components:
           type: string
           format: date-time
           nullable: true
+        first_rejection_reason:
+          type: string
+        first_decided_at:
+          type: string
+          format: date-time
+          nullable: true
         current_step:
           allOf:
           - $ref: '#/components/schemas/MeCurrentStep'
@@ -13236,6 +13242,14 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        first_rejection_reason:
+          type: string
+          readOnly: true
+        first_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         current_step:
           allOf:
           - $ref: '#/components/schemas/MeCurrentStep'
@@ -13275,6 +13289,8 @@ components:
       - cycle
       - decided_at
       - desired_form
+      - first_decided_at
+      - first_rejection_reason
       - id
       - rejection_reason
       - soul

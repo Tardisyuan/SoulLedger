@@ -147,8 +147,8 @@ class MeRebirthApplicationSerializer(serializers.ModelSerializer):
         model = RebirthApplication
         fields = [
             "id", "cycle", "desired_form", "statement", "appeal_statement", "status",
-            "cross_civilization", "rejection_reason", "decided_at", "current_step", "can_appeal",
-            "created_at", "updated_at",
+            "cross_civilization", "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at",
+            "current_step", "can_appeal", "created_at", "updated_at",
         ]
 
     @extend_schema_field(MeCurrentStepSerializer(allow_null=True))
@@ -300,7 +300,8 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
         fields = [
             "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement",
             "appeal_statement", "status", "workflow", "appeal_workflow", "cross_civilization",
-            "rejection_reason", "decided_at", "current_step", "can_appeal", "cooldown_until",
+            "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at",
+            "current_step", "can_appeal", "cooldown_until",
             "can_decide_cross_civilization", "created_at", "updated_at",
         ]
         read_only_fields = fields

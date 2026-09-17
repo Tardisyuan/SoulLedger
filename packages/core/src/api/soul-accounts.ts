@@ -88,6 +88,11 @@ export interface OfficerRebirthApplication {
   /** What the approver wrote FOR THE SOUL on rejection; internal node notes are never here. */
   rejection_reason: string;
   decided_at: string | null;
+  /** The initial review's rejection, kept when the soul appeals. `rejection_reason` /
+   *  `decided_at` above are the LATEST decision (after an appeal: the appeal's conclusion).
+   *  Empty / null when there was no appeal — or for appeals filed before this was kept (reason not recoverable). */
+  first_rejection_reason: string;
+  first_decided_at: string | null;
   /** The current node's type and ROLE (never who); null once the application is closed. */
   current_step: RebirthCurrentStep | null;
   can_appeal: boolean;
