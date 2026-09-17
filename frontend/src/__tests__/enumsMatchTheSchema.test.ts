@@ -42,6 +42,10 @@ const PAIRS: { decl: string; file: string; component: string }[] = [
   { decl: "TaskRunStatus", file: "scheduler.ts", component: "TaskRunStatusEnum" },
   { decl: "TaskRunTrigger", file: "scheduler.ts", component: "TriggerEnum" },
   { decl: "ScheduledJobScope", file: "scheduler.ts", component: "ScheduledJobScopeEnum" },
+  { decl: "SoulAccountOrigin", file: "soul-accounts.ts", component: "OriginEnum" },
+  { decl: "InitialCredentialStatus", file: "soul-accounts.ts", component: "InitialCredentialStatusEnum" },
+  { decl: "RebirthApplicationStatus", file: "soul-accounts.ts", component: "RebirthApplicationStatusEnum" },
+  { decl: "RebirthApplicationForm", file: "soul-accounts.ts", component: "RebirthFormEnum" },
 ];
 
 /** 内联在某个字段上的联合(没有具名 type),按 `组件.字段` 定位。 */

@@ -93,5 +93,22 @@ export {
   type RebuildResult,
 } from "./scheduler";
 
+// Soul accounts (officer side)
+export {
+  soulAccountsApi,
+  type CredentialFilters,
+  type InitialCredential,
+  type InitialCredentialStatus,
+  type OfficerRebirthApplication,
+  type RebirthApplicationFilters,
+  type RebirthApplicationForm,
+  type RebirthApplicationStatus,
+  type RevealedCredential,
+  type SoulAccount,
+  type SoulAccountErrorBody,
+  type SoulAccountOrigin,
+  type SoulContactUpdate,
+} from "./soul-accounts";
+
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";

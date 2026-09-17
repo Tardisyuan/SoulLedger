@@ -94,6 +94,12 @@ const ENUM_FIELDS = [
   // Its `status` was already here. The meta-test below demanded both.
   "trigger",
   "scope",
+  // Added 2026-09-17 with `packages/core/src/api/soul-accounts.ts`:
+  // SoulAccount's `origin` (DEATH_SYNC/OFFICER/BACKFILL) and a rebirth
+  // application's `desired_form` (the six paths + OTHER). The meta-test below
+  // demanded both; their `status` fields were already covered.
+  "origin",
+  "desired_form",
 ];
 
 /** The two modules that are allowed to spell a missing value out. */

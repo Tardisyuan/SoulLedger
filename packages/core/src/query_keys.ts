@@ -121,6 +121,20 @@ export const schedulerKeys = {
   },
 };
 
+/**
+ * One root: a reset writes a credential AND changes the account row; a reveal
+ * or delivery changes a credential a soul's account card may be summarising.
+ *
+ * There is deliberately no key for a revealed password. It is never cached.
+ */
+export const soulAccountKeys = {
+  all: ["soul-accounts"] as const,
+  chain: (soulId: string) => ["soul-accounts", "chain", soulId] as const,
+  credentials: (params: Record<string, string | number | undefined>) => ["soul-accounts", "credentials", params] as const,
+  rebirthApplications: (params: Record<string, string | number | undefined>) =>
+    ["soul-accounts", "rebirth-applications", params] as const,
+};
+
 export const socialKeys = {
   all: ["social"] as const,
   posts: {
