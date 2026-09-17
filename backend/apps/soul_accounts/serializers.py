@@ -293,6 +293,7 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
     current_step = serializers.SerializerMethodField()
     can_appeal = serializers.SerializerMethodField()
     cooldown_until = serializers.SerializerMethodField()
+    can_decide_cross_civilization = serializers.SerializerMethodField()
 
     class Meta:
         model = RebirthApplication
@@ -300,7 +301,7 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
             "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement",
             "appeal_statement", "status", "workflow", "appeal_workflow", "cross_civilization",
             "rejection_reason", "decided_at", "current_step", "can_appeal", "cooldown_until",
-            "created_at", "updated_at",
+            "can_decide_cross_civilization", "created_at", "updated_at",
         ]
         read_only_fields = fields
 
@@ -321,6 +322,13 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
         from apps.soul_accounts.rebirth import cooldown_until
 
         return cooldown_until(obj)
+
+    def get_can_decide_cross_civilization(self, obj) -> bool:
+        """与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为 False。"""
+        from apps.soul_accounts.rebirth import cross_civilization_refusal
+
+        request = self.context.get("request")
+        return request is not None and cross_civilization_refusal(obj, request.user) is None
 
 
 class CrossCivilizationDecisionSerializer(serializers.Serializer):

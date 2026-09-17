@@ -295,6 +295,29 @@ def _announce_status(application, old_status):
     )
 
 
+def cross_civilization_refusal(application, user):
+    """`user` 此刻能不能决定这份申请是否跨文明。None = 能;否则是拒绝它的 SoulAccountError。
+
+    **唯一一处判定。** `decide_cross_civilization`(`cross-civilization/` 端点)在行锁下调用它,
+    官员侧序列化器的 `can_decide_cross_civilization` 也调用它 —— 前端按钮只读那个字段,
+    不再自己拼「node_type == EVALUATION 且角色相同」。两处各写一份,就会有一天按钮亮着而端点 403。
+    """
+    from apps.perm.checker import check_permission
+
+    workflow = application.workflow
+    first = workflow.nodes.order_by("node_order").first()
+    if (
+        application.status != RebirthApplicationStatus.UNDER_REVIEW or application.appeal_workflow_id is not None
+        or first is None or workflow.current_node_id != first.pk or first.status != "PENDING"
+    ):
+        return SoulAccountError("初审已结束,不能再决定是否跨文明。", "not_in_initial_review", 409)
+    if not check_permission(user, "workflow.approve"):
+        return SoulAccountError("没有审批权限。", "missing_permission", 403)
+    if not first.can_approve(user):
+        return SoulAccountError("只有初审节点指定的审批人可以决定。", "not_the_approver", 403)
+    return None
+
+
 def decide_cross_civilization(application_id, user, value: bool):
     """判官初审决定是否跨文明。只在初审节点仍待决、且调用者正是该节点指定的审批人时可写。
     跨文明时只发事件 —— 本服务不去写目标文明的任何数据(分库约束)。"""
@@ -305,15 +328,10 @@ def decide_cross_civilization(application_id, user, value: bool):
             RebirthApplication.objects.select_for_update(of=("self",))
             .select_related("workflow__current_node", "soul__tenant").get(pk=application_id)
         )
+        refusal = cross_civilization_refusal(application, user)
+        if refusal is not None:
+            raise refusal
         workflow = application.workflow
-        first = workflow.nodes.order_by("node_order").first()
-        if (
-            application.status != RebirthApplicationStatus.UNDER_REVIEW
-            or first is None or workflow.current_node_id != first.pk or first.status != "PENDING"
-        ):
-            raise SoulAccountError("初审已结束,不能再决定是否跨文明。", "not_in_initial_review", 409)
-        if not first.can_approve(user):
-            raise SoulAccountError("只有初审节点指定的审批人可以决定。", "not_the_approver", 403)
         application.cross_civilization = value
         application.save(update_fields=["cross_civilization", "updated_at"])
         workflow.cross_civilization = value

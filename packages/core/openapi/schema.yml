@@ -13249,6 +13249,11 @@ components:
           format: date-time
           nullable: true
           readOnly: true
+        can_decide_cross_civilization:
+          type: boolean
+          description: 与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为
+            False。
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -13262,6 +13267,7 @@ components:
       - appeal_statement
       - appeal_workflow
       - can_appeal
+      - can_decide_cross_civilization
       - cooldown_until
       - created_at
       - cross_civilization
