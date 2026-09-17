@@ -165,7 +165,9 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
     filterset_fields = ["status", "soul"]
 
     def get_queryset(self):
-        qs = RebirthApplication.objects.select_related("soul")
+        qs = RebirthApplication.objects.select_related(
+            "soul__tenant", "workflow__current_node", "appeal_workflow__current_node"
+        )
         return scope_to_tenant(qs, self.request, field="soul__tenant")
 
     @extend_schema(request=CrossCivilizationDecisionSerializer,
