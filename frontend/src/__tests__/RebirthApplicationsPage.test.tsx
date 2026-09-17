@@ -1,6 +1,10 @@
 /**
- * app/rebirth-applications/page.tsx — list, filter, the detail
- * dialog, and who is offered the cross-civilization decision.
+ * app/rebirth-applications/page.tsx — list, filter, the detail dialog, and who
+ * is offered the cross-civilization decision.
+ *
+ * The detail reads `current_step` / `can_appeal` / `cooldown_until` off the
+ * application itself. `workflowApi.get` is mocked only so a regression that
+ * goes back to fetching the workflow shows up as a call, not as a crash.
  *
  * Permissions run for real (stubbed `useTenant` only).
  */
@@ -30,6 +34,8 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 const mockShowToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 
+const INITIAL_STEP = { node_type: "EVALUATION", approver_role: "JUDGE", is_appeal: false };
+
 function application(over: Record<string, unknown> = {}) {
   return {
     id: "r1",
@@ -47,31 +53,14 @@ function application(over: Record<string, unknown> = {}) {
     cross_civilization: null,
     rejection_reason: "",
     decided_at: null,
+    current_step: INITIAL_STEP as typeof INITIAL_STEP | null,
+    can_appeal: false,
+    cooldown_until: null as string | null,
     created_at: "2026-09-17T00:00:00Z",
     updated_at: "2026-09-17T00:00:00Z",
     ...over,
   };
 }
-
-const node = (over: Record<string, unknown> = {}) => ({
-  id: "n1",
-  workflow: "w1",
-  node_name: "判官初审",
-  node_type: "EVALUATION",
-  court_code: "转生申请",
-  node_order: 1,
-  approver_type: "ROLE",
-  approver_role: "JUDGE",
-  status: "PENDING",
-  decided_at: null,
-  notes: "",
-  ...over,
-});
-const FINAL = node({ id: "n2", node_name: "终审", node_type: "FINAL", node_order: 2, approver_role: "ADMIN" });
-
-const workflow = (current = "n1", nodes = [node(), FINAL]) => ({
-  data: { id: "w1", nodes, current_node: current, current_node_detail: nodes.find((n) => n.id === current) ?? null },
-});
 
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
@@ -87,7 +76,11 @@ const as = (role: string, ...permissions: string[]) => (mockUser = { id: 2, user
 beforeEach(() => {
   jest.clearAllMocks();
   soulAccountsApi.rebirthApplications.mockResolvedValue(page([application()]));
-  workflowApi.get.mockResolvedValue(workflow());
+});
+
+afterEach(() => {
+  // No detail view asks for the workflow any more: current_step is on the application.
+  expect(workflowApi.get).not.toHaveBeenCalled();
 });
 
 async function openDetail() {
@@ -111,38 +104,87 @@ it("lists applications and filters by status on the server", async () => {
   await waitFor(() => expect(soulAccountsApi.rebirthApplications).toHaveBeenLastCalledWith({ status: "REJECTED", page: 1 }));
 });
 
-it("the detail shows the current step by role, never by approver", async () => {
+it("the detail shows the current step by node type and role, never by approver", async () => {
   as("GUARDIAN", "workflow.read");
   renderPage();
   const dialog = await openDetail();
-  expect(await within(dialog).findByText("判官初审")).toBeInTheDocument();
+  expect(within(dialog).getByText(tZh("workflow.node_type.evaluation"))).toBeInTheDocument();
   expect(within(dialog).getByText(tZh("users.roles.JUDGE"))).toBeInTheDocument();
   expect(within(dialog).getByText("愿再为人")).toBeInTheDocument();
   expect(within(dialog).getByText(tZh("soul_accounts.rebirth.cross.undecided"))).toBeInTheDocument();
-  expect(workflowApi.get).toHaveBeenCalledWith("w1");
+  expect(within(dialog).queryByTestId("rebirth-cooldown")).toBeNull();
 });
 
-it("an appealed application reads its appeal workflow and says the one appeal is used", async () => {
+it("a closed application says there is no current step", async () => {
+  as("GUARDIAN", "workflow.read");
+  soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ status: "APPROVED", current_step: null })]));
+  renderPage();
+  const dialog = await openDetail();
+  expect(within(dialog).getByTitle(new RegExp(tZh("soul_accounts.rebirth.no_current_node")))).toBeInTheDocument();
+});
+
+it("a final rejection in cooldown shows the date, the reason for the soul, and whether it can still appeal", async () => {
   as("GUARDIAN", "workflow.read");
   soulAccountsApi.rebirthApplications.mockResolvedValue(
-    page([application({ status: "APPEALING", appeal_workflow: "w2", appeal_statement: "请复核" })])
+    page([
+      application({
+        status: "REJECTED",
+        current_step: null,
+        can_appeal: true,
+        rejection_reason: "功过未清",
+        decided_at: "2026-09-10T00:00:00Z",
+        cooldown_until: "2026-10-10T00:00:00Z",
+      }),
+    ])
   );
+  renderPage();
+  const dialog = await openDetail();
+  expect(within(dialog).getByTestId("rebirth-cooldown")).toHaveTextContent(
+    tZh("soul_accounts.rebirth.cooldown_until", { time: "dt(2026-10-10T00:00:00Z)" })
+  );
+  expect(within(dialog).getByText("功过未清")).toBeInTheDocument();
+  expect(within(dialog).getByText(tZh("soul_accounts.rebirth.appeal.available"))).toBeInTheDocument();
+});
+
+it("REJECTED but can_appeal false (e.g. the life ended) does not claim an appeal is available", async () => {
+  as("GUARDIAN", "workflow.read");
+  soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ status: "REJECTED", current_step: null, can_appeal: false })]));
+  renderPage();
+  const dialog = await openDetail();
+  expect(within(dialog).getByText(tZh("soul_accounts.rebirth.appeal.none"))).toBeInTheDocument();
+  expect(within(dialog).queryByText(tZh("soul_accounts.rebirth.appeal.available"))).toBeNull();
+});
+
+it("an appealed application says the one appeal is used and labels the step as appeal", async () => {
+  as("GUARDIAN", "workflow.read");
+  soulAccountsApi.rebirthApplications.mockResolvedValue(
+    page([
+      application({
+        status: "APPEALING",
+        appeal_workflow: "w2",
+        appeal_statement: "请复核",
+        current_step: { node_type: "APPEAL", approver_role: "JUDGE", is_appeal: true },
+      }),
+    ])
+  );
+  as("JUDGE", "workflow.read", "workflow.approve");
   renderPage();
   const dialog = await openDetail();
   expect(within(dialog).getByText(tZh("soul_accounts.rebirth.appeal.used"))).toBeInTheDocument();
   expect(within(dialog).getByText("请复核")).toBeInTheDocument();
-  await waitFor(() => expect(workflowApi.get).toHaveBeenCalledWith("w2"));
+  expect(within(dialog).getByText(tZh("soul_accounts.rebirth.step_appeal"))).toBeInTheDocument();
+  expect(within(dialog).getByRole("link", { name: tZh("soul_accounts.rebirth.open_workflow") })).toHaveAttribute("href", "/workflow/w2");
   // The initial-review decision is not offered on an appeal, even to a JUDGE.
   expect(within(dialog).queryByTestId("cross-civilization-decision")).toBeNull();
 });
 
 describe("cross-civilization", () => {
-  it("offered to the approver role of the pending first node, and it posts", async () => {
+  it("offered to the role named by the initial-review step, and it posts", async () => {
     as("JUDGE", "workflow.read", "workflow.approve");
     soulAccountsApi.decideCrossCivilization.mockResolvedValue({ data: application({ cross_civilization: true }) });
     renderPage();
     const dialog = await openDetail();
-    const decision = await within(dialog).findByTestId("cross-civilization-decision");
+    const decision = within(dialog).getByTestId("cross-civilization-decision");
     fireEvent.click(within(decision).getByRole("button", { name: tZh("soul_accounts.rebirth.cross.yes") }));
     await waitFor(() => expect(soulAccountsApi.decideCrossCivilization).toHaveBeenCalledWith("r1", true));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.rebirth.cross_saved"), "success"));
@@ -152,7 +194,6 @@ describe("cross-civilization", () => {
     as("JUDGE", "workflow.read");
     renderPage();
     const dialog = await openDetail();
-    await within(dialog).findByText("判官初审");
     expect(within(dialog).queryByTestId("cross-civilization-decision")).toBeNull();
   });
 
@@ -161,27 +202,31 @@ describe("cross-civilization", () => {
     soulAccountsApi.decideCrossCivilization.mockRejectedValue(http(403, { detail: "x", code: "not_the_approver" }));
     renderPage();
     const dialog = await openDetail();
-    const decision = await within(dialog).findByTestId("cross-civilization-decision");
+    const decision = within(dialog).getByTestId("cross-civilization-decision");
     fireEvent.click(within(decision).getByRole("button", { name: tZh("soul_accounts.rebirth.cross.no") }));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.rebirth.cross_not_approver"), "error"));
   });
 
   it.each([
     ["another role", { role: "ADMIN" }],
-    ["past the first node", { current: "n2" }],
-    ["first node already decided", { nodes: [node({ status: "APPROVED" }), FINAL] }],
-    ["ACTOR-designated node", { nodes: [node({ approver_type: "ACTOR" }), FINAL] }],
+    ["past the initial review (FINAL step)", { step: { node_type: "FINAL", approver_role: "ADMIN", is_appeal: false }, role: "ADMIN" }],
+    ["an appeal step", { step: { node_type: "EVALUATION", approver_role: "JUDGE", is_appeal: true } }],
+    ["no current step", { step: null }],
     ["not under review", { status: "REJECTED" }],
+    ["no workflow.approve", { approve: false }],
   ] as const)("mayDecideCrossCivilization: false for %s", (_label, over) => {
-    const o = over as { role?: string; current?: string; nodes?: ReturnType<typeof node>[]; status?: string };
-    const nodes = o.nodes ?? [node(), FINAL];
+    const o = over as { role?: string; step?: typeof INITIAL_STEP | null; status?: string; approve?: boolean };
     expect(
-      mayDecideCrossCivilization({ status: (o.status ?? "UNDER_REVIEW") as never }, nodes as never, o.current ?? "n1", o.role ?? "JUDGE", true)
+      mayDecideCrossCivilization(
+        { status: (o.status ?? "UNDER_REVIEW") as never, current_step: o.step === undefined ? INITIAL_STEP : o.step },
+        o.role ?? "JUDGE",
+        o.approve ?? true
+      )
     ).toBe(false);
   });
 
-  it("mayDecideCrossCivilization: true for the matching role on the pending first node, listed out of order", () => {
-    expect(mayDecideCrossCivilization({ status: "UNDER_REVIEW" }, [FINAL, node()] as never, "n1", "JUDGE", true)).toBe(true);
+  it("mayDecideCrossCivilization: true for the matching role on the initial-review step", () => {
+    expect(mayDecideCrossCivilization({ status: "UNDER_REVIEW", current_step: INITIAL_STEP }, "JUDGE", true)).toBe(true);
   });
 });
 
