@@ -49,6 +49,8 @@ const ROUTES = [
   "/recycle-bin",
   "/death-sync",
   "/scheduler",
+  "/soul-credentials",
+  "/rebirth-applications",
 ];
 
 test.describe("文档不比视口宽", () => {
