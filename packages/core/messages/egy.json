@@ -575,7 +575,10 @@
       "escalate_success": "Seshem Hery; Medu Sesh Seth",
       "escalate_error": "Ma Seshem Hery Seth",
       "escalate_needs_reason": "Seshem Hery Em Tepy Medu Sesh",
-      "approver_name_absent": "Mekher Ini Ren Aa Netjer; Ma Ren Em Wetjes"
+      "approver_name_absent": "Mekher Ini Ren Aa Netjer; Ma Ren Em Wetjes",
+      "reason_for_soul": "Khet Wehem n Ba",
+      "reason_for_soul_hint": "Ba Maa Khet Pen; Medu Djeser ma Maa. 2000 Sesh Wer.",
+      "reason_for_soul_required": "Wehem Nehet Ankh Wehem: Khet Wehem n Ba em Tepy"
     },
     "verdicts": {
       "passed": "Sethet",
@@ -1493,7 +1496,8 @@
         "created_at": "Sesh em",
         "statement": "Medu Ba",
         "appeal_statement": "Medu Nehet Sen",
-        "rejection_reason": "Khet Wehem"
+        "rejection_reason": "Khet Wehem",
+        "cooldown": "Ahet Qebeh"
       },
       "cross": {
         "undecided": "Ma Wedja",
@@ -1506,8 +1510,6 @@
         "used": "Nehet Sen Seth (Wa Djer)"
       },
       "no_current_node": "Nehet Wetep; ma Sba Emu",
-      "workflow_load_failed": "Ma Maa Sba",
-      "cooldown_note": "Khet Wehem Wetep: Ahet Qebeh em Wedja Ahet (Hru em Per Hemes, 30 Tepy); Ba ma Nehet Wehem",
       "statement_empty": "Ba ma Sesh",
       "open_workflow": "Wen Sba Hesy",
       "cross_title": "Ta Ky (Maa Tepy Wedja)",
@@ -1517,7 +1519,9 @@
       "cross_not_approver": "Hemsu Sba Tepy Wa Wedja",
       "cross_not_in_initial": "Maa Tepy Wetep; ma Wedja Ta Ky",
       "empty": "Ma Nehet Ankh Wehem",
-      "empty_filtered": "Ma Nehet em Kheper Pen"
+      "empty_filtered": "Ma Nehet em Kheper Pen",
+      "cooldown_until": "Ahet Qebeh r {{time}}; Ba ma Nehet Wehem",
+      "step_appeal": "(Nehet Sen)"
     }
   },
   "disposition": {
@@ -1650,7 +1654,9 @@
       "group_settings": "Sethet Aat",
       "corpus": "Medu Sesh",
       "ledger": "Sesh Maat",
-      "scheduler": "Seth Ahet"
+      "scheduler": "Seth Ahet",
+      "soul_credentials": "Medu Sekhem Em Ankh Djeret",
+      "rebirth_applications": "Nehet Ankh Wehem"
     }
   },
   "tenant": {
