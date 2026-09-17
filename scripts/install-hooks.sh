@@ -158,6 +158,12 @@ TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/' || true)
 # automatically was compiling the platform-independent package *with the DOM
 # available*, which is the opposite of the thing being enforced.
 TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
+# `mobile/` (the soul app, Expo) was a top-level directory this hook did not
+# know, so a push touching only it ran nothing. It consumes packages/core's
+# sources the same way the frontend does, and its theme test reads
+# frontend/app/globals.css (the ink layer it copies) — so a change to either
+# of those can break it without touching mobile/.
+TOUCHES_MOBILE=$(echo "$CHANGED" | grep -cE '^(mobile/|frontend/app/globals\.css$)' || true)
 
 # ── Root-level files ─────────────────────────────────────────────────────────
 #
@@ -219,18 +225,23 @@ fi
 # The gate decisions, computed ONCE. Every `if` below reads these rather than
 # re-deriving them, and so does the classify-only output — so the test asserts
 # the exact values that decide what runs, not a second copy of the rule.
-RUN_CORE=0; RUN_FRONTEND=0; RUN_BACKEND=0
+RUN_CORE=0; RUN_FRONTEND=0; RUN_BACKEND=0; RUN_MOBILE=0
 [ "$TOUCHES_CORE" -gt 0 ] && RUN_CORE=1
 # `|| TOUCHES_CORE` on purpose: the frontend compiles the package's sources
 # directly rather than a built artefact, so a change under packages/ can break
 # `frontend/` type-checking while touching no file under `frontend/`.
 if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_FRONTEND=1; fi
 [ "$TOUCHES_BACKEND" -gt 0 ] && RUN_BACKEND=1
+# TOUCHES_CORE already folds in the JS root files and unknown root files.
+if [ "$TOUCHES_MOBILE" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_MOBILE=1; fi
 
 echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
 
 if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify: core=$RUN_CORE frontend=$RUN_FRONTEND backend=$RUN_BACKEND"
+    # A separate line so the existing `classify:` contract (parsed by
+    # backend/tests/test_prepush_runs_the_gates_a_change_can_break.py) is unchanged.
+    echo "classify-mobile: mobile=$RUN_MOBILE"
     exit 0
 fi
 
@@ -287,6 +298,18 @@ if [ "$RUN_FRONTEND" = 1 ]; then
     echo "  → jest";  npx jest --coverage=false --silent 2>&1 | tail -4
     [ "${PIPESTATUS[0]}" -eq 0 ] || fail "jest failed"
     cd "$ROOT" || exit 1
+fi
+
+if [ "$RUN_MOBILE" = 1 ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    echo "  → mobile tsc"
+    npm run --workspace mobile typecheck --silent || fail "mobile typecheck failed"
+    echo "  → mobile eslint"
+    npm run --workspace mobile lint --silent || fail "mobile lint failed"
+    echo "  → mobile jest"
+    npm run --workspace mobile test --silent -- --silent 2>&1 | tail -4
+    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
 fi
 
 if [ "$RUN_BACKEND" = 1 ]; then
@@ -493,7 +516,8 @@ chmod +x "$HOOKS_DIR/pre-push"
 echo "✅ Git hooks installed successfully"
 echo "   - pre-commit: ESLint on staged frontend files"
 echo "   - pre-push:   typecheck + eslint (packages/core), tsc + eslint + jest"
-echo "                 (frontend, also on packages/ changes) / ruff +"
+echo "                 (frontend, also on packages/ changes) / tsc + eslint +"
+echo "                 jest (mobile, also on packages/ and globals.css) / ruff +"
 echo "                 makemigrations --check + pytest (backend),"
 echo "                 scoped to what the push actually changes."
 echo ""

@@ -177,6 +177,27 @@ jobs:
           cd frontend
           npm audit --audit-level=high
 
+  # The soul app (Expo). JS gates only: typecheck, lint, jest (jest-expo, no
+  # simulator). Native builds are not part of CI — they need Xcode / the
+  # Android SDK and are verified on simulators by hand for now.
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck mobile
+        run: npm run typecheck --workspace @soulledger/mobile
+      - name: Lint mobile
+        run: npm run lint --workspace @soulledger/mobile
+      - name: Test mobile
+        run: npm run test --workspace @soulledger/mobile
+
   # One leg per Playwright project, in parallel. Serial would be ~3x the wall
   # clock for no benefit, and a matrix keeps each engine's report separate so
   # a red run names the engine in the job title rather than in the log.
