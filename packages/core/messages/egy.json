@@ -1838,7 +1838,9 @@
       "retry": "Wehem",
       "cancel": "Sehen",
       "empty": "Nen Wenen",
-      "language": "Medu"
+      "language": "Medu",
+      "show": "Maa",
+      "hide": "Imen"
     },
     "login": {
       "title": "Aq Ba",
@@ -1847,12 +1849,13 @@
       "password": "Pert Abuf",
       "submit": "Aq",
       "submitting": "Khemut Aq…",
-      "required": "Sesh Ren Ba Hena Pert Abuf"
+      "required": "Sesh Ren Ba Hena Pert Abuf",
+      "soul_code_hint": "Sesh Medjat 10",
+      "verifying": "Khemut Maa Ren Ba. Nen Pert."
     },
     "change_password": {
       "title": "Kheper Pert Tepy",
       "intro": "Sesh Pert Ek Tepy. Pert Tepy Wenen 72 Unut.",
-      "expires_at": "Pert Tepy Wenen Er {{date}}",
       "old_password": "Pert Tepy",
       "new_password": "Pert Maa",
       "confirm_password": "Wehem Pert Maa",
@@ -1861,7 +1864,13 @@
       "too_short": "Pert Maa Khemenu Sesh Er Sep",
       "mismatch": "Pert Maa Sen Nen Shabu",
       "success": "Pert Kheper",
-      "back_to_login": "Ankh Er Aq"
+      "back_to_login": "Ankh Er Aq",
+      "expires_label": "Pert Tepy Wenen Er",
+      "hours_left": "Unut {{hours}} Wenen",
+      "hours_left_consequence": "Unut {{hours}} Wenen · Sab Er Wehem Em Khet",
+      "under_hour_consequence": "Nen Unut Wa Wenen · Sab Er Wehem Em Khet",
+      "expired_consequence": "Mut · Sab Er Wehem",
+      "new_hint": "Khemenu Sesh Er Sep"
     },
     "tabs": {
       "life": "Ankh Pen",
@@ -1884,8 +1893,8 @@
       "dispositions": "Wetep",
       "applications": "Wehem Mesut",
       "no_records": "Nen Nefer Hena Isfet Em Ankh Pen",
-      "no_judgments": "Nen Wedja Em Ankh Pen",
-      "no_dispositions": "Nen Wetep Em Ankh Pen",
+      "no_judgments": "Nen Wedja Djer Pen. Sesh Em Wesekhet.",
+      "no_dispositions": "Nen Wetep Djer Pen. Sesh Em Wedja Pehwy.",
       "no_applications": "Nen Wehem Mesut Em Ankh Pen",
       "milestone": "Khet Aa",
       "merit_entry": "Nefer",
@@ -1898,13 +1907,26 @@
       "sentence_years": "Renpet {{years}}",
       "executed": "Iri",
       "not_executed": "Nen Iri",
-      "logout": "Pert"
+      "logout": "Pert",
+      "verdict": "Wedja",
+      "realm": "Sekhet",
+      "sentence": "Renpet",
+      "execution": "Iri",
+      "birth_name": "Ren Mesut {{name}}",
+      "record_count": "Sesh {{count}}",
+      "copy_code": "Sesh Ren Ba",
+      "code_copied": "Ren Ba Sesh",
+      "code_copy_failed": "Nen Sesh"
     },
     "past_lives": {
       "title": "Ankh Tepyu",
       "empty": "Nen Ankh Tepyu",
-      "read_only": "Ankh Tepyu Dag Wa",
-      "reincarnated": "Wehem Mesut Em {{form}} Hru {{date}}"
+      "read_only": "Ankh Tepyu Dag Wa. Nen Dbh, Nen Wehem Medu.",
+      "reborn_as": "Wehem Mesut Em {{form}}",
+      "reborn_on": "Hru {{date}}",
+      "sealed": "Khetem",
+      "no_actions": "Sesh Ankh Pen Dag Wa. Nen Iri.",
+      "end": "Sesh Pehwy. Ankh Tepyu Nen Sesh."
     },
     "applications": {
       "title": "Wehem Mesut",
@@ -1919,7 +1941,10 @@
       "cannot_apply": "Nen Dbh Maa Djer Pen",
       "cooldown_until": "Hetep Er {{date}}",
       "created_at": "Dbh Hru {{date}}",
-      "view": "Maa"
+      "view": "Maa",
+      "expectation": "Medu Pen {{hope}}. Sab Wedja Wat, Sab Tepy Wedja Djer Taui.",
+      "expectation_word": "Mer",
+      "statement_hint": "Medu Ek, Er Sab Mi Sesh."
     },
     "status": {
       "UNDER_REVIEW": "Em Sheemtet",
@@ -1946,7 +1971,9 @@
       "appeal": "Wehem Medu",
       "appeal_hint": "Wehem Medu Sep Wa",
       "appeal_submit": "Dbh Wehem Medu",
-      "appealed": "Wehem Medu Seth"
+      "appealed": "Wehem Medu Seth",
+      "created_at": "Hru Dbh",
+      "flow": "Wat"
     },
     "errors": {
       "invalid_credentials": "Ren Ba Hena Pert Nen Maat",
@@ -1968,7 +1995,37 @@
       "not_found": "Nen Gem",
       "network": "Nen Aq Er Per Aa. Maa Wat Hena Wehem",
       "validation": "Sesh Nen Maat",
-      "unknown": "Isfet ({{code}})"
+      "unknown": "Isfet ({{code}})",
+      "screen_title": "Nen Aq Er Medjat",
+      "screen_body": "Sesh Ek Wenen. Nen Iri Djer Pen.",
+      "section": "Sekhet Pen Nen Iri. Kheru Wenen."
+    },
+    "lexicon": {
+      "eg": {
+        "merit": "Wedjat Ib",
+        "demerit": "Wedjat Shut Maat"
+      }
+    },
+    "logout": {
+      "title": "Pert?",
+      "body": "Aq Wehem: Ren Ba Hena Pert Maa. Pert Tepy Mut.",
+      "cancel": "Wenen Em Medjat"
+    },
+    "form_notes": {
+      "DIVINE": "Nefer Aa, Nen Djet.",
+      "HUMAN": "Nefer Hena Isfet, Wat Wenen.",
+      "ASURA": "Wser, Aha.",
+      "ANIMAL": "Nen Medu, Baku.",
+      "HUNGRY_GHOST": "Mer, Nen Gem.",
+      "HELL_BEING": "Renpet Men, Nen Pert."
+    },
+    "timeline": {
+      "submitted": "Dbh",
+      "rejected": "Sehen",
+      "appealed": "Wehem Medu",
+      "appeal_open": "Wehem Medu Wenen",
+      "outcome_pending": "Wedja · Nen Djer",
+      "in_progress": "Em Iri"
     }
   }
 }

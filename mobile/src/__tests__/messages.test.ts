@@ -69,6 +69,9 @@ describe("soul_app copy", () => {
     const needed = [
       ...["UNDER_REVIEW", "REJECTED", "APPEALING", "APPEAL_REJECTED", "APPROVED"].map((s) => `soul_app.status.${s}`),
       ...DESIRED_REBIRTH_FORMS.map((f) => `reincarnation.forms.${f}`),
+      // The radio cards read these through a template key the harvest above cannot see.
+      ...DESIRED_REBIRTH_FORMS.map((f) => `soul_app.form_notes.${f}`),
+      ...["merit", "demerit"].map((w) => `soul_app.life.${w}`),
       "common.value.unrecorded",
       "common.value.unrecognized",
     ];
