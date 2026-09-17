@@ -559,6 +559,152 @@ export const SCHEDULER_MANUAL_RUN = {
   triggered_by_username: TEST_USER.username,
 };
 
+/**
+ * Soul accounts, officer side (backend/apps/soul_accounts/{views,serializers}.py).
+ * SOUL_DETAIL's soul (life 1, cycle 0) has one current account whose initial
+ * password is still unchanged, and one credential in each status the
+ * pending-delivery page filters to.
+ */
+export const SOUL_ACCOUNT = {
+  id: "dddddddd-dddd-4ddd-8ddd-dddddddddd01",
+  soul: SOULS[0].id,
+  soul_code: "MPK7Q2RX9T",
+  soul_name: SOULS[0].name,
+  cycle: 0,
+  previous_account: null as string | null,
+  origin: "DEATH_SYNC",
+  username: "soul.MPK7Q2RX9T.0",
+  must_change_password: true,
+  initial_password_expires_at: "2999-01-01T00:00:00Z" as string | null,
+  retired_at: null as string | null,
+  created_at: "2026-09-17T01:00:00Z",
+  last_login: null as string | null,
+  contact_email_masked: "",
+  contact_phone_masked: "",
+};
+
+/** `/soul-accounts/credentials/?status=PENDING` — no contact on file, never sent. */
+export const CREDENTIALS_PENDING = [
+  {
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee01",
+    account: SOUL_ACCOUNT.id,
+    soul: SOULS[0].id,
+    soul_code: SOUL_ACCOUNT.soul_code,
+    soul_name: SOULS[0].name,
+    cycle: 0,
+    channel: "",
+    status: "PENDING",
+    expires_at: "2999-01-01T00:00:00Z",
+    attempts: 0,
+    last_error: "",
+    created_at: "2026-09-17T01:00:00Z",
+    sent_at: null as string | null,
+    revealed_at: null as string | null,
+    revealed_by: null as string | null,
+    delivered_at: null as string | null,
+    delivered_by: null as string | null,
+  },
+];
+
+/** `?status=REVEALED` — sending failed three times, then an officer viewed it once. */
+export const CREDENTIALS_REVEALED = [
+  {
+    ...CREDENTIALS_PENDING[0],
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee02",
+    status: "REVEALED",
+    channel: "EMAIL",
+    attempts: 3,
+    last_error: "SMTPException",
+    revealed_at: "2026-09-17T02:00:00Z" as string | null,
+    revealed_by: TEST_USER.username as string | null,
+  },
+];
+
+/** `?status=VOID` — expired before anyone delivered it. */
+export const CREDENTIALS_VOID = [
+  {
+    ...CREDENTIALS_PENDING[0],
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee03",
+    status: "VOID",
+    expires_at: "2026-09-01T00:00:00Z",
+  },
+];
+
+/** POST `/soul-accounts/credentials/:id/reveal/` — RevealedCredentialSerializer. */
+export const REVEALED_PASSWORD = {
+  soul_code: SOUL_ACCOUNT.soul_code,
+  password: "e2e-one-time-Pw9",
+  expires_at: "2999-01-01T00:00:00Z",
+};
+
+/** POST `.../mark-delivered/` — the REVEALED row, now DELIVERED. */
+export const DELIVERED_CREDENTIAL = {
+  ...CREDENTIALS_REVEALED[0],
+  status: "DELIVERED",
+  delivered_at: "2026-09-17T03:00:00Z" as string | null,
+  delivered_by: TEST_USER.username as string | null,
+};
+
+/** `/soul-accounts/rebirth-applications/` — OfficerRebirthApplicationSerializer. */
+export const REBIRTH_APPLICATIONS = [
+  {
+    id: "ffffffff-ffff-4fff-8fff-ffffffffff01",
+    soul: SOULS[0].id,
+    soul_code: SOUL_ACCOUNT.soul_code,
+    soul_name: SOULS[0].name,
+    account: SOUL_ACCOUNT.id,
+    cycle: 0,
+    desired_form: "HUMAN",
+    statement: "愿再入人道,侍奉双亲。",
+    appeal_statement: "",
+    status: "UNDER_REVIEW",
+    workflow: "ffffffff-ffff-4fff-8fff-ffffffffff11",
+    appeal_workflow: null as string | null,
+    cross_civilization: null as boolean | null,
+    rejection_reason: "",
+    decided_at: null as string | null,
+    created_at: "2026-09-17T04:00:00Z",
+    updated_at: "2026-09-17T04:00:00Z",
+  },
+];
+
+const REBIRTH_FIRST_NODE = {
+  id: "ffffffff-ffff-4fff-8fff-ffffffffff21",
+  workflow: REBIRTH_APPLICATIONS[0].workflow,
+  node_name: "判官初审",
+  node_type: "EVALUATION",
+  court_code: "转生申请",
+  node_order: 1,
+  approver_type: "ROLE",
+  approver_role: "JUDGE",
+  status: "PENDING",
+  verdict: null as string | null,
+  decided_at: null as string | null,
+  notes: "",
+};
+
+/** GET `/workflows/:id/` — ApprovalWorkflowSerializer: the rebirth application's workflow, at its first node. */
+export const REBIRTH_WORKFLOW = {
+  id: REBIRTH_APPLICATIONS[0].workflow,
+  workflow_name: `转生申请: ${SOUL_ACCOUNT.soul_code}`,
+  case_type: "REBIRTH_APPLICATION",
+  soul: SOULS[0].id,
+  soul_name: SOULS[0].name,
+  status: "IN_PROGRESS",
+  is_appeal: false,
+  priority: 0,
+  cross_civilization: false,
+  current_node: REBIRTH_FIRST_NODE.id as string | null,
+  current_node_detail: REBIRTH_FIRST_NODE,
+  nodes: [
+    REBIRTH_FIRST_NODE,
+    { ...REBIRTH_FIRST_NODE, id: "ffffffff-ffff-4fff-8fff-ffffffffff22", node_name: "终审", node_type: "FINAL", node_order: 2, approver_role: "ADMIN" },
+  ],
+  created_at: "2026-09-17T04:00:00Z",
+  updated_at: "2026-09-17T04:00:00Z",
+  completed_at: null as string | null,
+};
+
 // ── Mock engine ───────────────────────────────────────────────────────────
 
 export interface RecordedCall {
@@ -983,6 +1129,29 @@ export class ApiMock {
     // `/dispatch/records/proposed/` above, though the methods differ today.
     this.on("POST", "/scheduler/jobs/rebuild/", { created: 0, updated: 3, removed: 0, legacy_removed: 0 });
     this.on("GET", "/scheduler/runs/", paginated(SCHEDULER_RUNS));
+
+    // ── Soul accounts, officer side (backend/apps/soul_accounts/views.py) ──
+    this.on("GET", "/soul-accounts/accounts/", paginated([SOUL_ACCOUNT]));
+    this.on("POST", "/soul-accounts/accounts/provision/", () => ({ status: 201, body: SOUL_ACCOUNT }));
+    this.on("POST", "/soul-accounts/accounts/:id/reset-credential/", CREDENTIALS_PENDING[0]);
+    // Filtered on the server by `?status=`; one fixture list per status.
+    this.on("GET", "/soul-accounts/credentials/", (call) =>
+      call.query.status === "PENDING"
+        ? { body: paginated(CREDENTIALS_PENDING) }
+        : call.query.status === "REVEALED"
+          ? { body: paginated(CREDENTIALS_REVEALED) }
+          : call.query.status === "VOID"
+            ? { body: paginated(CREDENTIALS_VOID) }
+            : { body: paginated([]) }
+    );
+    this.on("POST", "/soul-accounts/credentials/:id/reveal/", REVEALED_PASSWORD);
+    this.on("POST", "/soul-accounts/credentials/:id/mark-delivered/", DELIVERED_CREDENTIAL);
+    this.on("POST", "/soul-accounts/credentials/:id/retry/", CREDENTIALS_PENDING[0]);
+    this.on("GET", "/soul-accounts/rebirth-applications/", paginated(REBIRTH_APPLICATIONS));
+    this.on("POST", "/soul-accounts/rebirth-applications/:id/cross-civilization/", (call) => ({
+      body: { ...REBIRTH_APPLICATIONS[0], cross_civilization: call.body.cross_civilization },
+    }));
+    this.on("GET", "/workflows/:id/", REBIRTH_WORKFLOW);
 
     return this;
   }

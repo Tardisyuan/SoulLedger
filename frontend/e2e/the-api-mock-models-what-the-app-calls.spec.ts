@@ -36,6 +36,8 @@ const ROUTES = [
   "/profile",
   "/death-sync",
   "/scheduler",
+  "/soul-credentials",
+  "/rebirth-applications",
 ];
 
 test.describe("ApiMock 覆盖了应用真的会调的东西", () => {
