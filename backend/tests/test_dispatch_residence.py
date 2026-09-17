@@ -256,6 +256,144 @@ def test_a_finished_residence_cannot_be_ended_twice(cn, eg):
     assert len(_returned_events(soul)) == 1
 
 
+# ── 未结案审判拦下回归(2026-09-18 用户决定)────────────────────────────
+
+
+def _open_judgment(soul, tenant):
+    from apps.judgment.models import Judgment
+    return Judgment.objects.create(soul=soul, tenant=tenant, civilization=soul.civilization)
+
+
+def _blocked_events(soul):
+    return [e for e in SoulEvent.objects.filter(soul=soul) if e.payload.get("action") == "DISPATCH_RETURN_BLOCKED"]
+
+
+def test_an_open_judgment_blocks_the_automatic_return_and_leaves_a_reason(cn, eg):
+    soul, record = _residing(cn, eg)
+    case = _open_judgment(soul, eg)
+    disposition = _disposition(soul, eg)
+
+    assert DispositionService.execute(disposition) is True
+
+    disposition.refresh_from_db()
+    soul.refresh_from_db()
+    record.refresh_from_db()
+    assert disposition.is_executed is True
+    assert soul.tenant_id == eg.pk and soul.is_residing is True
+    assert record.status == DispatchStatus.EXECUTED and record.returned_at is None
+    assert _returned_events(soul) == []
+    [event] = _blocked_events(soul)
+    assert event.tenant_id == eg.pk
+    assert event.payload["code"] == "open_judgment"
+    assert event.payload["open_judgment_ids"] == [str(case.pk)]
+    assert event.payload["disposition_id"] == str(disposition.pk)
+    assert event.payload["dispatch_id"] == str(record.pk)
+
+
+def test_an_open_judgment_in_the_home_tenant_also_blocks(cn, eg):
+    """「未结案」不分租户:原属租户在调拨前开的案,也拦。"""
+    soul, _ = _residing(cn, eg)
+    _open_judgment(soul, cn)
+    DispositionService.execute(_disposition(soul, eg))
+    soul.refresh_from_db()
+    assert soul.is_residing and len(_blocked_events(soul)) == 1
+
+
+@pytest.mark.parametrize("closed", ["concluded", "withdrawn"])
+def test_a_closed_judgment_does_not_block(cn, eg, closed):
+    soul, _ = _residing(cn, eg)
+    case = _open_judgment(soul, eg)
+    if closed == "concluded":
+        from apps.judgment.models import Judgment
+        Judgment.all_objects.filter(pk=case.pk).update(verdict="FAILED", is_final=True)
+    else:
+        case.soft_delete()
+    DispositionService.execute(_disposition(soul, eg))
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk and _blocked_events(soul) == []
+
+
+def test_manual_return_with_an_open_judgment_is_409_with_a_code(cn, eg):
+    soul, record = _residing(cn, eg)
+    case = _open_judgment(soul, eg)
+
+    response = _return(_officer("cn_mod", "MODERATOR", cn), record)
+
+    assert response.status_code == 409, response.data
+    assert response.data["code"] == "open_judgment"
+    assert response.data["open_judgment_ids"] == [str(case.pk)]
+    assert "open judgment" in response.data["error"]
+    soul.refresh_from_db()
+    record.refresh_from_db()
+    assert soul.tenant_id == eg.pk and record.status == DispatchStatus.EXECUTED
+    assert _returned_events(soul) == []
+
+
+def test_admin_manual_return_is_blocked_too(cn, eg, eu):
+    soul, record = _residing(cn, eg)
+    _open_judgment(soul, eg)
+    assert _return(_officer("eu_admin", "ADMIN", eu), record).data["code"] == "open_judgment"
+
+
+def test_withdrawing_the_last_open_judgment_resumes_the_blocked_return(cn, eg):
+    soul, record = _residing(cn, eg)
+    case = _open_judgment(soul, eg)
+    DispositionService.execute(_disposition(soul, eg))
+    soul.refresh_from_db()
+    assert soul.is_residing
+
+    response = officer_client(_officer("eg_judge", "JUDGE", eg)).delete(f"/api/v1/judgment/{case.pk}/")
+
+    assert response.status_code == 204, getattr(response, "data", None)
+    soul.refresh_from_db()
+    record.refresh_from_db()
+    assert soul.tenant_id == cn.pk and soul.current_state == SoulState.DISPOSED
+    assert record.status == DispatchStatus.RETURNED
+    [event] = _returned_events(soul)
+    assert event.payload["trigger"] == "JUDGMENT_CLOSED"
+    assert event.payload["reason"] == f"judgment {case.pk} closed"
+
+
+def test_withdrawing_one_of_two_open_judgments_keeps_the_soul_away(cn, eg):
+    soul, _ = _residing(cn, eg)
+    first, second = _open_judgment(soul, eg), _open_judgment(soul, cn)
+    DispositionService.execute(_disposition(soul, eg))
+    first.delete_or_raise()
+    soul.refresh_from_db()
+    assert soul.is_residing and _returned_events(soul) == []
+    second.delete_or_raise()
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk
+
+
+def test_withdrawing_a_judgment_does_not_return_a_soul_whose_residence_is_not_served(cn, eg):
+    """没有已执行的暂居处置(或只有永久刑期)时,撤案不触发回归。"""
+    soul, _ = _residing(cn, eg)
+    _open_judgment(soul, eg).delete_or_raise()
+    soul.refresh_from_db()
+    assert soul.is_residing
+
+    DispositionService.execute(_disposition(soul, eg, eternal=True))
+    _open_judgment(soul, eg).delete_or_raise()
+    soul.refresh_from_db()
+    assert soul.is_residing and _returned_events(soul) == []
+
+
+def test_a_pending_residence_disposition_holds_the_soul_after_withdrawal(cn, eg):
+    """结案会在暂居地新建一份未执行的处置;回归等它执行,而不是在撤案时提前发生。"""
+    soul, _ = _residing(cn, eg)
+    case = _open_judgment(soul, eg)
+    DispositionService.execute(_disposition(soul, eg))
+    later = _disposition(soul, eg)
+    case.delete_or_raise()
+    soul.refresh_from_db()
+    assert soul.is_residing
+    assert DispositionService.execute(later) is True
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk
+    assert [e.payload["trigger"] for e in _returned_events(soul)] == ["DISPOSITION_EXECUTED"]
+
+
 # ── 暂居期间的租户可见性 ──────────────────────────────────────────────────
 
 

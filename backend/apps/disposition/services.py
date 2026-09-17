@@ -766,13 +766,16 @@ class DispositionService:
           不在场时把它推进终局或轮回;
         * 灵魂不在 DISPOSED —— 与原路径「状态不允许就不记执行」同一个契约。
 
+        灵魂还有未结案的审判(2026-09-18 用户决定):记为已执行,**不回归**,写一条
+        `DISPATCH_RETURN_BLOCKED` 事件;撤案后补上回归。
+
         永久刑期(`is_eternal`):记为已执行,**不自动回归** —— 刑期永不结束。
         原租户或 ADMIN 仍可手动结束暂居(保守默认,待用户确认)。
         """
         from django.db import transaction
         from django.utils import timezone
 
-        from apps.dispatch.services import DispatchService
+        from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
         from apps.souls.models import Soul, SoulState
 
         with transaction.atomic():
@@ -787,8 +790,13 @@ class DispositionService:
             disposition.executed_at = timezone.now()
             disposition.save()
             if not disposition.is_eternal:
-                DispatchService.end_residence(
-                    soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
-                    reason=f"disposition {disposition.pk} executed",
-                )
+                try:
+                    DispatchService.end_residence(
+                        soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
+                        reason=f"disposition {disposition.pk} executed",
+                    )
+                except ResidenceReturnBlockedError as blocked:
+                    # 处置照常记为已执行,暂居继续;撤案后由
+                    # DispatchService.resume_return_after_case_closed 补上回归。
+                    DispatchService.record_blocked_return(locked, blocked, disposition)
         return True
