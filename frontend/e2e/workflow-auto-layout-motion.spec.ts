@@ -43,8 +43,6 @@ import { test, expect, setupAuthenticatedPage, type ApiMock } from "./fixtures";
  * screen-space values behind would be off by a factor of three and fail.
  */
 
-const SAMPLE_FRAMES = 90;
-
 /** Open the ten-node preset in the editor tab. */
 async function openPresetInEditor(page: Page) {
   await page.goto("/workflow");
@@ -113,28 +111,84 @@ function overflowOf(boxes: Awaited<ReturnType<typeof screenBoxes>>): number {
   );
 }
 
-/** Start recording one `transform` per node per animation frame. */
+/**
+ * Start recording one `transform` per node per animation frame, UNTIL
+ * `readSamples` stops it.
+ *
+ * NOT A FIXED NUMBER OF FRAMES. This used to stop itself after 90 frames, on
+ * the reading "90 frames ≈ 1.5s, comfortably past the 450ms travel". Both
+ * halves of that were wrong in a way that made the travel test flaky:
+ *
+ *   - a frame is not 16.7ms everywhere. Headless firefox ran these 90 frames
+ *     in 821–1315ms (measured 2026-09-18), not 1500.
+ *   - the window opened BEFORE the click, and the click's own latency is
+ *     unbounded — Playwright's actionability checks plus the round trip. The
+ *     same run (16 repeats) saw the click event land 97ms to 873ms into it.
+ *
+ * So the window could close before the travel began (measured: one distinct
+ * transform, click at 789ms, window over at 821ms) or partway into it (the
+ * reported "n2 was only seen at 2 position(s)"),
+ * and on the load-path case before the editor had mounted any card at all
+ * ("expected 10 nodes, got 0"). The window has to be ended by the test, after
+ * the thing it is watching is over — not by a guess at the frame rate.
+ */
 async function startSampling(page: Page) {
-  await page.evaluate((frames) => {
-    const w = window as unknown as { __flipSamples?: Record<string, string>[] };
+  await page.evaluate(() => {
+    const w = window as unknown as {
+      __flipSamples?: Record<string, string>[];
+      __flipStop?: boolean;
+    };
     w.__flipSamples = [];
+    w.__flipStop = false;
     const tick = () => {
+      if (w.__flipStop) return;
       const row: Record<string, string> = {};
       document.querySelectorAll<HTMLElement>(".react-flow__node").forEach((el) => {
         row[el.getAttribute("data-id") ?? ""] = getComputedStyle(el).transform;
       });
       w.__flipSamples!.push(row);
-      if (w.__flipSamples!.length < frames) requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }, SAMPLE_FRAMES);
+  });
 }
 
+/** Stop the sampler and return everything it saw. */
 async function readSamples(page: Page): Promise<Record<string, string>[]> {
   return page.evaluate(() => {
-    const w = window as unknown as { __flipSamples?: Record<string, string>[] };
+    const w = window as unknown as {
+      __flipSamples?: Record<string, string>[];
+      __flipStop?: boolean;
+    };
+    w.__flipStop = true;
     return w.__flipSamples ?? [];
   });
+}
+
+/**
+ * Wait for the travel to be OVER, by the editor's own word for it.
+ *
+ * `autoLayout` sets the visually hidden `role="status"` announcement from
+ * Flip's `onComplete` — and clears it at the start of each animated press — so
+ * its appearing is the event "the tween has finished", not an estimate of when
+ * it probably has. A fixed `waitForTimeout(1500)` was that estimate, and not a
+ * bound: gsap's lag smoothing (by default, a frame later than 500ms advances
+ * the tween by 33ms) lets a 450ms travel take longer in wall-clock time on a
+ * starved machine. Not observed failing here — the sampling window above was
+ * — but it is the same kind of wait, so the animated presses use this.
+ *
+ * Only for a FIRST animated press on a fresh page: a press that takes the
+ * instant branch sets the same text immediately, and a second press leaves
+ * the previous one's text in place.
+ *
+ * It does not excuse a teleport: with `autoLayout` forced onto the instant
+ * branch (`if (true || !moved || …)`), the travel case below still went red on
+ * chromium and firefox alike — "n2 was only seen at 2 position(s)" (2026-09-18).
+ */
+async function waitForTravelToEnd(page: Page) {
+  await expect(
+    page.getByRole("status").filter({ hasText: /^已重新排布 \d+ 个节点$/ })
+  ).toHaveCount(1);
 }
 
 /** How many distinct `transform` strings each node was seen at. */
@@ -197,8 +251,7 @@ test.describe("auto layout narrates the move", () => {
     const before = await domPositions(page);
     await startSampling(page);
     await page.getByRole("button", { name: "自动布局", exact: true }).click();
-    // Comfortably past the 450ms travel.
-    await page.waitForTimeout(1500);
+    await waitForTravelToEnd(page);
 
     const distinct = distinctPerNode(await readSamples(page));
     const after = await domPositions(page);
@@ -283,7 +336,7 @@ test.describe("auto layout narrates the move", () => {
   }) => {
     await openPresetInEditor(page);
     await page.getByRole("button", { name: "自动布局", exact: true }).click();
-    await page.waitForTimeout(1500);
+    await waitForTravelToEnd(page);
 
     const settled = await domPositions(page);
     await startSampling(page);
@@ -355,7 +408,7 @@ test.describe("auto layout brings the result back on screen, and only then", () 
 
     const vpBefore = await viewportTransform(page);
     await page.getByRole("button", { name: "自动布局", exact: true }).click();
-    await page.waitForTimeout(1500);
+    await waitForTravelToEnd(page);
 
     // THE VIEWPORT MOVED. This is the defect, directly: before the fix it
     // did not, and nothing else in the editor would have moved it either.
@@ -388,7 +441,7 @@ test.describe("auto layout brings the result back on screen, and only then", () 
     const before = await domPositions(page);
 
     await page.getByRole("button", { name: "自动布局", exact: true }).click();
-    await page.waitForTimeout(1500);
+    await waitForTravelToEnd(page);
 
     // The press DID something — otherwise "the viewport did not move" is the
     // trivially true statement about a button that does nothing.
