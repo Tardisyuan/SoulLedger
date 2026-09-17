@@ -44,6 +44,9 @@ const LEAF_KEYS: Record<string, string> = {
   "/organizations": "breadcrumb.menu.organizations",
   // backend/apps/menus/migrations/0015_add_scheduler_menu.py
   "/scheduler": "breadcrumb.menu.scheduler",
+  // backend/apps/menus/migrations/0016_add_soul_account_menus.py
+  "/soul-credentials": "breadcrumb.menu.soul_credentials",
+  "/rebirth-applications": "breadcrumb.menu.rebirth_applications",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {

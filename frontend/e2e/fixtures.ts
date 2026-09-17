@@ -370,6 +370,9 @@ export const MENUS = [
   { id: 3, name: "权限管理", path: "/permissions", icon: "shield", order: 3, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
   { id: 4, name: "回收站", path: "/recycle-bin", icon: "trash", order: 4, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
   { id: 5, name: "定时任务", path: "/scheduler", icon: "Clock", order: 5, component: "scheduler", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  // backend/apps/menus/migrations/0016_add_soul_account_menus.py (flat here: this tree has no directories).
+  { id: 6, name: "待交付初始密码", path: "/soul-credentials", icon: "KeyRound", order: 6, component: "soul-credentials", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  { id: 7, name: "转生申请", path: "/rebirth-applications", icon: "RefreshCw", order: 7, component: "rebirth-applications", roles: ["ADMIN", "JUDGE"], is_active: true, parent: null, menu_type: "MENU", visible: true },
 ];
 
 export const RECYCLE_BIN_ENTRY = {
@@ -663,6 +666,13 @@ export const REBIRTH_APPLICATIONS = [
     cross_civilization: null as boolean | null,
     rejection_reason: "",
     decided_at: null as string | null,
+    current_step: { node_type: "EVALUATION", approver_role: "JUDGE", is_appeal: false } as {
+      node_type: string;
+      approver_role: string;
+      is_appeal: boolean;
+    } | null,
+    can_appeal: false,
+    cooldown_until: null as string | null,
     created_at: "2026-09-17T04:00:00Z",
     updated_at: "2026-09-17T04:00:00Z",
   },

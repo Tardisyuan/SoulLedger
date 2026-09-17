@@ -9,6 +9,7 @@ import {
   REVEALED_PASSWORD,
   SOUL_ACCOUNT,
   SOUL_DETAIL,
+  REBIRTH_WORKFLOW,
 } from "./fixtures";
 
 /**
@@ -119,8 +120,8 @@ test.describe("Soul account card on the soul page", () => {
 });
 
 test.describe("Rebirth applications", () => {
-  test("lists applications and shows the current step by role", async ({ page }) => {
-    await setupAuthenticatedPage(page);
+  test("lists applications and shows the current step by role, without asking for the workflow", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
     await page.goto("/rebirth-applications");
 
     await expect(page.locator("h1")).toContainText("转生申请");
@@ -130,8 +131,9 @@ test.describe("Rebirth applications", () => {
 
     await row.getByRole("button", { name: "查看详情" }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog).toContainText("判官初审");
+    await expect(dialog).toContainText("评估");
     await expect(dialog).toContainText("审判者");
+    expect(api.countOf("GET", "/workflows/:id/")).toBe(0);
     await expect(dialog).toContainText(REBIRTH_APPLICATIONS[0].statement);
     await expect(dialog).toContainText("尚未决定");
     // TEST_USER is ADMIN, the first node names JUDGE, and ADMIN gets no bypass.
@@ -140,5 +142,34 @@ test.describe("Rebirth applications", () => {
       "href",
       `/workflow/${REBIRTH_APPLICATIONS[0].workflow}`
     );
+  });
+
+  test("rejecting on the rebirth workflow requires a reason for the soul, apart from the notes", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    await page.goto(`/workflow/${REBIRTH_APPLICATIONS[0].workflow}`);
+
+    await page.getByLabel("通过", { exact: true }).check();
+    await expect(page.getByLabel(/给灵魂的驳回理由/)).toHaveCount(0);
+
+    await page.getByLabel("拒绝", { exact: true }).check();
+    const reason = page.getByLabel(/给灵魂的驳回理由/);
+    await expect(reason).toBeVisible();
+    await expect(page.getByText("此理由对灵魂可见;内部备注不可见。最多 2000 字。")).toBeVisible();
+
+    // The backend's refusal lands beside the field.
+    api.on("POST", "/workflows/:id/approve_node/", () => ({
+      status: 400,
+      body: { error: "rejection_reason_for_soul is required", detail: "驳回转生申请必须填写给灵魂的驳回理由" },
+    }));
+    await reason.fill("功过未清");
+    await page.getByLabel("备注", { exact: true }).fill("内部:证据不足");
+    await page.getByRole("button", { name: "提交决定" }).click();
+    await expect(page.getByText("驳回转生申请必须填写给灵魂的驳回理由")).toBeVisible();
+    expect(api.lastCall("POST", "/workflows/:id/approve_node/")?.body).toEqual({
+      node_id: REBIRTH_WORKFLOW.current_node,
+      verdict: "REJECTED",
+      notes: "内部:证据不足",
+      rejection_reason_for_soul: "功过未清",
+    });
   });
 });
