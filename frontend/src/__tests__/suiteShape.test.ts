@@ -127,6 +127,7 @@ const COLLECTED_FILES = [
   "cssTokenReferenceContract.test.ts",
   "dispatchApproveConfirms.test.tsx",
   "dispatchProposeValidation.test.tsx",
+  "dispatchReturnHome.test.tsx",
   "contextValueIdentity.test.tsx",
   "crossJudgmentActivate.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
