@@ -1348,6 +1348,178 @@
       "PARTIAL": "部分处理"
     }
   },
+  "soul_accounts": {
+    "refresh": "刷新",
+    "life": "第 {{n}} 世",
+    "fields": {
+      "soul": "灵魂",
+      "soul_code": "灵魂编号",
+      "cycle": "世数",
+      "reason": "原因",
+      "expires_at": "有效期至",
+      "status": "状态"
+    },
+    "credential_status": {
+      "QUEUED": "待发送",
+      "SENT": "已发送",
+      "PENDING": "待交付",
+      "REVEALED": "已查看，待交付",
+      "DELIVERED": "已线下交付",
+      "VOID": "已作废"
+    },
+    "rebirth_status": {
+      "UNDER_REVIEW": "审批中",
+      "REJECTED": "已驳回",
+      "APPEALING": "申诉中",
+      "APPEAL_REJECTED": "申诉被驳回",
+      "APPROVED": "已批准"
+    },
+    "origin": {
+      "DEATH_SYNC": "死亡同步自动开通",
+      "OFFICER": "官员手动开通",
+      "BACKFILL": "存量补齐"
+    },
+    "credentials": {
+      "title": "待交付初始密码",
+      "subtitle": "未能自动发送的灵魂初始密码：查看一次、线下交付，或重试发送",
+      "manage_hint": "需要 soul_account.manage 权限才能查看密码、标记交付或重试发送",
+      "filters": {
+        "label": "按状态筛选",
+        "PENDING": "待交付",
+        "REVEALED": "已查看，待交付",
+        "DELIVERED": "已线下交付",
+        "VOID": "已作废",
+        "all": "全部"
+      },
+      "reason": {
+        "no_contact": "无可用联系方式",
+        "send_failed": "发送失败（{{error}}），已尝试 {{attempts}} 次",
+        "channel": "经 {{channel}} 发送",
+        "expired": "初始密码已过期",
+        "voided": "已被重置、灵魂改密或转世作废"
+      },
+      "revealed_by": "{{by}} 于 {{time}} 查看",
+      "delivered_by": "{{by}} 于 {{time}} 交付",
+      "expired": "已过期",
+      "expired_go_reset": "该初始密码已过期，请到灵魂详情页重置",
+      "actions": {
+        "reveal": "查看密码",
+        "retry": "重试发送",
+        "mark_delivered": "标记已交付",
+        "go_reset": "去重置"
+      },
+      "retry_sent": "已重新发送",
+      "retry_failed": "重试失败",
+      "retry_not_pending": "该项已不在待交付状态，不能重试",
+      "delivered_ok": "已标记为线下交付",
+      "deliver_failed": "标记失败",
+      "deliver_not_revealed": "只有已查看的项可以标记为已交付",
+      "empty": {
+        "pending": "没有待交付的初始密码",
+        "pending_reason": "有联系方式的灵魂，初始密码会自动发送，不会出现在这里",
+        "filtered": "该状态下没有记录"
+      }
+    },
+    "reveal": {
+      "confirm_title": "查看初始密码？",
+      "confirm_body": "明文只能查看一次：确认后服务器立即抹去明文，关闭窗口后任何人都无法再看到。请确认你现在就能把密码线下交付给灵魂 {{name}}（编号 {{code}}，第 {{n}} 世）。",
+      "confirm": "我已准备好，查看",
+      "shown_title": "初始密码（仅此一次）",
+      "shown_warning": "关闭窗口后无法再次查看。请立即线下交付；灵魂首次登录须修改密码。",
+      "password_label": "初始密码",
+      "copy": "复制密码",
+      "copied": "已复制到剪贴板",
+      "copy_failed": "复制失败，请手动抄写",
+      "close": "我已记下，关闭",
+      "deliver_and_close": "已交付，标记并关闭",
+      "already_revealed": "该密码已被查看过（可能是其他官员），不能再次查看；如需交付请到灵魂详情页重置",
+      "failed": "查看失败，请重试"
+    },
+    "account": {
+      "title": "灵魂账号",
+      "none": "本世尚未开通账号",
+      "alive_no_account": "灵魂尚在世，死亡登记后才开通账号",
+      "origin_label": "开通方式",
+      "password_label": "密码",
+      "must_change": "首次登录须改密",
+      "password_set": "灵魂已自行设置密码",
+      "initial_expired": "初始密码已过期",
+      "initial_expires_at": "初始密码到期",
+      "initial_expires_na": "灵魂已改密，初始密码不再适用",
+      "state_label": "账号状态",
+      "active": "可登录",
+      "retired": "已停用",
+      "last_login": "最近登录",
+      "never_logged_in": "从未登录",
+      "contact_email": "联系邮箱",
+      "contact_phone": "联系手机号",
+      "contact_hint": "留空则不修改现有联系方式",
+      "chain": "账号链（各世）",
+      "created_at": "开通于 {{time}}",
+      "retired_at": "停用于 {{time}}",
+      "pending_link": "查看待交付列表",
+      "actions": {
+        "provision": "开通本世账号",
+        "reset": "重置初始密码"
+      },
+      "provision_title": "为 {{name}} 开通本世账号？",
+      "provision_body": "将生成随机初始密码（72 小时有效，首次登录须改密）。有联系方式时自动发送，否则进入待交付列表。",
+      "reset_title": "重置 {{name}} 的初始密码？",
+      "reset_body": "未交付的旧密码立即作废；新密码 72 小时有效，灵魂登录后须改密。有联系方式时自动发送，否则进入待交付列表。",
+      "provisioned": "已开通本世账号",
+      "provision_existing": "本世已有账号，未重发密码；如需新密码请重置",
+      "reset_queued": "已重置，新密码将发送到联系方式",
+      "reset_pending": "已重置；无可用联系方式，新密码已进入待交付列表",
+      "retired_cannot_reset": "该账号已随转世停用，不能重置",
+      "soul_alive": "灵魂尚在世，不能开通灵魂账号",
+      "soul_not_found": "灵魂不存在",
+      "failed": "操作失败，请重试"
+    },
+    "rebirth": {
+      "title": "转生申请",
+      "subtitle": "灵魂提交的转生申请：审批进度、申诉与是否跨文明",
+      "filters": {
+        "label": "按状态筛选",
+        "all": "全部"
+      },
+      "view": "查看详情",
+      "detail_title": "转生申请 · {{name}}",
+      "fields": {
+        "desired_form": "期望形态",
+        "current_step": "当前节点",
+        "cross_civilization": "是否跨文明",
+        "appeal": "申诉",
+        "decided_at": "终局时间",
+        "created_at": "提交于",
+        "statement": "灵魂陈述",
+        "appeal_statement": "申诉陈述",
+        "rejection_reason": "驳回理由"
+      },
+      "cross": {
+        "undecided": "尚未决定",
+        "yes": "跨文明",
+        "no": "本文明内"
+      },
+      "appeal": {
+        "none": "未申诉",
+        "available": "可申诉一次（尚未使用）",
+        "used": "已申诉（每份申请仅一次）"
+      },
+      "no_current_node": "申请已结束，没有待审节点",
+      "workflow_load_failed": "审批进度加载失败",
+      "cooldown_note": "终局驳回后有冷却期，自终局时间起算，天数按租户配置（默认 30 天）；期内灵魂不能重新申请",
+      "statement_empty": "灵魂未填写",
+      "open_workflow": "打开审批流程",
+      "cross_title": "是否跨文明（初审决定）",
+      "cross_hint": "仅在初审节点待决时，由该节点指定的审批人设置",
+      "cross_saved": "已保存",
+      "cross_failed": "保存失败",
+      "cross_not_approver": "只有初审节点指定的审批人可以决定",
+      "cross_not_in_initial": "初审已结束，不能再决定是否跨文明",
+      "empty": "还没有转生申请",
+      "empty_filtered": "该状态下没有申请"
+    }
+  },
   "disposition": {
     "title": "处置管理",
     "subtitle": "审判结案后的灵魂去向安排",
