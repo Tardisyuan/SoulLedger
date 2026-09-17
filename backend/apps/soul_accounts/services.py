@@ -117,7 +117,7 @@ def provision_account(soul, origin, *, actor=None, request=None):
 
     caller_copy = soul
     with transaction.atomic():
-        soul = Soul.all_objects.select_for_update().select_related("tenant").get(pk=soul.pk)
+        soul = Soul.all_objects.select_for_update(of=("self",)).select_related("tenant").get(pk=soul.pk)
         if soul.current_state == SoulState.ALIVE:
             raise SoulAccountError("灵魂尚在世,不能开通灵魂账号。", "soul_alive")
         cycle = soul.life_index
@@ -156,7 +156,7 @@ def reset_credential(account, *, actor=None, request=None):
     """官员重置:新密码、新 72 小时,之前所有未完结的凭据作废。**从不重发旧密码** ——
     旧的明文在发出时就已抹掉,这里也拿不到。"""
     with transaction.atomic():
-        account = SoulAccount.objects.select_for_update().select_related("soul__tenant", "user").get(pk=account.pk)
+        account = SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
         if account.retired_at is not None:
             raise SoulAccountError("该账号已随转世停用,不能重置。", "account_retired")
         _void_open_credentials(account)
@@ -199,7 +199,7 @@ def send_credential(credential_id):
     """
     with transaction.atomic():
         credential = (
-            InitialCredential.objects.select_for_update()
+            InitialCredential.objects.select_for_update(of=("self",))
             .select_related("soul", "account").filter(pk=credential_id).first()
         )
         if credential is None or credential.status not in SECRET_BEARING_STATUSES:
@@ -263,7 +263,7 @@ def reveal_credential(credential_id, *, actor, request=None):
     """待交付明文**只能被看一次**。锁行、读出、抹掉、写审计,同一事务。"""
     with transaction.atomic():
         credential = (
-            InitialCredential.objects.select_for_update()
+            InitialCredential.objects.select_for_update(of=("self",))
             .select_related("soul__tenant", "account").get(pk=credential_id)
         )
         # 过期作废要落库,所以先提交再抛:在 atomic 里抛会把作废一起回滚。
@@ -287,7 +287,7 @@ def reveal_credential(credential_id, *, actor, request=None):
 def mark_delivered(credential_id, *, actor, request=None):
     with transaction.atomic():
         credential = (
-            InitialCredential.objects.select_for_update().select_related("soul__tenant").get(pk=credential_id)
+            InitialCredential.objects.select_for_update(of=("self",)).select_related("soul__tenant").get(pk=credential_id)
         )
         expired = _expire_if_due(credential)
         if not expired and credential.status == CredentialStatus.REVEALED:
@@ -392,7 +392,7 @@ def retire_account_for_rebirth(soul, ended_cycle):
     """转世完成时调用,**在转世的同一事务里**。本世账号停用,永不可再登录。
     没有账号(这一世从没开过号)就什么也不做。"""
     account = (
-        SoulAccount.objects.select_for_update().select_related("user")
+        SoulAccount.objects.select_for_update(of=("self",)).select_related("user")
         .filter(soul=soul, cycle=ended_cycle, retired_at__isnull=True).first()
     )
     if account is None:

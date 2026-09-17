@@ -118,7 +118,7 @@ def _create_workflow(soul, nodes, *, name, original=None):
 
 
 def _lock_account(account):
-    return SoulAccount.objects.select_for_update().select_related("soul__tenant", "user").get(pk=account.pk)
+    return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
 
 
 def submit(account, desired_form, statement=""):
@@ -254,7 +254,7 @@ def decide_cross_civilization(application_id, user, value: bool):
 
     with transaction.atomic():
         application = (
-            RebirthApplication.objects.select_for_update()
+            RebirthApplication.objects.select_for_update(of=("self",))
             .select_related("workflow__current_node", "soul__tenant").get(pk=application_id)
         )
         workflow = application.workflow
