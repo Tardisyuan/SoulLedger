@@ -1,4 +1,4 @@
-import { BCP47_FOR_LOCALE, DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, type Locale } from "@soulledger/core/config/locale";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, type Locale } from "@soulledger/core/config/locale";
 import { resolveEnumDisplay, type EnumDisplay } from "@soulledger/core/domain/enumDisplay";
 import egy from "@soulledger/core/messages/egy.json";
 import en from "@soulledger/core/messages/en.json";
@@ -27,13 +27,6 @@ export function translate(locale: Locale, key: string, params?: Record<string, s
   if (value === undefined) return key;
   if (!params) return value;
   return value.replace(/\{\{(\w+)\}\}/g, (whole, name: string) => (name in params ? params[name] : whole));
-}
-
-export function formatDateTime(iso: string | null | undefined, locale: Locale): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString(BCP47_FOR_LOCALE[locale], { year: "numeric", month: "short", day: "numeric" });
 }
 
 interface I18n {

@@ -1,81 +1,144 @@
-import fs from "fs";
-import path from "path";
+/**
+ * The tokens against the design handoff they were copied from.
+ *
+ * This test used to re-read `frontend/app/globals.css`. The soul app now follows
+ * the Claude Design handoff "灵魂簿 App" instead (its tokens differ from the
+ * web's in hairlines, canvas and the semantic inks), and the handoff is not in
+ * the repository — so its OKLCH table (section 1h-一, the stated source of
+ * truth: "OKLCH 为准，hex 为 sRGB 换算值") is transcribed below and every hex in
+ * `theme.ts` must be its conversion within rounding. A mistyped hex, or one
+ * copied into the wrong civilization, is red here.
+ */
+import { civ, ink, oklchToHex, sealedTheme, semantic, themeFor, type CivKey, type ColorScheme, type Theme } from "../theme";
 
-import { OKLCH, oklchToHex, paletteFor, type CivCode, type ColorScheme } from "../theme";
+/** [dark OKLCH, light OKLCH], exactly as the handoff's table prints them. */
+const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string] }[] = [
+  { path: (s) => ink[s].ink, triples: ["0.970 0.002 248", "0.209 0.010 268"] },
+  { path: (s) => ink[s].inkMuted, triples: ["0.839 0.015 255", "0.452 0.021 264"] },
+  { path: (s) => ink[s].inkSubtle, triples: ["0.651 0.017 257", "0.517 0.020 268"] },
+  { path: (s) => civ.neutral[s].s1, triples: ["0.175 0.008 286", "0.983 0.003 286"] },
+  { path: (s) => civ.neutral[s].s2, triples: ["0.194 0.012 285", "0.965 0.004 286"] },
+  { path: (s) => civ.neutral[s].accent, triples: ["0.651 0.017 257", "0.529 0.018 257"] },
+  { path: (s) => civ.cn[s].s1, triples: ["0.176 0.024 38", "0.983 0.010 58"] },
+  { path: (s) => civ.cn[s].s2, triples: ["0.199 0.023 38", "0.965 0.019 62"] },
+  { path: (s) => civ.cn[s].accent, triples: ["0.713 0.098 35", "0.462 0.100 46"] },
+  { path: (s) => civ.cn[s].mark, triples: ["0.650 0.124 35", "0.509 0.112 45"] },
+  { path: (s) => civ.eu[s].s1, triples: ["0.159 0.030 273", "0.975 0.012 281"] },
+  { path: (s) => civ.eu[s].accent, triples: ["0.713 0.079 278", "0.452 0.142 273"] },
+  { path: (s) => civ.eu[s].mark, triples: ["0.643 0.101 277", "0.452 0.142 273"] },
+  { path: (s) => civ.eg[s].s1, triples: ["0.201 0.024 93", "0.991 0.010 87"] },
+  { path: (s) => civ.eg[s].accent, triples: ["0.733 0.099 90", "0.461 0.075 89"] },
+  { path: (s) => civ.eg[s].mark, triples: ["0.728 0.100 89", "0.541 0.089 89"] },
+  { path: (s) => civ.gr[s].s1, triples: ["0.204 0.034 130", "0.994 0.014 129"] },
+  { path: (s) => civ.gr[s].accent, triples: ["0.722 0.138 130", "0.443 0.091 130"] },
+  { path: (s) => civ.gr[s].mark, triples: ["0.722 0.138 130", "0.526 0.111 131"] },
+  { path: (s) => semantic[s].pos, triples: ["0.780 0.110 150", "0.480 0.120 150"] },
+  { path: (s) => semantic[s].neg, triples: ["0.760 0.120 25", "0.500 0.160 25"] },
+  { path: (s) => semantic[s].negStrong, triples: ["0.600 0.130 25", "0.550 0.170 25"] },
+  { path: (s) => semantic[s].negInk, triples: ["0.900 0.050 25", "0.430 0.160 25"] },
+  { path: (s) => semantic[s].negBg, triples: ["0.240 0.040 25", "0.960 0.020 25"] },
+];
 
-/** Last declaration of `name` in a block whose selector is exactly `selector`, comments stripped. */
-function declared(css: string, selector: string, name: string): string | undefined {
-  let found: string | undefined;
-  for (const block of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    if (block[1].trim().replace(/\s+/g, " ") !== selector) continue;
-    for (const decl of block[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
-      if (decl[1] === name) found = decl[2].trim();
-    }
-  }
-  return found;
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+/** The handoff rounds its OKLCH to three decimals, so its hex can sit a step or two off an exact conversion. */
+function near(a: string, b: string): boolean {
+  const [x, y] = [rgb(a), rgb(b)];
+  return x.every((v, i) => Math.abs(v - y[i]) <= 2);
 }
 
-const css = fs
-  .readFileSync(path.join(__dirname, "..", "..", "..", "frontend", "app", "globals.css"), "utf8")
-  .replace(/\/\*[\s\S]*?\*\//g, "");
+function contrast(a: string, b: string): number {
+  const lum = (hex: string) =>
+    rgb(hex)
+      .map((c) => c / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+      .reduce((acc, c, i) => acc + c * [0.2126, 0.7152, 0.0722][i], 0);
+  const [hi, lo] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (hi + 0.05) / (lo + 0.05);
+}
 
-const ROOT: Record<ColorScheme, string> = { dark: ":root", light: ".light" };
-const NEUTRAL: Record<ColorScheme, string> = { dark: ":root:not([data-civ])", light: ".light:not([data-civ])" };
-const CIVS: CivCode[] = ["cn", "eu", "eg", "gr"];
+const SCHEMES: ColorScheme[] = ["dark", "light"];
+const KEYS: CivKey[] = ["neutral", "cn", "eu", "eg", "gr"];
 
-describe.each(["dark", "light"] as ColorScheme[])("the %s table is the web's ink layer", (scheme) => {
-  const table = OKLCH[scheme];
-
-  it("shared inks", () => {
-    const names = {
-      ink: "--color-ink",
-      inkMuted: "--color-ink-muted",
-      inkSubtle: "--color-ink-subtle",
-      hairline: "--color-hairline",
-      error: "--color-status-error",
-      success: "--color-status-success",
-    } as const;
-    for (const [key, name] of Object.entries(names)) {
-      expect([key, table.shared[key as keyof typeof names]]).toEqual([key, declared(css, ROOT[scheme], name)]);
-    }
+describe("tokens are the design's OKLCH table, converted", () => {
+  it.each(SCHEMES)("%s", (scheme) => {
+    const off = DESIGN_OKLCH.map(({ path, triples }) => {
+      const triple = triples[scheme === "dark" ? 0 : 1];
+      return { triple, token: path(scheme), converted: oklchToHex(triple) };
+    }).filter(({ token, converted }) => !near(token, converted));
+    expect(off).toEqual([]);
   });
 
-  it("the neutral ground (no civilization known)", () => {
-    expect(table.neutral.canvas).toBe(declared(css, NEUTRAL[scheme], "--color-canvas"));
-    expect(table.neutral.surface1).toBe(declared(css, NEUTRAL[scheme], "--color-surface-1"));
-    expect(table.neutral.surface2).toBe(declared(css, NEUTRAL[scheme], "--color-surface-2"));
-    expect(table.neutral.accent).toBe(declared(css, ROOT[scheme], "--civ-ink"));
-    expect(table.neutral.mark).toBe(declared(css, ":root", "--civ-mark"));
+  it("the transcription covers every row of the table (a short list checks nothing)", () => {
+    expect(DESIGN_OKLCH).toHaveLength(24);
+  });
+});
+
+describe("contrast holds in all ten skins (the handoff claims ≥ 4.6:1; WCAG AA is 4.5)", () => {
+  const pairs: [keyof Theme, keyof Theme][] = [
+    ["ink", "s0"],
+    ["ink", "s2"],
+    ["inkMuted", "s1"],
+    ["inkSubtle", "s0"],
+    ["inkSubtle", "s1"],
+    ["accent", "s0"],
+    ["accent", "s1"],
+    ["onAccent", "accent"],
+    ["neg", "s0"],
+    ["pos", "s0"],
+    ["negInk", "negBg"],
+  ];
+  const cases = KEYS.flatMap((key) =>
+    SCHEMES.map((scheme) => [key, scheme] as const)
+  );
+  it.each(cases)("%s / %s", (key, scheme) => {
+    const t = themeFor({ neutral: null, cn: "CHINESE", eu: "EUROPEAN", eg: "EGYPTIAN", gr: "GREEK" }[key], scheme);
+    expect(t.civ).toBe(key);
+    const low = pairs
+      .map(([fg, bg]) => ({ fg, bg, ratio: Math.round(contrast(t[fg] as string, t[bg] as string) * 100) / 100 }))
+      .filter(({ ratio }) => ratio < 4.5);
+    expect(low).toEqual([]);
+  });
+});
+
+describe("themeFor", () => {
+  it("skins by the soul's civilization", () => {
+    expect(themeFor("CHINESE", "dark").s1).toBe(civ.cn.dark.s1);
+    expect(themeFor("EGYPTIAN", "light").accent).toBe(civ.eg.light.accent);
+    expect(themeFor("GREEK", "dark").civ).toBe("gr");
+    expect(themeFor("EUROPEAN", "dark").mark).toBe(civ.eu.dark.mark);
   });
 
-  it.each(CIVS)("civilization %s", (civ) => {
-    const token = { canvas: "canvas", surface1: "surface-1", surface2: "surface-2", accent: "ink", mark: "mark" };
-    for (const [key, part] of Object.entries(token)) {
-      const expected = declared(css, ROOT[scheme], `--color-civ-${part}-${civ}`);
-      expect(expected).toBeDefined();
-      expect([key, table[civ][key as keyof typeof token]]).toEqual([key, expected]);
+  it("four different grounds, none of them the neutral one", () => {
+    const grounds = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((c) => themeFor(c, "dark").s1);
+    expect(new Set(grounds).size).toBe(4);
+    expect(grounds).not.toContain(themeFor(null, "dark").s1);
+  });
+
+  it("before sign-in and for an unknown civilization: neutral, not another civilization's", () => {
+    expect(themeFor(null, "light").civ).toBe("neutral");
+    const unknown = themeFor("ATLANTEAN", "dark");
+    expect(unknown.civ).toBe("neutral");
+    expect(unknown.s0).toBe(civ.neutral.dark.s0);
+    expect(unknown.mark).toBe(civ.neutral.dark.mark);
+  });
+
+  it("the ground steps s0 → s1 → s2 in the direction of the scheme", () => {
+    const l = (hex: string) => rgb(hex).reduce((a, b) => a + b, 0);
+    for (const key of KEYS) {
+      const [d, li] = [civ[key].dark, civ[key].light];
+      expect([key, l(d.s0) < l(d.s1) && l(d.s1) < l(d.s2)]).toEqual([key, true]);
+      expect([key, l(li.s0) >= l(li.s1) && l(li.s1) > l(li.s2)]).toEqual([key, true]);
     }
   });
 });
 
-describe("paletteFor", () => {
-  it("skins by the soul's civilization", () => {
-    expect(paletteFor("CHINESE", "dark").canvas).toBe(oklchToHex(OKLCH.dark.cn.canvas));
-    expect(paletteFor("EGYPTIAN", "light").accent).toBe(oklchToHex(OKLCH.light.eg.accent));
-    expect(paletteFor("GREEK", "dark").civ).toBe("gr");
-    expect(paletteFor("EUROPEAN", "dark").civ).toBe("eu");
-  });
-
-  it("gives four different grounds, none of them the neutral one", () => {
-    const canvases = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((c) => paletteFor(c, "dark").canvas);
-    expect(new Set(canvases).size).toBe(4);
-    expect(canvases).not.toContain(paletteFor(null, "dark").canvas);
-  });
-
-  it("an unknown civilization gets the neutral ground, not another civilization's", () => {
-    const unknown = paletteFor("ATLANTEAN", "dark");
-    expect(unknown.civ).toBeNull();
-    expect(unknown.canvas).toBe(oklchToHex(OKLCH.dark.neutral.canvas));
+describe("sealedTheme (a past life)", () => {
+  it("steps ink down one level and turns accent subtle, keeping the ground", () => {
+    const t = themeFor("CHINESE", "dark");
+    const sealed = sealedTheme(t);
+    expect([sealed.ink, sealed.inkMuted, sealed.accent]).toEqual([t.inkMuted, t.inkSubtle, t.inkSubtle]);
+    expect([sealed.s0, sealed.s1, sealed.hair]).toEqual([t.s0, t.s1, t.hair]);
   });
 });
 
