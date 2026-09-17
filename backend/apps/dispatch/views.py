@@ -26,7 +26,7 @@ from apps.dispatch.serializers import (
     DispatchRejectSerializer,
     DispatchReturnSerializer,
 )
-from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
+from apps.dispatch.services import CrossTenantJudgmentService, DispatchService, ResidenceReturnBlockedError
 from apps.perm.filters import DataScopeFilter
 from apps.tenants.models import Tenant
 
@@ -368,6 +368,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             DispatchService.end_residence(
                 soul, actor=request.user, trigger=DispatchService.RETURN_MANUAL,
                 reason=body.validated_data["reason"],
+            )
+        except ResidenceReturnBlockedError as blocked:
+            return Response(
+                {"error": str(blocked), "code": blocked.code, "open_judgment_ids": blocked.judgment_ids},
+                status=status.HTTP_409_CONFLICT,
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)

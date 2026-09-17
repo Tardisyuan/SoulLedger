@@ -7,7 +7,7 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
-from apps.judgment.models import Judgment, JudgmentCitation, Statute
+from apps.judgment.models import Judgment, JudgmentCitation, Statute, open_judgments
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
@@ -140,9 +140,7 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "This soul is SETTLED; its fate is final and no further case can be opened."
             )
-        open_cases = Judgment.all_objects.filter(
-            soul=value, verdict__isnull=True, is_final=False, is_deleted=False
-        )
+        open_cases = open_judgments(value)
         if self.instance is not None:
             open_cases = open_cases.exclude(pk=self.instance.pk)
         if open_cases.exists():
