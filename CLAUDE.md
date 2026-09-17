@@ -72,6 +72,12 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 `SyntaxError: 'node:util' does not provide an export named 'styleText'`。
 2026-09-04 实测:v18.20.8 下这两条红,v20.19.5 与 v22.22.1 下都绿。
 
+**装依赖用 npm 11:`npx -y npm@11 ci`,不要用 nvm 自带的 npm 10。** 锁文件由 npm 11 生成(带 `libc` 字段)。
+2026-09-17 实测:npm 10.8.2 的 `npm ci` 报「added 1529 packages」、退出码 0,但根 `node_modules` 里**没有 `typescript`、没有 `.bin`**,
+随后所有门禁都是 127(命令找不到)—— 读起来像代码坏了;它还顺手从锁文件删掉 204 行 `libc` 字段。
+npm 11 默认**不执行安装脚本**,装完补一次 `npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli`。
+改锁文件同样用 `npx npm@11 install …`,提交前 `git diff --stat package-lock.json` 看一眼没有成片删掉 `libc`。
+
 **后端的解释器是 `backend/.venv`,不是 PATH 上的任何 `python`。**
 Python **3.11** + `requirements.lock` + `requirements-dev.txt`(只有钉死的 ruff)——
 与镜像(`backend/Dockerfile`)和 CI(`ci.yml`)装的是**同一份**。建法,在仓库根:
