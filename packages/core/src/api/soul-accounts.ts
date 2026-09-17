@@ -93,6 +93,9 @@ export interface OfficerRebirthApplication {
   can_appeal: boolean;
   /** End of the cooldown this application's final rejection started; null when not cooling down. */
   cooldown_until: string | null;
+  /** Whether THIS user may decide cross-civilization now — the same check the
+   *  `cross-civilization/` endpoint runs. Read it; do not re-derive it from `current_step`. */
+  can_decide_cross_civilization: boolean;
   created_at: string;
   updated_at: string;
 }
