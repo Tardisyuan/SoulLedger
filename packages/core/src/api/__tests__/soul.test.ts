@@ -206,3 +206,58 @@ describe("soulErrorMessage", () => {
     expect(soulErrorMessage(new TypeError("boom")).key).toBe("soul_app.errors.unknown");
   });
 });
+
+describe("push tokens and notification settings", () => {
+  function recordRequests(replies: Record<string, { status: number; data?: unknown }>) {
+    const seen: { method: string; url: string; auth: unknown; body: unknown }[] = [];
+    soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      const url = config.url ?? "";
+      seen.push({
+        method: (config.method ?? "").toUpperCase(),
+        url,
+        auth: config.headers?.Authorization,
+        body: config.data ? JSON.parse(config.data as string) : undefined,
+      });
+      const reply = replies[url];
+      if (!reply) throw new Error(`unscripted request: ${url}`);
+      return { status: reply.status, data: reply.data, headers: {}, config, statusText: "" } as AxiosResponse;
+    };
+    return seen;
+  }
+
+  it("registers a token with the soul's access token and returns the device", async () => {
+    storeSoulTokens({ access: "A1", refresh: "R1" });
+    const device = { id: "d1", platform: "IOS", is_active: true, last_seen_at: "t", created_at: "t" };
+    const seen = recordRequests({ "/me/push-tokens/": { status: 201, data: device } });
+    await expect(soulApi.registerPushToken("ExponentPushToken[abc]", "IOS")).resolves.toEqual(device);
+    expect(seen).toEqual([
+      {
+        method: "POST",
+        url: "/me/push-tokens/",
+        auth: "Bearer A1",
+        body: { token: "ExponentPushToken[abc]", platform: "IOS" },
+      },
+    ]);
+  });
+
+  it("unregisters by posting the token and resolves to nothing", async () => {
+    storeSoulTokens({ access: "A1", refresh: "R1" });
+    const seen = recordRequests({ "/me/push-tokens/unregister/": { status: 204 } });
+    await expect(soulApi.unregisterPushToken("ExponentPushToken[abc]")).resolves.toBeUndefined();
+    expect(seen.map((c) => [c.method, c.url, c.body])).toEqual([
+      ["POST", "/me/push-tokens/unregister/", { token: "ExponentPushToken[abc]" }],
+    ]);
+  });
+
+  it("reads settings with GET and sends only the changed fields with PATCH", async () => {
+    storeSoulTokens({ access: "A1", refresh: "R1" });
+    const settings = { rebirth: true, judgment: false, residence: true, locale: "en" };
+    const seen = recordRequests({ "/me/notification-settings/": { status: 200, data: settings } });
+    await expect(soulApi.notificationSettings()).resolves.toEqual(settings);
+    await expect(soulApi.updateNotificationSettings({ judgment: false })).resolves.toEqual(settings);
+    expect(seen.map((c) => [c.method, c.body])).toEqual([
+      ["GET", undefined],
+      ["PATCH", { judgment: false }],
+    ]);
+  });
+});

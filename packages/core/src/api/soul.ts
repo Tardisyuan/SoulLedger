@@ -54,6 +54,11 @@ export type MeRebirthApplication = Schemas["MeRebirthApplication"];
 export type MeRebirthApplicationList = Schemas["MeRebirthApplicationList"];
 export type DesiredRebirthForm = Schemas["DesiredRebirthFormEnum"];
 export type RebirthApplicationStatus = Schemas["RebirthApplicationStatusEnum"];
+export type PushDevice = Schemas["PushDevice"];
+export type PushPlatform = Schemas["PushPlatformEnum"];
+export type PushLocale = Schemas["PushLocaleEnum"];
+export type NotificationSettings = Schemas["NotificationSettings"];
+export type NotificationSettingsPatch = Schemas["PatchedNotificationSettings"];
 
 /** The six forms a soul may ask for — the schema's enum, `OTHER` excluded server-side. */
 export const DESIRED_REBIRTH_FORMS: readonly DesiredRebirthForm[] = [
@@ -174,6 +179,21 @@ export const soulApi = {
     soulHttp
       .post<MeRebirthApplication>(`/me/rebirth-applications/${id}/appeal/`, { statement })
       .then((r) => r.data),
+  /**
+   * Register this device's Expo push token for the signed-in soul. Idempotent:
+   * 201 the first time, 200 after. A token already held by another soul account
+   * moves to this one. The token itself comes from the host (on a phone,
+   * `expo-notifications`); this package never imports it.
+   */
+  registerPushToken: (token: string, platform: PushPlatform) =>
+    soulHttp.post<PushDevice>("/me/push-tokens/", { token, platform }).then((r) => r.data),
+  /** Call BEFORE `logout`: it needs the soul's access token. 204 whether or not the token was known. */
+  unregisterPushToken: (token: string) =>
+    soulHttp.post("/me/push-tokens/unregister/", { token }).then(() => undefined),
+  notificationSettings: () =>
+    soulHttp.get<NotificationSettings>("/me/notification-settings/").then((r) => r.data),
+  updateNotificationSettings: (patch: NotificationSettingsPatch) =>
+    soulHttp.patch<NotificationSettings>("/me/notification-settings/", patch).then((r) => r.data),
 };
 
 /**
