@@ -39,6 +39,10 @@ export function LoginScreen() {
           value={soulCode}
           onChangeText={setSoulCode}
           autoCapitalize="characters"
+          // Soul codes are ASCII. With a Chinese (pinyin) keyboard active, letters
+          // otherwise go into an uncommitted composition that is dropped when focus
+          // moves to the password field (seen on the iPhone run).
+          keyboardType="ascii-capable"
         />
         <Input
           testID="login-password"

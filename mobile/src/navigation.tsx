@@ -122,7 +122,9 @@ export function RootNavigator() {
   return (
     <PaletteContext.Provider value={palette}>
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <Stack.Navigator>{screens}</Stack.Navigator>
+        {/* "minimal": a chevron only. The default iOS back title is the previous
+            route's NAME, and the tabs route is literally "Tabs" (seen on the iPhone run). */}
+        <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: "minimal" }}>{screens}</Stack.Navigator>
       </NavigationContainer>
     </PaletteContext.Provider>
   );

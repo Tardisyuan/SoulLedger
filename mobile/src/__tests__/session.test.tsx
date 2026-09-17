@@ -14,7 +14,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { paletteFor } from "../theme";
-import { PROFILE, life, stubApi } from "./stubApi";
+import { PROFILE, application, life, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -158,6 +158,28 @@ describe("a stored session", () => {
     const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
     expect(style).toMatchObject({ backgroundColor: paletteFor("EGYPTIAN", "light").surface1 }); // jest reports a light colour scheme
     expect(paletteFor("EGYPTIAN", "light").surface1).not.toBe(paletteFor(null, "light").surface1);
+  });
+
+  it("returning to the life tab reloads it — an application submitted elsewhere shows up", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": [
+        { status: 200, data: life(1) },
+        { status: 200, data: life(1, { rebirth_applications: [application()] }) },
+      ],
+      "/me/rebirth-applications/": {
+        status: 200,
+        data: { can_apply: false, reason: "application_open", cooldown_until: null, results: [application()] },
+      },
+    });
+    renderApp();
+    await screen.findByText("这一世没有转生申请");
+    fireEvent.press(screen.getAllByText("转生申请").at(-1)!); // the tab, not the section heading
+    await screen.findByTestId("eligibility");
+    fireEvent.press(screen.getByText("本世"));
+    await screen.findByText("审批中");
+    expect(screen.queryByText("这一世没有转生申请")).toBeNull();
   });
 
   it("sign-out clears the secure store and returns to login", async () => {

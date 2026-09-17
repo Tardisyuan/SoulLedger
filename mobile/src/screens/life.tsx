@@ -1,4 +1,4 @@
-import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
+import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import { soulApi, soulErrorMessage, type MeLife } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
@@ -7,7 +7,7 @@ import { View } from "react-native";
 
 import { formatDateTime, useI18n } from "../i18n";
 import { useSession } from "../session";
-import { Body, Button, Card, EnumText, Failure, Field, Heading, Loading, Screen, enumText, useRemote } from "../ui";
+import { Body, Button, Card, EnumText, Failure, Field, Heading, Loading, Screen, enumText, useReloadOnRefocus, useRemote } from "../ui";
 
 function realmName(realm: { name_zh: string; name_en: string; name_local: string }, locale: Locale): string {
   return (locale === "zh-Hans" ? realm.name_zh : realm.name_en) || realm.name_local;
@@ -96,6 +96,7 @@ export function MyLifeScreen() {
   const { t, locale, setLocale } = useI18n();
   const { state, signOut, refreshProfile } = useSession();
   const life = useRemote(soulApi.life);
+  useReloadOnRefocus(life.reload);
   if (state.status !== "signedIn") return null;
   const me = state.profile;
 
@@ -136,7 +137,7 @@ export function MyLifeScreen() {
         <View style={{ flexDirection: "row", gap: 8 }}>
           {SUPPORTED_LOCALES.map((l) => (
             <View key={l} style={{ flex: 1 }}>
-              <Button kind={l === locale ? "primary" : "secondary"} title={l} onPress={() => setLocale(l)} />
+              <Button kind={l === locale ? "primary" : "secondary"} title={LOCALE_LABELS[l]} onPress={() => setLocale(l)} />
             </View>
           ))}
         </View>
