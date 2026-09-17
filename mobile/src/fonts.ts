@@ -41,8 +41,14 @@ export const family = {
 
 const HAN = /[㐀-鿿豈-﫿]/;
 
-/** The family for quoted words: Source Serif 4, or the system's CJK serif when the words are Chinese. */
+/**
+ * The family for quoted words: Source Serif 4, or the system's CJK serif when
+ * the words are Chinese — on Android, where `serif` resolves Han glyphs to
+ * Noto Serif CJK. iOS ships no CJK serif by default (Songti SC is a
+ * downloadable font and was absent on the simulator), so there the Han glyphs
+ * fall back to PingFang; bundling a Han serif is an open decision (report).
+ */
 export function quoteFamily(text: string): string {
   if (!HAN.test(text)) return family.serif;
-  return Platform.select({ ios: "Songti SC", default: "serif" });
+  return Platform.select({ android: "serif", default: family.serif });
 }

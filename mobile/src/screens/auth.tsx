@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem } from "../emblems";
+import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { expiryOf, formatStamp } from "../rules";
@@ -204,6 +205,7 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
 export function ChangePasswordScreen() {
   const { t } = useI18n();
   const { state, changePassword, signOut } = useSession();
+  const toast = useToast();
   const now = useNow();
   const [oldPassword, setOld] = useState("");
   const [newPassword, setNew] = useState("");
@@ -221,6 +223,7 @@ export function ChangePasswordScreen() {
     setError(null);
     try {
       await changePassword(oldPassword, newPassword);
+      toast(t("soul_app.change_password.success"));
     } catch (e) {
       setError(soulErrorMessage(e));
       setBusy(false);
