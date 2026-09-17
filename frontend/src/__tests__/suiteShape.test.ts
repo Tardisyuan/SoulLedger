@@ -75,6 +75,7 @@ const COLLECTED_FILES = [
   "permissionGatesActuallyWithhold.test.tsx",
   "platformAdapterIsInstalled.test.tsx",
   "ProfileCard.test.tsx",
+  "RebirthApplicationsPage.test.tsx",
   "RebirthFormSelect.test.tsx",
   "RequireButton.test.tsx",
   "RequirePermission.test.tsx",
