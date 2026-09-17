@@ -402,6 +402,10 @@ def retire_account_for_rebirth(soul, ended_cycle):
     account.user.save(update_fields=["is_active"])
     _void_open_credentials(account)
     _revoke_refresh_tokens(account.user)
+    # 同一事务里停用推送设备:停用的账号不再收到任何推送,回滚则一起回滚。
+    from apps.soul_push.services import invalidate_account_devices
+
+    invalidate_account_devices(account)
     audit("UPDATE", soul, f"转世完成,第 {ended_cycle} 世灵魂账号停用", resource_id=account.pk)
     from apps.events.services import EventService
 

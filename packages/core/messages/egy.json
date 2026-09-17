@@ -1712,7 +1712,8 @@
       "events_retry_pending_webhooks": "Send Medu Kheper Khemu",
       "scheduler_reap_stale_runs": "Wetep Iri Ma Wetep",
       "scheduler_check_overdue": "Maa Ahet Sesh Ma Iri",
-      "scheduler_prune_runs": "Wehem Medew Iri Tepy"
+      "scheduler_prune_runs": "Wehem Medew Iri Tepy",
+      "soul_push_sweep": "Sedjem Ba: Wehem Dbh Hena Sesh Iri"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -1969,6 +1970,28 @@
       "network": "Nen Aq Er Per Aa. Maa Wat Hena Wehem",
       "validation": "Sesh Nen Maat",
       "unknown": "Isfet ({{code}})"
+    }
+  },
+  "soul_push": {
+    "rebirth_submitted": {
+      "title": "Wehem Mesut Dbh Seth",
+      "body": "Dbh Ek Em Sheemtet. Sedjem Ek Em Wedja."
+    },
+    "rebirth_appeal_submitted": {
+      "title": "Wehem Medu Seth",
+      "body": "Wehem Medu Ek Em Sheemtet. Sedjem Ek Em Wedja."
+    },
+    "rebirth_result": {
+      "title": "Wehem Mesut Wedja",
+      "body": "Wedja Er Dbh Ek. Wen Medjat Er Maa."
+    },
+    "judgment_result": {
+      "title": "Wedja Pehwy",
+      "body": "Wedja Ek Pehwy. Wen Medjat Er Maa."
+    },
+    "disposition_executed": {
+      "title": "Wetep Iri",
+      "body": "Wetep Ek Iri. Wen Medjat Er Maa."
     }
   }
 }

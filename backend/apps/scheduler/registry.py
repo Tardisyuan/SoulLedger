@@ -90,6 +90,9 @@ REGISTRY: tuple[JobSpec, ...] = (
         "events.retry_pending_webhooks", GLOBAL, "*/5 * * * *",
         kwargs={"older_than_seconds": 300, "limit": 200}, max_runtime=240,
     ),
+    # 灵魂端推送:把停住的投递重新入队 + 查 Expo 回执(apps/soul_push/services.py)。
+    # 每 5 分钟;回执只查发出满 15 分钟的,所以更密没有意义。锁 240s 同上一条的理由。
+    JobSpec("soul_push.sweep", GLOBAL, "*/5 * * * *", max_runtime=240),
     # ---- this app's own maintenance --------------------------------------------
     # Every 5 minutes: the finest-grained job above is 5-minutely, so a stuck
     # run is noticed within one period of its own max_runtime; two indexed

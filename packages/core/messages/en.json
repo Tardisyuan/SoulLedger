@@ -1712,7 +1712,8 @@
       "events_retry_pending_webhooks": "Retry pending webhooks",
       "scheduler_reap_stale_runs": "Close out stuck runs",
       "scheduler_check_overdue": "Detect overdue jobs",
-      "scheduler_prune_runs": "Prune old run history"
+      "scheduler_prune_runs": "Prune old run history",
+      "soul_push_sweep": "Soul push: requeue and fetch receipts"
     },
     "status": {
       "PENDING": "Queued",
@@ -1969,6 +1970,28 @@
       "network": "Cannot reach the server. Check your connection and retry",
       "validation": "Some fields are invalid",
       "unknown": "Something went wrong ({{code}})"
+    }
+  },
+  "soul_push": {
+    "rebirth_submitted": {
+      "title": "Rebirth application submitted",
+      "body": "Your rebirth application is under review. You will be notified when there is a result."
+    },
+    "rebirth_appeal_submitted": {
+      "title": "Appeal submitted",
+      "body": "Your appeal is under review. You will be notified when there is a result."
+    },
+    "rebirth_result": {
+      "title": "Rebirth application decided",
+      "body": "There is a result on your rebirth application. Open the app to see it."
+    },
+    "judgment_result": {
+      "title": "Judgment concluded",
+      "body": "Your judgment has concluded. Open the app to see it."
+    },
+    "disposition_executed": {
+      "title": "Disposition carried out",
+      "body": "Your disposition has been carried out. Open the app to see it."
     }
   }
 }
