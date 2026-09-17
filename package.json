@@ -5,6 +5,7 @@
   "description": "SoulLedger monorepo root. Holds the workspace list only; every runnable target lives in a workspace.",
   "workspaces": [
     "frontend",
+    "mobile",
     "packages/*"
   ],
   "engines": {
