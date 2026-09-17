@@ -155,7 +155,7 @@ export function LifeSections({
               {i ? <Hairline style={styles.rule} /> : null}
               <DataRows>
                 <DataRow label={tr("soul_app.life.realm")}>{d.destination_realm ? realmName(d.destination_realm, locale) : unrecorded}</DataRow>
-                <DataRow label={tr("soul_app.life.sentence")} mono={!d.is_eternal && d.sentence_years !== null}>
+                <DataRow label={tr("soul_app.life.sentence")}>
                   {d.is_eternal
                     ? tr("soul_app.life.eternal")
                     : d.sentence_years !== null

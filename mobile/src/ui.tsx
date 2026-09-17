@@ -150,6 +150,10 @@ export function Screen({
   testID?: string;
 }) {
   const t = useTheme();
+  // The spinner belongs to a pull. A reload the app starts itself (tab refocus)
+  // would otherwise open an empty band above the content on iOS (seen on the iPhone run).
+  const [pulled, setPulled] = useState(false);
+  if (pulled && !refreshing) setPulled(false);
   return (
     <SafeAreaView testID={testID} edges={edges} style={[styles.fill, { backgroundColor: t.s0 }]}>
       {scroll ? (
@@ -157,7 +161,16 @@ export function Screen({
           contentContainerStyle={styles.grow}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={t.accent} /> : undefined
+            onRefresh ? (
+              <RefreshControl
+                refreshing={pulled && !!refreshing}
+                onRefresh={() => {
+                  setPulled(true);
+                  onRefresh();
+                }}
+                tintColor={t.accent}
+              />
+            ) : undefined
           }
         >
           {children}
