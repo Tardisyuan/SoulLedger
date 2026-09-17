@@ -1,5 +1,5 @@
 /**
- * app/soul-accounts/credentials/page.tsx — the pending-delivery list and the
+ * app/soul-credentials/page.tsx — the pending-delivery list and the
  * one-time password reveal.
  *
  * `RequirePermission` / `usePermissions` run for real against a stubbed
@@ -13,7 +13,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import SoulCredentialsPage from "@/app/soul-accounts/credentials/page";
+import SoulCredentialsPage from "@/app/soul-credentials/page";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({

@@ -110,7 +110,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
           </Button>
         )}
         {current?.must_change_password && (
-          <Link href="/soul-accounts/credentials" className="block text-02 underline text-[oklch(var(--color-accent-ink))]">
+          <Link href="/soul-credentials" className="block text-02 underline text-[oklch(var(--color-accent-ink))]">
             {t("soul_accounts.account.pending_link")}
           </Link>
         )}

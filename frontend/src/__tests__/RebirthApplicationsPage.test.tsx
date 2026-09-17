@@ -1,5 +1,5 @@
 /**
- * app/soul-accounts/rebirth-applications/page.tsx — list, filter, the detail
+ * app/rebirth-applications/page.tsx — list, filter, the detail
  * dialog, and who is offered the cross-civilization decision.
  *
  * Permissions run for real (stubbed `useTenant` only).
@@ -7,7 +7,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import RebirthApplicationsPage from "@/app/soul-accounts/rebirth-applications/page";
+import RebirthApplicationsPage from "@/app/rebirth-applications/page";
 import { mayDecideCrossCivilization } from "@/src/components/soul-accounts/RebirthApplicationDetail";
 import { tZh } from "./support/zhBundle";
 
