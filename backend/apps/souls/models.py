@@ -562,17 +562,28 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # The check belongs here rather than on the action, because "which
             # doors have the gate" is the question that produced the hole. Any
             # future writer of this edge inherits it.
+            # 暂居中不进轮回、也不进终局(2026-09-17:调拨是暂居)。下一世还是终局,
+            # 由原文明在灵魂回归之后决定;暂居租户替它决定,等于把迁籍从后门做回来。
+            if locked_soul.is_residing and new_state in (SoulState.REINCARNATING, SoulState.SETTLED):
+                logger.warning(
+                    "Refused %s for %s: the soul is residing away from its home tenant.",
+                    new_state,
+                    self.pk,
+                )
+                return False
+
             if new_state == SoulState.REINCARNATING:
                 from apps.ledger.services import (
                     REBIRTH_CAPABLE_CIVILIZATIONS,
                 )
 
-                if self.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+                # 原属文明:暂居不改变灵魂有没有下一世。
+                if locked_soul.home_civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
                     logger.warning(
                         "Refused REINCARNATING for %s: %s is a terminal "
                         "cosmology.",
                         self.pk,
-                        self.civilization,
+                        locked_soul.home_civilization,
                     )
                     return False
 

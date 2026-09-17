@@ -15,6 +15,9 @@ class DispatchStatus(models.TextChoices):
     APPROVED = "APPROVED", "已批准"
     REJECTED = "REJECTED", "已拒绝"
     EXECUTED = "EXECUTED", "已执行"
+    # 暂居结束、灵魂已回到原属租户(2026-09-17:调拨是暂居,不是迁籍)。
+    # EXECUTED 在这之前表示「暂居中」。
+    RETURNED = "RETURNED", "已回归"
     CANCELLED = "CANCELLED", "已取消"
 
 
@@ -68,6 +71,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     proposed_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True, blank=True)
     executed_at = models.DateTimeField(null=True, blank=True)
+    returned_at = models.DateTimeField(null=True, blank=True)
 
     tenant = models.ForeignKey(
         "tenants.Tenant",
@@ -106,7 +110,8 @@ class DispatchRecord(AuditUserFields, models.Model):
         DispatchStatus.PROPOSED: [DispatchStatus.APPROVED, DispatchStatus.REJECTED, DispatchStatus.CANCELLED],
         DispatchStatus.APPROVED: [DispatchStatus.EXECUTED, DispatchStatus.CANCELLED],
         DispatchStatus.REJECTED: [],
-        DispatchStatus.EXECUTED: [],
+        DispatchStatus.EXECUTED: [DispatchStatus.RETURNED],
+        DispatchStatus.RETURNED: [],
         DispatchStatus.CANCELLED: [],
     }
 
@@ -116,7 +121,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     def transition_to(self, new_status: str, **kwargs) -> bool:
         from django.db import transaction as db_transaction
         with db_transaction.atomic():
-            locked = DispatchRecord._base_manager.select_for_update().get(pk=self.pk)
+            locked = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=self.pk)
             if not locked.can_transition_to(new_status):
                 return False
             locked.status = new_status

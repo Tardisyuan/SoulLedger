@@ -64,6 +64,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "proposed_at",
             "decided_at",
             "executed_at",
+            "returned_at",
             "create_time",
             "update_time",
         ]
@@ -84,6 +85,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "proposed_at",
             "decided_at",
             "executed_at",
+            "returned_at",
             "create_time",
             "update_time",
         ]
@@ -149,6 +151,7 @@ class DispatchRecordListSerializer(serializers.ModelSerializer):
             "status",
             "proposed_at",
             "executed_at",
+            "returned_at",
         ]
 
 
