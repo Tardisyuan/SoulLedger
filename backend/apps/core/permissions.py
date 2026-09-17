@@ -4,6 +4,8 @@ DRF permission classes for SoulLedger multi-tenant isolation.
 from django.core.exceptions import FieldDoesNotExist
 from rest_framework import permissions
 
+from apps.core.tenant import residence_read_allowed, residence_readable
+
 
 class CodenamePermission(permissions.BasePermission):
     """Enforce the codenames a view declares, at the one layer that can see them.
@@ -156,6 +158,10 @@ class TenantPermission(permissions.BasePermission):
             # carries an ownership claim, and refusing to look at it because it
             # has no `_meta` would be the same mistake in the other direction.
             pass
+
+        # 暂居只读例外 —— 与 scope_to_tenant 的列表过滤是同一个判定(apps/core/tenant.py)。
+        if residence_read_allowed(view) and residence_readable(obj, tenant):
+            return True
 
         obj_tenant = getattr(obj, "tenant", None)
         if obj_tenant is None:

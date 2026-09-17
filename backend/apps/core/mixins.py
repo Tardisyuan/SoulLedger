@@ -1,7 +1,7 @@
 """
 Core mixins for ViewSets.
 """
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import residence_read_allowed, scope_to_tenant
 
 
 class TenantQuerySetMixin:
@@ -20,7 +20,10 @@ class TenantQuerySetMixin:
         # unconditionally on `tenant=` used to raise FieldError for every
         # non-ADMIN request against them, so a model without the field is
         # left unscoped rather than blowing up the request.
-        return scope_to_tenant(super().get_queryset(), self.request, missing_field="allow")
+        return scope_to_tenant(
+            super().get_queryset(), self.request, missing_field="allow",
+            residence_read=residence_read_allowed(self),
+        )
 
 
 class TenantCreateMixin:

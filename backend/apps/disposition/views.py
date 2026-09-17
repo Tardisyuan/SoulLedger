@@ -54,6 +54,8 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     ).all()
     serializer_class = DispositionSerializer
     filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
+    # 暂居只读例外(apps/core/tenant.py)。
+    residence_read_actions = ("list", "retrieve")
     ordering_fields = ["created_at", "executed_at"]
 
     def get_queryset(self):
