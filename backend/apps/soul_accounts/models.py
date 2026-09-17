@@ -4,8 +4,8 @@
 (2026-09-14、2026-09-17)。这里只写代码层面的约束。
 
 **按分库约束写**(同文档 2026-09-17「顺序」):主键 UUID;只有同租户的外键
-(灵魂、它自己的账号、它自己的工作流);不存 tenant 列 —— 租户经 `soul__tenant`
-读出,于是灵魂被转移时这几张表不会留下一个过期的租户值。跨文明的动作(转生申请被
+(灵魂、它自己的账号、它自己的工作流);不存 tenant 列 —— 租户经 `soul__home_tenant`
+读出(原属租户;调拨是暂居,暂居不改变账号与申请归谁管),于是这几张表不会留下一个过期的租户值。跨文明的动作(转生申请被
 判定跨文明)只发事件,不写别的租户的数据。
 """
 import uuid
@@ -92,7 +92,7 @@ class InitialCredential(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     account = models.ForeignKey(SoulAccount, on_delete=models.CASCADE, related_name="credentials")
-    # 冗余一个 soul 外键,为了按 `soul__tenant` 一跳做租户隔离(tests/test_tenant_scoping_contract.py 只认一跳)。
+    # 冗余一个 soul 外键,为了按 `soul__home_tenant` 一跳做租户隔离(tests/test_tenant_scoping_contract.py 只认一跳)。
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="initial_credentials")
     channel = models.CharField(max_length=10, blank=True, default="", help_text="EMAIL / SMS;空表示没有可用渠道")
     status = models.CharField(max_length=10, choices=CredentialStatus.choices)

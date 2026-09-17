@@ -16,9 +16,11 @@ from apps.dispatch.services import DispatchService
 from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.events.models import SoulEvent
+from apps.ledger.services import LedgerService, RebirthNotApplicable
+from apps.soul_accounts.models import RebirthApplication
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
-from tests.soul_account_support import officer_client
+from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
 
@@ -267,3 +269,95 @@ def test_while_residing_only_the_residence_tenant_sees_the_soul(cn, eg, eu):
     assert officer_client(_officer("eu_judge", "JUDGE", eu)).get(url).status_code == 404
     home_mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
     assert home_mod.get(f"/api/v1/dispatch/records/{record.pk}/").status_code == 200
+
+
+# ── 转生资格、申请与申诉按原属文明 ───────────────────────────────────────
+
+
+APPLY = "/api/v1/me/rebirth-applications/"
+OFFICER_APPLICATIONS = "/api/v1/soul-accounts/rebirth-applications/"
+
+
+def _dispatch(soul, away):
+    """把一个已存在的灵魂从它此刻的租户调拨到 away 并执行。"""
+    record = DispatchRecord.objects.create(
+        source_tenant_id=soul.tenant_id, target_tenant=away, soul=soul, status=DispatchStatus.APPROVED,
+        reason="暂居", tenant_id=soul.tenant_id,
+    )
+    DispatchService.execute(record, "executor")
+    soul.refresh_from_db()
+    return record
+
+
+def _rows(response):
+    data = response.data
+    return data["results"] if isinstance(data, dict) and "results" in data else data
+
+
+def test_a_chinese_soul_residing_in_egypt_may_still_apply_and_home_reviews_it(
+        cn, eg, django_capture_on_commit_callbacks):
+    account, client = ready_soul(cn)
+    _dispatch(account.soul, eg)
+    assert account.soul.is_residing
+
+    listing = client.get(APPLY).data
+    assert listing["can_apply"] is True and listing["reason"] is None
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(APPLY, {"desired_form": "HUMAN", "statement": "愿为人"}, format="json")
+    assert response.status_code == 201, response.data
+
+    application = RebirthApplication.objects.get(pk=response.data["id"])
+    assert application.workflow.tenant_id == cn.pk
+    cn_judge = _officer("cn_judge", "JUDGE", cn)
+    eg_judge = _officer("eg_judge", "JUDGE", eg)
+    assert [row["id"] for row in _rows(officer_client(cn_judge).get(OFFICER_APPLICATIONS))] == [str(application.pk)]
+    assert _rows(officer_client(eg_judge).get(OFFICER_APPLICATIONS)) == []
+
+
+def test_ledger_rebirth_gate_asks_the_home_civilization(cn, eg, eu):
+    chinese, _ = _residing(cn, eg, name="华魂")
+    LedgerService.assert_rebirth_capable(chinese)
+    european, _ = _residing(eu, cn, name="欧魂")
+    with pytest.raises(RebirthNotApplicable):
+        LedgerService.assert_rebirth_capable(european)
+
+
+@pytest.mark.parametrize("home,away", [("EG_DUAT", None), ("EU_HEAVEN_HELL", "CN_DIYU")])
+def test_a_soul_from_a_terminal_cosmology_stays_terminal_wherever_it_resides(
+        home, away, django_capture_on_commit_callbacks):
+    """本土埃及灵魂仍是终局;欧洲灵魂暂居中国,也不因暂居地有轮回而获得转生。"""
+    account, client = ready_soul(_tenant(home))
+    if away:
+        _dispatch(account.soul, _tenant(away))
+        assert account.soul.civilization == "CHINESE"
+    listing = client.get(APPLY).data
+    assert listing["can_apply"] is False and listing["reason"] == "terminal_cosmology"
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(APPLY, {"desired_form": "HUMAN"}, format="json")
+    assert response.status_code == 409 and response.data["code"] == "terminal_cosmology"
+    assert not RebirthApplication.objects.filter(soul=account.soul).exists()
+
+
+def test_an_application_rejected_before_the_dispatch_can_be_appealed_during_residence(
+        cn, eg, django_capture_on_commit_callbacks):
+    account, client = ready_soul(cn)
+    with django_capture_on_commit_callbacks(execute=True):
+        submitted = client.post(APPLY, {"desired_form": "HUMAN"}, format="json")
+    application = RebirthApplication.objects.get(pk=submitted.data["id"])
+    cn_judge = _officer("cn_judge", "JUDGE", cn)
+    with django_capture_on_commit_callbacks(execute=True):
+        decided = officer_client(cn_judge).post(
+            f"/api/v1/workflows/{application.workflow_id}/approve_node/",
+            {"verdict": "FAILED", "rejection_reason_for_soul": "业障未消"}, format="json")
+    assert decided.status_code == 200, decided.data
+    application.refresh_from_db()
+    assert application.status == "REJECTED"
+
+    _dispatch(account.soul, eg)
+
+    assert client.get(f"{APPLY}{application.pk}/").data["can_appeal"] is True
+    with django_capture_on_commit_callbacks(execute=True):
+        appealed = client.post(f"{APPLY}{application.pk}/appeal/", {"statement": "请复核"}, format="json")
+    assert appealed.status_code == 200 and appealed.data["status"] == "APPEALING"
+    application.refresh_from_db()
+    assert application.appeal_workflow.tenant_id == cn.pk

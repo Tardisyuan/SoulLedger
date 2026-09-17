@@ -2,7 +2,9 @@
 
 权限码:`soul_account.read`(列表、账号链、待交付列表)、`soul_account.manage`(开通、
 重置、查看一次明文、标记交付、重试发送);转生申请的「是否跨文明」用 `workflow.approve`
-并要求调用者正是初审节点指定的审批人。租户隔离全部经 `scope_to_tenant(field="soul__tenant")`。
+并要求调用者正是初审节点指定的审批人。租户隔离全部经 `scope_to_tenant(field="soul__home_tenant")`:
+账号、初始密码与转生申请属于灵魂的**原属**租户(2026-09-17:跨文明调拨是暂居)。灵魂暂居他乡时,
+原属租户照常管理它的账号、审批它的转生申请;暂居租户看不到这三样。
 """
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
@@ -53,7 +55,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = SoulAccount.objects.select_related("soul", "user").order_by("soul", "cycle")
-        return scope_to_tenant(qs, self.request, field="soul__tenant")
+        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=ProvisionRequestSerializer,
                    responses={201: SoulAccountSerializer, 200: SoulAccountSerializer, 404: SoulErrorSerializer,
@@ -65,7 +67,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
         body = ProvisionRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=body.validated_data["soul_id"]).first()
+        soul = scope_to_tenant(Soul.objects.all(), request, field="home_tenant").filter(pk=body.validated_data["soul_id"]).first()
         if soul is None:
             return Response({"detail": "灵魂不存在。", "code": "not_found"}, status=404)
         try:
@@ -115,7 +117,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
     def get_queryset(self):
         svc.expire_due_credentials()
         qs = InitialCredential.objects.select_related("soul", "account", "revealed_by", "delivered_by")
-        return scope_to_tenant(qs, self.request, field="soul__tenant")
+        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=None, responses={200: RevealedCredentialSerializer, 409: SoulErrorSerializer,
                                             410: SoulErrorSerializer})
@@ -166,9 +168,9 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
 
     def get_queryset(self):
         qs = RebirthApplication.objects.select_related(
-            "soul__tenant", "workflow__current_node", "appeal_workflow__current_node"
+            "soul__tenant", "soul__home_tenant", "workflow__current_node", "appeal_workflow__current_node"
         )
-        return scope_to_tenant(qs, self.request, field="soul__tenant")
+        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=CrossCivilizationDecisionSerializer,
                    responses={200: OfficerRebirthApplicationSerializer, 403: SoulErrorSerializer,
