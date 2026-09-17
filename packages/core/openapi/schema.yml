@@ -11815,7 +11815,7 @@ components:
           readOnly: true
           nullable: true
           oneOf:
-          - $ref: '#/components/schemas/JudgmentVerdictEnum'
+          - $ref: '#/components/schemas/VerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
         notes:
           type: string
@@ -11955,18 +11955,6 @@ components:
       - skipped
       - soul
       - total
-    JudgmentVerdictEnum:
-      enum:
-      - PASSED
-      - FAILED
-      - PURGATORY
-      - RETRY
-      type: string
-      description: |-
-        * `PASSED` - Passed / Saved
-        * `FAILED` - Failed / Condemned
-        * `PURGATORY` - Purgatory / Intermediate
-        * `RETRY` - Retry / Appeal
     KarmaBucket:
       type: object
       description: |-
@@ -13010,6 +12998,20 @@ components:
         * `DIRECTORY` - 目录
         * `MENU` - 菜单
         * `BUTTON` - 按钮
+    NodeDecisionVerdictEnum:
+      enum:
+      - PASSED
+      - FAILED
+      - CONFIRMED
+      - REJECTED
+      - SKIPPED
+      type: string
+      description: |-
+        * `PASSED` - PASSED
+        * `FAILED` - FAILED
+        * `CONFIRMED` - CONFIRMED
+        * `REJECTED` - REJECTED
+        * `SKIPPED` - SKIPPED
     NonFungible:
       type: object
       description: |-
@@ -14586,7 +14588,7 @@ components:
           readOnly: true
           nullable: true
           oneOf:
-          - $ref: '#/components/schemas/JudgmentVerdictEnum'
+          - $ref: '#/components/schemas/VerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
         notes:
           type: string
@@ -17844,6 +17846,18 @@ components:
       - permissions
       - tenant
       - username
+    VerdictEnum:
+      enum:
+      - PASSED
+      - FAILED
+      - PURGATORY
+      - RETRY
+      type: string
+      description: |-
+        * `PASSED` - Passed / Saved
+        * `FAILED` - Failed / Condemned
+        * `PURGATORY` - Purgatory / Intermediate
+        * `RETRY` - Retry / Appeal
     VisibilityEnum:
       enum:
       - PUBLIC
@@ -17899,7 +17913,7 @@ components:
       description: Serializer for node approval action.
       properties:
         verdict:
-          $ref: '#/components/schemas/WorkflowNodeActionVerdictEnum'
+          $ref: '#/components/schemas/NodeDecisionVerdictEnum'
         notes:
           type: string
           default: ''
@@ -17909,20 +17923,6 @@ components:
           maxLength: 2000
       required:
       - verdict
-    WorkflowNodeActionVerdictEnum:
-      enum:
-      - PASSED
-      - FAILED
-      - CONFIRMED
-      - REJECTED
-      - SKIPPED
-      type: string
-      description: |-
-        * `PASSED` - PASSED
-        * `FAILED` - FAILED
-        * `CONFIRMED` - CONFIRMED
-        * `REJECTED` - REJECTED
-        * `SKIPPED` - SKIPPED
     WorkflowStats:
       type: object
       description: |-
