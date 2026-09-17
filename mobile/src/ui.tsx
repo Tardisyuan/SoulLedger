@@ -170,8 +170,17 @@ export function Screen({
   // would otherwise open an empty band above the content on iOS (seen on the iPhone run).
   const [pulled, setPulled] = useState(false);
   if (pulled && !refreshing) setPulled(false);
+  // When the system text size changes while a screen is open, iOS re-sizes the
+  // glyphs but Yoga keeps the old line boxes, and text is clipped (seen on the
+  // iPhone run). Remounting the content at a new scale re-measures every line.
+  const { fontScale } = useWindowDimensions();
   return (
-    <SafeAreaView testID={testID} edges={edges} style={[styles.fill, { backgroundColor: t.s0 }]}>
+    <SafeAreaView
+      key={Math.round(fontScale * 100)}
+      testID={testID}
+      edges={edges}
+      style={[styles.fill, { backgroundColor: t.s0 }]}
+    >
       {scroll ? (
         <ScrollView
           contentContainerStyle={styles.grow}
