@@ -58,17 +58,9 @@ function unwrapBundle(mod: unknown): Bundle {
   return (m && typeof m === "object" && m.default ? m.default : (mod as Bundle));
 }
 
-export const LOCALE_LABELS: Record<Locale, string> = {
-  "zh-Hans": "简体中文",
-  en: "English",
-  // Kemet ("the black land") is what ancient Egypt called itself. This label
-  // used to read "𓋴 العربية" — literally "Arabic" — which is a language that
-  // reached Egypt some 1400 years after the period this locale evokes.
-  // The hieroglyph that survived that fix is gone as well: U+132F4 needs a
-  // font no default Windows or Linux install ships, and the two labels above
-  // it are plain words carrying no glyph at all.
-  egy: "Kemet",
-};
+// Moved to @soulledger/core/config/locale (2026-09-17) so the soul app shows
+// the same language names; re-exported here for existing imports.
+export { LOCALE_LABELS } from "@soulledger/core/config/locale";
 
 
 

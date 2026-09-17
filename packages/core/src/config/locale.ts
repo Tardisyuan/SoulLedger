@@ -72,3 +72,16 @@ export const BCP47_FOR_LOCALE: Record<Locale, string> = {
 export function isLocale(value: string | undefined | null): value is Locale {
   return value === "zh-Hans" || value === "en" || value === "egy";
 }
+
+/** Each locale named in itself — what a language picker shows. */
+export const LOCALE_LABELS: Record<Locale, string> = {
+  "zh-Hans": "简体中文",
+  en: "English",
+  // Kemet ("the black land") is what ancient Egypt called itself. This label
+  // used to read "𓋴 العربية" — literally "Arabic" — which is a language that
+  // reached Egypt some 1400 years after the period this locale evokes.
+  // The hieroglyph that survived that fix is gone as well: U+132F4 needs a
+  // font no default Windows or Linux install ships, and the two labels above
+  // it are plain words carrying no glyph at all.
+  egy: "Kemet",
+};
