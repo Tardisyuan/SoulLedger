@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@soulledger/core/api";
+import {
+  workflowApi,
+  requiresReasonForSoul,
+  REJECTION_REASON_FOR_SOUL_MAX,
+  type ApprovalWorkflow,
+  type ApprovalNode,
+} from "@soulledger/core/api";
 import { workflowKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -58,6 +64,9 @@ export default function WorkflowDetailPage() {
 
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
+  // Rebirth applications only: the reason the SOUL will read. `notes` stays internal.
+  const [reasonForSoul, setReasonForSoul] = useState("");
+  const [reasonForSoulError, setReasonForSoulError] = useState("");
   const [activeTab, setActiveTab] = useState<"nodes" | "history">("nodes");
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
@@ -83,15 +92,28 @@ export default function WorkflowDetailPage() {
 
   // Approve node mutation
   const approveMutation = useMutation({
-    mutationFn: (payload: { node_id: string; verdict: string; notes: string }) =>
-      workflowApi.approveNode(id, payload.node_id, { verdict: payload.verdict, notes: payload.notes }),
+    mutationFn: (payload: { node_id: string; verdict: string; notes: string; rejection_reason_for_soul?: string }) =>
+      workflowApi.approveNode(id, payload.node_id, {
+        verdict: payload.verdict,
+        notes: payload.notes,
+        ...(payload.rejection_reason_for_soul !== undefined
+          ? { rejection_reason_for_soul: payload.rejection_reason_for_soul }
+          : {}),
+      }),
     onSuccess: () => {
       showToast(t("workflow.detail.approve_success"), "success");
       setSelectedVerdict("");
       setNotes("");
+      setReasonForSoul("");
+      setReasonForSoulError("");
       refetch();
     },
-    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
+    onError: (err: { response?: { status?: number; data?: { error?: string } }; message?: string }) => {
+      // The backend's one field-shaped refusal here: land it beside the field, not in a toast.
+      if (err?.response?.status === 400 && err.response.data?.error === "rejection_reason_for_soul is required") {
+        setReasonForSoulError(t("workflow.detail.reason_for_soul_required"));
+        return;
+      }
       showToast(err?.response?.data?.error || t("workflow.detail.approve_error"), "error");
     },
   });
@@ -140,6 +162,8 @@ export default function WorkflowDetailPage() {
 
   const currentNode = workflow?.current_node_detail;
   const sortedNodes = workflow?.nodes?.slice().sort((a, b) => a.node_order - b.node_order) || [];
+  // By `case_type` from the serializer — never by the workflow's name.
+  const needsReasonForSoul = requiresReasonForSoul(workflow?.case_type, selectedVerdict);
 
   function handleApproveNode() {
     if (!currentNode) return;
@@ -147,10 +171,15 @@ export default function WorkflowDetailPage() {
       showToast(t("workflow.detail.select_verdict"), "error");
       return;
     }
+    if (needsReasonForSoul && !reasonForSoul.trim()) {
+      setReasonForSoulError(t("workflow.detail.reason_for_soul_required"));
+      return;
+    }
     approveMutation.mutate({
       node_id: currentNode.id,
       verdict: selectedVerdict,
       notes,
+      ...(needsReasonForSoul ? { rejection_reason_for_soul: reasonForSoul.trim() } : {}),
     });
   }
 
@@ -312,6 +341,23 @@ export default function WorkflowDetailPage() {
               rows={3}
               placeholder={t("workflow.detail.notes_placeholder")}
             />
+
+            {needsReasonForSoul && (
+              <TextAreaField
+                className="mb-4"
+                label={t("workflow.detail.reason_for_soul")}
+                description={t("workflow.detail.reason_for_soul_hint")}
+                required
+                value={reasonForSoul}
+                onChange={(e) => {
+                  setReasonForSoul(e.target.value);
+                  setReasonForSoulError("");
+                }}
+                maxLength={REJECTION_REASON_FOR_SOUL_MAX}
+                rows={3}
+                error={reasonForSoulError || undefined}
+              />
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3">
