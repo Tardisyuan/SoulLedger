@@ -310,6 +310,10 @@ DEFAULT_PERMISSIONS = [
     ("dispatch.approve", "批准调度", "dispatch"),
     ("dispatch.reject", "驳回调度", "dispatch"),
     ("dispatch.execute", "执行调度", "dispatch"),
+    # 调拨是暂居(2026-09-17)。结束暂居 = 灵魂回到原属租户;视图另外要求调用者属于
+    # 原属租户(或 ADMIN)。持有者与 execute 相同:ADMIN、MODERATOR。
+    # 与同族其余五条一样不由迁移播种(走本文件 ROLE_PERMISSIONS 的字典路径)。
+    ("dispatch.return", "结束暂居", "dispatch"),
     # workflow 权限（迁移 0013 建了前六条、0015 建了 escalate，
     # 这份目录当时漏了它们，补上以对齐 DB）
     ("workflow.read", "查看工作流", "workflow"),
@@ -383,6 +387,7 @@ ROLE_PERMISSIONS = {
         "disposition.read", "disposition.execute",
         "dashboard.read", "audit.read", "notification.read",
         "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
+        "dispatch.return",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
         "org.read", "org.manage",
@@ -454,7 +459,7 @@ ROLE_PERMISSIONS = {
         "reincarnation.reborn", "reincarnation.complete",
         "ledger.read", "ledger.manage",
         "dispatch.read", "dispatch.manage",
-        "dispatch.approve", "dispatch.reject", "dispatch.execute",
+        "dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.return",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read", "dashboard.read",
         "org.read", "org.manage",

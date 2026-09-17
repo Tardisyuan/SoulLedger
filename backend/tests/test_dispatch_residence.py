@@ -42,6 +42,10 @@ def eu():
     return _tenant("EU_HEAVEN_HELL")
 
 
+def _officer(username, role, tenant):
+    return User.objects.create_user(username=username, password="x", role=role, tenant=tenant)
+
+
 def _residing(home, away, *, state=SoulState.DISPOSED, name="客魂"):
     """一个从 home 调拨到 away、已执行的灵魂。返回 (soul, record)。"""
     soul = Soul.objects.create(name=name, tenant=home, current_state=state)
@@ -132,7 +136,7 @@ def test_executing_the_residence_disposition_returns_the_soul_home(cn, eg):
 def test_the_disposition_endpoint_returns_the_soul_home(cn, eg):
     soul, record = _residing(cn, eg)
     disposition = _disposition(soul, eg)
-    officer = User.objects.create_user(username="eg_mod", password="x", role="MODERATOR", tenant=eg)
+    officer = _officer("eg_mod", "MODERATOR", eg)
 
     response = officer_client(officer).post(f"/api/v1/disposition/{disposition.pk}/execute/", {}, format="json")
 
@@ -180,3 +184,86 @@ def test_after_returning_a_chinese_soul_can_still_reincarnate(cn, eg):
     DispositionService.execute(_disposition(soul, eg))
     soul.refresh_from_db()
     assert soul.transition_to(SoulState.REINCARNATING) is True
+
+
+# ── 手动结束暂居 ─────────────────────────────────────────────────────────
+
+
+def _return(user, record, reason="提前结束"):
+    body = {"reason": reason} if reason is not None else {}
+    return officer_client(user).post(f"/api/v1/dispatch/records/{record.pk}/return-home/", body, format="json")
+
+
+def test_the_home_tenant_can_end_the_residence(cn, eg):
+    soul, record = _residing(cn, eg)
+    home_mod = _officer("cn_mod", "MODERATOR", cn)
+
+    response = _return(home_mod, record)
+
+    assert response.status_code == 200, response.data
+    assert response.data["status"] == "RETURNED" and response.data["returned_at"]
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk
+    [event] = _returned_events(soul)
+    assert event.payload["trigger"] == "MANUAL" and event.payload["reason"] == "提前结束"
+    [audit] = AuditLog.objects.filter(resource="dispatch_record", resource_id=str(record.pk))
+    assert audit.user_id == home_mod.pk and audit.tenant_id == cn.pk
+
+
+def test_the_residence_tenant_cannot_send_the_soul_home_by_hand(cn, eg):
+    soul, record = _residing(cn, eg)
+    response = _return(_officer("eg_mod", "MODERATOR", eg), record)
+    assert response.status_code == 403
+    soul.refresh_from_db()
+    assert soul.tenant_id == eg.pk and _returned_events(soul) == []
+
+
+def test_an_uninvolved_tenant_cannot_see_the_residence(cn, eg, eu):
+    soul, record = _residing(cn, eg)
+    assert _return(_officer("eu_mod", "MODERATOR", eu), record).status_code == 404
+    soul.refresh_from_db()
+    assert soul.tenant_id == eg.pk
+
+
+def test_a_home_officer_without_the_codename_is_refused(cn, eg):
+    soul, record = _residing(cn, eg)
+    assert _return(_officer("cn_guard", "GUARDIAN", cn), record).status_code == 403
+    soul.refresh_from_db()
+    assert soul.tenant_id == eg.pk
+
+
+def test_admin_of_another_tenant_can_end_the_residence(cn, eg, eu):
+    soul, record = _residing(cn, eg)
+    assert _return(_officer("eu_admin", "ADMIN", eu), record).status_code == 200
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk
+
+
+def test_manual_return_needs_a_reason(cn, eg):
+    soul, record = _residing(cn, eg)
+    assert _return(_officer("cn_mod", "MODERATOR", cn), record, reason=None).status_code == 400
+    soul.refresh_from_db()
+    assert soul.tenant_id == eg.pk
+
+
+def test_a_finished_residence_cannot_be_ended_twice(cn, eg):
+    soul, record = _residing(cn, eg)
+    home_mod = _officer("cn_mod", "MODERATOR", cn)
+    assert _return(home_mod, record).status_code == 200
+    assert _return(home_mod, record).status_code == 409
+    assert len(_returned_events(soul)) == 1
+
+
+# ── 暂居期间的租户可见性 ──────────────────────────────────────────────────
+
+
+def test_while_residing_only_the_residence_tenant_sees_the_soul(cn, eg, eu):
+    """原租户在暂居期间**看不到**灵魂本身(保守默认:租户隔离沿用现状);
+    它经调拨记录看得到暂居,并能手动结束暂居。"""
+    soul, record = _residing(cn, eg)
+    url = f"/api/v1/souls/{soul.pk}/"
+    assert officer_client(_officer("eg_judge", "JUDGE", eg)).get(url).status_code == 200
+    assert officer_client(_officer("cn_judge", "JUDGE", cn)).get(url).status_code == 404
+    assert officer_client(_officer("eu_judge", "JUDGE", eu)).get(url).status_code == 404
+    home_mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    assert home_mod.get(f"/api/v1/dispatch/records/{record.pk}/").status_code == 200
