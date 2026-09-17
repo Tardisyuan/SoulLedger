@@ -6,7 +6,13 @@
  * change-password one.
  */
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { DarkTheme, DefaultTheme, NavigationContainer, type Theme } from "@react-navigation/native";
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+  createNavigationContainerRef,
+  type Theme,
+} from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useColorScheme } from "react-native";
 
@@ -25,6 +31,9 @@ import { MyLifeScreen, PastLivesScreen } from "./screens/life";
 
 const Stack = createNativeStackNavigator<AppStackParams & { Login: undefined; ChangePassword: undefined }>();
 const Tabs = createBottomTabNavigator();
+
+/** Lets a test read which routes are mounted — the guard is the set of route names, not what is on screen. */
+export const navigationRef = createNavigationContainerRef();
 
 function MainTabs() {
   const { t } = useI18n();
@@ -112,7 +121,7 @@ export function RootNavigator() {
 
   return (
     <PaletteContext.Provider value={palette}>
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
         <Stack.Navigator>{screens}</Stack.Navigator>
       </NavigationContainer>
     </PaletteContext.Provider>
