@@ -8,12 +8,12 @@ import {
   type MeRebirthApplicationList,
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
-import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
 import { formatDateTime, useI18n } from "../i18n";
-import { Body, Button, Card, EnumText, ErrorText, Failure, Field, Heading, Input, Loading, Screen, useRemote } from "../ui";
+import { Body, Button, Card, EnumText, ErrorText, Failure, Field, Heading, Input, Loading, Screen, useReloadOnRefocus, useRemote } from "../ui";
 
 export type AppStackParams = {
   Tabs: undefined;
@@ -29,12 +29,14 @@ export type AppStackParams = {
 export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationList; onApply: () => void }) {
   const { t, locale } = useI18n();
   const until = formatDateTime(list.cooldown_until, locale);
+  const reason = list.reason ? soulCodeMessage(list.reason) : null;
   return (
     <Card testID="eligibility">
       {list.can_apply ? null : (
         <>
           <Body>{t("soul_app.applications.cannot_apply")}</Body>
-          {list.reason ? <ErrorText testID="eligibility-reason" error={soulCodeMessage(list.reason)} /> : null}
+          {/* A reason, not a failure: muted text, not the error colour. */}
+          {reason ? <Body muted testID="eligibility-reason">{t(reason.key, reason.params)}</Body> : null}
           {until ? <Body muted>{t("soul_app.applications.cooldown_until", { date: until })}</Body> : null}
         </>
       )}
@@ -47,12 +49,7 @@ export function ApplicationsScreen() {
   const { t, locale } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const list = useRemote(soulApi.applications);
-  useFocusEffect(
-    useCallback(() => {
-      void list.reload();
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on focus only
-    }, [])
-  );
+  useReloadOnRefocus(list.reload);
   return (
     <Screen refreshing={list.loading} onRefresh={list.reload}>
       {list.error ? (

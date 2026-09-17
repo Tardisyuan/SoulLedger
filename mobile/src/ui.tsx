@@ -1,6 +1,7 @@
 import type { SoulErrorMessage } from "@soulledger/core/api/soul";
 import type { EnumDisplay } from "@soulledger/core/domain/enumDisplay";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -46,6 +47,25 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
     return run();
   }, [run]);
   return { data, error, loading, reload };
+}
+
+/**
+ * Tab screens stay mounted, so data loaded once goes stale when the other tab
+ * changes it (seen on the iPhone run: a just-submitted application missing from
+ * the life tab). Reload on every focus AFTER the first — the first is the mount,
+ * which `useRemote` already loads.
+ */
+export function useReloadOnRefocus(reload: () => unknown) {
+  const first = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (first.current) {
+        first.current = false;
+        return;
+      }
+      void reload();
+    }, [reload])
+  );
 }
 
 export function Screen({
