@@ -24,7 +24,6 @@ from django.utils import timezone
 from apps.soul_accounts.delivery import pick_delivery
 from apps.soul_accounts.models import (
     SECRET_BEARING_STATUSES,
-    AccountOrigin,
     CredentialStatus,
     InitialCredential,
     SoulAccount,
@@ -410,25 +409,25 @@ def retire_account_for_rebirth(soul, ended_cycle):
     return account
 
 
-def provision_after_death_sync(soul, contact_email="", contact_phone=""):
-    """死亡同步登记成功后调用(在它的事务里)。联系方式有就更新,然后开号。
+def apply_contacts(soul, contact_email="", contact_phone=""):
+    """有值才写;save 而不是 update,走审计信号,值由 PII_FIELD_NAMES 遮蔽。"""
+    updates = {f: v for f, v in (("contact_email", contact_email), ("contact_phone", contact_phone)) if v}
+    for field, value in updates.items():
+        setattr(soul, field, value)
+    if updates:
+        soul.save(update_fields=list(updates))
 
-    开号失败**不**让死亡登记回滚:登记是外部系统的事实,账号是派生物,缺了由
-    `backfill_soul_accounts` 补。失败写 error 日志。
+
+def provision_on_death(soul, origin):
+    """`Soul.transition_to` 在 ALIVE -> JUDGING 的同一事务里调用。所有登记死亡的途径
+    都经过那里,所以这是开号的唯一自动入口。
+
+    开号失败**不**让死亡回滚:死亡是事实,账号是派生物,缺了由 `backfill_soul_accounts`
+    补。失败在保存点里回滚(PostgreSQL 上外层事务不会因此中止),写 error 日志。
     """
-    updates = {}
-    if contact_email:
-        updates["contact_email"] = contact_email
-    if contact_phone:
-        updates["contact_phone"] = contact_phone
     try:
         with transaction.atomic():
-            if updates:
-                for field, value in updates.items():
-                    setattr(soul, field, value)
-                # save 而不是 update:走审计信号,值由 PII_FIELD_NAMES 遮蔽。
-                soul.save(update_fields=list(updates))
-            return provision_account(soul, AccountOrigin.DEATH_SYNC)[0]
+            return provision_account(soul, origin)[0]
     except Exception:
-        logger.error("soul account provisioning after death sync failed for soul %s", soul.pk, exc_info=True)
+        logger.error("soul account provisioning on death failed for soul %s", soul.pk, exc_info=True)
         return None

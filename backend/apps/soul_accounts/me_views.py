@@ -34,8 +34,21 @@ from apps.soul_accounts.serializers import (
     SoulTokenPairSerializer,
 )
 
-LOGIN_ATTEMPTS = 5
+#: 两层,各 15 分钟一个窗口(2026-09-17 用户决定):
+#: 同一灵魂编号 5 次失败 —— 挡对单个账号猜密码;
+#: 同一 IP 50 次失败 —— 挡一台机器扫很多编号,又不至于把运营商 NAT 后面的一群人一起锁死。
 LOGIN_WINDOW_SECONDS = 900
+CODE_ATTEMPTS = 5
+IP_ATTEMPTS = 50
+
+
+def _rate_keys(ip, soul_code):
+    """编号不以原文进缓存键:键名会出现在 Redis 的 MONITOR / 慢日志 / 备份里。哈希后的键
+    仍按编号区分,但从键反推不出编号。"""
+    import hashlib
+
+    digest = hashlib.sha256(soul_code.strip().upper().encode()).hexdigest()[:32]
+    return f"soul_login_rate:ip:{ip}", f"soul_login_rate:code:{digest}"
 
 
 def _error(exc: svc.SoulAccountError):
@@ -84,23 +97,27 @@ class SoulLoginView(APIView):
         from apps.core.client_ip import get_client_ip
 
         ip = get_client_ip(request)
-        rate_key = f"soul_login_rate:{ip}"
-        attempts = cache.get(rate_key, 0)
-        if attempts >= LOGIN_ATTEMPTS:
-            return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
-                            status=status.HTTP_429_TOO_MANY_REQUESTS)
         body = SoulLoginRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         soul_code = body.validated_data["soul_code"]
+        ip_key, code_key = _rate_keys(ip, soul_code)
+        ip_attempts = cache.get(ip_key, 0)
+        code_attempts = cache.get(code_key, 0)
+        if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
+            return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
         try:
             account, tokens = svc.login(soul_code, body.validated_data["password"])
         except svc.SoulAccountError as exc:
-            cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
             LoginLog.objects.create(username=f"soul:{soul_code}"[:150], status="FAILED", ip_address=ip,
                                     user_agent=user_agent, failure_reason=exc.code)
             return _error(exc)
-        cache.delete(rate_key)
+        # 成功只清这个编号的计数。IP 计数不清:否则攻击者用自己的一个真账号登录一次,
+        # 就能把整台机器的扫描预算重置。
+        cache.delete(code_key)
         LoginLog.objects.create(user=account.user, username=f"soul:{soul_code}"[:150], status="SUCCESS",
                                 ip_address=ip, user_agent=user_agent)
         return Response({

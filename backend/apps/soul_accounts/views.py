@@ -33,11 +33,7 @@ def _error(exc):
 
 
 def _apply_contacts(soul, data):
-    updates = [f for f in ("contact_email", "contact_phone") if f in data]
-    for field in updates:
-        setattr(soul, field, data[field])
-    if updates:
-        soul.save(update_fields=updates)  # 审计 diff 里值被 PII_FIELD_NAMES 遮蔽
+    svc.apply_contacts(soul, data.get("contact_email", ""), data.get("contact_phone", ""))
 
 
 class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):

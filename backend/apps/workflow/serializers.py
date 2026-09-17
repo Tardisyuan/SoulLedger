@@ -435,6 +435,11 @@ class WorkflowNodeActionSerializer(serializers.Serializer):
         choices=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"]
     )
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+    # 只对转生申请工作流有意义(CaseType.REBIRTH_APPLICATION):驳回时必填,是**灵魂能看到**
+    # 的那段话。`notes` 仍是内部备注,灵魂接口不返回它。其他工作流忽略这个字段。
+    rejection_reason_for_soul = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=2000
+    )
 
 
 class WorkflowAdvanceSerializer(serializers.Serializer):

@@ -221,13 +221,27 @@ def sync_from_workflow(workflow_id):
         application.status = new
         if new in (RebirthApplicationStatus.APPROVED, *FINAL_REJECTIONS):
             application.decided_at = timezone.now()
-        if new in FINAL_REJECTIONS:
-            rejected = active_workflow(application).nodes.filter(status="REJECTED").order_by("-decided_at").first()
-            # 驳回理由 = 驳回节点上审批人写的备注。它会被灵魂看到(简报 §4)。
-            application.rejection_reason = (rejected.notes if rejected else "")[:2000]
+        # 驳回理由不在这里取:它是审批人另填的「给灵魂的理由」,由 approve_node 在同一事务里
+        # 写进 rejection_reason(record_reason_for_soul)。节点 notes 是内部备注,灵魂看不到。
         application.save()
     _announce_status(application, old)
     return application
+
+
+PASSING_VERDICTS = ("PASSED", "CONFIRMED")
+
+
+def requires_reason_for_soul(workflow, verdict) -> bool:
+    """这次决定是不是在驳回一份转生申请(complete_node 把非 PASSED/CONFIRMED 都当驳回)。"""
+    from apps.workflow.models import CaseType
+
+    return workflow.case_type == CaseType.REBIRTH_APPLICATION and verdict not in PASSING_VERDICTS
+
+
+def record_reason_for_soul(workflow, reason):
+    RebirthApplication.objects.filter(Q(workflow=workflow) | Q(appeal_workflow=workflow)).update(
+        rejection_reason=reason[:2000]
+    )
 
 
 def _announce_status(application, old_status):
