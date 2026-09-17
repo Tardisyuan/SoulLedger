@@ -2051,6 +2051,14 @@
       "no_time": "no timestamp",
       "decision": "Decision",
       "pending": "Pending"
+    },
+    "soul_states": {
+      "ALIVE": "Alive",
+      "JUDGING": "Judging",
+      "DISPOSED": "Disposed",
+      "REINCARNATING": "Reincarnating",
+      "LOST": "Lost",
+      "SETTLED": "Settled"
     }
   }
 }

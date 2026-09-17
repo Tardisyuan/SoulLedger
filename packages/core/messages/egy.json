@@ -2051,6 +2051,14 @@
       "no_time": "Nen Unut",
       "decision": "Wedja",
       "pending": "Nen Djer"
+    },
+    "soul_states": {
+      "ALIVE": "Em Ankh",
+      "JUDGING": "Em Sheemtet",
+      "DISPOSED": "Em Wetep",
+      "REINCARNATING": "Em Aru Her Tepy",
+      "LOST": "Nen Gem",
+      "SETTLED": "Sesh Khetem"
     }
   }
 }

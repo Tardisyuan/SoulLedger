@@ -11,7 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { APPLICATION_BADGES } from "../rules";
+import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
 import { themeFor } from "../theme";
@@ -52,6 +52,29 @@ describe("the unrecognized-value badge", () => {
     expect(within(badge).queryByText("REJECTED")).toBeNull();
     expect(within(badge).queryByText("未识别取值")).toBeNull();
     expect(flat(badge).borderStyle).toBe("solid");
+  });
+});
+
+describe("soul-state badges", () => {
+  it.each([
+    ["ALIVE", "在世", "○", "solid"],
+    ["LOST", "丢失", "⊘", "dashed"],
+    ["SETTLED", "已结算", "≡", "solid"],
+  ])("%s is named (%s) with its own glyph %s — not the unknown badge", (state, label, glyph, border) => {
+    wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value={state} />);
+    const badge = screen.getByTestId("b");
+    expect(within(badge).getByText(label)).toBeTruthy();
+    expect(within(badge).getByText(glyph)).toBeTruthy();
+    expect(within(badge).queryByText("未识别取值")).toBeNull();
+    expect(within(badge).queryByText(state)).toBeNull();
+    expect(flat(badge).borderStyle).toBe(border);
+  });
+
+  it("a state the app does not know still gets the unknown badge with its raw value", () => {
+    wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value="ASCENDED" />);
+    const badge = screen.getByTestId("b");
+    expect(within(badge).getByText("未识别取值")).toBeTruthy();
+    expect(within(badge).getByText("ASCENDED")).toBeTruthy();
   });
 });
 

@@ -25,6 +25,20 @@ describe("badgeSpec", () => {
     expect(new Set(shapes).size).toBe(Object.keys(APPLICATION_BADGES).length);
   });
 
+  it("all six soul states (backend SoulState) have their own shape: distinct glyph+border, no neutral dot", () => {
+    expect(Object.keys(SOUL_STATE_BADGES).sort()).toEqual(["ALIVE", "DISPOSED", "JUDGING", "LOST", "REINCARNATING", "SETTLED"]);
+    const specs = Object.values(SOUL_STATE_BADGES);
+    expect(new Set(specs.map((b) => `${b.glyph}/${b.border}`)).size).toBe(6);
+    // Glyph alone must already separate them — colour and border are extra, not the distinction.
+    expect(new Set(specs.map((b) => b.glyph)).size).toBe(6);
+    expect(specs.filter((b) => b.glyph === "·")).toEqual([]);
+    expect(SOUL_STATE_BADGES).toMatchObject({
+      ALIVE: { glyph: "○" },
+      LOST: { glyph: "⊘", border: "dashed", tone: "neg" },
+      SETTLED: { glyph: "≡" },
+    });
+  });
+
   it("a member the copy layer could not name gets the unknown shape, even when the table has it", () => {
     expect(badgeSpec(APPLICATION_BADGES, "REJECTED", true)).toBe(APPLICATION_BADGES.REJECTED);
     expect(badgeSpec(APPLICATION_BADGES, "REJECTED", false)).toBe(UNKNOWN_BADGE);
@@ -83,7 +97,7 @@ describe("lexiconKey", () => {
     expect(lexiconKey("eg", "judging")).toBe("soul_app.lexicon.eg.judging");
     for (const civ of ["neutral", "cn", "eu", "gr"] as const) {
       expect(lexiconKey(civ, "merit")).toBe("soul_app.life.merit");
-      expect(lexiconKey(civ, "judging")).toBe("souls.states.JUDGING");
+      expect(lexiconKey(civ, "judging")).toBe("soul_app.soul_states.JUDGING");
     }
   });
 
