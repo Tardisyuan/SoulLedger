@@ -428,13 +428,21 @@ class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
         ]
 
 
+#: 一个节点决定可以取的裁决。命名成常量是为了 ENUM_NAME_OVERRIDES 能指到它:
+#: approve_node 的请求体进了 OpenAPI 之后,这组选项与 judgment 的 Verdict 同名为 `verdict`。
+NODE_DECISION_VERDICTS = ["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"]
+
+
 class WorkflowNodeActionSerializer(serializers.Serializer):
     """Serializer for node approval action."""
 
-    verdict = serializers.ChoiceField(
-        choices=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"]
-    )
+    verdict = serializers.ChoiceField(choices=NODE_DECISION_VERDICTS)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+    # 只对转生申请工作流有意义(CaseType.REBIRTH_APPLICATION):驳回时必填,是**灵魂能看到**
+    # 的那段话。`notes` 仍是内部备注,灵魂接口不返回它。其他工作流忽略这个字段。
+    rejection_reason_for_soul = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=2000
+    )
 
 
 class WorkflowAdvanceSerializer(serializers.Serializer):

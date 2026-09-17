@@ -33,11 +33,7 @@ def _error(exc):
 
 
 def _apply_contacts(soul, data):
-    updates = [f for f in ("contact_email", "contact_phone") if f in data]
-    for field in updates:
-        setattr(soul, field, data[field])
-    if updates:
-        soul.save(update_fields=updates)  # 审计 diff 里值被 PII_FIELD_NAMES 遮蔽
+    svc.apply_contacts(soul, data.get("contact_email", ""), data.get("contact_phone", ""))
 
 
 class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -169,7 +165,9 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
     filterset_fields = ["status", "soul"]
 
     def get_queryset(self):
-        qs = RebirthApplication.objects.select_related("soul")
+        qs = RebirthApplication.objects.select_related(
+            "soul__tenant", "workflow__current_node", "appeal_workflow__current_node"
+        )
         return scope_to_tenant(qs, self.request, field="soul__tenant")
 
     @extend_schema(request=CrossCivilizationDecisionSerializer,

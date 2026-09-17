@@ -5929,6 +5929,15 @@ export interface components {
          */
         MenuTypeEnum: "DIRECTORY" | "MENU" | "BUTTON";
         /**
+         * @description * `PASSED` - PASSED
+         *     * `FAILED` - FAILED
+         *     * `CONFIRMED` - CONFIRMED
+         *     * `REJECTED` - REJECTED
+         *     * `SKIPPED` - SKIPPED
+         * @enum {string}
+         */
+        NodeDecisionVerdictEnum: "PASSED" | "FAILED" | "CONFIRMED" | "REJECTED" | "SKIPPED";
+        /**
          * @description `offset_within_classes` — 功過有不可折者, netted per class.
          *
          *     `by_class` is keyed by fungibility class name, not a list: the classes are
@@ -5973,6 +5982,10 @@ export interface components {
         NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED";
         /** @enum {unknown} */
         NullEnum: null;
+        /**
+         * @description 官员侧。`current_step` / `can_appeal` 与 /me 同一个函数算(rebirth.py),
+         *     `rejection_reason` 就是审批人驳回时填的「给灵魂的理由」,节点内部备注不在这里。
+         */
         OfficerRebirthApplication: {
             /** Format: uuid */
             readonly id: string;
@@ -5995,6 +6008,10 @@ export interface components {
             readonly rejection_reason: string;
             /** Format: date-time */
             readonly decided_at: string | null;
+            readonly current_step: components["schemas"]["MeCurrentStep"] | null;
+            readonly can_appeal: boolean;
+            /** Format: date-time */
+            readonly cooldown_until: string | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -8425,6 +8442,14 @@ export interface components {
             timeout_seconds?: number;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        /** @description Serializer for node approval action. */
+        WorkflowNodeAction: {
+            verdict: components["schemas"]["NodeDecisionVerdictEnum"];
+            /** @default  */
+            notes: string;
+            /** @default  */
+            rejection_reason_for_soul: string;
         };
         /**
          * @description The dict `WorkflowService.get_workflow_stats` builds.
@@ -15758,9 +15783,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApprovalWorkflow"];
-                "application/x-www-form-urlencoded": components["schemas"]["ApprovalWorkflow"];
-                "multipart/form-data": components["schemas"]["ApprovalWorkflow"];
+                "application/json": components["schemas"]["WorkflowNodeAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowNodeAction"];
+                "multipart/form-data": components["schemas"]["WorkflowNodeAction"];
             };
         };
         responses: {

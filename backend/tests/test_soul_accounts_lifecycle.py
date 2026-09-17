@@ -13,18 +13,22 @@ from apps.death_sync.models import ExternalApiKey
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import AccountOrigin, CredentialStatus, InitialCredential, SoulAccount
 from apps.souls.models import Soul, SoulState
-from tests.soul_account_support import dead_soul, officer_client, password_in_last_mail, provision_with_password
+from tests.soul_account_support import (
+    clear_soul_login_counters,
+    dead_soul,
+    officer_client,
+    password_in_last_mail,
+    provision_with_password,
+)
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
 def _fresh_soul_login_counter():
-    from django.core.cache import cache
-
-    cache.delete("soul_login_rate:127.0.0.1")
+    clear_soul_login_counters()
     yield
-    cache.delete("soul_login_rate:127.0.0.1")
+    clear_soul_login_counters()
 
 
 def _login(soul_code, password):
@@ -265,8 +269,9 @@ def test_rebirth_retires_the_account_for_good_and_the_next_death_opens_a_linked_
         svc.reset_credential(first)
 
     soul.refresh_from_db()
-    soul.die()
-    second, new_password = provision_with_password(soul)
+    soul.die()  # 死亡本身就开下一世的号,不需要再手动开
+    second = svc.current_account_of(soul)
+    new_password = InitialCredential.objects.get(account=second).secret
     assert second.cycle == 1 and second.previous_account_id == first.pk
     assert soul.soul_code == Soul.objects.get(pk=soul.pk).soul_code  # 编号跨世不变
     assert _login(soul.soul_code, new_password).status_code == 200
@@ -323,3 +328,69 @@ def test_backfill_is_idempotent_and_dry_run_writes_nothing(cn_tenant):
     call_command("backfill_soul_accounts", stdout=out)
     assert "已开通 0 个" in out.getvalue() and "跳过 2 个" in out.getvalue()
     assert InitialCredential.objects.count() == 2
+
+
+# ── 所有进入死亡的入口都自动开号 ─────────────────────────────────────────
+
+
+def _assert_one_account_opened(soul, origin):
+    accounts = list(SoulAccount.objects.filter(soul=soul))
+    assert len(accounts) == 1, accounts
+    assert accounts[0].origin == origin and accounts[0].cycle == 0
+    assert InitialCredential.objects.filter(soul=soul).count() == 1
+
+
+@pytest.fixture
+def mod_client(cn_tenant):
+    from apps.authentication.models import User
+
+    return officer_client(User.objects.create_user(username="mod_die", password="x", role="MODERATOR",
+                                                   tenant=cn_tenant))
+
+
+def test_the_officer_die_action_opens_an_account(cn_tenant, mod_client):
+    soul = Soul.objects.create(name="后台登记", tenant=cn_tenant)
+    response = mod_client.post(f"/api/v1/souls/{soul.pk}/die/", {"death_date": "2026-09-01"}, format="json")
+    assert response.status_code == 200, response.data
+    _assert_one_account_opened(soul, AccountOrigin.OFFICER)
+
+
+def test_the_transition_action_to_judging_opens_an_account(cn_tenant, mod_client):
+    soul = Soul.objects.create(name="经转换", tenant=cn_tenant)
+    response = mod_client.post(f"/api/v1/souls/{soul.pk}/transition/", {"new_state": "JUDGING"}, format="json")
+    assert response.status_code == 200, response.data
+    _assert_one_account_opened(soul, AccountOrigin.OFFICER)
+
+
+def test_creating_a_judgment_for_a_living_soul_opens_an_account(cn_tenant, mod_client):
+    soul = Soul.objects.create(name="径直受审", tenant=cn_tenant)
+    response = mod_client.post("/api/v1/judgment/", {"soul": str(soul.pk), "court": "第一殿"}, format="json")
+    assert response.status_code == 201, response.data
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.JUDGING
+    _assert_one_account_opened(soul, AccountOrigin.OFFICER)
+
+
+def test_death_sync_still_opens_exactly_one_and_marks_its_origin(cn_tenant, api_client_with_key):
+    soul = Soul.objects.create(name="外部登记", tenant=cn_tenant)
+    body = {"soul_lookup": {"soul_id": str(soul.pk)}, "death_date": "2026-09-01", "idempotency_key": "one"}
+    assert api_client_with_key.post("/api/v1/death-sync/register/", body, format="json").status_code == 201
+    _assert_one_account_opened(soul, AccountOrigin.DEATH_SYNC)
+
+
+def test_a_refused_transition_opens_nothing(cn_tenant):
+    soul = dead_soul(cn_tenant, name="已死")  # 直接以 JUDGING 创建,再 die 一次会被拒
+    assert soul.die() is None
+    assert not SoulAccount.objects.filter(soul=soul).exists()
+
+
+def test_a_provisioning_failure_does_not_undo_the_death(cn_tenant, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("provisioning exploded")
+
+    monkeypatch.setattr(svc, "provision_account", boom)
+    soul = Soul.objects.create(name="开号失败", tenant=cn_tenant)
+    assert soul.die() is not None
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.JUDGING
+    assert not SoulAccount.objects.filter(soul=soul).exists()
