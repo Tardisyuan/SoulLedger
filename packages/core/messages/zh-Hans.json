@@ -2051,6 +2051,14 @@
       "no_time": "无时间戳",
       "decision": "决定",
       "pending": "待定"
+    },
+    "soul_states": {
+      "ALIVE": "在世",
+      "JUDGING": "审判中",
+      "DISPOSED": "已处置",
+      "REINCARNATING": "轮回中",
+      "LOST": "丢失",
+      "SETTLED": "已结算"
     }
   }
 }

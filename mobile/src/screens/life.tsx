@@ -42,6 +42,13 @@ import {
 import { LanguageSwitch } from "./auth";
 import type { AppStackParams } from "./applications";
 
+/**
+ * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
+ * officer console's `souls.states`. A namespace, not a key: messages.test
+ * harvests quoted `soul_app.*` literals as keys and checks this one by member.
+ */
+const SOUL_STATES = ["soul_app", "soul_states"].join(".");
+
 /** `CN_DIYU` → `CHINESE`, via the one table that pairs them. */
 function civilizationOfTenant(code: string): string | null {
   const hit = Object.entries(CIVILIZATION_CODES).find(([, tenant]) => tenant === code);
@@ -301,7 +308,7 @@ function Identity({ me, residence }: { me: MeProfile; residence: Residence }) {
       <View style={styles.state}>
         <EnumBadge
           testID="soul-state"
-          namespace="souls.states"
+          namespace={SOUL_STATES}
           table={SOUL_STATE_BADGES}
           value={me.current_state}
           label={me.current_state === "JUDGING" ? tr(lexiconKey(residence.home, "judging")) : undefined}

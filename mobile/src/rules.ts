@@ -26,17 +26,34 @@ export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
 };
 
 /**
- * The design draws three soul states. The other three members the backend has
- * (ALIVE / LOST / SETTLED) get the muted shape with a plain dot: known values,
- * so NOT the unknown badge — that one is reserved for a value we cannot name.
+ * All six `Soul.current_state` members. The design drew the first three; the
+ * other three follow the same system — a pill told apart by glyph (and, for
+ * LOST, border), never by colour alone. The unknown badge (`?`, dotted) stays
+ * reserved for a value the app cannot name.
  */
 export const SOUL_STATE_BADGES: Record<string, BadgeSpec> = {
+  /** In progress: a clock face, in accent like every in-progress state. */
   JUDGING: { tone: "accent", glyph: "◷", border: "solid" },
+  /** A disposition is on record: a filled box within the frame. */
   DISPOSED: { tone: "muted", glyph: "▣", border: "solid" },
+  /** Moving on: the cycle arrow. */
   REINCARNATING: { tone: "muted", glyph: "↻", border: "solid" },
-  ALIVE: { tone: "muted", glyph: "·", border: "solid" },
-  LOST: { tone: "muted", glyph: "·", border: "solid" },
-  SETTLED: { tone: "muted", glyph: "·", border: "solid" },
+  /**
+   * Not yet dead, so nothing entered: an EMPTY circle. Round, so it cannot be
+   * read as a square state, and hollow, so it is not the clock (◷).
+   */
+  ALIVE: { tone: "muted", glyph: "○", border: "solid" },
+  /**
+   * The record has lost track of the soul: a slashed circle (absent) on a
+   * DASHED border, in the refusal colour — an anomaly an officer must resolve.
+   * Dashed, not dotted: dotted belongs to the unknown value.
+   */
+  LOST: { tone: "neg", glyph: "⊘", border: "dashed" },
+  /**
+   * The account is closed: triple bar, the ledger ruled off beneath its last
+   * line. Flat lines, so it is neither a box (▣) nor a circle (○ ◷ ⊘).
+   */
+  SETTLED: { tone: "muted", glyph: "≡", border: "solid" },
 };
 
 export const UNKNOWN_BADGE: BadgeSpec = { tone: "unknown", glyph: "?", border: "dotted" };
@@ -118,7 +135,7 @@ const DEFAULT_WORDS: Record<LexiconWord, string> = {
   records: "soul_app.life.records",
   judgments: "soul_app.life.judgments",
   court: "soul_app.life.court",
-  judging: "souls.states.JUDGING",
+  judging: "soul_app.soul_states.JUDGING",
   past_read_only: "soul_app.past_lives.read_only",
   no_past_lives: "soul_app.past_lives.empty",
   no_rebirth_title: "soul_app.lexicon.default.no_rebirth_title",
