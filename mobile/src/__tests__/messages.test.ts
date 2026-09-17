@@ -11,6 +11,22 @@ import fs from "fs";
 import path from "path";
 
 import { BUNDLES, translate } from "../i18n";
+import { lexiconKey, type LexiconWord } from "../rules";
+
+const LEXICON_WORDS: LexiconWord[] = [
+  "merit",
+  "demerit",
+  "merit_entry",
+  "demerit_entry",
+  "records",
+  "judgments",
+  "court",
+  "judging",
+  "past_read_only",
+  "no_past_lives",
+  "no_rebirth_title",
+  "no_rebirth_body",
+];
 
 type Bundle = Record<string, unknown>;
 
@@ -72,6 +88,8 @@ describe("soul_app copy", () => {
       // The radio cards read these through a template key the harvest above cannot see.
       ...DESIRED_REBIRTH_FORMS.map((f) => `soul_app.form_notes.${f}`),
       ...["merit", "demerit"].map((w) => `soul_app.life.${w}`),
+      // Lexicon keys are built from the civilization and the word, also out of the harvest's sight.
+      ...(["neutral", "cn", "eu", "eg", "gr"] as const).flatMap((civ) => LEXICON_WORDS.map((w) => lexiconKey(civ, w))),
       "common.value.unrecorded",
       "common.value.unrecognized",
     ];

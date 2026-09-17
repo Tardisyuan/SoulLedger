@@ -1916,7 +1916,9 @@
       "record_count": "{{count}} records",
       "copy_code": "Copy soul code",
       "code_copied": "Soul code copied",
-      "code_copy_failed": "Copy failed"
+      "code_copy_failed": "Copy failed",
+      "residing": "Residing in {{current}} · belongs to {{home}}",
+      "record_count_short": "{{count}} rec."
     },
     "past_lives": {
       "title": "Past lives",
@@ -1986,7 +1988,7 @@
       "account_retired": "This account is closed",
       "application_open": "An application is already under review",
       "cooldown": "You cannot apply again during the cooling-off period",
-      "terminal_cosmology": "Your civilization has no rebirth",
+      "terminal_cosmology": "Your civilization has no rebirth. Where you go from here is final.",
       "soul_state": "Your current state does not allow an application",
       "application_approved": "Your application for this life was approved",
       "appeal_used": "This application has already been appealed",
@@ -2002,8 +2004,28 @@
     },
     "lexicon": {
       "eg": {
-        "merit": "Weight of the heart",
-        "demerit": "Weight of the feather"
+        "merit": "Feather side",
+        "demerit": "Heart side",
+        "merit_entry": "Feather",
+        "demerit_entry": "Heart",
+        "records": "Feather and heart records",
+        "judgments": "Weighing of the heart",
+        "court": "Hall",
+        "judging": "Weighing",
+        "past_read_only": "Past lives are read-only. The Duat takes no applications or appeals.",
+        "no_past_lives": "The Duat has no past lives. You have this one life, and nothing after it is recorded.",
+        "no_rebirth_title": "The Duat has no rebirth",
+        "no_rebirth_body": "There will be no applications here, now or later. After the weighing of your heart, where you go is final and does not pass through this page."
+      },
+      "default": {
+        "no_rebirth_title": "Your civilization has no rebirth",
+        "no_rebirth_body": "There will be no applications here, now or later. Where you go from here is final and does not pass through this page."
+      },
+      "eu": {
+        "past_read_only": "Past lives are read-only. Heaven and Hell take no applications or appeals.",
+        "no_past_lives": "Heaven and Hell have no past lives. You have this one life, and nothing after it is recorded.",
+        "no_rebirth_title": "Heaven and Hell have no rebirth",
+        "no_rebirth_body": "There will be no applications here, now or later. After judgment, where you go is final and does not pass through this page."
       }
     },
     "logout": {
@@ -2021,11 +2043,14 @@
     },
     "timeline": {
       "submitted": "Submitted",
-      "rejected": "Rejected",
       "appealed": "Appealed",
-      "appeal_open": "Appeal available",
-      "outcome_pending": "Outcome · pending",
-      "in_progress": "In progress"
+      "decided": "Decision · {{status}}",
+      "appeal_once": "One appeal allowed",
+      "under_review": "Under review",
+      "appeal_review": "Appeal under review",
+      "no_time": "no timestamp",
+      "decision": "Decision",
+      "pending": "Pending"
     }
   }
 }

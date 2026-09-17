@@ -159,7 +159,7 @@ describe("a stored session", () => {
     expect(style).toMatchObject({ backgroundColor: themeFor("EGYPTIAN", "light").s0 }); // jest reports a light colour scheme
     expect(themeFor("EGYPTIAN", "light").s0).not.toBe(themeFor(null, "light").s0);
     // …and relabels the two scores from Egypt's lexicon, keeping the server's numbers.
-    expect(screen.getByText("心之重")).toBeTruthy();
+    expect(screen.getByText("羽侧")).toBeTruthy();
     expect(screen.queryByText("功")).toBeNull();
     expect(screen.getByText(String(PROFILE.merit_score))).toBeTruthy();
   });

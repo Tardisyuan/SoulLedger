@@ -87,15 +87,109 @@ export function stacksLabel(label: string): boolean {
 // ── lexicon ────────────────────────────────────────────────────────────
 
 /**
- * Words a civilization says differently; only the label changes, never the
- * component or the value. Egypt reads the two scores as heart and feather.
+ * Words a civilization says differently. Only the label changes — never the
+ * field, the component or the value (Egypt's two sides are the same two
+ * integers, `merit_score` / `demerit_score`, as everywhere else; handoff 2f-一
+ * withdraws round 1's "1.02").
+ *
+ * A soul residing in another civilization keeps its HOME lexicon (user
+ * decision 2026-09-17): the skin follows where it is, the words and the
+ * rebirth rules follow where it belongs.
  */
-const LEXICON: Partial<Record<CivKey, Partial<Record<"merit" | "demerit", string>>>> = {
-  eg: { merit: "soul_app.lexicon.eg.merit", demerit: "soul_app.lexicon.eg.demerit" },
+export type LexiconWord =
+  | "merit"
+  | "demerit"
+  | "merit_entry"
+  | "demerit_entry"
+  | "records"
+  | "judgments"
+  | "court"
+  | "judging"
+  | "past_read_only"
+  | "no_past_lives"
+  | "no_rebirth_title"
+  | "no_rebirth_body";
+
+const DEFAULT_WORDS: Record<LexiconWord, string> = {
+  merit: "soul_app.life.merit",
+  demerit: "soul_app.life.demerit",
+  merit_entry: "soul_app.life.merit_entry",
+  demerit_entry: "soul_app.life.demerit_entry",
+  records: "soul_app.life.records",
+  judgments: "soul_app.life.judgments",
+  court: "soul_app.life.court",
+  judging: "souls.states.JUDGING",
+  past_read_only: "soul_app.past_lives.read_only",
+  no_past_lives: "soul_app.past_lives.empty",
+  no_rebirth_title: "soul_app.lexicon.default.no_rebirth_title",
+  no_rebirth_body: "soul_app.lexicon.default.no_rebirth_body",
 };
 
-export function lexiconKey(civ: CivKey, word: "merit" | "demerit"): string {
-  return LEXICON[civ]?.[word] ?? `soul_app.life.${word}`;
+/**
+ * eu and eg are the two civilizations without rebirth
+ * (`backend/apps/ledger/constants.py::REBIRTH_CAPABLE_CIVILIZATIONS`), which is
+ * why both carry their own "no past lives / no rebirth" sentences. That is COPY
+ * only: whether a soul may apply is always the server's `can_apply` / `reason`.
+ */
+const LEXICON: Partial<Record<CivKey, readonly LexiconWord[]>> = {
+  eg: Object.keys(DEFAULT_WORDS) as LexiconWord[],
+  eu: ["past_read_only", "no_past_lives", "no_rebirth_title", "no_rebirth_body"],
+};
+
+export function lexiconKey(civ: CivKey, word: LexiconWord): string {
+  return LEXICON[civ]?.includes(word) ? `soul_app.lexicon.${civ}.${word}` : DEFAULT_WORDS[word];
+}
+
+// ── residence ──────────────────────────────────────────────────────────
+
+/** `CN_DIYU` → `cn`: a tenant code's prefix is its civilization key. */
+export function civKeyOfTenant(code: string | null | undefined): CivKey | null {
+  const prefix = code?.split("_")[0]?.toLowerCase();
+  return prefix === "cn" || prefix === "eu" || prefix === "eg" || prefix === "gr" ? prefix : null;
+}
+
+export interface Residence {
+  /** Where the soul is now: the skin. */
+  current: CivKey;
+  /** Where the soul belongs: the words and the rebirth rules. */
+  home: CivKey;
+  /** A home tenant is known and differs from the current tenant. */
+  residing: boolean;
+}
+
+/**
+ * `home_tenant` is not in the generated schema yet (backend branch
+ * `feat/dispatch-residence`); when it is absent every soul is at home.
+ */
+export function residenceOf(
+  current: CivKey,
+  tenantCode: string | null | undefined,
+  homeTenant: { code: string } | null | undefined
+): Residence {
+  const home = homeTenant && homeTenant.code !== tenantCode ? civKeyOfTenant(homeTenant.code) : null;
+  return home ? { current, home, residing: true } : { current, home: current, residing: false };
+}
+
+// ── layout ─────────────────────────────────────────────────────────────
+
+export const COMPACT_WIDTH = 340;
+export const GROW_FONT_SCALE = 1.3;
+export const STACK_FONT_SCALE = 1.7;
+
+export interface Layout {
+  /** ≤ 340pt wide: gutter 16, data rows stacked, display one step down. */
+  compact: boolean;
+  /** ≥ 1.3× text: badges wrap, heights are minimums. */
+  grow: boolean;
+  /** ≥ 1.7× text: tab bar, scores, password reveal and languages go vertical; the flow drops its rail. */
+  stack: boolean;
+  gutter: number;
+}
+
+/** Handoff 2f-四: three thresholds, one decision. */
+export function layoutFor(width: number, fontScale: number): Layout {
+  const compact = width <= COMPACT_WIDTH;
+  return { compact, grow: fontScale >= GROW_FONT_SCALE, stack: fontScale >= STACK_FONT_SCALE, gutter: compact ? 16 : 20 };
 }
 
 // ── dates ──────────────────────────────────────────────────────────────
@@ -110,66 +204,68 @@ export function formatStamp(iso: string | null | undefined): string | null {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// ── application timeline ───────────────────────────────────────────────
+// ── application flow ───────────────────────────────────────────────────
 
 export type StepState = "done" | "now" | "todo";
 
-export interface TimelineStep {
+export interface FlowStep {
   key: string;
   state: StepState;
-  /** A `soul_app.*` key, or the current workflow node's type and approver role. */
-  label: { key: string } | { node: string; role: string; appeal: boolean };
-  /** Only when the backend has a time for exactly this step. */
+  /** A `soul_app.timeline.*` key; `status` fills the decision's outcome. */
+  name: { key: string; status?: string };
+  /** A second line of copy (可申诉一次 / 待定 / 无时间戳). */
+  note?: string;
+  /** The approver role — only the current step has one (`current_step`). */
+  role?: string;
+  /** Only `created_at` and `decided_at` exist; no other step ever gets a time. */
   at?: string;
+  /** The rail after the current step is dashed: how many steps follow is unknown. */
+  dashedAfter?: boolean;
 }
 
-const FIRST_DECISION_MADE = new Set(["REJECTED", "APPEALING", "APPEAL_REJECTED"]);
 const APPEALED = new Set(["APPEALING", "APPEAL_REJECTED"]);
-const OPEN = new Set(["UNDER_REVIEW", "APPEALING"]);
 
 /**
- * The flow of one application, drawn ONLY from fields the backend sends:
- * `created_at`, `status`, `current_step`, `decided_at`, `appeal_statement`,
- * `can_appeal`. There is no per-node history in `/me/`, so a step the backend
- * has no time for carries none, and no step is invented to fill the shape of
- * the design's six-row example.
+ * The flow of one application (handoff 2e/2f-五), from the only fields `/me/`
+ * has: `created_at`, `decided_at`, `status`, `current_step`, `can_appeal`,
+ * `appeal_statement`.
  *
- * `decided_at` is the latest decision. It is attached to the first rejection
- * only while the status is still REJECTED; once an appeal exists the same field
- * would describe the appeal's outcome, so it moves there.
+ * Backend facts it leans on (`backend/apps/soul_accounts/rebirth.py`): an
+ * appeal CLEARS `decided_at` and `rejection_reason`, so while APPEALING the
+ * first rejection is known to have happened but has no time; `decided_at` is
+ * set again when the appeal is decided. `cooldown_until` is only on the list
+ * endpoint, so the design's "可再次提交" step is not drawn on the detail.
  */
-export function timelineOf(a: MeRebirthApplication): TimelineStep[] {
-  const steps: TimelineStep[] = [{ key: "submitted", state: "done", label: { key: "soul_app.timeline.submitted" }, at: a.created_at }];
-  if (FIRST_DECISION_MADE.has(a.status)) {
-    steps.push({
-      key: "rejected",
-      state: "done",
-      label: { key: "soul_app.timeline.rejected" },
-      ...(a.status === "REJECTED" && a.decided_at ? { at: a.decided_at } : {}),
-    });
-  }
+export function buildFlow(a: MeRebirthApplication): FlowStep[] {
+  const steps: FlowStep[] = [
+    { key: "submitted", state: "done", name: { key: "soul_app.timeline.submitted" }, at: a.created_at },
+  ];
   if (APPEALED.has(a.status) || (a.appeal_statement ?? "") !== "") {
-    steps.push({ key: "appealed", state: "done", label: { key: "soul_app.timeline.appealed" } });
+    steps.push({ key: "first-decision", state: "done", name: { key: "soul_app.timeline.decided", status: "REJECTED" } });
+    if (!a.current_step) steps.push({ key: "appealed", state: "done", name: { key: "soul_app.timeline.appealed" } });
+  }
+  if (a.decided_at) {
+    steps.push({
+      key: "decided",
+      state: "done",
+      name: { key: "soul_app.timeline.decided", status: a.status },
+      at: a.decided_at,
+    });
+    if (a.can_appeal) {
+      steps.push({ key: "appeal", state: "todo", name: { key: "soul_app.timeline.appealed" }, note: "soul_app.timeline.appeal_once" });
+    }
+    return steps;
   }
   if (a.current_step) {
     steps.push({
       key: "current",
       state: "now",
-      label: { node: a.current_step.node_type, role: a.current_step.approver_role, appeal: a.current_step.is_appeal },
+      name: { key: a.current_step.is_appeal ? "soul_app.timeline.appeal_review" : "soul_app.timeline.under_review" },
+      role: a.current_step.approver_role,
+      note: "soul_app.timeline.no_time",
+      dashedAfter: true,
     });
-  }
-  if (a.status === "REJECTED" && a.can_appeal) {
-    steps.push({ key: "appeal-open", state: "todo", label: { key: "soul_app.timeline.appeal_open" } });
-  }
-  if (a.status === "APPROVED" || a.status === "APPEAL_REJECTED") {
-    steps.push({
-      key: "outcome",
-      state: "done",
-      label: { key: `soul_app.status.${a.status}` },
-      ...(a.decided_at ? { at: a.decided_at } : {}),
-    });
-  } else if (OPEN.has(a.status)) {
-    steps.push({ key: "outcome", state: "todo", label: { key: "soul_app.timeline.outcome_pending" } });
+    steps.push({ key: "decision", state: "todo", name: { key: "soul_app.timeline.decision" }, note: "soul_app.timeline.pending" });
   }
   return steps;
 }

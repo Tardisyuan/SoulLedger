@@ -6,11 +6,14 @@ import {
   SOUL_STATE_BADGES,
   UNKNOWN_BADGE,
   badgeSpec,
+  buildFlow,
+  civKeyOfTenant,
   expiryOf,
   formatStamp,
+  layoutFor,
   lexiconKey,
+  residenceOf,
   stacksLabel,
-  timelineOf,
 } from "../rules";
 import { application } from "./stubApi";
 
@@ -74,12 +77,57 @@ describe("stacksLabel", () => {
 });
 
 describe("lexiconKey", () => {
-  it("Egypt reads the scores as heart and feather; the others keep merit and demerit", () => {
+  it("Egypt says feather side / heart side (handoff 2f; round 1's heart / feather weights withdrawn)", () => {
     expect(lexiconKey("eg", "merit")).toBe("soul_app.lexicon.eg.merit");
     expect(lexiconKey("eg", "demerit")).toBe("soul_app.lexicon.eg.demerit");
+    expect(lexiconKey("eg", "judging")).toBe("soul_app.lexicon.eg.judging");
     for (const civ of ["neutral", "cn", "eu", "gr"] as const) {
       expect(lexiconKey(civ, "merit")).toBe("soul_app.life.merit");
+      expect(lexiconKey(civ, "judging")).toBe("souls.states.JUDGING");
     }
+  });
+
+  it("the two civilizations without rebirth carry their own no-rebirth and no-past-lives sentences; the others do not", () => {
+    for (const civ of ["eg", "eu"] as const) {
+      expect(lexiconKey(civ, "no_rebirth_title")).toBe(`soul_app.lexicon.${civ}.no_rebirth_title`);
+      expect(lexiconKey(civ, "no_past_lives")).toBe(`soul_app.lexicon.${civ}.no_past_lives`);
+    }
+    for (const civ of ["neutral", "cn", "gr"] as const) {
+      expect(lexiconKey(civ, "no_past_lives")).toBe("soul_app.past_lives.empty");
+    }
+  });
+});
+
+describe("residenceOf", () => {
+  it("without home_tenant (the field is not merged yet) a soul is at home", () => {
+    expect(residenceOf("eg", "EG_DUAT", undefined)).toEqual({ current: "eg", home: "eg", residing: false });
+    expect(residenceOf("eg", "EG_DUAT", null)).toEqual({ current: "eg", home: "eg", residing: false });
+    expect(residenceOf("eg", "EG_DUAT", { code: "EG_DUAT" })).toEqual({ current: "eg", home: "eg", residing: false });
+  });
+
+  it("a Chinese soul residing in the Duat: skin stays where it is, words come from home", () => {
+    expect(residenceOf("eg", "EG_DUAT", { code: "CN_DIYU" })).toEqual({ current: "eg", home: "cn", residing: true });
+    expect(lexiconKey(residenceOf("eg", "EG_DUAT", { code: "CN_DIYU" }).home, "merit")).toBe("soul_app.life.merit");
+  });
+
+  it("an unknown home tenant code is not a residence (no guessing a lexicon)", () => {
+    expect(residenceOf("cn", "CN_DIYU", { code: "ATLANTIS" })).toEqual({ current: "cn", home: "cn", residing: false });
+    expect(civKeyOfTenant("GR_HADES")).toBe("gr");
+    expect(civKeyOfTenant(undefined)).toBeNull();
+  });
+});
+
+describe("layoutFor (handoff 2f-四)", () => {
+  it("≤ 340pt is compact with a 16pt gutter; 341pt is not", () => {
+    expect(layoutFor(340, 1)).toMatchObject({ compact: true, gutter: 16 });
+    expect(layoutFor(341, 1)).toMatchObject({ compact: false, gutter: 20 });
+  });
+
+  it("text ≥ 1.3× grows, ≥ 1.7× stacks; just below each does not", () => {
+    expect(layoutFor(393, 1.29)).toMatchObject({ grow: false, stack: false });
+    expect(layoutFor(393, 1.3)).toMatchObject({ grow: true, stack: false });
+    expect(layoutFor(393, 1.69)).toMatchObject({ grow: true, stack: false });
+    expect(layoutFor(393, 1.7)).toMatchObject({ grow: true, stack: true });
   });
 });
 
@@ -91,47 +139,62 @@ describe("formatStamp", () => {
   });
 });
 
-describe("timelineOf", () => {
+describe("buildFlow (handoff 2e)", () => {
   const CREATED = "2026-09-02T06:20:00Z";
   const DECIDED = "2026-09-09T08:40:00Z";
-  const shape = (a: MeRebirthApplication) => timelineOf(a).map((s) => `${s.key}:${s.state}${s.at ? `@${s.at}` : ""}`);
+  const shape = (a: MeRebirthApplication) =>
+    buildFlow(a).map((s) => `${s.key}:${s.state}${s.at ? `@${s.at}` : ""}${s.dashedAfter ? ":dashed" : ""}`);
 
-  it("under review: submitted, the current node, the outcome still to come", () => {
-    expect(shape(app({ created_at: CREATED }))).toEqual([`submitted:done@${CREATED}`, "current:now", "outcome:todo"]);
-    const current = timelineOf(app({})).find((s) => s.key === "current")!;
-    expect(current.label).toEqual({ node: "EVALUATION", role: "JUDGE", appeal: false });
+  it("A · under review: submitted, the current step (role, no time, dashed after), decision pending", () => {
+    const a = app({ created_at: CREATED });
+    expect(shape(a)).toEqual([`submitted:done@${CREATED}`, "current:now:dashed", "decision:todo"]);
+    const current = buildFlow(a).find((s) => s.key === "current")!;
+    expect(current).toMatchObject({ role: "JUDGE", name: { key: "soul_app.timeline.under_review" } });
+    expect(current.at).toBeUndefined();
   });
 
-  it("rejected and appealable: the rejection carries decided_at, the appeal is still open", () => {
-    expect(
-      shape(app({ created_at: CREATED, status: "REJECTED", decided_at: DECIDED, current_step: null, can_appeal: true }))
-    ).toEqual([`submitted:done@${CREATED}`, `rejected:done@${DECIDED}`, "appeal-open:todo"]);
+  it("B · rejected and appealable: the decision carries decided_at, then an open appeal", () => {
+    const a = app({ created_at: CREATED, status: "REJECTED", decided_at: DECIDED, current_step: null, can_appeal: true });
+    expect(shape(a)).toEqual([`submitted:done@${CREATED}`, `decided:done@${DECIDED}`, "appeal:todo"]);
+    expect(buildFlow(a)[1].name).toEqual({ key: "soul_app.timeline.decided", status: "REJECTED" });
   });
 
-  it("appealing: decided_at is NOT pinned on the first rejection, and nothing is given a time it does not have", () => {
-    const steps = timelineOf(
-      app({ created_at: CREATED, status: "APPEALING", decided_at: DECIDED, appeal_statement: "请复核", current_step: { node_type: "APPEAL", approver_role: "MODERATOR", is_appeal: true } })
-    );
-    expect(steps.map((s) => `${s.key}:${s.state}${s.at ? `@${s.at}` : ""}`)).toEqual([
-      `submitted:done@${CREATED}`,
-      "rejected:done",
-      "appealed:done",
-      "current:now",
-      "outcome:todo",
-    ]);
+  it("C · appealing: the backend cleared decided_at, so the first rejection is shown WITHOUT a time", () => {
+    const a = app({
+      created_at: CREATED,
+      status: "APPEALING",
+      decided_at: null,
+      appeal_statement: "请复核",
+      current_step: { node_type: "APPEAL", approver_role: "JUDGE", is_appeal: true },
+    });
+    expect(shape(a)).toEqual([`submitted:done@${CREATED}`, "first-decision:done", "current:now:dashed", "decision:todo"]);
+    expect(buildFlow(a)[2].name.key).toBe("soul_app.timeline.appeal_review");
   });
 
-  it("final outcomes carry decided_at", () => {
+  it("D · approved and not appealable: exactly two steps, nothing invented after", () => {
     expect(shape(app({ created_at: CREATED, status: "APPROVED", decided_at: DECIDED, current_step: null }))).toEqual([
       `submitted:done@${CREATED}`,
-      `outcome:done@${DECIDED}`,
+      `decided:done@${DECIDED}`,
     ]);
-    expect(
-      shape(app({ created_at: CREATED, status: "APPEAL_REJECTED", decided_at: DECIDED, appeal_statement: "x", current_step: null }))
-    ).toEqual([`submitted:done@${CREATED}`, "rejected:done", "appealed:done", `outcome:done@${DECIDED}`]);
   });
 
-  it("an unknown status invents no steps beyond what the fields say", () => {
+  it("appeal rejected: rejection and appeal happened (no times), the appeal's decision has decided_at", () => {
+    expect(
+      shape(app({ created_at: CREATED, status: "APPEAL_REJECTED", decided_at: DECIDED, appeal_statement: "x", current_step: null }))
+    ).toEqual([`submitted:done@${CREATED}`, "first-decision:done", "appealed:done", `decided:done@${DECIDED}`]);
+  });
+
+  it("only created_at and decided_at are ever used as times", () => {
+    const cases = [
+      app({ created_at: CREATED }),
+      app({ created_at: CREATED, status: "REJECTED", decided_at: DECIDED, current_step: null, can_appeal: true }),
+      app({ created_at: CREATED, status: "APPEAL_REJECTED", decided_at: DECIDED, appeal_statement: "x", current_step: null }),
+    ];
+    const times = cases.flatMap((a) => buildFlow(a).map((s) => s.at).filter(Boolean));
+    expect(times.filter((t) => t !== CREATED && t !== DECIDED)).toEqual([]);
+  });
+
+  it("an unknown status with no step and no decision draws only what exists", () => {
     expect(shape(app({ created_at: CREATED, status: "ON_HOLD", current_step: null }))).toEqual([`submitted:done@${CREATED}`]);
   });
 });

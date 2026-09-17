@@ -9,7 +9,7 @@ import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { expiryOf, formatStamp } from "../rules";
 import { useSession } from "../session";
-import { Block, Button, GUTTER, Interp, Input, Notice, Screen, Txt, useTheme } from "../ui";
+import { Block, Button, GUTTER, Interp, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
 
 /** Refusals are the user's to fix (red); a rate limit or a dead network is not (neutral). */
 const NEUTRAL_ERRORS = new Set(["soul_app.errors.rate_limited", "soul_app.errors.network"]);
@@ -17,8 +17,10 @@ const NEUTRAL_ERRORS = new Set(["soul_app.errors.rate_limited", "soul_app.errors
 export function LanguageSwitch() {
   const t = useTheme();
   const { locale, setLocale } = useI18n();
+  // Handoff 2d: at ≥ 1.7× text the three languages become three rows.
+  const { stack } = useLayout();
   return (
-    <View style={styles.languages}>
+    <View style={stack ? styles.languagesStacked : styles.languages}>
       {SUPPORTED_LOCALES.map((l) => {
         const on = l === locale;
         return (
@@ -293,6 +295,7 @@ const styles = StyleSheet.create({
   submit: { marginTop: 24 },
   footer: { borderTopWidth: 1, marginHorizontal: 28, marginTop: 28, paddingTop: 26, paddingBottom: 30 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
+  languagesStacked: { flexDirection: "column", alignItems: "stretch" },
   language: { minWidth: 56, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
   languageText: { fontSize: 12.5, letterSpacing: 0 },
   stack: { gap: 18, paddingHorizontal: GUTTER + 8 },

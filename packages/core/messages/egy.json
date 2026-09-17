@@ -1916,7 +1916,9 @@
       "record_count": "Sesh {{count}}",
       "copy_code": "Sesh Ren Ba",
       "code_copied": "Ren Ba Sesh",
-      "code_copy_failed": "Nen Sesh"
+      "code_copy_failed": "Nen Sesh",
+      "residing": "Hetep Em {{current}} · Nut {{home}}",
+      "record_count_short": "Sesh {{count}}"
     },
     "past_lives": {
       "title": "Ankh Tepyu",
@@ -1986,7 +1988,7 @@
       "account_retired": "Ren Ba Khetem",
       "application_open": "Dbh Wa Em Sheemtet",
       "cooldown": "Nen Dbh Em Hetep",
-      "terminal_cosmology": "Nen Wehem Mesut Em Taui Ek",
+      "terminal_cosmology": "Nen Wehem Mesut Em Taui Ek. Wat Pehwy.",
       "soul_state": "Kheperu Ek Nen Dbh",
       "application_approved": "Dbh Ek Hesy",
       "appeal_used": "Wehem Medu Iri Seth",
@@ -2002,8 +2004,28 @@
     },
     "lexicon": {
       "eg": {
-        "merit": "Wedjat Ib",
-        "demerit": "Wedjat Shut Maat"
+        "merit": "Shut",
+        "demerit": "Ib",
+        "merit_entry": "Shut",
+        "demerit_entry": "Ib",
+        "records": "Sesh Shut Hena Ib",
+        "judgments": "Wedja Ib",
+        "court": "Wesekhet Maaty",
+        "judging": "Em Wedja Ib",
+        "past_read_only": "Ankh Tepyu Dag Wa. Duat Nen Dbh.",
+        "no_past_lives": "Nen Ankh Tepyu Em Duat. Ankh Wa Pu.",
+        "no_rebirth_title": "Nen Wehem Mesut Em Duat",
+        "no_rebirth_body": "Nen Dbh Pen, Nen Djer Pen, Nen Em Khet. Em-Khet Wedja Ib, Wat Ek Pehwy."
+      },
+      "default": {
+        "no_rebirth_title": "Nen Wehem Mesut Em Taui Ek",
+        "no_rebirth_body": "Nen Dbh Pen, Nen Djer Pen, Nen Em Khet. Wat Ek Pehwy."
+      },
+      "eu": {
+        "past_read_only": "Ankh Tepyu Dag Wa. Pet Hena Duat Nen Dbh.",
+        "no_past_lives": "Nen Ankh Tepyu Em Pet. Ankh Wa Pu.",
+        "no_rebirth_title": "Nen Wehem Mesut Em Pet",
+        "no_rebirth_body": "Nen Dbh Pen, Nen Djer Pen, Nen Em Khet. Em-Khet Wedja, Wat Ek Pehwy."
       }
     },
     "logout": {
@@ -2021,11 +2043,14 @@
     },
     "timeline": {
       "submitted": "Dbh",
-      "rejected": "Sehen",
       "appealed": "Wehem Medu",
-      "appeal_open": "Wehem Medu Wenen",
-      "outcome_pending": "Wedja · Nen Djer",
-      "in_progress": "Em Iri"
+      "decided": "Wedja · {{status}}",
+      "appeal_once": "Wehem Medu Sep Wa",
+      "under_review": "Em Sheemtet",
+      "appeal_review": "Em Wehem Sheemtet",
+      "no_time": "Nen Unut",
+      "decision": "Wedja",
+      "pending": "Nen Djer"
     }
   }
 }

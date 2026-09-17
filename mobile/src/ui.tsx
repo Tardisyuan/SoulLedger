@@ -36,13 +36,14 @@ import {
   type TextProps,
   type TextStyle,
   type ViewStyle,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { Emblem, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import { badgeSpec, stacksLabel, type BadgeSpec } from "./rules";
+import { badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./rules";
 import { motion, radius, space, themeFor, type Theme } from "./theme";
 
 // ── theme & motion ─────────────────────────────────────────────────────
@@ -115,7 +116,22 @@ export function Txt({
   ...rest
 }: TextProps & { variant?: keyof typeof TYPE; tone?: Tone }) {
   const t = useTheme();
-  return <Text {...rest} style={[TYPE[variant], { color: toneColor(t, tone) }, style]} />;
+  const { compact } = useLayout();
+  return (
+    <Text {...rest} style={[TYPE[variant], compact && COMPACT_TYPE[variant], { color: toneColor(t, tone) }, style]} />
+  );
+}
+
+/** Handoff 2f-二: on a ≤ 340pt screen display and value-lg step down one size; everything else is unchanged. */
+const COMPACT_TYPE: Partial<Record<keyof typeof TYPE, TextStyle>> = {
+  display: { fontSize: 25, lineHeight: 30 },
+  valueLg: { fontSize: 30, lineHeight: 34 },
+};
+
+/** Screen width and system text size → the handoff's three layout thresholds. */
+export function useLayout(): Layout {
+  const { width, fontScale } = useWindowDimensions();
+  return layoutFor(width, fontScale);
 }
 
 /**
@@ -195,8 +211,12 @@ export function Block({
   testID?: string;
 }) {
   const t = useTheme();
+  const { gutter } = useLayout();
   return (
-    <View testID={testID} style={[styles.block, !last && { borderBottomWidth: 1, borderBottomColor: t.hair }, style]}>
+    <View
+      testID={testID}
+      style={[styles.block, { paddingHorizontal: gutter }, !last && { borderBottomWidth: 1, borderBottomColor: t.hair }, style]}
+    >
       {children}
     </View>
   );
@@ -222,6 +242,8 @@ export function Section({
   testID?: string;
 }) {
   const t = useTheme();
+  const { gutter } = useLayout();
+  const pad = { paddingHorizontal: gutter };
   const header = (
     <>
       <Txt variant="section">{title}</Txt>
@@ -246,14 +268,14 @@ export function Section({
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
           onPress={onToggle}
-          style={({ pressed }) => [styles.sectionHeader, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.sectionHeader, pad, pressed && styles.pressed]}
         >
           {header}
         </Pressable>
       ) : (
-        <View style={styles.sectionHeader}>{header}</View>
+        <View style={[styles.sectionHeader, pad]}>{header}</View>
       )}
-      {open ? <View style={styles.sectionBody}>{children}</View> : null}
+      {open ? <View style={[styles.sectionBody, pad]}>{children}</View> : null}
     </View>
   );
 }
@@ -323,6 +345,20 @@ export function Input({
   const bad = invalid || !!error;
   const text = typeof rest.value === "string" ? rest.value : "";
   const fontFamily = multiline ? quoteFamily(text || (rest.placeholder ?? "")) : mono ? family.mono[500] : family.mono[400];
+  // Handoff 2d: at ≥ 1.7× text the reveal leaves the field's right edge for a full-width row under it.
+  const { stack } = useLayout();
+  const reveal = secureToggle ? (
+    <Pressable
+      testID={rest.testID ? `${rest.testID}-reveal` : undefined}
+      accessibilityRole="button"
+      onPress={() => setRevealed((v) => !v)}
+      style={stack ? [styles.revealRow, { borderColor: t.hair, backgroundColor: t.s1 }] : [styles.reveal, { borderLeftColor: t.hair }]}
+    >
+      <Txt variant="label" tone="muted" style={styles.noSpacing}>
+        {revealed ? secureToggle.hide : secureToggle.show}
+      </Txt>
+    </Pressable>
+  ) : null;
   return (
     <View style={styles.field}>
       <Txt variant="label" tone="muted">
@@ -354,19 +390,10 @@ export function Input({
               style,
             ]}
           />
-          {secureToggle ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setRevealed((v) => !v)}
-              style={[styles.reveal, { borderLeftColor: t.hair }]}
-            >
-              <Txt variant="label" tone="muted" style={styles.noSpacing}>
-                {revealed ? secureToggle.hide : secureToggle.show}
-              </Txt>
-            </Pressable>
-          ) : null}
+          {secureToggle && !stack ? reveal : null}
         </View>
       </FocusRing>
+      {secureToggle && stack ? reveal : null}
       {error ? <FieldError text={error} /> : hint ? <Txt variant="label" tone="subtle" style={styles.noSpacing}>{hint}</Txt> : null}
     </View>
   );
@@ -580,7 +607,9 @@ export function DataRow({
   mono?: boolean;
   testID?: string;
 }) {
-  const stacked = stacksLabel(label);
+  const { compact } = useLayout();
+  // Two lines for a long label (EN / egy), and for every row on a narrow screen (handoff 2c).
+  const stacked = compact || stacksLabel(label);
   const value =
     isValidElement(children) && typeof (children as ReactElement).type !== "string" ? (
       children
@@ -651,29 +680,33 @@ export function EnumBadge({
   namespace,
   table,
   value,
+  label: lexiconLabel,
   testID,
 }: {
   namespace: string;
   table: Record<string, BadgeSpec>;
   value: string | null | undefined;
+  /** A civilization's own word for a KNOWN member (Egypt's 称心中); never replaces the unknown shape. */
+  label?: string;
   testID?: string;
 }) {
   const { enumLabel, t } = useI18n();
   const d = enumLabel(namespace, value);
   const spec = badgeSpec(table, d.raw, d.state === "known");
-  const label = d.state === "known" && spec.tone !== "unknown" ? d.label : d.state === "missing" ? t("common.value.unrecorded") : t("common.value.unrecognized");
+  const label = d.state === "known" && spec.tone !== "unknown" ? (lexiconLabel ?? d.label) : d.state === "missing" ? t("common.value.unrecorded") : t("common.value.unrecognized");
   return <Badge testID={testID} spec={spec} label={label} raw={spec.tone === "unknown" ? d.raw : null} />;
 }
 
 /** Words someone said: a statement, an appeal, a rejection reason. The only place the serif appears. */
 export function Quote({ text, tone = "neutral", testID }: { text: string; tone?: "neutral" | "appeal" | "rejection"; testID?: string }) {
   const t = useTheme();
+  const { compact } = useLayout();
   const line = tone === "rejection" ? t.negStrong : tone === "appeal" ? t.accent : t.hair2;
   return (
-    <View style={[styles.quote, { borderLeftColor: line }]}>
+    <View style={[styles.quote, compact && styles.quoteCompact, { borderLeftColor: line }]}>
       <Text
         testID={testID}
-        style={[styles.quoteText, { fontFamily: quoteFamily(text), color: tone === "rejection" ? t.ink : t.inkMuted }]}
+        style={[styles.quoteText, compact && styles.quoteTextCompact, { fontFamily: quoteFamily(text), color: tone === "rejection" ? t.ink : t.inkMuted }]}
       >
         {text}
       </Text>
@@ -766,6 +799,7 @@ export const styles = StyleSheet.create({
   monoInput: { fontSize: 16, letterSpacing: 2.2 },
   multiline: { minHeight: 128, paddingVertical: 13, fontSize: 15, lineHeight: 26, textAlignVertical: "top" },
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
+  revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   iconRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
   iconNudge: { marginTop: 3 },
   buttonWrap: { gap: 11 },
@@ -808,5 +842,7 @@ export const styles = StyleSheet.create({
   badgeRaw: { fontFamily: family.mono[400], fontSize: 10.5, lineHeight: 16, opacity: 0.85 },
   quote: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2 },
   quoteText: { fontSize: 16, lineHeight: 30 },
+  quoteCompact: { paddingLeft: 12 },
+  quoteTextCompact: { fontSize: 15.5, lineHeight: 29 },
   skeleton: { gap: 10, paddingVertical: space[4] },
 });
