@@ -56,6 +56,8 @@ function application(over: Record<string, unknown> = {}) {
     can_appeal: false,
     cooldown_until: null as string | null,
     can_decide_cross_civilization: false,
+    first_rejection_reason: "",
+    first_decided_at: null as string | null,
     created_at: "2026-09-17T00:00:00Z",
     updated_at: "2026-09-17T00:00:00Z",
     ...over,

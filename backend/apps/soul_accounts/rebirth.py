@@ -179,6 +179,9 @@ def appeal(account, application_id, statement=""):
         application.appeal_workflow = workflow
         application.appeal_statement = statement
         application.status = RebirthApplicationStatus.APPEALING
+        # 首次驳回留档,再清空「最近一次决定」两列给申诉结论用(见模型上的注释)。
+        application.first_rejection_reason = application.rejection_reason
+        application.first_decided_at = application.decided_at
         application.rejection_reason = ""
         application.decided_at = None
         application.save()
