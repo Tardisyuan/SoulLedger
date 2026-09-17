@@ -30,6 +30,8 @@ import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
+import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -523,6 +525,13 @@ export default function SoulDetailPage() {
             onStartJudgment={handleStartJudgment}
             onReincarnate={handleReincarnate}
           />
+
+          {/* 灵魂账号 — docs/ARCHITECTURE-soul-app-and-domain-split.md 2026-09-17「链式账号」. */}
+          {soul && (
+            <RequirePermission permissions="soul_account.read">
+              <SoulAccountCard soul={soul} />
+            </RequirePermission>
+          )}
         </div>
 
         {/* Right column: Timeline */}
