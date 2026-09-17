@@ -5,48 +5,59 @@
 `packages/` 不在容器里。两份一致由 `tests/test_soul_push_messages_match_the_language_packs.py`
 逐字钉住 —— 改了一边另一边不跟,测试红。
 
-推送出现在锁屏上,旁人看得见。所以文案**只说「有了结果」,不说是批准还是驳回**,
-不含驳回理由、证据、新身份、密码;具体内容要打开 App(登录后)才看得到。
-「结果是否在通知里区分批准 / 驳回」待用户确认。
+推送出现在锁屏上,旁人看得见。2026-09-18 用户决定**区分批准 / 驳回**,但文案仍然
+**不含**驳回理由原文、转生去向、判决内容、暂居去向、新身份、密码;具体内容要打开灵魂簿(登录后)才看得到。
 """
 DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
-        "rebirth_submitted": {"title": "转生申请已提交", "body": "你的转生申请已进入审批,有结果时会通知你。"},
-        "rebirth_appeal_submitted": {"title": "申诉已提交", "body": "你的申诉已进入复核,有结果时会通知你。"},
-        "rebirth_result": {"title": "转生申请有了结果", "body": "你的转生申请有了结果,打开 App 查看。"},
-        "judgment_result": {"title": "审判有了结论", "body": "你的审判有了结论,打开 App 查看。"},
-        "disposition_executed": {"title": "处置已执行", "body": "你的处置已执行,打开 App 查看。"},
+        "rebirth_approved": {"title": "转生申请已批准", "body": "你的转生申请已批准,打开灵魂簿查看。"},
+        "rebirth_rejected": {"title": "转生申请被驳回", "body": "你的转生申请被驳回,打开灵魂簿查看理由。"},
+        "rebirth_appeal_rejected": {"title": "申诉被驳回", "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"},
+        "judgment_result": {"title": "审判有了结论", "body": "你的审判有了结论,打开灵魂簿查看。"},
+        "disposition_executed": {"title": "处置已执行", "body": "你的处置已执行,打开灵魂簿查看。"},
+        "residence_started": {"title": "暂居开始", "body": "你已被调往另一文明暂居,打开灵魂簿查看。"},
+        "residence_returned": {"title": "暂居结束", "body": "你已回归原属文明,打开灵魂簿查看。"},
     },
     "en": {
-        "rebirth_submitted": {
-            "title": "Rebirth application submitted",
-            "body": "Your rebirth application is under review. You will be notified when there is a result.",
+        "rebirth_approved": {
+            "title": "Rebirth application approved",
+            "body": "Your rebirth application was approved. Open Soul Ledger to see it.",
         },
-        "rebirth_appeal_submitted": {
-            "title": "Appeal submitted",
-            "body": "Your appeal is under review. You will be notified when there is a result.",
+        "rebirth_rejected": {
+            "title": "Rebirth application rejected",
+            "body": "Your rebirth application was rejected. Open Soul Ledger to see why.",
         },
-        "rebirth_result": {
-            "title": "Rebirth application decided",
-            "body": "There is a result on your rebirth application. Open the app to see it.",
+        "rebirth_appeal_rejected": {
+            "title": "Appeal rejected",
+            "body": "Your appeal on the rebirth application was rejected. Open Soul Ledger to see why.",
         },
         "judgment_result": {
             "title": "Judgment concluded",
-            "body": "Your judgment has concluded. Open the app to see it.",
+            "body": "Your judgment has concluded. Open Soul Ledger to see it.",
         },
         "disposition_executed": {
             "title": "Disposition carried out",
-            "body": "Your disposition has been carried out. Open the app to see it.",
+            "body": "Your disposition has been carried out. Open Soul Ledger to see it.",
+        },
+        "residence_started": {
+            "title": "Residence begun",
+            "body": "You have been moved to reside in another civilization. Open Soul Ledger to see it.",
+        },
+        "residence_returned": {
+            "title": "Residence ended",
+            "body": "You have returned to your home civilization. Open Soul Ledger to see it.",
         },
     },
     "egy": {
-        "rebirth_submitted": {"title": "Wehem Mesut Dbh Seth", "body": "Dbh Ek Em Sheemtet. Sedjem Ek Em Wedja."},
-        "rebirth_appeal_submitted": {"title": "Wehem Medu Seth", "body": "Wehem Medu Ek Em Sheemtet. Sedjem Ek Em Wedja."},
-        "rebirth_result": {"title": "Wehem Mesut Wedja", "body": "Wedja Er Dbh Ek. Wen Medjat Er Maa."},
-        "judgment_result": {"title": "Wedja Pehwy", "body": "Wedja Ek Pehwy. Wen Medjat Er Maa."},
-        "disposition_executed": {"title": "Wetep Iri", "body": "Wetep Ek Iri. Wen Medjat Er Maa."},
+        "rebirth_approved": {"title": "Wehem Mesut Hesy", "body": "Dbh Ek Hesy. Wen Medjat Ba Er Maa."},
+        "rebirth_rejected": {"title": "Wehem Mesut Sehen", "body": "Dbh Ek Sehen. Wen Medjat Ba Er Maa Khet."},
+        "rebirth_appeal_rejected": {"title": "Wehem Medu Sehen", "body": "Wehem Medu Ek Sehen. Wen Medjat Ba Er Maa Khet."},
+        "judgment_result": {"title": "Wedja Pehwy", "body": "Wedja Ek Pehwy. Wen Medjat Ba Er Maa."},
+        "disposition_executed": {"title": "Wetep Iri", "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."},
+        "residence_started": {"title": "Hemes Taui Kety", "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."},
+        "residence_returned": {"title": "Ankh Er Taui", "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."},
     },
 }
 

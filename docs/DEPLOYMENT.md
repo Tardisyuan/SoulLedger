@@ -78,7 +78,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   **APNs 密钥与 FCM 凭据配在 Expo(EAS)项目上,不在本后端**;没有它们,真机收不到,但后端流程不受影响。
 - 环境变量(backend 与 celery worker 都要有):
   - `SOUL_PUSH_ENABLED`(默认 `False`)。**不打开时**事件照常记录成投递行(`soul_push_pushdelivery`),
-    状态标 `DISABLED`(「推送未启用」),不访问 Expo、不报错。打开之前入库的 `DISABLED` 行不会补发。
+    状态标 `DISABLED`(「推送未启用」),不访问 Expo、不报错。**打开并重启后,下一次 `soul_push.sweep`
+    (≤5 分钟)补发 `created_at` 在 24 小时内的 `DISABLED` 行**(补发前照常核对设备、归属、账号未停用、偏好仍开;
+    补的是原行,不会重复),更早的标 `EXPIRED`(不删)。beat 没跑就不会补发。
   - `EXPO_ACCESS_TOKEN`(可选)。只有在 Expo 控制台开启「增强推送安全」后才必需;设置了就随每个请求
     带 `Authorization: Bearer …`。开启增强安全却没设,Expo 整请求报 `UNAUTHORIZED`,投递记为 `FAILED`。
   - `SOUL_PUSH_SENDER`(默认 `apps.soul_push.expo.ExpoPushSender`)。发送端口的类路径,一般不改。

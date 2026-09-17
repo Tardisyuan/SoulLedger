@@ -1982,25 +1982,33 @@
     }
   },
   "soul_push": {
-    "rebirth_submitted": {
-      "title": "转生申请已提交",
-      "body": "你的转生申请已进入审批,有结果时会通知你。"
+    "rebirth_approved": {
+      "title": "转生申请已批准",
+      "body": "你的转生申请已批准,打开灵魂簿查看。"
     },
-    "rebirth_appeal_submitted": {
-      "title": "申诉已提交",
-      "body": "你的申诉已进入复核,有结果时会通知你。"
+    "rebirth_rejected": {
+      "title": "转生申请被驳回",
+      "body": "你的转生申请被驳回,打开灵魂簿查看理由。"
     },
-    "rebirth_result": {
-      "title": "转生申请有了结果",
-      "body": "你的转生申请有了结果,打开 App 查看。"
+    "rebirth_appeal_rejected": {
+      "title": "申诉被驳回",
+      "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"
     },
     "judgment_result": {
       "title": "审判有了结论",
-      "body": "你的审判有了结论,打开 App 查看。"
+      "body": "你的审判有了结论,打开灵魂簿查看。"
     },
     "disposition_executed": {
       "title": "处置已执行",
-      "body": "你的处置已执行,打开 App 查看。"
+      "body": "你的处置已执行,打开灵魂簿查看。"
+    },
+    "residence_started": {
+      "title": "暂居开始",
+      "body": "你已被调往另一文明暂居,打开灵魂簿查看。"
+    },
+    "residence_returned": {
+      "title": "暂居结束",
+      "body": "你已回归原属文明,打开灵魂簿查看。"
     }
   }
 }

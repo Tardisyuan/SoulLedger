@@ -76,7 +76,8 @@ class PushStatus(models.TextChoices):
     SENT = "SENT", "已交给 Expo"             # 有 ticket id,等回执
     DELIVERED = "DELIVERED", "回执成功"      # Expo 已交给 APNs / FCM
     FAILED = "FAILED", "失败"
-    DISABLED = "DISABLED", "推送未启用"      # SOUL_PUSH_ENABLED 未打开:照常记录,不发
+    DISABLED = "DISABLED", "推送未启用"      # SOUL_PUSH_ENABLED 未打开:照常记录,开启后 24 小时内的补发
+    EXPIRED = "EXPIRED", "已过期"            # 未启用期间记录、开启时已超过 24 小时:不补发,不删
     CANCELLED = "CANCELLED", "已取消"        # 发送前设备已失效或已转给别的账号
 
 

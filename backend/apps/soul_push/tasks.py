@@ -21,4 +21,5 @@ def sweep():
     """兜底入队 + 查回执。登记在 apps/scheduler/registry.py。"""
     from apps.soul_push import services
 
-    return {"requeued": services.requeue_stale(), "receipts": services.check_receipts()}
+    return {"backfilled": services.backfill_disabled(), "requeued": services.requeue_stale(),
+            "receipts": services.check_receipts()}
