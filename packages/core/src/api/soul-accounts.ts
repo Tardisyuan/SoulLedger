@@ -85,10 +85,23 @@ export interface OfficerRebirthApplication {
   appeal_workflow: string | null;
   /** null = the initial review has not decided yet. */
   cross_civilization: boolean | null;
+  /** What the approver wrote FOR THE SOUL on rejection; internal node notes are never here. */
   rejection_reason: string;
   decided_at: string | null;
+  /** The current node's type and ROLE (never who); null once the application is closed. */
+  current_step: RebirthCurrentStep | null;
+  can_appeal: boolean;
+  /** End of the cooldown this application's final rejection started; null when not cooling down. */
+  cooldown_until: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** MeCurrentStepSerializer. */
+export interface RebirthCurrentStep {
+  node_type: string;
+  approver_role: string;
+  is_appeal: boolean;
 }
 
 /** Optional contact update sent with provision / reset. Blank strings clear. */

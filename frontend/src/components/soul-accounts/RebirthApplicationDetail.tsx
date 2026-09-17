@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { workflowApi, type ApprovalNode, type OfficerRebirthApplication } from "@soulledger/core/api";
-import { workflowKeys } from "@soulledger/core/query_keys";
+import type { OfficerRebirthApplication } from "@soulledger/core/api";
 import { classifySoulAccountError, useDecideCrossCivilization } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -12,7 +10,6 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
-import { Spinner } from "@/src/components/ui/Spinner";
 import { failureKey, lifeNumber, rebirthBadgeClass } from "./soulAccountsView";
 
 interface Props {
@@ -20,32 +17,34 @@ interface Props {
   onClose: () => void;
 }
 
+/** The first node of a rebirth workflow (`rebirth.REBIRTH_NODES[0]`: 判官初审, EVALUATION, by ROLE). */
+const INITIAL_REVIEW_NODE_TYPE = "EVALUATION";
+
 /**
  * Whether this user may be offered the cross-civilization choice: the
- * application is in its initial review, the workflow's current node is its
- * first node and still pending, and that node names this user's role.
+ * application is in its initial review (not an appeal), the current step is
+ * the EVALUATION node, and that step names this user's role.
  *
+ * Read off the application's own `current_step` — no extra workflow request.
  * Mirrors `rebirth.decide_cross_civilization` + `ApprovalNode.can_approve`
- * (ROLE branch). It only decides whether the control is shown — the backend
- * decides whether the write lands, and a 403/409 is reported, not hidden.
- * ACTOR-designated nodes are not offered here: comparing actor ids needs the
- * user's actor, which the session does not carry. Rebirth nodes are ROLE.
+ * (ROLE branch; every rebirth node is ROLE). It only decides whether the
+ * control is shown — the backend decides whether the write lands, and a
+ * 403/409 is reported, not hidden.
  */
 export function mayDecideCrossCivilization(
-  application: Pick<OfficerRebirthApplication, "status">,
-  nodes: readonly ApprovalNode[] | undefined,
-  currentNodeId: string | null | undefined,
+  application: Pick<OfficerRebirthApplication, "status" | "current_step">,
   userRole: string | undefined,
   hasApprove: boolean
 ): boolean {
-  if (!hasApprove || application.status !== "UNDER_REVIEW" || !nodes?.length || !currentNodeId) return false;
-  const first = [...nodes].sort((a, b) => a.node_order - b.node_order)[0];
+  const step = application.current_step;
   return (
-    first.id === currentNodeId &&
-    first.status === "PENDING" &&
-    first.approver_type === "ROLE" &&
-    !!first.approver_role &&
-    first.approver_role === userRole
+    hasApprove &&
+    application.status === "UNDER_REVIEW" &&
+    step !== null &&
+    !step.is_appeal &&
+    step.node_type === INITIAL_REVIEW_NODE_TYPE &&
+    !!step.approver_role &&
+    step.approver_role === userRole
   );
 }
 
@@ -55,24 +54,8 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
   const decide = useDecideCrossCivilization();
-
-  const activeWorkflowId = a.appeal_workflow ?? a.workflow;
-  const workflow = useQuery({
-    queryKey: workflowKeys.detail(activeWorkflowId),
-    queryFn: () => workflowApi.get(activeWorkflowId).then((res) => res.data),
-  });
-  // The initial-review decision lives on the ORIGINAL workflow, not the appeal.
-  const canDecide =
-    a.appeal_workflow === null &&
-    mayDecideCrossCivilization(
-      a,
-      workflow.data?.nodes,
-      workflow.data?.current_node,
-      user?.role,
-      hasPermission("workflow.approve")
-    );
-  const node = workflow.data?.current_node_detail ?? null;
-  const open = a.status === "UNDER_REVIEW" || a.status === "APPEALING";
+  const canDecide = mayDecideCrossCivilization(a, user?.role, hasPermission("workflow.approve"));
+  const step = a.current_step;
 
   const setCross = (value: boolean) =>
     decide.mutate(
@@ -96,19 +79,16 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
       ? t("soul_accounts.rebirth.cross.undecided")
       : t(a.cross_civilization ? "soul_accounts.rebirth.cross.yes" : "soul_accounts.rebirth.cross.no");
 
-  let currentStep: React.ReactNode;
-  if (!open) currentStep = <MissingValue kind="inapplicable" reason={t("soul_accounts.rebirth.no_current_node")} />;
-  else if (workflow.isLoading) currentStep = <Spinner />;
-  else if (workflow.isError) currentStep = t("soul_accounts.rebirth.workflow_load_failed");
-  else if (node)
-    currentStep = (
-      <span className="inline-flex flex-wrap gap-1">
-        <span>{node.node_name}</span>
-        <span aria-hidden="true">·</span>
-        <DomainEnum namespace="users.roles" value={node.approver_role} />
-      </span>
-    );
-  else currentStep = <MissingValue kind="unrecorded" />;
+  const currentStep: React.ReactNode = step ? (
+    <span className="inline-flex flex-wrap gap-1">
+      <DomainEnum namespace="workflow.node_type" value={step.node_type} />
+      <span aria-hidden="true">·</span>
+      <DomainEnum namespace="users.roles" value={step.approver_role} />
+      {step.is_appeal && <span>{t("soul_accounts.rebirth.step_appeal")}</span>}
+    </span>
+  ) : (
+    <MissingValue kind="inapplicable" reason={t("soul_accounts.rebirth.no_current_node")} />
+  );
 
   return (
     <BaseModal isOpen onClose={onClose} title={t("soul_accounts.rebirth.detail_title", { name: a.soul_name })}>
@@ -122,18 +102,19 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
           {row(t("soul_accounts.rebirth.fields.cross_civilization"), crossText)}
           {row(
             t("soul_accounts.rebirth.fields.appeal"),
-            t(a.appeal_workflow ? "soul_accounts.rebirth.appeal.used" : a.status === "REJECTED" ? "soul_accounts.rebirth.appeal.available" : "soul_accounts.rebirth.appeal.none")
+            t(a.appeal_workflow ? "soul_accounts.rebirth.appeal.used" : a.can_appeal ? "soul_accounts.rebirth.appeal.available" : "soul_accounts.rebirth.appeal.none")
           )}
           {row(
             t("soul_accounts.rebirth.fields.decided_at"),
             a.decided_at ? <span className="font-mono">{formatDateTime(a.decided_at)}</span> : <MissingValue kind="unrecorded" />
           )}
+          {a.cooldown_until &&
+            row(
+              t("soul_accounts.rebirth.fields.cooldown"),
+              <span data-testid="rebirth-cooldown">{t("soul_accounts.rebirth.cooldown_until", { time: formatDateTime(a.cooldown_until) })}</span>
+            )}
           {row(t("soul_accounts.rebirth.fields.created_at"), <span className="font-mono">{formatDateTime(a.created_at)}</span>)}
         </dl>
-
-        {(a.status === "REJECTED" || a.status === "APPEAL_REJECTED") && (
-          <p className="text-02 text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.rebirth.cooldown_note")}</p>
-        )}
 
         <section>
           <h3 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.statement")}</h3>
@@ -177,7 +158,7 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
           </section>
         )}
 
-        <Link href={`/workflow/${activeWorkflowId}`} className="inline-block text-03 underline text-[oklch(var(--color-accent-ink))]">
+        <Link href={`/workflow/${a.appeal_workflow ?? a.workflow}`} className="inline-block text-03 underline text-[oklch(var(--color-accent-ink))]">
           {t("soul_accounts.rebirth.open_workflow")}
         </Link>
       </div>
