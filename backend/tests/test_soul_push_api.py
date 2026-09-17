@@ -112,9 +112,10 @@ def test_notification_settings_default_on_and_can_turn_a_category_off(cn_tenant,
     _judgment_concluded(account.soul)
     assert not PushDelivery.objects.exists()  # 关了审判类:不记、不推
 
-    EventService.log(account.soul, "REBIRTH_APPLICATION_SUBMITTED", {"application_id": "app-1"})
+    EventService.log(account.soul, "REBIRTH_STATUS_CHANGED",
+                     {"application_id": "app-1", "old_status": "UNDER_REVIEW", "new_status": "APPROVED"})
     delivery = PushDelivery.objects.get()
-    assert delivery.kind == "rebirth_submitted" and delivery.title == "Rebirth application submitted"
+    assert delivery.kind == "rebirth_approved" and delivery.title == "Rebirth application approved"
 
 
 def test_settings_are_per_account(cn_tenant):

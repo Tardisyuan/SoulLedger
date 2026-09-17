@@ -7,7 +7,9 @@
           └ record_for_event:按映射表决定推不推、推给谁,写 PushDelivery(QUEUED)
       └ 事务提交后 → celery `soul_push.send`
           └ send_deliveries:认领(SENDING)→ 按 ≤100 分批交给发送端口 → SENT + ticket / FAILED
+    暂居开始 / 回归(DispatchService 直接写 SoulEvent,不经总线)→ signals.py → 同一个 SoulPushHandler
     beat `soul_push.sweep`(每 5 分钟,apps/scheduler/registry.py)
+      ├ 推送开着时:24 小时内的 DISABLED 补发,更早的标 EXPIRED
       ├ 入队失败或 worker 崩掉而停住的 QUEUED / SENDING 重新入队
       └ SENT 满 15 分钟的查回执 → DELIVERED / FAILED;DeviceNotRegistered → 设备失效
 
@@ -63,25 +65,27 @@ def enabled() -> bool:
 
 # ── 事件 → 推送 ──────────────────────────────────────────────────────────
 
-#: 转生申请状态 → 推送种类。UNDER_REVIEW 不推(那是提交,由 SUBMITTED 事件推)。
+#: 转生申请状态 → 推送种类。**只推结果**(2026-09-18 用户决定):提交申请(REBIRTH_APPLICATION_SUBMITTED)
+#: 与提交申诉(new=APPEALING)是灵魂自己刚在 App 里做的事,不推确认;UNDER_REVIEW 同理。
+#: 三种结果各有文案(锁屏上区分批准 / 驳回),但仍不含理由原文、转生去向、判决内容。
 REBIRTH_STATUS_KINDS = {
-    "APPEALING": "rebirth_appeal_submitted",
-    "APPROVED": "rebirth_result",
-    "REJECTED": "rebirth_result",
-    "APPEAL_REJECTED": "rebirth_result",
+    "APPROVED": "rebirth_approved",
+    "REJECTED": "rebirth_rejected",
+    "APPEAL_REJECTED": "rebirth_appeal_rejected",
 }
 
 #: 处置执行没有自己的事件:`DispositionService.execute` 的可观察结果是灵魂状态
 #: 进入 REINCARNATING(有来世)或 SETTLED(终局宇宙观),`transition_to` 为此发 STATE_CHANGED。
 DISPOSITION_EXECUTED_STATES = ("REINCARNATING", "SETTLED")
 
-#: **尚未存在的事件**,留映射位。依赖 feat/dispatch-residence 落地暂居(事件名以那条分支为准)。
-#: 它们不在 `apps/events/models.py::EventType` 里;
-#: `tests/test_soul_push_delivery.py::test_pending_residence_events_do_not_exist_yet` 在它们出现时变红,
-#: 提醒把下面 `rule_for` 补上(category "residence",偏好字段已经在 PushPreference 里)。
-PENDING_EVENTS = {
-    "SOUL_RESIDENCE_STARTED": ("residence", "residence_started"),
-    "SOUL_RESIDENCE_ENDED": ("residence", "residence_ended"),
+#: 暂居(已合并的 feat/dispatch-residence)。**两者都没有独立的 EventType**:
+#: `DispatchService.execute` / `end_residence` 直接写 `SoulEvent(event_type=STATE_CHANGED)`,
+#: 用 payload 的 `action` 区分 —— 而且**不经事件总线**,所以由 `signals.py` 挂在 SoulEvent 的 post_save 上接。
+#: 「暂居开始」选调拨执行(DISPATCH_EXECUTED):那一刻 `soul.tenant` 切到目标文明,是灵魂真正换了管辖;
+#: 提议 / 批准只是官员之间的流程,灵魂的处境没变。
+RESIDENCE_ACTIONS = {
+    "DISPATCH_EXECUTED": "residence_started",
+    "DISPATCH_RETURNED": "residence_returned",
 }
 
 
@@ -89,12 +93,8 @@ def rule_for(event_type, payload, account):
     """`(category, kind, dedupe_key, data)`,或 None(这个事件不推)。
 
     `data` 只带导航需要的东西(屏幕名与 id),**不带 payload 里的任何其他字段** ——
-    payload 里可能有 reason、new_identity、verdict。
+    payload 里可能有 reason、new_identity、verdict、调拨去向。
     """
-    if event_type == "REBIRTH_APPLICATION_SUBMITTED":
-        app_id = payload.get("application_id")
-        return ("rebirth", "rebirth_submitted", f"rebirth:{app_id}:SUBMITTED",
-                {"screen": "ApplicationDetail", "application_id": app_id}) if app_id else None
     if event_type == "REBIRTH_STATUS_CHANGED":
         app_id, new = payload.get("application_id"), payload.get("new_status")
         kind = REBIRTH_STATUS_KINDS.get(new)
@@ -104,14 +104,27 @@ def rule_for(event_type, payload, account):
     if event_type == "JUDGMENT_CONCLUDED":
         judgment_id = payload.get("judgment_id")
         return ("judgment", "judgment_result", f"judgment:{judgment_id}", {"screen": "Life"}) if judgment_id else None
+    if event_type == "STATE_CHANGED" and payload.get("action") in RESIDENCE_ACTIONS:
+        action = payload["action"]
+        # 调拨记录 id 是这次暂居的业务主键;回归时记录可能不存在(数据修正过的灵魂,dispatch_id=None),
+        # 退回用那条 SoulEvent 的 id —— 由 signals.py 放进 `_event_id`,一次回归只有一条。
+        key = payload.get("dispatch_id") or payload.get("_event_id")
+        return ("residence", RESIDENCE_ACTIONS[action], f"residence:{key}:{action}", {"screen": "Life"}) if key else None
     if event_type == "STATE_CHANGED" and payload.get("new_state") in DISPOSITION_EXECUTED_STATES:
         # 一世一个账号,所以 (账号, 状态) 就是「这一世的这次处置执行」。
         return ("judgment", "disposition_executed", f"state:{account.pk}:{payload['new_state']}", {"screen": "Life"})
     return None
 
 
-HANDLED_EVENTS = frozenset({"REBIRTH_APPLICATION_SUBMITTED", "REBIRTH_STATUS_CHANGED", "JUDGMENT_CONCLUDED",
-                            "STATE_CHANGED"})
+HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "JUDGMENT_CONCLUDED", "STATE_CHANGED"})
+
+#: 种类 → 偏好类别。发送前(含补发)再核对一次偏好时用。
+KIND_CATEGORY = {
+    **{kind: "rebirth" for kind in REBIRTH_STATUS_KINDS.values()},
+    "judgment_result": "judgment",
+    "disposition_executed": "judgment",
+    **{kind: "residence" for kind in RESIDENCE_ACTIONS.values()},
+}
 
 
 def record_for_event(event_type, payload, tenant_code):
@@ -219,15 +232,22 @@ def _message(delivery):
 def _claim(delivery_ids):
     """把可发的行从 QUEUED 改成 SENDING 并返回它们。同一批 id 被两个 worker 拿到时,
     后一个在锁上等,醒来看到的已不是 QUEUED —— 不会两个都发。"""
-    claimed, touched = [], []
+    claimed, touched, preferences = [], [], {}
     with transaction.atomic():
         rows = (PushDelivery.objects.select_for_update(of=("self",))
                 .select_related("device", "account").filter(pk__in=delivery_ids, status=PushStatus.QUEUED))
         for row in rows:
+            if row.account_id not in preferences:
+                preferences[row.account_id] = PushPreference.objects.filter(account_id=row.account_id).first()
+            preference = preferences[row.account_id]
+            category = KIND_CATEGORY.get(row.kind)
             if (not row.device.is_active or row.device.account_id != row.account_id
                     or row.account.retired_at is not None):
                 # 事件记下之后设备被注销、转给了别的账号、或账号已转世停用:不推。
                 row.status, row.error = PushStatus.CANCELLED, "设备已失效或已不属于该账号"
+            elif preference is not None and category and not getattr(preference, category):
+                # 记下之后灵魂关了这一类(补发时尤其可能:未启用期间记的行可能是一天前的)。
+                row.status, row.error = PushStatus.CANCELLED, "灵魂已关闭这一类推送"
             elif not enabled():
                 row.status, row.error = PushStatus.DISABLED, "推送未启用(SOUL_PUSH_ENABLED 未打开)"
             else:
@@ -322,6 +342,41 @@ def requeue_stale(now=None, limit=500):
     for start in range(0, len(ids), SEND_BATCH):
         enqueue(ids[start:start + SEND_BATCH])
     return len(ids)
+
+
+#: 开启推送后补发多久以内因未启用而记为 DISABLED 的推送(2026-09-18 用户决定)。
+BACKFILL_WINDOW = timedelta(hours=24)
+
+
+def backfill_disabled(now=None, limit=500):
+    """推送开着时:补发 24 小时内的 DISABLED,更早的标 EXPIRED(不删)。
+
+    **由 sweep 触发,不做成一次性管理命令**:开关是环境变量,打开要重启进程,重启后第一个
+    5 分钟的 sweep 自然就补了 —— 不需要运维记得再跑一条命令,忘了跑的后果是静默不补。
+    推送一直开着时 DISABLED 行不会产生,这一步是空查询。
+
+    幂等:补发的是**原来那一行**(同一 dedupe_key、同一设备),不新建;DISABLED → QUEUED 是带条件的
+    UPDATE,两次 sweep 并发时只有一次改得到。之后走正常的 `_claim`,设备有效 / 归属 / 账号未停用 /
+    偏好仍开都在那里再核对一次。文案用行上记下的 title / body,不重新渲染。
+
+    时间按 `created_at`(事件发生、行被记下的时刻),不按开关打开的时刻:锁屏上出现一条两天前的
+    「审判有了结论」,比不出现更让人困惑。
+    """
+    if not enabled():
+        return 0
+    now = now or timezone.now()
+    cutoff = now - BACKFILL_WINDOW
+    PushDelivery.objects.filter(status=PushStatus.DISABLED, created_at__lt=cutoff).update(
+        status=PushStatus.EXPIRED, error="未启用期间记录,超过 24 小时不补发", updated_at=now)
+    ids = [str(pk) for pk in PushDelivery.objects.filter(status=PushStatus.DISABLED, created_at__gte=cutoff)
+           .order_by("created_at").values_list("pk", flat=True)[:limit]]
+    if not ids:
+        return 0
+    revived = PushDelivery.objects.filter(pk__in=ids, status=PushStatus.DISABLED).update(
+        status=PushStatus.QUEUED, error="", updated_at=now)
+    for start in range(0, len(ids), SEND_BATCH):
+        enqueue(ids[start:start + SEND_BATCH])  # _claim 只认 QUEUED:没被本次改到的 id 什么也不会发生
+    return revived
 
 
 def check_receipts(now=None, sender=None, limit=RECEIPT_BATCH):

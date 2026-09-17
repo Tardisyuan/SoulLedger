@@ -1982,25 +1982,33 @@
     }
   },
   "soul_push": {
-    "rebirth_submitted": {
-      "title": "Rebirth application submitted",
-      "body": "Your rebirth application is under review. You will be notified when there is a result."
+    "rebirth_approved": {
+      "title": "Rebirth application approved",
+      "body": "Your rebirth application was approved. Open Soul Ledger to see it."
     },
-    "rebirth_appeal_submitted": {
-      "title": "Appeal submitted",
-      "body": "Your appeal is under review. You will be notified when there is a result."
+    "rebirth_rejected": {
+      "title": "Rebirth application rejected",
+      "body": "Your rebirth application was rejected. Open Soul Ledger to see why."
     },
-    "rebirth_result": {
-      "title": "Rebirth application decided",
-      "body": "There is a result on your rebirth application. Open the app to see it."
+    "rebirth_appeal_rejected": {
+      "title": "Appeal rejected",
+      "body": "Your appeal on the rebirth application was rejected. Open Soul Ledger to see why."
     },
     "judgment_result": {
       "title": "Judgment concluded",
-      "body": "Your judgment has concluded. Open the app to see it."
+      "body": "Your judgment has concluded. Open Soul Ledger to see it."
     },
     "disposition_executed": {
       "title": "Disposition carried out",
-      "body": "Your disposition has been carried out. Open the app to see it."
+      "body": "Your disposition has been carried out. Open Soul Ledger to see it."
+    },
+    "residence_started": {
+      "title": "Residence begun",
+      "body": "You have been moved to reside in another civilization. Open Soul Ledger to see it."
+    },
+    "residence_returned": {
+      "title": "Residence ended",
+      "body": "You have returned to your home civilization. Open Soul Ledger to see it."
     }
   }
 }
