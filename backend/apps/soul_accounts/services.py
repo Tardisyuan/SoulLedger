@@ -59,7 +59,7 @@ def audit(action, soul, description, *, actor=None, request=None, resource_id=""
     from apps.core.client_ip import get_client_ip
 
     AuditLog.objects.create(
-        tenant=soul.tenant,
+        tenant=soul.home_tenant,
         user=actor if getattr(actor, "is_authenticated", False) else None,
         action=action,
         resource="soul_account",
@@ -129,7 +129,7 @@ def provision_account(soul, origin, *, actor=None, request=None):
         try:
             with transaction.atomic():
                 user = User.objects.create_user(
-                    username=f"soul.{code}.{cycle}", role=SOUL_ROLE, tenant=soul.tenant,
+                    username=f"soul.{code}.{cycle}", role=SOUL_ROLE, tenant=soul.home_tenant,
                     display_name=soul.name[:100],
                 )
                 user.set_unusable_password()

@@ -57,12 +57,12 @@ class RebirthNotApplicable(APIException):
     default_code = "REBIRTH_NOT_APPLICABLE"
 
     def __init__(self, soul: Soul):
-        civilization = str(soul.civilization)
+        civilization = str(soul.home_civilization)
         super().__init__({
             "code": self.default_code,
             "civilization": civilization,
             "detail": TERMINAL_COSMOLOGY_REASON.get(
-                soul.civilization,
+                soul.home_civilization,
                 f"{civilization} judgment is terminal; there is no next life "
                 f"to inherit into.",
             ),
@@ -580,7 +580,8 @@ class LedgerService:
         service, so the API cannot answer "no rebirth here" while the rebirth
         machinery quietly goes ahead anyway.
         """
-        if soul.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+        # 原属文明:暂居他乡的中国灵魂仍有下一世(2026-09-17)。
+        if soul.home_civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
             raise RebirthNotApplicable(soul)
 
     @classmethod
