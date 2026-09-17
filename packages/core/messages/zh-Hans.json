@@ -1712,7 +1712,8 @@
       "events_retry_pending_webhooks": "重试待投递的 Webhook",
       "scheduler_reap_stale_runs": "收尾卡死的执行记录",
       "scheduler_check_overdue": "检测超时未跑的任务",
-      "scheduler_prune_runs": "清理过期执行记录"
+      "scheduler_prune_runs": "清理过期执行记录",
+      "soul_push_sweep": "灵魂推送:重新入队与查回执"
     },
     "status": {
       "PENDING": "排队中",
@@ -1969,6 +1970,28 @@
       "network": "无法连接服务器,请检查网络后重试",
       "validation": "填写的内容有误,请检查",
       "unknown": "出错了({{code}})"
+    }
+  },
+  "soul_push": {
+    "rebirth_submitted": {
+      "title": "转生申请已提交",
+      "body": "你的转生申请已进入审批,有结果时会通知你。"
+    },
+    "rebirth_appeal_submitted": {
+      "title": "申诉已提交",
+      "body": "你的申诉已进入复核,有结果时会通知你。"
+    },
+    "rebirth_result": {
+      "title": "转生申请有了结果",
+      "body": "你的转生申请有了结果,打开 App 查看。"
+    },
+    "judgment_result": {
+      "title": "审判有了结论",
+      "body": "你的审判有了结论,打开 App 查看。"
+    },
+    "disposition_executed": {
+      "title": "处置已执行",
+      "body": "你的处置已执行,打开 App 查看。"
     }
   }
 }

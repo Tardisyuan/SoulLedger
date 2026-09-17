@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     "apps.social",
     "apps.scheduler",
     "apps.soul_accounts",
+    "apps.soul_push",
 ]
 
 MIDDLEWARE = [
@@ -367,6 +368,14 @@ SCHEDULER_PENDING_GRACE_SECONDS = int(os.getenv("SCHEDULER_PENDING_GRACE_SECONDS
 # recorded is "overdue". 10 minutes = two missed ticks of the 5-minutely job.
 SCHEDULER_OVERDUE_GRACE_SECONDS = int(os.getenv("SCHEDULER_OVERDUE_GRACE_SECONDS", "600"))
 
+# apps.soul_push — 灵魂端推送(Expo Push Service)。见 docs/DEPLOYMENT.md「灵魂端推送」。
+# 默认关:没打开时事件照常记录成投递行,状态标 DISABLED(「未启用」),不访问 Expo、不报错。
+SOUL_PUSH_ENABLED = _env_bool("SOUL_PUSH_ENABLED", "False")
+# 可选。只有在 Expo 控制台开启「增强推送安全」后才必需;设置了就随每个请求带上。
+EXPO_ACCESS_TOKEN = os.getenv("EXPO_ACCESS_TOKEN", "")
+# 发送端口的类路径(apps/soul_push/expo.py 文件头)。测试换成假实现。
+SOUL_PUSH_SENDER = os.getenv("SOUL_PUSH_SENDER", "apps.soul_push.expo.ExpoPushSender")
+
 # Logging
 LOGGING = {
     "version": 1,
@@ -484,6 +493,10 @@ SPECTACULAR_SETTINGS = {
         # frontend 的 enumsMatchTheSchema 测试按名字找它。
         "VerdictEnum": "apps.judgment.models.Verdict.choices",
         "NodeDecisionVerdictEnum": "apps.workflow.serializers.NODE_DECISION_VERDICTS",
+        # apps.soul_push:`platform` 与 `locale` 是太通用的字段名,不钉住的话,下一个同名字段
+        # 进 schema 时这两个会被改成带哈希的名字,客户端的类型名跟着变。
+        "PushPlatformEnum": "apps.soul_push.models.PushPlatform.choices",
+        "PushLocaleEnum": "apps.soul_push.models.PushLocale.choices",
     },
 }
 
