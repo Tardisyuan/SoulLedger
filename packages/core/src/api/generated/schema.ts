@@ -6051,6 +6051,8 @@ export interface components {
             readonly can_appeal: boolean;
             /** Format: date-time */
             readonly cooldown_until: string | null;
+            /** @description 与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为 False。 */
+            readonly can_decide_cross_civilization: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */

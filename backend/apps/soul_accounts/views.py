@@ -185,4 +185,5 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
                 application.pk, request.user, body.validated_data["cross_civilization"])
         except svc.SoulAccountError as exc:
             return _error(exc)
-        return Response(OfficerRebirthApplicationSerializer(application).data, status=status.HTTP_200_OK)
+        return Response(OfficerRebirthApplicationSerializer(application, context={"request": request}).data,
+                        status=status.HTTP_200_OK)

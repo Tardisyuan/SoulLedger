@@ -239,7 +239,7 @@ def test_other_workflows_do_not_require_the_soul_reason(cn_tenant, judge_user):
 OFFICER_KEYS = {
     "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement", "appeal_statement",
     "status", "workflow", "appeal_workflow", "cross_civilization", "rejection_reason", "decided_at",
-    "current_step", "can_appeal", "cooldown_until", "created_at", "updated_at",
+    "current_step", "can_appeal", "cooldown_until", "can_decide_cross_civilization", "created_at", "updated_at",
 }
 
 
@@ -276,3 +276,53 @@ def test_officer_view_carries_the_same_derived_fields_as_me(cn_tenant, judge_use
     appealing = officer.get(officer_url).data
     assert appealing["can_appeal"] is False
     assert appealing["current_step"] == {"node_type": "APPEAL", "approver_role": "JUDGE", "is_appeal": True}
+
+
+def _cross_case_initial(cn_tenant, judge_user, capture):
+    account, client = ready_soul(cn_tenant)
+    return RebirthApplication.objects.get(pk=_submit(client, capture).data["id"]), client
+
+
+def _cross_case_past_initial(cn_tenant, judge_user, capture):
+    application, client = _cross_case_initial(cn_tenant, judge_user, capture)
+    return _decide(judge_user, application, "PASSED", capture=capture), client
+
+
+def _cross_case_appeal(cn_tenant, judge_user, capture):
+    application, client = _cross_case_initial(cn_tenant, judge_user, capture)
+    application = _decide(judge_user, application, "FAILED", capture=capture)
+    with capture(execute=True):
+        assert client.post(f"{APPLY}{application.pk}/appeal/", {}, format="json").status_code == 200
+    application.refresh_from_db()
+    return application, client
+
+
+@pytest.mark.parametrize("stage,who,expected", [
+    ("initial", "judge", (True, 200)),
+    ("initial", "admin", (False, 403)),         # 持有 workflow.approve,不是初审节点的角色
+    ("initial", "moderator", (False, 403)),     # 没有 workflow.approve
+    ("past_initial", "judge", (False, 409)),
+    ("appeal", "judge", (False, 409)),
+])
+def test_can_decide_cross_civilization_agrees_with_the_endpoint(stage, who, expected, cn_tenant, judge_user, cn_admin,
+                                                                 django_capture_on_commit_callbacks):
+    """字段与端点是同一个判定:字段说能,端点就 200;字段说不能,端点就拒绝。"""
+    build = {"initial": _cross_case_initial, "past_initial": _cross_case_past_initial,
+             "appeal": _cross_case_appeal}[stage]
+    application, _ = build(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    user = {"judge": judge_user, "admin": cn_admin,
+            "moderator": User.objects.create_user(username="mod", password="x", role="MODERATOR",
+                                                  tenant=cn_tenant)}[who]
+    base = f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/"
+    field = officer_client(user).get(base).data["can_decide_cross_civilization"]
+    listed = [row for row in _rows(officer_client(user).get("/api/v1/soul-accounts/rebirth-applications/").data)
+              if row["id"] == str(application.pk)]
+    response = officer_client(user).post(f"{base}cross-civilization/", {"cross_civilization": True}, format="json")
+    assert (field, response.status_code) == expected
+    assert [row["can_decide_cross_civilization"] for row in listed] == [field]
+    if field:
+        assert response.data["can_decide_cross_civilization"] is True
+
+
+def _rows(data):
+    return data["results"] if isinstance(data, dict) and "results" in data else data
