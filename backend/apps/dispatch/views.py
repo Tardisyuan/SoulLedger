@@ -20,6 +20,7 @@ from apps.dispatch.serializers import (
     CrossTenantJudgmentConcludeSerializer,
     CrossTenantJudgmentListSerializer,
     CrossTenantJudgmentParticipateSerializer,
+    CrossTenantJudgmentSentenceSerializer,
     CrossTenantJudgmentSerializer,
     DispatchRecordListSerializer,
     DispatchRecordSerializer,
@@ -428,6 +429,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         'participate': ['cross_judgment.create'],
         'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],
+        'sentence': ['cross_judgment.create'],
         'create': ['cross_judgment.create'],
         'update': ['cross_judgment.create'],
         'partial_update': ['cross_judgment.create'],
@@ -568,12 +570,45 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
 
         try:
             CrossTenantJudgmentService.add_participant(
-                judgment, tenant, actor, role
+                judgment, tenant, actor, role,
+                node_order=serializer.validated_data.get("node_order"),
             )
             judgment.refresh_from_db()
             return Response(CrossTenantJudgmentSerializer(judgment).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(request=CrossTenantJudgmentSentenceSerializer, responses=CrossTenantJudgmentSerializer)
+    @action(detail=True, methods=["post"])
+    def sentence(self, request, pk=None):
+        """参与方填**自己文明**那一站的处置内容(docs/ARCHITECTURE-sentence-plan.md §2.1,Q1/Q12)。
+
+        只有该席位所属租户能填,ADMIN 也按令牌上的租户算 —— 与 `_initiator_or_403` 同一立场:
+        各文明定自己的节点,别人不能代填。
+        """
+        judgment = self.get_object()
+        serializer = CrossTenantJudgmentSentenceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        participant = judgment.participants.select_related("participant_tenant").filter(
+            pk=data["participant"], is_deleted=False,
+        ).first()
+        if participant is None:
+            return Response({"error": "Participant not found"}, status=status.HTTP_404_NOT_FOUND)
+        request_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        if request_tenant is None or participant.participant_tenant_id != request_tenant.pk:
+            return Response(
+                {"error": "Only the participant's own tenant may submit its sentence"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            CrossTenantJudgmentService.submit_sentence(
+                participant, data["realm_code"], data.get("sentence_years"), data["notes"], request.user,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        judgment.refresh_from_db()
+        return Response(CrossTenantJudgmentSerializer(judgment).data)
 
     @extend_schema(request=None, responses=CrossTenantJudgmentSerializer)
     @action(detail=True, methods=["post"])

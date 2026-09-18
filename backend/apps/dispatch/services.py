@@ -10,6 +10,7 @@ from apps.dispatch.models import (
     DispatchRecord,
     DispatchStatus,
     JudgmentStatus,
+    ParticipantRole,
 )
 from apps.events.models import EventType, SoulEvent
 
@@ -515,7 +516,7 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     @transaction.atomic
-    def add_participant(judgment, participant_tenant, participant_actor, role):
+    def add_participant(judgment, participant_tenant, participant_actor, role, node_order=None):
         """
         Add a participant to a cross-tenant judgment.
 
@@ -535,6 +536,7 @@ class CrossTenantJudgmentService:
         """
         if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
+        CrossTenantJudgmentService._check_node_order(judgment, participant_tenant, role, node_order)
 
         participant = CrossTenantJudgmentParticipant.objects.create(
             judgment=judgment,
@@ -542,6 +544,7 @@ class CrossTenantJudgmentService:
             participant_actor=participant_actor,
             role=role,
             tenant=participant_tenant,
+            node_order=node_order,
         )
 
         # Notify initiating tenant, through the bus so the row lands in the
@@ -561,6 +564,109 @@ class CrossTenantJudgmentService:
             )
 
         return participant
+
+    @staticmethod
+    def _check_node_order(judgment, participant_tenant, role, node_order):
+        """`node_order` 的规则(docs/ARCHITECTURE-sentence-plan.md §2.1、§2.3、§11 N3)。
+
+        没挂审判的联审是存量那种会议:不收 `node_order`,其余照旧。挂了审判的:
+        ADVISOR 不带节点;其他角色必须带,且不能是发起方自己(原属节点恒为 1,由原审判产出);
+        同一场联审里序号不重复(数据库约束 `unique_cross_judgment_node_order` 兜底并发)。
+        """
+        if judgment.judgment_id is None:
+            if node_order is not None:
+                raise ValueError("node_order only applies to a cross-tenant judgment attached to a judgment")
+            return
+        if role == ParticipantRole.ADVISOR:
+            if node_order is not None:
+                raise ValueError("An ADVISOR carries no sentence node")
+            return
+        if node_order is None:
+            raise ValueError("node_order is required for a CO_JUDGE or CHAIRMAN")
+        if participant_tenant.pk == judgment.initiating_tenant_id:
+            raise ValueError("The initiating tenant's own node is node 1, set by the judgment itself")
+        # 锁联审行:两次 seat 并发查不到对方的序号。约束兜底,锁让它答 400 而不是 500。
+        CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
+        if judgment.participants.filter(node_order=node_order, is_deleted=False).exists():
+            raise ValueError(f"node_order {node_order} is already taken")
+
+    @staticmethod
+    @transaction.atomic
+    def submit_sentence(participant, realm_code, sentence_years, notes, user):
+        """参与方填自己文明那一站的处置内容。联审结束前可重填。
+
+        `realm_code` 必须属于参与方的文明(不跨宇宙观,同 `StatuteCitationService.resolve`);
+        `is_eternal` / `memory_reset` 抄自 realm,与 `DispositionService.create_from_judgment` 同一抄法。
+        """
+        from apps.realms.models import Realm
+        from apps.souls.models import TENANT_CIVILIZATION
+
+        # 锁序 联审 → 参与方,与 `conclude` 相同:结束与填写并发时,要么填写在校验之前落地,
+        # 要么看到 CONCLUDED 被拒 —— 不会有「校验通过之后才改」的节点内容。
+        judgment = CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=participant.judgment_id)
+        locked = CrossTenantJudgmentParticipant.all_objects.select_for_update(of=("self",)).get(pk=participant.pk)
+        if judgment.judgment_id is None:
+            raise ValueError("This cross-tenant judgment is not attached to a judgment; it has no sentence nodes")
+        if judgment.status not in (JudgmentStatus.PROPOSED, JudgmentStatus.ACTIVE):
+            raise ValueError(f"Cannot submit a sentence to a judgment in status: {judgment.status}")
+        if locked.role == ParticipantRole.ADVISOR:
+            raise ValueError("An ADVISOR carries no sentence node")
+        civilization = TENANT_CIVILIZATION.get(participant.participant_tenant.code)
+        realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
+        if realm is None or civilization is None or realm.civilization != civilization:
+            raise ValueError(f"Realm {realm_code!r} is not a realm of {participant.participant_tenant.code}")
+
+        locked.sentence_realm_code = realm.realm_code
+        locked.sentence_years = sentence_years
+        locked.sentence_is_eternal = realm.is_eternal
+        locked.sentence_memory_reset = realm.memory_reset_mechanism
+        locked.sentence_notes = notes
+        locked.sentence_submitted_at = timezone.now()
+        locked.sentence_submitted_by = user
+        locked.save()
+        return locked
+
+    @staticmethod
+    def check_bench_sentences(judgment):
+        """挂了审判的联审结束前的校验(§2.3;Q5)。数据库表达不了,所以在这里。
+
+        返回错误信息列表,空 = 通过。没挂审判的联审不校验(存量会议,行为不变)。
+        """
+        from apps.souls.models import TENANT_CIVILIZATION
+
+        if judgment.judgment_id is None:
+            return []
+        seats = list(
+            judgment.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
+            .select_related("participant_tenant").order_by("node_order")
+        )
+        errors = []
+        missing = [p.participant_tenant.code for p in seats if p.sentence_submitted_at is None]
+        if missing:
+            errors.append(f"Sentence not submitted by: {', '.join(missing)}")
+        orders = [p.node_order for p in seats]
+        if orders != list(range(2, 2 + len(seats))):
+            errors.append(f"node_order must run 2..{1 + len(seats)} without gaps; got {orders}")
+        if seats:
+            last = max((p.node_order or 0) for p in seats)
+            early = [p.node_order for p in seats if p.sentence_is_eternal and p.node_order != last]
+            if early:
+                errors.append(f"An eternal sentence must be the last node; eternal at {early}")
+        from apps.realms.models import Realm
+
+        realms = dict(
+            Realm.all_objects.filter(
+                realm_code__in=[p.sentence_realm_code for p in seats], is_deleted=False,
+            ).values_list("realm_code", "civilization")
+        )
+        foreign = [
+            p.participant_tenant.code for p in seats
+            if p.sentence_submitted_at is not None
+            and realms.get(p.sentence_realm_code) != TENANT_CIVILIZATION.get(p.participant_tenant.code)
+        ]
+        if foreign:
+            errors.append(f"Realm is not of the participant's civilization: {', '.join(foreign)}")
+        return errors
 
     @staticmethod
     @transaction.atomic
@@ -598,6 +704,10 @@ class CrossTenantJudgmentService:
         Returns:
             CrossTenantJudgment: Updated judgment
         """
+        CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
+        errors = CrossTenantJudgmentService.check_bench_sentences(judgment)
+        if errors:
+            raise ValueError("; ".join(errors))
         if not judgment.transition_to(JudgmentStatus.CONCLUDED, concluded_at=timezone.now(), conclusion_type=conclusion_type):
             raise ValueError(f"Cannot conclude judgment in status: {judgment.status}")
 
