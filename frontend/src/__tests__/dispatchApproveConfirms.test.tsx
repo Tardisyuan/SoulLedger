@@ -32,6 +32,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  * step. Aligning the declared dependency to React 19 is the real fix and is
  * foundation-scale work, not something to smuggle into a defect commit.
  *
+ * UPDATE 2026-09-19 (feat/react-19): the declared dependency is now
+ * react@19.2.3, so the paragraphs above are history — `React.use` exists under
+ * jest. The shim stays for a different reason: with the real `use`, the
+ * params promise suspends the first render, and every `render(...)` here is a
+ * synchronous act — React 19 logs "A component suspended inside an `act`
+ * scope, but the `act` call was not awaited" and all 14 tests across the
+ * three files that carry this shim go red (measured). Dropping it means
+ * rewriting those renders as `await act(async () => render(...))`, which is a
+ * test rewrite, not an upgrade fix.
+ *
  * So: this replaces exactly one function, unwrapping the params promise the
  * way React 19's `use` does for an already-resolved promise. WHAT IT
  * THEREFORE CANNOT PROVE: anything about suspense, about an unresolved
