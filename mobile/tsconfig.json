@@ -2,14 +2,14 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": ["jest", "node"],
-    // The same single-React pin as metro.config.js and jest.config.js: packages
-    // npm hoisted to the repo root (@react-navigation/core) would otherwise
-    // read the web admin's @types/react 18.
-    "paths": {
-      "react": ["./node_modules/@types/react"],
-      "react/*": ["./node_modules/@types/react/*"]
-    }
+    "types": ["jest", "node"]
+    // There used to be a `paths` pin to ./node_modules/@types/react here,
+    // against the web admin's @types/react 18 at the root. Since feat/react-19
+    // there is one @types/react 19.2 at the root and that directory no longer
+    // exists; tsc silently fell through to normal resolution (seen with
+    // --traceResolution), so the pin was dead and was removed. If the root
+    // @types/react ever diverges from this app's again, it needs putting back
+    // pointed at wherever npm nests the app's copy.
   },
   "include": ["index.ts", "App.tsx", "src/**/*.ts", "src/**/*.tsx"]
 }
