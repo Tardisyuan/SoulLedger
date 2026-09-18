@@ -93,7 +93,29 @@ test.describe("dashboard 的图表", () => {
     // 而它守不住任何东西。
     await expect(page.getByText("84").first()).toBeVisible();
 
-    // 懒加载 + 挂载动画都在 toHaveCount 的自动重试窗口里。
+    /* 分两段等,而且**第二段的 5 秒不再被下载时间吃掉** —— 这一句此前写的是
+     * 「懒加载 + 挂载动画都在 toHaveCount 的自动重试窗口里」,那是一句没有量过
+     * 的话,而它是假的。2026-09-18 实测(mobile-chrome,机器同时在跑别的套件):
+     *
+     *   - 图表代码是按需取的:`LazyDashboardPieChart` 要到数据回来、组件第一次
+     *     渲染时才发出 `import("recharts")`,而那个 chunk 是 551KB(gzip 142KB)。
+     *     单进程的 `next start` 在负载下发这一个文件要 **3.5–4.3 秒**(同一时刻
+     *     用 curl 取同一个文件是 0.6–2.9 秒,所以慢在服务端,不在浏览器);
+     *   - 扇区容器挂上之后,`<path>` 还要再等 **约 460ms** 才出现 —— recharts 的
+     *     `animationBegin` 默认 400ms;
+     *   - 这两段加起来超过 `toHaveCount` 默认的 5 秒,于是这条用例在高负载下
+     *     偶发变红,报的是 `Received: 0`。失败样本里容器尺寸一律是 311×240、
+     *     path 也总在容器之后 460ms 出现,**页面本身没有缺陷**。
+     *
+     * 所以:先等「图表代码到位、series 挂上了」,再等「画出了几条 path」。
+     * **如实说明代价:两段各有 5 秒,总允许时间因此放宽到约 10 秒。** 换来的是
+     * 两件事分开报错 —— 第一段红 = 图表没挂上(代码没到 / 组件炸了),第二段红
+     * = 挂上了却没画东西,也就是本文件开头那段「容器在、path 一条都没有」的
+     * 真缺陷。
+     */
+    await expect(page.locator(".recharts-pie")).not.toHaveCount(0);
+    await expect(page.locator(".recharts-bar")).not.toHaveCount(0);
+
     await expect(page.locator(".recharts-pie-sector path")).toHaveCount(
       NON_ZERO_STATES
     );
@@ -122,17 +144,32 @@ test.describe("dashboard 的图表", () => {
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/ledger/stats/overview/", {
       ...STATS_WITH_MARKS,
+      // 一个非零 + 两个零,而不是从前的「三个都是零」。改法的理由在下面。
       state_distribution: [
-        { state: "ALIVE", label: "在世", count: 0 },
+        { state: "ALIVE", label: "在世", count: 7 },
         { state: "JUDGING", label: "审判中", count: 0 },
         { state: "LOST", label: "迷失", count: 0 },
       ],
-      tenants: [],
-      total_souls: 0,
+      total_souls: 7,
     });
 
     await page.goto("/dashboard");
-    await expect(page.getByText("0").first()).toBeVisible();
-    await expect(page.locator(".recharts-pie-sector path")).toHaveCount(0);
+    await expect(page.getByText("7").first()).toBeVisible();
+
+    /* 「零值不画」要靠一条**自带前提**的断言来说,而不是靠 `toHaveCount(0)`。
+     *
+     * 这一条此前的形状是「三个数据点都是 0,断言 path 数为 0」。那句断言在图表
+     * 代码还没下载完的时候就已经成立 —— 它可以在骨架屏上通过,一个字都没有验证。
+     * 而先等 `.recharts-pie` 挂上也不够:recharts 的 `animationBegin` 默认 400ms,
+     * 容器挂上之后 path 还要约 460ms 才出现,`toHaveCount(0)` 在这段空窗里照样
+     * 立刻成立。这两点都是变异实测出来的 —— 把页面改成「零值也当 1 画」
+     * (`value: Math.max(s.count, 1)`),两个版本都还是绿的;连「等同屏的柱状图
+     * 先画出 2 条 path」也只在 6 次里红 3 次,因为两个图谁先画完并不保证。
+     *
+     * 现在数据里留一个非零项,断言 **path 恰好一条**:这句话只有在「画图阶段
+     * 已经发生」时才可能成立(零条不等于一条),而它同时就是「两个零值没有各
+     * 占一条」。同一变异下 6 次全红(Expected 1,Received 3)。
+     */
+    await expect(page.locator(".recharts-pie-sector path")).toHaveCount(1);
   });
 });
