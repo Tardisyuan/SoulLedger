@@ -29,7 +29,8 @@ class SentencePlanStatus(models.TextChoices):
     CANCELLED = "CANCELLED", "已撤销"
 
 
-#: 「进行中」:一个灵魂同一时刻至多一份(部分唯一约束)。
+#: 「进行中」:一个灵魂同一时刻至多一份(部分唯一约束)。设计稿 §2.3 写的是 ACTIVE / HELD;
+#: RETRIAL(Q7 之后才加的状态)同样是进行中,一并纳入。
 IN_PROGRESS_PLAN_STATUSES = (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL, SentencePlanStatus.HELD)
 
 
@@ -46,12 +47,11 @@ class SentenceNodeStatus(models.TextChoices):
     CANCELLED = "CANCELLED", "随计划撤销"
 
 
-#: 还没结束的节点:参与「至多一个在路上或受刑中」与「序号唯一」两条约束。
-LIVE_NODE_STATUSES = (
-    SentenceNodeStatus.PENDING, SentenceNodeStatus.DISPATCHING, SentenceNodeStatus.ACTIVE,
-    SentenceNodeStatus.WAITING, SentenceNodeStatus.ETERNAL,
-)
-#: 灵魂正被这个节点占着:同一计划里至多一个。
+#: 不再占序号的节点(设计稿 §2.3:序号唯一只排除这两种)。已完成 / 永久 / 手动结束的
+#: 节点是历史,仍占着自己的序号 —— 加项「序号顺延」只挪 PENDING 的。
+VACATED_NODE_STATUSES = (SentenceNodeStatus.REMOVED, SentenceNodeStatus.CANCELLED)
+#: 灵魂正被这个节点占着:同一计划里至多一个。设计稿 §2.3 写的是 DISPATCHING / ACTIVE;
+#: WAITING(Q7 之后才加的状态)同样是「灵魂在那里」,一并纳入。
 OCCUPYING_NODE_STATUSES = (SentenceNodeStatus.DISPATCHING, SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING)
 
 
@@ -148,7 +148,7 @@ class SentenceNode(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["plan", "order"],
-                condition=Q(is_deleted=False) & Q(status__in=[s.value for s in LIVE_NODE_STATUSES]),
+                condition=Q(is_deleted=False) & ~Q(status__in=[s.value for s in VACATED_NODE_STATUSES]),
                 name="unique_live_sentence_node_order",
             ),
             models.UniqueConstraint(
