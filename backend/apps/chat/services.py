@@ -1,27 +1,32 @@
-"""聊天的全部写路径。四条规则(2026-09-17 用户决定)在这里,**不在客户端**。
+"""聊天的全部写路径。规则(2026-09-17 用户决定)在这里,**不在客户端**。
 
     1. 互相关注          → 自由私聊
-    2. 同文明、非互关    → 私聊请求,每 24 小时一条;对方回过话或两人互关后解除
-    3. 官员收件箱        → 灵魂 → 当前所在殿司;官员在 Web 后台看与回
-    4. 跨文明            → 拒绝
+    2. 同文明、非互关    → 私聊请求(对方须在本文明、搜得到),每 24 小时一条;
+                           对方回过话或两人互关后解除
+    3. 官员收件箱        → 灵魂 → **当前所在**殿司;官员在 Web 后台看与回
+    4. 跨文明            → 不能私聊;官员不进灵魂之间的聊天
+    +  朋友圈禁言(apps/social 的 SocialMute)对灵魂之间的私聊同样生效
+
+关系、文明、禁言都读朋友圈(`apps/social/soul_circle.py`)的那一份,不另写一套:
+互关按**本世账号**、按**当前所在文明**的关注边算;禁言挂在本世账号上。
 
 **规则是服务端执行的,而「服务端」有两半:**
 
-* *这个文件* 决定房间建不建、谁能进、发起方有没有用光这 24 小时的额度;
+* *这个文件* 决定房间建不建、谁能进、每个人在每个房间里是几级;
 * *Synapse* 让绕过这里变得不可能 —— `config/synapse/soulledger_policy.py` 拒绝服务账号
-  以外的任何人建房、邀请、建别名、发状态事件,房间的 power level 又把同一句话说了
-  第二遍。少了这一半,灵魂拿着自己的 access token 直接 `POST /createRoom` 就绕过了
-  上面四条的全部。集成测试 `tests/test_chat_synapse_integration.py` 对着真 Synapse 断言这件事。
+  以外的任何人建房、邀请、建别名、发布房间;房间里的发言权是 power level,状态事件一律
+  100 级而只有服务账号有 100。
 
-**节流的落点是 power level。** 被节流的房间里发起方是 0 级、`events_default` 是 50,
-所以它在 Matrix 里根本发不出消息;唯一的出口是
-`POST /me/chat/conversations/{id}/messages/`,而那条路走这个文件。解除节流 = 把它提回 50,
-从那以后消息不再经过后端 —— 互关房间从一开始就是这样,后端不在消息路径上。
+**发言权只有一个出处:`_speaking_levels`。** 一个灵魂在一个房间里能不能说话,由此刻的事实
+算出来(同文明?被禁言?是被节流的发起方?还在这个殿司?),再由 `sync_rooms` 写进 Synapse。
+事实变化的地方都调它:禁言 / 解禁(signals)、调拨与回归(signals)、解除节流、打开聊天。
+禁言到期没有事件,它在灵魂下一次打开聊天(`chat_session` / 会话列表)时生效。
+ponytail: 到期靠懒同步;要准点解禁再加一个按 `until` 排的任务。
 
-**举报**:朋友圈那一轮(`feat/soul-social-2`)带来审核队列。接入点是
-`officer_messages()` 返回的 `event_id` —— 一条聊天消息的稳定标识只有它,正文不在我们库里。
-到时候在这里加一个 `report(account, conversation, event_id, reason)`,写队列 + 审计。
-本轮**不提供**举报端点:一个收下举报又丢掉的接口比没有更糟。
+**节流的落点是 power level。** 被节流的房间里发起方是 0 级,它在 Matrix 里发不出消息;
+唯一的出口是 `POST /me/chat/conversations/{id}/messages/`,由服务账号转发、内容带
+`io.soulledger.on_behalf_of`(发起方本人 0 级,以它的身份发会被 Synapse 拒)。
+解除节流 = 把它提回 50,从那以后消息不再经过后端。
 
 **审计不含正文。** `audit()` 写的是「谁对哪个会话做了什么」,body 一个字都不传进去。
 """
@@ -30,21 +35,21 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
-from apps.chat.identity import ensure_identity
+from apps.chat.identity import deactivate_identity, display_name, ensure_identity
 from apps.chat.matrix import MatrixError, get_client, login_jwt
 from apps.chat.models import ChatIdentity, Conversation, ConversationKind
-from apps.chat.relations import are_mutual_follows, same_civilization
+from apps.social import soul_circle as circle
 from apps.soul_accounts.services import current_account_of
 
 logger = logging.getLogger(__name__)
 
-#: 自由房间:谁都能发消息,谁都不能改房间(状态事件、邀请一律 100,只有服务账号有 100)。
-FREE_EVENTS_DEFAULT = 0
-#: 被节流的房间:发消息要 50 级,发起方 0 级 —— 于是它发不出。
-THROTTLED_EVENTS_DEFAULT = 50
-MEMBER_LEVEL = 50
+#: 所有房间:发消息要 50 级。能说话的成员 50,不能的 0;状态事件、邀请一律 100。
+EVENTS_DEFAULT = 50
+SPEAK = 50
+SILENT = 0
 
 
 class ChatError(Exception):
@@ -56,12 +61,15 @@ class ChatError(Exception):
         self.status = status
 
 
-def _power_levels(service_user, *, events_default, members):
-    """`members` 是 {mxid: 级别}。状态事件与邀请一律 100:房间的形状只有服务账号能改。"""
+def _power_levels(service_user, members):
+    """`members` 是 {mxid: 级别}。`events: {}` 不能省:`private_chat` 预设自带的 `events`
+    表让 50 级成员能改房间名、头像、置顶(2026-09-18 对真 Synapse 实测改名 200),
+    覆盖成空表之后所有状态事件都落到 `state_default` 100。"""
     return {
         "users": {service_user: 100, **members},
         "users_default": 0,
-        "events_default": events_default,
+        "events": {},
+        "events_default": EVENTS_DEFAULT,
         "state_default": 100,
         "invite": 100,
         "kick": 100,
@@ -72,8 +80,8 @@ def _power_levels(service_user, *, events_default, members):
 
 def audit(action, conversation, description, *, actor=None, request=None):
     """一条审计行,`resource="chat_conversation"`。**签名里没有正文的位置** —— 这是故意的:
-    调用点想塞也塞不进来,只能写进 description,而 description 由这个文件的调用点拼,
-    没有一处用到 body(`test_the_audit_trail_never_contains_a_message_body` 断言不在场)。
+    description 由这个文件的调用点拼,没有一处用到 body
+    (`test_the_audit_trail_never_contains_a_message_body` 断言不在场)。
 
     租户是会话的租户(收件殿司 / 建房时的文明),不是灵魂此刻的所在:审计要能按
     「这件事发生在哪个殿司」查到。
@@ -93,13 +101,88 @@ def audit(action, conversation, description, *, actor=None, request=None):
     )
 
 
+# ── 发言权 ───────────────────────────────────────────────────────────────
+
+
+def _live_identities(conversation):
+    """{soul_id: (本世账号, 未停用的 ChatIdentity)}。前世账号、没开过聊天的不在里面。"""
+    rows = {}
+    for soul in (conversation.soul_a, conversation.soul_b):
+        if soul is None:
+            continue
+        account = current_account_of(soul)
+        if account is None:
+            continue
+        identity = ChatIdentity.objects.filter(account=account, deactivated_at__isnull=True).first()
+        if identity is not None:
+            rows[soul.pk] = (account, identity)
+    return rows
+
+
+def refusal(conversation, account, peer_account=None):
+    """`account` 此刻不能在这个会话里说话的理由(`ChatError`),能说则 None。"""
+    if conversation.closed_at is not None:
+        return ChatError("会话已关闭。", "closed", status=409)
+    if conversation.kind == ConversationKind.OFFICER_INBOX:
+        if account.soul.tenant_id != conversation.tenant_id:
+            return ChatError("你已不在这个殿司,只能给当前所在的殿司写信。", "not_current_hall", status=403)
+        return None
+    if peer_account is None or not circle.same_civilization(account.user, peer_account.user):
+        return ChatError("跨文明的灵魂之间不能私聊。", "cross_civilization", status=403)
+    if circle.active_mute(account.user) is not None:
+        return ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
+    return None
+
+
+def _speaking_levels(conversation, identities):
+    """{mxid: 级别}。每个成员此刻该是几级 —— 发言权的唯一出处。"""
+    levels = {}
+    for soul_id, (account, identity) in identities.items():
+        peer = next((acc for sid, (acc, _) in identities.items() if sid != soul_id), None)
+        if peer is None and conversation.kind == ConversationKind.DIRECT:
+            peer = current_account_of(
+                conversation.soul_b if conversation.soul_a_id == soul_id else conversation.soul_a
+            )
+        blocked = refusal(conversation, account, peer) is not None
+        throttled = conversation.throttled and conversation.initiator_id == soul_id
+        levels[identity.matrix_user_id] = SILENT if blocked or throttled else SPEAK
+    return levels
+
+
+def sync_levels(conversation, *, client=None):
+    identities = _live_identities(conversation)
+    if identities:
+        (client or get_client()).set_user_levels(conversation.room_id, _speaking_levels(conversation, identities))
+
+
+def sync_rooms(soul, *, client=None):
+    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。"""
+    rows = Conversation.objects.filter(Q(soul_a=soul) | Q(soul_b=soul), closed_at__isnull=True)
+    rows = list(rows.select_related("soul_a", "soul_b"))
+    if not rows:
+        return
+    client = client or get_client()
+    for conversation in rows:
+        sync_levels(conversation, client=client)
+
+
+def sync_rooms_quietly(soul):
+    """signals 用:聊天没启用、Synapse 不可达都只记日志,不阻断触发它的那件事(禁言、调拨)。"""
+    try:
+        sync_rooms(soul)
+    except MatrixError as exc:
+        logger.warning("chat: 同步发言权失败 soul=%s: %s", soul.pk, exc)
+
+
 # ── 身份 ─────────────────────────────────────────────────────────────────
 
 
 def chat_session(account):
-    """`GET /me/chat/session/` 的内容。首次调用顺手把 Matrix 用户建出来。"""
+    """`GET /me/chat/session/` 的内容。首次调用顺手把 Matrix 用户建出来;每次都把发言权对一遍
+    (禁言到期在这里生效)。"""
     client = get_client()
     identity = ensure_identity(account, client=client)
+    sync_rooms(account.soul, client=client)
     return {
         "homeserver": settings.MATRIX_PUBLIC_BASEURL,
         "user_id": identity.matrix_user_id,
@@ -110,13 +193,14 @@ def chat_session(account):
 
 
 def deactivate_for_account(account):
-    """转世停用。停用 Matrix 用户 = 同时离开它的所有房间(Synapse 的语义)。
+    """转世停用:先关会话(库里,一定成功),再停 Matrix 用户(= 离开它的所有房间,Synapse 语义)。
 
     聊天没启用、或 Synapse 暂时不可达时**不阻断转世**:账号本身已经登不进来了
     (`SoulJWTAuthentication` 认 `retired_at`),Matrix 侧留一条日志等人工或下次调用。
     """
-    from apps.chat.identity import deactivate_identity
-
+    Conversation.objects.filter(
+        Q(soul_a=account.soul) | Q(soul_b=account.soul), closed_at__isnull=True
+    ).update(closed_at=timezone.now())
     try:
         return deactivate_identity(account)
     except MatrixError as exc:
@@ -132,47 +216,43 @@ def _pair(soul_a, soul_b):
     return (soul_a, soul_b) if str(soul_a.id) < str(soul_b.id) else (soul_b, soul_a)
 
 
-def _identity_of(soul, *, client):
-    account = current_account_of(soul)
-    if account is None or account.retired_at is not None:
-        raise ChatError("对方账号已停用。", "peer_retired", status=409)
-    return ensure_identity(account, client=client)
+def open_direct(account, target_user, *, request=None):
+    """取或建与 `target_user`(朋友圈搜索结果里的那个 user_id)的私聊房间。
 
-
-def open_direct(account, target_soul, *, request=None):
-    """取或建与 `target_soul` 的私聊房间,并说明它现在是不是被节流的。
-
-    返回 `(conversation, created)`。跨文明直接 403;非互关建出来的房间带节流。
+    返回 `(conversation, created)`。对方必须此刻与我同文明、是本世账号 —— 与朋友圈搜索
+    同一个集合(`circle.souls_in`),所以「搜得到」与「能发请求」是同一句话。跨文明与不存在
+    答同一个 404。非互关建出来的房间带节流。
     """
     soul = account.soul
-    if target_soul.pk == soul.pk:
+    if target_user.pk == account.user_id:
         raise ChatError("不能和自己私聊。", "self_conversation", status=400)
-    if not same_civilization(soul, target_soul):
-        raise ChatError("跨文明的灵魂之间不能私聊。", "cross_civilization", status=403)
+    tenant = circle.civilization_of(account.user)
+    if tenant is None or not circle.souls_in(tenant).filter(pk=target_user.pk).exists():
+        raise ChatError("找不到这个灵魂。", "not_found", status=404)
+    target_account = target_user.soul_account
+    target_soul = target_account.soul
+    if circle.active_mute(account.user) is not None:
+        raise ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
 
     low, high = _pair(soul, target_soul)
     existing = Conversation.objects.filter(
-        kind=ConversationKind.DIRECT, soul_a=low, soul_b=high
-    ).first()
+        kind=ConversationKind.DIRECT, soul_a=low, soul_b=high, closed_at__isnull=True
+    ).select_related("soul_a", "soul_b").first()
     if existing is not None:
         return refresh_throttle(existing), False
 
     client = get_client()
     mine = ensure_identity(account, client=client)
-    theirs = _identity_of(target_soul, client=client)
-    mutual = are_mutual_follows(soul, target_soul)
+    theirs = ensure_identity(target_account, client=client)
+    mutual = circle.are_mutual_followers(account.user, target_user)
 
-    members = {mine.matrix_user_id: MEMBER_LEVEL, theirs.matrix_user_id: MEMBER_LEVEL}
-    if not mutual:
-        # 发起方 0 级:它在 Matrix 里发不出消息,只能走后端的 24 小时通道。
-        members[mine.matrix_user_id] = 0
     room_id = client.create_room(
-        name=f"{soul.name} · {target_soul.name}",
-        power_levels=_power_levels(
-            client.service_user,
-            events_default=FREE_EVENTS_DEFAULT if mutual else THROTTLED_EVENTS_DEFAULT,
-            members=members,
-        ),
+        name=f"{display_name(account)} · {display_name(target_account)}",
+        power_levels=_power_levels(client.service_user, {
+            # 非互关:发起方 0 级 —— 它在 Matrix 里发不出消息,只能走后端的 24 小时通道。
+            mine.matrix_user_id: SPEAK if mutual else SILENT,
+            theirs.matrix_user_id: SPEAK,
+        }),
     )
     client.force_join(room_id, mine.matrix_user_id)
     client.force_join(room_id, theirs.matrix_user_id)
@@ -184,60 +264,51 @@ def open_direct(account, target_soul, *, request=None):
                 tenant=soul.tenant, initiator=None if mutual else soul, throttled=not mutual,
             )
     except IntegrityError:
-        # 并发:另一个请求先建成了。刚建的房间没有人能找到它(不在目录里、无别名),
-        # 留一条日志即可。
+        # 并发:另一个请求先建成了。刚建的房间没有人能找到它(不在目录里、无别名)。
         # ponytail: 不清理孤儿房间;真出现频率不为零时再让服务账号 leave + forget。
         logger.warning("chat: 并发建房,丢弃 %s", room_id)
-        return Conversation.objects.get(kind=ConversationKind.DIRECT, soul_a=low, soul_b=high), False
+        return Conversation.objects.get(
+            kind=ConversationKind.DIRECT, soul_a=low, soul_b=high, closed_at__isnull=True
+        ), False
 
-    audit("CREATE", conversation,
-          f"开启私聊({'互关' if mutual else '私聊请求'}):{soul.name} → {target_soul.name}",
+    audit("CREATE", conversation, f"开启私聊({'互关' if mutual else '私聊请求'})",
           actor=account.user, request=request)
     return conversation, True
 
 
 def refresh_throttle(conversation, *, client=None):
-    """被节流的会话:检查一下是不是该解除了,该则解除。
+    """被节流的会话:该解除就解除。两个解除条件(用户决定):**对方回过话**,或**两人已互关**。
 
-    两个解除条件(用户决定):**对方回过话**,或**两人已互关**。对方回话发生在 Matrix 里,
-    后端不在那条路径上 —— 所以这里问 Synapse 一次,而且只在发起方要发言时问
-    (`send_request_message`)或读会话时问,不轮询。
+    对方回话发生在 Matrix 里,后端不在那条路径上 —— 所以这里问 Synapse 一次,只在发起方要
+    发言或打开会话时问,不轮询。
     """
     if not conversation.throttled or conversation.kind != ConversationKind.DIRECT:
         return conversation
     client = client or get_client()
-    initiator_id = conversation.initiator_id
-    initiator, other = (
-        (conversation.soul_a, conversation.soul_b)
-        if conversation.soul_a_id == initiator_id
-        else (conversation.soul_b, conversation.soul_a)
-    )
+    identities = _live_identities(conversation)
+    initiator = identities.get(conversation.initiator_id)
+    other = next((row for sid, row in identities.items() if sid != conversation.initiator_id), None)
+    if initiator is None or other is None:
+        return conversation
+
     reason = None
-
-    if are_mutual_follows(initiator, other):
+    if circle.are_mutual_followers(initiator[0].user, other[0].user):
         reason = "mutual"
-    else:
-        peer = ChatIdentity.objects.filter(soul_id=other.pk, deactivated_at__isnull=True).first()
-        if peer is not None and any(
-            m["sender"] == peer.matrix_user_id for m in client.recent_messages(conversation.room_id)
-        ):
-            reason = "responded"
-
+    elif any(m["sender"] == other[1].matrix_user_id for m in client.recent_messages(conversation.room_id)):
+        reason = "responded"
     if reason is None:
         return conversation
 
-    mine = ChatIdentity.objects.filter(soul_id=initiator_id, deactivated_at__isnull=True).first()
-    if mine is not None:
-        client.set_power_level(conversation.room_id, mine.matrix_user_id, MEMBER_LEVEL)
     conversation.throttled = False
     if reason == "responded":
         conversation.responded_at = timezone.now()
     conversation.save(update_fields=["throttled", "responded_at"])
+    client.set_user_levels(conversation.room_id, _speaking_levels(conversation, identities))
     return conversation
 
 
-def send_request_message(account, conversation, body, *, request=None):
-    """被节流的会话里发一条。**这是 24 小时规则的唯一执行点。**
+def send_direct_message(account, conversation, body, *, request=None):
+    """私聊经后端发一条。被节流时**这是 24 小时规则的唯一执行点**。
 
     行锁 `select_for_update(of=("self",))` 罩住「读上次时间 → 发 → 写这次时间」整段:
     两个并发请求若只靠读后写,两条都会认为额度还在。
@@ -246,10 +317,16 @@ def send_request_message(account, conversation, body, *, request=None):
     """
     with transaction.atomic():
         conversation = (
-            Conversation.objects.select_for_update(of=("self",)).get(pk=conversation.pk)
+            Conversation.objects.select_for_update(of=("self",))
+            .select_related("soul_a", "soul_b").get(pk=conversation.pk)
         )
+        peer_soul = conversation.soul_b if conversation.soul_a_id == account.soul_id else conversation.soul_a
+        error = refusal(conversation, account, current_account_of(peer_soul))
+        if error is not None:
+            raise error
         client = get_client()
         conversation = refresh_throttle(conversation, client=client)
+        identity = _live_identity(account)
         if conversation.throttled:
             if conversation.initiator_id != account.soul_id:
                 raise ChatError("这是对方发起的请求,你可以直接回复。", "not_initiator", status=409)
@@ -257,9 +334,12 @@ def send_request_message(account, conversation, body, *, request=None):
             last = conversation.last_request_at
             if last is not None and (timezone.now() - last).total_seconds() < interval:
                 raise _throttled(last + timedelta(seconds=interval))
-
-        identity = _live_identity(account)
-        event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
+            event_id = client.send_message(
+                conversation.room_id, body, as_localpart=settings.MATRIX_SERVICE_LOCALPART,
+                extra={"io.soulledger.on_behalf_of": identity.matrix_user_id},
+            )
+        else:
+            event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
         now = timezone.now()
         conversation.last_message_at = now
         fields = ["last_message_at"]
@@ -268,7 +348,7 @@ def send_request_message(account, conversation, body, *, request=None):
             fields.append("last_request_at")
         conversation.save(update_fields=fields)
 
-    audit("EXECUTE", conversation, "发送私聊请求" if conversation.throttled else "代发私聊消息",
+    audit("EXECUTE", conversation, "发送私聊请求" if conversation.throttled else "经后端发送私聊消息",
           actor=account.user, request=request)
     return event_id
 
@@ -292,16 +372,15 @@ def _throttled(retry_at):
 def open_officer_inbox(account, *, request=None):
     """灵魂 → **当前所在**殿司。每个殿司一份,暂居时写给暂居地的殿司。
 
-    官员一侧是服务账号:官员不进灵魂的 Matrix 世界(用户决定「官员不进灵魂之间的聊天」,
-    而收件箱里官员的身份是「殿司」而不是某个人)。谁回的记在事件的
-    `io.soulledger.officer` 字段与审计里。
+    官员一侧是服务账号:官员不进灵魂的 Matrix 世界,收件箱里官员的身份是「殿司」而不是
+    某个人。谁回的记在事件的 `io.soulledger.officer` 字段与审计里。
     """
     soul = account.soul
     if soul.tenant_id is None:
         raise ChatError("灵魂当前不属于任何殿司。", "no_tenant", status=409)
 
     existing = Conversation.objects.filter(
-        kind=ConversationKind.OFFICER_INBOX, soul_a=soul, tenant_id=soul.tenant_id
+        kind=ConversationKind.OFFICER_INBOX, soul_a=soul, tenant_id=soul.tenant_id, closed_at__isnull=True
     ).first()
     if existing is not None:
         return existing, False
@@ -310,10 +389,7 @@ def open_officer_inbox(account, *, request=None):
     identity = ensure_identity(account, client=client)
     room_id = client.create_room(
         name=f"{soul.tenant.display_name} · 殿司收件箱",
-        power_levels=_power_levels(
-            client.service_user, events_default=FREE_EVENTS_DEFAULT,
-            members={identity.matrix_user_id: MEMBER_LEVEL},
-        ),
+        power_levels=_power_levels(client.service_user, {identity.matrix_user_id: SPEAK}),
     )
     client.force_join(room_id, identity.matrix_user_id)
     try:
@@ -325,7 +401,7 @@ def open_officer_inbox(account, *, request=None):
     except IntegrityError:
         logger.warning("chat: 并发建收件箱,丢弃 %s", room_id)
         return Conversation.objects.get(
-            kind=ConversationKind.OFFICER_INBOX, soul_a=soul, tenant_id=soul.tenant_id
+            kind=ConversationKind.OFFICER_INBOX, soul_a=soul, tenant_id=soul.tenant_id, closed_at__isnull=True
         ), False
 
     audit("CREATE", conversation, f"开启殿司收件箱:{soul.tenant.display_name}",
@@ -333,32 +409,45 @@ def open_officer_inbox(account, *, request=None):
     return conversation, True
 
 
-def officer_messages(conversation, *, limit=50):
-    """会话正文。**不落我们的库** —— 每次从 Synapse 读。
+def send_inbox_message(account, conversation, body, *, request=None):
+    """灵魂在收件箱里发一条。没有 24 小时限制,也不受朋友圈禁言约束(待拍板:见报告)——
+    禁言的是灵魂之间的发言,给殿司写信(申诉、求助)不在其列。只能写给**当前所在**的殿司。"""
+    error = refusal(conversation, account)
+    if error is not None:
+        raise error
+    identity = _live_identity(account)
+    client = get_client()
+    event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
+    conversation.last_message_at = timezone.now()
+    conversation.save(update_fields=["last_message_at"])
+    audit("EXECUTE", conversation, f"致殿司:{conversation.tenant.display_name}",
+          actor=account.user, request=request)
+    return event_id
 
-    `sender` 换成可读的名字:服务账号 = 殿司(带回复人),灵魂 = 姓名。
+
+def officer_messages(conversation, officer, *, request=None, limit=50):
+    """会话正文。**不落我们的库** —— 每次从 Synapse 读。官员读信本身记一条审计(不含正文)。
+
+    `sender` 换成可读的名字:服务账号 = 殿司(带回复人),灵魂 = 朋友圈显示名。
     """
     client = get_client()
     names = {
-        identity.matrix_user_id: identity.soul.name
-        for identity in ChatIdentity.objects.filter(
-            soul__in=[s for s in (conversation.soul_a, conversation.soul_b) if s is not None]
-        ).select_related("soul")
+        identity.matrix_user_id: display_name(identity.account)
+        for identity in ChatIdentity.objects.filter(soul=conversation.soul_a).select_related(
+            "account__user", "account__soul"
+        )
     }
     rows = []
     for message in client.recent_messages(conversation.room_id, limit=limit):
         from_officer = message["sender"] == client.service_user
-        if from_officer:
-            sender_name = message["officer"] or "殿司"
-        else:
-            sender_name = names.get(message["sender"], "")
         rows.append({
             "event_id": message["event_id"],
             "from_officer": from_officer,
-            "sender_name": sender_name,
+            "sender_name": (message["officer"] or "殿司") if from_officer else names.get(message["sender"], ""),
             "body": message["body"],
             "timestamp": message["timestamp"],
         })
+    audit("READ", conversation, "查看殿司收件箱", actor=officer, request=request)
     return rows
 
 
@@ -366,6 +455,8 @@ def officer_reply(conversation, officer, body, *, request=None):
     """官员回复。以服务账号发出,`io.soulledger.officer` 带上是谁回的。"""
     if conversation.kind != ConversationKind.OFFICER_INBOX:
         raise ChatError("只有殿司收件箱可以由官员回复。", "not_inbox", status=409)
+    if conversation.closed_at is not None:
+        raise ChatError("会话已关闭(对方已转世)。", "closed", status=409)
     client = get_client()
     event_id = client.send_message(
         conversation.room_id, body,
@@ -374,18 +465,5 @@ def officer_reply(conversation, officer, body, *, request=None):
     )
     conversation.last_message_at = timezone.now()
     conversation.save(update_fields=["last_message_at"])
-    audit("EXECUTE", conversation, f"殿司回复:{conversation.soul_a.name}",
-          actor=officer, request=request)
-    return event_id
-
-
-def send_inbox_message(account, conversation, body, *, request=None):
-    """灵魂在收件箱里发一条。没有 24 小时限制 —— 那条规则只管灵魂之间的私聊请求。"""
-    identity = _live_identity(account)
-    client = get_client()
-    event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
-    conversation.last_message_at = timezone.now()
-    conversation.save(update_fields=["last_message_at"])
-    audit("EXECUTE", conversation, f"致殿司:{conversation.tenant.display_name}",
-          actor=account.user, request=request)
+    audit("EXECUTE", conversation, "殿司回复", actor=officer, request=request)
     return event_id

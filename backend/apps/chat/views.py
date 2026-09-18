@@ -17,7 +17,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.chat import services as svc
-from apps.chat.matrix import MatrixError, MatrixNotConfigured
+from apps.chat.matrix import MatrixError, MatrixNotConfiguredError
 from apps.chat.models import Conversation, ConversationKind
 from apps.chat.serializers import (
     ChatErrorSerializer,
@@ -46,7 +46,7 @@ def _error(exc):
 
 def _unavailable(exc):
     """Synapse 没配 / 连不上。两者都不是调用者的错,所以是 503 而不是 4xx 也不是 500。"""
-    code = "chat_not_configured" if isinstance(exc, MatrixNotConfigured) else "chat_unavailable"
+    code = "chat_not_configured" if isinstance(exc, MatrixNotConfiguredError) else "chat_unavailable"
     return Response({"detail": str(exc), "code": code},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -74,7 +74,7 @@ class MeChatConversationsView(ChatView):
     def get(self, request):
         soul_id = self.account.soul_id
         rows = Conversation.objects.filter(
-            Q(soul_a_id=soul_id) | Q(soul_b_id=soul_id)
+            Q(soul_a_id=soul_id) | Q(soul_b_id=soul_id), closed_at__isnull=True
         ).select_related("soul_a", "soul_b", "tenant")
         return Response(ConversationSerializer(rows, many=True, context={"soul_id": soul_id}).data)
 
@@ -83,7 +83,7 @@ class MeChatConversationsView(ChatView):
                               403: ChatErrorSerializer, 409: ChatErrorSerializer,
                               503: ChatErrorSerializer})
     def post(self, request):
-        from apps.souls.models import Soul
+        from apps.authentication.models import User
 
         body = ConversationCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -91,11 +91,8 @@ class MeChatConversationsView(ChatView):
         if body.validated_data["kind"] == ConversationKind.OFFICER_INBOX:
             conversation, created = svc.open_officer_inbox(account, request=request)
         else:
-            # 只在**当前所在**文明里找对方:跨文明在 open_direct 里也会被拒,这里先一层
-            # 是为了不把「这个灵魂存在吗」答成和「他在哪个文明」不同的两种错误。
-            target = Soul.objects.filter(
-                pk=body.validated_data["target_soul"], tenant_id=account.soul.tenant_id
-            ).first()
+            # 存在与否、是否同文明,由 open_direct 按朋友圈搜索的同一个集合判断 —— 这里只取行。
+            target = User.objects.filter(pk=body.validated_data["target_user"]).first()
             if target is None:
                 raise svc.ChatError("找不到这个灵魂。", "not_found", status=404)
             conversation, created = svc.open_direct(account, target, request=request)
@@ -120,7 +117,7 @@ class MeChatMessagesView(ChatView):
         body = MessageSendSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         account = self.account
-        conversation = Conversation.objects.filter(pk=conversation_id).first()
+        conversation = Conversation.objects.filter(pk=conversation_id).select_related("tenant").first()
         if conversation is None or (
             conversation.soul_a_id != account.soul_id and conversation.soul_b_id != account.soul_id
         ):
@@ -129,8 +126,8 @@ class MeChatMessagesView(ChatView):
             event_id = svc.send_inbox_message(account, conversation, body.validated_data["body"],
                                               request=request)
         else:
-            event_id = svc.send_request_message(account, conversation, body.validated_data["body"],
-                                                request=request)
+            event_id = svc.send_direct_message(account, conversation, body.validated_data["body"],
+                                               request=request)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
 
 
@@ -166,7 +163,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     def messages(self, request, pk=None):
         conversation = self.get_object()
         try:
-            rows = svc.officer_messages(conversation)
+            rows = svc.officer_messages(conversation, request.user, request=request)
         except MatrixError as exc:
             return _unavailable(exc)
         return Response(InboxMessageSerializer(rows, many=True).data)

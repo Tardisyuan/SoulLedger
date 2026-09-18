@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
 from apps.chat.models import ChatIdentity, Conversation, ConversationKind
-from tests.chat_support import matrix, room_of  # noqa: F401
+from tests.chat_support import can_speak, matrix, mxid, room_of  # noqa: F401
 from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -42,9 +42,10 @@ def test_a_soul_writes_to_the_hall_it_is_in_now(cn_tenant, eu_tenant, matrix):  
     assert conversation.kind == ConversationKind.OFFICER_INBOX
     assert conversation.tenant_id == cn_tenant.pk
     assert data["hall"] == cn_tenant.display_name
-    # 灵魂自由发言:events_default 0。房间形状仍只有服务账号能改。
+    # 灵魂可以直接在 Matrix 里写;房间形状仍只有服务账号能改。
+    assert can_speak(conversation.room_id, mxid(account))
     levels = room_of(conversation)["power_levels"]
-    assert levels["events_default"] == 0 and levels["state_default"] == 100
+    assert levels["state_default"] == 100 and levels["events"] == {}
     # 同一殿司再开一次:同一个会话。
     again = client.post("/api/v1/me/chat/conversations/", {"kind": "OFFICER_INBOX"}, format="json")
     assert again.status_code == 200 and again.data["id"] == data["id"]
@@ -109,9 +110,11 @@ def test_officer_reads_and_replies_through_the_backend(cn_tenant, matrix):  # no
     newest = api.get(f"{INBOX}{data['id']}/messages/").data[0]
     assert (newest["from_officer"], newest["sender_name"], newest["body"]) == (True, "判官崔珏", "已收到")
 
-    # 审计:谁回的记下了,回了什么没有。
-    row = AuditLog.objects.filter(resource="chat_conversation", user=officer).get()
-    assert "已收到" not in row.description and "我想申诉" not in row.description
+    # 审计:谁读了、谁回的都记下了,信里写了什么没有。
+    rows = AuditLog.objects.filter(resource="chat_conversation", user=officer)
+    assert sorted(rows.values_list("action", flat=True)) == ["EXECUTE", "READ", "READ"]
+    for row in AuditLog.objects.all():
+        assert "已收到" not in row.description and "我想申诉" not in row.description
 
 
 def test_inbox_permission_codes(cn_tenant, matrix):  # noqa: F811
@@ -133,16 +136,17 @@ def test_the_inbox_requires_an_officer_token(cn_tenant, matrix):  # noqa: F811
 
 
 def test_officers_are_never_members_of_soul_to_soul_rooms(cn_tenant, matrix):  # noqa: F811
-    """规则 4 的后半句。私聊房间成员只有两个灵魂(服务账号是创建者,但不以成员身份出现在 force_join 里)。"""
+    """规则 4 的后半句。私聊房间里只有两个灵魂和建房的服务账号;官员接口读不到私聊。"""
     from tests.chat_support import mutual
 
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(cn_tenant, name="乙")
     mutual(a, b)
-    a_client.post("/api/v1/me/chat/conversations/", {"target_soul": str(b.soul_id)}, format="json")
+    a_client.post("/api/v1/me/chat/conversations/", {"target_user": b.user_id}, format="json")
     conversation = Conversation.objects.get(kind=ConversationKind.DIRECT)
     souls = set(ChatIdentity.objects.values_list("matrix_user_id", flat=True))
-    assert room_of(conversation)["members"] == souls
+    # 服务账号是建房者,留在房间里改 power level;它不是任何官员,也没有任何官员接口读私聊。
+    assert room_of(conversation)["members"] == souls | {matrix().service_user}
     # 私聊不在官员收件箱里出现。
     officer = officer_client(_moderator(cn_tenant, "cn_mod"))
     assert officer.get(INBOX).data["results"] == []
@@ -161,7 +165,7 @@ def test_a_retired_account_loses_chat_and_its_matrix_user(cn_tenant, matrix, dja
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(cn_tenant, name="乙")
     mutual(a, b)
-    assert a_client.post("/api/v1/me/chat/conversations/", {"target_soul": str(b.soul_id)},
+    assert a_client.post("/api/v1/me/chat/conversations/", {"target_user": b.user_id},
                          format="json").status_code == 201
     identity = ChatIdentity.objects.get(account=a)
     conversation = Conversation.objects.get()
@@ -185,3 +189,34 @@ def test_retiring_an_account_that_never_chatted_touches_nothing(cn_tenant, matri
     with django_capture_on_commit_callbacks(execute=True):
         retire_account_for_rebirth(a.soul, a.cycle)
     assert not matrix.calls
+
+
+# ── 菜单 ─────────────────────────────────────────────────────────────────
+
+
+def _menu_names(user):
+    response = officer_client(user).get("/api/v1/menus/tree/")
+    assert response.status_code == 200, response.data
+    out = set()
+
+    def walk(items):
+        for item in items:
+            out.add(item["name"])
+            walk(item.get("children") or [])
+
+    walk(response.json().get("results", response.json()) if isinstance(response.json(), dict) else response.json())
+    return out
+
+
+def test_the_inbox_menu_follows_the_codename(cn_tenant):
+    """menus/0018:`/soul-inbox` 挂在「灵魂业务」下,持有 soul_inbox.read 才看得见。
+    变异:把迁移里的 permission 改成 `soul.read` → JUDGE 也看得见,红。"""
+    from apps.menus.models import Menu
+
+    menu = Menu.objects.get(path="/soul-inbox")
+    assert (menu.parent.name, menu.permission) == ("灵魂业务", "soul_inbox.read")
+    assert "殿司收件箱" in _menu_names(_moderator(cn_tenant, "cn_mod"))
+    judge = User.objects.create_user(username="j", password="x", role="JUDGE", tenant=cn_tenant)
+    names = _menu_names(judge)
+    assert names, "断言的主体不空:JUDGE 看得见别的菜单"
+    assert "殿司收件箱" not in names
