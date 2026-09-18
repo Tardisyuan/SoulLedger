@@ -525,6 +525,18 @@ SPECTACULAR_SETTINGS = {
         # 进 schema 时这两个会被改成带哈希的名字,客户端的类型名跟着变。
         "PushPlatformEnum": "apps.soul_push.models.PushPlatform.choices",
         "PushLocaleEnum": "apps.soul_push.models.PushLocale.choices",
+        # 灵魂朋友圈:`my_reaction`(可空的输出字段)与 `reaction_type` 是同一个选项集,
+        # 不钉住就是「multiple names for the same choice set」—— 钉在既有的名字上,
+        # 官员侧 social 的 `ReactionTypeEnum` 不变。
+        "ReactionTypeEnum": "apps.social.models.ReactionType.choices",
+        # 审核后台的五个选项集按字段名会叫 ReasonEnum / TargetTypeEnum / ResolutionEnum /
+        # ReportStatusEnum —— 太通用,并行的 feat/soul-chat 或下一个 `reason` 字段一进 schema,
+        # 这几个名字就会被改成带哈希的,客户端类型名跟着变。带上 Social 前缀钉住。
+        "SocialReportReasonEnum": "apps.social.models.ReportReason.choices",
+        "SocialReportTargetEnum": "apps.social.models.ReportTargetType.choices",
+        "SocialReportResolutionEnum": "apps.social.models.ReportResolution.choices",
+        "SocialReportStatusEnum": "apps.social.models.ReportStatus.choices",
+        "SocialModerationStatusEnum": "apps.social.models.ModerationStatus.choices",
     },
 }
 
