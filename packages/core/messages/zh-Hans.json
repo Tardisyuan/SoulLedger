@@ -2094,6 +2094,10 @@
       "title": "处置已执行",
       "body": "你的处置已执行,打开灵魂簿查看。"
     },
+    "residence_approved": {
+      "title": "即将暂居",
+      "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"
+    },
     "residence_started": {
       "title": "暂居开始",
       "body": "你已被调往另一文明暂居,打开灵魂簿查看。"
@@ -2101,6 +2105,12 @@
     "residence_returned": {
       "title": "暂居结束",
       "body": "你已回归原属文明,打开灵魂簿查看。"
+    }
+  },
+  "official_notify": {
+    "dispatch_return_blocked": {
+      "title": "暂居回归被拦下",
+      "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"
     }
   }
 }

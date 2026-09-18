@@ -33,8 +33,9 @@ export const FONT_ASSETS = {
   IBMPlexMono_400Regular,
   IBMPlexMono_500Medium,
   SourceSerif4_400Regular,
+  // Regular only: nothing sets quoted words in a heavier weight. The 600 subset
+  // (1.49 MB) was bundled with no caller and removed 2026-09-18.
   NotoSerifSC_400: require("../assets/fonts/NotoSerifSC-Subset-400.ttf"),
-  NotoSerifSC_600: require("../assets/fonts/NotoSerifSC-Subset-600.ttf"),
 };
 
 type FontName = keyof typeof FONT_ASSETS;
@@ -43,17 +44,17 @@ export const family = {
   ui: { 400: "Archivo_400Regular", 500: "Archivo_500Medium", 600: "Archivo_600SemiBold" },
   mono: { 400: "IBMPlexMono_400Regular", 500: "IBMPlexMono_500Medium" },
   serif: "SourceSerif4_400Regular",
-  serifHan: { 400: "NotoSerifSC_400", 600: "NotoSerifSC_600" },
+  serifHan: "NotoSerifSC_400",
 } as const satisfies {
   ui: Record<number, FontName>;
   mono: Record<number, FontName>;
   serif: FontName;
-  serifHan: Record<number, FontName>;
+  serifHan: FontName;
 };
 
 const HAN = /[㐀-鿿豈-﫿]/;
 
 /** The family for quoted words: the bundled Noto Serif SC when they contain Han characters, else Source Serif 4. */
-export function quoteFamily(text: string, weight: 400 | 600 = 400): string {
-  return HAN.test(text) ? family.serifHan[weight] : family.serif;
+export function quoteFamily(text: string): string {
+  return HAN.test(text) ? family.serifHan : family.serif;
 }
