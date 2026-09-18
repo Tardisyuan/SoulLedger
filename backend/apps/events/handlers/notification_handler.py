@@ -48,6 +48,7 @@ class NotificationHandler(DomainEventHandler):
         notification_type = notif_data.get("notification_type", NotificationType.SYSTEM)
         related_resource = notif_data.get("related_resource")
         related_id = notif_data.get("related_id")
+        params = notif_data.get("params") or {}
 
         if not user_id:
             logger.warning("NotificationHandler: missing user_id in payload")
@@ -67,6 +68,7 @@ class NotificationHandler(DomainEventHandler):
             notification_type=notification_type,
             related_resource=related_resource,
             related_id=related_id,
+            params=params,
         )
 
         # The row's id goes into the payload the WebSocketHandler will send.

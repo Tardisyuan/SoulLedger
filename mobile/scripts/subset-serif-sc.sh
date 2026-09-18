@@ -4,12 +4,14 @@
 #
 #   bash mobile/scripts/subset-serif-sc.sh
 #
-# Writes mobile/assets/fonts/NotoSerifSC-Subset-{400,600}.ttf and OFL.txt.
+# Writes mobile/assets/fonts/NotoSerifSC-Subset-400.ttf and OFL.txt. Regular
+# only: the 600 SemiBold subset had no caller in the app and was dropped
+# 2026-09-18 (it was another 1.49 MB in every build).
 # Characters outside the subset fall back to the system font on the device.
 #
 # SOURCES (pinned, both from the npm registry):
-#   Font     @expo-google-fonts/noto-serif-sc@0.4.3 — Noto Serif SC 400Regular /
-#            600SemiBold, SIL Open Font License 1.1 (LICENSE_FONT in the package,
+#   Font     @expo-google-fonts/noto-serif-sc@0.4.3 — Noto Serif SC 400Regular,
+#            SIL Open Font License 1.1 (LICENSE_FONT in the package,
 #            copied to OFL.txt). Redistribution of a modified (subset) version is
 #            allowed; the Reserved Font Name clause does not apply to "Noto".
 #   Charset  table-of-general-standard-chinese-characters@0.0.0 (MIT) — a JSON
@@ -23,7 +25,7 @@
 #
 # TOOL: fonttools' pyftsubset (via `uvx --from fonttools` when not installed).
 #
-# SIZE: target ≤ 1.5 MB per weight; ~96% of it is glyph outlines (glyf), so
+# SIZE: target ≤ 1.5 MB; ~96% of it is glyph outlines (glyf), so
 # the savings come from what is NOT needed for horizontal quoted text: hinting,
 # vertical metrics (vhea/vmtx/VORG) and the glyph variants that only the
 # vertical and stylistic OpenType features pull in. Keeping every feature
@@ -54,18 +56,15 @@ UNICODES="U+0020-007E,U+00A0-00BF,U+00D7,U+00F7,U+2010-2027,U+2030-203B,U+2E3A-2
 
 if command -v pyftsubset >/dev/null 2>&1; then SUBSET=(pyftsubset); else SUBSET=(uvx --from fonttools pyftsubset); fi
 
-for pair in "400:400Regular" "600:600SemiBold"; do
-  weight="${pair%%:*}"; dir="${pair##*:}"
-  "${SUBSET[@]}" "$WORK/font/package/$dir/NotoSerifSC_$dir.ttf" \
-    --text-file="$WORK/tier1.txt" \
-    --unicodes="$UNICODES" \
-    --layout-features='kern,liga,locl,ccmp,halt,palt' \
-    --no-hinting \
-    --desubroutinize \
-    --name-IDs='1,2,3,4,5,6' \
-    --drop-tables+=DSIG,vhea,vmtx,VORG \
-    --output-file="$OUT/NotoSerifSC-Subset-$weight.ttf"
-done
+"${SUBSET[@]}" "$WORK/font/package/400Regular/NotoSerifSC_400Regular.ttf" \
+  --text-file="$WORK/tier1.txt" \
+  --unicodes="$UNICODES" \
+  --layout-features='kern,liga,locl,ccmp,halt,palt' \
+  --no-hinting \
+  --desubroutinize \
+  --name-IDs='1,2,3,4,5,6' \
+  --drop-tables+=DSIG,vhea,vmtx,VORG \
+  --output-file="$OUT/NotoSerifSC-Subset-400.ttf"
 cp "$WORK/font/package/LICENSE_FONT" "$OUT/OFL.txt"
 
-ls -l "$OUT"/NotoSerifSC-Subset-*.ttf
+ls -l "$OUT"/NotoSerifSC-Subset-400.ttf

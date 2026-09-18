@@ -357,6 +357,10 @@ class FollowCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Cannot follow a user from another tenant."
             )
+        # Soul accounts live in the soul circle (apps/social/soul_circle.py);
+        # an officer-API follow edge onto one would be invisible to both sides.
+        if getattr(value, "role", None) == "SOUL":
+            raise serializers.ValidationError("Cannot follow a soul account.")
         return value
 
 

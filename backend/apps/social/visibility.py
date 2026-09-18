@@ -50,6 +50,12 @@ def visible_posts(request, queryset=None):
         if tenant
         else []
     )
+    # Souls have their own circle (apps/social/soul_circle.py, 2026-09-17 user
+    # decision: officers do not appear in a soul's circle). The converse holds
+    # here: a soul's post is never an officer-API post, so an officer cannot
+    # read, comment on or react to it through /api/v1/social/ — moderation
+    # goes through /api/v1/social-moderation/ instead.
+    qs = qs.exclude(author__role="SOUL")
     return qs.filter(
         Q(visibility="PUBLIC")
         | Q(visibility="TENANT", tenant=tenant)

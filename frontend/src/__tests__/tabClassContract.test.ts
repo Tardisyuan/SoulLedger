@@ -92,6 +92,8 @@ describe("the six strips read it from there", () => {
   const EXPECTED_IMPORTERS = [
     "app/dashboard/page.tsx",
     "app/judgment/page.tsx",
+    // 2026-09-18:朋友圈审核的四个分区(举报 / 待审 / 敏感词 / 禁言),第七条读它的条带。
+    "app/moderation/page.tsx",
     "app/notifications/page.tsx",
     "app/workflow/[id]/page.tsx",
     "app/workflow/page.tsx",

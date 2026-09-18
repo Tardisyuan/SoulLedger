@@ -27,6 +27,8 @@ class NotificationType(models.TextChoices):
     DISPATCH_REJECTED = "DISPATCH_REJECTED", "Dispatch Rejected"
     CROSS_JUDGMENT_INVITED = "CROSS_JUDGMENT_INVITED", "Cross-Tenant Judgment Invitation"
     JUDGMENT_CONCLUDED = "JUDGMENT_CONCLUDED", "Judgment Concluded"
+    # 暂居的自动回归被未结案审判拦下(`DispatchService.record_blocked_return`)。
+    DISPATCH_RETURN_BLOCKED = "DISPATCH_RETURN_BLOCKED", "Dispatch Return Blocked"
 
 
 class UserNotification(AuditUserFields, models.Model):
@@ -59,6 +61,9 @@ class UserNotification(AuditUserFields, models.Model):
         null=True,
         help_text="UUID of related resource",
     )
+    # 分语言的类型(`apps/notifications/messages.py::KIND_BY_TYPE`)读时渲染要的参数。
+    # 不进 API:序列化器用它渲染 title / message,客户端看到的仍是那两个字段。
+    params = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -81,6 +86,7 @@ def notify_user(
     notification_type: str = NotificationType.SYSTEM,
     related_resource: str = None,
     related_id: str = None,
+    params: dict = None,
 ) -> None:
     """
     Publish a notification event to EventBus.
@@ -119,6 +125,7 @@ def notify_user(
             "notification_type": notification_type,
             "related_resource": related_resource,
             "related_id": related_id,
+            "params": params or {},
         },
         tenant_code=tenant_code,
         permission="notification.read",

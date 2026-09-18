@@ -3942,6 +3942,699 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/social/comments/{comment_id}/:
+    delete:
+      operationId: v1_me_social_comment_delete
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/feed/:
+    get:
+      operationId: v1_me_social_feed_retrieve
+      description: |-
+        本文明 + 关注。四档可见性已经把「关注」算进去了(FOLLOWERS 档只对关注者可见),
+        所以动态流就是 `visible_posts_for_soul` 本身,按时间倒序。
+
+        `?author=<user_id>` 是同一个查询加一个作者过滤 —— 个人主页的帖子列表用它,
+        不另开一条可见性路径。
+      parameters:
+      - in: query
+        name: author
+        schema:
+          type: integer
+        description: 只看这个灵魂的帖子(user_id)。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoulPosts'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+    post:
+      operationId: v1_me_social_feed_create
+      description: |-
+        本文明 + 关注。四档可见性已经把「关注」算进去了(FOLLOWERS 档只对关注者可见),
+        所以动态流就是 `visible_posts_for_soul` 本身,按时间倒序。
+
+        `?author=<user_id>` 是同一个查询加一个作者过滤 —— 个人主页的帖子列表用它,
+        不另开一条可见性路径。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulPostCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulPostCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulPostCreate'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulPost'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/followers/:
+    get:
+      operationId: v1_me_social_followers
+      description: |-
+        我关注的人。只列此刻同文明的:换了文明,旧文明的关注边不再算数
+        (`is_following` 同一条规则)。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoulCards'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/following/:
+    get:
+      operationId: v1_me_social_following
+      description: |-
+        我关注的人。只列此刻同文明的:换了文明,旧文明的关注边不再算数
+        (`is_following` 同一条规则)。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoulCards'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/posts/{post_id}/:
+    get:
+      operationId: v1_me_social_post_detail
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulPost'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+    delete:
+      operationId: v1_me_social_post_delete
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/posts/{post_id}/comments/:
+    get:
+      operationId: v1_me_social_posts_comments_retrieve
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoulComments'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+    post:
+      operationId: v1_me_social_posts_comments_create
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulCommentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulCommentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulCommentCreate'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulComment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/posts/{post_id}/reaction/:
+    post:
+      operationId: v1_me_social_posts_reaction_create
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulReactionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulReactionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulReactionRequest'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulReactionState'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/reports/:
+    post:
+      operationId: v1_me_social_reports_create
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulReportRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulReportRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulReportRequest'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulReportResult'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/search/:
+    get:
+      operationId: v1_me_social_search_list
+      description: |-
+        本文明内按显示名或灵魂编号找人。
+
+        编号是**精确**匹配而不是模糊:它是登录名,模糊匹配等于把本文明的登录名表按前缀
+        交出去。结果里也不回显编号(`SoulCardSerializer` 的字段白名单)—— 知道编号的人
+        才找得到那个人,而找到了也拿不到更多。
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 显示名(包含)或灵魂编号(精确)。
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SoulSearchResult'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/status/:
+    get:
+      operationId: v1_me_social_status_retrieve
+      description: App 进朋友圈第一件事问这里:能不能写、禁言到什么时候、今天还能举报几次。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialStatus'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/users/{user_id}/:
+    get:
+      operationId: v1_me_social_profile
+      description: 一个灵魂的主页。跨文明、官员、不存在 —— 同一个 404。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulProfile'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/users/{user_id}/follow/:
+    post:
+      operationId: v1_me_social_follow
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulFollowState'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+    delete:
+      operationId: v1_me_social_unfollow
+      description: |-
+        本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+
+        DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+        聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulFollowState'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
   /api/v1/menus/:
     get:
       operationId: v1_menus_list
@@ -6409,6 +7102,878 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaskRun'
           description: ''
+  /api/v1/social-moderation/comments/:
+    get:
+      operationId: v1_social_moderation_comments_list
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: query
+        name: moderation_status
+        schema:
+          type: string
+          enum:
+          - HIDDEN
+          - PENDING
+          - PUBLISHED
+        description: |-
+          * `PUBLISHED` - Published
+          * `PENDING` - Pending review
+          * `HIDDEN` - Hidden
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModeratedCommentList'
+          description: ''
+  /api/v1/social-moderation/comments/{id}/:
+    get:
+      operationId: v1_social_moderation_comments_retrieve
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Comment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModeratedComment'
+          description: ''
+  /api/v1/social-moderation/comments/{id}/approve/:
+    post:
+      operationId: v1_social_moderation_comments_approve_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Comment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/comments/{id}/delete/:
+    post:
+      operationId: v1_social_moderation_comments_delete_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Comment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: 已删除
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/comments/{id}/hide/:
+    post:
+      operationId: v1_social_moderation_comments_hide_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Comment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/comments/{id}/restore/:
+    post:
+      operationId: v1_social_moderation_comments_restore_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Comment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/mutes/:
+    get:
+      operationId: v1_social_moderation_mutes_list
+      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSocialMuteList'
+          description: ''
+    post:
+      operationId: v1_social_moderation_mutes_create
+      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MuteCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MuteCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MuteCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialMute'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/mutes/{id}/lift/:
+    post:
+      operationId: v1_social_moderation_mutes_lift_create
+      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this social mute.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialMute'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/posts/:
+    get:
+      operationId: v1_social_moderation_posts_list
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: query
+        name: moderation_status
+        schema:
+          type: string
+          enum:
+          - HIDDEN
+          - PENDING
+          - PUBLISHED
+        description: |-
+          * `PUBLISHED` - Published
+          * `PENDING` - Pending review
+          * `HIDDEN` - Hidden
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModeratedPostList'
+          description: ''
+  /api/v1/social-moderation/posts/{id}/:
+    get:
+      operationId: v1_social_moderation_posts_retrieve
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Post.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModeratedPost'
+          description: ''
+  /api/v1/social-moderation/posts/{id}/approve/:
+    post:
+      operationId: v1_social_moderation_posts_approve_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Post.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/posts/{id}/delete/:
+    post:
+      operationId: v1_social_moderation_posts_delete_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Post.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: 已删除
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/posts/{id}/hide/:
+    post:
+      operationId: v1_social_moderation_posts_hide_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Post.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/posts/{id}/restore/:
+    post:
+      operationId: v1_social_moderation_posts_restore_create
+      description: |-
+        待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+
+        默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Post.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModerationAction'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/reports/:
+    get:
+      operationId: v1_social_moderation_reports_list
+      description: 举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - DISMISSED
+          - OPEN
+          - RESOLVED
+        description: |-
+          * `OPEN` - Open
+          * `RESOLVED` - Resolved
+          * `DISMISSED` - Dismissed
+      - in: query
+        name: target_type
+        schema:
+          type: string
+          enum:
+          - COMMENT
+          - POST
+          - USER
+        description: |-
+          * `POST` - Post
+          * `COMMENT` - Comment
+          * `USER` - User
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReportList'
+          description: ''
+  /api/v1/social-moderation/reports/{id}/:
+    get:
+      operationId: v1_social_moderation_reports_retrieve
+      description: 举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this report.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+          description: ''
+  /api/v1/social-moderation/reports/{id}/resolve/:
+    post:
+      operationId: v1_social_moderation_reports_resolve_create
+      description: 举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this report.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveReport'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveReport'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveReport'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/sensitive-words/:
+    get:
+      operationId: v1_social_moderation_sensitive_words_list
+      description: 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSensitiveWordList'
+          description: ''
+    post:
+      operationId: v1_social_moderation_sensitive_words_create
+      description: 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveWord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveWord'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveWord'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/sensitive-words/{id}/:
+    delete:
+      operationId: v1_social_moderation_sensitive_words_destroy
+      description: 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive word.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/social/comments/:
     get:
       operationId: v1_social_comments_list
@@ -13204,6 +14769,111 @@ components:
         * `DIRECTORY` - 目录
         * `MENU` - 菜单
         * `BUTTON` - 按钮
+    ModeratedComment:
+      type: object
+      description: 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。
+      properties:
+        id:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/ModerationAuthor'
+        content:
+          type: string
+        moderation_status:
+          $ref: '#/components/schemas/SocialModerationStatusEnum'
+        open_report_count:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+        post:
+          type: string
+          format: uuid
+      required:
+      - author
+      - content
+      - create_time
+      - id
+      - moderation_status
+      - open_report_count
+      - post
+    ModeratedPost:
+      type: object
+      description: 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。
+      properties:
+        id:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/ModerationAuthor'
+        content:
+          type: string
+        moderation_status:
+          $ref: '#/components/schemas/SocialModerationStatusEnum'
+        open_report_count:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+        visibility:
+          type: string
+        comment_count:
+          type: integer
+      required:
+      - author
+      - comment_count
+      - content
+      - create_time
+      - id
+      - moderation_status
+      - open_report_count
+      - visibility
+    ModerationAction:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+    ModerationAuthor:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+      required:
+      - display_name
+      - user_id
+    ModerationError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
+    MuteCreate:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        days:
+          type: integer
+          maximum: 365
+          minimum: 1
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - days
+      - user_id
     NodeDecisionVerdictEnum:
       enum:
       - PASSED
@@ -13298,6 +14968,7 @@ components:
       - DISPATCH_REJECTED
       - CROSS_JUDGMENT_INVITED
       - JUDGMENT_CONCLUDED
+      - DISPATCH_RETURN_BLOCKED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -13312,6 +14983,7 @@ components:
         * `DISPATCH_REJECTED` - Dispatch Rejected
         * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
         * `JUDGMENT_CONCLUDED` - Judgment Concluded
+        * `DISPATCH_RETURN_BLOCKED` - Dispatch Return Blocked
     NullEnum:
       enum:
       - null
@@ -13868,6 +15540,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Menu'
+    PaginatedModeratedCommentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModeratedComment'
+    PaginatedModeratedPostList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModeratedPost'
     PaginatedOfficerRebirthApplicationList:
       type: object
       required:
@@ -14006,6 +15724,75 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Reincarnation'
+    PaginatedReportList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Report'
+    PaginatedSensitiveWordList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitiveWord'
+    PaginatedSocialMuteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialMute'
     PaginatedSoulAccountList:
       type: object
       required:
@@ -14029,6 +15816,46 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SoulAccount'
+    PaginatedSoulCards:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulCard'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    PaginatedSoulComments:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulComment'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedSoulEventList:
       type: object
       required:
@@ -14075,6 +15902,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SoulList'
+    PaginatedSoulPosts:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulPost'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedStatuteList:
       type: object
       required:
@@ -15276,6 +17123,9 @@ components:
           maxLength: 100
     PatchedUserNotification:
       type: object
+      description: |-
+        分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+        请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
       properties:
         id:
           type: integer
@@ -16356,6 +18206,104 @@ components:
       - soul
       - soul_name
       - target_realm
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        target_type:
+          allOf:
+          - $ref: '#/components/schemas/SocialReportTargetEnum'
+          readOnly: true
+        post:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        comment:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        target_user:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SocialReportStatusEnum'
+          readOnly: true
+        report_count:
+          type: integer
+          readOnly: true
+        content_excerpt:
+          type: string
+          readOnly: true
+        content_status:
+          type: string
+          readOnly: true
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportEntry'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_reported_at:
+          type: string
+          format: date-time
+          readOnly: true
+        resolution:
+          allOf:
+          - $ref: '#/components/schemas/SocialReportResolutionEnum'
+          readOnly: true
+        resolution_note:
+          type: string
+          readOnly: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - comment
+      - content_excerpt
+      - content_status
+      - created_at
+      - entries
+      - id
+      - last_reported_at
+      - post
+      - report_count
+      - resolution
+      - resolution_note
+      - resolved_at
+      - status
+      - target_type
+      - target_user
+    ReportEntry:
+      type: object
+      properties:
+        reporter:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          nullable: true
+        reason:
+          $ref: '#/components/schemas/SocialReportReasonEnum'
+        detail:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - detail
+      - reason
+      - reporter
     ResetPassword:
       type: object
       description: Serializer for requesting password reset.
@@ -16381,6 +18329,22 @@ components:
             pattern: ^\+?[1-9]\d{6,14}$
           - type: string
             maxLength: 0
+    ResolveReport:
+      type: object
+      properties:
+        resolution:
+          $ref: '#/components/schemas/SocialReportResolutionEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+        mute_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          nullable: true
+      required:
+      - resolution
     RevealedCredential:
       type: object
       properties:
@@ -16678,6 +18642,30 @@ components:
       description: |-
         * `GLOBAL` - 全局
         * `ORG` - 组织级
+    SensitiveWord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        word:
+          type: string
+          maxLength: 50
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - id
+      - word
     SentenceReading:
       type: object
       description: |-
@@ -16744,6 +18732,100 @@ components:
       description: |-
         * `error` - error
         * `warning` - warning
+    SocialModerationStatusEnum:
+      enum:
+      - PUBLISHED
+      - PENDING
+      - HIDDEN
+      type: string
+      description: |-
+        * `PUBLISHED` - Published
+        * `PENDING` - Pending review
+        * `HIDDEN` - Hidden
+    SocialMute:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+        until:
+          type: string
+          format: date-time
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        lifted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_active
+      - lifted_at
+      - reason
+      - until
+      - user
+    SocialReportReasonEnum:
+      enum:
+      - SPAM
+      - ABUSE
+      - SEXUAL
+      - ILLEGAL
+      - OTHER
+      type: string
+      description: |-
+        * `SPAM` - Spam
+        * `ABUSE` - Abuse
+        * `SEXUAL` - Sexual content
+        * `ILLEGAL` - Illegal or harmful
+        * `OTHER` - Other
+    SocialReportResolutionEnum:
+      enum:
+      - HIDE
+      - DELETE
+      - MUTE
+      - DISMISS
+      type: string
+      description: |-
+        * `HIDE` - Hide content
+        * `DELETE` - Delete content
+        * `MUTE` - Mute author
+        * `DISMISS` - Dismiss
+    SocialReportStatusEnum:
+      enum:
+      - OPEN
+      - RESOLVED
+      - DISMISSED
+      type: string
+      description: |-
+        * `OPEN` - Open
+        * `RESOLVED` - Resolved
+        * `DISMISSED` - Dismissed
+    SocialReportTargetEnum:
+      enum:
+      - POST
+      - COMMENT
+      - USER
+      type: string
+      description: |-
+        * `POST` - Post
+        * `COMMENT` - Comment
+        * `USER` - User
     Soul:
       type: object
       description: |-
@@ -16977,6 +19059,74 @@ components:
       - soul_code
       - soul_name
       - username
+    SoulCard:
+      type: object
+      description: 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          description: false:前世账号,只读、不可关注。
+      required:
+      - avatar
+      - display_name
+      - is_active
+      - user_id
+    SoulComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        post:
+          type: string
+          format: uuid
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        author:
+          $ref: '#/components/schemas/SoulCard'
+        content:
+          type: string
+        moderation_status:
+          $ref: '#/components/schemas/SocialModerationStatusEnum'
+        is_mine:
+          type: boolean
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+      required:
+      - author
+      - content
+      - create_time
+      - id
+      - is_mine
+      - moderation_status
+      - parent
+      - post
+    SoulCommentCreate:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 500
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - content
     SoulDateProblem:
       type: object
       description: |-
@@ -17043,6 +19193,13 @@ components:
       - id
       - soul
       - soul_name
+    SoulFollowState:
+      type: object
+      properties:
+        following:
+          type: boolean
+      required:
+      - following
     SoulHomeTenant:
       type: object
       properties:
@@ -17175,6 +19332,129 @@ components:
       - account
       - refresh
       - soul_code
+    SoulPost:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/SoulCard'
+        content:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/VisibilityEnum'
+        moderation_status:
+          allOf:
+          - $ref: '#/components/schemas/SocialModerationStatusEnum'
+          description: |-
+            非 PUBLISHED 只会出现在作者本人看到的数据里:PENDING=审核中,HIDDEN=已被隐藏。
+
+            * `PUBLISHED` - Published
+            * `PENDING` - Pending review
+            * `HIDDEN` - Hidden
+        comment_count:
+          type: integer
+        reaction_count:
+          type: integer
+        my_reaction:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        is_mine:
+          type: boolean
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+      required:
+      - author
+      - comment_count
+      - content
+      - create_time
+      - id
+      - is_mine
+      - moderation_status
+      - my_reaction
+      - reaction_count
+      - visibility
+    SoulPostCreate:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 2000
+        visibility:
+          allOf:
+          - $ref: '#/components/schemas/VisibilityEnum'
+          default: TENANT
+      required:
+      - content
+    SoulProfile:
+      type: object
+      description: 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          description: false:前世账号,只读、不可关注。
+        is_self:
+          type: boolean
+        is_following:
+          type: boolean
+        is_followed_by:
+          type: boolean
+        is_mutual:
+          type: boolean
+        followers_count:
+          type: integer
+        following_count:
+          type: integer
+        post_count:
+          type: integer
+          description: 当前查看者看得见的帖子数。
+      required:
+      - avatar
+      - display_name
+      - followers_count
+      - following_count
+      - is_active
+      - is_followed_by
+      - is_following
+      - is_mutual
+      - is_self
+      - post_count
+      - user_id
+    SoulReactionRequest:
+      type: object
+      properties:
+        reaction_type:
+          allOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          default: LIKE
+    SoulReactionState:
+      type: object
+      properties:
+        reacted:
+          type: boolean
+        reaction_type:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - reacted
+      - reaction_type
     SoulRecord:
       type: object
       properties:
@@ -17317,6 +19597,92 @@ components:
           type: string
       required:
       - refresh
+    SoulReportRequest:
+      type: object
+      properties:
+        target_type:
+          $ref: '#/components/schemas/SocialReportTargetEnum'
+        target_id:
+          type: string
+          description: 帖子 / 评论的 UUID,或用户的 user_id。
+          maxLength: 64
+        reason:
+          $ref: '#/components/schemas/SocialReportReasonEnum'
+        detail:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - reason
+      - target_id
+      - target_type
+    SoulReportResult:
+      type: object
+      properties:
+        counted:
+          type: boolean
+          description: false:你已经举报过这条,本次不重复计数。
+        reports_remaining:
+          type: integer
+      required:
+      - counted
+      - reports_remaining
+    SoulSearchResult:
+      type: object
+      description: 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          description: false:前世账号,只读、不可关注。
+        is_following:
+          type: boolean
+      required:
+      - avatar
+      - display_name
+      - is_active
+      - is_following
+      - user_id
+    SoulSocialError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        muted_until:
+          type: string
+          format: date-time
+      required:
+      - code
+      - detail
+    SoulSocialStatus:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        can_write:
+          type: boolean
+        muted_until:
+          type: string
+          format: date-time
+          nullable: true
+        reports_remaining:
+          type: integer
+      required:
+      - can_write
+      - muted_until
+      - reports_remaining
+      - user_id
     SoulStateDistribution:
       type: object
       description: |-
@@ -17939,6 +20305,9 @@ components:
       - username
     UserNotification:
       type: object
+      description: |-
+        分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+        请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
       properties:
         id:
           type: integer
