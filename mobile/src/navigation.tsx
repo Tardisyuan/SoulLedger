@@ -72,6 +72,9 @@ function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDe
   return <ApplicationDetailScreen id={route.params.id} landed={route.params.landed} />;
 }
 
+/** Notification ids already landed in this process. */
+const HANDLED_TAPS = new Set<string>();
+
 /**
  * The push glue that needs the navigator: taps (while running, and the one that
  * cold-started the app) become a landing, held until a soul is signed in and
@@ -85,14 +88,23 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
 
   useEffect(() => {
     let alive = true;
-    const hold = (data: unknown) => {
-      pending.current = landingOf(data);
+    const hold = (r: Notifications.NotificationResponse) => {
+      // The "last response" outlives this component (a retryBoot remounts it): a tap
+      // is landed once, never again — or it lands a later session on an old record.
+      const id = r.notification.request.identifier;
+      if (HANDLED_TAPS.has(id)) return;
+      HANDLED_TAPS.add(id);
+      pending.current = landingOf(r.notification.request.content.data);
       setArrived((n) => n + 1);
     };
     Notifications.getLastNotificationResponseAsync()
-      .then((r) => alive && r && hold(r.notification.request.content.data))
+      .then((r) => {
+        if (!r) return;
+        Notifications.clearLastNotificationResponse();
+        if (alive) hold(r);
+      })
       .catch(() => {});
-    const sub = Notifications.addNotificationResponseReceivedListener((r) => hold(r.notification.request.content.data));
+    const sub = Notifications.addNotificationResponseReceivedListener(hold);
     return () => {
       alive = false;
       sub.remove();

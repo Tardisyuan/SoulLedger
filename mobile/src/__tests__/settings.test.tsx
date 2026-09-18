@@ -62,9 +62,12 @@ function signedIn(extra: Record<string, Reply | Reply[]> = {}) {
   });
 }
 
+let tapCount = 0;
+/** A tap on a NEW notification: every real notification has its own identifier. */
 const tap = (data: unknown) =>
   act(() => {
-    for (const listener of system.responseListeners) listener({ notification: { request: { content: { data } } } });
+    const identifier = `tap-${++tapCount}`;
+    for (const listener of system.responseListeners) listener({ notification: { request: { identifier, content: { data } } } });
   });
 
 const route = () => navigationRef.getCurrentRoute();
@@ -381,11 +384,30 @@ describe("tapping a notification", () => {
     expect(screen.queryByTestId("failure")).toBeNull();
   });
 
-  it("the tap that cold-started the app lands once the session is back", async () => {
-    system.lastResponse = { notification: { request: { content: { data: { screen: "ApplicationDetail", application_id: APP_ID } } } } };
-    signedIn({ [`/me/rebirth-applications/${APP_ID}/`]: { status: 200, data: application({ id: APP_ID }) } });
-    renderApp();
+  it("the tap that cold-started the app lands once the session is back — and only once", async () => {
+    system.lastResponse = {
+      notification: { request: { identifier: "cold-1", content: { data: { screen: "ApplicationDetail", application_id: APP_ID } } } },
+    };
+    const calls = signedIn({ [`/me/rebirth-applications/${APP_ID}/`]: { status: 200, data: application({ id: APP_ID }) } });
+    const first = renderApp();
     expect(await screen.findByTestId("landing-highlight")).toBeTruthy();
+    // Cleared on the OS side too: a JS reload empties HANDLED_TAPS, the OS's copy survives it.
+    expect(system.lastResponse).toBeNull();
+    // Some platforms hand the cold-start tap to the listener as well: same id, no second landing.
+    act(() => {
+      for (const listener of system.responseListeners)
+        listener({ notification: { request: { identifier: "cold-1", content: { data: { screen: "Life" } } } } });
+    });
+    await act(async () => {});
+    expect(route()?.name).toBe("ApplicationDetail");
+    first.unmount();
+    // The navigator mounts again (retryBoot does this; so did Fast Refresh on the simulator,
+    // where the old tap re-landed another soul on 周芸's application): no second landing.
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await act(async () => {});
+    expect(route()?.name).toBe("Life");
+    expect(calls.filter((c) => c.url === `/me/rebirth-applications/${APP_ID}/`)).toHaveLength(1);
   });
 
   it("a tap that meets the login screen lands after sign-in, not before", async () => {
