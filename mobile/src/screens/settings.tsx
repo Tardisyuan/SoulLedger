@@ -200,7 +200,7 @@ function Toggle({
       onPress={() => onChange(!value)}
       style={({ pressed }) => [
         stack ? styles.toggleStacked : styles.row,
-        { paddingHorizontal: gutter, borderBottomColor: theme.hair },
+        { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" },
         pressed && styles.pressed,
       ]}
     >
@@ -271,7 +271,7 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
           </View>
         </View>
       ) : null}
-      {perm === "undetermined" ? (
+      {perm === "undetermined" && available ? (
         <View style={[styles.notice, { paddingHorizontal: gutter }]}>
           <Button testID="enable-push" kind="secondary" title={t("soul_app.settings.enable_push")} onPress={() => navigation.navigate("NotificationPrimer")} />
         </View>
