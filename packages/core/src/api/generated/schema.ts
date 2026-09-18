@@ -1718,6 +1718,283 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/social/comments/{comment_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        delete: operations["v1_me_social_comment_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/feed/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 本文明 + 关注。四档可见性已经把「关注」算进去了(FOLLOWERS 档只对关注者可见),
+         *     所以动态流就是 `visible_posts_for_soul` 本身,按时间倒序。
+         *
+         *     `?author=<user_id>` 是同一个查询加一个作者过滤 —— 个人主页的帖子列表用它,
+         *     不另开一条可见性路径。
+         */
+        get: operations["v1_me_social_feed_retrieve"];
+        put?: never;
+        /**
+         * @description 本文明 + 关注。四档可见性已经把「关注」算进去了(FOLLOWERS 档只对关注者可见),
+         *     所以动态流就是 `visible_posts_for_soul` 本身,按时间倒序。
+         *
+         *     `?author=<user_id>` 是同一个查询加一个作者过滤 —— 个人主页的帖子列表用它,
+         *     不另开一条可见性路径。
+         */
+        post: operations["v1_me_social_feed_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/followers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 我关注的人。只列此刻同文明的:换了文明,旧文明的关注边不再算数
+         *     (`is_following` 同一条规则)。
+         */
+        get: operations["v1_me_social_followers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/following/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 我关注的人。只列此刻同文明的:换了文明,旧文明的关注边不再算数
+         *     (`is_following` 同一条规则)。
+         */
+        get: operations["v1_me_social_following"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/posts/{post_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        get: operations["v1_me_social_post_detail"];
+        put?: never;
+        post?: never;
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        delete: operations["v1_me_social_post_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/posts/{post_id}/comments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        get: operations["v1_me_social_posts_comments_retrieve"];
+        put?: never;
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        post: operations["v1_me_social_posts_comments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/posts/{post_id}/reaction/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        post: operations["v1_me_social_posts_reaction_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/reports/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        post: operations["v1_me_social_reports_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 本文明内按显示名或灵魂编号找人。
+         *
+         *     编号是**精确**匹配而不是模糊:它是登录名,模糊匹配等于把本文明的登录名表按前缀
+         *     交出去。结果里也不回显编号(`SoulCardSerializer` 的字段白名单)—— 知道编号的人
+         *     才找得到那个人,而找到了也拿不到更多。
+         */
+        get: operations["v1_me_social_search_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description App 进朋友圈第一件事问这里:能不能写、禁言到什么时候、今天还能举报几次。 */
+        get: operations["v1_me_social_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/users/{user_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 一个灵魂的主页。跨文明、官员、不存在 —— 同一个 404。 */
+        get: operations["v1_me_social_profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/users/{user_id}/follow/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        post: operations["v1_me_social_follow"];
+        /**
+         * @description 本模块的公共外壳:把 `SocialError` 答成 `{detail, code}` + 它自己的状态码。
+         *
+         *     DRF 的 `handle_exception` 只认 `APIException`,而服务层刻意不 import DRF ——
+         *     聊天代理(feat/soul-chat)也要 import `soul_circle`。于是在边界上翻译一次。
+         */
+        delete: operations["v1_me_social_unfollow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/menus/": {
         parameters: {
             query?: never;
@@ -2908,6 +3185,379 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/comments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        get: operations["v1_social_moderation_comments_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/comments/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        get: operations["v1_social_moderation_comments_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/comments/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_comments_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/comments/{id}/delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_comments_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/comments/{id}/hide/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_comments_hide_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/comments/{id}/restore/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_comments_restore_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/mutes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        get: operations["v1_social_moderation_mutes_list"];
+        put?: never;
+        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        post: operations["v1_social_moderation_mutes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/mutes/{id}/lift/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        post: operations["v1_social_moderation_mutes_lift_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        get: operations["v1_social_moderation_posts_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        get: operations["v1_social_moderation_posts_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_posts_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/{id}/delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_posts_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/{id}/hide/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_posts_hide_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/{id}/restore/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 待审 / 已隐藏内容的队列,加四个处置动作。帖子与评论各继承一次 —— 差别只有模型。
+         *
+         *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
+         */
+        post: operations["v1_social_moderation_posts_restore_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/reports/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。 */
+        get: operations["v1_social_moderation_reports_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/reports/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。 */
+        get: operations["v1_social_moderation_reports_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/reports/{id}/resolve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。 */
+        post: operations["v1_social_moderation_reports_resolve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/sensitive-words/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。 */
+        get: operations["v1_social_moderation_sensitive_words_list"];
+        put?: never;
+        /** @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。 */
+        post: operations["v1_social_moderation_sensitive_words_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/sensitive-words/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。 */
+        delete: operations["v1_social_moderation_sensitive_words_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6019,6 +6669,50 @@ export interface components {
          * @enum {string}
          */
         MenuTypeEnum: "DIRECTORY" | "MENU" | "BUTTON";
+        /** @description 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。 */
+        ModeratedComment: {
+            /** Format: uuid */
+            id: string;
+            readonly author: {
+                [key: string]: unknown;
+            } | null;
+            content: string;
+            moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            readonly open_report_count: number;
+            /** Format: date-time */
+            create_time: string;
+            /** Format: uuid */
+            post: string;
+        };
+        /** @description 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。 */
+        ModeratedPost: {
+            /** Format: uuid */
+            id: string;
+            readonly author: {
+                [key: string]: unknown;
+            } | null;
+            content: string;
+            moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            readonly open_report_count: number;
+            /** Format: date-time */
+            create_time: string;
+            visibility: string;
+            comment_count: number;
+        };
+        ModerationAction: {
+            /** @default  */
+            reason: string;
+        };
+        ModerationError: {
+            detail: string;
+            code: string;
+        };
+        MuteCreate: {
+            user_id: number;
+            days: number;
+            /** @default  */
+            reason: string;
+        };
         /**
          * @description * `PASSED` - PASSED
          *     * `FAILED` - FAILED
@@ -6400,6 +7094,36 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Menu"][];
         };
+        PaginatedModeratedCommentList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ModeratedComment"][];
+        };
+        PaginatedModeratedPostList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ModeratedPost"][];
+        };
         PaginatedOfficerRebirthApplicationList: {
             /** @example 123 */
             count: number;
@@ -6490,6 +7214,51 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Reincarnation"][];
         };
+        PaginatedReportList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Report"][];
+        };
+        PaginatedSensitiveWordList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SensitiveWord"][];
+        };
+        PaginatedSocialMuteList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SocialMute"][];
+        };
         PaginatedSoulAccountList: {
             /** @example 123 */
             count: number;
@@ -6504,6 +7273,18 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["SoulAccount"][];
+        };
+        PaginatedSoulCards: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["SoulCard"][];
+        };
+        PaginatedSoulComments: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["SoulComment"][];
         };
         PaginatedSoulEventList: {
             /** @example 123 */
@@ -6534,6 +7315,12 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["SoulList"][];
+        };
+        PaginatedSoulPosts: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["SoulPost"][];
         };
         PaginatedStatuteList: {
             /** @example 123 */
@@ -7743,6 +8530,31 @@ export interface components {
             /** Format: date-time */
             readonly reincarnated_at: string;
         };
+        Report: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly target_type: components["schemas"]["SocialReportTargetEnum"];
+            /** Format: uuid */
+            readonly post: string | null;
+            /** Format: uuid */
+            readonly comment: string | null;
+            readonly target_user: {
+                [key: string]: unknown;
+            } | null;
+            readonly status: components["schemas"]["SocialReportStatusEnum"];
+            readonly report_count: number;
+            readonly content_excerpt: string;
+            readonly content_status: string;
+            readonly entries: unknown[];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly last_reported_at: string;
+            readonly resolution: components["schemas"]["SocialReportResolutionEnum"];
+            readonly resolution_note: string;
+            /** Format: date-time */
+            readonly resolved_at: string | null;
+        };
         /** @description Serializer for requesting password reset. */
         ResetPassword: {
             /** Format: email */
@@ -7751,6 +8563,12 @@ export interface components {
         ResetRequest: {
             contact_email?: string;
             contact_phone?: string;
+        };
+        ResolveReport: {
+            resolution: components["schemas"]["SocialReportResolutionEnum"];
+            /** @default  */
+            note: string;
+            mute_days?: number | null;
         };
         RevealedCredential: {
             soul_code: string;
@@ -7877,6 +8695,16 @@ export interface components {
          * @enum {string}
          */
         ScopeEnum: "GLOBAL" | "ORG";
+        SensitiveWord: {
+            /** Format: uuid */
+            readonly id: string;
+            word: string;
+            readonly created_by: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         /**
          * @description kind=SENTENCE — Republic X's two roads.
          *
@@ -7913,6 +8741,59 @@ export interface components {
          * @enum {string}
          */
         SeverityEnum: "error" | "warning";
+        /**
+         * @description * `PUBLISHED` - Published
+         *     * `PENDING` - Pending review
+         *     * `HIDDEN` - Hidden
+         * @enum {string}
+         */
+        SocialModerationStatusEnum: "PUBLISHED" | "PENDING" | "HIDDEN";
+        SocialMute: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly user: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: date-time */
+            readonly until: string;
+            readonly reason: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly lifted_at: string | null;
+            readonly is_active: boolean;
+        };
+        /**
+         * @description * `SPAM` - Spam
+         *     * `ABUSE` - Abuse
+         *     * `SEXUAL` - Sexual content
+         *     * `ILLEGAL` - Illegal or harmful
+         *     * `OTHER` - Other
+         * @enum {string}
+         */
+        SocialReportReasonEnum: "SPAM" | "ABUSE" | "SEXUAL" | "ILLEGAL" | "OTHER";
+        /**
+         * @description * `HIDE` - Hide content
+         *     * `DELETE` - Delete content
+         *     * `MUTE` - Mute author
+         *     * `DISMISS` - Dismiss
+         * @enum {string}
+         */
+        SocialReportResolutionEnum: "HIDE" | "DELETE" | "MUTE" | "DISMISS";
+        /**
+         * @description * `OPEN` - Open
+         *     * `RESOLVED` - Resolved
+         *     * `DISMISSED` - Dismissed
+         * @enum {string}
+         */
+        SocialReportStatusEnum: "OPEN" | "RESOLVED" | "DISMISSED";
+        /**
+         * @description * `POST` - Post
+         *     * `COMMENT` - Comment
+         *     * `USER` - User
+         * @enum {string}
+         */
+        SocialReportTargetEnum: "POST" | "COMMENT" | "USER";
         /**
          * @description Soul detail. Field access is enforced in two layers, deliberately.
          *
@@ -7995,6 +8876,34 @@ export interface components {
             readonly contact_email_masked: string;
             readonly contact_phone_masked: string;
         };
+        /** @description 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。 */
+        SoulCard: {
+            user_id: number;
+            display_name: string;
+            /** Format: uri */
+            readonly avatar: string | null;
+            /** @description false:前世账号,只读、不可关注。 */
+            readonly is_active: boolean;
+        };
+        SoulComment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            post: string;
+            /** Format: uuid */
+            parent: string | null;
+            author: components["schemas"]["SoulCard"];
+            content: string;
+            moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            readonly is_mine: boolean;
+            /** Format: date-time */
+            create_time: string;
+        };
+        SoulCommentCreate: {
+            content: string;
+            /** Format: uuid */
+            parent?: string | null;
+        };
         /**
          * @description The shape `_soul_level_date_problems` returns, for the schema only.
          *
@@ -8030,6 +8939,9 @@ export interface components {
             actor?: string;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        SoulFollowState: {
+            following: boolean;
         };
         SoulHomeTenant: {
             code: string;
@@ -8073,6 +8985,57 @@ export interface components {
             refresh: string;
             soul_code: string;
             account: components["schemas"]["MeAccount"];
+        };
+        SoulPost: {
+            /** Format: uuid */
+            id: string;
+            author: components["schemas"]["SoulCard"];
+            content: string;
+            visibility: components["schemas"]["VisibilityEnum"];
+            /**
+             * @description 非 PUBLISHED 只会出现在作者本人看到的数据里:PENDING=审核中,HIDDEN=已被隐藏。
+             *
+             *     * `PUBLISHED` - Published
+             *     * `PENDING` - Pending review
+             *     * `HIDDEN` - Hidden
+             */
+            moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            comment_count: number;
+            reaction_count: number;
+            my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly is_mine: boolean;
+            /** Format: date-time */
+            create_time: string;
+        };
+        SoulPostCreate: {
+            content: string;
+            /** @default TENANT */
+            visibility: components["schemas"]["VisibilityEnum"];
+        };
+        /** @description 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。 */
+        SoulProfile: {
+            user_id: number;
+            display_name: string;
+            /** Format: uri */
+            readonly avatar: string | null;
+            /** @description false:前世账号,只读、不可关注。 */
+            readonly is_active: boolean;
+            is_self: boolean;
+            is_following: boolean;
+            is_followed_by: boolean;
+            is_mutual: boolean;
+            followers_count: number;
+            following_count: number;
+            /** @description 当前查看者看得见的帖子数。 */
+            post_count: number;
+        };
+        SoulReactionRequest: {
+            /** @default LIKE */
+            reaction_type: components["schemas"]["ReactionTypeEnum"];
+        };
+        SoulReactionState: {
+            reacted: boolean;
+            reaction_type: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         SoulRecord: {
             /** Format: uuid */
@@ -8140,6 +9103,42 @@ export interface components {
         SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
         SoulRefreshRequest: {
             refresh: string;
+        };
+        SoulReportRequest: {
+            target_type: components["schemas"]["SocialReportTargetEnum"];
+            /** @description 帖子 / 评论的 UUID,或用户的 user_id。 */
+            target_id: string;
+            reason: components["schemas"]["SocialReportReasonEnum"];
+            /** @default  */
+            detail: string;
+        };
+        SoulReportResult: {
+            /** @description false:你已经举报过这条,本次不重复计数。 */
+            counted: boolean;
+            reports_remaining: number;
+        };
+        /** @description 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。 */
+        SoulSearchResult: {
+            user_id: number;
+            display_name: string;
+            /** Format: uri */
+            readonly avatar: string | null;
+            /** @description false:前世账号,只读、不可关注。 */
+            readonly is_active: boolean;
+            is_following: boolean;
+        };
+        SoulSocialError: {
+            detail: string;
+            code: string;
+            /** Format: date-time */
+            muted_until?: string;
+        };
+        SoulSocialStatus: {
+            user_id: number;
+            can_write: boolean;
+            /** Format: date-time */
+            muted_until: string | null;
+            reports_remaining: number;
         };
         /**
          * @description `label` is the raw state member today, same value as `state` — the
@@ -11715,6 +12714,740 @@ export interface operations {
             };
         };
     };
+    v1_me_social_comment_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_feed_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 只看这个灵魂的帖子(user_id)。 */
+                author?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSoulPosts"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_feed_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulPostCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulPostCreate"];
+                "multipart/form-data": components["schemas"]["SoulPostCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulPost"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_followers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSoulCards"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_following: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSoulCards"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_post_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulPost"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_post_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_posts_comments_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSoulComments"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_posts_comments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulCommentCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulCommentCreate"];
+                "multipart/form-data": components["schemas"]["SoulCommentCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulComment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_posts_reaction_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SoulReactionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulReactionRequest"];
+                "multipart/form-data": components["schemas"]["SoulReactionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulReactionState"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_reports_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulReportRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulReportRequest"];
+                "multipart/form-data": components["schemas"]["SoulReportRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulReportResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_search_list: {
+        parameters: {
+            query: {
+                /** @description 显示名(包含)或灵魂编号(精确)。 */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSearchResult"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialStatus"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulProfile"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_follow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulFollowState"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_unfollow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulFollowState"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
     v1_menus_list: {
         parameters: {
             query?: {
@@ -13624,6 +15357,839 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TaskRun"];
                 };
+            };
+        };
+    };
+    v1_social_moderation_comments_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `PUBLISHED` - Published
+                 *     * `PENDING` - Pending review
+                 *     * `HIDDEN` - Hidden
+                 */
+                moderation_status?: "HIDDEN" | "PENDING" | "PUBLISHED";
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedModeratedCommentList"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_comments_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Comment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeratedComment"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_comments_approve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Comment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_comments_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Comment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_comments_hide_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Comment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_comments_restore_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Comment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSocialMuteList"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MuteCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["MuteCreate"];
+                "multipart/form-data": components["schemas"]["MuteCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialMute"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_lift_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this social mute. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialMute"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `PUBLISHED` - Published
+                 *     * `PENDING` - Pending review
+                 *     * `HIDDEN` - Hidden
+                 */
+                moderation_status?: "HIDDEN" | "PENDING" | "PUBLISHED";
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedModeratedPostList"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Post. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeratedPost"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_approve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Post. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Post. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_hide_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Post. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_restore_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Post. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModerationAction"];
+                "application/x-www-form-urlencoded": components["schemas"]["ModerationAction"];
+                "multipart/form-data": components["schemas"]["ModerationAction"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_reports_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /**
+                 * @description * `OPEN` - Open
+                 *     * `RESOLVED` - Resolved
+                 *     * `DISMISSED` - Dismissed
+                 */
+                status?: "DISMISSED" | "OPEN" | "RESOLVED";
+                /**
+                 * @description * `POST` - Post
+                 *     * `COMMENT` - Comment
+                 *     * `USER` - User
+                 */
+                target_type?: "COMMENT" | "POST" | "USER";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReportList"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_reports_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this report. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_reports_resolve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this report. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveReport"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResolveReport"];
+                "multipart/form-data": components["schemas"]["ResolveReport"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSensitiveWordList"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SensitiveWord"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWord"];
+                "multipart/form-data": components["schemas"]["SensitiveWord"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWord"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this sensitive word. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
