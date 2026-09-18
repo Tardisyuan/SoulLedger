@@ -1,10 +1,10 @@
-"""聊天四条规则的服务端执行(2026-09-17 用户决定)。**全部经真实 URL,不直接调服务函数。**
+"""聊天规则的服务端执行。**全部经真实 URL,不直接调服务函数。**
 
 1. 互关 → 自由私聊                          test_mutual_follows_get_a_free_room
-2. 同文明非互关 → 请求,24 小时一条;          test_a_stranger_gets_one_request_per_24_hours
+2. 非互关 → 请求,24 小时一条;              test_a_stranger_gets_one_request_per_24_hours
    对方回复 / 互关后解除                       test_a_reply_lifts_the_limit / test_following_back_lifts_the_limit
 3. 殿司收件箱                                 tests/test_chat_officer_inbox.py
-4. 跨文明拒绝                                 test_cross_civilization_is_refused
+4. 私聊不看文明(2026-09-19 用户改定)        test_souls_in_different_civilizations_*
 +  禁言、调拨 / 回归、转世                      tests/test_chat_moves_and_mutes.py
 
 每条的变异证明写在测试的 docstring 里(改哪一行、哪条会红)。
@@ -273,24 +273,36 @@ def test_a_soul_outside_the_conversation_cannot_post_into_it(cn_tenant, matrix):
     assert not matrix.sent
 
 
-# ── 规则 4:跨文明 ─────────────────────────────────────────────────────────
+# ── 规则 4:私聊不看文明 ────────────────────────────────────────────────────
 
 
-def test_cross_civilization_is_refused(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """跨文明与不存在答同一个 404(与朋友圈搜索同一个集合:别的文明的人搜不到,也请求不到)。
-    变异:`open_direct` 里把 `circle.souls_in(tenant)` 换成 `User.objects.all()` → 201,红。"""
+def test_souls_in_different_civilizations_who_follow_each_other_chat_freely(cn_tenant, eu_tenant, matrix):  # noqa: F811
+    """两条关注边记在不同的文明上(关注者各自所在),照样是互关。
+    变异:`_mutual` 改用朋友圈的 `circle.are_mutual_followers`(要求此刻同文明)→ throttled 为真,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(eu_tenant, name="Beatrice")
-    follow(a, b)  # 关注边也不行:文明先于关系
-
+    mutual(a, b)
     response = _open(a_client, b)
-    assert response.status_code == 404 and response.data["code"] == "not_found"
-    assert not Conversation.objects.exists()
-    assert not matrix.rooms
+    assert response.status_code == 201, response.data
+    assert response.data["throttled"] is False
+    conversation = Conversation.objects.get()
+    assert can_speak(conversation.room_id, mxid(a)) and can_speak(conversation.room_id, mxid(b))
 
 
-def test_only_souls_the_search_can_find_can_be_asked(cn_tenant, matrix):  # noqa: F811
-    """官员、前世(已停用)账号不在朋友圈搜索的集合里,也不能被发起私聊。"""
+def test_souls_in_different_civilizations_who_do_not_follow_each_other_send_a_request(
+        cn_tenant, eu_tenant, matrix):  # noqa: F811
+    """变异:`_reachable` 加回「同一文明」过滤(`soul_account__soul__tenant_id=account.soul.tenant_id`)→ 404,红。"""
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(eu_tenant, name="Beatrice")
+    response = _open(a_client, b)
+    assert response.status_code == 201 and response.data["throttled"] is True
+    assert _send(a_client, response.data["id"], "打扰").status_code == 201
+    assert _send(a_client, response.data["id"], "在吗").status_code == 429
+
+
+def test_only_current_soul_accounts_can_be_asked(cn_tenant, matrix):  # noqa: F811
+    """官员、前世(已停用)账号、不存在的 id:同一个 404。
+    变异:`_reachable` 去掉 `role=circle.SOUL_ROLE` → 官员能被发起私聊,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     officer = User.objects.create_user(username="pan", password="x", role="JUDGE", tenant=cn_tenant)
     assert a_client.post(CONVERSATIONS, {"target_user": officer.pk}, format="json").status_code == 404
@@ -300,15 +312,6 @@ def test_only_souls_the_search_can_find_can_be_asked(cn_tenant, matrix):  # noqa
     assert _open(a_client, b).status_code == 404
     assert a_client.post(CONVERSATIONS, {"target_user": 999999}, format="json").status_code == 404
     assert not matrix.rooms
-
-
-def test_residence_counts_as_the_current_civilization(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """暂居:文明按**当前所在**算。乙原属欧洲、暂居中国 → 与甲同文明。"""
-    a, a_client = ready_soul(cn_tenant, name="甲")
-    b, _ = ready_soul(eu_tenant, name="Beatrice")
-    b.soul.tenant = cn_tenant  # home_tenant 仍是 eu
-    b.soul.save()
-    assert _open(a_client, b).status_code == 201
 
 
 def test_cannot_open_a_chat_with_yourself(cn_tenant, matrix):  # noqa: F811
