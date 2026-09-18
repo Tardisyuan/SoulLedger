@@ -11,6 +11,7 @@ from rest_framework.routers import DefaultRouter
 from apps.authentication.views import UserViewSet
 from apps.core.health import HealthCheck, HealthCheckDetailed
 from apps.core.recycle_bin_views import RecycleBinViewSet
+from apps.social import soul_urls as social_urls
 from apps.soul_accounts import urls as soul_account_urls
 
 # User management router (registered at api/v1/users/ via path)
@@ -56,6 +57,10 @@ urlpatterns = [
     path("api/v1/me/", include(soul_account_urls.me_urlpatterns)),
     # 推送设备与偏好(apps/soul_push)。同一个 /me/ 前缀、同一个 SoulAPIView 分界。
     path("api/v1/me/", include("apps.soul_push.urls")),
+    # 灵魂朋友圈(2026-09-17)。灵魂侧在 /me/ 之下,与上面两段同一条认证分界;
+    # 官员审核后台是另一段前缀、另一套码名(social.moderate),两者不共用路由。
+    path("api/v1/me/social/", include(social_urls.me_social_urlpatterns)),
+    path("api/v1/social-moderation/", include(social_urls.moderation_urlpatterns)),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

@@ -135,6 +135,20 @@ export const soulAccountKeys = {
     ["soul-accounts", "rebirth-applications", params] as const,
 };
 
+/**
+ * The officer moderation backend. One root: resolving a report can hide a post
+ * (content queue), mute its author (mutes) and close sibling reports — every
+ * write invalidates the whole tree rather than guessing which lists moved.
+ */
+export const socialModerationKeys = {
+  all: ["social-moderation"] as const,
+  reports: (params: Record<string, string | number | undefined>) => ["social-moderation", "reports", params] as const,
+  content: (kind: "posts" | "comments", params: Record<string, string | number | undefined>) =>
+    ["social-moderation", kind, params] as const,
+  words: (params: Record<string, string | number | undefined>) => ["social-moderation", "words", params] as const,
+  mutes: (params: Record<string, string | number | undefined>) => ["social-moderation", "mutes", params] as const,
+};
+
 export const socialKeys = {
   all: ["social"] as const,
   posts: {
