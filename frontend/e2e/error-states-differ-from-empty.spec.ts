@@ -85,8 +85,20 @@ async function bodyTextWith(
   await expect
     .poll(() => attempts, { timeout: 15_000 })
     .toBeGreaterThanOrEqual(wanted);
-  // One frame for the state change to render.
-  await page.waitForTimeout(250);
+  /* 渲染完成的信号,不是「250ms 大概够了」。
+   *
+   * 上面那个 poll 数的是**拦截器被调用过几次**,而它在 `route.fulfill` 之前就加
+   * 了 1 —— 响应还没送到浏览器,更没渲染。原先补的是 `waitForTimeout(250)`,
+   * 一个时间估计:机器繁忙时它可能不够,而不够的后果不是超时报错,是读到加载态
+   * 的文本、两次读到同样的东西,于是下面的比较变成两个骨架屏比自己,静默通过。
+   *
+   * 这八个页面的加载态一律是 `Skeleton`(2026-09-18 逐个数过:8/8 用 Skeleton,
+   * 0 个用 spinner)。查询落定 —— 无论落到空列表还是错误 —— 骨架屏都会被卸下,
+   * 所以「页面上没有骨架屏」就是「这一屏已经是最终状态」。
+   *
+   * 找的是 `data-slot="skeleton"`,不是 `.animate-pulse`:后者实测在 /tenants 上
+   * 还匹配到一个常驻的状态圆点,那条等待因此永远等不到 0。 */
+  await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0);
   const text = (await page.locator("body").innerText()).trim();
   await page.unroute(endpoint);
   return text;
