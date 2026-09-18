@@ -56,14 +56,14 @@ MESSAGES = {
         },
     },
     "egy": {
-        "rebirth_approved": {"title": "Wehem Mesut Hesy", "body": "Dbh Ek Hesy. Wen Medjat Ba Er Maa."},
-        "rebirth_rejected": {"title": "Wehem Mesut Sehen", "body": "Dbh Ek Sehen. Wen Medjat Ba Er Maa Khet."},
-        "rebirth_appeal_rejected": {"title": "Wehem Medu Sehen", "body": "Wehem Medu Ek Sehen. Wen Medjat Ba Er Maa Khet."},
-        "judgment_result": {"title": "Wedja Pehwy", "body": "Wedja Ek Pehwy. Wen Medjat Ba Er Maa."},
-        "disposition_executed": {"title": "Wetep Iri", "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."},
+        "rebirth_approved": {"title": "Dbh Hesy Seth", "body": "Dbh Ek Hesy. Wen Medjat Ba Er Maa."},
+        "rebirth_rejected": {"title": "Dbh Khesef Seth", "body": "Dbh Ek Sehen. Wen Medjat Ba Er Maa Khet."},
+        "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Wehem Medu Ek Sehen. Wen Medjat Ba Er Maa Khet."},
+        "judgment_result": {"title": "Wedja Khetem", "body": "Wedja Ek Pehwy. Wen Medjat Ba Er Maa."},
+        "disposition_executed": {"title": "Wetep Iri Seth", "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."},
         "residence_approved": {"title": "Hemes Taui Kety Hesy", "body": "Ek Er Hemes Em Taui Kety. Wen Medjat Ba Er Maa."},
-        "residence_started": {"title": "Hemes Taui Kety", "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."},
-        "residence_returned": {"title": "Ankh Er Taui", "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."},
+        "residence_started": {"title": "Hemes Tepy", "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."},
+        "residence_returned": {"title": "Hemes Khetem", "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."},
     },
 }
 
