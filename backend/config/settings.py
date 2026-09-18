@@ -537,6 +537,10 @@ SPECTACULAR_SETTINGS = {
         "SocialReportResolutionEnum": "apps.social.models.ReportResolution.choices",
         "SocialReportStatusEnum": "apps.social.models.ReportStatus.choices",
         "SocialModerationStatusEnum": "apps.social.models.ModerationStatus.choices",
+        # 聊天的 `kind`(DIRECT / OFFICER_INBOX)。按字段名会与别处的 `kind` 撞成带哈希的名字。
+        "ConversationKindEnum": "apps.chat.models.ConversationKind.choices",
+        # 回收站的 `kind`:上一条一钉,它就从 KindEnum 被改名成 RecycleBinEntryKindEnum。钉回原名。
+        "KindEnum": ["reference", "domain"],
     },
 }
 
