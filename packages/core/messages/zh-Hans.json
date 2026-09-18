@@ -1994,7 +1994,8 @@
       "appeal_hint_residing": "暂居不改籍。此案仍由{{home}}受理，每份申请只能申诉一次。",
       "first_rejection_reason": "首次驳回理由",
       "appeal_rejection_reason": "申诉驳回理由",
-      "not_recorded": "未记录"
+      "not_recorded": "未记录",
+      "new_result": "新结果"
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
@@ -2083,6 +2084,52 @@
       "title": "你已归{{home}}",
       "body": "在{{from}}的暂居已结束。簿册与配色已回{{home}}式样。",
       "ok": "知道了"
+    },
+    "settings": {
+      "title": "设置",
+      "language": "语言",
+      "language_name": "中文",
+      "language_note": "简体 · 界面与提示",
+      "current": "当前",
+      "language_hint": "切换即时生效，不必重新登录。卷宗内容（判词、陈述、理由）保持原文。",
+      "saving": "正在保存…",
+      "saved": "已保存",
+      "save_failed": "没能记到你的账上。此刻界面已是{{current}}，但换设备后会回到{{previous}}。",
+      "revert": "改回{{previous}}",
+      "notifications": "通知",
+      "rebirth": "转生申请结果",
+      "rebirth_note": "批准 / 驳回 / 申诉复核有结论时",
+      "judgment": "审判结果",
+      "judgment_note": "审判结束、处置执行时",
+      "residence": "暂居与回归",
+      "residence_note": "调往另一文明暂居、回归原属文明时",
+      "lock_screen": "锁屏只说「有了结果」，不带理由与证据。",
+      "push_unavailable": "推送暂未启用：这个版本还没有接入推送服务。下面的开关仍会记在你的账上。",
+      "push_denied": "系统层面的通知已关闭。下面的开关会记住你的选择，但在系统里放行前不会送达。",
+      "open_system_settings": "前往系统设置",
+      "enable_push": "开启通知",
+      "toggle_failed": "没能保存这项设置，已恢复原样",
+      "version": "灵魂簿 {{version}}"
+    },
+    "push": {
+      "primer_title": "要不要在有结果时通知你？",
+      "primer_body": "簿册的事多半要等。开了通知，不必一遍遍回来看。",
+      "will_notify": "会通知你",
+      "primer_rebirth": "转生申请有了结果",
+      "primer_rebirth_note": "只说批准还是驳回，不带理由原文。",
+      "primer_judgment": "审判有了结果",
+      "primer_judgment_note": "不带证据、不带功过明细。",
+      "primer_residence": "暂居开始与回归",
+      "primer_residence_note": "不说调往哪里。",
+      "never": "锁屏上永不出现：驳回理由、审判证据、功过分数、密码。",
+      "yes": "好，通知我",
+      "no": "暂不"
+    },
+    "original": {
+      "tag": "原文",
+      "tag_language": "原文 · {{language}}",
+      "zh": "中文",
+      "note": "卷宗内容保持原文，不随界面语言翻译。"
     }
   },
   "soul_push": {

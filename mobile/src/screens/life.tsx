@@ -9,7 +9,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
 import { family } from "../fonts";
-import { useAskLogout, useToast } from "../feedback";
+import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES, formatStamp, lexiconKey, residenceOf, type Residence } from "../rules";
 import { SessionContext, useSession } from "../session";
@@ -39,7 +39,6 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
-import { LanguageSwitch } from "./auth";
 import type { AppStackParams } from "./applications";
 
 /**
@@ -405,11 +404,9 @@ function Homecoming({ me }: { me: MeProfile }) {
 export function MyLifeScreen() {
   const { t, locale } = useI18n();
   const { state, refreshProfile } = useSession();
-  const askLogout = useAskLogout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const life = useRemote(soulApi.life);
   const residence = useResidence();
-  const { gutter } = useLayout();
   useReloadOnRefocus(life.reload);
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     records: true,
@@ -459,10 +456,9 @@ export function MyLifeScreen() {
           <Skeleton lines={4} testID="life-loading" />
         </Block>
       )}
-      <View style={[styles.foot, { paddingHorizontal: gutter }]}>
+      {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
+      <View style={styles.foot}>
         <EmblemDivider />
-        <LanguageSwitch />
-        <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
       </View>
     </Screen>
   );
@@ -602,8 +598,7 @@ const styles = StyleSheet.create({
   homecomingHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   score: { flex: 1, paddingHorizontal: GUTTER, paddingVertical: 18, gap: 4 },
   scoreLabel: { letterSpacing: 1.8 },
-  foot: { paddingHorizontal: GUTTER, paddingTop: 26, paddingBottom: 34, gap: 18, alignItems: "stretch" },
-  logout: { alignSelf: "center", minWidth: 160 },
+  foot: { paddingTop: 26, paddingBottom: 34 },
   readOnly: { flexDirection: "row", gap: 9, paddingHorizontal: GUTTER, paddingVertical: 14, borderBottomWidth: 1 },
   nudge: { marginTop: 3 },
   pastLife: { borderBottomWidth: 1, opacity: 0.92 },

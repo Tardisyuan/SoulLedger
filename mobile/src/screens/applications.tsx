@@ -10,8 +10,8 @@ import {
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useCallback, useContext, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
 import { useToast } from "../feedback";
@@ -38,6 +38,7 @@ import {
   Txt,
   enumText,
   useReloadOnRefocus,
+  useReducedMotion,
   useRemote,
   useLayout,
   useTheme,
@@ -45,9 +46,13 @@ import {
 import { useResidence } from "./life";
 
 export type AppStackParams = {
-  Tabs: undefined;
+  /** `screen` picks the tab (a push landing on the life tab). */
+  Tabs: { screen: "Life" | "PastLives" | "Applications" } | undefined;
   NewApplication: undefined;
-  ApplicationDetail: { id: string };
+  /** `landed`: opened from a tapped notification — the result block is highlighted once. */
+  ApplicationDetail: { id: string; landed?: boolean };
+  Settings: undefined;
+  NotificationPrimer: undefined;
 };
 
 /**
@@ -379,7 +384,39 @@ function Flow({ steps }: { steps: FlowStep[] }) {
   );
 }
 
-export function ApplicationDetailScreen({ id }: { id: string }) {
+/**
+ * Handoff 3c: the block a tapped notification points at — a 3px mark rule on
+ * the left, the surface one step up, a "新结果" tag top right — fading out
+ * after 1.2s. Under reduce-motion nothing moves: only the rule stays.
+ */
+function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const reduced = useReducedMotion();
+  const [opacity] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (!on || reduced) return;
+    const timer = setTimeout(() => Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(), 1200);
+    return () => clearTimeout(timer);
+  }, [on, opacity, reduced]);
+  if (!on) return <>{children}</>;
+  return (
+    <View testID="landing-highlight">
+      {reduced ? null : <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: theme.s1 }]} />}
+      {children}
+      <Animated.View pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.mark, opacity: reduced ? 1 : opacity }]} />
+      {reduced ? null : (
+        <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.accent, opacity }]}>
+          <Txt testID="landing-tag" variant="label" tone="accent" style={styles.landingTagText}>
+            {t("soul_app.detail.new_result")}
+          </Txt>
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
+export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: boolean }) {
   const theme = useTheme();
   const { t } = useI18n();
   const toast = useToast();
@@ -429,6 +466,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
   return (
     <Screen refreshing={app.loading} onRefresh={app.reload}>
       <FadeIn>
+        <LandingHighlight on={!!landed}>
         <Block testID="application-detail">
           <View style={styles.badgeRow}>
             <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
@@ -469,6 +507,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
             </DataRow>
           </DataRows>
         </Block>
+        </LandingHighlight>
 
         <Block>
           <Txt variant="section" style={styles.heading}>
@@ -582,6 +621,9 @@ const styles = StyleSheet.create({
   formCode: { fontSize: 11, letterSpacing: 1.1 },
   statement: { marginTop: 4 },
   formTitle: { marginTop: 14 },
+  landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
+  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  landingTagText: { fontSize: 10.5, letterSpacing: 0.4 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   handler: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   handlerText: { letterSpacing: 0.4 },

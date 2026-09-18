@@ -22,6 +22,7 @@ import { getRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { setUnauthorizedHandler } from "./platform";
+import { hasRegisteredDevice, unregisterDevice } from "./push";
 
 export type SessionState =
   | { status: "booting" }
@@ -105,11 +106,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [enter]
   );
 
+  /**
+   * The push token is unregistered FIRST: that endpoint is authenticated, so it
+   * must run before the tokens are cleared and the session revoked. The screen
+   * returns to login at once; the clean-up follows, and clears only the tokens
+   * it started with (a quick sign-in in between keeps its own).
+   */
   const signOut = useCallback(() => {
     const refresh = getRefreshToken();
-    clearSoulTokens();
     setState({ status: "signedOut" });
-    if (refresh) soulApi.logout(refresh).catch(() => {});
+    const end = () => {
+      if (getRefreshToken() === refresh) clearSoulTokens();
+      if (refresh) soulApi.logout(refresh).catch(() => {});
+    };
+    if (hasRegisteredDevice()) void unregisterDevice().finally(end);
+    else end();
   }, []);
 
   const refreshProfile = useCallback(async () => {
