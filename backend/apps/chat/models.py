@@ -82,6 +82,9 @@ class Conversation(models.Model):
     last_request_at = models.DateTimeField(null=True, blank=True)
     responded_at = models.DateTimeField(null=True, blank=True)
     last_message_at = models.DateTimeField(null=True, blank=True)
+    #: 一方转世停用账号时关闭(`services.close_for_soul`)。关闭的会话灵魂侧不再列出、不能发言,
+    #: 官员侧仍可读、不可回;新一世再开同一对灵魂的私聊是**新房间** —— 前世的聊天不跟着人走。
+    closed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -92,18 +95,18 @@ class Conversation(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["soul_a", "soul_b"],
-                condition=models.Q(kind="DIRECT"),
-                name="chat_one_direct_room_per_pair",
+                condition=models.Q(kind="DIRECT", closed_at__isnull=True),
+                name="chat_one_open_direct_room_per_pair",
             ),
             models.UniqueConstraint(
                 fields=["soul_a", "tenant"],
-                condition=models.Q(kind="OFFICER_INBOX"),
-                name="chat_one_inbox_per_soul_and_hall",
+                condition=models.Q(kind="OFFICER_INBOX", closed_at__isnull=True),
+                name="chat_one_open_inbox_per_soul_and_hall",
             ),
             # 形状由数据库兜底,不是由「服务层总是记得排序」兜底:soul_a < soul_b 一旦
             # 不成立,上面那条唯一约束就挡不住同一对灵魂的第二个房间。
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(kind="DIRECT", soul_b__isnull=False)
                     & models.Q(soul_a__lt=models.F("soul_b"))
                 ) | models.Q(kind="OFFICER_INBOX", soul_b__isnull=True),

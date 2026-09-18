@@ -17,46 +17,53 @@ class ChatSessionSerializer(serializers.Serializer):
 
 
 class ConversationSerializer(serializers.ModelSerializer):
-    peer_name = serializers.SerializerMethodField()
-    peer_soul = serializers.SerializerMethodField()
+    peer_user = serializers.SerializerMethodField(
+        help_text="对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。")
+    peer_name = serializers.SerializerMethodField(help_text="对方在朋友圈的显示名。")
     hall = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
-            "id", "kind", "room_id", "peer_soul", "peer_name", "hall",
+            "id", "kind", "room_id", "peer_user", "peer_name", "hall",
             "throttled", "last_request_at", "responded_at", "last_message_at", "created_at",
         ]
         read_only_fields = fields
 
     def _peer(self, obj):
+        """对方本世账号。灵魂身份不出库:对方认得的是朋友圈的 user_id 与显示名。"""
+        from apps.soul_accounts.services import current_account_of
+
         soul_id = self.context.get("soul_id")
         if obj.kind != ConversationKind.DIRECT or soul_id is None:
             return None
-        return obj.soul_b if obj.soul_a_id == soul_id else obj.soul_a
+        return current_account_of(obj.soul_b if obj.soul_a_id == soul_id else obj.soul_a)
 
-    def get_peer_soul(self, obj):
+    def get_peer_user(self, obj) -> int | None:
         peer = self._peer(obj)
-        return str(peer.pk) if peer is not None else None
+        return peer.user_id if peer is not None else None
 
-    def get_peer_name(self, obj):
+    def get_peer_name(self, obj) -> str:
+        from apps.chat.identity import display_name
+
         peer = self._peer(obj)
-        return peer.name if peer is not None else ""
+        return display_name(peer) if peer is not None else ""
 
-    def get_hall(self, obj):
+    def get_hall(self, obj) -> str:
         """殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。"""
         return obj.tenant.display_name if obj.kind == ConversationKind.OFFICER_INBOX else ""
 
 
 class ConversationCreateSerializer(serializers.Serializer):
-    """两种会话一个端点:给 `target_soul` 就是私聊,`kind=OFFICER_INBOX` 就是殿司收件箱。"""
+    """两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
+    `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。"""
 
     kind = serializers.ChoiceField(choices=ConversationKind.choices, default=ConversationKind.DIRECT)
-    target_soul = serializers.UUIDField(required=False)
+    target_user = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs):
-        if attrs["kind"] == ConversationKind.DIRECT and not attrs.get("target_soul"):
-            raise serializers.ValidationError({"target_soul": "私聊必须指定对方。"})
+        if attrs["kind"] == ConversationKind.DIRECT and not attrs.get("target_user"):
+            raise serializers.ValidationError({"target_user": "私聊必须指定对方。"})
         return attrs
 
 
@@ -89,7 +96,7 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
         fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name",
-                  "last_message_at", "created_at"]
+                  "last_message_at", "created_at", "closed_at"]
         read_only_fields = fields
 
 

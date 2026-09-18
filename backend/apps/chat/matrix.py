@@ -4,10 +4,14 @@
 
 * **服务账号**(`MATRIX_SERVICE_LOCALPART`)是 admin,**每一个房间都由它创建**。
   Synapse 侧 `config/synapse/soulledger_policy.py` 拒绝其他任何本地用户建房、邀请、
-  建别名、发状态事件 —— 于是「房间只能经后端创建」不是一条约定,是服务端的拒绝。
-* **灵魂本人**:后端偶尔代其发言(被节流的私聊请求)。**不用管理 API 冒充**,而是用
-  后端自己签的 JWT 正常登录一次 —— 登录凭据的签发者本来就是后端,这条路没有额外权力,
-  发出的消息 sender 也是灵魂自己而不是服务账号。
+  建别名、发布房间;状态事件由房间的 power level 挡(一律 100,只有服务账号有 100)——
+  于是「房间只能经后端创建、形状只能经后端改」不是约定,是服务端的拒绝。
+* **灵魂本人**:后端偶尔代其发言(互关房间里经后端发的那条、收件箱里的信)。**不用管理 API
+  冒充**,而是用后端自己签的 JWT 正常登录一次 —— 登录凭据的签发者本来就是后端,这条路没有
+  额外权力,Synapse 照样按房间的 power level 判它能不能发。
+* **被节流的私聊请求由服务账号转发**,内容带 `io.soulledger.on_behalf_of: <发起方 mxid>`。
+  发起方在那种房间里是 0 级,Synapse 拒绝它本人发言(2026-09-18 对真 Synapse v1.161 实测:
+  `user_level (0) < send_level (50)`)—— 以它的身份代发同样会被拒。
 
 **启动自举**:服务账号用 `registration_shared_secret` 注册成 admin 一次
 (`/_synapse/admin/v1/register`),之后一律 JWT 登录。所以除了 compose 里的两个密钥,
@@ -47,7 +51,7 @@ class MatrixError(Exception):
         self.status = status
 
 
-class MatrixNotConfigured(MatrixError):
+class MatrixNotConfiguredError(MatrixError):
     """聊天没打开或缺密钥。视图把它答成 503,而不是 500 —— 这不是故障,是没部署。"""
 
 
@@ -82,7 +86,7 @@ class SynapseClient:
             ) if not getattr(settings, name, "")
         ]
         if missing:
-            raise MatrixNotConfigured(f"聊天未配置:缺 {', '.join(missing)}")
+            raise MatrixNotConfiguredError(f"聊天未配置:缺 {', '.join(missing)}")
         self.base = settings.MATRIX_INTERNAL_URL.rstrip("/")
         self.server_name = settings.MATRIX_SERVER_NAME
         self.service_user = f"@{settings.MATRIX_SERVICE_LOCALPART}:{self.server_name}"
@@ -187,10 +191,17 @@ class SynapseClient:
     def force_join(self, room_id, user_id):
         self._admin("POST", f"/_synapse/admin/v1/join/{room_id}", json={"user_id": user_id})
 
-    def set_power_level(self, room_id, user_id, level):
-        content = self._admin("GET", f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels")
-        content.setdefault("users", {})[user_id] = level
-        self._admin("PUT", f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels", json=content)
+    def set_user_levels(self, room_id, levels):
+        """把 `levels`({mxid: 级别})写进房间的 power level。**没变就不写** ——
+        每次写都是一条状态事件,会出现在双方的时间线上。返回是否写了。"""
+        path = f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels"
+        content = self._admin("GET", path)
+        users = content.setdefault("users", {})
+        if all(users.get(mxid, content.get("users_default", 0)) == level for mxid, level in levels.items()):
+            return False
+        users.update(levels)
+        self._admin("PUT", path, json=content)
+        return True
 
     def send_message(self, room_id, body, *, as_localpart, extra=None):
         token = self._token_for(as_localpart)
@@ -211,6 +222,7 @@ class SynapseClient:
                 "sender": event["sender"],
                 "body": event.get("content", {}).get("body", ""),
                 "officer": event.get("content", {}).get("io.soulledger.officer", ""),
+                "on_behalf_of": event.get("content", {}).get("io.soulledger.on_behalf_of", ""),
                 "timestamp": event["origin_server_ts"],
             }
             for event in data.get("chunk", [])
@@ -219,7 +231,7 @@ class SynapseClient:
 
 
 def get_client():
-    """`settings.MATRIX_CLIENT` 指向的实现。关掉聊天时抛 `MatrixNotConfigured`。"""
+    """`settings.MATRIX_CLIENT` 指向的实现。关掉聊天时抛 `MatrixNotConfiguredError`。"""
     if not settings.MATRIX_ENABLED:
-        raise MatrixNotConfigured("聊天未启用(MATRIX_ENABLED)。")
+        raise MatrixNotConfiguredError("聊天未启用(MATRIX_ENABLED)。")
     return import_string(settings.MATRIX_CLIENT)()

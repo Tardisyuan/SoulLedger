@@ -5,6 +5,7 @@
    对方回复 / 互关后解除                       test_a_reply_lifts_the_limit / test_following_back_lifts_the_limit
 3. 殿司收件箱                                 tests/test_chat_officer_inbox.py
 4. 跨文明拒绝                                 test_cross_civilization_is_refused
++  禁言、调拨 / 回归、转世                      tests/test_chat_moves_and_mutes.py
 
 每条的变异证明写在测试的 docstring 里(改哪一行、哪条会红)。
 """
@@ -16,8 +17,9 @@ from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.chat.matrix import MatrixError
 from apps.chat.models import ChatIdentity, Conversation
-from tests.chat_support import follow, matrix, mutual, room_of  # noqa: F401
+from tests.chat_support import can_speak, follow, matrix, mutual, mxid, room_of  # noqa: F401
 from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -26,7 +28,7 @@ CONVERSATIONS = "/api/v1/me/chat/conversations/"
 
 
 def _open(client, target):
-    return client.post(CONVERSATIONS, {"target_soul": str(target.soul_id)}, format="json")
+    return client.post(CONVERSATIONS, {"target_user": target.user_id}, format="json")
 
 
 def _send(client, conversation_id, body="你好"):
@@ -69,7 +71,8 @@ def test_the_login_token_is_short_lived_and_names_only_this_soul(cn_tenant, matr
 
     account, client = ready_soul(cn_tenant)
     data = client.get("/api/v1/me/chat/session/").data
-    claims = jwt.decode(data["token"], "jwt-secret-for-tests", algorithms=["HS256"], audience="synapse")
+    claims = jwt.decode(data["token"], "jwt-secret-for-tests-0123456789abcdef", algorithms=["HS256"],
+                        audience="synapse")
     identity = ChatIdentity.objects.get(account=account)
     assert claims["sub"] == identity.localpart
     assert claims["iss"] == "soulledger"
@@ -99,16 +102,22 @@ def test_mutual_follows_get_a_free_room(cn_tenant, matrix):  # noqa: F811
     assert response.data["throttled"] is False
     assert response.data["peer_name"] == "乙"
 
-    room = room_of(Conversation.objects.get())
-    a_id = ChatIdentity.objects.get(account=a).matrix_user_id
-    b_id = ChatIdentity.objects.get(account=b).matrix_user_id
-    assert room["members"] == {a_id, b_id}
+    assert response.data["peer_user"] == b.user_id
+    assert "peer_soul" not in response.data  # 灵魂身份不出库:对方认得的是朋友圈 user_id
+
+    conversation = Conversation.objects.get()
+    room = room_of(conversation)
+    a_id, b_id = mxid(a), mxid(b)
+    assert room["members"] - {matrix().service_user} == {a_id, b_id}
+    assert can_speak(conversation.room_id, a_id) and can_speak(conversation.room_id, b_id)
     levels = room["power_levels"]
-    assert levels["events_default"] == 0
-    assert levels["users"][a_id] == levels["users"][b_id] == 50
-    # 房间的形状只有服务账号能改:状态事件与邀请都要 100,而灵魂只有 50。
+    # 房间的形状只有服务账号能改:状态事件与邀请都要 100,而灵魂只有 50;
+    # `events` 必须是空表 —— private_chat 预设自带的那张让 50 级成员能改房间名(真 Synapse 实测)。
     assert levels["state_default"] == levels["invite"] == 100
+    assert levels["events"] == {}
     assert max(v for k, v in levels["users"].items() if k != matrix().service_user) < 100
+    # 互关房间里双方直接在 Matrix 里说话,后端不在路径上。
+    matrix.says(conversation.room_id, a_id, "直接发")
 
     # 同一对灵魂第二次:同一个房间,200 而不是 201。
     again = _open(a_client, b)
@@ -143,16 +152,19 @@ def test_a_stranger_gets_one_request_per_24_hours(cn_tenant, matrix):  # noqa: F
     conversation = Conversation.objects.get()
     assert conversation.initiator_id == a.soul_id
 
-    # 发起方在 Matrix 里发不出:events_default 50,它 0 级。对方 50 级、可以回。
-    levels = room_of(conversation)["power_levels"]
-    a_id = ChatIdentity.objects.get(account=a).matrix_user_id
-    b_id = ChatIdentity.objects.get(account=b).matrix_user_id
-    assert levels["events_default"] == 50
-    assert levels["users"][a_id] == 0
-    assert levels["users"][b_id] == 50
+    # 发起方在 Matrix 里发不出:它 0 级。对方 50 级、可以回。
+    a_id, b_id = mxid(a), mxid(b)
+    assert not can_speak(conversation.room_id, a_id)
+    assert can_speak(conversation.room_id, b_id)
+    with pytest.raises(MatrixError):
+        matrix.says(conversation.room_id, a_id, "绕过后端")
 
     first = _send(a_client, conversation.id, "打扰一下")
     assert first.status_code == 201, first.data
+    # 由服务账号转发、标明是替谁发的 —— 以 0 级发起方本人的身份发,Synapse 会拒。
+    _, relayed = matrix.sent[-1]
+    assert relayed["sender"] == matrix().service_user
+    assert relayed["on_behalf_of"] == a_id
     second = _send(a_client, conversation.id, "在吗")
     assert second.status_code == 429, second.data
     assert second.data["code"] == "request_throttled"
@@ -176,14 +188,13 @@ def test_a_reply_lifts_the_limit(cn_tenant, matrix):  # noqa: F811
     assert _send(a_client, conversation.id).status_code == 429
 
     # 乙在 Matrix 里回了一句 —— 后端不在那条路径上,是下一次甲发言时才知道。
-    b_id = ChatIdentity.objects.get(account=b).matrix_user_id
-    matrix.peer_says(conversation.room_id, b_id)
+    matrix.says(conversation.room_id, mxid(b))
 
     assert _send(a_client, conversation.id, "谢谢回复").status_code == 201
     conversation.refresh_from_db()
     assert conversation.throttled is False and conversation.responded_at is not None
-    a_id = ChatIdentity.objects.get(account=a).matrix_user_id
-    assert room_of(conversation)["power_levels"]["users"][a_id] == 50  # 从此直接走 Matrix
+    assert can_speak(conversation.room_id, mxid(a))  # 从此直接走 Matrix
+    assert matrix.sent[-1][1]["sender"] == mxid(a)  # 解除后经后端发的也是本人,不再转发
     assert _send(a_client, conversation.id, "再一条").status_code == 201
 
 
@@ -239,28 +250,28 @@ def test_a_soul_outside_the_conversation_cannot_post_into_it(cn_tenant, matrix):
 
 
 def test_cross_civilization_is_refused(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """变异:把 `open_direct` 的 `same_civilization` 判定删掉,同时把视图里按 tenant 过滤的
-    `tenant_id=...` 删掉 → 201,红。两层各删一层都仍是 4xx(视图层 404,服务层 403)——
-    `test_the_service_refuses_cross_civilization_on_its_own` 单独钉服务层那一层。"""
+    """跨文明与不存在答同一个 404(与朋友圈搜索同一个集合:别的文明的人搜不到,也请求不到)。
+    变异:`open_direct` 里把 `circle.souls_in(tenant)` 换成 `User.objects.all()` → 201,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(eu_tenant, name="Beatrice")
-    mutual(a, b)  # 互关也不行:文明先于关系
+    follow(a, b)  # 关注边也不行:文明先于关系
 
     response = _open(a_client, b)
-    assert response.status_code in (403, 404)
+    assert response.status_code == 404 and response.data["code"] == "not_found"
     assert not Conversation.objects.exists()
     assert not matrix.rooms
 
 
-def test_the_service_refuses_cross_civilization_on_its_own(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """变异:删掉 `open_direct` 里的 `same_civilization` 判定 → 建出房间,红。"""
-    from apps.chat import services as svc
-
-    a, _ = ready_soul(cn_tenant, name="甲")
-    b, _ = ready_soul(eu_tenant, name="Beatrice")
-    with pytest.raises(svc.ChatError) as caught:
-        svc.open_direct(a, b.soul)
-    assert caught.value.status == 403 and caught.value.code == "cross_civilization"
+def test_only_souls_the_search_can_find_can_be_asked(cn_tenant, matrix):  # noqa: F811
+    """官员、前世(已停用)账号不在朋友圈搜索的集合里,也不能被发起私聊。"""
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    officer = User.objects.create_user(username="pan", password="x", role="JUDGE", tenant=cn_tenant)
+    assert a_client.post(CONVERSATIONS, {"target_user": officer.pk}, format="json").status_code == 404
+    b, _ = ready_soul(cn_tenant, name="乙")
+    b.retired_at = timezone.now()
+    b.save()
+    assert _open(a_client, b).status_code == 404
+    assert a_client.post(CONVERSATIONS, {"target_user": 999999}, format="json").status_code == 404
     assert not matrix.rooms
 
 

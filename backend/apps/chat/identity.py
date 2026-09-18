@@ -13,8 +13,8 @@
 mxid 就换了** —— 老房间里的人从此对不上号,所以它和签名密钥一样不可轮换(见
 docs/DEPLOYMENT.md「灵魂聊天」)。
 
-显示名是灵魂的姓名:同文明的灵魂本来就按姓名互相搜索(朋友圈规则),而 homeserver
-模板关掉了 `enable_set_displayname`,所以这个值只能由后端写,灵魂自己改不了。
+显示名是灵魂在朋友圈的显示名(`User.display_name`,开号时取姓名):同文明的灵魂本来就按它
+互相搜索;homeserver 模板关掉了 `enable_set_displayname`,所以这个值只能由后端写。
 """
 import hashlib
 import hmac
@@ -34,11 +34,16 @@ def localpart_for(account):
     return f"soul_{digest[:24]}"
 
 
+def display_name(account):
+    """朋友圈里的显示名 —— 灵魂互相认识的是这个名字(搜索也按它)。"""
+    return account.user.display_name or account.soul.name
+
+
 def ensure_identity(account, *, client=None):
     """取或建这一世的 Matrix 用户。幂等:重复调用只是再确认一次显示名。"""
     client = client or get_client()
     localpart = localpart_for(account)
-    client.ensure_user(localpart, account.soul.name)
+    client.ensure_user(localpart, display_name(account))
     with transaction.atomic():
         identity, _ = ChatIdentity.objects.get_or_create(
             account=account,

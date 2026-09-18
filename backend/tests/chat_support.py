@@ -1,12 +1,24 @@
 """聊天测试共用(不是测试文件,pytest 不收集)。**没有任何一条路径访问 Synapse。**
 
-`FakeMatrix` **只记账,不执行策略**:它不因为某人 power level 是 0 就拒绝发送。
-这是刻意的 —— 一个会按 power level 拒绝的假实现,就是把「Synapse 真的会拒绝」这条
-断言换成了「我写的假实现会拒绝」,而那正是这个仓库记过的那类测试替身。
-单元测试断言的是**后端交给 Synapse 的 power level 是什么**;
-「Synapse 照着拒绝」由 `tests/test_chat_synapse_integration.py` 对着真服务断言。
+`FakeMatrix` **照 Synapse 的样子拒绝**,每一条都在 2026-09-18 对真 Synapse v1.161
+(本机 docker,`tests/test_chat_synapse_integration.py`)实测过:
+
+* 发消息要求发送者是房间成员、未停用,且 power level ≥ `events_default`
+  (`events` 表里的类型除外 —— 后端建房时把它设成空表);低了是 403 `M_FORBIDDEN`;
+* 停用用户离开它的所有房间(真 Synapse 是后台异步做完的,这里立即);
+* `set_user_levels` 只在级别真变了才写 —— 与真实现同一条判断,于是「写了几次」可断言。
+
+**不照抄的**:建房、邀请的拒绝在 Synapse 模块里(config/synapse/soulledger_policy.py),
+后端只以服务账号建房,这里没有别的调用者可拒。
+
+曾经的版本「只记账不拒绝」,理由是会拒绝的替身把「Synapse 会拒绝」换成了「替身会拒绝」。
+代价是它把一条真缺陷藏了起来:后端以 0 级发起方的身份代发私聊请求,替身照收,真 Synapse
+拒绝(`user_level (0) < send_level (50)`)。**不拒绝的替身同样是在复现缺陷** —— 它复现的是
+「后端以为能发」。所以这里拒绝,而拒绝的依据本身由集成测试对着真服务钉住。
 """
 import pytest
+
+from apps.chat.matrix import MatrixError
 
 SERVER_NAME = "test.soulledger"
 
@@ -38,29 +50,45 @@ class FakeMatrix:
     def deactivate_user(self, localpart):
         FakeMatrix.calls.append(("deactivate_user", localpart))
         FakeMatrix.users.setdefault(localpart, {})["deactivated"] = True
-        # 真 Synapse 的 deactivate 同时让用户离开所有房间 —— 这一点照抄,因为
-        # 「停用后还留在房间里」会让下面的断言读起来是对的而其实不对。
         for room in FakeMatrix.rooms.values():
             room["members"].discard(self.user_id(localpart))
 
     # ── 房间 ──
     def create_room(self, *, name, power_levels):
+        FakeMatrix.calls.append(("create_room", name))
         room_id = f"!room{len(FakeMatrix.rooms)}:{SERVER_NAME}"
         FakeMatrix.rooms[room_id] = {"name": name, "power_levels": power_levels,
-                                     "members": set(), "messages": []}
+                                     "members": {self.service_user}, "messages": [], "level_writes": 0}
         return room_id
 
     def force_join(self, room_id, user_id):
         FakeMatrix.rooms[room_id]["members"].add(user_id)
 
-    def set_power_level(self, room_id, user_id, level):
-        FakeMatrix.rooms[room_id]["power_levels"]["users"][user_id] = level
+    def set_user_levels(self, room_id, levels):
+        pl = FakeMatrix.rooms[room_id]["power_levels"]
+        users = pl.setdefault("users", {})
+        if all(users.get(m, pl.get("users_default", 0)) == lvl for m, lvl in levels.items()):
+            return False
+        users.update(levels)
+        FakeMatrix.rooms[room_id]["level_writes"] += 1
+        return True
 
     def send_message(self, room_id, body, *, as_localpart, extra=None):
         room = FakeMatrix.rooms[room_id]
+        sender = self.user_id(as_localpart)
+        if FakeMatrix.users.get(as_localpart, {}).get("deactivated"):
+            raise MatrixError("User is deactivated", errcode="M_USER_DEACTIVATED", status=403)
+        if sender not in room["members"]:
+            raise MatrixError("User not in room", errcode="M_FORBIDDEN", status=403)
+        pl = room["power_levels"]
+        need = pl.get("events", {}).get("m.room.message", pl.get("events_default", 0))
+        have = pl.get("users", {}).get(sender, pl.get("users_default", 0))
+        if have < need:
+            raise MatrixError(f"user_level ({have}) < send_level ({need})", errcode="M_FORBIDDEN", status=403)
         event_id = f"$evt{len(FakeMatrix.sent)}"
-        message = {"event_id": event_id, "sender": self.user_id(as_localpart), "body": body,
+        message = {"event_id": event_id, "sender": sender, "body": body,
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
+                   "on_behalf_of": (extra or {}).get("io.soulledger.on_behalf_of", ""),
                    "timestamp": 1000 + len(FakeMatrix.sent)}
         room["messages"].append(message)
         FakeMatrix.sent.append((room_id, message))
@@ -69,13 +97,18 @@ class FakeMatrix:
     def recent_messages(self, room_id, *, limit=50):
         return list(reversed(FakeMatrix.rooms[room_id]["messages"]))[:limit]
 
-    # ── 测试直接用的辅助:模拟「对方在 Matrix 里回了一句」──
+    # ── 测试直接用:模拟某个灵魂拿自己的 token 在 Matrix 里发言(同样受 power level 约束)──
     @classmethod
-    def peer_says(cls, room_id, mxid, body="来了"):
-        cls.rooms[room_id]["messages"].append({
-            "event_id": f"$peer{len(cls.rooms[room_id]['messages'])}", "sender": mxid,
-            "body": body, "officer": "", "timestamp": 2000,
-        })
+    def says(cls, room_id, mxid, body="来了"):
+        localpart = mxid[1:].split(":", 1)[0]
+        return cls().send_message(room_id, body, as_localpart=localpart)
+
+
+def can_speak(room_id, mxid):
+    """`mxid` 此刻在这个房间里能不能直接发消息(按房间当前的 power level)。"""
+    room = FakeMatrix.rooms[room_id]
+    pl = room["power_levels"]
+    return mxid in room["members"] and pl["users"].get(mxid, pl.get("users_default", 0)) >= pl["events_default"]
 
 
 @pytest.fixture
@@ -85,7 +118,7 @@ def matrix(settings):
     settings.MATRIX_CLIENT = "tests.chat_support.FakeMatrix"
     settings.MATRIX_PUBLIC_BASEURL = "https://matrix.test.soulledger/"
     settings.MATRIX_SERVER_NAME = SERVER_NAME
-    settings.MATRIX_JWT_SECRET = "jwt-secret-for-tests"
+    settings.MATRIX_JWT_SECRET = "jwt-secret-for-tests-0123456789abcdef"
     settings.MATRIX_REGISTRATION_SHARED_SECRET = "shared-secret-for-tests"
     settings.MATRIX_USER_SALT = "salt-for-tests"
     settings.MATRIX_SERVICE_LOCALPART = "soulledger"
@@ -95,7 +128,7 @@ def matrix(settings):
 
 
 def follow(a_account, b_account):
-    """a 关注 b(`Follow` 连的是 User)。"""
+    """a 关注 b(`Follow` 连的是 User,边记在 a 当前所在的文明上 —— 与朋友圈同一口径)。"""
     from apps.social.models import Follow
 
     Follow.objects.create(follower=a_account.user, following=b_account.user,
@@ -109,3 +142,9 @@ def mutual(a_account, b_account):
 
 def room_of(conversation):
     return FakeMatrix.rooms[conversation.room_id]
+
+
+def mxid(account):
+    from apps.chat.models import ChatIdentity
+
+    return ChatIdentity.objects.get(account=account).matrix_user_id
