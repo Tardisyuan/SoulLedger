@@ -9,7 +9,7 @@
 | # | 决定 |
 |---|---|
 | Q1 | **外地节点的处置内容在跨文明联审(cross-judgments)时就确定。** 受刑计划的节点序列与每个节点的处置内容(界域 / 刑期)由联审结论产出;各参与文明的判官在联审中定**自己文明那一节点**的内容(避开跨宇宙观引用)。单文明审判 = 只有原属一个节点的退化情况。 |
-| Q2 | 情况 1(灵魂在场、当地开加 / 减项审判)**结案后须原审判官批准才生效**(走 `SentencePlanRequest`)。 |
+| Q2 | 情况 1(灵魂在场、当地开加 / 减项审判)**结案后须原审判官批准才生效**(走 `SentencePlanRequest`)。**补充(同日):情况 2.2 的加 / 减项同样由原审判官批准** —— 三种情况都走 `SentencePlanRequest`,都由原审判官批。 |
 | Q3 | 计划 ACTIVE 时手动发起调拨 → **拒绝**,提示走计划;无计划的灵魂照旧可手动调拨。 |
 | Q4 | 系统发起的调拨被执行地拒绝 → **节点退回 PENDING,通知原属判官**。 |
 | Q5 | **联审结论时就拒绝「永久刑期节点后面还有节点」的排法**(处置内容在联审时已定,可以校验)。 |
@@ -19,6 +19,7 @@
 | Q9 | **新增专门的事件类型 `EventType.SENTENCE_*`**(含迁移;`SoulPushHandler` 相应识别)。 |
 | Q10 | 灵魂端可见**全部节点与各自处置**(不含理由、判官、请求)。 |
 | Q11 | 计划撤销要做,放在加减项那一阶段(阶段 3)。 |
+| Q12 | **联审模型的补齐放进阶段 1**:`CrossTenantJudgment` 挂灵魂 / 审判,参与方带节点内容(文明、顺序、界域 / 刑期等),以及「永久刑期只能排最后」的校验。用户已看过按本设计画的三张流程图(主流程、三种改判、重审与暂留)并确认。 |
 
 ## 0. 用户的原话(权威需求)
 
@@ -487,8 +488,8 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| **1 模型(行为不变)** | 三张表 + 约束 + 迁移;`Judgment.kind / amends_plan_id`;`Disposition.sentence_node_id` + `can_delete`;`CrossTenantJudgment.judgment` + 参与方八列 + 约束;`EventType.SENTENCE_*`;**结案时建计划 + 原属节点(ACTIVE),不接推进**;回填命令;只读 API(`sentence-plans/`)与两张分类表;schema 重生成 + core 类型 | `makemigrations --check`;每条约束一次变异证明;回填命令跑两次第二次计数全 0;`test_every_soul_linked_viewset_is_classified` 绿;schema 0 warning / 0 error;`test_committed_schema_matches_the_backend` 绿 |
-| **2 推进** | 联审 `sentence` 动作与结案校验(Q5);原属 `conclude/` 抄参与方节点;`advance` 与 §3.3 全部调用点(含 WAITING);删 `resume_return_after_case_closed`;`eligibility`(Q6);Q3 拒绝;Q4 退回;§5 事件 / 通知 / 推送;`feat/notify-judges` 三个反例并入 | 重写 `test_dispatch_residence.py`;PG 测试 1、2、5;两份文案镜像测试 |
+| **1 模型(行为不变)** | 三张表 + 约束 + 迁移;`Judgment.kind / amends_plan_id`;`Disposition.sentence_node_id` + `can_delete`;**联审补齐(Q12)**:`CrossTenantJudgment.judgment` + 参与方八列 + 约束 + `participate` 收 `node_order` + `sentence/` 动作(参与方填自己节点)+ 挂了审判的联审 `conclude` 校验(都填了、序号连续、永久在最后);`EventType.SENTENCE_*`;**结案时建计划 + 原属节点(ACTIVE),不接推进**;回填命令;只读 API(`sentence-plans/`)与两张分类表;schema 重生成 + core 类型 | `makemigrations --check`;每条约束一次变异证明;回填命令跑两次第二次计数全 0;`test_every_soul_linked_viewset_is_classified` 绿;schema 0 warning / 0 error;`test_committed_schema_matches_the_backend` 绿 |
+| **2 推进** | 原属 `conclude/` 抄参与方节点;`advance` 与 §3.3 全部调用点(含 WAITING);删 `resume_return_after_case_closed`;`eligibility`(Q6);Q3 拒绝;Q4 退回;§5 事件 / 通知 / 推送;`feat/notify-judges` 三个反例并入 | 重写 `test_dispatch_residence.py`;PG 测试 1、2、5;两份文案镜像测试 |
 | **3 加减项与撤销** | AMENDMENT 审判结案 → 请求;`SentencePlanRequest` 端点 / 决定 / 撤回;REOPEN(按 §11 N1 的结论);`sentence_plan.cancel`(Q11);`perform_create` 锁灵魂行(G7);未结案唯一落成约束(G11,可选);重开审判的窄写例外并入租户隔离契约 | PG 测试 3、4、6、7;每种拒绝各一条 4xx 测试且**断言未写入** |
 | **4 客户端** | Web:联审详情页的节点内容表单与排序;灵魂详情的计划面板;请求收件箱;App:Life 屏「我的受刑」(Q10);新推送 kind 落地页 | `tsc`、`lint --max-warnings 0`、`test:coverage` 阈值;E2E 三个 project;App 两种模拟器实测截图 |
 | **5 收尾** | 删旧注释(`dispatch/services.py:452-456`);架构文档决策记录补一条;`SOUL_STATES_THAT_MAY_APPLY` 收紧 | 全量门禁 |
