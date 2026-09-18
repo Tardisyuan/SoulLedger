@@ -16,9 +16,12 @@
    DISPOSED / JUDGING(REINCARNATING、SETTLED、ALIVE 等)→ COMPLETED;否则 ACTIVE。
    `completed_at` 取原属处置的 `executed_at`(设计稿写「状态变化事件时间」,两者由同一次
    `DispositionService.execute` 写出;没有执行时间的留空)。
-5. **会违反约束的形状不建,只报告**:最常见的是「原属处置还没执行、灵魂已被调去外地受刑」,
-   那是两个同时 ACTIVE 的节点,而「一份计划至多一个在路上或受刑中的节点」不允许。
-   这类灵魂打印 id,等人决定(设计稿没有写这种存量怎么描述)。
+5. **原属处置还没执行、灵魂已被调去外地受刑**(用户 2026-09-19 决定):原属节点记为
+   **PENDING**,灵魂回来后再执行 —— 与新流程「回原属地检查剩余节点」一致。「外地受刑」=
+   后面某个节点是 ACTIVE / WAITING / DISPATCHING / ETERNAL(灵魂此刻在那里)。PENDING 不在
+   「在路上或受刑中」之列(设计稿 §2.3 那条约束只数 DISPATCHING / ACTIVE,§3.2 里 PENDING 是
+   「未开始」),所以这样写出的计划满足 `unique_occupying_sentence_node`。
+6. 这之后仍会违反约束的形状(例如两条都没回归的外地调拨,正常流程产生不了)不建,只打印灵魂 id。
 
 第二次运行,「建了」的计数必须全为 0。
 """
@@ -150,6 +153,12 @@ class Command(BaseCommand):
                 completed_at=record.returned_at or (disposition.executed_at if disposition else None),
                 **_content(disposition),
             ))
+        home_node = nodes[0]
+        away_now = (*OCCUPYING_NODE_STATUSES, SentenceNodeStatus.ETERNAL)
+        if home_node.status == SentenceNodeStatus.ACTIVE and any(n.status in away_now for n in nodes[1:]):
+            home_node.status = SentenceNodeStatus.PENDING
+            home_node.activated_at = None
+            home_node.completed_at = None
         if sum(1 for n in nodes if n.status in OCCUPYING_NODE_STATUSES) > 1:
             return None
 
