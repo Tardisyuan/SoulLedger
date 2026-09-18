@@ -750,6 +750,9 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
+            # 受刑计划的记录(阶段 1 只记,不推进):挂着这份处置的节点结束。
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.note_disposition_executed(disposition)
         return True
 
     @staticmethod
@@ -789,6 +792,8 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.note_disposition_executed(disposition)
             if not disposition.is_eternal:
                 try:
                     DispatchService.end_residence(

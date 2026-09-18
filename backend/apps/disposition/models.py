@@ -140,6 +140,11 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
         help_text="Life index this row belongs to; 0 is the first life.",
     )
 
+    # 受刑计划里挂着这份处置的节点(docs/ARCHITECTURE-sentence-plan.md §2.4)。裸 UUID:
+    # 节点在原属库,处置在执行地库。外地节点的处置没有本地审判(`judgment` 为空),
+    # 这一列让它仍然算「系于结论」而不可删 —— 见 `can_delete`。
+    sentence_node_id = models.UUIDField(null=True, blank=True, db_index=True)
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Disposition"
@@ -180,7 +185,13 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
         """False whenever this disposition is tied to a concluded verdict
         (the ordinary case — see class docstring). A disposition whose
         judgment link was cleared (judgment FK is on_delete=SET_NULL) has
-        no verdict left to check and falls back to deletable."""
+        no verdict left to check and falls back to deletable.
+
+        A disposition a sentence node points at is tied to a conclusion even
+        with no local judgment: the away tenant carries out what the joint
+        judgment decided (docs/ARCHITECTURE-sentence-plan.md §2.4)."""
+        if self.sentence_node_id is not None:
+            return False
         return self.judgment is None or self.judgment.verdict is None
 
     def delete_or_raise(self, user=None, reason=""):
