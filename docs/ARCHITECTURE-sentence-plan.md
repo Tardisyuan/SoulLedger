@@ -14,7 +14,7 @@
 | Q4 | 系统发起的调拨被执行地拒绝 → **节点退回 PENDING,通知原属判官**。 |
 | Q5 | **联审结论时就拒绝「永久刑期节点后面还有节点」的排法**(处置内容在联审时已定,可以校验)。 |
 | Q6 | 转世申请**计划全部完成才开放**;已提交过的申请照常可申诉。 |
-| Q7 | 原审判官批准「重开审判」后**立刻开**,即使灵魂在外地。与现有两条规则的冲突及解法见 §4.3;衍生一条待确认(§11 N1)。 |
+| Q7 | 原审判官批准「重开审判」后**立刻在原属地开审**,即使灵魂在外地。用户澄清:流程是「先结案 → 执行 → 执行期间如需要再重开」,原审判在执行前已结案,所以执行期间**至多一件未结案审判(即重开的那件)**,「一个灵魂同时只能有一个未结案审判」**不冲突,不按租户 / 计划区分唯一性**。需要的只是一个**窄的写例外**:原属租户可为暂居在外的灵魂开这件重开审判(只限此操作,集中实现、并入租户隔离契约)。**重审期间外地执行不受影响**;若当前节点刑满时重审还没结案,灵魂**在当地暂留等待**(不回原属、不推进),重审结案并调整计划后再继续;暂留状态官员端与灵魂端都可见,有事件与通知。见 §4.3。衍生一条待确认(§11 N1)。 |
 | Q8 | `feat/notify-judges` 不合并,并入阶段 2。 |
 | Q9 | **新增专门的事件类型 `EventType.SENTENCE_*`**(含迁移;`SoulPushHandler` 相应识别)。 |
 | Q10 | 灵魂端可见**全部节点与各自处置**(不含理由、判官、请求)。 |
@@ -79,7 +79,7 @@
 | G8 | 工作流 `announce` 只通知 `approver_actor`,按 ROLE 指定的节点**没人被通知**。 | `apps/workflow/services.py:597-609` | 追加请求不走工作流的理由之一(§4.4)。 |
 | G9 | `EventType` 声明了 `DISPATCH_*` 成员(`:36-40`)却没有任何一处写入它们:调拨全部事件都是 `STATE_CHANGED` + `payload.action`;`SoulPushHandler.should_handle` 只认 `HANDLED_EVENTS` 三种。 | `apps/events/models.py:12-40`;`apps/dispatch/services.py:101`、`:262`、`:354`;`apps/soul_push/services.py:120` | Q9 已拍板:加 `SENTENCE_*` 成员并让处理器认。 |
 | G10 | 本地分支 `feat/notify-judges`(1 提交 `1a1d0d62`,2 文件 +25/−4,新增 1 条测试):给「回归被拦下」通知加上**暂居地**持有 `judgment.execute` 的判官。 | `git log main..feat/notify-judges` | Q8 已拍板:不合并,并入阶段 2(§7.3)。 |
-| G11 | 「一个灵魂同时只能有一个未结案审判」只在序列化器里(`validate_soul`),ADMIN 免检;**没有数据库约束**。 | `apps/judgment/serializers.py:130-150` | Q7 要把它改成按租户;改序列化器一处即可,但也说明它从来不是并发安全的。 |
+| G11 | 「一个灵魂同时只能有一个未结案审判」只在序列化器里(`validate_soul`),ADMIN 免检;**没有数据库约束**。 | `apps/judgment/serializers.py:130-150` | 规则本身**不变**(Q7 澄清);可选加固:把它落成部分唯一约束 `UniqueConstraint(fields=["soul"], condition=Q(verdict__isnull=True, is_final=False, is_deleted=False))`,与 G7 一起在阶段 3 做。 |
 
 ### 1.3 分库约束(2026-09-14 用户拍板,`docs/ARCHITECTURE-soul-app-and-domain-split.md:10-11`、`:29`)
 
@@ -135,7 +135,7 @@ erDiagram
         fk soul
         fk tenant "= soul.home_tenant"
         int cycle
-        str status "ACTIVE|HELD|COMPLETED|CANCELLED"
+        str status "ACTIVE|RETRIAL|HELD|COMPLETED|CANCELLED"
         uuid origin_judgment_id
         uuid cross_judgment_id "可空;退化情况为空"
         datetime completed_at
@@ -206,14 +206,14 @@ erDiagram
 
 | 既有实体 | 变化 |
 |---|---|
-| `Judgment` | 加 `kind = ORIGINAL \| AMENDMENT \| REOPEN`(默认 ORIGINAL;存量全 ORIGINAL)、`amends_plan_id = UUIDField(null=True)`。**AMENDMENT 结案不建处置、不动灵魂状态**,只生成一条 `SentencePlanRequest(kind=AMEND)`(Q2);REOPEN 见 §4.3。`open_judgments` 加可选 `tenant=` 参数(Q7)。 |
+| `Judgment` | 加 `kind = ORIGINAL \| AMENDMENT \| REOPEN`(默认 ORIGINAL;存量全 ORIGINAL)、`amends_plan_id = UUIDField(null=True)`。**AMENDMENT 结案不建处置、不动灵魂状态**,只生成一条 `SentencePlanRequest(kind=AMEND)`(Q2);REOPEN 见 §4.3。`open_judgments` 不变(Q7 澄清:不按租户区分)。 |
 | `CrossTenantJudgment` | 加 `judgment = OneToOneField("judgment.Judgment", null=True, SET_NULL)`;`conclude` 加 §2.3 校验。**存量行 `judgment=NULL`,照旧是一场会议。** |
 | `CrossTenantJudgmentParticipant` | 加 §2.2 的八列;新动作 `POST cross-judgments/{id}/sentence/`(参与方本文明、`cross_judgment.create`)。 |
 | `Disposition` | 加 `sentence_node_id = UUIDField(null=True, db_index=True)`;`can_delete` 改为 `judgment is None and sentence_node_id is None`(G3)。外地节点激活时按节点内容直接建(`destination_realm = Realm(realm_code)`、`sentence_years`、`is_eternal` / `memory_reset` 抄 realm),**不走** `_route_to_realm`。 |
 | `DispatchRecord` | 不加列。计划推进时由系统 `propose`,`dispatched_by=None`,`reason` 写「受刑计划 <id> 节点 <order>」。 |
 | `Soul` | 不加列、不加状态(理由见 §3.3)。 |
 | `SoulAccount / RebirthApplication` | 不加列;`eligibility` 加一条(§6)。 |
-| `EventType` | 加 `SENTENCE_PLAN_CREATED / SENTENCE_NODE_ACTIVATED / SENTENCE_NODE_COMPLETED / SENTENCE_NODE_REFUSED / SENTENCE_PLAN_AMENDED / SENTENCE_REQUEST_CREATED / SENTENCE_REQUEST_DECIDED / SENTENCE_PLAN_COMPLETED / SENTENCE_PLAN_CANCELLED`(Q9;迁移改 `choices`)。 |
+| `EventType` | 加 `SENTENCE_PLAN_CREATED / SENTENCE_NODE_ACTIVATED / SENTENCE_NODE_WAITING / SENTENCE_NODE_COMPLETED / SENTENCE_NODE_REFUSED / SENTENCE_PLAN_AMENDED / SENTENCE_REQUEST_CREATED / SENTENCE_REQUEST_DECIDED / SENTENCE_PLAN_COMPLETED / SENTENCE_PLAN_CANCELLED`(Q9;迁移改 `choices`)。 |
 
 ### 2.5 可见性与权限
 
@@ -223,6 +223,7 @@ erDiagram
   - 联审参与方填节点:`cross_judgment.create` + 对象级「参与方本文明」。
   - 请求:提出 = `judgment.execute`(提出方租户);决定 = `judgment.execute` + **原属租户**(对象级,同 `_initiator_or_403`,`dispatch/views.py:521-537`)。
   - 撤销计划:新 codename `sentence_plan.cancel`,ADMIN / MODERATOR(与 `dispatch.return` 同持有者,`perm/models.py:316`);理由必填、写审计。新 codename 要过 `apps/perm/test_codename_coverage.py`。
+- **暂居写例外(Q7,唯一一条)**:原属租户可为暂居在外的灵魂开 `kind=REOPEN` 的审判(§4.3)。与只读例外同一个模块、同一张契约测试的表。
 - ADMIN 的租户豁免照旧。
 
 ---
@@ -235,9 +236,12 @@ erDiagram
 stateDiagram-v2
     [*] --> ACTIVE : 原属审判结案(ORIGINAL)
     ACTIVE --> ACTIVE : 节点推进 / 请求被批准
+    ACTIVE --> RETRIAL : REOPEN 请求被批准,原属立刻建重开审判
+    RETRIAL --> ACTIVE : 重开审判结案(计划按结论调整)或撤案
     ACTIVE --> HELD : 某节点处置 is_eternal 执行完毕
     ACTIVE --> COMPLETED : 灵魂在原属地、无未结案审判、无 PENDING 节点、无 PENDING 请求
     ACTIVE --> CANCELLED : sentence_plan.cancel(理由必填)
+    RETRIAL --> CANCELLED : sentence_plan.cancel(同时撤掉重开审判)
     HELD --> ACTIVE : 手动结束该节点(return-home)
     HELD --> CANCELLED : sentence_plan.cancel
     COMPLETED --> [*]
@@ -245,8 +249,9 @@ stateDiagram-v2
 ```
 
 - **COMPLETED 是推进函数算出来的**,不是谁点出来的。
-- **HELD** 对应今天「永久刑期不自动回归」(`disposition/services.py:772-773`)。Q5 保证 HELD 时后面没有 PENDING 节点(联审校验);只有加项能在之后再加,加项请求在 HELD 下**拒绝**(要先手动结束永久节点)。
-- **CANCELLED**:未执行节点全部 → CANCELLED,进行中的调拨记录 → CANCELLED(`DispatchService.cancel`),PENDING 请求 → WITHDRAWN;灵魂若在外**不自动回归**(那是另一次 `return-home`)。
+- **RETRIAL(重审中)**:原属有一件未结案的重开审判。**外地当前节点照常执行**(处置执行、刑期计算不受影响);推进暂停 —— 刑满的节点进 WAITING(§3.2),不回原属、不推进下一站。重开审判结案后 `advance` 按调整过的计划继续。
+- **HELD** 对应今天「永久刑期不自动回归」(`disposition/services.py:772-773`)。Q5 保证 HELD 时后面没有 PENDING 节点(联审校验);加项请求在 HELD 下**拒绝**(要先手动结束永久节点)。
+- **CANCELLED**:未执行节点全部 → CANCELLED,进行中的调拨记录 → CANCELLED(`DispatchService.cancel`),PENDING 请求 → WITHDRAWN,未结的重开审判撤案;灵魂若在外**不自动回归**(那是另一次 `return-home`)。
 
 ### 3.2 节点
 
@@ -257,14 +262,19 @@ stateDiagram-v2
     PENDING --> DISPATCHING : 轮到它,系统 propose 调拨
     DISPATCHING --> ACTIVE : 执行地 execute 调拨(灵魂到达),同一事务按节点内容建处置
     DISPATCHING --> PENDING : 调拨被 REJECTED / CANCELLED(Q4:通知原属判官)
-    ACTIVE --> COMPLETED : 处置执行(非永久)
+    ACTIVE --> COMPLETED : 处置执行(非永久),且没有未结案审判
+    ACTIVE --> WAITING : 处置执行(非永久),但有未结案审判 → 刑满暂留
+    WAITING --> COMPLETED : 那件审判结案 / 撤案 → 回归
     ACTIVE --> ETERNAL : 处置执行(is_eternal)→ 计划 HELD
     ACTIVE --> ABORTED : 手动结束暂居(return-home)
+    WAITING --> ABORTED : 手动结束暂居
     ETERNAL --> ABORTED : 手动结束暂居
     PENDING --> REMOVED : 请求批准(减项)
     PENDING --> CANCELLED : 计划撤销
     DISPATCHING --> CANCELLED : 计划撤销
 ```
+
+**WAITING(刑满暂留)** 是 Q7 要的那个可见状态:处置已执行、灵魂却不能离开执行地,因为**某处**有一件未结案审判 —— 原属的重开审判(计划 RETRIAL),或本地的加减项审判(情况 1)。它统一了今天 `DISPATCH_RETURN_BLOCKED` 描述的情形,并给它一个节点状态,官员端与灵魂端都读得到;进入时写 `SENTENCE_NODE_WAITING` 事件、通知两地判官、推送 `sentence_waiting`。原属节点也可能 WAITING(原属处置执行完时恰有重开审判未结 —— 极少,但状态机不排除)。
 
 **只有 PENDING 能被减项。** 已经开始的刑不能靠改计划抹掉,要终止它是 ABORTED(带理由、带审计),要否认它是撤销整份计划。COMPLETED 连 ABORTED 都不行:它是历史。
 
@@ -272,14 +282,14 @@ stateDiagram-v2
 
 ```
 锁 Soul 行(select_for_update(of=("self",))),再锁 Plan 行
-if plan.status != ACTIVE: return
-current = 状态 ∈ {DISPATCHING, ACTIVE, COMPLETED, ETERNAL, ABORTED} 且灵魂仍在其执行地的节点
+if plan.status not in (ACTIVE, RETRIAL): return
+open = open_judgments(soul)                           # 不分租户,与 end_residence 同一个定义
+current = 灵魂此刻所在执行地的那个节点(状态 ∈ {DISPATCHING, ACTIVE, WAITING, ETERNAL, ABORTED})
 if soul.is_residing:
-    # 在外地。只有「外地节点已完结、且本地没有未结案审判」时才把灵魂送回来。
-    if current.status in (COMPLETED, ABORTED) and not open_judgments(soul, tenant=soul.tenant).exists():
-        end_residence(...)                          # 回归后递归一次 advance
-    return                                          # 其余情况等
-if open_judgments(soul, tenant=home).exists(): return   # 原属有未结案(重开审判)→ 等它结案
+    if current.status == WAITING and not open.exists():
+        current → COMPLETED;end_residence(...)        # 回归后递归一次 advance
+    return                                            # ACTIVE 在执行、WAITING 在等、ETERNAL 永久:都等
+if open.exists(): return                              # 原属有未结案(重开审判)→ 计划 RETRIAL,等它结案
 if 有 PENDING 请求: return                            # 原审判官先决定
 next = 首个 PENDING 节点(按 order)
 if next is None:
@@ -288,13 +298,15 @@ if next is None:
         (即今天 DispositionService.execute 原属分支做的事,disposition/services.py:736-748)
     SENTENCE_PLAN_COMPLETED 事件 + 推送 sentence_completed
     return
-if next.is_home:                                      # 重开审判加的原属节点
+if next.tenant_code == home.code:                     # 重开审判加的原属节点
     按节点内容建原属处置(sentence_node_id=next.id);next → ACTIVE;return
 DispatchService.propose(home, Tenant(next.tenant_code), soul, dispatcher=None, reason=...)
 next.status = DISPATCHING; next.dispatch_record_id = record.id
 ```
 
-**回归被拦的规则改成「只看灵魂此刻所在租户的未结案审判」**(Q7 的推论,§4.3):原属的未结案审判需要灵魂回来才能审,不应把灵魂拦在外地。`test_an_open_judgment_in_the_home_tenant_also_blocks`(`test_dispatch_residence.py:293`)因此**反转**。
+处置执行时(`DispositionService.execute` / `_execute_during_residence`)对节点的标记:`is_eternal → ETERNAL(计划 HELD)`;否则 `open_judgments(soul).exists() ? WAITING : COMPLETED`;然后 `advance`。
+
+**回归被拦的规则不变:任一租户的未结案审判都拦住回归**(`end_residence` 现状,`dispatch/services.py:329`)。Q7 澄清后它恰好就是「暂留等待」:原属重开的审判未结时,刑满的灵魂留在外地。`test_an_open_judgment_in_the_home_tenant_also_blocks`(`test_dispatch_residence.py:293`)**保留**。
 
 调用点(全部在既有事务内、灵魂行锁之下):
 
@@ -338,17 +350,20 @@ X = 开审判的租户;`node_X` = X 在计划里的最后一个节点。
 - HELD 计划拒绝 AMEND 请求(先手动结束永久节点)。
 - **审计与事件**:节点集合每次变化写 `SoulEvent(SENTENCE_PLAN_AMENDED)` 到原属租户 + `AuditLog(resource="sentence_plan")`;请求创建 / 决定各一条 `SENTENCE_REQUEST_*`,写到**提出方**租户(原属经节点方例外读得到)。
 
-### 4.3 重开审判(Q7:批准后立刻开,即使灵魂在外)
+### 4.3 重开审判(Q7:批准后立刻在原属地开审,即使灵魂在外)
 
-`REOPEN` 请求 ACCEPT 时,系统在**原属租户**立即建 `Judgment(kind=REOPEN, tenant=home, amends_plan_id=plan.id)`(与 `Soul.die` 建案同形,不经序列化器,所以 `same_tenant_or_404_message` 不在路径上)。它与现有两条规则冲突,解法:
+用户澄清后,这一节比上一版**小得多**:流程是「结案 → 执行 → 执行期间如需要再重开」,原审判在执行前已结案,所以执行期间至多一件未结案审判,就是重开的那件。**「一个灵魂同时只能有一个未结案审判」不改、不按租户区分。**
 
-| 冲突 | 现状 | 解法 | 代价 |
+| 现有规则 | 现状 | 在重开审判上的读法 | 需要改什么 |
 |---|---|---|---|
-| 「一个灵魂同时只能有一个未结案审判」 | `validate_soul` 全局唯一(`serializers.py:143-149`),无数据库约束(G11) | 改成**按租户**唯一:`open_judgments(soul, tenant=request.tenant)`。X 的加项审判与原属的重开审判可以并存;同一租户内仍只有一份 | 改 `validate_soul` 一处;`open_judgments` 加参数;加一条部分唯一约束 `UniqueConstraint(fields=["soul","tenant"], condition=Q(verdict__isnull=True, is_final=False, is_deleted=False))` 把它从序列化器层落到数据库层(顺手补上 G11) |
-| 「任一未结案审判拦住回归」 | `end_residence` 问的是不分租户的 `open_judgments(locked)`(`dispatch/services.py:329`);`test_an_open_judgment_in_the_home_tenant_also_blocks` 钉住 | 只看**灵魂此刻所在租户**的未结案审判(§3.3)。原属的重开审判**不拦**回归 —— 它正等着灵魂回来 | 反转 1 条测试;`ResidenceReturnBlockedError.judgment_ids` 只含所在地的案子 |
-| 原属能否在灵魂**在外时**结案重开审判 | `conclude_judgment` 的 `transition_to(DISPOSED)` 对 DISPOSED 灵魂失败(G1) | REOPEN 的结案**不走**灵魂状态转移:写 verdict、按 verdict 在原属**建一个新的原属节点**(PENDING,`is_home=True`?—— 见下)、生成处置内容;灵魂回来后 `advance` 激活它 | 「原属节点恒 `order=1` 且唯一」的约束要放宽为「**首个**节点是原属」:重开审判加的原属节点是普通节点(`is_home=False`,`tenant_code=home`),只有 `order=1` 那个标 `is_home=True`。`advance` 对 `tenant_code == home` 的节点不 `propose` 调拨,直接建处置 |
+| 一个灵魂同时只能有一个未结案审判 | `validate_soul`(`serializers.py:143-149`) | **保留**。REOPEN 请求 ACCEPT 时若灵魂已有未结案审判(情况 1 的加项审判还没结),ACCEPT 答 409 `open_judgment`,请求留在 PENDING,原属判官等它结案后再批 | 无 |
+| 任一未结案审判拦住回归 | `end_residence`(`dispatch/services.py:329`);`test_an_open_judgment_in_the_home_tenant_also_blocks` | **保留**,它就是「刑满暂留」的机制:重开审判未结时,外地刑满的灵魂进 WAITING,留在当地 | 无(只加节点状态与事件) |
+| 原属不能给暂居在外的灵魂开审判 | `same_tenant_or_404_message`(`apps/core/tenant_fields.py:41`);`test_the_home_tenant_cannot_write_to_the_residing_soul` | **一个窄的写例外**:原属租户可在自己租户下为该灵魂开 `kind=REOPEN` 的审判,且仅当计划上有一条 ACCEPTED 且尚未开审的 REOPEN 请求。其他写路径照旧 | 例外集中写在 `apps/core/tenant.py`(与只读例外并排:`residence_write_q` / `residence_writable(obj, tenant, action)`),`validate_soul` 调它;`test_tenant_scoping_contract.py` 加一张 `RESIDENCE_WRITABLE = {"JudgmentViewSet": ("create", "kind=REOPEN", 理由)}`,并断言**没有别的**视图 / 动作声明写例外 |
+| 结案要求灵魂 `JUDGING → DISPOSED`(G1) | `conclude_judgment :205-211` | REOPEN 的结案**不走**灵魂状态转移;写 verdict、按结论调整计划(§11 N1 决定是否产生新的原属节点);`advance` | AMENDMENT / REOPEN 走 `conclude_judgment` 的另一分支 |
 
-**重开审判结案产出什么,需要用户确认(§11 N1)**:(a) 新裁决 + 新的原属节点(推荐,上表按此写);(b) 只允许 `plan_changes`,不写裁决(等于一份挂在原属的 AMENDMENT)。两者模型相同(`kind=REOPEN` 已在阶段 1 里),差别只在阶段 3 的结案服务。
+**重审期间外地执行不受影响**:执行地照常执行当前节点的处置;刑满时因 `open_judgments` 非空进 WAITING(事件 `SENTENCE_NODE_WAITING`,通知两地判官,推送 `sentence_waiting`);重开审判结案 → `advance` → WAITING → COMPLETED → 回归 → 检查剩余 → 下一站。官员端在计划面板与调拨记录上都看到 WAITING;灵魂端 Life 屏节点列表显示「刑满暂留 · 等待重审」。
+
+**重开审判结案产出什么**,见 §11 N1。
 
 ### 4.4 为什么请求不用审批工作流
 
@@ -372,6 +387,7 @@ X = 开审判的租户;`node_X` = X 在计划里的最后一个节点。
 | 节点 DISPATCHING(系统 propose) | 执行地全部在职用户(现有 `_notify_target_tenant`,`:132`,不变) | 现有 `DISPATCH_PROPOSED` |
 | `SENTENCE_NODE_ACTIVATED` | 执行地判官 | `sentence_node_active` |
 | `SENTENCE_NODE_COMPLETED`(含 ETERNAL / ABORTED) | 原属判官 | `sentence_node_done` |
+| `SENTENCE_NODE_WAITING`(刑满暂留,Q7) | 执行地判官 + 原属判官 | `sentence_node_waiting` |
 | 回归被拦(现有 `DISPATCH_RETURN_BLOCKED`) | 现有规则 **+ 暂居地判官**(= `feat/notify-judges` 的规则,Q8) | 现有 `dispatch_return_blocked` |
 | `SENTENCE_NODE_REFUSED`(Q4) | 原属判官 | `sentence_node_refused` |
 | `SENTENCE_PLAN_AMENDED` | 每个被加 / 被删节点所在文明的判官 + 原属判官 | `sentence_plan_amended` |
@@ -388,6 +404,7 @@ X = 开审判的租户;`node_X` = X 在计划里的最后一个节点。
 | `disposition_executed` | 保留,**触发条件改挂 `SENTENCE_NODE_COMPLETED`**(现在挂灵魂进入 REINCARNATING/SETTLED,`:82-84`,而计划期间处置执行不再改灵魂状态);dedupe_key 用节点 id |
 | 新增 `sentence_completed` | 「受刑完毕,可以申请转生」,挂 `SENTENCE_PLAN_COMPLETED`,`data.screen="Life"` |
 | 新增 `sentence_amended` | 「你的受刑计划有变更,打开灵魂簿查看」,挂 `SENTENCE_PLAN_AMENDED`;不说加了哪里、为什么 |
+| 新增 `sentence_waiting` | 「本站刑满,等待重审结案后回归」,挂 `SENTENCE_NODE_WAITING`(Q7) |
 
 不推:请求创建 / 决定、节点 DISPATCHING(批准时已有 `residence_approved`)、联审进展。
 
@@ -421,7 +438,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 | `return-home/`、`DispatchReturnSerializer` | 保留 |
 | `CrossTenantJudgmentViewSet` | 加 `sentence` 动作;`create` 接受可选 `judgment`;`conclude` 加校验;前端 `app/cross-judgments/[id]` 加节点内容表单(阶段 4) |
 | 暂居只读例外与 `RESIDENCE_READABLE` 表 | 保留;新增三张分类 |
-| `test_dispatch_residence.py`(42 条)、`test_dispatch_return_blocked_notice.py`(7)、`test_soul_push_residence_approved.py`(6) | 前者约三分之一重写(夹具换成「节点激活生成处置」;`:293` 反转;`:585` 反转);后两者不变 |
+| `test_dispatch_residence.py`(42 条)、`test_dispatch_return_blocked_notice.py`(7)、`test_soul_push_residence_approved.py`(6) | 前者约三分之一重写(夹具换成「节点激活生成处置」;`:585` 反转);后两者不变 |
 | `frontend/src/__tests__/dispatchReturnHome.test.tsx`、`mobile/src/__tests__/residence.test.tsx` | 不变 |
 
 ### 7.2 存量数据回填(115 上是测试数据;要幂等)
@@ -449,7 +466,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 - 所有锁语句写 `select_for_update(of=("self",))`,关联对象在锁外另取(`apps/core/lock_join_guard.py`)。
 - **幂等:**`advance` 是状态的纯函数;并发调用被灵魂行锁串行化;串行化失效时 `unique_active_dispatch` 与「至多一个 DISPATCHING/ACTIVE 节点」两条部分唯一约束把第二条写入变成 IntegrityError(视图翻成 4xx,同 `dispatch/views.py:199-203`)。
 - **G7 补上:**`JudgmentViewSet.perform_create` 在建案前锁灵魂行。
-- **G11 补上:**未结案审判按 (soul, tenant) 的部分唯一约束(§4.3)。
+- **G11 可选加固:**未结案审判按 soul 的部分唯一约束(与现有规则同义,只是落到数据库层)。
 - 事件与通知在事务提交后发(`transaction.on_commit`,同 `soul_push/handler.py:20-35`);`SoulEvent` 与 `AuditLog` 在事务内写。
 
 **PostgreSQL 专属测试清单**(`skipif(SQLITE)`,加进 `test_the_postgres_only_set_is_the_set_we_think_it_is` 的集合):
@@ -460,7 +477,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 4. 计划完成与 `rebirth.submit` 并发 → 不存在建在 ACTIVE 计划上的申请。
 5. 两个执行地官员并发执行节点处置 → `{200, 400}`,节点 COMPLETED 恰一次、回归恰一次。
 6. 撤销计划与推进并发 → 撤销后不再出现新的 DISPATCHING。
-7. 两个租户并发开未结案审判 → 各一条(按租户唯一),同一租户两条 → 一条 IntegrityError。
+7. 两个租户并发给同一灵魂开未结案审判 → 恰一条(G11 约束落地后才能在 PG 上证明;落地前这条是 `validate_soul` 的竞态,写不出来)。
 
 ---
 
@@ -471,8 +488,8 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 | 阶段 | 内容 | 验收 |
 |---|---|---|
 | **1 模型(行为不变)** | 三张表 + 约束 + 迁移;`Judgment.kind / amends_plan_id`;`Disposition.sentence_node_id` + `can_delete`;`CrossTenantJudgment.judgment` + 参与方八列 + 约束;`EventType.SENTENCE_*`;**结案时建计划 + 原属节点(ACTIVE),不接推进**;回填命令;只读 API(`sentence-plans/`)与两张分类表;schema 重生成 + core 类型 | `makemigrations --check`;每条约束一次变异证明;回填命令跑两次第二次计数全 0;`test_every_soul_linked_viewset_is_classified` 绿;schema 0 warning / 0 error;`test_committed_schema_matches_the_backend` 绿 |
-| **2 推进** | 联审 `sentence` 动作与结案校验(Q5);原属 `conclude/` 抄参与方节点;`advance` 与 §3.3 全部调用点;拦截规则按所在租户;删 `resume_return_after_case_closed`;`eligibility`(Q6);Q3 拒绝;Q4 退回;§5 事件 / 通知 / 推送;`feat/notify-judges` 三个反例并入 | 重写 `test_dispatch_residence.py`;PG 测试 1、2、5;两份文案镜像测试 |
-| **3 加减项与撤销** | AMENDMENT 审判结案 → 请求;`SentencePlanRequest` 端点 / 决定 / 撤回;REOPEN(按 §11 N1 的结论);`sentence_plan.cancel`(Q11);`perform_create` 锁灵魂行(G7);未结案按租户唯一 + 约束(G11) | PG 测试 3、4、6、7;每种拒绝各一条 4xx 测试且**断言未写入** |
+| **2 推进** | 联审 `sentence` 动作与结案校验(Q5);原属 `conclude/` 抄参与方节点;`advance` 与 §3.3 全部调用点(含 WAITING);删 `resume_return_after_case_closed`;`eligibility`(Q6);Q3 拒绝;Q4 退回;§5 事件 / 通知 / 推送;`feat/notify-judges` 三个反例并入 | 重写 `test_dispatch_residence.py`;PG 测试 1、2、5;两份文案镜像测试 |
+| **3 加减项与撤销** | AMENDMENT 审判结案 → 请求;`SentencePlanRequest` 端点 / 决定 / 撤回;REOPEN(按 §11 N1 的结论);`sentence_plan.cancel`(Q11);`perform_create` 锁灵魂行(G7);未结案唯一落成约束(G11,可选);重开审判的窄写例外并入租户隔离契约 | PG 测试 3、4、6、7;每种拒绝各一条 4xx 测试且**断言未写入** |
 | **4 客户端** | Web:联审详情页的节点内容表单与排序;灵魂详情的计划面板;请求收件箱;App:Life 屏「我的受刑」(Q10);新推送 kind 落地页 | `tsc`、`lint --max-warnings 0`、`test:coverage` 阈值;E2E 三个 project;App 两种模拟器实测截图 |
 | **5 收尾** | 删旧注释(`dispatch/services.py:452-456`);架构文档决策记录补一条;`SOUL_STATES_THAT_MAY_APPLY` 收紧 | 全量门禁 |
 
