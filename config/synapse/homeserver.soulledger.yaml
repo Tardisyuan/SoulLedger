@@ -29,9 +29,11 @@ user_directory:
   enabled: true
   search_all_users: false
 
-# 除服务账号外不能建房 / 邀请 / 建别名 / 发布房间(config/synapse/soulledger_policy.py)。
+# 除服务账号外不能建房 / 邀请 / 建别名 / 发布房间;节流房间里发起方只能发后端签过凭据的
+# 那一条(config/synapse/soulledger_policy.py)。grant_secret 与后端 MATRIX_JWT_SECRET 同值。
 # 模块文件挂进容器并放进 PYTHONPATH(docker-compose 的 synapse 服务)。
 modules:
   - module: soulledger_policy.SoulLedgerPolicy
     config:
       service_user: "@soulledger:${MATRIX_SERVER_NAME}"
+      grant_secret: "${MATRIX_JWT_SECRET}"

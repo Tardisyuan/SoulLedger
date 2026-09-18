@@ -6,10 +6,12 @@
 * 发消息要求发送者是房间成员、未停用,且 power level ≥ `events_default`
   (`events` 表里的类型除外 —— 后端建房时把它设成空表);低了是 403 `M_FORBIDDEN`;
 * 停用用户离开它的所有房间(真 Synapse 是后台异步做完的,这里立即);
-* `set_user_levels` 只在级别真变了才写 —— 与真实现同一条判断,于是「写了几次」可断言。
+* `set_user_levels` 只在级别真变了才写 —— 与真实现同一条判断,于是「写了几次」可断言;
+* Synapse 模块(config/synapse/soulledger_policy.py)的节流规则:房间的 `io.soulledger.throttle`
+  指向发送者时,只收带有效、未用过的一次性凭据的 `m.room.message`(凭据校验用后端同一个
+  `apps.chat.grant.verify`;模块里那份与它一致,由集成测试对真 Synapse 证明)。
 
-**不照抄的**:建房、邀请的拒绝在 Synapse 模块里(config/synapse/soulledger_policy.py),
-后端只以服务账号建房,这里没有别的调用者可拒。
+**不照抄的**:建房、邀请的拒绝也在模块里,后端只以服务账号建房,这里没有别的调用者可拒。
 
 曾经的版本「只记账不拒绝」,理由是会拒绝的替身把「Synapse 会拒绝」换成了「替身会拒绝」。
 代价是它把一条真缺陷藏了起来:后端以 0 级发起方的身份代发私聊请求,替身照收,真 Synapse
@@ -17,7 +19,10 @@
 「后端以为能发」。所以这里拒绝,而拒绝的依据本身由集成测试对着真服务钉住。
 """
 import pytest
+from django.conf import settings
 
+from apps.chat.grant import KEY as GRANT_KEY
+from apps.chat.grant import verify
 from apps.chat.matrix import MatrixError
 
 SERVER_NAME = "test.soulledger"
@@ -30,13 +35,14 @@ class FakeMatrix:
     rooms: dict = {}
     sent: list = []
     calls: list = []
+    used: set = set()
 
     def __init__(self):
         self.service_user = f"@soulledger:{SERVER_NAME}"
 
     @classmethod
     def reset(cls):
-        cls.users, cls.rooms, cls.sent, cls.calls = {}, {}, [], []
+        cls.users, cls.rooms, cls.sent, cls.calls, cls.used = {}, {}, [], [], set()
 
     # ── 用户 ──
     def user_id(self, localpart):
@@ -57,8 +63,9 @@ class FakeMatrix:
     def create_room(self, *, name, power_levels):
         FakeMatrix.calls.append(("create_room", name))
         room_id = f"!room{len(FakeMatrix.rooms)}:{SERVER_NAME}"
-        FakeMatrix.rooms[room_id] = {"name": name, "power_levels": power_levels,
-                                     "members": {self.service_user}, "messages": [], "level_writes": 0}
+        FakeMatrix.rooms[room_id] = {"name": name, "power_levels": power_levels, "throttle": None,
+                                     "members": {self.service_user}, "messages": [], "level_writes": 0,
+                                     "level_log": []}
         return room_id
 
     def force_join(self, room_id, user_id):
@@ -71,7 +78,11 @@ class FakeMatrix:
             return False
         users.update(levels)
         FakeMatrix.rooms[room_id]["level_writes"] += 1
+        FakeMatrix.rooms[room_id]["level_log"].append(dict(levels))
         return True
+
+    def set_room_throttle(self, room_id, initiator):
+        FakeMatrix.rooms[room_id]["throttle"] = initiator
 
     def send_message(self, room_id, body, *, as_localpart, extra=None):
         room = FakeMatrix.rooms[room_id]
@@ -85,10 +96,16 @@ class FakeMatrix:
         have = pl.get("users", {}).get(sender, pl.get("users_default", 0))
         if have < need:
             raise MatrixError(f"user_level ({have}) < send_level ({need})", errcode="M_FORBIDDEN", status=403)
+        if room["throttle"] == sender:
+            grant = (extra or {}).get(GRANT_KEY)
+            if not verify(settings.MATRIX_JWT_SECRET, room_id, sender, grant) or grant["nonce"] in FakeMatrix.used:
+                raise MatrixError("This message has been rejected as probable spam", errcode="M_FORBIDDEN",
+                                  status=403)
+            FakeMatrix.used.add(grant["nonce"])
         event_id = f"$evt{len(FakeMatrix.sent)}"
         message = {"event_id": event_id, "sender": sender, "body": body,
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
-                   "on_behalf_of": (extra or {}).get("io.soulledger.on_behalf_of", ""),
+                   "grant": (extra or {}).get(GRANT_KEY),
                    "timestamp": 1000 + len(FakeMatrix.sent)}
         room["messages"].append(message)
         FakeMatrix.sent.append((room_id, message))
@@ -99,9 +116,9 @@ class FakeMatrix:
 
     # ── 测试直接用:模拟某个灵魂拿自己的 token 在 Matrix 里发言(同样受 power level 约束)──
     @classmethod
-    def says(cls, room_id, mxid, body="来了"):
+    def says(cls, room_id, mxid, body="来了", extra=None):
         localpart = mxid[1:].split(":", 1)[0]
-        return cls().send_message(room_id, body, as_localpart=localpart)
+        return cls().send_message(room_id, body, as_localpart=localpart, extra=extra)
 
 
 def can_speak(room_id, mxid):

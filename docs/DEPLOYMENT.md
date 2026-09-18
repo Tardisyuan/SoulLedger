@@ -98,7 +98,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - homeserver.yaml = `docker run … matrixdotorg/synapse generate` 产出的那份 + 追加
   `config/synapse/homeserver.soulledger.yaml`(`${…}` 换成与后端相同的值)。模块
   `config/synapse/soulledger_policy.py` 挂进容器并放进 `PYTHONPATH`:除服务账号外不能建房、邀请、
-  建别名、发布房间 —— **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。
+  建别名、发布房间,并在节流房间里只放行后端签过一次性凭据的那条私聊请求 ——
+  **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。模块把用过的凭据记在进程内存里:
+  Synapse 单进程部署;拆 worker 前先把它换成共享存储。
 - 后端环境变量:`MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
   `MATRIX_INTERNAL_URL`(后端 → Synapse)、`MATRIX_PUBLIC_BASEURL`(App → Synapse,发给 App)、
   `MATRIX_SERVER_NAME`、`MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、

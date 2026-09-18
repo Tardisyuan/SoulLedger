@@ -1,14 +1,17 @@
 """聊天的全部写路径。规则(2026-09-17 用户决定)在这里,**不在客户端**。
 
     1. 互相关注          → 自由私聊
-    2. 同文明、非互关    → 私聊请求(对方须在本文明、搜得到),每 24 小时一条;
-                           对方回过话或两人互关后解除
+    2. 可聊文明内、非互关 → 私聊请求,每 24 小时一条;对方回过话或两人互关后解除
     3. 官员收件箱        → 灵魂 → **当前所在**殿司;官员在 Web 后台看与回
-    4. 跨文明            → 不能私聊;官员不进灵魂之间的聊天
+    4. 不在可聊文明内    → 不能私聊;官员不进灵魂之间的聊天
     +  朋友圈禁言(apps/social 的 SocialMute)对灵魂之间的私聊同样生效
 
-关系、文明、禁言都读朋友圈(`apps/social/soul_circle.py`)的那一份,不另写一套:
-互关按**本世账号**、按**当前所在文明**的关注边算;禁言挂在本世账号上。
+**「可聊文明」按灵魂的两个文明算:当前所在 + 原属**(2026-09-19 用户决定:「暂居期间可以
+聊天,就是暂居地和原来的地」)。两个灵魂的 {tenant, home_tenant} 有交集就可以私聊;
+不暂居的灵魂两者是同一个,于是退化成「同文明」。回归后 tenant 回到 home,暂居地那一格消失。
+**朋友圈不跟着改**:它的搜索、主页、关注仍然只到当前所在文明(apps/social/soul_circle.py),
+这里的 `_civilizations` / `_mutual` / `_reachable` 是聊天自己的资格判断,只读朋友圈的关注边
+与禁言,不改它的范围。互关按**本世账号**、边记在可聊文明之一上;禁言挂在本世账号上。
 
 **规则是服务端执行的,而「服务端」有两半:**
 
@@ -18,15 +21,16 @@
   100 级而只有服务账号有 100。
 
 **发言权只有一个出处:`_speaking_levels`。** 一个灵魂在一个房间里能不能说话,由此刻的事实
-算出来(同文明?被禁言?是被节流的发起方?还在这个殿司?),再由 `sync_rooms` 写进 Synapse。
+算出来(有共同的可聊文明?被禁言?是被节流的发起方?还在这个殿司?),再由 `sync_rooms` 写进 Synapse。
 事实变化的地方都调它:禁言 / 解禁(signals)、调拨与回归(signals)、解除节流、打开聊天。
 禁言到期没有事件,它在灵魂下一次打开聊天(`chat_session` / 会话列表)时生效。
 ponytail: 到期靠懒同步;要准点解禁再加一个按 `until` 排的任务。
 
-**节流的落点是 power level。** 被节流的房间里发起方是 0 级,它在 Matrix 里发不出消息;
-唯一的出口是 `POST /me/chat/conversations/{id}/messages/`,由服务账号转发、内容带
-`io.soulledger.on_behalf_of`(发起方本人 0 级,以它的身份发会被 Synapse 拒)。
-解除节流 = 把它提回 50,从那以后消息不再经过后端。
+**节流的落点是 power level + 一次性凭据。** 被节流的房间里发起方是 0 级,它在 Matrix 里
+发不出消息;唯一的出口是 `POST /me/chat/conversations/{id}/messages/`:会话行锁下
+「临时提到 50 → 以**本人**身份发一条带凭据的消息 → 降回 0」。提权窗口里发起方自己直接发的
+任何东西都被 Synapse 模块拒绝(房间带 `io.soulledger.throttle`,见 apps/chat/grant.py)。
+解除节流 = 清掉那条状态事件、把它提回 50,从那以后消息不再经过后端。
 
 **审计不含正文。** `audit()` 写的是「谁对哪个会话做了什么」,body 一个字都不传进去。
 """
@@ -38,10 +42,13 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.chat.grant import KEY as GRANT_KEY
+from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
 from apps.chat.matrix import MatrixError, get_client, login_jwt
 from apps.chat.models import ChatIdentity, Conversation, ConversationKind
 from apps.social import soul_circle as circle
+from apps.social.models import Follow
 from apps.soul_accounts.services import current_account_of
 
 logger = logging.getLogger(__name__)
@@ -101,6 +108,46 @@ def audit(action, conversation, description, *, actor=None, request=None):
     )
 
 
+# ── 可聊文明 ─────────────────────────────────────────────────────────────
+
+
+def _civilizations(account):
+    """这个灵魂可以私聊的文明:当前所在 + 原属。"""
+    soul = account.soul
+    return {t for t in (soul.tenant_id, soul.home_tenant_id) if t is not None}
+
+
+def _shared(account, peer_account):
+    """两个本世账号共同的可聊文明;任一方不是本世账号即空。"""
+    if not (circle.is_current_soul(account.user) and circle.is_current_soul(peer_account.user)):
+        return set()
+    return _civilizations(account) & _civilizations(peer_account)
+
+
+def _mutual(account, peer_account):
+    """互关:双向都有关注边,且每条边都记在两人共同的可聊文明之一上(边的 tenant 是关注那一刻
+    关注者所在的文明 —— 暂居前在原属文明互关的两人,暂居期间仍算互关)。"""
+    shared = _shared(account, peer_account)
+    if not shared or account.user_id == peer_account.user_id:
+        return False
+    a, b = account.user_id, peer_account.user_id
+    edges = Follow.objects.filter(
+        Q(follower_id=a, following_id=b) | Q(follower_id=b, following_id=a), tenant_id__in=shared
+    ).values_list("follower_id", flat=True)
+    return set(edges) == {a, b}
+
+
+def _reachable(account):
+    """可以向其发起私聊的本世灵魂账号(User 查询集):对方的当前所在或原属落在我的可聊文明里。"""
+    from apps.authentication.models import User
+
+    mine = _civilizations(account)
+    return User.objects.filter(
+        Q(soul_account__soul__tenant_id__in=mine) | Q(soul_account__soul__home_tenant_id__in=mine),
+        role=circle.SOUL_ROLE, soul_account__retired_at__isnull=True, is_active=True,
+    ).exclude(pk=account.user_id)
+
+
 # ── 发言权 ───────────────────────────────────────────────────────────────
 
 
@@ -127,7 +174,7 @@ def refusal(conversation, account, peer_account=None):
         if account.soul.tenant_id != conversation.tenant_id:
             return ChatError("你已不在这个殿司,只能给当前所在的殿司写信。", "not_current_hall", status=403)
         return None
-    if peer_account is None or not circle.same_civilization(account.user, peer_account.user):
+    if peer_account is None or not _shared(account, peer_account):
         return ChatError("跨文明的灵魂之间不能私聊。", "cross_civilization", status=403)
     if circle.active_mute(account.user) is not None:
         return ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
@@ -217,17 +264,15 @@ def _pair(soul_a, soul_b):
 
 
 def open_direct(account, target_user, *, request=None):
-    """取或建与 `target_user`(朋友圈搜索结果里的那个 user_id)的私聊房间。
+    """取或建与 `target_user`(朋友圈 user_id)的私聊房间。
 
-    返回 `(conversation, created)`。对方必须此刻与我同文明、是本世账号 —— 与朋友圈搜索
-    同一个集合(`circle.souls_in`),所以「搜得到」与「能发请求」是同一句话。跨文明与不存在
-    答同一个 404。非互关建出来的房间带节流。
+    返回 `(conversation, created)`。对方必须是本世账号、与我有共同的可聊文明(`_reachable`)。
+    不可达与不存在答同一个 404。非互关建出来的房间带节流。
     """
     soul = account.soul
     if target_user.pk == account.user_id:
         raise ChatError("不能和自己私聊。", "self_conversation", status=400)
-    tenant = circle.civilization_of(account.user)
-    if tenant is None or not circle.souls_in(tenant).filter(pk=target_user.pk).exists():
+    if not _reachable(account).filter(pk=target_user.pk).exists():
         raise ChatError("找不到这个灵魂。", "not_found", status=404)
     target_account = target_user.soul_account
     target_soul = target_account.soul
@@ -244,7 +289,7 @@ def open_direct(account, target_user, *, request=None):
     client = get_client()
     mine = ensure_identity(account, client=client)
     theirs = ensure_identity(target_account, client=client)
-    mutual = circle.are_mutual_followers(account.user, target_user)
+    mutual = _mutual(account, target_account)
 
     room_id = client.create_room(
         name=f"{display_name(account)} · {display_name(target_account)}",
@@ -254,6 +299,8 @@ def open_direct(account, target_user, *, request=None):
             theirs.matrix_user_id: SPEAK,
         }),
     )
+    if not mutual:
+        client.set_room_throttle(room_id, mine.matrix_user_id)
     client.force_join(room_id, mine.matrix_user_id)
     client.force_join(room_id, theirs.matrix_user_id)
 
@@ -292,7 +339,7 @@ def refresh_throttle(conversation, *, client=None):
         return conversation
 
     reason = None
-    if circle.are_mutual_followers(initiator[0].user, other[0].user):
+    if _mutual(initiator[0], other[0]):
         reason = "mutual"
     elif any(m["sender"] == other[1].matrix_user_id for m in client.recent_messages(conversation.room_id)):
         reason = "responded"
@@ -303,6 +350,7 @@ def refresh_throttle(conversation, *, client=None):
     if reason == "responded":
         conversation.responded_at = timezone.now()
     conversation.save(update_fields=["throttled", "responded_at"])
+    client.set_room_throttle(conversation.room_id, None)
     client.set_user_levels(conversation.room_id, _speaking_levels(conversation, identities))
     return conversation
 
@@ -334,10 +382,7 @@ def send_direct_message(account, conversation, body, *, request=None):
             last = conversation.last_request_at
             if last is not None and (timezone.now() - last).total_seconds() < interval:
                 raise _throttled(last + timedelta(seconds=interval))
-            event_id = client.send_message(
-                conversation.room_id, body, as_localpart=settings.MATRIX_SERVICE_LOCALPART,
-                extra={"io.soulledger.on_behalf_of": identity.matrix_user_id},
-            )
+            event_id = _send_request(client, conversation, identity, body)
         else:
             event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
         now = timezone.now()
@@ -351,6 +396,29 @@ def send_direct_message(account, conversation, body, *, request=None):
     audit("EXECUTE", conversation, "发送私聊请求" if conversation.throttled else "经后端发送私聊消息",
           actor=account.user, request=request)
     return event_id
+
+
+def _send_request(client, conversation, identity, body):
+    """临时提权、本人发、降回 0 —— 在调用方持有的会话行锁里。
+
+    * 同一会话的两次后端请求被行锁串行,不会一个在另一个的窗口里再发;
+    * 发起方在窗口里自己直接发的,被 Synapse 模块按凭据拒绝(一次性、绑房间与发送者、30 秒);
+    * 降权放在 `finally`,发送失败也降;降权本身失败(Synapse 那一刻不可达)只记日志 ——
+      那时发起方停在 50 级,但模块仍然只放行带凭据的消息,而凭据只有这里签得出;下一次
+      `sync_rooms`(取会话、禁言、调拨时)按 `_speaking_levels` 把它写回 0。
+    """
+    mxid = identity.matrix_user_id
+    grant = sign_grant(settings.MATRIX_JWT_SECRET, conversation.room_id, mxid)
+    client.set_user_levels(conversation.room_id, {mxid: SPEAK})
+    try:
+        return client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
+                                   extra={GRANT_KEY: grant})
+    finally:
+        try:
+            client.set_user_levels(conversation.room_id, {mxid: SILENT})
+        except MatrixError as exc:
+            logger.error("chat: 私聊请求发完降权失败 room=%s: %s(模块仍挡住无凭据消息)",
+                         conversation.room_id, exc)
 
 
 def _live_identity(account):
