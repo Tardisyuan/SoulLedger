@@ -9,6 +9,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from apps.authentication.views import UserViewSet
+from apps.chat import urls as chat_urls
 from apps.core.health import HealthCheck, HealthCheckDetailed
 from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.soul_accounts import urls as soul_account_urls
@@ -56,6 +57,9 @@ urlpatterns = [
     path("api/v1/me/", include(soul_account_urls.me_urlpatterns)),
     # 推送设备与偏好(apps/soul_push)。同一个 /me/ 前缀、同一个 SoulAPIView 分界。
     path("api/v1/me/", include("apps.soul_push.urls")),
+    # 聊天(apps/chat)。灵魂侧同样在 /me/ 之下;/chat/ 是官员的殿司收件箱,走官员令牌。
+    path("api/v1/me/", include(chat_urls.me_urlpatterns)),
+    path("api/v1/chat/", include(chat_urls.officer_urlpatterns)),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

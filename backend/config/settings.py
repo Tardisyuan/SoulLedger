@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     "apps.scheduler",
     "apps.soul_accounts",
     "apps.soul_push",
+    "apps.chat",
 ]
 
 MIDDLEWARE = [
@@ -375,6 +376,33 @@ SOUL_PUSH_ENABLED = _env_bool("SOUL_PUSH_ENABLED", "False")
 EXPO_ACCESS_TOKEN = os.getenv("EXPO_ACCESS_TOKEN", "")
 # 发送端口的类路径(apps/soul_push/expo.py 文件头)。测试换成假实现。
 SOUL_PUSH_SENDER = os.getenv("SOUL_PUSH_SENDER", "apps.soul_push.expo.ExpoPushSender")
+
+# apps.chat — 灵魂端聊天(Matrix / Synapse)。见 docs/DEPLOYMENT.md「灵魂聊天」。
+# 默认关:没打开时 /me/chat/ 一律 503,不访问 Synapse、不建任何行。与 SOUL_PUSH_ENABLED
+# 同一形状,理由也同一条:未部署 Synapse 的环境(本地、CI)照常跑全量测试。
+MATRIX_ENABLED = _env_bool("MATRIX_ENABLED", "False")
+# 后端→Synapse 走 compose 网络;灵魂的客户端走 nginx 反代的公开地址。两者不同,
+# 且**只有后者**会出现在发给 App 的会话响应里。
+MATRIX_INTERNAL_URL = os.getenv("MATRIX_INTERNAL_URL", "http://synapse:8008")
+MATRIX_PUBLIC_BASEURL = os.getenv("MATRIX_PUBLIC_BASEURL", "")
+MATRIX_SERVER_NAME = os.getenv("MATRIX_SERVER_NAME", "")
+# 与 Synapse 的 jwt_config.secret 是同一个值。后端用它签两种东西:发给 App 的
+# 短时效登录凭据,以及后端自己代灵魂发言时换取的 access token。
+MATRIX_JWT_SECRET = os.getenv("MATRIX_JWT_SECRET", "")
+# 与 Synapse 的 registration_shared_secret 同一个值。**只用一次**:把服务账号
+# 注册成 admin(`/_synapse/admin/v1/register`)。之后一律走 JWT 登录。
+MATRIX_REGISTRATION_SHARED_SECRET = os.getenv("MATRIX_REGISTRATION_SHARED_SECRET", "")
+# 服务账号:每个房间都由它创建,官员收件箱的官员一侧也是它。
+MATRIX_SERVICE_LOCALPART = os.getenv("MATRIX_SERVICE_LOCALPART", "soulledger")
+# 灵魂的 Matrix localpart 由账号 id 经 HMAC 派生(apps/chat/identity.py)。这个盐
+# 单独一份:泄漏 SECRET_KEY 不等于能把 mxid 反推回账号,反之亦然。**不设则拒绝启用聊天**。
+MATRIX_USER_SALT = os.getenv("MATRIX_USER_SALT", "")
+# 发给 App 的登录凭据有效期。够一次登录往返,不够转手给别人用。
+MATRIX_LOGIN_TOKEN_TTL_SECONDS = int(os.getenv("MATRIX_LOGIN_TOKEN_TTL_SECONDS", "120"))
+# 非互关私聊请求的间隔(2026-09-17 用户决定:每 24 小时一条)。
+CHAT_REQUEST_INTERVAL_SECONDS = int(os.getenv("CHAT_REQUEST_INTERVAL_SECONDS", str(24 * 3600)))
+# 客户端的类路径。测试换成假实现(tests/chat_support.py),于是单元测试一条 HTTP 都不发。
+MATRIX_CLIENT = os.getenv("MATRIX_CLIENT", "apps.chat.matrix.SynapseClient")
 
 # Logging
 LOGGING = {
