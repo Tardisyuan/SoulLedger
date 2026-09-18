@@ -386,8 +386,9 @@ function Flow({ steps }: { steps: FlowStep[] }) {
 
 /**
  * Handoff 3c: the block a tapped notification points at — a 3px mark rule on
- * the left, the surface one step up, a "新结果" tag top right — fading out
- * after 1.2s. Under reduce-motion nothing moves: only the rule stays.
+ * the left, the surface one step up, a "新结果" tag top right. After 1.2s the
+ * surface and the tag fade; the rule stays, so the landing is still findable.
+ * Under reduce-motion nothing moves: only the rule is drawn.
  */
 function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }) {
   const theme = useTheme();
@@ -404,7 +405,7 @@ function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }
     <View testID="landing-highlight">
       {reduced ? null : <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: theme.s1 }]} />}
       {children}
-      <Animated.View pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.mark, opacity: reduced ? 1 : opacity }]} />
+      <View testID="landing-rule" pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.mark }]} />
       {reduced ? null : (
         <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.accent, opacity }]}>
           <Txt testID="landing-tag" variant="label" tone="accent" style={styles.landingTagText}>
