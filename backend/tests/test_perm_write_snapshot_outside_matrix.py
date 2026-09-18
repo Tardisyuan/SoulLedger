@@ -1699,6 +1699,8 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         # perm/0022 (2026-09-17, 灵魂端). Same reasoning as the scheduler pair.
         "soul_account.manage",
         "soul_account.read",
+        # perm/0023 (2026-09-18, 灵魂朋友圈审核). Same reasoning as the scheduler pair.
+        "social.moderate",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",
