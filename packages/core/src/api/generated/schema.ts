@@ -6771,9 +6771,10 @@ export interface components {
          *     * `DISPATCH_REJECTED` - Dispatch Rejected
          *     * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
          *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
+         *     * `DISPATCH_RETURN_BLOCKED` - Dispatch Return Blocked
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED";
         /** @enum {unknown} */
         NullEnum: null;
         /**
@@ -8000,6 +8001,10 @@ export interface components {
             /** @description 职位：如 第一殿殿主 */
             position?: string;
         };
+        /**
+         * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+         *     请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+         */
         PatchedUserNotification: {
             readonly id?: number;
             readonly user?: number;
@@ -9438,6 +9443,10 @@ export interface components {
             /** Format: uri */
             avatar?: string | null;
         };
+        /**
+         * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+         *     请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+         */
         UserNotification: {
             readonly id: number;
             readonly user: number;

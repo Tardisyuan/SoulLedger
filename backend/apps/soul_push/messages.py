@@ -17,6 +17,7 @@ MESSAGES = {
         "rebirth_appeal_rejected": {"title": "申诉被驳回", "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"},
         "judgment_result": {"title": "审判有了结论", "body": "你的审判有了结论,打开灵魂簿查看。"},
         "disposition_executed": {"title": "处置已执行", "body": "你的处置已执行,打开灵魂簿查看。"},
+        "residence_approved": {"title": "即将暂居", "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_started": {"title": "暂居开始", "body": "你已被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_returned": {"title": "暂居结束", "body": "你已回归原属文明,打开灵魂簿查看。"},
     },
@@ -41,6 +42,10 @@ MESSAGES = {
             "title": "Disposition carried out",
             "body": "Your disposition has been carried out. Open Soul Ledger to see it.",
         },
+        "residence_approved": {
+            "title": "Residence approved",
+            "body": "You are about to be moved to reside in another civilization. Open Soul Ledger to see it.",
+        },
         "residence_started": {
             "title": "Residence begun",
             "body": "You have been moved to reside in another civilization. Open Soul Ledger to see it.",
@@ -56,6 +61,7 @@ MESSAGES = {
         "rebirth_appeal_rejected": {"title": "Wehem Medu Sehen", "body": "Wehem Medu Ek Sehen. Wen Medjat Ba Er Maa Khet."},
         "judgment_result": {"title": "Wedja Pehwy", "body": "Wedja Ek Pehwy. Wen Medjat Ba Er Maa."},
         "disposition_executed": {"title": "Wetep Iri", "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."},
+        "residence_approved": {"title": "Hemes Taui Kety Hesy", "body": "Ek Er Hemes Em Taui Kety. Wen Medjat Ba Er Maa."},
         "residence_started": {"title": "Hemes Taui Kety", "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."},
         "residence_returned": {"title": "Ankh Er Taui", "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."},
     },

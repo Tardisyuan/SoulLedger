@@ -14968,6 +14968,7 @@ components:
       - DISPATCH_REJECTED
       - CROSS_JUDGMENT_INVITED
       - JUDGMENT_CONCLUDED
+      - DISPATCH_RETURN_BLOCKED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -14982,6 +14983,7 @@ components:
         * `DISPATCH_REJECTED` - Dispatch Rejected
         * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
         * `JUDGMENT_CONCLUDED` - Judgment Concluded
+        * `DISPATCH_RETURN_BLOCKED` - Dispatch Return Blocked
     NullEnum:
       enum:
       - null
@@ -17121,6 +17123,9 @@ components:
           maxLength: 100
     PatchedUserNotification:
       type: object
+      description: |-
+        分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+        请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
       properties:
         id:
           type: integer
@@ -20300,6 +20305,9 @@ components:
       - username
     UserNotification:
       type: object
+      description: |-
+        分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+        请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
       properties:
         id:
           type: integer
