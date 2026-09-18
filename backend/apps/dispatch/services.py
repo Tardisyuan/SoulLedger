@@ -373,23 +373,77 @@ class DispatchService:
         """自动回归被未结案审判拦下:留一条 SoulEvent,官员从时间线上看得到为什么没回去。
 
         写在暂居租户(审判在那里);原属租户经只读例外也读得到这条事件。
+
+        同时给两边的官员发站内通知(`_notify_return_blocked`),**每次暂居只发一次**:
+        同一暂居里再有处置执行、再被拦,事件照写,通知不再发。「这次暂居发过没有」
+        就是「这次暂居已经有 DISPATCH_RETURN_BLOCKED 事件没有」,不另建表;在灵魂行锁下问,
+        两次并发的处置执行不会都看到「没有」。
+        只在自动回归被拦时发:手动结束的 409 已经把未结案审判的 id 交给了点按钮的那位官员。
         """
-        record = (
-            DispatchRecord._base_manager
-            .filter(soul_id=soul.pk, status=DispatchStatus.EXECUTED, target_tenant_id=soul.tenant_id, is_deleted=False)
-            .order_by("-executed_at").first()
-        )
-        SoulEvent.objects.create(
-            tenant_id=soul.tenant_id, soul=soul, event_type=EventType.STATE_CHANGED,
-            payload={
-                "action": "DISPATCH_RETURN_BLOCKED",
-                "code": blocked.code,
-                "open_judgment_ids": blocked.judgment_ids,
-                "disposition_id": str(disposition.pk),
-                "dispatch_id": str(record.pk) if record else None,
-            },
-            actor="system",
-        )
+        from apps.souls.models import Soul
+
+        with transaction.atomic():
+            # 调用方(`_execute_during_residence`)已持有这把锁;再取一次是可重入的,
+            # 让「每次暂居只发一次」不依赖调用方记得先锁。
+            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            record = (
+                DispatchRecord._base_manager
+                .filter(soul_id=locked.pk, status=DispatchStatus.EXECUTED, target_tenant_id=locked.tenant_id,
+                        is_deleted=False)
+                .order_by("-executed_at").first()
+            )
+            dispatch_id = str(record.pk) if record else None
+            already_told = SoulEvent.all_objects.filter(
+                soul_id=locked.pk, payload__action="DISPATCH_RETURN_BLOCKED", payload__dispatch_id=dispatch_id,
+            ).exists()
+            SoulEvent.objects.create(
+                tenant_id=locked.tenant_id, soul=locked, event_type=EventType.STATE_CHANGED,
+                payload={
+                    "action": "DISPATCH_RETURN_BLOCKED",
+                    "code": blocked.code,
+                    "open_judgment_ids": blocked.judgment_ids,
+                    "disposition_id": str(disposition.pk),
+                    "dispatch_id": dispatch_id,
+                },
+                actor="system",
+            )
+            if not already_told:
+                DispatchService._notify_return_blocked(locked, dispatch_id, len(blocked.judgment_ids))
+
+    #: 「回归被拦下」通知的收件权限。选 `dispatch.read`(ADMIN / MODERATOR / GUARDIAN)而不是
+    #: `dispatch.return`(只有 ADMIN / MODERATOR):通知链到调拨记录,收件人必须看得见它;
+    #: 而解开它的动作是结案或撤案,不是「结束暂居」—— 那会同样被 409 拦下,所以持有
+    #: `dispatch.return` 并不让谁更该知道。JUDGE / VIEWER 不持有 `dispatch.read`,不收。
+    RETURN_BLOCKED_PERMISSION = "dispatch.read"
+
+    @staticmethod
+    def return_blocked_recipients(soul):
+        """原属租户与暂居租户里持有 `dispatch.read` 的在职(is_active)官员。
+        ADMIN 经 `check_permission` 的旁路自然在内,但**只限这两个租户的** ADMIN。
+        灵魂账号(role=SOUL)`check_permission` 恒为 False,不收 —— 用户明确不推给灵魂。"""
+        from apps.authentication.models import User
+        from apps.perm.checker import check_permission
+
+        candidates = User.objects.filter(
+            tenant_id__in={soul.home_tenant_id, soul.tenant_id}, is_active=True,
+        ).order_by("pk")
+        return [u for u in candidates if check_permission(u, DispatchService.RETURN_BLOCKED_PERMISSION)]
+
+    @staticmethod
+    def _notify_return_blocked(soul, dispatch_id, open_count):
+        """存下 zh-Hans 文本(WebSocket 推送与兜底),读时按请求语言重渲染(apps/notifications/messages.py)。
+        只带灵魂名与未结案件数,**不带**审判 id、判决或任何案情。"""
+        from apps.events.services import EventService
+        from apps.notifications import messages
+
+        params = {"soul": soul.name, "count": open_count}
+        title, body = messages.render(messages.DEFAULT_LOCALE, "dispatch_return_blocked", params)
+        for user in DispatchService.return_blocked_recipients(soul):
+            EventService.notify_user(
+                user, title=title, message=body, notification_type="DISPATCH_RETURN_BLOCKED",
+                related_resource="DispatchRecord" if dispatch_id else "soul",
+                related_id=dispatch_id or str(soul.pk), params=params,
+            )
 
     @staticmethod
     def resume_return_after_case_closed(soul, *, judgment):

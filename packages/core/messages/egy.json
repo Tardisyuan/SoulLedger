@@ -2153,6 +2153,10 @@
       "title": "Wetep Iri",
       "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."
     },
+    "residence_approved": {
+      "title": "Hemes Taui Kety Hesy",
+      "body": "Ek Er Hemes Em Taui Kety. Wen Medjat Ba Er Maa."
+    },
     "residence_started": {
       "title": "Hemes Taui Kety",
       "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."
@@ -2160,6 +2164,12 @@
     "residence_returned": {
       "title": "Ankh Er Taui",
       "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."
+    }
+  },
+  "official_notify": {
+    "dispatch_return_blocked": {
+      "title": "Ankh Er Taui Khesef",
+      "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."
     }
   }
 }
