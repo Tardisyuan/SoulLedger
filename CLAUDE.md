@@ -163,8 +163,10 @@ cd frontend && npm run test:coverage
 # three on any `^packages/` change. They were missing from this list, so the
 # way to find out they exist was to be refused by the hook.
 # `test` is vitest, not jest: `domBoundary.test.ts` builds a TS program from
-# the package's own tsconfig and asserts that ~146 DOM type names leaked in by
-# `@types/react` stay unresolvable. `typecheck` alone does NOT catch that —
+# the package's own tsconfig and asserts that the 150 DOM type names leaked in by
+# `@types/react` 19.2 stay unused (146 under 18.3; the list is derived at test
+# time from `@types/react/global.d.ts`, so this number is a reading, not a
+# config — re-measured 2026-09-19 on feat/react-19). `typecheck` alone does NOT catch that —
 # they are empty interfaces, so `const el: HTMLElement = {}` compiles.
 npm run --workspace packages/core typecheck
 npm run --workspace packages/core lint
