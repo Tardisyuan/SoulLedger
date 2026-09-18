@@ -139,6 +139,7 @@ const COLLECTED_FILES = [
   "domainDisplayRendering.test.tsx",
   "domainNamespaceContract.test.ts",
   "drawerFocusTrap.test.tsx",
+  "egyLexiconRules.test.ts",
   "eventInvalidationReachesCache.test.ts",
   "eventRegistry.test.ts",
   "enumsMatchTheSchema.test.ts",
