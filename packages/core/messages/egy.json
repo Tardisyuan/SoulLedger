@@ -2102,5 +2102,11 @@
       "title": "Ankh Er Taui",
       "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."
     }
+  },
+  "official_notify": {
+    "dispatch_return_blocked": {
+      "title": "Ankh Er Taui Khesef",
+      "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."
+    }
   }
 }

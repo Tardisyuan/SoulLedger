@@ -2102,5 +2102,11 @@
       "title": "Residence ended",
       "body": "You have returned to your home civilization. Open Soul Ledger to see it."
     }
+  },
+  "official_notify": {
+    "dispatch_return_blocked": {
+      "title": "Residence return blocked",
+      "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."
+    }
   }
 }

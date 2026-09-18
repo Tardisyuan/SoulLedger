@@ -2102,5 +2102,11 @@
       "title": "暂居结束",
       "body": "你已回归原属文明,打开灵魂簿查看。"
     }
+  },
+  "official_notify": {
+    "dispatch_return_blocked": {
+      "title": "暂居回归被拦下",
+      "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"
+    }
   }
 }
