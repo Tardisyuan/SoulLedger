@@ -1,15 +1,15 @@
 import { soulApi, soulErrorMessage, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
-import { CIVILIZATION_CODES } from "@soulledger/core/config/civilizations";
 import type { Locale } from "@soulledger/core/config/locale";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
-import { useContext, useState } from "react";
+import { platform } from "@soulledger/core/platform";
+import { useContext, useEffect, useReducer, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
 import { family } from "../fonts";
-import { useAskLogout, useToast } from "../feedback";
+import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES, formatStamp, lexiconKey, residenceOf, type Residence } from "../rules";
 import { SessionContext, useSession } from "../session";
@@ -39,7 +39,6 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
-import { LanguageSwitch } from "./auth";
 import type { AppStackParams } from "./applications";
 
 /**
@@ -48,12 +47,6 @@ import type { AppStackParams } from "./applications";
  * harvests quoted `soul_app.*` literals as keys and checks this one by member.
  */
 const SOUL_STATES = ["soul_app", "soul_states"].join(".");
-
-/** `CN_DIYU` → `CHINESE`, via the one table that pairs them. */
-function civilizationOfTenant(code: string): string | null {
-  const hit = Object.entries(CIVILIZATION_CODES).find(([, tenant]) => tenant === code);
-  return hit ? hit[0] : null;
-}
 
 function realmName(realm: { name_zh: string; name_en: string; name_local: string }, locale: Locale): string {
   return (locale === "zh-Hans" ? realm.name_zh : realm.name_en) || realm.name_local;
@@ -67,7 +60,7 @@ export function useResidence(): Residence {
   // Read the context directly: a screen rendered without a session (a test) is simply "at home".
   const session = useContext(SessionContext);
   const me = session?.state.status === "signedIn" ? session.state.profile : null;
-  return residenceOf(t.civ, me?.tenant.code, me?.home_tenant);
+  return residenceOf(t.civ, me);
 }
 
 function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
@@ -275,13 +268,22 @@ function Identity({ me, residence }: { me: MeProfile; residence: Residence }) {
           {tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) })}
         </Txt>
       </View>
-      {residence.residing && me.home_tenant ? (
-        <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
-          {tr("soul_app.life.residing", {
-            current: civName(me.civilization),
-            home: civName(civilizationOfTenant(me.home_tenant.code)),
-          })}
-        </Txt>
+      {/* Handoff 3b: the residence mark is a 1px DASHED box in ink-muted — never a colour
+          block, so it cannot be read as a state badge — shown only while is_residing. */}
+      {residence.residing ? (
+        <>
+          <View style={[styles.residenceBox, { borderColor: t.hair2 }]}>
+            <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
+              {tr("soul_app.life.residing", {
+                current: civName(me.civilization),
+                home: civName(me.home_civilization),
+              })}
+            </Txt>
+          </View>
+          <Txt testID="residence-note" variant="caption" tone="subtle" style={styles.residenceNote}>
+            {tr("soul_app.life.residing_note")}
+          </Txt>
+        </>
       ) : null}
       <View style={styles.nameRow}>
         <Txt variant="display" style={styles.shrink}>
@@ -352,14 +354,59 @@ function Scores({ me, life, lex }: { me: MeProfile; life: MeLife | null; lex: Ci
   );
 }
 
+/** Where a residing soul's app remembers WHERE it resides (a civilization), per soul. */
+export const RESIDENCE_MEMO_PREFIX = "soul_app_residing_in:";
+
+/**
+ * Handoff 3b: after a residence ends, ONE card on the life tab says so and asks
+ * for an acknowledgement — a card, not a toast, because the skin and the
+ * lexicon just changed under the soul. The design stores the acknowledgement
+ * server-side (`acknowledged_at`); the API has no such field, so it is kept on
+ * this device: the civilization is remembered while `is_residing`, the card
+ * shows once it no longer is, and "got it" forgets it.
+ */
+function Homecoming({ me }: { me: MeProfile }) {
+  const theme = useTheme();
+  const { t, enumLabel } = useI18n();
+  const { gutter } = useLayout();
+  const key = `${RESIDENCE_MEMO_PREFIX}${me.soul_code}`;
+  // The persistent port reads synchronously, so the store itself is the state; this only re-renders.
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (me.is_residing) platform().persistent.set(key, me.civilization);
+  }, [key, me.is_residing, me.civilization]);
+  const from = me.is_residing ? null : platform().persistent.get(key);
+  if (!from) return null;
+  const civName = (civilization: string) => enumText(enumLabel("souls.civilizations", civilization), t);
+  const home = civName(me.home_civilization);
+  const acknowledge = () => {
+    platform().persistent.remove(key);
+    rerender();
+  };
+  return (
+    <View style={[styles.homecomingWrap, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
+      <View testID="homecoming" style={[styles.homecoming, { borderColor: theme.accent, borderLeftColor: theme.mark, backgroundColor: theme.s1 }]}>
+        <View style={styles.homecomingHead}>
+          <Emblem civ={theme.civ} size={15} stroke={theme.mark} />
+          <Txt variant="bodyLg" style={styles.shrink}>
+            {t("soul_app.homecoming.title", { home })}
+          </Txt>
+        </View>
+        <Txt variant="caption" tone="muted">
+          {t("soul_app.homecoming.body", { from: civName(from), home })}
+        </Txt>
+        <Button testID="homecoming-ok" kind="secondary" title={t("soul_app.homecoming.ok")} onPress={acknowledge} />
+      </View>
+    </View>
+  );
+}
+
 export function MyLifeScreen() {
   const { t, locale } = useI18n();
   const { state, refreshProfile } = useSession();
-  const askLogout = useAskLogout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const life = useRemote(soulApi.life);
   const residence = useResidence();
-  const { gutter } = useLayout();
   useReloadOnRefocus(life.reload);
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     records: true,
@@ -378,6 +425,7 @@ export function MyLifeScreen() {
 
   return (
     <Screen refreshing={life.loading && !!life.data} onRefresh={refresh} edges={["left", "right"]} testID="profile-card">
+      <Homecoming me={me} />
       <Identity me={me} residence={residence} />
       <Scores me={me} life={life.data} lex={residence.home} />
       <Block>
@@ -408,10 +456,9 @@ export function MyLifeScreen() {
           <Skeleton lines={4} testID="life-loading" />
         </Block>
       )}
-      <View style={[styles.foot, { paddingHorizontal: gutter }]}>
+      {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
+      <View style={styles.foot}>
         <EmblemDivider />
-        <LanguageSwitch />
-        <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
       </View>
     </Screen>
   );
@@ -543,11 +590,15 @@ const styles = StyleSheet.create({
   state: { marginTop: 16 },
   scores: { flexDirection: "row", borderBottomWidth: 1 },
   scoresStacked: { flexDirection: "column" },
-  residence: { marginTop: 8, letterSpacing: 0.4 },
+  residenceBox: { alignSelf: "flex-start", marginTop: 10, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 9, paddingVertical: 4 },
+  residence: { fontSize: 11, lineHeight: 15, letterSpacing: 0.4 },
+  residenceNote: { marginTop: 6 },
+  homecomingWrap: { paddingTop: GUTTER, paddingBottom: GUTTER, borderBottomWidth: 1 },
+  homecoming: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 10 },
+  homecomingHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   score: { flex: 1, paddingHorizontal: GUTTER, paddingVertical: 18, gap: 4 },
   scoreLabel: { letterSpacing: 1.8 },
-  foot: { paddingHorizontal: GUTTER, paddingTop: 26, paddingBottom: 34, gap: 18, alignItems: "stretch" },
-  logout: { alignSelf: "center", minWidth: 160 },
+  foot: { paddingTop: 26, paddingBottom: 34 },
   readOnly: { flexDirection: "row", gap: 9, paddingHorizontal: GUTTER, paddingVertical: 14, borderBottomWidth: 1 },
   nudge: { marginTop: 3 },
   pastLife: { borderBottomWidth: 1, opacity: 0.92 },
