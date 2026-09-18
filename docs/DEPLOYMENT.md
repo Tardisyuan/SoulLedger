@@ -91,6 +91,24 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 排查:按状态看 `soul_push_pushdelivery.status` 与 `error`。`FAILED` + `DeviceNotRegistered` 是 App 被卸载或
   token 失效,属正常;成片 `FAILED` + `HTTP 4xx` / `UNAUTHORIZED` 看上面的访问令牌;`QUEUED` 堆积看 worker 与 beat。
 
+## 灵魂聊天(Matrix / Synapse)
+
+- 单 Synapse homeserver(不联邦)。**compose 里还没有 synapse 服务与 nginx 反代**(2026-09-18),
+  上线前要补;本节是它们要满足的条件。
+- homeserver.yaml = `docker run … matrixdotorg/synapse generate` 产出的那份 + 追加
+  `config/synapse/homeserver.soulledger.yaml`(`${…}` 换成与后端相同的值)。模块
+  `config/synapse/soulledger_policy.py` 挂进容器并放进 `PYTHONPATH`:除服务账号外不能建房、邀请、
+  建别名、发布房间 —— **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。
+- 后端环境变量:`MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
+  `MATRIX_INTERNAL_URL`(后端 → Synapse)、`MATRIX_PUBLIC_BASEURL`(App → Synapse,发给 App)、
+  `MATRIX_SERVER_NAME`、`MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、
+  `MATRIX_REGISTRATION_SHARED_SECRET`(= Synapse `registration_shared_secret`,只用来把服务账号
+  注册成 admin 一次)、`MATRIX_USER_SALT`(mxid 由账号 id 经 HMAC 派生;**不可轮换**,换了所有 mxid
+  都变)、`CHAT_REQUEST_INTERVAL_SECONDS`(默认 86400)。
+- 限速:服务账号替灵魂转发、改 power level、建房,量随灵魂数增长。用 admin API
+  `POST /_synapse/admin/v1/users/@soulledger:<server_name>/override_ratelimit` 给它免限速。
+- 实机验证:`backend/tests/test_chat_synapse_integration.py` 文件头有本机起一个 Synapse 跑它的命令。
+
 ## 数据库备份与恢复
 
 - `backup` 服务启动时先备份一次(失败则容器退出、在 `$DC ps` 里反复重启),之后每天
