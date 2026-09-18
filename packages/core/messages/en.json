@@ -1930,7 +1930,8 @@
       "code_copied": "Soul code copied",
       "code_copy_failed": "Copy failed",
       "residing": "Residing in {{current}} · belongs to {{home}}",
-      "record_count_short": "{{count}} rec."
+      "record_count_short": "{{count}} rec.",
+      "residing_note": "You return home when the residence ends. Until then your ledger keeps your home civilization's words."
     },
     "past_lives": {
       "title": "Past lives",
@@ -1958,7 +1959,8 @@
       "view": "View",
       "expectation": "What you state here is a {{hope}}. The judges decide where you go, and the first review decides whether you cross civilizations.",
       "expectation_word": "wish",
-      "statement_hint": "Your own words, passed to the judges as written."
+      "statement_hint": "Your own words, passed to the judges as written.",
+      "residing_note": "You are residing in {{current}}; rebirth is still decided by {{home}}. This page follows {{home}}'s rules."
     },
     "status": {
       "UNDER_REVIEW": "Under review",
@@ -1987,7 +1989,12 @@
       "appeal_submit": "Submit appeal",
       "appealed": "Appeal submitted",
       "created_at": "Submitted",
-      "flow": "Progress"
+      "flow": "Progress",
+      "handled_by": "Handled by {{home}}",
+      "appeal_hint_residing": "Residence does not change where you belong. {{home}} still handles this case; each application can be appealed once.",
+      "first_rejection_reason": "First rejection",
+      "appeal_rejection_reason": "Appeal rejected because",
+      "not_recorded": "Not recorded"
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
@@ -2071,6 +2078,11 @@
       "REINCARNATING": "Reincarnating",
       "LOST": "Lost",
       "SETTLED": "Settled"
+    },
+    "homecoming": {
+      "title": "You are back in {{home}}",
+      "body": "Your residence in {{from}} has ended. The ledger and its colours are {{home}}'s again.",
+      "ok": "Got it"
     }
   },
   "soul_push": {

@@ -1930,7 +1930,8 @@
       "code_copied": "Ren Ba Sesh",
       "code_copy_failed": "Nen Sesh",
       "residing": "Hetep Em {{current}} · Nut {{home}}",
-      "record_count_short": "Sesh {{count}}"
+      "record_count_short": "Sesh {{count}}",
+      "residing_note": "Hetep er Nut Ek. Sesh Em Medu Nut Ek."
     },
     "past_lives": {
       "title": "Ankh Tepyu",
@@ -1958,7 +1959,8 @@
       "view": "Maa",
       "expectation": "Medu Pen {{hope}}. Sab Wedja Wat, Sab Tepy Wedja Djer Taui.",
       "expectation_word": "Mer",
-      "statement_hint": "Medu Ek, Er Sab Mi Sesh."
+      "statement_hint": "Medu Ek, Er Sab Mi Sesh.",
+      "residing_note": "Hetep Ek Em {{current}}; Wehem Mesut Er {{home}}. Hep {{home}}."
     },
     "status": {
       "UNDER_REVIEW": "Em Sheemtet",
@@ -1987,7 +1989,12 @@
       "appeal_submit": "Dbh Wehem Medu",
       "appealed": "Wehem Medu Seth",
       "created_at": "Hru Dbh",
-      "flow": "Wat"
+      "flow": "Wat",
+      "handled_by": "Wesekhet {{home}}",
+      "appeal_hint_residing": "Hetep Nen Nut. {{home}} Wedja; Sep Wa Nehem.",
+      "first_rejection_reason": "Tepy Isfet",
+      "appeal_rejection_reason": "Nehem Isfet",
+      "not_recorded": "Nen Sesh"
     },
     "errors": {
       "invalid_credentials": "Ren Ba Hena Pert Nen Maat",
@@ -2071,6 +2078,11 @@
       "REINCARNATING": "Em Aru Her Tepy",
       "LOST": "Nen Gem",
       "SETTLED": "Sesh Khetem"
+    },
+    "homecoming": {
+      "title": "Ii Ek Er {{home}}",
+      "body": "Hetep Em {{from}} Djer. Sesh Hena Iwen Er {{home}}.",
+      "ok": "Rekh"
     }
   },
   "soul_push": {
