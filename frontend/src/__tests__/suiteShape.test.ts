@@ -148,6 +148,7 @@ const COLLECTED_FILES = [
   "historicalDateLocale.test.ts",
   "HomePageIdentity.test.tsx",
   "inkOnSurfaceContract.test.ts",
+  "jestRunsNextVendoredReact.test.ts",
   "ledgerQuantityContract.render.test.tsx",
   "messageValuesAreNotTheirOwnKeys.test.ts",
   "middlewareAuthGate.test.ts",
