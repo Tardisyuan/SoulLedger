@@ -1,4 +1,4 @@
-"""聊天跟着别处的事实变:转世停用、禁言 / 解禁、调拨与回归。
+"""聊天跟着别处的事实变:转世停用、禁言 / 解禁、调拨与回归(只影响殿司收件箱)。
 
 **转世停用账号时,把它的 Matrix 用户也停掉。**
 
@@ -19,7 +19,9 @@ from apps.events.models import SoulEvent
 from apps.social.models import SocialMute
 
 #: 改了 `Soul.tenant` 的两条写路径(apps/dispatch/services.py)写的 STATE_CHANGED 动作。
-#: 文明变了,灵魂在私聊里的发言权跟着变(跨文明不能私聊),在收件箱里也是(只能写给当前殿司)。
+#: 私聊不看文明(2026-09-19),这里要同步的只剩**殿司收件箱**:灵魂只能写给当前所在的殿司,
+#: 调走之后原殿司那封变只读(它在房间里降到 0),回来之后恢复。灵魂之间的房间 `sync_rooms`
+#: 也会算一遍,但级别不变、不写(`set_user_levels` 没变就不写)。
 TENANT_MOVES = {"DISPATCH_EXECUTED", "DISPATCH_RETURNED"}
 
 

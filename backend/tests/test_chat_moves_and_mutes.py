@@ -131,56 +131,34 @@ def _dispatch(soul, home, away):
     DispatchService.execute(record, "executor")
 
 
-def test_a_residing_soul_chats_with_both_its_home_and_its_residence(
-        cn_tenant, eu_tenant, pair, django_capture_on_commit_callbacks):
-    """暂居(2026-09-19 用户决定):与原属文明、暂居地文明的灵魂都能私聊,两者都不是的不能;
-    回归后只剩原属文明,暂居期间开的暂居地私聊冻结(双方 0 级)。
-    变异:`_civilizations` 只返回 `soul.tenant_id` → 调拨后与原属文明的乙说不了话,红。
-    变异:`_civilizations` 只返回 `soul.home_tenant_id` → 暂居时找不到暂居地的丙(404),红。
-    变异:删掉 `apps/chat/signals.py` 的 `_soul_moved` → 回归后与丙的房间仍能说话,红。"""
+def test_dispatch_and_return_leave_soul_to_soul_speech_alone(
+        cn_tenant, eu_tenant, pair, matrix, django_capture_on_commit_callbacks):  # noqa: F811
+    """私聊不看文明(2026-09-19):调拨、暂居、回归都不改灵魂之间的发言权,也不改谁能被找到。
+    调拨信号仍在跑(它管殿司收件箱),但灵魂之间的房间一次都不写。
+    变异:`refusal` 里加回「此刻同文明」(`account.soul.tenant_id != peer_account.soul.tenant_id`)→ 调拨后说不了话,红。"""
     from apps.tenants.models import Tenant
 
     eg_tenant = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "EG"})[0]
-    a, a_client, b, b_client, with_b = pair  # 甲乙都原属中国,互关
-    c, _ = ready_soul(eu_tenant, name="Clara")
+    a, a_client, b, b_client, with_b = pair
     d, _ = ready_soul(eg_tenant, name="Djed")
     with django_capture_on_commit_callbacks(execute=True):
         _dispatch(a.soul, cn_tenant, eu_tenant)
-
-    # 与原属文明的乙:照旧,互关仍算(关注边记在中国,是两人共同的可聊文明)。
     assert can_speak(with_b.room_id, mxid(a)) and can_speak(with_b.room_id, mxid(b))
     assert _send(a_client, with_b.id).status_code == 201
-    assert _send(b_client, with_b.id).status_code == 201
-    # 与暂居地的丙:可以发私聊请求;与两者都不是的埃及的丁:不能。
-    opened = _open(a_client, c)
+    opened = _open(a_client, d)  # 既不是原属也不是暂居地:照样可以发请求
     assert opened.status_code == 201 and opened.data["throttled"] is True
-    assert _send(a_client, opened.data["id"], "打扰").status_code == 201
-    assert _open(a_client, d).status_code == 404
 
     a.soul.refresh_from_db()
     with django_capture_on_commit_callbacks(execute=True):
         DispatchService.end_residence(a.soul, actor="system", trigger=DispatchService.RETURN_MANUAL)
-    with_c = Conversation.objects.get(pk=opened.data["id"])
-    assert not can_speak(with_c.room_id, mxid(a)) and not can_speak(with_c.room_id, mxid(c))
-    response = _send(a_client, with_c.id)
-    assert response.status_code == 403 and response.data["code"] == "cross_civilization"
-    assert can_speak(with_b.room_id, mxid(a))
-    assert _open(a_client, c).status_code == 404
-
-
-def test_a_soul_from_the_same_home_residing_elsewhere_is_still_reachable(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """对称:乙暂居欧洲,在中国的甲照样能找到它、与它私聊(乙的原属落在甲的可聊文明里)。
-    变异:`_reachable` 去掉 `home_tenant_id__in` 那一支 → 404,红。"""
-    a, a_client = ready_soul(cn_tenant, name="甲")
-    b, _ = ready_soul(cn_tenant, name="乙")
-    b.soul.tenant = eu_tenant  # 暂居;home_tenant 仍是中国
-    b.soul.save()
-    assert _open(a_client, b).status_code == 201
+    assert can_speak(with_b.room_id, mxid(a)) and _send(b_client, with_b.id).status_code == 201
+    assert matrix.rooms[with_b.room_id]["level_writes"] == 0
 
 
 def test_the_inbox_follows_the_hall_the_soul_is_in(cn_tenant, eu_tenant, matrix, django_capture_on_commit_callbacks):  # noqa: F811
     """收件箱只能写给**当前所在**殿司:调走之后原殿司那封只能读(官员仍能回),新殿司另开一封。
-    变异:删掉 `refusal` 里收件箱那条 `tenant_id` 判定 → 调走后仍能写给原殿司,红。"""
+    变异:删掉 `refusal` 里收件箱那条 `tenant_id` 判定 → 调走后仍能写给原殿司,红。
+    变异:删掉 `apps/chat/signals.py` 的 `_soul_moved` → 调走后原殿司房间里灵魂仍能说话,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     home = a_client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
     with django_capture_on_commit_callbacks(execute=True):
@@ -227,16 +205,3 @@ def test_a_new_life_starts_new_rooms(cn_tenant, pair, django_capture_on_commit_c
     assert response.status_code == 201, response.data
     assert response.data["id"] != str(old.id) and response.data["throttled"] is True
     assert _send(b_client, old.id).status_code == 409  # 旧房间已关闭
-
-
-def test_mutual_follows_made_at_home_still_count_while_residing(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """在中国互关的两人,甲暂居欧洲后第一次开私聊:仍是自由房间,不是私聊请求。
-    朋友圈的 `are_mutual_followers` 要求此刻同文明,在这里答「否」—— 所以聊天用自己的 `_mutual`。
-    变异:`open_direct` 改用 `circle.are_mutual_followers` → throttled 为真,红。"""
-    a, a_client = ready_soul(cn_tenant, name="甲")
-    b, _ = ready_soul(cn_tenant, name="乙")
-    mutual(a, b)
-    a.soul.tenant = eu_tenant
-    a.soul.save()
-    response = _open(a_client, b)
-    assert response.status_code == 201 and response.data["throttled"] is False

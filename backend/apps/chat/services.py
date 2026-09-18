@@ -1,17 +1,16 @@
-"""聊天的全部写路径。规则(2026-09-17 用户决定)在这里,**不在客户端**。
+"""聊天的全部写路径。规则在这里,**不在客户端**。
 
     1. 互相关注          → 自由私聊
-    2. 可聊文明内、非互关 → 私聊请求,每 24 小时一条;对方回过话或两人互关后解除
+    2. 非互关            → 私聊请求,每 24 小时一条;对方回过话或两人互关后解除
     3. 官员收件箱        → 灵魂 → **当前所在**殿司;官员在 Web 后台看与回
-    4. 不在可聊文明内    → 不能私聊;官员不进灵魂之间的聊天
+    4. 官员不进灵魂之间的聊天
     +  朋友圈禁言(apps/social 的 SocialMute)对灵魂之间的私聊同样生效
 
-**「可聊文明」按灵魂的两个文明算:当前所在 + 原属**(2026-09-19 用户决定:「暂居期间可以
-聊天,就是暂居地和原来的地」)。两个灵魂的 {tenant, home_tenant} 有交集就可以私聊;
-不暂居的灵魂两者是同一个,于是退化成「同文明」。回归后 tenant 回到 home,暂居地那一格消失。
-**朋友圈不跟着改**:它的搜索、主页、关注仍然只到当前所在文明(apps/social/soul_circle.py),
-这里的 `_civilizations` / `_mutual` / `_reachable` 是聊天自己的资格判断,只读朋友圈的关注边
-与禁言,不改它的范围。互关按**本世账号**、边记在可聊文明之一上;禁言挂在本世账号上。
+**私聊不看文明**(2026-09-19 用户改定:「所有灵魂理论上都该可以聊」,取代 2026-09-17 的
+「跨文明灵魂之间不能私聊」;见 docs/ARCHITECTURE-soul-app-and-domain-split.md)。任意两个
+本世灵魂账号都可以私聊,调拨、暂居、回归都不改变灵魂之间的发言权。**朋友圈不跟着改**:
+它的搜索、主页、关注仍只到当前所在文明;这里只读它的关注边(不带它「同文明」的过滤)与禁言。
+互关 = 两个本世账号之间双向都有关注边,边记在哪个文明不论。
 
 **规则是服务端执行的,而「服务端」有两半:**
 
@@ -21,8 +20,8 @@
   100 级而只有服务账号有 100。
 
 **发言权只有一个出处:`_speaking_levels`。** 一个灵魂在一个房间里能不能说话,由此刻的事实
-算出来(有共同的可聊文明?被禁言?是被节流的发起方?还在这个殿司?),再由 `sync_rooms` 写进 Synapse。
-事实变化的地方都调它:禁言 / 解禁(signals)、调拨与回归(signals)、解除节流、打开聊天。
+算出来(对方还是本世账号?被禁言?是被节流的发起方?还在这个殿司?),再由 `sync_rooms` 写进 Synapse。
+事实变化的地方都调它:禁言 / 解禁(signals)、调拨与回归(signals,只影响收件箱)、解除节流、打开聊天。
 禁言到期没有事件,它在灵魂下一次打开聊天(`chat_session` / 会话列表)时生效。
 ponytail: 到期靠懒同步;要准点解禁再加一个按 `until` 排的任务。
 
@@ -108,42 +107,26 @@ def audit(action, conversation, description, *, actor=None, request=None):
     )
 
 
-# ── 可聊文明 ─────────────────────────────────────────────────────────────
-
-
-def _civilizations(account):
-    """这个灵魂可以私聊的文明:当前所在 + 原属。"""
-    soul = account.soul
-    return {t for t in (soul.tenant_id, soul.home_tenant_id) if t is not None}
-
-
-def _shared(account, peer_account):
-    """两个本世账号共同的可聊文明;任一方不是本世账号即空。"""
-    if not (circle.is_current_soul(account.user) and circle.is_current_soul(peer_account.user)):
-        return set()
-    return _civilizations(account) & _civilizations(peer_account)
+# ── 谁和谁 ───────────────────────────────────────────────────────────────
 
 
 def _mutual(account, peer_account):
-    """互关:双向都有关注边,且每条边都记在两人共同的可聊文明之一上(边的 tenant 是关注那一刻
-    关注者所在的文明 —— 暂居前在原属文明互关的两人,暂居期间仍算互关)。"""
-    shared = _shared(account, peer_account)
-    if not shared or account.user_id == peer_account.user_id:
-        return False
+    """互关:两个不同的本世账号,双向都有关注边(不论边记在哪个文明)。"""
     a, b = account.user_id, peer_account.user_id
+    if a == b or not (circle.is_current_soul(account.user) and circle.is_current_soul(peer_account.user)):
+        return False
     edges = Follow.objects.filter(
-        Q(follower_id=a, following_id=b) | Q(follower_id=b, following_id=a), tenant_id__in=shared
+        Q(follower_id=a, following_id=b) | Q(follower_id=b, following_id=a)
     ).values_list("follower_id", flat=True)
     return set(edges) == {a, b}
 
 
 def _reachable(account):
-    """可以向其发起私聊的本世灵魂账号(User 查询集):对方的当前所在或原属落在我的可聊文明里。"""
+    """可以向其发起私聊的灵魂账号(User 查询集):任何一个本世灵魂账号,除了自己。
+    官员、前世账号不在里面。"""
     from apps.authentication.models import User
 
-    mine = _civilizations(account)
     return User.objects.filter(
-        Q(soul_account__soul__tenant_id__in=mine) | Q(soul_account__soul__home_tenant_id__in=mine),
         role=circle.SOUL_ROLE, soul_account__retired_at__isnull=True, is_active=True,
     ).exclude(pk=account.user_id)
 
@@ -174,8 +157,8 @@ def refusal(conversation, account, peer_account=None):
         if account.soul.tenant_id != conversation.tenant_id:
             return ChatError("你已不在这个殿司,只能给当前所在的殿司写信。", "not_current_hall", status=403)
         return None
-    if peer_account is None or not _shared(account, peer_account):
-        return ChatError("跨文明的灵魂之间不能私聊。", "cross_civilization", status=403)
+    if peer_account is None or not circle.is_current_soul(peer_account.user):
+        return ChatError("对方账号已停用。", "peer_retired", status=409)
     if circle.active_mute(account.user) is not None:
         return ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
     return None
@@ -266,8 +249,8 @@ def _pair(soul_a, soul_b):
 def open_direct(account, target_user, *, request=None):
     """取或建与 `target_user`(朋友圈 user_id)的私聊房间。
 
-    返回 `(conversation, created)`。对方必须是本世账号、与我有共同的可聊文明(`_reachable`)。
-    不可达与不存在答同一个 404。非互关建出来的房间带节流。
+    返回 `(conversation, created)`。对方必须是本世灵魂账号(`_reachable`),不论在哪个文明;
+    官员、前世账号与不存在答同一个 404。非互关建出来的房间带节流。
     """
     soul = account.soul
     if target_user.pk == account.user_id:
