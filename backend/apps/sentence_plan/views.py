@@ -1,9 +1,9 @@
 """受刑计划的只读 API。`GET /api/v1/sentence-plans/`、`/{id}/`。"""
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch
 from rest_framework import viewsets
 
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest
 from apps.sentence_plan.serializers import SentencePlanSerializer
@@ -42,23 +42,20 @@ class SentencePlanViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     # 与 `StatuteViewSet` 用 `judgment` 同一个理由;`sentence_plan.cancel` 在阶段 3 随撤销一起加。
     permission_classes = [SentencePlanPartyPermission, CodenamePermission]
     permission_codename = "judgment"
-    queryset = SentencePlan.objects.select_related("soul", "tenant").prefetch_related(*_ordered_children()).all()
+    queryset = SentencePlan.objects.all()
     serializer_class = SentencePlanSerializer
     filterset_fields = ["soul", "status", "cycle"]
     ordering_fields = ["create_time", "completed_at"]
 
     def get_queryset(self):
-        """原属租户的计划,加上本租户有节点的计划。
+        """原属租户的计划(经 `scope_to_tenant`),加上本租户有节点的计划。
 
-        与 `DispatchRecordViewSet.get_queryset` 同形(源或目标),所以在
-        `tests/test_tenant_scoping_contract.py::EXEMPT` 里登记,理由写在那里。
-        `.distinct()`:右边那个 `Q` 连了 nodes,一个计划有几个本租户节点就回来几次。
+        右半边是「节点方可读」(设计稿 §2.5),形状同 `DispatchRecordViewSet` 的「源或目标」;
+        `.distinct()`:它连了 nodes,一个计划有几个本租户节点就回来几次。
         """
         qs = SentencePlan.objects.select_related("soul", "tenant").prefetch_related(*_ordered_children())
-        user = self.request.user
-        if is_tenant_exempt(user):
-            return qs
+        home = scope_to_tenant(qs, self.request)
         tenant = getattr(self.request, "tenant", None)
-        if tenant is None:
-            return qs.none()
-        return qs.filter(Q(tenant=tenant) | Q(nodes__tenant_code=tenant.code, nodes__is_deleted=False)).distinct()
+        if tenant is None or is_tenant_exempt(self.request.user):
+            return home
+        return (home | qs.filter(nodes__tenant_code=tenant.code, nodes__is_deleted=False)).distinct()
