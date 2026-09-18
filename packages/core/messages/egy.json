@@ -1930,7 +1930,8 @@
       "code_copied": "Ren Ba Sesh",
       "code_copy_failed": "Nen Sesh",
       "residing": "Hetep Em {{current}} · Nut {{home}}",
-      "record_count_short": "Sesh {{count}}"
+      "record_count_short": "Sesh {{count}}",
+      "residing_note": "Hetep er Nut Ek. Sesh Em Medu Nut Ek."
     },
     "past_lives": {
       "title": "Ankh Tepyu",
@@ -1958,7 +1959,8 @@
       "view": "Maa",
       "expectation": "Medu Pen {{hope}}. Sab Wedja Wat, Sab Tepy Wedja Djer Taui.",
       "expectation_word": "Mer",
-      "statement_hint": "Medu Ek, Er Sab Mi Sesh."
+      "statement_hint": "Medu Ek, Er Sab Mi Sesh.",
+      "residing_note": "Hetep Ek Em {{current}}; Wehem Mesut Er {{home}}. Hep {{home}}."
     },
     "status": {
       "UNDER_REVIEW": "Em Sheemtet",
@@ -1987,7 +1989,13 @@
       "appeal_submit": "Dbh Wehem Medu",
       "appealed": "Wehem Medu Seth",
       "created_at": "Hru Dbh",
-      "flow": "Wat"
+      "flow": "Wat",
+      "handled_by": "Wesekhet {{home}}",
+      "appeal_hint_residing": "Hetep Nen Nut. {{home}} Wedja; Sep Wa Nehem.",
+      "first_rejection_reason": "Tepy Isfet",
+      "appeal_rejection_reason": "Nehem Isfet",
+      "not_recorded": "Nen Sesh",
+      "new_result": "Wedja Ma"
     },
     "errors": {
       "invalid_credentials": "Ren Ba Hena Pert Nen Maat",
@@ -2071,6 +2079,57 @@
       "REINCARNATING": "Em Aru Her Tepy",
       "LOST": "Nen Gem",
       "SETTLED": "Sesh Khetem"
+    },
+    "homecoming": {
+      "title": "Ii Ek Er {{home}}",
+      "body": "Hetep Em {{from}} Djer. Sesh Hena Iwen Er {{home}}.",
+      "ok": "Rekh"
+    },
+    "settings": {
+      "title": "Seshem",
+      "language": "Medu",
+      "language_name": "Egyptian",
+      "language_note": "Wetep sheemtet neheh ankh maatheru",
+      "current": "Djesef",
+      "language_hint": "Wetep Em At. Sesh Ba Em Medu Tepy.",
+      "saving": "Sesh…",
+      "saved": "Seshu",
+      "save_failed": "Nen Sesh Er Ren Ek. {{current}} Em At; Ky Khet {{previous}}.",
+      "revert": "Ankh Er {{previous}}",
+      "notifications": "Sedjem",
+      "rebirth": "Wehem Mesut Wedja",
+      "rebirth_note": "Hesy / Sehen / Nehem Wedja",
+      "judgment": "Wedja Pehwy",
+      "judgment_note": "Wedja Pehwy, Wetep Iri",
+      "residence": "Hetep Hena Ankh",
+      "residence_note": "Hemes Hesy, Hemes Em Taui Kety, Ankh Er Taui",
+      "lock_screen": "Sedjem Wa: Wedja Iri. Nen Khet, Nen Metru.",
+      "push_unavailable": "Sedjem Nen Wenen Em Sesh Pen. Seshem Er Ren Ek.",
+      "push_denied": "Sedjem Khetem Em Seshem Ta. Seshem Rekh; Nen Iyt Er Wen.",
+      "open_system_settings": "Wen Seshem Ta",
+      "enable_push": "Wen Sedjem",
+      "toggle_failed": "Nen Sesh; Ankh Er Tepy",
+      "version": "Medjat Ba {{version}}"
+    },
+    "push": {
+      "primer_title": "Sedjem Ek Em Wedja?",
+      "primer_body": "Sesh Ba Wah. Sedjem Wen, Nen Ankh Er Maa.",
+      "will_notify": "Sedjem Ek",
+      "primer_rebirth": "Wehem Mesut Wedja",
+      "primer_rebirth_note": "Hesy Hena Sehen; Nen Khet.",
+      "primer_judgment": "Wedja Pehwy",
+      "primer_judgment_note": "Nen Metru, Nen Nefer Hena Isfet.",
+      "primer_residence": "Hetep Hena Ankh",
+      "primer_residence_note": "Nen Taui.",
+      "never": "Djer Nen: Khet Sehen, Metru, Nefer Hena Isfet, Ren Sheta.",
+      "yes": "Sedjem Wi",
+      "no": "Nen At"
+    },
+    "original": {
+      "tag": "Medu Tepy",
+      "tag_language": "Medu Tepy · {{language}}",
+      "zh": "Medu Khetaw",
+      "note": "Wetep sheemtet — nebankh maatheru."
     }
   },
   "soul_push": {

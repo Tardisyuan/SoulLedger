@@ -8,24 +8,26 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Emblem, Icon, type IconName } from "./emblems";
-import { useAskLogout } from "./feedback";
 import { useI18n } from "./i18n";
 import { Txt, useLayout, useTheme } from "./ui";
 
 export function AppHeader({
   title,
   onBack,
-  account,
+  onAccount,
 }: {
   title: string;
   onBack?: () => void;
-  /** Show the account entry (opens the sign-out sheet). */
-  account?: boolean;
+  /**
+   * The person icon, top right, on all three tabs. Round 1 had it open the
+   * sign-out sheet; since round 4 it opens the settings page (language,
+   * notifications, sign out) — same place, a destination instead of an action.
+   */
+  onAccount?: () => void;
 }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
-  const askLogout = useAskLogout();
   const { compact } = useLayout();
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: t.s0, borderBottomWidth: 1, borderBottomColor: t.hair }}>
@@ -45,8 +47,8 @@ export function AppHeader({
         >
           {title}
         </Txt>
-        {account ? (
-          <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.life.logout")} onPress={askLogout} style={styles.icon}>
+        {onAccount ? (
+          <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.settings.title")} onPress={onAccount} style={styles.icon}>
             <Icon name="person" size={18} color={t.inkSubtle} strokeWidth={1.2} />
           </Pressable>
         ) : (

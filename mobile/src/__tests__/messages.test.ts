@@ -94,6 +94,13 @@ describe("soul_app copy", () => {
       ...(["neutral", "cn", "eu", "eg", "gr"] as const).flatMap((civ) => LEXICON_WORDS.map((w) => lexiconKey(civ, w))),
       "common.value.unrecorded",
       "common.value.unrecognized",
+      // The settings switches and the primer's list build their keys from the category.
+      ...["rebirth", "judgment", "residence"].flatMap((c) => [
+        `soul_app.settings.${c}`,
+        `soul_app.settings.${c}_note`,
+        `soul_app.push.primer_${c}`,
+        `soul_app.push.primer_${c}_note`,
+      ]),
     ];
     expect(needed.filter((k) => !(k in flat[locale]))).toEqual([]);
   });

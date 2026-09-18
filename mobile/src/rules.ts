@@ -5,7 +5,7 @@
  */
 import type { MeRebirthApplication } from "@soulledger/core/api/soul";
 
-import type { CivKey } from "./theme";
+import { civKeyOf, type CivKey } from "./theme";
 
 // ── badges ──────────────────────────────────────────────────────────────
 
@@ -159,12 +159,6 @@ export function lexiconKey(civ: CivKey, word: LexiconWord): string {
 
 // ── residence ──────────────────────────────────────────────────────────
 
-/** `CN_DIYU` → `cn`: a tenant code's prefix is its civilization key. */
-export function civKeyOfTenant(code: string | null | undefined): CivKey | null {
-  const prefix = code?.split("_")[0]?.toLowerCase();
-  return prefix === "cn" || prefix === "eu" || prefix === "eg" || prefix === "gr" ? prefix : null;
-}
-
 export interface Residence {
   /** Where the soul is now: the skin. */
   current: CivKey;
@@ -175,16 +169,16 @@ export interface Residence {
 }
 
 /**
- * `home_tenant` is not in the generated schema yet (backend branch
- * `feat/dispatch-residence`); when it is absent every soul is at home.
+ * `is_residing` is the server's word; `home_civilization` names the lexicon.
+ * A home civilization the app does not know is not guessed at: the soul is
+ * then shown as at home, in the current civilization's words.
  */
 export function residenceOf(
   current: CivKey,
-  tenantCode: string | null | undefined,
-  homeTenant: { code: string } | null | undefined
+  me: { is_residing: boolean; home_civilization: string } | null | undefined
 ): Residence {
-  const home = homeTenant && homeTenant.code !== tenantCode ? civKeyOfTenant(homeTenant.code) : null;
-  return home ? { current, home, residing: true } : { current, home: current, residing: false };
+  const home = me?.is_residing ? civKeyOf(me.home_civilization) : "neutral";
+  return home !== "neutral" ? { current, home, residing: true } : { current, home: current, residing: false };
 }
 
 // ── layout ─────────────────────────────────────────────────────────────
@@ -243,22 +237,37 @@ export interface FlowStep {
 const APPEALED = new Set(["APPEALING", "APPEAL_REJECTED"]);
 
 /**
+ * Whether this application has been appealed — i.e. whether a FIRST rejection
+ * exists apart from the latest decision. APPROVED after an appeal counts too.
+ */
+export function wasAppealed(a: MeRebirthApplication): boolean {
+  return APPEALED.has(a.status) || (a.appeal_statement ?? "") !== "" || !!a.first_decided_at;
+}
+
+/**
  * The flow of one application (handoff 2e/2f-五), from the only fields `/me/`
  * has: `created_at`, `decided_at`, `status`, `current_step`, `can_appeal`,
  * `appeal_statement`.
  *
  * Backend facts it leans on (`backend/apps/soul_accounts/rebirth.py`): an
- * appeal CLEARS `decided_at` and `rejection_reason`, so while APPEALING the
- * first rejection is known to have happened but has no time; `decided_at` is
- * set again when the appeal is decided. `cooldown_until` is only on the list
- * endpoint, so the design's "可再次提交" step is not drawn on the detail.
+ * appeal CLEARS `decided_at` and `rejection_reason` after copying them to
+ * `first_decided_at` / `first_rejection_reason`; `decided_at` is set again when
+ * the appeal is decided. Applications appealed before those two columns
+ * existed have them empty: the first rejection then shows "unrecorded", never
+ * another step's time. `cooldown_until` is only on the list endpoint, so the
+ * design's "可再次提交" step is not drawn on the detail.
  */
 export function buildFlow(a: MeRebirthApplication): FlowStep[] {
   const steps: FlowStep[] = [
     { key: "submitted", state: "done", name: { key: "soul_app.timeline.submitted" }, at: a.created_at },
   ];
-  if (APPEALED.has(a.status) || (a.appeal_statement ?? "") !== "") {
-    steps.push({ key: "first-decision", state: "done", name: { key: "soul_app.timeline.decided", status: "REJECTED" } });
+  if (wasAppealed(a)) {
+    steps.push({
+      key: "first-decision",
+      state: "done",
+      name: { key: "soul_app.timeline.decided", status: "REJECTED" },
+      ...(a.first_decided_at ? { at: a.first_decided_at } : { note: "soul_app.detail.not_recorded" }),
+    });
     if (!a.current_step) steps.push({ key: "appealed", state: "done", name: { key: "soul_app.timeline.appealed" } });
   }
   if (a.decided_at) {

@@ -15,7 +15,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform, persistentStore } from "../platform";
+import { RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
 import { PROFILE, application, life, stubApi } from "./stubApi";
@@ -26,9 +27,25 @@ const EG_TENANT = { code: "EG_DUAT", display_name: "杜阿特" };
 const CN_TENANT = { code: "CN_DIYU", display_name: "中国地府" };
 
 /** A Chinese soul dispatched to the Duat. */
-const RESIDING = { ...PROFILE, civilization: "EGYPTIAN", tenant: EG_TENANT, home_tenant: CN_TENANT };
+const RESIDING = {
+  ...PROFILE,
+  civilization: "EGYPTIAN",
+  tenant: EG_TENANT,
+  home_tenant: CN_TENANT,
+  home_civilization: "CHINESE",
+  is_residing: true,
+};
+/** The same soul after the residence ended: back in the Diyu. */
+const RETURNED = { ...PROFILE, tenant: CN_TENANT, home_tenant: CN_TENANT, is_residing: false };
 /** A soul of the Duat, at home. */
-const NATIVE_EG = { ...PROFILE, civilization: "EGYPTIAN", tenant: EG_TENANT };
+const NATIVE_EG = {
+  ...PROFILE,
+  civilization: "EGYPTIAN",
+  tenant: EG_TENANT,
+  home_tenant: EG_TENANT,
+  home_civilization: "EGYPTIAN",
+  is_residing: false,
+};
 
 function renderApp() {
   return render(
@@ -47,6 +64,8 @@ beforeEach(async () => {
   secure.clear();
   secure.set(REFRESH_TOKEN_KEY, "R");
   await AsyncStorage.clear();
+  // The persistent port's synchronous cache outlives AsyncStorage.clear().
+  persistentStore.remove(`${RESIDENCE_MEMO_PREFIX}${PROFILE.soul_code}`);
 });
 
 const background = (el: { props: { style?: unknown } }) =>
@@ -67,6 +86,70 @@ describe("a soul residing in another civilization", () => {
     expect(within(screen.getByTestId("soul-state")).getByText("审判中")).toBeTruthy();
     expect(screen.queryByText("称心中")).toBeNull();
     expect(screen.getByTestId("residence").props.children).toBe("暂居 埃及 · 原属 中国");
+    expect(screen.getByTestId("residence-note")).toBeTruthy();
+  });
+
+  it("is_residing is the server's word: a home_tenant that differs but is_residing=false draws no residence", async () => {
+    stubApi({
+      "/me/": { status: 200, data: { ...RESIDING, is_residing: false } },
+      "/me/life/": { status: 200, data: life(1) },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    expect(screen.queryByTestId("residence")).toBeNull();
+    // …and the words are then the Duat's own.
+    expect(within(screen.getByTestId("score-merit")).getByText("羽侧")).toBeTruthy();
+  });
+
+  it("the applications tab says the home civilization still decides, and the detail names it as the handler", async () => {
+    stubApi({
+      "/me/": { status: 200, data: RESIDING },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/rebirth-applications/": {
+        status: 200,
+        data: { can_apply: false, reason: "application_open", cooldown_until: null, results: [application({ status: "REJECTED", can_appeal: true, current_step: null })] },
+      },
+      "/me/rebirth-applications/a1/": { status: 200, data: application({ status: "REJECTED", can_appeal: true, current_step: null, rejection_reason: "x" }) },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("tab-Applications"));
+    expect((await screen.findByTestId("residence-applications")).props).toBeTruthy();
+    expect(screen.getByText("你暂居埃及，转生仍归中国受理。此页按中国的规例。")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("open-a1"));
+    expect((await screen.findByTestId("handled-by")).props.children).toBe("受理方 中国");
+    expect(screen.getByText("暂居不改籍。此案仍由中国受理，每份申请只能申诉一次。")).toBeTruthy();
+  });
+
+  it("the return home is said ONCE, on a card, and 'got it' makes it go for good", async () => {
+    // Seen residing first: the app remembers where.
+    stubApi({ "/me/": { status: 200, data: RESIDING }, "/me/life/": { status: 200, data: life(1) } });
+    const first = renderApp();
+    await screen.findByTestId("profile-card");
+    expect(screen.queryByTestId("homecoming")).toBeNull();
+    first.unmount();
+
+    stubApi({ "/me/": { status: 200, data: RETURNED }, "/me/life/": { status: 200, data: life(1) } });
+    const second = renderApp();
+    const card = await screen.findByTestId("homecoming");
+    expect(within(card).getByText("你已归中国")).toBeTruthy();
+    expect(within(card).getByText("在埃及的暂居已结束。簿册与配色已回中国式样。")).toBeTruthy();
+    expect(screen.queryByTestId("residence")).toBeNull();
+    fireEvent.press(screen.getByTestId("homecoming-ok"));
+    expect(screen.queryByTestId("homecoming")).toBeNull();
+    second.unmount();
+
+    stubApi({ "/me/": { status: 200, data: RETURNED }, "/me/life/": { status: 200, data: life(1) } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    expect(screen.queryByTestId("homecoming")).toBeNull();
+  });
+
+  it("a soul that was never seen residing gets no homecoming card", async () => {
+    stubApi({ "/me/": { status: 200, data: RETURNED }, "/me/life/": { status: 200, data: life(1) } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    expect(screen.queryByTestId("homecoming")).toBeNull();
   });
 
   it("may apply when the server says so — the Duat having no rebirth does not disable it", async () => {
