@@ -373,6 +373,16 @@ DEFAULT_PERMISSIONS = [
     # 按最小可见。perm 迁移 0022 播种这两行。
     ("soul_account.read", "查看灵魂账号", "soul_account"),
     ("soul_account.manage", "管理灵魂账号", "soul_account"),
+    # 灵魂朋友圈的审核后台(2026-09-17)。**一个码名,不是 read/manage 两个**:
+    # 这个后台只有一件事可做 —— 看举报队列、处置内容、维护敏感词、管禁言,
+    # 而「只读的审核员」不是这个设计里存在的角色(能看到被举报的内容却不能处置它,
+    # 既没有人要,也把私密内容多摊给了一个角色)。族名是 `social`,与官员侧那五个
+    # 社交 viewset 无关 —— 它们在 apps/perm/test_codename_coverage.py 的
+    # EXEMPT_VIEWS 里,仍然不声明任何码名。
+    # 默认 ADMIN 与 MODERATOR(殿主)持有,与 soul_account.* 同一批人:能管本租户
+    # 灵魂的角色。JUDGE / GUARDIAN / VIEWER 不持有 —— 被举报的内容里会有
+    # PRIVATE 与待审的帖子,按最小可见收。perm 迁移 0023 播种这一行。
+    ("social.moderate", "审核灵魂朋友圈", "social"),
 ]
 
 
@@ -395,6 +405,7 @@ ROLE_PERMISSIONS = {
         "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",
         "scheduler.read", "scheduler.manage",
         "soul_account.read", "soul_account.manage",
+        "social.moderate",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
         # ["workflow.escalate"]) — this static list had drifted from that intent
@@ -465,6 +476,7 @@ ROLE_PERMISSIONS = {
         "org.read", "org.manage",
         "audit.read", "notification.read", "menu.read",
         "soul_account.read", "soul_account.manage",
+        "social.moderate",
     ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
