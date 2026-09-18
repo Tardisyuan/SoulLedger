@@ -54,6 +54,14 @@ describe("the unrecognized-value badge", () => {
     expect(within(badge).queryByText("未识别取值")).toBeNull();
     expect(flat(badge).borderStyle).toBe("solid");
   });
+
+  it("a known pill never wraps (iOS put its glyph over its label); only the raw member may", () => {
+    const { unmount } = wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="APPEALING" />);
+    expect(flat(screen.getByTestId("b")).flexWrap).toBeUndefined();
+    unmount();
+    wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="PENDING_SYNC" />);
+    expect(flat(screen.getByTestId("b")).flexWrap).toBe("wrap");
+  });
 });
 
 describe("soul-state badges", () => {

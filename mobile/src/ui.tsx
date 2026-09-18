@@ -675,7 +675,10 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       testID={testID}
       accessible
       accessibilityLabel={raw ? `${label} ${raw}` : label}
-      style={[styles.badge, { borderColor: border, borderStyle: spec.border }]}
+      // Only the raw member may wrap onto its own line. A known pill never wraps: laid
+      // out at exactly its own content width (a pill in a row), iOS measures the label a
+      // hair wider and a wrapping pill puts the glyph over the label.
+      style={[styles.badge, raw ? styles.badgeWraps : null, { borderColor: border, borderStyle: spec.border }]}
     >
       <Text style={[styles.badgeText, { color }]}>{spec.glyph}</Text>
       <Text style={[styles.badgeText, styles.shrink, { color }]}>{label}</Text>
@@ -861,7 +864,6 @@ export const styles = StyleSheet.create({
     maxWidth: "100%",
     minHeight: 28,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     columnGap: 6,
     borderWidth: 1,
@@ -869,6 +871,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
+  badgeWraps: { flexWrap: "wrap" },
   badgeText: { fontFamily: family.ui[500], fontSize: 11.5, lineHeight: 16, letterSpacing: 0.9 },
   badgeRaw: { fontFamily: family.mono[400], fontSize: 10.5, lineHeight: 16, opacity: 0.85 },
   quote: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2 },

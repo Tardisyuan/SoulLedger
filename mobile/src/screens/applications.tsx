@@ -469,8 +469,8 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
       <FadeIn>
         <LandingHighlight on={!!landed}>
         <Block testID="application-detail">
-          {/* Items here must not shrink: a shrunk badge wraps its own glyph and label
-              apart (seen on the simulator as "↺" over "申诉中"). They wrap as whole pills. */}
+          {/* Items here do not shrink: they wrap as whole pills. ("↺" over "申诉中" on iOS
+              was the pill's own flexWrap, not shrinking — see Badge in ui.tsx.) */}
           <View style={styles.badgeRow}>
             <View testID="status-badge-slot" style={styles.badgeItem}>
               <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
