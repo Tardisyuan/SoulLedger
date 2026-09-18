@@ -93,15 +93,14 @@ export function useDrawerA11y<T extends HTMLElement>({
   labelledBy,
   label,
 }: DrawerA11yOptions): {
-  drawerRef: React.RefObject<T>;
+  drawerRef: React.RefObject<T | null>;
   drawerProps: DrawerA11yProps;
 } {
-  // `useRef<T>(null)`, not `useRef<T | null>(null)`. The latter types as
-  // `RefObject<T | null>`, and @types/react measures `RefObject` as covariant,
-  // so TS compares it to the `ref` prop's `RefObject<T>` by variance rather
-  // than structurally and rejects it — despite the two having the identical
-  // `readonly current: T | null`. Nothing here writes to `.current`; React
-  // does.
+  // React 19: `useRef<T>(null)` returns `RefObject<T | null>` and the `ref`
+  // prop accepts it as-is. Under @types/react 18 the same call typed as
+  // `RefObject<T>` and the `| null` spelling was rejected by variance; that
+  // workaround went with the upgrade. Nothing here writes to `.current`;
+  // React does.
   const drawerRef = useRef<T>(null);
 
   // Deps are `[open]` alone, and that is deliberate. `onClose` is written at
