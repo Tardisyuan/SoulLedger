@@ -10,13 +10,14 @@ import {
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useCallback, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, type FlowStep } from "../rules";
+import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
+import { SessionContext } from "../session";
 import {
   Block,
   Button,
@@ -130,6 +131,38 @@ function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => 
   );
 }
 
+/**
+ * Handoff 3b: a residing soul's applications are still its home civilization's
+ * to decide — said once, at the top of the tab, in the current skin.
+ */
+function useResidenceNames(): { current: string; home: string } | null {
+  const { t, enumLabel } = useI18n();
+  const { residing } = useResidence();
+  const session = useContext(SessionContext);
+  const me = session?.state.status === "signedIn" ? session.state.profile : null;
+  if (!me || !residing) return null;
+  const civName = (c: string) => enumText(enumLabel("souls.civilizations", c), t);
+  return { current: civName(me.civilization), home: civName(me.home_civilization) };
+}
+
+function ResidenceNote() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const { gutter } = useLayout();
+  const names = useResidenceNames();
+  if (!names) return null;
+  return (
+    <View testID="residence-applications" style={[styles.residenceNote, { paddingHorizontal: gutter, borderBottomColor: theme.hair, backgroundColor: theme.s1 }]}>
+      <View style={styles.nudge}>
+        <Icon name="info" size={14} color={theme.inkSubtle} strokeWidth={1.2} />
+      </View>
+      <Txt variant="caption" tone="muted" style={styles.fill}>
+        {t("soul_app.applications.residing_note", names)}
+      </Txt>
+    </View>
+  );
+}
+
 export function ApplicationsScreen() {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -150,6 +183,7 @@ export function ApplicationsScreen() {
         </Block>
       ) : (
         <FadeIn>
+          <ResidenceNote />
           <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} />
           {list.data.results.length === 0 ? (
             list.data.reason === TERMINAL_REASON ? (
@@ -351,6 +385,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
   const toast = useToast();
   const fetcher = useCallback(() => soulApi.application(id), [id]);
   const app = useRemote(fetcher);
+  const residence = useResidenceNames();
   const [appeal, setAppeal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
@@ -373,6 +408,8 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
   }
   const a = app.data;
   const reason = rejectionReasonOf(a);
+  const appealed = wasAppealed(a);
+  const unrecorded = t("soul_app.detail.not_recorded");
 
   const submitAppeal = async () => {
     setBusy(true);
@@ -393,7 +430,16 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
     <Screen refreshing={app.loading} onRefresh={app.reload}>
       <FadeIn>
         <Block testID="application-detail">
-          <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+          <View style={styles.badgeRow}>
+            <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+            {residence ? (
+              <View style={[styles.handler, { borderColor: theme.hair2 }]}>
+                <Txt testID="handled-by" variant="label" tone="muted" style={styles.handlerText}>
+                  {t("soul_app.detail.handled_by", { home: residence.home })}
+                </Txt>
+              </View>
+            ) : null}
+          </View>
           <View style={styles.formTitle}>
             <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="display" />
           </View>
@@ -440,11 +486,33 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
           </Block>
         ) : null}
 
+        {/* The first rejection survives an appeal (first_rejection_reason / first_decided_at);
+            applications appealed before those columns existed say "unrecorded", not nothing. */}
+        {appealed ? (
+          <Block style={{ backgroundColor: theme.s1 }} testID="first-rejection">
+            <View style={styles.headingRow}>
+              <Txt variant="section">{t("soul_app.detail.first_rejection_reason")}</Txt>
+              <Txt testID="first-rejection-at" variant="value" tone="subtle" style={styles.meta}>
+                {formatStamp(a.first_decided_at) ?? unrecorded}
+              </Txt>
+            </View>
+            {a.first_rejection_reason ? (
+              <Quote testID="first-rejection-reason" text={a.first_rejection_reason} tone="rejection" />
+            ) : (
+              <Txt testID="first-rejection-reason" variant="caption" tone="subtle">
+                {unrecorded}
+              </Txt>
+            )}
+          </Block>
+        ) : null}
+
         {reason ? (
           <Block style={{ backgroundColor: theme.s1 }} testID="rejection">
             <View style={styles.headingRow}>
-              <Txt variant="section">{t("soul_app.detail.rejection_reason")}</Txt>
-              {a.status === "REJECTED" && a.decided_at ? (
+              <Txt variant="section">
+                {t(a.status === "APPEAL_REJECTED" ? "soul_app.detail.appeal_rejection_reason" : "soul_app.detail.rejection_reason")}
+              </Txt>
+              {a.decided_at ? (
                 <Txt variant="value" tone="subtle" style={styles.meta}>
                   {formatStamp(a.decided_at)}
                 </Txt>
@@ -468,7 +536,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
             <View>
               <Txt variant="section">{t("soul_app.detail.appeal")}</Txt>
               <Txt variant="caption" tone="subtle" style={styles.hint}>
-                {t("soul_app.detail.appeal_hint")}
+                {residence ? t("soul_app.detail.appeal_hint_residing", { home: residence.home }) : t("soul_app.detail.appeal_hint")}
               </Txt>
             </View>
             <Input
@@ -514,6 +582,11 @@ const styles = StyleSheet.create({
   formCode: { fontSize: 11, letterSpacing: 1.1 },
   statement: { marginTop: 4 },
   formTitle: { marginTop: 14 },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  handler: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  handlerText: { letterSpacing: 0.4 },
+  residenceNote: { flexDirection: "row", gap: 9, paddingVertical: 14, borderBottomWidth: 1 },
+  nudge: { marginTop: 3 },
   facts: { marginTop: 16 },
   step: { flexDirection: "row", columnGap: 14 },
   rail: { width: 22, alignItems: "center" },

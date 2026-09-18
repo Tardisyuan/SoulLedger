@@ -7,7 +7,6 @@ import {
   UNKNOWN_BADGE,
   badgeSpec,
   buildFlow,
-  civKeyOfTenant,
   expiryOf,
   formatStamp,
   layoutFor,
@@ -113,21 +112,21 @@ describe("lexiconKey", () => {
 });
 
 describe("residenceOf", () => {
-  it("without home_tenant (the field is not merged yet) a soul is at home", () => {
-    expect(residenceOf("eg", "EG_DUAT", undefined)).toEqual({ current: "eg", home: "eg", residing: false });
-    expect(residenceOf("eg", "EG_DUAT", null)).toEqual({ current: "eg", home: "eg", residing: false });
-    expect(residenceOf("eg", "EG_DUAT", { code: "EG_DUAT" })).toEqual({ current: "eg", home: "eg", residing: false });
+  it("is_residing false (or no profile) is at home — even if home_civilization says otherwise", () => {
+    expect(residenceOf("eg", undefined)).toEqual({ current: "eg", home: "eg", residing: false });
+    expect(residenceOf("eg", { is_residing: false, home_civilization: "EGYPTIAN" })).toEqual({ current: "eg", home: "eg", residing: false });
+    expect(residenceOf("eg", { is_residing: false, home_civilization: "CHINESE" })).toEqual({ current: "eg", home: "eg", residing: false });
   });
 
   it("a Chinese soul residing in the Duat: skin stays where it is, words come from home", () => {
-    expect(residenceOf("eg", "EG_DUAT", { code: "CN_DIYU" })).toEqual({ current: "eg", home: "cn", residing: true });
-    expect(lexiconKey(residenceOf("eg", "EG_DUAT", { code: "CN_DIYU" }).home, "merit")).toBe("soul_app.life.merit");
+    const r = residenceOf("eg", { is_residing: true, home_civilization: "CHINESE" });
+    expect(r).toEqual({ current: "eg", home: "cn", residing: true });
+    expect(lexiconKey(r.home, "merit")).toBe("soul_app.life.merit");
+    expect(lexiconKey(r.current, "merit")).toBe("soul_app.lexicon.eg.merit");
   });
 
-  it("an unknown home tenant code is not a residence (no guessing a lexicon)", () => {
-    expect(residenceOf("cn", "CN_DIYU", { code: "ATLANTIS" })).toEqual({ current: "cn", home: "cn", residing: false });
-    expect(civKeyOfTenant("GR_HADES")).toBe("gr");
-    expect(civKeyOfTenant(undefined)).toBeNull();
+  it("an unknown home civilization is not a residence (no guessing a lexicon)", () => {
+    expect(residenceOf("cn", { is_residing: true, home_civilization: "ATLANTEAN" })).toEqual({ current: "cn", home: "cn", residing: false });
   });
 });
 
@@ -173,7 +172,22 @@ describe("buildFlow (handoff 2e)", () => {
     expect(buildFlow(a)[1].name).toEqual({ key: "soul_app.timeline.decided", status: "REJECTED" });
   });
 
-  it("C · appealing: the backend cleared decided_at, so the first rejection is shown WITHOUT a time", () => {
+  it("C · appealing: the first rejection carries first_decided_at (the backend copied it before clearing decided_at)", () => {
+    const FIRST = "2026-09-05T02:00:00Z";
+    const a = app({
+      created_at: CREATED,
+      status: "APPEALING",
+      decided_at: null,
+      first_decided_at: FIRST,
+      first_rejection_reason: "x",
+      appeal_statement: "请复核",
+      current_step: { node_type: "APPEAL", approver_role: "JUDGE", is_appeal: true },
+    });
+    expect(shape(a)).toEqual([`submitted:done@${CREATED}`, `first-decision:done@${FIRST}`, "current:now:dashed", "decision:todo"]);
+    expect(buildFlow(a)[2].name.key).toBe("soul_app.timeline.appeal_review");
+  });
+
+  it("C′ · appealed before first_decided_at existed: the first rejection says 'unrecorded', borrows no other time", () => {
     const a = app({
       created_at: CREATED,
       status: "APPEALING",
@@ -181,8 +195,9 @@ describe("buildFlow (handoff 2e)", () => {
       appeal_statement: "请复核",
       current_step: { node_type: "APPEAL", approver_role: "JUDGE", is_appeal: true },
     });
-    expect(shape(a)).toEqual([`submitted:done@${CREATED}`, "first-decision:done", "current:now:dashed", "decision:todo"]);
-    expect(buildFlow(a)[2].name.key).toBe("soul_app.timeline.appeal_review");
+    const first = buildFlow(a)[1];
+    expect(first).toMatchObject({ key: "first-decision", note: "soul_app.detail.not_recorded" });
+    expect(first.at).toBeUndefined();
   });
 
   it("D · approved and not appealable: exactly two steps, nothing invented after", () => {
@@ -198,14 +213,15 @@ describe("buildFlow (handoff 2e)", () => {
     ).toEqual([`submitted:done@${CREATED}`, "first-decision:done", "appealed:done", `decided:done@${DECIDED}`]);
   });
 
-  it("only created_at and decided_at are ever used as times", () => {
+  it("only created_at, first_decided_at and decided_at are ever used as times", () => {
+    const FIRST = "2026-09-05T02:00:00Z";
     const cases = [
       app({ created_at: CREATED }),
       app({ created_at: CREATED, status: "REJECTED", decided_at: DECIDED, current_step: null, can_appeal: true }),
-      app({ created_at: CREATED, status: "APPEAL_REJECTED", decided_at: DECIDED, appeal_statement: "x", current_step: null }),
+      app({ created_at: CREATED, status: "APPEAL_REJECTED", decided_at: DECIDED, first_decided_at: FIRST, appeal_statement: "x", current_step: null }),
     ];
     const times = cases.flatMap((a) => buildFlow(a).map((s) => s.at).filter(Boolean));
-    expect(times.filter((t) => t !== CREATED && t !== DECIDED)).toEqual([]);
+    expect(times.filter((t) => t !== CREATED && t !== DECIDED && t !== FIRST)).toEqual([]);
   });
 
   it("an unknown status with no step and no decision draws only what exists", () => {

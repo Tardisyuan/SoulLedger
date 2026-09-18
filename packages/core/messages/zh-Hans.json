@@ -1930,7 +1930,8 @@
       "code_copied": "灵魂编号已复制",
       "code_copy_failed": "复制失败",
       "residing": "暂居 {{current}} · 原属 {{home}}",
-      "record_count_short": "共 {{count}} 条"
+      "record_count_short": "共 {{count}} 条",
+      "residing_note": "暂居结束后回原属文明。此间簿册仍按原属文明的词例。"
     },
     "past_lives": {
       "title": "前世",
@@ -1958,7 +1959,8 @@
       "view": "查看",
       "expectation": "你在此表达的是{{hope}}。最终去向由判官裁定，是否跨文明亦由判官初审决定。",
       "expectation_word": "期望",
-      "statement_hint": "你自己的话，会原样呈给判官。"
+      "statement_hint": "你自己的话，会原样呈给判官。",
+      "residing_note": "你暂居{{current}}，转生仍归{{home}}受理。此页按{{home}}的规例。"
     },
     "status": {
       "UNDER_REVIEW": "审批中",
@@ -1987,7 +1989,12 @@
       "appeal_submit": "提交申诉",
       "appealed": "申诉已提交",
       "created_at": "提交时间",
-      "flow": "流转"
+      "flow": "流转",
+      "handled_by": "受理方 {{home}}",
+      "appeal_hint_residing": "暂居不改籍。此案仍由{{home}}受理，每份申请只能申诉一次。",
+      "first_rejection_reason": "首次驳回理由",
+      "appeal_rejection_reason": "申诉驳回理由",
+      "not_recorded": "未记录"
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
@@ -2071,6 +2078,11 @@
       "REINCARNATING": "轮回中",
       "LOST": "丢失",
       "SETTLED": "已结算"
+    },
+    "homecoming": {
+      "title": "你已归{{home}}",
+      "body": "在{{from}}的暂居已结束。簿册与配色已回{{home}}式样。",
+      "ok": "知道了"
     }
   },
   "soul_push": {

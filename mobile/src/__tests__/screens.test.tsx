@@ -130,4 +130,84 @@ describe("application detail", () => {
     expect(screen.queryByTestId("appeal")).toBeNull();
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({ statement: "请复核" });
   });
+
+  it("while appealing, the FIRST rejection's reason and time are still shown (first_rejection_reason / first_decided_at)", async () => {
+    const FIRST = new Date(2026, 7, 19, 16, 40).toISOString();
+    stubApi({
+      "/me/rebirth-applications/a1/": {
+        status: 200,
+        data: application({
+          status: "APPEALING",
+          appeal_statement: "请复核",
+          rejection_reason: "",
+          decided_at: null,
+          first_rejection_reason: "一九八三年之欺瞒未清",
+          first_decided_at: FIRST,
+          current_step: { node_type: "APPEAL", approver_role: "JUDGE", is_appeal: true },
+        }),
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    const block = await screen.findByTestId("first-rejection");
+    expect(within(block).getByText("首次驳回理由")).toBeTruthy();
+    expect(screen.getByTestId("first-rejection-reason").props.children).toBe("一九八三年之欺瞒未清");
+    expect(screen.getByTestId("first-rejection-at").props.children).toBe("2026-08-19 16:40");
+    // Shown once — not also as a "latest decision" block, which the appeal cleared.
+    expect(screen.queryByTestId("rejection")).toBeNull();
+    expect(within(screen.getByTestId("step-first-decision")).getByText("2026-08-19 16:40")).toBeTruthy();
+  });
+
+  it("appealed before those columns existed: both say 未记录, nothing is borrowed from another field", async () => {
+    stubApi({
+      "/me/rebirth-applications/a1/": {
+        status: 200,
+        data: application({
+          status: "APPEALING",
+          appeal_statement: "请复核",
+          rejection_reason: "",
+          decided_at: null,
+          current_step: { node_type: "APPEAL", approver_role: "JUDGE", is_appeal: true },
+        }),
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    await screen.findByTestId("first-rejection");
+    expect(screen.getByTestId("first-rejection-reason").props.children).toBe("未记录");
+    expect(screen.getByTestId("first-rejection-at").props.children).toBe("未记录");
+  });
+
+  it("appeal rejected: the first rejection AND the appeal's own reason, each under its own heading", async () => {
+    stubApi({
+      "/me/rebirth-applications/a1/": {
+        status: 200,
+        data: application({
+          status: "APPEAL_REJECTED",
+          appeal_statement: "请复核",
+          rejection_reason: "复核维持原判",
+          decided_at: "2026-09-12T00:00:00Z",
+          first_rejection_reason: "业报未清",
+          first_decided_at: "2026-09-05T00:00:00Z",
+          current_step: null,
+        }),
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    expect(within(await screen.findByTestId("first-rejection")).getByText("业报未清")).toBeTruthy();
+    const latest = screen.getByTestId("rejection");
+    expect(within(latest).getByText("申诉驳回理由")).toBeTruthy();
+    expect(within(latest).getByText("复核维持原判")).toBeTruthy();
+    expect(within(latest).queryByText("业报未清")).toBeNull();
+  });
+
+  it("never appealed: no first-rejection block (the one rejection is the latest decision)", async () => {
+    stubApi({
+      "/me/rebirth-applications/a1/": {
+        status: 200,
+        data: application({ status: "REJECTED", can_appeal: true, rejection_reason: "业报未清", decided_at: "2026-09-05T00:00:00Z", current_step: null }),
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    await screen.findByTestId("rejection");
+    expect(screen.queryByTestId("first-rejection")).toBeNull();
+  });
 });
