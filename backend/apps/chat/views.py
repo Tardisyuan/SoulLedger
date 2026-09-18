@@ -10,7 +10,7 @@
 聊天没启用(`MATRIX_ENABLED=False`)时每条路由都是 **503**,不是 500:那不是故障,
 是这套环境没部署 Synapse。
 """
-from django.db.models import Q
+from django.db.models import F, Q
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -153,13 +153,14 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     filterset_fields = ["soul_a"]
 
     def get_queryset(self):
+        # 最近来信在前;从没来过信的排最后(PostgreSQL 的 DESC 默认把 NULL 放在最前)。
         qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related(
             "soul_a", "tenant"
-        )
+        ).order_by(F("last_message_at").desc(nulls_last=True), "-created_at")
         return scope_to_tenant(qs, self.request)
 
     @extend_schema(responses={200: InboxMessageSerializer(many=True), 503: ChatErrorSerializer})
-    @action(detail=True, methods=["get"])
+    @action(detail=True, methods=["get"], pagination_class=None)
     def messages(self, request, pk=None):
         conversation = self.get_object()
         try:
