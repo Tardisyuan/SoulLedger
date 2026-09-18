@@ -41,6 +41,11 @@ class BinEntryIdField(serializers.Field):
     """
 
 
+#: 回收站条目的两类。具名是为了 `ENUM_NAME_OVERRIDES` 能把它钉在既有的 `KindEnum` 上:
+#: 受刑计划加了另外两个 `kind` 字段之后,不钉住它会被改名(config/settings.py)。
+RECYCLE_BIN_KINDS = ["reference", "domain"]
+
+
 class RecycleBinEntrySerializer(serializers.Serializer):
     """One row of the bin — always a cascade PARENT, never a dependent.
 
@@ -55,7 +60,7 @@ class RecycleBinEntrySerializer(serializers.Serializer):
     """
 
     entity_type = serializers.CharField()
-    kind = serializers.ChoiceField(choices=["reference", "domain"])
+    kind = serializers.ChoiceField(choices=RECYCLE_BIN_KINDS)
     id = BinEntryIdField()
     label = serializers.CharField()
     deleted_at = serializers.DateTimeField(allow_null=True)
