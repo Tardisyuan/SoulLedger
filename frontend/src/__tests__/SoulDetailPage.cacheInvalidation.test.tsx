@@ -71,7 +71,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 // Same reasoning: one frozen identity. The real permission gates run against an
 // ADMIN, so the edit control below is reachable without stubbing
 // `RequirePermission` itself (which suiteShape.test.ts forbids anyway).
-const mockTenant = {
+const mockTenant: { user: object; tenantCode?: string } = {
   user: { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] },
 };
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -280,6 +280,53 @@ describe("SoulDetailPage shows a residence", () => {
     const residing = await screen.findByTestId("soul-residing");
     expect(residing).toHaveTextContent("中国地府");
     expect(residing).toHaveAttribute("title", "CN_DIYU");
+  });
+
+  /* 2026-09-18:原属租户的官员经暂居只读例外看得到这个灵魂,写操作后端一律 404。
+   * 页面标「暂居于 X · 只读」并收起写按钮;暂居地自己的官员(上一条)不受影响。 */
+  it("is read-only for the home tenant while the soul is away", async () => {
+    mockTenant.tenantCode = "CN_DIYU";
+    try {
+      mockSoulsGet.mockResolvedValue({
+        data: {
+          ...soulNamed(FIRST_NAME, "DISPOSED"),
+          civilization: "EGYPTIAN",
+          tenant_code: "EG_DUAT",
+          is_residing: true,
+          home_tenant: { code: "CN_DIYU", display_name: "中国地府" },
+          home_civilization: "CHINESE",
+        },
+      });
+      renderPage();
+      const chip = await screen.findByTestId("soul-residing-read-only");
+      expect(chip).toHaveTextContent("EG_DUAT");
+      expect(screen.queryByTestId("soul-residing")).toBeNull();
+      expect(screen.queryByRole("button", { name: "souls.detail.edit" })).toBeNull();
+      expect(screen.queryByText("souls.detail.actions")).toBeNull();
+    } finally {
+      delete mockTenant.tenantCode;
+    }
+  });
+
+  it("keeps the write controls for the residence tenant", async () => {
+    mockTenant.tenantCode = "EG_DUAT";
+    try {
+      mockSoulsGet.mockResolvedValue({
+        data: {
+          ...soulNamed(FIRST_NAME, "DISPOSED"),
+          tenant_code: "EG_DUAT",
+          is_residing: true,
+          home_tenant: { code: "CN_DIYU", display_name: "中国地府" },
+        },
+      });
+      renderPage();
+      await screen.findByTestId("soul-residing");
+      expect(screen.queryByTestId("soul-residing-read-only")).toBeNull();
+      expect(await screen.findByRole("button", { name: "souls.detail.edit" })).toBeInTheDocument();
+      expect(screen.getByText("souls.detail.actions")).toBeInTheDocument();
+    } finally {
+      delete mockTenant.tenantCode;
+    }
   });
 
   it("says nothing about residence for a soul at home", async () => {

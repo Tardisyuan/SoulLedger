@@ -197,6 +197,7 @@
       "generation": "Life {{n}}",
       "previous_identity": "Formerly {{name}}",
       "residing": "Residing here · home: {{tenant}}",
+      "residing_read_only": "Residing in {{tenant}} · read-only",
       "birth_of": "Birth ({{name}})",
       "copy_id_aria": "Copy soul ID",
       "reading": {
@@ -1125,6 +1126,7 @@
     "return_home_reason": "Reason for ending the residence",
     "return_home_success": "The soul has returned to its home tenant",
     "return_home_error": "Failed to end the residence",
+    "return_home_blocked_open_judgment": "The soul still has an open judgment; it can return once that case is concluded or withdrawn",
     "approve": "Approve",
     "reject": "Reject",
     "execute": "Execute",

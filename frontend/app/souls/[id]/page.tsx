@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import type { ToastType } from "@/src/components/ui/Toast";
 import {
   soulsApi,
@@ -77,6 +78,7 @@ export default function SoulDetailPage() {
   // key is missing" is answered once for the app instead of once per page.
   const { t, tf, formatDate, locale } = useI18n();
   const { showToast } = useToast();
+  const { tenantCode } = useTenant();
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -363,6 +365,10 @@ export default function SoulDetailPage() {
   // 那个 prop 就成了窗口里最近的 `title=`,规则会判定「原始成员没走 title」
   // 而报红 —— 而且那不是误报,真正的 `title={soul?.current_state}` 确实在它
   // 够不到的地方。提出来之后,每个窗口里唯一的 `title=` 都是 HTML 属性。
+  // 暂居只读(2026-09-18):原属租户的官员看得到暂居在外的灵魂,但写操作后端一律 404。
+  // 不给写按钮,比给了再失败诚实。暂居地自己的官员不受影响。
+  const readOnlyAway = Boolean(soul?.is_residing && soul.home_tenant && soul.home_tenant.code === tenantCode);
+
   const backLink = (
     <a href="/souls" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
       ← {t("souls.detail.back_to_list")}
@@ -424,9 +430,15 @@ export default function SoulDetailPage() {
       {soul?.is_residing && soul.home_tenant && (
         <>
           <span aria-hidden="true">·</span>
-          <span data-testid="soul-residing" title={soul.home_tenant.code}>
-            {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: soul.home_tenant.display_name })}
-          </span>
+          {readOnlyAway ? (
+            <span data-testid="soul-residing-read-only" title={soul.tenant_code}>
+              {tf("souls.detail.residing_read_only", "Residing in {{tenant}} · read-only", { tenant: soul.tenant_code ?? "" })}
+            </span>
+          ) : (
+            <span data-testid="soul-residing" title={soul.home_tenant.code}>
+              {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: soul.home_tenant.display_name })}
+            </span>
+          )}
         </>
       )}
       {(!soul?.birth_name || soul.birth_name === soul.name) && dateRangeText && (
@@ -447,7 +459,7 @@ export default function SoulDetailPage() {
     </span>
   );
 
-  const headerActions = !loading && soul ? (
+  const headerActions = !loading && soul && !readOnlyAway ? (
     <SoulHeaderActions
       onEdit={() => setIsEditModalOpen(true)}
       onDelete={handleDeleteConfirm}
@@ -523,7 +535,7 @@ export default function SoulDetailPage() {
           )}
 
           {/* Action Buttons */}
-          <SoulActionsCard
+          {!readOnlyAway && <SoulActionsCard
             soul={soul}
             loading={loading}
             actionLoading={actionLoading}
@@ -534,7 +546,7 @@ export default function SoulDetailPage() {
             onDie={handleDie}
             onStartJudgment={handleStartJudgment}
             onReincarnate={handleReincarnate}
-          />
+          />}
 
           {/* 灵魂账号 — docs/ARCHITECTURE-soul-app-and-domain-split.md 2026-09-17「链式账号」. */}
           {soul && (

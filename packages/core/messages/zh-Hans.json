@@ -197,6 +197,7 @@
       "generation": "第 {{n}} 世",
       "previous_identity": "前世 {{name}}",
       "residing": "暂居中 · 原属 {{tenant}}",
+      "residing_read_only": "暂居于 {{tenant}} · 只读",
       "birth_of": "出生({{name}})",
       "copy_id_aria": "复制灵魂 ID",
       "reading": {
@@ -1125,6 +1126,7 @@
     "return_home_reason": "结束暂居的理由",
     "return_home_success": "灵魂已回归原属租户",
     "return_home_error": "结束暂居失败",
+    "return_home_blocked_open_judgment": "灵魂仍有未结案的审判,结案或撤案后才能结束暂居",
     "approve": "批准",
     "reject": "驳回",
     "execute": "执行",

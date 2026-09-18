@@ -25,6 +25,23 @@ class JudgmentMethod(models.TextChoices):
     DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
 
 
+def open_judgments(soul):
+    """这个灵魂**未结案**的审判,不分租户。
+
+    Judgment 没有状态列;它的状态机就是这三列:
+    * 未结案 = `verdict IS NULL` 且 `is_final = False` 且 `is_deleted = False`。
+    * 结案 = `conclude/` 写下裁决(`verdict` 非空、`is_final=True`)。
+    * 撤案 = 无裁决时软删除(`delete_or_raise`)。有裁决的审判不能删、只能归档,
+      所以「已归档」一定已结案;无裁决的审判不能归档(`archive` 400)。
+
+    两个调用方共用这一份定义:`JudgmentSerializer.validate_soul`(一个灵魂同时只能有
+    一个未结案审判)与 `DispatchService.end_residence`(有未结案审判时不回归)。
+    """
+    return Judgment.all_objects.filter(
+        soul=soul, verdict__isnull=True, is_final=False, is_deleted=False
+    )
+
+
 class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     """
     A single judgment proceeding for a soul.
@@ -134,6 +151,9 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
                 archivable=True,
             )
         self.soft_delete(user=user, reason=reason)
+        # 撤案可能是暂居灵魂回归的最后一道阻碍(DispatchService.end_residence)。
+        from apps.dispatch.services import DispatchService
+        DispatchService.resume_return_after_case_closed(self.soul, judgment=self)
 
 
 # ---------------------------------------------------------------------------
