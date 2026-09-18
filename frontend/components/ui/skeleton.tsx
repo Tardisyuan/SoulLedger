@@ -16,6 +16,14 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
   // `as="span"` and add `inline-block` for the height to apply.
   return (
     <Tag
+      /* 加载态的稳定标记,给测试用。
+       *
+       * `e2e/error-states-differ-from-empty.spec.ts` 要等「这一屏已经是最终状态」
+       * 才去读正文,而那八个页面的加载态一律是这个组件。按类名找不行:
+       * `animate-pulse` 还长在别处(实测 /tenants 上有一个 `w-2 h-2 rounded-full
+       * animate-pulse` 的状态圆点常驻),而 `bg-[oklch(var(--color-hairline))]`
+       * 是 Tailwind 的任意值,拿它当选择器等于把测试钉在一个可以随时改的样式上。 */
+      data-slot="skeleton"
       className={cn(
         /* `--color-hairline`, NOT a surface token.
          *
