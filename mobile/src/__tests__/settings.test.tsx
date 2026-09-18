@@ -272,7 +272,7 @@ describe("notification settings", () => {
 
   it("system permission denied: the page says so, links to system settings, and the switches dim but still work", async () => {
     system.status = "denied";
-    signedIn();
+    const calls = signedIn({ "PATCH /me/notification-settings/": { status: 200, data: { ...SETTINGS, rebirth: false } } });
     renderApp();
     await screen.findByTestId("profile-card");
     fireEvent.press(screen.getByTestId("header-account"));
@@ -281,6 +281,9 @@ describe("notification settings", () => {
     expect(StyleSheet.flatten(screen.getByTestId("push-toggles").props.style)).toMatchObject({ opacity: 0.55 });
     expect(screen.getByTestId("toggle-rebirth").props.accessibilityState).toEqual({ checked: true });
     expect(screen.queryByTestId("enable-push")).toBeNull();
+    // Dimmed is not disabled: the choice is saved for when the system allows it.
+    fireEvent.press(screen.getByTestId("toggle-rebirth"));
+    await waitFor(() => expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ rebirth: false }]));
   });
 
   it("the primer explains first: 'not now' never calls the system dialog; 'yes' does, once", async () => {
