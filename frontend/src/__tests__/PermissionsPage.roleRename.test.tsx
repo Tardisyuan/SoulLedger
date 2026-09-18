@@ -120,7 +120,11 @@ async function renameClerkToScribe() {
   });
   // The renamed column is on screen, so its permissions have loaded and the
   // matrix is ready — this is the moment the false diff used to appear.
-  await screen.findByText("文书");
+  // By role, not by text: "文书" is also the role card's <h3>. Under React 18
+  // only one of the two had committed when `findByText` first looked; under 19
+  // both commit together and a text query is ambiguous. The column is the one
+  // this comment is about.
+  await screen.findByRole("columnheader", { name: /文书/ });
   await waitFor(() => expect(cell("SCRIBE", "menu.read")).toBeInTheDocument());
 }
 

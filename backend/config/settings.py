@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "apps.soul_accounts",
     "apps.soul_push",
     "apps.chat",
+    "apps.sentence_plan",
 ]
 
 MIDDLEWARE = [
@@ -539,8 +540,14 @@ SPECTACULAR_SETTINGS = {
         "SocialModerationStatusEnum": "apps.social.models.ModerationStatus.choices",
         # 聊天的 `kind`(DIRECT / OFFICER_INBOX)。按字段名会与别处的 `kind` 撞成带哈希的名字。
         "ConversationKindEnum": "apps.chat.models.ConversationKind.choices",
-        # 回收站的 `kind`:上一条一钉,它就从 KindEnum 被改名成 RecycleBinEntryKindEnum。钉回原名。
-        "KindEnum": ["reference", "domain"],
+        # 受刑计划(docs/ARCHITECTURE-sentence-plan.md):`kind` 与 `status` 两个字段名在别处已有
+        # 别的选项集。回收站的 `KindEnum` 钉在既有名字上,新增的各自带前缀。
+        "KindEnum": "apps.core.recycle_bin_views.RECYCLE_BIN_KINDS",
+        "JudgmentKindEnum": "apps.judgment.models.JudgmentKind.choices",
+        "SentencePlanRequestKindEnum": "apps.sentence_plan.models.SentenceRequestKind.choices",
+        "SentencePlanRequestStatusEnum": "apps.sentence_plan.models.SentenceRequestStatus.choices",
+        "SentencePlanStatusEnum": "apps.sentence_plan.models.SentencePlanStatus.choices",
+        "SentenceNodeStatusEnum": "apps.sentence_plan.models.SentenceNodeStatus.choices",
     },
 }
 

@@ -862,6 +862,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/cross-tenant-judgments/{id}/sentence/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 参与方填**自己文明**那一站的处置内容(docs/ARCHITECTURE-sentence-plan.md §2.1,Q1/Q12)。
+         *
+         *     只有该席位所属租户能填,ADMIN 也按令牌上的租户算 —— 与 `_initiator_or_403` 同一立场:
+         *     各文明定自己的节点,别人不能代填。
+         */
+        post: operations["v1_dispatch_cross_tenant_judgments_sentence_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/records/": {
         parameters: {
             query?: never;
@@ -3331,6 +3353,78 @@ export interface paths {
         };
         /** @description Execution history, newest first. Filter by job / status / tenant / task_name / trigger. */
         get: operations["v1_scheduler_runs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sentence-plans/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Mixin that auto-generates the codenames a request must carry.
+         *
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
+         *
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
+         */
+        get: operations["v1_sentence_plans_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sentence-plans/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Mixin that auto-generates the codenames a request must carry.
+         *
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
+         *
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
+         */
+        get: operations["v1_sentence_plans_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5816,6 +5910,8 @@ export interface components {
             readonly concluded_at: string | null;
             /** @description PASS or FAIL */
             readonly conclusion_type: string | null;
+            /** Format: uuid */
+            judgment?: string | null;
             readonly participants: components["schemas"]["CrossTenantJudgmentParticipant"][];
             /** Format: date-time */
             readonly create_time: string;
@@ -5849,6 +5945,14 @@ export interface components {
             role?: components["schemas"]["CrossTenantJudgmentParticipantRoleEnum"];
             /** Format: date-time */
             readonly joined_at: string;
+            readonly node_order: number | null;
+            readonly sentence_realm_code: string;
+            readonly sentence_years: number | null;
+            readonly sentence_is_eternal: boolean;
+            readonly sentence_memory_reset: string;
+            readonly sentence_notes: string;
+            /** Format: date-time */
+            readonly sentence_submitted_at: string | null;
         };
         /**
          * @description * `ADVISOR` - 顾问
@@ -5857,6 +5961,19 @@ export interface components {
          * @enum {string}
          */
         CrossTenantJudgmentParticipantRoleEnum: "ADVISOR" | "CO_JUDGE" | "CHAIRMAN";
+        /**
+         * @description 参与方填自己文明那一站的处置内容(docs/ARCHITECTURE-sentence-plan.md §2.1)。
+         *
+         *     `is_eternal` / `memory_reset` 不收:服务端抄自 realm,与 `create_from_judgment` 同一抄法。
+         */
+        CrossTenantJudgmentSentence: {
+            /** Format: uuid */
+            participant: string;
+            realm_code: string;
+            sentence_years?: number | null;
+            /** @default  */
+            notes: string;
+        };
         /**
          * @description * `PROPOSED` - 提议中
          *     * `ACTIVE` - 进行中
@@ -6083,6 +6200,8 @@ export interface components {
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
+            /** Format: uuid */
+            readonly sentence_node_id: string | null;
         };
         /**
          * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
@@ -6130,9 +6249,19 @@ export interface components {
          *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
          *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
          *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+         *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
+         *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
+         *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+         *     * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
+         *     * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+         *     * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+         *     * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
+         *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+         *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+         *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED";
         ExportedDataScope: {
             role: string;
             civilization?: string | null;
@@ -6360,6 +6489,9 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly concluded_at: string | null;
+            readonly kind: components["schemas"]["JudgmentKindEnum"];
+            /** Format: uuid */
+            readonly amends_plan_id: string | null;
         };
         /**
          * @description A ground, with the article inlined.
@@ -6391,6 +6523,13 @@ export interface components {
             /** @default  */
             note: string;
         };
+        /**
+         * @description * `ORIGINAL` - 原审判
+         *     * `AMENDMENT` - 加项 / 减项审判
+         *     * `REOPEN` - 重开审判
+         * @enum {string}
+         */
+        JudgmentKindEnum: "ORIGINAL" | "AMENDMENT" | "REOPEN";
         /**
          * @description The envelope `GET /api/v1/judgment/next/` returns.
          *
@@ -7490,6 +7629,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["SensitiveWord"][];
         };
+        PaginatedSentencePlanList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SentencePlan"][];
+        };
         PaginatedSocialMuteList: {
             /** @example 123 */
             count: number;
@@ -7861,6 +8015,8 @@ export interface components {
             readonly concluded_at?: string | null;
             /** @description PASS or FAIL */
             readonly conclusion_type?: string | null;
+            /** Format: uuid */
+            judgment?: string | null;
             readonly participants?: components["schemas"]["CrossTenantJudgmentParticipant"][];
             /** Format: date-time */
             readonly create_time?: string;
@@ -7966,6 +8122,8 @@ export interface components {
             notes?: string;
             /** Format: date-time */
             readonly created_at?: string;
+            /** Format: uuid */
+            readonly sentence_node_id?: string | null;
         };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         PatchedExternalApiKey: {
@@ -8029,6 +8187,9 @@ export interface components {
             readonly created_at?: string;
             /** Format: date-time */
             readonly concluded_at?: string | null;
+            readonly kind?: components["schemas"]["JudgmentKindEnum"];
+            /** Format: uuid */
+            readonly amends_plan_id?: string | null;
         };
         PatchedMenuButtonCreateUpdate: {
             readonly id?: number;
@@ -8958,6 +9119,109 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        SentenceNode: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly order: number;
+            readonly tenant_code: string;
+            readonly is_home: boolean;
+            readonly status: components["schemas"]["SentenceNodeStatusEnum"];
+            readonly realm_code: string;
+            readonly sentence_years: number | null;
+            readonly is_eternal: boolean;
+            readonly memory_reset: components["schemas"]["MemoryResetMechanismEnum"];
+            /** Format: uuid */
+            readonly disposition_id: string | null;
+            /** Format: uuid */
+            readonly dispatch_record_id: string | null;
+            /** Format: uuid */
+            readonly added_by_judgment_id: string | null;
+            /** Format: uuid */
+            readonly added_by_request_id: string | null;
+            /** Format: uuid */
+            readonly removed_by_request_id: string | null;
+            readonly reason: string;
+            /** Format: date-time */
+            readonly activated_at: string | null;
+            /** Format: date-time */
+            readonly completed_at: string | null;
+        };
+        /**
+         * @description * `PENDING` - 未开始
+         *     * `DISPATCHING` - 调拨中
+         *     * `ACTIVE` - 受刑中
+         *     * `WAITING` - 刑满暂留
+         *     * `COMPLETED` - 已完成
+         *     * `ETERNAL` - 永久刑期
+         *     * `ABORTED` - 手动结束
+         *     * `REMOVED` - 已减项
+         *     * `CANCELLED` - 随计划撤销
+         * @enum {string}
+         */
+        SentenceNodeStatusEnum: "PENDING" | "DISPATCHING" | "ACTIVE" | "WAITING" | "COMPLETED" | "ETERNAL" | "ABORTED" | "REMOVED" | "CANCELLED";
+        SentencePlan: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_name: string;
+            readonly tenant: number | null;
+            readonly tenant_code: string | null;
+            readonly cycle: number;
+            readonly status: components["schemas"]["SentencePlanStatusEnum"];
+            /** Format: uuid */
+            readonly origin_judgment_id: string | null;
+            /** Format: uuid */
+            readonly cross_judgment_id: string | null;
+            /** Format: date-time */
+            readonly completed_at: string | null;
+            readonly cancel_reason: string;
+            readonly nodes: components["schemas"]["SentenceNode"][];
+            readonly requests: components["schemas"]["SentencePlanRequest"][];
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        SentencePlanRequest: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly from_tenant_code: string;
+            readonly kind: components["schemas"]["SentencePlanRequestKindEnum"];
+            readonly status: components["schemas"]["SentencePlanRequestStatusEnum"];
+            readonly changes: unknown;
+            /** Format: uuid */
+            readonly requested_by_judgment_id: string | null;
+            readonly reason: string;
+            readonly decision_reason: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly create_time: string;
+        };
+        /**
+         * @description * `AMEND` - 加项 / 减项
+         *     * `REOPEN` - 重开审判
+         * @enum {string}
+         */
+        SentencePlanRequestKindEnum: "AMEND" | "REOPEN";
+        /**
+         * @description * `PENDING` - 待原审判官决定
+         *     * `ACCEPTED` - 已批准
+         *     * `REJECTED` - 已驳回
+         *     * `WITHDRAWN` - 已撤回
+         * @enum {string}
+         */
+        SentencePlanRequestStatusEnum: "PENDING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * @description * `ACTIVE` - 执行中
+         *     * `RETRIAL` - 重审中
+         *     * `HELD` - 永久刑期挂起
+         *     * `COMPLETED` - 已完成
+         *     * `CANCELLED` - 已撤销
+         * @enum {string}
+         */
+        SentencePlanStatusEnum: "ACTIVE" | "RETRIAL" | "HELD" | "COMPLETED" | "CANCELLED";
         /**
          * @description kind=SENTENCE — Republic X's two roads.
          *
@@ -11438,6 +11702,34 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_cross_tenant_judgments_sentence_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Cross-Tenant Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrossTenantJudgmentSentence"];
+                "application/x-www-form-urlencoded": components["schemas"]["CrossTenantJudgmentSentence"];
+                "multipart/form-data": components["schemas"]["CrossTenantJudgmentSentence"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrossTenantJudgment"];
+                };
+            };
+        };
+    };
     v1_dispatch_records_list: {
         parameters: {
             query?: {
@@ -12050,8 +12342,18 @@ export interface operations {
                  *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
                  *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
                  *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+                 *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
+                 *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
+                 *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+                 *     * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
+                 *     * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+                 *     * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+                 *     * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
+                 *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+                 *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+                 *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -15918,6 +16220,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskRun"];
+                };
+            };
+        };
+    };
+    v1_sentence_plans_list: {
+        parameters: {
+            query?: {
+                cycle?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `ACTIVE` - 执行中
+                 *     * `RETRIAL` - 重审中
+                 *     * `HELD` - 永久刑期挂起
+                 *     * `COMPLETED` - 已完成
+                 *     * `CANCELLED` - 已撤销
+                 */
+                status?: "ACTIVE" | "CANCELLED" | "COMPLETED" | "HELD" | "RETRIAL";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSentencePlanList"];
+                };
+            };
+        };
+    };
+    v1_sentence_plans_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Sentence plan. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentencePlan"];
                 };
             };
         };

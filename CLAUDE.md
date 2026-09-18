@@ -157,14 +157,22 @@ cd frontend && npm run build
 # `npm test` prints the word "coverage" zero times. The gate this repo lowered
 # deliberately (with the arithmetic written into jest.config.js) is invisible
 # to the command this file used to name.
+# 两份 React(2026-09-19,feat/react-19):web 的生产构建与 jest 用的都是 Next
+# 自带的 canary(`next/dist/compiled/react`;jest.config.js 的 moduleNameMapper
+# 把 react / react-dom 映射过去,`jestRunsNextVendoredReact.test.ts` 守着);
+# packages/core 的 vitest 与 mobile 用已安装的 react 19.2.3 —— Expo 57 钉了
+# 19.2.3,而 Next 的每个版本都只自带 canary,两边无法取同一个版本。升级 next
+# 会顺带换掉 web 测试里的 React。
 cd frontend && npm run test:coverage
 
 # packages/core — three separate gates, and `.git/hooks/pre-push` runs all
 # three on any `^packages/` change. They were missing from this list, so the
 # way to find out they exist was to be refused by the hook.
 # `test` is vitest, not jest: `domBoundary.test.ts` builds a TS program from
-# the package's own tsconfig and asserts that ~146 DOM type names leaked in by
-# `@types/react` stay unresolvable. `typecheck` alone does NOT catch that —
+# the package's own tsconfig and asserts that the 150 DOM type names leaked in by
+# `@types/react` 19.2 stay unused (146 under 18.3; the list is derived at test
+# time from `@types/react/global.d.ts`, so this number is a reading, not a
+# config — re-measured 2026-09-19 on feat/react-19). `typecheck` alone does NOT catch that —
 # they are empty interfaces, so `const el: HTMLElement = {}` compiles.
 npm run --workspace packages/core typecheck
 npm run --workspace packages/core lint

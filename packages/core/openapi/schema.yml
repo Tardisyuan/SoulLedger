@@ -1903,6 +1903,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
           description: ''
+  /api/v1/dispatch/cross-tenant-judgments/{id}/sentence/:
+    post:
+      operationId: v1_dispatch_cross_tenant_judgments_sentence_create
+      description: |-
+        参与方填**自己文明**那一站的处置内容(docs/ARCHITECTURE-sentence-plan.md §2.1,Q1/Q12)。
+
+        只有该席位所属租户能填,ADMIN 也按令牌上的租户算 —— 与 `_initiator_or_403` 同一立场:
+        各文明定自己的节点,别人不能代填。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentSentence'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentSentence'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentSentence'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossTenantJudgment'
+          description: ''
   /api/v1/dispatch/records/:
     get:
       operationId: v1_dispatch_records_list
@@ -2787,6 +2826,16 @@ paths:
           - REBIRTH_STATUS_CHANGED
           - RECORD_ADDED
           - REINCARNATION_TRIGGERED
+          - SENTENCE_NODE_ACTIVATED
+          - SENTENCE_NODE_COMPLETED
+          - SENTENCE_NODE_REFUSED
+          - SENTENCE_NODE_WAITING
+          - SENTENCE_PLAN_AMENDED
+          - SENTENCE_PLAN_CANCELLED
+          - SENTENCE_PLAN_COMPLETED
+          - SENTENCE_PLAN_CREATED
+          - SENTENCE_REQUEST_CREATED
+          - SENTENCE_REQUEST_DECIDED
           - SETTLEMENT_CORRECTED
           - SOUL_ACCOUNT_CREATED
           - SOUL_ACCOUNT_RETIRED
@@ -2834,6 +2883,16 @@ paths:
           * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
           * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
           * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+          * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
+          * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
+          * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+          * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
+          * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+          * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+          * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
+          * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+          * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+          * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
       - name: ordering
         required: false
         in: query
@@ -7439,6 +7498,124 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskRun'
+          description: ''
+  /api/v1/sentence-plans/:
+    get:
+      operationId: v1_sentence_plans_list
+      description: |-
+        Mixin that auto-generates the codenames a request must carry.
+
+        Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+        codenames like "soul.read", "soul.create" from the current DRF action.
+
+        Custom actions are mapped via `extra_permissions` dict:
+            extra_permissions = {
+                'die': ['soul.die'],
+                'karma': ['soul.read'],
+            }
+
+        `apps/core/permissions.py::CodenamePermission` calls
+        get_required_permissions() from `APIView.initial()`. It has to be there
+        and not in middleware: the answer depends on `self.action`, which DRF sets
+        in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+        this docstring used to name ran in the request phase, read a
+        `request.view` attribute nothing sets, and took its `view is None` early
+        return on every request ever made. It was deleted 2026-08-28.
+      parameters:
+      - in: query
+        name: cycle
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELLED
+          - COMPLETED
+          - HELD
+          - RETRIAL
+        description: |-
+          * `ACTIVE` - 执行中
+          * `RETRIAL` - 重审中
+          * `HELD` - 永久刑期挂起
+          * `COMPLETED` - 已完成
+          * `CANCELLED` - 已撤销
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSentencePlanList'
+          description: ''
+  /api/v1/sentence-plans/{id}/:
+    get:
+      operationId: v1_sentence_plans_retrieve
+      description: |-
+        Mixin that auto-generates the codenames a request must carry.
+
+        Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+        codenames like "soul.read", "soul.create" from the current DRF action.
+
+        Custom actions are mapped via `extra_permissions` dict:
+            extra_permissions = {
+                'die': ['soul.die'],
+                'karma': ['soul.read'],
+            }
+
+        `apps/core/permissions.py::CodenamePermission` calls
+        get_required_permissions() from `APIView.initial()`. It has to be there
+        and not in middleware: the answer depends on `self.action`, which DRF sets
+        in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+        this docstring used to name ran in the request phase, read a
+        `request.view` attribute nothing sets, and took its `view is None` early
+        return on every request ever made. It was deleted 2026-08-28.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Sentence plan.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentencePlan'
           description: ''
   /api/v1/social-moderation/comments/:
     get:
@@ -12910,6 +13087,10 @@ components:
           readOnly: true
           nullable: true
           description: PASS or FAIL
+        judgment:
+          type: string
+          format: uuid
+          nullable: true
         participants:
           type: array
           items:
@@ -12997,13 +13178,45 @@ components:
           type: string
           format: date-time
           readOnly: true
+        node_order:
+          type: integer
+          readOnly: true
+          nullable: true
+        sentence_realm_code:
+          type: string
+          readOnly: true
+        sentence_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        sentence_is_eternal:
+          type: boolean
+          readOnly: true
+        sentence_memory_reset:
+          type: string
+          readOnly: true
+        sentence_notes:
+          type: string
+          readOnly: true
+        sentence_submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
       required:
       - id
       - joined_at
       - judgment
+      - node_order
       - participant_actor_name
       - participant_tenant
       - participant_tenant_code
+      - sentence_is_eternal
+      - sentence_memory_reset
+      - sentence_notes
+      - sentence_realm_code
+      - sentence_submitted_at
+      - sentence_years
     CrossTenantJudgmentParticipantRoleEnum:
       enum:
       - ADVISOR
@@ -13014,6 +13227,30 @@ components:
         * `ADVISOR` - 顾问
         * `CO_JUDGE` - 联合审判官
         * `CHAIRMAN` - 主持
+    CrossTenantJudgmentSentence:
+      type: object
+      description: |-
+        参与方填自己文明那一站的处置内容(docs/ARCHITECTURE-sentence-plan.md §2.1)。
+
+        `is_eternal` / `memory_reset` 不收:服务端抄自 realm,与 `create_from_judgment` 同一抄法。
+      properties:
+        participant:
+          type: string
+          format: uuid
+        realm_code:
+          type: string
+          maxLength: 50
+        sentence_years:
+          type: integer
+          minimum: 0
+          nullable: true
+        notes:
+          type: string
+          default: ''
+          maxLength: 5000
+      required:
+      - participant
+      - realm_code
     CrossTenantJudgmentStatusEnum:
       enum:
       - PROPOSED
@@ -13482,6 +13719,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        sentence_node_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
       required:
       - created_at
       - executed_at
@@ -13489,6 +13731,7 @@ components:
       - is_executed
       - realm_code
       - realm_name
+      - sentence_node_id
       - soul
       - soul_name
     ErrorResponse:
@@ -13541,6 +13784,16 @@ components:
       - REBIRTH_APPLICATION_SUBMITTED
       - REBIRTH_STATUS_CHANGED
       - REBIRTH_CROSS_CIV_DECIDED
+      - SENTENCE_PLAN_CREATED
+      - SENTENCE_NODE_ACTIVATED
+      - SENTENCE_NODE_WAITING
+      - SENTENCE_NODE_COMPLETED
+      - SENTENCE_NODE_REFUSED
+      - SENTENCE_PLAN_AMENDED
+      - SENTENCE_REQUEST_CREATED
+      - SENTENCE_REQUEST_DECIDED
+      - SENTENCE_PLAN_COMPLETED
+      - SENTENCE_PLAN_CANCELLED
       type: string
       description: |-
         * `SOUL_CREATED` - Soul Created
@@ -13578,6 +13831,16 @@ components:
         * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
         * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
         * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+        * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
+        * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
+        * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+        * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
+        * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+        * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+        * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
+        * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+        * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+        * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
     ExportedDataScope:
       type: object
       properties:
@@ -14062,7 +14325,17 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentKindEnum'
+          readOnly: true
+        amends_plan_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
       required:
+      - amends_plan_id
       - citations
       - civilization
       - concluded_at
@@ -14070,6 +14343,7 @@ components:
       - id
       - is_final
       - judge_name
+      - kind
       - soul
       - soul_name
       - verdict
@@ -14119,6 +14393,16 @@ components:
           default: ''
       required:
       - statute
+    JudgmentKindEnum:
+      enum:
+      - ORIGINAL
+      - AMENDMENT
+      - REOPEN
+      type: string
+      description: |-
+        * `ORIGINAL` - 原审判
+        * `AMENDMENT` - 加项 / 减项审判
+        * `REOPEN` - 重开审判
     JudgmentQueueCursor:
       type: object
       description: |-
@@ -16333,6 +16617,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SensitiveWord'
+    PaginatedSentencePlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentencePlan'
     PaginatedSocialMuteList:
       type: object
       required:
@@ -16951,6 +17258,10 @@ components:
           readOnly: true
           nullable: true
           description: PASS or FAIL
+        judgment:
+          type: string
+          format: uuid
+          nullable: true
         participants:
           type: array
           items:
@@ -17141,6 +17452,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        sentence_node_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
     PatchedExternalApiKey:
       type: object
       description: Serializer for ExternalApiKey (hides key_hash, shows raw_key on
@@ -17258,6 +17574,15 @@ components:
         concluded_at:
           type: string
           format: date-time
+          readOnly: true
+          nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentKindEnum'
+          readOnly: true
+        amends_plan_id:
+          type: string
+          format: uuid
           readOnly: true
           nullable: true
     PatchedMenuButtonCreateUpdate:
@@ -19229,6 +19554,284 @@ components:
       - created_by
       - id
       - word
+    SentenceNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: integer
+          readOnly: true
+        tenant_code:
+          type: string
+          readOnly: true
+        is_home:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SentenceNodeStatusEnum'
+          readOnly: true
+        realm_code:
+          type: string
+          readOnly: true
+        sentence_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        is_eternal:
+          type: boolean
+          readOnly: true
+        memory_reset:
+          allOf:
+          - $ref: '#/components/schemas/MemoryResetMechanismEnum'
+          readOnly: true
+        disposition_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        dispatch_record_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        added_by_judgment_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        added_by_request_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        removed_by_request_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        reason:
+          type: string
+          readOnly: true
+        activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - activated_at
+      - added_by_judgment_id
+      - added_by_request_id
+      - completed_at
+      - dispatch_record_id
+      - disposition_id
+      - id
+      - is_eternal
+      - is_home
+      - memory_reset
+      - order
+      - realm_code
+      - reason
+      - removed_by_request_id
+      - sentence_years
+      - status
+      - tenant_code
+    SentenceNodeStatusEnum:
+      enum:
+      - PENDING
+      - DISPATCHING
+      - ACTIVE
+      - WAITING
+      - COMPLETED
+      - ETERNAL
+      - ABORTED
+      - REMOVED
+      - CANCELLED
+      type: string
+      description: |-
+        * `PENDING` - 未开始
+        * `DISPATCHING` - 调拨中
+        * `ACTIVE` - 受刑中
+        * `WAITING` - 刑满暂留
+        * `COMPLETED` - 已完成
+        * `ETERNAL` - 永久刑期
+        * `ABORTED` - 手动结束
+        * `REMOVED` - 已减项
+        * `CANCELLED` - 随计划撤销
+    SentencePlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+          nullable: true
+        tenant_code:
+          type: string
+          readOnly: true
+          nullable: true
+        cycle:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SentencePlanStatusEnum'
+          readOnly: true
+        origin_judgment_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        cross_judgment_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cancel_reason:
+          type: string
+          readOnly: true
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentenceNode'
+          readOnly: true
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/SentencePlanRequest'
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - cancel_reason
+      - completed_at
+      - create_time
+      - cross_judgment_id
+      - cycle
+      - id
+      - nodes
+      - origin_judgment_id
+      - requests
+      - soul
+      - soul_name
+      - status
+      - tenant
+      - tenant_code
+      - update_time
+    SentencePlanRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        from_tenant_code:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/SentencePlanRequestKindEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SentencePlanRequestStatusEnum'
+          readOnly: true
+        changes:
+          readOnly: true
+        requested_by_judgment_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        reason:
+          type: string
+          readOnly: true
+        decision_reason:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - changes
+      - create_time
+      - decided_at
+      - decision_reason
+      - from_tenant_code
+      - id
+      - kind
+      - reason
+      - requested_by_judgment_id
+      - status
+    SentencePlanRequestKindEnum:
+      enum:
+      - AMEND
+      - REOPEN
+      type: string
+      description: |-
+        * `AMEND` - 加项 / 减项
+        * `REOPEN` - 重开审判
+    SentencePlanRequestStatusEnum:
+      enum:
+      - PENDING
+      - ACCEPTED
+      - REJECTED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `PENDING` - 待原审判官决定
+        * `ACCEPTED` - 已批准
+        * `REJECTED` - 已驳回
+        * `WITHDRAWN` - 已撤回
+    SentencePlanStatusEnum:
+      enum:
+      - ACTIVE
+      - RETRIAL
+      - HELD
+      - COMPLETED
+      - CANCELLED
+      type: string
+      description: |-
+        * `ACTIVE` - 执行中
+        * `RETRIAL` - 重审中
+        * `HELD` - 永久刑期挂起
+        * `COMPLETED` - 已完成
+        * `CANCELLED` - 已撤销
     SentenceReading:
       type: object
       description: |-

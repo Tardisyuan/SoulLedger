@@ -47,6 +47,8 @@ urlpatterns = [
     path("api/v1/", include("apps.workflow.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/dispatch/", include("apps.dispatch.urls")),
+    # 受刑计划(docs/ARCHITECTURE-sentence-plan.md)。阶段 1 只读。
+    path("api/v1/sentence-plans/", include("apps.sentence_plan.urls")),
     path("api/v1/death-sync/", include("apps.death_sync.urls")),
     path("api/v1/organizations/", include("apps.org.urls")),
     path("api/v1/social/", include("apps.social.urls")),

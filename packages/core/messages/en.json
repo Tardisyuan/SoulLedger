@@ -1931,7 +1931,8 @@
       "code_copied": "Soul code copied",
       "code_copy_failed": "Copy failed",
       "residing": "Residing in {{current}} · belongs to {{home}}",
-      "record_count_short": "{{count}} rec."
+      "record_count_short": "{{count}} rec.",
+      "residing_note": "You return home when the residence ends. Until then your ledger keeps your home civilization's words."
     },
     "past_lives": {
       "title": "Past lives",
@@ -1959,7 +1960,8 @@
       "view": "View",
       "expectation": "What you state here is a {{hope}}. The judges decide where you go, and the first review decides whether you cross civilizations.",
       "expectation_word": "wish",
-      "statement_hint": "Your own words, passed to the judges as written."
+      "statement_hint": "Your own words, passed to the judges as written.",
+      "residing_note": "You are residing in {{current}}; rebirth is still decided by {{home}}. This page follows {{home}}'s rules."
     },
     "status": {
       "UNDER_REVIEW": "Under review",
@@ -1988,7 +1990,13 @@
       "appeal_submit": "Submit appeal",
       "appealed": "Appeal submitted",
       "created_at": "Submitted",
-      "flow": "Progress"
+      "flow": "Progress",
+      "handled_by": "Handled by {{home}}",
+      "appeal_hint_residing": "Residence does not change where you belong. {{home}} still handles this case; each application can be appealed once.",
+      "first_rejection_reason": "First rejection",
+      "appeal_rejection_reason": "Appeal rejected because",
+      "not_recorded": "Not recorded",
+      "new_result": "New result"
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
@@ -2072,6 +2080,57 @@
       "REINCARNATING": "Reincarnating",
       "LOST": "Lost",
       "SETTLED": "Settled"
+    },
+    "homecoming": {
+      "title": "You are back in {{home}}",
+      "body": "Your residence in {{from}} has ended. The ledger and its colours are {{home}}'s again.",
+      "ok": "Got it"
+    },
+    "settings": {
+      "title": "Settings",
+      "language": "Language",
+      "language_name": "English",
+      "language_note": "Interface and prompts",
+      "current": "Current",
+      "language_hint": "Changes take effect at once; no need to sign in again. Record content (verdicts, statements, reasons) stays as written.",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "save_failed": "Could not save this to your account. The interface is {{current}} now, but another device will show {{previous}}.",
+      "revert": "Back to {{previous}}",
+      "notifications": "Notifications",
+      "rebirth": "Rebirth application results",
+      "rebirth_note": "When an application or appeal is decided",
+      "judgment": "Judgment results",
+      "judgment_note": "When a judgment concludes or a disposition is carried out",
+      "residence": "Residence",
+      "residence_note": "When a transfer is approved, when you are sent to reside elsewhere, and when you return",
+      "lock_screen": "The lock screen only says there is a result — never reasons or evidence.",
+      "push_unavailable": "Push notifications are not enabled in this build yet. The switches below are still saved to your account.",
+      "push_denied": "Notifications are turned off in the system. The switches below remember your choice, but nothing arrives until the system allows it.",
+      "open_system_settings": "Open system settings",
+      "enable_push": "Turn on notifications",
+      "toggle_failed": "Could not save that setting; it has been put back",
+      "version": "Soul Ledger {{version}}"
+    },
+    "push": {
+      "primer_title": "Tell you when there is a result?",
+      "primer_body": "Most things in the ledger take time. With notifications on, you need not keep checking.",
+      "will_notify": "You will be told",
+      "primer_rebirth": "Your rebirth application is decided",
+      "primer_rebirth_note": "Only approved or rejected — never the reason.",
+      "primer_judgment": "Your judgment has a result",
+      "primer_judgment_note": "No evidence, no merit or demerit details.",
+      "primer_residence": "A residence begins or ends",
+      "primer_residence_note": "Not where you are sent.",
+      "never": "Never on the lock screen: rejection reasons, evidence, scores, passwords.",
+      "yes": "Yes, notify me",
+      "no": "Not now"
+    },
+    "original": {
+      "tag": "Original",
+      "tag_language": "Original · {{language}}",
+      "zh": "Chinese",
+      "note": "Record content stays as written; it is not translated with the interface."
     }
   },
   "soul_push": {

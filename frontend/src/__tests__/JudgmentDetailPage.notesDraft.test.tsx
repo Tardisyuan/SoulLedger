@@ -25,8 +25,8 @@ const ID = "j-1";
 
 /**
  * `React.use` shim — the same one, for the same reason, as
- * `dispatchApproveConfirms.test.tsx`: jest resolves `react@18`, where `use`
- * does not exist, while the app runs on the React Next bundles. It unwraps the
+ * `dispatchApproveConfirms.test.tsx` (whose note now says why it outlived the
+ * React 19 upgrade: the real `use` suspends a synchronous render). It unwraps the
  * one already-resolved params promise these tests hand in and proves nothing
  * about suspense. Read the note over there before widening it.
  */
