@@ -4,6 +4,9 @@
  * by any navigate() call, deep link or back gesture. In particular, while the
  * server says the password must change, the only screen that exists is the
  * change-password one.
+ *
+ * The theme is decided here too: neutral until a soul is signed in, then that
+ * soul's civilization; light or dark follows the system.
  */
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
@@ -11,15 +14,17 @@ import {
   DefaultTheme,
   NavigationContainer,
   createNavigationContainerRef,
-  type Theme,
+  type Theme as NavTheme,
 } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useColorScheme } from "react-native";
 
+import { AppHeader, TabBar } from "./chrome";
+import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
 import { useSession } from "./session";
-import { paletteFor } from "./theme";
-import { Failure, Loading, PaletteContext, Screen } from "./ui";
+import { themeFor } from "./theme";
+import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
 import {
   ApplicationDetailScreen,
   ApplicationsScreen,
@@ -38,19 +43,24 @@ export const navigationRef = createNavigationContainerRef();
 function MainTabs() {
   const { t } = useI18n();
   return (
-    // Text-only tabs: no icon font is bundled, and the default icon renders as
-    // a missing-glyph box on Android (seen on the emulator run).
-    <Tabs.Navigator screenOptions={{ tabBarIconStyle: { display: "none" }, tabBarLabelStyle: { fontSize: 14 } }}>
+    <Tabs.Navigator
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={({ route }) => ({
+        header: () => <AppHeader title={t(TAB_TITLES[route.name])} account />,
+      })}
+    >
       <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life") }} />
       <Tabs.Screen name="PastLives" component={PastLivesScreen} options={{ title: t("soul_app.tabs.past_lives") }} />
-      <Tabs.Screen
-        name="Applications"
-        component={ApplicationsScreen}
-        options={{ title: t("soul_app.tabs.applications") }}
-      />
+      <Tabs.Screen name="Applications" component={ApplicationsScreen} options={{ title: t("soul_app.tabs.applications") }} />
     </Tabs.Navigator>
   );
 }
+
+const TAB_TITLES: Record<string, string> = {
+  Life: "soul_app.tabs.life",
+  PastLives: "soul_app.tabs.past_lives",
+  Applications: "soul_app.tabs.applications",
+};
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
   return <ApplicationDetailScreen id={route.params.id} />;
@@ -58,74 +68,79 @@ function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDe
 
 export function RootNavigator() {
   const { t } = useI18n();
-  const { state, retryBoot } = useSession();
+  const { state, retryBoot, signOut } = useSession();
   const scheme = useColorScheme() === "light" ? "light" : "dark";
-  const palette = paletteFor(state.status === "signedIn" ? state.profile.civilization : null, scheme);
+  const theme = themeFor(state.status === "signedIn" ? state.profile.civilization : null, scheme);
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
-  const navTheme: Theme = {
+  const navTheme: NavTheme = {
     ...base,
-    colors: {
-      ...base.colors,
-      primary: palette.accent,
-      background: palette.canvas,
-      card: palette.surface1,
-      text: palette.ink,
-      border: palette.hairline,
-    },
+    colors: { ...base.colors, primary: theme.accent, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
   };
 
-  let screens;
+  let body;
   switch (state.status) {
     case "booting":
-      return (
-        <PaletteContext.Provider value={palette}>
-          <Screen scroll={false}>
-            <Loading />
-          </Screen>
-        </PaletteContext.Provider>
+      body = (
+        <Screen scroll={false} edges={["top", "left", "right", "bottom"]}>
+          <Block last>
+            <Skeleton lines={5} testID="booting" />
+          </Block>
+        </Screen>
       );
+      break;
     case "unreachable":
-      return (
-        <PaletteContext.Provider value={palette}>
-          <Screen scroll={false}>
-            <Failure error={state.error} onRetry={retryBoot} />
-          </Screen>
-        </PaletteContext.Provider>
-      );
-    case "signedOut":
-      screens = <Stack.Screen name="Login" component={LoginScreen} options={{ title: t("soul_app.app_name") }} />;
-      break;
-    case "mustChangePassword":
-      screens = (
-        <Stack.Screen
-          name="ChangePassword"
-          component={ChangePasswordScreen}
-          options={{ title: t("soul_app.change_password.title") }}
-        />
+      body = (
+        <Screen scroll={false} edges={["top", "left", "right", "bottom"]}>
+          <ScreenError error={state.error} onRetry={retryBoot} />
+        </Screen>
       );
       break;
-    case "signedIn":
-      screens = (
-        <>
-          <Stack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
+    default: {
+      let screens;
+      if (state.status === "signedOut") {
+        screens = <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />;
+      } else if (state.status === "mustChangePassword") {
+        screens = (
           <Stack.Screen
-            name="NewApplication"
-            component={NewApplicationScreen}
-            options={{ title: t("soul_app.applications.new") }}
+            name="ChangePassword"
+            component={ChangePasswordScreen}
+            options={{ header: () => <AppHeader title={t("soul_app.change_password.title")} /> }}
           />
-          <Stack.Screen name="ApplicationDetail" component={Detail} options={{ title: t("soul_app.detail.title") }} />
-        </>
+        );
+      } else {
+        screens = (
+          <>
+            <Stack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="NewApplication"
+              component={NewApplicationScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.applications.new")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="ApplicationDetail"
+              component={Detail}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.detail.title")} onBack={navigation.goBack} />,
+              })}
+            />
+          </>
+        );
+      }
+      body = (
+        <NavigationContainer ref={navigationRef} theme={navTheme}>
+          <Stack.Navigator>{screens}</Stack.Navigator>
+        </NavigationContainer>
       );
-      break;
+    }
   }
 
   return (
-    <PaletteContext.Provider value={palette}>
-      <NavigationContainer ref={navigationRef} theme={navTheme}>
-        {/* "minimal": a chevron only. The default iOS back title is the previous
-            route's NAME, and the tabs route is literally "Tabs" (seen on the iPhone run). */}
-        <Stack.Navigator screenOptions={{ headerBackButtonDisplayMode: "minimal" }}>{screens}</Stack.Navigator>
-      </NavigationContainer>
-    </PaletteContext.Provider>
+    <ThemeContext.Provider value={theme}>
+      <ToastProvider>
+        <LogoutProvider onConfirm={signOut}>{body}</LogoutProvider>
+      </ToastProvider>
+    </ThemeContext.Provider>
   );
 }

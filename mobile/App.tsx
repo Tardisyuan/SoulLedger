@@ -1,7 +1,9 @@
+import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { FONT_ASSETS } from "./src/fonts";
 import { I18nProvider } from "./src/i18n";
 import { RootNavigator } from "./src/navigation";
 import { hydratePersistentStore, installMobilePlatform } from "./src/platform";
@@ -11,11 +13,13 @@ import { SessionProvider } from "./src/session";
 installMobilePlatform();
 
 export default function App() {
-  const [ready, setReady] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  // A font that fails to load falls back to the system face; it must not keep the app blank.
+  const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
   useEffect(() => {
-    hydratePersistentStore().finally(() => setReady(true));
+    hydratePersistentStore().finally(() => setHydrated(true));
   }, []);
-  if (!ready) return null;
+  if (!hydrated || !(fontsLoaded || fontError)) return null;
   return (
     <SafeAreaProvider>
       <I18nProvider>

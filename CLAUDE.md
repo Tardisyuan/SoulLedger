@@ -77,6 +77,8 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 随后所有门禁都是 127(命令找不到)—— 读起来像代码坏了;它还顺手从锁文件删掉 204 行 `libc` 字段。
 npm 11 默认**不执行安装脚本**,装完补一次 `npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli`。
 改锁文件同样用 `npx npm@11 install …`,提交前 `git diff --stat package-lock.json` 看一眼没有成片删掉 `libc`。
+**2026-09-18 补正:npm 11(实测 11.19.1)的 `npm ci` 也会删掉锁文件里的 `libc` 字段**(204 行)—— 上面「npm 10 删、npm 11 不删」的说法不成立;
+npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一律 `git checkout -- package-lock.json` 还原锁文件**,只有有意改依赖时才提交锁文件改动。
 
 **后端的解释器是 `backend/.venv`,不是 PATH 上的任何 `python`。**
 Python **3.11** + `requirements.lock` + `requirements-dev.txt`(只有钉死的 ruff)——
