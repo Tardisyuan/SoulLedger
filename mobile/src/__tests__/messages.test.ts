@@ -107,7 +107,7 @@ describe("soul_app copy", () => {
 
   it("interpolates and never echoes a filled key", () => {
     expect(translate("en", "soul_app.life.cycle", { cycle: "2" })).toBe("Life 2");
-    expect(translate("egy", "soul_app.errors.unknown", { code: "x" })).toBe("Isfet (x)");
+    expect(translate("egy", "soul_app.errors.unknown", { code: "x" })).toBe("Sethet (x)");
     expect(translate("en", "soul_app.no_such_key")).toBe("soul_app.no_such_key");
   });
 });
