@@ -3,10 +3,25 @@ Serializers for notifications.
 """
 from rest_framework import serializers
 
+from apps.core.locale import locale_from_context
+from apps.notifications import messages
 from apps.notifications.models import UserNotification
 
 
-class UserNotificationSerializer(serializers.ModelSerializer):
+class _LocalizedMixin:
+    """分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
+    请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。"""
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        kind = messages.KIND_BY_TYPE.get(instance.notification_type)
+        locale = locale_from_context(self.context)
+        if kind and instance.params and locale in messages.MESSAGES:
+            data["title"], data["message"] = messages.render(locale, kind, instance.params)
+        return data
+
+
+class UserNotificationSerializer(_LocalizedMixin, serializers.ModelSerializer):
     class Meta:
         model = UserNotification
         fields = [
@@ -43,7 +58,7 @@ class UserNotificationSerializer(serializers.ModelSerializer):
         ]
 
 
-class UserNotificationListSerializer(serializers.ModelSerializer):
+class UserNotificationListSerializer(_LocalizedMixin, serializers.ModelSerializer):
     """Lightweight serializer for listing notifications."""
 
     class Meta:
