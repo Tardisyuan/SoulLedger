@@ -469,10 +469,14 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
       <FadeIn>
         <LandingHighlight on={!!landed}>
         <Block testID="application-detail">
+          {/* Items here must not shrink: a shrunk badge wraps its own glyph and label
+              apart (seen on the simulator as "↺" over "申诉中"). They wrap as whole pills. */}
           <View style={styles.badgeRow}>
-            <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+            <View testID="status-badge-slot" style={styles.badgeItem}>
+              <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+            </View>
             {residence ? (
-              <View style={[styles.handler, { borderColor: theme.hair2 }]}>
+              <View style={[styles.handler, styles.badgeItem, { borderColor: theme.hair2 }]}>
                 <Txt testID="handled-by" variant="label" tone="muted" style={styles.handlerText}>
                   {t("soul_app.detail.handled_by", { home: residence.home })}
                 </Txt>
@@ -626,6 +630,7 @@ const styles = StyleSheet.create({
   landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
   landingTagText: { fontSize: 10.5, letterSpacing: 0.4 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  badgeItem: { flexShrink: 0, maxWidth: "100%" },
   handler: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   handlerText: { letterSpacing: 0.4 },
   residenceNote: { flexDirection: "row", gap: 9, paddingVertical: 14, borderBottomWidth: 1 },

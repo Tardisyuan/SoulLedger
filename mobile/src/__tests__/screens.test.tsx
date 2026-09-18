@@ -1,6 +1,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -112,6 +113,8 @@ describe("application detail", () => {
     expect(within(badge).getByText("ON_HOLD")).toBeTruthy();
     expect(screen.queryByText(/soul_app\.status/)).toBeNull();
     expect(screen.queryByTestId("appeal")).toBeNull();
+    // In the badge row the pill must not shrink, or its glyph and label wrap apart (simulator, round 3).
+    expect(StyleSheet.flatten(screen.getByTestId("status-badge-slot").props.style)).toMatchObject({ flexShrink: 0 });
   });
 
   it("offers the appeal only when can_appeal, and shows the rejection reason", async () => {
