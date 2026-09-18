@@ -110,6 +110,9 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     )
     serializer_class = JudgmentSerializer
     filterset_class = JudgmentFilter
+    # 暂居只读例外(apps/core/tenant.py)。不含 `next_pending`:那是待办队列,
+    # 原属租户对暂居地的案子什么都做不了。
+    residence_read_actions = ("list", "retrieve", "citations")
     ordering_fields = ["created_at", "concluded_at"]
 
     def perform_create(self, serializer):

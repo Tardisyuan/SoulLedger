@@ -14,6 +14,22 @@ from apps.dispatch.models import (
 from apps.events.models import EventType, SoulEvent
 
 
+class ResidenceReturnBlockedError(Exception):
+    """灵魂还有未结案的审判,暂居不能结束(2026-09-18 用户决定)。
+
+    不是 ValueError:`return_home` 把 ValueError 一律答 409 且不带 `code`,
+    这一条要带 `code` 与未结案审判的 id,让官员知道该去结哪一案。
+    """
+
+    code = "open_judgment"
+
+    def __init__(self, judgment_ids):
+        self.judgment_ids = [str(pk) for pk in judgment_ids]
+        super().__init__(
+            "Soul has an open judgment; conclude or withdraw it before the residence can end"
+        )
+
+
 class DispatchService:
     """
     Service for managing cross-tenant soul dispatch operations.
@@ -283,6 +299,7 @@ class DispatchService:
 
     RETURN_ON_DISPOSITION = "DISPOSITION_EXECUTED"
     RETURN_MANUAL = "MANUAL"
+    RETURN_ON_CASE_CLOSED = "JUDGMENT_CLOSED"
 
     @staticmethod
     def end_residence(soul, *, actor, trigger, reason=""):
@@ -296,14 +313,22 @@ class DispatchService:
 
         Raises:
             ValueError: 灵魂没有在暂居。
+            ResidenceReturnBlockedError: 灵魂还有未结案的审判(任何租户的),什么都不写。
         """
         from apps.audit.models import AuditAction, AuditLog
+        from apps.judgment.models import open_judgments
         from apps.souls.models import Soul
 
         with transaction.atomic():
             locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
             if not locked.is_residing:
                 raise ValueError("Soul is not residing away from its home tenant")
+            # 在灵魂行锁下问:与之竞争的「撤案后恢复回归」也走这里,两者串行。
+            # ponytail: 开新审判不锁灵魂行,与回归并发时可能漏看一条刚创建的审判;
+            # 需要时让 JudgmentViewSet.perform_create 也锁灵魂行。
+            open_ids = list(open_judgments(locked).values_list("pk", flat=True))
+            if open_ids:
+                raise ResidenceReturnBlockedError(open_ids)
             residence = locked.tenant
             record = (
                 DispatchRecord._base_manager.select_for_update(of=("self",))
@@ -342,6 +367,66 @@ class DispatchService:
         # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。
         soul.tenant_id = locked.tenant_id
         return record
+
+    @staticmethod
+    def record_blocked_return(soul, blocked, disposition):
+        """自动回归被未结案审判拦下:留一条 SoulEvent,官员从时间线上看得到为什么没回去。
+
+        写在暂居租户(审判在那里);原属租户经只读例外也读得到这条事件。
+        """
+        record = (
+            DispatchRecord._base_manager
+            .filter(soul_id=soul.pk, status=DispatchStatus.EXECUTED, target_tenant_id=soul.tenant_id, is_deleted=False)
+            .order_by("-executed_at").first()
+        )
+        SoulEvent.objects.create(
+            tenant_id=soul.tenant_id, soul=soul, event_type=EventType.STATE_CHANGED,
+            payload={
+                "action": "DISPATCH_RETURN_BLOCKED",
+                "code": blocked.code,
+                "open_judgment_ids": blocked.judgment_ids,
+                "disposition_id": str(disposition.pk),
+                "dispatch_id": str(record.pk) if record else None,
+            },
+            actor="system",
+        )
+
+    @staticmethod
+    def resume_return_after_case_closed(soul, *, judgment):
+        """撤案之后,若暂居处置早已执行完毕,补上当时被拦下的回归。
+
+        「暂居处置执行完毕」= 本次暂居开始(调拨记录 `executed_at`)以来,暂居租户对这个
+        灵魂有一份**已执行、非永久**的处置,且没有还未执行的处置。后一条让「结案」不必
+        单独挂钩:`conclude` 总会在暂居租户新建一份未执行的处置,回归随它执行发生
+        (`DispositionService._execute_during_residence`,同一个 `end_residence`)。
+
+        条件不满足、或回归仍被别的未结案审判拦着,就什么都不做,返回 None。
+        """
+        from apps.disposition.models import Disposition
+        from apps.souls.models import Soul
+
+        soul = Soul.all_objects.get(pk=soul.pk)
+        if not soul.is_residing:
+            return None
+        record = (
+            DispatchRecord._base_manager
+            .filter(soul_id=soul.pk, status=DispatchStatus.EXECUTED, target_tenant_id=soul.tenant_id, is_deleted=False)
+            .order_by("-executed_at").first()
+        )
+        if record is None or record.executed_at is None:
+            return None
+        residence = Disposition.all_objects.filter(soul_id=soul.pk, tenant_id=soul.tenant_id, is_deleted=False)
+        served = residence.filter(is_executed=True, is_eternal=False, executed_at__gte=record.executed_at).exists()
+        pending = residence.filter(is_executed=False, is_archived=False, created_at__gte=record.executed_at).exists()
+        if not served or pending:
+            return None
+        try:
+            return DispatchService.end_residence(
+                soul, actor="system", trigger=DispatchService.RETURN_ON_CASE_CLOSED,
+                reason=f"judgment {judgment.pk} closed",
+            )
+        except (ResidenceReturnBlockedError, ValueError):
+            return None
 
 
 class CrossTenantJudgmentService:

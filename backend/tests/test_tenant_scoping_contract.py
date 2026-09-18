@@ -111,6 +111,51 @@ EXEMPT: dict[str, str] = {
 }
 
 
+#: 暂居只读例外(apps/core/tenant.py,2026-09-18 用户决定)的**纳入**清单:
+#: 视图名 → (声明的 `residence_read_actions`, 理由)。暂居期间原属租户的官员对这些
+#: 动作只读可见;其余一切动作、一切写方法照旧只按 tenant。
+RESIDENCE_READABLE: dict[str, tuple[tuple[str, ...], str]] = {
+    "SoulViewSet": (
+        ("list", "retrieve", "karma", "records"),
+        "灵魂列表、详情、功过总账与功过记录 —— 原属文明要知道自己的灵魂在别处的状况。"
+        "写动作(die / transition / add_record / 确认日期警告 / archive / 更正终局)不纳入。",
+    ),
+    "JudgmentViewSet": (
+        ("list", "retrieve", "citations"),
+        "暂居地对灵魂的审判与其所引条文,即「审判进展」。不含 `next_pending`:"
+        "那是待办队列,原属租户对暂居地的案子什么都不能做,出现在它的队列里只会误导。",
+    ),
+    "DispositionViewSet": (
+        ("list", "retrieve"),
+        "暂居地的处置,即「处置进展」:执行了没有、是否永久刑期决定灵魂何时回归。",
+    ),
+    "SoulEventViewSet": (
+        ("list", "retrieve"),
+        "灵魂时间线。暂居地写的事件(调拨执行、回归被拦下 DISPATCH_RETURN_BLOCKED)"
+        "是原属租户跟进回归的唯一线索。",
+    ),
+}
+
+#: 模型挂在灵魂上、**不纳入**暂居只读例外的视图,各自的理由。
+#: 新增一个挂在灵魂上的视图,必须进两张表之一 —— 见 test_every_soul_linked_viewset_is_classified。
+NOT_RESIDENCE_READABLE: dict[str, str] = {
+    "ReincarnationViewSet": (
+        "暂居中的灵魂不能转生(Soul.transition_to 拒绝 REINCARNATING),暂居地不会有转生行;"
+        "转生归原属文明,原属租户本来就看得到自己的。"
+    ),
+    "ApprovalWorkflowViewSet": (
+        "审批流是暂居地的办事队列(approve / advance / escalate),不是进展本身;"
+        "审判与处置的结果已经经 JudgmentViewSet / DispositionViewSet 可读。"
+    ),
+    "DispatchRecordViewSet": "调拨记录本来就对源、目标两方可见(EXEMPT),不需要再放宽。",
+    "DeathRegistrationViewSet": "死亡登记是机器对机器的入口,按 API key 隔离,与暂居无关。",
+    "DeathRegistrationReadViewSet": "同上:死亡登记发生在调拨之前,属于登记它的租户。",
+    "SoulAccountViewSet": "灵魂账号本来就按 soul__home_tenant 隔离,原属租户始终可见。",
+    "InitialCredentialViewSet": "同上,按 soul__home_tenant;暂居地不应看到初始密码。",
+    "OfficerRebirthApplicationViewSet": "同上,转生申请归原属文明审理。",
+}
+
+
 def _authorship_fields():
     """Field names AuditUserFields contributes — read off the abstract base
     rather than hardcoded, so adding one there does not silently start
@@ -415,3 +460,116 @@ def test_a_judge_only_sees_its_own_tenant(path, api_client, judge_user, cn_tenan
     ids = {row["id"] for row in res.json()["results"]}
     assert str(mine.id) in ids
     assert str(theirs.id) not in ids, f"{path}: other tenant's row leaked to a JUDGE"
+
+
+# ---------------------------------------------------------------------------
+# 暂居只读例外的契约
+# ---------------------------------------------------------------------------
+
+
+def _soul_linked(model):
+    from apps.core.tenant import _soul_path
+
+    return model is not None and _soul_path(model) is not None
+
+
+def test_every_soul_linked_viewset_is_classified_for_the_residence_exception():
+    linked = {cls.__name__ for cls in _registered_viewsets() if _soul_linked(_model_for(cls))}
+    both = sorted(set(RESIDENCE_READABLE) & set(NOT_RESIDENCE_READABLE))
+    assert both == [], f"同时出现在纳入与不纳入清单里:{both}"
+    unclassified = sorted(linked - set(RESIDENCE_READABLE) - set(NOT_RESIDENCE_READABLE))
+    assert unclassified == [], (
+        f"这些视图的模型挂在灵魂上,但没有决定是否纳入暂居只读例外:{unclassified}。"
+        f"写进 {__file__} 的 RESIDENCE_READABLE 或 NOT_RESIDENCE_READABLE,附理由。"
+    )
+    stale = sorted((set(RESIDENCE_READABLE) | set(NOT_RESIDENCE_READABLE)) - linked)
+    assert stale == [], f"清单里这些名字已不是路由上挂在灵魂上的视图:{stale}"
+
+
+def test_declared_residence_actions_match_the_contract_exactly():
+    declared = {
+        cls.__name__: tuple(cls.residence_read_actions)
+        for cls in _registered_viewsets()
+        if getattr(cls, "residence_read_actions", ())
+    }
+    expected = {name: actions for name, (actions, _reason) in RESIDENCE_READABLE.items()}
+    assert declared == expected
+
+
+def test_residence_actions_are_reads_only():
+    """声明进例外的动作只能是 GET。一个 POST 动作混进来,方法检查仍会挡住它,
+    但那样的声明读起来像「原属租户能做这件事」—— 在这里就拒绝。"""
+    for cls in _registered_viewsets():
+        for action in getattr(cls, "residence_read_actions", ()):
+            if action in ("list", "retrieve"):
+                continue
+            method = getattr(cls, action, None)
+            mapping = getattr(method, "mapping", None)
+            assert mapping is not None, f"{cls.__name__}.{action} 不是一个 @action"
+            # 同一路由可以把 POST 映射到另一个动作名(citations / cite_statute),只看映射到本动作的方法。
+            methods = {m for m, name in mapping.items() if name == action}
+            assert methods == {"get"}, f"{cls.__name__}.{action} 接受 {sorted(methods)}"
+
+
+@pytest.mark.django_db
+def test_the_residence_exception_widens_only_safe_methods_and_only_soul_linked_models(cn_tenant, eu_tenant):
+    from types import SimpleNamespace
+
+    from apps.core.tenant import scope_to_tenant
+    from apps.realms.models import Realm
+    from apps.souls.models import Soul
+
+    soul = Soul.objects.create(name="暂居", tenant=cn_tenant)
+    Soul.all_objects.filter(pk=soul.pk).update(tenant=eu_tenant)
+    user = SimpleNamespace(is_authenticated=True, role="JUDGE")
+
+    def scoped(method, *, model=Soul, **kwargs):
+        request = SimpleNamespace(user=user, tenant=cn_tenant, method=method)
+        return scope_to_tenant(model.all_objects.all(), request, **kwargs)
+
+    assert list(scoped("GET", residence_read=True)) == [soul]
+    assert list(scoped("GET")) == []
+    for method in ("POST", "PUT", "PATCH", "DELETE"):
+        assert list(scoped(method, residence_read=True)) == [], method
+    # 例外只挂在默认的 `tenant` 字段上;走别的路径的调用方不受影响。
+    assert list(scoped("GET", residence_read=True, field="create_user__tenant")) == []
+    # 不挂在灵魂上的模型:没有放宽,照常按 tenant 过滤。
+    Realm.objects.create(realm_code="EU_ONLY", civilization="EUROPEAN", name_local="Hell",
+                         realm_type="HELL", tenant=eu_tenant)
+    assert list(scoped("GET", model=Realm, residence_read=True)) == []
+    # 暂居结束:原属照常可见(普通隔离),暂居地一侧没有例外。
+    Soul.all_objects.filter(pk=soul.pk).update(tenant=cn_tenant)
+    assert list(scoped("GET", residence_read=True)) == [soul]
+    eu_request = SimpleNamespace(user=user, tenant=eu_tenant, method="GET")
+    assert list(scope_to_tenant(Soul.all_objects.all(), eu_request, residence_read=True)) == []
+
+
+@pytest.mark.django_db
+def test_the_object_level_residence_check_matches_the_queryset_one(cn_tenant, eu_tenant):
+    """`TenantPermission` 的对象级判定是列表过滤之后的第二道。列表过滤先挡掉了第三租户的行,
+    所以只经 API 测不到这一道 —— 在这里直接问它。"""
+    from apps.core.tenant import residence_readable
+    from apps.disposition.models import Disposition
+    from apps.souls.models import Soul
+    from apps.tenants.models import Tenant
+
+    eg = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "EG"})[0]
+    soul = Soul.objects.create(name="暂居", tenant=cn_tenant)
+    Soul.all_objects.filter(pk=soul.pk).update(tenant=eg)
+    soul.refresh_from_db()
+    here = Disposition.objects.create(soul=soul, tenant=eg)
+    third = Disposition.objects.create(soul=soul, tenant=eu_tenant)
+
+    assert residence_readable(soul, cn_tenant) is True
+    assert residence_readable(here, cn_tenant) is True
+    assert residence_readable(third, cn_tenant) is False
+    assert residence_readable(here, eu_tenant) is False
+    assert residence_readable(here, None) is False
+    Soul.all_objects.filter(pk=soul.pk).update(tenant=cn_tenant)
+    soul.refresh_from_db()
+    here.refresh_from_db()
+    assert residence_readable(here, cn_tenant) is False
+    # 无主的灵魂行(tenant 为空)不因为原属对得上就可读 —— TenantPermission 对空 tenant 一律拒绝。
+    Soul.all_objects.filter(pk=soul.pk).update(tenant=None)
+    soul.refresh_from_db()
+    assert residence_readable(soul, cn_tenant) is False
