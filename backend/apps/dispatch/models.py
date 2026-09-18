@@ -160,6 +160,15 @@ class CrossTenantJudgment(AuditUserFields, models.Model):
         blank=True,
         help_text="PASS or FAIL"
     )
+    # 这场联审为哪份原属审判定受刑计划(docs/ARCHITECTURE-sentence-plan.md §2.1,Q1)。
+    # 同租户(发起方就是原属),所以可以是外键。空 = 存量的那种不挂灵魂的会议,行为不变。
+    judgment = models.OneToOneField(
+        "judgment.Judgment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cross_judgment",
+    )
 
     tenant = models.ForeignKey(
         "tenants.Tenant",
@@ -242,6 +251,28 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
     )
     joined_at = models.DateTimeField(auto_now_add=True)
 
+    # ── 这一方在受刑计划里的那一站(docs/ARCHITECTURE-sentence-plan.md §2.2,Q1)──
+    #
+    # 非 ADVISOR 的参与方各定**自己文明**那一节点的处置内容;发起方 seat 时给 `node_order`
+    # (原属恒为 1,所以从 2 起)。`sentence_realm_code` 是字符串不是外键(分库约束);
+    # `sentence_is_eternal` / `sentence_memory_reset` 由服务端抄自 realm,与
+    # `DispositionService.create_from_judgment` 抄法相同。`sentence_submitted_at` 为空 =
+    # 还没填,挂了审判的联审 `conclude` 会拒绝。
+    node_order = models.PositiveIntegerField(null=True, blank=True)
+    sentence_realm_code = models.CharField(max_length=50, blank=True, default="")
+    sentence_years = models.IntegerField(null=True, blank=True)
+    sentence_is_eternal = models.BooleanField(default=False)
+    sentence_memory_reset = models.CharField(max_length=20, blank=True, default="")
+    sentence_notes = models.TextField(blank=True, default="")
+    sentence_submitted_at = models.DateTimeField(null=True, blank=True)
+    sentence_submitted_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sentences_submitted",
+    )
+
     tenant = models.ForeignKey(
         "tenants.Tenant",
         on_delete=models.CASCADE,
@@ -255,6 +286,18 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
         verbose_name_plural = "Judgment Participants"
         indexes = [
             models.Index(fields=["judgment", "participant_tenant"]),
+        ]
+        constraints = [
+            # 两个参与方不能排同一位。
+            UniqueConstraint(
+                fields=["judgment", "node_order"],
+                condition=Q(is_deleted=False) & Q(node_order__isnull=False),
+                name="unique_cross_judgment_node_order",
+            ),
+            models.CheckConstraint(
+                condition=Q(sentence_years__isnull=True) | Q(sentence_years__gte=0),
+                name="cross_participant_sentence_years_not_negative",
+            ),
         ]
 
     def __str__(self):

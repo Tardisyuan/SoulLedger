@@ -203,8 +203,21 @@ class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
             "participant_actor_name",
             "role",
             "joined_at",
+            # 这一方在受刑计划里的那一站(docs/ARCHITECTURE-sentence-plan.md §2.2)。
+            # 只经 `sentence/` 动作写(服务端抄 realm 的 is_eternal / memory_reset),不经 PATCH。
+            "node_order",
+            "sentence_realm_code",
+            "sentence_years",
+            "sentence_is_eternal",
+            "sentence_memory_reset",
+            "sentence_notes",
+            "sentence_submitted_at",
         ]
-        read_only_fields = ["id", "joined_at"]
+        read_only_fields = [
+            "id", "joined_at",
+            "node_order", "sentence_realm_code", "sentence_years", "sentence_is_eternal",
+            "sentence_memory_reset", "sentence_notes", "sentence_submitted_at",
+        ]
 
 
 class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
@@ -238,6 +251,7 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "status",
             "concluded_at",
             "conclusion_type",
+            "judgment",
             "participants",
             "create_time",
             "update_time",
@@ -247,6 +261,9 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "status",
             "conclusion_type",
             "concluded_at",
+            # 挂到哪份原属审判由 `create` 的 body 决定一次(perform_create 校验同租户),
+            # 之后不可改:参与方按它填节点,换审判等于换灵魂。
+            "judgment",
             # Who opened the judgment is decided by who is making the request,
             # not by what they put in the body. It was writable, and
             # `perform_create` only pinned `tenant` -- so a JUDGE in tenant B
