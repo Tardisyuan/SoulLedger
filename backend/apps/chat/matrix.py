@@ -6,12 +6,11 @@
   Synapse 侧 `config/synapse/soulledger_policy.py` 拒绝其他任何本地用户建房、邀请、
   建别名、发布房间;状态事件由房间的 power level 挡(一律 100,只有服务账号有 100)——
   于是「房间只能经后端创建、形状只能经后端改」不是约定,是服务端的拒绝。
-* **灵魂本人**:后端偶尔代其发言(互关房间里经后端发的那条、收件箱里的信)。**不用管理 API
+* **灵魂本人**:后端代其发言(私聊请求、经后端发的私聊消息、收件箱里的信)。**不用管理 API
   冒充**,而是用后端自己签的 JWT 正常登录一次 —— 登录凭据的签发者本来就是后端,这条路没有
-  额外权力,Synapse 照样按房间的 power level 判它能不能发。
-* **被节流的私聊请求由服务账号转发**,内容带 `io.soulledger.on_behalf_of: <发起方 mxid>`。
-  发起方在那种房间里是 0 级,Synapse 拒绝它本人发言(2026-09-18 对真 Synapse v1.161 实测:
-  `user_level (0) < send_level (50)`)—— 以它的身份代发同样会被拒。
+  额外权力,Synapse 照样按房间的 power level 判它能不能发。所以被节流的私聊请求要先把发起方
+  临时提到 50 级(它平时 0 级,Synapse 拒绝 `user_level (0) < send_level (50)`,2026-09-18
+  对真 Synapse v1.161 实测),发完降回 0;提权窗口由 `apps/chat/grant.py` 的一次性凭据挡住。
 
 **启动自举**:服务账号用 `registration_shared_secret` 注册成 admin 一次
 (`/_synapse/admin/v1/register`),之后一律 JWT 登录。所以除了 compose 里的两个密钥,
@@ -203,6 +202,12 @@ class SynapseClient:
         self._admin("PUT", path, json=content)
         return True
 
+    def set_room_throttle(self, room_id, initiator):
+        """`io.soulledger.throttle` 状态事件:`initiator` 为 mxid 时 Synapse 模块只放行它带凭据的
+        那一条消息;为 None 时写空内容,解除。"""
+        self._admin("PUT", f"/_matrix/client/v3/rooms/{room_id}/state/io.soulledger.throttle",
+                    json={"initiator": initiator} if initiator else {})
+
     def send_message(self, room_id, body, *, as_localpart, extra=None):
         token = self._token_for(as_localpart)
         content = {"msgtype": "m.text", "body": body, **(extra or {})}
@@ -222,7 +227,6 @@ class SynapseClient:
                 "sender": event["sender"],
                 "body": event.get("content", {}).get("body", ""),
                 "officer": event.get("content", {}).get("io.soulledger.officer", ""),
-                "on_behalf_of": event.get("content", {}).get("io.soulledger.on_behalf_of", ""),
                 "timestamp": event["origin_server_ts"],
             }
             for event in data.get("chunk", [])

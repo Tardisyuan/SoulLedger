@@ -12,7 +12,7 @@
       .venv/bin/python -m pytest tests/test_chat_synapse_integration.py --no-cov
     docker rm -f soulchat-synapse-test
 
-2026-09-18 实跑:v1.161.0,2 passed。
+2026-09-19 实跑:v1.161.0,见报告。
 """
 import os
 import secrets
@@ -22,6 +22,8 @@ import uuid
 import pytest
 import requests
 
+from apps.chat.grant import KEY as GRANT_KEY
+from apps.chat.grant import sign as sign_grant
 from apps.chat.models import Conversation
 from tests.chat_support import follow, mutual, mxid
 from tests.soul_account_support import ready_soul
@@ -66,9 +68,27 @@ def _login_as_the_app_would(client):
     return body["access_token"]
 
 
-def _say(token, room_id, body="hi"):
+def _say(token, room_id, body="hi", extra=None):
     return _matrix("PUT", f"/_matrix/client/v3/rooms/{room_id}/send/m.room.message/{uuid.uuid4().hex}",
-                   token, json={"msgtype": "m.text", "body": body})
+                   token, json={"msgtype": "m.text", "body": body, **(extra or {})})
+
+
+def _level(token, room_id, user):
+    _, levels = _matrix("GET", f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels", token)
+    return levels["users"].get(user, levels.get("users_default", 0))
+
+
+def _service_token(settings):
+    from apps.chat.matrix import SynapseClient
+
+    return SynapseClient()._admin_token()
+
+
+def _set_level(service_token, room_id, user, level):
+    path = f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels"
+    _, levels = _matrix("GET", path, service_token)
+    levels["users"][user] = level
+    assert _matrix("PUT", path, service_token, json=levels)[0] == 200
 
 
 def _wait_until(check, seconds=10):
@@ -131,15 +151,29 @@ def test_the_request_rule_the_mute_and_retirement_against_synapse(cn_tenant, syn
     # 发起方直接在 Matrix 里发:Synapse 拒绝。
     status, body = _say(a_token, room_id)
     assert status == 403 and body["errcode"] == "M_FORBIDDEN", body
-    # 经后端发:一条到达,是服务账号转发、标着替谁发。第二条 429,没有到达。
+    # 经后端发:一条到达,sender 是甲本人,带一次性凭据;发完甲回到 0 级。第二条 429,没有到达。
     assert a_client.post(send, {"body": "打扰一下"}, format="json").status_code == 201
+    assert _level(b_token, room_id, mxid(a)) == 0
     assert a_client.post(send, {"body": "在吗"}, format="json").status_code == 429
     _, history = _matrix("GET", f"/_matrix/client/v3/rooms/{room_id}/messages", b_token,
                          params={"dir": "b", "limit": 20})
     texts = [e for e in history["chunk"] if e["type"] == "m.room.message"]
     assert [e["content"]["body"] for e in texts] == ["打扰一下"]
-    assert texts[0]["sender"] == f"@soulledger:{synapse.MATRIX_SERVER_NAME}"
-    assert texts[0]["content"]["io.soulledger.on_behalf_of"] == mxid(a)
+    assert texts[0]["sender"] == mxid(a)
+    grant = texts[0]["content"][GRANT_KEY]
+
+    # 提权窗口(由服务账号模拟):甲 50 级,但模块只收有效、未用过、属于甲的凭据。
+    service = _service_token(synapse)
+    _set_level(service, room_id, mxid(a), 50)
+    assert _say(a_token, room_id, "窗口里裸发")[0] == 403
+    assert _say(a_token, room_id, "重放", extra={GRANT_KEY: grant})[0] == 403
+    status, _ = _matrix("PUT", f"/_matrix/client/v3/rooms/{room_id}/send/m.reaction/{uuid.uuid4().hex}", a_token,
+                        json={"m.relates_to": {"rel_type": "m.annotation", "event_id": texts[0]["event_id"],
+                                               "key": "+"}})
+    assert status == 403
+    fresh = sign_grant(synapse.MATRIX_JWT_SECRET, room_id, mxid(a))
+    assert _say(a_token, room_id, "带新凭据", extra={GRANT_KEY: fresh})[0] == 200
+    _set_level(service, room_id, mxid(a), 0)
 
     # 乙回了一句;甲下一次经后端发言时解除,从此甲直接在 Matrix 里说话。
     assert _say(b_token, room_id, "你好")[0] == 200

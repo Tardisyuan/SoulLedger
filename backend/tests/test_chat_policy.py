@@ -140,8 +140,9 @@ def test_one_room_per_pair_regardless_of_who_asks(cn_tenant, matrix):  # noqa: F
 
 
 def test_a_stranger_gets_one_request_per_24_hours(cn_tenant, matrix):  # noqa: F811
-    """变异:`send_request_message` 里把 `< interval` 改成 `< 0` → 第二条 201,红。
-    变异:删掉 `members[mine.matrix_user_id] = 0` → 发起方 50 级,可以绕过后端直接发,红。"""
+    """变异:把 `< interval` 改成 `< 0` → 第二条 201,红。
+    变异:建房时发起方给 50 级 → 可以绕过后端直接发,红。
+    变异:删掉 `_send_request` 里 finally 的降权 → 发完仍是 50 级,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(cn_tenant, name="乙")
     follow(a, b)  # 单向关注不算互关
@@ -161,10 +162,11 @@ def test_a_stranger_gets_one_request_per_24_hours(cn_tenant, matrix):  # noqa: F
 
     first = _send(a_client, conversation.id, "打扰一下")
     assert first.status_code == 201, first.data
-    # 由服务账号转发、标明是替谁发的 —— 以 0 级发起方本人的身份发,Synapse 会拒。
-    _, relayed = matrix.sent[-1]
-    assert relayed["sender"] == matrix().service_user
-    assert relayed["on_behalf_of"] == a_id
+    # 本人发出(临时提权、带一次性凭据),发完降回 0。
+    _, sent = matrix.sent[-1]
+    assert sent["sender"] == a_id and sent["grant"]
+    assert room_of(conversation)["level_log"] == [{a_id: 50}, {a_id: 0}]
+    assert not can_speak(conversation.room_id, a_id)
     second = _send(a_client, conversation.id, "在吗")
     assert second.status_code == 429, second.data
     assert second.data["code"] == "request_throttled"
@@ -176,6 +178,30 @@ def test_a_stranger_gets_one_request_per_24_hours(cn_tenant, matrix):  # noqa: F
         last_request_at=timezone.now() - timedelta(hours=24, seconds=1))
     assert _send(a_client, conversation.id, "第二天").status_code == 201
     assert _send(a_client, conversation.id, "又一条").status_code == 429
+
+
+def test_the_raise_window_admits_only_the_backends_one_message(cn_tenant, matrix):  # noqa: F811
+    """提权窗口:发起方此刻 50 级,但 Synapse 模块只收后端签的那一条 —— 没凭据、凭据重放、
+    别人的凭据都拒(非消息事件与真 Synapse 上的同一组断言在集成测试里)。
+    变异:建房时不写 `io.soulledger.throttle`(删掉 `set_room_throttle(room_id, ...)`)→ 窗口里裸发成功,红。"""
+    from apps.chat.grant import KEY, sign
+
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(cn_tenant, name="乙")
+    _open(a_client, b)
+    conversation = Conversation.objects.get()
+    room, a_id = conversation.room_id, mxid(a)
+    assert room_of(conversation)["throttle"] == a_id
+    matrix().set_user_levels(room, {a_id: 50})  # 模拟窗口
+    with pytest.raises(MatrixError):
+        matrix.says(room, a_id, "窗口里裸发")
+    grant = sign("jwt-secret-for-tests-0123456789abcdef", room, a_id)
+    matrix.says(room, a_id, "带凭据", extra={KEY: grant})
+    with pytest.raises(MatrixError):
+        matrix.says(room, a_id, "重放", extra={KEY: grant})
+    forged = sign("jwt-secret-for-tests-0123456789abcdef", room, mxid(b))
+    with pytest.raises(MatrixError):
+        matrix.says(room, a_id, "别人的凭据", extra={KEY: forged})
 
 
 def test_a_reply_lifts_the_limit(cn_tenant, matrix):  # noqa: F811
@@ -194,6 +220,7 @@ def test_a_reply_lifts_the_limit(cn_tenant, matrix):  # noqa: F811
     conversation.refresh_from_db()
     assert conversation.throttled is False and conversation.responded_at is not None
     assert can_speak(conversation.room_id, mxid(a))  # 从此直接走 Matrix
+    assert room_of(conversation)["throttle"] is None  # 模块那一道也撤了
     assert matrix.sent[-1][1]["sender"] == mxid(a)  # 解除后经后端发的也是本人,不再转发
     assert _send(a_client, conversation.id, "再一条").status_code == 201
 
