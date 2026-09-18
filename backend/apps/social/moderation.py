@@ -26,9 +26,9 @@ from apps.social.models import (
 )
 from apps.social.soul_circle import (
     SocialError,
-    publish_event,
     civilization_of,
     ensure_can_write,
+    publish_event,
     souls_in,
     visible_comments_for_soul,
     visible_posts_for_soul,
