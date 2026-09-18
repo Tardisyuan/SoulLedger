@@ -54,6 +54,8 @@ urlpatterns = [
     path("api/v1/soul-accounts/", include(soul_account_urls.officer_urlpatterns)),
     path("api/v1/soul-auth/", include(soul_account_urls.soul_auth_urlpatterns)),
     path("api/v1/me/", include(soul_account_urls.me_urlpatterns)),
+    # 推送设备与偏好(apps/soul_push)。同一个 /me/ 前缀、同一个 SoulAPIView 分界。
+    path("api/v1/me/", include("apps.soul_push.urls")),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

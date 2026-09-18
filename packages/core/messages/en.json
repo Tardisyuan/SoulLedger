@@ -1723,7 +1723,8 @@
       "events_retry_pending_webhooks": "Retry pending webhooks",
       "scheduler_reap_stale_runs": "Close out stuck runs",
       "scheduler_check_overdue": "Detect overdue jobs",
-      "scheduler_prune_runs": "Prune old run history"
+      "scheduler_prune_runs": "Prune old run history",
+      "soul_push_sweep": "Soul push: requeue and fetch receipts"
     },
     "status": {
       "PENDING": "Queued",
@@ -2070,6 +2071,36 @@
       "REINCARNATING": "Reincarnating",
       "LOST": "Lost",
       "SETTLED": "Settled"
+    }
+  },
+  "soul_push": {
+    "rebirth_approved": {
+      "title": "Rebirth application approved",
+      "body": "Your rebirth application was approved. Open Soul Ledger to see it."
+    },
+    "rebirth_rejected": {
+      "title": "Rebirth application rejected",
+      "body": "Your rebirth application was rejected. Open Soul Ledger to see why."
+    },
+    "rebirth_appeal_rejected": {
+      "title": "Appeal rejected",
+      "body": "Your appeal on the rebirth application was rejected. Open Soul Ledger to see why."
+    },
+    "judgment_result": {
+      "title": "Judgment concluded",
+      "body": "Your judgment has concluded. Open Soul Ledger to see it."
+    },
+    "disposition_executed": {
+      "title": "Disposition carried out",
+      "body": "Your disposition has been carried out. Open Soul Ledger to see it."
+    },
+    "residence_started": {
+      "title": "Residence begun",
+      "body": "You have been moved to reside in another civilization. Open Soul Ledger to see it."
+    },
+    "residence_returned": {
+      "title": "Residence ended",
+      "body": "You have returned to your home civilization. Open Soul Ledger to see it."
     }
   }
 }

@@ -3633,6 +3633,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/notification-settings/:
+    get:
+      operationId: v1_me_notification_settings_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettings'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+    patch:
+      operationId: v1_me_notification_settings_partial_update
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationSettings'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationSettings'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationSettings'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettings'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/me/password/:
     post:
       operationId: v1_me_password_create
@@ -3687,6 +3739,75 @@ paths:
                 items:
                   $ref: '#/components/schemas/MeLife'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/push-tokens/:
+    post:
+      operationId: v1_me_push_tokens_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushTokenRegister'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PushTokenRegister'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PushTokenRegister'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushDevice'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushDevice'
+          description: ''
+        '400':
+          description: token 格式不对
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/push-tokens/unregister/:
+    post:
+      operationId: v1_me_push_tokens_unregister_create
+      description: 204 与 token 是否存在、属于谁无关 —— 不能拿它探测别人的 token。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushTokenUnregister'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PushTokenUnregister'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PushTokenUnregister'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
         '403':
           content:
             application/json:
@@ -13149,6 +13270,20 @@ components:
       - rule_zh
       - unoffset_demerit
       - unusable_merit
+    NotificationSettings:
+      type: object
+      properties:
+        rebirth:
+          type: boolean
+          description: 转生申请:提交确认、申诉确认、结果
+        judgment:
+          type: boolean
+          description: 审判结论与处置执行
+        residence:
+          type: boolean
+          description: 暂居开始 / 回归(依赖 feat/dispatch-residence)
+        locale:
+          $ref: '#/components/schemas/PushLocaleEnum'
     NotificationTypeEnum:
       enum:
       - WORKFLOW_ASSIGNED
@@ -14777,6 +14912,20 @@ components:
         component:
           type: string
           maxLength: 200
+    PatchedNotificationSettings:
+      type: object
+      properties:
+        rebirth:
+          type: boolean
+          description: 转生申请:提交确认、申诉确认、结果
+        judgment:
+          type: boolean
+          description: 审判结论与处置执行
+        residence:
+          type: boolean
+          description: 暂居开始 / 回归(依赖 feat/dispatch-residence)
+        locale:
+          $ref: '#/components/schemas/PushLocaleEnum'
     PatchedOrganization:
       type: object
       properties:
@@ -15574,6 +15723,71 @@ components:
             maxLength: 0
       required:
       - soul_id
+    PushDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/PushPlatformEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_active
+      - last_seen_at
+      - platform
+    PushLocaleEnum:
+      enum:
+      - zh-Hans
+      - en
+      - egy
+      type: string
+      description: |-
+        * `zh-Hans` - 简体中文
+        * `en` - English
+        * `egy` - Medu Netjer
+    PushPlatformEnum:
+      enum:
+      - IOS
+      - ANDROID
+      type: string
+      description: |-
+        * `IOS` - iOS
+        * `ANDROID` - Android
+    PushTokenRegister:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 255
+        platform:
+          $ref: '#/components/schemas/PushPlatformEnum'
+      required:
+      - platform
+      - token
+    PushTokenUnregister:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 255
+      required:
+      - token
     Reaction:
       type: object
       properties:

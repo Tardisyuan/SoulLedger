@@ -72,6 +72,25 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 执行状态与调度变更通过既有 WebSocket 管道推送(domain `scheduler`,权限门
   `scheduler.read`;租户行只进该租户分组,全局行只到 ADMIN)。
 
+## 灵魂端推送(Expo Push Service)
+
+- 后端把推送交给 Expo(`https://exp.host/--/api/v2/push/send`),Expo 转 APNs / FCM。
+  **APNs 密钥与 FCM 凭据配在 Expo(EAS)项目上,不在本后端**;没有它们,真机收不到,但后端流程不受影响。
+- 环境变量(backend 与 celery worker 都要有):
+  - `SOUL_PUSH_ENABLED`(默认 `False`)。**不打开时**事件照常记录成投递行(`soul_push_pushdelivery`),
+    状态标 `DISABLED`(「推送未启用」),不访问 Expo、不报错。**打开并重启后,下一次 `soul_push.sweep`
+    (≤5 分钟)补发 `created_at` 在 24 小时内的 `DISABLED` 行**(补发前照常核对设备、归属、账号未停用、偏好仍开;
+    补的是原行,不会重复),更早的标 `EXPIRED`(不删)。beat 没跑就不会补发。
+  - `EXPO_ACCESS_TOKEN`(可选)。只有在 Expo 控制台开启「增强推送安全」后才必需;设置了就随每个请求
+    带 `Authorization: Bearer …`。开启增强安全却没设,Expo 整请求报 `UNAUTHORIZED`,投递记为 `FAILED`。
+  - `SOUL_PUSH_SENDER`(默认 `apps.soul_push.expo.ExpoPushSender`)。发送端口的类路径,一般不改。
+- 出站:worker 要能访问 `exp.host:443`。
+- 定时任务 `soul_push.sweep`(每 5 分钟,全局)随 `setup_scheduled_tasks` 自动建行:
+  把入队失败或 worker 崩掉而停在 `QUEUED` / `SENDING` 的投递重新入队;对发出满 15 分钟的查回执,
+  `DeviceNotRegistered` 的设备置无效。**beat 没跑时回执不会被检查**,但首次发送不依赖它(提交后直接入队)。
+- 排查:按状态看 `soul_push_pushdelivery.status` 与 `error`。`FAILED` + `DeviceNotRegistered` 是 App 被卸载或
+  token 失效,属正常;成片 `FAILED` + `HTTP 4xx` / `UNAUTHORIZED` 看上面的访问令牌;`QUEUED` 堆积看 worker 与 beat。
+
 ## 数据库备份与恢复
 
 - `backup` 服务启动时先备份一次(失败则容器退出、在 `$DC ps` 里反复重启),之后每天

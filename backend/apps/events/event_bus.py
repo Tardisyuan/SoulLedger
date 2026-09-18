@@ -328,6 +328,11 @@ def configure_default_handlers() -> None:
     for domain in ("soul", "workflow", "notification", "dispatch", "deathsync", "social"):
         handler_registry.register_domain(domain, AuditHandler())
 
+    # 灵魂端推送(apps/soul_push)。在 AuditHandler 之后:推送是对已记下事实的宣告。
+    from apps.soul_push.handler import SoulPushHandler
+
+    handler_registry.register_domain("soul", SoulPushHandler())
+
     # Notification domain — the UserNotification row itself.
     #
     # **Registered before WebSocketHandler, and the order matters**: dispatch
