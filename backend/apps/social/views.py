@@ -360,7 +360,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         # a bypass here could mint the same tenant-inconsistent Follow row
         # that POST /follows/ now rejects.
         following_user = scope_to_tenant(
-            User.objects.all(), request, admin_bypass=False
+            User.objects.exclude(role="SOUL"), request, admin_bypass=False
         ).filter(pk=following_id).first()
         if following_user is None:
             return Response(
@@ -418,7 +418,7 @@ class UserProfileViewSet(
         # authenticated user enumerate every tenant's profiles.
         qs = scope_to_tenant(
             super().get_queryset(), self.request, field="user__tenant"
-        )
+        ).exclude(user__role="SOUL")  # souls have their own circle — see soul_circle.py
         # Allow filtering by user
         user_id = self.request.query_params.get("user")
         if user_id:
