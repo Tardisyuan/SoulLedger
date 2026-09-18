@@ -48,6 +48,37 @@ module.exports = {
   testEnvironment: 'jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/frontend/$1',
+    // THE REACT THESE TESTS RUN IS THE ONE PRODUCTION RUNS — Next's vendored
+    // copy, not the installed `react@19.2.3`. Next's App Router aliases every
+    // `react` / `react-dom` import to `next/dist/compiled/react{,-dom}`
+    // (`next/dist/build/create-compiler-aliases.js`, createVendoredReactAliases)
+    // and has no switch to use the installed one; `.next/` after a build holds
+    // only the vendored version string and 0 occurrences of 19.2.3 (measured
+    // 2026-09-19, Next 16.3.4 → 19.3.0-canary-cbb046ab-20260731). Without these
+    // lines jest resolved the installed package, so tests and the shipped app
+    // were on different Reacts. The installed `react` stays in package.json
+    // because packages/core's vitest and mobile/ (Expo pins 19.2.3) use it, and
+    // @testing-library/react's peer check needs it.
+    //
+    // Mapped: `react`, `react/*` (jsx-runtime, jsx-dev-runtime,
+    // compiler-runtime), `react-dom`, `react-dom/*` (client, server...).
+    // EXCEPTION, `react-dom/test-utils`: the vendored react-dom does not ship
+    // it, and @testing-library/react imports it — without this line 112 of 161
+    // suites fail to load. In React 19 that file only re-exports `act` from
+    // `react`, which the line above already sends to the vendored copy, so
+    // pointing it back at the installed package keeps one React. It must sit
+    // before the `react-dom/(.*)` catch-all; jest takes the first match.
+    //
+    // CONSEQUENCE: upgrading `next` changes the React under test with no edit
+    // to any package.json here. That is the point — it tracks production — but
+    // a jest diff after a Next bump may be a React change.
+    // `src/__tests__/jestRunsNextVendoredReact.test.ts` fails if this mapping
+    // stops taking effect.
+    '^react$': '<rootDir>/node_modules/next/dist/compiled/react',
+    '^react/(.*)$': '<rootDir>/node_modules/next/dist/compiled/react/$1',
+    '^react-dom/test-utils$': '<rootDir>/node_modules/react-dom/test-utils',
+    '^react-dom$': '<rootDir>/node_modules/next/dist/compiled/react-dom',
+    '^react-dom/(.*)$': '<rootDir>/node_modules/next/dist/compiled/react-dom/$1',
     // Mapped rather than resolved through node_modules. The workspace symlink
     // would work, but jest's default `transformIgnorePatterns` is
     // `/node_modules/`, and a package whose "build" is its TypeScript source

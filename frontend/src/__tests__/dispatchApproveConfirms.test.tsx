@@ -42,6 +42,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  * rewriting those renders as `await act(async () => render(...))`, which is a
  * test rewrite, not an upgrade fix.
  *
+ * And the mapping "tried and abandoned" above is now in place: jest.config.js
+ * sends `react` / `react-dom` to Next's compiled copy (with `react-dom/test-utils`
+ * pointed back at the installed package — the missing piece that sank the
+ * earlier attempt), so this shim wraps the same React the app ships.
+ *
  * So: this replaces exactly one function, unwrapping the params promise the
  * way React 19's `use` does for an already-resolved promise. WHAT IT
  * THEREFORE CANNOT PROVE: anything about suspense, about an unresolved

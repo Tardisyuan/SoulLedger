@@ -157,6 +157,12 @@ cd frontend && npm run build
 # `npm test` prints the word "coverage" zero times. The gate this repo lowered
 # deliberately (with the arithmetic written into jest.config.js) is invisible
 # to the command this file used to name.
+# 两份 React(2026-09-19,feat/react-19):web 的生产构建与 jest 用的都是 Next
+# 自带的 canary(`next/dist/compiled/react`;jest.config.js 的 moduleNameMapper
+# 把 react / react-dom 映射过去,`jestRunsNextVendoredReact.test.ts` 守着);
+# packages/core 的 vitest 与 mobile 用已安装的 react 19.2.3 —— Expo 57 钉了
+# 19.2.3,而 Next 的每个版本都只自带 canary,两边无法取同一个版本。升级 next
+# 会顺带换掉 web 测试里的 React。
 cd frontend && npm run test:coverage
 
 # packages/core — three separate gates, and `.git/hooks/pre-push` runs all
