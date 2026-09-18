@@ -1667,7 +1667,8 @@
       "ledger": "Sesh Maat",
       "scheduler": "Seth Ahet",
       "soul_credentials": "Medu Sekhem Em Ankh Djeret",
-      "rebirth_applications": "Nehet Ankh Wehem"
+      "rebirth_applications": "Nehet Ankh Wehem",
+      "soul_inbox": "Sesh en Hut"
     }
   },
   "tenant": {
@@ -2206,6 +2207,31 @@
       "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
       "words": "No words yet",
       "mutes": "No mutes"
+    }
+  },
+  "soul_inbox": {
+    "title": "Sesh en Hut",
+    "subtitle": "Sesh en Ba er Hut ten. Medu em Per Medu, ben em Sesh Maat.",
+    "refresh": "Ankh Em Maa",
+    "list_label": "Sesh",
+    "empty": "Ben Sesh",
+    "empty_reason": "Sesh en Ba er Hut en Duat-ef, iu-ef em ages.",
+    "select_hint": "Setep Sesh",
+    "thread_label": "Medu hena {{name}}",
+    "thread_empty": "Ben Medu",
+    "closed": "Khetem (Wehem Ankh)",
+    "no_messages": "Ben Medu",
+    "from_hall": "Hut · {{name}}",
+    "reply_label": "Wesheb en Hut",
+    "reply_hint": "Ba maa wesheb en Hut, ren-k her-f.",
+    "send": "Di",
+    "sent": "Wesheb Di",
+    "failed": "Ma Aper, wehem",
+    "errors": {
+      "closed": "Ba Wehem Ankh; Medu Khetem",
+      "not_inbox": "Nen Sesh en Hut",
+      "chat_not_configured": "Per Medu Ben",
+      "chat_unavailable": "Per Medu Ma Aper"
     }
   }
 }
