@@ -1531,8 +1531,8 @@
       "cross_not_in_initial": "Wedja Tepy Khetem; Nen Wedja Taui Ky",
       "empty": "Nen Dbh Wehem Mesut",
       "empty_filtered": "Nen Dbh Em Kheperu Pen",
-      "cooldown_until": "Ahet Qebeh r {{time}}; Ba ma Nehet Wehem",
-      "step_appeal": "(Nehet Sen)"
+      "cooldown_until": "Ahet Qebeh Er {{time}}; Ba Nen Dbh Djer",
+      "step_appeal": "(Nehet)"
     }
   },
   "disposition": {
@@ -1724,7 +1724,7 @@
       "scheduler_reap_stale_runs": "Khetem Sesh Iri Nen Kheper",
       "scheduler_check_overdue": "Maa Baku Ahet Sesh",
       "scheduler_prune_runs": "Khetem Sesh Iri Tepy",
-      "soul_push_sweep": "Sedjem Ba: Wehem Dbh Hena Sesh Iri"
+      "soul_push_sweep": "Sedjem Ba: Wehem Smen Hena Maa Sesh Iri"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -1947,7 +1947,7 @@
       "title": "Wehem Mesut",
       "new": "Dbh Wehem Mesut",
       "desired_form": "Kheperu Mer",
-      "statement": "Medu (Ib)",
+      "statement": "Medu (Mer Ek)",
       "submit": "Dbh",
       "submitting": "Em Dbh…",
       "submitted": "Dbh Seth",
@@ -1999,11 +1999,11 @@
     },
     "errors": {
       "invalid_credentials": "Ren Ba Er Sekhem Nen Maat",
-      "initial_password_expired": "Pert Tepy Mut. Dbh Sab Er Wehem",
-      "rate_limited": "Aq Aashu. Wehem Em Khet",
+      "initial_password_expired": "Sekhem Tepy Mut. Dbh Sab Er Wehem Sekhem",
+      "rate_limited": "Aq Aashu. Wehem Er Khet",
       "invalid_old_password": "Sekhem Tepy Nen Maat",
       "password_unchanged": "Sekhem Renpi Nen Wa Hena Sekhem Tepy",
-      "weak_password": "Pert Maa Nen Wser",
+      "weak_password": "Sekhem Renpi Nen Wser. Setep Ky, Aa Er Hry.",
       "password_change_required": "Khemen Sekhem Tepy Er Tepy",
       "account_retired": "Aq Khetem",
       "application_open": "Dbh Wa Em Wedja",
@@ -2015,9 +2015,9 @@
       "not_appealable": "Dbh Pen Nen Nehet Emu",
       "past_life_read_only": "Ankh Tepyu Maa Wa",
       "not_found": "Nen Gem",
-      "network": "Nen Aq Er Per Aa. Maa Wat Hena Wehem",
+      "network": "Nen Aq Er Per Aa. Maa Wat Hena Wehem Iri",
       "validation": "Sesh Nen Maat",
-      "unknown": "Isfet ({{code}})",
+      "unknown": "Sethet ({{code}})",
       "screen_title": "Nen Aq Er Medjat",
       "screen_body": "Sesh Ek Wenen. Nen Gem Emu.",
       "section": "Sa Pen Nen Gem. Ky Wenen."
@@ -2135,23 +2135,23 @@
   "soul_push": {
     "rebirth_approved": {
       "title": "Dbh Hesy Seth",
-      "body": "Dbh Ek Hesy. Wen Medjat Ba Er Maa."
+      "body": "Dbh Ek Hesy Seth. Wen Medjat Ba Er Maa."
     },
     "rebirth_rejected": {
       "title": "Dbh Khesef Seth",
-      "body": "Dbh Ek Sehen. Wen Medjat Ba Er Maa Khet."
+      "body": "Dbh Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "rebirth_appeal_rejected": {
       "title": "Nehet Khesef Seth",
-      "body": "Wehem Medu Ek Sehen. Wen Medjat Ba Er Maa Khet."
+      "body": "Nehet Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "judgment_result": {
       "title": "Wedja Khetem",
-      "body": "Wedja Ek Pehwy. Wen Medjat Ba Er Maa."
+      "body": "Wedja Ek Khetem. Wen Medjat Ba Er Maa."
     },
     "disposition_executed": {
       "title": "Wetep Iri Seth",
-      "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."
+      "body": "Wetep Ek Iri Seth. Wen Medjat Ba Er Maa."
     },
     "residence_approved": {
       "title": "Hemes Taui Kety Hesy",
@@ -2159,11 +2159,11 @@
     },
     "residence_started": {
       "title": "Hemes Tepy",
-      "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."
+      "body": "Ek Hemes Em Taui Ky. Wen Medjat Ba Er Maa."
     },
     "residence_returned": {
       "title": "Hemes Khetem",
-      "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."
+      "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
