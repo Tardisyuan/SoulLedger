@@ -39,8 +39,11 @@ export function easProjectId(): string | null {
 
 export async function permission(): Promise<Permission> {
   try {
-    const { status } = await Notifications.getPermissionsAsync();
-    return status === "granted" ? "granted" : status === "undetermined" ? "undetermined" : "denied";
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    if (status === "granted") return "granted";
+    // Android 13+ reports a never-asked app as "denied" (notifications are off until
+    // granted); only canAskAgain tells it apart from a real refusal.
+    return status === "undetermined" || canAskAgain ? "undetermined" : "denied";
   } catch {
     return "denied";
   }

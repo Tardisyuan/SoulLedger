@@ -27,10 +27,18 @@ jest.mock("expo-notifications", () => {
   return {
     __state: state,
     AndroidImportance: { DEFAULT: 3 },
-    getPermissionsAsync: async () => ({ status: state.status, granted: state.status === "granted" }),
+    // canAskAgain unset = iOS: only "undetermined" can still be asked.
+    getPermissionsAsync: async () => ({
+      status: state.status,
+      granted: state.status === "granted",
+      canAskAgain: state.canAskAgain ?? state.status === "undetermined",
+    }),
     requestPermissionsAsync: async () => {
       state.requests += 1;
-      if (state.status === "undetermined") state.status = state.answer;
+      if (state.status === "undetermined" || state.canAskAgain) {
+        state.status = state.answer;
+        state.canAskAgain = undefined;
+      }
       return { status: state.status, granted: state.status === "granted" };
     },
     getExpoPushTokenAsync: async () => {
