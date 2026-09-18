@@ -7,7 +7,7 @@
           └ record_for_event:按映射表决定推不推、推给谁,写 PushDelivery(QUEUED)
       └ 事务提交后 → celery `soul_push.send`
           └ send_deliveries:认领(SENDING)→ 按 ≤100 分批交给发送端口 → SENT + ticket / FAILED
-    暂居开始 / 回归(DispatchService 直接写 SoulEvent,不经总线)→ signals.py → 同一个 SoulPushHandler
+    调拨批准 / 暂居开始 / 回归(DispatchService 直接写 SoulEvent,不经总线)→ signals.py → 同一个 SoulPushHandler
     beat `soul_push.sweep`(每 5 分钟,apps/scheduler/registry.py)
       ├ 推送开着时:24 小时内的 DISABLED 补发,更早的标 EXPIRED
       ├ 入队失败或 worker 崩掉而停住的 QUEUED / SENDING 重新入队
@@ -81,9 +81,13 @@ DISPOSITION_EXECUTED_STATES = ("REINCARNATING", "SETTLED")
 #: 暂居(已合并的 feat/dispatch-residence)。**两者都没有独立的 EventType**:
 #: `DispatchService.execute` / `end_residence` 直接写 `SoulEvent(event_type=STATE_CHANGED)`,
 #: 用 payload 的 `action` 区分 —— 而且**不经事件总线**,所以由 `signals.py` 挂在 SoulEvent 的 post_save 上接。
-#: 「暂居开始」选调拨执行(DISPATCH_EXECUTED):那一刻 `soul.tenant` 切到目标文明,是灵魂真正换了管辖;
-#: 提议 / 批准只是官员之间的流程,灵魂的处境没变。
+#: 「暂居开始」选调拨执行(DISPATCH_EXECUTED):那一刻 `soul.tenant` 切到目标文明,是灵魂真正换了管辖。
+#: 批准(DISPATCH_APPROVED)另推一条「即将暂居」(2026-09-18 用户决定);提议不推 —— 还可能被驳回。
+#: 批准与执行的 dedupe_key 分别以各自的 action 结尾,同一次调拨两条各一、互不覆盖。
+#: 批准之后被撤销(APPROVED → CANCELLED)**不补发更正**:锁屏上多一条「取消」比少一条更让人困惑;
+#: 但还没发出去的批准推送在发送前会被取消(`_claim` → `_stale_approval`)。
 RESIDENCE_ACTIONS = {
+    "DISPATCH_APPROVED": "residence_approved",
     "DISPATCH_EXECUTED": "residence_started",
     "DISPATCH_RETURNED": "residence_returned",
 }
@@ -245,6 +249,8 @@ def _claim(delivery_ids):
                     or row.account.retired_at is not None):
                 # 事件记下之后设备被注销、转给了别的账号、或账号已转世停用:不推。
                 row.status, row.error = PushStatus.CANCELLED, "设备已失效或已不属于该账号"
+            elif _stale_approval(row):
+                row.status, row.error = PushStatus.CANCELLED, "调拨已不在「已批准」状态(已撤销、或已执行)"
             elif preference is not None and category and not getattr(preference, category):
                 # 记下之后灵魂关了这一类(补发时尤其可能:未启用期间记的行可能是一天前的)。
                 row.status, row.error = PushStatus.CANCELLED, "灵魂已关闭这一类推送"
@@ -257,6 +263,18 @@ def _claim(delivery_ids):
             touched.append(row)
         _save(touched, ["status", "error", "attempts"])
     return claimed
+
+
+def _stale_approval(row):
+    """「即将暂居」只在调拨仍是 APPROVED 时发。已撤销:不该再说「即将」;已执行:「暂居开始」那条
+    会自己到(补发时两条同时在队里,只发后一条)。调拨 id 取自 dedupe_key —— 不放进 `data`,
+    那是给手机的,只带导航需要的东西。"""
+    if row.kind != "residence_approved":
+        return False
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+
+    dispatch_id = row.dedupe_key.split(":")[1]
+    return not DispatchRecord._base_manager.filter(pk=dispatch_id, status=DispatchStatus.APPROVED).exists()
 
 
 def _invalidate_device(device_id):

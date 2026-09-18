@@ -164,6 +164,7 @@ class EventService:
         notification_type: str = "SYSTEM",
         related_resource: str = None,
         related_id: str = None,
+        params: dict = None,
     ) -> None:
         """
         Publish a notification event via EventBus.
@@ -187,6 +188,7 @@ class EventService:
                 "notification_type": notification_type,
                 "related_resource": related_resource,
                 "related_id": related_id,
+                "params": params or {},
             },
             domain="notification",
             tenant_code=tenant_code,
