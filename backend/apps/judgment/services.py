@@ -190,7 +190,14 @@ class JudgmentConclusionService:
 
             # Step 2: Create disposition (cross-context: judgment → disposition)
             from apps.disposition.services import DispositionService
-            DispositionService.create_from_judgment(judgment)
+            disposition = DispositionService.create_from_judgment(judgment)
+
+            # Step 2b: the sentence plan this conclusion opens — one home node,
+            # carrying the disposition just made (docs/ARCHITECTURE-sentence-plan.md).
+            # Same transaction: a plan without its conclusion, or the reverse,
+            # is the half-written record the saga exists to prevent.
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.create_from_conclusion(judgment, disposition)
 
             # Step 3: Optionally create workflow (cross-context: judgment → workflow)
             if create_workflow:

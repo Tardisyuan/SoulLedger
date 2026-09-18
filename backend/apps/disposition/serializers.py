@@ -45,7 +45,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "id", "soul", "soul_name", "judgment", "destination_realm",
             "realm_code", "realm_name", "memory_reset", "is_eternal",
             "sentence_years", "term_start", "is_executed", "executed_at",
-            "notes", "created_at",
+            "notes", "created_at", "sentence_node_id",
         ]
         # This serializer had no `read_only_fields` at all. Measured
         # 2026-08-29, a MODERATOR could `PATCH {"is_executed": true,
@@ -61,7 +61,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         # tests/test_perm_write_snapshot_outside_matrix.py. Disposition's copy
         # was never written down. A shape that has been diagnosed once is worth
         # grepping for.
-        read_only_fields = ["id", "is_executed", "executed_at", "created_at"]
+        read_only_fields = ["id", "is_executed", "executed_at", "created_at", "sentence_node_id"]
 
     def validate_soul(self, value):
         """A disposition may only be recorded against a soul in this tenant.
