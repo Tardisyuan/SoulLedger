@@ -54,7 +54,10 @@ import ts from "typescript";
  *   2. the derived set must still contain a fixed floor of names that are the
  *      point of the exercise (the event types and element types a UI signature
  *      would reach for, plus `FormData`, which this package really does use);
- *   3. the derived set must not fall below 100 entries — it has 146 today.
+ *   3. the derived set must not fall below 100 entries — it had 146 under
+ *      @types/react 18.3 and has 150 under 19.2 (re-counted 2026-09-19 on the
+ *      React 19 upgrade; a `HTMLElement` alias added to src/query_keys.ts
+ *      turned the usage test red, so the derivation still bites).
  * If `@types/react` reorganises this file, the guard goes red and a human
  * re-derives it, rather than passing on an empty list.
  * ---------------------------------------------------------------------------

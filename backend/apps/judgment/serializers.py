@@ -119,8 +119,11 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "court", "evidence_json", "confession", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at",
+            "kind", "amends_plan_id",
         ]
-        read_only_fields = ["civilization", "verdict", "is_final", "concluded_at"]
+        # `kind` / `amends_plan_id` 只读:阶段 1 没有写它们的路径;加减项 / 重开审判
+        # 由服务层建(docs/ARCHITECTURE-sentence-plan.md 阶段 3),不由 POST 的 body 定。
+        read_only_fields = ["civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id"]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
     # (the ApprovalNodeSerializer shape) because DRF strips read-only fields

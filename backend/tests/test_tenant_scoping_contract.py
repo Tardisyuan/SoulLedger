@@ -153,6 +153,10 @@ NOT_RESIDENCE_READABLE: dict[str, str] = {
     "SoulAccountViewSet": "灵魂账号本来就按 soul__home_tenant 隔离,原属租户始终可见。",
     "InitialCredentialViewSet": "同上,按 soul__home_tenant;暂居地不应看到初始密码。",
     "OfficerRebirthApplicationViewSet": "同上,转生申请归原属文明审理。",
+    "SentencePlanViewSet": (
+        "受刑计划归原属文明(tenant = home_tenant),原属租户始终可见;执行地经「节点方可读」"
+        "看到有自己节点的计划(docs/ARCHITECTURE-sentence-plan.md §2.5),不需要暂居例外。"
+    ),
 }
 
 

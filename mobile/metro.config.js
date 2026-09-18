@@ -8,6 +8,12 @@
 // from the root and get 18 — two Reacts in one bundle, "Invalid hook call" at
 // the first render. So every `react` / `react/*` request is answered from this
 // workspace, whoever asks. `jest.config.js` does the same for tests.
+//
+// UPDATE 2026-09-19 (feat/react-19): the web admin is on 19.2.3 too, and npm
+// now hoists a single React to the root — the split above no longer exists.
+// The resolver stays because it is layout-agnostic (`require.resolve` from
+// here finds the root copy just as well) and brings the guarantee back for
+// free if the versions ever diverge again.
 const { getDefaultConfig } = require("expo/metro-config");
 
 const config = getDefaultConfig(__dirname);
