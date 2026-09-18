@@ -222,6 +222,34 @@ def test_residence_pushes_respect_the_residence_preference_and_roll_back(django_
     assert not PushDelivery.objects.exists()
 
 
+def test_a_residing_soul_still_gets_its_judgment_and_rebirth_pushes(enqueued):  # noqa: F811
+    """暂居期间照常推送。
+
+    暂居时 `soul.tenant` 是暂居地、`soul.home_tenant` 是原属,而事件走 `EventService.log`,
+    带的是 `soul.tenant` —— 记录时按事件自称的租户找账号,两者对得上,所以推得出去。
+    审判由暂居地进行(处置也在那里执行),转生申请仍由原属审批,**两类都要到得了这台手机**。
+    回归之后同样。
+    """
+    home, away = _residence_tenants()
+    account, _ = _soul_with_device(home)
+    _dispatch(account.soul, away)
+    assert account.soul.tenant_id == away.pk and account.soul.home_tenant_id == home.pk
+
+    _judgment(account.soul, "while-away")
+    EventService.log(account.soul, "REBIRTH_STATUS_CHANGED",
+                     {"application_id": "a-1", "old_status": "UNDER_REVIEW", "new_status": "REJECTED"})
+    assert sorted(PushDelivery.objects.filter(kind__in=["judgment_result", "rebirth_rejected"])
+                  .values_list("kind", flat=True)) == ["judgment_result", "rebirth_rejected"]
+
+    from apps.dispatch.services import DispatchService
+
+    DispatchService.end_residence(account.soul, actor="officer", trigger=DispatchService.RETURN_MANUAL)
+    account.soul.refresh_from_db()
+    assert account.soul.tenant_id == home.pk
+    _judgment(account.soul, "back-home")
+    assert PushDelivery.objects.filter(dedupe_key="judgment:back-home").count() == 1
+
+
 def test_other_soul_events_written_directly_are_not_pushed_twice(enqueued,  # noqa: F811
                                                                  django_capture_on_commit_callbacks):
     """AuditHandler 把总线事件写成 SoulEvent;signals.py 只接暂居的两个 action,不会把它们再推一遍。"""
