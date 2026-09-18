@@ -1,0 +1,77 @@
+/**
+ * The soul circle, soul side: `/me/social/*`. Rides `soulHttp` (./soul) — the
+ * soul token, the soul refresh, the password-change gate — so none of that is
+ * restated here. backend/apps/social/soul_views.py is the contract.
+ *
+ * What a soul can see is decided server-side in one place
+ * (backend/apps/social/soul_circle.py): same civilization (where the soul is
+ * NOW, not where it came from), four visibility levels, pending/hidden content
+ * only to its author. A client never filters to enforce that.
+ */
+import { soulHttp } from "./soul";
+import type { components } from "./generated/schema";
+
+type Schemas = components["schemas"];
+export type SoulCard = Schemas["SoulCard"];
+export type SoulSearchResult = Schemas["SoulSearchResult"];
+export type SoulProfile = Schemas["SoulProfile"];
+export type SoulPost = Schemas["SoulPost"];
+export type SoulComment = Schemas["SoulComment"];
+export type SoulSocialStatus = Schemas["SoulSocialStatus"];
+export type SoulReactionState = Schemas["SoulReactionState"];
+export type SoulReportResult = Schemas["SoulReportResult"];
+export type SoulPostVisibility = Schemas["SoulPostCreate"]["visibility"];
+export type SoulReactionType = Schemas["SoulReactionRequest"]["reaction_type"];
+export type SoulReportTarget = Schemas["SoulReportRequest"]["target_type"];
+export type SoulReportReason = Schemas["SoulReportRequest"]["reason"];
+export type PaginatedSoulPosts = Schemas["PaginatedSoulPosts"];
+export type PaginatedSoulComments = Schemas["PaginatedSoulComments"];
+export type PaginatedSoulCards = Schemas["PaginatedSoulCards"];
+
+/**
+ * The `code`s the circle's refusals carry, beyond the ones in `SOUL_ERROR_CODES`
+ * (`not_found`, `account_retired`). `muted` also carries `muted_until`.
+ */
+export const SOUL_SOCIAL_ERROR_CODES = [
+  "muted",
+  "not_author",
+  "parent_not_found",
+  "report_limit",
+  "self_report",
+] as const;
+
+const get = <T>(url: string, params?: object) => soulHttp.get<T>(url, { params }).then((r) => r.data);
+
+export const soulSocialApi = {
+  /** Ask first: `can_write` false while muted; `reports_remaining` of the 24 h allowance. */
+  status: () => get<SoulSocialStatus>("/me/social/status/"),
+  /** This civilization + followed. `author` narrows it to one soul's posts (profile page). */
+  feed: (params: { page?: number; author?: number } = {}) => get<PaginatedSoulPosts>("/me/social/feed/", params),
+  /** 201 with `moderation_status`: PENDING when it hit the word list — show that, it is not visible yet. */
+  createPost: (content: string, visibility: SoulPostVisibility = "TENANT") =>
+    soulHttp.post<SoulPost>("/me/social/feed/", { content, visibility }).then((r) => r.data),
+  post: (id: string) => get<SoulPost>(`/me/social/posts/${id}/`),
+  deletePost: (id: string) => soulHttp.delete(`/me/social/posts/${id}/`).then(() => undefined),
+  comments: (postId: string, page?: number) =>
+    get<PaginatedSoulComments>(`/me/social/posts/${postId}/comments/`, { page }),
+  comment: (postId: string, content: string, parent?: string) =>
+    soulHttp
+      .post<SoulComment>(`/me/social/posts/${postId}/comments/`, { content, ...(parent ? { parent } : {}) })
+      .then((r) => r.data),
+  deleteComment: (id: string) => soulHttp.delete(`/me/social/comments/${id}/`).then(() => undefined),
+  /** Same type again removes it; a different type switches. The response is the state after. */
+  react: (postId: string, reaction_type: SoulReactionType = "LIKE") =>
+    soulHttp.post<SoulReactionState>(`/me/social/posts/${postId}/reaction/`, { reaction_type }).then((r) => r.data),
+  /** Display name (contains) or soul code (exact). The code is never returned. */
+  search: (q: string) => get<SoulSearchResult[]>("/me/social/search/", { q }),
+  profile: (userId: number) => get<SoulProfile>(`/me/social/users/${userId}/`),
+  follow: (userId: number) => soulHttp.post(`/me/social/users/${userId}/follow/`).then(() => true),
+  unfollow: (userId: number) => soulHttp.delete(`/me/social/users/${userId}/follow/`).then(() => false),
+  following: (page?: number) => get<PaginatedSoulCards>("/me/social/following/", { page }),
+  followers: (page?: number) => get<PaginatedSoulCards>("/me/social/followers/", { page }),
+  /** `counted` false: this soul already reported it (idempotent, costs nothing). 429 `report_limit`. */
+  report: (target_type: SoulReportTarget, target_id: string | number, reason: SoulReportReason, detail = "") =>
+    soulHttp
+      .post<SoulReportResult>("/me/social/reports/", { target_type, target_id: String(target_id), reason, detail })
+      .then((r) => r.data),
+};

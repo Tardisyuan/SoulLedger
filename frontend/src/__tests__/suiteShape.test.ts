@@ -62,6 +62,7 @@ const COLLECTED_FILES = [
   "JudgmentQueueConsole.test.tsx",
   "LedgerPage.test.tsx",
   "Modal.test.tsx",
+  "ModerationPage.test.tsx",
   "NotificationsPage.test.tsx",
   "PageError.test.tsx",
   "PageShell.test.tsx",
