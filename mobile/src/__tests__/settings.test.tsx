@@ -210,6 +210,8 @@ describe("push registration", () => {
     await screen.findByTestId("profile-card");
     fireEvent.press(screen.getByTestId("header-account"));
     expect(await screen.findByTestId("push-unavailable")).toBeTruthy();
+    // No way into a system dialog for pushes this build cannot receive.
+    expect(screen.queryByTestId("enable-push")).toBeNull();
     expect(calls.some((c) => c.url === "/me/push-tokens/")).toBe(false);
     expect(screen.queryByTestId("failure")).toBeNull();
     // …and the primer is never pushed on a build that cannot deliver.
@@ -287,7 +289,9 @@ describe("notification settings", () => {
   });
 
   it("the primer explains first: 'not now' never calls the system dialog; 'yes' does, once", async () => {
-    signedIn();
+    constants.expoConfig.extra = { eas: { projectId: "p-123" } };
+    persistentStore.set(PRIMER_SEEN_KEY, "1"); // not auto-offered here: reached from the settings page
+    signedIn({ "POST /me/push-tokens/": { status: 201, data: {} } });
     renderApp();
     await screen.findByTestId("profile-card");
     fireEvent.press(screen.getByTestId("header-account"));
