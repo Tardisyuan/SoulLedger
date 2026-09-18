@@ -50,7 +50,14 @@ def declared_families():
 def claimed_families():
     """被某个视图以 `permission_codename` 声明的族,以及声明它的文件。"""
     out = {}
-    for path in (BACKEND / "apps").rglob("views.py"):
+    # `*views*.py`,不是 `views.py`。**主体清单又一次不全**:这个仓库的视图并不都
+    # 叫 views.py —— `apps/soul_accounts/me_views.py`、`apps/social/soul_views.py`、
+    # `apps/social/moderation_views.py`、`apps/core/recycle_bin_views.py` 都是路由上
+    # 真实存在的视图,而按 `views.py` 扫描一个都看不见。2026-09-18 实测:
+    # `social.moderate` 由 `apps/social/moderation_views.py` 声明,这条断言却报
+    # 「social 族没有任何视图声明」—— 与模块 docstring 里记的 `ledger` 是同一个形状,
+    # 只是这次错在文件名而不是声明写法。
+    for path in (BACKEND / "apps").rglob("*views*.py"):
         source = path.read_text(encoding="utf-8")
         # 只看代码行:这个仓库已经五次栽在「扫描器读到了自己的注释」上。
         code = "\n".join(

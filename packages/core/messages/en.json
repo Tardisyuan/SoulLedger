@@ -2171,5 +2171,100 @@
       "title": "Residence return blocked",
       "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."
     }
+  },
+  "social_moderation": {
+    "title": "Circle moderation",
+    "subtitle": "Reports, pending content, the word list and mutes for this civilization's soul circle",
+    "refresh": "Refresh",
+    "tabs": {
+      "label": "Moderation sections",
+      "reports": "Reports",
+      "content": "Pending content",
+      "words": "Word list",
+      "mutes": "Mutes"
+    },
+    "target_type": {
+      "POST": "Post",
+      "COMMENT": "Comment",
+      "USER": "User"
+    },
+    "report_status": {
+      "OPEN": "Open",
+      "RESOLVED": "Resolved",
+      "DISMISSED": "Dismissed"
+    },
+    "reason": {
+      "SPAM": "Spam",
+      "ABUSE": "Abuse",
+      "SEXUAL": "Sexual content",
+      "ILLEGAL": "Illegal or harmful",
+      "OTHER": "Other"
+    },
+    "moderation_status": {
+      "PUBLISHED": "Published",
+      "PENDING": "Pending",
+      "HIDDEN": "Hidden",
+      "DELETED": "Deleted"
+    },
+    "fields": {
+      "author": "Author",
+      "content": "Content",
+      "reports": "Reports",
+      "reasons": "Reasons",
+      "created": "Time",
+      "until": "Muted until",
+      "reason": "Reason",
+      "word": "Word"
+    },
+    "report_count": "{{n}} reporters",
+    "kind": {
+      "posts": "Posts",
+      "comments": "Comments"
+    },
+    "status_filter": {
+      "PENDING": "Pending",
+      "HIDDEN": "Hidden"
+    },
+    "actions": {
+      "hide": "Hide",
+      "delete": "Delete",
+      "mute": "Mute",
+      "dismiss": "Dismiss",
+      "approve": "Approve",
+      "restore": "Restore",
+      "lift": "Lift mute",
+      "add_word": "Add",
+      "remove_word": "Remove"
+    },
+    "mute_days": "Mute for",
+    "mute_days_option": "{{n}} days",
+    "word_placeholder": "Word to hold back",
+    "word_hint": "Lower-case substring match; new posts and comments that hit it wait for review and are hidden until then",
+    "confirm_delete_title": "Delete this content?",
+    "confirm_delete_body": "It disappears from the soul app; the audit log keeps a record.",
+    "confirm_remove_word_title": "Remove “{{word}}”?",
+    "confirm_remove_word_body": "New content will no longer be held for this word.",
+    "mute_active": "Active",
+    "mute_lifted": "Lifted",
+    "mute_expired": "Expired",
+    "done": "Done",
+    "failed": "Action failed",
+    "errors": {
+      "already_resolved": "This report was already handled (perhaps by another officer)",
+      "invalid_transition": "The content's status changed; refresh and try again",
+      "already_deleted": "The content was already deleted",
+      "duplicate_word": "That word is already on the list",
+      "invalid_word": "The word cannot be empty",
+      "invalid_resolution": "A report against a user cannot hide or delete content; mute instead",
+      "already_lifted": "That mute was already lifted",
+      "not_found": "Not found, or not in this civilization"
+    },
+    "empty": {
+      "reports": "No open reports",
+      "content": "Nothing pending",
+      "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
+      "words": "No words yet",
+      "mutes": "No mutes"
+    }
   }
 }

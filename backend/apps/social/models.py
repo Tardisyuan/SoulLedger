@@ -16,6 +16,17 @@ class Visibility(models.TextChoices):
     PRIVATE = "PRIVATE", "Private"
 
 
+class ModerationStatus(models.TextChoices):
+    """帖子与评论的审核状态(2026-09-17 用户决定:先发后审 + 举报 + 敏感词)。
+
+    PUBLISHED 是默认:发出即可见。命中本文明敏感词表的内容写成 PENDING,审核通过前
+    除作者本人外谁都看不见。HIDDEN 是官员处置的结果,可恢复;删除走软删除,不是一个状态。
+    """
+    PUBLISHED = "PUBLISHED", "Published"
+    PENDING = "PENDING", "Pending review"
+    HIDDEN = "HIDDEN", "Hidden"
+
+
 class ReactionType(models.TextChoices):
     LIKE = "LIKE", "Like"
     LOVE = "LOVE", "Love"
@@ -39,6 +50,12 @@ class Post(AuditUserFields, models.Model):
         max_length=12,
         choices=Visibility.choices,
         default=Visibility.PUBLIC,
+    )
+    moderation_status = models.CharField(
+        max_length=10,
+        choices=ModerationStatus.choices,
+        default=ModerationStatus.PUBLISHED,
+        db_index=True,
     )
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
@@ -95,6 +112,12 @@ class Comment(AuditUserFields, models.Model):
         related_name="replies",
     )
     content = models.TextField()
+    moderation_status = models.CharField(
+        max_length=10,
+        choices=ModerationStatus.choices,
+        default=ModerationStatus.PUBLISHED,
+        db_index=True,
+    )
     tenant = models.ForeignKey(
         "tenants.Tenant",
         on_delete=models.CASCADE,
@@ -312,3 +335,142 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profile({self.user_id})"
+
+
+# ── 审核(灵魂朋友圈,2026-09-17)────────────────────────────────────────────
+#
+# 这几张表不继承 AuditUserFields:举报、禁言、敏感词的变动是「动作」,由
+# apps/social/moderation.py 显式写一条说清谁对什么做了什么的 AuditLog,
+# 而不是一串通用字段 diff(与 apps/soul_accounts 同一理由)。
+
+
+class ReportTargetType(models.TextChoices):
+    POST = "POST", "Post"
+    COMMENT = "COMMENT", "Comment"
+    USER = "USER", "User"
+
+
+class ReportReason(models.TextChoices):
+    SPAM = "SPAM", "Spam"
+    ABUSE = "ABUSE", "Abuse"
+    SEXUAL = "SEXUAL", "Sexual content"
+    ILLEGAL = "ILLEGAL", "Illegal or harmful"
+    OTHER = "OTHER", "Other"
+
+
+class ReportStatus(models.TextChoices):
+    OPEN = "OPEN", "Open"
+    RESOLVED = "RESOLVED", "Resolved"
+    DISMISSED = "DISMISSED", "Dismissed"
+
+
+class ReportResolution(models.TextChoices):
+    HIDE = "HIDE", "Hide content"
+    DELETE = "DELETE", "Delete content"
+    MUTE = "MUTE", "Mute author"
+    DISMISS = "DISMISS", "Dismiss"
+
+
+class Report(models.Model):
+    """对一个对象的举报。**同一对象同时只有一条 OPEN 的举报**,多个灵魂举报它合并到这一行,
+    `report_count` 是去重后的举报人数(每人一条 ReportEntry)。处置后关闭;之后再被举报开新行。
+
+    `target_user` 总是填:举报帖子 / 评论时是其作者,举报用户时是那个用户 ——
+    官员「禁言」一步就知道对谁。
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_reports")
+    target_type = models.CharField(max_length=10, choices=ReportTargetType.choices)
+    post = models.ForeignKey(Post, null=True, blank=True, on_delete=models.CASCADE, related_name="reports")
+    comment = models.ForeignKey(Comment, null=True, blank=True, on_delete=models.CASCADE, related_name="reports")
+    target_user = models.ForeignKey(
+        "authentication.User", on_delete=models.CASCADE, related_name="social_reports_against"
+    )
+    status = models.CharField(max_length=10, choices=ReportStatus.choices, default=ReportStatus.OPEN)
+    report_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_reported_at = models.DateTimeField(auto_now_add=True)
+    resolution = models.CharField(max_length=10, choices=ReportResolution.choices, blank=True, default="")
+    resolution_note = models.CharField(max_length=500, blank=True, default="")
+    resolved_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-last_reported_at"]
+        indexes = [models.Index(fields=["tenant", "status", "last_reported_at"])]
+        constraints = [
+            # 三条而不是一条 (target_type, post, comment, target_user):PostgreSQL 的唯一约束里
+            # NULL 互不相等,举报用户时 post/comment 都是 NULL,一条合并约束永远不会冲突。
+            models.UniqueConstraint(
+                fields=["post"], condition=models.Q(status="OPEN", target_type="POST"),
+                name="social_report_one_open_per_post",
+            ),
+            models.UniqueConstraint(
+                fields=["comment"], condition=models.Q(status="OPEN", target_type="COMMENT"),
+                name="social_report_one_open_per_comment",
+            ),
+            models.UniqueConstraint(
+                fields=["target_user"], condition=models.Q(status="OPEN", target_type="USER"),
+                name="social_report_one_open_per_user",
+            ),
+        ]
+
+
+class ReportEntry(models.Model):
+    """一个灵魂对一条 Report 的一次举报。同一人对同一条举报只算一次。"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="entries")
+    reporter = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="social_report_entries")
+    reason = models.CharField(max_length=10, choices=ReportReason.choices)
+    detail = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["reporter", "created_at"])]
+        constraints = [
+            models.UniqueConstraint(fields=["report", "reporter"], name="social_report_entry_once_per_reporter"),
+        ]
+
+
+class SensitiveWord(models.Model):
+    """本文明的敏感词。按小写存、按小写子串匹配(apps/social/moderation.py::hits_sensitive_word)。"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_sensitive_words")
+    word = models.CharField(max_length=50)
+    created_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["word"]
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "word"], name="social_sensitive_word_unique_per_tenant"),
+        ]
+
+
+class SocialMute(models.Model):
+    """禁言:`until` 之前该用户在朋友圈只读。解除写 `lifted_at`,行不删(审计与禁言历史)。
+
+    挂在 User(即某一世的账号)上:转世后的新账号不继承禁言 —— 与「社交内容随账号」同一规则。
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_mutes")
+    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="social_mutes")
+    until = models.DateTimeField()
+    reason = models.CharField(max_length=500, blank=True, default="")
+    created_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    lifted_at = models.DateTimeField(null=True, blank=True)
+    lifted_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "until"])]
