@@ -82,6 +82,18 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     REBIRTH_APPLICATION_SUBMITTED: handleSoulEvent,
     REBIRTH_STATUS_CHANGED: handleSoulEvent,
     REBIRTH_CROSS_CIV_DECIDED: handleSoulEvent,
+    // 受刑计划(docs/ARCHITECTURE-sentence-plan.md,Q9)。阶段 1 只声明,后端没有路径写入;
+    // 落在灵魂时间线上,与上面几种同样处理。
+    SENTENCE_PLAN_CREATED: handleSoulEvent,
+    SENTENCE_NODE_ACTIVATED: handleSoulEvent,
+    SENTENCE_NODE_WAITING: handleSoulEvent,
+    SENTENCE_NODE_COMPLETED: handleSoulEvent,
+    SENTENCE_NODE_REFUSED: handleSoulEvent,
+    SENTENCE_PLAN_AMENDED: handleSoulEvent,
+    SENTENCE_REQUEST_CREATED: handleSoulEvent,
+    SENTENCE_REQUEST_DECIDED: handleSoulEvent,
+    SENTENCE_PLAN_COMPLETED: handleSoulEvent,
+    SENTENCE_PLAN_CANCELLED: handleSoulEvent,
   },
 
   // Workflow domain
@@ -229,6 +241,17 @@ export const BACKEND_EVENT_TYPES = [
   "SOUL_ACCOUNT_CREATED", "SOUL_ACCOUNT_RETIRED",
   "REBIRTH_APPLICATION_SUBMITTED", "REBIRTH_STATUS_CHANGED",
   "REBIRTH_CROSS_CIV_DECIDED",
+  // Sentence plans (受刑计划)
+  "SENTENCE_PLAN_CREATED",
+  "SENTENCE_NODE_ACTIVATED",
+  "SENTENCE_NODE_WAITING",
+  "SENTENCE_NODE_COMPLETED",
+  "SENTENCE_NODE_REFUSED",
+  "SENTENCE_PLAN_AMENDED",
+  "SENTENCE_REQUEST_CREATED",
+  "SENTENCE_REQUEST_DECIDED",
+  "SENTENCE_PLAN_COMPLETED",
+  "SENTENCE_PLAN_CANCELLED",
 ] as const;
 
 /**

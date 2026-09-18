@@ -42,6 +42,18 @@ def open_judgments(soul):
     )
 
 
+class JudgmentKind(models.TextChoices):
+    """这份审判对受刑计划做什么(docs/ARCHITECTURE-sentence-plan.md §2.4)。
+
+    ORIGINAL 结案生成计划;AMENDMENT(执行地的加 / 减项审判)与 REOPEN(原属的重开审判)
+    结案**不建处置、不动灵魂状态**,只改计划 —— 那两条结案分支是阶段 3 的事;阶段 1 里
+    没有任何路径写入 ORIGINAL 以外的值。
+    """
+    ORIGINAL = "ORIGINAL", "原审判"
+    AMENDMENT = "AMENDMENT", "加项 / 减项审判"
+    REOPEN = "REOPEN", "重开审判"
+
+
 class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     """
     A single judgment proceeding for a soul.
@@ -100,6 +112,11 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         default=0,
         help_text="Life index this row belongs to; 0 is the first life.",
     )
+
+    # 受刑计划(docs/ARCHITECTURE-sentence-plan.md)。`amends_plan_id` 是裸 UUID:
+    # 计划在原属库,加减项审判在执行地库,分库后不能是外键。存量行全是 ORIGINAL。
+    kind = models.CharField(max_length=10, choices=JudgmentKind.choices, default=JudgmentKind.ORIGINAL)
+    amends_plan_id = models.UUIDField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["-created_at"]
