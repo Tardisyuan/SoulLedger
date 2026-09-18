@@ -375,6 +375,8 @@ export const MENUS = [
   { id: 7, name: "转生申请", path: "/rebirth-applications", icon: "RefreshCw", order: 7, component: "rebirth-applications", roles: ["ADMIN", "JUDGE"], is_active: true, parent: null, menu_type: "MENU", visible: true },
   // backend/apps/menus/migrations/0017_add_moderation_menu.py
   { id: 8, name: "朋友圈审核", path: "/moderation", icon: "ShieldAlert", order: 8, component: "moderation", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  // backend/apps/menus/migrations/0018_add_soul_inbox_menu.py
+  { id: 9, name: "殿司收件箱", path: "/soul-inbox", icon: "Inbox", order: 9, component: "soul-inbox", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
 ];
 
 export const RECYCLE_BIN_ENTRY = {
@@ -699,6 +701,29 @@ export const SOCIAL_MUTES = [
     lifted_at: null as string | null,
     is_active: true,
   },
+];
+
+// ── Hall inbox (backend/apps/chat/serializers.py) ──
+
+/** GET `/chat/inbox/` — OfficerInboxSerializer. */
+export const INBOX_CONVERSATIONS = [
+  {
+    id: "abcdabcd-abcd-4bcd-8bcd-abcdabcdab01",
+    soul: "abcdabcd-abcd-4bcd-8bcd-abcdabcdab02",
+    soul_name: "写信的灵魂",
+    soul_code: "ABCDEFGHJK",
+    tenant: 1,
+    tenant_name: "中国地府",
+    last_message_at: "2026-09-18T01:00:00Z",
+    created_at: "2026-09-18T00:00:00Z",
+    closed_at: null as string | null,
+  },
+];
+
+/** GET `/chat/inbox/:id/messages/` — InboxMessageSerializer, newest first. */
+export const INBOX_MESSAGES = [
+  { event_id: "$reply", from_officer: true, sender_name: "测试管理员", body: "已收到,正在查", timestamp: 1789700000000 },
+  { event_id: "$letter", from_officer: false, sender_name: "写信的灵魂", body: "我想申诉这次判决", timestamp: 1789690000000 },
 ];
 
 /** POST `.../mark-delivered/` — the REVEALED row, now DELIVERED. */
@@ -1239,6 +1264,11 @@ export class ApiMock {
     }));
     this.on("GET", "/social-moderation/mutes/", paginated(SOCIAL_MUTES));
     this.on("POST", "/social-moderation/mutes/:id/lift/", { ...SOCIAL_MUTES[0], lifted_at: "2026-09-18T04:00:00Z", is_active: false });
+
+    // ── Hall inbox (backend/apps/chat/views.py OfficerInboxViewSet) ──
+    this.on("GET", "/chat/inbox/", paginated(INBOX_CONVERSATIONS));
+    this.on("GET", "/chat/inbox/:id/messages/", INBOX_MESSAGES);
+    this.on("POST", "/chat/inbox/:id/reply/", () => ({ status: 201, body: { event_id: "$sent" } }));
 
     return this;
   }

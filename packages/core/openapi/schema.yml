@@ -891,6 +891,183 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/v1/chat/inbox/:
+    get:
+      operationId: v1_chat_inbox_list
+      description: |-
+        `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+
+        租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+        暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+        永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul_a
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfficerInboxList'
+          description: ''
+  /api/v1/chat/inbox/{id}/:
+    get:
+      operationId: v1_chat_inbox_retrieve
+      description: |-
+        `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+
+        租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+        暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+        永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerInbox'
+          description: ''
+  /api/v1/chat/inbox/{id}/messages/:
+    get:
+      operationId: v1_chat_inbox_messages_list
+      description: |-
+        `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+
+        租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+        暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+        永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul_a
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InboxMessage'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/chat/inbox/{id}/reply/:
+    post:
+      operationId: v1_chat_inbox_reply_create
+      description: |-
+        `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+
+        租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+        暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+        永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerReply'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerReply'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerReply'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
   /api/v1/death-sync/api-keys/:
     get:
       operationId: v1_death_sync_api_keys_list
@@ -3671,6 +3848,167 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/chat/conversations/:
+    get:
+      operationId: v1_me_chat_conversations_list
+      description: 把两类异常翻成响应,省得每个方法各写一遍 try。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+    post:
+      operationId: v1_me_chat_conversations_create
+      description: 把两类异常翻成响应,省得每个方法各写一遍 try。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/me/chat/conversations/{conversation_id}/messages/:
+    post:
+      operationId: v1_me_chat_conversations_messages_create
+      description: |-
+        被节流的私聊、以及殿司收件箱的发送口。
+
+        **互关(或已解除节流)的私聊不走这里** —— 那种房间灵魂直接用 Matrix 发,后端不在
+        消息路径上。这里照样接受,因为客户端不必分两条路;服务层判断之后仍然代发一次。
+      parameters:
+      - in: path
+        name: conversation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageSend'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageSend'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageSend'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/me/chat/session/:
+    get:
+      operationId: v1_me_chat_session_retrieve
+      description: 把两类异常翻成响应,省得每个方法各写一遍 try。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSession'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
           description: ''
   /api/v1/me/life/:
     get:
@@ -12443,6 +12781,36 @@ components:
       required:
       - new_password
       - old_password
+    ChatError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
+    ChatSession:
+      type: object
+      description: '`GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。'
+      properties:
+        homeserver:
+          type: string
+        user_id:
+          type: string
+        login_type:
+          type: string
+        token:
+          type: string
+        expires_in:
+          type: integer
+      required:
+      - expires_in
+      - homeserver
+      - login_type
+      - token
+      - user_id
     CivilizationEnum:
       enum:
       - CHINESE
@@ -12564,6 +12932,88 @@ components:
       - create_time
       - id
       - post
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ConversationKindEnum'
+          readOnly: true
+        room_id:
+          type: string
+          readOnly: true
+        peer_user:
+          type: integer
+          nullable: true
+          readOnly: true
+          description: 对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。
+        peer_name:
+          type: string
+          readOnly: true
+          description: 对方在朋友圈的显示名。
+        hall:
+          type: string
+          description: 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。
+          readOnly: true
+        throttled:
+          type: boolean
+          readOnly: true
+        last_request_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - hall
+      - id
+      - kind
+      - last_message_at
+      - last_request_at
+      - peer_name
+      - peer_user
+      - responded_at
+      - room_id
+      - throttled
+    ConversationCreate:
+      type: object
+      description: |-
+        两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
+        `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
+      properties:
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ConversationKindEnum'
+          default: DIRECT
+        target_user:
+          type: integer
+          minimum: 1
+    ConversationKindEnum:
+      enum:
+      - DIRECT
+      - OFFICER_INBOX
+      type: string
+      description: |-
+        * `DIRECT` - 灵魂私聊
+        * `OFFICER_INBOX` - 官员收件箱
     CorpusEnum:
       enum:
       - HELL_LAW
@@ -13645,6 +14095,26 @@ components:
       - kind
       - poena
       - poena_missing
+    InboxMessage:
+      type: object
+      description: 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。
+      properties:
+        event_id:
+          type: string
+        from_officer:
+          type: boolean
+        sender_name:
+          type: string
+        body:
+          type: string
+        timestamp:
+          type: integer
+      required:
+      - body
+      - event_id
+      - from_officer
+      - sender_name
+      - timestamp
     InitRolePermissionsResult:
       type: object
       description: |-
@@ -15053,6 +15523,21 @@ components:
         * `DIRECTORY` - 目录
         * `MENU` - 菜单
         * `BUTTON` - 按钮
+    MessageSend:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 4000
+      required:
+      - body
+    MessageSent:
+      type: object
+      properties:
+        event_id:
+          type: string
+      required:
+      - event_id
     ModeratedComment:
       type: object
       description: 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。
@@ -15271,6 +15756,53 @@ components:
     NullEnum:
       enum:
       - null
+    OfficerInbox:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+        tenant_name:
+          type: string
+          readOnly: true
+        last_message_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - closed_at
+      - created_at
+      - id
+      - last_message_at
+      - soul
+      - soul_code
+      - soul_name
+      - tenant
+      - tenant_name
     OfficerRebirthApplication:
       type: object
       description: |-
@@ -15391,6 +15923,14 @@ components:
       - status
       - updated_at
       - workflow
+    OfficerReply:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 4000
+      required:
+      - body
     Organization:
       type: object
       properties:
@@ -15870,6 +16410,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ModeratedPost'
+    PaginatedOfficerInboxList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfficerInbox'
     PaginatedOfficerRebirthApplicationList:
       type: object
       required:

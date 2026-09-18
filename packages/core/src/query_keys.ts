@@ -149,6 +149,13 @@ export const socialModerationKeys = {
   mutes: (params: Record<string, string | number | undefined>) => ["social-moderation", "mutes", params] as const,
 };
 
+/** The hall inbox (officer side of soul chat). One root; a reply invalidates all of it. */
+export const soulInboxKeys = {
+  all: ["soul-inbox"] as const,
+  list: (params: Record<string, string | number | undefined>) => ["soul-inbox", "list", params] as const,
+  messages: (id: string) => ["soul-inbox", "messages", id] as const,
+};
+
 export const socialKeys = {
   all: ["social"] as const,
   posts: {

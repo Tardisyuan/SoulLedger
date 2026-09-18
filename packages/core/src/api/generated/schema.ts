@@ -429,6 +429,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat/inbox/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         */
+        get: operations["v1_chat_inbox_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         */
+        get: operations["v1_chat_inbox_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/messages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         */
+        get: operations["v1_chat_inbox_messages_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/reply/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         */
+        post: operations["v1_chat_inbox_reply_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/api-keys/": {
         parameters: {
             query?: never;
@@ -1587,6 +1679,63 @@ export interface paths {
             cookie?: never;
         };
         get: operations["v1_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 把两类异常翻成响应,省得每个方法各写一遍 try。 */
+        get: operations["v1_me_chat_conversations_list"];
+        put?: never;
+        /** @description 把两类异常翻成响应,省得每个方法各写一遍 try。 */
+        post: operations["v1_me_chat_conversations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/conversations/{conversation_id}/messages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 被节流的私聊、以及殿司收件箱的发送口。
+         *
+         *     **互关(或已解除节流)的私聊不走这里** —— 那种房间灵魂直接用 Matrix 发,后端不在
+         *     消息路径上。这里照样接受,因为客户端不必分两条路;服务层判断之后仍然代发一次。
+         */
+        post: operations["v1_me_chat_conversations_messages_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/session/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 把两类异常翻成响应,省得每个方法各写一遍 try。 */
+        get: operations["v1_me_chat_session_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5618,6 +5767,18 @@ export interface components {
             old_password: string;
             new_password: string;
         };
+        ChatError: {
+            detail: string;
+            code: string;
+        };
+        /** @description `GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。 */
+        ChatSession: {
+            homeserver: string;
+            user_id: string;
+            login_type: string;
+            token: string;
+            expires_in: number;
+        };
         /**
          * @description * `CHINESE` - Chinese Diyu
          *     * `EUROPEAN` - European Heaven/Hell
@@ -5670,6 +5831,42 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
         };
+        Conversation: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly kind: components["schemas"]["ConversationKindEnum"];
+            readonly room_id: string;
+            /** @description 对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。 */
+            readonly peer_user: number | null;
+            /** @description 对方在朋友圈的显示名。 */
+            readonly peer_name: string;
+            /** @description 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。 */
+            readonly hall: string;
+            readonly throttled: boolean;
+            /** Format: date-time */
+            readonly last_request_at: string | null;
+            /** Format: date-time */
+            readonly responded_at: string | null;
+            /** Format: date-time */
+            readonly last_message_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description 两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
+         *     `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
+         */
+        ConversationCreate: {
+            /** @default DIRECT */
+            kind: components["schemas"]["ConversationKindEnum"];
+            target_user?: number;
+        };
+        /**
+         * @description * `DIRECT` - 灵魂私聊
+         *     * `OFFICER_INBOX` - 官员收件箱
+         * @enum {string}
+         */
+        ConversationKindEnum: "DIRECT" | "OFFICER_INBOX";
         /**
          * @description * `HELL_LAW` - 冥律 — Hell Law (Chinese)
          *     * `GONGGUOGE` - 功過格 — Ledger of Merit and Demerit (Chinese)
@@ -6187,6 +6384,14 @@ export interface components {
             culpa_record_count: number;
             poena: number | null;
             poena_missing: string[];
+        };
+        /** @description 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。 */
+        InboxMessage: {
+            event_id: string;
+            from_officer: boolean;
+            sender_name: string;
+            body: string;
+            timestamp: number;
         };
         /**
          * @description 200 body of `init_role_permissions`.
@@ -6808,6 +7013,12 @@ export interface components {
          * @enum {string}
          */
         MenuTypeEnum: "DIRECTORY" | "MENU" | "BUTTON";
+        MessageSend: {
+            body: string;
+        };
+        MessageSent: {
+            event_id: string;
+        };
         /** @description 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。 */
         ModeratedComment: {
             /** Format: uuid */
@@ -6916,6 +7127,22 @@ export interface components {
         NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED";
         /** @enum {unknown} */
         NullEnum: null;
+        OfficerInbox: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_name: string;
+            readonly soul_code: string;
+            readonly tenant: number;
+            readonly tenant_name: string;
+            /** Format: date-time */
+            readonly last_message_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly closed_at: string | null;
+        };
         /**
          * @description 官员侧。`current_step` / `can_appeal` 与 /me 同一个函数算(rebirth.py),
          *     `rejection_reason` 就是审批人驳回时填的「给灵魂的理由」,节点内部备注不在这里。
@@ -6955,6 +7182,9 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        OfficerReply: {
+            body: string;
         };
         Organization: {
             readonly id: number;
@@ -7263,6 +7493,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ModeratedPost"][];
+        };
+        PaginatedOfficerInboxList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["OfficerInbox"][];
         };
         PaginatedOfficerRebirthApplicationList: {
             /** @example 123 */
@@ -10660,6 +10905,135 @@ export interface operations {
             };
         };
     };
+    v1_chat_inbox_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul_a?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOfficerInboxList"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerInbox"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_messages_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                soul_a?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxMessage"][];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_reply_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerReply"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerReply"];
+                "multipart/form-data": components["schemas"]["OfficerReply"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageSent"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
     v1_death_sync_api_keys_list: {
         parameters: {
             query?: {
@@ -12640,6 +13014,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_conversations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_conversations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ConversationCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["ConversationCreate"];
+                "multipart/form-data": components["schemas"]["ConversationCreate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_conversations_messages_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageSend"];
+                "application/x-www-form-urlencoded": components["schemas"]["MessageSend"];
+                "multipart/form-data": components["schemas"]["MessageSend"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageSent"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_session_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSession"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
                 };
             };
         };
