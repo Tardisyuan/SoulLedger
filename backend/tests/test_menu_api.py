@@ -172,18 +172,34 @@ class TestMenuRoleVisibility:
         }
 
     @staticmethod
-    def _paths(response):
-        data = response.data
-        if isinstance(data, dict) and "results" in data:
-            data = data["results"]
-        return {m["path"] for m in data}
+    def _paths(response, api_client=None, headers=None):
+        """Every path the list serves, **across all pages**.
+
+        This read only the first page. With 17 seeded menus plus the three probes
+        the list was exactly 20 — one page — so it held until menus/0017 seeded an
+        eighteenth and `/probe-viewer` (order 903, last) moved to page two: ADMIN
+        "lost" a row it could see. An absence assertion over a truncated list is
+        green for the wrong reason too, so every caller now walks `next`.
+        """
+        paths = set()
+        while True:
+            data = response.data
+            nxt = data.get("next") if isinstance(data, dict) else None
+            if isinstance(data, dict) and "results" in data:
+                data = data["results"]
+            paths |= {m["path"] for m in data}
+            if not nxt:
+                return paths
+            assert api_client is not None, "paginated response: pass api_client and headers"
+            response = api_client.get(nxt, **headers)
 
     def test_a_viewer_is_not_shown_an_admin_only_entry(
         self, api_client, viewer_user, rows
     ):
-        response = api_client.get("/api/v1/menus/", **self._headers(viewer_user))
+        headers = self._headers(viewer_user)
+        response = api_client.get("/api/v1/menus/", **headers)
         assert response.status_code == 200
-        assert "/probe-admin" not in self._paths(response)
+        assert "/probe-admin" not in self._paths(response, api_client, headers)
 
     def test_a_row_with_no_roles_stays_visible_to_everyone(
         self, api_client, viewer_user, rows
@@ -195,18 +211,21 @@ class TestMenuRoleVisibility:
         children, and the ADMIN-only assertion above would stay green while it
         happened.
         """
-        response = api_client.get("/api/v1/menus/", **self._headers(viewer_user))
-        assert "/probe-public" in self._paths(response)
+        headers = self._headers(viewer_user)
+        response = api_client.get("/api/v1/menus/", **headers)
+        assert "/probe-public" in self._paths(response, api_client, headers)
 
     def test_a_row_naming_the_role_is_visible_to_it(
         self, api_client, viewer_user, rows
     ):
-        response = api_client.get("/api/v1/menus/", **self._headers(viewer_user))
-        assert "/probe-viewer" in self._paths(response)
+        headers = self._headers(viewer_user)
+        response = api_client.get("/api/v1/menus/", **headers)
+        assert "/probe-viewer" in self._paths(response, api_client, headers)
 
     def test_admin_still_sees_everything(self, api_client, admin_user, rows):
-        response = api_client.get("/api/v1/menus/", **self._headers(admin_user))
-        paths = self._paths(response)
+        headers = self._headers(admin_user)
+        response = api_client.get("/api/v1/menus/", **headers)
+        paths = self._paths(response, api_client, headers)
         assert {"/probe-admin", "/probe-public", "/probe-viewer"} <= paths
 
     def test_an_unauthenticated_caller_gets_nothing(self, api_client, rows):
