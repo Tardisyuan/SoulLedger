@@ -416,10 +416,15 @@ class DispatchService:
     #: 而解开它的动作是结案或撤案,不是「结束暂居」—— 那会同样被 409 拦下,所以持有
     #: `dispatch.return` 并不让谁更该知道。JUDGE / VIEWER 不持有 `dispatch.read`,不收。
     RETURN_BLOCKED_PERMISSION = "dispatch.read"
+    #: 暂居地还通知能结案或撤案的人(2026-09-18 用户决定):`JudgmentViewSet` 的 `conclude` 与
+    #: `destroy`(撤案)都要 `judgment.execute`(ADMIN / JUDGE / MODERATOR)。**只限暂居地**:
+    #: 案子在那里审;原属地的判官不收。
+    RETURN_BLOCKED_CASE_PERMISSION = "judgment.execute"
 
     @staticmethod
     def return_blocked_recipients(soul):
-        """原属租户与暂居租户里持有 `dispatch.read` 的在职(is_active)官员。
+        """原属租户与暂居租户里持有 `dispatch.read` 的在职(is_active)官员,加上暂居租户里持有
+        `judgment.execute` 的在职官员(判官)。
         ADMIN 经 `check_permission` 的旁路自然在内,但**只限这两个租户的** ADMIN。
         灵魂账号(role=SOUL)`check_permission` 恒为 False,不收 —— 用户明确不推给灵魂。"""
         from apps.authentication.models import User
@@ -428,7 +433,11 @@ class DispatchService:
         candidates = User.objects.filter(
             tenant_id__in={soul.home_tenant_id, soul.tenant_id}, is_active=True,
         ).order_by("pk")
-        return [u for u in candidates if check_permission(u, DispatchService.RETURN_BLOCKED_PERMISSION)]
+        return [
+            u for u in candidates
+            if check_permission(u, DispatchService.RETURN_BLOCKED_PERMISSION)
+            or (u.tenant_id == soul.tenant_id and check_permission(u, DispatchService.RETURN_BLOCKED_CASE_PERMISSION))
+        ]
 
     @staticmethod
     def _notify_return_blocked(soul, dispatch_id, open_count):
