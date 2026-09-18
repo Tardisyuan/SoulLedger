@@ -77,8 +77,16 @@ test.describe("WebSocket 不再逃过 fixture", () => {
   test("打开的 socket 与应用真正调用的 API 同源,只换协议", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/notifications");
-    // 客户端是否连、什么时候连,取决于页面;这里只在它连了的时候检查它连去哪。
-    await page.waitForTimeout(1500);
+    /* 等的是「socket 连上了」这件事本身,不是 1500ms。
+     *
+     * 原先是 `waitForTimeout(1500)` 加一句「客户端是否连、什么时候连取决于页面」
+     * —— 但下面那条守卫的守卫已经断言了**它必须连**,所以「连没连上」不是可等可
+     * 不等的事,它就是这条用例的前提。写成时间估计只有坏处:机器繁忙时 1500ms
+     * 不够,失败信息会变成「/notifications 应当打开至少一个 WebSocket 连接」,
+     * 指向一条并不存在的回归。 */
+    await expect
+      .poll(() => api.socketUrls.length, { timeout: 15_000 })
+      .toBeGreaterThan(0);
 
     expect(api.apiOrigin, "一条 API 请求都没记到,下面的比较无从谈起").not.toBeNull();
     // 守卫的守卫(FT-12,2026-09-13):`for (const url of api.socketUrls)` 在
