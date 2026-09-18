@@ -17,6 +17,9 @@ import {
   type Theme as NavTheme,
 } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
+import { platform } from "@soulledger/core/platform";
+import * as Notifications from "expo-notifications";
+import { useEffect, useRef, useState } from "react";
 import { useColorScheme } from "react-native";
 
 import { AppHeader, TabBar } from "./chrome";
@@ -32,21 +35,24 @@ import {
   type AppStackParams,
 } from "./screens/applications";
 import { ChangePasswordScreen, LoginScreen } from "./screens/auth";
+import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
+import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen, PastLivesScreen } from "./screens/life";
 
-const Stack = createNativeStackNavigator<AppStackParams & { Login: undefined; ChangePassword: undefined }>();
+type RootParams = AppStackParams & { Login: undefined; ChangePassword: undefined };
+const Stack = createNativeStackNavigator<RootParams>();
 const Tabs = createBottomTabNavigator();
 
 /** Lets a test read which routes are mounted — the guard is the set of route names, not what is on screen. */
-export const navigationRef = createNavigationContainerRef();
+export const navigationRef = createNavigationContainerRef<RootParams>();
 
 function MainTabs() {
   const { t } = useI18n();
   return (
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
-      screenOptions={({ route }) => ({
-        header: () => <AppHeader title={t(TAB_TITLES[route.name])} account />,
+      screenOptions={({ route, navigation }) => ({
+        header: () => <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />,
       })}
     >
       <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life") }} />
@@ -63,12 +69,83 @@ const TAB_TITLES: Record<string, string> = {
 };
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
-  return <ApplicationDetailScreen id={route.params.id} />;
+  return <ApplicationDetailScreen id={route.params.id} landed={route.params.landed} />;
+}
+
+/** Notification ids already landed in this process. */
+const HANDLED_TAPS = new Set<string>();
+
+/**
+ * The push glue that needs the navigator: taps (while running, and the one that
+ * cold-started the app) become a landing, held until a soul is signed in and
+ * the navigator is ready — so a tap that meets the login screen still lands
+ * after sign-in. Signed in: register the device (cold start and sign-in alike),
+ * follow token changes, keep the push language, and offer the primer once.
+ */
+function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
+  const pending = useRef<Landing | null>(null);
+  const [arrived, setArrived] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    const hold = (r: Notifications.NotificationResponse) => {
+      // The "last response" outlives this component (a retryBoot remounts it): a tap
+      // is landed once, never again — or it lands a later session on an old record.
+      const id = r.notification.request.identifier;
+      if (HANDLED_TAPS.has(id)) return;
+      HANDLED_TAPS.add(id);
+      pending.current = landingOf(r.notification.request.content.data);
+      setArrived((n) => n + 1);
+    };
+    Notifications.getLastNotificationResponseAsync()
+      .then((r) => {
+        if (!r) return;
+        Notifications.clearLastNotificationResponse();
+        if (alive) hold(r);
+      })
+      .catch(() => {});
+    const sub = Notifications.addNotificationResponseReceivedListener(hold);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let alive = true;
+    void syncPushLocale();
+    void registerDevice().then(async () => {
+      const offer =
+        alive &&
+        !pending.current &&
+        easProjectId() !== null &&
+        !platform().persistent.get(PRIMER_SEEN_KEY) &&
+        (await permission()) === "undetermined";
+      if (offer && navigationRef.isReady()) navigationRef.navigate("NotificationPrimer");
+    });
+    const sub = Notifications.addPushTokenListener(() => void registerDevice());
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [signedIn]);
+
+  useEffect(() => {
+    const landing = pending.current;
+    if (!landing || !signedIn || !navigationRef.isReady()) return;
+    pending.current = null;
+    if (landing.screen === "ApplicationDetail") navigationRef.navigate("ApplicationDetail", { id: landing.id, landed: true });
+    else navigationRef.navigate("Tabs", { screen: "Life" });
+  }, [arrived, signedIn, ready]);
+
+  return null;
 }
 
 export function RootNavigator() {
   const { t } = useI18n();
   const { state, retryBoot, signOut } = useSession();
+  const [ready, setReady] = useState(0);
   const scheme = useColorScheme() === "light" ? "light" : "dark";
   const theme = themeFor(state.status === "signedIn" ? state.profile.civilization : null, scheme);
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
@@ -119,6 +196,14 @@ export function RootNavigator() {
               })}
             />
             <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.settings.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen name="NotificationPrimer" component={NotificationPrimerScreen} options={{ headerShown: false }} />
+            <Stack.Screen
               name="ApplicationDetail"
               component={Detail}
               options={({ navigation }) => ({
@@ -129,9 +214,12 @@ export function RootNavigator() {
         );
       }
       body = (
-        <NavigationContainer ref={navigationRef} theme={navTheme}>
-          <Stack.Navigator>{screens}</Stack.Navigator>
-        </NavigationContainer>
+        <>
+          <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setReady((n) => n + 1)}>
+            <Stack.Navigator>{screens}</Stack.Navigator>
+          </NavigationContainer>
+          <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
+        </>
       );
     }
   }

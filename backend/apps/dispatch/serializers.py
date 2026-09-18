@@ -4,6 +4,7 @@ Serializers for dispatch app.
 from rest_framework import serializers
 
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord
+from apps.judgment.models import Judgment
 
 
 class DispatchRecordSerializer(serializers.ModelSerializer):
@@ -203,8 +204,21 @@ class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
             "participant_actor_name",
             "role",
             "joined_at",
+            # 这一方在受刑计划里的那一站(docs/ARCHITECTURE-sentence-plan.md §2.2)。
+            # 只经 `sentence/` 动作写(服务端抄 realm 的 is_eternal / memory_reset),不经 PATCH。
+            "node_order",
+            "sentence_realm_code",
+            "sentence_years",
+            "sentence_is_eternal",
+            "sentence_memory_reset",
+            "sentence_notes",
+            "sentence_submitted_at",
         ]
-        read_only_fields = ["id", "joined_at"]
+        read_only_fields = [
+            "id", "joined_at",
+            "node_order", "sentence_realm_code", "sentence_years", "sentence_is_eternal",
+            "sentence_memory_reset", "sentence_notes", "sentence_submitted_at",
+        ]
 
 
 class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
@@ -226,6 +240,13 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
     """
     initiating_tenant_code = serializers.CharField(source="initiating_tenant.code", read_only=True)
     participants = CrossTenantJudgmentParticipantSerializer(many=True, read_only=True)
+    # 这场联审为哪份原属审判定受刑计划(docs/ARCHITECTURE-sentence-plan.md §2.1,Q12)。
+    # 只在 `create` 时给一次,之后不可改:参与方按它填节点,换审判等于换灵魂。
+    # 不给 = 存量那种不挂灵魂的会议,行为不变。
+    judgment = serializers.PrimaryKeyRelatedField(
+        queryset=Judgment.all_objects.filter(is_deleted=False),
+        required=False, allow_null=True,
+    )
 
     class Meta:
         model = CrossTenantJudgment
@@ -238,6 +259,7 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "status",
             "concluded_at",
             "conclusion_type",
+            "judgment",
             "participants",
             "create_time",
             "update_time",
@@ -273,7 +295,7 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
         if self.instance is not None:
             blocked = [
                 field
-                for field in ("status", "conclusion_type", "initiating_tenant")
+                for field in ("status", "conclusion_type", "initiating_tenant", "judgment")
                 if field in self.initial_data
             ]
             if blocked:
@@ -283,6 +305,9 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
                         "body. Setting it here is how a row lands in another "
                         "tenant's list that neither side can open or remove."
                         if field == "initiating_tenant"
+                        else "The judgment is fixed when the cross-tenant judgment is "
+                        "opened; participants have filled their nodes against it."
+                        if field == "judgment"
                         else "Not settable through this endpoint. Use the participate/"
                         "conclude actions, which also set `concluded_at` and "
                         "notify participants — a plain field write would skip both."
@@ -290,6 +315,31 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
                     for field in blocked
                 })
         return attrs
+
+    def validate_judgment(self, value):
+        """挂的必须是发起方**自己的、还没结案的原审判**,且灵魂的原属就是发起方。
+
+        发起方取自请求(同 `perform_create`),不取自 body。别的租户的审判一律答
+        「本租户没有这份审判」,不区分「不存在」与「不是你的」。
+        """
+        if value is None:
+            return value
+        from apps.judgment.models import JudgmentKind
+
+        request = self.context.get("request")
+        tenant = getattr(request, "tenant", None) or getattr(getattr(request, "user", None), "tenant", None)
+        soul = value.soul
+        home_id = soul.home_tenant_id or soul.tenant_id
+        if tenant is None or value.tenant_id != tenant.pk or home_id != tenant.pk:
+            raise serializers.ValidationError("No such judgment in your tenant.")
+        if value.verdict is not None or value.is_final:
+            raise serializers.ValidationError("This judgment is already concluded.")
+        if value.kind != JudgmentKind.ORIGINAL:
+            raise serializers.ValidationError("Only an original judgment opens a sentence plan.")
+        # 含软删的行:OneToOne 的唯一约束不看 is_deleted。
+        if CrossTenantJudgment._base_manager.filter(judgment=value).exists():
+            raise serializers.ValidationError("This judgment already has a cross-tenant judgment.")
+        return value
 
 
 class CrossTenantJudgmentListSerializer(serializers.ModelSerializer):
@@ -323,6 +373,20 @@ class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):
         choices=["ADVISOR", "CO_JUDGE", "CHAIRMAN"],
         default="ADVISOR"
     )
+    # 这一方在受刑计划里排第几站(原属恒为 1,所以从 2 起)。只对挂了审判的联审有意义;
+    # 规则在 `CrossTenantJudgmentService.add_participant`。
+    node_order = serializers.IntegerField(required=False, allow_null=True, min_value=2)
+
+
+class CrossTenantJudgmentSentenceSerializer(serializers.Serializer):
+    """参与方填自己文明那一站的处置内容(docs/ARCHITECTURE-sentence-plan.md §2.1)。
+
+    `is_eternal` / `memory_reset` 不收:服务端抄自 realm,与 `create_from_judgment` 同一抄法。
+    """
+    participant = serializers.UUIDField()
+    realm_code = serializers.CharField(max_length=50)
+    sentence_years = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    notes = serializers.CharField(required=False, allow_blank=True, default="", max_length=5000)
 
 
 class CrossTenantJudgmentConcludeSerializer(serializers.Serializer):

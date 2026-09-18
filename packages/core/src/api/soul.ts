@@ -45,16 +45,11 @@ type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
 export type SoulTokenPair = Schemas["SoulTokenPair"];
 /**
- * Residence (a soul temporarily dispatched to another civilization) is being
- * added to `/me/` on backend branch `feat/dispatch-residence`, not merged yet.
- * Declared here as OPTIONAL so the app shows it when present and treats its
- * absence as "at home". When that branch lands and `schema:generate` emits the
- * fields, delete this and use the generated `MeProfile` as-is.
+ * Residence (a soul dispatched to another civilization) comes with the generated
+ * type: `home_tenant`, `home_civilization` and `is_residing` are always present,
+ * and `is_residing` is the server's word on whether the soul is away from home.
  */
-export interface MeResidenceFields {
-  home_tenant?: { code: string; display_name: string } | null;
-}
-export type MeProfile = Schemas["MeProfile"] & MeResidenceFields;
+export type MeProfile = Schemas["MeProfile"];
 export type MeLife = Schemas["MeLife"];
 export type MeRecord = Schemas["MeRecord"];
 export type MeJudgment = Schemas["MeJudgment"];
@@ -207,9 +202,9 @@ export const soulApi = {
 };
 
 /**
- * THE ONE PLACE THE REJECTION REASON IS READ. The backend is moving it to a
- * dedicated field (name not yet fixed); when it lands, this line changes and no
- * screen does.
+ * THE ONE PLACE THE REJECTION REASON IS READ: the MOST RECENT decision's reason
+ * (the appeal's, once there has been one). An appeal clears it; the first
+ * rejection is kept apart in `first_rejection_reason` / `first_decided_at`.
  */
 export function rejectionReasonOf(application: MeRebirthApplication): string {
   return application.rejection_reason ?? "";

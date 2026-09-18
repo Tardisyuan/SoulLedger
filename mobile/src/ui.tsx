@@ -675,7 +675,10 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       testID={testID}
       accessible
       accessibilityLabel={raw ? `${label} ${raw}` : label}
-      style={[styles.badge, { borderColor: border, borderStyle: spec.border }]}
+      // Only the raw member may wrap onto its own line. A known pill never wraps: laid
+      // out at exactly its own content width (a pill in a row), iOS measures the label a
+      // hair wider and a wrapping pill puts the glyph over the label.
+      style={[styles.badge, raw ? styles.badgeWraps : null, { borderColor: border, borderStyle: spec.border }]}
     >
       <Text style={[styles.badgeText, { color }]}>{spec.glyph}</Text>
       <Text style={[styles.badgeText, styles.shrink, { color }]}>{label}</Text>
@@ -706,11 +709,21 @@ export function EnumBadge({
   return <Badge testID={testID} spec={spec} label={label} raw={spec.tone === "unknown" ? d.raw : null} />;
 }
 
-/** Words someone said: a statement, an appeal, a rejection reason. The only place the serif appears. */
+/** Han characters (the same ranges `fonts.ts` picks the Han serif by): the one content language the app can name. */
+const HAN = /[㐀-鿿豈-﫿]/;
+
+/**
+ * Words someone said: a statement, an appeal, a rejection reason. The only place
+ * the serif appears. Handoff 4a rule 二: switching the interface language never
+ * translates these — each carries a hairline "原文" tag (naming the language when
+ * it can tell), and a line saying so when the interface is in another language.
+ */
 export function Quote({ text, tone = "neutral", testID }: { text: string; tone?: "neutral" | "appeal" | "rejection"; testID?: string }) {
   const t = useTheme();
+  const { t: tr, locale } = useI18n();
   const { compact } = useLayout();
   const line = tone === "rejection" ? t.negStrong : tone === "appeal" ? t.accent : t.hair2;
+  const han = HAN.test(text);
   return (
     <View style={[styles.quote, compact && styles.quoteCompact, { borderLeftColor: line }]}>
       <Text
@@ -719,6 +732,18 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
       >
         {text}
       </Text>
+      <View style={styles.original}>
+        <View style={[styles.originalTag, { borderColor: t.hair2 }]}>
+          <Txt testID="original-tag" variant="label" tone="subtle" style={styles.originalText}>
+            {han ? tr("soul_app.original.tag_language", { language: tr("soul_app.original.zh") }) : tr("soul_app.original.tag")}
+          </Txt>
+        </View>
+        {han && locale !== "zh-Hans" ? (
+          <Txt testID="original-note" variant="caption" tone="subtle" style={styles.shrink}>
+            {tr("soul_app.original.note")}
+          </Txt>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -839,7 +864,6 @@ export const styles = StyleSheet.create({
     maxWidth: "100%",
     minHeight: 28,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     columnGap: 6,
     borderWidth: 1,
@@ -847,11 +871,15 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
+  badgeWraps: { flexWrap: "wrap" },
   badgeText: { fontFamily: family.ui[500], fontSize: 11.5, lineHeight: 16, letterSpacing: 0.9 },
   badgeRaw: { fontFamily: family.mono[400], fontSize: 10.5, lineHeight: 16, opacity: 0.85 },
   quote: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2 },
   quoteText: { fontSize: 16, lineHeight: 30 },
   quoteCompact: { paddingLeft: 12 },
   quoteTextCompact: { fontSize: 15.5, lineHeight: 29 },
+  original: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 6 },
+  originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 5, paddingVertical: 1 },
+  originalText: { fontSize: 10.5, lineHeight: 14, letterSpacing: 0.4 },
   skeleton: { gap: 10, paddingVertical: space[4] },
 });

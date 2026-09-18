@@ -10,13 +10,14 @@ import {
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, type FlowStep } from "../rules";
+import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
+import { SessionContext } from "../session";
 import {
   Block,
   Button,
@@ -37,6 +38,7 @@ import {
   Txt,
   enumText,
   useReloadOnRefocus,
+  useReducedMotion,
   useRemote,
   useLayout,
   useTheme,
@@ -44,9 +46,13 @@ import {
 import { useResidence } from "./life";
 
 export type AppStackParams = {
-  Tabs: undefined;
+  /** `screen` picks the tab (a push landing on the life tab). */
+  Tabs: { screen: "Life" | "PastLives" | "Applications" } | undefined;
   NewApplication: undefined;
-  ApplicationDetail: { id: string };
+  /** `landed`: opened from a tapped notification — the result block is highlighted once. */
+  ApplicationDetail: { id: string; landed?: boolean };
+  Settings: undefined;
+  NotificationPrimer: undefined;
 };
 
 /**
@@ -130,6 +136,38 @@ function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => 
   );
 }
 
+/**
+ * Handoff 3b: a residing soul's applications are still its home civilization's
+ * to decide — said once, at the top of the tab, in the current skin.
+ */
+function useResidenceNames(): { current: string; home: string } | null {
+  const { t, enumLabel } = useI18n();
+  const { residing } = useResidence();
+  const session = useContext(SessionContext);
+  const me = session?.state.status === "signedIn" ? session.state.profile : null;
+  if (!me || !residing) return null;
+  const civName = (c: string) => enumText(enumLabel("souls.civilizations", c), t);
+  return { current: civName(me.civilization), home: civName(me.home_civilization) };
+}
+
+function ResidenceNote() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const { gutter } = useLayout();
+  const names = useResidenceNames();
+  if (!names) return null;
+  return (
+    <View testID="residence-applications" style={[styles.residenceNote, { paddingHorizontal: gutter, borderBottomColor: theme.hair, backgroundColor: theme.s1 }]}>
+      <View style={styles.nudge}>
+        <Icon name="info" size={14} color={theme.inkSubtle} strokeWidth={1.2} />
+      </View>
+      <Txt variant="caption" tone="muted" style={styles.fill}>
+        {t("soul_app.applications.residing_note", names)}
+      </Txt>
+    </View>
+  );
+}
+
 export function ApplicationsScreen() {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -150,6 +188,7 @@ export function ApplicationsScreen() {
         </Block>
       ) : (
         <FadeIn>
+          <ResidenceNote />
           <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} />
           {list.data.results.length === 0 ? (
             list.data.reason === TERMINAL_REASON ? (
@@ -345,12 +384,46 @@ function Flow({ steps }: { steps: FlowStep[] }) {
   );
 }
 
-export function ApplicationDetailScreen({ id }: { id: string }) {
+/**
+ * Handoff 3c: the block a tapped notification points at — a 3px mark rule on
+ * the left, the surface one step up, a "新结果" tag top right. After 1.2s the
+ * surface and the tag fade; the rule stays, so the landing is still findable.
+ * Under reduce-motion nothing moves: only the rule is drawn.
+ */
+function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const reduced = useReducedMotion();
+  const [opacity] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (!on || reduced) return;
+    const timer = setTimeout(() => Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(), 1200);
+    return () => clearTimeout(timer);
+  }, [on, opacity, reduced]);
+  if (!on) return <>{children}</>;
+  return (
+    <View testID="landing-highlight">
+      {reduced ? null : <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: theme.s1 }]} />}
+      {children}
+      <View testID="landing-rule" pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.mark }]} />
+      {reduced ? null : (
+        <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.accent, opacity }]}>
+          <Txt testID="landing-tag" variant="label" tone="accent" style={styles.landingTagText}>
+            {t("soul_app.detail.new_result")}
+          </Txt>
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
+export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: boolean }) {
   const theme = useTheme();
   const { t } = useI18n();
   const toast = useToast();
   const fetcher = useCallback(() => soulApi.application(id), [id]);
   const app = useRemote(fetcher);
+  const residence = useResidenceNames();
   const [appeal, setAppeal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
@@ -373,6 +446,8 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
   }
   const a = app.data;
   const reason = rejectionReasonOf(a);
+  const appealed = wasAppealed(a);
+  const unrecorded = t("soul_app.detail.not_recorded");
 
   const submitAppeal = async () => {
     setBusy(true);
@@ -392,8 +467,22 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
   return (
     <Screen refreshing={app.loading} onRefresh={app.reload}>
       <FadeIn>
+        <LandingHighlight on={!!landed}>
         <Block testID="application-detail">
-          <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+          {/* Items here do not shrink: they wrap as whole pills. ("↺" over "申诉中" on iOS
+              was the pill's own flexWrap, not shrinking — see Badge in ui.tsx.) */}
+          <View style={styles.badgeRow}>
+            <View testID="status-badge-slot" style={styles.badgeItem}>
+              <EnumBadge testID="status-badge" namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
+            </View>
+            {residence ? (
+              <View style={[styles.handler, styles.badgeItem, { borderColor: theme.hair2 }]}>
+                <Txt testID="handled-by" variant="label" tone="muted" style={styles.handlerText}>
+                  {t("soul_app.detail.handled_by", { home: residence.home })}
+                </Txt>
+              </View>
+            ) : null}
+          </View>
           <View style={styles.formTitle}>
             <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="display" />
           </View>
@@ -423,6 +512,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
             </DataRow>
           </DataRows>
         </Block>
+        </LandingHighlight>
 
         <Block>
           <Txt variant="section" style={styles.heading}>
@@ -440,11 +530,33 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
           </Block>
         ) : null}
 
+        {/* The first rejection survives an appeal (first_rejection_reason / first_decided_at);
+            applications appealed before those columns existed say "unrecorded", not nothing. */}
+        {appealed ? (
+          <Block style={{ backgroundColor: theme.s1 }} testID="first-rejection">
+            <View style={styles.headingRow}>
+              <Txt variant="section">{t("soul_app.detail.first_rejection_reason")}</Txt>
+              <Txt testID="first-rejection-at" variant="value" tone="subtle" style={styles.meta}>
+                {formatStamp(a.first_decided_at) ?? unrecorded}
+              </Txt>
+            </View>
+            {a.first_rejection_reason ? (
+              <Quote testID="first-rejection-reason" text={a.first_rejection_reason} tone="rejection" />
+            ) : (
+              <Txt testID="first-rejection-reason" variant="caption" tone="subtle">
+                {unrecorded}
+              </Txt>
+            )}
+          </Block>
+        ) : null}
+
         {reason ? (
           <Block style={{ backgroundColor: theme.s1 }} testID="rejection">
             <View style={styles.headingRow}>
-              <Txt variant="section">{t("soul_app.detail.rejection_reason")}</Txt>
-              {a.status === "REJECTED" && a.decided_at ? (
+              <Txt variant="section">
+                {t(a.status === "APPEAL_REJECTED" ? "soul_app.detail.appeal_rejection_reason" : "soul_app.detail.rejection_reason")}
+              </Txt>
+              {a.decided_at ? (
                 <Txt variant="value" tone="subtle" style={styles.meta}>
                   {formatStamp(a.decided_at)}
                 </Txt>
@@ -468,7 +580,7 @@ export function ApplicationDetailScreen({ id }: { id: string }) {
             <View>
               <Txt variant="section">{t("soul_app.detail.appeal")}</Txt>
               <Txt variant="caption" tone="subtle" style={styles.hint}>
-                {t("soul_app.detail.appeal_hint")}
+                {residence ? t("soul_app.detail.appeal_hint_residing", { home: residence.home }) : t("soul_app.detail.appeal_hint")}
               </Txt>
             </View>
             <Input
@@ -514,6 +626,15 @@ const styles = StyleSheet.create({
   formCode: { fontSize: 11, letterSpacing: 1.1 },
   statement: { marginTop: 4 },
   formTitle: { marginTop: 14 },
+  landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
+  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  landingTagText: { fontSize: 10.5, letterSpacing: 0.4 },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  badgeItem: { flexShrink: 0, maxWidth: "100%" },
+  handler: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  handlerText: { letterSpacing: 0.4 },
+  residenceNote: { flexDirection: "row", gap: 9, paddingVertical: 14, borderBottomWidth: 1 },
+  nudge: { marginTop: 3 },
   facts: { marginTop: 16 },
   step: { flexDirection: "row", columnGap: 14 },
   rail: { width: 22, alignItems: "center" },

@@ -4,7 +4,7 @@
 > 基于 `main` = `0ac91b99`。「现状」每一条都写了代码出处(文件:行);没有实跑过的推断标「未核实」。
 > 阶段 1(只加模型、行为不变)可以在第 11 节拍板之前实施;阶段 2 起要等它。
 
-## 决策记录(2026-09-18 用户拍板)
+## 决策记录(2026-09-18 用户拍板;Q13–Q17 于 2026-09-19 用户确认)
 
 | # | 决定 |
 |---|---|
@@ -20,6 +20,11 @@
 | Q10 | 灵魂端可见**全部节点与各自处置**(不含理由、判官、请求)。 |
 | Q11 | 计划撤销要做,放在加减项那一阶段(阶段 3)。 |
 | Q12 | **联审模型的补齐放进阶段 1**:`CrossTenantJudgment` 挂灵魂 / 审判,参与方带节点内容(文明、顺序、界域 / 刑期等),以及「永久刑期只能排最后」的校验。用户已看过按本设计画的三张流程图(主流程、三种改判、重审与暂留)并确认。 |
+| Q13 | **(2026-09-19 用户确认)回填遇「原属处置未执行、灵魂已被调去外地受刑」:原属节点记 PENDING**,灵魂回来后再执行,与「回原属地检查剩余节点」一致。「外地受刑」= 后面某节点为 ACTIVE / WAITING / DISPATCHING / ETERNAL。PENDING 不在「在路上或受刑中」之列,写出的计划满足该约束。其余仍违反约束的形状(正常流程产生不了)不写、只报。见 §7.2。 |
+| Q14 | **(2026-09-19 用户确认)§2.3 两条部分唯一约束按意图放宽**:「一个灵魂至多一份进行中计划」含 RETRIAL;「一份计划至多一个在路上或受刑中的节点」含 WAITING。两个状态都是 Q7 之后才加的,约束原文写于它们之前。 |
+| Q15 | **(2026-09-19 用户确认)结论为 FAIL 的联审照跑 §2.3 的结束校验,但不抄节点**:阶段 2 原属结案抄参与方节点时只抄 PASS 的联审。 |
+| Q16 | **(2026-09-19 用户确认)§11 N3 定为 (a)**:CO_JUDGE / CHAIRMAN 必须带节点并填处置,ADVISOR 不带也不能填。 |
+| Q17 | **(2026-09-19 用户确认)原审判 `conclude/` 遇未结束的联审答 409 `cross_judgment_open` 放在阶段 2**,与「原属结案抄参与方节点」一起做;阶段 1 不改原审判结案行为。 |
 
 ## 0. 用户的原话(权威需求)
 
@@ -250,9 +255,9 @@ erDiagram
 
 | 约束 | 形状 | 守什么 |
 |---|---|---|
-| 一个灵魂同一时刻至多一份**进行中**计划 | `UniqueConstraint(fields=["soul"], condition=Q(status__in=["ACTIVE","HELD"]))` | 两次结案并发不会生成两份计划 |
+| 一个灵魂同一时刻至多一份**进行中**计划 | `UniqueConstraint(fields=["soul"], condition=Q(status__in=["ACTIVE","RETRIAL","HELD"]))`(含 RETRIAL,Q14) | 两次结案并发不会生成两份计划 |
 | 一份计划里节点序号唯一(活着的) | `UniqueConstraint(fields=["plan","order"], condition=Q(status__notin=["REMOVED","CANCELLED"]))` | 并发加项撞同一序号 → IntegrityError → 4xx |
-| 一份计划同一时刻至多一个「在路上或受刑中」的节点 | `UniqueConstraint(fields=["plan"], condition=Q(status__in=["DISPATCHING","ACTIVE"]))` | 推进的幂等(§8) |
+| 一份计划同一时刻至多一个「在路上或受刑中」的节点 | `UniqueConstraint(fields=["plan"], condition=Q(status__in=["DISPATCHING","ACTIVE","WAITING"]))`(含 WAITING,Q14) | 推进的幂等(§8) |
 | 原属地节点有且只有一个,`order=1` | `UniqueConstraint(fields=["plan"], condition=Q(is_home=True))` + `CheckConstraint(~Q(is_home=True) \| Q(order=1))` + `CheckConstraint(order__gte=1)` | 「优先执行原属地」是约束不是约定 |
 | 一份计划同一时刻至多一条 PENDING 请求 | `UniqueConstraint(fields=["plan"], condition=Q(status="PENDING"))` | 原审判官一次只处理一条 |
 | 一份联审里 `node_order` 唯一 | `UniqueConstraint(fields=["judgment","node_order"], condition=Q(node_order__isnull=False))` | 两个参与方不能排同一位 |
@@ -513,6 +518,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 2. 原属节点:`order=1, is_home=True, tenant_code=home.code`,`disposition_id=` 该审判的处置,`realm_code / sentence_years / is_eternal / memory_reset` 抄处置;状态:`is_executed and is_eternal → ETERNAL`;`is_executed → COMPLETED`;否则 ACTIVE。
 3. 每条 EXECUTED / RETURNED 的 `DispatchRecord`(按 `executed_at`)追加一个执行地节点:`dispatch_record_id`;在该租户找 `Disposition(soul, tenant, created_at >= executed_at)` 首条作 `disposition_id` 并抄内容;状态:RETURNED → COMPLETED(事件 `trigger=MANUAL` 则 ABORTED);EXECUTED 且处置已执行 → `is_eternal ? ETERNAL : COMPLETED`;EXECUTED 未执行 → ACTIVE。
 4. 计划状态:有 ETERNAL 节点且灵魂在外 → HELD;灵魂 `current_state in (REINCARNATING, SETTLED, ALIVE)` → COMPLETED(`completed_at` 取状态变化事件时间);否则 ACTIVE。
+4a. 原属节点仍 ACTIVE(原属处置未执行)而灵魂此刻在外地某节点(ACTIVE / WAITING / DISPATCHING / ETERNAL)→ 原属节点记 **PENDING**(Q13);此后仍有两个占位节点的形状不写,打印灵魂 id。
 5. **不跑 `advance`**:回填只描述已发生的事。命令打印每类计数,第二次运行计数必须全 0(写进命令的测试)。
 
 迁移 0036 的选择(`souls/migrations/0036_soul_home_tenant.py` 文档字符串)沿用,不重算原属。
@@ -552,7 +558,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 | 阶段 | 内容 | 验收 |
 |---|---|---|
 | **1 模型(行为不变)** | 三张表 + 约束 + 迁移;`Judgment.kind / amends_plan_id`;`Disposition.sentence_node_id` + `can_delete`;**联审补齐(Q12)**:`CrossTenantJudgment.judgment` + 参与方八列 + 约束 + `participate` 收 `node_order` + `sentence/` 动作(参与方填自己节点)+ 挂了审判的联审 `conclude` 校验(都填了、序号连续、永久在最后);`EventType.SENTENCE_*`;**结案时建计划 + 原属节点(ACTIVE),不接推进**;回填命令;只读 API(`sentence-plans/`)与两张分类表;schema 重生成 + core 类型 | `makemigrations --check`;每条约束一次变异证明;回填命令跑两次第二次计数全 0;`test_every_soul_linked_viewset_is_classified` 绿;schema 0 warning / 0 error;`test_committed_schema_matches_the_backend` 绿 |
-| **2 推进** | 原属 `conclude/` 抄参与方节点;`advance` 与 §3.3 全部调用点(含 WAITING);删 `resume_return_after_case_closed`;`eligibility`(Q6);Q3 拒绝;Q4 退回;§5 事件 / 通知 / 推送;`feat/notify-judges` 三个反例并入 | 重写 `test_dispatch_residence.py`;PG 测试 1、2、5;两份文案镜像测试 |
+| **2 推进** | 原属 `conclude/` 抄参与方节点(只抄 PASS 的联审,Q15),挂着未结束联审答 409 `cross_judgment_open`(Q17);`advance` 与 §3.3 全部调用点(含 WAITING);删 `resume_return_after_case_closed`;`eligibility`(Q6);Q3 拒绝;Q4 退回;§5 事件 / 通知 / 推送;`feat/notify-judges` 三个反例并入 | 重写 `test_dispatch_residence.py`;PG 测试 1、2、5;两份文案镜像测试 |
 | **3 加减项与撤销** | AMENDMENT 审判结案 → 请求;`SentencePlanRequest` 端点 / 决定 / 撤回;REOPEN(按 §11 N1 的结论);`sentence_plan.cancel`(Q11);`perform_create` 锁灵魂行(G7);未结案唯一落成约束(G11,可选);重开审判的窄写例外并入租户隔离契约 | PG 测试 3、4、6、7;每种拒绝各一条 4xx 测试且**断言未写入** |
 | **4 客户端** | Web:联审详情页的节点内容表单与排序;灵魂详情的计划面板;请求收件箱;App:Life 屏「我的受刑」(Q10);新推送 kind 落地页 | `tsc`、`lint --max-warnings 0`、`test:coverage` 阈值;E2E 三个 project;App 两种模拟器实测截图 |
 | **5 收尾** | 删旧注释(`dispatch/services.py:452-456`);架构文档决策记录补一条;`SOUL_STATES_THAT_MAY_APPLY` 收紧 | 全量门禁 |
@@ -571,7 +577,7 @@ Q1–Q11 全部已决,原选项与代价见 git 历史里的上一版(`42dffd4d`
 |---|---|---|---|
 | **N1** | 重开审判(REOPEN)结案产出什么 | (a) 新裁决 + 一个新的原属节点(灵魂回来后执行);(b) 只允许 `plan_changes`,不写裁决 | **(a)**,「再开一次审判」按字面是一次审判,有裁决。代价:「原属节点唯一且 `order=1`」放宽为「首个节点是原属」(§4.3 表第三行);(b) 与情况 1 的 AMENDMENT 除租户外无差别,那 REOPEN 就不必是独立 kind |
 | **N2** | 2.x 请求里 X 给**别的文明**加节点时,谁填那个节点的处置内容 | (a) 不允许:请求方只能加自己文明的节点;要加别处,由原属判官另开联审;(b) 允许,`realm_code` 留空,由该文明在 DISPATCHING 前补填,未补则 `advance` 停在该节点并通知 | **(a)**,与 Q1「各文明定自己节点」一致,且少一个「等待补填」状态。(b) 多一个中间态与一条通知 |
-| **N3** | 联审参与方 role 与节点的关系 | (a) `role != ADVISOR`(CO_JUDGE / CHAIRMAN)必须填节点,ADVISOR 不填也不能填;(b) 所有参与方都填 | **(a)**。ADVISOR 顾问身份今天就存在(`dispatch/models.py:31-34`),让它不带节点是唯一不改现有语义的读法 |
+| **N3**(已定,Q16:(a)) | 联审参与方 role 与节点的关系 | (a) `role != ADVISOR`(CO_JUDGE / CHAIRMAN)必须填节点,ADVISOR 不填也不能填;(b) 所有参与方都填 | **(a)**。ADVISOR 顾问身份今天就存在(`dispatch/models.py:31-34`),让它不带节点是唯一不改现有语义的读法 |
 
 N1–N3 都只影响阶段 2 / 3 的服务逻辑,阶段 1 的模型对三者都兼容(`kind=REOPEN` 已在枚举里;`changes.add[].realm_code` 可空;参与方八列全部可空)。
 
