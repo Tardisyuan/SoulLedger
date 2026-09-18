@@ -6673,9 +6673,7 @@ export interface components {
         ModeratedComment: {
             /** Format: uuid */
             id: string;
-            readonly author: {
-                [key: string]: unknown;
-            } | null;
+            author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
             readonly open_report_count: number;
@@ -6688,9 +6686,7 @@ export interface components {
         ModeratedPost: {
             /** Format: uuid */
             id: string;
-            readonly author: {
-                [key: string]: unknown;
-            } | null;
+            author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
             readonly open_report_count: number;
@@ -6702,6 +6698,10 @@ export interface components {
         ModerationAction: {
             /** @default  */
             reason: string;
+        };
+        ModerationAuthor: {
+            user_id: number;
+            display_name: string;
         };
         ModerationError: {
             detail: string;
@@ -8538,14 +8538,12 @@ export interface components {
             readonly post: string | null;
             /** Format: uuid */
             readonly comment: string | null;
-            readonly target_user: {
-                [key: string]: unknown;
-            } | null;
+            readonly target_user: components["schemas"]["ModerationAuthor"];
             readonly status: components["schemas"]["SocialReportStatusEnum"];
             readonly report_count: number;
             readonly content_excerpt: string;
             readonly content_status: string;
-            readonly entries: unknown[];
+            readonly entries: components["schemas"]["ReportEntry"][];
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -8554,6 +8552,13 @@ export interface components {
             readonly resolution_note: string;
             /** Format: date-time */
             readonly resolved_at: string | null;
+        };
+        ReportEntry: {
+            reporter: components["schemas"]["ModerationAuthor"] | null;
+            reason: components["schemas"]["SocialReportReasonEnum"];
+            detail: string;
+            /** Format: date-time */
+            created_at: string;
         };
         /** @description Serializer for requesting password reset. */
         ResetPassword: {
@@ -8699,9 +8704,7 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             word: string;
-            readonly created_by: {
-                [key: string]: unknown;
-            } | null;
+            readonly created_by: components["schemas"]["ModerationAuthor"] | null;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -8751,9 +8754,7 @@ export interface components {
         SocialMute: {
             /** Format: uuid */
             readonly id: string;
-            readonly user: {
-                [key: string]: unknown;
-            } | null;
+            readonly user: components["schemas"]["ModerationAuthor"];
             /** Format: date-time */
             readonly until: string;
             readonly reason: string;

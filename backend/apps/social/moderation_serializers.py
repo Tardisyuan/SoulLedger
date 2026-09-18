@@ -21,14 +21,8 @@ from apps.social.models import (
 EXCERPT = 200
 
 
-def _author(user):
-    if user is None:
-        return None
-    return {"user_id": user.pk, "display_name": user.display_name}
-
-
 class ModerationAuthorSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
+    user_id = serializers.IntegerField(source="pk")
     display_name = serializers.CharField()
 
 
@@ -40,10 +34,10 @@ class ReportEntrySerializer(serializers.Serializer):
 
 
 class ReportSerializer(serializers.ModelSerializer):
-    target_user = serializers.SerializerMethodField()
+    target_user = ModerationAuthorSerializer(read_only=True)
     content_excerpt = serializers.SerializerMethodField()
     content_status = serializers.SerializerMethodField()
-    entries = serializers.SerializerMethodField()
+    entries = ReportEntrySerializer(many=True, read_only=True)
 
     class Meta:
         model = Report
@@ -53,9 +47,6 @@ class ReportSerializer(serializers.ModelSerializer):
             "created_at", "last_reported_at", "resolution", "resolution_note", "resolved_at",
         ]
         read_only_fields = fields
-
-    def get_target_user(self, report) -> dict | None:
-        return _author(report.target_user)
 
     def _content(self, report):
         return report.post if report.target_type == "POST" else report.comment
@@ -70,15 +61,6 @@ class ReportSerializer(serializers.ModelSerializer):
             return ""
         return "DELETED" if content.is_deleted else content.moderation_status
 
-    def get_entries(self, report) -> list:
-        return ReportEntrySerializer(
-            [
-                {"reporter": _author(e.reporter), "reason": e.reason, "detail": e.detail, "created_at": e.created_at}
-                for e in report.entries.all()
-            ],
-            many=True,
-        ).data
-
 
 class ResolveReportSerializer(serializers.Serializer):
     resolution = serializers.ChoiceField(choices=ReportResolution.choices)
@@ -90,14 +72,11 @@ class ModeratedContentSerializer(serializers.Serializer):
     """帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。"""
 
     id = serializers.UUIDField()
-    author = serializers.SerializerMethodField()
+    author = ModerationAuthorSerializer()
     content = serializers.CharField()
     moderation_status = serializers.ChoiceField(choices=ModerationStatus.choices)
     open_report_count = serializers.SerializerMethodField()
     create_time = serializers.DateTimeField()
-
-    def get_author(self, row) -> dict | None:
-        return _author(row.author)
 
     def get_open_report_count(self, row) -> int:
         return getattr(row, "open_report_count", 0) or 0
@@ -117,28 +96,22 @@ class ModerationActionSerializer(serializers.Serializer):
 
 
 class SensitiveWordSerializer(serializers.ModelSerializer):
-    created_by = serializers.SerializerMethodField()
+    created_by = ModerationAuthorSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = SensitiveWord
         fields = ["id", "word", "created_by", "created_at"]
         read_only_fields = ["id", "created_by", "created_at"]
 
-    def get_created_by(self, row) -> dict | None:
-        return _author(row.created_by)
-
 
 class SocialMuteSerializer(serializers.ModelSerializer):
-    user = serializers.SerializerMethodField()
+    user = ModerationAuthorSerializer(read_only=True)
     is_active = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialMute
         fields = ["id", "user", "until", "reason", "created_at", "lifted_at", "is_active"]
         read_only_fields = fields
-
-    def get_user(self, row) -> dict | None:
-        return _author(row.user)
 
     def get_is_active(self, row) -> bool:
         from django.utils import timezone

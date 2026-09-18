@@ -14777,10 +14777,7 @@ components:
           type: string
           format: uuid
         author:
-          type: object
-          additionalProperties: {}
-          nullable: true
-          readOnly: true
+          $ref: '#/components/schemas/ModerationAuthor'
         content:
           type: string
         moderation_status:
@@ -14810,10 +14807,7 @@ components:
           type: string
           format: uuid
         author:
-          type: object
-          additionalProperties: {}
-          nullable: true
-          readOnly: true
+          $ref: '#/components/schemas/ModerationAuthor'
         content:
           type: string
         moderation_status:
@@ -14844,6 +14838,16 @@ components:
           type: string
           default: ''
           maxLength: 500
+    ModerationAuthor:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+      required:
+      - display_name
+      - user_id
     ModerationError:
       type: object
       properties:
@@ -18219,9 +18223,8 @@ components:
           readOnly: true
           nullable: true
         target_user:
-          type: object
-          additionalProperties: {}
-          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
           readOnly: true
         status:
           allOf:
@@ -18238,7 +18241,8 @@ components:
           readOnly: true
         entries:
           type: array
-          items: {}
+          items:
+            $ref: '#/components/schemas/ReportEntry'
           readOnly: true
         created_at:
           type: string
@@ -18276,6 +18280,25 @@ components:
       - status
       - target_type
       - target_user
+    ReportEntry:
+      type: object
+      properties:
+        reporter:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          nullable: true
+        reason:
+          $ref: '#/components/schemas/SocialReportReasonEnum'
+        detail:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - detail
+      - reason
+      - reporter
     ResetPassword:
       type: object
       description: Serializer for requesting password reset.
@@ -18625,10 +18648,10 @@ components:
           type: string
           maxLength: 50
         created_by:
-          type: object
-          additionalProperties: {}
-          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
           readOnly: true
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -18722,9 +18745,8 @@ components:
           format: uuid
           readOnly: true
         user:
-          type: object
-          additionalProperties: {}
-          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
           readOnly: true
         until:
           type: string

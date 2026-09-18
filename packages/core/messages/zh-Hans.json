@@ -2102,5 +2102,100 @@
       "title": "暂居结束",
       "body": "你已回归原属文明,打开灵魂簿查看。"
     }
+  },
+  "social_moderation": {
+    "title": "朋友圈审核",
+    "subtitle": "本文明灵魂朋友圈的举报、待审内容、敏感词与禁言",
+    "refresh": "刷新",
+    "tabs": {
+      "label": "审核分区",
+      "reports": "举报队列",
+      "content": "待审内容",
+      "words": "敏感词",
+      "mutes": "禁言"
+    },
+    "target_type": {
+      "POST": "帖子",
+      "COMMENT": "评论",
+      "USER": "用户"
+    },
+    "report_status": {
+      "OPEN": "待处理",
+      "RESOLVED": "已处置",
+      "DISMISSED": "已驳回"
+    },
+    "reason": {
+      "SPAM": "垃圾信息",
+      "ABUSE": "辱骂骚扰",
+      "SEXUAL": "色情内容",
+      "ILLEGAL": "违法有害",
+      "OTHER": "其他"
+    },
+    "moderation_status": {
+      "PUBLISHED": "已发布",
+      "PENDING": "待审",
+      "HIDDEN": "已隐藏",
+      "DELETED": "已删除"
+    },
+    "fields": {
+      "author": "作者",
+      "content": "内容",
+      "reports": "举报",
+      "reasons": "举报原因",
+      "created": "时间",
+      "until": "禁言至",
+      "reason": "理由",
+      "word": "敏感词"
+    },
+    "report_count": "{{n}} 人举报",
+    "kind": {
+      "posts": "帖子",
+      "comments": "评论"
+    },
+    "status_filter": {
+      "PENDING": "待审",
+      "HIDDEN": "已隐藏"
+    },
+    "actions": {
+      "hide": "隐藏",
+      "delete": "删除",
+      "mute": "禁言",
+      "dismiss": "驳回",
+      "approve": "通过",
+      "restore": "恢复",
+      "lift": "解除禁言",
+      "add_word": "添加",
+      "remove_word": "删除"
+    },
+    "mute_days": "禁言天数",
+    "mute_days_option": "{{n}} 天",
+    "word_placeholder": "输入要拦截的词",
+    "word_hint": "按小写子串匹配;命中的新帖子与评论先进待审队列,审核前不可见",
+    "confirm_delete_title": "删除这条内容?",
+    "confirm_delete_body": "删除后灵魂端不再显示,审计里留有记录。",
+    "confirm_remove_word_title": "删除敏感词「{{word}}」?",
+    "confirm_remove_word_body": "之后的新内容不再因为这个词进入待审。",
+    "mute_active": "生效中",
+    "mute_lifted": "已解除",
+    "mute_expired": "已到期",
+    "done": "已处理",
+    "failed": "操作失败",
+    "errors": {
+      "already_resolved": "这条举报已被处理(可能是其他官员)",
+      "invalid_transition": "内容状态已变化,请刷新后再操作",
+      "already_deleted": "内容已被删除",
+      "duplicate_word": "该敏感词已存在",
+      "invalid_word": "敏感词不能为空",
+      "invalid_resolution": "针对用户的举报不能隐藏或删除,请用禁言",
+      "already_lifted": "禁言已解除",
+      "not_found": "对象不存在或不在本文明"
+    },
+    "empty": {
+      "reports": "没有待处理的举报",
+      "content": "没有待审的内容",
+      "content_reason": "只有命中敏感词的内容会进待审;被举报的内容在举报队列里",
+      "words": "还没有敏感词",
+      "mutes": "没有禁言记录"
+    }
   }
 }
