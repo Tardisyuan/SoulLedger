@@ -41,7 +41,9 @@ jest.mock("expo-notifications", () => {
     setNotificationHandler: () => {},
     addPushTokenListener: (fn) => sub(state.tokenListeners, fn),
     addNotificationResponseReceivedListener: (fn) => sub(state.responseListeners, fn),
+    // Like the OS: the last response stays until cleared.
     getLastNotificationResponseAsync: async () => state.lastResponse,
+    clearLastNotificationResponse: () => void (state.lastResponse = null),
   };
 });
 
