@@ -345,6 +345,9 @@ describe("tapping a notification", () => {
     expect(await screen.findByTestId("landing-highlight")).toBeTruthy();
     expect(route()).toMatchObject({ name: "ApplicationDetail", params: { id: APP_ID, landed: true } });
     expect(screen.getByTestId("landing-tag").props.children).toBe("新结果");
+    // The 3px rule is not part of the fade: it is a plain View, never animated away.
+    expect(StyleSheet.flatten(screen.getByTestId("landing-rule").props.style)).toMatchObject({ width: 3 });
+    expect(StyleSheet.flatten(screen.getByTestId("landing-rule").props.style).opacity).toBeUndefined();
   });
 
   it("residence_approved (the dispatch-approval kind) lands on the life tab", async () => {
