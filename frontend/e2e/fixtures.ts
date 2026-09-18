@@ -373,6 +373,8 @@ export const MENUS = [
   // backend/apps/menus/migrations/0016_add_soul_account_menus.py (flat here: this tree has no directories).
   { id: 6, name: "待交付初始密码", path: "/soul-credentials", icon: "KeyRound", order: 6, component: "soul-credentials", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
   { id: 7, name: "转生申请", path: "/rebirth-applications", icon: "RefreshCw", order: 7, component: "rebirth-applications", roles: ["ADMIN", "JUDGE"], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  // backend/apps/menus/migrations/0017_add_moderation_menu.py
+  { id: 8, name: "朋友圈审核", path: "/moderation", icon: "ShieldAlert", order: 8, component: "moderation", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
 ];
 
 export const RECYCLE_BIN_ENTRY = {
@@ -639,6 +641,65 @@ export const REVEALED_PASSWORD = {
   password: "e2e-one-time-Pw9",
   expires_at: "2999-01-01T00:00:00Z",
 };
+
+// ── Soul circle moderation (backend/apps/social/moderation_serializers.py) ──
+
+const MODERATION_AUTHOR = { user_id: 41, display_name: "被举报的灵魂" };
+
+/** GET `/social-moderation/reports/` — ReportSerializer; three souls reported one post. */
+export const MODERATION_REPORTS = [
+  {
+    id: "abababab-abab-4bab-8bab-ababababab01",
+    target_type: "POST",
+    post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd01",
+    comment: null as string | null,
+    target_user: MODERATION_AUTHOR,
+    status: "OPEN",
+    report_count: 3,
+    content_excerpt: "这是一条被举报的帖子",
+    content_status: "PUBLISHED",
+    entries: [
+      { reporter: { user_id: 42, display_name: "举报者甲" }, reason: "ABUSE", detail: "辱骂", created_at: "2026-09-18T01:00:00Z" },
+    ],
+    created_at: "2026-09-18T01:00:00Z",
+    last_reported_at: "2026-09-18T02:00:00Z",
+    resolution: "",
+    resolution_note: "",
+    resolved_at: null as string | null,
+  },
+];
+
+/** GET `/social-moderation/posts/?moderation_status=PENDING` — ModeratedPostSerializer. */
+export const MODERATED_POSTS = [
+  {
+    id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd02",
+    author: MODERATION_AUTHOR,
+    content: "命中敏感词的帖子",
+    moderation_status: "PENDING",
+    open_report_count: 0,
+    create_time: "2026-09-18T03:00:00Z",
+    visibility: "PUBLIC",
+    comment_count: 0,
+  },
+];
+
+/** GET `/social-moderation/sensitive-words/`. */
+export const SENSITIVE_WORDS = [
+  { id: "efefefef-efef-4fef-8fef-efefefefef01", word: "违禁词", created_by: { user_id: 1, display_name: "测试管理员" }, created_at: "2026-09-18T00:00:00Z" },
+];
+
+/** GET `/social-moderation/mutes/`. */
+export const SOCIAL_MUTES = [
+  {
+    id: "fafafafa-fafa-4afa-8afa-fafafafafa01",
+    user: MODERATION_AUTHOR,
+    until: "2999-01-01T00:00:00Z",
+    reason: "辱骂",
+    created_at: "2026-09-18T00:00:00Z",
+    lifted_at: null as string | null,
+    is_active: true,
+  },
+];
 
 /** POST `.../mark-delivered/` — the REVEALED row, now DELIVERED. */
 export const DELIVERED_CREDENTIAL = {
@@ -1162,6 +1223,22 @@ export class ApiMock {
       body: { ...REBIRTH_APPLICATIONS[0], cross_civilization: call.body.cross_civilization },
     }));
     this.on("GET", "/workflows/:id/", REBIRTH_WORKFLOW);
+
+    // ── Soul circle moderation (backend/apps/social/moderation_views.py) ──
+    this.on("GET", "/social-moderation/reports/", paginated(MODERATION_REPORTS));
+    this.on("POST", "/social-moderation/reports/:id/resolve/", (call) => ({
+      body: { ...MODERATION_REPORTS[0], status: call.body.resolution === "DISMISS" ? "DISMISSED" : "RESOLVED", resolution: call.body.resolution },
+    }));
+    this.on("GET", "/social-moderation/posts/", paginated(MODERATED_POSTS));
+    this.on("GET", "/social-moderation/comments/", paginated([]));
+    this.on("POST", "/social-moderation/posts/:id/approve/", { ...MODERATED_POSTS[0], moderation_status: "PUBLISHED" });
+    this.on("GET", "/social-moderation/sensitive-words/", paginated(SENSITIVE_WORDS));
+    this.on("POST", "/social-moderation/sensitive-words/", (call) => ({
+      status: 201,
+      body: { ...SENSITIVE_WORDS[0], id: "efefefef-efef-4fef-8fef-efefefefef02", word: String(call.body.word).trim().toLowerCase() },
+    }));
+    this.on("GET", "/social-moderation/mutes/", paginated(SOCIAL_MUTES));
+    this.on("POST", "/social-moderation/mutes/:id/lift/", { ...SOCIAL_MUTES[0], lifted_at: "2026-09-18T04:00:00Z", is_active: false });
 
     return this;
   }
