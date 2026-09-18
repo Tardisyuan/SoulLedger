@@ -1667,7 +1667,8 @@
       "ledger": "Sesh Maat",
       "scheduler": "Seth Ahet",
       "soul_credentials": "Sekhem Tepy Em Djeret",
-      "rebirth_applications": "Nehet Ankh Wehem"
+      "rebirth_applications": "Nehet Ankh Wehem",
+      "soul_inbox": "Sesh Wesekhet"
     }
   },
   "tenant": {
@@ -2265,6 +2266,31 @@
       "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
       "words": "No words yet",
       "mutes": "No mutes"
+    }
+  },
+  "soul_inbox": {
+    "title": "Sesh Wesekhet",
+    "subtitle": "Sesh Ba Er Wesekhet Pen. Medu Em Per Medu; Nen Em Medjat, Nen Em Medew Sethet.",
+    "refresh": "Wehem Maa",
+    "list_label": "Sesh",
+    "empty": "Nen Sesh",
+    "empty_reason": "Ba Sesh Er Wesekhet Em Medjat Ba; Sesh Gem Dy.",
+    "select_hint": "Setep Sesh Wa",
+    "thread_label": "Medu Hena {{name}}",
+    "thread_empty": "Nen Medu",
+    "closed": "Khetem Seth (Wehem Ankh Seth)",
+    "no_messages": "Nen Medu",
+    "from_hall": "Wesekhet · {{name}}",
+    "reply_label": "Wesheb Em Wesekhet",
+    "reply_hint": "Ba Maa Wesheb Wesekhet; Ren Ek Em Sesh.",
+    "send": "Hab",
+    "sent": "Wesheb Seth",
+    "failed": "Nen Kheper. Wehem Iri",
+    "errors": {
+      "closed": "Ba Wehem Ankh Seth; Medu Khetem Seth",
+      "not_inbox": "Nen Sesh Wesekhet",
+      "chat_not_configured": "Per Medu Nen Wenen",
+      "chat_unavailable": "Per Medu Nen Wenen Emu"
     }
   }
 }

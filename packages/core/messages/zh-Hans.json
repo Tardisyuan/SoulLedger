@@ -1667,7 +1667,8 @@
       "ledger": "功过格",
       "scheduler": "定时任务",
       "soul_credentials": "待交付初始密码",
-      "rebirth_applications": "转生申请"
+      "rebirth_applications": "转生申请",
+      "soul_inbox": "殿司收件箱"
     }
   },
   "tenant": {
@@ -2265,6 +2266,31 @@
       "content_reason": "只有命中敏感词的内容会进待审;被举报的内容在举报队列里",
       "words": "还没有敏感词",
       "mutes": "没有禁言记录"
+    }
+  },
+  "soul_inbox": {
+    "title": "殿司收件箱",
+    "subtitle": "灵魂写给本殿司的信。正文存在聊天服务器上,不进本库,也不进审计。",
+    "refresh": "刷新",
+    "list_label": "来信",
+    "empty": "还没有来信",
+    "empty_reason": "灵魂在 App 里给当前所在的殿司写信后,会出现在这里。",
+    "select_hint": "在左侧选一封来信",
+    "thread_label": "与 {{name}} 的来往",
+    "thread_empty": "这封信还没有内容",
+    "closed": "已关闭(已转世)",
+    "no_messages": "暂无消息",
+    "from_hall": "殿司 · {{name}}",
+    "reply_label": "以殿司名义回复",
+    "reply_hint": "灵魂看到的是殿司的回复,署你的名字。",
+    "send": "发送",
+    "sent": "已回复",
+    "failed": "操作失败,请重试",
+    "errors": {
+      "closed": "对方已转世,会话已关闭",
+      "not_inbox": "这不是殿司收件箱",
+      "chat_not_configured": "聊天服务未启用",
+      "chat_unavailable": "聊天服务暂时不可用"
     }
   }
 }

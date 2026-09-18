@@ -373,6 +373,13 @@ DEFAULT_PERMISSIONS = [
     # 按最小可见。perm 迁移 0022 播种这两行。
     ("soul_account.read", "查看灵魂账号", "soul_account"),
     ("soul_account.manage", "管理灵魂账号", "soul_account"),
+    # soul_inbox 权限(殿司收件箱,2026-09-17)。灵魂写给**当前所在**殿司的信,
+    # 官员在 Web 后台看与回。read 看会话列表与正文;reply 以殿司名义回复。
+    # 默认 ADMIN 与 MODERATOR(殿主)持有 —— 收件箱是殿司的事务,与 soul_account.*
+    # 同一批人;JUDGE / GUARDIAN / VIEWER 不持有:那是灵魂的私人信件,不按最小可见
+    # 收就等于让每个能登录后台的人读它。perm 迁移 0024 播种这两行。
+    ("soul_inbox.read", "查看殿司收件箱", "soul_inbox"),
+    ("soul_inbox.reply", "回复殿司收件箱", "soul_inbox"),
     # 灵魂朋友圈的审核后台(2026-09-17)。**一个码名,不是 read/manage 两个**:
     # 这个后台只有一件事可做 —— 看举报队列、处置内容、维护敏感词、管禁言,
     # 而「只读的审核员」不是这个设计里存在的角色(能看到被举报的内容却不能处置它,
@@ -405,6 +412,7 @@ ROLE_PERMISSIONS = {
         "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",
         "scheduler.read", "scheduler.manage",
         "soul_account.read", "soul_account.manage",
+        "soul_inbox.read", "soul_inbox.reply",
         "social.moderate",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
@@ -476,6 +484,7 @@ ROLE_PERMISSIONS = {
         "org.read", "org.manage",
         "audit.read", "notification.read", "menu.read",
         "soul_account.read", "soul_account.manage",
+        "soul_inbox.read", "soul_inbox.reply",
         "social.moderate",
     ],
     "VIEWER": [

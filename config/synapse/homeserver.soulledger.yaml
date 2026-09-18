@@ -1,0 +1,39 @@
+# SoulLedger 对 Synapse 生成的 homeserver.yaml 的**追加**部分(docs/DEPLOYMENT.md「灵魂聊天」)。
+# `generate` 产出 server_name / 数据库 / 签名密钥;下面是聊天规则依赖的部分,缺一条规则就有漏洞。
+# ${...} 由部署时替换成与后端 .env 相同的值(MATRIX_JWT_SECRET 等)。
+
+# 账号只经后端产生:灵魂用后端签的 JWT 登录(apps/chat/matrix.py::login_jwt),
+# 服务账号用 registration_shared_secret 注册一次。
+enable_registration: false
+password_config:
+  enabled: false
+jwt_config:
+  enabled: true
+  secret: "${MATRIX_JWT_SECRET}"
+  algorithm: HS256
+  subject_claim: sub
+  issuer: soulledger
+  audiences: [synapse]
+registration_shared_secret: "${MATRIX_REGISTRATION_SHARED_SECRET}"
+
+# 显示名由后端写(灵魂在朋友圈的显示名),灵魂自己改不了。
+enable_set_displayname: false
+enable_set_avatar_url: false
+
+# 本轮单 homeserver,不联邦(联邦留到按租户分库那一轮)。
+federation_domain_whitelist: []
+allow_public_rooms_over_federation: false
+allow_public_rooms_without_auth: false
+# 灵魂之间的目录搜索:只搜得到共同房间里的人,不是全服用户表。找人走朋友圈搜索(本文明)。
+user_directory:
+  enabled: true
+  search_all_users: false
+
+# 除服务账号外不能建房 / 邀请 / 建别名 / 发布房间;节流房间里发起方只能发后端签过凭据的
+# 那一条(config/synapse/soulledger_policy.py)。grant_secret 与后端 MATRIX_JWT_SECRET 同值。
+# 模块文件挂进容器并放进 PYTHONPATH(docker-compose 的 synapse 服务)。
+modules:
+  - module: soulledger_policy.SoulLedgerPolicy
+    config:
+      service_user: "@soulledger:${MATRIX_SERVER_NAME}"
+      grant_secret: "${MATRIX_JWT_SECRET}"

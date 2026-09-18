@@ -1667,7 +1667,8 @@
       "ledger": "Merit Ledger",
       "scheduler": "Scheduled Tasks",
       "soul_credentials": "Initial Passwords Awaiting Delivery",
-      "rebirth_applications": "Rebirth Applications"
+      "rebirth_applications": "Rebirth Applications",
+      "soul_inbox": "Hall Inbox"
     }
   },
   "tenant": {
@@ -2265,6 +2266,31 @@
       "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
       "words": "No words yet",
       "mutes": "No mutes"
+    }
+  },
+  "soul_inbox": {
+    "title": "Hall inbox",
+    "subtitle": "Letters souls write to this hall. Bodies live on the chat server, not in this database or the audit log.",
+    "refresh": "Refresh",
+    "list_label": "Letters",
+    "empty": "No letters yet",
+    "empty_reason": "Letters a soul writes from the app to the hall it is in now appear here.",
+    "select_hint": "Pick a letter on the left",
+    "thread_label": "Correspondence with {{name}}",
+    "thread_empty": "This letter has no messages yet",
+    "closed": "Closed (reborn)",
+    "no_messages": "No messages yet",
+    "from_hall": "Hall · {{name}}",
+    "reply_label": "Reply as the hall",
+    "reply_hint": "The soul sees a reply from the hall, signed with your name.",
+    "send": "Send",
+    "sent": "Reply sent",
+    "failed": "Something went wrong, try again",
+    "errors": {
+      "closed": "The soul has been reborn; this conversation is closed",
+      "not_inbox": "This is not a hall inbox",
+      "chat_not_configured": "Chat is not enabled",
+      "chat_unavailable": "Chat is temporarily unavailable"
     }
   }
 }
