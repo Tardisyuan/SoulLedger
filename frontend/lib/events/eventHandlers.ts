@@ -112,6 +112,18 @@ export const EVENT_LABELS: Record<string, string> = {
   REBIRTH_APPLICATION_SUBMITTED: "Rebirth application submitted",
   REBIRTH_STATUS_CHANGED: "Rebirth application updated",
   REBIRTH_CROSS_CIV_DECIDED: "Cross-civilization rebirth decided",
+
+  // Sentence plan events (受刑计划)
+  SENTENCE_PLAN_CREATED: "Sentence plan created",
+  SENTENCE_NODE_ACTIVATED: "Sentence node started",
+  SENTENCE_NODE_WAITING: "Sentence served, waiting for retrial",
+  SENTENCE_NODE_COMPLETED: "Sentence node completed",
+  SENTENCE_NODE_REFUSED: "Sentence dispatch refused",
+  SENTENCE_PLAN_AMENDED: "Sentence plan amended",
+  SENTENCE_REQUEST_CREATED: "Sentence plan request submitted",
+  SENTENCE_REQUEST_DECIDED: "Sentence plan request decided",
+  SENTENCE_PLAN_COMPLETED: "Sentence plan completed",
+  SENTENCE_PLAN_CANCELLED: "Sentence plan cancelled",
 };
 
 // ── Pure Handler Functions ─────────────────────────────────────────────

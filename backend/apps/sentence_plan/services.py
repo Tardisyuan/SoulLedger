@@ -9,7 +9,6 @@ from django.utils import timezone
 
 from apps.sentence_plan.models import (
     IN_PROGRESS_PLAN_STATUSES,
-    LIVE_NODE_STATUSES,
     SentenceNode,
     SentenceNodeStatus,
     SentencePlan,
@@ -35,6 +34,11 @@ class SentencePlanService:
         if judgment.kind != JudgmentKind.ORIGINAL:
             return None
         soul = judgment.soul
+        home = soul.home_tenant if soul.home_tenant_id is not None else soul.tenant
+        if home is None or judgment.tenant_id != home.pk:
+            # 暂居地的审判不是原审判(那是阶段 3 的加减项审判)。今天它经 API 结不了案
+            # (设计稿 G1),这里只是不让一条走得通的旁路把它记成原属计划。
+            return None
         existing = SentencePlan.all_objects.filter(
             soul=soul, is_deleted=False, status__in=IN_PROGRESS_PLAN_STATUSES,
         ).values_list("pk", flat=True).first()
@@ -44,7 +48,6 @@ class SentencePlanService:
                 soul.pk, existing, judgment.pk,
             )
             return None
-        home = soul.home_tenant if soul.home_tenant_id is not None else soul.tenant
         from apps.dispatch.models import CrossTenantJudgment
 
         cross_id = CrossTenantJudgment._base_manager.filter(
@@ -65,15 +68,18 @@ class SentencePlanService:
 
     @staticmethod
     def note_disposition_executed(disposition):
-        """处置执行完毕 → 挂着它的 ACTIVE 节点结束;没有别的活节点时计划完成。
+        """处置执行完毕 → 挂着它的 ACTIVE 节点结束。只记事实,不推进。
 
-        原属节点:一律 COMPLETED。今天原属处置执行不看 `is_eternal`,灵魂照样进
-        REINCARNATING / SETTLED(`DispositionService.execute` 原属分支),节点跟着那个事实走,
-        永久与否留在 `is_eternal` 列上。外地节点:`is_eternal` → ETERNAL(计划 HELD),否则 COMPLETED。
-        WAITING(刑满暂留)要看 `open_judgments`,由阶段 2 的 `advance` 一并接管,这里不判。
+        节点:`is_eternal` → ETERNAL,否则 COMPLETED(与回填命令 §7.2 第 2、3 步同一规则)。
+        计划:
+        * 原属节点 → COMPLETED。今天原属处置执行就是灵魂离开 DISPOSED(进 REINCARNATING /
+          SETTLED)的那一步,计划跟着这个事实走;永久与否留在节点的 ETERNAL 上。
+        * 外地节点永久 → HELD(今天永久刑期不自动回归)。外地非永久:计划不动,推进是阶段 2。
+        WAITING(刑满暂留)要看 `open_judgments`,阶段 2 的 `advance` 接管,这里不判。
 
-        调用方持有灵魂行锁;这里只锁节点行。没有节点挂着这份处置(存量、或阶段 1 之前
-        执行过的)就什么都不做。
+        调用方持有它自己的事务;锁序 节点 → 计划 与设计稿 §8 的 Plan → Node 相反,但阶段 1
+        没有别的路径同时锁这两张表,不会成环;阶段 2 引入 `advance` 时要按 §8 改回来。
+        没有节点挂着这份处置(存量、或阶段 1 之前结案的)就什么都不做。
         """
         node = (
             SentenceNode.objects.select_for_update(of=("self",))
@@ -82,20 +88,19 @@ class SentencePlanService:
         )
         if node is None:
             return None
-        node.status = (
-            SentenceNodeStatus.ETERNAL if (disposition.is_eternal and not node.is_home) else SentenceNodeStatus.COMPLETED
-        )
-        node.completed_at = timezone.now()
+        now = timezone.now()
+        node.status = SentenceNodeStatus.ETERNAL if disposition.is_eternal else SentenceNodeStatus.COMPLETED
+        node.completed_at = now
         node.save(update_fields=["status", "completed_at", "update_time", "update_user", "version"])
 
-        plan = SentencePlan.all_objects.select_for_update(of=("self",)).get(pk=node.plan_id)
-        live = list(plan.nodes.filter(is_deleted=False, status__in=LIVE_NODE_STATUSES).values_list("status", flat=True))
-        if not live:
-            plan.status = SentencePlanStatus.COMPLETED
-            plan.completed_at = timezone.now()
-        elif set(live) == {SentenceNodeStatus.ETERNAL}:
-            plan.status = SentencePlanStatus.HELD
+        if node.is_home:
+            new_status = SentencePlanStatus.COMPLETED
+        elif node.status == SentenceNodeStatus.ETERNAL:
+            new_status = SentencePlanStatus.HELD
         else:
             return node
+        plan = SentencePlan.all_objects.select_for_update(of=("self",)).get(pk=node.plan_id)
+        plan.status = new_status
+        plan.completed_at = now if new_status == SentencePlanStatus.COMPLETED else None
         plan.save(update_fields=["status", "completed_at", "update_time", "update_user", "version"])
         return node
