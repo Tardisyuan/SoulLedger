@@ -340,6 +340,16 @@ describe("tapping a notification", () => {
     expect(screen.getByTestId("landing-tag").props.children).toBe("新结果");
   });
 
+  it("residence_approved (the dispatch-approval kind) lands on the life tab", async () => {
+    signedIn({ "/me/rebirth-applications/": { status: 200, data: { can_apply: true, reason: null, cooldown_until: null, results: [] } } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await screen.findByTestId("eligibility");
+    tap({ screen: "Life", kind: "residence_approved" });
+    await waitFor(() => expect(route()?.name).toBe("Life"));
+  });
+
   it("an application opened by hand is not highlighted", async () => {
     signedIn({ "/me/rebirth-applications/a1/": { status: 200, data: application() } });
     renderApp();

@@ -2102,7 +2102,7 @@
       "judgment": "Judgment results",
       "judgment_note": "When a judgment concludes or a disposition is carried out",
       "residence": "Residence",
-      "residence_note": "When you are sent to reside elsewhere, and when you return",
+      "residence_note": "When a transfer is approved, when you are sent to reside elsewhere, and when you return",
       "lock_screen": "The lock screen only says there is a result — never reasons or evidence.",
       "push_unavailable": "Push notifications are not enabled in this build yet. The switches below are still saved to your account.",
       "push_denied": "Notifications are turned off in the system. The switches below remember your choice, but nothing arrives until the system allows it.",
