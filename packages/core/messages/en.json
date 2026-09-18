@@ -2094,6 +2094,10 @@
       "title": "Disposition carried out",
       "body": "Your disposition has been carried out. Open Soul Ledger to see it."
     },
+    "residence_approved": {
+      "title": "Residence approved",
+      "body": "You are about to be moved to reside in another civilization. Open Soul Ledger to see it."
+    },
     "residence_started": {
       "title": "Residence begun",
       "body": "You have been moved to reside in another civilization. Open Soul Ledger to see it."
