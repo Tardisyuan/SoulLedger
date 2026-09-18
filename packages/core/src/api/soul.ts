@@ -44,7 +44,17 @@ import type { components } from "./generated/schema";
 type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
 export type SoulTokenPair = Schemas["SoulTokenPair"];
-export type MeProfile = Schemas["MeProfile"];
+/**
+ * Residence (a soul temporarily dispatched to another civilization) is being
+ * added to `/me/` on backend branch `feat/dispatch-residence`, not merged yet.
+ * Declared here as OPTIONAL so the app shows it when present and treats its
+ * absence as "at home". When that branch lands and `schema:generate` emits the
+ * fields, delete this and use the generated `MeProfile` as-is.
+ */
+export interface MeResidenceFields {
+  home_tenant?: { code: string; display_name: string } | null;
+}
+export type MeProfile = Schemas["MeProfile"] & MeResidenceFields;
 export type MeLife = Schemas["MeLife"];
 export type MeRecord = Schemas["MeRecord"];
 export type MeJudgment = Schemas["MeJudgment"];

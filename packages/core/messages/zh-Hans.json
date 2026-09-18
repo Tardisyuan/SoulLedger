@@ -1848,7 +1848,9 @@
       "retry": "重试",
       "cancel": "取消",
       "empty": "暂无",
-      "language": "语言"
+      "language": "语言",
+      "show": "显示",
+      "hide": "隐藏"
     },
     "login": {
       "title": "灵魂登录",
@@ -1856,13 +1858,14 @@
       "soul_code": "灵魂编号",
       "password": "密码",
       "submit": "登录",
-      "submitting": "登录中…",
-      "required": "请填写灵魂编号与密码"
+      "submitting": "正在核验…",
+      "required": "请填写灵魂编号与密码",
+      "soul_code_hint": "10 位字母数字",
+      "verifying": "正在核验编号与密码。请勿离开此页。"
     },
     "change_password": {
       "title": "修改初始密码",
       "intro": "首次登录须先设置自己的密码。初始密码 72 小时内有效。",
-      "expires_at": "初始密码有效期至 {{date}}",
       "old_password": "初始密码",
       "new_password": "新密码",
       "confirm_password": "再次输入新密码",
@@ -1871,7 +1874,13 @@
       "too_short": "新密码至少 8 位",
       "mismatch": "两次输入的新密码不一致",
       "success": "密码已更新",
-      "back_to_login": "返回登录"
+      "back_to_login": "返回登录",
+      "expires_label": "初始密码有效期至",
+      "hours_left": "剩余 {{hours}} 小时",
+      "hours_left_consequence": "剩余 {{hours}} 小时 · 过期后须由官员重置",
+      "under_hour_consequence": "剩余不足 1 小时 · 过期后须由官员重置",
+      "expired_consequence": "已过期 · 须由官员重置",
+      "new_hint": "至少 8 位"
     },
     "tabs": {
       "life": "本世",
@@ -1894,8 +1903,8 @@
       "dispositions": "处置",
       "applications": "转生申请",
       "no_records": "这一世没有功过记录",
-      "no_judgments": "这一世还没有审判",
-      "no_dispositions": "这一世还没有处置",
+      "no_judgments": "尚未收案。审理殿定下后此处入簿。",
+      "no_dispositions": "尚未处置。审判结束后此处入簿。",
       "no_applications": "这一世没有转生申请",
       "milestone": "要事",
       "merit_entry": "功",
@@ -1908,13 +1917,28 @@
       "sentence_years": "刑期 {{years}} 年",
       "executed": "已执行",
       "not_executed": "未执行",
-      "logout": "退出登录"
+      "logout": "退出登录",
+      "verdict": "判决结果",
+      "realm": "去向",
+      "sentence": "刑期",
+      "execution": "执行",
+      "birth_name": "生前名 {{name}}",
+      "record_count": "共 {{count}} 条记录",
+      "copy_code": "复制灵魂编号",
+      "code_copied": "灵魂编号已复制",
+      "code_copy_failed": "复制失败",
+      "residing": "暂居 {{current}} · 原属 {{home}}",
+      "record_count_short": "共 {{count}} 条"
     },
     "past_lives": {
       "title": "前世",
       "empty": "没有前世记录",
-      "read_only": "前世记录只读",
-      "reincarnated": "{{date}} 转生为 {{form}}"
+      "read_only": "前世记录只读。已封存的卷宗不可申请、不可申诉。",
+      "reborn_as": "转生为 {{form}}",
+      "reborn_on": "{{date}} 转生",
+      "sealed": "已封存",
+      "no_actions": "此世卷宗只读，无可行操作。",
+      "end": "卷宗止于此。更早的世次未入簿。"
     },
     "applications": {
       "title": "转生申请",
@@ -1929,7 +1953,10 @@
       "cannot_apply": "暂不能提交新申请",
       "cooldown_until": "冷却期至 {{date}}",
       "created_at": "提交于 {{date}}",
-      "view": "查看"
+      "view": "查看",
+      "expectation": "你在此表达的是{{hope}}。最终去向由判官裁定，是否跨文明亦由判官初审决定。",
+      "expectation_word": "期望",
+      "statement_hint": "你自己的话，会原样呈给判官。"
     },
     "status": {
       "UNDER_REVIEW": "审批中",
@@ -1956,7 +1983,9 @@
       "appeal": "申诉",
       "appeal_hint": "每份申请只能申诉一次",
       "appeal_submit": "提交申诉",
-      "appealed": "申诉已提交"
+      "appealed": "申诉已提交",
+      "created_at": "提交时间",
+      "flow": "流转"
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
@@ -1969,7 +1998,7 @@
       "account_retired": "账号已停用",
       "application_open": "已有一份进行中的转生申请",
       "cooldown": "驳回后的冷却期内不能重新申请",
-      "terminal_cosmology": "你所属的文明没有转生",
+      "terminal_cosmology": "你所属的文明没有转生。此处的去向是终局。",
       "soul_state": "当前状态不能申请转生",
       "application_approved": "本世的转生申请已获批准",
       "appeal_used": "这份申请已经申诉过",
@@ -1978,7 +2007,68 @@
       "not_found": "记录不存在",
       "network": "无法连接服务器,请检查网络后重试",
       "validation": "填写的内容有误,请检查",
-      "unknown": "出错了({{code}})"
+      "unknown": "出错了({{code}})",
+      "screen_title": "簿册未能连上",
+      "screen_body": "你的记录仍在。只是此刻取不到。",
+      "section": "这一段没取到。其余部分照常显示。"
+    },
+    "lexicon": {
+      "eg": {
+        "merit": "羽侧",
+        "demerit": "心侧",
+        "merit_entry": "羽",
+        "demerit_entry": "心",
+        "records": "羽侧与心侧记录",
+        "judgments": "称心",
+        "court": "审理厅",
+        "judging": "称心中",
+        "past_read_only": "前世记录只读。杜阿特不受理申请与申诉。",
+        "no_past_lives": "杜阿特没有前世。你只有这一世，此后不再入簿。",
+        "no_rebirth_title": "杜阿特没有转生",
+        "no_rebirth_body": "这里不会有申请，现在没有，以后也不会有。称心之后你的去向即为终局，不经此页。"
+      },
+      "default": {
+        "no_rebirth_title": "你所属的文明没有转生",
+        "no_rebirth_body": "这里不会有申请，现在没有，以后也不会有。此处的去向即为终局，不经此页。"
+      },
+      "eu": {
+        "past_read_only": "前世记录只读。天堂与地狱不受理申请与申诉。",
+        "no_past_lives": "天堂与地狱没有前世。你只有这一世，此后不再入簿。",
+        "no_rebirth_title": "天堂与地狱没有转生",
+        "no_rebirth_body": "这里不会有申请，现在没有，以后也不会有。审判之后你的去向即为终局，不经此页。"
+      }
+    },
+    "logout": {
+      "title": "退出登录？",
+      "body": "再次登录需要你的灵魂编号与新设的密码。初始密码已失效。",
+      "cancel": "留在簿中"
+    },
+    "form_notes": {
+      "DIVINE": "福报盛，然有尽时。",
+      "HUMAN": "苦乐相半，可再修。",
+      "ASURA": "力强而多争。",
+      "ANIMAL": "无言，受役。",
+      "HUNGRY_GHOST": "常求不得。",
+      "HELL_BEING": "刑期有定，不可自出。"
+    },
+    "timeline": {
+      "submitted": "提交",
+      "appealed": "申诉",
+      "decided": "决定 · {{status}}",
+      "appeal_once": "可申诉一次",
+      "under_review": "审批中",
+      "appeal_review": "申诉复核中",
+      "no_time": "无时间戳",
+      "decision": "决定",
+      "pending": "待定"
+    },
+    "soul_states": {
+      "ALIVE": "在世",
+      "JUDGING": "审判中",
+      "DISPOSED": "已处置",
+      "REINCARNATING": "轮回中",
+      "LOST": "丢失",
+      "SETTLED": "已结算"
     }
   },
   "soul_push": {

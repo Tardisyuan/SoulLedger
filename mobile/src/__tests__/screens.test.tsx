@@ -1,5 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -45,8 +45,12 @@ describe("past lives", () => {
     });
     wrap(<PastLivesScreen />);
     await screen.findByTestId("past-life-0");
+    fireEvent.press(screen.getByTestId("past-life-0-toggle"));
     expect(screen.getByText("已驳回")).toBeTruthy();
-    expect(screen.queryAllByRole("button")).toEqual([]);
+    // The one button on the screen is the disclosure that opened this life — it
+    // shows or hides the record and does nothing to it.
+    expect(screen.queryAllByRole("button").map((b) => b.props.testID)).toEqual(["past-life-0-toggle"]);
+    expect(screen.getByTestId("past-life-0-toggle").props.accessibilityState).toMatchObject({ expanded: true });
     expect(screen.queryByText("申诉")).toBeNull();
     expect(screen.queryByText("提交申请")).toBeNull();
     expect(calls.every((c) => c.method === "GET")).toBe(true);
@@ -102,7 +106,11 @@ describe("application detail", () => {
     await screen.findByTestId("application-detail");
     expect(screen.getByText("评估")).toBeTruthy();
     expect(screen.getByText("审判者")).toBeTruthy();
-    expect(screen.getByText("未识别取值 (ON_HOLD)")).toBeTruthy();
+    // The unrecognized status is a badge carrying the raw member, not a guess and not a dotted key.
+    const badge = screen.getByTestId("status-badge");
+    expect(within(badge).getByText("未识别取值")).toBeTruthy();
+    expect(within(badge).getByText("ON_HOLD")).toBeTruthy();
+    expect(screen.queryByText(/soul_app\.status/)).toBeNull();
     expect(screen.queryByTestId("appeal")).toBeNull();
   });
 
