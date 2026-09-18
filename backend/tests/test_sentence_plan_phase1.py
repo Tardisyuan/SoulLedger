@@ -486,7 +486,7 @@ def test_a_role_without_judgment_read_gets_nothing(cn):
 def _backfill():
     out = StringIO()
     call_command("backfill_sentence_plans", stdout=out)
-    return dict(line.split(": ") for line in out.getvalue().splitlines() if ": " in line and "conflict" not in line)
+    return dict(line.split(": ") for line in out.getvalue().splitlines() if ": " in line and not line.startswith("conflict ("))
 
 
 def _legacy_case(tenant, name):
@@ -543,13 +543,60 @@ def test_backfill_marks_a_manual_return_as_aborted(cn, eg):
     assert [n.status for n in plan.nodes.order_by("order")] == [SentenceNodeStatus.ACTIVE, SentenceNodeStatus.ABORTED]
 
 
-def test_backfill_reports_rather_than_writes_two_nodes_holding_one_soul(cn, eg):
-    """原属处置未执行、灵魂已在外地受刑:设计稿没写这种存量怎么描述,不写、只报。"""
+def test_backfill_records_the_home_node_pending_while_the_soul_serves_abroad(cn, eg):
+    """原属处置未执行、灵魂已在外地受刑(用户 2026-09-19 决定):原属节点 PENDING,灵魂回来后再执行。
+
+    PENDING 不是占位状态,所以写得进 `unique_occupying_sentence_node`;第二次运行零写入。
+    """
     case = _legacy_case(cn, "两头占")
     record = DispatchRecord.objects.create(
         source_tenant=cn, target_tenant=eg, soul=case.soul, status=DispatchStatus.APPROVED, reason="x", tenant=cn,
     )
     DispatchService.execute(record, "executor")
+    case.soul.refresh_from_db()
+    away = Disposition.objects.create(soul=case.soul, tenant=eg)
+
+    first = _backfill()
+    assert first["plans_created"] == "1" and first["nodes_created"] == "2" and first["skipped_conflict"] == "0"
+    plan = SentencePlan.objects.get(soul=case.soul)
+    assert plan.status == SentencePlanStatus.ACTIVE
+    home, abroad = plan.nodes.order_by("order")
+    assert (home.is_home, home.status, home.activated_at) == (True, SentenceNodeStatus.PENDING, None)
+    assert home.disposition_id == Disposition.objects.get(judgment=case).pk
+    assert (abroad.tenant_code, abroad.status, abroad.disposition_id) == ("EG_DUAT", SentenceNodeStatus.ACTIVE, away.pk)
+    # 断缺席:同一计划里只有一个占位节点。
+    assert plan.nodes.filter(status__in=["ACTIVE", "DISPATCHING", "WAITING"]).count() == 1
+
+    second = _backfill()
+    assert second["plans_created"] == "0" and second["nodes_created"] == "0" and second["already_planned"] == "1"
+    assert SentenceNode.objects.filter(plan__soul=case.soul).count() == 2
+
+
+def test_backfill_leaves_the_home_node_active_once_the_soul_is_back(cn, eg):
+    """回归之后原属处置仍未执行:灵魂就在原属,原属节点是 ACTIVE,不改成 PENDING。"""
+    case = _legacy_case(cn, "回来了")
+    record = DispatchRecord.objects.create(
+        source_tenant=cn, target_tenant=eg, soul=case.soul, status=DispatchStatus.APPROVED, reason="x", tenant=cn,
+    )
+    DispatchService.execute(record, "executor")
+    case.soul.refresh_from_db()
+    assert DispositionService.execute(Disposition.objects.create(soul=case.soul, tenant=eg)) is True
+    _backfill()
+    statuses = [n.status for n in SentencePlan.objects.get(soul=case.soul).nodes.order_by("order")]
+    assert statuses == [SentenceNodeStatus.ACTIVE, SentenceNodeStatus.COMPLETED]
+
+
+def test_backfill_reports_rather_than_writes_two_away_nodes_holding_one_soul(cn, eg, eu):
+    """正常流程产生不了的形状(两条都没回归的外地调拨):不写,只报。"""
+    from django.utils import timezone
+
+    case = _legacy_case(cn, "两地同占")
+    for target in (eg, eu):
+        DispatchRecord.objects.create(
+            source_tenant=cn, target_tenant=target, soul=case.soul, status=DispatchStatus.EXECUTED,
+            executed_at=timezone.now(), reason="x", tenant=cn,
+        )
+        Disposition.objects.create(soul=case.soul, tenant=target)
     out = StringIO()
     call_command("backfill_sentence_plans", stdout=out)
     assert "skipped_conflict: 1" in out.getvalue()
