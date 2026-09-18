@@ -108,7 +108,7 @@ describe("system-event copy resolves through the shipped bundles", () => {
   const expected: Record<(typeof LOCALES)[number], { event: string; from: string; to: string }> = {
     "zh-Hans": { event: "状态变更", from: "审判中", to: "已处置" },
     en: { event: "State changed", from: "Judging", to: "Disposed" },
-    egy: { event: "Set Medu Khemen Seth", from: "Em Sheemtet", to: "Em Wetep" },
+    egy: { event: "Set Medu Khemen Seth", from: "Em Wedja", to: "Em Wetep" },
   };
 
   it.each(LOCALES)("renders a STATE_CHANGED row in %s and leaks no raw member", async (locale) => {
