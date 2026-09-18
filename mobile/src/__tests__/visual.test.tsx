@@ -84,16 +84,18 @@ describe("the Han serif", () => {
     expect(quoteFamily("功过相权，尚有一过未清")).toBe("NotoSerifSC_400");
     expect(quoteFamily("Merit and demerit have been weighed")).toBe("SourceSerif4_400Regular");
     expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_400");
-    expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_600");
+    // Regular only (2026-09-18): the SemiBold subset had no caller and is gone.
+    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_400"]);
   });
 
-  it("each bundled weight stays within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
+  it("bundles exactly the one Han serif file, within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
     const fs = jest.requireActual<typeof import("fs")>("fs");
     const path = jest.requireActual<typeof import("path")>("path");
-    for (const weight of ["400", "600"]) {
-      const file = path.join(__dirname, "..", "..", "assets", "fonts", `NotoSerifSC-Subset-${weight}.ttf`);
-      expect([weight, fs.statSync(file).size <= 1_500_000]).toEqual([weight, true]);
-    }
+    const dir = path.join(__dirname, "..", "..", "assets", "fonts");
+    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["NotoSerifSC-Subset-400.ttf"]);
+    expect(fs.statSync(path.join(dir, "NotoSerifSC-Subset-400.ttf")).size <= 1_500_000).toBe(true);
+    // what App.tsx hands to useFonts must resolve — a require of a deleted file fails the import above
+    expect(FONT_ASSETS.NotoSerifSC_400).toBeTruthy();
   });
 
   it("renders a rejection reason in it", () => {

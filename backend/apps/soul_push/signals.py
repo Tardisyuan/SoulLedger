@@ -1,4 +1,4 @@
-"""暂居开始 / 回归不经事件总线:`apps/dispatch/services.py` 直接写 `SoulEvent`。这里接那两种。
+"""调拨批准 / 暂居开始 / 回归不经事件总线:`apps/dispatch/services.py` 直接写 `SoulEvent`。这里接那三种。
 
 只接 `RESIDENCE_ACTIONS` 里的 action。其余 SoulEvent 都是 AuditHandler 从总线事件写下的,
 那些已经由 `SoulPushHandler` 处理过 —— 在这里再接一遍只会多一次(幂等挡得住,但没有理由)。
