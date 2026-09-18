@@ -14,7 +14,7 @@
  * account save never takes the interface back; it says so and offers both ways.
  */
 import { soulApi, type NotificationSettings } from "@soulledger/core/api/soul";
-import { SUPPORTED_LOCALES, type Locale } from "@soulledger/core/config/locale";
+import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@soulledger/core/config/locale";
 import { platform } from "@soulledger/core/platform";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import Constants from "expo-constants";
@@ -48,8 +48,11 @@ type Save =
   | { state: "idle" }
   | { state: "saving" | "saved" | "failed"; to: Locale; from: Locale };
 
-/** A locale's own name and note, in that language — a row must be findable by someone who cannot read the current one. */
-const selfName = (l: Locale) => translate(l, "soul_app.settings.language_name");
+/**
+ * A locale's own name, in that language — a row must be findable by someone who cannot read the current one.
+ * Same source as the login screen's language buttons, so one language is not "Kemet" there and "Egyptian" here.
+ */
+const selfName = (l: Locale) => LOCALE_LABELS[l];
 
 function Heading({ children }: { children: string }) {
   return (

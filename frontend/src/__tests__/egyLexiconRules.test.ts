@@ -53,7 +53,7 @@ const offenders = (keys: string[], bad: Rule) =>
 const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR"]);
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
-const ENGLISH_RESIDUE = ["Send", "Dismiss"];
+const ENGLISH_RESIDUE = ["Send", "Dismiss", "Egyptian"];
 
 /**
  * 仍含单词 Ma 的键 —— 这些 Ma 不是否定(「有误」「移至」等早期写法),按同键中文判过义。

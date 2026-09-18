@@ -95,6 +95,10 @@ describe("the settings page is the one place for language and sign-out", () => {
     expect(screen.getByTestId("logout")).toBeTruthy();
     expect(screen.getAllByRole("radio").map((r) => r.props.testID)).toEqual(["language-zh-Hans", "language-en", "language-egy"]);
     expect(screen.getByTestId("language-zh-Hans").props.accessibilityState).toEqual({ checked: true });
+    // Each row names its language the way the login screen's buttons do (LOCALE_LABELS) —
+    // the bundles' own `language_name` said "Egyptian" and "中文" while login said "Kemet" and "简体中文".
+    for (const name of ["简体中文", "English", "Kemet"]) expect(screen.getByText(name)).toBeTruthy();
+    expect(screen.queryByText("Egyptian")).toBeNull();
   });
 
   it("the same icon is on all three tabs", async () => {
@@ -160,7 +164,7 @@ describe("switching language", () => {
     fireEvent.press(screen.getByTestId("language-en"));
     const failed = await screen.findByTestId("language-save-failed");
     expect(failed.props.children).toBe(
-      "Could not save this to your account. The interface is English now, but another device will show 中文."
+      "Could not save this to your account. The interface is English now, but another device will show 简体中文."
     );
     expect(screen.getByText("Settings")).toBeTruthy(); // not taken back
     fireEvent.press(screen.getByTestId("language-revert"));
