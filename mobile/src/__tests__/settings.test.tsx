@@ -77,7 +77,7 @@ beforeEach(async () => {
   secure.clear();
   await AsyncStorage.clear();
   for (const key of [PUSH_TOKEN_KEY, PRIMER_SEEN_KEY, LOCALE_COOKIE]) persistentStore.remove(key);
-  Object.assign(system, { status: "undetermined", answer: "granted", requests: 0, tokenError: null, lastResponse: null });
+  Object.assign(system, { status: "undetermined", answer: "granted", requests: 0, tokenError: null, lastResponse: null, canAskAgain: undefined });
   constants.expoConfig.extra = {};
 });
 
@@ -289,6 +289,19 @@ describe("notification settings", () => {
     // Dimmed is not disabled: the choice is saved for when the system allows it.
     fireEvent.press(screen.getByTestId("toggle-rebirth"));
     await waitFor(() => expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ rebirth: false }]));
+  });
+
+  it("Android 13+ reports a never-asked app as denied-but-askable: that is the primer, not 'system closed'", async () => {
+    Object.assign(system, { status: "denied", canAskAgain: true });
+    constants.expoConfig.extra = { eas: { projectId: "p-123" } };
+    signedIn({ "POST /me/push-tokens/": { status: 201, data: {} } });
+    renderApp();
+    fireEvent.press(await screen.findByTestId("primer-yes"));
+    await screen.findByTestId("profile-card");
+    expect(system.requests).toBe(1);
+    fireEvent.press(screen.getByTestId("header-account"));
+    await screen.findByTestId("settings");
+    expect(screen.queryByTestId("push-denied")).toBeNull();
   });
 
   it("the primer explains first: 'not now' never calls the system dialog; 'yes' does, once", async () => {
