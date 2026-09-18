@@ -1723,7 +1723,8 @@
       "events_retry_pending_webhooks": "Send Medu Kheper Khemu",
       "scheduler_reap_stale_runs": "Wetep Iri Ma Wetep",
       "scheduler_check_overdue": "Maa Ahet Sesh Ma Iri",
-      "scheduler_prune_runs": "Wehem Medew Iri Tepy"
+      "scheduler_prune_runs": "Wehem Medew Iri Tepy",
+      "soul_push_sweep": "Sedjem Ba: Wehem Dbh Hena Sesh Iri"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -2070,6 +2071,36 @@
       "REINCARNATING": "Em Aru Her Tepy",
       "LOST": "Nen Gem",
       "SETTLED": "Sesh Khetem"
+    }
+  },
+  "soul_push": {
+    "rebirth_approved": {
+      "title": "Wehem Mesut Hesy",
+      "body": "Dbh Ek Hesy. Wen Medjat Ba Er Maa."
+    },
+    "rebirth_rejected": {
+      "title": "Wehem Mesut Sehen",
+      "body": "Dbh Ek Sehen. Wen Medjat Ba Er Maa Khet."
+    },
+    "rebirth_appeal_rejected": {
+      "title": "Wehem Medu Sehen",
+      "body": "Wehem Medu Ek Sehen. Wen Medjat Ba Er Maa Khet."
+    },
+    "judgment_result": {
+      "title": "Wedja Pehwy",
+      "body": "Wedja Ek Pehwy. Wen Medjat Ba Er Maa."
+    },
+    "disposition_executed": {
+      "title": "Wetep Iri",
+      "body": "Wetep Ek Iri. Wen Medjat Ba Er Maa."
+    },
+    "residence_started": {
+      "title": "Hemes Taui Kety",
+      "body": "Ek Hemes Em Taui Kety. Wen Medjat Ba Er Maa."
+    },
+    "residence_returned": {
+      "title": "Ankh Er Taui",
+      "body": "Ek Ankh Er Taui Ek. Wen Medjat Ba Er Maa."
     }
   }
 }

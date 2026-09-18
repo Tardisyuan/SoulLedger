@@ -932,6 +932,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_death_sync_opens_the_account_and_mails_the_password_once 每个引擎都跑。
         "tests/test_concurrent_death_sync_opens_one_account.py::"
         "test_two_simultaneous_death_syncs_open_one_account_and_issue_one_password",
+        # 2026-09-17 灵魂端推送:at-least-once 队列把同一批 id 交给两个 worker,认领必须在
+        # 投递行锁上排队,只有一个真正发出。SQLite 没有行锁可等。串行版本
+        # test_soul_push_delivery.py::test_the_same_event_twice_is_pushed_once 每个引擎都跑。
+        "tests/test_two_workers_cannot_both_send_one_push.py::"
+        "test_two_workers_given_the_same_ids_send_once",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

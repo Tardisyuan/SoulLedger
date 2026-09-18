@@ -1589,6 +1589,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/notification-settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_notification_settings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["v1_me_notification_settings_partial_update"];
+        trace?: never;
+    };
     "/api/v1/me/password/": {
         parameters: {
             query?: never;
@@ -1615,6 +1631,39 @@ export interface paths {
         get: operations["v1_me_past_lives_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/push-tokens/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_push_tokens_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/push-tokens/unregister/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 204 与 token 是否存在、属于谁无关 —— 不能拿它探测别人的 token。 */
+        post: operations["v1_me_push_tokens_unregister_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6006,6 +6055,15 @@ export interface components {
             granularity_unavailable: string;
             granularity_missing_inputs: string[];
         };
+        NotificationSettings: {
+            /** @description 转生申请:提交确认、申诉确认、结果 */
+            rebirth?: boolean;
+            /** @description 审判结论与处置执行 */
+            judgment?: boolean;
+            /** @description 暂居开始 / 回归(依赖 feat/dispatch-residence) */
+            residence?: boolean;
+            locale?: components["schemas"]["PushLocaleEnum"];
+        };
         /**
          * @description * `WORKFLOW_ASSIGNED` - Workflow Assigned
          *     * `JUDGMENT_COMPLETED` - Judgment Completed
@@ -6969,6 +7027,15 @@ export interface components {
             cache?: boolean;
             component?: string;
         };
+        PatchedNotificationSettings: {
+            /** @description 转生申请:提交确认、申诉确认、结果 */
+            rebirth?: boolean;
+            /** @description 审判结论与处置执行 */
+            judgment?: boolean;
+            /** @description 暂居开始 / 回归(依赖 feat/dispatch-residence) */
+            residence?: boolean;
+            locale?: components["schemas"]["PushLocaleEnum"];
+        };
         PatchedOrganization: {
             readonly id?: number;
             /** @description 组织名称：如 第一殿、冥王厅 */
@@ -7362,6 +7429,36 @@ export interface components {
             soul_id: string;
             contact_email?: string;
             contact_phone?: string;
+        };
+        PushDevice: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly platform: components["schemas"]["PushPlatformEnum"];
+            readonly is_active: boolean;
+            /** Format: date-time */
+            readonly last_seen_at: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `zh-Hans` - 简体中文
+         *     * `en` - English
+         *     * `egy` - Medu Netjer
+         * @enum {string}
+         */
+        PushLocaleEnum: "zh-Hans" | "en" | "egy";
+        /**
+         * @description * `IOS` - iOS
+         *     * `ANDROID` - Android
+         * @enum {string}
+         */
+        PushPlatformEnum: "IOS" | "ANDROID";
+        PushTokenRegister: {
+            token: string;
+            platform: components["schemas"]["PushPlatformEnum"];
+        };
+        PushTokenUnregister: {
+            token: string;
         };
         Reaction: {
             /** Format: uuid */
@@ -11263,6 +11360,73 @@ export interface operations {
             };
         };
     };
+    v1_me_notification_settings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettings"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_notification_settings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedNotificationSettings"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedNotificationSettings"];
+                "multipart/form-data": components["schemas"]["PatchedNotificationSettings"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettings"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
     v1_me_password_create: {
         parameters: {
             query?: never;
@@ -11320,6 +11484,86 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MeLife"][];
                 };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_push_tokens_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushTokenRegister"];
+                "application/x-www-form-urlencoded": components["schemas"]["PushTokenRegister"];
+                "multipart/form-data": components["schemas"]["PushTokenRegister"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushDevice"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushDevice"];
+                };
+            };
+            /** @description token 格式不对 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_push_tokens_unregister_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushTokenUnregister"];
+                "application/x-www-form-urlencoded": components["schemas"]["PushTokenUnregister"];
+                "multipart/form-data": components["schemas"]["PushTokenUnregister"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             403: {
                 headers: {
