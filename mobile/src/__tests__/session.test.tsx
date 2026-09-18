@@ -195,8 +195,11 @@ describe("a stored session", () => {
       "/me/": { status: 200, data: PROFILE },
       "/me/life/": { status: 200, data: life(1) },
       "/soul-auth/logout/": { status: 204 },
+      "/me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, locale: "zh-Hans" } },
     });
     renderApp();
+    // Round 4: sign-out lives at the end of the settings page, reached from the header icon.
+    fireEvent.press(await screen.findByTestId("header-account"));
     fireEvent.press(await screen.findByTestId("logout"));
     // Signing out asks first; nothing is cleared until the choice is confirmed.
     await screen.findByTestId("confirm-sheet");
