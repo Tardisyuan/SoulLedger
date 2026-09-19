@@ -260,7 +260,7 @@ export function LettersScreen() {
               {...preview(c)}
             />
           ))}
-          <View style={{ height: 1, backgroundColor: t.hair2 }} />
+          <View testID="section-rule" style={{ height: 1, backgroundColor: t.hair2 }} />
           <SectionLabel text={tr("soul_app.chat.section.souls")} tone="subtle" />
           {souls.length === 0 ? (
             <View testID="chat-empty" style={styles.empty}>
