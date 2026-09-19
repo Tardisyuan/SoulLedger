@@ -9306,10 +9306,14 @@ export interface components {
          * @enum {string}
          */
         ScopeEnum: "GLOBAL" | "ORG";
-        /** @description `seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。 */
+        /**
+         * @description `seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁;顾问席混着几种神祇,
+         *     所以带上 `role`(ActorRole)。
+         */
         SeatableActor: {
             /** Format: uuid */
             readonly id: string;
+            readonly role: string;
             readonly name: string;
             readonly name_zh: string;
             readonly name_en: string;
@@ -11955,6 +11959,8 @@ export interface operations {
             query: {
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
+                /** @description The seat: CO_JUDGE / CHAIRMAN take JUDGE actors only; ADVISOR any role. */
+                role: "ADVISOR" | "CHAIRMAN" | "CO_JUDGE";
                 /** @description A search term. */
                 search?: string;
                 /** @description The civilization being invited. */

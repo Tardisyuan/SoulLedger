@@ -416,8 +416,10 @@ class CrossTenantJudgmentConcludeSerializer(serializers.Serializer):
 
 
 class SeatableActorSerializer(serializers.Serializer):
-    """`seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。"""
+    """`seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁;顾问席混着几种神祇,
+    所以带上 `role`(ActorRole)。"""
     id = serializers.UUIDField(read_only=True)
+    role = serializers.CharField(read_only=True)
     name = serializers.CharField(read_only=True)
     name_zh = serializers.CharField(read_only=True)
     name_en = serializers.CharField(read_only=True)

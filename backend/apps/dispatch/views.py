@@ -20,6 +20,7 @@ from apps.dispatch.models import (
     DispatchRecord,
     DispatchStatus,
     JudgmentStatus,
+    ParticipantRole,
 )
 from apps.dispatch.permissions import CrossJudgmentPartyPermission, DispatchPartyPermission
 from apps.dispatch.serializers import (
@@ -602,8 +603,13 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        parameters=[OpenApiParameter("tenant_code", str, OpenApiParameter.QUERY, required=True,
-                                     description="The civilization being invited.")],
+        parameters=[
+            OpenApiParameter("tenant_code", str, OpenApiParameter.QUERY, required=True,
+                             description="The civilization being invited."),
+            OpenApiParameter("role", str, OpenApiParameter.QUERY, required=True,
+                             enum=["ADVISOR", "CO_JUDGE", "CHAIRMAN"],
+                             description="The seat: CO_JUDGE / CHAIRMAN take JUDGE actors only; ADVISOR any role."),
+        ],
         responses=SeatableActorSerializer(many=True),
     )
     @action(detail=True, methods=["get"], url_path="seatable-actors", pagination_class=None)
@@ -627,7 +633,11 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         if tenant.pk == judgment.initiating_tenant_id:
             return Response({"error": "The initiating tenant does not seat itself"},
                             status=status.HTTP_400_BAD_REQUEST)
-        actors = CrossTenantJudgmentService.seatable_actors(tenant)
+        seat_role = request.query_params.get("role") or ""
+        if seat_role not in ParticipantRole.values:
+            return Response({"error": "role must be ADVISOR, CO_JUDGE or CHAIRMAN"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        actors = CrossTenantJudgmentService.seatable_actors(tenant, seat_role)
         return Response(SeatableActorSerializer(actors, many=True).data)
 
     @extend_schema(request=CrossTenantJudgmentSentenceSerializer, responses=CrossTenantJudgmentSerializer)

@@ -39,6 +39,7 @@
 | D10 | 官员通知在事务内直接发(沿用现有「回归被拦」的写法),不是 §8 说的提交后发。 |
 | D11 | 码名 `sentence_plan.cancel` 归 judgment 族(单独成族会没有视图认领)。 |
 | D12 | **(2026-09-19 用户改定)`SOUL_STATES_THAT_MAY_APPLY` 只留 `REINCARNATING`**,去掉 DISPOSED(取代 §6 原文「收成 `("DISPOSED", "REINCARNATING")`」)。计划完成与撤销都把可转世灵魂推进 REINCARNATING,正常流程里 DISPOSED 只出现在计划进行中;「ADMIN 修过数据、计划已完成而灵魂仍停在 DISPOSED」**不再放口子**,答 `soul_state`,要申请先把灵魂状态修对。计划进行中的 DISPOSED 灵魂仍答 `sentence_in_progress`(比 `soul_state` 说得清楚)。守卫:`test_a_disposed_soul_with_a_finished_plan_still_may_not_apply`。 |
+| D13 | **(2026-09-20 用户确认)入席时就选席位上的神祇,可选集合按席位角色分**:发起方在 PROPOSED 时经 `GET cross-tenant-judgments/{id}/seatable-actors/?tenant_code=&role=` 取**被邀文明**的在任、未删神祇;`participate` 按同一判定校验,不合即 400 且什么都不写。**CO_JUDGE / CHAIRMAN 只认 `ActorRole.JUDGE`**(要定处置、带一站,坐审判席的只有 JUDGE);**ADVISOR 放开到 `ActorRole` 全部五种**(JUDGE / OVERSEER / GUARDIAN / CONDUIT / EXECUTOR)—— 顾问不带站、不定处置,管界域、守门、引路、行刑的各有判官没有的第一手知识,五种里没有「明显不适合坐席」的,故一种都不排除。映射在 `apps/dispatch/services.py::SEAT_ACTOR_ROLES`。这是 `ActorViewSet` 之外唯一一处跨租户读神祇,`ActorViewSet` 的租户过滤不变。 |
 
 ## 0. 用户的原话(权威需求)
 
