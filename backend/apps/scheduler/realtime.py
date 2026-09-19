@@ -14,6 +14,19 @@ Contract (what the frontend subscribes to via `onGenericEvent`):
     event   "SCHEDULER_JOBS_REBUILT"  — the registry sync ran (rebuild / boot)
             payload: created, updated, removed, legacy_removed, timestamp
 
+Plus one `EventType` member, which is NOT realtime-only:
+
+    event   SCHEDULER_RUN_FAILED      — a *tenant* TaskRun reached FAILURE or
+                                        LOST. Same payload as RUN_UPDATED.
+            It is published on the same bus as everything above, so it also
+            reaches the WebSocket (same group, same gate), and it is the one
+            scheduler event `WebhookHandler` is registered for (by type, in
+            `configure_default_handlers`) — failures are what a tenant
+            integration subscribes to; heartbeats are not. GLOBAL runs never
+            emit it: `WebhookHandler` delivers per tenant, and a run that
+            belongs to no tenant has no tenant whose webhooks may see it. The
+            ADMINs still get the RUN_UPDATED frame.
+
 Delivery is what `WebSocketHandler` does with the envelope, and is also the
 authorization: `permission="scheduler.read"` rides on every event, so the
 consumer drops it for a socket whose permission set lacks the codename;
@@ -65,20 +78,26 @@ def _publish(event_type: str, payload: dict, tenant_id) -> None:
         logger.exception("scheduler realtime: could not publish %s", event_type)
 
 
+#: The statuses that emit SCHEDULER_RUN_FAILED. Both are terminal failures:
+#: FAILURE from postrun or a refused enqueue, LOST from the reaper / worker_ready.
+FAILED_STATUSES = frozenset({"FAILURE", "LOST"})
+
+
 def emit_run_updated(run) -> None:
-    _publish(
-        RUN_UPDATED,
-        {
-            "job_id": run.job_id,
-            "run_id": run.pk,
-            "status": run.status,
-            "task_name": run.task_name,
-            "trigger": run.trigger,
-            "tenant_id": run.tenant_id,
-            "timestamp": timezone.now().isoformat(),
-        },
-        run.tenant_id,
-    )
+    payload = {
+        "job_id": run.job_id,
+        "run_id": run.pk,
+        "status": run.status,
+        "task_name": run.task_name,
+        "trigger": run.trigger,
+        "tenant_id": run.tenant_id,
+        "timestamp": timezone.now().isoformat(),
+    }
+    _publish(RUN_UPDATED, payload, run.tenant_id)
+    if run.status in FAILED_STATUSES and run.tenant_id is not None:
+        from apps.events.models import EventType
+
+        _publish(EventType.SCHEDULER_RUN_FAILED.value, payload, run.tenant_id)
 
 
 def emit_job_updated(job, reason: str = "patch") -> None:

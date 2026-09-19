@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import type { ScheduledJob } from "@soulledger/core/api";
@@ -15,6 +15,7 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useWebSocket } from "@/src/contexts/WebSocketContext";
+import type { SchedulerEventPayload } from "@/lib/events/event_registry";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -34,7 +35,7 @@ function SchedulerPageContent() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected } = useWebSocket();
+  const { isConnected, subscribe } = useWebSocket();
   // Codenames, not role names: `scheduler.manage` can be granted to any role
   // in the permission matrix. `isAdmin` is only for rebuild, which the backend
   // refuses to anyone who is not tenant-exempt (views.py `rebuild`).
@@ -56,6 +57,25 @@ function SchedulerPageContent() {
 
   const all = useMemo(() => jobs.data ?? [], [jobs.data]);
   const groups = useMemo(() => groupJobs(all.filter((job) => matchesFilter(job, filter))), [all, filter]);
+
+  // One toast per run that reaches FAILURE or LOST, while this page is open
+  // (user decision 2026-09-20). Every other status stays refresh-only — the
+  // registry's `handleSchedulerEvent` does the refresh, silently, everywhere.
+  // Off RUN_UPDATED rather than the SCHEDULER_RUN_FAILED EventType: GLOBAL
+  // runs never emit the latter, and the ADMINs watching this page own them.
+  useEffect(
+    () =>
+      subscribe((event) => {
+        if (event.domain !== "scheduler" || event.event !== "SCHEDULER_RUN_UPDATED") return;
+        const payload = event as SchedulerEventPayload;
+        const status = payload.status;
+        if (status !== "FAILURE" && status !== "LOST") return;
+        const row = queryClient.getQueryData<ScheduledJob[]>(schedulerKeys.jobs)?.find((j) => j.id === payload.job_id);
+        const job = row ? jobName(row) : (payload.task_name ?? "");
+        showToast(t(status === "LOST" ? "scheduler.realtime.run_lost" : "scheduler.realtime.run_failed", { job }), "error");
+      }),
+    [subscribe, queryClient, jobName, showToast, t]
+  );
 
   const toggle = (job: ScheduledJob) =>
     update.mutate(

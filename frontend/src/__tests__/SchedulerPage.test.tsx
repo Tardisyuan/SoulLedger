@@ -20,7 +20,7 @@ import SchedulerPage from "@/app/scheduler/page";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
 import zhHans from "@soulledger/core/messages/zh-Hans.json";
-import { tZh } from "./support/zhBundle";
+import { tZh, zh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -46,7 +46,18 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 const mockShowToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
-jest.mock("@/src/contexts/WebSocketContext", () => ({ useWebSocket: () => ({ isConnected: true }) }));
+const mockListeners = new Set<(_event: Record<string, unknown>) => void>();
+jest.mock("@/src/contexts/WebSocketContext", () => ({
+  useWebSocket: () => ({
+    isConnected: true,
+    subscribe: (listener: (_event: Record<string, unknown>) => void) => {
+      mockListeners.add(listener);
+      return () => {
+        mockListeners.delete(listener);
+      };
+    },
+  }),
+}));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 
 type Job = Record<string, unknown>;
@@ -405,6 +416,58 @@ describe("run history drawer", () => {
       fireEvent.keyDown(drawer, { key: "Escape" });
     });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});
+
+describe("a realtime failure toasts once, and nothing else toasts", () => {
+  const frame = (over: Record<string, unknown>) => ({
+    domain: "scheduler",
+    event: "SCHEDULER_RUN_UPDATED",
+    job_id: 1,
+    run_id: 50,
+    task_name: "ledger.recalculate_tenant",
+    ...over,
+  });
+  const push = (event: Record<string, unknown>) => act(() => mockListeners.forEach((listener) => listener(event)));
+
+  async function openPage() {
+    asAdmin();
+    const view = renderPage();
+    await screen.findAllByText(tZh("scheduler.jobs.ledger_recalculate_tenant"));
+    mockShowToast.mockClear();
+    return view;
+  }
+
+  it.each([
+    ["FAILURE", "scheduler.realtime.run_failed"],
+    ["LOST", "scheduler.realtime.run_lost"],
+  ])("%s → one error toast naming the job", async (status, key) => {
+    await openPage();
+    push(frame({ status }));
+    // `zh` throws on a key the bundle lacks, so this also pins the copy exists.
+    const job = zh("scheduler.jobs.ledger_recalculate_tenant");
+    expect(mockShowToast.mock.calls).toEqual([[zh(key, { job }), "error"]]);
+  });
+
+  it("names a run whose job is not on screen by its task name", async () => {
+    await openPage();
+    push(frame({ status: "FAILURE", job_id: 404, task_name: "some.unknown_task" }));
+    expect(mockShowToast.mock.calls).toEqual([[zh("scheduler.realtime.run_failed", { job: "some.unknown_task" }), "error"]]);
+  });
+
+  it("toasts nothing for any other status, for the SCHEDULER_RUN_FAILED twin, or for other domains", async () => {
+    await openPage();
+    for (const status of ["PENDING", "RUNNING", "RETRY", "SKIPPED", "SUCCESS"]) push(frame({ status }));
+    push(frame({ event: "SCHEDULER_RUN_FAILED", status: "FAILURE" }));
+    push(frame({ domain: "dispatch", status: "FAILURE" }));
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it("stops listening when the page goes away", async () => {
+    const { unmount } = await openPage();
+    expect(mockListeners.size).toBeGreaterThan(0);
+    unmount();
+    expect(mockListeners.size).toBe(0);
   });
 });
 

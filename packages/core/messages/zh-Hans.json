@@ -1843,6 +1843,13 @@
       "hourly": "每小时第 {{minute}} 分",
       "daily": "每天 {{time}}",
       "weekly": "每{{weekday}} {{time}}"
+    },
+    "events": {
+      "SCHEDULER_RUN_FAILED": "定时任务运行失败"
+    },
+    "realtime": {
+      "run_failed": "「{{job}}」运行失败",
+      "run_lost": "「{{job}}」运行已丢失：没有 Worker 把它跑完"
     }
   },
   "soul_app": {

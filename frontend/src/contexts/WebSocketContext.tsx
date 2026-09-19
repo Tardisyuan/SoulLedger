@@ -28,7 +28,16 @@ interface WebSocketContextValue {
   send: (data: WSMessage) => void;
   /** Manually reconnect */
   reconnect: () => void;
+  /**
+   * Listen to every generic realtime frame, after the registry has handled it.
+   * Returns the unsubscribe. For page-local reactions (the scheduler page's
+   * failure toast) that must not fire on every other page the way a registry
+   * handler would.
+   */
+  subscribe: (listener: RealtimeListener) => () => void;
 }
+
+type RealtimeListener = (event: EventPayload) => void;
 
 // ── Context ──────────────────────────────────────────────────────────
 
@@ -37,6 +46,7 @@ const WebSocketContext = createContext<WebSocketContextValue>({
   isConnected: false,
   send: () => {},
   reconnect: () => {},
+  subscribe: () => () => {},
 });
 
 // ── Provider ─────────────────────────────────────────────────────────
@@ -51,6 +61,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const currentUserId = user ? String(user.id) : undefined;
   const [status, setStatus] = useState<WSStatus>("disconnected");
   const clientRef = useRef<WSClient | null>(null);
+  const listenersRef = useRef(new Set<RealtimeListener>());
 
   const handleNotification = useCallback(
     (notification: Record<string, unknown>) => {
@@ -89,6 +100,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const handleGenericEvent = useCallback(
     (event: Record<string, unknown>) => {
       dispatchEvent(event as EventPayload, { queryClient, showToast, currentUserId });
+      for (const listener of listenersRef.current) {
+        // One broken page listener must not stop the others, or the socket's onmessage.
+        try {
+          listener(event as EventPayload);
+        } catch (err) {
+          console.error("[WebSocket] event listener failed", err);
+        }
+      }
     },
     [queryClient, showToast, currentUserId],
   );
@@ -194,14 +213,22 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     clientRef.current?.connect();
   }, []);
 
+  const subscribe = useCallback((listener: RealtimeListener) => {
+    listenersRef.current.add(listener);
+    return () => {
+      listenersRef.current.delete(listener);
+    };
+  }, []);
+
   const value = useMemo(
     () => ({
       status,
       isConnected: status === "connected",
       send,
       reconnect,
+      subscribe,
     }),
-    [status, send, reconnect]
+    [status, send, reconnect, subscribe]
   );
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;

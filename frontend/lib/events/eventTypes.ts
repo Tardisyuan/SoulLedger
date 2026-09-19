@@ -82,6 +82,7 @@ export interface SchedulerEventPayload extends BaseEventPayload {
   domain: "scheduler";
   job_id?: number | null;
   run_id?: number;
+  task_name?: string;
   status?: string;
   tenant_id?: number | null;
 }

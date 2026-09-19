@@ -2920,6 +2920,7 @@ paths:
           - REBIRTH_STATUS_CHANGED
           - RECORD_ADDED
           - REINCARNATION_TRIGGERED
+          - SCHEDULER_RUN_FAILED
           - SENTENCE_NODE_ACTIVATED
           - SENTENCE_NODE_COMPLETED
           - SENTENCE_NODE_REFUSED
@@ -2987,6 +2988,7 @@ paths:
           * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
           * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
           * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+          * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - name: ordering
         required: false
         in: query
@@ -14157,6 +14159,7 @@ components:
       - SENTENCE_REQUEST_DECIDED
       - SENTENCE_PLAN_COMPLETED
       - SENTENCE_PLAN_CANCELLED
+      - SCHEDULER_RUN_FAILED
       type: string
       description: |-
         * `SOUL_CREATED` - Soul Created
@@ -14204,6 +14207,7 @@ components:
         * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
         * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+        * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     ExportedDataScope:
       type: object
       properties:

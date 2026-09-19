@@ -361,4 +361,11 @@ def configure_default_handlers() -> None:
     for domain in ("workflow", "notification", "dispatch", "deathsync", "social"):
         handler_registry.register_domain(domain, WebhookHandler())
 
+    # Scheduler: by event type, not by domain. Of the scheduler events only a
+    # tenant run's failure is a business fact an integration subscribes to
+    # (see the "scheduler" note above and apps/scheduler/realtime.py).
+    from apps.events.models import EventType
+
+    handler_registry.register(EventType.SCHEDULER_RUN_FAILED.value, WebhookHandler())
+
     logger.info("EventBus: default handlers configured (%s)", handler_registry.handler_count())

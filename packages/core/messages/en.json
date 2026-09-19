@@ -1843,6 +1843,13 @@
       "hourly": "Hourly at :{{minute}}",
       "daily": "Daily at {{time}}",
       "weekly": "{{weekday}}s at {{time}}"
+    },
+    "events": {
+      "SCHEDULER_RUN_FAILED": "Scheduled task run failed"
+    },
+    "realtime": {
+      "run_failed": "“{{job}}” failed",
+      "run_lost": "“{{job}}” was lost: no worker finished it"
     }
   },
   "soul_app": {

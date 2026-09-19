@@ -89,6 +89,14 @@ class EventType(models.TextChoices):
     SENTENCE_PLAN_COMPLETED = "SENTENCE_PLAN_COMPLETED"
     SENTENCE_PLAN_CANCELLED = "SENTENCE_PLAN_CANCELLED"
 
+    # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
+    #
+    # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`
+    # 发;没有 soul,所以和 NOTIFICATION_CREATED 一样**不写 SoulEvent**
+    # (AuditHandler 只收带 soul_id 的),走的是 WebSocket 与租户 webhook。
+    # 全局任务(tenant 为空)不发:它不属于任何租户,不能出现在任何租户的 webhook 里。
+    SCHEDULER_RUN_FAILED = "SCHEDULER_RUN_FAILED"
+
 
 class SoulEvent(AuditUserFields, models.Model):
     """

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import type { ScheduledJob } from "@soulledger/core/api";
 import { joinCron, presetFromCron } from "@soulledger/core/domain/cron";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -23,13 +24,17 @@ export function jobDescriptionMember(job: ScheduledJob): string {
 
 export function useJobName() {
   const { t } = useI18n();
-  return (job: ScheduledJob) => {
-    const key = job.description_key;
-    const translated = key ? t(key) : key;
-    // Used where a string is needed (dialog titles). Falls back to the task
-    // name, which is what an operator would grep for, never to the dotted key.
-    return translated && translated !== key ? translated : job.task_name;
-  };
+  // Stable per `t`: the page's realtime subscription lists it as a dependency.
+  return useCallback(
+    (job: ScheduledJob) => {
+      const key = job.description_key;
+      const translated = key ? t(key) : key;
+      // Used where a string is needed (dialog titles). Falls back to the task
+      // name, which is what an operator would grep for, never to the dotted key.
+      return translated && translated !== key ? translated : job.task_name;
+    },
+    [t]
+  );
 }
 
 /** Grid track list shared by the column header and every row, md and up. */
