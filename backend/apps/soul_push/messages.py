@@ -66,7 +66,7 @@ MESSAGES = {
     "egy": {
         "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
         "sentence_amended": {"title": "Wetep Khemen Seth", "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."},
-        "sentence_completed": {"title": "Wetep Nebt Seth", "body": "Wetep Ek Nebt Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
+        "sentence_completed": {"title": "Wetep Neb Seth", "body": "Wetep Ek Neb Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
         "sentence_waiting": {"title": "Hemes Smen", "body": "Mekher Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},
         "rebirth_approved": {"title": "Dbh Hesy Seth", "body": "Dbh Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Khesef Seth", "body": "Dbh Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
