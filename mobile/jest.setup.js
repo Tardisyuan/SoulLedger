@@ -1,4 +1,4 @@
-/* global jest */
+/* global jest, afterEach, afterAll */
 // Native storage has no JS implementation under jest. These doubles keep the
 // one property the tests depend on — two SEPARATE stores — and expose their
 // contents (`__store`) so a test can assert which store a value went to.
@@ -67,3 +67,27 @@ jest.mock("expo-secure-store", () => {
     deleteItemAsync: async (key) => void store.delete(key),
   };
 });
+
+// An act() warning means a state update landed after the test stopped looking —
+// the assertion ran against a screen that was still changing (one of the nine
+// found 2026-09-19 made `push-denied` absent only because the permission had not
+// been read yet). They printed and the suite stayed green, so none was noticed.
+// Now the test that caused one fails; the message still prints.
+//
+// RNTL is required FIRST so its auto-cleanup afterEach (flush pending promises,
+// then unmount) is registered before ours and runs before ours: an update the test
+// left running lands during that flush and is charged to THIS test, not the next.
+require("@testing-library/react-native");
+const actWarnings = [];
+const consoleError = console.error;
+console.error = (...args) => {
+  if (String(args[0]).includes("not wrapped in act")) actWarnings.push(String(args[0]).split("\n")[0].replace("%s", args[1]));
+  consoleError(...args);
+};
+const failOnActWarnings = () => {
+  if (actWarnings.length === 0) return;
+  const found = actWarnings.splice(0);
+  throw new Error(`act() warning(s) — await the update before the test ends:\n${found.join("\n")}`);
+};
+afterEach(failOnActWarnings);
+afterAll(failOnActWarnings);

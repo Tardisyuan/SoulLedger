@@ -19,7 +19,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { PRIMER_SEEN_KEY, PUSH_TOKEN_KEY, landingOf, registerDevice } from "../push";
 import { SessionProvider } from "../session";
-import { PROFILE, application, life, stubApi, type Reply } from "./stubApi";
+import { PROFILE, application, life, pressTab, settleTabs, stubApi, type Reply } from "./stubApi";
 
 type NotificationsDouble = {
   status: string;
@@ -99,6 +99,7 @@ describe("the settings page is the one place for language and sign-out", () => {
     // the bundles' own `language_name` said "Egyptian" and "中文" while login said "Kemet" and "简体中文".
     for (const name of ["简体中文", "English", "Kemet"]) expect(screen.getByText(name)).toBeTruthy();
     expect(screen.queryByText("Egyptian")).toBeNull();
+    await act(async () => {}); // the page's permission read settles before the test ends
   });
 
   it("the same icon is on all three tabs", async () => {
@@ -108,9 +109,10 @@ describe("the settings page is the one place for language and sign-out", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    for (const tab of ["tab-PastLives", "tab-Applications"]) {
-      fireEvent.press(screen.getByTestId(tab));
+    for (const [tab, loaded] of [["tab-PastLives", "past-lives-empty"], ["tab-Applications", "eligibility"]]) {
+      await pressTab(tab);
       expect(screen.getAllByTestId("header-account").length).toBeGreaterThan(0);
+      await screen.findByTestId(loaded); // …and its request answered
     }
   });
 });
@@ -317,6 +319,9 @@ describe("notification settings", () => {
     expect(system.requests).toBe(1);
     fireEvent.press(screen.getByTestId("header-account"));
     await screen.findByTestId("settings");
+    // Until the permission read answers, perm is null and push-denied is absent whatever
+    // the answer — the assertion below would pass without looking. Let it answer first.
+    await act(async () => {});
     expect(screen.queryByTestId("push-denied")).toBeNull();
   });
 
@@ -388,10 +393,11 @@ describe("tapping a notification", () => {
     signedIn({ "/me/rebirth-applications/": { status: 200, data: { can_apply: true, reason: null, cooldown_until: null, results: [] } } });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await pressTab("tab-Applications");
     await screen.findByTestId("eligibility");
     tap({ screen: "Life", kind: "residence_approved" });
     await waitFor(() => expect(route()?.name).toBe("Life"));
+    await settleTabs(); // the tap switched tabs
   });
 
   it("an application opened by hand is not highlighted", async () => {
@@ -407,7 +413,7 @@ describe("tapping a notification", () => {
     signedIn({ "/me/rebirth-applications/": { status: 200, data: { can_apply: true, reason: null, cooldown_until: null, results: [] } } });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await pressTab("tab-Applications");
     await screen.findByTestId("eligibility");
     tap({ screen: "Chat", kind: "dm_received", room: "!x" });
     await act(async () => {});

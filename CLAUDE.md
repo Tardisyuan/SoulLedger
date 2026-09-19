@@ -80,6 +80,12 @@ npm 11 默认**不执行安装脚本**,装完补一次 `npm rebuild @parcel/watc
 **2026-09-18 补正:npm 11(实测 11.19.1)的 `npm ci` 也会删掉锁文件里的 `libc` 字段**(204 行)—— 上面「npm 10 删、npm 11 不删」的说法不成立;
 npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一律 `git checkout -- package-lock.json` 还原锁文件**,只有有意改依赖时才提交锁文件改动。
 
+**App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
+2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
+而 `CI=1` 启动时 Metro 根本不监视文件 —— App 跑的仍是旧 bundle,且不报任何错,于是「改动没生效」
+读起来像「改动是错的」。换过文件之后要 `npx expo start --clear` 重启(**不要带 `CI=1`**),
+再看模拟器上的行为;在那之前观察到的一切都是旧代码的。
+
 **后端的解释器是 `backend/.venv`,不是 PATH 上的任何 `python`。**
 Python **3.11** + `requirements.lock` + `requirements-dev.txt`(只有钉死的 ruff)——
 与镜像(`backend/Dockerfile`)和 CI(`ci.yml`)装的是**同一份**。建法,在仓库根:
