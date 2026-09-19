@@ -10,6 +10,7 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
+        "sentence_plan_cancelled": {"title": "受刑计划已撤销", "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"},
         "sentence_plan_amended": {"title": "受刑计划变更", "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"},
         "sentence_request_pending": {"title": "受刑计划请求待决", "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原审判官决定。"},
         "sentence_request_decided": {"title": "受刑计划请求已决定", "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"},
@@ -25,6 +26,7 @@ MESSAGES = {
         },
     },
     "en": {
+        "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
         "sentence_plan_amended": {"title": "Sentence plan changed", "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."},
         "sentence_request_pending": {"title": "Sentence plan request pending", "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."},
         "sentence_request_decided": {"title": "Sentence plan request decided", "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."},
@@ -43,6 +45,7 @@ MESSAGES = {
         },
     },
     "egy": {
+        "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Nebt Seth."},
         "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."},
         "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Hemsu Tepy Er Wedja."},
         "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh Ek Wedja Seth Em Hemsu Tepy."},
@@ -71,6 +74,7 @@ KIND_BY_TYPE = {
     "SENTENCE_PLAN_AMENDED": "sentence_plan_amended",
     "SENTENCE_REQUEST_PENDING": "sentence_request_pending",
     "SENTENCE_REQUEST_DECIDED": "sentence_request_decided",
+    "SENTENCE_PLAN_CANCELLED": "sentence_plan_cancelled",
 }
 
 

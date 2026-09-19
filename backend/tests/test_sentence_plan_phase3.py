@@ -20,6 +20,7 @@ from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRe
 from apps.souls.models import SoulState
 from tests import sentence_plan_support as plan
 from tests.soul_account_support import officer_client
+from tests.soul_push_support import enqueued  # noqa: F401
 
 pytestmark = pytest.mark.django_db
 PLANS = "/api/v1/sentence-plans/"
@@ -447,40 +448,126 @@ def test_a_retrial_takes_no_plan_changes(cn, eg, eu, judges):
     assert retrial.verdict is None
 
 
-# ── 撤销(Q11)──────────────────────────────────────────────────────────
+# ── 撤销(Q11;2026-09-19 用户决定:撤销 = 赦免剩余刑期,视为完成)──────────────────
 
 
-def test_cancelling_a_plan_stops_everything_not_yet_started(cn, eg, eu, judges):
-    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7)])
+def _cancel(user, p, reason="复核撤销"):
+    return _c(user).post(f"{PLANS}{p.pk}/cancel/", {"reason": reason}, format="json")
+
+
+def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(cn, eg, eu, judges):
+    from tests.soul_account_support import ready_soul
+
+    account, client = ready_soul(cn, name="赦免")
+    soul = account.soul
+    case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
+    plan.bench(case, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7)])
+    case.conclude("PASSED", "")
+    p = SentencePlan.all_objects.get(soul=soul)
     plan.serve(soul, p, 1)
     [record] = DispatchRecord.all_objects.filter(soul=soul)
+    assert client.get("/api/v1/me/rebirth-applications/").data["reason"] == "sentence_in_progress"
     mod = plan.officer("cn_mod", "MODERATOR", cn)
 
-    response = _c(mod).post(f"{PLANS}{p.pk}/cancel/", {"reason": "复核撤销"}, format="json")
+    response = _cancel(mod, p)
 
     assert response.status_code == 200, response.data
     p.refresh_from_db()
     record.refresh_from_db()
-    assert p.status == "CANCELLED" and p.cancel_reason == "复核撤销"
+    soul.refresh_from_db()
+    assert p.status == "CANCELLED" and p.cancel_reason == "复核撤销" and p.completed_at is not None
     assert _shape(p) == [(1, "CN_DIYU", "COMPLETED"), (2, "EG_DUAT", "CANCELLED"), (3, "EU_HEAVEN_HELL", "CANCELLED")]
     assert record.status == "CANCELLED"
-    assert SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_PLAN_CANCELLED").count() == 1
+    # 与计划完成同一条路径:进轮回、记转生触发、通知原属判官(撤销的文案)。
+    assert soul.current_state == SoulState.REINCARNATING
+    assert SoulEvent.objects.filter(soul=soul, event_type="REINCARNATION_TRIGGERED").count() == 1
+    [cancelled] = SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_PLAN_CANCELLED")
+    assert cancelled.payload["rebirth_open"] is True
+    assert not SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_PLAN_COMPLETED").exists()
+    assert {n.user_id for n in UserNotification.objects.filter(notification_type="SENTENCE_PLAN_CANCELLED")} == {
+        judges["cn"].pk, mod.pk}
     [audit] = AuditLog.objects.filter(resource="sentence_plan", resource_id=str(p.pk))
     assert audit.user_id == mod.pk and audit.changes["reason"] == "复核撤销"
-    # 手动调拨从此重新开放(Q3 只挡进行中的计划)。
+    # Q6:撤销过的计划视为完成,转生申请开放。
+    listing = client.get("/api/v1/me/rebirth-applications/").data
+    assert listing["can_apply"] is True and listing["reason"] is None
+
+
+def test_cancelling_pushes_the_pardon_not_the_completion(cn, eg, enqueued):  # noqa: F811
+    from apps.soul_push.models import PushDelivery
+    from tests.soul_account_support import ready_soul
+    from tests.soul_push_support import register
+
+    account, client = ready_soul(cn, name="赦免推送")
+    assert register(client).status_code == 201
+    soul = account.soul
+    case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
+    plan.bench(case, [(eg, plan.stop_realm(eg), 5)])
+    case.conclude("PASSED", "")
+    p = SentencePlan.all_objects.get(soul=soul)
+    PushDelivery.objects.all().delete()
+    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p, reason="SECRET-REASON").status_code == 200
+    [push] = PushDelivery.objects.filter(kind__startswith="sentence_")
+    assert (push.kind, push.title) == ("sentence_pardoned", "受刑计划已撤销")
+    assert "SECRET" not in push.body and "SECRET" not in push.title
+
+
+def test_cancelling_while_the_soul_serves_abroad_ends_that_stop_and_brings_it_home(cn, eg, eu, judges):
+    soul, p = _two_stops(cn, eg, eu)
+    record = DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id)
+
+    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p).status_code == 200
+
     soul.refresh_from_db()
-    assert soul.current_state == SoulState.DISPOSED
+    record.refresh_from_db()
+    p.refresh_from_db()
+    # 正在受的刑赦免(ABORTED);回归与计划推进里的回归同一个函数,触发记 PLAN_CANCELLED。
+    assert _shape(p) == [(1, "CN_DIYU", "COMPLETED"), (2, "EG_DUAT", "ABORTED"), (3, "EU_HEAVEN_HELL", "CANCELLED")]
+    assert soul.tenant_id == cn.pk and not soul.is_residing and record.status == "RETURNED"
+    [returned] = plan.returned_events(soul)
+    assert returned.payload["trigger"] == "PLAN_CANCELLED"
+    assert p.status == "CANCELLED" and soul.current_state == SoulState.REINCARNATING
+    assert Disposition.all_objects.get(pk=plan.node(p, 2).disposition_id).is_executed is False
 
 
-def test_cancelling_withdraws_the_pending_request_and_the_open_retrial_and_does_not_bring_the_soul_home(
-        cn, eg, eu, judges):
+def test_cancelling_a_held_plan_brings_the_soul_home_from_its_eternal_stop(cn, eg, judges):
+    soul, p, _ = plan.at_stop(cn, eg, eternal=True)
+    plan.serve(soul, p, 2)
+    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p).status_code == 200
+    soul.refresh_from_db()
+    assert plan.node(p, 2).status == "ABORTED" and soul.tenant_id == cn.pk
+    assert soul.current_state == SoulState.REINCARNATING
+
+
+def test_a_terminal_cosmology_settles_when_its_plan_is_cancelled(eu, eg):
+    soul, p, _ = plan.at_stop(eu, eg, name="欧魂")
+    assert _cancel(plan.officer("eu_mod", "MODERATOR", eu), p).status_code == 200
+    soul.refresh_from_db()
+    assert soul.tenant_id == eu.pk and soul.current_state == SoulState.SETTLED
+    assert SoulEvent.objects.get(soul=soul, event_type="SENTENCE_PLAN_CANCELLED").payload["rebirth_open"] is False
+
+
+def test_cancelling_withdraws_the_pending_request_and_the_open_retrial(cn, eg, eu, judges):
     soul, p, retrial = _reopen_accepted(cn, eg, eu, judges)
-    mod = plan.officer("cn_mod", "MODERATOR", cn)
-    assert _c(mod).post(f"{PLANS}{p.pk}/cancel/", {"reason": "撤"}, format="json").status_code == 200
+    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p).status_code == 200
     retrial.refresh_from_db()
     soul.refresh_from_db()
-    assert retrial.is_deleted and soul.tenant_id == eu.pk
-    assert plan.node(p, 3).status == "ACTIVE"  # 已开始的刑是历史,不改
+    assert retrial.is_deleted and soul.tenant_id == cn.pk
+    assert plan.node(p, 3).status == "ABORTED"
+
+
+def test_a_cancelled_plan_neither_advances_nor_takes_requests(cn, eg, eu, judges):
+    from apps.sentence_plan.services import SentencePlanService
+
+    soul, p = _two_stops(cn, eg, eu)
+    _cancel(plan.officer("cn_mod", "MODERATOR", cn), p)
+    before, records = _shape(p), DispatchRecord.all_objects.filter(soul=soul).count()
+    SentencePlanService.advance(soul)
+    assert _shape(p) == before and DispatchRecord.all_objects.filter(soul=soul).count() == records
+    response = _file(judges["eu"], p, kind="AMEND", changes={"add": [{"realm_code": plan.stop_realm(eu)}]})
+    assert response.status_code == 409 and response.data["code"] == "plan_closed"
+    assert not SentencePlanRequest.all_objects.filter(plan=p).exists()
+    assert _cancel(plan.officer("cn_mod2", "MODERATOR", cn), p).data["code"] == "plan_closed"
 
 
 @pytest.mark.allow_uncommitted_audit  # 撤销的 AuditLog 由服务直接写(不经 on_commit 信号),「不存在」不是空断言
@@ -494,7 +581,24 @@ def test_cancel_refusals_write_nothing(cn, eg, eu, judges):
     response = _c(plan.officer("eg_mod", "MODERATOR", eg)).post(url, {"reason": "x"}, format="json")
     assert response.status_code == 403 and response.data["code"] == "not_home"
     p.refresh_from_db()
-    assert p.status == "ACTIVE" and p.cancel_reason == ""
+    soul.refresh_from_db()
+    assert p.status == "ACTIVE" and p.cancel_reason == "" and soul.tenant_id == eg.pk
+    _nothing_changed(p, before)
+    assert not AuditLog.objects.filter(resource="sentence_plan").exists()
+
+
+@pytest.mark.allow_uncommitted_audit
+def test_an_open_case_blocks_the_cancel_like_it_blocks_completion(cn, eg, eu, judges):
+    """与正常完成一致:未结案审判拦住回归与完成 → 撤销答 409 `open_judgment`,什么都不写。"""
+    soul, p = _two_stops(cn, eg, eu)
+    case = _open_amendment(judges["eg"], soul)
+    before = _shape(p)
+    response = _cancel(plan.officer("cn_mod", "MODERATOR", cn), p)
+    assert response.status_code == 409 and response.data["code"] == "open_judgment"
+    assert response.data["open_judgment_ids"] == [str(case.pk)]
+    p.refresh_from_db()
+    soul.refresh_from_db()
+    assert p.status == "ACTIVE" and soul.tenant_id == eg.pk and soul.current_state == SoulState.DISPOSED
     _nothing_changed(p, before)
     assert not AuditLog.objects.filter(resource="sentence_plan").exists()
 

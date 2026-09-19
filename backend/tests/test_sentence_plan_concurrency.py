@@ -258,9 +258,11 @@ def _cancel_while_advancing(cn, eg, run):
         "cancel": lambda: canceller.post(f"{PLANS}{p.pk}/cancel/", {"reason": "撤"}, format="json").status_code,
     })
     p.refresh_from_db()
-    assert results == {"serve": 200, "cancel": 200}, results
+    # 撤销 = 赦免剩余刑期、视为完成(2026-09-19):撤销在先,原属那站 ABORTED、灵魂已进轮回,
+    # 随后的执行答 409(灵魂不在能执行处置的状态);执行在先,两者都 200。
+    assert results in ({"serve": 200, "cancel": 200}, {"serve": 409, "cancel": 200}), results
     assert p.status == "CANCELLED"
-    assert plan.node(p, 1).status == "COMPLETED"
+    assert plan.node(p, 1).status == ("COMPLETED" if results["serve"] == 200 else "ABORTED")
     assert not p.nodes.filter(status="DISPATCHING").exists()
     assert not DispatchRecord.all_objects.filter(soul=soul, status__in=["PROPOSED", "APPROVED"]).exists()
 
