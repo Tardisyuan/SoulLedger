@@ -96,6 +96,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 单 Synapse homeserver(不联邦)。compose 的 `synapse` 服务(`matrixdotorg/synapse:v1.161.0`,
   **不发布端口**)+ `nginx.conf` 的 `/_matrix`、`/_synapse/client` 反代;`/_synapse/admin` 在 nginx
   上一律 403,admin API 只有 compose 网络里的后端够得着(`MATRIX_INTERNAL_URL=http://synapse:8008`)。
+  联邦接口 `/_matrix/federation`、`/_matrix/key` 在 nginx 上也一律 403:不联邦(模板里
+  `federation_domain_whitelist: []`,不与任何服务器互通),App 只用 `/_matrix/client`(媒体也在其下),
+  这两个前缀没有任何客户端要用,关掉只是少暴露一块用不上的面。
   nginx 按请求解析 synapse(resolver),synapse 没起或在重启时只有这两条路径 502,不连累全站。
 - 数据库:同一个 `db` 实例里单独一个 `synapse` 库(Synapse 要求 `LC_COLLATE`/`LC_CTYPE` 为 `C`,
   由初始化脚本从 `template0` 建),用 `soulledger` 账号、直连 `db` 不经 pgbouncer(pgbouncer 只配了 `soulledger` 库;
@@ -136,9 +139,11 @@ $DC up -d nginx
 $DC up -d backend celery celery-beat
 # 4. 服务账号注册成 admin(已有则 JWT 登录)并免限速。幂等,重跑无害
 $DC exec backend python manage.py setup_matrix
-# 5. 验证:经 nginx 客户端 API 200,admin API 403
+# 5. 验证:经 nginx 客户端 API 200,admin 与联邦接口 403
 curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/client/versions      # 200
 curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_synapse/admin/v1/register   # 403
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/federation/v1/version # 403
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/server        # 403
 ```
 
   改 homeserver 的值:编辑 `synapse_data` 卷里的 `/data/homeserver.yaml` 后 `$DC restart synapse`,
