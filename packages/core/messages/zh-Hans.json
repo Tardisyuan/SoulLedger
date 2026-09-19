@@ -2282,7 +2282,7 @@
     },
     "chat_message": {
       "title": "新书信",
-      "body": "你收到一封新书信,打开灵魂簿查看。"
+      "body": "{{name}} 给你写了一封信,打开灵魂簿查看。"
     }
   },
   "official_notify": {

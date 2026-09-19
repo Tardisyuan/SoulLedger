@@ -57,8 +57,9 @@ def test_the_module_signs_what_the_backend_verifies(matrix):  # noqa: F811
 
 def test_a_new_message_is_pushed_to_the_other_side_only(pair, matrix):  # noqa: F811
     """互关房间里甲直接在 Matrix 里发(后端不在路径上):乙收到一条推送,甲自己不收。
-    锁屏上没有正文、没有名字;数据只带 App 落地要的 screen 与 conversation_id。
-    变异:`_recipient` 返回发送者自己的账号 → 甲收到、乙没收到,红。"""
+    锁屏上说「谁」写了信(甲的朋友圈显示名),**不带正文**;数据只带 App 落地要的 screen 与 conversation_id。
+    变异:`_recipient` 返回发送者自己的账号 → 甲收到、乙没收到,红。
+    变异:名字里拼进正文(模块把 body 一并回调、后端把它当名字)→ 正文上了锁屏,红。"""
     a, _, b, _, conversation = pair
     matrix.says(conversation.room_id, mxid(a), "今晚月色很好")
     api = deliver_hooks()
@@ -66,9 +67,50 @@ def test_a_new_message_is_pushed_to_the_other_side_only(pair, matrix):  # noqa: 
     assert [uri for uri, _ in api.posts] == [PUSH_URL] and not api.failures
     [push] = _pushes(b)
     assert push.data == {"screen": "Conversation", "conversation_id": str(conversation.id), "kind": "chat_message"}
-    assert (push.title, push.body) == ("新书信", "你收到一封新书信,打开灵魂簿查看。")
-    assert "今晚月色很好" not in f"{push.title}{push.body}{push.data}" and "甲" not in push.body
+    assert (push.title, push.body) == ("新书信", f"{a.user.display_name} 给你写了一封信,打开灵魂簿查看。")
+    assert "今晚月色很好" not in f"{push.title}{push.body}{push.data}"
+    assert "今晚月色很好" not in str(api.posts)  # 回调本身就不带正文
     assert _pushes(a) == []
+
+
+@pytest.mark.parametrize("locale, expected", [
+    ("zh-Hans", "前世之甲 给你写了一封信,打开灵魂簿查看。"),
+    ("en", "前世之甲 wrote you a letter. Open Soul Ledger to read it."),
+    ("egy", "前世之甲: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."),
+])
+def test_the_name_is_the_senders_life_in_this_conversation(cn_tenant, matrix, locale, expected,  # noqa: F811
+                                                         django_capture_on_commit_callbacks):
+    """名字取会话那一世发件方账号的显示名(与会话列表一致),文案按收件方的推送语言。
+    场景:甲转世那一刻关会话的提交后回调没跑成(进程在提交后、回调前退出)—— 旧房间仍开着,
+    甲的前世身份仍能发;这时甲的本世账号是「今生之甲」,而这条信是前世写的。
+    变异:名字改取发件灵魂此刻的本世账号(`current_account_of`)→ 显示「今生之甲」,红。"""
+    from apps.reincarnation.models import Reincarnation
+    from apps.soul_accounts import services as accounts
+    from apps.soul_accounts.models import AccountOrigin
+
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, b_client = ready_soul(cn_tenant, name="乙")
+    a.user.display_name = "前世之甲"
+    a.user.save(update_fields=["display_name"])
+    register(b_client, TOKEN_B)
+    assert b_client.patch("/api/v1/me/notification-settings/", {"locale": locale}, format="json").status_code == 200
+    mutual(a, b)
+    opened = a_client.post(CONVERSATIONS, {"target_user": b.user_id}, format="json").data
+    old_mxid = mxid(a)
+
+    with django_capture_on_commit_callbacks(execute=False):  # 提交后的回调没跑成
+        accounts.retire_account_for_rebirth(a.soul, a.cycle)
+    Reincarnation.objects.create(soul=a.soul, cycle_count=1, rebirth_form="HUMAN", target_realm="R0", tenant=cn_tenant)
+    new, _ = accounts.provision_account(a.soul, AccountOrigin.OFFICER)
+    new.user.display_name = "今生之甲"
+    new.user.save(update_fields=["display_name"])
+    assert Conversation.objects.get(pk=opened["id"]).closed_at is None
+
+    matrix.says(opened["room_id"], old_mxid, "前世的一封")
+    deliver_hooks()
+    [push] = _pushes(b)
+    assert push.body == expected
+    assert "今生之甲" not in push.body and "前世的一封" not in push.body
 
 
 def test_a_request_through_the_backend_is_pushed_too(cn_tenant, matrix):  # noqa: F811
@@ -103,6 +145,29 @@ def test_a_hall_reply_is_pushed_but_a_letter_to_the_hall_is_not(cn_tenant, matri
     deliver_hooks()
     [push] = _pushes(a)
     assert push.data["conversation_id"] == inbox["id"]
+    # 「谁」是殿司展示名(没填时退回租户名),不是回信官员本人;回信正文不上锁屏。
+    assert push.body == f"{cn_tenant.hall_names['zh-Hans']} 给你写了一封信,打开灵魂簿查看。"
+    assert "已收" not in push.body
+
+
+def test_a_hall_reply_names_the_hall_in_the_souls_push_language(cn_tenant, matrix):  # noqa: F811
+    """殿司名按收件灵魂的推送语言取(`Tenant.hall_names`,空的退回 zh)。
+    变异:殿司名固定取 zh-Hans → en 收件人看到「第五殿」,红。"""
+    from apps.authentication.models import User
+
+    cn_tenant.hall_name, cn_tenant.hall_name_en, cn_tenant.hall_name_egy = "第五殿", "The Fifth Court", "Yanluo Qedi"
+    cn_tenant.save()
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    register(a_client, TOKEN_A)
+    a_client.patch("/api/v1/me/notification-settings/", {"locale": "en"}, format="json")
+    inbox = a_client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
+    officer = User.objects.create_user(username="cn_mod", password="x", role="ADMIN", tenant=cn_tenant,
+                                       first_name="崔珏")
+    officer_client(officer).post(f"/api/v1/chat/inbox/{inbox['id']}/reply/", {"body": "已收"}, format="json")
+    deliver_hooks()
+    [push] = _pushes(a)
+    assert push.body == "The Fifth Court wrote you a letter. Open Soul Ledger to read it."
+    assert "崔珏" not in push.body
 
 
 def test_the_letters_switch_turns_chat_pushes_off(pair, matrix):  # noqa: F811

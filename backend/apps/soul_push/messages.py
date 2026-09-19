@@ -24,7 +24,7 @@ MESSAGES = {
         "residence_approved": {"title": "即将暂居", "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_started": {"title": "暂居开始", "body": "你已被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_returned": {"title": "暂居结束", "body": "你已回归原属文明,打开灵魂簿查看。"},
-        "chat_message": {"title": "新书信", "body": "你收到一封新书信,打开灵魂簿查看。"},
+        "chat_message": {"title": "新书信", "body": "{{name}} 给你写了一封信,打开灵魂簿查看。"},
     },
     "en": {
         "sentence_pardoned": {"title": "Sentence plan cancelled", "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."},
@@ -63,7 +63,7 @@ MESSAGES = {
             "title": "Residence ended",
             "body": "You have returned to your home civilization. Open Soul Ledger to see it.",
         },
-        "chat_message": {"title": "New letter", "body": "You have a new letter. Open Soul Ledger to read it."},
+        "chat_message": {"title": "New letter", "body": "{{name}} wrote you a letter. Open Soul Ledger to read it."},
     },
     "egy": {
         "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."},
@@ -78,11 +78,15 @@ MESSAGES = {
         "residence_approved": {"title": "Hemes Taui Ky Hesy", "body": "Ek Er Hemes Em Taui Ky. Wen Medjat Ba Er Maa."},
         "residence_started": {"title": "Hemes Tepy", "body": "Ek Hemes Em Taui Ky. Wen Medjat Ba Er Maa."},
         "residence_returned": {"title": "Hemes Khetem", "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."},
-        "chat_message": {"title": "Shemes Renpi", "body": "Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."},
+        "chat_message": {"title": "Shemes Renpi", "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."},
     },
 }
 
 
-def render(locale, kind):
+def render(locale, kind, **params):
+    """`params` 填 `{{占位符}}`(与语言包同一写法;目前只有 chat_message 的 `name`)。"""
     pack = MESSAGES.get(locale) or MESSAGES[DEFAULT_LOCALE]
-    return pack[kind]["title"], pack[kind]["body"]
+    title, body = pack[kind]["title"], pack[kind]["body"]
+    for key, value in params.items():
+        title, body = title.replace(f"{{{{{key}}}}}", value), body.replace(f"{{{{{key}}}}}", value)
+    return title, body

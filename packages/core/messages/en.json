@@ -2282,7 +2282,7 @@
     },
     "chat_message": {
       "title": "New letter",
-      "body": "You have a new letter. Open Soul Ledger to read it."
+      "body": "{{name}} wrote you a letter. Open Soul Ledger to read it."
     }
   },
   "official_notify": {
