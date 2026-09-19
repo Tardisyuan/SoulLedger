@@ -119,8 +119,8 @@ test.describe("Sentence plan", () => {
     api.on("GET", "/dispatch/cross-tenant-judgments/:id/", () => ({ body: bench() }));
     // 只回被问的那个文明的神祇(服务端的规则钉在 test_sentence_plan_phase4.py)。
     api.on("GET", "/dispatch/cross-tenant-judgments/:id/seatable-actors/", (call) => ({
-      body: call.query.tenant_code === "EG_DUAT"
-        ? [{ id: "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a1", name: "Osiris", name_zh: "奥西里斯", name_en: "Osiris", name_egy: "Wesir" }]
+      body: call.query.tenant_code === "EG_DUAT" && call.query.role === "CO_JUDGE"
+        ? [{ id: "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a1", role: "JUDGE", name: "Osiris", name_zh: "奥西里斯", name_en: "Osiris", name_egy: "Wesir" }]
         : [],
     }));
     api.on("POST", "/dispatch/cross-tenant-judgments/:id/participate/", (call) => {
@@ -150,7 +150,9 @@ test.describe("Sentence plan", () => {
     await expect(seat.getByTestId("seat-stop")).toHaveText("排第 2 站");
     await seat.getByLabel("文明", { exact: true }).selectOption("EG_DUAT");
     await seat.getByLabel("席位上的神祇（可选）").selectOption({ label: "奥西里斯" });
-    expect(api.lastCall("GET", "/dispatch/cross-tenant-judgments/:id/seatable-actors/")?.query.tenant_code).toBe("EG_DUAT");
+    expect(api.lastCall("GET", "/dispatch/cross-tenant-judgments/:id/seatable-actors/")?.query).toEqual({
+      tenant_code: "EG_DUAT", role: "CO_JUDGE",
+    });
     await seat.getByRole("button", { name: "入席" }).click();
 
     await expect

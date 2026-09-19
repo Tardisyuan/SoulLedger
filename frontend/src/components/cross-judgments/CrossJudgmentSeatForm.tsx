@@ -14,7 +14,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
 
 /** The name in the reader's language, falling back to the primary name. */
-function actorLabel(a: SeatableActor, locale: string): string {
+function actorName(a: SeatableActor, locale: string): string {
   const byLocale = locale === "en" ? a.name_en : locale === "egy" ? a.name_egy : a.name_zh;
   return byLocale || a.name;
 }
@@ -35,8 +35,9 @@ function errorText(error: unknown): string | null {
  *   可选的是另外三个文明中还没入席的。
  * * N3=(a):联合审判官 / 主持带一站,站号自动取下一个(2、3……;要换顺序用各站区的上下移);
  *   顾问不带站。没挂审判的联审(存量会议)不带站号 —— 服务端对它拒收 `node_order`。
- * * 席位上的神祇(可选,2026-09-20 用户决定):从**被邀文明**里可担任席位的神祇选
- *   (`seatable-actors/`,只给发起方);换文明时清空。服务端入席时再校验一次。
+ * * 席位上的神祇(可选,2026-09-20 用户决定):从**被邀文明**里可担任**这种席位**的神祇选
+ *   (`seatable-actors/`,只给发起方;D13:联合审判官 / 主持只有判官,顾问任一在任神祇)。
+ *   换文明或换角色都重新取列表、清空已选。服务端入席时再校验一次。
  */
 export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgment }) {
   const { t, locale } = useI18n();
@@ -63,8 +64,8 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
     mine === judgment.initiating_tenant_code &&
     hasPermission("cross_judgment.create");
   const actors = useQuery({
-    queryKey: ["cross-judgments", "seatable-actors", judgment.id, tenantCode],
-    queryFn: () => crossTenantJudgmentsApi.seatableActors(judgment.id, tenantCode).then((r) => r.data),
+    queryKey: ["cross-judgments", "seatable-actors", judgment.id, tenantCode, role],
+    queryFn: () => crossTenantJudgmentsApi.seatableActors(judgment.id, tenantCode, role).then((r) => r.data),
     enabled: isInitiator && !!tenantCode,
   });
 
@@ -118,7 +119,10 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
         <SelectField
           label={t("sentence_plan.cross.seat_role")}
           value={role}
-          onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}
+          onChange={(e) => {
+            setRole(e.target.value as (typeof ROLES)[number]);
+            setActorId("");
+          }}
           options={ROLES.map((r) => ({
             value: r,
             label: resolveEnumDisplay(t, "crossJudgments.participant_roles", r).label ?? r,
@@ -136,8 +140,20 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
             onChange={(e) => setActorId(e.target.value)}
             options={[
               { value: "", label: t("sentence_plan.cross.seat_actor_none") },
-              ...actors.data.map((a) => ({ value: a.id, label: actorLabel(a, locale) })),
+              ...actors.data.map((a) => ({
+                value: a.id,
+                // 顾问席混着几种神祇:名字后面带上它的角色。
+                label:
+                  role === "ADVISOR"
+                    ? `${actorName(a, locale)} · ${resolveEnumDisplay(t, "actors.roles", a.role).label ?? a.role}`
+                    : actorName(a, locale),
+              })),
             ]}
+            description={t(
+              role === "ADVISOR"
+                ? "sentence_plan.cross.seat_actor_hint_advisor"
+                : "sentence_plan.cross.seat_actor_hint_judging"
+            )}
           />
         ))}
       {judgment.judgment && (

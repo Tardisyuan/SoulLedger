@@ -2586,7 +2586,9 @@
       "seat_error": "Could not seat",
       "seat_actor": "Deity in the seat (optional)",
       "seat_actor_none": "Not specified yet",
-      "seat_actor_empty": "This civilization has no deity who can take a seat"
+      "seat_actor_empty": "This civilization has no deity who can take a seat",
+      "seat_actor_hint_judging": "A co-judge or chair must be a judge",
+      "seat_actor_hint_advisor": "Any serving deity may sit as an advisor"
     },
     "file": {
       "open": "File a request",

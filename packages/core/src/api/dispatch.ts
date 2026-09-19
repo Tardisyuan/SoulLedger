@@ -168,12 +168,13 @@ export const crossTenantJudgmentsApi = {
   // other tenant, 400 on an empty bench or a judgment past PROPOSED.
   activate: (id: string) => api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/activate/`),
   /**
-   * Initiator only, while PROPOSED: the invited tenant's deities who may hold a
-   * seat (active JUDGE actors), id and names only. 403 for anyone else.
+   * Initiator only, while PROPOSED: the invited tenant's active deities who may
+   * hold this kind of seat (design doc D13) — CO_JUDGE / CHAIRMAN take JUDGE
+   * actors only, ADVISOR any role. 403 for anyone else, 400 without a seat role.
    */
-  seatableActors: (id: string, tenantCode: string) =>
+  seatableActors: (id: string, tenantCode: string, seatRole: "ADVISOR" | "CO_JUDGE" | "CHAIRMAN") =>
     api.get<SeatableActor[]>(`/dispatch/cross-tenant-judgments/${id}/seatable-actors/`, {
-      params: { tenant_code: tenantCode },
+      params: { tenant_code: tenantCode, role: seatRole },
     }),
   /** The seat's own tenant fills its stop: a realm of its own civilization, and a term (null = unrecorded). */
   sentence: (id: string, data: { participant: string; realm_code: string; sentence_years: number | null; notes?: string }) =>

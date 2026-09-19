@@ -342,7 +342,7 @@ describe("联审详情:请文明入席", () => {
     cjApi.seatableActors.mockImplementation((_id: string, code: string) =>
       Promise.resolve({
         data: code === "EU_HEAVEN_HELL"
-          ? [{ id: "a-minos", name: "Minos", name_zh: "米诺斯", name_en: "Minos", name_egy: "" }]
+          ? [{ id: "a-minos", role: "JUDGE", name: "Minos", name_zh: "米诺斯", name_en: "Minos", name_egy: "" }]
           : [],
       })
     );
@@ -352,7 +352,7 @@ describe("联审详情:请文明入席", () => {
 
     fireEvent.change(tenant, { target: { value: "GR_HADES" } });
     expect(await screen.findByText(tZh("sentence_plan.cross.seat_actor_empty"))).toBeInTheDocument();
-    expect(cjApi.seatableActors).toHaveBeenCalledWith("cj1", "GR_HADES");
+    expect(cjApi.seatableActors).toHaveBeenCalledWith("cj1", "GR_HADES", "CO_JUDGE");
 
     fireEvent.change(tenant, { target: { value: "EU_HEAVEN_HELL" } });
     const actor = await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"));
@@ -370,7 +370,7 @@ describe("联审详情:请文明入席", () => {
     as("JUDGE", "CN_DIYU", ...JUDGE);
     cjApi.participate.mockResolvedValue({ data: bench() });
     cjApi.seatableActors.mockImplementation((_id: string, code: string) =>
-      Promise.resolve({ data: [{ id: `a-${code}`, name: code, name_zh: code, name_en: code, name_egy: code }] })
+      Promise.resolve({ data: [{ id: `a-${code}`, role: "JUDGE", name: code, name_zh: code, name_en: code, name_egy: code }] })
     );
     renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
     const tenant = screen.getByLabelText(tZh("sentence_plan.cross.seat_tenant"));
@@ -384,6 +384,62 @@ describe("联审详情:请文明入席", () => {
     await waitFor(() =>
       expect(cjApi.participate).toHaveBeenCalledWith("cj1", {
         participant_tenant_code: "GR_HADES", role: "CO_JUDGE", node_order: 3,
+      })
+    );
+  });
+
+  it("换成顾问:按顾问席重新取(D13,判官以外的在任神祇也在),清空已选,名字后面带角色", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    cjApi.participate.mockResolvedValue({ data: bench() });
+    const osiris = { id: "a-osiris", role: "JUDGE", name: "Osiris", name_zh: "奥西里斯", name_en: "Osiris", name_egy: "Wesir" };
+    const ra = { id: "a-ra", role: "OVERSEER", name: "Ra", name_zh: "拉", name_en: "Ra", name_egy: "Ra" };
+    cjApi.seatableActors.mockImplementation((_id: string, _code: string, seatRole: string) =>
+      Promise.resolve({ data: seatRole === "ADVISOR" ? [osiris, ra] : [osiris] })
+    );
+    renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
+    fireEvent.change(screen.getByLabelText(tZh("sentence_plan.cross.seat_tenant")), { target: { value: "EU_HEAVEN_HELL" } });
+    const judging = await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"));
+    await within(judging).findByRole("option", { name: "奥西里斯" });
+    expect(within(judging).queryByRole("option", { name: /拉/ })).toBeNull();
+    expect(screen.getByText(tZh("sentence_plan.cross.seat_actor_hint_judging"))).toBeInTheDocument();
+    fireEvent.change(judging, { target: { value: "a-osiris" } });
+
+    fireEvent.change(screen.getByLabelText(tZh("sentence_plan.cross.seat_role")), { target: { value: "ADVISOR" } });
+    await waitFor(() => expect(cjApi.seatableActors).toHaveBeenLastCalledWith("cj1", "EU_HEAVEN_HELL", "ADVISOR"));
+    const advisor = await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"));
+    const overseer = `拉 · ${tZh("actors.roles.OVERSEER")}`;
+    await within(advisor).findByRole("option", { name: overseer });
+    expect((advisor as HTMLSelectElement).value).toBe("");
+    expect(screen.getByText(tZh("sentence_plan.cross.seat_actor_hint_advisor"))).toBeInTheDocument();
+    fireEvent.change(advisor, { target: { value: "a-ra" } });
+    fireEvent.click(screen.getByRole("button", { name: SEAT() }));
+    await waitFor(() =>
+      expect(cjApi.participate).toHaveBeenCalledWith("cj1", {
+        participant_tenant_code: "EU_HEAVEN_HELL", role: "ADVISOR", participant_actor: "a-ra",
+      })
+    );
+  });
+
+  it("换角色时清掉已选的神祇(不会把顾问席选的监理带到联合审判官席上)", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    cjApi.participate.mockResolvedValue({ data: bench() });
+    const ra = { id: "a-ra", role: "OVERSEER", name: "Ra", name_zh: "拉", name_en: "Ra", name_egy: "Ra" };
+    const osiris = { id: "a-osiris", role: "JUDGE", name: "Osiris", name_zh: "奥西里斯", name_en: "Osiris", name_egy: "Wesir" };
+    cjApi.seatableActors.mockImplementation((_id: string, _code: string, seatRole: string) =>
+      Promise.resolve({ data: seatRole === "ADVISOR" ? [osiris, ra] : [osiris] })
+    );
+    renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
+    fireEvent.change(screen.getByLabelText(tZh("sentence_plan.cross.seat_role")), { target: { value: "ADVISOR" } });
+    fireEvent.change(screen.getByLabelText(tZh("sentence_plan.cross.seat_tenant")), { target: { value: "EU_HEAVEN_HELL" } });
+    const advisor = await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"));
+    await within(advisor).findByRole("option", { name: `拉 · ${tZh("actors.roles.OVERSEER")}` });
+    fireEvent.change(advisor, { target: { value: "a-ra" } });
+    fireEvent.change(screen.getByLabelText(tZh("sentence_plan.cross.seat_role")), { target: { value: "CO_JUDGE" } });
+    await within(await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"))).findByRole("option", { name: "奥西里斯" });
+    fireEvent.click(screen.getByRole("button", { name: SEAT() }));
+    await waitFor(() =>
+      expect(cjApi.participate).toHaveBeenCalledWith("cj1", {
+        participant_tenant_code: "EU_HEAVEN_HELL", role: "CO_JUDGE", node_order: 3,
       })
     );
   });
