@@ -156,6 +156,15 @@ export const soulInboxKeys = {
   messages: (id: string) => ["soul-inbox", "messages", id] as const,
 };
 
+/**
+ * Sentence plans (officer side). One root: deciding a request, withdrawing it
+ * or cancelling the plan changes both the soul's plan panel and the inbox.
+ */
+export const sentencePlanKeys = {
+  all: ["sentence-plans"] as const,
+  list: (params: Record<string, string | number | boolean | undefined>) => ["sentence-plans", "list", params] as const,
+};
+
 /** Soul chat, soul side. Opening a conversation invalidates the list. */
 export const soulChatKeys = {
   all: ["soul-chat"] as const,

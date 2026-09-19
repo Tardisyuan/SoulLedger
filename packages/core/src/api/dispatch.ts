@@ -65,6 +65,9 @@ export interface CrossTenantJudgmentListItem {
  */
 export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
   description: string;
+  /** The original judgment this bench sets a sentence plan for; null = a plain
+   *  meeting with no soul and no sentence nodes (every pre-plan row). */
+  judgment: string | null;
   participants: CrossTenantJudgmentParticipant[];
   create_time: string;
   update_time: string;
@@ -79,6 +82,21 @@ export interface CrossTenantJudgmentParticipant {
   participant_actor_name: string | null;
   role: string;
   joined_at: string;
+  /**
+   * This seat's stop in the sentence plan (docs/ARCHITECTURE-sentence-plan.md
+   * §2.2). The home tenant is always stop 1, so seats run from 2. Null for an
+   * ADVISOR and on a bench with no judgment. The `sentence_*` fields are
+   * written only through `sentence/` (the seat's own tenant); `is_eternal` and
+   * `memory_reset` are copied from the realm server-side.
+   */
+  node_order: number | null;
+  sentence_realm_code: string;
+  sentence_years: number | null;
+  sentence_is_eternal: boolean;
+  sentence_memory_reset: string;
+  sentence_notes: string;
+  /** Null until the seat's tenant has filled its stop; `conclude` refuses until every node seat has. */
+  sentence_submitted_at: string | null;
 }
 
 export const dispatchApi = {
@@ -130,6 +148,13 @@ export const crossTenantJudgmentsApi = {
   // convenes explicitly, once at least one participant is seated. 403 for any
   // other tenant, 400 on an empty bench or a judgment past PROPOSED.
   activate: (id: string) => api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/activate/`),
+  /** The seat's own tenant fills its stop: a realm of its own civilization, and a term (null = unrecorded). */
+  sentence: (id: string, data: { participant: string; realm_code: string; sentence_years: number | null; notes?: string }) =>
+    api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/sentence/`, data),
+  /** Initiator only, while PROPOSED: every node seat's id in the new order; they become stops 2, 3, …
+   *  400 when a filled eternal stop would not be last (Q5). */
+  order: (id: string, participants: string[]) =>
+    api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/order/`, { participants }),
   conclude: (id: string, data: { conclusion_type: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/conclude/`, data),
 };
