@@ -11,6 +11,7 @@
  * token, no toast for a malformed frame, no reconnect after a 4001 close,
  * and teardown on logout/unmount.
  */
+import { useEffect } from "react";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
@@ -344,6 +345,47 @@ describe("WebSocketProvider event fan-out", () => {
 
     expect(mockShowToast).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith("[WS] Server error:", "nope");
+  });
+
+  it("hands generic frames to subscribers after the registry, isolates a throwing one, and stops on unsubscribe", () => {
+    const seen: string[] = [];
+    let unsubscribe = () => {};
+    function Subscriber() {
+      const { subscribe } = useWebSocket();
+      useEffect(() => {
+        const offBroken = subscribe(() => {
+          throw new Error("broken page listener");
+        });
+        const offGood = subscribe((e) => seen.push(`${e.domain}.${e.event}`));
+        unsubscribe = () => {
+          offBroken();
+          offGood();
+        };
+        return unsubscribe;
+      }, [subscribe]);
+      return null;
+    }
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WebSocketProvider>
+          <Subscriber />
+        </WebSocketProvider>
+      </QueryClientProvider>,
+    );
+    act(() => lastSocket().open());
+    act(() => lastSocket().receive({ type: "connected" }));
+
+    act(() => lastSocket().receive({ type: "broadcast", domain: "scheduler", event: "SCHEDULER_RUN_UPDATED", status: "FAILURE" }));
+    expect(seen).toEqual(["scheduler.SCHEDULER_RUN_UPDATED"]);
+    // The registry ran first and was not disturbed by the broken listener.
+    expect(invalidatedKeys()).toContain('["scheduler"]');
+    expect(errorSpy).toHaveBeenCalledWith("[WebSocket] event listener failed", expect.any(Error));
+
+    act(() => unsubscribe());
+    act(() => lastSocket().receive({ type: "broadcast", domain: "scheduler", event: "SCHEDULER_RUN_UPDATED", status: "LOST" }));
+    expect(seen).toEqual(["scheduler.SCHEDULER_RUN_UPDATED"]);
+    errorSpy.mockRestore();
   });
 
   it("keeps processing frames after a malformed one", () => {

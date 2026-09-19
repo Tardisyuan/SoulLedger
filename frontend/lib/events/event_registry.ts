@@ -142,6 +142,10 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     SCHEDULER_RUN_UPDATED: handleSchedulerEvent,
     SCHEDULER_JOB_UPDATED: handleSchedulerEvent,
     SCHEDULER_JOBS_REBUILT: handleSchedulerEvent,
+    // The EventType member (tenant runs that reached FAILURE / LOST); on the
+    // socket it arrives next to the RUN_UPDATED frame for the same save, so it
+    // only refreshes — the scheduler page toasts off RUN_UPDATED.
+    SCHEDULER_RUN_FAILED: handleSchedulerEvent,
   },
 };
 
@@ -252,6 +256,8 @@ export const BACKEND_EVENT_TYPES = [
   "SENTENCE_REQUEST_DECIDED",
   "SENTENCE_PLAN_COMPLETED",
   "SENTENCE_PLAN_CANCELLED",
+  // Scheduler (only the failure is an EventType; see REALTIME_ONLY below)
+  "SCHEDULER_RUN_FAILED",
 ] as const;
 
 /**

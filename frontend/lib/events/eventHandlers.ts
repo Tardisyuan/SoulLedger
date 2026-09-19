@@ -124,6 +124,9 @@ export const EVENT_LABELS: Record<string, string> = {
   SENTENCE_REQUEST_DECIDED: "Sentence plan request decided",
   SENTENCE_PLAN_COMPLETED: "Sentence plan completed",
   SENTENCE_PLAN_CANCELLED: "Sentence plan cancelled",
+
+  // Scheduler events
+  SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };
 
 // ── Pure Handler Functions ─────────────────────────────────────────────
@@ -304,7 +307,9 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
 }
 
 /**
- * All three scheduler events invalidate the whole scheduler root, silently.
+ * All four scheduler events invalidate the whole scheduler root, silently.
+ * (The failure toast is the scheduler page's, off RUN_UPDATED — see
+ * app/scheduler/page.tsx — so it shows only where the rows are.)
  *
  * Silently: a 5-minutely job emits a RUNNING and a SUCCESS every 5 minutes for
  * every ADMIN; a toast per frame would bury the page. The page's rows are the

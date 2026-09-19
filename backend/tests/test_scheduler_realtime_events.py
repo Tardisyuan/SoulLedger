@@ -252,3 +252,120 @@ async def test_a_viewer_without_the_codename_receives_nothing_and_with_it_receiv
         assert frame["status"] == "PENDING" and frame["job_id"] == job.pk
     finally:
         await comm.disconnect()
+
+
+# ---------------------------------------------------------------------------
+# SCHEDULER_RUN_FAILED: the one scheduler event that is an EventType
+# ---------------------------------------------------------------------------
+
+FAILED = "SCHEDULER_RUN_FAILED"
+
+
+@pytest.fixture
+def webhooks(monkeypatch, cn_tenant, eu_tenant):
+    """One subscribe-to-everything webhook per tenant; enqueue stubbed out, the
+    recorded `EventWebhookDelivery` rows are what is asserted."""
+    from apps.death_sync.models import ExternalApiKey, WebhookConfig
+    from apps.events.handlers.webhook_handler import WebhookHandler
+
+    monkeypatch.setattr(WebhookHandler, "_enqueue", staticmethod(lambda ids: None))
+    hooks = {}
+    for tenant in (cn_tenant, eu_tenant):
+        _, key_hash, key_prefix = ExternalApiKey.generate_key()
+        key = ExternalApiKey.objects.create(
+            tenant=tenant, name="oc", system_type="HOSPITAL", key_hash=key_hash, key_prefix=key_prefix,
+        )
+        hooks[tenant.code] = WebhookConfig.objects.create(
+            tenant=tenant, api_key=key, url="https://example.invalid/hook", signing_secret="s", events=[],
+        )
+    return hooks
+
+
+def _deliveries():
+    from apps.events.models import EventWebhookDelivery
+
+    return list(EventWebhookDelivery.objects.values_list("webhook__tenant__code", "event_type", "payload_json"))
+
+
+def test_the_failure_event_is_a_member_of_the_backend_enum():
+    from apps.events.models import EventType
+
+    assert EventType.SCHEDULER_RUN_FAILED == FAILED
+    assert {RunStatus.FAILURE, RunStatus.LOST} == realtime.FAILED_STATUSES
+
+
+@pytest.mark.django_db(transaction=True)
+def test_only_failure_and_lost_emit_the_failure_event_to_the_tenant_group(layer, cn_tenant, eu_tenant):
+    job = _job("tests.rt_tenant_job", tenant=cn_tenant)
+    ok = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="ok", tenant=cn_tenant)
+    for status in (RunStatus.RUNNING, RunStatus.RETRY, RunStatus.SKIPPED):
+        ok.status = status
+        ok.save(update_fields=["status"])
+    ok.finish(RunStatus.SUCCESS)
+    assert _events(layer, FAILED) == [], "a non-failure status emitted SCHEDULER_RUN_FAILED"
+
+    bad = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="bad", tenant=cn_tenant)
+    bad.finish(RunStatus.FAILURE, error="Traceback: secret internals")
+    old = timezone.now() - timedelta(hours=2)
+    TaskRun.objects.create(
+        job=job, task_name=job.job_key, celery_task_id="stuck", tenant=cn_tenant,
+        status=RunStatus.PENDING, queued_at=old,
+    )
+    services.reap_stale_runs()
+
+    events = _events(layer, FAILED)
+    assert [d["status"] for _, d in events] == ["FAILURE", "LOST"]
+    for group, data in events:
+        assert group == f"rt_tenant_{cn_tenant.code}"
+        assert data["_permission"] == "scheduler.read" and data["domain"] == "scheduler"
+        assert data["tenant_id"] == cn_tenant.pk and data["job_id"] == job.pk
+        assert "error" not in data, "the traceback must not ride on an event a tenant webhook receives"
+    assert not any(g == f"rt_tenant_{eu_tenant.code}" for g, _ in layer.sent)
+    # RUN_UPDATED is unchanged: every status still gets its frame.
+    assert [d["status"] for _, d in _events(layer, realtime.RUN_UPDATED) if d["run_id"] == ok.pk] == [
+        "PENDING", "RUNNING", "RETRY", "SKIPPED", "SUCCESS",
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_global_run_failing_emits_no_failure_event_at_all(layer, admin_user):
+    job = _job("tests.rt_global_job")
+    run = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id=str(uuid.uuid4()))
+    run.finish(RunStatus.FAILURE, error="boom")
+    assert _events(layer, FAILED) == []
+    # The ADMINs are still told, through the frame that was always there.
+    assert [d["status"] for _, d in _events(layer, realtime.RUN_UPDATED)] == ["PENDING", "FAILURE"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_tenant_failure_is_delivered_to_that_tenants_webhooks_only(layer, webhooks, cn_tenant, eu_tenant):
+    from apps.events.models import SoulEvent
+
+    job = _job("tests.rt_tenant_job", tenant=cn_tenant)
+    ok = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="ok", tenant=cn_tenant)
+    ok.finish(RunStatus.SUCCESS)
+    assert _deliveries() == [], "a successful run (or RUN_UPDATED at all) reached a webhook"
+
+    bad = TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="bad", tenant=cn_tenant)
+    bad.finish(RunStatus.FAILURE, error="boom")
+
+    rows = _deliveries()
+    assert [(code, et) for code, et, _ in rows] == [(cn_tenant.code, FAILED)]
+    envelope = rows[0][2]
+    assert envelope["tenant_code"] == cn_tenant.code and envelope["domain"] == "scheduler"
+    assert envelope["payload"]["run_id"] == bad.pk and envelope["payload"]["status"] == "FAILURE"
+    # No soul, so no timeline row — same as NOTIFICATION_CREATED.
+    assert not SoulEvent.all_objects.filter(event_type=FAILED).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_global_failure_reaches_no_tenants_webhook(layer, webhooks):
+    job = _job("tests.rt_global_job")
+    TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="g1").finish(RunStatus.FAILURE, error="x")
+    TaskRun.objects.create(
+        job=job, task_name=job.job_key, celery_task_id="g2", status=RunStatus.PENDING,
+        queued_at=timezone.now() - timedelta(hours=2),
+    )
+    services.reap_stale_runs()
+    assert TaskRun.objects.get(celery_task_id="g2").status == RunStatus.LOST
+    assert _deliveries() == []

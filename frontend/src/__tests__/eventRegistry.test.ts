@@ -284,7 +284,7 @@ describe("death sync events", () => {
 // ── Scheduler domain ─────────────────────────────────────────────────
 
 describe("scheduler events", () => {
-  it.each(["SCHEDULER_RUN_UPDATED", "SCHEDULER_JOB_UPDATED", "SCHEDULER_JOBS_REBUILT"])(
+  it.each(["SCHEDULER_RUN_UPDATED", "SCHEDULER_JOB_UPDATED", "SCHEDULER_JOBS_REBUILT", "SCHEDULER_RUN_FAILED"])(
     "%s invalidates the scheduler root, and toasts nothing",
     (event) => {
       const { ctx, invalidateQueries, showToast } = makeContext();
@@ -312,7 +312,8 @@ describe("scheduler events", () => {
     const published = [...source.matchAll(/^[A-Z_]+ = "(SCHEDULER_[A-Z_]+)"$/gm)].map((m) => m[1]).sort();
     expect(published.length).toBeGreaterThanOrEqual(3);
     expect([...REALTIME_ONLY_EVENT_TYPES].sort()).toEqual(published);
-    expect(getRegisteredEvents("scheduler").sort()).toEqual(published);
+    // Plus the one scheduler event that is an EventType member, not a module constant.
+    expect(getRegisteredEvents("scheduler").sort()).toEqual([...published, "SCHEDULER_RUN_FAILED"].sort());
   });
 });
 

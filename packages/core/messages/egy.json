@@ -1843,6 +1843,13 @@
       "hourly": "Unut Neb Em At {{minute}}",
       "daily": "Hru Neb Em {{time}}",
       "weekly": "{{weekday}} Neb Em {{time}}"
+    },
+    "events": {
+      "SCHEDULER_RUN_FAILED": "Iri Baku Ahet: Nen Kheper"
+    },
+    "realtime": {
+      "run_failed": "Iri «{{job}}»: Nen Kheper",
+      "run_lost": "Iri «{{job}}»: Nen Gem"
     }
   },
   "soul_app": {
