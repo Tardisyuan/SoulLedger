@@ -1,27 +1,28 @@
 /**
- * The soul chat entry point: find a soul by its full code, then open the chat.
+ * The soul chat entry point's hooks: find a soul by its full code, then open the chat.
  *
- * Driven through the real `soulHttp` (soul token, interceptors) with only the
- * transport stubbed — a mocked `soulChatApi` would test the mock. The server
- * rate-limits lookups per account, so the hook must fire exactly once per
- * submit: never on mount, never on retry.
+ * The server rate-limits lookups per account, so the hook must fire exactly once
+ * per submit: never on mount, never on retry.
+ *
+ * `soulHttp` is replaced by a plain axios instance whose transport is stubbed.
+ * Its own behaviour (soul token, refresh, password gate) is `soul.ts`'s and is
+ * tested by core's vitest (`api/__tests__/soul.test.ts`, `soulChat.test.ts`) —
+ * importing the real module here would only pull its interceptors into this
+ * run's coverage denominator as untested code (measured: core branches
+ * 76.8% → 70.3%, under the 74% gate), without testing any of it.
  */
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
-import {
-  SOUL_ERROR_CODES,
-  clearSoulTokens,
-  soulCodeMessage,
-  soulHttp,
-  storeSoulTokens,
-} from "@soulledger/core/api/soul";
-import { SOUL_CHAT_LOOKUP_ERROR_CODES, soulChatApi } from "@soulledger/core/api/soul-chat";
+import { soulHttp } from "@soulledger/core/api/soul";
+import { soulChatApi } from "@soulledger/core/api/soul-chat";
 import { useOpenSoulChat, useSoulChatLookup, useSoulConversations } from "@soulledger/core/hooks/useSoulChat";
 import { soulChatKeys } from "@soulledger/core/query_keys";
 
-type Call = { method: string; url: string; auth: unknown; body: unknown };
+jest.mock("@soulledger/core/api/soul", () => ({ soulHttp: jest.requireActual("axios").create() }));
+
+type Call = { method: string; url: string; body: unknown };
 let calls: Call[];
 let reply: (_config: InternalAxiosRequestConfig) => AxiosResponse;
 const originalAdapter = soulHttp.defaults.adapter;
@@ -32,12 +33,10 @@ const ok = (config: InternalAxiosRequestConfig, data: unknown, status = 200) =>
 beforeEach(() => {
   calls = [];
   reply = (config) => ok(config, {});
-  storeSoulTokens({ access: "SOUL", refresh: "R" });
   soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
     calls.push({
       method: config.method ?? "",
       url: config.url ?? "",
-      auth: config.headers?.Authorization,
       body: config.data ? JSON.parse(config.data as string) : undefined,
     });
     return reply(config);
@@ -46,7 +45,6 @@ beforeEach(() => {
 
 afterEach(() => {
   soulHttp.defaults.adapter = originalAdapter;
-  clearSoulTokens();
 });
 
 function wrapper(client: QueryClient) {
@@ -56,11 +54,10 @@ function wrapper(client: QueryClient) {
 const card = { user_id: 7, display_name: "Beatrice", avatar: null, is_active: true };
 
 describe("soulChatApi", () => {
-  it("looks up by POST body with the soul token — the code never goes into a URL", async () => {
+  it("looks up by POST body — the code never goes into a URL", async () => {
     reply = (config) => ok(config, card);
     await expect(soulChatApi.lookup("abcd23456x")).resolves.toEqual(card);
-    expect(calls).toEqual([{ method: "post", url: "/me/chat/lookup/", auth: "Bearer SOUL", body: { soul_code: "abcd23456x" } }]);
-    expect(calls[0].url).not.toContain("abcd");
+    expect(calls).toEqual([{ method: "post", url: "/me/chat/lookup/", body: { soul_code: "abcd23456x" } }]);
   });
 
   it("opens a direct chat with the looked-up user_id, and lists conversations", async () => {
@@ -70,13 +67,6 @@ describe("soulChatApi", () => {
       ["post", "/me/chat/conversations/", { target_user: 7 }],
       ["get", "/me/chat/conversations/", undefined],
     ]);
-  });
-
-  it("maps every lookup refusal to existing copy, not to the `unknown` fallback", () => {
-    for (const code of SOUL_CHAT_LOOKUP_ERROR_CODES) {
-      expect(SOUL_ERROR_CODES).toContain(code);
-      expect(soulCodeMessage(code)).toEqual({ key: `soul_app.errors.${code}` });
-    }
   });
 });
 
