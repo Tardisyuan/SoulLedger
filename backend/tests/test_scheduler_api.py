@@ -110,6 +110,55 @@ def test_runs_are_tenant_scoped_and_filterable(api_client, judge_with_manage, ad
     assert {r["celery_task_id"] for r in by_job["results"]} == {"eu1"}
 
 
+def _ids(resp):
+    assert resp.status_code == 200, resp.content
+    return {r["celery_task_id"] for r in resp.json()["results"]}
+
+
+@pytest.mark.django_db
+def test_run_history_filters_status_list_time_range_and_search(api_client, admin_user, synced):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    now = timezone.now()
+    cn = synced["cn"]
+    TaskRun.objects.create(job=cn, task_name="ledger.recalculate_tenant", celery_task_id="ok", tenant=cn.tenant, status=RunStatus.SUCCESS, queued_at=now - timedelta(days=1))
+    TaskRun.objects.create(job=cn, task_name="ledger.recalculate_tenant", celery_task_id="boom", tenant=cn.tenant, status=RunStatus.FAILURE, queued_at=now - timedelta(days=2), error="ZeroDivisionError: karma")
+    TaskRun.objects.create(job=cn, task_name="ledger.recalculate_tenant", celery_task_id="lost", tenant=cn.tenant, status=RunStatus.LOST, queued_at=now - timedelta(days=10))
+    TaskRun.objects.create(job=synced["global"], task_name="authentication.flush_expired_tokens", celery_task_id="g", status=RunStatus.SKIPPED, queued_at=now)
+    auth = _bearer(admin_user)
+
+    assert _ids(api_client.get(RUNS, {"status": "FAILURE,LOST"}, **auth)) == {"boom", "lost"}
+    assert _ids(api_client.get(RUNS, {"status": "SKIPPED"}, **auth)) == {"g"}
+    window = {"queued_after": (now - timedelta(days=3)).isoformat(), "queued_before": (now - timedelta(hours=12)).isoformat()}
+    assert _ids(api_client.get(RUNS, window, **auth)) == {"ok", "boom"}
+    # search matches the error text and the task name, case-insensitively.
+    assert _ids(api_client.get(RUNS, {"search": "zerodivision"}, **auth)) == {"boom"}
+    assert _ids(api_client.get(RUNS, {"search": "flush_expired"}, **auth)) == {"g"}
+    # newest first
+    resp = api_client.get(RUNS, **auth).json()
+    assert [r["celery_task_id"] for r in resp["results"]] == ["g", "ok", "boom", "lost"]
+
+
+@pytest.mark.django_db
+def test_run_history_filters_and_search_never_reach_past_the_tenant_scope(api_client, judge_with_manage, synced):
+    """The new filters narrow the scoped queryset; none of them can widen it —
+    not a status list naming the foreign row's status, not ?tenant=<other>,
+    not a search hitting the foreign / GLOBAL row's error text."""
+    TaskRun.objects.create(job=synced["cn"], task_name="x", celery_task_id="mine", tenant=synced["cn"].tenant, status=RunStatus.FAILURE, error="needle mine")
+    TaskRun.objects.create(job=synced["eu"], task_name="x", celery_task_id="eu", tenant=synced["eu"].tenant, status=RunStatus.FAILURE, error="needle eu")
+    TaskRun.objects.create(job=synced["global"], task_name="x", celery_task_id="g", status=RunStatus.LOST, error="needle global")
+    auth = _bearer(judge_with_manage)
+
+    assert _ids(api_client.get(RUNS, {"status": "FAILURE,LOST"}, **auth)) == {"mine"}
+    assert _ids(api_client.get(RUNS, {"search": "needle"}, **auth)) == {"mine"}
+    assert _ids(api_client.get(RUNS, {"search": "needle eu"}, **auth)) == set()
+    assert _ids(api_client.get(RUNS, {"search": "needle global"}, **auth)) == set()
+    assert _ids(api_client.get(RUNS, {"tenant": synced["eu"].tenant_id}, **auth)) == set()
+    assert _ids(api_client.get(RUNS, {"queued_after": "2000-01-01T00:00:00Z"}, **auth)) == {"mine"}
+
+
 # ---------------------------------------------------------------------------
 # PATCH
 # ---------------------------------------------------------------------------
