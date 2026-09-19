@@ -946,6 +946,15 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "test_serving_a_stop_and_opening_a_case_there_at_once_never_strands_the_case",
         "tests/test_sentence_plan_concurrency.py::"
         "test_two_officers_executing_a_stop_at_once_complete_and_return_once",
+        # 阶段 3(§8 清单 3、4、6、7):批准、转生申请、撤销、开审都在灵魂行锁下读计划;串行版本同文件。
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_judges_accepting_one_request_at_once_add_once",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_completing_a_plan_and_applying_for_rebirth_at_once_never_applies_early",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_cancelling_a_plan_while_it_advances_leaves_nothing_dispatching",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_tenants_opening_a_case_on_one_soul_at_once_open_exactly_one",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
