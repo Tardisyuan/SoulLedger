@@ -37,6 +37,7 @@ const conversation = (over: Record<string, unknown> = {}) => ({
   soul_code: "ABCDEFGHJK",
   tenant: 1,
   tenant_name: "中国地府",
+  hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" },
   last_message_at: "2026-09-18T01:00:00Z",
   created_at: "2026-09-18T00:00:00Z",
   closed_at: null,
@@ -44,8 +45,8 @@ const conversation = (over: Record<string, unknown> = {}) => ({
 });
 // 接口新的在前。
 const MESSAGES = [
-  { event_id: "$2", from_officer: true, sender_name: "判官崔珏", body: "已收到", timestamp: 2000 },
-  { event_id: "$1", from_officer: false, sender_name: "张三", body: "我想申诉", timestamp: 1000 },
+  { event_id: "$2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到", timestamp: 2000 },
+  { event_id: "$1", from_officer: false, sender_name: "张三", officer_title: "", body: "我想申诉", timestamp: 1000 },
 ];
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
@@ -84,8 +85,10 @@ it("reads a thread oldest first, marking the hall's replies", async () => {
   expect(apiMock.messages).toHaveBeenCalledWith("c1");
   const items = await within(thread).findAllByRole("listitem");
   expect(items.map((li) => li.getAttribute("data-event-id"))).toEqual(["$1", "$2"]);
-  expect(within(items[1]).getByText(new RegExp(tZh("soul_inbox.from_hall", { name: "判官崔珏" })))).toBeInTheDocument();
-  expect(within(items[0]).queryByText(new RegExp(tZh("soul_inbox.from_hall", { name: "" })))).toBeNull();
+  // 署名:殿司展示名(不是租户管理名)· 职位 · 官员。灵魂的信没有这一行。
+  expect(within(items[1]).getByText(/第五殿 · 判官 崔珏/)).toBeInTheDocument();
+  expect(within(items[0]).queryByText(/第五殿 ·/)).toBeNull();
+  expect(screen.queryByText(/中国地府/)).toBeNull();
 });
 
 it("replies with the typed text", async () => {

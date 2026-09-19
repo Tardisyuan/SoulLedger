@@ -33,10 +33,18 @@ export const ANDROID = Platform.OS === "android";
 /** The accent, faintly: my bubbles, the Android selected tab. Hex alpha, so it follows every civilization's accent. */
 export const wash = (t: Theme) => `${t.accent}1F`;
 
-/** The hall this soul is in now (`/me/`'s tenant). */
+/** A hall's name in the interface language (`hall_names`); the server's simplified-Chinese `hall` otherwise. */
+export function hallOf(c: SoulConversation, locale: string): string {
+  return c.hall_names?.[locale] || c.hall;
+}
+
+/** The hall this soul is in now (`/me/`'s tenant), by its hall name — not the tenant's admin name. */
 export function useCurrentHall(): string {
   const session = useContext(SessionContext);
-  return session?.state.status === "signedIn" ? session.state.profile.tenant.display_name : "";
+  const { locale } = useI18n();
+  if (session?.state.status !== "signedIn") return "";
+  const tenant = session.state.profile.tenant;
+  return tenant.hall_names?.[locale] || tenant.display_name;
 }
 
 /** The newest text in a room: what the row previews and when it sorts. */
@@ -171,7 +179,7 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
 
 export function LettersScreen() {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, locale } = useI18n();
   const chat = useChat();
   const hallName = useCurrentHall();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -247,7 +255,7 @@ export function LettersScreen() {
             hall
             onPress={() => void openHall(hall)}
             glyph={<Glyph text={hallGlyph} tone="mark" />}
-            title={tr("soul_app.chat.hall.title", { hall: hall?.hall || hallName })}
+            title={tr("soul_app.chat.hall.title", { hall: (hall && hallOf(hall, locale)) || hallName })}
             hint={tr("soul_app.chat.hall.hint")}
             {...(hall ? preview(hall) : {})}
           />
@@ -257,7 +265,7 @@ export function LettersScreen() {
               testID={`hall-sealed-${c.id}`}
               onPress={() => open(c)}
               glyph={<Glyph text={hallGlyph} tone="subtle" dotted />}
-              title={tr("soul_app.chat.hall.title", { hall: c.hall })}
+              title={tr("soul_app.chat.hall.title", { hall: hallOf(c, locale) })}
               tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" />}
               {...preview(c)}
             />

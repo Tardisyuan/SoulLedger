@@ -29,7 +29,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
-import { FindSoulScreen, LettersScreen } from "../screens/letters";
+import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
 import { PROFILE, stubApi } from "./stubApi";
 
@@ -74,7 +74,7 @@ function conv(overrides: Partial<SoulConversation> = {}): SoulConversation {
 const hall = (overrides: Partial<SoulConversation> = {}) =>
   conv({ id: "c-hall", kind: "OFFICER_INBOX", room_id: "!hall:hs.test", peer_user: null, peer_name: "", hall: "第五殿", mutual: false, ...overrides });
 
-const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, txnId: null });
+const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, officerTitle: null, txnId: null });
 
 const facts = (overrides = {}) => ({ now: NOW, peerHasSpoken: false, iHaveSpoken: false, refused: null, ...overrides });
 
@@ -394,10 +394,20 @@ describe("the conversation's eight states", () => {
   });
 
   it("the hall: officer bubbles, writable; a hall left behind is sealed and offers the current one", () => {
-    openConversation(hall(), [{ ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "崔珏" }]);
+    openConversation(
+      hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } }),
+      [{ ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "崔珏", officerTitle: "判官" }]
+    );
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
-    expect(screen.getByTestId("officer-bubble")).toBeTruthy();
+    // The byline: the hall's display name, the officer's position, the officer — as the backend stamped them.
+    expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿 · 判官 崔珏")).toBeTruthy();
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
+  });
+
+  it("a hall is named in the interface language, falling back to the server's hall", () => {
+    const c = hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } });
+    expect([hallOf(c, "zh-Hans"), hallOf(c, "en"), hallOf(c, "egy")]).toEqual(["第五殿", "The Fifth Court", "Yanluo Qedi"]);
+    expect(hallOf(hall({ hall: "第五殿", hall_names: null }), "en")).toBe("第五殿");
   });
 
   it("a sealed hall has no composer, only the way to the current hall", () => {

@@ -714,6 +714,7 @@ export const INBOX_CONVERSATIONS = [
     soul_code: "ABCDEFGHJK",
     tenant: 1,
     tenant_name: "中国地府",
+    hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" },
     last_message_at: "2026-09-18T01:00:00Z",
     created_at: "2026-09-18T00:00:00Z",
     closed_at: null as string | null,
@@ -722,7 +723,7 @@ export const INBOX_CONVERSATIONS = [
 
 /** GET `/chat/inbox/:id/messages/` — InboxMessageSerializer, newest first. */
 export const INBOX_MESSAGES = [
-  { event_id: "$reply", from_officer: true, sender_name: "测试管理员", body: "已收到,正在查", timestamp: 1789700000000 },
+  { event_id: "$reply", from_officer: true, sender_name: "测试管理员", officer_title: "判官", body: "已收到,正在查", timestamp: 1789700000000 },
   { event_id: "$letter", from_officer: false, sender_name: "写信的灵魂", body: "我想申诉这次判决", timestamp: 1789690000000 },
 ];
 

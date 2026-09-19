@@ -13165,8 +13165,15 @@ components:
           description: 对方**会话那一世**的显示名 —— 对方转世之后也不变。
         hall:
           type: string
-          description: 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。
+          description: 殿司展示名(简体中文;收件箱)。私聊为空。
           readOnly: true
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          readOnly: true
+          description: 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。私聊为空。
         throttled:
           type: boolean
           readOnly: true
@@ -13218,6 +13225,7 @@ components:
       - closed_at
       - created_at
       - hall
+      - hall_names
       - id
       - initiated_by_me
       - kind
@@ -14351,6 +14359,9 @@ components:
           type: boolean
         sender_name:
           type: string
+        officer_title:
+          type: string
+          description: 回信官员的职位(官员回信;灵魂的信为空)。
         body:
           type: string
         timestamp:
@@ -14359,6 +14370,7 @@ components:
       - body
       - event_id
       - from_officer
+      - officer_title
       - sender_name
       - timestamp
     InitRolePermissionsResult:
@@ -15528,9 +15540,16 @@ components:
           type: string
         display_name:
           type: string
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+          description: 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。
       required:
       - code
       - display_name
+      - hall_names
     MemoryResetMechanismEnum:
       enum:
       - MENGPO
@@ -16048,6 +16067,12 @@ components:
         tenant_name:
           type: string
           readOnly: true
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+          description: 殿司展示名,按语言:{zh-Hans, en, egy}。
         last_message_at:
           type: string
           format: date-time
@@ -16065,6 +16090,7 @@ components:
       required:
       - closed_at
       - created_at
+      - hall_names
       - id
       - last_message_at
       - soul

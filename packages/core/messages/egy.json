@@ -2438,7 +2438,7 @@
     "thread_empty": "Nen Medu",
     "closed": "Khetem Seth (Wehem Mesut Seth)",
     "no_messages": "Nen Medu",
-    "from_hall": "Wesekhet · {{name}}",
+    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Wesheb Em Wesekhet",
     "reply_hint": "Ba Maa Wesheb Wesekhet; Ren Ek Em Sesh.",
     "send": "Hab",
