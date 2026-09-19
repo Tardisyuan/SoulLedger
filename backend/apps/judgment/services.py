@@ -156,6 +156,7 @@ class JudgmentConclusionService:
         notes: str = "",
         create_workflow: bool = False,
         statute_ids=None,
+        plan_changes=None,
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -194,6 +195,31 @@ class JudgmentConclusionService:
             judgment.is_final = True
             judgment.concluded_at = timezone.now()
             judgment.save()
+
+            # An AMENDMENT (the stop's own case, situation 1) or a REOPEN (the
+            # home judge's retrial) changes the sentence plan instead: no
+            # disposition, no soul state move — the soul is already DISPOSED,
+            # which is why this used to be unconcludable (design doc G1).
+            # Same transaction: a refusal below rolls the verdict back with it.
+            from apps.judgment.models import JudgmentKind
+            from apps.sentence_plan import requests as plan_requests
+
+            if judgment.kind != JudgmentKind.ORIGINAL:
+                if judgment.kind == JudgmentKind.AMENDMENT:
+                    plan_requests.request_from_amendment(judgment, plan_changes, notes)
+                else:
+                    if plan_changes:
+                        raise plan_requests.PlanChangeRefusedError(
+                            "A reopened judgment changes the plan through its verdict (a new home node), "
+                            "not through plan_changes", "invalid_changes")
+                    plan_requests.conclude_reopened(judgment)
+                SentencePlanService.advance(judgment.soul)
+                from apps.events.services import EventService
+                EventService.log_judgment_concluded(judgment)
+                return True
+            if plan_changes:
+                raise plan_requests.PlanChangeRefusedError(
+                    "plan_changes apply only to an amendment judgment", "invalid_changes")
 
             # Step 2: Create disposition (cross-context: judgment → disposition)
             from apps.disposition.services import DispositionService
