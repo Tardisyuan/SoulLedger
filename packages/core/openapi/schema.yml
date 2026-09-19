@@ -15967,6 +15967,9 @@ components:
         residence:
           type: boolean
           description: 暂居开始 / 回归(依赖 feat/dispatch-residence)
+        chat:
+          type: boolean
+          description: 新书信:私聊的新消息、殿司的回信
         locale:
           $ref: '#/components/schemas/PushLocaleEnum'
     NotificationTypeEnum:
@@ -17925,6 +17928,9 @@ components:
         residence:
           type: boolean
           description: 暂居开始 / 回归(依赖 feat/dispatch-residence)
+        chat:
+          type: boolean
+          description: 新书信:私聊的新消息、殿司的回信
         locale:
           $ref: '#/components/schemas/PushLocaleEnum'
     PatchedOrganization:

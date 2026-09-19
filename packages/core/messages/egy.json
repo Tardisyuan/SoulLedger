@@ -2112,7 +2112,9 @@
       "open_system_settings": "Wen Seshem Ta",
       "enable_push": "Wen Sedjem",
       "toggle_failed": "Nen Sesh; Ankh Er Tepy",
-      "version": "Medjat Ba {{version}}"
+      "version": "Medjat Ba {{version}}",
+      "chat": "Shemes",
+      "chat_note": "Shemes Renpi, Weshed Wesekhet"
     },
     "push": {
       "primer_title": "Sedjem Ek Em Wedja?",
@@ -2277,6 +2279,10 @@
     "sentence_pardoned": {
       "title": "Wetep Sehen Seth",
       "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."
+    },
+    "chat_message": {
+      "title": "Shemes Renpi",
+      "body": "Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {

@@ -7229,6 +7229,8 @@ export interface components {
             judgment?: boolean;
             /** @description 暂居开始 / 回归(依赖 feat/dispatch-residence) */
             residence?: boolean;
+            /** @description 新书信:私聊的新消息、殿司的回信 */
+            chat?: boolean;
             locale?: components["schemas"]["PushLocaleEnum"];
         };
         /**
@@ -8361,6 +8363,8 @@ export interface components {
             judgment?: boolean;
             /** @description 暂居开始 / 回归(依赖 feat/dispatch-residence) */
             residence?: boolean;
+            /** @description 新书信:私聊的新消息、殿司的回信 */
+            chat?: boolean;
             locale?: components["schemas"]["PushLocaleEnum"];
         };
         PatchedOrganization: {

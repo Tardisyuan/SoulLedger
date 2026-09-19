@@ -11,6 +11,11 @@
   指向发送者时,只收带有效、未用过的一次性凭据的 `m.room.message`(凭据校验用后端同一个
   `apps.chat.grant.verify`;模块里那份与它一致,由集成测试对真 Synapse 证明)。
 
+* 新消息落库之后,模块的 `on_new_event` 回调后端(`push_url`)—— 这里把每条落库的消息记进
+  `FakeMatrix.hooks`,由 `deliver_hooks()` 交给**模块本身**(`config/synapse/soulledger_policy.py`,
+  用下面的 `FakeModuleApi` 装载)去签名、回调真实 URL。Synapse 是在后台进程里调的、在消息落库之后:
+  所以这里也是「先落库、后回调」,回调失败不回滚那条消息。
+
 **不照抄的**:建房、邀请的拒绝也在模块里,后端只以服务账号建房,这里没有别的调用者可拒。
 
 曾经的版本「只记账不拒绝」,理由是会拒绝的替身把「Synapse 会拒绝」换成了「替身会拒绝」。
@@ -18,6 +23,11 @@
 拒绝(`user_level (0) < send_level (50)`)。**不拒绝的替身同样是在复现缺陷** —— 它复现的是
 「后端以为能发」。所以这里拒绝,而拒绝的依据本身由集成测试对着真服务钉住。
 """
+import importlib
+import sys
+import types
+from pathlib import Path
+
 import pytest
 from django.conf import settings
 
@@ -36,13 +46,14 @@ class FakeMatrix:
     sent: list = []
     calls: list = []
     used: set = set()
+    hooks: list = []  # 落库后待回调的 (room_id, event)
 
     def __init__(self):
         self.service_user = f"@soulledger:{SERVER_NAME}"
 
     @classmethod
     def reset(cls):
-        cls.users, cls.rooms, cls.sent, cls.calls, cls.used = {}, {}, [], [], set()
+        cls.users, cls.rooms, cls.sent, cls.calls, cls.used, cls.hooks = {}, {}, [], [], set(), []
 
     # ── 用户 ──
     def user_id(self, localpart):
@@ -109,6 +120,8 @@ class FakeMatrix:
                    "timestamp": 1000 + len(FakeMatrix.sent)}
         room["messages"].append(message)
         FakeMatrix.sent.append((room_id, message))
+        FakeMatrix.hooks.append(FakeEvent(room_id, event_id, sender, "m.room.message",
+                                          {"msgtype": "m.text", "body": body, **(extra or {})}))
         return event_id
 
     def recent_messages(self, room_id, *, limit=50):
@@ -119,6 +132,129 @@ class FakeMatrix:
     def says(cls, room_id, mxid, body="来了", extra=None):
         localpart = mxid[1:].split(":", 1)[0]
         return cls().send_message(room_id, body, as_localpart=localpart, extra=extra)
+
+
+class FakeEvent:
+    """模块回调拿到的 `EventBase` 的那几个属性。"""
+
+    def __init__(self, room_id, event_id, sender, type_, content, state_key=None):
+        self.room_id, self.event_id, self.sender, self.type, self.content = room_id, event_id, sender, type_, content
+        self.state_key = state_key
+
+    def is_state(self):
+        return self.state_key is not None
+
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def load_policy_module():
+    """`config/synapse/soulledger_policy.py` 本身。它 import 的两个 synapse 名字换成最小替身
+    (`Codes.FORBIDDEN`、`NOT_SPAM`、`ModuleApi`)—— 后端环境里没有 synapse。"""
+    if "synapse.module_api" not in sys.modules:
+        synapse = types.ModuleType("synapse")
+        api = types.ModuleType("synapse.api")
+        errors = types.ModuleType("synapse.api.errors")
+        errors.Codes = type("Codes", (), {"FORBIDDEN": "M_FORBIDDEN"})
+        module_api = types.ModuleType("synapse.module_api")
+        module_api.NOT_SPAM = "NOT_SPAM"
+        module_api.ModuleApi = object
+        sys.modules.update({"synapse": synapse, "synapse.api": api, "synapse.api.errors": errors,
+                            "synapse.module_api": module_api})
+    path = str(REPO / "config" / "synapse")
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    return importlib.import_module("soulledger_policy")
+
+
+def run_coroutine(coro):
+    """跑完一个不会真正挂起的协程,不起事件循环 —— 回调里要走 Django 的同步 ORM,
+    而 ORM 在有运行中事件循环的线程里拒绝工作(SynchronousOnlyOperation)。"""
+    try:
+        coro.send(None)
+    except StopIteration as done:
+        return done.value
+    coro.close()
+    raise RuntimeError("协程挂起了:替身里不该有真正的异步等待")
+
+
+class HttpResponseException(Exception):  # noqa: N818 — Synapse 里就叫这个名字
+    """Synapse 的 `SimpleHttpClient.post_json_get_json` 对非 2xx 抛的那个。"""
+
+
+class FakeModuleApi:
+    """模块用到的 ModuleApi 那几样,照 Synapse 的行为:
+
+    * `run_as_background_process`:不在调用者的这条链上跑(这里排进 `background`,由 `deliver_hooks`
+      在回调返回之后再跑),**异常记日志后吞掉**,不传回调用者;
+    * `http_client.post_json_get_json`:POST JSON,非 2xx 抛 `HttpResponseException`,2xx 返回解析后的 JSON。
+      这里 POST 进 Django 的测试客户端,于是回调走的是真实的 URL、真实的视图。
+    """
+
+    def __init__(self, client=None, *, url_ok=True):
+        self.callbacks = {}
+        self.posts = []
+        self.failures = []
+        self.background = []
+        self._client = client
+        api = self
+
+        class _Http:
+            async def post_json_get_json(self, uri, body, headers=None):
+                api.posts.append((uri, body))
+                if api._client is None:
+                    raise HttpResponseException("connection refused")
+                path = "/" + uri.split("://", 1)[-1].split("/", 1)[1]
+                response = api._client.post(path, body, format="json")
+                if response.status_code >= 300:
+                    raise HttpResponseException(f"{response.status_code}")
+                return response.json()
+
+        self.http_client = _Http()
+
+    def register_spam_checker_callbacks(self, **callbacks):
+        self.callbacks.update(callbacks)
+
+    def register_third_party_rules_callbacks(self, **callbacks):
+        self.callbacks.update(callbacks)
+
+    def run_as_background_process(self, desc, func, *args, **kwargs):
+        self.background.append((desc, func, args, kwargs))
+
+    def drain(self):
+        pending, self.background = self.background, []
+        for desc, func, args, kwargs in pending:
+            try:
+                run_coroutine(func(*args, **kwargs))
+            except Exception as exc:  # noqa: BLE001 — Synapse 记日志、吞掉
+                self.failures.append((desc, exc))
+
+
+PUSH_URL = "http://backend:8000/api/v1/chat/hooks/new-message/"
+
+
+def policy(client=None, *, push_url=PUSH_URL):
+    """用测试的 grant_secret 装载的模块实例。"""
+    module = load_policy_module()
+    api = FakeModuleApi(client)
+    config = module.SoulLedgerPolicy.parse_config({
+        "service_user": f"@soulledger:{SERVER_NAME}", "grant_secret": settings.MATRIX_JWT_SECRET,
+        **({"push_url": push_url} if push_url else {}),
+    })
+    return module.SoulLedgerPolicy(config, api), api
+
+
+def deliver_hooks(client=None):
+    """把落库后待回调的消息交给模块(= Synapse 此时会做的事)。返回模块的 FakeModuleApi,
+    `posts` 是它发出的回调,`failures` 是被吞掉的异常。"""
+    from rest_framework.test import APIClient
+
+    _, api = policy(client or APIClient())
+    pending, FakeMatrix.hooks = FakeMatrix.hooks, []
+    for event in pending:
+        run_coroutine(api.callbacks["on_new_event"](event, {}))
+    api.drain()
+    return api
 
 
 def can_speak(room_id, mxid):

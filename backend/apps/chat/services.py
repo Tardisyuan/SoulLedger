@@ -470,6 +470,46 @@ def _throttled(retry_at):
     return error
 
 
+# ── 新书信推送 ───────────────────────────────────────────────────────────
+
+
+def notify_new_message(room_id, event_id, sender):
+    """Synapse 模块回调进来的一条新消息(已验签,`views.ChatPushHookView`)→ 给收件方记一条推送。
+
+    收件方由会话定,不由回调说:
+    * 私聊:发送者必须是会话双方之一(那一世的 Matrix 身份),收件方是另一方**那一世**的账号;
+    * 殿司收件箱:只推服务账号发的(官员回信),收件方是写信的灵魂;灵魂写给殿司的不推(官员不用 App)。
+    已关闭的会话(含收件方已转世的)、发送者对不上号:一律不推。
+    返回新建的投递 id(测试断言用)。
+    """
+    conversation = (Conversation.objects.filter(room_id=room_id, closed_at__isnull=True)
+                    .select_related(*ACCOUNT_JOINS).first())
+    if conversation is None:
+        return []
+    # 「只推本世账号」由上一行的 `closed_at` 兑现:转世停用账号时先关它参与的每个会话
+    # (`deactivate_for_account`),所以未关闭会话里的账号都是本世的。
+    recipient = _recipient(conversation, sender)
+    if recipient is None:
+        return []
+    from apps.soul_push import services as push
+
+    ids = push.record_chat_message(recipient, conversation, event_id)
+    if ids:
+        transaction.on_commit(lambda: push.enqueue(ids))
+    return ids
+
+
+def _recipient(conversation, sender):
+    if conversation.kind == ConversationKind.OFFICER_INBOX:
+        service_user = f"@{settings.MATRIX_SERVICE_LOCALPART}:{settings.MATRIX_SERVER_NAME}"
+        return conversation.account_a if sender == service_user else None
+    accounts = [a for a in (conversation.account_a_id, conversation.account_b_id) if a is not None]
+    sender_account = ChatIdentity.objects.filter(
+        account_id__in=accounts, matrix_user_id=sender
+    ).values_list("account_id", flat=True).first()
+    return conversation.other_account(sender_account) if sender_account is not None else None
+
+
 # ── 官员收件箱 ───────────────────────────────────────────────────────────
 
 
