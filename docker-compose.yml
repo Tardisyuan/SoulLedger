@@ -25,6 +25,16 @@ x-django-env: &django-env
   # Uploaded avatars. The backend mounts the media_files volume here; in
   # production nginx mounts the same volume read-only and serves it as /media/.
   MEDIA_ROOT: /app/media
+  # 灵魂聊天(docs/DEPLOYMENT.md「灵魂聊天」)。后端经 compose 网络直连 synapse,
+  # 不绕 nginx —— admin API 只在这条路上可达。MATRIX_ENABLED 不设就是关着:
+  # /me/chat/ 与 /chat/inbox/ 答 503,其余功能不受影响。
+  MATRIX_ENABLED: ${MATRIX_ENABLED:-False}
+  MATRIX_INTERNAL_URL: http://synapse:8008
+  MATRIX_PUBLIC_BASEURL: ${MATRIX_PUBLIC_BASEURL:-}
+  MATRIX_SERVER_NAME: ${MATRIX_SERVER_NAME:-}
+  MATRIX_JWT_SECRET: ${MATRIX_JWT_SECRET:-}
+  MATRIX_REGISTRATION_SHARED_SECRET: ${MATRIX_REGISTRATION_SHARED_SECRET:-}
+  MATRIX_USER_SALT: ${MATRIX_USER_SALT:-}
 
 services:
   db:
@@ -125,6 +135,48 @@ services:
       backend:
         condition: service_healthy
 
+  # 灵魂聊天的 homeserver。不发布端口:客户端 API 只经 nginx 的 /_matrix 与
+  # /_synapse/client,admin API 只有 compose 网络里的后端够得着。
+  # /data/homeserver.yaml 不在仓库里(含密钥),由 scripts/synapse-init.sh 生成一次;
+  # 没生成就 `up`,容器报 "Config file ... does not exist" 并反复重启,不影响其余服务。
+  # 数据库是同一个 db 实例里的 `synapse` 库(C collation,属 `synapse` 角色,脚本建),直连 db 而不经
+  # pgbouncer:production 的 pgbouncer 只配了 soulledger 库,而 Synapse 自带连接池
+  # (cp_min/cp_max),再套一层没有收益。
+  synapse:
+    image: matrixdotorg/synapse:v1.161.0
+    restart: unless-stopped
+    volumes:
+      - synapse_data:/data
+      # 策略模块(soulledger_policy.py)与追加模板,只读。少了模块,灵魂拿自己的 token
+      # 就能绕过全部聊天规则 —— 见 homeserver.soulledger.yaml 的 modules 段。
+      - ./config/synapse:/modules:ro
+    environment:
+      PYTHONPATH: /modules
+      # 下面这些只有 scripts/synapse-init.sh 用(generate 要 server_name;合并时把
+      # ${...} 换成与后端相同的值)。Synapse 运行时只读 /data/homeserver.yaml,
+      # 而那份文件里本来就是这些值,所以放在这里不多暴露什么。
+      SYNAPSE_SERVER_NAME: ${MATRIX_SERVER_NAME:-}
+      SYNAPSE_REPORT_STATS: "no"
+      # `synapse` 库账号的密码(只拥有 synapse 库,不是超级用户;脚本建角色时用)。
+      # 不设不影响其余服务 —— 只有 synapse-init.sh 会因为它缺失而拒绝。
+      SYNAPSE_DB_PASSWORD: ${SYNAPSE_DB_PASSWORD:-}
+      MATRIX_SERVER_NAME: ${MATRIX_SERVER_NAME:-}
+      MATRIX_PUBLIC_BASEURL: ${MATRIX_PUBLIC_BASEURL:-}
+      MATRIX_JWT_SECRET: ${MATRIX_JWT_SECRET:-}
+      MATRIX_REGISTRATION_SHARED_SECRET: ${MATRIX_REGISTRATION_SHARED_SECRET:-}
+      # 书信推送回调(模板 homeserver.soulledger.yaml 里 push_url 的占位 MATRIX_PUSH_HOOK_URL):compose 网络内直连 backend,不经 nginx。
+      # backend 必须在 ALLOWED_HOSTS 里;回调路径已在 SECURE_REDIRECT_EXEMPT(否则 301,推送静默失效)。
+      MATRIX_PUSH_HOOK_URL: http://backend:8000/api/v1/chat/hooks/new-message/
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       # Root context: `frontend` is an npm workspace and its `@soulledger/core`
@@ -154,3 +206,6 @@ volumes:
   # Uploaded avatars (MEDIA_ROOT); nginx mounts it read-only as /media/.
   # Unlike static_files this is user data — back it up with the database.
   media_files:
+  # Synapse 的签名密钥与媒体(聊天图片)。消息本身在 db 的 synapse 库里;
+  # 签名密钥丢了等于换了一台 homeserver —— 与数据库一起备份。
+  synapse_data:

@@ -93,20 +93,38 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 
 ## 灵魂聊天(Matrix / Synapse)
 
-- 单 Synapse homeserver(不联邦)。**compose 里还没有 synapse 服务与 nginx 反代**(2026-09-18),
-  上线前要补;本节是它们要满足的条件。
-- homeserver.yaml = `docker run … matrixdotorg/synapse generate` 产出的那份 + 追加
-  `config/synapse/homeserver.soulledger.yaml`(`${…}` 换成与后端相同的值)。模块
-  `config/synapse/soulledger_policy.py` 挂进容器并放进 `PYTHONPATH`:除服务账号外不能建房、邀请、
-  建别名、发布房间,并在节流房间里只放行后端签过一次性凭据的那条私聊请求 ——
-  **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。模块把用过的凭据记在进程内存里:
+- 单 Synapse homeserver(不联邦)。compose 的 `synapse` 服务(`matrixdotorg/synapse:v1.161.0`,
+  **不发布端口**)+ `nginx.conf` 的 `/_matrix`、`/_synapse/client` 反代;`/_synapse/admin` 在 nginx
+  上一律 403,admin API 只有 compose 网络里的后端够得着(`MATRIX_INTERNAL_URL=http://synapse:8008`)。
+  联邦接口 `/_matrix/federation`、`/_matrix/key` 在 nginx 上也一律 403:不联邦(模板里
+  `federation_domain_whitelist: []`,不与任何服务器互通),App 只用 `/_matrix/client`(媒体也在其下),
+  这两个前缀没有任何客户端要用,关掉只是少暴露一块用不上的面。
+  nginx 按请求解析 synapse(resolver),synapse 没起或在重启时只有这两条路径 502,不连累全站。
+- 数据库:同一个 `db` 实例里单独一个 `synapse` 库(Synapse 要求 `LC_COLLATE`/`LC_CTYPE` 为 `C`,
+  由初始化脚本从 `template0` 建),用单独的 `synapse` 账号(只拥有 `synapse` 库;非超级用户、不能建库建角色;
+  脚本同时收回 PUBLIC 对 `soulledger`、`synapse` 两库的 CONNECT,所以它连不进主库)、直连 `db` 不经 pgbouncer(pgbouncer 只配了 `soulledger` 库;
+  Synapse 自带连接池)。**不用 SQLite**:Synapse 官方只把它当试用,
+  单写锁在灵魂数上来后顶不住,且 SQLite → PostgreSQL 迁移要停机跑 `synapse_port_db`。
+  聊天消息(`synapse` 库)与 `synapse_data` 卷(签名密钥、聊天媒体)在每日备份里,见下面
+  「聊天(Synapse)备份与恢复」。
+- homeserver.yaml 含密钥,不进仓库,在 `synapse_data` 卷里,由 `scripts/synapse-init.sh` 生成:
+  `generate` 的产物 − 与模板重复的顶层键(`registration_shared_secret` 等)− SQLite 的 `database` 段
+  \+ PostgreSQL 的 `database` 与 `public_baseurl` + `config/synapse/homeserver.soulledger.yaml`
+  (`${…}` 换成与后端相同的值)。模块 `config/synapse/soulledger_policy.py` 只读挂到 `/modules` 并放进
+  `PYTHONPATH`:除服务账号外不能建房、邀请、建别名、发布房间,并在节流房间里只放行后端签过一次性凭据的
+  那条私聊请求 —— **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。模块把用过的凭据记在进程内存里:
   Synapse 单进程部署;拆 worker 前先把它换成共享存储。
-- 后端环境变量:`MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
-  `MATRIX_INTERNAL_URL`(后端 → Synapse)、`MATRIX_PUBLIC_BASEURL`(App → Synapse,发给 App)、
-  `MATRIX_SERVER_NAME`、`MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、
+- 根 `.env` 的变量(backend、celery、celery-beat 与 synapse 都从这里取,见 `docker-compose.yml`):
+  `MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
+  `MATRIX_PUBLIC_BASEURL`(App → Synapse,即经 nginx 的公开地址,如 `https://example.com/`;
+  也写进 homeserver 的 `public_baseurl`)、`MATRIX_SERVER_NAME`(**定了不能改**,它在每个 mxid 里)、
+  `MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、
   `MATRIX_REGISTRATION_SHARED_SECRET`(= Synapse `registration_shared_secret`,只用来把服务账号
   注册成 admin 一次)、`MATRIX_USER_SALT`(mxid 由账号 id 经 HMAC 派生;**不可轮换**,换了所有 mxid
-  都变)、`CHAT_REQUEST_INTERVAL_SECONDS`(默认 86400)。
+  都变)。`MATRIX_INTERNAL_URL` 在 compose 里写死为 `http://synapse:8008`;
+  `CHAT_REQUEST_INTERVAL_SECONDS` 用默认(86400)。`SYNAPSE_DB_PASSWORD` 是 `synapse` 库账号的密码,
+  只有 synapse 服务读(脚本用它建角色并写进 homeserver.yaml;角色已存在时脚本**不改密码** ——
+  要换密码,在 db 里 `ALTER ROLE synapse PASSWORD …` 并同步改卷里 homeserver.yaml 的 `database.args.password`)。
 - **新书信推送(Synapse → 后端回调)**:模块配置里的 `push_url`(模板里是 `${MATRIX_PUSH_HOOK_URL}`),指向后端
   `http://<后端内网地址>/api/v1/chat/hooks/new-message/`(容器网络内,不经 nginx、不对外暴露)。
   每条 `m.room.message` 落库之后,模块在后台进程里 POST `{room_id, event_id, sender, ts, mac}`;
@@ -119,9 +137,47 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   一条都推不出去,而消息照常收发 —— 故障是静默的,只在 Synapse 日志里有 `新消息回调失败 … 400`
   (2026-09-19 对真 Synapse v1.161.0 实测撞到)。
   改了模块文件要**重启 Synapse**(模块在启动时装载)。
-- 限速:服务账号替灵魂转发、改 power level、建房,量随灵魂数增长。用 admin API
-  `POST /_synapse/admin/v1/users/@soulledger:<server_name>/override_ratelimit` 给它免限速。
+- 限速:模板把 `rc_login.address` 放宽了 —— 后端代灵魂发言要以该灵魂身份 JWT 登录,所有这类登录
+  都来自后端一个地址,默认值下突发用完即 429。服务账号替灵魂转发、改 power level、建房,量随灵魂数
+  增长,由下面第 4 步免限速。
+
+**首次部署(一次):**
+
+```bash
+# 0. 根 .env 里填好上面的 MATRIX_* 与 SYNAPSE_DB_PASSWORD(MATRIX_ENABLED 先留 False)
+# 1. 建 synapse 角色与库 + 生成并合并 homeserver.yaml。幂等:已有的角色 / 库 / 文件 / 合并都跳过,永不覆盖
+DC="$DC" scripts/synapse-init.sh
+# 2. 起 Synapse 与 nginx
+$DC up -d --wait synapse
+$DC up -d nginx
+# 3. 打开聊天:.env 里 MATRIX_ENABLED=True,然后
+$DC up -d backend celery celery-beat
+# 4. 服务账号注册成 admin(已有则 JWT 登录)并免限速。幂等,重跑无害
+$DC exec backend python manage.py setup_matrix
+# 5. 验证:经 nginx 客户端 API 200,admin 与联邦接口 403
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/client/versions      # 200
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_synapse/admin/v1/register   # 403
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/federation/v1/version # 403
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/server        # 403
+```
+
+  改 homeserver 的值:编辑 `synapse_data` 卷里的 `/data/homeserver.yaml` 后 `$DC restart synapse`,
+  或删掉它重跑脚本(签名密钥是单独的文件,不受影响)。**改 `MATRIX_JWT_SECRET` 要两边一起改**,
+  否则 App 登录与后端代发全部 403。
+- 2026-09-19 本机实跑过上面这套(synapse + 临时 postgres + nginx,端口只绑 127.0.0.1):脚本两次运行
+  第二次全部跳过;`/_matrix/client/versions` 经 nginx 200,`/_synapse/admin/*` 经 nginx 403;
+  `setup_matrix` 两次均成功(第二次走「已注册 → JWT 登录」);`test_chat_synapse_integration.py`
+  2 passed。停掉 synapse 时 nginx 在、这两条路径 502。
 - 实机验证:`backend/tests/test_chat_synapse_integration.py` 文件头有本机起一个 Synapse 跑它的命令。
+- **已有一台用 SQLite 的 Synapse**(如测试机上手工加进 compose 的那台):`scripts/synapse-migrate-sqlite-to-pg.sh`
+  在那台机器的 compose 目录里执行,用官方 `synapse_port_db` 迁到同一 compose 里的 PostgreSQL,
+  建单独的 `synapse` 角色与 C collation 的库,只换 `homeserver.yaml` 的 `database` 段 ——
+  **server_name 与签名密钥不动**。先等 SQLite 的后台更新跑完(`synapse_port_db` 拒绝迁移有未完成
+  后台更新的库,而新库常有),停机前把 `/data` 整个打包;迁移后核对 server_name、签名密钥 id 与
+  users/rooms/events 行数。任一步失败即停,并打印该阶段的回滚命令(换配置前:直接起回;换配置后:
+  恢复 `homeserver.yaml.sqlite.bak` 再起)。参数与默认值见脚本头。2026-09-19 本机演练(SQLite 版
+  synapse + postgres:16-alpine,只绑 127.0.0.1):迁移 exit 0;迁移后服务账号 JWT 登录、admin 标记、
+  房间与三条消息、迁移前签发的 access token 都在;重跑识别为已迁移、exit 0。
 
 ## 数据库备份与恢复
 
@@ -160,3 +216,36 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
     alpine sh -c "rm -rf /media/* && tar xzf /backups/soulledger_media_YYYYMMDD_HHMMSS.tar.gz -C /media"
   $DC start pgbouncer backend celery celery-beat
   ```
+
+### 聊天(Synapse)备份与恢复
+
+- 同一个 `backup` 服务、同一轮 cron、同一份 `RETENTION_DAYS`。`synapse_data` 卷只读挂在
+  `/synapse`;卷里有 `homeserver.yaml`(聊天已初始化)时,`backup-db.sh` 在 db 与 media 之后再出两份:
+  - `soulledger_synapse_<timestamp>.dump`:`synapse` 库,`pg_dump -Fc`(自定义格式,
+    写完先 `pg_restore --list` 校验再改名);
+  - `soulledger_synapse_data_<timestamp>.tar.gz`:整个卷 —— **签名密钥**(丢了等于换了一台
+    homeserver)、`homeserver.yaml`(含密钥)与聊天媒体 `media_store/`。
+  失败语义与 db dump 一致(非零退出、不留 `.partial`)。聊天没初始化时两份都跳过并打印一行,
+  healthcheck 也不要求它们;初始化了,healthcheck 就同样要求这两份在 26 小时以内。
+- 恢复(同一台机器,或新机器上 `synapse_data` 卷还是空的):
+
+  ```bash
+  $DC stop synapse
+  $DC exec db dropdb -U soulledger --if-exists synapse
+  # 卷(签名密钥 / homeserver.yaml / 媒体)。只丢了库时可以跳过这一步
+  docker run --rm \
+    -v "$(docker volume ls -q --filter name=synapse_data)":/data \
+    -v "$(pwd)/backups:/backups:ro" \
+    alpine sh -c "rm -rf /data/* && tar xzf /backups/soulledger_synapse_data_YYYYMMDD_HHMMSS.tar.gz -C /data"
+  # 建 synapse 角色与空库(已在的跳过;卷里已有 homeserver.yaml,generate 与合并也跳过)
+  DC="$DC" scripts/synapse-init.sh
+  $DC run --rm --no-deps -T --entrypoint pg_restore backup \
+    --no-owner --role=synapse -d synapse --single-transaction --exit-on-error \
+    /backups/soulledger_synapse_YYYYMMDD_HHMMSS.dump
+  $DC start synapse
+  ```
+
+  `--role=synapse`:恢复出来的表归 `synapse` 角色,而不是执行恢复的 `soulledger`。
+  2026-09-19 本机实跑过这一套(备份 → stop → dropdb → 卷恢复 → init → pg_restore → start):
+  各步 exit 0,服务账号 `@soulledger:…` 与 admin 标记都在,`public` 下没有不属 `synapse` 的表,
+  签名密钥前后 sha 相同,`/_matrix/client/versions` 经 nginx 200。
