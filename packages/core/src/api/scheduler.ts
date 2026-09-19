@@ -85,10 +85,16 @@ export interface RebuildResult {
 
 export interface TaskRunFilters {
   job?: number;
+  /** One status, or a comma list: `"FAILURE,LOST"`. */
   status?: string;
   tenant?: number;
   task_name?: string;
   trigger?: string;
+  /** ISO datetimes, inclusive, on `queued_at`. */
+  queued_after?: string;
+  queued_before?: string;
+  /** Case-insensitive match on task_name or error text. */
+  search?: string;
   page?: number;
 }
 

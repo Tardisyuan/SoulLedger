@@ -1850,6 +1850,23 @@
     "realtime": {
       "run_failed": "「{{job}}」运行失败",
       "run_lost": "「{{job}}」运行已丢失：没有 Worker 把它跑完"
+    },
+    "tabs": {
+      "jobs": "任务",
+      "history": "运行历史"
+    },
+    "history": {
+      "job": "任务",
+      "all_jobs": "全部任务",
+      "tenant": "租户",
+      "all_tenants": "全部租户",
+      "trigger": "触发方式",
+      "all_triggers": "全部触发方式",
+      "queued_from": "入队起",
+      "queued_to": "入队止",
+      "search": "搜索任务名或错误",
+      "clear": "清除筛选",
+      "empty": "没有符合筛选条件的执行记录"
     }
   },
   "soul_app": {

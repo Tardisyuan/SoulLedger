@@ -1850,6 +1850,23 @@
     "realtime": {
       "run_failed": "Iri «{{job}}»: Nen Kheper",
       "run_lost": "Iri «{{job}}»: Nen Gem"
+    },
+    "tabs": {
+      "jobs": "Baku",
+      "history": "Sesh Iri"
+    },
+    "history": {
+      "job": "Baku",
+      "all_jobs": "Baku Neb",
+      "tenant": "Per Hemes",
+      "all_tenants": "Per Hemes Neb",
+      "trigger": "Tepy Iri",
+      "all_triggers": "Tepy Iri Neb",
+      "queued_from": "Smen Tepy",
+      "queued_to": "Smen Khetem",
+      "search": "Shesed Baku Er Sethet",
+      "clear": "Fekh Setep",
+      "empty": "Nen Sesh Iri Em Setep Pen"
     }
   },
   "soul_app": {
