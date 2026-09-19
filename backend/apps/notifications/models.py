@@ -39,6 +39,7 @@ class NotificationType(models.TextChoices):
     SENTENCE_PLAN_AMENDED = "SENTENCE_PLAN_AMENDED", "Sentence Plan Amended"
     SENTENCE_REQUEST_PENDING = "SENTENCE_REQUEST_PENDING", "Sentence Request Pending"
     SENTENCE_REQUEST_DECIDED = "SENTENCE_REQUEST_DECIDED", "Sentence Request Decided"
+    SENTENCE_PLAN_CANCELLED = "SENTENCE_PLAN_CANCELLED", "Sentence Plan Cancelled"
 
 
 class UserNotification(AuditUserFields, models.Model):

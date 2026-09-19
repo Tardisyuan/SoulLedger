@@ -183,6 +183,21 @@ class SentencePlanService:
         home = soul.home_tenant if soul.home_tenant_id is not None else soul.tenant
         if home is None or judgment.tenant_id != home.pk:
             return None
+        if cross is not None and disposition.is_eternal:
+            # Q5 同一条校验,原属节点也跑(2026-09-19 用户决定):原属处置是永久刑期,后面却还有联审
+            # 抄来的节点 —— 那些节点永远执行不到。结案整体回滚。错误码沿用 Q5 在请求路径上的
+            # `eternal_not_last`(同一条规则,一个码)。
+            from apps.dispatch.models import CrossTenantJudgmentParticipant, ParticipantRole
+
+            seats = CrossTenantJudgmentParticipant.all_objects.filter(
+                judgment_id=cross.pk, is_deleted=False,
+            ).exclude(role=ParticipantRole.ADVISOR).count()
+            if seats:
+                raise CrossJudgmentOpenError(
+                    f"The home sentence ({disposition.destination_realm.realm_code if disposition.destination_realm_id else '?'}) "
+                    f"is eternal, but the joint judgment adds {seats} node(s) after it; an eternal sentence must be the last node",
+                    code="eternal_not_last",
+                )
         existing = in_progress_plan(soul)
         if existing is not None:
             logger.warning(
@@ -257,13 +272,10 @@ class SentencePlanService:
             node.completed_at = now
             _save(node, "status", "completed_at")
             # 外地的永久刑期:灵魂留在那里,计划 HELD(今天「永久刑期不自动回归」)。
-            # 原属地的永久刑期且后面没有节点:灵魂本来就在家,计划照常完成(终局文明 → SETTLED,
-            # 与阶段 1 之前原属处置执行的结果相同)。原属永久而后面还有节点:HELD —— Q5 只校验了
-            # 参与方的顺序,没管原属节点,见交付报告「待拍板」。
-            later = SentenceNode.all_objects.filter(
-                plan_id=plan.pk, is_deleted=False, status=SentenceNodeStatus.PENDING,
-            ).exists()
-            if (not node.is_home or later) and plan.status in (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL):
+            # 原属地的永久刑期:后面不会有节点 —— 原审判结案(`create_from_conclusion`)与重开审判结案
+            # (`requests._assert_eternal_last`)都按 Q5 拒绝「永久之后还有节点」(2026-09-19 用户决定),
+            # 所以灵魂本来就在家,计划照常完成(终局文明 → SETTLED)。
+            if not node.is_home and plan.status in (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL):
                 plan.status = SentencePlanStatus.HELD
                 _save(plan, "status")
             SentencePlanService._node_finished(soul, plan, node)
@@ -466,9 +478,13 @@ class SentencePlanService:
         return False
 
     @staticmethod
-    def _complete(soul, plan, nodes):
+    def _complete(soul, plan, nodes, *, pardoned=False):
         """计划完成:今天原属处置执行做的那次转移(`DispositionService.execute` 原属分支),挪到这里。
-        可转世 → REINCARNATING(并记 REINCARNATION_TRIGGERED,原来在 `disposition/views.py`);否则 → SETTLED。"""
+        可转世 → REINCARNATING(并记 REINCARNATION_TRIGGERED,原来在 `disposition/views.py`);否则 → SETTLED。
+
+        `pardoned=True`:撤销计划(2026-09-19 用户决定:撤销 = 赦免剩余刑期,视为完成)走**同一条路径**,
+        只是终态记 CANCELLED、事件 SENTENCE_PLAN_CANCELLED、通知 / 推送用「撤销」的文案。
+        返回灵魂是否移动了;没移动时什么都不写(调用方决定是否当作拒绝)。"""
         from apps.disposition.models import Disposition
         from apps.events.models import EventType
         from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS
@@ -494,14 +510,16 @@ class SentencePlanService:
             # 灵魂不在 DISPOSED(例如 ADMIN 修过数据):计划照样不能说自己完成了。什么都不写。
             logger.warning("sentence_plan: plan %s cannot complete; soul %s is %s",
                            plan.pk, soul.pk, soul.current_state)
-            return
-        plan.status = SentencePlanStatus.COMPLETED
+            return False
+        plan.status = SentencePlanStatus.CANCELLED if pardoned else SentencePlanStatus.COMPLETED
         plan.completed_at = timezone.now()
         _save(plan, "status", "completed_at")
-        record_event(soul, EventType.SENTENCE_PLAN_COMPLETED, {
+        record_event(soul, EventType.SENTENCE_PLAN_CANCELLED if pardoned else EventType.SENTENCE_PLAN_COMPLETED, {
             "sentence_plan_id": str(plan.pk), "rebirth_open": rebirth,
         })
-        notify_judges({plan.tenant_id}, "sentence_plan_completed", {"soul": soul.name}, plan.pk)
+        notify_judges({plan.tenant_id}, "sentence_plan_cancelled" if pardoned else "sentence_plan_completed",
+                      {"soul": soul.name}, plan.pk)
+        return True
 
     @staticmethod
     def _activate_home_node(soul, plan, node):

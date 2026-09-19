@@ -24,6 +24,8 @@ class SentencePlanStatus(models.TextChoices):
     # 某节点是永久刑期,灵魂留在那里;后面没有节点(Q5 在联审时校验)。
     HELD = "HELD", "永久刑期挂起"
     COMPLETED = "COMPLETED", "已完成"
+    # 撤销 = 赦免剩余刑期、视为完成(2026-09-19 用户决定):灵魂与 COMPLETED 一样进轮回 / 终局,
+    # 转生申请同样开放;状态值分开,官员看得出这份计划是刑满还是被撤销的。
     CANCELLED = "CANCELLED", "已撤销"
 
 

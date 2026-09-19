@@ -2178,6 +2178,10 @@
     "sentence_amended": {
       "title": "Sentence plan changed",
       "body": "Your sentence plan has changed. Open Soul Ledger to see it."
+    },
+    "sentence_pardoned": {
+      "title": "Sentence plan cancelled",
+      "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."
     }
   },
   "official_notify": {
@@ -2220,6 +2224,10 @@
     "sentence_request_decided": {
       "title": "Sentence plan request decided",
       "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."
+    },
+    "sentence_plan_cancelled": {
+      "title": "Sentence plan cancelled",
+      "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."
     }
   },
   "social_moderation": {

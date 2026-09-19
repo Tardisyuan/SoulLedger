@@ -81,7 +81,8 @@ def eligibility(account):
         SentencePlan.all_objects.filter(soul_id=soul.pk, cycle=account.cycle, is_deleted=False)
         .order_by("-create_time").first()
     )
-    if plan is None or plan.status != SentencePlanStatus.COMPLETED:
+    # CANCELLED = 撤销,即赦免剩余刑期、视为完成(2026-09-19 用户决定),同样开放。
+    if plan is None or plan.status not in (SentencePlanStatus.COMPLETED, SentencePlanStatus.CANCELLED):
         return False, "sentence_in_progress", None
     mine = RebirthApplication.objects.filter(soul=soul)
     if mine.filter(status__in=OPEN_APPLICATION_STATUSES).exists():

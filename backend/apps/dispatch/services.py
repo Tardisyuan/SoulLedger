@@ -321,6 +321,8 @@ class DispatchService:
     RETURN_ON_DISPOSITION = "DISPOSITION_EXECUTED"
     RETURN_MANUAL = "MANUAL"
     RETURN_ON_CASE_CLOSED = "JUDGMENT_CLOSED"
+    #: 受刑计划被撤销(赦免剩余刑期,2026-09-19 用户决定):与计划完成同一条回归路径。
+    RETURN_ON_PLAN_CANCELLED = "PLAN_CANCELLED"
 
     @staticmethod
     def end_residence(soul, *, actor, trigger, reason=""):

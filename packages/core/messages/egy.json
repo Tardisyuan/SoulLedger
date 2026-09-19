@@ -2178,6 +2178,10 @@
     "sentence_amended": {
       "title": "Wetep Khemen Seth",
       "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."
+    },
+    "sentence_pardoned": {
+      "title": "Wetep Sehen Seth",
+      "body": "Ky Wetep Ek Nen; Dbh Ankh Wen. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
@@ -2220,6 +2224,10 @@
     "sentence_request_decided": {
       "title": "Dbh Wetep Wedja Seth",
       "body": "{{soul}}: Dbh Ek Wedja Seth Em Hemsu Tepy."
+    },
+    "sentence_plan_cancelled": {
+      "title": "Wetep Sehen Seth",
+      "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Nebt Seth."
     }
   },
   "social_moderation": {

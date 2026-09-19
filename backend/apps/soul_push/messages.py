@@ -12,6 +12,7 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
+        "sentence_pardoned": {"title": "受刑计划已撤销", "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"},
         "sentence_amended": {"title": "受刑计划有变更", "body": "你的受刑计划有变更,打开灵魂簿查看。"},
         "sentence_completed": {"title": "受刑完毕", "body": "你的受刑已全部完毕,可以申请转生,打开灵魂簿查看。"},
         "sentence_waiting": {"title": "刑满暂留", "body": "本站刑满,等待审判结案后回归,打开灵魂簿查看。"},
@@ -25,6 +26,7 @@ MESSAGES = {
         "residence_returned": {"title": "暂居结束", "body": "你已回归原属文明,打开灵魂簿查看。"},
     },
     "en": {
+        "sentence_pardoned": {"title": "Sentence plan cancelled", "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."},
         "sentence_amended": {"title": "Sentence plan changed", "body": "Your sentence plan has changed. Open Soul Ledger to see it."},
         "sentence_completed": {"title": "Sentence served", "body": "You have served your whole sentence and may apply for rebirth. Open Soul Ledger to see it."},
         "sentence_waiting": {"title": "Held after serving", "body": "You have served this stop and wait for a judgment to close before returning. Open Soul Ledger to see it."},
@@ -62,6 +64,7 @@ MESSAGES = {
         },
     },
     "egy": {
+        "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
         "sentence_amended": {"title": "Wetep Khemen Seth", "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."},
         "sentence_completed": {"title": "Wetep Nebt Seth", "body": "Wetep Ek Nebt Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
         "sentence_waiting": {"title": "Hemes Smen", "body": "Mekher Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},

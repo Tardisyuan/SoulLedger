@@ -382,13 +382,23 @@ def conclude_reopened(judgment):
 
 
 def cancel(plan, *, reason, user):
-    """`sentence_plan.cancel`(§3.1):未执行节点 → CANCELLED,进行中的调拨 → CANCELLED,PENDING 请求 →
-    WITHDRAWN,未结的重开审判撤案,计划 CANCELLED。**灵魂在外不自动回归**(那是另一次 return-home);
-    已在受刑中的节点照常执行完(它们是历史的一部分)。不推进。"""
+    """`sentence_plan.cancel`:**撤销 = 赦免剩余刑期,视为完成**(2026-09-19 用户决定,取代 §3.1 原来的
+    「撤销 = 否认计划、灵魂在外不自动回归」)。
+
+    1. 未开始的节点(PENDING / DISPATCHING)→ CANCELLED,进行中的调拨 → CANCELLED;
+    2. 正在受的刑(ACTIVE / WAITING / ETERNAL)→ ABORTED(赦免);
+    3. 待决请求 → WITHDRAWN,未结的重开审判撤案;
+    4. 灵魂在外 → 回归原属(`end_residence`,与计划推进里的回归同一个函数);
+    5. 计划完成的同一条路径(`SentencePlanService._complete(pardoned=True)`):灵魂进 REINCARNATING / SETTLED,
+       事件、通知、推送;终态记 **CANCELLED**(与「刑满完成」的 COMPLETED 区分),`eligibility` 把两者都当作已完成。
+
+    拒绝(什么都不写):理由为空;计划已结束;灵魂还有别的未结案审判(与正常完成一致 —— 未结案审判
+    拦住回归与完成);灵魂不在能完成的状态。
+    """
     from apps.audit.models import AuditAction, AuditLog
     from apps.dispatch.models import DispatchRecord, DispatchStatus
-    from apps.events.models import EventType
-    from apps.judgment.models import Judgment, JudgmentKind
+    from apps.dispatch.services import DispatchService
+    from apps.judgment.models import Judgment, JudgmentKind, open_judgments
 
     if not (reason or "").strip():
         raise PlanChangeRefusedError("A reason is required to cancel a sentence plan", "reason_required")
@@ -397,31 +407,53 @@ def cancel(plan, *, reason, user):
         plan = _lock_plan(plan.pk)
         if plan.status not in IN_PROGRESS_PLAN_STATUSES:
             raise PlanChangeRefusedError(f"This plan is {plan.status}", "plan_closed", status=409)
-        for node in _lock_nodes(plan):
-            if node.status not in (SentenceNodeStatus.PENDING, SentenceNodeStatus.DISPATCHING):
-                continue
-            if node.dispatch_record_id is not None:
-                record = DispatchRecord._base_manager.filter(pk=node.dispatch_record_id).first()
-                if record is not None and record.status in (DispatchStatus.PROPOSED, DispatchStatus.APPROVED):
-                    record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now())
-            node.status = SentenceNodeStatus.CANCELLED
-            _save(node, "status")
+        retrials = Judgment.all_objects.filter(
+            amends_plan_id=plan.pk, kind=JudgmentKind.REOPEN, verdict__isnull=True, is_final=False, is_deleted=False,
+        )
+        other_open = [str(pk) for pk in open_judgments(soul).exclude(pk__in=retrials.values("pk"))
+                      .values_list("pk", flat=True)]
+        if other_open:
+            raise PlanChangeRefusedError(
+                "The soul has an open judgment; conclude or withdraw it before the plan can be cancelled",
+                "open_judgment", status=409, open_judgment_ids=other_open,
+            )
+        by_user = user if getattr(user, "pk", None) else None
+        for case in retrials:
+            case.soft_delete(user=by_user, reason=f"sentence plan cancelled: {reason}")
         SentencePlanRequest.all_objects.filter(
             plan_id=plan.pk, is_deleted=False, status=SentenceRequestStatus.PENDING,
         ).update(status=SentenceRequestStatus.WITHDRAWN, decided_at=timezone.now())
-        for case in Judgment.all_objects.filter(
-            amends_plan_id=plan.pk, kind=JudgmentKind.REOPEN, verdict__isnull=True, is_final=False, is_deleted=False,
-        ):
-            case.soft_delete(user=user if getattr(user, "pk", None) else None, reason=f"sentence plan cancelled: {reason}")
-        plan.status = SentencePlanStatus.CANCELLED
+        now = timezone.now()
+        nodes = _lock_nodes(plan)
+        for node in nodes:
+            if node.status in (SentenceNodeStatus.PENDING, SentenceNodeStatus.DISPATCHING):
+                if node.dispatch_record_id is not None:
+                    record = DispatchRecord._base_manager.filter(pk=node.dispatch_record_id).first()
+                    if record is not None and record.status in (DispatchStatus.PROPOSED, DispatchStatus.APPROVED):
+                        record.transition_to(DispatchStatus.CANCELLED, decided_at=now)
+                node.status = SentenceNodeStatus.CANCELLED
+                _save(node, "status")
+            elif node.status in (SentenceNodeStatus.ACTIVE, SentenceNodeStatus.WAITING, SentenceNodeStatus.ETERNAL):
+                node.status = SentenceNodeStatus.ABORTED
+                node.completed_at = now
+                _save(node, "status", "completed_at")
+        if soul.is_residing:
+            DispatchService.end_residence(
+                soul, actor=user if getattr(user, "is_authenticated", False) else "system",
+                trigger=DispatchService.RETURN_ON_PLAN_CANCELLED, reason=reason,
+            )
+            soul = _lock_soul(soul)
         plan.cancel_reason = reason
-        _save(plan, "status", "cancel_reason")
-        record_event(soul, EventType.SENTENCE_PLAN_CANCELLED, {"sentence_plan_id": str(plan.pk)})
+        _save(plan, "cancel_reason")
+        if not SentencePlanService._complete(soul, plan, nodes, pardoned=True):
+            raise PlanChangeRefusedError(
+                f"The soul is {soul.current_state}; the plan cannot be closed from there", "soul_state", status=409,
+            )
         AuditLog.objects.create(
             tenant_id=plan.tenant_id, user=user if getattr(user, "is_authenticated", False) else None,
             action=AuditAction.UPDATE, resource="sentence_plan", resource_id=str(plan.pk),
             changes={"status": ["IN_PROGRESS", "CANCELLED"], "reason": reason},
-            description=f"受刑计划撤销:{soul.name} {reason}"[:500],
+            description=f"受刑计划撤销(赦免剩余刑期):{soul.name} {reason}"[:500],
         )
     return plan
 

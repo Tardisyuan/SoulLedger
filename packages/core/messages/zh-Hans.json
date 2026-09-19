@@ -2178,6 +2178,10 @@
     "sentence_amended": {
       "title": "受刑计划有变更",
       "body": "你的受刑计划有变更,打开灵魂簿查看。"
+    },
+    "sentence_pardoned": {
+      "title": "受刑计划已撤销",
+      "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"
     }
   },
   "official_notify": {
@@ -2220,6 +2224,10 @@
     "sentence_request_decided": {
       "title": "受刑计划请求已决定",
       "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"
+    },
+    "sentence_plan_cancelled": {
+      "title": "受刑计划已撤销",
+      "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"
     }
   },
   "social_moderation": {

@@ -142,15 +142,40 @@ def test_executing_a_single_home_node_through_the_api_completes_the_plan_and_tri
 # ── 原属地的永久刑期 ─────────────────────────────────────────────────────
 
 
-def test_an_eternal_home_node_with_stops_after_it_holds_the_plan(cn, eg):
-    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
-    Disposition.all_objects.filter(pk=plan.node(p, 1).disposition_id).update(is_eternal=True)
+def _eternal_heaven():
+    """中国灵魂 PASSED 路由到 DY_01_HEAVEN;把它设成永久刑期。"""
+    from apps.realms.models import Realm
+
+    realm = plan.realm("DY_01_HEAVEN", "CHINESE")
+    Realm.all_objects.filter(pk=realm.pk).update(is_eternal=True)
+
+
+def test_an_eternal_home_sentence_with_stops_after_it_refuses_the_conclusion(cn, eg):
+    """Q5 同一条校验也管原属节点(2026-09-19 用户决定):原属处置永久,联审却在它后面排了节点 →
+    原审判结案答 409 `eternal_not_last`,裁决、处置、计划、灵魂状态都不写。"""
+    _eternal_heaven()
+    soul, case = plan.open_case(cn)
+    plan.bench(case, [(eg, plan.stop_realm(eg), 5)])
+
+    response = officer_client(plan.officer("cn_judge", "JUDGE", cn)).post(
+        f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "PASSED"}, format="json")
+
+    assert response.status_code == 409 and response.data["code"] == "eternal_not_last", response.data
+    case.refresh_from_db()
+    soul.refresh_from_db()
+    assert case.verdict is None and not case.is_final
+    assert not Disposition.all_objects.filter(soul=soul).exists()
+    assert not SentencePlan.all_objects.filter(soul=soul).exists()
+    assert soul.current_state == SoulState.JUDGING
+
+
+def test_an_eternal_home_sentence_alone_concludes_and_completes_the_plan(cn):
+    """没有后续节点时照常:原属永久刑期执行完,计划完成(不进 HELD —— 那条兜底已删)。"""
+    _eternal_heaven()
+    soul, p = plan.planned(cn)
     plan.serve(soul, p, 1)
     p.refresh_from_db()
-    soul.refresh_from_db()
-    assert plan.node(p, 1).status == "ETERNAL" and p.status == "HELD"
-    assert plan.node(p, 2).status == "PENDING" and not plan.records(soul).exists()
-    assert soul.current_state == SoulState.DISPOSED
+    assert plan.node(p, 1).status == "ETERNAL" and p.status == "COMPLETED"
 
 
 # ── 站内通知(§5.1)──────────────────────────────────────────────────────
