@@ -831,7 +831,7 @@ EGYPTIAN_REALMS = [
     # {HELL, PURGATORY, BLISS, NEUTRAL} none means "ceased to exist", and
     # NEUTRAL ("between") would be a worse lie than HELL — it would file
     # annihilation next to the ferry crossing as another waypoint.
-    ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "AmMit",
+    ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "Ammit",
      RealmType.HELL, 10,
      "Not a place and not a residence: the outcome recorded when the heart is "
      "heavier than the feather and Ammit devours it. Egyptian sources call this "
