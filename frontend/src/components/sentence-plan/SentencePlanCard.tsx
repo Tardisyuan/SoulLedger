@@ -25,6 +25,7 @@ import {
   refusalKey,
 } from "./sentencePlanDisplay";
 import { SentenceRequestActions } from "./SentenceRequestActions";
+import { SentenceRequestForm } from "./SentenceRequestForm";
 
 /*
  * 灵魂详情的受刑计划面板(设计稿 §9 阶段 4)。
@@ -150,6 +151,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
         </div>
       )}
 
+      <SentenceRequestForm plan={plan} />
       {canCancel && (
         <Button type="button" variant="danger" size="sm" onClick={() => setCancelOpen(true)}>
           {t("sentence_plan.cancel")}
