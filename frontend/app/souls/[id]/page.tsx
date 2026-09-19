@@ -32,6 +32,7 @@ import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActio
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
+import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -552,6 +553,14 @@ export default function SoulDetailPage() {
           {soul && (
             <RequirePermission permissions="soul_account.read">
               <SoulAccountCard soul={soul} />
+            </RequirePermission>
+          )}
+
+          {/* 受刑计划(docs/ARCHITECTURE-sentence-plan.md §9 阶段 4)。暂居在外、本页只读时也显示:
+              原属仍是这份计划的主人,撤销与决定请求都在原属。 */}
+          {soul && (
+            <RequirePermission permissions="judgment.read">
+              <SentencePlanCard soulId={soul.id} />
             </RequirePermission>
           )}
         </div>

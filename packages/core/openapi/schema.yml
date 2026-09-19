@@ -1866,6 +1866,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
           description: ''
+  /api/v1/dispatch/cross-tenant-judgments/{id}/order/:
+    post:
+      operationId: v1_dispatch_cross_tenant_judgments_order_create
+      description: 发起方重排各站顺序(PROPOSED 时;原属恒为 1,参与方从 2 起)。永久刑期只能排最后(Q5)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentOrder'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentOrder'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentOrder'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossTenantJudgment'
+          description: ''
   /api/v1/dispatch/cross-tenant-judgments/{id}/participate/:
     post:
       operationId: v1_dispatch_cross_tenant_judgments_participate_create
@@ -7590,6 +7625,10 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: pending_request
+        schema:
+          type: boolean
       - name: search
         required: false
         in: query
@@ -13394,6 +13433,17 @@ components:
       - initiating_tenant
       - initiating_tenant_code
       - title
+    CrossTenantJudgmentOrder:
+      type: object
+      description: 发起方重排各站:全部带节点席位的 id,按新顺序;服务端依次给 2、3……(`reorder_nodes`)。
+      properties:
+        participants:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - participants
     CrossTenantJudgmentParticipant:
       type: object
       description: Serializer for CrossTenantJudgmentParticipant.

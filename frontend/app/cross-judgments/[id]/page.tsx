@@ -11,6 +11,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { User } from "lucide-react";
+import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgmentStops";
 
 /**
  * Case state → badge tone, the same table the list page carries.
@@ -226,6 +227,9 @@ export default function CrossJudgmentDetailPage() {
           <p className="text-04 text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
         )}
       </div>
+
+      {/* 挂了原审判的联审定下受刑计划的各站(docs/ARCHITECTURE-sentence-plan.md §2.1)。 */}
+      {!loading && judgment?.judgment && <CrossJudgmentStops judgment={judgment} />}
 
       {/* Conclusion (if concluded) */}
       {!loading && judgment?.status === "CONCLUDED" && (
