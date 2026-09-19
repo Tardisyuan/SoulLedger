@@ -3,11 +3,11 @@
  * Driven through the real interceptors with a stubbed adapter, as
  * soulSocial.test.ts does.
  */
-import { type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
+import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configurePlatform, resetPlatform, type KeyValueStore } from "../../platform/index";
 import { SOUL_ERROR_CODES, soulCodeMessage, soulHttp, storeSoulTokens } from "../soul";
-import { SOUL_CHAT_LOOKUP_ERROR_CODES, soulChatApi } from "../soul-chat";
+import { SOUL_CHAT_LOOKUP_ERROR_CODES, soulChatApi, soulChatErrorMessage, soulChatRetryAt } from "../soul-chat";
 
 function memoryStore(): KeyValueStore {
   const data = new Map<string, string>();
@@ -62,5 +62,36 @@ describe("soulChatApi", () => {
       expect(SOUL_ERROR_CODES).toContain(code);
       expect(soulCodeMessage(code)).toEqual({ key: `soul_app.errors.${code}` });
     }
+  });
+
+  it("sends through the backend's request channel with the body, and opens the hall inbox by kind", async () => {
+    await soulChatApi.send("c-1", "在吗");
+    await soulChatApi.openInbox();
+    await soulChatApi.session();
+    expect(calls.map((c) => [c.method, c.url, c.body])).toEqual([
+      ["post", "/me/chat/conversations/c-1/messages/", { body: "在吗" }],
+      ["post", "/me/chat/conversations/", { kind: "OFFICER_INBOX" }],
+      ["get", "/me/chat/session/", undefined],
+    ]);
+  });
+});
+
+describe("chat refusals", () => {
+  const refused = (status: number, data: unknown) =>
+    new AxiosError("x", "ERR_BAD_RESPONSE", undefined, null, { status, data, headers: {}, statusText: "" } as AxiosResponse);
+
+  it("a chat code gets its own copy; retry_at is carried", () => {
+    const throttled = refused(429, { code: "request_throttled", retry_at: "2026-09-20T10:00:00Z" });
+    expect(soulChatErrorMessage(throttled)).toEqual({ key: "soul_app.chat.errors.request_throttled" });
+    expect(soulChatRetryAt(throttled)).toBe("2026-09-20T10:00:00Z");
+    expect(soulChatErrorMessage(refused(400, { code: "self_conversation" }))).toEqual({ key: "soul_app.chat.errors.self" });
+  });
+
+  it("anything else falls to the general soul copy, raw code carried", () => {
+    expect(soulChatErrorMessage(refused(409, { code: "no_chat_identity" }))).toEqual({
+      key: "soul_app.errors.unknown",
+      params: { code: "no_chat_identity" },
+    });
+    expect(soulChatRetryAt(refused(409, { code: "closed" }))).toBeNull();
   });
 });
