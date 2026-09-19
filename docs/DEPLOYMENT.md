@@ -107,6 +107,18 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   `MATRIX_REGISTRATION_SHARED_SECRET`(= Synapse `registration_shared_secret`,只用来把服务账号
   注册成 admin 一次)、`MATRIX_USER_SALT`(mxid 由账号 id 经 HMAC 派生;**不可轮换**,换了所有 mxid
   都变)、`CHAT_REQUEST_INTERVAL_SECONDS`(默认 86400)。
+- **新书信推送(Synapse → 后端回调)**:模块配置里的 `push_url`(模板里是 `${MATRIX_PUSH_HOOK_URL}`),指向后端
+  `http://<后端内网地址>/api/v1/chat/hooks/new-message/`(容器网络内,不经 nginx、不对外暴露)。
+  每条 `m.room.message` 落库之后,模块在后台进程里 POST `{room_id, event_id, sender, ts, mac}`;
+  `mac` 用 `grant_secret`(= `MATRIX_JWT_SECRET`)签,后端 `apps/chat/hook.py` 验签、限 5 分钟时间窗,
+  不认令牌。后端按会话定收件人(那一世的本世账号;官员回信推给灵魂,灵魂写给殿司的不推),
+  按收件人的「书信」偏好(`PushPreference.chat`)记推送,走 soul_push 的同一条发送 / 补发 / 回执路径
+  (`SOUL_PUSH_ENABLED` 关着时照常记为 DISABLED)。**回调失败不影响消息本身**:Synapse 在落库之后才调,
+  模块吞掉异常只记 warning;漏掉的那条不补推。不配 `push_url` 就不回调。
+  **`push_url` 的主机名要在后端 `ALLOWED_HOSTS` 里**(例如 `backend`),否则 Django 对回调答 400、
+  一条都推不出去,而消息照常收发 —— 故障是静默的,只在 Synapse 日志里有 `新消息回调失败 … 400`
+  (2026-09-19 对真 Synapse v1.161.0 实测撞到)。
+  改了模块文件要**重启 Synapse**(模块在启动时装载)。
 - 限速:服务账号替灵魂转发、改 power level、建房,量随灵魂数增长。用 admin API
   `POST /_synapse/admin/v1/users/@soulledger:<server_name>/override_ratelimit` 给它免限速。
 - 实机验证:`backend/tests/test_chat_synapse_integration.py` 文件头有本机起一个 Synapse 跑它的命令。

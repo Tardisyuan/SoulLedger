@@ -48,7 +48,6 @@ from apps.chat.matrix import MatrixError, get_client, login_jwt
 from apps.chat.models import ChatIdentity, Conversation, ConversationKind
 from apps.social import soul_circle as circle
 from apps.social.models import Follow
-from apps.soul_accounts.services import current_account_of
 
 logger = logging.getLogger(__name__)
 
@@ -153,17 +152,18 @@ def find_by_soul_code(account, soul_code):
 
 
 def _live_identities(conversation):
-    """{soul_id: (本世账号, 未停用的 ChatIdentity)}。前世账号、没开过聊天的不在里面。"""
+    """{soul_id: (会话那一世的账号, 未停用的 ChatIdentity)}。
+
+    账号取**会话记下的那一世**(`account_a` / `account_b`),不取灵魂此刻的本世账号:新一世的
+    账号永远不会被算进前世的房间。那一世已转世停用的(ChatIdentity 已停用)不在里面。"""
     rows = {}
-    for soul in (conversation.soul_a, conversation.soul_b):
-        if soul is None:
-            continue
-        account = current_account_of(soul)
-        if account is None:
+    for soul_id, account in ((conversation.soul_a_id, conversation.account_a),
+                             (conversation.soul_b_id, conversation.account_b)):
+        if soul_id is None or account is None:
             continue
         identity = ChatIdentity.objects.filter(account=account, deactivated_at__isnull=True).first()
         if identity is not None:
-            rows[soul.pk] = (account, identity)
+            rows[soul_id] = (account, identity)
     return rows
 
 
@@ -188,9 +188,7 @@ def _speaking_levels(conversation, identities):
     for soul_id, (account, identity) in identities.items():
         peer = next((acc for sid, (acc, _) in identities.items() if sid != soul_id), None)
         if peer is None and conversation.kind == ConversationKind.DIRECT:
-            peer = current_account_of(
-                conversation.soul_b if conversation.soul_a_id == soul_id else conversation.soul_a
-            )
+            peer = conversation.other_account(account.pk)
         blocked = refusal(conversation, account, peer) is not None
         throttled = conversation.throttled and conversation.initiator_id == soul_id
         levels[identity.matrix_user_id] = SILENT if blocked or throttled else SPEAK
@@ -204,14 +202,31 @@ def sync_levels(conversation, *, client=None):
 
 
 def sync_rooms(soul, *, client=None):
-    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。"""
-    rows = Conversation.objects.filter(Q(soul_a=soul) | Q(soul_b=soul), closed_at__isnull=True)
-    rows = list(rows.select_related("soul_a", "soul_b"))
+    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。
+
+    **已关闭但还欠一次降权的也在里面**(`silenced_at` 为空):关闭时那一次写失败了
+    (Synapse 不可达),下一次任何一方的同步 —— 留下的一方打开聊天、被禁言、被调拨 —— 补上。"""
+    rows = Conversation.objects.filter(
+        Q(soul_a=soul) | Q(soul_b=soul), Q(closed_at__isnull=True) | Q(silenced_at__isnull=True)
+    )
+    rows = list(rows.select_related(*ACCOUNT_JOINS))
     if not rows:
         return
     client = client or get_client()
     for conversation in rows:
         sync_levels(conversation, client=client)
+        if conversation.closed_at is not None:
+            _mark_silenced(conversation)
+
+
+def _mark_silenced(conversation):
+    conversation.silenced_at = timezone.now()
+    Conversation.objects.filter(pk=conversation.pk, silenced_at__isnull=True).update(
+        silenced_at=conversation.silenced_at)
+
+
+#: 算发言权要读的关联:双方灵魂、双方那一世的账号与其 User(`is_current_soul` 看 User)。
+ACCOUNT_JOINS = ("soul_a", "soul_b", "account_a__user", "account_b__user")
 
 
 def sync_rooms_quietly(soul):
@@ -246,14 +261,33 @@ def deactivate_for_account(account):
     聊天没启用、或 Synapse 暂时不可达时**不阻断转世**:账号本身已经登不进来了
     (`SoulJWTAuthentication` 认 `retired_at`),Matrix 侧留一条日志等人工或下次调用。
     """
-    Conversation.objects.filter(
-        Q(soul_a=account.soul) | Q(soul_b=account.soul), closed_at__isnull=True
-    ).update(closed_at=timezone.now())
+    closing = Conversation.objects.filter(
+        Q(account_a=account) | Q(account_b=account), closed_at__isnull=True
+    )
+    ids = list(closing.values_list("pk", flat=True))
+    closing.update(closed_at=timezone.now())
     try:
-        return deactivate_identity(account)
+        identity = deactivate_identity(account)
     except MatrixError as exc:
         logger.warning("chat: 停用 Matrix 用户失败 account=%s: %s", account.pk, exc)
-        return None
+        identity = None
+    silence_closed(ids)
+    return identity
+
+
+def silence_closed(conversation_ids):
+    """关闭的会话:把房间里还在的一方降到 0(`refusal` 对关闭的会话答 `closed`,所以
+    `_speaking_levels` 给每个人都是 SILENT)。写成功才记 `silenced_at`;失败只记日志,
+    留给 `sync_rooms` 下次补 —— 这一步不能拖住转世。"""
+    rows = Conversation.objects.filter(pk__in=conversation_ids, closed_at__isnull=False,
+                                       silenced_at__isnull=True).select_related(*ACCOUNT_JOINS)
+    for conversation in rows:
+        try:
+            sync_levels(conversation)
+        except MatrixError as exc:
+            logger.warning("chat: 关闭后降权失败 room=%s: %s(下次同步补)", conversation.room_id, exc)
+            continue
+        _mark_silenced(conversation)
 
 
 # ── 私聊 ─────────────────────────────────────────────────────────────────
@@ -281,9 +315,10 @@ def open_direct(account, target_user, *, request=None):
         raise ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
 
     low, high = _pair(soul, target_soul)
+    account_of = {soul.pk: account, target_soul.pk: target_account}
     existing = Conversation.objects.filter(
         kind=ConversationKind.DIRECT, soul_a=low, soul_b=high, closed_at__isnull=True
-    ).select_related("soul_a", "soul_b").first()
+    ).select_related(*ACCOUNT_JOINS).first()
     if existing is not None:
         return refresh_throttle(existing), False
 
@@ -309,6 +344,7 @@ def open_direct(account, target_user, *, request=None):
         with transaction.atomic():
             conversation = Conversation.objects.create(
                 kind=ConversationKind.DIRECT, room_id=room_id, soul_a=low, soul_b=high,
+                account_a=account_of[low.pk], account_b=account_of[high.pk],
                 tenant=soul.tenant, initiator=None if mutual else soul, throttled=not mutual,
             )
     except IntegrityError:
@@ -367,10 +403,9 @@ def send_direct_message(account, conversation, body, *, request=None):
     with transaction.atomic():
         conversation = (
             Conversation.objects.select_for_update(of=("self",))
-            .select_related("soul_a", "soul_b").get(pk=conversation.pk)
+            .select_related(*ACCOUNT_JOINS).get(pk=conversation.pk)
         )
-        peer_soul = conversation.soul_b if conversation.soul_a_id == account.soul_id else conversation.soul_a
-        error = refusal(conversation, account, current_account_of(peer_soul))
+        error = refusal(conversation, account, conversation.other_account(account.pk))
         if error is not None:
             raise error
         client = get_client()
@@ -435,6 +470,57 @@ def _throttled(retry_at):
     return error
 
 
+# ── 新书信推送 ───────────────────────────────────────────────────────────
+
+
+def notify_new_message(room_id, event_id, sender):
+    """Synapse 模块回调进来的一条新消息(已验签,`views.ChatPushHookView`)→ 给收件方记一条推送。
+
+    收件方由会话定,不由回调说:
+    * 私聊:发送者必须是会话双方之一(那一世的 Matrix 身份),收件方是另一方**那一世**的账号;
+    * 殿司收件箱:只推服务账号发的(官员回信),收件方是写信的灵魂;灵魂写给殿司的不推(官员不用 App)。
+    已关闭的会话(含收件方已转世的)、发送者对不上号:一律不推。
+    返回新建的投递 id(测试断言用)。
+    """
+    conversation = (Conversation.objects.filter(room_id=room_id, closed_at__isnull=True)
+                    .select_related(*ACCOUNT_JOINS, "tenant").first())
+    if conversation is None:
+        return []
+    # 「只推本世账号」由上一行的 `closed_at` 兑现:转世停用账号时先关它参与的每个会话
+    # (`deactivate_for_account`),所以未关闭会话里的账号都是本世的。
+    recipient, sender_name = _recipient(conversation, sender)
+    if recipient is None:
+        return []
+    from apps.soul_push import services as push
+
+    ids = push.record_chat_message(recipient, conversation, event_id, sender_name)
+    if ids:
+        transaction.on_commit(lambda: push.enqueue(ids))
+    return ids
+
+
+def _recipient(conversation, sender):
+    """`(收件账号, 锁屏上的「谁」(locale → 名字))`;不该推时 `(None, None)`。
+
+    名字与会话列表同一个出处:私聊是发件方**会话那一世**账号的显示名(`display_name`,
+    不是它此刻的本世账号);殿司回信是殿司展示名(`Tenant.hall_names`,按收件灵魂的推送语言)。"""
+    if conversation.kind == ConversationKind.OFFICER_INBOX:
+        service_user = f"@{settings.MATRIX_SERVICE_LOCALPART}:{settings.MATRIX_SERVER_NAME}"
+        if sender != service_user:
+            return None, None
+        halls = conversation.tenant.hall_names
+        return conversation.account_a, lambda locale: halls.get(locale) or halls["zh-Hans"]
+    accounts = [a for a in (conversation.account_a_id, conversation.account_b_id) if a is not None]
+    sender_account = ChatIdentity.objects.filter(
+        account_id__in=accounts, matrix_user_id=sender
+    ).values_list("account_id", flat=True).first()
+    if sender_account is None:
+        return None, None
+    sender_life = conversation.account_a if conversation.account_a_id == sender_account else conversation.account_b
+    name = display_name(sender_life)
+    return conversation.other_account(sender_account), lambda locale: name
+
+
 # ── 官员收件箱 ───────────────────────────────────────────────────────────
 
 
@@ -464,7 +550,7 @@ def open_officer_inbox(account, *, request=None):
     try:
         with transaction.atomic():
             conversation = Conversation.objects.create(
-                kind=ConversationKind.OFFICER_INBOX, room_id=room_id, soul_a=soul,
+                kind=ConversationKind.OFFICER_INBOX, room_id=room_id, soul_a=soul, account_a=account,
                 tenant_id=soul.tenant_id,
             )
     except IntegrityError:
@@ -513,6 +599,7 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
             "event_id": message["event_id"],
             "from_officer": from_officer,
             "sender_name": (message["officer"] or "殿司") if from_officer else names.get(message["sender"], ""),
+            "officer_title": message.get("officer_title", "") if from_officer else "",
             "body": message["body"],
             "timestamp": message["timestamp"],
         })
@@ -520,8 +607,22 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
     return rows
 
 
+OFFICER = "io.soulledger.officer"
+OFFICER_TITLE = "io.soulledger.officer_title"
+
+
+def officer_title(officer):
+    """回信官员的职位:`User.position`(官员档案里填的职位,如「第五殿殿主」);没填就用他关联的
+    冥府角色(`User.actor`)的中文头衔;都没有是空串,App 与后台署名里就只剩殿名与名字。"""
+    if officer.position:
+        return officer.position
+    actor = officer.actor
+    return (actor.title_zh or actor.title) if actor is not None else ""
+
+
 def officer_reply(conversation, officer, body, *, request=None):
-    """官员回复。以服务账号发出,`io.soulledger.officer` 带上是谁回的。"""
+    """官员回复。以服务账号发出,事件里带上是谁回的(`io.soulledger.officer`)与他的职位
+    (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。"""
     if conversation.kind != ConversationKind.OFFICER_INBOX:
         raise ChatError("只有殿司收件箱可以由官员回复。", "not_inbox", status=409)
     if conversation.closed_at is not None:
@@ -530,7 +631,7 @@ def officer_reply(conversation, officer, body, *, request=None):
     event_id = client.send_message(
         conversation.room_id, body,
         as_localpart=settings.MATRIX_SERVICE_LOCALPART,
-        extra={"io.soulledger.officer": officer.get_full_name() or officer.username},
+        extra={OFFICER: officer.get_full_name() or officer.username, OFFICER_TITLE: officer_title(officer)},
     )
     conversation.last_message_at = timezone.now()
     conversation.save(update_fields=["last_message_at"])

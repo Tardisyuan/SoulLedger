@@ -2113,7 +2113,9 @@
       "open_system_settings": "前往系统设置",
       "enable_push": "开启通知",
       "toggle_failed": "没能保存这项设置，已恢复原样",
-      "version": "灵魂簿 {{version}}"
+      "version": "灵魂簿 {{version}}",
+      "chat": "书信",
+      "chat_note": "有新书信、殿司回信时"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -2278,6 +2280,10 @@
     "sentence_pardoned": {
       "title": "受刑计划已撤销",
       "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"
+    },
+    "chat_message": {
+      "title": "新书信",
+      "body": "{{name}} 给你写了一封信,打开灵魂簿查看。"
     }
   },
   "official_notify": {
@@ -2433,7 +2439,7 @@
     "thread_empty": "这封信还没有内容",
     "closed": "已关闭(已转世)",
     "no_messages": "暂无消息",
-    "from_hall": "殿司 · {{name}}",
+    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "以殿司名义回复",
     "reply_hint": "灵魂看到的是殿司的回复,署你的名字。",
     "send": "发送",

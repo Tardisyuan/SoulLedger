@@ -83,7 +83,7 @@ def test_profile_is_exactly_the_whitelist(reborn_soul, cn_tenant):
     data = soul_client(account).get("/api/v1/me/").data
     assert set(data) == PROFILE_KEYS
     assert set(data["account"]) == ACCOUNT_KEYS
-    assert set(data["tenant"]) == {"code", "display_name"}
+    assert set(data["tenant"]) == {"code", "display_name", "hall_names"}
     assert data["soul_code"] == soul.soul_code and data["account"]["cycle"] == 1
     raw = json.dumps(data, ensure_ascii=False, default=str)
     for absent in ("hidden@example.com", "官员写的描述", "contact", "description", "baptism"):

@@ -66,6 +66,7 @@ class PushPreference(models.Model):
     rebirth = models.BooleanField(default=True, help_text="转生申请:提交确认、申诉确认、结果")
     judgment = models.BooleanField(default=True, help_text="审判结论与处置执行")
     residence = models.BooleanField(default=True, help_text="暂居开始 / 回归(依赖 feat/dispatch-residence)")
+    chat = models.BooleanField(default=True, help_text="新书信:私聊的新消息、殿司的回信")
     locale = models.CharField(max_length=10, choices=PushLocale.choices, default=PushLocale.ZH_HANS)
     updated_at = models.DateTimeField(auto_now=True)
 

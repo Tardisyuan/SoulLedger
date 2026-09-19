@@ -40,7 +40,7 @@ import { formatStamp } from "../rules";
 import { Button, Interp, Notice, Skeleton, Txt, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
-import { ANDROID, Glyph, Tag, useCurrentHall, wash } from "./letters";
+import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
 
 type Line =
   | { kind: "day"; key: string; day: string }
@@ -55,7 +55,7 @@ const Mono = ({ children, tone = "muted" }: { children: string; tone?: "muted" |
 
 export function ConversationScreen({ id, landed }: { id: string; landed?: boolean }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, locale } = useI18n();
   const chat = useChat();
   const insets = useSafeAreaInsets();
   const hallName = useCurrentHall();
@@ -178,7 +178,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     >
       <View style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
         {inbox ? (
-          <HallHeader hall={c.hall} sealed={mode.kind === "hall_sealed"} onBack={navigation.goBack} />
+          <HallHeader hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} onBack={navigation.goBack} />
         ) : (
           <Header
             onBack={navigation.goBack}
@@ -224,11 +224,17 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             ) : line.mine ? (
               <Bubble key={line.key} mine m={line.m} now={now} read={!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m))} />
             ) : inbox ? (
-              <OfficerBubble key={line.key} m={line.m} hall={c.hall} sealed={mode.kind === "hall_sealed"} now={now} />
+              <OfficerBubble key={line.key} m={line.m} hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} now={now} />
             ) : (
               <Bubble key={line.key} m={line.m} now={now} landed={line.m.eventId === landedOn} />
             )
           )}
+          {/* Where the thread stops: the server's `closed_at` (the other soul's rebirth closed it). */}
+          {!inbox && c.closed_at ? (
+            <Txt testID="closed-marker" variant="value" tone="subtle" style={styles.day}>
+              {tr("soul_app.chat.closed.marker", { date: dayOf(Date.parse(c.closed_at)) })}
+            </Txt>
+          ) : null}
           {mode.kind === "outgoing_locked" && mode.rejected ? (
             <View style={styles.rejected}>
               <Notice tone="neg" testID="request-throttled">
@@ -482,8 +488,8 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
   const t = useTheme();
   const { t: tr } = useI18n();
   const line = sealed ? t.hair2 : t.mark;
-  // The backend records who replied, not their office: the role slot is empty until it does.
-  const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: "", name: m.officer ?? "" }).replace(/\s+/g, " ").trim();
+  // Who replied and their position, as the backend stamped them on the event (either may be missing).
+  const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: m.officerTitle ?? "", name: m.officer ?? "" }).replace(/\s+/g, " ").trim();
   return (
     <View style={styles.bubbleRow}>
       <View testID="officer-bubble" style={[styles.bubble, styles.officer, { borderColor: line, borderLeftWidth: 3, backgroundColor: t.s1 }]}>

@@ -16,7 +16,7 @@ test.describe("Hall inbox", () => {
     const thread = page.getByRole("region", { name: "与 写信的灵魂 的来往" });
     await expect(thread.locator("li[data-event-id]")).toHaveCount(2);
     await expect(thread.locator("li[data-event-id]").first()).toContainText("我想申诉这次判决");
-    await expect(thread.locator("li[data-event-id]").last()).toContainText("殿司 · 测试管理员");
+    await expect(thread.locator("li[data-event-id]").last()).toContainText("第五殿 · 判官 测试管理员");
 
     await thread.getByLabel("以殿司名义回复").fill("已受理");
     await thread.getByRole("button", { name: "发送" }).click();

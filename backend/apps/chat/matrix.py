@@ -227,6 +227,7 @@ class SynapseClient:
                 "sender": event["sender"],
                 "body": event.get("content", {}).get("body", ""),
                 "officer": event.get("content", {}).get("io.soulledger.officer", ""),
+                "officer_title": event.get("content", {}).get("io.soulledger.officer_title", ""),
                 "timestamp": event["origin_server_ts"],
             }
             for event in data.get("chunk", [])

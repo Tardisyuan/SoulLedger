@@ -2113,7 +2113,9 @@
       "open_system_settings": "Wen Smen Ta",
       "enable_push": "Wen Sedjem",
       "toggle_failed": "Nen Sau Smen Pen. Wehem Er Tepy.",
-      "version": "Medjat Ba {{version}}"
+      "version": "Medjat Ba {{version}}",
+      "chat": "Shemes",
+      "chat_note": "Shemes Renpi, Weshed Wesekhet"
     },
     "push": {
       "primer_title": "Sedjem Ek Em Wedja?",
@@ -2278,6 +2280,10 @@
     "sentence_pardoned": {
       "title": "Wetep Sehen Seth",
       "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."
+    },
+    "chat_message": {
+      "title": "Shemes Renpi",
+      "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
@@ -2433,7 +2439,7 @@
     "thread_empty": "Nen Medu",
     "closed": "Khetem Seth (Wehem Mesut Seth)",
     "no_messages": "Nen Medu",
-    "from_hall": "Wesekhet · {{name}}",
+    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Wesheb Em Wesekhet",
     "reply_hint": "Ba Maa Wesheb Wesekhet; Ren Ek Em Sesh.",
     "send": "Hab",
