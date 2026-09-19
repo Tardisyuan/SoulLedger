@@ -10,7 +10,8 @@ module.exports = {
   preset: "jest-expo",
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.test.ts", "**/*.test.tsx"],
-  setupFiles: ["<rootDir>/jest.setup.js"],
+  // AfterEnv, not setupFiles: the act guard at the bottom needs afterEach.
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   // One React for the whole run — the one this workspace resolves — so a
   // hoisted package can never pick up a different copy; see metro.config.js.
   moduleNameMapper: {
