@@ -23,6 +23,7 @@
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
+ * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
@@ -99,7 +100,10 @@ const MA_NOT_NEGATION = new Set([
   "workflow.detail.escalate_reason_placeholder",
 ]);
 
-/** 「Pert Abuf」只剩调度义(dispatch);作密码的写法已废止。 */
+/**
+ * 第六节:「Pert Abuf」整个废止(它是密码的旧写法,误贴到了调度上;调度统一 Hab-Ba)。Pert 本义「出」,
+ * 「杜阿特入口」写成 Duat Pert 是把入口写成了出口(→ Duat Aq)。Pert 若再出现,只许在调度键里。
+ */
 const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(k);
 
 /**
@@ -253,14 +257,30 @@ describe("egy 词表规则", () => {
     // Wehem Mesut 之后的旧写法 Wehem Ankh。
     // 第五节:Sethety(早期万能填充,不是词根;按义项分给 Pet-Sesh / Was / Setep / Smen / Nefer / Isfet / Renu)、
     // 保存 Pedet(→ Sau)、新 Werpet(→ Renpi)、加载 Khemut(→ Ini)。定稿表外的同形也按同键中文判义改掉了。
+    // 第六节:Pert Abuf(密码旧写法,调度统一 Hab-Ba;定稿表外的 16 处调度键一并改了)。
     const abolished = [
       /Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/, /\bSekhem Ma\b/,
       /\bRemetch\b/, /\bSepr\b/, /\bSep-U\b/, /\bAmMit\b/, /\bDjesef\b/, /\bHemst\b/, /\bMaakher\b/,
       /\bMekheru\b/, /\bIaru\b/, /\bSemen\b/, /\bWenu\b/, /\bMetu\b/, /\bWehem Ankh\b/,
-      /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/,
+      /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/, /\bPert Abuf\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
-    expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /Pert Abuf/.test(v))).toEqual([]);
+  });
+
+  it("Pert 只在调度键里出现(入口是 Aq,不是 Pert)", () => {
+    expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /\bPert\b/.test(prose(v)))).toEqual([]);
+  });
+
+  it("Sethet 只表技术错误:中文不含「错误 / 出错 / 故障 / 异常」的键不出现 Sethet", () => {
+    // 第六节把它曾担的通过 / 活动 / 审计 / 证据 / 条文 / 时戳 / 顺序 / 资源……五十处散回各自的词,
+    // settings 的冗余 Sethet 直接删。目前没有例外,所以不设白名单;真出现一个再加,并照 Sekhem 那条补陈旧检查。
+    expect(offenders(KEYS, (v, k) => /\bSethet\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? ""))).toEqual([]);
+  });
+
+  it("Seshem 只表推进:中文不含「推进 / 越级 / 升级」的键不出现 Seshem", () => {
+    // 第六节:创建 Iri、展开 Wen、开始 Tepy、图表 Tut-Hesb、系统层 Ta、开关 Wen-Khetem 都分出去了。
+    // 「升级」是 workflow.status.ESCALATED 的中文(越级推进后的状态)。不设白名单,理由同上。
+    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级/.test(ZH[k] ?? ""))).toEqual([]);
   });
 
   it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {
