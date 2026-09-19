@@ -588,6 +588,7 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
             "event_id": message["event_id"],
             "from_officer": from_officer,
             "sender_name": (message["officer"] or "殿司") if from_officer else names.get(message["sender"], ""),
+            "officer_title": message.get("officer_title", "") if from_officer else "",
             "body": message["body"],
             "timestamp": message["timestamp"],
         })
@@ -595,8 +596,22 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
     return rows
 
 
+OFFICER = "io.soulledger.officer"
+OFFICER_TITLE = "io.soulledger.officer_title"
+
+
+def officer_title(officer):
+    """回信官员的职位:`User.position`(官员档案里填的职位,如「第五殿殿主」);没填就用他关联的
+    冥府角色(`User.actor`)的中文头衔;都没有是空串,App 与后台署名里就只剩殿名与名字。"""
+    if officer.position:
+        return officer.position
+    actor = officer.actor
+    return (actor.title_zh or actor.title) if actor is not None else ""
+
+
 def officer_reply(conversation, officer, body, *, request=None):
-    """官员回复。以服务账号发出,`io.soulledger.officer` 带上是谁回的。"""
+    """官员回复。以服务账号发出,事件里带上是谁回的(`io.soulledger.officer`)与他的职位
+    (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。"""
     if conversation.kind != ConversationKind.OFFICER_INBOX:
         raise ChatError("只有殿司收件箱可以由官员回复。", "not_inbox", status=409)
     if conversation.closed_at is not None:
@@ -605,7 +620,7 @@ def officer_reply(conversation, officer, body, *, request=None):
     event_id = client.send_message(
         conversation.room_id, body,
         as_localpart=settings.MATRIX_SERVICE_LOCALPART,
-        extra={"io.soulledger.officer": officer.get_full_name() or officer.username},
+        extra={OFFICER: officer.get_full_name() or officer.username, OFFICER_TITLE: officer_title(officer)},
     )
     conversation.last_message_at = timezone.now()
     conversation.save(update_fields=["last_message_at"])

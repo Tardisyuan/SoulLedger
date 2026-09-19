@@ -116,6 +116,7 @@ class FakeMatrix:
         event_id = f"$evt{len(FakeMatrix.sent)}"
         message = {"event_id": event_id, "sender": sender, "body": body,
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
+                   "officer_title": (extra or {}).get("io.soulledger.officer_title", ""),
                    "grant": (extra or {}).get(GRANT_KEY),
                    "timestamp": 1000 + len(FakeMatrix.sent)}
         room["messages"].append(message)

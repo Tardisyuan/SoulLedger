@@ -2438,7 +2438,7 @@
     "thread_empty": "这封信还没有内容",
     "closed": "已关闭(已转世)",
     "no_messages": "暂无消息",
-    "from_hall": "殿司 · {{name}}",
+    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "以殿司名义回复",
     "reply_hint": "灵魂看到的是殿司的回复,署你的名字。",
     "send": "发送",

@@ -31,13 +31,18 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 const PANEL = "border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]";
 const MUTED_TEXT = "text-02 text-[oklch(var(--color-ink-subtle))]";
 
+/** 殿司展示名,按界面语言(`hall_names`,backend `Tenant.hall_names`);没有就退回租户名。 */
+function hallOf(c: InboxConversation, locale: string): string {
+  return c.hall_names?.[locale] || c.tenant_name;
+}
+
 function errorCode(error: unknown): string | null {
   const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
   return typeof code === "string" ? code : null;
 }
 
 function Thread({ conversation }: { conversation: InboxConversation }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
   const messages = useInboxMessages(conversation.id);
@@ -84,7 +89,11 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
             <li key={m.event_id} data-event-id={m.event_id}
               className={m.from_officer ? "pl-6 border-l-2 border-[oklch(var(--color-hairline))]" : ""}>
               <p className={MUTED_TEXT}>
-                {m.from_officer ? t("soul_inbox.from_hall", { name: m.sender_name }) : m.sender_name}
+                {m.from_officer
+                  ? t("soul_inbox.from_hall", { hall: hallOf(conversation, locale), title: m.officer_title, name: m.sender_name })
+                      .replace(/\s+/g, " ")
+                      .trim()
+                  : m.sender_name}
                 {" · "}
                 {formatDateTime(new Date(m.timestamp).toISOString())}
               </p>
@@ -113,7 +122,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
 }
 
 function SoulInboxContent() {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
   const queryClient = useQueryClient();
   const list = useInboxConversations();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -152,7 +161,7 @@ function SoulInboxContent() {
                     {r.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
                   </span>
                   <span className={`block ${MUTED_TEXT}`}>
-                    {r.tenant_name}
+                    {hallOf(r, locale)}
                     {" · "}
                     {r.last_message_at ? formatDateTime(r.last_message_at) : t("soul_inbox.no_messages")}
                   </span>

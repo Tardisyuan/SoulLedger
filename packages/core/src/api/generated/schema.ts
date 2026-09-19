@@ -5944,8 +5944,12 @@ export interface components {
             readonly peer_user: number | null;
             /** @description 对方**会话那一世**的显示名 —— 对方转世之后也不变。 */
             readonly peer_name: string;
-            /** @description 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。 */
+            /** @description 殿司展示名(简体中文;收件箱)。私聊为空。 */
             readonly hall: string;
+            /** @description 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。私聊为空。 */
+            readonly hall_names: {
+                [key: string]: string;
+            } | null;
             readonly throttled: boolean;
             /** Format: date-time */
             readonly last_request_at: string | null;
@@ -6513,6 +6517,8 @@ export interface components {
             event_id: string;
             from_officer: boolean;
             sender_name: string;
+            /** @description 回信官员的职位(官员回信;灵魂的信为空)。 */
+            officer_title: string;
             body: string;
             timestamp: number;
         };
@@ -7033,6 +7039,10 @@ export interface components {
         MeTenant: {
             code: string;
             display_name: string;
+            /** @description 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。 */
+            readonly hall_names: {
+                [key: string]: string;
+            };
         };
         /**
          * @description * `MENGPO` - 孟婆汤 (Mengpo Soup)
@@ -7271,6 +7281,10 @@ export interface components {
             readonly soul_code: string;
             readonly tenant: number;
             readonly tenant_name: string;
+            /** @description 殿司展示名,按语言:{zh-Hans, en, egy}。 */
+            readonly hall_names: {
+                [key: string]: string;
+            };
             /** Format: date-time */
             readonly last_message_at: string | null;
             /** Format: date-time */

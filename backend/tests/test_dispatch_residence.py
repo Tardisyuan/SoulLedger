@@ -886,17 +886,23 @@ def test_an_application_rejected_before_the_dispatch_can_be_appealed_during_resi
 # ── API 契约:/me 与官员灵魂详情 ──────────────────────────────────────────
 
 
+def _me_tenant(code):
+    """/me 的租户:殿司展示名没填时三语都退回 display_name(`Tenant.hall_names`)。"""
+    name = f"{code} 名"
+    return {"code": code, "display_name": name, "hall_names": {"zh-Hans": name, "en": name, "egy": name}}
+
+
 def test_me_reports_home_and_residence(cn, eg):
     account, client = ready_soul(cn)
     at_home = client.get("/api/v1/me/").data
     assert at_home["is_residing"] is False
-    assert at_home["home_tenant"] == at_home["tenant"] == {"code": "CN_DIYU", "display_name": "CN_DIYU 名"}
+    assert at_home["home_tenant"] == at_home["tenant"] == _me_tenant("CN_DIYU")
 
     _dispatch(account.soul, eg)
     away = client.get("/api/v1/me/").data
     assert away["is_residing"] is True
-    assert away["tenant"] == {"code": "EG_DUAT", "display_name": "EG_DUAT 名"}
-    assert away["home_tenant"] == {"code": "CN_DIYU", "display_name": "CN_DIYU 名"}
+    assert away["tenant"] == _me_tenant("EG_DUAT")
+    assert away["home_tenant"] == _me_tenant("CN_DIYU")
     assert (away["civilization"], away["home_civilization"]) == ("EGYPTIAN", "CHINESE")
 
 

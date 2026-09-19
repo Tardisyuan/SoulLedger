@@ -2438,7 +2438,7 @@
     "thread_empty": "This letter has no messages yet",
     "closed": "Closed (reborn)",
     "no_messages": "No messages yet",
-    "from_hall": "Hall · {{name}}",
+    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Reply as the hall",
     "reply_hint": "The soul sees a reply from the hall, signed with your name.",
     "send": "Send",

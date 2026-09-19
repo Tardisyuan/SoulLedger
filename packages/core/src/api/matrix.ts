@@ -178,6 +178,8 @@ export interface ChatMessage {
   ts: number;
   /** The officer's name on a hall reply (`io.soulledger.officer`, set by the backend); `null` otherwise. */
   officer: string | null;
+  /** That officer's position (`io.soulledger.officer_title`, e.g. 判官); `null` when not given or not a hall reply. */
+  officerTitle: string | null;
   /** Set on this device's own sends: matches a queued message to its echo. */
   txnId: string | null;
 }
@@ -204,12 +206,14 @@ const EMPTY_ROOM: RoomTimeline = { messages: [], unread: 0, readUpTo: {}, prevBa
 export function toMessage(event: MatrixEvent): ChatMessage | null {
   if (event.type !== "m.room.message" || typeof event.content?.body !== "string") return null;
   const officer = event.content["io.soulledger.officer"];
+  const officerTitle = event.content["io.soulledger.officer_title"];
   return {
     eventId: event.event_id,
     sender: event.sender,
     body: event.content.body,
     ts: event.origin_server_ts,
     officer: typeof officer === "string" && officer ? officer : null,
+    officerTitle: typeof officerTitle === "string" && officerTitle ? officerTitle : null,
     txnId: event.unsigned?.transaction_id ?? null,
   };
 }

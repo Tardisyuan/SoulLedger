@@ -214,7 +214,7 @@ describe("timeline", () => {
     expect(last().params).toMatchObject({ since: "s1" });
   });
 
-  it("ignores non-text events and keeps the officer's name from a hall reply", () => {
+  it("ignores non-text events and keeps the officer's name and position from a hall reply", () => {
     const state = applySync(EMPTY_TIMELINE, {
       next_batch: "s1",
       rooms: {
@@ -222,7 +222,7 @@ describe("timeline", () => {
           [ROOM]: {
             timeline: {
               events: [
-                { event_id: "$a", type: "m.room.message", sender: "@svc:hs", origin_server_ts: 1, content: { body: "已收", "io.soulledger.officer": "崔珏" } },
+                { event_id: "$a", type: "m.room.message", sender: "@svc:hs", origin_server_ts: 1, content: { body: "已收", "io.soulledger.officer": "崔珏", "io.soulledger.officer_title": "判官" } },
                 { event_id: "$b", type: "m.room.message", sender: PEER, origin_server_ts: 2, content: { msgtype: "m.image" } },
                 { event_id: "$c", type: "m.reaction", sender: PEER, origin_server_ts: 3, content: { body: "x" } },
               ],
@@ -231,7 +231,7 @@ describe("timeline", () => {
         },
       },
     });
-    expect(state.rooms[ROOM].messages.map((m) => [m.eventId, m.officer])).toEqual([["$a", "崔珏"]]);
+    expect(state.rooms[ROOM].messages.map((m) => [m.eventId, m.officer, m.officerTitle])).toEqual([["$a", "崔珏", "判官"]]);
   });
 
   it("history pages merge behind what sync loaded, and the room's start ends paging", () => {
