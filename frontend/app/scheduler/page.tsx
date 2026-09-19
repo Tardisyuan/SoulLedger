@@ -29,6 +29,8 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { JOB_ROW_GRID, SchedulerJobRow, useJobName } from "@/src/components/scheduler/SchedulerJobRow";
 import { ScheduleEditorModal } from "@/src/components/scheduler/ScheduleEditorModal";
 import { TaskRunsDrawer } from "@/src/components/scheduler/TaskRunsDrawer";
+import { RunHistoryPanel } from "@/src/components/scheduler/RunHistoryPanel";
+import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
 import { JOB_FILTERS, groupJobs, matchesFilter, type JobFilter } from "@/src/components/scheduler/schedulerView";
 
 function SchedulerPageContent() {
@@ -48,6 +50,7 @@ function SchedulerPageContent() {
   const run = useRunScheduledJob();
   const rebuild = useRebuildSchedules();
 
+  const [tab, setTab] = useState<"jobs" | "history">("jobs");
   const [filter, setFilter] = useState<JobFilter>("all");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<ScheduledJob | null>(null);
@@ -152,6 +155,23 @@ function SchedulerPageContent() {
     </div>
   );
 
+  // aria-pressed, not role="tab": see the note on the same bar in app/notifications/page.tsx.
+  const tabs = (
+    <>
+      {(["jobs", "history"] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={tab === value}
+          onClick={() => setTab(value)}
+          className={`${TAB_BASE} ${tab === value ? TAB_ON : TAB_OFF}`}
+        >
+          {t(`scheduler.tabs.${value}`)}
+        </button>
+      ))}
+    </>
+  );
+
   const filters = (
     <div role="group" aria-label={t("scheduler.filters.label")} className="flex flex-wrap gap-2">
       {JOB_FILTERS.map((value) => (
@@ -195,77 +215,82 @@ function SchedulerPageContent() {
       title={title}
       subtitle={canManage ? t("scheduler.subtitle") : `${t("scheduler.subtitle")} · ${t("scheduler.manage_hint")}`}
       actions={actions}
-      filters={filters}
+      tabs={tabs}
+      filters={tab === "jobs" ? filters : undefined}
       isLoading={jobs.isLoading}
       skeleton={<ListSkeleton count={4} />}
-      isEmpty={failed || groups.length === 0}
+      isEmpty={tab === "jobs" && (failed || groups.length === 0)}
       empty={empty}
     >
-      <div className="space-y-6">
-        {groups.map((group) => {
-          const open = !collapsed.has(group.key);
-          const bodyId = `scheduler-group-${group.key.replace(/[^\w-]/g, "_")}`;
-          return (
-            <section
-              key={group.key}
-              className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]"
-              data-group={group.key}
-            >
-              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-muted))]">
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  aria-controls={bodyId}
-                  onClick={() =>
-                    setCollapsed((current) => {
-                      const next = new Set(current);
-                      if (next.has(group.key)) next.delete(group.key);
-                      else next.add(group.key);
-                      return next;
-                    })
-                  }
-                  className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
-                >
-                  <span className="min-w-0 break-words">
-                    {group.tenantCode === null ? t("scheduler.groups.global") : t("scheduler.groups.tenant", { code: group.tenantCode })}
-                    {" · "}
-                    {t("scheduler.groups.count", { count: String(group.jobs.length) })}
-                  </span>
-                  <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
-                </button>
-              </h2>
-              {open && (
-                <div id={bodyId} className="border-t border-[oklch(var(--color-hairline))]">
-                  <div
-                    aria-hidden="true"
-                    className={`hidden px-4 py-2 text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${JOB_ROW_GRID}`}
+      {tab === "history" ? (
+        <RunHistoryPanel jobs={all} jobName={jobName} showTenant={isAdmin} realtimeConnected={isConnected} />
+      ) : (
+        <div className="space-y-6">
+          {groups.map((group) => {
+            const open = !collapsed.has(group.key);
+            const bodyId = `scheduler-group-${group.key.replace(/[^\w-]/g, "_")}`;
+            return (
+              <section
+                key={group.key}
+                className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]"
+                data-group={group.key}
+              >
+                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-muted))]">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={bodyId}
+                    onClick={() =>
+                      setCollapsed((current) => {
+                        const next = new Set(current);
+                        if (next.has(group.key)) next.delete(group.key);
+                        else next.add(group.key);
+                        return next;
+                      })
+                    }
+                    className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
                   >
-                    <span />
-                    <span>{t("scheduler.fields.schedule")}</span>
-                    <span>{t("scheduler.fields.last_run")}</span>
-                    <span>{t("scheduler.fields.next_run")}</span>
-                    <span />
+                    <span className="min-w-0 break-words">
+                      {group.tenantCode === null ? t("scheduler.groups.global") : t("scheduler.groups.tenant", { code: group.tenantCode })}
+                      {" · "}
+                      {t("scheduler.groups.count", { count: String(group.jobs.length) })}
+                    </span>
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
+                  </button>
+                </h2>
+                {open && (
+                  <div id={bodyId} className="border-t border-[oklch(var(--color-hairline))]">
+                    <div
+                      aria-hidden="true"
+                      className={`hidden px-4 py-2 text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${JOB_ROW_GRID}`}
+                    >
+                      <span />
+                      <span>{t("scheduler.fields.schedule")}</span>
+                      <span>{t("scheduler.fields.last_run")}</span>
+                      <span>{t("scheduler.fields.next_run")}</span>
+                      <span />
+                    </div>
+                    <ul>
+                      {group.jobs.map((job) => (
+                        <SchedulerJobRow
+                          key={job.id}
+                          job={job}
+                          canManage={canManage}
+                          togglePending={update.isPending && update.variables?.id === job.id}
+                          onToggle={toggle}
+                          onRun={setConfirmRun}
+                          onEdit={setEditing}
+                          onShowRuns={setRunsFor}
+                        />
+                      ))}
+                    </ul>
                   </div>
-                  <ul>
-                    {group.jobs.map((job) => (
-                      <SchedulerJobRow
-                        key={job.id}
-                        job={job}
-                        canManage={canManage}
-                        togglePending={update.isPending && update.variables?.id === job.id}
-                        onToggle={toggle}
-                        onRun={setConfirmRun}
-                        onEdit={setEditing}
-                        onShowRuns={setRunsFor}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-          );
-        })}
-      </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {editing && <ScheduleEditorModal key={editing.id} job={editing} jobName={jobName(editing)} onClose={() => setEditing(null)} />}
 

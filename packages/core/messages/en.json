@@ -1850,6 +1850,23 @@
     "realtime": {
       "run_failed": "“{{job}}” failed",
       "run_lost": "“{{job}}” was lost: no worker finished it"
+    },
+    "tabs": {
+      "jobs": "Jobs",
+      "history": "Run history"
+    },
+    "history": {
+      "job": "Job",
+      "all_jobs": "All jobs",
+      "tenant": "Tenant",
+      "all_tenants": "All tenants",
+      "trigger": "Trigger",
+      "all_triggers": "All triggers",
+      "queued_from": "Queued from",
+      "queued_to": "Queued until",
+      "search": "Search task name or error",
+      "clear": "Clear filters",
+      "empty": "No runs match these filters"
     }
   },
   "soul_app": {

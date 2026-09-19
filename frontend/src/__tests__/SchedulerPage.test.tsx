@@ -419,6 +419,96 @@ describe("run history drawer", () => {
   });
 });
 
+describe("run history tab", () => {
+  const RUN = {
+    id: 88, job: 9, task_name: "events.retry_pending_webhooks", celery_task_id: "c-88", tenant: null, trigger: "SCHEDULE",
+    status: "LOST", queued_at: "2026-09-18T00:00:00Z", started_at: null, finished_at: null, duration_ms: null,
+    worker_hostname: "", error: "", result: "", triggered_by: null, triggered_by_username: null,
+  };
+
+  async function openHistory(client?: QueryClient) {
+    schedulerApi.runs.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [RUN] } });
+    const qc = client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<SchedulerPage />, { wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider> });
+    await screen.findAllByText(tZh("scheduler.jobs.ledger_recalculate_tenant"));
+    const tab = screen.getByRole("button", { name: tZh("scheduler.tabs.history") });
+    expect(tab).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute("aria-pressed", "true");
+    return screen.findByTestId("run-history");
+  }
+
+  it("opens on FAILURE + LOST across every job, and names each run's job and tenant", async () => {
+    asAdmin();
+    const panel = await openHistory();
+    await waitFor(() => expect(schedulerApi.runs).toHaveBeenLastCalledWith({ status: "FAILURE,LOST", page: 1 }));
+    const call = schedulerApi.runs.mock.lastCall![0] as Record<string, unknown>;
+    expect(call.job).toBeUndefined();
+    const statuses = within(panel).getByRole("group", { name: tZh("scheduler.runs.status_filter") });
+    const pressed = within(statuses).getAllByRole("button").filter((b) => b.getAttribute("aria-pressed") === "true");
+    expect(pressed.map((b) => b.textContent)).toEqual([tZh("scheduler.status.FAILURE"), tZh("scheduler.status.LOST")]);
+    const row = await within(panel).findByTitle("LOST");
+    const item = row.closest("li")!;
+    expect(item).toHaveTextContent(tZh("scheduler.jobs.events_retry_pending_webhooks"));
+    expect(item).toHaveTextContent(tZh("scheduler.groups.global"));
+    // The job list is not on this tab.
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    expect(screen.queryByRole("group", { name: tZh("scheduler.filters.label") })).toBeNull();
+  });
+
+  it("clearing the filters asks for every status; each filter goes to the API from page 1", async () => {
+    asAdmin();
+    const panel = await openHistory();
+    fireEvent.click(within(panel).getByRole("button", { name: tZh("scheduler.history.clear") }));
+    await waitFor(() => expect(schedulerApi.runs).toHaveBeenLastCalledWith({ page: 1 }));
+    expect((schedulerApi.runs.mock.lastCall![0] as Record<string, unknown>).status).toBeUndefined();
+    expect(within(panel).queryByRole("button", { name: tZh("scheduler.history.clear") })).toBeNull();
+
+    fireEvent.change(within(panel).getByLabelText(tZh("scheduler.history.job")), { target: { value: "ledger.recalculate_tenant" } });
+    fireEvent.change(within(panel).getByLabelText(tZh("scheduler.history.tenant")), { target: { value: "2" } });
+    fireEvent.change(within(panel).getByLabelText(tZh("scheduler.history.trigger")), { target: { value: "MANUAL" } });
+    fireEvent.change(within(panel).getByLabelText(tZh("scheduler.history.queued_from")), { target: { value: "2026-09-01T08:00" } });
+    fireEvent.change(within(panel).getByLabelText(tZh("scheduler.history.search")), { target: { value: "  boom " } });
+    fireEvent.click(within(panel).getByRole("button", { name: tZh("scheduler.status.SKIPPED") }));
+    await waitFor(() =>
+      expect(schedulerApi.runs).toHaveBeenLastCalledWith({
+        status: "SKIPPED",
+        task_name: "ledger.recalculate_tenant",
+        tenant: 2,
+        trigger: "MANUAL",
+        queued_after: new Date("2026-09-01T08:00").toISOString(),
+        search: "boom",
+        page: 1,
+      })
+    );
+  });
+
+  it("offers the tenant filter to ADMIN only, with the tenants of the visible jobs", async () => {
+    asAdmin();
+    const panel = await openHistory();
+    const select = within(panel).getByLabelText(tZh("scheduler.history.tenant")) as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toEqual([tZh("scheduler.history.all_tenants"), "CN_DIYU", "EG_DUAT"]);
+  });
+
+  it("a tenant-scoped reader gets no tenant filter", async () => {
+    asRole("scheduler.read");
+    const panel = await openHistory();
+    expect(within(panel).queryByLabelText(tZh("scheduler.history.tenant"))).toBeNull();
+    expect(within(panel).getByLabelText(tZh("scheduler.history.job"))).toBeInTheDocument();
+  });
+
+  it("refetches when the scheduler keys are invalidated — what the realtime handler does", async () => {
+    asAdmin();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await openHistory(client);
+    await waitFor(() => expect(schedulerApi.runs).toHaveBeenCalled());
+    const before = schedulerApi.runs.mock.calls.length;
+    const { schedulerKeys } = jest.requireActual("@soulledger/core/query_keys") as typeof import("@soulledger/core/query_keys");
+    await act(() => client.invalidateQueries({ queryKey: schedulerKeys.all }));
+    await waitFor(() => expect(schedulerApi.runs.mock.calls.length).toBeGreaterThan(before));
+  });
+});
+
 describe("a realtime failure toasts once, and nothing else toasts", () => {
   const frame = (over: Record<string, unknown>) => ({
     domain: "scheduler",

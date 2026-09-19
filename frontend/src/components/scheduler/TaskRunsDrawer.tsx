@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { PAGE_SIZE, type ScheduledJob, type TaskRun, type TaskRunStatus } from "@soulledger/core/api";
 import { useTaskRuns } from "@soulledger/core/hooks/useScheduler";
@@ -16,7 +16,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Spinner } from "@/src/components/ui/Spinner";
 import { durationParts, runStatusBadgeClass } from "./schedulerView";
 
-const STATUSES: TaskRunStatus[] = ["PENDING", "RUNNING", "SUCCESS", "FAILURE", "RETRY", "SKIPPED", "LOST"];
+export const RUN_STATUSES: TaskRunStatus[] = ["PENDING", "RUNNING", "SUCCESS", "FAILURE", "RETRY", "SKIPPED", "LOST"];
 
 interface Props {
   job: ScheduledJob;
@@ -77,7 +77,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
             }}
             options={[
               { value: "", label: t("scheduler.runs.all_statuses") },
-              ...STATUSES.map((s) => ({ value: s, label: t(`scheduler.status.${s}`) })),
+              ...RUN_STATUSES.map((s) => ({ value: s, label: t(`scheduler.status.${s}`) })),
             ]}
           />
 
@@ -93,7 +93,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
             <>
               <ul className="divide-y divide-[oklch(var(--color-hairline))]" data-testid="task-runs">
                 {results.map((run) => (
-                  <RunItem key={run.id} run={run} formatDateTime={formatDateTime} />
+                  <TaskRunItem key={run.id} run={run} formatDateTime={formatDateTime} />
                 ))}
               </ul>
               <Pagination page={page} totalPages={totalPages} count={runs.data?.count ?? 0} onPageChange={setPage} />
@@ -105,7 +105,16 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
   );
 }
 
-function RunItem({ run, formatDateTime }: { run: TaskRun; formatDateTime: (v: string) => string }) {
+/** One run. `heading` names the job and tenant where the list spans many jobs (the history tab). */
+export function TaskRunItem({
+  run,
+  formatDateTime,
+  heading,
+}: {
+  run: TaskRun;
+  formatDateTime: (v: string) => string;
+  heading?: ReactNode;
+}) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -123,6 +132,7 @@ function RunItem({ run, formatDateTime }: { run: TaskRun; formatDateTime: (v: st
 
   return (
     <li className="py-3 space-y-2" data-run-status={run.status}>
+      {heading}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <DomainEnum namespace="scheduler.status" value={run.status} className={runStatusBadgeClass(run.status)} />
         <DomainEnum namespace="scheduler.trigger" value={run.trigger} className="text-02 text-[oklch(var(--color-ink-muted))]" />
