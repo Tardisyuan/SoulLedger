@@ -842,6 +842,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/cross-tenant-judgments/{id}/order/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 发起方重排各站顺序(PROPOSED 时;原属恒为 1,参与方从 2 起)。永久刑期只能排最后(Q5)。 */
+        post: operations["v1_dispatch_cross_tenant_judgments_order_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/cross-tenant-judgments/{id}/participate/": {
         parameters: {
             query?: never;
@@ -6042,6 +6059,10 @@ export interface components {
             concluded_at?: string | null;
             /** @description PASS or FAIL */
             conclusion_type?: string | null;
+        };
+        /** @description 发起方重排各站:全部带节点席位的 id,按新顺序;服务端依次给 2、3……(`reorder_nodes`)。 */
+        CrossTenantJudgmentOrder: {
+            participants: string[];
         };
         /** @description Serializer for CrossTenantJudgmentParticipant. */
         CrossTenantJudgmentParticipant: {
@@ -11818,6 +11839,34 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_cross_tenant_judgments_order_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Cross-Tenant Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrossTenantJudgmentOrder"];
+                "application/x-www-form-urlencoded": components["schemas"]["CrossTenantJudgmentOrder"];
+                "multipart/form-data": components["schemas"]["CrossTenantJudgmentOrder"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrossTenantJudgment"];
+                };
+            };
+        };
+    };
     v1_dispatch_cross_tenant_judgments_participate_create: {
         parameters: {
             query?: never;
@@ -16425,6 +16474,7 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                pending_request?: boolean;
                 /** @description A search term. */
                 search?: string;
                 soul?: string;

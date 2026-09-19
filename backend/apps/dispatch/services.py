@@ -590,6 +590,35 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     @transaction.atomic
+    def reorder_nodes(judgment, participant_ids):
+        """发起方重排各站顺序(设计稿 §2.2「发起方 seat 时给,ACTIVE 前可改」)。
+
+        `participant_ids` 是**全部**带节点的席位(非 ADVISOR)按新顺序排好的 id,依次得 2、3……
+        只在 PROPOSED:开庭之后各方按顺序填了处置,再改顺序就改了别人签过的那一站。
+        Q5 在这里先拦一次:已填的永久刑期只能排最后(结束时 `check_bench_sentences` 再拦一次)。
+        """
+        locked = CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
+        if locked.judgment_id is None:
+            raise ValueError("This cross-tenant judgment is not attached to a judgment; it has no sentence nodes")
+        if locked.status != JudgmentStatus.PROPOSED:
+            raise ValueError("The order can only be changed before the bench is convened")
+        seats = {
+            str(p.pk): p for p in locked.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
+        }
+        wanted = [str(pk) for pk in participant_ids]
+        if sorted(wanted) != sorted(seats):
+            raise ValueError("The new order must list every seat that carries a node, once each")
+        eternal = [i for i, pk in enumerate(wanted) if seats[pk].sentence_is_eternal and seats[pk].sentence_submitted_at]
+        if any(i != len(wanted) - 1 for i in eternal):
+            raise ValueError("An eternal sentence must be the last node")
+        # 先全部腾空再依次写:`unique_cross_judgment_node_order` 是逐条语句检查的,直接对调两个序号会撞。
+        locked.participants.filter(pk__in=list(seats)).update(node_order=None)
+        for order, pk in enumerate(wanted, start=2):
+            CrossTenantJudgmentParticipant.all_objects.filter(pk=pk).update(node_order=order)
+        return locked
+
+    @staticmethod
+    @transaction.atomic
     def submit_sentence(participant, realm_code, sentence_years, notes, user):
         """参与方填自己文明那一站的处置内容。联审结束前可重填。
 

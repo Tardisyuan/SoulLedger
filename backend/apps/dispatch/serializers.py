@@ -389,6 +389,11 @@ class CrossTenantJudgmentSentenceSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True, default="", max_length=5000)
 
 
+class CrossTenantJudgmentOrderSerializer(serializers.Serializer):
+    """发起方重排各站:全部带节点席位的 id,按新顺序;服务端依次给 2、3……(`reorder_nodes`)。"""
+    participants = serializers.ListField(child=serializers.UUIDField(), allow_empty=False)
+
+
 class CrossTenantJudgmentConcludeSerializer(serializers.Serializer):
     """Serializer for concluding a cross-tenant judgment."""
     conclusion_type = serializers.ChoiceField(choices=["PASS", "FAIL"])
