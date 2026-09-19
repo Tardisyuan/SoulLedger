@@ -1,14 +1,15 @@
-"""会话属于**一世**,不属于灵魂;关闭的会话留在那一世,只读。
+"""会话属于**一世**,不属于灵魂;关闭的会话留在那一世,只读,并在 Synapse 上把留下的一方降到 0。
 
 全部走真实的写路径:`retire_account_for_rebirth`(转世停用,信号在提交后关会话、停 Matrix 用户)、
 `provision_account`(新一世开号)、真实 URL。
 """
 import pytest
 
-from apps.chat.models import Conversation
+from apps.chat.matrix import MatrixError
+from apps.chat.models import Conversation, ConversationKind
 from apps.soul_accounts import services as accounts
 from apps.soul_accounts.models import AccountOrigin
-from tests.chat_support import matrix, mutual  # noqa: F401
+from tests.chat_support import FakeMatrix, can_speak, matrix, mutual, mxid  # noqa: F401
 from tests.soul_account_support import ready_soul, soul_client
 
 pytestmark = pytest.mark.django_db
@@ -97,6 +98,63 @@ def test_the_new_life_chats_with_the_same_soul_in_a_new_room(cn_tenant, pair, dj
     rows = _rows(b_client)
     assert set(rows) == {str(old.id), opened.data["id"]}
     assert rows[opened.data["id"]]["peer_name"] == "今生之甲" and rows[str(old.id)]["peer_name"] == "前世之甲"
+
+
+# ── 关闭时降权(第 3 项)─────────────────────────────────────────────────
+
+
+def test_closing_silences_the_one_left_in_the_room(cn_tenant, pair, matrix, django_capture_on_commit_callbacks):  # noqa: F811
+    """转世关会话时,留下的一方在 Synapse 上降到 0 —— 不只是后端不再代发,它拿自己的 token
+    直接在 Matrix 里也发不出。
+    变异:删掉 `deactivate_for_account` 里的 `silence_closed(ids)` → 乙仍能在房间里说话,红。"""
+    a, _, b, _, old = pair
+    assert can_speak(old.room_id, mxid(b))
+    with django_capture_on_commit_callbacks(execute=True):
+        accounts.retire_account_for_rebirth(a.soul, a.cycle)
+
+    assert not can_speak(old.room_id, mxid(b))
+    with pytest.raises(MatrixError):
+        matrix.says(old.room_id, mxid(b), "还在吗")
+    old.refresh_from_db()
+    assert old.silenced_at is not None
+
+
+def test_a_failed_silencing_is_made_up_by_the_next_sync(cn_tenant, pair, matrix, monkeypatch,  # noqa: F811
+                                                       django_capture_on_commit_callbacks):
+    """关闭那一刻 Synapse 不可达:转世照常,`silenced_at` 留空;留下的一方下次打开聊天时补上。
+    变异:`sync_rooms` 的筛选去掉 `silenced_at__isnull=True` 那一支 → 补不上,乙一直能说话,红。
+    变异:`silence_closed` 在写失败时也记 `silenced_at` → 下次同步不再重试,红。"""
+    a, _, b, b_client, old = pair
+
+    def unreachable(self, room_id, levels):
+        raise MatrixError("Synapse 无法访问:ConnectionError")
+
+    with monkeypatch.context() as patched:
+        patched.setattr(FakeMatrix, "set_user_levels", unreachable)
+        with django_capture_on_commit_callbacks(execute=True):
+            accounts.retire_account_for_rebirth(a.soul, a.cycle)
+    old.refresh_from_db()
+    assert old.closed_at is not None and old.silenced_at is None
+    assert can_speak(old.room_id, mxid(b))
+
+    assert b_client.get("/api/v1/me/chat/session/").status_code == 200
+    assert not can_speak(old.room_id, mxid(b))
+    old.refresh_from_db()
+    assert old.silenced_at is not None
+    writes = matrix.rooms[old.room_id]["level_writes"]
+    assert b_client.get("/api/v1/me/chat/session/").status_code == 200
+    assert matrix.rooms[old.room_id]["level_writes"] == writes  # 补上之后不再每次重写
+
+
+def test_closing_an_inbox_needs_no_silencing(cn_tenant, matrix, django_capture_on_commit_callbacks):  # noqa: F811
+    """收件箱里只有灵魂自己(官员一侧是服务账号):它停用了,房间里没有要降的人。"""
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    inbox = a_client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
+    with django_capture_on_commit_callbacks(execute=True):
+        accounts.retire_account_for_rebirth(a.soul, a.cycle)
+    row = Conversation.objects.get(pk=inbox["id"])
+    assert row.kind == ConversationKind.OFFICER_INBOX and row.closed_at and row.silenced_at
+    assert matrix.rooms[row.room_id]["level_writes"] == 0
 
 
 # ── 存量迁移 ─────────────────────────────────────────────────────────────

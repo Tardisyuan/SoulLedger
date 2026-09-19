@@ -202,14 +202,27 @@ def sync_levels(conversation, *, client=None):
 
 
 def sync_rooms(soul, *, client=None):
-    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。"""
-    rows = Conversation.objects.filter(Q(soul_a=soul) | Q(soul_b=soul), closed_at__isnull=True)
+    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。
+
+    **已关闭但还欠一次降权的也在里面**(`silenced_at` 为空):关闭时那一次写失败了
+    (Synapse 不可达),下一次任何一方的同步 —— 留下的一方打开聊天、被禁言、被调拨 —— 补上。"""
+    rows = Conversation.objects.filter(
+        Q(soul_a=soul) | Q(soul_b=soul), Q(closed_at__isnull=True) | Q(silenced_at__isnull=True)
+    )
     rows = list(rows.select_related(*ACCOUNT_JOINS))
     if not rows:
         return
     client = client or get_client()
     for conversation in rows:
         sync_levels(conversation, client=client)
+        if conversation.closed_at is not None:
+            _mark_silenced(conversation)
+
+
+def _mark_silenced(conversation):
+    conversation.silenced_at = timezone.now()
+    Conversation.objects.filter(pk=conversation.pk, silenced_at__isnull=True).update(
+        silenced_at=conversation.silenced_at)
 
 
 #: 算发言权要读的关联:双方灵魂、双方那一世的账号与其 User(`is_current_soul` 看 User)。
@@ -248,14 +261,33 @@ def deactivate_for_account(account):
     聊天没启用、或 Synapse 暂时不可达时**不阻断转世**:账号本身已经登不进来了
     (`SoulJWTAuthentication` 认 `retired_at`),Matrix 侧留一条日志等人工或下次调用。
     """
-    Conversation.objects.filter(
+    closing = Conversation.objects.filter(
         Q(account_a=account) | Q(account_b=account), closed_at__isnull=True
-    ).update(closed_at=timezone.now())
+    )
+    ids = list(closing.values_list("pk", flat=True))
+    closing.update(closed_at=timezone.now())
     try:
-        return deactivate_identity(account)
+        identity = deactivate_identity(account)
     except MatrixError as exc:
         logger.warning("chat: 停用 Matrix 用户失败 account=%s: %s", account.pk, exc)
-        return None
+        identity = None
+    silence_closed(ids)
+    return identity
+
+
+def silence_closed(conversation_ids):
+    """关闭的会话:把房间里还在的一方降到 0(`refusal` 对关闭的会话答 `closed`,所以
+    `_speaking_levels` 给每个人都是 SILENT)。写成功才记 `silenced_at`;失败只记日志,
+    留给 `sync_rooms` 下次补 —— 这一步不能拖住转世。"""
+    rows = Conversation.objects.filter(pk__in=conversation_ids, closed_at__isnull=False,
+                                       silenced_at__isnull=True).select_related(*ACCOUNT_JOINS)
+    for conversation in rows:
+        try:
+            sync_levels(conversation)
+        except MatrixError as exc:
+            logger.warning("chat: 关闭后降权失败 room=%s: %s(下次同步补)", conversation.room_id, exc)
+            continue
+        _mark_silenced(conversation)
 
 
 # ── 私聊 ─────────────────────────────────────────────────────────────────
