@@ -23,7 +23,6 @@ import {
   ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -170,8 +169,10 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   return (
     <KeyboardAvoidingView
       style={[styles.fill, { backgroundColor: t.s0 }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      // The dock already pads for the home indicator; over the keyboard that inset is a gap.
+      // Both platforms: Android draws edge-to-edge (SDK 57), so the window no longer shrinks for the
+      // keyboard (adjustResize) and the composer would sit under it.
+      behavior="padding"
+      // The dock already pads for the home indicator / gesture bar; over the keyboard that inset is a gap.
       keyboardVerticalOffset={-insets.bottom}
       testID={`conversation-${mode.kind}`}
     >
@@ -207,6 +208,8 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         style={styles.fill}
         contentContainerStyle={styles.thread}
         onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: false })}
+        // The keyboard shrinks the viewport, not the content: keep the newest letter in view then too.
+        onLayout={() => scroller.current?.scrollToEnd({ animated: false })}
         keyboardShouldPersistTaps="handled"
       >
         {/* Muted: the history stays fully legible — not dimmed, not blurred (1c ⑤). Only sealed rooms recede. */}
