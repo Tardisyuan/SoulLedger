@@ -93,22 +93,61 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 
 ## 灵魂聊天(Matrix / Synapse)
 
-- 单 Synapse homeserver(不联邦)。**compose 里还没有 synapse 服务与 nginx 反代**(2026-09-18),
-  上线前要补;本节是它们要满足的条件。
-- homeserver.yaml = `docker run … matrixdotorg/synapse generate` 产出的那份 + 追加
-  `config/synapse/homeserver.soulledger.yaml`(`${…}` 换成与后端相同的值)。模块
-  `config/synapse/soulledger_policy.py` 挂进容器并放进 `PYTHONPATH`:除服务账号外不能建房、邀请、
-  建别名、发布房间,并在节流房间里只放行后端签过一次性凭据的那条私聊请求 ——
-  **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。模块把用过的凭据记在进程内存里:
+- 单 Synapse homeserver(不联邦)。compose 的 `synapse` 服务(`matrixdotorg/synapse:v1.161.0`,
+  **不发布端口**)+ `nginx.conf` 的 `/_matrix`、`/_synapse/client` 反代;`/_synapse/admin` 在 nginx
+  上一律 403,admin API 只有 compose 网络里的后端够得着(`MATRIX_INTERNAL_URL=http://synapse:8008`)。
+  nginx 按请求解析 synapse(resolver),synapse 没起或在重启时只有这两条路径 502,不连累全站。
+- 数据库:同一个 `db` 实例里单独一个 `synapse` 库(Synapse 要求 `LC_COLLATE`/`LC_CTYPE` 为 `C`,
+  由初始化脚本从 `template0` 建),用 `soulledger` 账号、直连 `db` 不经 pgbouncer(pgbouncer 只配了 `soulledger` 库;
+  Synapse 自带连接池)。**不用 SQLite**:Synapse 官方只把它当试用,
+  单写锁在灵魂数上来后顶不住,且 SQLite → PostgreSQL 迁移要停机跑 `synapse_port_db`。
+  **`backup` 服务目前只 dump `soulledger` 库**:聊天消息(`synapse` 库)与 `synapse_data` 卷
+  (签名密钥、聊天媒体)不在每日备份里,上线前要补。
+- homeserver.yaml 含密钥,不进仓库,在 `synapse_data` 卷里,由 `scripts/synapse-init.sh` 生成:
+  `generate` 的产物 − 与模板重复的顶层键(`registration_shared_secret` 等)− SQLite 的 `database` 段
+  \+ PostgreSQL 的 `database` 与 `public_baseurl` + `config/synapse/homeserver.soulledger.yaml`
+  (`${…}` 换成与后端相同的值)。模块 `config/synapse/soulledger_policy.py` 只读挂到 `/modules` 并放进
+  `PYTHONPATH`:除服务账号外不能建房、邀请、建别名、发布房间,并在节流房间里只放行后端签过一次性凭据的
+  那条私聊请求 —— **少了它,灵魂拿自己的 token 就能绕过全部聊天规则**。模块把用过的凭据记在进程内存里:
   Synapse 单进程部署;拆 worker 前先把它换成共享存储。
-- 后端环境变量:`MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
-  `MATRIX_INTERNAL_URL`(后端 → Synapse)、`MATRIX_PUBLIC_BASEURL`(App → Synapse,发给 App)、
-  `MATRIX_SERVER_NAME`、`MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、
+- 根 `.env` 的变量(backend、celery、celery-beat 与 synapse 都从这里取,见 `docker-compose.yml`):
+  `MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
+  `MATRIX_PUBLIC_BASEURL`(App → Synapse,即经 nginx 的公开地址,如 `https://example.com/`;
+  也写进 homeserver 的 `public_baseurl`)、`MATRIX_SERVER_NAME`(**定了不能改**,它在每个 mxid 里)、
+  `MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、
   `MATRIX_REGISTRATION_SHARED_SECRET`(= Synapse `registration_shared_secret`,只用来把服务账号
   注册成 admin 一次)、`MATRIX_USER_SALT`(mxid 由账号 id 经 HMAC 派生;**不可轮换**,换了所有 mxid
-  都变)、`CHAT_REQUEST_INTERVAL_SECONDS`(默认 86400)。
-- 限速:服务账号替灵魂转发、改 power level、建房,量随灵魂数增长。用 admin API
-  `POST /_synapse/admin/v1/users/@soulledger:<server_name>/override_ratelimit` 给它免限速。
+  都变)。`MATRIX_INTERNAL_URL` 在 compose 里写死为 `http://synapse:8008`;
+  `CHAT_REQUEST_INTERVAL_SECONDS` 用默认(86400)。Synapse 的库密码就是 `DB_PASSWORD`。
+- 限速:模板把 `rc_login.address` 放宽了 —— 后端代灵魂发言要以该灵魂身份 JWT 登录,所有这类登录
+  都来自后端一个地址,默认值下突发用完即 429。服务账号替灵魂转发、改 power level、建房,量随灵魂数
+  增长,由下面第 4 步免限速。
+
+**首次部署(一次):**
+
+```bash
+# 0. 根 .env 里填好上面的 MATRIX_*(MATRIX_ENABLED 先留 False)
+# 1. 建 synapse 库 + 生成并合并 homeserver.yaml。幂等:已有的库 / 文件 / 合并都跳过,永不覆盖
+DC="$DC" scripts/synapse-init.sh
+# 2. 起 Synapse 与 nginx
+$DC up -d --wait synapse
+$DC up -d nginx
+# 3. 打开聊天:.env 里 MATRIX_ENABLED=True,然后
+$DC up -d backend celery celery-beat
+# 4. 服务账号注册成 admin(已有则 JWT 登录)并免限速。幂等,重跑无害
+$DC exec backend python manage.py setup_matrix
+# 5. 验证:经 nginx 客户端 API 200,admin API 403
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/client/versions      # 200
+curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_synapse/admin/v1/register   # 403
+```
+
+  改 homeserver 的值:编辑 `synapse_data` 卷里的 `/data/homeserver.yaml` 后 `$DC restart synapse`,
+  或删掉它重跑脚本(签名密钥是单独的文件,不受影响)。**改 `MATRIX_JWT_SECRET` 要两边一起改**,
+  否则 App 登录与后端代发全部 403。
+- 2026-09-19 本机实跑过上面这套(synapse + 临时 postgres + nginx,端口只绑 127.0.0.1):脚本两次运行
+  第二次全部跳过;`/_matrix/client/versions` 经 nginx 200,`/_synapse/admin/*` 经 nginx 403;
+  `setup_matrix` 两次均成功(第二次走「已注册 → JWT 登录」);`test_chat_synapse_integration.py`
+  2 passed。停掉 synapse 时 nginx 在、这两条路径 502。
 - 实机验证:`backend/tests/test_chat_synapse_integration.py` 文件头有本机起一个 Synapse 跑它的命令。
 
 ## 数据库备份与恢复
