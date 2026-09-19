@@ -178,33 +178,51 @@ def bench(cn, eg, eu):
     actors = {
         "osiris": _actor(eg, "Osiris"),
         "anubis_guard": _actor(eg, "Anubis", role="GUARDIAN"),
+        "ra_overseer": _actor(eg, "Ra", role="OVERSEER"),
         "retired": _actor(eg, "Retired", is_active=False),
+        "retired_overseer": _actor(eg, "Aten", role="OVERSEER", is_active=False),
         "yama": _actor(cn, "阎罗王"),
         "minos": _actor(eu, "Minos"),
     }
     return {"id": cj_id, "c": clients, "a": actors}
 
 
-def test_the_initiator_lists_only_the_invited_tenants_seatable_actors(bench):
-    got = bench["c"]["CN_DIYU"].get(f"{CJ}{bench['id']}/seatable-actors/", {"tenant_code": "EG_DUAT"})
+@pytest.mark.parametrize("seat", ["CO_JUDGE", "CHAIRMAN"])
+def test_the_initiator_lists_only_the_invited_tenants_judges_for_a_judging_seat(bench, seat):
+    got = bench["c"]["CN_DIYU"].get(f"{CJ}{bench['id']}/seatable-actors/", {"tenant_code": "EG_DUAT", "role": seat})
     assert got.status_code == 200, got.data
     assert [row["name"] for row in got.data] == ["Osiris"]
-    assert set(got.data[0]) == {"id", "name", "name_zh", "name_en", "name_egy"}
+    assert set(got.data[0]) == {"id", "role", "name", "name_zh", "name_en", "name_egy"}
+
+
+def test_an_advisor_seat_lists_every_active_actor_of_the_invited_tenant(bench):
+    """D13(2026-09-20 用户确认):顾问席放开到 JUDGE 以外的在任神祇;不在任的、别家的仍不列。"""
+    got = bench["c"]["CN_DIYU"].get(f"{CJ}{bench['id']}/seatable-actors/", {"tenant_code": "EG_DUAT", "role": "ADVISOR"})
+    assert got.status_code == 200, got.data
+    assert sorted((row["name"], row["role"]) for row in got.data) == [
+        ("Anubis", "GUARDIAN"), ("Osiris", "JUDGE"), ("Ra", "OVERSEER"),
+    ]
+
+
+@pytest.mark.parametrize("role", [None, "", "JUDGE", "OVERSEER"])
+def test_seatable_actors_needs_a_seat_role(bench, role):
+    params = {"tenant_code": "EG_DUAT", **({"role": role} if role is not None else {})}
+    assert bench["c"]["CN_DIYU"].get(f"{CJ}{bench['id']}/seatable-actors/", params).status_code == 400
 
 
 def test_seatable_actors_is_the_initiators_and_only_before_convening(bench):
     url = f"{CJ}{bench['id']}/seatable-actors/"
     # 不相干的租户看不到这场联审:404;入了席的参与方也不是发起方:403;
     # 发起方邀自己:400;不存在的租户:404;开庭之后:400。
-    assert bench["c"]["EG_DUAT"].get(url, {"tenant_code": "EU_HEAVEN_HELL"}).status_code == 404
+    assert bench["c"]["EG_DUAT"].get(url, {"tenant_code": "EU_HEAVEN_HELL", "role": "ADVISOR"}).status_code == 404
     assert bench["c"]["CN_DIYU"].post(f"{CJ}{bench['id']}/participate/",
                                       {"participant_tenant_code": "EG_DUAT", "role": "ADVISOR"},
                                       format="json").status_code == 200
-    assert bench["c"]["EG_DUAT"].get(url, {"tenant_code": "EU_HEAVEN_HELL"}).status_code == 403
-    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "CN_DIYU"}).status_code == 400
-    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "XX"}).status_code == 404
+    assert bench["c"]["EG_DUAT"].get(url, {"tenant_code": "EU_HEAVEN_HELL", "role": "ADVISOR"}).status_code == 403
+    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "CN_DIYU", "role": "ADVISOR"}).status_code == 400
+    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "XX", "role": "ADVISOR"}).status_code == 404
     CrossTenantJudgment.all_objects.filter(pk=bench["id"]).update(status="ACTIVE")
-    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "EG_DUAT"}).status_code == 400
+    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "EG_DUAT", "role": "ADVISOR"}).status_code == 400
 
 
 def test_seating_takes_an_actor_of_the_invited_tenant(bench):
@@ -216,14 +234,31 @@ def test_seating_takes_an_actor_of_the_invited_tenant(bench):
     assert seat.participant_actor_id == bench["a"]["osiris"].pk
 
 
-@pytest.mark.parametrize("who", ["minos", "yama", "anubis_guard", "retired", "missing"])
-def test_seating_refuses_an_actor_that_cannot_hold_this_seat(bench, who):
-    """别家的神祇(欧洲 / 发起方中国)、被邀文明里不坐审判席的、不在任的、不存在的:400,什么都不写。"""
+def test_an_advisor_seat_takes_an_overseer(bench):
+    ok = bench["c"]["CN_DIYU"].post(f"{CJ}{bench['id']}/participate/", {
+        "participant_tenant_code": "EG_DUAT", "role": "ADVISOR", "participant_actor": str(bench["a"]["ra_overseer"].pk),
+    }, format="json")
+    assert ok.status_code == 200, ok.data
+    assert CrossTenantJudgment.objects.get(pk=bench["id"]).participants.get().participant_actor_id == \
+        bench["a"]["ra_overseer"].pk
+
+
+@pytest.mark.parametrize("seat,who", [
+    # 联合审判官 / 主持仍只认 JUDGE:
+    ("CO_JUDGE", "ra_overseer"), ("CHAIRMAN", "ra_overseer"), ("CO_JUDGE", "anubis_guard"),
+    # 任何席位:别家的(欧洲 / 发起方中国)、不在任的、不存在的:
+    ("CO_JUDGE", "minos"), ("CO_JUDGE", "yama"), ("CO_JUDGE", "retired"), ("CO_JUDGE", "missing"),
+    ("ADVISOR", "minos"), ("ADVISOR", "yama"), ("ADVISOR", "retired"), ("ADVISOR", "retired_overseer"),
+    ("ADVISOR", "missing"),
+])
+def test_seating_refuses_an_actor_that_cannot_hold_this_seat(bench, seat, who):
+    """400,什么都不写。"""
     import uuid
 
     actor_id = str(bench["a"][who].pk) if who != "missing" else str(uuid.uuid4())
     got = bench["c"]["CN_DIYU"].post(f"{CJ}{bench['id']}/participate/", {
-        "participant_tenant_code": "EG_DUAT", "role": "CO_JUDGE", "node_order": 2, "participant_actor": actor_id,
+        "participant_tenant_code": "EG_DUAT", "role": seat, "participant_actor": actor_id,
+        **({"node_order": 2} if seat != "ADVISOR" else {}),
     }, format="json")
     assert got.status_code == 400, got.data
     assert not CrossTenantJudgment.objects.get(pk=bench["id"]).participants.exists()

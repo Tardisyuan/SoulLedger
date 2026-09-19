@@ -482,6 +482,20 @@ class DispatchService:
             )
 
 
+def _seat_actor_roles():
+    from apps.actors.models import ActorRole
+
+    return {
+        ParticipantRole.CO_JUDGE: (ActorRole.JUDGE,),
+        ParticipantRole.CHAIRMAN: (ActorRole.JUDGE,),
+        ParticipantRole.ADVISOR: tuple(ActorRole.values),
+    }
+
+
+#: 席位角色 → 可坐这种席位的神祇角色(设计稿决策记录 D13,2026-09-20 用户确认)。
+SEAT_ACTOR_ROLES = _seat_actor_roles()
+
+
 class CrossTenantJudgmentService:
     """
     Service for managing cross-tenant judgments.
@@ -535,8 +549,8 @@ class CrossTenantJudgmentService:
         if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
         if participant_actor is not None and not CrossTenantJudgmentService.seatable_actors(
-                participant_tenant).filter(pk=participant_actor.pk).exists():
-            raise ValueError(f"That actor cannot hold a seat for {participant_tenant.code}")
+                participant_tenant, role).filter(pk=participant_actor.pk).exists():
+            raise ValueError(f"That actor cannot hold a {role} seat for {participant_tenant.code}")
         CrossTenantJudgmentService._check_node_order(judgment, participant_tenant, role, node_order)
 
         participant = CrossTenantJudgmentParticipant.objects.create(
@@ -567,21 +581,26 @@ class CrossTenantJudgmentService:
         return participant
 
     @staticmethod
-    def seatable_actors(tenant):
-        """被邀文明里**可担任席位**的神祇(2026-09-20 用户决定:入席时就选席位上的神祇)。
+    def seatable_actors(tenant, seat_role):
+        """被邀文明里**可担任这种席位**的神祇(2026-09-20 用户决定:入席时就选席位上的神祇)。
 
-        判定取现有 actor 模型能表达的最窄一条:属该租户、在任(`is_active`)、未软删、
-        `role == JUDGE` —— 席位(CO_JUDGE / CHAIRMAN / ADVISOR)都是坐在审判席上,
-        而 `ActorRole` 里坐审判席的只有 JUDGE(OVERSEER 是管界域,见 actors_greek.py 里 Minos 那段)。
+        共同条件:属该租户、在任(`is_active`)、未软删。再按席位角色(`SEAT_ACTOR_ROLES`,设计稿 D13):
+        * CO_JUDGE / CHAIRMAN:只有 `role == JUDGE` —— 这两种席位要定处置、带一站,
+          而 `ActorRole` 里坐审判席的只有 JUDGE(OVERSEER 是管界域,见 actors_greek.py 里 Minos 那段)。
+        * ADVISOR(2026-09-20 用户放开):`ActorRole` 全部五种。顾问不带站、不定处置,只提意见;
+          管界域的(OVERSEER)、守门的(GUARDIAN)、引路的(CONDUIT)、行刑的(EXECUTOR)都各有
+          判官不具备的第一手知识,没有一种「明显不适合坐席」。
+        不认识的席位角色 → 空集(调用方先校验)。
         `all_objects` 而不是 `objects`:后者按**当前请求的租户**过滤,而这里要的恰是另一个租户的行。
         这是 `ActorViewSet` 之外唯一一处跨租户读神祇的地方,只经联审的
         `seatable-actors` 动作(发起方、PROPOSED)与 `participate` 的校验使用。
         """
-        from apps.actors.models import Actor, ActorRole
+        from apps.actors.models import Actor
 
+        allowed = SEAT_ACTOR_ROLES.get(seat_role, ())
         return Actor.all_objects.filter(
-            tenant=tenant, is_active=True, is_deleted=False, role=ActorRole.JUDGE,
-        ).order_by("name")
+            tenant=tenant, is_active=True, is_deleted=False, role__in=allowed,
+        ).order_by("role", "name")
 
     @staticmethod
     def _check_node_order(judgment, participant_tenant, role, node_order):
