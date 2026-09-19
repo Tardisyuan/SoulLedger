@@ -1938,6 +1938,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
           description: ''
+  /api/v1/dispatch/cross-tenant-judgments/{id}/seatable-actors/:
+    get:
+      operationId: v1_dispatch_cross_tenant_judgments_seatable_actors_list
+      description: |-
+        被邀文明里可担任席位的神祇,供发起方入席时选(2026-09-20 用户决定)。
+
+        只给能入席的人:`cross_judgment.create`、发起方租户、联审 PROPOSED;被邀的不能是发起方自己。
+        只读、字段最小(id 与名字)。**不放宽 `ActorViewSet` 的租户过滤** —— 跨租户读神祇只在这里,
+        且只读这一个被邀租户的、`seatable_actors` 判定过的那些行。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: tenant_code
+        schema:
+          type: string
+        description: The civilization being invited.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeatableActor'
+          description: ''
   /api/v1/dispatch/cross-tenant-judgments/{id}/sentence/:
     post:
       operationId: v1_dispatch_cross_tenant_judgments_sentence_create
@@ -19838,6 +19886,32 @@ components:
       description: |-
         * `GLOBAL` - 全局
         * `ORG` - 组织级
+    SeatableActor:
+      type: object
+      description: '`seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        name_zh:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        name_egy:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - name
+      - name_egy
+      - name_en
+      - name_zh
     SensitiveWord:
       type: object
       properties:

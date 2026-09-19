@@ -157,3 +157,80 @@ def test_the_initiator_seats_a_tenant_by_its_code(cn, eg, eu):
                         format="json")
     assert (both.status_code, neither.status_code, unknown.status_code) == (400, 400, 404)
     assert _orders(CrossTenantJudgment.objects.get(pk=cj_id)) == {"EG_DUAT": 2}
+
+
+# ── 入席时选席位上的神祇(2026-09-20 用户决定)──────────────────────────────
+
+
+def _actor(t, name, role="JUDGE", **over):
+    from apps.actors.models import Actor
+    from apps.souls.models import TENANT_CIVILIZATION
+
+    return Actor.all_objects.create(name=name, role=role, civilization=TENANT_CIVILIZATION[t.code], tenant=t, **over)
+
+
+@pytest.fixture
+def bench(cn, eg, eu):
+    _, case = open_case(cn)
+    clients = {t.code: officer_client(officer(f"judge_{t.code}", "JUDGE", t)) for t in (cn, eg)}
+    cj_id = clients["CN_DIYU"].post(CJ, {"title": "联审", "description": "d", "judgment": str(case.pk)},
+                                    format="json").data["id"]
+    actors = {
+        "osiris": _actor(eg, "Osiris"),
+        "anubis_guard": _actor(eg, "Anubis", role="GUARDIAN"),
+        "retired": _actor(eg, "Retired", is_active=False),
+        "yama": _actor(cn, "阎罗王"),
+        "minos": _actor(eu, "Minos"),
+    }
+    return {"id": cj_id, "c": clients, "a": actors}
+
+
+def test_the_initiator_lists_only_the_invited_tenants_seatable_actors(bench):
+    got = bench["c"]["CN_DIYU"].get(f"{CJ}{bench['id']}/seatable-actors/", {"tenant_code": "EG_DUAT"})
+    assert got.status_code == 200, got.data
+    assert [row["name"] for row in got.data] == ["Osiris"]
+    assert set(got.data[0]) == {"id", "name", "name_zh", "name_en", "name_egy"}
+
+
+def test_seatable_actors_is_the_initiators_and_only_before_convening(bench):
+    url = f"{CJ}{bench['id']}/seatable-actors/"
+    # 不相干的租户看不到这场联审:404;入了席的参与方也不是发起方:403;
+    # 发起方邀自己:400;不存在的租户:404;开庭之后:400。
+    assert bench["c"]["EG_DUAT"].get(url, {"tenant_code": "EU_HEAVEN_HELL"}).status_code == 404
+    assert bench["c"]["CN_DIYU"].post(f"{CJ}{bench['id']}/participate/",
+                                      {"participant_tenant_code": "EG_DUAT", "role": "ADVISOR"},
+                                      format="json").status_code == 200
+    assert bench["c"]["EG_DUAT"].get(url, {"tenant_code": "EU_HEAVEN_HELL"}).status_code == 403
+    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "CN_DIYU"}).status_code == 400
+    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "XX"}).status_code == 404
+    CrossTenantJudgment.all_objects.filter(pk=bench["id"]).update(status="ACTIVE")
+    assert bench["c"]["CN_DIYU"].get(url, {"tenant_code": "EG_DUAT"}).status_code == 400
+
+
+def test_seating_takes_an_actor_of_the_invited_tenant(bench):
+    url = f"{CJ}{bench['id']}/participate/"
+    body = {"participant_tenant_code": "EG_DUAT", "role": "CO_JUDGE", "node_order": 2}
+    ok = bench["c"]["CN_DIYU"].post(url, {**body, "participant_actor": str(bench["a"]["osiris"].pk)}, format="json")
+    assert ok.status_code == 200, ok.data
+    seat = CrossTenantJudgment.objects.get(pk=bench["id"]).participants.get()
+    assert seat.participant_actor_id == bench["a"]["osiris"].pk
+
+
+@pytest.mark.parametrize("who", ["minos", "yama", "anubis_guard", "retired", "missing"])
+def test_seating_refuses_an_actor_that_cannot_hold_this_seat(bench, who):
+    """别家的神祇(欧洲 / 发起方中国)、被邀文明里不坐审判席的、不在任的、不存在的:400,什么都不写。"""
+    import uuid
+
+    actor_id = str(bench["a"][who].pk) if who != "missing" else str(uuid.uuid4())
+    got = bench["c"]["CN_DIYU"].post(f"{CJ}{bench['id']}/participate/", {
+        "participant_tenant_code": "EG_DUAT", "role": "CO_JUDGE", "node_order": 2, "participant_actor": actor_id,
+    }, format="json")
+    assert got.status_code == 400, got.data
+    assert not CrossTenantJudgment.objects.get(pk=bench["id"]).participants.exists()
+
+
+def test_the_general_actor_list_still_shows_only_the_callers_tenant(bench):
+    """跨租户读只经 `seatable-actors`;`/actors/` 的租户过滤不因此放宽。"""
+    rows = bench["c"]["CN_DIYU"].get("/api/v1/actors/", {"tenant_code": "EG_DUAT", "page_size": 500}).data
+    names = [r["name"] for r in (rows.get("results", rows) if isinstance(rows, dict) else rows)]
+    assert "阎罗王" in names and "Osiris" not in names and "Minos" not in names

@@ -95,7 +95,13 @@ EXEMPT: dict[str, str] = {
     "CrossTenantJudgmentViewSet": (
         "Same reason as DispatchRecordViewSet: the model exists to span "
         "tenants. Scoped to the initiating tenant OR the participating "
-        "tenants, not to one."
+        "tenants, not to one. "
+        "Its `seatable-actors` action (2026-09-20) is the one read of ANOTHER "
+        "tenant's Actor rows outside ActorViewSet: initiator only, while "
+        "PROPOSED, one invited tenant, only JUDGE / active / live rows, five "
+        "fields (CrossTenantJudgmentService.seatable_actors). ActorViewSet's "
+        "own scoping is untouched — pinned by "
+        "test_sentence_plan_phase4.py::test_the_general_actor_list_still_shows_only_the_callers_tenant."
     ),
     "LoginLogViewSet": (
         "Runs the ADMIN check inverted, so the helper cannot express it: "
