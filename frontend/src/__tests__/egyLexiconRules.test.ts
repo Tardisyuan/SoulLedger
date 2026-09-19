@@ -8,19 +8,25 @@
  * - 修订表 462 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
- * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致。
+ * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
+ * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
+ * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 「词表外的生词」不是门禁 —— 现有文案大量使用词根表以外的词,硬上只会整体红;
- * - 大小写(每词首字母大写)不是门禁 —— 早期文案里还有上百条小写词;
- * - `social_moderation` 整个命名空间还是英文原文(没翻),对英文残留与撇号两条豁免。
- *   下面有一条断言它**仍然**需要豁免:翻完之后那条会红,提醒把豁免删掉。
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根表只有 39 + 18 个,
+ *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行;
+ * - `social_moderation` 整个命名空间还是英文原文(没翻),对英文残留、撇号、大小写、
+ *   封闭词汇四条豁免。下面有一条断言它**仍然**需要豁免:翻完之后那条会红,提醒把豁免删掉。
  */
+import { writeFileSync } from "node:fs";
+import path from "node:path";
+
 import egy from "@soulledger/core/messages/egy.json";
 import en from "@soulledger/core/messages/en.json";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 
 import REVISIONS from "./support/egyLexiconRevisions.json";
+import VOCABULARY from "./support/egyVocabulary.json";
 
 type Bundle = Record<string, unknown>;
 
@@ -81,6 +87,77 @@ const MA_NOT_NEGATION = new Set([
 /** 「Pert Abuf」只剩调度义(dispatch);作密码的写法已废止。 */
 const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(k);
 
+/**
+ * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
+ * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
+ * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
+ * 修订表 462 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ */
+const TECHNICAL: Record<string, string[]> = {
+  "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
+  "scheduler.manage_hint": ["scheduler.manage"],
+  "audit.needs_audit_read": ["audit.read"],
+  "judgment.queue.read_only": ["judgment.execute"],
+  "permissions.matrix.confirm_menu_read_warning": ["menu.read"],
+  "menus.permission_codename_placeholder": ["soul.read"],
+  "menu_buttons.permission_placeholder": ["soul.create", "judgment.delete"],
+  "menu_buttons.code_placeholder": ["add", "edit", "delete", "export"],
+  "menus.component_placeholder": ["souls"],
+  "permissions.category_placeholder": ["soul"],
+  "menus.gate_permission_effect": ["get_codename"],
+  "scheduler.empty.no_jobs_reason": ["setup_scheduled_tasks"],
+  "scheduler.duration.ms": ["ms"],
+  "scheduler.duration.s": ["s"],
+  "welcome.minutes_ago": ["m"],
+  "welcome.hours_ago": ["h"],
+  "footer.version": ["v0.1"],
+  "settings.accent_hex_invalid": ["#ff5500"],
+  "ledger.copy_resource_id": ["{resource}"],
+};
+
+/** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
+const bare = (token: string) => token.replace(/^[^A-Za-z0-9#{]+|[^A-Za-z0-9}]+$/g, "");
+const tokens = (k: string) => prose(EGY[k]).split(/\s+/).map(bare);
+/** 一条文案里的词:去占位符、去该键的技术词,取字母串;连字符复合词(Djes-Ef)算一个词。 */
+const words = (k: string) =>
+  prose(EGY[k])
+    .split(/\s+/)
+    .filter((t) => !(TECHNICAL[k] ?? []).includes(bare(t)))
+    .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? []);
+
+/** 定稿词表:词根 39 个、语法小词 18 个,逐字照抄。「Duat / Pet」「Er Hry」按空格拆成词。 */
+const ROOTS = [
+  "Ba", "Ren", "Ankh", "Medjat", "Sesh", "Medu", "Sekhem", "Wedja", "Wetep", "Mesut",
+  "Dbh", "Nehet", "Khesef", "Hesy", "Hemes", "Taui", "Wesekhet", "Sab", "Nefer", "Isfet",
+  "Shut", "Ib", "Wat", "Kheperu", "Kheper", "Sethet", "Gem", "Mut", "Khetem", "Djeret",
+  "Hab", "Aq", "Wenen", "Baku", "Ahet", "Was", "Renpi", "Qebeh", "Duat / Pet",
+];
+const PARTICLES = [
+  "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
+  "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
+];
+const LEXICON = new Set([...ROOTS, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+
+/**
+ * 封闭词汇登记表(support/egyVocabulary.json):egy 文案(social_moderation 除外)用到的
+ * 每个词形 → 出现次数、是否在定稿词根 / 小词表内。**由本文件生成,不手抄**:
+ *
+ *     EGY_VOCAB_WRITE=1 npx jest egyLexiconRules    # 在 frontend/ 下;写完再跑一次看绿
+ *
+ * 写的那一次仍按旧表断言(import 在写之前),所以会红;第二次才是结论。
+ */
+type VocabEntry = { count: number; lexicon: boolean };
+const usage: Record<string, VocabEntry> = {};
+for (const k of translated) {
+  for (const w of words(k)) usage[w] = { count: (usage[w]?.count ?? 0) + 1, lexicon: LEXICON.has(w) };
+}
+const USAGE = Object.fromEntries(Object.entries(usage).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+if (process.env.EGY_VOCAB_WRITE === "1") {
+  const lines = Object.entries(USAGE).map(([w, e]) => `  ${JSON.stringify(w)}: ${JSON.stringify(e)}`);
+  writeFileSync(path.join(__dirname, "support/egyVocabulary.json"), `{\n${lines.join(",\n")}\n}\n`);
+}
+const REGISTERED = VOCABULARY as Record<string, VocabEntry>;
+
 describe("egy 词表规则", () => {
   it("摊平后拿到了整份包(扫不到东西的扫描器会让下面全部通过)", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
@@ -129,6 +206,33 @@ describe("egy 词表规则", () => {
     // 白名单里的键若已不含 Ma,就该从白名单删掉,否则它会替将来的漏改背书。
     const stale = [...MA_NOT_NEGATION].filter((k) => !/\b[Mm]a\b/.test(prose(EGY[k] ?? "")));
     expect(stale).toEqual([]);
+  });
+
+  it("每词首字母大写:含小词,连字符复合词的每一段都算", () => {
+    expect(offenders(translated, (_v, k) => words(k).some((w) => w.split("-").some((s) => !/^[A-Z]/.test(s))))).toEqual(
+      []
+    );
+  });
+
+  it("技术词放行清单没有陈旧项:每个记号都还原样出现在它的键里", () => {
+    const stale = Object.entries(TECHNICAL).flatMap(([k, ts]) =>
+      ts.filter((t) => !tokens(k).includes(t)).map((t) => `${k}: ${t}`)
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it("封闭词汇:每个词都在词根 ∪ 小词 ∪ 登记表里", () => {
+    expect(Object.keys(USAGE).length).toBeGreaterThan(300);
+    const unregistered = Object.keys(USAGE).filter((w) => !LEXICON.has(w) && !(w in REGISTERED));
+    expect(unregistered).toEqual([]);
+  });
+
+  it("登记表没有已不再使用的词", () => {
+    expect(Object.keys(REGISTERED).filter((w) => !(w in USAGE))).toEqual([]);
+  });
+
+  it("登记表的次数与词表标记与现状逐条一致(改了文案就重新生成,见上方命令)", () => {
+    expect(REGISTERED).toEqual(USAGE);
   });
 
   it(`${UNTRANSLATED}* 仍是英文原文,豁免仍然必要`, () => {
