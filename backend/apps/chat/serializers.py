@@ -104,6 +104,13 @@ class OfficerReplySerializer(serializers.Serializer):
     body = serializers.CharField(max_length=4000, trim_whitespace=True)
 
 
+class ChatLookupSerializer(serializers.Serializer):
+    """`POST /me/chat/lookup/`。走请求体而不是查询串:编号是登录名,不该落进访问日志的 URL 里。"""
+
+    soul_code = serializers.CharField(max_length=32, help_text="完整的灵魂编号,大小写不论;不做前缀或模糊匹配。")
+
+
 class ChatErrorSerializer(serializers.Serializer):
     detail = serializers.CharField()
     code = serializers.CharField()
+    retry_at = serializers.DateTimeField(required=False, help_text="429 时:何时可以再试。")
