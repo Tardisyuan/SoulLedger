@@ -139,7 +139,7 @@ services:
   # /_synapse/client,admin API 只有 compose 网络里的后端够得着。
   # /data/homeserver.yaml 不在仓库里(含密钥),由 scripts/synapse-init.sh 生成一次;
   # 没生成就 `up`,容器报 "Config file ... does not exist" 并反复重启,不影响其余服务。
-  # 数据库是同一个 db 实例里的 `synapse` 库(C collation,脚本建),直连 db 而不经
+  # 数据库是同一个 db 实例里的 `synapse` 库(C collation,属 `synapse` 角色,脚本建),直连 db 而不经
   # pgbouncer:production 的 pgbouncer 只配了 soulledger 库,而 Synapse 自带连接池
   # (cp_min/cp_max),再套一层没有收益。
   synapse:
@@ -157,7 +157,9 @@ services:
       # 而那份文件里本来就是这些值,所以放在这里不多暴露什么。
       SYNAPSE_SERVER_NAME: ${MATRIX_SERVER_NAME:-}
       SYNAPSE_REPORT_STATS: "no"
-      SYNAPSE_DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      # `synapse` 库账号的密码(只拥有 synapse 库,不是超级用户;脚本建角色时用)。
+      # 不设不影响其余服务 —— 只有 synapse-init.sh 会因为它缺失而拒绝。
+      SYNAPSE_DB_PASSWORD: ${SYNAPSE_DB_PASSWORD:-}
       MATRIX_SERVER_NAME: ${MATRIX_SERVER_NAME:-}
       MATRIX_PUBLIC_BASEURL: ${MATRIX_PUBLIC_BASEURL:-}
       MATRIX_JWT_SECRET: ${MATRIX_JWT_SECRET:-}

@@ -101,7 +101,8 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   这两个前缀没有任何客户端要用,关掉只是少暴露一块用不上的面。
   nginx 按请求解析 synapse(resolver),synapse 没起或在重启时只有这两条路径 502,不连累全站。
 - 数据库:同一个 `db` 实例里单独一个 `synapse` 库(Synapse 要求 `LC_COLLATE`/`LC_CTYPE` 为 `C`,
-  由初始化脚本从 `template0` 建),用 `soulledger` 账号、直连 `db` 不经 pgbouncer(pgbouncer 只配了 `soulledger` 库;
+  由初始化脚本从 `template0` 建),用单独的 `synapse` 账号(只拥有 `synapse` 库;非超级用户、不能建库建角色;
+  脚本同时收回 PUBLIC 对 `soulledger`、`synapse` 两库的 CONNECT,所以它连不进主库)、直连 `db` 不经 pgbouncer(pgbouncer 只配了 `soulledger` 库;
   Synapse 自带连接池)。**不用 SQLite**:Synapse 官方只把它当试用,
   单写锁在灵魂数上来后顶不住,且 SQLite → PostgreSQL 迁移要停机跑 `synapse_port_db`。
   **`backup` 服务目前只 dump `soulledger` 库**:聊天消息(`synapse` 库)与 `synapse_data` 卷
@@ -121,7 +122,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   `MATRIX_REGISTRATION_SHARED_SECRET`(= Synapse `registration_shared_secret`,只用来把服务账号
   注册成 admin 一次)、`MATRIX_USER_SALT`(mxid 由账号 id 经 HMAC 派生;**不可轮换**,换了所有 mxid
   都变)。`MATRIX_INTERNAL_URL` 在 compose 里写死为 `http://synapse:8008`;
-  `CHAT_REQUEST_INTERVAL_SECONDS` 用默认(86400)。Synapse 的库密码就是 `DB_PASSWORD`。
+  `CHAT_REQUEST_INTERVAL_SECONDS` 用默认(86400)。`SYNAPSE_DB_PASSWORD` 是 `synapse` 库账号的密码,
+  只有 synapse 服务读(脚本用它建角色并写进 homeserver.yaml;角色已存在时脚本**不改密码** ——
+  要换密码,在 db 里 `ALTER ROLE synapse PASSWORD …` 并同步改卷里 homeserver.yaml 的 `database.args.password`)。
 - 限速:模板把 `rc_login.address` 放宽了 —— 后端代灵魂发言要以该灵魂身份 JWT 登录,所有这类登录
   都来自后端一个地址,默认值下突发用完即 429。服务账号替灵魂转发、改 power level、建房,量随灵魂数
   增长,由下面第 4 步免限速。
@@ -129,8 +132,8 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 **首次部署(一次):**
 
 ```bash
-# 0. 根 .env 里填好上面的 MATRIX_*(MATRIX_ENABLED 先留 False)
-# 1. 建 synapse 库 + 生成并合并 homeserver.yaml。幂等:已有的库 / 文件 / 合并都跳过,永不覆盖
+# 0. 根 .env 里填好上面的 MATRIX_* 与 SYNAPSE_DB_PASSWORD(MATRIX_ENABLED 先留 False)
+# 1. 建 synapse 角色与库 + 生成并合并 homeserver.yaml。幂等:已有的角色 / 库 / 文件 / 合并都跳过,永不覆盖
 DC="$DC" scripts/synapse-init.sh
 # 2. 起 Synapse 与 nginx
 $DC up -d --wait synapse

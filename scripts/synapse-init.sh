@@ -12,15 +12,30 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 DC=${DC:-docker compose -f docker-compose.yml -f docker-compose.production.yml}
 
-# 1. 数据库。Synapse 拒绝在 collation 不是 C 的库上启动,而 postgres 镜像建的默认库
-#    是 en_US.utf8 —— 所以从 template0 显式建。
+# 1. 数据库与账号。Synapse 用自己的 `synapse` 角色(只拥有 `synapse` 库,非超级用户,
+#    不能建库建角色),密码是根 .env 的 SYNAPSE_DB_PASSWORD —— 经 synapse 服务的 environment
+#    取出,以 SQL 走 stdin 进 psql,不上任何命令行。Synapse 拒绝在 collation 不是 C 的库上
+#    启动,而 postgres 镜像建的默认库是 en_US.utf8 —— 所以从 template0 显式建。
+#    幂等:角色已在不建、不改密码(已合并的 homeserver.yaml 里是旧密码,静默改掉只会让
+#    Synapse 连不上);库已在不建。收回 PUBLIC 对两个库的 CONNECT(默认人人可连),
+#    于是 synapse 角色进不了 soulledger 库 —— soulledger 是库主兼超级用户,不受影响。
 $DC up -d --wait db
-if [ "$($DC exec -T db psql -U soulledger -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='synapse'")" = "1" ]; then
-  echo "synapse 库已存在,跳过"
-else
-  $DC exec -T db psql -U soulledger -d postgres -v ON_ERROR_STOP=1 -c \
-    "CREATE DATABASE synapse OWNER soulledger ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0"
-fi
+$DC run --rm --no-deps -T --entrypoint python synapse -c '
+import os, sys
+pw = os.environ.get("SYNAPSE_DB_PASSWORD") or sys.exit("缺少环境变量 SYNAPSE_DB_PASSWORD(写进根 .env)")
+lit = "\x27" + pw.replace("\x27", "\x27\x27") + "\x27"
+print(f"SELECT format(\x27CREATE ROLE synapse LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD %L\x27, {lit}) "
+      "WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = \x27synapse\x27)\\gexec")
+' | {
+  cat
+  cat <<'SQL'
+SELECT 'CREATE DATABASE synapse OWNER synapse ENCODING ''UTF8'' LC_COLLATE ''C'' LC_CTYPE ''C'' TEMPLATE template0'
+  WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'synapse')\gexec
+REVOKE CONNECT ON DATABASE synapse FROM PUBLIC;
+REVOKE CONNECT ON DATABASE soulledger FROM PUBLIC;
+SELECT format('synapse 库 owner=%s collate=%s', pg_get_userbyid(datdba), datcollate) FROM pg_database WHERE datname = 'synapse';
+SQL
+} | $DC exec -T db psql -U soulledger -d postgres -v ON_ERROR_STOP=1 -qtA
 
 # 2. generate(server_name、签名密钥、macaroon/form 密钥)。已有配置就跳过。
 if $DC run --rm --no-deps -T --entrypoint test synapse -f /data/homeserver.yaml; then
@@ -63,7 +78,7 @@ template = re.sub(r"\$\{([A-Z_]+)\}", fill, open(TEMPLATE).read())
 added = {
     "public_baseurl": f'"{q(os.environ["MATRIX_PUBLIC_BASEURL"])}"',
     "database": (
-        '\n  name: psycopg2\n  args:\n    user: soulledger\n'
+        '\n  name: psycopg2\n  args:\n    user: synapse\n'
         f'    password: "{q(os.environ["SYNAPSE_DB_PASSWORD"])}"\n'
         '    database: synapse\n    host: db\n    port: 5432\n    cp_min: 5\n    cp_max: 10'
     ),
