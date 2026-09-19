@@ -566,11 +566,13 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         serializer = CrossTenantJudgmentParticipateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tenant_id = serializer.validated_data["participant_tenant"]
         actor_id = serializer.validated_data.get("participant_actor")
         role = serializer.validated_data["role"]
 
-        tenant = Tenant.objects.filter(id=tenant_id).first()
+        if "participant_tenant_code" in serializer.validated_data:
+            tenant = Tenant.objects.filter(code=serializer.validated_data["participant_tenant_code"]).first()
+        else:
+            tenant = Tenant.objects.filter(id=serializer.validated_data["participant_tenant"]).first()
         if not tenant:
             return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
 

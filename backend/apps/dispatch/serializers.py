@@ -366,8 +366,15 @@ class CrossTenantJudgmentCreateSerializer(serializers.Serializer):
 
 
 class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):
-    """Serializer for participating in a cross-tenant judgment."""
-    participant_tenant = serializers.IntegerField()
+    """Serializer for participating in a cross-tenant judgment.
+
+    The seat's tenant by numeric id **or** by code, exactly one. `/tenants/` shows a
+    non-ADMIN caller only its own row, so the id of the tenant to be seated is not
+    something a JUDGE can look up; the code is (the four civilizations' codes are
+    public config, `TENANT_CIVILIZATION`). Added 2026-09-20 for the web seat form.
+    """
+    participant_tenant = serializers.IntegerField(required=False)
+    participant_tenant_code = serializers.CharField(required=False, max_length=50)
     participant_actor = serializers.IntegerField(required=False, allow_null=True)
     role = serializers.ChoiceField(
         choices=["ADVISOR", "CO_JUDGE", "CHAIRMAN"],
@@ -376,6 +383,13 @@ class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):
     # 这一方在受刑计划里排第几站(原属恒为 1,所以从 2 起)。只对挂了审判的联审有意义;
     # 规则在 `CrossTenantJudgmentService.add_participant`。
     node_order = serializers.IntegerField(required=False, allow_null=True, min_value=2)
+
+    def validate(self, attrs):
+        if ("participant_tenant" in attrs) == ("participant_tenant_code" in attrs):
+            raise serializers.ValidationError(
+                "Give exactly one of participant_tenant (id) or participant_tenant_code."
+            )
+        return attrs
 
 
 class CrossTenantJudgmentSentenceSerializer(serializers.Serializer):

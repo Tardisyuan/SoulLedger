@@ -134,3 +134,26 @@ def test_pending_request_lists_only_plans_awaiting_a_decision(cn, eg, eu):
 
     SentencePlanRequest.all_objects.filter(pk=req.pk).update(status="WITHDRAWN")
     assert home.get(PLANS, {"pending_request": "true"}).data["count"] == 0
+
+
+
+# ── 按租户代码入席(Web 入席表单;非 ADMIN 查不到别的租户的数字 id)──────────────
+
+
+def test_the_initiator_seats_a_tenant_by_its_code(cn, eg, eu):
+    _, case = open_case(cn)
+    home = officer_client(officer("judge_home", "JUDGE", cn))
+    cj_id = home.post(CJ, {"title": "联审", "description": "d", "judgment": str(case.pk)}, format="json").data["id"]
+    seat = home.post(f"{CJ}{cj_id}/participate/",
+                     {"participant_tenant_code": "EG_DUAT", "role": "CO_JUDGE", "node_order": 2}, format="json")
+    assert seat.status_code == 200, seat.data
+    assert _orders(CrossTenantJudgment.objects.get(pk=cj_id)) == {"EG_DUAT": 2}
+
+    both = home.post(f"{CJ}{cj_id}/participate/",
+                     {"participant_tenant": eu.pk, "participant_tenant_code": "EU_HEAVEN_HELL", "role": "ADVISOR"},
+                     format="json")
+    neither = home.post(f"{CJ}{cj_id}/participate/", {"role": "ADVISOR"}, format="json")
+    unknown = home.post(f"{CJ}{cj_id}/participate/", {"participant_tenant_code": "XX_NOWHERE", "role": "ADVISOR"},
+                        format="json")
+    assert (both.status_code, neither.status_code, unknown.status_code) == (400, 400, 404)
+    assert _orders(CrossTenantJudgment.objects.get(pk=cj_id)) == {"EG_DUAT": 2}
