@@ -1888,7 +1888,8 @@
     "tabs": {
       "life": "本世",
       "past_lives": "前世",
-      "applications": "转生申请"
+      "applications": "转生申请",
+      "rebirth": "转生"
     },
     "life": {
       "title": "我的数据",
@@ -2131,6 +2132,100 @@
       "tag_language": "原文 · {{language}}",
       "zh": "中文",
       "note": "卷宗内容保持原文，不随界面语言翻译。"
+    },
+    "chat": {
+      "tab": "书信",
+      "title": "书信",
+      "section": {
+        "hall": "殿司",
+        "souls": "灵魂"
+      },
+      "new": "找人写信",
+      "empty": {
+        "title": "还没有往来",
+        "body": "互相关注的灵魂可以直接说话；也可以凭灵魂编号找人。"
+      },
+      "hall": {
+        "hint": "写信给殿司，官员会以殿司名义回复。",
+        "title": "{{hall}} · 殿司",
+        "subtitle": "官员以殿司名义回复 · 非即时",
+        "officer_byline": "{{hall}} · {{role}} {{name}}",
+        "not_current": "你已不在{{hall}}。旧信留着，不能再添。",
+        "go_current": "写信给{{hall}} · 殿司"
+      },
+      "loading": "加载中…",
+      "unread": "未读",
+      "badge": {
+        "awaiting": "待回复",
+        "closed": "已闭",
+        "sealed": "封存",
+        "mutual": "互关",
+        "following": "已关注",
+        "not_mutual": "未互关"
+      },
+      "find": {
+        "title": "找人写信",
+        "by_code": "按灵魂编号",
+        "code_placeholder": "10 位灵魂编号",
+        "code_hint": "须输完整 10 位。编号不分文明，何处的灵魂都能找到。",
+        "not_found": "未找到。",
+        "from_circle": "从朋友圈",
+        "circle_hint": "只列同文明、你关注或关注你的灵魂。",
+        "write": "写信"
+      },
+      "compose": {
+        "placeholder": "说一句……",
+        "reply_placeholder": "回一句……",
+        "hall_placeholder": "向殿司陈情……",
+        "send": "发"
+      },
+      "receipt": {
+        "sending": "正在送出",
+        "sent": "已送达",
+        "read": "已读",
+        "failed": "未送出",
+        "queued": "等待送出",
+        "retry": "重发"
+      },
+      "request": {
+        "outgoing_hint": "你们还没有互相关注。对方回话之后，就能自由说了。",
+        "incoming_hint": "一封新信。你回了，就能自由说了；不回也可以。",
+        "locked": "等对方回话",
+        "next_at": "已发出一封。{{time}} 起可再发一封。",
+        "throttled": "一日一封，已发过了。{{time}} 起可再发。你写的留着。"
+      },
+      "muted": {
+        "banner": "你被禁言 {{days}} 日。{{time}} 起可再与灵魂通信。此间仍可读，仍可写信给殿司。",
+        "to_hall": "写信给{{hall}} · 殿司"
+      },
+      "closed": {
+        "peer_reborn": "她已转生去了。这段话留着，不能再添。",
+        "peer_retired": "这个账号已停用。这段话留着，不能再添。",
+        "marker": "{{date}} 转生 · 会话止于此"
+      },
+      "unavailable": {
+        "banner": "一时送不出，正在重连",
+        "list": "书信一时送不出。已收到的仍可读。",
+        "retry": "重试"
+      },
+      "not_configured": "此地尚未通书信。开通之后，此处自会出现。",
+      "menu": {
+        "report": "举报",
+        "profile": "看他的主页"
+      },
+      "new_marker": "新",
+      "errors": {
+        "request_throttled": "一日一封，明日请早。",
+        "muted": "你在禁言中，不能与灵魂通信。仍可写信给殿司。",
+        "closed": "这段会话已闭。",
+        "peer_retired": "对方的账号已停用。",
+        "not_current_hall": "你已不在这个殿司，不能再写。",
+        "chat_unavailable": "书信一时不通。稍后再试。",
+        "chat_not_configured": "此地尚未通书信。",
+        "not_found": "未找到。",
+        "invalid_code": "灵魂编号须为 10 位。",
+        "self": "不能写信给自己。"
+      }
     }
   },
   "soul_push": {
