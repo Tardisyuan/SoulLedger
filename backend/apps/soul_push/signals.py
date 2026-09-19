@@ -1,7 +1,10 @@
-"""调拨批准 / 暂居开始 / 回归不经事件总线:`apps/dispatch/services.py` 直接写 `SoulEvent`。这里接那三种。
+"""不经事件总线的 SoulEvent:这里接。
 
-只接 `RESIDENCE_ACTIONS` 里的 action。其余 SoulEvent 都是 AuditHandler 从总线事件写下的,
-那些已经由 `SoulPushHandler` 处理过 —— 在这里再接一遍只会多一次(幂等挡得住,但没有理由)。
+* 调拨批准 / 暂居开始 / 回归:`apps/dispatch/services.py` 直接写 `SoulEvent`(`RESIDENCE_ACTIONS`)。
+* 受刑计划:`apps/sentence_plan/services.py` 直接写 `SoulEvent`(`SENTENCE_EVENTS`)。
+
+其余 SoulEvent 都是 AuditHandler 从总线事件写下的,那些已经由 `SoulPushHandler` 处理过 ——
+在这里再接一遍只会多一次(幂等挡得住,但没有理由)。
 交给同一个 `SoulPushHandler.handle`:同样的保存点、同样的「提交后才入队」。
 """
 from django.db.models.signals import post_save
@@ -14,10 +17,12 @@ from apps.events.models import SoulEvent
 def _residence_event(sender, instance, created, **kwargs):
     from apps.events.event_bus import EventEnvelope
     from apps.soul_push.handler import SoulPushHandler
-    from apps.soul_push.services import RESIDENCE_ACTIONS
+    from apps.soul_push.services import RESIDENCE_ACTIONS, SENTENCE_EVENTS
 
     payload = instance.payload if isinstance(instance.payload, dict) else {}
-    if not created or payload.get("action") not in RESIDENCE_ACTIONS:
+    if not created:
+        return
+    if payload.get("action") not in RESIDENCE_ACTIONS and instance.event_type not in SENTENCE_EVENTS:
         return
     SoulPushHandler().handle(EventEnvelope(
         event_type=instance.event_type,

@@ -74,10 +74,6 @@ REBIRTH_STATUS_KINDS = {
     "APPEAL_REJECTED": "rebirth_appeal_rejected",
 }
 
-#: 处置执行没有自己的事件:`DispositionService.execute` 的可观察结果是灵魂状态
-#: 进入 REINCARNATING(有来世)或 SETTLED(终局宇宙观),`transition_to` 为此发 STATE_CHANGED。
-DISPOSITION_EXECUTED_STATES = ("REINCARNATING", "SETTLED")
-
 #: 暂居(已合并的 feat/dispatch-residence)。**两者都没有独立的 EventType**:
 #: `DispatchService.execute` / `end_residence` 直接写 `SoulEvent(event_type=STATE_CHANGED)`,
 #: 用 payload 的 `action` 区分 —— 而且**不经事件总线**,所以由 `signals.py` 挂在 SoulEvent 的 post_save 上接。
@@ -114,13 +110,39 @@ def rule_for(event_type, payload, account):
         # 退回用那条 SoulEvent 的 id —— 由 signals.py 放进 `_event_id`,一次回归只有一条。
         key = payload.get("dispatch_id") or payload.get("_event_id")
         return ("residence", RESIDENCE_ACTIONS[action], f"residence:{key}:{action}", {"screen": "Life"}) if key else None
-    if event_type == "STATE_CHANGED" and payload.get("new_state") in DISPOSITION_EXECUTED_STATES:
-        # 一世一个账号,所以 (账号, 状态) 就是「这一世的这次处置执行」。
-        return ("judgment", "disposition_executed", f"state:{account.pk}:{payload['new_state']}", {"screen": "Life"})
+    if event_type in SENTENCE_EVENTS:
+        return _sentence_rule(event_type, payload)
     return None
 
 
-HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "JUDGMENT_CONCLUDED", "STATE_CHANGED"})
+#: 受刑计划(docs/ARCHITECTURE-sentence-plan.md §5.2)。`SentencePlanService` 直接写 SoulEvent,
+#: 由 `signals.py` 接。
+#: * `disposition_executed` 改挂节点结束(COMPLETED / ETERNAL;手动结束的 ABORTED 没有处置执行,不推)。
+#:   它以前挂「灵魂进入 REINCARNATING / SETTLED」,而计划期间处置执行不再改灵魂状态;
+#:   dedupe_key 用节点 id,一站一条。
+#: * `sentence_completed` 只推给**开放了转生申请**的(文案说「可以申请转生」,终局文明的灵魂不收)。
+#: * `sentence_waiting`:刑满暂留(Q7)。
+SENTENCE_EVENTS = frozenset({"SENTENCE_NODE_COMPLETED", "SENTENCE_PLAN_COMPLETED", "SENTENCE_NODE_WAITING"})
+DISPOSITION_DONE_NODE_STATUSES = ("COMPLETED", "ETERNAL")
+
+
+def _sentence_rule(event_type, payload):
+    life = {"screen": "Life"}
+    if event_type == "SENTENCE_NODE_COMPLETED":
+        node_id = payload.get("node_id")
+        if not node_id or payload.get("status") not in DISPOSITION_DONE_NODE_STATUSES:
+            return None
+        return ("judgment", "disposition_executed", f"node:{node_id}:done", life)
+    if event_type == "SENTENCE_NODE_WAITING":
+        node_id = payload.get("node_id")
+        return ("residence", "sentence_waiting", f"node:{node_id}:waiting", life) if node_id else None
+    plan_id = payload.get("sentence_plan_id")
+    if not plan_id or not payload.get("rebirth_open"):
+        return None
+    return ("rebirth", "sentence_completed", f"plan:{plan_id}:completed", life)
+
+
+HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "JUDGMENT_CONCLUDED", "STATE_CHANGED", *SENTENCE_EVENTS})
 
 #: 种类 → 偏好类别。发送前(含补发)再核对一次偏好时用。
 KIND_CATEGORY = {
@@ -128,6 +150,8 @@ KIND_CATEGORY = {
     "judgment_result": "judgment",
     "disposition_executed": "judgment",
     **{kind: "residence" for kind in RESIDENCE_ACTIONS.values()},
+    "sentence_waiting": "residence",
+    "sentence_completed": "rebirth",
 }
 
 
