@@ -23,7 +23,7 @@ import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, useChat, type Chat } from "../chat";
-import { chatMode, chatSections, normalizeCode, sendsThroughBackend } from "../chatRules";
+import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
@@ -354,8 +354,12 @@ describe("the conversation's eight states", () => {
   });
 
   it("⑥ closed: read-only with the reason, and the composer is gone", () => {
-    openConversation(conv({ refusal: "closed", peer_name: "周芸" }), [msg("e1", PEER, "盖子换了是好事。", NOW - 86_400_000)]);
+    openConversation(conv({ refusal: "closed", peer_name: "周芸", closed_at: new Date(NOW).toISOString() }), [msg("e1", PEER, "盖子换了是好事。", NOW - 86_400_000)]);
     expect(screen.getByTestId("conversation-closed")).toBeTruthy();
+    // The thread ends where the server closed it — after the last letter, dated by `closed_at`.
+    expect(screen.getByTestId("closed-marker").props.children).toBe(`${dayOf(NOW)} 转生 · 会话止于此`);
+    const ids = hostIds(screen.getByTestId("conversation-closed"));
+    expect(ids.indexOf("closed-marker")).toBeGreaterThan(-1);
     expect(screen.getByTestId("closed-reason").props.children).toBe("她已转生去了。这段话留着，不能再添。");
     expect(screen.getByTestId("closed-tag")).toBeTruthy();
     composerGone();
@@ -363,6 +367,7 @@ describe("the conversation's eight states", () => {
 
   it("⑥ peer_retired: the same screen, only the sentence differs", () => {
     openConversation(conv({ refusal: "peer_retired" }));
+    expect(screen.queryByTestId("closed-marker")).toBeNull(); // no `closed_at`: no end marker
     expect(screen.getByTestId("closed-reason").props.children).toBe("这个账号已停用。这段话留着，不能再添。");
     composerGone();
   });

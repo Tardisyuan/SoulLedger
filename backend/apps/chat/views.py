@@ -79,11 +79,13 @@ class MeChatSessionView(ChatView):
 class MeChatConversationsView(ChatView):
     @extend_schema(responses={200: ConversationSerializer(many=True), 403: ChatErrorSerializer})
     def get(self, request):
-        soul_id = self.account.soul_id
+        """**这一世**参与的会话,包括已闭的(只读,带 `closed_at`)。按账号筛,不按灵魂:
+        新一世看不见前世的会话,前世那一个账号也不会因为灵魂转世而多看见什么。"""
+        account = self.account
         rows = Conversation.objects.filter(
-            Q(soul_a_id=soul_id) | Q(soul_b_id=soul_id), closed_at__isnull=True
-        ).select_related("soul_a", "soul_b", "tenant")
-        context = {"soul_id": soul_id, "account": self.account}
+            Q(account_a=account) | Q(account_b=account)
+        ).select_related(*svc.ACCOUNT_JOINS, "tenant")
+        context = {"soul_id": account.soul_id, "account": account}
         return Response(ConversationSerializer(rows, many=True, context=context).data)
 
     @extend_schema(request=ConversationCreateSerializer,
@@ -160,9 +162,9 @@ class MeChatMessagesView(ChatView):
         body.is_valid(raise_exception=True)
         account = self.account
         conversation = Conversation.objects.filter(pk=conversation_id).select_related("tenant").first()
-        if conversation is None or (
-            conversation.soul_a_id != account.soul_id and conversation.soul_b_id != account.soul_id
-        ):
+        # 按这一世的账号认参与方:同一个灵魂的新一世对前世的会话答 404(不是 409 closed ——
+        # 那会说出「这个会话存在」)。
+        if conversation is None or not conversation.has_account(account.pk):
             raise svc.ChatError("会话不存在。", "not_found", status=404)
         if conversation.kind == ConversationKind.OFFICER_INBOX:
             event_id = svc.send_inbox_message(account, conversation, body.validated_data["body"],

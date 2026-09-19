@@ -139,8 +139,8 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
   const reload = useCallback(async () => {
     try {
       const rows = await soulChatApi.conversations();
-      // The list has only open rooms: one that drops out was closed by the server (the other soul
-      // was reborn). Kept for this session, read-only, so an open screen does not go blank (1c ⑥).
+      // The list keeps closed rooms of this life (read-only, with `closed_at`), so a row dropping out
+      // is rare — a backfill gap, say. Kept for this session, read-only, so an open screen does not go blank (1c ⑥).
       const vanished = convs.current.filter((p) => !rows.some((r) => r.id === p.id));
       if (vanished.length) setGone((g) => ({ ...g, ...Object.fromEntries(vanished.map((v) => [v.id, { ...v, refusal: "closed" }])) }));
       convs.current = rows;

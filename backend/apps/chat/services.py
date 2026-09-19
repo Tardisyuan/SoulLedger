@@ -48,7 +48,6 @@ from apps.chat.matrix import MatrixError, get_client, login_jwt
 from apps.chat.models import ChatIdentity, Conversation, ConversationKind
 from apps.social import soul_circle as circle
 from apps.social.models import Follow
-from apps.soul_accounts.services import current_account_of
 
 logger = logging.getLogger(__name__)
 
@@ -153,17 +152,18 @@ def find_by_soul_code(account, soul_code):
 
 
 def _live_identities(conversation):
-    """{soul_id: (本世账号, 未停用的 ChatIdentity)}。前世账号、没开过聊天的不在里面。"""
+    """{soul_id: (会话那一世的账号, 未停用的 ChatIdentity)}。
+
+    账号取**会话记下的那一世**(`account_a` / `account_b`),不取灵魂此刻的本世账号:新一世的
+    账号永远不会被算进前世的房间。那一世已转世停用的(ChatIdentity 已停用)不在里面。"""
     rows = {}
-    for soul in (conversation.soul_a, conversation.soul_b):
-        if soul is None:
-            continue
-        account = current_account_of(soul)
-        if account is None:
+    for soul_id, account in ((conversation.soul_a_id, conversation.account_a),
+                             (conversation.soul_b_id, conversation.account_b)):
+        if soul_id is None or account is None:
             continue
         identity = ChatIdentity.objects.filter(account=account, deactivated_at__isnull=True).first()
         if identity is not None:
-            rows[soul.pk] = (account, identity)
+            rows[soul_id] = (account, identity)
     return rows
 
 
@@ -188,9 +188,7 @@ def _speaking_levels(conversation, identities):
     for soul_id, (account, identity) in identities.items():
         peer = next((acc for sid, (acc, _) in identities.items() if sid != soul_id), None)
         if peer is None and conversation.kind == ConversationKind.DIRECT:
-            peer = current_account_of(
-                conversation.soul_b if conversation.soul_a_id == soul_id else conversation.soul_a
-            )
+            peer = conversation.other_account(account.pk)
         blocked = refusal(conversation, account, peer) is not None
         throttled = conversation.throttled and conversation.initiator_id == soul_id
         levels[identity.matrix_user_id] = SILENT if blocked or throttled else SPEAK
@@ -206,12 +204,16 @@ def sync_levels(conversation, *, client=None):
 def sync_rooms(soul, *, client=None):
     """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。"""
     rows = Conversation.objects.filter(Q(soul_a=soul) | Q(soul_b=soul), closed_at__isnull=True)
-    rows = list(rows.select_related("soul_a", "soul_b"))
+    rows = list(rows.select_related(*ACCOUNT_JOINS))
     if not rows:
         return
     client = client or get_client()
     for conversation in rows:
         sync_levels(conversation, client=client)
+
+
+#: 算发言权要读的关联:双方灵魂、双方那一世的账号与其 User(`is_current_soul` 看 User)。
+ACCOUNT_JOINS = ("soul_a", "soul_b", "account_a__user", "account_b__user")
 
 
 def sync_rooms_quietly(soul):
@@ -247,7 +249,7 @@ def deactivate_for_account(account):
     (`SoulJWTAuthentication` 认 `retired_at`),Matrix 侧留一条日志等人工或下次调用。
     """
     Conversation.objects.filter(
-        Q(soul_a=account.soul) | Q(soul_b=account.soul), closed_at__isnull=True
+        Q(account_a=account) | Q(account_b=account), closed_at__isnull=True
     ).update(closed_at=timezone.now())
     try:
         return deactivate_identity(account)
@@ -281,9 +283,10 @@ def open_direct(account, target_user, *, request=None):
         raise ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
 
     low, high = _pair(soul, target_soul)
+    account_of = {soul.pk: account, target_soul.pk: target_account}
     existing = Conversation.objects.filter(
         kind=ConversationKind.DIRECT, soul_a=low, soul_b=high, closed_at__isnull=True
-    ).select_related("soul_a", "soul_b").first()
+    ).select_related(*ACCOUNT_JOINS).first()
     if existing is not None:
         return refresh_throttle(existing), False
 
@@ -309,6 +312,7 @@ def open_direct(account, target_user, *, request=None):
         with transaction.atomic():
             conversation = Conversation.objects.create(
                 kind=ConversationKind.DIRECT, room_id=room_id, soul_a=low, soul_b=high,
+                account_a=account_of[low.pk], account_b=account_of[high.pk],
                 tenant=soul.tenant, initiator=None if mutual else soul, throttled=not mutual,
             )
     except IntegrityError:
@@ -367,10 +371,9 @@ def send_direct_message(account, conversation, body, *, request=None):
     with transaction.atomic():
         conversation = (
             Conversation.objects.select_for_update(of=("self",))
-            .select_related("soul_a", "soul_b").get(pk=conversation.pk)
+            .select_related(*ACCOUNT_JOINS).get(pk=conversation.pk)
         )
-        peer_soul = conversation.soul_b if conversation.soul_a_id == account.soul_id else conversation.soul_a
-        error = refusal(conversation, account, current_account_of(peer_soul))
+        error = refusal(conversation, account, conversation.other_account(account.pk))
         if error is not None:
             raise error
         client = get_client()
@@ -464,7 +467,7 @@ def open_officer_inbox(account, *, request=None):
     try:
         with transaction.atomic():
             conversation = Conversation.objects.create(
-                kind=ConversationKind.OFFICER_INBOX, room_id=room_id, soul_a=soul,
+                kind=ConversationKind.OFFICER_INBOX, room_id=room_id, soul_a=soul, account_a=account,
                 tenant_id=soul.tenant_id,
             )
     except IntegrityError:
