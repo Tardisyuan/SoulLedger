@@ -9,6 +9,7 @@ me_urlpatterns = [
     path("chat/conversations/", views.MeChatConversationsView.as_view(), name="me-chat-conversations"),
     path("chat/conversations/<uuid:conversation_id>/messages/", views.MeChatMessagesView.as_view(),
          name="me-chat-messages"),
+    path("chat/lookup/", views.MeChatLookupView.as_view(), name="me-chat-lookup"),
 ]
 
 officer_router = DefaultRouter()

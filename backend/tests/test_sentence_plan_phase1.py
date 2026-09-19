@@ -101,9 +101,11 @@ def test_an_original_conclusion_records_a_plan_with_one_active_home_node(cn):
     [node] = plan.nodes.all()
     assert (node.order, node.is_home, node.tenant_code, node.status) == (1, True, "CN_DIYU", SentenceNodeStatus.ACTIVE)
     assert node.disposition_id == disposition.pk and node.added_by_judgment_id == case.pk
-    # 阶段 1 只记:不写 SENTENCE_* 事件(那会触发推送),处置也不回指节点(那会改 can_delete)。
-    assert not SoulEvent.objects.filter(soul=case.soul, event_type__startswith="SENTENCE_").exists()
-    assert disposition.sentence_node_id is None
+    # 阶段 2 起:一条 SENTENCE_PLAN_CREATED;处置回指节点(原属处置本来就挂着裁决,can_delete 不变)。
+    assert [e.event_type for e in SoulEvent.objects.filter(soul=case.soul, event_type__startswith="SENTENCE_")] == [
+        "SENTENCE_PLAN_CREATED"]
+    disposition.refresh_from_db()
+    assert disposition.sentence_node_id == node.pk and disposition.can_delete is False
 
 
 def test_executing_the_home_disposition_completes_node_and_plan(cn):
@@ -117,7 +119,7 @@ def test_executing_the_home_disposition_completes_node_and_plan(cn):
     assert plan.status == SentencePlanStatus.COMPLETED and plan.completed_at is not None
 
 
-def test_an_eternal_home_disposition_leaves_an_eternal_node_in_a_completed_plan(cn):
+def test_an_eternal_home_disposition_with_nothing_after_it_completes_the_plan(cn):
     case = _concluded(cn)
     disposition = Disposition.objects.get(judgment=case)
     Disposition.all_objects.filter(pk=disposition.pk).update(is_eternal=True)
@@ -151,7 +153,7 @@ def test_a_second_in_progress_plan_is_not_recorded_and_the_conclusion_still_stan
 
 
 def test_a_residing_soul_executing_an_away_disposition_touches_no_plan(cn, eg):
-    """阶段 1 不建外地节点;暂居地的处置执行照旧回归,计划原样。"""
+    """手动调拨的暂居(不挂节点)里的处置:照旧回归,计划原样。"""
     case = _concluded(cn)
     record = DispatchRecord.objects.create(
         source_tenant=cn, target_tenant=eg, soul=case.soul, status=DispatchStatus.APPROVED, reason="x", tenant=cn,
@@ -221,11 +223,14 @@ def test_at_most_one_node_holds_the_soul(cn):
     _node(plan, 3, status=SentenceNodeStatus.PENDING)
 
 
-def test_exactly_one_home_node_and_it_is_first(cn):
+def test_the_first_node_is_home(cn):
+    """阶段 1 是「原属节点有且只有一个,且 order=1」;N1=(a)(2026-09-19)放宽为「首个节点是原属」:
+    重开审判结案会在后面再加一个原属节点(迁移 sentence_plan 0002)。"""
     plan = _plan(cn)
-    _refused(lambda: _node(plan, 2, is_home=True))
+    _refused(lambda: _node(plan, 1, is_home=False))
     _node(plan, 1, is_home=True)
-    _refused(lambda: _node(plan, 1, is_home=True, status=SentenceNodeStatus.REMOVED))
+    _node(plan, 2, is_home=True)  # 重开审判加的原属节点
+    _refused(lambda: _node(plan, 1, is_home=False, status=SentenceNodeStatus.REMOVED))
 
 
 def test_node_order_is_positive(cn):
@@ -435,9 +440,16 @@ def test_a_realm_that_no_longer_matches_is_caught_at_conclude(bench, eg):
     assert resp.status_code == 400 and "civilization" in resp.data["error"]
 
 
-def test_the_plan_records_the_attached_cross_judgment(bench):
-    bench["case"].conclude(Verdict.PASSED, "")
-    assert SentencePlan.objects.get(soul=bench["case"].soul).cross_judgment_id == bench["cj"].pk
+def test_an_unfinished_bench_now_refuses_the_conclusion(bench):
+    """阶段 1 时这条是「计划记下挂着的联审」;阶段 2 起(Q17)联审没结束,原审判结不了案、什么都不写。
+    结束了的联审怎样抄进计划见 tests/test_sentence_plan_phase2.py。"""
+    from apps.sentence_plan.services import CrossJudgmentOpenError
+
+    with pytest.raises(CrossJudgmentOpenError):
+        bench["case"].conclude(Verdict.PASSED, "")
+    bench["case"].refresh_from_db()
+    assert bench["case"].verdict is None
+    assert not SentencePlan.all_objects.filter(soul=bench["case"].soul).exists()
 
 
 def test_the_service_check_is_empty_for_a_meeting(cn):

@@ -10,12 +10,32 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
+        "sentence_plan_cancelled": {"title": "受刑计划已撤销", "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"},
+        "sentence_plan_amended": {"title": "受刑计划变更", "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"},
+        "sentence_request_pending": {"title": "受刑计划请求待决", "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原审判官决定。"},
+        "sentence_request_decided": {"title": "受刑计划请求已决定", "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"},
+        "sentence_node_active": {"title": "受刑节点开始", "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"},
+        "sentence_node_done": {"title": "受刑节点结束", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"},
+        "sentence_node_waiting": {"title": "刑满暂留", "body": "灵魂「{{soul}}」在 {{tenant}} 的第 {{order}} 站刑满，因有未结案审判暂留当地；结案或撤案后回归。"},
+        "sentence_node_refused": {"title": "受刑节点被拒", "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"},
+        "sentence_plan_completed": {"title": "受刑计划完成", "body": "灵魂「{{soul}}」的受刑计划已全部完成。"},
+        "cross_sentence_submitted": {"title": "联审节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "dispatch_return_blocked": {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
         },
     },
     "en": {
+        "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
+        "sentence_plan_amended": {"title": "Sentence plan changed", "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."},
+        "sentence_request_pending": {"title": "Sentence plan request pending", "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."},
+        "sentence_request_decided": {"title": "Sentence plan request decided", "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."},
+        "sentence_node_active": {"title": "Sentence stop begun", "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."},
+        "sentence_node_done": {"title": "Sentence stop ended", "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."},
+        "sentence_node_waiting": {"title": "Held after serving", "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."},
+        "sentence_node_refused": {"title": "Sentence stop refused", "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."},
+        "sentence_plan_completed": {"title": "Sentence plan completed", "body": "Soul {{soul}} has served every stop of its sentence plan."},
+        "cross_sentence_submitted": {"title": "Joint sentence submitted", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
         "dispatch_return_blocked": {
             "title": "Residence return blocked",
             "body": (
@@ -25,6 +45,16 @@ MESSAGES = {
         },
     },
     "egy": {
+        "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."},
+        "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."},
+        "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Hemsu Tepy Er Wedja."},
+        "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh Ek Wedja Seth Em Hemsu Tepy."},
+        "sentence_node_active": {"title": "Mekher Wetep Tepy", "body": "{{soul}}: Iyi Seth. Mekher {{order}} Wetep Em {{tenant}}."},
+        "sentence_node_done": {"title": "Mekher Wetep Seth", "body": "{{soul}}: Mekher {{order}} ({{tenant}}) Wetep Seth."},
+        "sentence_node_waiting": {"title": "Hemes Smen", "body": "{{soul}}: Mekher {{order}} Em {{tenant}} Wetep Seth; Hemes Smen Em Wedja. Wedja Pehwy, Iyi Er Taui Tepy."},
+        "sentence_node_refused": {"title": "Mekher Khesef Seth", "body": "{{tenant}}: Hab Mekher {{order}} En {{soul}} Khesef Seth. Mekher Em Smen."},
+        "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Mekher Neb Wetep Seth."},
+        "cross_sentence_submitted": {"title": "Mekher Sesh Seth", "body": "{{tenant}}: Mekher {{order}} En {{soul}} Sesh Seth."},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
@@ -33,7 +63,19 @@ MESSAGES = {
 }
 
 #: 通知类型 → 文案键。不在这里的类型照存下来的 title / message 原样返回。
-KIND_BY_TYPE = {"DISPATCH_RETURN_BLOCKED": "dispatch_return_blocked"}
+KIND_BY_TYPE = {
+    "DISPATCH_RETURN_BLOCKED": "dispatch_return_blocked",
+    "SENTENCE_NODE_ACTIVE": "sentence_node_active",
+    "SENTENCE_NODE_DONE": "sentence_node_done",
+    "SENTENCE_NODE_WAITING": "sentence_node_waiting",
+    "SENTENCE_NODE_REFUSED": "sentence_node_refused",
+    "SENTENCE_PLAN_COMPLETED": "sentence_plan_completed",
+    "CROSS_SENTENCE_SUBMITTED": "cross_sentence_submitted",
+    "SENTENCE_PLAN_AMENDED": "sentence_plan_amended",
+    "SENTENCE_REQUEST_PENDING": "sentence_request_pending",
+    "SENTENCE_REQUEST_DECIDED": "sentence_request_decided",
+    "SENTENCE_PLAN_CANCELLED": "sentence_plan_cancelled",
+}
 
 
 def render(locale, kind, params):

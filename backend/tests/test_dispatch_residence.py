@@ -1,8 +1,9 @@
-"""跨文明调拨是暂居,不是迁籍(2026-09-17 用户决定)。
+"""跨文明调拨是暂居,不是迁籍(2026-09-17 用户决定);受刑计划用它搬运(docs/ARCHITECTURE-sentence-plan.md)。
 
 `tenant` = 此刻管辖;`home_tenant` = 原属。调拨执行切 `tenant`、不动 `home_tenant`;
-暂居租户的处置执行完毕自动回归;原租户或 ADMIN 可以手动结束暂居。
-转生资格、转生申请、申诉、灵魂账号按原属。
+受刑计划的一站刑满 → 回归 → 原属检查剩余节点(§3.3);原租户或 ADMIN 可以手动结束暂居(节点 ABORTED)。
+无计划的暂居(手动调拨)照旧:处置执行完毕自动回归。
+转生申请要计划全部完成(Q6);资格、申请、申诉、灵魂账号按原属。
 
 每个用户都**不是** ADMIN,除非测试名说它是:ADMIN 绕过租户对象检查,
 全用 ADMIN 的测试证明不了原租户 / 目标租户各自能做什么(apps/dispatch/permissions.py)。
@@ -20,7 +21,8 @@ from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.soul_accounts.models import RebirthApplication
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
-from tests.soul_account_support import officer_client, ready_soul
+from tests import sentence_plan_support as plan
+from tests.soul_account_support import officer_client, ready_soul, rebirth_ready_soul
 
 pytestmark = pytest.mark.django_db
 
@@ -110,10 +112,13 @@ def test_execute_refuses_a_soul_that_is_no_longer_in_the_source_tenant(cn, eg, e
     assert record.status == DispatchStatus.APPROVED and soul.tenant_id == eu.pk
 
 
-# ── 处置执行完毕 → 自动回归 ────────────────────────────────────────────────
+# ── 无计划的暂居(手动调拨)────────────────────────────────────────────────
+#
+# 受刑计划之外的调拨照旧可以手动发起(Q3)。这种暂居里暂居地的处置不挂节点,
+# 执行完毕照旧自动回归;永久刑期不回归。撤案后不再自动补回归(G4/G6,见下面计划那一节)。
 
 
-def test_executing_the_residence_disposition_returns_the_soul_home(cn, eg):
+def test_without_a_plan_executing_the_residence_disposition_returns_the_soul_home(cn, eg):
     soul, record = _residing(cn, eg)
     disposition = _disposition(soul, eg)
 
@@ -135,20 +140,7 @@ def test_executing_the_residence_disposition_returns_the_soul_home(cn, eg):
     assert [a.changes["soul_tenant"] for a in audit] == [["EG_DUAT", "CN_DIYU"]]
 
 
-def test_the_disposition_endpoint_returns_the_soul_home(cn, eg):
-    soul, record = _residing(cn, eg)
-    disposition = _disposition(soul, eg)
-    officer = _officer("eg_mod", "MODERATOR", eg)
-
-    response = officer_client(officer).post(f"/api/v1/disposition/{disposition.pk}/execute/", {}, format="json")
-
-    assert response.status_code == 200, response.data
-    soul.refresh_from_db()
-    assert soul.tenant_id == cn.pk and soul.current_state == SoulState.DISPOSED
-    assert not SoulEvent.objects.filter(soul=soul, event_type="REINCARNATION_TRIGGERED").exists()
-
-
-def test_an_eternal_sentence_does_not_end_the_residence(cn, eg):
+def test_without_a_plan_an_eternal_sentence_does_not_end_the_residence(cn, eg):
     soul, record = _residing(cn, eg)
     disposition = _disposition(soul, eg, eternal=True)
 
@@ -181,11 +173,198 @@ def test_a_residing_soul_neither_reincarnates_nor_settles(cn, eg, target):
     assert soul.current_state == SoulState.DISPOSED
 
 
-def test_after_returning_a_chinese_soul_can_still_reincarnate(cn, eg):
-    soul, _ = _residing(cn, eg)
-    DispositionService.execute(_disposition(soul, eg))
+# ── 受刑计划的一站:到达、刑满、回归(设计稿 §3.3)─────────────────────────
+#
+# 夹具 `plan.at_stop`:原属审判结案(挂 PASS 联审)→ 原属处置执行 → 系统调拨 → 执行地批准并执行。
+# 执行地的处置由调拨执行时按节点内容建(「节点激活生成处置」),测试不手写。
+
+
+def _node(plan_, order):
+    return plan.node(plan_, order)
+
+
+def test_serving_the_home_node_dispatches_the_next_stop_instead_of_moving_the_soul(cn, eg):
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 12)])
+
+    assert plan.serve(soul, p, 1) is True
+
     soul.refresh_from_db()
-    assert soul.transition_to(SoulState.REINCARNATING) is True
+    assert soul.current_state == SoulState.DISPOSED and soul.tenant_id == cn.pk
+    assert _node(p, 1).status == "COMPLETED" and _node(p, 2).status == "DISPATCHING"
+    [record] = plan.records(soul)
+    assert (record.status, record.source_tenant_id, record.target_tenant_id) == ("PROPOSED", cn.pk, eg.pk)
+    assert record.dispatched_by_id is None and _node(p, 2).dispatch_record_id == record.pk
+    proposed = [e for e in SoulEvent.objects.filter(soul=soul) if e.payload.get("action") == "DISPATCH_PROPOSED"]
+    assert [e.actor for e in proposed] == ["system"]
+
+
+def test_arriving_activates_the_stop_with_the_disposition_the_bench_decided(cn, eg):
+    soul, p, record = plan.at_stop(cn, eg, years=12)
+
+    stop = _node(p, 2)
+    assert soul.tenant_id == eg.pk and stop.status == "ACTIVE" and stop.activated_at is not None
+    disposition = Disposition.all_objects.get(pk=stop.disposition_id)
+    assert (disposition.tenant_id, disposition.sentence_years) == (eg.pk, 12)
+    assert disposition.destination_realm.realm_code == stop.realm_code == "EG_DUAT_TEST_HALL"
+    assert disposition.sentence_node_id == stop.pk and disposition.judgment_id is None
+    assert disposition.can_delete is False
+    assert SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_NODE_ACTIVATED", tenant=eg).count() == 1
+
+
+def test_serving_the_stop_returns_the_soul_and_completes_the_plan(cn, eg):
+    soul, p, record = plan.at_stop(cn, eg)
+
+    assert plan.serve(soul, p, 2) is True
+
+    soul.refresh_from_db()
+    record.refresh_from_db()
+    p.refresh_from_db()
+    assert soul.tenant_id == cn.pk and soul.is_residing is False
+    assert record.status == DispatchStatus.RETURNED
+    [event] = _returned_events(soul)
+    assert event.payload["trigger"] == "DISPOSITION_EXECUTED"
+    assert _node(p, 2).status == "COMPLETED"
+    # 回原属地检查:没有剩余节点 → 计划完成,中国灵魂进轮回(Q6 从此开放申请)。
+    assert p.status == "COMPLETED" and p.completed_at is not None
+    assert soul.current_state == SoulState.REINCARNATING
+    assert SoulEvent.objects.filter(soul=soul, event_type="REINCARNATION_TRIGGERED").count() == 1
+
+
+def test_the_disposition_endpoint_serves_the_stop(cn, eg):
+    soul, p, _ = plan.at_stop(cn, eg)
+    stop = _node(p, 2)
+    officer = _officer("eg_mod", "MODERATOR", eg)
+
+    response = officer_client(officer).post(f"/api/v1/disposition/{stop.disposition_id}/execute/", {}, format="json")
+
+    assert response.status_code == 200, response.data
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk and soul.current_state == SoulState.REINCARNATING
+    # 转生触发只记一次:计划完成时由 `advance` 记,视图不再补一次。
+    assert SoulEvent.objects.filter(soul=soul, event_type="REINCARNATION_TRIGGERED").count() == 1
+
+
+def test_a_terminal_cosmology_settles_when_its_plan_completes(eu, eg):
+    soul, p, _ = plan.at_stop(eu, eg, name="欧魂")
+    plan.serve(soul, p, 2)
+    soul.refresh_from_db()
+    p.refresh_from_db()
+    assert p.status == "COMPLETED" and soul.current_state == SoulState.SETTLED
+    assert not SoulEvent.objects.filter(soul=soul, event_type="REINCARNATION_TRIGGERED").exists()
+
+
+def test_the_scenario_from_the_brief_home_then_b_then_c(cn, eg, eu):
+    """原话:属于 A,判 ABC 三地;先 A,再 B,回 A 查还有 C,去 C,回 A 查没有了 → 开放转世申请。"""
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7)])
+    plan.serve(soul, p, 1)
+    plan.arrive(soul, p, 2)
+    assert soul.tenant_id == eg.pk
+
+    plan.serve(soul, p, 2)
+    soul.refresh_from_db()
+    # 同一次推进里:回原属 → 查剩余 → 调往 C。
+    assert soul.tenant_id == cn.pk and _node(p, 3).status == "DISPATCHING"
+    plan.arrive(soul, p, 3)
+    assert soul.tenant_id == eu.pk
+    plan.serve(soul, p, 3)
+
+    soul.refresh_from_db()
+    p.refresh_from_db()
+    assert soul.tenant_id == cn.pk and p.status == "COMPLETED"
+    assert [n.status for n in p.nodes.order_by("order")] == ["COMPLETED"] * 3
+    targets = [r.target_tenant.code for r in plan.records(soul).order_by("proposed_at")]
+    assert targets == ["EG_DUAT", "EU_HEAVEN_HELL"]
+    assert soul.current_state == SoulState.REINCARNATING
+
+
+def test_an_eternal_stop_holds_the_soul_and_the_plan(cn, eg):
+    soul, p, record = plan.at_stop(cn, eg, eternal=True)
+
+    assert plan.serve(soul, p, 2) is True
+
+    soul.refresh_from_db()
+    record.refresh_from_db()
+    p.refresh_from_db()
+    assert soul.tenant_id == eg.pk and record.status == DispatchStatus.EXECUTED
+    assert _node(p, 2).status == "ETERNAL" and p.status == "HELD"
+    assert _returned_events(soul) == []
+
+
+def test_ending_an_eternal_stop_by_hand_aborts_it_and_the_plan_goes_on(cn, eg):
+    soul, p, record = plan.at_stop(cn, eg, eternal=True)
+    plan.serve(soul, p, 2)
+
+    response = _return(_officer("cn_mod", "MODERATOR", cn), record)
+
+    assert response.status_code == 200, response.data
+    soul.refresh_from_db()
+    p.refresh_from_db()
+    assert _node(p, 2).status == "ABORTED" and _node(p, 2).completed_at is not None
+    assert soul.tenant_id == cn.pk and p.status == "COMPLETED"
+
+
+def test_ending_an_active_stop_by_hand_aborts_it_and_the_next_stop_is_dispatched(cn, eg, eu):
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7)])
+    plan.serve(soul, p, 1)
+    record = plan.arrive(soul, p, 2)
+
+    assert _return(_officer("cn_mod", "MODERATOR", cn), record).status_code == 200
+
+    soul.refresh_from_db()
+    assert _node(p, 2).status == "ABORTED" and _node(p, 3).status == "DISPATCHING"
+    assert Disposition.all_objects.get(pk=_node(p, 2).disposition_id).is_executed is False
+
+
+# ── 调拨被拒(Q4)与手动调拨(Q3)────────────────────────────────────────
+
+
+def test_a_refused_stop_goes_back_to_pending_and_the_home_judges_are_told(cn, eg):
+    from apps.notifications.models import UserNotification
+
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
+    home_judge, away_judge = _officer("cn_judge", "JUDGE", cn), _officer("eg_judge", "JUDGE", eg)
+    plan.serve(soul, p, 1)
+    [record] = plan.records(soul)
+
+    response = officer_client(_officer("eg_mod", "MODERATOR", eg)).post(
+        f"/api/v1/dispatch/records/{record.pk}/reject/", {"reason": "不收"}, format="json")
+
+    assert response.status_code == 200, response.data
+    stop = _node(p, 2)
+    assert stop.status == "PENDING" and stop.dispatch_record_id is None
+    [refused] = SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_NODE_REFUSED")
+    assert refused.payload["dispatch_status"] == "REJECTED"
+    told = {n.user_id for n in UserNotification.objects.filter(notification_type="SENTENCE_NODE_REFUSED")}
+    assert home_judge.pk in told and away_judge.pk not in told
+    # 不自动重试:没有第二条调拨。
+    assert plan.records(soul).count() == 1
+
+
+def test_a_cancelled_stop_goes_back_to_pending_too(cn, eg):
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
+    plan.serve(soul, p, 1)
+    [record] = plan.records(soul)
+    DispatchService.cancel(record, "canceller")
+    assert _node(p, 2).status == "PENDING"
+    assert plan.records(soul).count() == 1
+
+
+def test_a_manual_dispatch_is_refused_while_a_plan_is_in_progress(cn, eg):
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
+    mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动"}
+
+    response = mod.post("/api/v1/dispatch/records/", body, format="json")
+
+    assert response.status_code == 400 and response.data["code"] == "sentence_plan_active"
+    assert not plan.records(soul).exists()
+
+
+def test_a_soul_without_a_plan_can_still_be_dispatched_by_hand(cn, eg):
+    soul = Soul.objects.create(name="无计划", tenant=cn, current_state=SoulState.DISPOSED)
+    mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动"}
+    assert mod.post("/api/v1/dispatch/records/", body, format="json").status_code == 201
 
 
 # ── 手动结束暂居 ─────────────────────────────────────────────────────────
@@ -335,63 +514,99 @@ def test_admin_manual_return_is_blocked_too(cn, eg, eu):
     assert _return(_officer("eu_admin", "ADMIN", eu), record).data["code"] == "open_judgment"
 
 
-def test_withdrawing_the_last_open_judgment_resumes_the_blocked_return(cn, eg):
+def test_without_a_plan_withdrawing_the_blocking_judgment_no_longer_returns_the_soul(cn, eg):
+    """`resume_return_after_case_closed` 已删(G4/G6):无计划的暂居撤案后留在原地,等原属手动 `return-home`。"""
     soul, record = _residing(cn, eg)
     case = _open_judgment(soul, eg)
     DispositionService.execute(_disposition(soul, eg))
+    case.delete_or_raise()
     soul.refresh_from_db()
-    assert soul.is_residing
+    assert soul.is_residing and _returned_events(soul) == []
+    assert _return(_officer("cn_mod", "MODERATOR", cn), record).status_code == 200
+
+
+# ── 刑满暂留(WAITING,Q7):受刑计划里被未结案审判拦下的回归 ─────────────────
+
+
+def test_an_open_judgment_holds_the_served_soul_at_the_stop_as_waiting(cn, eg):
+    from apps.notifications.models import UserNotification
+
+    soul, p, record = plan.at_stop(cn, eg)
+    judges = {"cn": _officer("cn_judge", "JUDGE", cn), "eg": _officer("eg_judge", "JUDGE", eg)}
+    case = _open_judgment(soul, eg)
+
+    assert plan.serve(soul, p, 2) is True
+
+    soul.refresh_from_db()
+    record.refresh_from_db()
+    p.refresh_from_db()
+    stop = _node(p, 2)
+    assert stop.status == "WAITING" and stop.completed_at is None
+    assert Disposition.all_objects.get(pk=stop.disposition_id).is_executed is True
+    assert soul.tenant_id == eg.pk and record.status == DispatchStatus.EXECUTED and p.status == "ACTIVE"
+    [waiting] = SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_NODE_WAITING")
+    assert waiting.tenant_id == eg.pk and waiting.payload["order"] == 2
+    [blocked] = _blocked_events(soul)
+    assert blocked.payload["open_judgment_ids"] == [str(case.pk)]
+    told = {n.user_id for n in UserNotification.objects.filter(notification_type="SENTENCE_NODE_WAITING")}
+    assert told == {judges["cn"].pk, judges["eg"].pk}
+
+
+def test_withdrawing_the_last_open_judgment_releases_the_waiting_soul(cn, eg):
+    soul, p, record = plan.at_stop(cn, eg)
+    case = _open_judgment(soul, eg)
+    plan.serve(soul, p, 2)
 
     response = officer_client(_officer("eg_judge", "JUDGE", eg)).delete(f"/api/v1/judgment/{case.pk}/")
 
     assert response.status_code == 204, getattr(response, "data", None)
     soul.refresh_from_db()
     record.refresh_from_db()
-    assert soul.tenant_id == cn.pk and soul.current_state == SoulState.DISPOSED
-    assert record.status == DispatchStatus.RETURNED
+    p.refresh_from_db()
+    assert _node(p, 2).status == "COMPLETED"
+    assert soul.tenant_id == cn.pk and record.status == DispatchStatus.RETURNED
     [event] = _returned_events(soul)
     assert event.payload["trigger"] == "JUDGMENT_CLOSED"
-    assert event.payload["reason"] == f"judgment {case.pk} closed"
+    assert p.status == "COMPLETED" and soul.current_state == SoulState.REINCARNATING
 
 
-def test_withdrawing_one_of_two_open_judgments_keeps_the_soul_away(cn, eg):
-    soul, _ = _residing(cn, eg)
+def test_withdrawing_one_of_two_open_judgments_keeps_the_soul_waiting(cn, eg):
+    soul, p, _ = plan.at_stop(cn, eg)
     first, second = _open_judgment(soul, eg), _open_judgment(soul, cn)
-    DispositionService.execute(_disposition(soul, eg))
+    plan.serve(soul, p, 2)
     first.delete_or_raise()
     soul.refresh_from_db()
-    assert soul.is_residing and _returned_events(soul) == []
+    assert soul.is_residing and _node(p, 2).status == "WAITING" and _returned_events(soul) == []
     second.delete_or_raise()
     soul.refresh_from_db()
-    assert soul.tenant_id == cn.pk
+    assert soul.tenant_id == cn.pk and _node(p, 2).status == "COMPLETED"
 
 
-def test_withdrawing_a_judgment_does_not_return_a_soul_whose_residence_is_not_served(cn, eg):
-    """没有已执行的暂居处置(或只有永久刑期)时,撤案不触发回归。"""
-    soul, _ = _residing(cn, eg)
+def test_withdrawing_a_judgment_before_the_stop_is_served_does_not_return_the_soul(cn, eg):
+    """刑还没满(节点 ACTIVE):撤案不触发回归;永久刑期(ETERNAL)也不。"""
+    soul, p, _ = plan.at_stop(cn, eg)
     _open_judgment(soul, eg).delete_or_raise()
     soul.refresh_from_db()
-    assert soul.is_residing
+    assert soul.is_residing and _node(p, 2).status == "ACTIVE"
 
-    DispositionService.execute(_disposition(soul, eg, eternal=True))
-    _open_judgment(soul, eg).delete_or_raise()
-    soul.refresh_from_db()
-    assert soul.is_residing and _returned_events(soul) == []
+    soul2, p2, _ = plan.at_stop(cn, eg, name="永久客魂", eternal=True)
+    plan.serve(soul2, p2, 2)
+    _open_judgment(soul2, eg).delete_or_raise()
+    soul2.refresh_from_db()
+    assert soul2.is_residing and _returned_events(soul2) == []
 
 
-def test_a_pending_residence_disposition_holds_the_soul_after_withdrawal(cn, eg):
-    """结案会在暂居地新建一份未执行的处置;回归等它执行,而不是在撤案时提前发生。"""
-    soul, _ = _residing(cn, eg)
+def test_a_waiting_soul_can_be_ended_by_hand_once_nothing_is_open(cn, eg):
+    soul, p, record = plan.at_stop(cn, eg)
     case = _open_judgment(soul, eg)
-    DispositionService.execute(_disposition(soul, eg))
-    later = _disposition(soul, eg)
-    case.delete_or_raise()
-    soul.refresh_from_db()
-    assert soul.is_residing
-    assert DispositionService.execute(later) is True
-    soul.refresh_from_db()
-    assert soul.tenant_id == cn.pk
-    assert [e.payload["trigger"] for e in _returned_events(soul)] == ["DISPOSITION_EXECUTED"]
+    plan.serve(soul, p, 2)
+    mod = _officer("cn_mod", "MODERATOR", cn)
+    assert _return(mod, record).status_code == 409
+    from apps.judgment.models import Judgment
+    # 绕开撤案(撤案会推进并自动回归):只剩手动结束这一条路,节点记 ABORTED。
+    Judgment.all_objects.filter(pk=case.pk).update(is_deleted=True)
+    assert _return(mod, record).status_code == 200
+    assert _node(p, 2).status == "ABORTED"
 
 
 # ── 暂居期间的租户可见性 ──────────────────────────────────────────────────
@@ -582,18 +797,35 @@ def _rows(response):
     return data["results"] if isinstance(data, dict) and "results" in data else data
 
 
-def test_a_chinese_soul_residing_in_egypt_may_still_apply_and_home_reviews_it(
+def test_a_soul_serving_its_plan_abroad_may_not_apply_until_the_plan_completes(
         cn, eg, django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn)
-    _dispatch(account.soul, eg)
-    assert account.soul.is_residing
+    """Q6(反转了原来的「暂居中仍可申请」):计划全部完成才开放;开放后按原属审批。"""
+    from apps.judgment.models import Judgment
+    from apps.sentence_plan.models import SentencePlan
 
+    account, client = ready_soul(cn)
+    soul = account.soul
+    judgment = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
+    plan.bench(judgment, [(eg, plan.stop_realm(eg), 5)])
+    judgment.conclude("PASSED", "")
+    p = SentencePlan.all_objects.get(soul=soul)
+    plan.serve(soul, p, 1)
+    plan.arrive(soul, p, 2)
+    assert soul.is_residing
+
+    listing = client.get(APPLY).data
+    assert listing["can_apply"] is False and listing["reason"] == "sentence_in_progress"
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(APPLY, {"desired_form": "HUMAN", "statement": "愿为人"}, format="json")
+    assert response.status_code == 409 and response.data["code"] == "sentence_in_progress"
+    assert not RebirthApplication.objects.filter(soul=soul).exists()
+
+    plan.serve(soul, p, 2)
     listing = client.get(APPLY).data
     assert listing["can_apply"] is True and listing["reason"] is None
     with django_capture_on_commit_callbacks(execute=True):
-        response = client.post(APPLY, {"desired_form": "HUMAN", "statement": "愿为人"}, format="json")
+        response = client.post(APPLY, {"desired_form": "HUMAN"}, format="json")
     assert response.status_code == 201, response.data
-
     application = RebirthApplication.objects.get(pk=response.data["id"])
     assert application.workflow.tenant_id == cn.pk
     cn_judge = _officer("cn_judge", "JUDGE", cn)
@@ -628,7 +860,7 @@ def test_a_soul_from_a_terminal_cosmology_stays_terminal_wherever_it_resides(
 
 def test_an_application_rejected_before_the_dispatch_can_be_appealed_during_residence(
         cn, eg, django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn)
+    account, client = rebirth_ready_soul(cn)
     with django_capture_on_commit_callbacks(execute=True):
         submitted = client.post(APPLY, {"desired_form": "HUMAN"}, format="json")
     application = RebirthApplication.objects.get(pk=submitted.data["id"])

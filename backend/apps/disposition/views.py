@@ -129,8 +129,13 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                     {"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST
                 )
             disposition = locked
+            from apps.sentence_plan.services import SentencePlanService
+
+            # 挂在受刑计划节点上的处置:转生 / 终局由计划完成时的 `advance` 做
+            # (docs/ARCHITECTURE-sentence-plan.md §3.3,原来在这里的那次调用挪过去了)。
+            on_plan = SentencePlanService.node_for_disposition(disposition) is not None
             executed = DispositionService.execute(disposition)
-            if executed:
+            if executed and not on_plan:
                 # Souls whose cosmology has a next life go on to be reborn. The
                 # call is unconditional on cosmology on purpose:
                 # `ReincarnationService.execute` answers False for the terminal

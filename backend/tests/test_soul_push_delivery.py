@@ -12,7 +12,7 @@ from apps.soul_accounts.models import RebirthApplication
 from apps.soul_push import services
 from apps.soul_push.expo import ExpoPushSender, PushRequestError, PushTransientError
 from apps.soul_push.models import PushDelivery, PushDevice, PushStatus
-from tests.soul_account_support import officer_client, ready_soul
+from tests.soul_account_support import officer_client, ready_soul, rebirth_ready_soul
 from tests.soul_push_support import (  # noqa: F401
     TOKEN_A,
     TOKEN_B,
@@ -29,7 +29,8 @@ APPLY = "/api/v1/me/rebirth-applications/"
 
 
 def _soul_with_device(tenant, name="亡魂甲", token=TOKEN_A):
-    account, client = ready_soul(tenant, name=name)
+    # 受刑计划已完成:转生申请开放(Q6);下面几条走真实的申请接口。
+    account, client = rebirth_ready_soul(tenant, name=name)
     assert register(client, token).status_code == 201
     return account, client
 
@@ -101,7 +102,7 @@ def test_payload_fields_never_reach_the_push(cn_tenant, enqueued):  # noqa: F811
     EventService.log(account.soul, "REBIRTH_STATUS_CHANGED",
                      {"application_id": "a-1", "old_status": "UNDER_REVIEW", "new_status": "REJECTED", **poison})
     _judgment(account.soul)
-    EventService.log(account.soul, "STATE_CHANGED", {"old_state": "DISPOSED", "new_state": "REINCARNATING", **poison})
+    EventService.log(account.soul, "SENTENCE_NODE_COMPLETED", {"node_id": "n-1", "status": "COMPLETED", **poison})
     rows = list(PushDelivery.objects.values("title", "body", "data"))
     assert len(rows) == 3
     # 灵魂端 App 显示「打开灵魂簿查看理由」—— 理由本身不在推送里。
@@ -121,6 +122,12 @@ def test_what_is_and_is_not_pushed(cn_tenant, enqueued):  # noqa: F811
         # 调拨的提议 / 批准 / 驳回是官员之间的流程,灵魂的管辖没变。
         ("STATE_CHANGED", {"action": "DISPATCH_PROPOSED", "dispatch_id": "x"}),
         ("STATE_CHANGED", {"old_state": "JUDGING", "new_state": "DISPOSED"}),
+        # 处置执行的推送改挂受刑计划的节点结束(docs/ARCHITECTURE-sentence-plan.md §5.2):
+        # 灵魂状态的变化本身不再推;手动结束(ABORTED)没有执行处置,也不推。
+        ("STATE_CHANGED", {"old_state": "DISPOSED", "new_state": "SETTLED"}),
+        ("SENTENCE_NODE_COMPLETED", {"node_id": "n-0", "status": "ABORTED"}),
+        # 终局文明的计划完成:文案说「可以申请转生」,不推给它。
+        ("SENTENCE_PLAN_COMPLETED", {"sentence_plan_id": "p-0", "rebirth_open": False}),
         ("DISPOSITION_CREATED", {"disposition_id": "d"}),
         ("SOUL_ACCOUNT_CREATED", {"account_id": "x"}),
         ("REBIRTH_CROSS_CIV_DECIDED", {"application_id": "a", "cross_civilization": True}),
@@ -129,7 +136,7 @@ def test_what_is_and_is_not_pushed(cn_tenant, enqueued):  # noqa: F811
         EventService.log(soul, event_type, payload)
     assert not PushDelivery.objects.exists()
 
-    EventService.log(soul, "STATE_CHANGED", {"old_state": "DISPOSED", "new_state": "SETTLED"})
+    EventService.log(soul, "SENTENCE_NODE_COMPLETED", {"node_id": "n-1", "status": "COMPLETED"})
     for app_id, new in (("a", "APPROVED"), ("b", "REJECTED"), ("c", "APPEAL_REJECTED")):
         EventService.log(soul, "REBIRTH_STATUS_CHANGED",
                          {"application_id": app_id, "old_status": "UNDER_REVIEW", "new_status": new})

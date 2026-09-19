@@ -2021,7 +2021,8 @@
       "unknown": "Something went wrong ({{code}})",
       "screen_title": "Could not reach the ledger",
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
-      "section": "This part could not be loaded. The rest is shown as usual."
+      "section": "This part could not be loaded. The rest is shown as usual.",
+      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete"
     },
     "lexicon": {
       "eg": {
@@ -2165,12 +2166,68 @@
     "residence_returned": {
       "title": "Residence ended",
       "body": "You have returned to your home civilization. Open Soul Ledger to see it."
+    },
+    "sentence_completed": {
+      "title": "Sentence served",
+      "body": "You have served your whole sentence and may apply for rebirth. Open Soul Ledger to see it."
+    },
+    "sentence_waiting": {
+      "title": "Held after serving",
+      "body": "You have served this stop and wait for a judgment to close before returning. Open Soul Ledger to see it."
+    },
+    "sentence_amended": {
+      "title": "Sentence plan changed",
+      "body": "Your sentence plan has changed. Open Soul Ledger to see it."
+    },
+    "sentence_pardoned": {
+      "title": "Sentence plan cancelled",
+      "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."
     }
   },
   "official_notify": {
     "dispatch_return_blocked": {
       "title": "Residence return blocked",
       "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."
+    },
+    "sentence_node_active": {
+      "title": "Sentence stop begun",
+      "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."
+    },
+    "sentence_node_done": {
+      "title": "Sentence stop ended",
+      "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."
+    },
+    "sentence_node_waiting": {
+      "title": "Held after serving",
+      "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."
+    },
+    "sentence_node_refused": {
+      "title": "Sentence stop refused",
+      "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."
+    },
+    "sentence_plan_completed": {
+      "title": "Sentence plan completed",
+      "body": "Soul {{soul}} has served every stop of its sentence plan."
+    },
+    "cross_sentence_submitted": {
+      "title": "Joint sentence submitted",
+      "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."
+    },
+    "sentence_plan_amended": {
+      "title": "Sentence plan changed",
+      "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."
+    },
+    "sentence_request_pending": {
+      "title": "Sentence plan request pending",
+      "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."
+    },
+    "sentence_request_decided": {
+      "title": "Sentence plan request decided",
+      "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."
+    },
+    "sentence_plan_cancelled": {
+      "title": "Sentence plan cancelled",
+      "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."
     }
   },
   "social_moderation": {
