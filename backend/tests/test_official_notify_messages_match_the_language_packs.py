@@ -20,5 +20,9 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
     assert set(KIND_BY_TYPE) <= set(NotificationType.values)
     for locale, pack in MESSAGES.items():
         assert set(pack) == set(KIND_BY_TYPE.values()), locale
-        for entry in pack.values():
-            assert entry["title"] and "{{soul}}" in entry["body"] and "{{count}}" in entry["body"], locale
+        for kind, entry in pack.items():
+            # 每条都点名灵魂;各自的其余占位符与发送方给的 params 对上(egy 与 zh 同键一致由前端测试守)。
+            assert entry["title"] and "{{soul}}" in entry["body"], (locale, kind)
+        assert "{{count}}" in pack["dispatch_return_blocked"]["body"], locale
+        for kind in ("sentence_node_active", "sentence_node_done", "sentence_node_waiting", "sentence_node_refused"):
+            assert "{{order}}" in pack[kind]["body"] and "{{tenant}}" in pack[kind]["body"], (locale, kind)

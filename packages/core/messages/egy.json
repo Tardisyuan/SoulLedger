@@ -2021,7 +2021,8 @@
       "unknown": "Sethet ({{code}})",
       "screen_title": "Nen Aq Er Medjat",
       "screen_body": "Sesh Ek Wenen. Nen Gem Emu.",
-      "section": "Sa Pen Nen Gem. Ky Wenen."
+      "section": "Sa Pen Nen Gem. Ky Wenen.",
+      "sentence_in_progress": "Wetep Ek Nen Nebt Seth. Dbh Em Khet Wetep"
     },
     "lexicon": {
       "eg": {
@@ -2165,12 +2166,44 @@
     "residence_returned": {
       "title": "Hemes Khetem",
       "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."
+    },
+    "sentence_completed": {
+      "title": "Wetep Nebt Seth",
+      "body": "Wetep Ek Nebt Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."
+    },
+    "sentence_waiting": {
+      "title": "Hemes Smen",
+      "body": "Mekher Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
     "dispatch_return_blocked": {
       "title": "Ankh Er Taui Khesef",
       "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."
+    },
+    "sentence_node_active": {
+      "title": "Mekher Wetep Tepy",
+      "body": "{{soul}}: Iyi Seth. Mekher {{order}} Wetep Em {{tenant}}."
+    },
+    "sentence_node_done": {
+      "title": "Mekher Wetep Seth",
+      "body": "{{soul}}: Mekher {{order}} ({{tenant}}) Wetep Seth."
+    },
+    "sentence_node_waiting": {
+      "title": "Hemes Smen",
+      "body": "{{soul}}: Mekher {{order}} Em {{tenant}} Wetep Seth; Hemes Smen Em Wedja. Wedja Pehwy, Iyi Er Taui Tepy."
+    },
+    "sentence_node_refused": {
+      "title": "Mekher Khesef Seth",
+      "body": "{{tenant}}: Hab Mekher {{order}} En {{soul}} Khesef Seth. Mekher Em Smen."
+    },
+    "sentence_plan_completed": {
+      "title": "Wetep Nebt Seth",
+      "body": "{{soul}}: Mekher Nebt Wetep Seth."
+    },
+    "cross_sentence_submitted": {
+      "title": "Mekher Sesh Seth",
+      "body": "{{tenant}}: Mekher {{order}} En {{soul}} Sesh Seth."
     }
   },
   "social_moderation": {

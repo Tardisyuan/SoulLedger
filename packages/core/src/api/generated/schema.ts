@@ -7122,9 +7122,15 @@ export interface components {
          *     * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
          *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
          *     * `DISPATCH_RETURN_BLOCKED` - Dispatch Return Blocked
+         *     * `SENTENCE_NODE_ACTIVE` - Sentence Node Active
+         *     * `SENTENCE_NODE_DONE` - Sentence Node Done
+         *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+         *     * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+         *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+         *     * `CROSS_SENTENCE_SUBMITTED` - Cross Sentence Submitted
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerInbox: {

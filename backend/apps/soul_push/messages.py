@@ -12,6 +12,8 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
+        "sentence_completed": {"title": "受刑完毕", "body": "你的受刑已全部完毕,可以申请转生,打开灵魂簿查看。"},
+        "sentence_waiting": {"title": "刑满暂留", "body": "本站刑满,等待审判结案后回归,打开灵魂簿查看。"},
         "rebirth_approved": {"title": "转生申请已批准", "body": "你的转生申请已批准,打开灵魂簿查看。"},
         "rebirth_rejected": {"title": "转生申请被驳回", "body": "你的转生申请被驳回,打开灵魂簿查看理由。"},
         "rebirth_appeal_rejected": {"title": "申诉被驳回", "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"},
@@ -22,6 +24,8 @@ MESSAGES = {
         "residence_returned": {"title": "暂居结束", "body": "你已回归原属文明,打开灵魂簿查看。"},
     },
     "en": {
+        "sentence_completed": {"title": "Sentence served", "body": "You have served your whole sentence and may apply for rebirth. Open Soul Ledger to see it."},
+        "sentence_waiting": {"title": "Held after serving", "body": "You have served this stop and wait for a judgment to close before returning. Open Soul Ledger to see it."},
         "rebirth_approved": {
             "title": "Rebirth application approved",
             "body": "Your rebirth application was approved. Open Soul Ledger to see it.",
@@ -56,6 +60,8 @@ MESSAGES = {
         },
     },
     "egy": {
+        "sentence_completed": {"title": "Wetep Nebt Seth", "body": "Wetep Ek Nebt Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
+        "sentence_waiting": {"title": "Hemes Smen", "body": "Mekher Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},
         "rebirth_approved": {"title": "Dbh Hesy Seth", "body": "Dbh Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Khesef Seth", "body": "Dbh Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
