@@ -95,6 +95,8 @@ describe("the six strips read it from there", () => {
     // 2026-09-18:朋友圈审核的四个分区(举报 / 待审 / 敏感词 / 禁言),第七条读它的条带。
     "app/moderation/page.tsx",
     "app/notifications/page.tsx",
+    // 2026-09-20:定时任务的「任务 / 运行历史」两个页签,第八条。
+    "app/scheduler/page.tsx",
     "app/workflow/[id]/page.tsx",
     "app/workflow/page.tsx",
   ];
