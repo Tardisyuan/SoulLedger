@@ -10,6 +10,9 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
+        "sentence_plan_amended": {"title": "受刑计划变更", "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"},
+        "sentence_request_pending": {"title": "受刑计划请求待决", "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原审判官决定。"},
+        "sentence_request_decided": {"title": "受刑计划请求已决定", "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"},
         "sentence_node_active": {"title": "受刑节点开始", "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"},
         "sentence_node_done": {"title": "受刑节点结束", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"},
         "sentence_node_waiting": {"title": "刑满暂留", "body": "灵魂「{{soul}}」在 {{tenant}} 的第 {{order}} 站刑满，因有未结案审判暂留当地；结案或撤案后回归。"},
@@ -22,6 +25,9 @@ MESSAGES = {
         },
     },
     "en": {
+        "sentence_plan_amended": {"title": "Sentence plan changed", "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."},
+        "sentence_request_pending": {"title": "Sentence plan request pending", "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."},
+        "sentence_request_decided": {"title": "Sentence plan request decided", "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."},
         "sentence_node_active": {"title": "Sentence stop begun", "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."},
         "sentence_node_done": {"title": "Sentence stop ended", "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."},
         "sentence_node_waiting": {"title": "Held after serving", "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."},
@@ -37,6 +43,9 @@ MESSAGES = {
         },
     },
     "egy": {
+        "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."},
+        "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Hemsu Tepy Er Wedja."},
+        "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh Ek Wedja Seth Em Hemsu Tepy."},
         "sentence_node_active": {"title": "Mekher Wetep Tepy", "body": "{{soul}}: Iyi Seth. Mekher {{order}} Wetep Em {{tenant}}."},
         "sentence_node_done": {"title": "Mekher Wetep Seth", "body": "{{soul}}: Mekher {{order}} ({{tenant}}) Wetep Seth."},
         "sentence_node_waiting": {"title": "Hemes Smen", "body": "{{soul}}: Mekher {{order}} Em {{tenant}} Wetep Seth; Hemes Smen Em Wedja. Wedja Pehwy, Iyi Er Taui Tepy."},
@@ -59,6 +68,9 @@ KIND_BY_TYPE = {
     "SENTENCE_NODE_REFUSED": "sentence_node_refused",
     "SENTENCE_PLAN_COMPLETED": "sentence_plan_completed",
     "CROSS_SENTENCE_SUBMITTED": "cross_sentence_submitted",
+    "SENTENCE_PLAN_AMENDED": "sentence_plan_amended",
+    "SENTENCE_REQUEST_PENDING": "sentence_request_pending",
+    "SENTENCE_REQUEST_DECIDED": "sentence_request_decided",
 }
 
 
