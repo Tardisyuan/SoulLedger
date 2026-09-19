@@ -2586,7 +2586,9 @@
       "seat_error": "Nen Redi",
       "seat_actor": "Netjer (Setep)",
       "seat_actor_none": "Nen Netjer",
-      "seat_actor_empty": "Nen Netjeru Em Aset Ahamet Pen"
+      "seat_actor_empty": "Nen Netjeru Em Aset Ahamet Pen",
+      "seat_actor_hint_judging": "Wepwy-Em-Senu Hena Heri-Tep: Hemsu Seth Wa",
+      "seat_actor_hint_advisor": "Sedjem-Ash: Netjer Neb Em Iri"
     },
     "file": {
       "open": "Hab Dbh",
