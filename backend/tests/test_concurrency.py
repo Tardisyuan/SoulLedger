@@ -937,6 +937,15 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_soul_push_delivery.py::test_the_same_event_twice_is_pushed_once 每个引擎都跑。
         "tests/test_two_workers_cannot_both_send_one_push.py::"
         "test_two_workers_given_the_same_ids_send_once",
+        # 2026-09-19 受刑计划阶段 2(docs/ARCHITECTURE-sentence-plan.md §8 清单 1、2、5):
+        # 推进在灵魂行锁上串行、开审在同一把锁下再问一次(G7)。SQLite 没有行锁可等;
+        # 三条各有一条串行版本在 tests/test_sentence_plan_concurrency.py,每个引擎都跑。
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_officers_executing_the_home_disposition_at_once_dispatch_once",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_serving_a_stop_and_opening_a_case_there_at_once_never_strands_the_case",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_officers_executing_a_stop_at_once_complete_and_return_once",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
