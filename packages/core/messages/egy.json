@@ -504,7 +504,7 @@
       "auto_layout": "Smen Djes-Ef",
       "relayouting": "Em Wehem Smen…",
       "delete_selected": "Wehem Setep Seth",
-      "saving": "Em Pedet...",
+      "saving": "Em Sau...",
       "save_template": "Sau Pet-Sesh",
       "hint": "Kefa Sen: Khemen Sekhet · Neh: Mut Sekhet",
       "edit_node": "Khemen Sekhet",
@@ -515,9 +515,9 @@
       "approver_type": "Aset Netjer Sesen",
       "approver_role": "Ami Sesen",
       "approver_placeholder": "— Setep Ami Sesen —",
-      "new_node": "Sekhet Werpet",
+      "new_node": "Sekhet Renpi",
       "saved": "Pet-Sesh Sau Seth",
-      "save_failed": "Nen Pedet Seth",
+      "save_failed": "Nen Sau",
       "title": "Khemen Pet-Sesh",
       "relayout_done": "Tep Sekhet {{n}} Kehat"
     },
@@ -545,7 +545,7 @@
       "normal": "Em Tepy",
       "urgent": "Em Khet Seth",
       "critical": "Em Hetep Seth",
-      "created_at": "Khemut Seth",
+      "created_at": "Ahet Iri",
       "completed_at": "Ahet Kheper",
       "current_node": "Sekhet Tepy",
       "order": "Medu Sethet",
@@ -627,7 +627,7 @@
     "nodes_count": "Sekhet {{count}}",
     "view_to_see_nodes": "Wen Er Maa Mekher Sekhet",
     "delete_error": "Nen Wehem Seth",
-    "view_error": "Nen Khemut Seth",
+    "view_error": "Nen Maa",
     "status": {
       "PENDING": "Em Set Medu",
       "IN_PROGRESS": "Em Wedja",
@@ -717,7 +717,7 @@
     "civilization": "Aset Ahamet",
     "court": "Hemsu Seth",
     "verdict": "Unemu",
-    "created": "Khemut Seth",
+    "created": "Ahet Iri",
     "action": "Aha Seth",
     "view": "Smen",
     "verdicts": {
@@ -896,7 +896,7 @@
       "LOGOUT": "Per Aq",
       "VIEW": "Smen",
       "EXPORT": "Wehem Seth",
-      "IMPORT": "Khemut Seth",
+      "IMPORT": "Ini Seth",
       "PERMISSION_CHANGE": "Khemen Was",
       "BATCH_CREATE": "Kheme Seth Wu",
       "BATCH_UPDATE": "Khemen Seth Wu",
@@ -924,7 +924,7 @@
     "profile_updated": "Pepi Em Wepet",
     "profile_update_failed": "Pepi Em Hedj",
     "avatar": "Wer Aha",
-    "load_failed": "Nen Khemut Aha Pepi — Medu Kher Em Aru Tepy"
+    "load_failed": "Nen Ini Aha Pepi — Medu Kher Em Aru Tepy"
   },
   "notifications": {
     "title": "Mes Neteru",
