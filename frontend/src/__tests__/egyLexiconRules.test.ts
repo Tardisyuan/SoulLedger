@@ -7,9 +7,11 @@
  * 又给了 social_moderation 71 行与 18 个审核域词根(删除一律 Fekh,Sekhem Ma 废止);再后来的
  * 「笔误 · 一词多写 · 英文残留」一节给了 39 行与 24 个词根。那 39 行里有 5 个键各出现两次
  * (每行判一处毛病),两行的修订后 egy 逐字相同 —— 是同一条修订结果,所以夹具里一键一条:
- * 34 个键,其中 2 个前几节已有同值,净增 32。这里钉住:
+ * 34 个键,其中 2 个前几节已有同值,净增 32。第四节「一词一义收口 · Sekhem / Was / Mekher / Dbh」
+ * 给了 113 行与 14 个词根:113 行里 menu_buttons.permission_mismatch_warning 出现两次且同值,
+ * 所以是 112 个键;其中 19 个前几节已有(12 条「沿用」同值,7 条按转生政策改写),净增 93。这里钉住:
  *
- * - 修订表 565 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
+ * - 修订表 658 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
@@ -17,7 +19,7 @@
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24、小词 18 个,
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14、小词 18 个,
  *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
@@ -55,7 +57,22 @@ const offenders = (keys: string[], bad: Rule) =>
 const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR"]);
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
-const ENGLISH_RESIDUE = ["Send", "Dismiss", "Egyptian"];
+const ENGLISH_RESIDUE = ["Send", "Dismiss", "Egyptian", "Hall", "Purgatorium", "SevenArrwt", "TwentyOneSebkhet"];
+
+/**
+ * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
+ * 判据是同键中文含「密码」。下面这些是密码义、但中文没写出「密码」二字(重置、改密、待交付的都是密码)——
+ * 第四节把它们标为「沿用」。新增一条之前先确认它真是密码义。
+ */
+const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
+  "soul_accounts.credentials.reason.voided",
+  "soul_accounts.credentials.actions.go_reset",
+  "soul_accounts.account.pending_link",
+  "soul_app.change_password.hours_left_consequence",
+  "soul_app.change_password.under_hour_consequence",
+  "soul_app.change_password.expired_consequence",
+]);
+const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
 
 /**
  * 仍含单词 Ma 的键 —— 这些 Ma 不是否定(「有误」「移至」等早期写法),按同键中文判过义。
@@ -84,7 +101,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 565 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 658 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -106,6 +123,11 @@ const TECHNICAL: Record<string, string[]> = {
   "footer.version": ["v0.1"],
   "settings.accent_hex_invalid": ["#ff5500"],
   "ledger.copy_resource_id": ["{resource}"],
+  "menus.gate_visible_nonadmin": ["menu.manage"],
+  "menus.gate_permission_nonadmin": ["menu.manage"],
+  "menus.gate_roles_nonadmin": ["menu.manage"],
+  "menus.gate_menu_type_nonadmin": ["menu.manage"],
+  "menus.gates_footnote": ["menu.manage"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -119,7 +141,7 @@ const words = (k: string) =>
     .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? []);
 
 /**
- * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、语法小词 18 个,逐字照抄。
+ * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、一词一义词根 14 个、语法小词 18 个,逐字照抄。
  * 「Duat / Pet」「Er Hry」按空格拆成词;连字符写法(Djes-Ef、Neb-Medu、Hemet-Sesh……)照抄为一个词形。
  */
 const ROOTS = [
@@ -139,11 +161,19 @@ const ROOTS_FIX = [
   "Ammit", "Weret", "Fai", "Sebkhet", "Hesmen", "Hep", "Djadjat", "Gesu", "Hemet-Sesh", "Medu-Sesu",
   "Wat-Ha", "Per-Hemsu",
 ];
+/**
+ * 一词一义收口(第四节,Sekhem 九义拆净)。Ini(加载)、Wen-Khetem(开关)、Arrwt(通路)、Wa-Ek(仅自己)为新词,
+ * 其余是把已在用的词正式定为该义。注意:定稿行里「私密」写作两词 Wa Ek(两个小词),词根表照抄为 Wa-Ek。
+ */
+const ROOTS_SPLIT = [
+  "Smen", "Was", "Aha", "Setep", "Ini", "Wen-Khetem", "Khemen", "Ta", "Wat", "Arrwt",
+  "Netjer", "Mesqet", "Sesen", "Wa-Ek",
+];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
@@ -170,9 +200,9 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 565 行与包里逐字一致", () => {
+  it("修订表 658 行与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(565);
+    expect(Object.keys(table)).toHaveLength(658);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -213,6 +243,17 @@ describe("egy 词表规则", () => {
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
     expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /Pert Abuf/.test(v))).toEqual([]);
+  });
+
+  it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {
+    expect(
+      offenders(KEYS, (v, k) => hasSekhem(v) && !(ZH[k] ?? "").includes("密码") && !SEKHEM_PASSWORD_WITHOUT_THE_WORD.has(k))
+    ).toEqual([]);
+    // 白名单里的键若已不含 Sekhem,或中文已写出「密码」,就不再需要豁免 —— 留着会替将来的误用背书。
+    const stale = [...SEKHEM_PASSWORD_WITHOUT_THE_WORD].filter(
+      (k) => !hasSekhem(EGY[k] ?? "") || (ZH[k] ?? "").includes("密码")
+    );
+    expect(stale).toEqual([]);
   });
 
   it("否定一律 Nen:单词 Ma 只剩判过义的非否定用法", () => {
