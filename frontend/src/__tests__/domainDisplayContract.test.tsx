@@ -106,6 +106,10 @@ const ENUM_FIELDS = [
   // meta-test below cannot tell a request field from a response field, and it
   // should not have to.
   "decision",
+  // Added 2026-09-20 with `Judgment.kind` (ORIGINAL / AMENDMENT / REOPEN) and the
+  // request form's `kind` (AMEND / REOPEN). Neither is rendered raw: the request
+  // kind goes through <DomainEnum namespace="sentence_plan.request_kinds">.
+  "kind",
 ];
 
 /** The two modules that are allowed to spell a missing value out. */
@@ -136,6 +140,12 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
     "Inside an <option>, which can hold no child element.",
   [path.join("src", "components", "cross-judgments", "CrossJudgmentStops.tsx")]:
     "Realm names inside an <option>, which can hold no child element. The chosen realm is rendered elsewhere with <DomainEnum>.",
+  [path.join("src", "components", "cross-judgments", "CrossJudgmentSeatForm.tsx")]:
+    "Civilization and role names inside an <option>, which can hold no child element.",
+  [path.join("src", "components", "sentence-plan", "PlanChangesEditor.tsx")]:
+    "Realm names inside an <option>, which can hold no child element. Chosen realms render elsewhere with <DomainEnum>.",
+  [path.join("src", "components", "sentence-plan", "SentenceRequestForm.tsx")]:
+    "Request kinds inside an <option>, which can hold no child element.",
   [path.join("app", "recycle-bin", "page.tsx")]:
     "Interpolated into t('recycle_bin.dependent_count', { type }) as a parameter, not rendered.",
   [path.join("app", "workflow", "[id]", "page.tsx")]:

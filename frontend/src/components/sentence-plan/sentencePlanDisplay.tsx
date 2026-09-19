@@ -55,7 +55,8 @@ export const OPEN_PLAN_STATUSES = ["ACTIVE", "RETRIAL", "HELD"];
 export const REFUSAL_CODES = [
   "open_judgment", "plan_closed", "plan_held", "plan_in_retrial", "request_pending", "request_closed",
   "not_home", "not_requester", "node_not_pending", "eternal_not_last", "soul_state", "reason_required",
-  "not_found",
+  "not_found", "invalid_changes", "empty_changes", "foreign_node", "foreign_realm", "unknown_node",
+  "soul_is_here",
 ] as const;
 
 export function refusalKey(error: unknown): string {

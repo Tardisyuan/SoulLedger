@@ -12,6 +12,7 @@ import { Button } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { User } from "lucide-react";
 import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgmentStops";
+import { CrossJudgmentSeatForm } from "@/src/components/cross-judgments/CrossJudgmentSeatForm";
 
 /**
  * Case state → badge tone, the same table the list page carries.
@@ -227,6 +228,9 @@ export default function CrossJudgmentDetailPage() {
           <p className="text-04 text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
         )}
       </div>
+
+      {/* 发起方请各文明入席(PROPOSED;按租户代码,N3=(a) 带站 / 顾问不带)。 */}
+      {!loading && judgment && <CrossJudgmentSeatForm judgment={judgment} />}
 
       {/* 挂了原审判的联审定下受刑计划的各站(docs/ARCHITECTURE-sentence-plan.md §2.1)。 */}
       {!loading && judgment?.judgment && <CrossJudgmentStops judgment={judgment} />}
