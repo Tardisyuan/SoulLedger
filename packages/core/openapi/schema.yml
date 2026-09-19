@@ -15897,6 +15897,7 @@ components:
       - SENTENCE_PLAN_AMENDED
       - SENTENCE_REQUEST_PENDING
       - SENTENCE_REQUEST_DECIDED
+      - SENTENCE_PLAN_CANCELLED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -15921,6 +15922,7 @@ components:
         * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
         * `SENTENCE_REQUEST_PENDING` - Sentence Request Pending
         * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+        * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
     NullEnum:
       enum:
       - null
