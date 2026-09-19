@@ -340,6 +340,34 @@ def test_prune_keeps_the_newest_m_per_job_and_never_touches_open_rows(db, settin
     assert not TaskRun.objects.filter(celery_task_id="orphan").exists()
 
 
+@pytest.mark.django_db
+def test_prune_keeps_failure_and_lost_runs_for_the_longer_window(db, settings):
+    settings.SCHEDULER_RUN_RETENTION_DAYS = 30
+    settings.SCHEDULER_FAILED_RUN_RETENTION_DAYS = 365
+    settings.SCHEDULER_RUN_KEEP_MIN = 0
+    now = timezone.now()
+    job = _job("tests.scheduler_ok")
+
+    def run(tid, status, days):
+        TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id=tid, status=status, queued_at=now - timedelta(days=days))
+
+    # 40 days: past the normal window, inside the failure window.
+    for status in (RunStatus.SUCCESS, RunStatus.SKIPPED, RunStatus.FAILURE, RunStatus.LOST):
+        run(f"40-{status}", status, 40)
+    # 400 days: past both.
+    for status in (RunStatus.FAILURE, RunStatus.LOST):
+        run(f"400-{status}", status, 400)
+    # Orphans (job gone) follow the same split.
+    TaskRun.objects.create(job=None, task_name="gone", celery_task_id="orphan-fail", status=RunStatus.FAILURE, queued_at=now - timedelta(days=40))
+    TaskRun.objects.create(job=None, task_name="gone", celery_task_id="orphan-ok", status=RunStatus.SUCCESS, queued_at=now - timedelta(days=40))
+
+    deleted = services.prune_runs(now)
+
+    remaining = set(TaskRun.objects.values_list("celery_task_id", flat=True))
+    assert remaining == {"40-FAILURE", "40-LOST", "orphan-fail"}
+    assert deleted == 5
+
+
 # ---------------------------------------------------------------------------
 # Alerts
 # ---------------------------------------------------------------------------
