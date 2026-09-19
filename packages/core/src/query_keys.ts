@@ -163,6 +163,7 @@ export const soulInboxKeys = {
 export const sentencePlanKeys = {
   all: ["sentence-plans"] as const,
   list: (params: Record<string, string | number | boolean | undefined>) => ["sentence-plans", "list", params] as const,
+  detail: (id: string) => ["sentence-plans", "detail", id] as const,
 };
 
 /** Soul chat, soul side. Opening a conversation invalidates the list. */
