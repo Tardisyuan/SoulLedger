@@ -229,6 +229,12 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
               <Bubble key={line.key} m={line.m} now={now} landed={line.m.eventId === landedOn} />
             )
           )}
+          {/* Where the thread stops: the server's `closed_at` (the other soul's rebirth closed it). */}
+          {!inbox && c.closed_at ? (
+            <Txt testID="closed-marker" variant="value" tone="subtle" style={styles.day}>
+              {tr("soul_app.chat.closed.marker", { date: dayOf(Date.parse(c.closed_at)) })}
+            </Txt>
+          ) : null}
           {mode.kind === "outgoing_locked" && mode.rejected ? (
             <View style={styles.rejected}>
               <Notice tone="neg" testID="request-throttled">

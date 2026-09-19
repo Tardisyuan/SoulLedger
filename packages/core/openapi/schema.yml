@@ -3852,7 +3852,9 @@ paths:
   /api/v1/me/chat/conversations/:
     get:
       operationId: v1_me_chat_conversations_list
-      description: 把两类异常翻成响应,省得每个方法各写一遍 try。
+      description: |-
+        **这一世**参与的会话,包括已闭的(只读,带 `closed_at`)。按账号筛,不按灵魂:
+        新一世看不见前世的会话,前世那一个账号也不会因为灵魂转世而多看见什么。
       tags:
       - v1
       security:
@@ -13156,11 +13158,11 @@ components:
           type: integer
           nullable: true
           readOnly: true
-          description: 对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。
+          description: 对方会话那一世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。
         peer_name:
           type: string
           readOnly: true
-          description: 对方在朋友圈的显示名。
+          description: 对方**会话那一世**的显示名 —— 对方转世之后也不变。
         hall:
           type: string
           description: 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。
@@ -13187,6 +13189,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         mutual:
           type: boolean
           readOnly: true
@@ -13208,6 +13215,7 @@ components:
           description: 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall`
             / `closed`),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。
       required:
+      - closed_at
       - created_at
       - hall
       - id

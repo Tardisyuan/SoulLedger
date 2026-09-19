@@ -21,8 +21,9 @@ class ChatSessionSerializer(serializers.Serializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     peer_user = serializers.SerializerMethodField(
-        help_text="对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。")
-    peer_name = serializers.SerializerMethodField(help_text="对方在朋友圈的显示名。")
+        help_text="对方会话那一世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。")
+    peer_name = serializers.SerializerMethodField(
+        help_text="对方**会话那一世**的显示名 —— 对方转世之后也不变。")
     hall = serializers.SerializerMethodField()
     mutual = serializers.SerializerMethodField(help_text="私聊:两人此刻互相关注。收件箱为 false。")
     initiated_by_me = serializers.SerializerMethodField(
@@ -37,19 +38,18 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = [
             "id", "kind", "room_id", "peer_user", "peer_name", "hall",
-            "throttled", "last_request_at", "responded_at", "last_message_at", "created_at",
+            "throttled", "last_request_at", "responded_at", "last_message_at", "created_at", "closed_at",
             "mutual", "initiated_by_me", "next_request_at", "refusal",
         ]
         read_only_fields = fields
 
     def _peer(self, obj):
-        """对方本世账号。灵魂身份不出库:对方认得的是朋友圈的 user_id 与显示名。"""
-        from apps.soul_accounts.services import current_account_of
-
-        soul_id = self.context.get("soul_id")
-        if obj.kind != ConversationKind.DIRECT or soul_id is None:
+        """对方**会话那一世**的账号 —— 不是对方此刻的本世账号:对方转世之后,这里仍是当时
+        和我说话的那一个。灵魂身份不出库:认得的是朋友圈的 user_id 与显示名。"""
+        account = self.context.get("account")
+        if obj.kind != ConversationKind.DIRECT or account is None:
             return None
-        return current_account_of(obj.soul_b if obj.soul_a_id == soul_id else obj.soul_a)
+        return obj.other_account(account.pk)
 
     def get_peer_user(self, obj) -> int | None:
         peer = self._peer(obj)
