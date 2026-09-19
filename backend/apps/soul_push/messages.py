@@ -64,10 +64,10 @@ MESSAGES = {
         },
     },
     "egy": {
-        "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
+        "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."},
         "sentence_amended": {"title": "Wetep Khemen Seth", "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."},
-        "sentence_completed": {"title": "Wetep Neb Seth", "body": "Wetep Ek Neb Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."},
-        "sentence_waiting": {"title": "Hemes Smen", "body": "Mekher Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},
+        "sentence_completed": {"title": "Wetep Neb Seth", "body": "Wetep Ek Neb Seth; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."},
+        "sentence_waiting": {"title": "Hemes Smen", "body": "Sekhet Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},
         "rebirth_approved": {"title": "Dbh Wehem Mesut Hesy Seth", "body": "Dbh Wehem Mesut Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Wehem Mesut Khesef Seth", "body": "Dbh Wehem Mesut Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
