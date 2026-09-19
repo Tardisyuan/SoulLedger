@@ -29,6 +29,17 @@ class NotificationType(models.TextChoices):
     JUDGMENT_CONCLUDED = "JUDGMENT_CONCLUDED", "Judgment Concluded"
     # 暂居的自动回归被未结案审判拦下(`DispatchService.record_blocked_return`)。
     DISPATCH_RETURN_BLOCKED = "DISPATCH_RETURN_BLOCKED", "Dispatch Return Blocked"
+    # 受刑计划(docs/ARCHITECTURE-sentence-plan.md §5.1)。文案键见 apps/notifications/messages.py。
+    SENTENCE_NODE_ACTIVE = "SENTENCE_NODE_ACTIVE", "Sentence Node Active"
+    SENTENCE_NODE_DONE = "SENTENCE_NODE_DONE", "Sentence Node Done"
+    SENTENCE_NODE_WAITING = "SENTENCE_NODE_WAITING", "Sentence Node Waiting"
+    SENTENCE_NODE_REFUSED = "SENTENCE_NODE_REFUSED", "Sentence Node Refused"
+    SENTENCE_PLAN_COMPLETED = "SENTENCE_PLAN_COMPLETED", "Sentence Plan Completed"
+    CROSS_SENTENCE_SUBMITTED = "CROSS_SENTENCE_SUBMITTED", "Cross Sentence Submitted"
+    SENTENCE_PLAN_AMENDED = "SENTENCE_PLAN_AMENDED", "Sentence Plan Amended"
+    SENTENCE_REQUEST_PENDING = "SENTENCE_REQUEST_PENDING", "Sentence Request Pending"
+    SENTENCE_REQUEST_DECIDED = "SENTENCE_REQUEST_DECIDED", "Sentence Request Decided"
+    SENTENCE_PLAN_CANCELLED = "SENTENCE_PLAN_CANCELLED", "Sentence Plan Cancelled"
 
 
 class UserNotification(AuditUserFields, models.Model):

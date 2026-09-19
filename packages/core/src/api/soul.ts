@@ -228,6 +228,7 @@ export const SOUL_ERROR_CODES = [
   "terminal_cosmology",
   "soul_state",
   "application_approved",
+  "sentence_in_progress",
   "appeal_used",
   "not_appealable",
   "past_life_read_only",

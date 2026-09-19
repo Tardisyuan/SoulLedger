@@ -106,7 +106,8 @@ class DispatchService:
                 "target_tenant": target_tenant.code,
                 "reason": reason,
             },
-            actor=str(dispatcher),
+            # 受刑计划推进由系统发起(`dispatcher=None`,设计稿 §2.4)。
+            actor=str(dispatcher) if dispatcher is not None else "system",
         )
 
         return dispatch_record
@@ -186,10 +187,16 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
-        if not dispatch_record.transition_to(DispatchStatus.REJECTED, decided_at=timezone.now()):
-            raise ValueError(f"Cannot reject dispatch in status: {dispatch_record.status}")
-        dispatch_record.reason = f"{dispatch_record.reason}\n\nRejection reason: {reason}"
-        dispatch_record.save(update_fields=["reason"])
+        with transaction.atomic():
+            # 锁序 灵魂 → 计划 → 节点 → 调拨记录(docs/ARCHITECTURE-sentence-plan.md §8)。
+            soul = DispatchService._lock_soul(dispatch_record.soul_id)
+            if not dispatch_record.transition_to(DispatchStatus.REJECTED, decided_at=timezone.now()):
+                raise ValueError(f"Cannot reject dispatch in status: {dispatch_record.status}")
+            dispatch_record.reason = f"{dispatch_record.reason}\n\nRejection reason: {reason}"
+            dispatch_record.save(update_fields=["reason"])
+            # 系统为受刑计划发起的调拨被拒(Q4):节点退回 PENDING,通知原属判官。
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.on_dispatch_refused(soul, dispatch_record)
 
         # Notify source tenant
         DispatchService._notify_approval(dispatch_record, approved=False, reason=reason)
@@ -271,6 +278,9 @@ class DispatchService:
                 },
                 actor=str(executor),
             )
+            # 受刑计划的这一站:节点 DISPATCHING → ACTIVE,按节点内容建处置(同一事务)。
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.on_dispatch_executed(soul, dispatch_record)
 
             # Checked, not dropped (BD-16). `can_transition_to` above read the
             # caller's in-memory row; `transition_to` locks the DB row, which
@@ -293,21 +303,33 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
-        if not dispatch_record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now()):
-            raise ValueError(f"Cannot cancel dispatch in status: {dispatch_record.status}")
+        with transaction.atomic():
+            soul = DispatchService._lock_soul(dispatch_record.soul_id)
+            if not dispatch_record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now()):
+                raise ValueError(f"Cannot cancel dispatch in status: {dispatch_record.status}")
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.on_dispatch_refused(soul, dispatch_record)
 
         return dispatch_record
+
+    @staticmethod
+    def _lock_soul(soul_id):
+        from apps.souls.models import Soul
+
+        return Soul.all_objects.select_for_update(of=("self",)).get(pk=soul_id)
 
     RETURN_ON_DISPOSITION = "DISPOSITION_EXECUTED"
     RETURN_MANUAL = "MANUAL"
     RETURN_ON_CASE_CLOSED = "JUDGMENT_CLOSED"
+    #: 受刑计划被撤销(赦免剩余刑期,2026-09-19 用户决定):与计划完成同一条回归路径。
+    RETURN_ON_PLAN_CANCELLED = "PLAN_CANCELLED"
 
     @staticmethod
     def end_residence(soul, *, actor, trigger, reason=""):
         """暂居结束:`soul.tenant` 回到 `soul.home_tenant`,暂居记录 EXECUTED → RETURNED。
 
-        两个调用方:`DispositionService.execute`(暂居租户的处置执行完毕,与之同一事务)
-        与 `DispatchRecordViewSet.return_home`(原租户或 ADMIN 手动结束)。
+        调用方:`SentencePlanService.advance`(受刑计划这一站刑满)、`DispositionService.execute`
+        (无计划的暂居,处置执行完毕)与 `DispatchRecordViewSet.return_home`(原租户或 ADMIN 手动结束)。
         灵魂行在锁下读;SoulEvent 与 AuditLog 在同一事务里写,回滚一起回滚。
 
         暂居记录可能不存在(数据修正过的灵魂);那样仍然回归,返回 None。
@@ -324,9 +346,7 @@ class DispatchService:
             locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
             if not locked.is_residing:
                 raise ValueError("Soul is not residing away from its home tenant")
-            # 在灵魂行锁下问:与之竞争的「撤案后恢复回归」也走这里,两者串行。
-            # ponytail: 开新审判不锁灵魂行,与回归并发时可能漏看一条刚创建的审判;
-            # 需要时让 JudgmentViewSet.perform_create 也锁灵魂行。
+            # 在灵魂行锁下问。开新审判(`JudgmentViewSet.perform_create`)也锁灵魂行(G7),两者串行。
             open_ids = list(open_judgments(locked).values_list("pk", flat=True))
             if open_ids:
                 raise ResidenceReturnBlockedError(open_ids)
@@ -364,6 +384,12 @@ class DispatchService:
                 changes={"soul_tenant": [residence.code, home.code], "trigger": trigger},
                 description=f"暂居结束({trigger}):{locked.name} {residence.code} → {home.code} {reason}"[:500],
             )
+            if trigger == DispatchService.RETURN_MANUAL:
+                # 手动结束:这一站的节点 ABORTED,然后推进(设计稿 §3.3 调用点表)。自动回归由
+                # `SentencePlanService.advance` 发起,它自己接着推进,这里不再调。
+                from apps.sentence_plan.services import SentencePlanService
+                SentencePlanService.on_residence_ended_by_hand(locked, record)
+                SentencePlanService.advance(locked)
 
         # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。
         soul.tenant_id = locked.tenant_id
@@ -416,10 +442,15 @@ class DispatchService:
     #: 而解开它的动作是结案或撤案,不是「结束暂居」—— 那会同样被 409 拦下,所以持有
     #: `dispatch.return` 并不让谁更该知道。JUDGE / VIEWER 不持有 `dispatch.read`,不收。
     RETURN_BLOCKED_PERMISSION = "dispatch.read"
+    #: 暂居地还通知能结案或撤案的人(2026-09-18 用户决定):`JudgmentViewSet` 的 `conclude` 与
+    #: `destroy`(撤案)都要 `judgment.execute`(ADMIN / JUDGE / MODERATOR)。**只限暂居地**:
+    #: 案子在那里审;原属地的判官不收。
+    RETURN_BLOCKED_CASE_PERMISSION = "judgment.execute"
 
     @staticmethod
     def return_blocked_recipients(soul):
-        """原属租户与暂居租户里持有 `dispatch.read` 的在职(is_active)官员。
+        """原属租户与暂居租户里持有 `dispatch.read` 的在职(is_active)官员,加上暂居租户里持有
+        `judgment.execute` 的在职官员(判官)。
         ADMIN 经 `check_permission` 的旁路自然在内,但**只限这两个租户的** ADMIN。
         灵魂账号(role=SOUL)`check_permission` 恒为 False,不收 —— 用户明确不推给灵魂。"""
         from apps.authentication.models import User
@@ -428,7 +459,11 @@ class DispatchService:
         candidates = User.objects.filter(
             tenant_id__in={soul.home_tenant_id, soul.tenant_id}, is_active=True,
         ).order_by("pk")
-        return [u for u in candidates if check_permission(u, DispatchService.RETURN_BLOCKED_PERMISSION)]
+        return [
+            u for u in candidates
+            if check_permission(u, DispatchService.RETURN_BLOCKED_PERMISSION)
+            or (u.tenant_id == soul.tenant_id and check_permission(u, DispatchService.RETURN_BLOCKED_CASE_PERMISSION))
+        ]
 
     @staticmethod
     def _notify_return_blocked(soul, dispatch_id, open_count):
@@ -445,43 +480,6 @@ class DispatchService:
                 related_resource="DispatchRecord" if dispatch_id else "soul",
                 related_id=dispatch_id or str(soul.pk), params=params,
             )
-
-    @staticmethod
-    def resume_return_after_case_closed(soul, *, judgment):
-        """撤案之后,若暂居处置早已执行完毕,补上当时被拦下的回归。
-
-        「暂居处置执行完毕」= 本次暂居开始(调拨记录 `executed_at`)以来,暂居租户对这个
-        灵魂有一份**已执行、非永久**的处置,且没有还未执行的处置。后一条让「结案」不必
-        单独挂钩:`conclude` 总会在暂居租户新建一份未执行的处置,回归随它执行发生
-        (`DispositionService._execute_during_residence`,同一个 `end_residence`)。
-
-        条件不满足、或回归仍被别的未结案审判拦着,就什么都不做,返回 None。
-        """
-        from apps.disposition.models import Disposition
-        from apps.souls.models import Soul
-
-        soul = Soul.all_objects.get(pk=soul.pk)
-        if not soul.is_residing:
-            return None
-        record = (
-            DispatchRecord._base_manager
-            .filter(soul_id=soul.pk, status=DispatchStatus.EXECUTED, target_tenant_id=soul.tenant_id, is_deleted=False)
-            .order_by("-executed_at").first()
-        )
-        if record is None or record.executed_at is None:
-            return None
-        residence = Disposition.all_objects.filter(soul_id=soul.pk, tenant_id=soul.tenant_id, is_deleted=False)
-        served = residence.filter(is_executed=True, is_eternal=False, executed_at__gte=record.executed_at).exists()
-        pending = residence.filter(is_executed=False, is_archived=False, created_at__gte=record.executed_at).exists()
-        if not served or pending:
-            return None
-        try:
-            return DispatchService.end_residence(
-                soul, actor="system", trigger=DispatchService.RETURN_ON_CASE_CLOSED,
-                reason=f"judgment {judgment.pk} closed",
-            )
-        except (ResidenceReturnBlockedError, ValueError):
-            return None
 
 
 class CrossTenantJudgmentService:
@@ -624,6 +622,16 @@ class CrossTenantJudgmentService:
         locked.sentence_submitted_at = timezone.now()
         locked.sentence_submitted_by = user
         locked.save()
+        # 发起方的判官(§5.1 `cross_sentence_submitted`):只带灵魂名、文明代码、节点序号。
+        from apps.judgment.models import Judgment
+        from apps.sentence_plan.services import notify_judges
+
+        soul_name = Judgment.all_objects.filter(pk=judgment.judgment_id).values_list("soul__name", flat=True).first()
+        notify_judges(
+            {judgment.initiating_tenant_id}, "cross_sentence_submitted",
+            {"soul": soul_name or "", "order": locked.node_order, "tenant": participant.participant_tenant.code},
+            judgment.pk, related_resource="CrossTenantJudgment",
+        )
         return locked
 
     @staticmethod

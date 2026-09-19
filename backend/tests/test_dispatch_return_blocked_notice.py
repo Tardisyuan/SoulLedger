@@ -1,4 +1,5 @@
-"""自动回归被未结案审判拦下 → 两边持有 `dispatch.read` 的官员收到站内通知。
+"""自动回归被未结案审判拦下 → 两边持有 `dispatch.read` 的官员、加上暂居地持有 `judgment.execute`
+的判官(能结案 / 撤案的人,2026-09-18 用户决定)收到站内通知。原属地与第三文明的判官不收。
 
 收件人规则写在 `DispatchService.return_blocked_recipients`。这里每条都同时断言
 **不该收到的人不在场**:只断言「该收的收到了」,在「所有人都收到」时照样是绿的。
@@ -45,8 +46,11 @@ def world():
         "home_admin": _user("home_admin", "ADMIN", home),
         "away_mod": _user("away_mod", "MODERATOR", away),
         "away_guardian": _user("away_guardian", "GUARDIAN", away),
+        "away_judge": _user("away_judge", "JUDGE", away),
         # 不该收的:
         "home_judge": _user("home_judge", "JUDGE", home),
+        "third_judge": _user("third_judge", "JUDGE", third),
+        "away_retired_judge": _user("away_retired_judge", "JUDGE", away, is_active=False),
         "away_viewer": _user("away_viewer", "VIEWER", away),
         "away_retired_mod": _user("away_retired_mod", "MODERATOR", away, is_active=False),
         "third_mod": _user("third_mod", "MODERATOR", third),
@@ -56,7 +60,7 @@ def world():
     return {"home": home, "away": away, "soul": soul, "record": record, "people": people}
 
 
-SHOULD = {"home_mod", "home_guardian", "home_admin", "away_mod", "away_guardian"}
+SHOULD = {"home_mod", "home_guardian", "home_admin", "away_mod", "away_guardian", "away_judge"}
 
 
 def _block(world, n_cases=2):
@@ -84,6 +88,14 @@ def test_the_notice_names_the_soul_and_the_count_but_no_case_detail(world):
     assert note.related_resource == "DispatchRecord" and note.related_id == str(world["record"].pk)
     for case in Judgment.all_objects.filter(soul=world["soul"]):
         assert str(case.pk) not in note.message and str(case.pk) not in note.title
+
+
+def test_the_residence_judge_is_told_but_no_other_judge(world):
+    """单独点名:上面那条比的是整个集合,这条让「判官」这条规则的两面各有一个名字。"""
+    _block(world)
+    told = set(_recipients(world))
+    assert "away_judge" in told
+    assert not told & {"home_judge", "third_judge", "away_retired_judge"}
 
 
 def test_the_soul_is_not_told(world):

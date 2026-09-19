@@ -31,6 +31,30 @@ def ready_soul(tenant, name="亡魂甲", state=SoulState.JUDGING, **fields):
     return account, soul_client(account)
 
 
+def sentence_served(account):
+    """本世的受刑计划已完成、灵魂在轮回中 —— 转生申请开放的前提(Q6,
+    docs/ARCHITECTURE-sentence-plan.md §6)。只写记录,不走推进;要走真实推进的测试
+    用 `tests/sentence_plan_support.py`。"""
+    from django.utils import timezone
+
+    from apps.sentence_plan.models import SentencePlan, SentencePlanStatus
+
+    soul = account.soul
+    SentencePlan.all_objects.create(
+        soul=soul, tenant_id=soul.home_tenant_id or soul.tenant_id, cycle=account.cycle,
+        status=SentencePlanStatus.COMPLETED, completed_at=timezone.now(),
+    )
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.REINCARNATING)
+    soul.refresh_from_db()
+    return account
+
+
+def rebirth_ready_soul(tenant, name="亡魂甲", **fields):
+    """`ready_soul` + `sentence_served`:可以提交转生申请的灵魂。返回 (account, client)。"""
+    account, client = ready_soul(tenant, name=name, **fields)
+    return sentence_served(account), client
+
+
 def soul_client(account):
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {svc.issue_tokens(account)['access']}")

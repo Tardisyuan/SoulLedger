@@ -577,3 +577,53 @@ def test_the_object_level_residence_check_matches_the_queryset_one(cn_tenant, eu
     Soul.all_objects.filter(pk=soul.pk).update(tenant=None)
     soul.refresh_from_db()
     assert residence_readable(soul, cn_tenant) is False
+
+
+# ---------------------------------------------------------------------------
+# 暂居写例外的契约(Q7,docs/ARCHITECTURE-sentence-plan.md §2.5、§4.3)
+# ---------------------------------------------------------------------------
+
+#: 租户隔离**唯一**的写例外:视图名 → (声明的 `residence_write_actions`, 覆盖的写, 理由)。
+RESIDENCE_WRITABLE: dict[str, tuple[tuple[str, ...], str, str]] = {
+    "SentencePlanViewSet": (
+        ("decide",),
+        "kind=REOPEN",
+        "原审判官批准 REOPEN 请求时,原属地立刻为暂居在外的灵魂开重开审判(图 3、Q7)。"
+        "只有这一个写;`POST /judgment/` 不在例外里,原属租户经它给暂居灵魂开案仍是 400。",
+    ),
+}
+
+
+def test_the_residence_write_exception_is_declared_once_and_nowhere_else():
+    declared = {
+        cls.__name__: tuple(cls.residence_write_actions)
+        for cls in _registered_viewsets()
+        if getattr(cls, "residence_write_actions", ())
+    }
+    assert declared == {name: actions for name, (actions, _what, _reason) in RESIDENCE_WRITABLE.items()}
+
+
+def test_the_residence_write_exception_has_one_caller():
+    """`residence_writable` 只能从批准 REOPEN 那一处调。第二个调用方就是第二条写例外。"""
+    from pathlib import Path
+
+    apps_dir = Path(__file__).resolve().parents[1] / "apps"
+    callers = sorted(
+        path.relative_to(apps_dir).as_posix()
+        for path in apps_dir.rglob("*.py")
+        if "residence_writable(" in path.read_text(encoding="utf-8") and path.name != "tenant.py"
+    )
+    assert callers == ["sentence_plan/requests.py"]
+
+
+def test_residence_writable_covers_one_action_for_the_home_tenant_only(cn_tenant, eu_tenant):
+    from types import SimpleNamespace
+
+    from apps.core.tenant import RESIDENCE_WRITE_REOPEN, residence_writable
+
+    soul = SimpleNamespace(home_tenant_id=cn_tenant.pk, tenant_id=eu_tenant.pk)
+    assert residence_writable(soul, cn_tenant, RESIDENCE_WRITE_REOPEN) is True
+    assert residence_writable(soul, eu_tenant, RESIDENCE_WRITE_REOPEN) is False
+    assert residence_writable(soul, None, RESIDENCE_WRITE_REOPEN) is False
+    for other in ("create_judgment", "execute_disposition", "update_soul", ""):
+        assert residence_writable(soul, cn_tenant, other) is False, other

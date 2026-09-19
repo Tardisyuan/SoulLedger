@@ -195,6 +195,32 @@ def residence_readable(obj, tenant) -> bool:
     )
 
 
+# ---------------------------------------------------------------------------
+# 暂居写例外(Q7,docs/ARCHITECTURE-sentence-plan.md §2.5、§4.3)—— 唯一一条
+#
+# 原属租户为**暂居在外**的灵魂开一件「重开审判」(`Judgment.kind=REOPEN`)。原审判官批准了
+# 一条 REOPEN 请求之后,原属地立刻开审(图 3),即使灵魂在外地。其他写路径照旧:原属租户对
+# 暂居灵魂只读(上面那段)。
+#
+# 只有一个调用方:`apps/sentence_plan/requests.py::_open_reopen_judgment`,在
+# `SentencePlanViewSet.decide` 批准 REOPEN 请求的同一事务里。视图用 `residence_write_actions`
+# 声明它,清单钉在 tests/test_tenant_scoping_contract.py::RESIDENCE_WRITABLE,并断言
+# 没有别的视图 / 动作声明写例外。`POST /judgment/` 不走这里:原属租户经它给暂居灵魂开案仍是 400。
+# ---------------------------------------------------------------------------
+
+#: 例外唯一覆盖的那个写动作。
+RESIDENCE_WRITE_REOPEN = "open_reopen_judgment"
+
+
+def residence_writable(soul, tenant, action) -> bool:
+    """``tenant`` 能否对暂居在外的 ``soul`` 做 ``action``。只有 (原属租户, 开重开审判) 为 True。"""
+    return (
+        action == RESIDENCE_WRITE_REOPEN
+        and tenant is not None
+        and soul.home_tenant_id == tenant.pk
+    )
+
+
 def scope_to_api_key(qs, request):
     """Narrow ``qs`` to the API key that authenticated ``request``. Fails closed.
 

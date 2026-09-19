@@ -121,8 +121,8 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "is_final", "created_at", "concluded_at",
             "kind", "amends_plan_id",
         ]
-        # `kind` / `amends_plan_id` 只读:阶段 1 没有写它们的路径;加减项 / 重开审判
-        # 由服务层建(docs/ARCHITECTURE-sentence-plan.md 阶段 3),不由 POST 的 body 定。
+        # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
+        # 不由 POST 的 body 定 —— 灵魂有进行中的计划即 AMENDMENT;REOPEN 只由批准请求时开。
         read_only_fields = ["civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id"]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
@@ -199,6 +199,10 @@ class JudgmentConcludeSerializer(serializers.Serializer):
     statute_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, default=list
     )
+    # 加减项审判(kind=AMENDMENT)结案时对受刑计划的改动,形状同 `SentencePlanRequest.changes`:
+    # {"add": [{"realm_code", "sentence_years", "reason"}], "remove": ["<node id>"]}。
+    # 内容由 `apps/sentence_plan/requests.py::normalize_changes` 校验;其他 kind 带它答 400。
+    plan_changes = serializers.DictField(required=False, allow_empty=True)
 
 
 class JudgmentQueueCursorSerializer(serializers.Serializer):

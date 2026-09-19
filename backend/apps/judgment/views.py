@@ -34,6 +34,8 @@ from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.sentence_plan.requests import PlanChangeRefusedError
+from apps.sentence_plan.services import CrossJudgmentOpenError
 from apps.souls.models import SoulState
 from apps.souls.serializers import SoulSerializer
 
@@ -130,11 +132,44 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         #
         # `tests/test_judgment_api.py` did not catch it because both of its
         # clients are ADMIN, and ADMIN bypasses scoping.
-        super().perform_create(serializer)
-        judgment = serializer.instance
-        soul = judgment.soul
-        if soul.current_state == SoulState.ALIVE:
-            soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
+        #
+        # G7 (docs/ARCHITECTURE-sentence-plan.md §8): the serializer's two
+        # checks — the soul is in this tenant, and it has no open case — ran
+        # without a lock, so a concurrent return home (`end_residence`, which
+        # asks `open_judgments` under the soul row lock) could slip between
+        # them and the insert: the soul goes home while a case is filed where
+        # it no longer is. Both are asked again here, under the same lock.
+        from django.db import transaction
+        from rest_framework.exceptions import ValidationError
+
+        from apps.core.tenant import is_tenant_exempt
+        from apps.judgment.models import open_judgments
+        from apps.souls.models import Soul
+
+        with transaction.atomic():
+            soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=serializer.validated_data["soul"].pk)
+            if not is_tenant_exempt(self.request.user):
+                tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
+                if tenant is None or soul.tenant_id != tenant.pk:
+                    raise ValidationError({"soul": ["No such soul in this tenant."]})
+                if open_judgments(soul).exists():
+                    raise ValidationError(
+                        {"soul": ["This soul already has an open case. Conclude it before opening another."]}
+                    )
+            super().perform_create(serializer)
+            judgment = serializer.instance
+            # 受刑计划进行中的灵魂,这件案子是对计划的加 / 减项(情况 1,§4.1):结案生成请求,
+            # 不建处置、不动灵魂状态。服务端定,不由 body 定。
+            from apps.sentence_plan.services import in_progress_plan
+
+            plan = in_progress_plan(soul)
+            if plan is not None:
+                from apps.judgment.models import Judgment, JudgmentKind
+
+                Judgment.all_objects.filter(pk=judgment.pk).update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
+                judgment.kind, judgment.amends_plan_id = JudgmentKind.AMENDMENT, plan.pk
+            if soul.current_state == SoulState.ALIVE:
+                soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete a pending judgment, or refuse with a clear reason
@@ -452,13 +487,21 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         notes = serializer.validated_data.get("notes", "")
         create_workflow = serializer.validated_data.get("create_workflow", False)
         statute_ids = serializer.validated_data.get("statute_ids") or []
+        plan_changes = serializer.validated_data.get("plan_changes") or None
 
         try:
             judgment.conclude(
-                verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids
+                verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids,
+                plan_changes=plan_changes,
             )
+        except PlanChangeRefusedError as exc:
+            # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
+            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except CitationRefusedError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except CrossJudgmentOpenError as exc:
+            # Q17:挂着的联审没结束(或它的节点内容不再通过校验)。什么都没写。
+            return Response({"error": str(exc), "code": exc.code}, status=status.HTTP_409_CONFLICT)
         except JudgmentNotConcludableError as exc:
             # The soul cannot make the move a conclusion requires — it is not
             # under judgment. This used to be **silent**: `transition_to`'s

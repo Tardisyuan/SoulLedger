@@ -937,6 +937,24 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_soul_push_delivery.py::test_the_same_event_twice_is_pushed_once 每个引擎都跑。
         "tests/test_two_workers_cannot_both_send_one_push.py::"
         "test_two_workers_given_the_same_ids_send_once",
+        # 2026-09-19 受刑计划阶段 2(docs/ARCHITECTURE-sentence-plan.md §8 清单 1、2、5):
+        # 推进在灵魂行锁上串行、开审在同一把锁下再问一次(G7)。SQLite 没有行锁可等;
+        # 三条各有一条串行版本在 tests/test_sentence_plan_concurrency.py,每个引擎都跑。
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_officers_executing_the_home_disposition_at_once_dispatch_once",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_serving_a_stop_and_opening_a_case_there_at_once_never_strands_the_case",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_officers_executing_a_stop_at_once_complete_and_return_once",
+        # 阶段 3(§8 清单 3、4、6、7):批准、转生申请、撤销、开审都在灵魂行锁下读计划;串行版本同文件。
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_judges_accepting_one_request_at_once_add_once",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_completing_a_plan_and_applying_for_rebirth_at_once_never_applies_early",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_cancelling_a_plan_while_it_advances_leaves_nothing_dispatching",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_tenants_opening_a_case_on_one_soul_at_once_open_exactly_one",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
