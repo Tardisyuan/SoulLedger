@@ -375,7 +375,9 @@ class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):
     """
     participant_tenant = serializers.IntegerField(required=False)
     participant_tenant_code = serializers.CharField(required=False, max_length=50)
-    participant_actor = serializers.IntegerField(required=False, allow_null=True)
+    # Actor 的主键是 UUID。这里曾是 IntegerField,于是任何神祇都选不上(见视图)。
+    # 必须是被邀文明里可担任席位的神祇(`CrossTenantJudgmentService.seatable_actors`)。
+    participant_actor = serializers.UUIDField(required=False, allow_null=True)
     role = serializers.ChoiceField(
         choices=["ADVISOR", "CO_JUDGE", "CHAIRMAN"],
         default="ADVISOR"
@@ -411,3 +413,12 @@ class CrossTenantJudgmentOrderSerializer(serializers.Serializer):
 class CrossTenantJudgmentConcludeSerializer(serializers.Serializer):
     """Serializer for concluding a cross-tenant judgment."""
     conclusion_type = serializers.ChoiceField(choices=["PASS", "FAIL"])
+
+
+class SeatableActorSerializer(serializers.Serializer):
+    """`seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。"""
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    name_zh = serializers.CharField(read_only=True)
+    name_en = serializers.CharField(read_only=True)
+    name_egy = serializers.CharField(read_only=True)

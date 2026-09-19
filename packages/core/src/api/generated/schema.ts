@@ -879,6 +879,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/cross-tenant-judgments/{id}/seatable-actors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 被邀文明里可担任席位的神祇,供发起方入席时选(2026-09-20 用户决定)。
+         *
+         *     只给能入席的人:`cross_judgment.create`、发起方租户、联审 PROPOSED;被邀的不能是发起方自己。
+         *     只读、字段最小(id 与名字)。**不放宽 `ActorViewSet` 的租户过滤** —— 跨租户读神祇只在这里,
+         *     且只读这一个被邀租户的、`seatable_actors` 判定过的那些行。
+         */
+        get: operations["v1_dispatch_cross_tenant_judgments_seatable_actors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/cross-tenant-judgments/{id}/sentence/": {
         parameters: {
             query?: never;
@@ -9260,6 +9283,15 @@ export interface components {
          * @enum {string}
          */
         ScopeEnum: "GLOBAL" | "ORG";
+        /** @description `seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。 */
+        SeatableActor: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly name: string;
+            readonly name_zh: string;
+            readonly name_en: string;
+            readonly name_egy: string;
+        };
         SensitiveWord: {
             /** Format: uuid */
             readonly id: string;
@@ -11891,6 +11923,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CrossTenantJudgment"];
+                };
+            };
+        };
+    };
+    v1_dispatch_cross_tenant_judgments_seatable_actors_list: {
+        parameters: {
+            query: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                /** @description The civilization being invited. */
+                tenant_code: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Cross-Tenant Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatableActor"][];
                 };
             };
         };
