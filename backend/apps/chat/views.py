@@ -10,9 +10,13 @@
 聊天没启用(`MATRIX_ENABLED=False`)时每条路由都是 **503**,不是 500:那不是故障,
 是这套环境没部署 Synapse。
 """
+import math
+from datetime import timedelta
+
 from django.db.models import F, Q
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, status, viewsets
+from rest_framework import mixins, status, throttling, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -21,6 +25,7 @@ from apps.chat.matrix import MatrixError, MatrixNotConfiguredError
 from apps.chat.models import Conversation, ConversationKind
 from apps.chat.serializers import (
     ChatErrorSerializer,
+    ChatLookupSerializer,
     ChatSessionSerializer,
     ConversationCreateSerializer,
     ConversationSerializer,
@@ -32,7 +37,9 @@ from apps.chat.serializers import (
 )
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
+from apps.core.throttling import ClientIPIdentMixin
 from apps.core.viewsets import CodenameViewSetMixin
+from apps.social.soul_serializers import SoulCardSerializer
 from apps.soul_accounts.me_views import SoulAPIView
 
 
@@ -100,6 +107,40 @@ class MeChatConversationsView(ChatView):
             ConversationSerializer(conversation, context={"soul_id": account.soul_id}).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+
+class ChatLookupThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
+    """按灵魂账号(本世 User)计数;速率在 `DEFAULT_THROTTLE_RATES["chat_lookup"]`。
+    未认证时 DRF 会退回按来源地址 —— 那条路走 `ClientIPIdentMixin`,不信客户端自报的 XFF。
+    (这个视图要求灵魂令牌,节流在认证与权限之后才跑,所以实际上总是按账号。)"""
+
+    scope = "chat_lookup"
+
+
+class MeChatLookupView(ChatView):
+    """`POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
+
+    返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
+    **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
+    互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+    """
+
+    throttle_classes = [ChatLookupThrottle]
+
+    def throttled(self, request, wait):
+        # DRF 默认的 429 体没有 `code`;App 按 code 分支,所以翻成与聊天其余拒绝同一形状。
+        error = svc.ChatError("查找太频繁,请稍后再试。", "rate_limited", status=429)
+        error.retry_at = timezone.now() + timedelta(seconds=math.ceil(wait or 0))
+        raise error
+
+    @extend_schema(request=ChatLookupSerializer,
+                   responses={200: SoulCardSerializer, 403: ChatErrorSerializer,
+                              404: ChatErrorSerializer, 429: ChatErrorSerializer})
+    def post(self, request):
+        body = ChatLookupSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        target = svc.find_by_soul_code(self.account, body.validated_data["soul_code"])
+        return Response(SoulCardSerializer(target).data)
 
 
 class MeChatMessagesView(ChatView):

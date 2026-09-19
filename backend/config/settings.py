@@ -264,6 +264,9 @@ REST_FRAMEWORK = {
         "anon": "60/minute",
         "register": "5/hour",
         "password_reset": "3/5minute",
+        # 聊天按编号查人(apps/chat/views.py::MeChatLookupView),按灵魂账号计。编号空间
+        # 31^10,穷举本来就不可行;这个数限制的是「拿一份收集来的编号表逐个验证」。
+        "chat_lookup": "20/hour",
     },
 }
 
