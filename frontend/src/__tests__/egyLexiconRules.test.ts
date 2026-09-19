@@ -4,9 +4,12 @@
  * 词表(Claude Design 定稿)的总原则是「同一概念,永远同一写法」。它统一了七处冲突
  * (否定一律 Nen、驳回 Khesef / 取消 Sehen、审批中与审判中同为 Em Wedja、Send→Hab、
  * Ma'a→Wehem Maa、密码一律 Sekhem……),并给了 462 行逐字修订表;后来追加的「审核域」一节
- * 又给了 social_moderation 71 行与 18 个审核域词根(删除一律 Fekh,Sekhem Ma 废止)。这里钉住:
+ * 又给了 social_moderation 71 行与 18 个审核域词根(删除一律 Fekh,Sekhem Ma 废止);再后来的
+ * 「笔误 · 一词多写 · 英文残留」一节给了 39 行与 24 个词根。那 39 行里有 5 个键各出现两次
+ * (每行判一处毛病),两行的修订后 egy 逐字相同 —— 是同一条修订结果,所以夹具里一键一条:
+ * 34 个键,其中 2 个前几节已有同值,净增 32。这里钉住:
  *
- * - 修订表 533 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
+ * - 修订表 565 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
@@ -14,7 +17,7 @@
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18、小词 18 个,
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24、小词 18 个,
  *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
@@ -68,12 +71,10 @@ const MA_NOT_NEGATION = new Set([
   "souls.date_problem_filter",
   "souls.date_problem_marker.error",
   "menus.delete_confirm_title",
-  "menus.delete_confirm_message",
   "menus.delete_confirm_action",
   "permissions.matrix.only_differences",
   "permissions.matrix.confirm_removed_label",
   "workflow.detail.escalate_reason_placeholder",
-  "workflow.view_to_see_nodes",
 ]);
 
 /** 「Pert Abuf」只剩调度义(dispatch);作密码的写法已废止。 */
@@ -83,7 +84,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 533 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 565 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -118,8 +119,8 @@ const words = (k: string) =>
     .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? []);
 
 /**
- * 定稿词表:词根 39 个、审核域词根 18 个、语法小词 18 个,逐字照抄。「Duat / Pet」「Er Hry」按空格
- * 拆成词;连字符写法(Djes-Ef、Neb-Medu、Ankh-Wehem)照抄为一个词形。
+ * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、语法小词 18 个,逐字照抄。
+ * 「Duat / Pet」「Er Hry」按空格拆成词;连字符写法(Djes-Ef、Neb-Medu、Hemet-Sesh……)照抄为一个词形。
  */
 const ROOTS = [
   "Ba", "Ren", "Ankh", "Medjat", "Sesh", "Medu", "Sekhem", "Wedja", "Wetep", "Mesut",
@@ -132,11 +133,17 @@ const ROOTS_MOD = [
   "Sedjem", "Wesheb", "Djeseru", "Gerh", "Imen", "Fekh", "Per", "Aat", "Redi",
   "Mehy", "Kher", "Hemet", "Betau", "Shemsu", "Neb-Medu", "Khet", "Menkh", "Ankh-Wehem",
 ];
+/** 笔误 · 一词多写 · 英文残留。Wesir(神名)与 Wser(强)是两个词,不可互改;Maakheru 不是 Mekher 的异写。 */
+const ROOTS_FIX = [
+  "Hemsu", "Remetj", "Sep", "Dbh", "Mekher", "Maakheru", "Aaru", "Wesir", "Wser", "Smen", "Wen", "Mut",
+  "Ammit", "Weret", "Fai", "Sebkhet", "Hesmen", "Hep", "Djadjat", "Gesu", "Hemet-Sesh", "Medu-Sesu",
+  "Wat-Ha", "Per-Hemsu",
+];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
@@ -163,9 +170,9 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 533 行与包里逐字一致", () => {
+  it("修订表 565 行与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(533);
+    expect(Object.keys(table)).toHaveLength(565);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -196,7 +203,13 @@ describe("egy 词表规则", () => {
 
   it("已废止写法不再出现", () => {
     // Sekhem 只表密码:删除一律 Fekh(审核域定稿)。
-    const abolished = [/Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/, /\bSekhem Ma\b/];
+    // 笔误一节:标「废止」的异写(Remetch、Sepr、Sep-U、词中大写的 AmMit)、词根表点名的笔误
+    // (Djesef、Hemst、Maakher、Mekheru、Iaru、Semen、Wenu)、改用 Ahet 的 Metu。
+    const abolished = [
+      /Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/, /\bSekhem Ma\b/,
+      /\bRemetch\b/, /\bSepr\b/, /\bSep-U\b/, /\bAmMit\b/, /\bDjesef\b/, /\bHemst\b/, /\bMaakher\b/,
+      /\bMekheru\b/, /\bIaru\b/, /\bSemen\b/, /\bWenu\b/, /\bMetu\b/,
+    ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
     expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /Pert Abuf/.test(v))).toEqual([]);
   });
