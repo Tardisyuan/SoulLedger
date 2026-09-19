@@ -38,6 +38,7 @@
 | D9 | PG 测试 2 里「回归先完成」时开审被拒是 400(POST 走序列化器),不是 404。 |
 | D10 | 官员通知在事务内直接发(沿用现有「回归被拦」的写法),不是 §8 说的提交后发。 |
 | D11 | 码名 `sentence_plan.cancel` 归 judgment 族(单独成族会没有视图认领)。 |
+| D12 | **(2026-09-19 用户改定)`SOUL_STATES_THAT_MAY_APPLY` 只留 `REINCARNATING`**,去掉 DISPOSED(取代 §6 原文「收成 `("DISPOSED", "REINCARNATING")`」)。计划完成与撤销都把可转世灵魂推进 REINCARNATING,正常流程里 DISPOSED 只出现在计划进行中;「ADMIN 修过数据、计划已完成而灵魂仍停在 DISPOSED」**不再放口子**,答 `soul_state`,要申请先把灵魂状态修对。计划进行中的 DISPOSED 灵魂仍答 `sentence_in_progress`(比 `soul_state` 说得清楚)。守卫:`test_a_disposed_soul_with_a_finished_plan_still_may_not_apply`。 |
 
 ## 0. 用户的原话(权威需求)
 
@@ -501,7 +502,7 @@ plan = SentencePlan.objects.filter(soul=soul, cycle=account.cycle).order_by("-cr
 if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress", None
 ```
 
-`SOUL_STATES_THAT_MAY_APPLY` 收成 `("DISPOSED", "REINCARNATING")`。冷却、申诉(`can_appeal` 不看计划,`:228-233`)、按原属文明不变;`terminal_cosmology` 判定在计划之前。拒绝码 `sentence_in_progress` 进 `REFUSALS`、语言包与 App 提示。**存量**经 §7.2 回填后,没有计划的只剩 ALIVE / JUDGING 灵魂。要改的测试:`test_dispatch_residence.py:585`(暂居中可申请 → 不可);`:629`(调拨前被驳回的申请暂居中可申诉)**不变**。
+`SOUL_STATES_THAT_MAY_APPLY` 收成 `("REINCARNATING",)`(D12,2026-09-19 用户改定;原写 `("DISPOSED", "REINCARNATING")`)。冷却、申诉(`can_appeal` 不看计划,`:228-233`)、按原属文明不变;`terminal_cosmology` 判定在计划之前。拒绝码 `sentence_in_progress` 进 `REFUSALS`、语言包与 App 提示。**存量**经 §7.2 回填后,没有计划的只剩 ALIVE / JUDGING 灵魂。要改的测试:`test_dispatch_residence.py:585`(暂居中可申请 → 不可);`:629`(调拨前被驳回的申请暂居中可申诉)**不变**。
 
 ---
 
