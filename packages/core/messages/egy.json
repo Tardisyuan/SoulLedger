@@ -2174,13 +2174,13 @@
     }
   },
   "social_moderation": {
-    "title": "Maat en Shemsu",
-    "subtitle": "Sedjem, Imen, Medu Djeseru, Gerh — en Shemsu en Duat Set",
+    "title": "Maat Shemsu",
+    "subtitle": "Sedjem, Khet Em Maat, Medu Djeseru, Gerh — Em Shemsu Ba Taui Pen",
     "refresh": "Wehem Maa",
     "tabs": {
-      "label": "Aat en Maat",
+      "label": "Aat Maat",
       "reports": "Sedjem",
-      "content": "Em Ankh Maat",
+      "content": "Khet Em Maat",
       "words": "Medu Djeseru",
       "mutes": "Gerh"
     },
@@ -2190,82 +2190,82 @@
       "USER": "Ba"
     },
     "report_status": {
-      "OPEN": "Wen",
-      "RESOLVED": "Wedja",
+      "OPEN": "Em Smen",
+      "RESOLVED": "Wetep Seth",
       "DISMISSED": "Khesef Seth"
     },
     "reason": {
-      "SPAM": "Spam",
-      "ABUSE": "Abuse",
-      "SEXUAL": "Sexual content",
-      "ILLEGAL": "Illegal or harmful",
-      "OTHER": "Other"
+      "SPAM": "Medu Mehy",
+      "ABUSE": "Medu Kher",
+      "SEXUAL": "Khet Hemet",
+      "ILLEGAL": "Betau",
+      "OTHER": "Ky"
     },
     "moderation_status": {
-      "PUBLISHED": "Per",
-      "PENDING": "Em Ankh Maat",
-      "HIDDEN": "Imen",
-      "DELETED": "Sekhem Ma"
+      "PUBLISHED": "Per Seth",
+      "PENDING": "Em Maat",
+      "HIDDEN": "Imen Seth",
+      "DELETED": "Fekh Seth"
     },
     "fields": {
-      "author": "Author",
-      "content": "Content",
-      "reports": "Reports",
-      "reasons": "Reasons",
-      "created": "Time",
-      "until": "Muted until",
-      "reason": "Reason",
-      "word": "Word"
+      "author": "Neb Medu",
+      "content": "Khet",
+      "reports": "Sedjem",
+      "reasons": "Khet Sedjem",
+      "created": "Ahet",
+      "until": "Gerh Er",
+      "reason": "Khet",
+      "word": "Medu Djeseru"
     },
-    "report_count": "{{n}} reporters",
+    "report_count": "Sedjem {{n}}",
     "kind": {
-      "posts": "Posts",
-      "comments": "Comments"
+      "posts": "Medu",
+      "comments": "Wesheb"
     },
     "status_filter": {
-      "PENDING": "Pending",
-      "HIDDEN": "Hidden"
+      "PENDING": "Em Maat",
+      "HIDDEN": "Imen Seth"
     },
     "actions": {
-      "hide": "Hide",
-      "delete": "Delete",
-      "mute": "Mute",
+      "hide": "Imen",
+      "delete": "Fekh",
+      "mute": "Gerh",
       "dismiss": "Khesef",
-      "approve": "Approve",
-      "restore": "Restore",
-      "lift": "Lift mute",
-      "add_word": "Add",
-      "remove_word": "Remove"
+      "approve": "Menkh",
+      "restore": "Ankh Wehem",
+      "lift": "Fekh Gerh",
+      "add_word": "Redi",
+      "remove_word": "Fekh"
     },
-    "mute_days": "Mute for",
-    "mute_days_option": "{{n}} days",
-    "word_placeholder": "Word to hold back",
-    "word_hint": "Lower-case substring match; new posts and comments that hit it wait for review and are hidden until then",
-    "confirm_delete_title": "Delete this content?",
-    "confirm_delete_body": "It disappears from the soul app; the audit log keeps a record.",
-    "confirm_remove_word_title": "Remove “{{word}}”?",
-    "confirm_remove_word_body": "New content will no longer be held for this word.",
-    "mute_active": "Active",
-    "mute_lifted": "Lifted",
-    "mute_expired": "Expired",
-    "done": "Done",
-    "failed": "Action failed",
+    "mute_days": "Hru Gerh",
+    "mute_days_option": "Hru {{n}}",
+    "word_placeholder": "Sesh Medu Djeseru",
+    "word_hint": "Gem Em Sesh Khered. Medu Hena Wesheb Renpi Em Maat; Nen Maa Er Khet Maat.",
+    "confirm_delete_title": "Fekh Khet Pen?",
+    "confirm_delete_body": "Nen Maa Em Medjat Ba; Sesh Maa Wenen.",
+    "confirm_remove_word_title": "Fekh Medu Djeseru «{{word}}»?",
+    "confirm_remove_word_body": "Khet Renpi Nen Em Maat Em Medu Pen Er Khet.",
+    "mute_active": "Em Wenen",
+    "mute_lifted": "Fekh Seth",
+    "mute_expired": "Mut",
+    "done": "Kheper",
+    "failed": "Nen Kheper",
     "errors": {
-      "already_resolved": "This report was already handled (perhaps by another officer)",
-      "invalid_transition": "The content's status changed; refresh and try again",
-      "already_deleted": "The content was already deleted",
-      "duplicate_word": "That word is already on the list",
-      "invalid_word": "The word cannot be empty",
-      "invalid_resolution": "A report against a user cannot hide or delete content; mute instead",
-      "already_lifted": "That mute was already lifted",
-      "not_found": "Not found, or not in this civilization"
+      "already_resolved": "Sedjem Pen Wetep Seth (Sab Ky)",
+      "invalid_transition": "Kheperu Khet Khemen Seth. Wehem Maa Er Iri.",
+      "already_deleted": "Khet Fekh Seth",
+      "duplicate_word": "Medu Djeseru Pen Wenen Djer",
+      "invalid_word": "Nen Medu Djeseru Sesh",
+      "invalid_resolution": "Sedjem Er Ba: Nen Imen, Nen Fekh. Iri Gerh.",
+      "already_lifted": "Gerh Fekh Seth",
+      "not_found": "Nen Gem, Er Nen Em Taui Pen"
     },
     "empty": {
-      "reports": "No open reports",
-      "content": "Nothing pending",
-      "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
-      "words": "No words yet",
-      "mutes": "No mutes"
+      "reports": "Nen Sedjem Em Smen",
+      "content": "Nen Khet Em Maat",
+      "content_reason": "Khet Gem Medu Djeseru Wa Em Maat; Khet Sedjem Em Aat Sedjem.",
+      "words": "Nen Medu Djeseru Djer",
+      "mutes": "Nen Sesh Gerh"
     }
   },
   "soul_inbox": {

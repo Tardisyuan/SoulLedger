@@ -3,9 +3,10 @@
  *
  * 词表(Claude Design 定稿)的总原则是「同一概念,永远同一写法」。它统一了七处冲突
  * (否定一律 Nen、驳回 Khesef / 取消 Sehen、审批中与审判中同为 Em Wedja、Send→Hab、
- * Ma'a→Wehem Maa、密码一律 Sekhem……),并给了 462 行逐字修订表。这里钉住:
+ * Ma'a→Wehem Maa、密码一律 Sekhem……),并给了 462 行逐字修订表;后来追加的「审核域」一节
+ * 又给了 social_moderation 71 行与 18 个审核域词根(删除一律 Fekh,Sekhem Ma 废止)。这里钉住:
  *
- * - 修订表 462 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
+ * - 修订表 533 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
@@ -13,16 +14,13 @@
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根表只有 39 + 18 个,
- *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行;
- * - `social_moderation` 整个命名空间还是英文原文(没翻),对英文残留、撇号、大小写、
- *   封闭词汇四条豁免。下面有一条断言它**仍然**需要豁免:翻完之后那条会红,提醒把豁免删掉。
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18、小词 18 个,
+ *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
 import egy from "@soulledger/core/messages/egy.json";
-import en from "@soulledger/core/messages/en.json";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 
 import REVISIONS from "./support/egyLexiconRevisions.json";
@@ -41,12 +39,7 @@ function flatten(node: unknown, prefix = ""): Record<string, string> {
 
 const EGY = flatten(egy);
 const ZH = flatten(zh);
-const EN = flatten(en);
 const KEYS = Object.keys(EGY);
-
-/** 还没翻译的命名空间:值与 en 相同的英文原文。 */
-const UNTRANSLATED = "social_moderation.";
-const translated = KEYS.filter((k) => !k.startsWith(UNTRANSLATED));
 
 const placeholders = (s: string) => [...s.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map((m) => m[1]).sort();
 /** 去掉占位符后的正文 —— 占位符名是代码,不是文案。 */
@@ -81,7 +74,6 @@ const MA_NOT_NEGATION = new Set([
   "permissions.matrix.confirm_removed_label",
   "workflow.detail.escalate_reason_placeholder",
   "workflow.view_to_see_nodes",
-  "social_moderation.moderation_status.DELETED",
 ]);
 
 /** 「Pert Abuf」只剩调度义(dispatch);作密码的写法已废止。 */
@@ -91,7 +83,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 462 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 533 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -125,21 +117,29 @@ const words = (k: string) =>
     .filter((t) => !(TECHNICAL[k] ?? []).includes(bare(t)))
     .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? []);
 
-/** 定稿词表:词根 39 个、语法小词 18 个,逐字照抄。「Duat / Pet」「Er Hry」按空格拆成词。 */
+/**
+ * 定稿词表:词根 39 个、审核域词根 18 个、语法小词 18 个,逐字照抄。「Duat / Pet」「Er Hry」按空格
+ * 拆成词;连字符写法(Djes-Ef、Neb-Medu、Ankh-Wehem)照抄为一个词形。
+ */
 const ROOTS = [
   "Ba", "Ren", "Ankh", "Medjat", "Sesh", "Medu", "Sekhem", "Wedja", "Wetep", "Mesut",
   "Dbh", "Nehet", "Khesef", "Hesy", "Hemes", "Taui", "Wesekhet", "Sab", "Nefer", "Isfet",
   "Shut", "Ib", "Wat", "Kheperu", "Kheper", "Sethet", "Gem", "Mut", "Khetem", "Djeret",
   "Hab", "Aq", "Wenen", "Baku", "Ahet", "Was", "Renpi", "Qebeh", "Duat / Pet",
 ];
+/** 审核域(social_moderation)。Imen 隐藏 / Fekh 删除·解除;Menkh 审核通过 / Hesy 批准转生;Gerh 禁言 / Djeseru 敏感词。 */
+const ROOTS_MOD = [
+  "Sedjem", "Wesheb", "Djeseru", "Gerh", "Imen", "Fekh", "Per", "Aat", "Redi",
+  "Mehy", "Kher", "Hemet", "Betau", "Shemsu", "Neb-Medu", "Khet", "Menkh", "Ankh-Wehem",
+];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
- * 封闭词汇登记表(support/egyVocabulary.json):egy 文案(social_moderation 除外)用到的
+ * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
  * 每个词形 → 出现次数、是否在定稿词根 / 小词表内。**由本文件生成,不手抄**:
  *
  *     EGY_VOCAB_WRITE=1 npx jest egyLexiconRules    # 在 frontend/ 下;写完再跑一次看绿
@@ -148,7 +148,7 @@ const LEXICON = new Set([...ROOTS, ...PARTICLES].flatMap((e) => e.split(/ \/ | /
  */
 type VocabEntry = { count: number; lexicon: boolean };
 const usage: Record<string, VocabEntry> = {};
-for (const k of translated) {
+for (const k of KEYS) {
   for (const w of words(k)) usage[w] = { count: (usage[w]?.count ?? 0) + 1, lexicon: LEXICON.has(w) };
 }
 const USAGE = Object.fromEntries(Object.entries(usage).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
@@ -161,12 +161,11 @@ const REGISTERED = VOCABULARY as Record<string, VocabEntry>;
 describe("egy 词表规则", () => {
   it("摊平后拿到了整份包(扫不到东西的扫描器会让下面全部通过)", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
-    expect(translated.length).toBeGreaterThan(1700);
   });
 
-  it("修订表 462 行与包里逐字一致", () => {
+  it("修订表 533 行与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(462);
+    expect(Object.keys(table)).toHaveLength(533);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -181,7 +180,7 @@ describe("egy 词表规则", () => {
   });
 
   it("无撇号", () => {
-    expect(offenders(translated, (v) => /['’]/.test(prose(v)))).toEqual([]);
+    expect(offenders(KEYS, (v) => /['’]/.test(prose(v)))).toEqual([]);
   });
 
   it("无全大写词(技术词白名单除外)", () => {
@@ -192,7 +191,7 @@ describe("egy 词表规则", () => {
 
   it("无已知英文残留", () => {
     const re = new RegExp(`\\b(${ENGLISH_RESIDUE.join("|")})\\b`);
-    expect(offenders(translated, (v) => re.test(prose(v)))).toEqual([]);
+    expect(offenders(KEYS, (v) => re.test(prose(v)))).toEqual([]);
   });
 
   it("已废止写法不再出现", () => {
@@ -209,7 +208,7 @@ describe("egy 词表规则", () => {
   });
 
   it("每词首字母大写:含小词,连字符复合词的每一段都算", () => {
-    expect(offenders(translated, (_v, k) => words(k).some((w) => w.split("-").some((s) => !/^[A-Z]/.test(s))))).toEqual(
+    expect(offenders(KEYS, (_v, k) => words(k).some((w) => w.split("-").some((s) => !/^[A-Z]/.test(s))))).toEqual(
       []
     );
   });
@@ -233,10 +232,5 @@ describe("egy 词表规则", () => {
 
   it("登记表的次数与词表标记与现状逐条一致(改了文案就重新生成,见上方命令)", () => {
     expect(REGISTERED).toEqual(USAGE);
-  });
-
-  it(`${UNTRANSLATED}* 仍是英文原文,豁免仍然必要`, () => {
-    const english = KEYS.filter((k) => k.startsWith(UNTRANSLATED) && EGY[k] === EN[k]);
-    expect(english.length).toBeGreaterThan(0);
   });
 });
