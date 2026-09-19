@@ -39,6 +39,12 @@ SOUL_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 SOUL_CODE_LENGTH = 10
 
 
+def normalize_soul_code(raw):
+    """用户手输的编号 → 库里的样子:去首尾空白、转大写。登录与聊天查找共用这一条,
+    两处规则不能各写一份(一处放宽、一处没放宽,就是「登得进却查不到」)。"""
+    return (raw or "").strip().upper()
+
+
 class SoulAccountError(Exception):
     """业务拒绝。`code` 给 App 做分支用,`status` 给视图选状态码。"""
 
@@ -341,7 +347,7 @@ def login(soul_code, password):
     from apps.souls.models import Soul
 
     bad = SoulAccountError("灵魂编号或密码错误。", "invalid_credentials", 401)
-    soul = Soul.objects.filter(soul_code=(soul_code or "").strip().upper()).first()
+    soul = Soul.objects.filter(soul_code=normalize_soul_code(soul_code)).first()
     account = current_account_of(soul) if soul is not None else None
     if account is None or not account.user.is_active:
         User().set_password(password)

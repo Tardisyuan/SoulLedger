@@ -3983,6 +3983,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatError'
           description: ''
+  /api/v1/me/chat/lookup/:
+    post:
+      operationId: v1_me_chat_lookup_create
+      description: |-
+        `POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
+
+        返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
+        **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
+        互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatLookup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatLookup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatLookup'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulCard'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
   /api/v1/me/chat/session/:
     get:
       operationId: v1_me_chat_session_retrieve
@@ -12930,9 +12980,23 @@ components:
           type: string
         code:
           type: string
+        retry_at:
+          type: string
+          format: date-time
+          description: 429 时:何时可以再试。
       required:
       - code
       - detail
+    ChatLookup:
+      type: object
+      description: '`POST /me/chat/lookup/`。走请求体而不是查询串:编号是登录名,不该落进访问日志的 URL 里。'
+      properties:
+        soul_code:
+          type: string
+          description: 完整的灵魂编号,大小写不论;不做前缀或模糊匹配。
+          maxLength: 32
+      required:
+      - soul_code
     ChatSession:
       type: object
       description: '`GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。'

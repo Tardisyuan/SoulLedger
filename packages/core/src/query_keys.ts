@@ -156,6 +156,12 @@ export const soulInboxKeys = {
   messages: (id: string) => ["soul-inbox", "messages", id] as const,
 };
 
+/** Soul chat, soul side. Opening a conversation invalidates the list. */
+export const soulChatKeys = {
+  all: ["soul-chat"] as const,
+  conversations: () => ["soul-chat", "conversations"] as const,
+};
+
 export const socialKeys = {
   all: ["social"] as const,
   posts: {

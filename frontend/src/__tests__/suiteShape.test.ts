@@ -194,6 +194,7 @@ const COLLECTED_FILES = [
   "useSidebarMenus.test.tsx",
   "useSocial.queries.test.ts",
   "useSocial.test.ts",
+  "useSoulChat.test.ts",
   "useSouls.lifecycle.test.ts",
   "useSouls.test.ts",
   "workflowAutoLayoutMotion.test.tsx",

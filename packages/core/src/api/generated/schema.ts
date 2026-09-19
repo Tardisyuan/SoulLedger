@@ -1727,6 +1727,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/chat/lookup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
+         *
+         *     返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
+         *     **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
+         *     互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+         */
+        post: operations["v1_me_chat_lookup_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/chat/session/": {
         parameters: {
             query?: never;
@@ -5838,6 +5861,16 @@ export interface components {
         ChatError: {
             detail: string;
             code: string;
+            /**
+             * Format: date-time
+             * @description 429 时:何时可以再试。
+             */
+            retry_at?: string;
+        };
+        /** @description `POST /me/chat/lookup/`。走请求体而不是查询串:编号是登录名,不该落进访问日志的 URL 里。 */
+        ChatLookup: {
+            /** @description 完整的灵魂编号,大小写不论;不做前缀或模糊匹配。 */
+            soul_code: string;
         };
         /** @description `GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。 */
         ChatSession: {
@@ -13252,6 +13285,55 @@ export interface operations {
                 };
             };
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_lookup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatLookup"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChatLookup"];
+                "multipart/form-data": components["schemas"]["ChatLookup"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulCard"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
