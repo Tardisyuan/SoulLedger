@@ -195,7 +195,8 @@ describe("egy 词表规则", () => {
   });
 
   it("已废止写法不再出现", () => {
-    const abolished = [/Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/];
+    // Sekhem 只表密码:删除一律 Fekh(审核域定稿)。
+    const abolished = [/Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/, /\bSekhem Ma\b/];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
     expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /Pert Abuf/.test(v))).toEqual([]);
   });
