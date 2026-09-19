@@ -84,7 +84,23 @@ export function LedgerUnreachable({ size, stroke }: { size: number; stroke: stri
   );
 }
 
-export type IconName = "ledger" | "alert" | "info" | "lock" | "back" | "chevron" | "chevronDown" | "person" | "copy" | "check" | "cycle";
+export type IconName =
+  | "ledger"
+  | "alert"
+  | "info"
+  | "lock"
+  | "back"
+  | "chevron"
+  | "chevronDown"
+  | "person"
+  | "copy"
+  | "check"
+  | "cycle"
+  | "letter"
+  | "plus"
+  | "search"
+  | "send"
+  | "clock";
 
 const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   ledger: { box: 16, body: [<Rect key="a" x={3} y={2.5} width={10} height={11} />, <Path key="b" d="M5.5 2.5v11M3 6.5h10" />] },
@@ -105,6 +121,12 @@ const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   copy: { box: 16, body: [<Rect key="a" x={5.5} y={5.5} width={9} height={9} />, <Path key="b" d="M11 3.5H2v9" />] },
   check: { box: 16, body: <Path d="M2.5 8.5l3.5 3.5 7.5-8" /> },
   cycle: { box: 16, body: [<Path key="a" d="M13 8a5 5 0 11-1.5-3.6" />, <Path key="b" d="M13 2v3h-3" />] },
+  // The chat handoff (1b / 1e): a folded letter for the tab, and the "new", "search", "send" (paper kite) and clock glyphs.
+  letter: { box: 16, body: [<Rect key="a" x={2} y={3.5} width={12} height={9} />, <Path key="b" d="M2 4l6 4.5L14 4" />] },
+  plus: { box: 18, body: <Path d="M9 3v12M3 9h12" /> },
+  search: { box: 18, body: [<Circle key="a" cx={8} cy={8} r={5.5} />, <Path key="b" d="M12 12l4 4" />] },
+  send: { box: 20, body: <Path d="M3 17L17 10 3 3v5.5L11 10l-8 1.5z" /> },
+  clock: { box: 12, body: [<Circle key="a" cx={6} cy={6} r={4.6} />, <Path key="b" d="M6 3.4V6l1.8 1.3" />] },
 };
 
 export function Icon({ name, size, color, strokeWidth = 1.3 }: { name: IconName; size: number; color: string; strokeWidth?: number }) {

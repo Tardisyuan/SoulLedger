@@ -47,12 +47,15 @@ import { useResidence } from "./life";
 
 export type AppStackParams = {
   /** `screen` picks the tab (a push landing on the life tab). */
-  Tabs: { screen: "Life" | "PastLives" | "Applications" } | undefined;
+  Tabs: { screen: "Life" | "PastLives" | "Applications" | "Letters" } | undefined;
   NewApplication: undefined;
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
   Settings: undefined;
   NotificationPrimer: undefined;
+  /** `landed`: opened from a tapped notification — the newest letter from the other side is highlighted once. */
+  Conversation: { id: string; landed?: boolean };
+  FindSoul: undefined;
 };
 
 /**

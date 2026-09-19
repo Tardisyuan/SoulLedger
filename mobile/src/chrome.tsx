@@ -4,20 +4,32 @@
  * item is the civilization's emblem in its mark colour with a 2px rule on top.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Emblem, Icon, type IconName } from "./emblems";
 import { useI18n } from "./i18n";
 import { Txt, useLayout, useTheme } from "./ui";
 
+/** A title-bar action in the account icon's place (the 书信 tab's "new" / search, handoff chat 1b / 1e). */
+export interface HeaderAction {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+  testID: string;
+  /** iOS "new": a 44pt square framed in the accent. */
+  framed?: boolean;
+}
+
 export function AppHeader({
   title,
   onBack,
   onAccount,
+  action,
 }: {
   title: string;
   onBack?: () => void;
+  action?: HeaderAction;
   /**
    * The person icon, top right, on all three tabs. Round 1 had it open the
    * sign-out sheet; since round 4 it opens the settings page (language,
@@ -47,7 +59,21 @@ export function AppHeader({
         >
           {title}
         </Txt>
-        {onAccount ? (
+        {action ? (
+          <Pressable
+            testID={action.testID}
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
+            onPress={action.onPress}
+            style={({ pressed }) => [
+              styles.icon,
+              action.framed && { borderWidth: 1, borderColor: t.accent },
+              pressed && { backgroundColor: t.s1 },
+            ]}
+          >
+            <Icon name={action.icon} size={18} color={action.framed ? t.accent : t.inkMuted} strokeWidth={1.4} />
+          </Pressable>
+        ) : onAccount ? (
           <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.settings.title")} onPress={onAccount} style={styles.icon}>
             <Icon name="person" size={18} color={t.inkSubtle} strokeWidth={1.2} />
           </Pressable>
@@ -59,7 +85,13 @@ export function AppHeader({
   );
 }
 
-const TAB_ICONS: Record<string, IconName> = { Life: "ledger", PastLives: "lock", Applications: "cycle" };
+const TAB_ICONS: Record<string, IconName> = { Life: "ledger", PastLives: "lock", Applications: "cycle", Letters: "letter" };
+
+/**
+ * Chat handoff 1e: the selected tab is a 2px mark rule on top on iOS, and the
+ * whole cell tinted with the accent on Android — no pill, no corner either way.
+ */
+const ANDROID_TABS = Platform.OS === "android";
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const t = useTheme();
@@ -76,23 +108,33 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     >
       {state.routes.map((route, index) => {
         const selected = state.index === index;
-        const label = descriptors[route.key].options.title ?? route.name;
+        const { title, tabBarBadge } = descriptors[route.key].options;
+        const label = title ?? route.name;
         const color = selected ? t.mark : t.inkSubtle;
         return (
           <Pressable
             key={route.key}
             testID={`tab-${route.name}`}
             accessibilityRole="tab"
-            accessibilityLabel={label}
+            accessibilityLabel={tabBarBadge ? `${label}, ${tabBarBadge}` : label}
             accessibilityState={{ selected }}
             onPress={() => {
               const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!selected && !event.defaultPrevented) navigation.navigate(route.name, route.params);
             }}
-            style={stack ? [styles.tabRow, { borderBottomColor: t.hair }] : styles.tab}
+            style={[
+              stack ? [styles.tabRow, { borderBottomColor: t.hair }] : styles.tab,
+              ANDROID_TABS && selected && { backgroundColor: `${t.accent}1F` },
+            ]}
           >
-            <View style={[stack ? styles.tabRuleSide : styles.tabRule, { backgroundColor: selected ? t.mark : "transparent" }]} />
+            <View
+              style={[
+                stack ? styles.tabRuleSide : styles.tabRule,
+                { backgroundColor: selected && !ANDROID_TABS ? t.mark : "transparent" },
+              ]}
+            />
             <View style={styles.tabIcon}>
+              {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.mark }]} /> : null}
               {selected ? (
                 <Emblem civ={t.civ} size={24} stroke={t.mark} strokeWidth={2.2} />
               ) : (
@@ -121,5 +163,6 @@ const styles = StyleSheet.create({
   tabRuleSide: { position: "absolute", top: 0, bottom: 0, left: 0, width: 2 },
   tabRule: { position: "absolute", top: -1, left: 0, right: 0, height: 2 },
   tabIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
+  tabBadge: { position: "absolute", top: -4, right: -5, width: 7, height: 7 },
   tabLabel: { fontSize: 11, letterSpacing: 0.6, textAlign: "center" },
 });
