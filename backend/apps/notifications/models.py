@@ -36,6 +36,9 @@ class NotificationType(models.TextChoices):
     SENTENCE_NODE_REFUSED = "SENTENCE_NODE_REFUSED", "Sentence Node Refused"
     SENTENCE_PLAN_COMPLETED = "SENTENCE_PLAN_COMPLETED", "Sentence Plan Completed"
     CROSS_SENTENCE_SUBMITTED = "CROSS_SENTENCE_SUBMITTED", "Cross Sentence Submitted"
+    SENTENCE_PLAN_AMENDED = "SENTENCE_PLAN_AMENDED", "Sentence Plan Amended"
+    SENTENCE_REQUEST_PENDING = "SENTENCE_REQUEST_PENDING", "Sentence Request Pending"
+    SENTENCE_REQUEST_DECIDED = "SENTENCE_REQUEST_DECIDED", "Sentence Request Decided"
 
 
 class UserNotification(AuditUserFields, models.Model):

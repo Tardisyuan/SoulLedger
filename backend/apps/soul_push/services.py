@@ -122,7 +122,10 @@ def rule_for(event_type, payload, account):
 #:   dedupe_key 用节点 id,一站一条。
 #: * `sentence_completed` 只推给**开放了转生申请**的(文案说「可以申请转生」,终局文明的灵魂不收)。
 #: * `sentence_waiting`:刑满暂留(Q7)。
-SENTENCE_EVENTS = frozenset({"SENTENCE_NODE_COMPLETED", "SENTENCE_PLAN_COMPLETED", "SENTENCE_NODE_WAITING"})
+#: * `sentence_amended`:计划的节点集合变了(请求被批准、重开审判结案)。不说加了哪里、为什么;
+#:   dedupe 用那条事件的 id(每次变更一条)。请求的创建 / 决定不推(官员之间的流程)。
+SENTENCE_EVENTS = frozenset({"SENTENCE_NODE_COMPLETED", "SENTENCE_PLAN_COMPLETED", "SENTENCE_NODE_WAITING",
+                             "SENTENCE_PLAN_AMENDED"})
 DISPOSITION_DONE_NODE_STATUSES = ("COMPLETED", "ETERNAL")
 
 
@@ -136,6 +139,9 @@ def _sentence_rule(event_type, payload):
     if event_type == "SENTENCE_NODE_WAITING":
         node_id = payload.get("node_id")
         return ("residence", "sentence_waiting", f"node:{node_id}:waiting", life) if node_id else None
+    if event_type == "SENTENCE_PLAN_AMENDED":
+        key = payload.get("_event_id")
+        return ("judgment", "sentence_amended", f"plan-amended:{key}", life) if key else None
     plan_id = payload.get("sentence_plan_id")
     if not plan_id or not payload.get("rebirth_open"):
         return None
@@ -152,6 +158,7 @@ KIND_CATEGORY = {
     **{kind: "residence" for kind in RESIDENCE_ACTIONS.values()},
     "sentence_waiting": "residence",
     "sentence_completed": "rebirth",
+    "sentence_amended": "judgment",
 }
 
 

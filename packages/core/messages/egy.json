@@ -2174,6 +2174,10 @@
     "sentence_waiting": {
       "title": "Hemes Smen",
       "body": "Mekher Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."
+    },
+    "sentence_amended": {
+      "title": "Wetep Khemen Seth",
+      "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
@@ -2204,6 +2208,18 @@
     "cross_sentence_submitted": {
       "title": "Mekher Sesh Seth",
       "body": "{{tenant}}: Mekher {{order}} En {{soul}} Sesh Seth."
+    },
+    "sentence_plan_amended": {
+      "title": "Wetep Khemen Seth",
+      "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."
+    },
+    "sentence_request_pending": {
+      "title": "Dbh Wetep Em Smen",
+      "body": "{{tenant}}: Dbh Wetep En {{soul}}. Hemsu Tepy Er Wedja."
+    },
+    "sentence_request_decided": {
+      "title": "Dbh Wetep Wedja Seth",
+      "body": "{{soul}}: Dbh Ek Wedja Seth Em Hemsu Tepy."
     }
   },
   "social_moderation": {

@@ -2174,6 +2174,10 @@
     "sentence_waiting": {
       "title": "刑满暂留",
       "body": "本站刑满,等待审判结案后回归,打开灵魂簿查看。"
+    },
+    "sentence_amended": {
+      "title": "受刑计划有变更",
+      "body": "你的受刑计划有变更,打开灵魂簿查看。"
     }
   },
   "official_notify": {
@@ -2204,6 +2208,18 @@
     "cross_sentence_submitted": {
       "title": "联审节点已填写",
       "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"
+    },
+    "sentence_plan_amended": {
+      "title": "受刑计划变更",
+      "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"
+    },
+    "sentence_request_pending": {
+      "title": "受刑计划请求待决",
+      "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原审判官决定。"
+    },
+    "sentence_request_decided": {
+      "title": "受刑计划请求已决定",
+      "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"
     }
   },
   "social_moderation": {

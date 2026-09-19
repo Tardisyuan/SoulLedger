@@ -2174,6 +2174,10 @@
     "sentence_waiting": {
       "title": "Held after serving",
       "body": "You have served this stop and wait for a judgment to close before returning. Open Soul Ledger to see it."
+    },
+    "sentence_amended": {
+      "title": "Sentence plan changed",
+      "body": "Your sentence plan has changed. Open Soul Ledger to see it."
     }
   },
   "official_notify": {
@@ -2204,6 +2208,18 @@
     "cross_sentence_submitted": {
       "title": "Joint sentence submitted",
       "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."
+    },
+    "sentence_plan_amended": {
+      "title": "Sentence plan changed",
+      "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."
+    },
+    "sentence_request_pending": {
+      "title": "Sentence plan request pending",
+      "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."
+    },
+    "sentence_request_decided": {
+      "title": "Sentence plan request decided",
+      "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."
     }
   },
   "social_moderation": {
