@@ -16,11 +16,15 @@ import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { soulHttp } from "@soulledger/core/api/soul";
-import { soulChatApi } from "@soulledger/core/api/soul-chat";
+import { soulChatApi, soulChatErrorCode, soulChatErrorMessage, soulChatRetryAt } from "@soulledger/core/api/soul-chat";
 import { useOpenSoulChat, useSoulChatLookup, useSoulConversations } from "@soulledger/core/hooks/useSoulChat";
 import { soulChatKeys } from "@soulledger/core/query_keys";
 
-jest.mock("@soulledger/core/api/soul", () => ({ soulHttp: jest.requireActual("axios").create() }));
+jest.mock("@soulledger/core/api/soul", () => ({
+  soulHttp: jest.requireActual("axios").create(),
+  // The general copy is soul.ts's (tested by core's vitest); here only "it was asked for".
+  soulErrorMessage: () => ({ key: "soul_app.errors.general" }),
+}));
 
 type Call = { method: string; url: string; body: unknown };
 let calls: Call[];
@@ -108,5 +112,47 @@ describe("useOpenSoulChat / useSoulConversations", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: soulChatKeys.all });
     await waitFor(() => expect(calls.filter((c) => c.method === "get")).toHaveLength(2));
     expect(soulChatKeys.conversations().slice(0, 1)).toEqual([...soulChatKeys.all]);
+  });
+});
+
+/** A refusal as the backend sends it: `{code, detail}`, plus `retry_at` on a 429. */
+function refusal(status: number, data: unknown) {
+  const config = { headers: {} } as InternalAxiosRequestConfig;
+  return new AxiosError("fail", "ERR_BAD_RESPONSE", config, null, ok(config, data, status));
+}
+
+describe("the chat refusals the app picks its screens by", () => {
+  it("reads the chat code, and only a known one", () => {
+    expect(soulChatErrorCode(refusal(429, { code: "request_throttled", retry_at: "2026-09-20T10:00:00Z" }))).toBe("request_throttled");
+    expect(soulChatErrorCode(refusal(403, { code: "muted" }))).toBe("muted");
+    // A code this client does not know is not guessed at.
+    expect(soulChatErrorCode(refusal(409, { code: "not_initiator" }))).toBeNull();
+    expect(soulChatErrorCode(new Error("offline"))).toBeNull();
+  });
+
+  it("carries retry_at of a 429, and nothing else", () => {
+    expect(soulChatRetryAt(refusal(429, { code: "request_throttled", retry_at: "2026-09-20T10:00:00Z" }))).toBe("2026-09-20T10:00:00Z");
+    expect(soulChatRetryAt(refusal(403, { code: "muted" }))).toBeNull();
+    expect(soulChatRetryAt(new Error("offline"))).toBeNull();
+  });
+
+  it("maps a chat code to its own copy, the server's self_conversation to `self`, the rest to the general copy", () => {
+    expect(soulChatErrorMessage(refusal(409, { code: "closed" }))).toEqual({ key: "soul_app.chat.errors.closed" });
+    expect(soulChatErrorMessage(refusal(400, { code: "self_conversation" }))).toEqual({ key: "soul_app.chat.errors.self" });
+    expect(soulChatErrorMessage(refusal(500, {}))).toEqual({ key: "soul_app.errors.general" });
+  });
+
+  it("session, the list, the hall and a letter each hit their own endpoint", async () => {
+    reply = (config) => ok(config, config.url === "/me/chat/conversations/" && config.method === "get" ? [] : { event_id: "$e", id: "c" });
+    await soulChatApi.session();
+    await soulChatApi.conversations();
+    await soulChatApi.openInbox();
+    await expect(soulChatApi.send("c1", "hi")).resolves.toBe("$e");
+    expect(calls).toEqual([
+      { method: "get", url: "/me/chat/session/", body: undefined },
+      { method: "get", url: "/me/chat/conversations/", body: undefined },
+      { method: "post", url: "/me/chat/conversations/", body: { kind: "OFFICER_INBOX" } },
+      { method: "post", url: "/me/chat/conversations/c1/messages/", body: { body: "hi" } },
+    ]);
   });
 });
