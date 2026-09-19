@@ -2112,7 +2112,9 @@
       "open_system_settings": "前往系统设置",
       "enable_push": "开启通知",
       "toggle_failed": "没能保存这项设置，已恢复原样",
-      "version": "灵魂簿 {{version}}"
+      "version": "灵魂簿 {{version}}",
+      "chat": "书信",
+      "chat_note": "有新书信、殿司回信时"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -2277,6 +2279,10 @@
     "sentence_pardoned": {
       "title": "受刑计划已撤销",
       "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"
+    },
+    "chat_message": {
+      "title": "新书信",
+      "body": "你收到一封新书信,打开灵魂簿查看。"
     }
   },
   "official_notify": {

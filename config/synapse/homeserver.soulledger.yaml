@@ -37,3 +37,5 @@ modules:
     config:
       service_user: "@soulledger:${MATRIX_SERVER_NAME}"
       grant_secret: "${MATRIX_JWT_SECRET}"
+      # 新消息落库后回调后端记推送(签名同 grant_secret;不配就不推)。容器网络内的后端地址。
+      push_url: "${MATRIX_PUSH_HOOK_URL}"

@@ -7,7 +7,7 @@
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
@@ -36,7 +36,7 @@ const constants = Constants as unknown as { expoConfig: { extra: Record<string, 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
 const APP_ID = "3f1c2a9e-1b2c-4d5e-8f90-a1b2c3d4e5f6";
-const SETTINGS = { rebirth: true, judgment: true, residence: true, locale: "zh-Hans" };
+const SETTINGS = { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" };
 const STATEMENT = "我这一世无甚大功，唯有在一九九八年的水里，把一个不认识的孩子推上了岸。";
 
 function renderApp() {
@@ -279,6 +279,18 @@ describe("notification settings", () => {
     expect(screen.getByTestId("toggle-judgment").props.accessibilityState).toEqual({ checked: false });
   });
 
+  it("the letters switch is its own category: it writes back only `chat`", async () => {
+    const calls = signedIn({ "PATCH /me/notification-settings/": { status: 200, data: { ...SETTINGS, chat: false } } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    const letters = await screen.findByTestId("toggle-chat");
+    expect(within(letters).getByText("书信")).toBeTruthy();
+    fireEvent.press(letters);
+    await waitFor(() => expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ chat: false }]));
+    expect(screen.getByTestId("toggle-chat").props.accessibilityState).toEqual({ checked: false });
+  });
+
   it("system permission denied: the page says so, links to system settings, and the switches dim but still work", async () => {
     system.status = "denied";
     const calls = signedIn({ "PATCH /me/notification-settings/": { status: 200, data: { ...SETTINGS, rebirth: false } } });
@@ -349,6 +361,8 @@ describe("tapping a notification", () => {
   it("landingOf routes by screen alone; an unknown kind with a known screen still lands, junk lands nowhere", () => {
     expect(landingOf({ screen: "ApplicationDetail", application_id: APP_ID, kind: "rebirth_rejected" })).toEqual({ screen: "ApplicationDetail", id: APP_ID });
     expect(landingOf({ screen: "Life", kind: "residence_approved" })).toEqual({ screen: "Life" });
+    // The backend's `chat_message` (a new letter, or the hall's reply) lands on that conversation.
+    expect(landingOf({ screen: "Conversation", conversation_id: APP_ID, kind: "chat_message" })).toEqual({ screen: "Conversation", id: APP_ID });
     expect(landingOf({ screen: "ApplicationDetail", application_id: "../../me/" })).toEqual({ screen: "Life" });
     expect(landingOf({ screen: "ApplicationDetail" })).toEqual({ screen: "Life" });
     expect(landingOf({ screen: "Chat", kind: "dm_received" })).toBeNull();
