@@ -3400,7 +3400,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Execution history, newest first. Filter by job / status / tenant / task_name / trigger. */
+        /**
+         * @description Execution history, newest first. Filter by job / status (comma list) /
+         *     tenant / task_name / trigger / queued_after / queued_before; `?search=`
+         *     matches task_name and error. Every filter and the search run on the
+         *     tenant-scoped queryset, so they narrow what the caller could already list.
+         */
         get: operations["v1_scheduler_runs_list"];
         put?: never;
         post?: never;
@@ -3417,7 +3422,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Execution history, newest first. Filter by job / status / tenant / task_name / trigger. */
+        /**
+         * @description Execution history, newest first. Filter by job / status (comma list) /
+         *     tenant / task_name / trigger / queued_after / queued_before; `?search=`
+         *     matches task_name and error. Every filter and the search run on the
+         *     tenant-scoped queryset, so they narrow what the caller could already list.
+         */
         get: operations["v1_scheduler_runs_retrieve"];
         put?: never;
         post?: never;
@@ -16500,18 +16510,12 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                queued_after?: string;
+                queued_before?: string;
                 /** @description A search term. */
                 search?: string;
-                /**
-                 * @description * `PENDING` - Pending
-                 *     * `RUNNING` - Running
-                 *     * `SUCCESS` - Success
-                 *     * `FAILURE` - Failure
-                 *     * `RETRY` - Retry
-                 *     * `SKIPPED` - Skipped
-                 *     * `LOST` - Lost
-                 */
-                status?: "FAILURE" | "LOST" | "PENDING" | "RETRY" | "RUNNING" | "SKIPPED" | "SUCCESS";
+                /** @description Multiple values may be separated by commas. */
+                status?: string[];
                 task_name?: string;
                 tenant?: number;
                 /**

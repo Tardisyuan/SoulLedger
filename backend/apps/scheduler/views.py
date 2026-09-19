@@ -12,6 +12,7 @@ PATCH is the PeriodicTask/CrontabSchedule, not this row.
 """
 import logging
 
+import django_filters as filters
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django_celery_beat.models import CrontabSchedule, PeriodicTasks
@@ -145,14 +146,33 @@ class ScheduledJobViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         return Response(RebuildResultSerializer(result).data)
 
 
+class _CharInFilter(filters.BaseInFilter, filters.CharFilter):
+    pass
+
+
+class TaskRunFilter(filters.FilterSet):
+    # `?status=FAILURE,LOST` — a comma list; a single value still works as before.
+    status = _CharInFilter(field_name="status", lookup_expr="in")
+    queued_after = filters.IsoDateTimeFilter(field_name="queued_at", lookup_expr="gte")
+    queued_before = filters.IsoDateTimeFilter(field_name="queued_at", lookup_expr="lte")
+
+    class Meta:
+        model = TaskRun
+        fields = ["job", "status", "tenant", "task_name", "trigger"]
+
+
 class TaskRunViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
-    """Execution history, newest first. Filter by job / status / tenant / task_name / trigger."""
+    """Execution history, newest first. Filter by job / status (comma list) /
+    tenant / task_name / trigger / queued_after / queued_before; `?search=`
+    matches task_name and error. Every filter and the search run on the
+    tenant-scoped queryset, so they narrow what the caller could already list."""
 
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "scheduler"
     queryset = TaskRun.objects.select_related("job", "tenant", "triggered_by")
     serializer_class = TaskRunSerializer
-    filterset_fields = ["job", "status", "tenant", "task_name", "trigger"]
+    filterset_class = TaskRunFilter
+    search_fields = ["task_name", "error"]
     ordering_fields = ["queued_at", "started_at", "finished_at", "duration_ms"]
     ordering = ["-queued_at"]
 

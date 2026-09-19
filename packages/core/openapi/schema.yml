@@ -7550,8 +7550,11 @@ paths:
   /api/v1/scheduler/runs/:
     get:
       operationId: v1_scheduler_runs_list
-      description: Execution history, newest first. Filter by job / status / tenant
-        / task_name / trigger.
+      description: |-
+        Execution history, newest first. Filter by job / status (comma list) /
+        tenant / task_name / trigger / queued_after / queued_before; `?search=`
+        matches task_name and error. Every filter and the search run on the
+        tenant-scoped queryset, so they narrow what the caller could already list.
       parameters:
       - in: query
         name: job
@@ -7569,6 +7572,16 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: queued_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: queued_before
+        schema:
+          type: string
+          format: date-time
       - name: search
         required: false
         in: query
@@ -7578,23 +7591,12 @@ paths:
       - in: query
         name: status
         schema:
-          type: string
-          enum:
-          - FAILURE
-          - LOST
-          - PENDING
-          - RETRY
-          - RUNNING
-          - SKIPPED
-          - SUCCESS
-        description: |-
-          * `PENDING` - Pending
-          * `RUNNING` - Running
-          * `SUCCESS` - Success
-          * `FAILURE` - Failure
-          * `RETRY` - Retry
-          * `SKIPPED` - Skipped
-          * `LOST` - Lost
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: task_name
         schema:
@@ -7627,8 +7629,11 @@ paths:
   /api/v1/scheduler/runs/{id}/:
     get:
       operationId: v1_scheduler_runs_retrieve
-      description: Execution history, newest first. Filter by job / status / tenant
-        / task_name / trigger.
+      description: |-
+        Execution history, newest first. Filter by job / status (comma list) /
+        tenant / task_name / trigger / queued_after / queued_before; `?search=`
+        matches task_name and error. Every filter and the search run on the
+        tenant-scoped queryset, so they narrow what the caller could already list.
       parameters:
       - in: path
         name: id
