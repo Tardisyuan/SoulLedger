@@ -1,6 +1,9 @@
 """聊天接口的形状。**没有一个序列化器带消息正文出库** —— 正文在 Synapse,
 `InboxMessageSerializer` 是一次转发,不是一张表的投影。
 """
+from datetime import datetime, timedelta
+
+from django.conf import settings
 from rest_framework import serializers
 
 from apps.chat.models import Conversation, ConversationKind
@@ -21,12 +24,21 @@ class ConversationSerializer(serializers.ModelSerializer):
         help_text="对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。")
     peer_name = serializers.SerializerMethodField(help_text="对方在朋友圈的显示名。")
     hall = serializers.SerializerMethodField()
+    mutual = serializers.SerializerMethodField(help_text="私聊:两人此刻互相关注。收件箱为 false。")
+    initiated_by_me = serializers.SerializerMethodField(
+        help_text="被节流的私聊由我发起:我只能经 `POST .../messages/` 每 24 小时发一条。")
+    next_request_at = serializers.SerializerMethodField(
+        help_text="我发起的被节流私聊:何时可以再发一条请求;还没发过、或不受节流时为空。")
+    refusal = serializers.SerializerMethodField(
+        help_text="此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall` / `closed`),"
+                  "能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。")
 
     class Meta:
         model = Conversation
         fields = [
             "id", "kind", "room_id", "peer_user", "peer_name", "hall",
             "throttled", "last_request_at", "responded_at", "last_message_at", "created_at",
+            "mutual", "initiated_by_me", "next_request_at", "refusal",
         ]
         read_only_fields = fields
 
@@ -48,6 +60,29 @@ class ConversationSerializer(serializers.ModelSerializer):
 
         peer = self._peer(obj)
         return display_name(peer) if peer is not None else ""
+
+    def get_mutual(self, obj) -> bool:
+        from apps.chat.services import _mutual
+
+        account, peer = self.context.get("account"), self._peer(obj)
+        return account is not None and peer is not None and _mutual(account, peer)
+
+    def get_initiated_by_me(self, obj) -> bool:
+        return obj.throttled and obj.initiator_id is not None and obj.initiator_id == self.context.get("soul_id")
+
+    def get_next_request_at(self, obj) -> datetime | None:
+        if not self.get_initiated_by_me(obj) or obj.last_request_at is None:
+            return None
+        return obj.last_request_at + timedelta(seconds=settings.CHAT_REQUEST_INTERVAL_SECONDS)
+
+    def get_refusal(self, obj) -> str | None:
+        from apps.chat.services import refusal
+
+        account = self.context.get("account")
+        if account is None:
+            return None
+        error = refusal(obj, account, self._peer(obj))
+        return error.code if error is not None else None
 
     def get_hall(self, obj) -> str:
         """殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。"""
