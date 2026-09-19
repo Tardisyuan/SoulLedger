@@ -56,3 +56,19 @@ def test_health_answers_plain_http_while_detailed_still_redirects(client):
     ):
         assert client.get("/health/").status_code == 200
         assert client.get("/health/detailed/").status_code == 301
+
+
+@pytest.mark.django_db
+def test_the_synapse_push_hook_is_not_redirected_while_other_api_paths_are(client):
+    """Synapse posts to the hook over plain http inside the compose network and cannot set
+    X-Forwarded-Proto; a 301 would drop every chat push silently. Unsigned, it must answer the
+    view's own refusal (not 301); any other API path still redirects."""
+    exempt = _production_setting("SECURE_REDIRECT_EXEMPT")
+    with override_settings(
+        SECURE_SSL_REDIRECT=True,
+        SECURE_REDIRECT_EXEMPT=exempt,
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+    ):
+        hook = client.post("/api/v1/chat/hooks/new-message/", {}, content_type="application/json")
+        assert hook.status_code != 301
+        assert client.get("/api/v1/me/chat/conversations/").status_code == 301

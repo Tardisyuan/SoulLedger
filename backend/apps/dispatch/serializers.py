@@ -366,9 +366,18 @@ class CrossTenantJudgmentCreateSerializer(serializers.Serializer):
 
 
 class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):
-    """Serializer for participating in a cross-tenant judgment."""
-    participant_tenant = serializers.IntegerField()
-    participant_actor = serializers.IntegerField(required=False, allow_null=True)
+    """Serializer for participating in a cross-tenant judgment.
+
+    The seat's tenant by numeric id **or** by code, exactly one. `/tenants/` shows a
+    non-ADMIN caller only its own row, so the id of the tenant to be seated is not
+    something a JUDGE can look up; the code is (the four civilizations' codes are
+    public config, `TENANT_CIVILIZATION`). Added 2026-09-20 for the web seat form.
+    """
+    participant_tenant = serializers.IntegerField(required=False)
+    participant_tenant_code = serializers.CharField(required=False, max_length=50)
+    # Actor 的主键是 UUID。这里曾是 IntegerField,于是任何神祇都选不上(见视图)。
+    # 必须是被邀文明里可担任席位的神祇(`CrossTenantJudgmentService.seatable_actors`)。
+    participant_actor = serializers.UUIDField(required=False, allow_null=True)
     role = serializers.ChoiceField(
         choices=["ADVISOR", "CO_JUDGE", "CHAIRMAN"],
         default="ADVISOR"
@@ -376,6 +385,13 @@ class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):
     # 这一方在受刑计划里排第几站(原属恒为 1,所以从 2 起)。只对挂了审判的联审有意义;
     # 规则在 `CrossTenantJudgmentService.add_participant`。
     node_order = serializers.IntegerField(required=False, allow_null=True, min_value=2)
+
+    def validate(self, attrs):
+        if ("participant_tenant" in attrs) == ("participant_tenant_code" in attrs):
+            raise serializers.ValidationError(
+                "Give exactly one of participant_tenant (id) or participant_tenant_code."
+            )
+        return attrs
 
 
 class CrossTenantJudgmentSentenceSerializer(serializers.Serializer):
@@ -389,6 +405,20 @@ class CrossTenantJudgmentSentenceSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True, default="", max_length=5000)
 
 
+class CrossTenantJudgmentOrderSerializer(serializers.Serializer):
+    """发起方重排各站:全部带节点席位的 id,按新顺序;服务端依次给 2、3……(`reorder_nodes`)。"""
+    participants = serializers.ListField(child=serializers.UUIDField(), allow_empty=False)
+
+
 class CrossTenantJudgmentConcludeSerializer(serializers.Serializer):
     """Serializer for concluding a cross-tenant judgment."""
     conclusion_type = serializers.ChoiceField(choices=["PASS", "FAIL"])
+
+
+class SeatableActorSerializer(serializers.Serializer):
+    """`seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。"""
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    name_zh = serializers.CharField(read_only=True)
+    name_en = serializers.CharField(read_only=True)
+    name_egy = serializers.CharField(read_only=True)

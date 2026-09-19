@@ -4,7 +4,23 @@
  * exactly as on a device; only the network is replaced.
  */
 import { soulHttp } from "@soulledger/core/api/soul";
+import { act, fireEvent, screen } from "@testing-library/react-native";
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
+
+/**
+ * Wait out a bottom-tab switch. After the (zero-length) transition, BottomTabView
+ * clears its `animating` flag in a 32 ms setTimeout (@react-navigation/bottom-tabs
+ * BottomTabView.tsx:190). A test that ends right after a switch leaves that update
+ * to land after it — the act() warning jest.setup.js fails on, and a flaky one:
+ * whether the timer beats RNTL's cleanup is a race (2026-09-19: one run in four).
+ */
+export const settleTabs = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 100)));
+
+/** Press a bottom tab and let the switch finish (see settleTabs). */
+export async function pressTab(testID: string) {
+  fireEvent.press(screen.getByTestId(testID));
+  await settleTabs();
+}
 
 export type Reply = { status: number; data?: unknown } | "offline";
 
@@ -30,8 +46,8 @@ export const PROFILE = {
   name: "张三",
   birth_name: "张三",
   civilization: "CHINESE",
-  tenant: { code: "CN_DIYU", display_name: "中国地府" },
-  home_tenant: { code: "CN_DIYU", display_name: "中国地府" },
+  tenant: { code: "CN_DIYU", display_name: "中国地府", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } },
+  home_tenant: { code: "CN_DIYU", display_name: "中国地府", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } },
   home_civilization: "CHINESE",
   is_residing: false,
   current_state: "JUDGING",

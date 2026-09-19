@@ -21,6 +21,18 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { toHanNumeral } from "@soulledger/core/config/civilizationSigil";
+import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import { AmendmentPlanChanges } from "@/src/components/sentence-plan/AmendmentPlanChanges";
+import {
+  EMPTY_DRAFT,
+  draftIsEmpty,
+  draftToChanges,
+  type ChangesDraft,
+} from "@/src/components/sentence-plan/PlanChangesEditor";
+import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
+import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -131,6 +143,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [createWorkflow, setCreateWorkflow] = useState(false);
+  const [planDraft, setPlanDraft] = useState<ChangesDraft>(EMPTY_DRAFT);
+  const { user } = useTenant();
+  const { hasPermission } = usePermissions();
   const createWorkflowId = useId();
   const notesId = useId();
   const clausesId = useId();
@@ -156,7 +171,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   });
 
   const concludeMutation = useMutation({
-    mutationFn: (payload: { verdict: string; notes: string; create_workflow: boolean }) =>
+    mutationFn: (payload: {
+      verdict: string;
+      notes: string;
+      create_workflow: boolean;
+      plan_changes?: SentenceRequestChanges;
+    }) =>
       judgmentApi.conclude(id, payload),
     /* THE PAGE STAYS. It used to `router.push("/judgment")` here.
      *
@@ -180,7 +200,13 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.conclude_success"), "success");
     },
     onError: (err: unknown) => {
-      const e = err as { response?: { data?: { error?: string } } };
+      const e = err as { response?: { data?: { error?: string; code?: string } } };
+      // An amendment's plan changes refused (same transaction, nothing written): say which rule, translated.
+      const code = e?.response?.data?.code;
+      if (code && (REFUSAL_CODES as readonly string[]).includes(code)) {
+        showToast(t(`sentence_plan.errors.${code}`), "error");
+        return;
+      }
       showToast(e?.response?.data?.error || t("judgment.detail.conclude_error"), "error");
     },
   });
@@ -208,12 +234,38 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     }
   }, [judgment]);
 
+  const isAmendment = judgment?.kind === "AMENDMENT" && !!judgment?.amends_plan_id;
+  const myTenant = user?.tenant?.code ?? null;
+  const soulHome = soulData?.home_tenant?.code ?? soulData?.tenant_code ?? null;
+  /* 开联审(§2.1):原属的 ORIGINAL 审判,持 cross_judgment.create;按钮只在未结案的结案区里。服务端再判一次。 */
+  const canOpenCross =
+    !!judgment &&
+    (judgment.kind ?? "ORIGINAL") === "ORIGINAL" &&
+    hasPermission("cross_judgment.create") &&
+    myTenant !== null &&
+    myTenant === soulHome;
+
   function handleConclude() {
     if (!selectedVerdict) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
     }
-    concludeMutation.mutate({ verdict: selectedVerdict, notes, create_workflow: createWorkflow });
+    // 加减项审判(情况 1):改动随裁决一起交,系统生成一条请求给原审判官;没改动就不带(不生成请求)。
+    let planChanges: SentenceRequestChanges | undefined;
+    if (isAmendment && !draftIsEmpty(planDraft)) {
+      const changes = draftToChanges(planDraft);
+      if (changes === null) {
+        showToast(t("sentence_plan.errors.invalid_changes"), "error");
+        return;
+      }
+      planChanges = changes;
+    }
+    concludeMutation.mutate({
+      verdict: selectedVerdict,
+      notes,
+      create_workflow: createWorkflow,
+      ...(planChanges ? { plan_changes: planChanges } : {}),
+    });
   }
 
   /* A known route, so a link and not a router.back() button. */
@@ -512,6 +564,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <JudgmentGroundsPanel citations={judgment.citations ?? []} />
       )}
 
+      {!isFinal && isAmendment && myTenant && (
+        <AmendmentPlanChanges
+          planId={judgment.amends_plan_id as string}
+          tenantCode={myTenant}
+          draft={planDraft}
+          onChange={setPlanDraft}
+        />
+      )}
+
       {/* ── 结案 ─────────────────────────────────────────────────────────── */}
       {!isFinal && (
         <div className="mt-10 border-t-2 border-[oklch(var(--color-ink-subtle))] pt-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -531,6 +592,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </label>
           </div>
 
+          {canOpenCross && <OpenCrossJudgment judgmentId={judgment.id} soulName={soulName} />}
           <RequirePermission permissions="judgment.execute">
             <Button
               type="button"
