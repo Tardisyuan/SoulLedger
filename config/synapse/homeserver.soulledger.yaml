@@ -15,6 +15,14 @@ jwt_config:
   issuer: soulledger
   audiences: [synapse]
 registration_shared_secret: "${MATRIX_REGISTRATION_SHARED_SECRET}"
+# 登录限速按来源 IP 算,默认每 IP 突发 5 次、之后约每 5 分钟 1 次。后端代灵魂发言时以该灵魂
+# 的身份 JWT 登录(matrix.py::_token_for,token 缓存 1 小时),**所有灵魂的这类登录都来自
+# 后端这一个地址** —— 突发额度用完就是 429 M_LIMIT_EXCEEDED(2026-09-19 本机 compose 上跑
+# test_chat_synapse_integration.py 实测,retry_after 约 290 秒)。放宽不削弱什么:密码登录关着,JWT 只有后端签得出。
+rc_login:
+  address:
+    per_second: 10
+    burst_count: 100
 
 # 显示名由后端写(灵魂在朋友圈的显示名),灵魂自己改不了。
 enable_set_displayname: false

@@ -154,6 +154,14 @@ class SynapseClient:
     def _admin(self, method, path, **kwargs):
         return self._request(method, path, token=self._admin_token(), **kwargs)
 
+    def setup_service_account(self):
+        """首次部署(`manage.py setup_matrix`):注册服务账号(已有则登录),并免除它的限速 ——
+        它替所有灵魂建房、改 power level、转发,量随灵魂数增长。幂等,重跑无害。"""
+        self._admin_token()
+        self._admin("POST", f"/_synapse/admin/v1/users/{self.service_user}/override_ratelimit",
+                    json={"messages_per_second": 0, "burst_count": 0})
+        return self.service_user
+
     # ── 用户 ──────────────────────────────────────────────────────────────
 
     def user_id(self, localpart):

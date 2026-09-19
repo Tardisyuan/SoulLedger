@@ -90,9 +90,46 @@ if [ -n "${MEDIA_DIR:-}" ]; then
     echo "Media backup complete: ${MEDIA_FILE} ($(du -h "$MEDIA_FILE" | cut -f1))"
 fi
 
+# 灵魂聊天(Synapse)。SYNAPSE_DATA_DIR 是只读挂进来的 synapse_data 卷。里面有
+# homeserver.yaml 才算聊天已初始化(scripts/synapse-init.sh);没初始化就两样都跳过并
+# 说一声 —— 聊天是可选的,不能因此让整个备份失败。初始化了就两样都必须成功:
+#   soulledger_synapse_<ts>.dump       synapse 库,pg_dump 自定义格式(pg_restore 读)
+#   soulledger_synapse_data_<ts>.tar.gz  卷:签名密钥(丢了等于换一台 homeserver)与聊天媒体
+# 同样的 partial-再改名与失败非零退出。库名是 SYNAPSE_DATABASE(默认 synapse),连接沿用
+# 上面的 PG*(soulledger 是超级用户,读得了 synapse 角色的库)。
+if [ -n "${SYNAPSE_DATA_DIR:-}" ]; then
+    if [ ! -f "${SYNAPSE_DATA_DIR}/homeserver.yaml" ]; then
+        echo "Synapse not initialized (no ${SYNAPSE_DATA_DIR}/homeserver.yaml); skipping chat backup"
+    else
+        SYNAPSE_FILE="${BACKUP_DIR}/soulledger_synapse_${TIMESTAMP}.dump"
+        echo "Backing up Synapse database (${SYNAPSE_DATABASE:-synapse})..."
+        if ! pg_dump -Fc -d "${SYNAPSE_DATABASE:-synapse}" -f "${SYNAPSE_FILE}.partial" \
+            || ! pg_restore --list "${SYNAPSE_FILE}.partial" >/dev/null; then
+            rm -f "${SYNAPSE_FILE}.partial"
+            echo "ERROR: Synapse database backup failed; no Synapse backup written" >&2
+            exit 1
+        fi
+        mv "${SYNAPSE_FILE}.partial" "$SYNAPSE_FILE"
+        echo "Synapse database backup complete: ${SYNAPSE_FILE} ($(du -h "$SYNAPSE_FILE" | cut -f1))"
+
+        SYNAPSE_DATA_FILE="${BACKUP_DIR}/soulledger_synapse_data_${TIMESTAMP}.tar.gz"
+        echo "Backing up Synapse data (${SYNAPSE_DATA_DIR})..."
+        if ! tar -czf "${SYNAPSE_DATA_FILE}.partial" -C "$SYNAPSE_DATA_DIR" . \
+            || ! gzip -t "${SYNAPSE_DATA_FILE}.partial"; then
+            rm -f "${SYNAPSE_DATA_FILE}.partial"
+            echo "ERROR: Synapse data backup failed; no Synapse data backup written" >&2
+            exit 1
+        fi
+        mv "${SYNAPSE_DATA_FILE}.partial" "$SYNAPSE_DATA_FILE"
+        echo "Synapse data backup complete: ${SYNAPSE_DATA_FILE} ($(du -h "$SYNAPSE_DATA_FILE" | cut -f1))"
+    fi
+fi
+
 # Clean up old backups
 echo "Cleaning up backups older than ${RETENTION_DAYS} days..."
 find "$BACKUP_DIR" -name "soulledger_*.sql.gz" -mtime +"$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "soulledger_media_*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "soulledger_synapse_*.dump" -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "soulledger_synapse_data_*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
 
 echo "Done."
