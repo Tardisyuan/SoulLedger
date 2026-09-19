@@ -176,7 +176,14 @@ class JudgmentConclusionService:
         the citations are written while the judgment is still amendable, which
         is the only window `StatuteCitationService.assert_amendable` allows.
         """
+        from apps.sentence_plan.services import SentencePlanService
+
         with transaction.atomic():
+            # Step -1 (Q17): an attached cross-tenant judgment must have ended —
+            # its PASS nodes are copied into the plan below. Raises before
+            # anything is written.
+            cross = SentencePlanService.check_cross_judgment(judgment)
+
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:
                 StatuteCitationService.cite_many(judgment, statute_ids)
@@ -196,8 +203,7 @@ class JudgmentConclusionService:
             # carrying the disposition just made (docs/ARCHITECTURE-sentence-plan.md).
             # Same transaction: a plan without its conclusion, or the reverse,
             # is the half-written record the saga exists to prevent.
-            from apps.sentence_plan.services import SentencePlanService
-            SentencePlanService.create_from_conclusion(judgment, disposition)
+            SentencePlanService.create_from_conclusion(judgment, disposition, cross)
 
             # Step 3: Optionally create workflow (cross-context: judgment → workflow)
             if create_workflow:
@@ -216,6 +222,10 @@ class JudgmentConclusionService:
                     f"Soul {judgment.soul.pk} is {judgment.soul.current_state}; "
                     f"a judgment cannot conclude from there. Nothing was written."
                 )
+
+            # Step 4b: any conclusion may be the last thing a sentence plan was
+            # waiting on (docs/ARCHITECTURE-sentence-plan.md §3.3).
+            SentencePlanService.advance(judgment.soul)
 
         # Step 5: Log domain event (outside transaction for performance)
         from apps.events.services import EventService

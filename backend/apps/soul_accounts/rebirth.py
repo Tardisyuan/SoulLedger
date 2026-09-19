@@ -16,7 +16,8 @@
   「被驳回就换一份重新提交」可以绕过申诉与冷却(见报告「待用户确认」);
 * 只有本世账号能提交 / 申诉;前世申请只读。
 
-**一律按原属文明**(2026-09-17:跨文明调拨是暂居)。暂居他乡的中国灵魂仍可申请;
+**受刑计划全部完成才开放**(Q6,docs/ARCHITECTURE-sentence-plan.md §6);暂居中的灵魂计划未完,不能申请。
+**一律按原属文明**(2026-09-17:跨文明调拨是暂居);
 工作流建在原属租户、由原属租户的判官与阎罗审批;冷却天数读原属租户的设置。
 调拨前提交的申请照常可申诉 —— `can_appeal` 本来就不看租户。
 """
@@ -49,7 +50,9 @@ APPEAL_NODES = [
     ("申诉复核", "APPEAL", "JUDGE"),
     ("申诉终审", "FINAL", "ADMIN"),
 ]
-SOUL_STATES_THAT_MAY_APPLY = ("JUDGING", "DISPOSED")
+#: 受刑计划完成时灵魂进 REINCARNATING(可转世文明,§3.3);计划完成才开放申请(Q6),所以是它。
+#: DISPOSED 留着:ADMIN 修过数据、计划完成而灵魂没能转移的形状不在这里另拒一次。
+SOUL_STATES_THAT_MAY_APPLY = ("DISPOSED", "REINCARNATING")
 
 
 def cooldown_days(tenant) -> int:
@@ -70,6 +73,16 @@ def eligibility(account):
         return False, "terminal_cosmology", None
     if soul.current_state not in SOUL_STATES_THAT_MAY_APPLY:
         return False, "soul_state", None
+    # Q6:受刑计划**全部完成**才开放(docs/ARCHITECTURE-sentence-plan.md §6)。本世最新的那份计划;
+    # 没有计划 = 本世还没结过案,同样不开放。已提交的申请照常可申诉(`can_appeal` 不看这里)。
+    from apps.sentence_plan.models import SentencePlan, SentencePlanStatus
+
+    plan = (
+        SentencePlan.all_objects.filter(soul_id=soul.pk, cycle=account.cycle, is_deleted=False)
+        .order_by("-create_time").first()
+    )
+    if plan is None or plan.status != SentencePlanStatus.COMPLETED:
+        return False, "sentence_in_progress", None
     mine = RebirthApplication.objects.filter(soul=soul)
     if mine.filter(status__in=OPEN_APPLICATION_STATUSES).exists():
         return False, "application_open", None
@@ -90,6 +103,7 @@ REFUSALS = {
     "application_open": "已有一份进行中的转生申请。",
     "application_approved": "本世的转生申请已获批准。",
     "cooldown": "驳回后的冷却期内不能重新申请。",
+    "sentence_in_progress": "受刑计划尚未完成,完成后才能申请转生。",
 }
 
 
@@ -127,10 +141,14 @@ def _lock_account(account):
 
 def submit(account, desired_form, statement=""):
     from apps.events.services import EventService
+    from apps.souls.models import Soul
     from apps.workflow.services import WorkflowService
 
     with transaction.atomic():
         account = _lock_account(account)
+        # 锁序 账号 → 灵魂:受刑计划在灵魂行锁下完成(`SentencePlanService.advance`),
+        # 资格要在同一把锁下读,才不会读到一份正在变的计划(设计稿 §8 PG 测试 4)。
+        Soul.all_objects.select_for_update(of=("self",)).get(pk=account.soul_id)
         can, code, _ = eligibility(account)
         if not can:
             raise SoulAccountError(REFUSALS[code], code, 409)
