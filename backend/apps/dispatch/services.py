@@ -57,9 +57,9 @@ class DispatchService:
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
-        # 暂居中的灵魂不再转调(保守默认,待用户确认)。调拨由原租户发起;暂居租户若能
-        # 再把它送往第三个文明,「处置执行完毕回归原文明」就要回答「回到哪一站」,
-        # 而暂居链上的每一站都会成为新的回归点。先回归,再由原租户发起下一段。
+        # 暂居中的灵魂不再转调。原是保守默认;受刑计划落地后它就是用户的原话(设计稿
+        # docs/ARCHITECTURE-sentence-plan.md §0):「完成后回到 A,检查还有嘛,有 C,那就去 C」——
+        # 每一站执行完先回原属,再由原属(计划推进,`SentencePlanService.advance`)发起下一段。
         if soul.is_residing:
             raise ValueError(
                 "Soul is residing away from its home tenant; it must return home "
