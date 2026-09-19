@@ -61,11 +61,13 @@ export function chatMode(c: SoulConversation, facts: ChatFacts): ChatMode {
 }
 
 /**
- * A send that must go through the backend: the request channel of a throttled
+ * A send that must go through the backend: MY request channel in a throttled
  * room (the initiator is power level 0 in Synapse until the backend lifts it),
- * and the hall inbox (audited server-side). Everything else goes to Synapse.
+ * and the hall inbox (audited server-side). Everything else goes to Synapse —
+ * including the answer to THEIR request: the receiver speaks at level 50, and
+ * the backend refuses it on its path (409 `not_initiator`).
  */
-export const sendsThroughBackend = (c: SoulConversation) => c.throttled || c.kind === "OFFICER_INBOX";
+export const sendsThroughBackend = (c: SoulConversation) => (c.throttled && c.initiated_by_me) || c.kind === "OFFICER_INBOX";
 
 export interface ChatSections {
   /** The hall the soul is in now — at most one; `null`: never written, the row offers to start. */

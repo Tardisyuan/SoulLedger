@@ -225,6 +225,8 @@ export function LettersScreen() {
     const last = lastOf(chat, c.room_id);
     return { stamp: last ? listStamp(last.ts, now) : undefined, preview: last?.body, unread: (chat.timeline.rooms[c.room_id]?.unread ?? 0) > 0 };
   };
+  // Read-only for good — the other soul reborn, or its account closed: 已闭, never 待回复.
+  const shut = (c: SoulConversation) => c.refusal === "closed" || c.refusal === "peer_retired";
   const awaiting = (c: SoulConversation) =>
     c.throttled && c.initiated_by_me && !(chat.timeline.rooms[c.room_id]?.messages ?? []).some((m) => m.sender !== chat.me);
 
@@ -277,11 +279,11 @@ export function LettersScreen() {
                 key={c.id}
                 testID={`soul-row-${c.id}`}
                 onPress={() => open(c)}
-                glyph={<Glyph text={c.peer_name} tone={c.refusal === "closed" ? "subtle" : "muted"} dotted={awaiting(c)} />}
+                glyph={<Glyph text={c.peer_name} tone={shut(c) ? "subtle" : "muted"} dotted={awaiting(c) || shut(c)} />}
                 title={c.peer_name}
-                dim={c.refusal === "closed"}
+                dim={shut(c)}
                 tag={
-                  c.refusal === "closed" ? (
+                  shut(c) ? (
                     <Tag testID={`closed-${c.id}`} text={tr("soul_app.chat.badge.closed")} tone="quiet" />
                   ) : awaiting(c) ? (
                     <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="accent" />
@@ -331,8 +333,9 @@ export function FindSoulScreen() {
     };
   }, []);
 
-  const find = async () => {
-    const normalized = normalizeCode(code);
+  // `typed`: the submit event's own text — the `code` in this closure can be a keystroke behind.
+  const find = async (typed = code) => {
+    const normalized = normalizeCode(typed);
     if (!isCompleteCode(normalized)) return setLookup({ state: "error", key: "soul_app.chat.errors.invalid_code" });
     setLookup({ state: "busy" });
     try {
@@ -371,11 +374,13 @@ export function FindSoulScreen() {
               setCode(v);
               if (lookup.state !== "idle") setLookup({ state: "idle" });
             }}
-            onSubmitEditing={() => void find()}
+            onSubmitEditing={(e) => void find(e.nativeEvent.text)}
             placeholder={tr("soul_app.chat.find.code_placeholder")}
             placeholderTextColor={t.inkSubtle}
             autoCapitalize="characters"
             autoCorrect={false}
+            // As on the login screen: a pinyin / kana keyboard would compose the letters of a code into words.
+            keyboardType="ascii-capable"
             maxLength={16}
             returnKeyType="search"
             style={[styles.codeInput, { color: t.ink }]}

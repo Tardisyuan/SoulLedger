@@ -23,7 +23,7 @@ import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, useChat, type Chat } from "../chat";
-import { chatMode, chatSections, normalizeCode } from "../chatRules";
+import { chatMode, chatSections, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
@@ -124,6 +124,16 @@ describe("chatMode — the design's eight states from the server's facts", () =>
     expect(chatMode(hall(), facts()).kind).toBe("hall");
     expect(chatMode(hall({ refusal: "not_current_hall" }), facts()).kind).toBe("hall_sealed");
     expect(chatMode(hall({ refusal: "muted" }), facts()).kind).toBe("hall");
+  });
+});
+
+describe("sendsThroughBackend — the path each send takes", () => {
+  it("my request and the hall go through the backend; the answer to THEIR request goes to Synapse", () => {
+    expect(sendsThroughBackend(conv({ throttled: true, initiated_by_me: true }))).toBe(true);
+    expect(sendsThroughBackend(hall())).toBe(true);
+    // The backend refuses the receiver on its path (409 not_initiator); in Synapse the receiver speaks at 50.
+    expect(sendsThroughBackend(conv({ throttled: true, initiated_by_me: false }))).toBe(false);
+    expect(sendsThroughBackend(conv())).toBe(false);
   });
 });
 
@@ -228,6 +238,13 @@ describe("the list", () => {
     expect(screen.getByTestId("awaiting-b")).toBeTruthy();
     expect(screen.queryByTestId("awaiting-a")).toBeNull();
     expect(within(screen.getByTestId("hall-row")).getByText("第五殿 · 殿司")).toBeTruthy();
+  });
+
+  it("a request whose other soul is gone reads 已闭, not 待回复", () => {
+    const gone = conv({ id: "g", room_id: "!g", throttled: true, initiated_by_me: true, mutual: false, refusal: "peer_retired" });
+    wrap(chatState({ conversations: [gone] }), <LettersScreen />);
+    expect(screen.getByTestId("closed-g")).toBeTruthy();
+    expect(screen.queryByTestId("awaiting-g")).toBeNull();
   });
 
   it("an empty list still has the hall to write to, and the empty souls section offers to find someone", () => {
@@ -397,6 +414,8 @@ describe("find someone by code", () => {
 
   it("a miss is one sentence, whatever the reason", async () => {
     wrap(chatState(), <FindSoulScreen />);
+    // A code is letters and digits: an ASCII keyboard, or a pinyin keyboard composes it into words.
+    expect(screen.getByTestId("find-code").props.keyboardType).toBe("ascii-capable");
     fireEvent.changeText(screen.getByTestId("find-code"), "8q0x15mb43");
     await act(async () => fireEvent.press(screen.getByTestId("find-submit")));
     expect(await screen.findByText("未找到。")).toBeTruthy();
@@ -404,6 +423,19 @@ describe("find someone by code", () => {
     expect(screen.getByTestId("find-not-found")).toBeTruthy();
     expect(screen.queryByTestId("find-error")).toBeNull();
     expect(screen.queryByTestId("find-result")).toBeNull();
+  });
+
+  it("the return key searches for what the field holds, not what the last render saw", async () => {
+    const calls = stubApi({
+      "/me/social/following/": { status: 200, data: { results: [] } },
+      "/me/social/followers/": { status: 200, data: { results: [] } },
+      "POST /me/chat/lookup/": { status: 404, data: { code: "not_found" } },
+    });
+    wrap(chatState(), <FindSoulScreen />);
+    // A fast typist's submit can arrive before the last keystroke's state update.
+    fireEvent.changeText(screen.getByTestId("find-code"), "73ngc3zyj");
+    await act(async () => fireEvent(screen.getByTestId("find-code"), "submitEditing", { nativeEvent: { text: "73ngc3zyj8" } }));
+    expect(calls.find((c) => c.url === "/me/chat/lookup/")?.body).toEqual({ soul_code: "73NGC3ZYJ8" });
   });
 
   it("an incomplete code is refused here, without asking the server", async () => {
@@ -556,6 +588,8 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
 // ── the tab bar, through the real navigator ───────────────────────────
 
 describe("the fourth tab", () => {
+  // The whole app boots here (session, profile, navigator); under a full parallel run that alone passed 5 s once.
+  jest.setTimeout(20_000);
   const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
   async function signedIn(chatRoutes: Record<string, unknown>) {
