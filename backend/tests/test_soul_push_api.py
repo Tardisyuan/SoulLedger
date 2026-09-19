@@ -102,11 +102,11 @@ def test_notification_settings_default_on_and_can_turn_a_category_off(cn_tenant,
     account, client = ready_soul(cn_tenant)
     register(client)
     url = "/api/v1/me/notification-settings/"
-    assert client.get(url).data == {"rebirth": True, "judgment": True, "residence": True, "locale": "zh-Hans"}
+    assert client.get(url).data == {"rebirth": True, "judgment": True, "residence": True, "chat": True, "locale": "zh-Hans"}
 
     response = client.patch(url, {"judgment": False, "locale": "en"}, format="json")
     assert response.status_code == 200
-    assert response.data == {"rebirth": True, "judgment": False, "residence": True, "locale": "en"}
+    assert response.data == {"rebirth": True, "judgment": False, "residence": True, "chat": True, "locale": "en"}
     assert client.patch(url, {"locale": "fr"}, format="json").status_code == 400
 
     _judgment_concluded(account.soul)

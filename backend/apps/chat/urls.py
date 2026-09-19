@@ -16,4 +16,8 @@ officer_router = DefaultRouter()
 officer_router.register(r"inbox", views.OfficerInboxViewSet, basename="soul-inbox")
 
 #: 官员侧,挂在 `/api/v1/chat/`。
-officer_urlpatterns = [path("", include(officer_router.urls))]
+officer_urlpatterns = [
+    # Synapse 模块的新消息回调:只认签名(apps/chat/hook.py),不认令牌。
+    path("hooks/new-message/", views.ChatPushHookView.as_view(), name="chat-push-hook"),
+    path("", include(officer_router.urls)),
+]

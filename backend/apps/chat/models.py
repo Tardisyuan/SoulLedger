@@ -74,6 +74,16 @@ class Conversation(models.Model):
         "souls.Soul", on_delete=models.CASCADE, null=True, blank=True, related_name="chat_conversations_b"
     )
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="chat_conversations")
+    #: 双方各是**哪一世的账号**(`account_a` 对应 `soul_a`)。会话属于那一世,不属于灵魂:
+    #: 列表按它筛(本世账号只看见自己那一世参与的会话,包括已闭的),对方名字按它取
+    #: (不随对方转世变化),发言权也按它算 —— 新一世的账号永远不会被算进前世的房间。
+    #: 可空只为迁移:存量行由 chat/0003 补上,新行在建房时写。
+    account_a = models.ForeignKey(
+        "soul_accounts.SoulAccount", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    account_b = models.ForeignKey(
+        "soul_accounts.SoulAccount", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
     #: 谁发起的私聊请求。互关直接建房时为空 —— 没有被节流的一方。
     initiator = models.ForeignKey(
         "souls.Soul", on_delete=models.CASCADE, null=True, blank=True, related_name="+"
@@ -82,9 +92,13 @@ class Conversation(models.Model):
     last_request_at = models.DateTimeField(null=True, blank=True)
     responded_at = models.DateTimeField(null=True, blank=True)
     last_message_at = models.DateTimeField(null=True, blank=True)
-    #: 一方转世停用账号时关闭(`services.close_for_soul`)。关闭的会话灵魂侧不再列出、不能发言,
-    #: 官员侧仍可读、不可回;新一世再开同一对灵魂的私聊是**新房间** —— 前世的聊天不跟着人走。
+    #: 一方转世停用账号时关闭(`services.deactivate_for_account`)。关闭的会话仍列给**那一世**
+    #: 留下的一方(只读,App 标「会话止于此」),官员侧仍可读、不可回;新一世再开同一对灵魂的私聊是
+    #: **新房间** —— 前世的聊天不跟着人走。
     closed_at = models.DateTimeField(null=True, blank=True)
+    #: 关闭之后,房间里还在的一方已在 Synapse 上降到 0 的时刻。为空 = 还欠一次降权:
+    #: `sync_rooms` 连同未关闭的房间一起重算它,直到写成功(与发言权的其余同步同一条路)。
+    silenced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -123,4 +137,15 @@ class Conversation(models.Model):
             return self.soul_b_id
         if self.soul_b_id == soul_id:
             return self.soul_a_id
+        return None
+
+    def has_account(self, account_id):
+        return account_id is not None and account_id in (self.account_a_id, self.account_b_id)
+
+    def other_account(self, account_id):
+        """DIRECT 会话里对方**那一世**的账号。"""
+        if self.account_a_id == account_id:
+            return self.account_b
+        if self.account_b_id == account_id:
+            return self.account_a
         return None

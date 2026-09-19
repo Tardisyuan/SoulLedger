@@ -44,7 +44,7 @@ class PushDeviceSerializer(serializers.ModelSerializer):
 class NotificationSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PushPreference
-        fields = ["rebirth", "judgment", "residence", "locale"]
+        fields = ["rebirth", "judgment", "residence", "chat", "locale"]
 
 
 class MePushTokensView(SoulAPIView):

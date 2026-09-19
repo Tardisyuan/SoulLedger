@@ -227,11 +227,13 @@ function Toggle({
   );
 }
 
-type Category = "rebirth" | "judgment" | "residence";
+type Category = "rebirth" | "judgment" | "residence" | "chat";
 const CATEGORIES: { key: Category; icon: IconName }[] = [
   { key: "rebirth", icon: "cycle" },
   { key: "judgment", icon: "ledger" },
   { key: "residence", icon: "info" },
+  // New letters: a soul's message, a reply from the hall (`chat_message`, lands on the Conversation).
+  { key: "chat", icon: "letter" },
 ];
 
 /** The system permission, re-read whenever this page is shown or the app comes back from the system settings. */

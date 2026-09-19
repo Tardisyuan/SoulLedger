@@ -1734,7 +1734,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 把两类异常翻成响应,省得每个方法各写一遍 try。 */
+        /**
+         * @description **这一世**参与的会话,包括已闭的(只读,带 `closed_at`)。按账号筛,不按灵魂:
+         *     新一世看不见前世的会话,前世那一个账号也不会因为灵魂转世而多看见什么。
+         */
         get: operations["v1_me_chat_conversations_list"];
         put?: never;
         /** @description 把两类异常翻成响应,省得每个方法各写一遍 try。 */
@@ -5977,12 +5980,16 @@ export interface components {
             readonly id: string;
             readonly kind: components["schemas"]["ConversationKindEnum"];
             readonly room_id: string;
-            /** @description 对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。 */
+            /** @description 对方会话那一世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。 */
             readonly peer_user: number | null;
-            /** @description 对方在朋友圈的显示名。 */
+            /** @description 对方**会话那一世**的显示名 —— 对方转世之后也不变。 */
             readonly peer_name: string;
-            /** @description 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。 */
+            /** @description 殿司展示名(简体中文;收件箱)。私聊为空。 */
             readonly hall: string;
+            /** @description 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。私聊为空。 */
+            readonly hall_names: {
+                [key: string]: string;
+            } | null;
             readonly throttled: boolean;
             /** Format: date-time */
             readonly last_request_at: string | null;
@@ -5992,6 +5999,8 @@ export interface components {
             readonly last_message_at: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            /** Format: date-time */
+            readonly closed_at: string | null;
             /** @description 私聊:两人此刻互相关注。收件箱为 false。 */
             readonly mutual: boolean;
             /** @description 被节流的私聊由我发起:我只能经 `POST .../messages/` 每 24 小时发一条。 */
@@ -6552,6 +6561,8 @@ export interface components {
             event_id: string;
             from_officer: boolean;
             sender_name: string;
+            /** @description 回信官员的职位(官员回信;灵魂的信为空)。 */
+            officer_title: string;
             body: string;
             timestamp: number;
         };
@@ -7072,6 +7083,10 @@ export interface components {
         MeTenant: {
             code: string;
             display_name: string;
+            /** @description 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。 */
+            readonly hall_names: {
+                [key: string]: string;
+            };
         };
         /**
          * @description * `MENGPO` - 孟婆汤 (Mengpo Soup)
@@ -7268,6 +7283,8 @@ export interface components {
             judgment?: boolean;
             /** @description 暂居开始 / 回归(依赖 feat/dispatch-residence) */
             residence?: boolean;
+            /** @description 新书信:私聊的新消息、殿司的回信 */
+            chat?: boolean;
             locale?: components["schemas"]["PushLocaleEnum"];
         };
         /**
@@ -7308,6 +7325,10 @@ export interface components {
             readonly soul_code: string;
             readonly tenant: number;
             readonly tenant_name: string;
+            /** @description 殿司展示名,按语言:{zh-Hans, en, egy}。 */
+            readonly hall_names: {
+                [key: string]: string;
+            };
             /** Format: date-time */
             readonly last_message_at: string | null;
             /** Format: date-time */
@@ -8400,6 +8421,8 @@ export interface components {
             judgment?: boolean;
             /** @description 暂居开始 / 回归(依赖 feat/dispatch-residence) */
             residence?: boolean;
+            /** @description 新书信:私聊的新消息、殿司的回信 */
+            chat?: boolean;
             locale?: components["schemas"]["PushLocaleEnum"];
         };
         PatchedOrganization: {

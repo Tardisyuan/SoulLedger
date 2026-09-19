@@ -2113,7 +2113,9 @@
       "open_system_settings": "Open system settings",
       "enable_push": "Turn on notifications",
       "toggle_failed": "Could not save that setting; it has been put back",
-      "version": "Soul Ledger {{version}}"
+      "version": "Soul Ledger {{version}}",
+      "chat": "Letters",
+      "chat_note": "When a new letter or a reply from the hall arrives"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -2278,6 +2280,10 @@
     "sentence_pardoned": {
       "title": "Sentence plan cancelled",
       "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."
+    },
+    "chat_message": {
+      "title": "New letter",
+      "body": "{{name}} wrote you a letter. Open Soul Ledger to read it."
     }
   },
   "official_notify": {
@@ -2433,7 +2439,7 @@
     "thread_empty": "This letter has no messages yet",
     "closed": "Closed (reborn)",
     "no_messages": "No messages yet",
-    "from_hall": "Hall · {{name}}",
+    "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Reply as the hall",
     "reply_hint": "The soul sees a reply from the hall, signed with your name.",
     "send": "Send",
