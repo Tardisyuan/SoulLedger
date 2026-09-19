@@ -735,10 +735,10 @@ EGYPTIAN_REALMS = [
      "that passage then meets are seeded separately as EG_SEVEN_ARRWT and "
      "EG_TWENTYONE_SEBKHET, which carry their chapters and their edition.",
      "SPELL", False, None),
-    ("EG_HALL_TWO_TRUTHS", "真理殿堂", "两真之殿", "Hall of Two Truths", "HallTwoTruths", RealmType.PURGATORY, 2,
+    ("EG_HALL_TWO_TRUTHS", "真理殿堂", "两真之殿", "Hall of Two Truths", "Weret Maaty", RealmType.PURGATORY, 2,
      "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_SEVEN_ARRWT", "七道通路", "七道通路", "The Seven Approaches to the House of Osiris",
-     "SevenArrwt", RealmType.PURGATORY, 3,
+     "Arrwt 7", RealmType.PURGATORY, 3,
      "Book of the Dead 144 and 147, two variants of one text: 'knowing the names of the "
      "keepers of the seven approaches' — the ꜥrrwt-gates of the house of Osiris in the "
      "field of reeds. Seven gates, three keepers apiece (iry-ꜥꜣ doorkeeper, sꜣw watcher, "
@@ -751,7 +751,7 @@ EGYPTIAN_REALMS = [
      "obtained and the order of the series has no second witness.",
      "SPELL", False, None),
     ("EG_TWENTYONE_SEBKHET", "二十一道门户", "二十一道门户",
-     "The Twenty-One Portals of the Field of Reeds", "TwentyOneSebkhet", RealmType.PURGATORY, 3,
+     "The Twenty-One Portals of the Field of Reeds", "Sebkhet 21", RealmType.PURGATORY, 3,
      "Book of the Dead 145 and 146, two variants of one text: 'start of the gateways of the "
      "Field of Reeds of the domain of Osiris' — the sbḫt-portals, twenty-one of them, one "
      "demon to each. A different series from the seven ꜥrrwt, in a different pair of "
