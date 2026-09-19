@@ -729,7 +729,13 @@ class DispositionService:
         if soul.is_residing:
             return DispositionService._execute_during_residence(disposition, soul)
 
+        from apps.sentence_plan.services import SentencePlanService
+
+        if SentencePlanService.node_for_disposition(disposition) is not None:
+            return DispositionService._execute_plan_node(disposition, soul)
+
         with transaction.atomic():
+            # 没有受刑计划节点的处置(阶段 1 之前、且没回填到的存量):照旧直接转移。
             # 原属文明,不是管辖文明:暂居不改变灵魂有没有下一世。暂居中的灵魂走
             # 上面那条分支,到这里的灵魂 home 与 tenant 相同 —— 除非是迁移 0036
             # 之前被单程调拨过的存量灵魂,那时两者已经被回填成同一个。
@@ -750,35 +756,62 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
-            # 受刑计划的记录(阶段 1 只记,不推进):挂着这份处置的节点结束。
-            from apps.sentence_plan.services import SentencePlanService
-            SentencePlanService.note_disposition_executed(disposition)
+        return True
+
+    @staticmethod
+    def _execute_plan_node(disposition: Disposition, soul) -> bool:
+        """原属地、挂在受刑计划节点上的处置(docs/ARCHITECTURE-sentence-plan.md §3.3)。
+
+        **不再直接推 REINCARNATING / SETTLED**:标节点(COMPLETED / WAITING / ETERNAL),然后
+        `advance` —— 没有下一站时由它完成计划并做那次转移,有下一站时由它发起调拨。
+        拒绝(返回 False,什么都不写):灵魂不在 DISPOSED,或此刻不在原属地。
+        """
+        from django.db import transaction
+        from django.utils import timezone
+
+        from apps.sentence_plan.services import SentencePlanService
+        from apps.souls.models import Soul, SoulState
+
+        with transaction.atomic():
+            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            if (
+                locked.is_deleted or locked.is_residing
+                or disposition.tenant_id != locked.tenant_id
+                or locked.current_state != SoulState.DISPOSED
+            ):
+                return False
+            disposition.is_executed = True
+            disposition.executed_at = timezone.now()
+            disposition.save()
+            SentencePlanService.on_disposition_executed(locked, disposition)
+            SentencePlanService.advance(locked)
         return True
 
     @staticmethod
     def _execute_during_residence(disposition: Disposition, soul) -> bool:
-        """暂居中的灵魂:在暂居租户受罚完毕 → 回归原文明(2026-09-17 用户决定)。
+        """暂居中的灵魂:在暂居租户受罚完毕。
 
-        **不推进灵魂的生命周期状态**,灵魂保持 DISPOSED 回到原属租户。下一步
-        (转生 REINCARNATING 还是终局 SETTLED)由原文明按自己的宇宙观决定 ——
-        「先在 A 受罚、再到 B」的设想里,原文明可能还有自己的处置没执行;若在这里
-        按原属文明推到 REINCARNATING,原文明那份处置就再也执行不了。
+        **不推进灵魂的生命周期状态**,灵魂保持 DISPOSED。下一步由原文明决定。
 
         拒绝(返回 False,什么都不写):
         * 处置不属于暂居租户 —— 原租户在灵魂离开期间执行自己的处置,会在灵魂
           不在场时把它推进终局或轮回;
         * 灵魂不在 DISPOSED —— 与原路径「状态不允许就不记执行」同一个契约。
 
-        灵魂还有未结案的审判(2026-09-18 用户决定):记为已执行,**不回归**,写一条
-        `DISPATCH_RETURN_BLOCKED` 事件;撤案后补上回归。
+        挂在受刑计划节点上的处置:标节点(COMPLETED / WAITING / ETERNAL)→ `advance`,
+        由它决定是否回归(§3.3)。刑满时有未结案审判 → 节点 WAITING,另记一条
+        `DISPATCH_RETURN_BLOCKED`(回归被拦的事件与通知,规则不变)。
 
-        永久刑期(`is_eternal`):记为已执行,**不自动回归** —— 刑期永不结束。
-        原租户或 ADMIN 仍可手动结束暂居(保守默认,待用户确认)。
+        没有节点的处置(手动调拨的暂居,无计划):照旧 —— 自动回归;永久刑期不回归;
+        被未结案审判拦下则记 `DISPATCH_RETURN_BLOCKED`。撤案后**不再**自动补回归
+        (`resume_return_after_case_closed` 已删,设计稿 G4/G6),要原属手动 `return-home`。
         """
         from django.db import transaction
         from django.utils import timezone
 
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
+        from apps.judgment.models import open_judgments
+        from apps.sentence_plan.services import SentencePlanService
         from apps.souls.models import Soul, SoulState
 
         with transaction.atomic():
@@ -792,8 +825,13 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
-            from apps.sentence_plan.services import SentencePlanService
-            SentencePlanService.note_disposition_executed(disposition)
+            node = SentencePlanService.on_disposition_executed(locked, disposition)
+            if node is not None:
+                if node.status == "WAITING":
+                    open_ids = list(open_judgments(locked).values_list("pk", flat=True))
+                    DispatchService.record_blocked_return(locked, ResidenceReturnBlockedError(open_ids), disposition)
+                SentencePlanService.advance(locked)
+                return True
             if not disposition.is_eternal:
                 try:
                     DispatchService.end_residence(
@@ -801,7 +839,5 @@ class DispositionService:
                         reason=f"disposition {disposition.pk} executed",
                     )
                 except ResidenceReturnBlockedError as blocked:
-                    # 处置照常记为已执行,暂居继续;撤案后由
-                    # DispatchService.resume_return_after_case_closed 补上回归。
                     DispatchService.record_blocked_return(locked, blocked, disposition)
         return True

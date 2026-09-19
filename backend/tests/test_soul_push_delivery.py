@@ -12,7 +12,7 @@ from apps.soul_accounts.models import RebirthApplication
 from apps.soul_push import services
 from apps.soul_push.expo import ExpoPushSender, PushRequestError, PushTransientError
 from apps.soul_push.models import PushDelivery, PushDevice, PushStatus
-from tests.soul_account_support import officer_client, ready_soul
+from tests.soul_account_support import officer_client, ready_soul, rebirth_ready_soul
 from tests.soul_push_support import (  # noqa: F401
     TOKEN_A,
     TOKEN_B,
@@ -29,7 +29,8 @@ APPLY = "/api/v1/me/rebirth-applications/"
 
 
 def _soul_with_device(tenant, name="亡魂甲", token=TOKEN_A):
-    account, client = ready_soul(tenant, name=name)
+    # 受刑计划已完成:转生申请开放(Q6);下面几条走真实的申请接口。
+    account, client = rebirth_ready_soul(tenant, name=name)
     assert register(client, token).status_code == 201
     return account, client
 
