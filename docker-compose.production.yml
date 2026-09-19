@@ -98,6 +98,13 @@ services:
         limits:
           memory: 256m
 
+  synapse:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
   frontend:
     restart: always
     deploy:
