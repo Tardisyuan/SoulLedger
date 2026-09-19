@@ -1888,7 +1888,8 @@
     "tabs": {
       "life": "This life",
       "past_lives": "Past lives",
-      "applications": "Rebirth"
+      "applications": "Rebirth",
+      "rebirth": "Rebirth"
     },
     "life": {
       "title": "My record",
@@ -2131,6 +2132,100 @@
       "tag_language": "Original · {{language}}",
       "zh": "Chinese",
       "note": "Record content stays as written; it is not translated with the interface."
+    },
+    "chat": {
+      "tab": "Letters",
+      "title": "Letters",
+      "section": {
+        "hall": "Hall",
+        "souls": "Souls"
+      },
+      "new": "Write to someone",
+      "empty": {
+        "title": "No letters yet",
+        "body": "Souls who follow each other can speak freely; you can also find someone by soul code."
+      },
+      "hall": {
+        "hint": "Write to the hall; an officer replies in its name.",
+        "title": "{{hall}} · Hall",
+        "subtitle": "An officer replies in the hall's name · not immediate",
+        "officer_byline": "{{hall}} · {{role}} {{name}}",
+        "not_current": "You are no longer at {{hall}}. The old letters remain; nothing can be added.",
+        "go_current": "Write to {{hall}}"
+      },
+      "loading": "Loading…",
+      "unread": "Unread",
+      "badge": {
+        "awaiting": "Awaiting reply",
+        "closed": "Closed",
+        "sealed": "Sealed",
+        "mutual": "Mutual",
+        "following": "Following",
+        "not_mutual": "Not mutual"
+      },
+      "find": {
+        "title": "Write to someone",
+        "by_code": "By soul code",
+        "code_placeholder": "10-character soul code",
+        "code_hint": "Enter all 10 characters. Codes cross civilizations; any soul can be found.",
+        "not_found": "Not found.",
+        "from_circle": "From the circle",
+        "circle_hint": "Only souls of your civilization who follow you or whom you follow.",
+        "write": "Write"
+      },
+      "compose": {
+        "placeholder": "Say something…",
+        "reply_placeholder": "Reply…",
+        "hall_placeholder": "Write to the hall…",
+        "send": "Send"
+      },
+      "receipt": {
+        "sending": "Sending",
+        "sent": "Delivered",
+        "read": "Read",
+        "failed": "Not sent",
+        "queued": "Waiting to send",
+        "retry": "Resend"
+      },
+      "request": {
+        "outgoing_hint": "You do not follow each other yet. Once they reply, you can speak freely.",
+        "incoming_hint": "A first letter. Reply and you can speak freely; you may also leave it.",
+        "locked": "Waiting for a reply",
+        "next_at": "One letter sent. You may send another from {{time}}.",
+        "throttled": "One letter a day, and today's is sent. You may send again from {{time}}. Your draft is kept."
+      },
+      "muted": {
+        "banner": "You are muted for {{days}} days. You may write to souls again from {{time}}. You can still read, and still write to the hall.",
+        "to_hall": "Write to {{hall}}"
+      },
+      "closed": {
+        "peer_reborn": "They have been reborn. These words remain; nothing can be added.",
+        "peer_retired": "This account is closed. These words remain; nothing can be added.",
+        "marker": "Reborn {{date}} · the thread ends here"
+      },
+      "unavailable": {
+        "banner": "Cannot send right now; reconnecting",
+        "list": "Letters cannot be sent right now. What arrived is still readable.",
+        "retry": "Retry"
+      },
+      "not_configured": "Letters are not open here yet. When they are, this appears.",
+      "menu": {
+        "report": "Report",
+        "profile": "Open profile"
+      },
+      "new_marker": "New",
+      "errors": {
+        "request_throttled": "One letter a day. Try tomorrow.",
+        "muted": "You are muted and cannot write to souls. You can still write to the hall.",
+        "closed": "This thread is closed.",
+        "peer_retired": "That account is closed.",
+        "not_current_hall": "You are no longer at this hall and cannot write.",
+        "chat_unavailable": "Letters are down for now. Try again shortly.",
+        "chat_not_configured": "Letters are not open here.",
+        "not_found": "Not found.",
+        "invalid_code": "A soul code has 10 characters.",
+        "self": "You cannot write to yourself."
+      }
     }
   },
   "soul_push": {

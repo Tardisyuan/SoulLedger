@@ -1888,7 +1888,8 @@
     "tabs": {
       "life": "Ankh Pen",
       "past_lives": "Ankh Tepyu",
-      "applications": "Wehem Mesut"
+      "applications": "Wehem Mesut",
+      "rebirth": "Wehem Mesut"
     },
     "life": {
       "title": "Sesh Ek",
@@ -2131,6 +2132,100 @@
       "tag_language": "Medu Tepy · {{language}}",
       "zh": "Medu Khetaw",
       "note": "Wetep Sheemtet — Nebankh Maatheru."
+    },
+    "chat": {
+      "tab": "Shemes",
+      "title": "Shemes",
+      "section": {
+        "hall": "Wesekhet",
+        "souls": "Ba"
+      },
+      "new": "Gem Ba",
+      "empty": {
+        "title": "Nen Shemes Djer",
+        "body": "Ba Em Senb Medu Wa. Gem Ba Em Ren Ba."
+      },
+      "hall": {
+        "hint": "Sesh Er Wesekhet. Sab Weshed Em Ren-Es.",
+        "title": "{{hall}} · Wesekhet",
+        "subtitle": "Sab Weshed Em Ren Wesekhet · Nen Emu",
+        "officer_byline": "{{hall}} · {{role}} {{name}}",
+        "not_current": "Nen Em {{hall}} Djer. Medu Tepy Wenen; Nen Redi Djer.",
+        "go_current": "Sesh Er {{hall}}"
+      },
+      "loading": "Em Iri…",
+      "unread": "Nen Maa",
+      "badge": {
+        "awaiting": "Em Weshed",
+        "closed": "Khetem",
+        "sealed": "Khetem Seth",
+        "mutual": "Senb",
+        "following": "Shems Seth",
+        "not_mutual": "Nen Senb"
+      },
+      "find": {
+        "title": "Gem Ba",
+        "by_code": "Em Ren Ba",
+        "code_placeholder": "Ren Ba Sesh 10",
+        "code_hint": "Sesh 10 Neb. Ren Ba Em Taui Neb; Gem Ba Neb.",
+        "not_found": "Nen Gem.",
+        "from_circle": "Em Shemsu",
+        "circle_hint": "Ba Taui Pen, Em Shems Ek Er Shems Ek.",
+        "write": "Sesh"
+      },
+      "compose": {
+        "placeholder": "Medu…",
+        "reply_placeholder": "Weshed…",
+        "hall_placeholder": "Sesh Er Wesekhet…",
+        "send": "Hab"
+      },
+      "receipt": {
+        "sending": "Em Hab",
+        "sent": "Hab Seth",
+        "read": "Maa Seth",
+        "failed": "Nen Hab",
+        "queued": "Em Smen Hab",
+        "retry": "Wehem Hab"
+      },
+      "request": {
+        "outgoing_hint": "Nen Senb Djer. Er Khet Weshed-Ef, Medu Wa.",
+        "incoming_hint": "Medu Tepy. Weshed, Medu Wa; Er Nen Weshed, Nen Khet.",
+        "locked": "Em Weshed",
+        "next_at": "Medu Wa Hab Seth. Er {{time}}: Hab Wa Djer.",
+        "throttled": "Ates Hru: Medu Wa Hab Seth. Er {{time}}: Hab Djer. Sesh Ek Wenen."
+      },
+      "muted": {
+        "banner": "Gerh Hru {{days}}. Er {{time}}: Shemes Ba Djer. Maa Wenen; Sesh Er Wesekhet Wenen.",
+        "to_hall": "Sesh Er {{hall}}"
+      },
+      "closed": {
+        "peer_reborn": "Wehem Mesut Seth. Medu Wenen; Nen Redi Djer.",
+        "peer_retired": "Aq Khetem. Medu Wenen; Nen Redi Djer.",
+        "marker": "Hru {{date}} Wehem Mesut · Hen Pehwy"
+      },
+      "unavailable": {
+        "banner": "Nen Hab Emu; Em Wehem Aq",
+        "list": "Nen Hab Shemes Emu. Medu Em Djeret Maa Wenen.",
+        "retry": "Wehem Iri"
+      },
+      "not_configured": "Nen Shemes Dy Djer. Er Khet Iri, Kheper Dy.",
+      "menu": {
+        "report": "Sedjem",
+        "profile": "Maa Per Ba"
+      },
+      "new_marker": "Renpi",
+      "errors": {
+        "request_throttled": "Ates Hru. Hru Djer.",
+        "muted": "Em Gerh: Nen Shemes Ba. Sesh Er Wesekhet Wenen.",
+        "closed": "Hen Khetem.",
+        "peer_retired": "Aq-Ef Khetem.",
+        "not_current_hall": "Nen Em Wesekhet Pen; Nen Sesh.",
+        "chat_unavailable": "Nen Shemes Emu. Wehem Iri Er Khet.",
+        "chat_not_configured": "Nen Shemes Dy.",
+        "not_found": "Nen Gem.",
+        "invalid_code": "Ren Ba: Sesh 10.",
+        "self": "Nen Sesh Er Ek Djes-Ef."
+      }
     }
   },
   "soul_push": {
