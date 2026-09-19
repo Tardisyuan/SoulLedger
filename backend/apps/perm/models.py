@@ -316,7 +316,10 @@ DEFAULT_PERMISSIONS = [
     ("dispatch.return", "结束暂居", "dispatch"),
     # 撤销受刑计划(docs/ARCHITECTURE-sentence-plan.md §2.5,Q11)。视图另外要求调用者属于
     # 原属租户(或 ADMIN)。持有者与 dispatch.return 相同:ADMIN、MODERATOR;同样不由迁移播种。
-    ("sentence_plan.cancel", "撤销受刑计划", "sentence_plan"),
+    # 归 judgment 族:声明它的 SentencePlanViewSet 的 `permission_codename` 是 "judgment"
+    # (读计划是读案子的一部分);单独立一个 sentence_plan 族就是一个没有视图认领的族
+    # (tests/test_every_codename_family_is_claimed.py)。
+    ("sentence_plan.cancel", "撤销受刑计划", "judgment"),
     # workflow 权限（迁移 0013 建了前六条、0015 建了 escalate，
     # 这份目录当时漏了它们，补上以对齐 DB）
     ("workflow.read", "查看工作流", "workflow"),
