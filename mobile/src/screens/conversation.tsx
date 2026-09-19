@@ -146,8 +146,9 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const unavailable = chat.availability === "unavailable";
 
   // Bubbles: the timeline, day dividers, and this device's sends not yet echoed back.
-  const echoed = new Set(messages.flatMap((m) => [m.eventId, m.txnId ?? ""]));
-  const pending = chat.outbox.filter((o) => o.conversationId === c.id && !echoed.has(o.eventId ?? "") && !echoed.has(o.txnId));
+  // No "" in the set: a message without a txn id (theirs, history) must not match a send with no event id yet.
+  const echoed = new Set(messages.flatMap((m) => (m.txnId ? [m.eventId, m.txnId] : [m.eventId])));
+  const pending = chat.outbox.filter((o) => o.conversationId === c.id && !(o.eventId && echoed.has(o.eventId)) && !echoed.has(o.txnId));
   const lines: Line[] = [];
   let lastDay = "";
   for (const item of [...messages.map((m) => ({ ts: m.ts, m })), ...pending.map((o) => ({ ts: o.ts, o }))]) {
@@ -206,7 +207,8 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: false })}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={sealed || mode.kind === "muted" ? { opacity: mode.kind === "muted" ? 0.72 : 0.88 } : undefined}>
+        {/* Muted: the history stays fully legible — not dimmed, not blurred (1c ⑤). Only sealed rooms recede. */}
+        <View style={sealed ? { opacity: 0.88 } : undefined}>
           {lines.map((line) =>
             line.kind === "day" ? (
               <Txt key={line.key} variant="value" tone="subtle" style={styles.day}>
@@ -262,7 +264,8 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
   return (
     <View style={[styles.header, { borderBottomColor: t.hair }]}>
       <BackButton onBack={onBack} />
-      <View style={styles.fill}>
+      {/* 1e: iOS centres the title, Android sets it left. */}
+      <View style={[styles.fill, !ANDROID && styles.centered]}>
         <Txt accessibilityRole="header" variant="nav" tone={muted ? "muted" : "ink"} numberOfLines={1}>
           {title}
         </Txt>
@@ -272,7 +275,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
           </Txt>
         ) : null}
       </View>
-      {right}
+      {right ?? (ANDROID ? null : <View style={styles.icon} />)}
     </View>
   );
 }
@@ -596,6 +599,7 @@ function Dock({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  centered: { alignItems: "center" },
   pad: { padding: 20 },
   noSpacing: { letterSpacing: 0 },
   inlineMono: { fontSize: 12.5, lineHeight: 19 },

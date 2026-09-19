@@ -101,7 +101,8 @@ const INERT: Chat = {
   openDirect: (userId) => soulChatApi.openDirect(userId),
 };
 
-const ChatContext = createContext<Chat>(INERT);
+/** Exported for screen tests, which hand a screen a fixed chat state. */
+export const ChatContext = createContext<Chat>(INERT);
 export const useChat = () => useContext(ChatContext);
 
 /** No response, or the service said it could not reach Synapse: queue, do not refuse. */
