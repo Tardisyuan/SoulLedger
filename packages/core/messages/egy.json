@@ -2531,7 +2531,13 @@
       "soul_state": "Set Medu Tepy Nen Dy",
       "reason_required": "Medu Em Tepy",
       "not_found": "Nen Dbh",
-      "failed": "Nen Kheper"
+      "failed": "Nen Kheper",
+      "invalid_changes": "Khemen Isfet",
+      "empty_changes": "Her Er Fekh Sekhet",
+      "foreign_node": "Her Sekhet Em Aset Ahamet Ek Wa",
+      "foreign_realm": "Ta Nen Em Aset Ahamet Ek",
+      "unknown_node": "Nen Sekhet Pen Em Wetep",
+      "soul_is_here": "Ba Em Aset Ahamet Ek; Shesep Sheemtet Khemen Sekhet"
     },
     "cross": {
       "title": "Sekhet Wetep",
@@ -2555,7 +2561,43 @@
       "order_saved": "Qed Sau Seth",
       "order_error": "Nen Serudj",
       "eternal_not_last": "Wetep Djet Em Pehwy; Wedja Pehwy Khesef",
-      "no_stops": "Nen Netjeru Sekhet"
+      "no_stops": "Nen Netjeru Sekhet",
+      "open": "Shesep Sheemtet Seth Em Kehat",
+      "open_title": "Shesep Sheemtet Seth Em Kehat: {{soul}}",
+      "open_hint": "Sheemtet Seth Em Kehat Iri Sekhet Neb; Pehwy Er Tepy Khetem.",
+      "title_label": "Ren",
+      "description_label": "Medu Seth",
+      "opened": "Sheemtet Seth Em Kehat Iri Seth",
+      "open_error": "Nen Iri Sheemtet",
+      "seat_title": "Redi Aset Ahamet",
+      "seat_tenant": "Aset Ahamet",
+      "seat_tenant_placeholder": "Setep Aset Ahamet",
+      "seat_role": "Sah",
+      "seat_order": "Sekhet {{order}}",
+      "seat_advisor_hint": "Sedjem-Ash Nen Sekhet",
+      "seat_submit": "Redi",
+      "seated": "Redi Seth",
+      "seat_error": "Nen Redi"
+    },
+    "file": {
+      "open": "Hab Dbh",
+      "title": "Hab Dbh Er Hemsu Tepy: {{soul}}",
+      "kind": "Kher Seth",
+      "add_title": "Her Sekhet (Aset Ahamet Ek Wa)",
+      "add_stop": "Her Sekhet",
+      "remove_row": "Fekh",
+      "remove_title": "Fekh Sekhet (Sekhet Nen Wepet Wa)",
+      "no_pending": "Nen Sekhet Er Fekh",
+      "reason": "Medu",
+      "reason_reopen": "Medu (Wedja Wehem: Em Tepy)",
+      "reopen_hint": "Sesen: Wedja Wehem Em Per Tepy; Wedja Iri Khemen Wetep.",
+      "submit": "Hab Dbh",
+      "submitted": "Dbh Hab Seth; Em Smen Er Hemsu Tepy",
+      "soul_is_here": "Ba Em Aset Ahamet Ek: Shesep Sheemtet Khemen Sekhet."
+    },
+    "amend": {
+      "title": "Khemen Wetep",
+      "hint": "Sheemtet Khemen Sekhet: Khetem Hab Dbh Er Hemsu Tepy. Nen Khemen, Nen Dbh."
     }
   }
 }
