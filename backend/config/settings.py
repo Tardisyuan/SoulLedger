@@ -362,6 +362,9 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 # apps.scheduler — TaskRun history and the "did it run" detection.
 # Retention: delete finished runs older than this many days ...
 SCHEDULER_RUN_RETENTION_DAYS = int(os.getenv("SCHEDULER_RUN_RETENTION_DAYS", "30"))
+# ... except FAILURE and LOST runs, which are kept this long: they are the rows
+# someone comes back to look for, and a small fraction of the table.
+SCHEDULER_FAILED_RUN_RETENTION_DAYS = int(os.getenv("SCHEDULER_FAILED_RUN_RETENTION_DAYS", "365"))
 # ... but always keep the newest N per job, so a monthly job's history is not
 # emptied by a daily sweep.
 SCHEDULER_RUN_KEEP_MIN = int(os.getenv("SCHEDULER_RUN_KEEP_MIN", "20"))

@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django_celery_beat.models import CrontabSchedule, PeriodicTask, PeriodicTasks
 
@@ -448,17 +449,26 @@ def prune_runs(now=None, *, batch_size: int = 1000) -> int:
     """Delete finished runs older than the retention window, keeping the newest
     M per job so a monthly job's history is not emptied by a daily sweep.
 
+    FAILURE and LOST runs have their own, longer window
+    (SCHEDULER_FAILED_RUN_RETENTION_DAYS): the failures are what someone comes
+    back to look for, and they are a small fraction of the table.
+
     Open rows (PENDING/RUNNING/RETRY) are the reaper's business and are never
     pruned. Rows whose job is gone (SET_NULL) have no floor to keep.
     """
     now = now or timezone.now()
     cutoff = now - timedelta(days=_setting("SCHEDULER_RUN_RETENTION_DAYS", 30))
+    failed_cutoff = now - timedelta(days=_setting("SCHEDULER_FAILED_RUN_RETENTION_DAYS", 365))
     keep = _setting("SCHEDULER_RUN_KEEP_MIN", 20)
-    closed = [s for s in RunStatus.values if s not in OPEN_STATUSES]
+    failed = (RunStatus.FAILURE, RunStatus.LOST)
+    other_closed = [s for s in RunStatus.values if s not in OPEN_STATUSES and s not in failed]
+    expired = TaskRun.objects.filter(
+        Q(status__in=other_closed, queued_at__lt=cutoff) | Q(status__in=failed, queued_at__lt=failed_cutoff)
+    )
     deleted = 0
-    job_ids = list(TaskRun.objects.filter(queued_at__lt=cutoff).values_list("job_id", flat=True).distinct())
+    job_ids = list(expired.values_list("job_id", flat=True).distinct())
     for job_id in job_ids:
-        candidates = TaskRun.objects.filter(job_id=job_id, queued_at__lt=cutoff, status__in=closed)
+        candidates = expired.filter(job_id=job_id)
         if job_id is not None:
             newest = TaskRun.objects.filter(job_id=job_id).order_by("-queued_at").values_list("pk", flat=True)[:keep]
             candidates = candidates.exclude(pk__in=list(newest))

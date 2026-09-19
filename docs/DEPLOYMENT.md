@@ -53,7 +53,8 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   新建租户时由 `Tenant` 的 post_save 自动补行,不用等下次启动。
 - 页面 `/scheduler`(权限码 `scheduler.read` / `scheduler.manage`,默认只 ADMIN)可以
   启停、改 cron、手动运行、看执行记录;「重建」等于再跑一遍上面的命令。
-- 执行记录(`scheduler_taskrun`)保留 `SCHEDULER_RUN_RETENTION_DAYS`(默认 30)天,每个
+- 执行记录(`scheduler_taskrun`)保留 `SCHEDULER_RUN_RETENTION_DAYS`(默认 30)天,失败(FAILURE)
+  与丢失(LOST)的保留 `SCHEDULER_FAILED_RUN_RETENTION_DAYS`(默认 365)天;每个
   任务至少留 `SCHEDULER_RUN_KEEP_MIN`(默认 20)条;卡死的 RUNNING 超过任务的 max_runtime、
   或 PENDING 超过 `SCHEDULER_PENDING_GRACE_SECONDS`(默认 900)没被取走,都由每 5 分钟的
   `scheduler.reap_stale_runs` 标成 LOST;worker 重启时它名下遗留的 RUNNING 也标 LOST。
