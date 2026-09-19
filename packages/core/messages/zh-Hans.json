@@ -2531,7 +2531,13 @@
       "soul_state": "灵魂当前的状态不允许结束计划",
       "reason_required": "需要填写理由",
       "not_found": "请求不存在",
-      "failed": "操作失败"
+      "failed": "操作失败",
+      "invalid_changes": "改动的格式不对",
+      "empty_changes": "至少加一站或减一站",
+      "foreign_node": "只能给本文明加站；别处的站由原属另开联审",
+      "foreign_realm": "该界域不属于本文明",
+      "unknown_node": "计划里没有这一站",
+      "soul_is_here": "灵魂就在本文明，请开加减项审判"
     },
     "cross": {
       "title": "受刑计划各站",
@@ -2555,7 +2561,43 @@
       "order_saved": "顺序已保存",
       "order_error": "保存顺序失败",
       "eternal_not_last": "永久刑期只能排在最后一站；按现在的顺序，联审结束时会被拒绝",
-      "no_stops": "还没有联合审判官或主持入席"
+      "no_stops": "还没有联合审判官或主持入席",
+      "open": "开联审",
+      "open_title": "为「{{soul}}」的审判开联审",
+      "open_hint": "联审定下外地各站；这份审判结案前，联审必须已结束。",
+      "title_label": "标题",
+      "description_label": "说明",
+      "opened": "联审已建立",
+      "open_error": "建立联审失败",
+      "seat_title": "请文明入席",
+      "seat_tenant": "文明",
+      "seat_tenant_placeholder": "选择文明",
+      "seat_role": "角色",
+      "seat_order": "排第 {{order}} 站",
+      "seat_advisor_hint": "顾问不带站",
+      "seat_submit": "入席",
+      "seated": "已入席",
+      "seat_error": "入席失败"
+    },
+    "file": {
+      "open": "提出请求",
+      "title": "向原审判官提出请求：{{soul}}",
+      "kind": "请求类型",
+      "add_title": "加站（只能加本文明的站）",
+      "add_stop": "再加一站",
+      "remove_row": "不加这一站",
+      "remove_title": "减站（只有未开始的站能减）",
+      "no_pending": "没有可减的站",
+      "reason": "理由",
+      "reason_reopen": "理由（重开审判必填）",
+      "reopen_hint": "批准后原属地立刻开重审；重审的裁决决定计划怎么改。",
+      "submit": "提交请求",
+      "submitted": "请求已提交，等待原审判官决定",
+      "soul_is_here": "灵魂此刻就在本文明：请开加减项审判，结案时带上改动。"
+    },
+    "amend": {
+      "title": "结案时对受刑计划的改动",
+      "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原审判官批准；不带改动则不生成请求。"
     }
   }
 }
