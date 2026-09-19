@@ -183,6 +183,29 @@ os.chmod(dst, st.st_mode & 0o777)
 PY
 run --entrypoint synapse_port_db -- --sqlite-database "$SQLITE_PATH" --postgres-config /data/homeserver.yaml.pg
 
+# synapse_port_db 迁完的流序列可能停在「值 = 已用位置、is_called = false」:下一个号会与已写入的
+# 流位置重复,Synapse 启动即报 IncorrectDatabaseSetup(2026-09-19 在 115 上实测:
+# `pushers_sequence` last_value=2 is_called=f,stream_positions 里 pushers=2)。官方提示的
+# 「删 stream_positions 那一行」每次重启都要再做一遍;这里把每条 <流名>_sequence 推到该流
+# 已用的最大位置(is_called = true),只往前推、从不回退。
+echo "== 3b. 对齐流序列与 stream_positions"
+psql_su -d "$SYNAPSE_DB_NAME" <<'SQL'
+DO $$
+DECLARE r record; cur bigint; called boolean;
+BEGIN
+  FOR r IN SELECT sp.stream_name, max(sp.stream_id) AS pos
+             FROM stream_positions sp
+             JOIN pg_class c ON c.relname = sp.stream_name || '_sequence' AND c.relkind = 'S'
+            GROUP BY sp.stream_name LOOP
+    EXECUTE format('SELECT last_value, is_called FROM %I', r.stream_name || '_sequence') INTO cur, called;
+    IF cur < r.pos OR (cur = r.pos AND NOT called) THEN
+      PERFORM setval(r.stream_name || '_sequence', r.pos, true);
+      RAISE NOTICE '% : % (is_called=%) -> %', r.stream_name || '_sequence', cur, called, r.pos;
+    END IF;
+  END LOOP;
+END $$;
+SQL
+
 # ---------------------------------------------------------------- 4. 换配置
 STAGE=switch
 echo "== 4. 换上新配置(原文件 → /data/homeserver.yaml.sqlite.bak)"
