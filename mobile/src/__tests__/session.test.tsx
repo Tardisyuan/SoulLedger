@@ -14,7 +14,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
-import { PROFILE, application, life, stubApi } from "./stubApi";
+import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -182,9 +182,9 @@ describe("a stored session", () => {
     fireEvent.press(await screen.findByTestId("section-applications-toggle"));
     await screen.findByText("这一世没有转生申请");
     // By testID: the tab label also appears as the header title and a section heading.
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await pressTab("tab-Applications");
     await screen.findByTestId("eligibility");
-    fireEvent.press(screen.getByTestId("tab-Life"));
+    await pressTab("tab-Life");
     await screen.findByText("审批中");
     expect(screen.queryByText("这一世没有转生申请")).toBeNull();
   });
