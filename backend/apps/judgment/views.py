@@ -34,6 +34,7 @@ from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.sentence_plan.requests import PlanChangeRefusedError
 from apps.sentence_plan.services import CrossJudgmentOpenError
 from apps.souls.models import SoulState
 from apps.souls.serializers import SoulSerializer
@@ -157,6 +158,16 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                     )
             super().perform_create(serializer)
             judgment = serializer.instance
+            # 受刑计划进行中的灵魂,这件案子是对计划的加 / 减项(情况 1,§4.1):结案生成请求,
+            # 不建处置、不动灵魂状态。服务端定,不由 body 定。
+            from apps.sentence_plan.services import in_progress_plan
+
+            plan = in_progress_plan(soul)
+            if plan is not None:
+                from apps.judgment.models import Judgment, JudgmentKind
+
+                Judgment.all_objects.filter(pk=judgment.pk).update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
+                judgment.kind, judgment.amends_plan_id = JudgmentKind.AMENDMENT, plan.pk
             if soul.current_state == SoulState.ALIVE:
                 soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
 
@@ -476,11 +487,16 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         notes = serializer.validated_data.get("notes", "")
         create_workflow = serializer.validated_data.get("create_workflow", False)
         statute_ids = serializer.validated_data.get("statute_ids") or []
+        plan_changes = serializer.validated_data.get("plan_changes") or None
 
         try:
             judgment.conclude(
-                verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids
+                verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids,
+                plan_changes=plan_changes,
             )
+        except PlanChangeRefusedError as exc:
+            # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
+            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except CitationRefusedError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except CrossJudgmentOpenError as exc:

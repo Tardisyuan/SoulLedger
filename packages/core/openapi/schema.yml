@@ -7617,6 +7617,148 @@ paths:
               schema:
                 $ref: '#/components/schemas/SentencePlan'
           description: ''
+  /api/v1/sentence-plans/{id}/cancel/:
+    post:
+      operationId: v1_sentence_plans_cancel_create
+      description: 撤销整份计划(Q11,§3.1)。理由必填、写审计;灵魂在外不自动回归。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Sentence plan.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SentencePlanCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SentencePlanCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SentencePlanCancel'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentencePlan'
+          description: ''
+  /api/v1/sentence-plans/{id}/requests/:
+    post:
+      operationId: v1_sentence_plans_requests_create
+      description: 情况 2.1 / 2.2(§4.1):提出方租户的判官提请求。灵魂在本地 → 400,开加减项审判。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Sentence plan.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SentencePlanRequestCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SentencePlanRequestCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SentencePlanRequestCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentencePlanRequest'
+          description: ''
+  /api/v1/sentence-plans/{id}/requests/{request_id}/decide/:
+    post:
+      operationId: v1_sentence_plans_requests_decide_create
+      description: 原审判官决定(Q2):只有原属租户(或 ADMIN)。ACCEPT 立刻应用;REOPEN 立刻在原属地开审(Q7)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Sentence plan.
+        required: true
+      - in: path
+        name: request_id
+        schema:
+          type: string
+          format: uuid
+        description: The SentencePlanRequest on this plan.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SentencePlanRequestDecide'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SentencePlanRequestDecide'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SentencePlanRequestDecide'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentencePlan'
+          description: ''
+  /api/v1/sentence-plans/{id}/requests/{request_id}/withdraw/:
+    post:
+      operationId: v1_sentence_plans_requests_withdraw_create
+      description: 提出方撤回(§4.2)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Sentence plan.
+        required: true
+      - in: path
+        name: request_id
+        schema:
+          type: string
+          format: uuid
+        description: The SentencePlanRequest on this plan.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentencePlan'
+          description: ''
   /api/v1/social-moderation/comments/:
     get:
       operationId: v1_social_moderation_comments_list
@@ -13427,6 +13569,14 @@ components:
       - failed_webhooks_24h
       - pending_registrations_24h
       - status
+    DecisionEnum:
+      enum:
+      - ACCEPT
+      - REJECT
+      type: string
+      description: |-
+        * `ACCEPT` - ACCEPT
+        * `REJECT` - REJECT
     DesiredRebirthFormEnum:
       enum:
       - DIVINE
@@ -15744,6 +15894,9 @@ components:
       - SENTENCE_NODE_REFUSED
       - SENTENCE_PLAN_COMPLETED
       - CROSS_SENTENCE_SUBMITTED
+      - SENTENCE_PLAN_AMENDED
+      - SENTENCE_REQUEST_PENDING
+      - SENTENCE_REQUEST_DECIDED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -15765,6 +15918,9 @@ components:
         * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
         * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
         * `CROSS_SENTENCE_SUBMITTED` - Cross Sentence Submitted
+        * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+        * `SENTENCE_REQUEST_PENDING` - Sentence Request Pending
+        * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
     NullEnum:
       enum:
       - null
@@ -19759,6 +19915,13 @@ components:
       - tenant
       - tenant_code
       - update_time
+    SentencePlanCancel:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+      - reason
     SentencePlanRequest:
       type: object
       properties:
@@ -19810,6 +19973,29 @@ components:
       - reason
       - requested_by_judgment_id
       - status
+    SentencePlanRequestCreate:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/SentencePlanRequestKindEnum'
+        changes:
+          type: object
+          additionalProperties: {}
+        reason:
+          type: string
+          default: ''
+      required:
+      - kind
+    SentencePlanRequestDecide:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        reason:
+          type: string
+          default: ''
+      required:
+      - decision
     SentencePlanRequestKindEnum:
       enum:
       - AMEND

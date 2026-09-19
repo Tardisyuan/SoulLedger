@@ -45,9 +45,10 @@ def open_judgments(soul):
 class JudgmentKind(models.TextChoices):
     """这份审判对受刑计划做什么(docs/ARCHITECTURE-sentence-plan.md §2.4)。
 
-    ORIGINAL 结案生成计划;AMENDMENT(执行地的加 / 减项审判)与 REOPEN(原属的重开审判)
-    结案**不建处置、不动灵魂状态**,只改计划 —— 那两条结案分支是阶段 3 的事;阶段 1 里
-    没有任何路径写入 ORIGINAL 以外的值。
+    ORIGINAL 结案生成计划;AMENDMENT(灵魂所在地的加 / 减项审判)与 REOPEN(原属的重开审判)
+    结案**不建处置、不动灵魂状态**,只改计划(`apps/sentence_plan/requests.py`)。
+    AMENDMENT 由开案时自动定:灵魂有进行中的计划(`JudgmentViewSet.perform_create`);
+    REOPEN 只由原审判官批准 REOPEN 请求时由系统开(`requests._open_reopen_judgment`)。
     """
     ORIGINAL = "ORIGINAL", "原审判"
     AMENDMENT = "AMENDMENT", "加项 / 减项审判"
@@ -145,10 +146,10 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         return f"Judgment of {self.soul.name}: {v}"
 
     def conclude(self, verdict: str, notes: str = "", create_workflow: bool = False,
-                 statute_ids=None) -> bool:
+                 statute_ids=None, plan_changes=None) -> bool:
         from apps.judgment.services import JudgmentConclusionService
         return JudgmentConclusionService.conclude_judgment(
-            self, verdict, notes, create_workflow, statute_ids=statute_ids
+            self, verdict, notes, create_workflow, statute_ids=statute_ids, plan_changes=plan_changes,
         )
 
     @property
