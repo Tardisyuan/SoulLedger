@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { components } from "./generated/schema";
 import type { PaginatedResponse } from "./users";
 
 export interface DispatchRecord {
@@ -135,6 +136,9 @@ export const dispatchApi = {
   history: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
 };
 
+/** `seatable-actors/`: a deity who may hold a seat, as the seat form needs it. */
+export type SeatableActor = components["schemas"]["SeatableActor"];
+
 export const crossTenantJudgmentsApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgmentListItem>>("/dispatch/cross-tenant-judgments/", { params }),
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
@@ -149,7 +153,8 @@ export const crossTenantJudgmentsApi = {
   participate: (
     id: string,
     data: ({ participant_tenant: number } | { participant_tenant_code: string }) & {
-      participant_actor?: number;
+      /** An Actor id (UUID) from `seatableActors` for the same tenant; anything else is 400. */
+      participant_actor?: string;
       role?: string;
       node_order?: number | null;
     }
@@ -162,6 +167,14 @@ export const crossTenantJudgmentsApi = {
   // convenes explicitly, once at least one participant is seated. 403 for any
   // other tenant, 400 on an empty bench or a judgment past PROPOSED.
   activate: (id: string) => api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/activate/`),
+  /**
+   * Initiator only, while PROPOSED: the invited tenant's deities who may hold a
+   * seat (active JUDGE actors), id and names only. 403 for anyone else.
+   */
+  seatableActors: (id: string, tenantCode: string) =>
+    api.get<SeatableActor[]>(`/dispatch/cross-tenant-judgments/${id}/seatable-actors/`, {
+      params: { tenant_code: tenantCode },
+    }),
   /** The seat's own tenant fills its stop: a realm of its own civilization, and a term (null = unrecorded). */
   sentence: (id: string, data: { participant: string; realm_code: string; sentence_years: number | null; notes?: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/sentence/`, data),
