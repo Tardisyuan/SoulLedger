@@ -83,7 +83,8 @@ class MeChatConversationsView(ChatView):
         rows = Conversation.objects.filter(
             Q(soul_a_id=soul_id) | Q(soul_b_id=soul_id), closed_at__isnull=True
         ).select_related("soul_a", "soul_b", "tenant")
-        return Response(ConversationSerializer(rows, many=True, context={"soul_id": soul_id}).data)
+        context = {"soul_id": soul_id, "account": self.account}
+        return Response(ConversationSerializer(rows, many=True, context=context).data)
 
     @extend_schema(request=ConversationCreateSerializer,
                    responses={200: ConversationSerializer, 201: ConversationSerializer,
@@ -104,7 +105,7 @@ class MeChatConversationsView(ChatView):
                 raise svc.ChatError("找不到这个灵魂。", "not_found", status=404)
             conversation, created = svc.open_direct(account, target, request=request)
         return Response(
-            ConversationSerializer(conversation, context={"soul_id": account.soul_id}).data,
+            ConversationSerializer(conversation, context={"soul_id": account.soul_id, "account": account}).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 

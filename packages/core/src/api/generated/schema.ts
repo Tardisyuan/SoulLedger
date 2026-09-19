@@ -5884,6 +5884,17 @@ export interface components {
             readonly last_message_at: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            /** @description 私聊:两人此刻互相关注。收件箱为 false。 */
+            readonly mutual: boolean;
+            /** @description 被节流的私聊由我发起:我只能经 `POST .../messages/` 每 24 小时发一条。 */
+            readonly initiated_by_me: boolean;
+            /**
+             * Format: date-time
+             * @description 我发起的被节流私聊:何时可以再发一条请求;还没发过、或不受节流时为空。
+             */
+            readonly next_request_at: string | null;
+            /** @description 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall` / `closed`),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。 */
+            readonly refusal: string | null;
         };
         /**
          * @description 两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,

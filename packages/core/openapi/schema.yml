@@ -13045,15 +13045,39 @@ components:
           type: string
           format: date-time
           readOnly: true
+        mutual:
+          type: boolean
+          readOnly: true
+          description: 私聊:两人此刻互相关注。收件箱为 false。
+        initiated_by_me:
+          type: boolean
+          readOnly: true
+          description: 被节流的私聊由我发起:我只能经 `POST .../messages/` 每 24 小时发一条。
+        next_request_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: 我发起的被节流私聊:何时可以再发一条请求;还没发过、或不受节流时为空。
+        refusal:
+          type: string
+          nullable: true
+          readOnly: true
+          description: 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall`
+            / `closed`),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。
       required:
       - created_at
       - hall
       - id
+      - initiated_by_me
       - kind
       - last_message_at
       - last_request_at
+      - mutual
+      - next_request_at
       - peer_name
       - peer_user
+      - refusal
       - responded_at
       - room_id
       - throttled
