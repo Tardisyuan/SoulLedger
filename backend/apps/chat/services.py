@@ -483,31 +483,42 @@ def notify_new_message(room_id, event_id, sender):
     返回新建的投递 id(测试断言用)。
     """
     conversation = (Conversation.objects.filter(room_id=room_id, closed_at__isnull=True)
-                    .select_related(*ACCOUNT_JOINS).first())
+                    .select_related(*ACCOUNT_JOINS, "tenant").first())
     if conversation is None:
         return []
     # 「只推本世账号」由上一行的 `closed_at` 兑现:转世停用账号时先关它参与的每个会话
     # (`deactivate_for_account`),所以未关闭会话里的账号都是本世的。
-    recipient = _recipient(conversation, sender)
+    recipient, sender_name = _recipient(conversation, sender)
     if recipient is None:
         return []
     from apps.soul_push import services as push
 
-    ids = push.record_chat_message(recipient, conversation, event_id)
+    ids = push.record_chat_message(recipient, conversation, event_id, sender_name)
     if ids:
         transaction.on_commit(lambda: push.enqueue(ids))
     return ids
 
 
 def _recipient(conversation, sender):
+    """`(收件账号, 锁屏上的「谁」(locale → 名字))`;不该推时 `(None, None)`。
+
+    名字与会话列表同一个出处:私聊是发件方**会话那一世**账号的显示名(`display_name`,
+    不是它此刻的本世账号);殿司回信是殿司展示名(`Tenant.hall_names`,按收件灵魂的推送语言)。"""
     if conversation.kind == ConversationKind.OFFICER_INBOX:
         service_user = f"@{settings.MATRIX_SERVICE_LOCALPART}:{settings.MATRIX_SERVER_NAME}"
-        return conversation.account_a if sender == service_user else None
+        if sender != service_user:
+            return None, None
+        halls = conversation.tenant.hall_names
+        return conversation.account_a, lambda locale: halls.get(locale) or halls["zh-Hans"]
     accounts = [a for a in (conversation.account_a_id, conversation.account_b_id) if a is not None]
     sender_account = ChatIdentity.objects.filter(
         account_id__in=accounts, matrix_user_id=sender
     ).values_list("account_id", flat=True).first()
-    return conversation.other_account(sender_account) if sender_account is not None else None
+    if sender_account is None:
+        return None, None
+    sender_life = conversation.account_a if conversation.account_a_id == sender_account else conversation.account_b
+    name = display_name(sender_life)
+    return conversation.other_account(sender_account), lambda locale: name
 
 
 # ── 官员收件箱 ───────────────────────────────────────────────────────────

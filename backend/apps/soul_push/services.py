@@ -189,21 +189,26 @@ def record_for_event(event_type, payload, tenant_code):
 #: 新书信(apps/chat):私聊的新消息、殿司给灵魂的回信。**不经事件总线** ——
 #: 消息在 Synapse 里,Synapse 模块回调 `POST /api/v1/chat/hooks/new-message/`,
 #: `apps.chat.services.notify_new_message` 定下收件人(会话那一世的本世账号)后调这里。
-#: 锁屏只说「有新书信」:不带正文、不带对方名字。dedupe 用 Matrix 事件 id —— 回调重放不会重推。
+#: 锁屏说「谁给你写了信」,**不带正文**(2026-09-19 用户定)。dedupe 用 Matrix 事件 id —— 回调重放不会重推。
 CHAT_EVENT = "CHAT_MESSAGE"
 
 
-def record_chat_message(account, conversation, event_id):
-    """写下一条新书信推送,返回新建的投递 id;偏好关了「书信」就不写(发送前 `_claim` 还会再核对一次)。"""
+def record_chat_message(account, conversation, event_id, sender_name):
+    """写下一条新书信推送,返回新建的投递 id;偏好关了「书信」就不写(发送前 `_claim` 还会再核对一次)。
+
+    `sender_name(locale)` 给出锁屏上「谁」:私聊是对方那一世的显示名(与语言无关),
+    殿司回信是殿司展示名(按收件灵魂的推送语言)。"""
     return _record(account, CHAT_EVENT, "chat", "chat_message", f"chat:{event_id}"[:120],
-                   {"screen": "Conversation", "conversation_id": str(conversation.pk)})
+                   {"screen": "Conversation", "conversation_id": str(conversation.pk)},
+                   params=lambda locale: {"name": sender_name(locale)})
 
 
-def _record(account, event_type, category, kind, dedupe_key, data):
+def _record(account, event_type, category, kind, dedupe_key, data, params=None):
     preference = PushPreference.objects.filter(account=account).first()
     if preference is not None and not getattr(preference, category):
         return []
-    title, body = messages.render(preference.locale if preference else messages.DEFAULT_LOCALE, kind)
+    locale = preference.locale if preference else messages.DEFAULT_LOCALE
+    title, body = messages.render(locale, kind, **(params(locale) if params else {}))
     data = {**data, "kind": kind}
     created_ids = []
     for device in PushDevice.objects.filter(account=account, is_active=True):

@@ -2282,7 +2282,7 @@
     },
     "chat_message": {
       "title": "Shemes Renpi",
-      "body": "Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
+      "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
