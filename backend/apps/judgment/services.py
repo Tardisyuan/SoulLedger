@@ -156,6 +156,7 @@ class JudgmentConclusionService:
         notes: str = "",
         create_workflow: bool = False,
         statute_ids=None,
+        plan_changes=None,
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -176,7 +177,14 @@ class JudgmentConclusionService:
         the citations are written while the judgment is still amendable, which
         is the only window `StatuteCitationService.assert_amendable` allows.
         """
+        from apps.sentence_plan.services import SentencePlanService
+
         with transaction.atomic():
+            # Step -1 (Q17): an attached cross-tenant judgment must have ended —
+            # its PASS nodes are copied into the plan below. Raises before
+            # anything is written.
+            cross = SentencePlanService.check_cross_judgment(judgment)
+
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:
                 StatuteCitationService.cite_many(judgment, statute_ids)
@@ -188,6 +196,31 @@ class JudgmentConclusionService:
             judgment.concluded_at = timezone.now()
             judgment.save()
 
+            # An AMENDMENT (the stop's own case, situation 1) or a REOPEN (the
+            # home judge's retrial) changes the sentence plan instead: no
+            # disposition, no soul state move — the soul is already DISPOSED,
+            # which is why this used to be unconcludable (design doc G1).
+            # Same transaction: a refusal below rolls the verdict back with it.
+            from apps.judgment.models import JudgmentKind
+            from apps.sentence_plan import requests as plan_requests
+
+            if judgment.kind != JudgmentKind.ORIGINAL:
+                if judgment.kind == JudgmentKind.AMENDMENT:
+                    plan_requests.request_from_amendment(judgment, plan_changes, notes)
+                else:
+                    if plan_changes:
+                        raise plan_requests.PlanChangeRefusedError(
+                            "A reopened judgment changes the plan through its verdict (a new home node), "
+                            "not through plan_changes", "invalid_changes")
+                    plan_requests.conclude_reopened(judgment)
+                SentencePlanService.advance(judgment.soul)
+                from apps.events.services import EventService
+                EventService.log_judgment_concluded(judgment)
+                return True
+            if plan_changes:
+                raise plan_requests.PlanChangeRefusedError(
+                    "plan_changes apply only to an amendment judgment", "invalid_changes")
+
             # Step 2: Create disposition (cross-context: judgment → disposition)
             from apps.disposition.services import DispositionService
             disposition = DispositionService.create_from_judgment(judgment)
@@ -196,8 +229,7 @@ class JudgmentConclusionService:
             # carrying the disposition just made (docs/ARCHITECTURE-sentence-plan.md).
             # Same transaction: a plan without its conclusion, or the reverse,
             # is the half-written record the saga exists to prevent.
-            from apps.sentence_plan.services import SentencePlanService
-            SentencePlanService.create_from_conclusion(judgment, disposition)
+            SentencePlanService.create_from_conclusion(judgment, disposition, cross)
 
             # Step 3: Optionally create workflow (cross-context: judgment → workflow)
             if create_workflow:
@@ -216,6 +248,10 @@ class JudgmentConclusionService:
                     f"Soul {judgment.soul.pk} is {judgment.soul.current_state}; "
                     f"a judgment cannot conclude from there. Nothing was written."
                 )
+
+            # Step 4b: any conclusion may be the last thing a sentence plan was
+            # waiting on (docs/ARCHITECTURE-sentence-plan.md §3.3).
+            SentencePlanService.advance(judgment.soul)
 
         # Step 5: Log domain event (outside transaction for performance)
         from apps.events.services import EventService

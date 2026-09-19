@@ -131,6 +131,24 @@ def _reachable(account):
     ).exclude(pk=account.user_id)
 
 
+def find_by_soul_code(account, soul_code):
+    """跨文明私聊的发起入口:按**完整**灵魂编号找一个可私聊的灵魂(2026-09-19 用户定)。
+    朋友圈搜索只到当前所在文明,这里是找别的文明的人的唯一办法。
+
+    精确匹配,规范化与登录同一条(`normalize_soul_code`);不做前缀、不做模糊 —— 编号是
+    登录名。候选集就是 `_reachable`(与 `open_direct` 同一个),所以不存在、官员、前世账号、
+    自己**答同一个 404,同一句话**:响应里不留「这个编号存在但……」的区分。
+    """
+    from apps.soul_accounts.services import normalize_soul_code
+
+    target = _reachable(account).filter(
+        soul_account__soul__soul_code=normalize_soul_code(soul_code)
+    ).select_related("soul_account").first()
+    if target is None:
+        raise ChatError("找不到这个灵魂。", "not_found", status=404)
+    return target
+
+
 # ── 发言权 ───────────────────────────────────────────────────────────────
 
 

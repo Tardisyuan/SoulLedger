@@ -185,6 +185,17 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
+        # Q3:受刑计划进行中的灵魂只能走计划(系统按节点发起调拨);无计划的照旧可手动调拨。
+        from apps.sentence_plan.services import in_progress_plan
+
+        soul = validated.get("soul")
+        if soul is not None and in_progress_plan(soul) is not None:
+            return Response(
+                {"error": "This soul has a sentence plan in progress; dispatches follow the plan",
+                 "code": "sentence_plan_active"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         set_current_user(request.user)
         set_current_request(request)
         try:

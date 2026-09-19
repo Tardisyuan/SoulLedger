@@ -16,7 +16,7 @@ from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import AccountOrigin
 from apps.souls.models import SoulState
 from apps.souls.record_models import SoulRecord
-from tests.soul_account_support import dead_soul, ready_soul, soul_client
+from tests.soul_account_support import dead_soul, ready_soul, rebirth_ready_soul, soul_client
 
 pytestmark = pytest.mark.django_db
 
@@ -122,7 +122,7 @@ def test_past_lives_are_read_only_by_cycle_and_hide_new_identity(reborn_soul):
 
 def test_a_soul_never_sees_another_soul(reborn_soul, cn_tenant):
     soul, account = reborn_soul
-    other_account, other_client = ready_soul(cn_tenant, name="旁人")
+    other_account, other_client = rebirth_ready_soul(cn_tenant, name="旁人")
     SoulRecord.objects.create(soul=other_account.soul, record_type="MERIT", description="旁人的功")
     for url in ("/api/v1/me/", "/api/v1/me/life/", "/api/v1/me/past-lives/"):
         raw = json.dumps(soul_client(account).get(url).data, ensure_ascii=False, default=str)
