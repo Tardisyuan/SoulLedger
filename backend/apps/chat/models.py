@@ -96,6 +96,9 @@ class Conversation(models.Model):
     #: 留下的一方(只读,App 标「会话止于此」),官员侧仍可读、不可回;新一世再开同一对灵魂的私聊是
     #: **新房间** —— 前世的聊天不跟着人走。
     closed_at = models.DateTimeField(null=True, blank=True)
+    #: 关闭之后,房间里还在的一方已在 Synapse 上降到 0 的时刻。为空 = 还欠一次降权:
+    #: `sync_rooms` 连同未关闭的房间一起重算它,直到写成功(与发言权的其余同步同一条路)。
+    silenced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
