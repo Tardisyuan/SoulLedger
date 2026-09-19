@@ -19,7 +19,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
-import { PROFILE, application, life, stubApi } from "./stubApi";
+import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -113,7 +113,7 @@ describe("a soul residing in another civilization", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await pressTab("tab-Applications");
     expect((await screen.findByTestId("residence-applications")).props).toBeTruthy();
     expect(screen.getByText("你暂居埃及，转生仍归中国受理。此页按中国的规例。")).toBeTruthy();
     fireEvent.press(screen.getByTestId("open-a1"));
@@ -160,7 +160,7 @@ describe("a soul residing in another civilization", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await pressTab("tab-Applications");
     const apply = await screen.findByTestId("apply");
     expect(apply.props.accessibilityState.disabled).toBe(false);
     expect(screen.queryByTestId("terminal-empty")).toBeNull();
@@ -206,7 +206,7 @@ describe("a native soul of the Duat", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    await pressTab("tab-Applications");
     const apply = await screen.findByTestId("apply");
     expect(apply.props.accessibilityState.disabled).toBe(true);
     expect(screen.getByTestId("eligibility-reason").props.children).toBe("你所属的文明没有转生。此处的去向是终局。");
@@ -223,7 +223,7 @@ describe("a native soul of the Duat", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-PastLives"));
+    await pressTab("tab-PastLives");
     expect((await screen.findByTestId("past-lives-empty")).props.children).toBe("杜阿特没有前世。你只有这一世，此后不再入簿。");
   });
 
@@ -235,7 +235,7 @@ describe("a native soul of the Duat", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    fireEvent.press(screen.getByTestId("tab-PastLives"));
+    await pressTab("tab-PastLives");
     expect((await screen.findByTestId("past-lives-empty")).props.children).toBe("没有前世记录");
   });
 });
