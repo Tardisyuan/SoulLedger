@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { sentencePlansApi, type SentencePlanFilters } from "../api/sentence-plans";
+import { sentencePlansApi, type FileSentenceRequestBody, type SentencePlanFilters } from "../api/sentence-plans";
 import { sentencePlanKeys, soulKeys } from "../query_keys";
 
 /**
@@ -16,6 +16,15 @@ export function useSentencePlans(filters: SentencePlanFilters, enabled = true) {
     queryFn: async () => (await sentencePlansApi.list(filters)).data,
     enabled,
     placeholderData: (previous) => previous,
+  });
+}
+
+/** One plan by id — the plan an amendment judgment amends (`Judgment.amends_plan_id`). */
+export function useSentencePlan(planId: string | null | undefined) {
+  return useQuery({
+    queryKey: sentencePlanKeys.detail(planId ?? ""),
+    queryFn: async () => (await sentencePlansApi.get(planId as string)).data,
+    enabled: !!planId,
   });
 }
 
@@ -41,6 +50,14 @@ export function useDecideSentenceRequest() {
 export function useWithdrawSentenceRequest() {
   return usePlanWrite(
     async (v: { planId: string; requestId: string }) => (await sentencePlansApi.withdraw(v.planId, v.requestId)).data,
+  );
+}
+
+/** Situations 2.1 / 2.2 — the filer's judge files; the inbox and the plan panel refresh through `usePlanWrite`. */
+export function useFileSentenceRequest() {
+  return usePlanWrite(
+    async (v: { planId: string } & FileSentenceRequestBody) =>
+      (await sentencePlansApi.file(v.planId, { kind: v.kind, changes: v.changes, reason: v.reason })).data,
   );
 }
 

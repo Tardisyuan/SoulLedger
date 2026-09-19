@@ -37,9 +37,26 @@ export interface SentencePlanFilters {
   page?: number;
 }
 
+/**
+ * Situations 2.1 / 2.2: the filing tenant's judge asks the original judge
+ * (`POST /{id}/requests/`). REOPEN carries no `changes`; its reason is required.
+ * Refusals: 400 `soul_is_here` (open an amendment judgment instead),
+ * `foreign_node` / `foreign_realm` (N2=(a): only stops in your own civilization),
+ * `node_not_pending`, `unknown_node`, `empty_changes`, `invalid_changes`,
+ * `reason_required`; 409 `request_pending`, `plan_held`, `plan_in_retrial`, `plan_closed`.
+ */
+export interface FileSentenceRequestBody {
+  kind: "AMEND" | "REOPEN";
+  changes?: SentenceRequestChanges;
+  reason?: string;
+}
+
 export const sentencePlansApi = {
   list: (params: SentencePlanFilters) =>
     api.get<PaginatedResponse<SentencePlan>>("/sentence-plans/", { params }),
+  get: (planId: string) => api.get<SentencePlan>(`/sentence-plans/${planId}/`),
+  file: (planId: string, body: FileSentenceRequestBody) =>
+    api.post<SentencePlanRequest>(`/sentence-plans/${planId}/requests/`, body),
   decide: (planId: string, requestId: string, body: { decision: "ACCEPT" | "REJECT"; reason?: string }) =>
     api.post<SentencePlan>(`/sentence-plans/${planId}/requests/${requestId}/decide/`, body),
   withdraw: (planId: string, requestId: string) =>

@@ -138,8 +138,22 @@ export const dispatchApi = {
 export const crossTenantJudgmentsApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgmentListItem>>("/dispatch/cross-tenant-judgments/", { params }),
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
-  create: (data: { title: string; description: string }) => api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
-  participate: (id: string, data: { participant_tenant: number; participant_actor?: number; role?: string }) =>
+  /** `judgment`: the home tenant's own open ORIGINAL case this bench sets the stops for (fixed once given). */
+  create: (data: { title: string; description: string; judgment?: string }) =>
+    api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
+  /**
+   * Initiator only, while PROPOSED. The seat's tenant by id **or** by code — a
+   * non-ADMIN cannot list other tenants' ids. `node_order` (2, 3, …) is required
+   * for a CO_JUDGE / CHAIRMAN on a bench attached to a judgment, refused for an ADVISOR.
+   */
+  participate: (
+    id: string,
+    data: ({ participant_tenant: number } | { participant_tenant_code: string }) & {
+      participant_actor?: number;
+      role?: string;
+      node_order?: number | null;
+    }
+  ) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/participate/`, data),
   // `activate` was deleted 2026-08-31 because the backend had no such route
   // and the call 404'd. It is back 2026-09-12 with a real route behind it:

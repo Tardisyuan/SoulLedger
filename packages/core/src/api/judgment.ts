@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { LedgerSummary } from "./ledger";
 import type { NumericFields } from "./ledgerQuantities";
+import type { SentenceRequestChanges } from "./sentence-plans";
 import type { PaginatedResponse } from "./users";
 
 /**
@@ -38,6 +39,14 @@ export interface Judgment {
   is_final: boolean;
   created_at: string;
   concluded_at: string | null;
+  /**
+   * Server-decided (docs/ARCHITECTURE-sentence-plan.md §2.4): a case opened on a
+   * soul with a plan in progress is AMENDMENT; REOPEN is opened only by
+   * accepting a request. Optional: FieldPermissionMixin may strip it.
+   */
+  kind?: "ORIGINAL" | "AMENDMENT" | "REOPEN";
+  /** The plan an AMENDMENT / REOPEN case changes; null on an ORIGINAL. */
+  amends_plan_id?: string | null;
 }
 
 /**
@@ -155,6 +164,12 @@ export interface ConcludeJudgmentPayload {
   create_workflow?: boolean;
   /** Grounds filed with the verdict; refused ids abort the conclusion. */
   statute_ids?: string[];
+  /**
+   * AMENDMENT cases only (situation 1): the plan changes the concluded case
+   * sends to the original judge as one AMEND request. Omitted = no request.
+   * Any other kind answers 400 `invalid_changes`.
+   */
+  plan_changes?: SentenceRequestChanges;
 }
 
 /**
