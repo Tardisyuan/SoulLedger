@@ -303,6 +303,25 @@ class TestDockerConfiguration:
         script = _read(os.path.join(REPO_ROOT, "scripts", "backup-db.sh"))
         assert 'PGHOST="${PGHOST:-' in script
 
+    def test_backup_covers_the_chat_data(self):
+        """Chat messages live in the `synapse` database and the signing key
+        in the synapse_data volume — neither is in the soulledger dump. The
+        backup service must see the volume and the healthcheck must ask for
+        both chat files once chat is initialized."""
+        backup = _production_services()['backup']
+        assert 'synapse_data:/synapse:ro' in backup['volumes']
+        assert backup['environment']['SYNAPSE_DATA_DIR'] == '/synapse'
+        health = backup['healthcheck']['test'][1]
+        assert "soulledger_synapse_*.dump" in health
+        assert "soulledger_synapse_data_*.tar.gz" in health
+
+    def test_nginx_denies_synapse_admin_and_federation(self):
+        """Admin API is the backend's alone; federation is off (single
+        homeserver), so its endpoints have no business on the public port."""
+        content = _read(NGINX_CONF)
+        for prefix in ['/_synapse/admin', '/_matrix/federation', '/_matrix/key']:
+            assert re.search(r"location \^~ " + re.escape(prefix) + r" \{\s*deny all;", content), prefix
+
     def test_certbot_renews_into_the_webroot_nginx_serves(self):
         """Renewal is only real if the three pieces meet: certbot writes the
         challenge where nginx's /.well-known/acme-challenge/ location reads it

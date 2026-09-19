@@ -105,8 +105,8 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   脚本同时收回 PUBLIC 对 `soulledger`、`synapse` 两库的 CONNECT,所以它连不进主库)、直连 `db` 不经 pgbouncer(pgbouncer 只配了 `soulledger` 库;
   Synapse 自带连接池)。**不用 SQLite**:Synapse 官方只把它当试用,
   单写锁在灵魂数上来后顶不住,且 SQLite → PostgreSQL 迁移要停机跑 `synapse_port_db`。
-  **`backup` 服务目前只 dump `soulledger` 库**:聊天消息(`synapse` 库)与 `synapse_data` 卷
-  (签名密钥、聊天媒体)不在每日备份里,上线前要补。
+  聊天消息(`synapse` 库)与 `synapse_data` 卷(签名密钥、聊天媒体)在每日备份里,见下面
+  「聊天(Synapse)备份与恢复」。
 - homeserver.yaml 含密钥,不进仓库,在 `synapse_data` 卷里,由 `scripts/synapse-init.sh` 生成:
   `generate` 的产物 − 与模板重复的顶层键(`registration_shared_secret` 等)− SQLite 的 `database` 段
   \+ PostgreSQL 的 `database` 与 `public_baseurl` + `config/synapse/homeserver.soulledger.yaml`
@@ -195,3 +195,36 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
     alpine sh -c "rm -rf /media/* && tar xzf /backups/soulledger_media_YYYYMMDD_HHMMSS.tar.gz -C /media"
   $DC start pgbouncer backend celery celery-beat
   ```
+
+### 聊天(Synapse)备份与恢复
+
+- 同一个 `backup` 服务、同一轮 cron、同一份 `RETENTION_DAYS`。`synapse_data` 卷只读挂在
+  `/synapse`;卷里有 `homeserver.yaml`(聊天已初始化)时,`backup-db.sh` 在 db 与 media 之后再出两份:
+  - `soulledger_synapse_<timestamp>.dump`:`synapse` 库,`pg_dump -Fc`(自定义格式,
+    写完先 `pg_restore --list` 校验再改名);
+  - `soulledger_synapse_data_<timestamp>.tar.gz`:整个卷 —— **签名密钥**(丢了等于换了一台
+    homeserver)、`homeserver.yaml`(含密钥)与聊天媒体 `media_store/`。
+  失败语义与 db dump 一致(非零退出、不留 `.partial`)。聊天没初始化时两份都跳过并打印一行,
+  healthcheck 也不要求它们;初始化了,healthcheck 就同样要求这两份在 26 小时以内。
+- 恢复(同一台机器,或新机器上 `synapse_data` 卷还是空的):
+
+  ```bash
+  $DC stop synapse
+  $DC exec db dropdb -U soulledger --if-exists synapse
+  # 卷(签名密钥 / homeserver.yaml / 媒体)。只丢了库时可以跳过这一步
+  docker run --rm \
+    -v "$(docker volume ls -q --filter name=synapse_data)":/data \
+    -v "$(pwd)/backups:/backups:ro" \
+    alpine sh -c "rm -rf /data/* && tar xzf /backups/soulledger_synapse_data_YYYYMMDD_HHMMSS.tar.gz -C /data"
+  # 建 synapse 角色与空库(已在的跳过;卷里已有 homeserver.yaml,generate 与合并也跳过)
+  DC="$DC" scripts/synapse-init.sh
+  $DC run --rm --no-deps -T --entrypoint pg_restore backup \
+    --no-owner --role=synapse -d synapse --single-transaction --exit-on-error \
+    /backups/soulledger_synapse_YYYYMMDD_HHMMSS.dump
+  $DC start synapse
+  ```
+
+  `--role=synapse`:恢复出来的表归 `synapse` 角色,而不是执行恢复的 `soulledger`。
+  2026-09-19 本机实跑过这一套(备份 → stop → dropdb → 卷恢复 → init → pg_restore → start):
+  各步 exit 0,服务账号 `@soulledger:…` 与 admin 标记都在,`public` 下没有不属 `synapse` 的表,
+  签名密钥前后 sha 相同,`/_matrix/client/versions` 经 nginx 200。

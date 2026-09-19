@@ -128,12 +128,19 @@ services:
   # a db dump doesn't cover, and MEDIA_DIR tells backup-db.sh to tar it
   # alongside the db dump, same partial-then-rename and non-zero-exit-on-
   # failure behavior, same retention.
+  #
+  # Chat (Synapse) likewise: synapse_data read-only at /synapse, and once it
+  # holds a homeserver.yaml (chat initialized) the script also dumps the
+  # `synapse` database (pg_dump -Fc) and tars the volume (signing key, chat
+  # media), and the healthcheck requires both to be fresh too. Before chat is
+  # initialized both are skipped and not required.
   backup:
     image: postgres:16-alpine
     volumes:
       - ./scripts:/scripts:ro
       - ./backups:/backups
       - media_files:/media:ro
+      - synapse_data:/synapse:ro
     environment:
       PGHOST: db
       PGPORT: "5432"
@@ -141,6 +148,8 @@ services:
       PGUSER: soulledger
       PGPASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
       MEDIA_DIR: /media
+      SYNAPSE_DATA_DIR: /synapse
+      SYNAPSE_DATABASE: synapse
     entrypoint: ["sh", "-c"]
     command:
       - >
@@ -148,7 +157,7 @@ services:
         echo '0 2 * * * /scripts/backup-db.sh /backups > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
         exec crond -f -l 8
     healthcheck:
-      test: ["CMD-SHELL", "find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q . && find /backups -name 'soulledger_media_*.tar.gz' -mmin -1560 | grep -q ."]
+      test: ["CMD-SHELL", "find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q . && find /backups -name 'soulledger_media_*.tar.gz' -mmin -1560 | grep -q . && { [ ! -f /synapse/homeserver.yaml ] || { find /backups -name 'soulledger_synapse_*.dump' -mmin -1560 | grep -q . && find /backups -name 'soulledger_synapse_data_*.tar.gz' -mmin -1560 | grep -q .; }; }"]
       interval: 5m
       timeout: 10s
       start_period: 5m
