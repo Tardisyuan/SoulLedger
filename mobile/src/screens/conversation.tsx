@@ -171,6 +171,8 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     <KeyboardAvoidingView
       style={[styles.fill, { backgroundColor: t.s0 }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // The dock already pads for the home indicator; over the keyboard that inset is a gap.
+      keyboardVerticalOffset={-insets.bottom}
       testID={`conversation-${mode.kind}`}
     >
       <View style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
