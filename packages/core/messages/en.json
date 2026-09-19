@@ -2577,7 +2577,10 @@
       "seat_advisor_hint": "Advisors carry no stop",
       "seat_submit": "Seat",
       "seated": "Seated",
-      "seat_error": "Could not seat"
+      "seat_error": "Could not seat",
+      "seat_actor": "Deity in the seat (optional)",
+      "seat_actor_none": "Not specified yet",
+      "seat_actor_empty": "This civilization has no deity who can take a seat"
     },
     "file": {
       "open": "File a request",

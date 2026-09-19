@@ -2577,7 +2577,10 @@
       "seat_advisor_hint": "顾问不带站",
       "seat_submit": "入席",
       "seated": "已入席",
-      "seat_error": "入席失败"
+      "seat_error": "入席失败",
+      "seat_actor": "席位上的神祇（可选）",
+      "seat_actor_none": "暂不指定",
+      "seat_actor_empty": "该文明没有可入席的神祇"
     },
     "file": {
       "open": "提出请求",

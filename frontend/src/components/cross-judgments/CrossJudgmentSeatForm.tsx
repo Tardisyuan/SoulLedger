@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, type CrossTenantJudgment } from "@soulledger/core/api";
+import type { SeatableActor } from "@soulledger/core/api/dispatch";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -11,6 +12,12 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
+
+/** The name in the reader's language, falling back to the primary name. */
+function actorLabel(a: SeatableActor, locale: string): string {
+  const byLocale = locale === "en" ? a.name_en : locale === "egy" ? a.name_egy : a.name_zh;
+  return byLocale || a.name;
+}
 
 const ROLES = ["CO_JUDGE", "CHAIRMAN", "ADVISOR"] as const;
 
@@ -28,17 +35,18 @@ function errorText(error: unknown): string | null {
  *   可选的是另外三个文明中还没入席的。
  * * N3=(a):联合审判官 / 主持带一站,站号自动取下一个(2、3……;要换顺序用各站区的上下移);
  *   顾问不带站。没挂审判的联审(存量会议)不带站号 —— 服务端对它拒收 `node_order`。
- * * 席位上的判官(`participant_actor`)不在这里选:它是可选的,而可选的神祇只属发起方租户(视图按请求方
- *   租户过滤),填了反而误导。见报告「待拍板」。
+ * * 席位上的神祇(可选,2026-09-20 用户决定):从**被邀文明**里可担任席位的神祇选
+ *   (`seatable-actors/`,只给发起方);换文明时清空。服务端入席时再校验一次。
  */
 export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgment }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   const [tenantCode, setTenantCode] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("CO_JUDGE");
+  const [actorId, setActorId] = useState("");
 
   const mine = user?.tenant?.code ?? null;
   const seatedCodes = new Set(judgment.participants.map((p) => p.participant_tenant_code));
@@ -49,28 +57,35 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
   const nextOrder =
     Math.max(1, ...judgment.participants.map((p) => p.node_order ?? 0).filter((n) => n > 0)) + 1;
 
+  const isInitiator =
+    judgment.status === "PROPOSED" &&
+    mine !== null &&
+    mine === judgment.initiating_tenant_code &&
+    hasPermission("cross_judgment.create");
+  const actors = useQuery({
+    queryKey: ["cross-judgments", "seatable-actors", judgment.id, tenantCode],
+    queryFn: () => crossTenantJudgmentsApi.seatableActors(judgment.id, tenantCode).then((r) => r.data),
+    enabled: isInitiator && !!tenantCode,
+  });
+
   const seat = useMutation({
     mutationFn: () =>
       crossTenantJudgmentsApi.participate(judgment.id, {
         participant_tenant_code: tenantCode,
         role,
+        ...(actorId ? { participant_actor: actorId } : {}),
         ...(carriesStop ? { node_order: nextOrder } : {}),
       }),
     onSuccess: () => {
       setTenantCode("");
+      setActorId("");
       showToast(t("sentence_plan.cross.seated"), "success");
       queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
     },
     onError: (error) => showToast(errorText(error) ?? t("sentence_plan.cross.seat_error"), "error"),
   });
 
-  if (
-    judgment.status !== "PROPOSED" ||
-    mine === null ||
-    mine !== judgment.initiating_tenant_code ||
-    !hasPermission("cross_judgment.create") ||
-    available.length === 0
-  ) {
+  if (!isInitiator || available.length === 0) {
     return null;
   }
 
@@ -88,7 +103,10 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
         <SelectField
           label={t("sentence_plan.cross.seat_tenant")}
           value={tenantCode}
-          onChange={(e) => setTenantCode(e.target.value)}
+          onChange={(e) => {
+            setTenantCode(e.target.value);
+            setActorId("");
+          }}
           options={[
             { value: "", label: t("sentence_plan.cross.seat_tenant_placeholder") },
             ...available.map((code) => ({
@@ -107,6 +125,21 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
           }))}
         />
       </div>
+      {tenantCode &&
+        actors.data &&
+        (actors.data.length === 0 ? (
+          <p className="text-02 text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.cross.seat_actor_empty")}</p>
+        ) : (
+          <SelectField
+            label={t("sentence_plan.cross.seat_actor")}
+            value={actorId}
+            onChange={(e) => setActorId(e.target.value)}
+            options={[
+              { value: "", label: t("sentence_plan.cross.seat_actor_none") },
+              ...actors.data.map((a) => ({ value: a.id, label: actorLabel(a, locale) })),
+            ]}
+          />
+        ))}
       {judgment.judgment && (
         <p className="text-02 text-[oklch(var(--color-ink-subtle))]" data-testid="seat-stop">
           {carriesStop

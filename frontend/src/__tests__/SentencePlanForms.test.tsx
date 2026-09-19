@@ -23,7 +23,7 @@ const { sentencePlansApi: planApi } = jest.requireMock("@soulledger/core/api/sen
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
-  crossTenantJudgmentsApi: { create: jest.fn(), participate: jest.fn() },
+  crossTenantJudgmentsApi: { create: jest.fn(), participate: jest.fn(), seatableActors: jest.fn() },
   realmsApi: { list: jest.fn() },
 }));
 const { crossTenantJudgmentsApi: cjApi, realmsApi } = jest.requireMock("@soulledger/core/api") as {
@@ -79,6 +79,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   planApi.list.mockResolvedValue(page([plan()]));
   planApi.file.mockResolvedValue({ data: {} });
+  cjApi.seatableActors.mockResolvedValue({ data: [] });
   realmsApi.list.mockResolvedValue({
     data: { results: [{ realm_code: "EG_AARU", is_eternal: false }, { realm_code: "EG_ANNIHILATION", is_eternal: true }] },
   });
@@ -333,6 +334,64 @@ describe("联审详情:请文明入席", () => {
     who();
     renderWith(<CrossJudgmentSeatForm judgment={judgment} />);
     expect(screen.queryByRole("button", { name: SEAT() })).toBeNull();
+  });
+
+  it("选了文明才问可入席的神祇;选的神祇随入席发出,换文明就清空", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    cjApi.participate.mockResolvedValue({ data: bench() });
+    cjApi.seatableActors.mockImplementation((_id: string, code: string) =>
+      Promise.resolve({
+        data: code === "EU_HEAVEN_HELL"
+          ? [{ id: "a-minos", name: "Minos", name_zh: "米诺斯", name_en: "Minos", name_egy: "" }]
+          : [],
+      })
+    );
+    renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
+    expect(cjApi.seatableActors).not.toHaveBeenCalled();
+    const tenant = screen.getByLabelText(tZh("sentence_plan.cross.seat_tenant"));
+
+    fireEvent.change(tenant, { target: { value: "GR_HADES" } });
+    expect(await screen.findByText(tZh("sentence_plan.cross.seat_actor_empty"))).toBeInTheDocument();
+    expect(cjApi.seatableActors).toHaveBeenCalledWith("cj1", "GR_HADES");
+
+    fireEvent.change(tenant, { target: { value: "EU_HEAVEN_HELL" } });
+    const actor = await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"));
+    await within(actor).findByRole("option", { name: "米诺斯" });
+    fireEvent.change(actor, { target: { value: "a-minos" } });
+    fireEvent.click(screen.getByRole("button", { name: SEAT() }));
+    await waitFor(() =>
+      expect(cjApi.participate).toHaveBeenCalledWith("cj1", {
+        participant_tenant_code: "EU_HEAVEN_HELL", role: "CO_JUDGE", participant_actor: "a-minos", node_order: 3,
+      })
+    );
+  });
+
+  it("换文明时清掉已选的神祇(不会把欧洲的神祇带到希腊的席位上)", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    cjApi.participate.mockResolvedValue({ data: bench() });
+    cjApi.seatableActors.mockImplementation((_id: string, code: string) =>
+      Promise.resolve({ data: [{ id: `a-${code}`, name: code, name_zh: code, name_en: code, name_egy: code }] })
+    );
+    renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
+    const tenant = screen.getByLabelText(tZh("sentence_plan.cross.seat_tenant"));
+    fireEvent.change(tenant, { target: { value: "EU_HEAVEN_HELL" } });
+    const actor = await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"));
+    await within(actor).findByRole("option", { name: "EU_HEAVEN_HELL" });
+    fireEvent.change(actor, { target: { value: "a-EU_HEAVEN_HELL" } });
+    fireEvent.change(tenant, { target: { value: "GR_HADES" } });
+    await within(await screen.findByLabelText(tZh("sentence_plan.cross.seat_actor"))).findByRole("option", { name: "GR_HADES" });
+    fireEvent.click(screen.getByRole("button", { name: SEAT() }));
+    await waitFor(() =>
+      expect(cjApi.participate).toHaveBeenCalledWith("cj1", {
+        participant_tenant_code: "GR_HADES", role: "CO_JUDGE", node_order: 3,
+      })
+    );
+  });
+
+  it("非发起方不去问可入席的神祇", () => {
+    as("JUDGE", "EG_DUAT", ...JUDGE);
+    renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
+    expect(cjApi.seatableActors).not.toHaveBeenCalled();
   });
 
   it("服务端拒绝原样给出", async () => {

@@ -117,10 +117,17 @@ test.describe("Sentence plan", () => {
     });
     api.on("POST", "/dispatch/cross-tenant-judgments/", () => ({ status: 201, body: bench() }));
     api.on("GET", "/dispatch/cross-tenant-judgments/:id/", () => ({ body: bench() }));
+    // 只回被问的那个文明的神祇(服务端的规则钉在 test_sentence_plan_phase4.py)。
+    api.on("GET", "/dispatch/cross-tenant-judgments/:id/seatable-actors/", (call) => ({
+      body: call.query.tenant_code === "EG_DUAT"
+        ? [{ id: "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a1", name: "Osiris", name_zh: "奥西里斯", name_en: "Osiris", name_egy: "Wesir" }]
+        : [],
+    }));
     api.on("POST", "/dispatch/cross-tenant-judgments/:id/participate/", (call) => {
       participants = [{
         id: "p-eg", judgment: CJ_ID, participant_tenant: 3, participant_tenant_code: call.body.participant_tenant_code,
-        participant_actor: null, participant_actor_name: null, role: call.body.role, joined_at: "2026-09-20T00:00:00Z",
+        participant_actor: call.body.participant_actor ?? null, participant_actor_name: call.body.participant_actor ? "Osiris" : null,
+        role: call.body.role, joined_at: "2026-09-20T00:00:00Z",
         node_order: call.body.node_order ?? null, sentence_realm_code: "", sentence_years: null, sentence_is_eternal: false,
         sentence_memory_reset: "", sentence_notes: "", sentence_submitted_at: null,
       }];
@@ -141,12 +148,17 @@ test.describe("Sentence plan", () => {
 
     const seat = page.getByRole("form", { name: "请文明入席" });
     await expect(seat.getByTestId("seat-stop")).toHaveText("排第 2 站");
-    await seat.getByLabel("文明").selectOption("EG_DUAT");
+    await seat.getByLabel("文明", { exact: true }).selectOption("EG_DUAT");
+    await seat.getByLabel("席位上的神祇（可选）").selectOption({ label: "奥西里斯" });
+    expect(api.lastCall("GET", "/dispatch/cross-tenant-judgments/:id/seatable-actors/")?.query.tenant_code).toBe("EG_DUAT");
     await seat.getByRole("button", { name: "入席" }).click();
 
     await expect
       .poll(() => api.lastCall("POST", "/dispatch/cross-tenant-judgments/:id/participate/")?.body)
-      .toEqual({ participant_tenant_code: "EG_DUAT", role: "CO_JUDGE", node_order: 2 });
+      .toEqual({
+        participant_tenant_code: "EG_DUAT", role: "CO_JUDGE",
+        participant_actor: "a0a0a0a0-a0a0-4a0a-8a0a-a0a0a0a0a0a1", node_order: 2,
+      });
     // 入席后详情重取:埃及成了第 2 站,还没填。
     const stops = page.getByRole("region", { name: "受刑计划各站" });
     await expect(stops.locator('li[data-stop="2"]')).toContainText("尚未填写");
