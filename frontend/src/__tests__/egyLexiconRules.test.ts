@@ -9,17 +9,27 @@
  * (每行判一处毛病),两行的修订后 egy 逐字相同 —— 是同一条修订结果,所以夹具里一键一条:
  * 34 个键,其中 2 个前几节已有同值,净增 32。第四节「一词一义收口 · Sekhem / Was / Mekher / Dbh」
  * 给了 113 行与 14 个词根:113 行里 menu_buttons.permission_mismatch_warning 出现两次且同值,
- * 所以是 112 个键;其中 19 个前几节已有(12 条「沿用」同值,7 条按转生政策改写),净增 93。这里钉住:
+ * 所以是 112 个键;其中 19 个前几节已有(12 条「沿用」同值,7 条按转生政策改写),净增 93。
+ * 第五节「设置 / 加载 / Sethety 收口」给了 35 行与 5 个词根(ROOTS_CLOSE):其中 5 个键前几节已有,净增 30。
+ * 第六节「Sethet / Seshem / Pert 收口」(末轮)给了 74 行与 12 个词根(ROOTS_FINAL):其中 1 个键前几节已有
+ * (soul_accounts.reveal.failed,回填为 Nen Maa),净增 73。
+ * 定稿同时把后定的值**回填**到早先各节的行里,所以全表 794 行、761 个键,每个键全表只有一个值。
  *
- * - 修订表 658 行与包里逐字一致(夹具 support/egyLexiconRevisions.json,键 → 修订后 egy);
+ * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
+ * 按 SECTIONS 九节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
+ * (生成时断言同键各行值相同),`JSON.stringify(table, null, 2)` 落盘。改定稿就整份重生成。这里钉住:
+ *
+ * - 修订表 761 个键与包里逐字一致(键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
+ * - 加载一律 Ini(同键中文含「加载 / 载入」);
+ * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14、小词 18 个,
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12、小词 18 个,
  *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
@@ -77,15 +87,11 @@ const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
 /**
  * 仍含单词 Ma 的键 —— 这些 Ma 不是否定(「有误」「移至」等早期写法),按同键中文判过义。
  * 否定一律 Nen:任何不在这里的 Ma 都是漏改的否定。
+ * 第六节把「Ma Sethet」四处改写(Culpa (Isfet)、Khet Hru、Ankh Nen Maat、Maa Khet Wa),它们随之移出。
  */
 const MA_NOT_NEGATION = new Set([
   "souls.categories.COWARDICE",
-  "souls.detail.demerit",
-  "souls.detail.reading.culpa_label",
-  "souls.detail.date_problems.title",
-  "souls.detail.date_problems.codes.implausible_lifespan",
   "souls.detail.delete_to_recycle_bin",
-  "souls.date_problem_filter",
   "souls.date_problem_marker.error",
   "menus.delete_confirm_title",
   "menus.delete_confirm_action",
@@ -94,14 +100,17 @@ const MA_NOT_NEGATION = new Set([
   "workflow.detail.escalate_reason_placeholder",
 ]);
 
-/** 「Pert Abuf」只剩调度义(dispatch);作密码的写法已废止。 */
+/**
+ * 第六节:「Pert Abuf」整个废止(它是密码的旧写法,误贴到了调度上;调度统一 Hab-Ba)。Pert 本义「出」,
+ * 「杜阿特入口」写成 Duat Pert 是把入口写成了出口(→ Duat Aq)。Pert 若再出现,只许在调度键里。
+ */
 const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(k);
 
 /**
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 658 行里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 761 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -141,7 +150,8 @@ const words = (k: string) =>
     .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? []);
 
 /**
- * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、一词一义词根 14 个、语法小词 18 个,逐字照抄。
+ * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、一词一义词根 14 个、收口词根 5 个、末轮收口词根 12 个、
+ * 语法小词 18 个,逐字照抄。
  * 「Duat / Pet」「Er Hry」按空格拆成词;连字符写法(Djes-Ef、Neb-Medu、Hemet-Sesh……)照抄为一个词形。
  */
 const ROOTS = [
@@ -163,17 +173,26 @@ const ROOTS_FIX = [
 ];
 /**
  * 一词一义收口(第四节,Sekhem 九义拆净)。Ini(加载)、Wen-Khetem(开关)、Arrwt(通路)、Wa-Ek(仅自己)为新词,
- * 其余是把已在用的词正式定为该义。注意:定稿行里「私密」写作两词 Wa Ek(两个小词),词根表照抄为 Wa-Ek。
+ * 其余是把已在用的词正式定为该义。「私密」第四节行里写作两词 Wa Ek,第五节确认为连字符合成词 Wa-Ek(同 Djes-Ef)。
  */
 const ROOTS_SPLIT = [
   "Smen", "Was", "Aha", "Setep", "Ini", "Wen-Khetem", "Khemen", "Ta", "Wat", "Arrwt",
   "Netjer", "Mesqet", "Sesen", "Wa-Ek",
 ];
+/** 设置 / 加载 / Sethety 收口(第五节)。Pet-Sesh(模板,定式之书)为新词;其余四个是把已定的词派给 Sethety 的旧义项。 */
+const ROOTS_CLOSE = ["Pet-Sesh", "Setep", "Renu", "Nefer", "Isfet"];
+/**
+ * Sethet / Seshem / Pert 收口(第六节,末轮)。Khedu(活动)、Sepdet(时戳)、Djedu(条文)、Bek(导出,与 Ini 成对)、
+ * Tut-Hesb(图表)为新词;其余是把已在用的词派给 Sethet / Seshem 散出去的义项。Seshem 收口后唯一义是推进。
+ */
+const ROOTS_FINAL = [
+  "Iri", "Seshem", "Khedu", "Medew", "Sepdet", "Djedu", "Hetep", "Unemu", "Menkh", "Bek", "Wen", "Tut-Hesb",
+];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
@@ -200,9 +219,9 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 658 行与包里逐字一致", () => {
+  it("修订表 761 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(658);
+    expect(Object.keys(table)).toHaveLength(761);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -236,13 +255,32 @@ describe("egy 词表规则", () => {
     // 笔误一节:标「废止」的异写(Remetch、Sepr、Sep-U、词中大写的 AmMit)、词根表点名的笔误
     // (Djesef、Hemst、Maakher、Mekheru、Iaru、Semen、Wenu)、改用 Ahet 的 Metu、转生统一
     // Wehem Mesut 之后的旧写法 Wehem Ankh。
+    // 第五节:Sethety(早期万能填充,不是词根;按义项分给 Pet-Sesh / Was / Setep / Smen / Nefer / Isfet / Renu)、
+    // 保存 Pedet(→ Sau)、新 Werpet(→ Renpi)、加载 Khemut(→ Ini)。定稿表外的同形也按同键中文判义改掉了。
+    // 第六节:Pert Abuf(密码旧写法,调度统一 Hab-Ba;定稿表外的 16 处调度键一并改了)。
     const abolished = [
       /Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/, /\bSekhem Ma\b/,
       /\bRemetch\b/, /\bSepr\b/, /\bSep-U\b/, /\bAmMit\b/, /\bDjesef\b/, /\bHemst\b/, /\bMaakher\b/,
       /\bMekheru\b/, /\bIaru\b/, /\bSemen\b/, /\bWenu\b/, /\bMetu\b/, /\bWehem Ankh\b/,
+      /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/, /\bPert Abuf\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
-    expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /Pert Abuf/.test(v))).toEqual([]);
+  });
+
+  it("Pert 只在调度键里出现(入口是 Aq,不是 Pert)", () => {
+    expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /\bPert\b/.test(prose(v)))).toEqual([]);
+  });
+
+  it("Sethet 只表技术错误:中文不含「错误 / 出错 / 故障 / 异常」的键不出现 Sethet", () => {
+    // 第六节把它曾担的通过 / 活动 / 审计 / 证据 / 条文 / 时戳 / 顺序 / 资源……五十处散回各自的词,
+    // settings 的冗余 Sethet 直接删。目前没有例外,所以不设白名单;真出现一个再加,并照 Sekhem 那条补陈旧检查。
+    expect(offenders(KEYS, (v, k) => /\bSethet\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? ""))).toEqual([]);
+  });
+
+  it("Seshem 只表推进:中文不含「推进 / 越级 / 升级」的键不出现 Seshem", () => {
+    // 第六节:创建 Iri、展开 Wen、开始 Tepy、图表 Tut-Hesb、系统层 Ta、开关 Wen-Khetem 都分出去了。
+    // 「升级」是 workflow.status.ESCALATED 的中文(越级推进后的状态)。不设白名单,理由同上。
+    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级/.test(ZH[k] ?? ""))).toEqual([]);
   });
 
   it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {
@@ -261,6 +299,13 @@ describe("egy 词表规则", () => {
     // 白名单里的键若已不含 Ma,就该从白名单删掉,否则它会替将来的漏改背书。
     const stale = [...MA_NOT_NEGATION].filter((k) => !/\b[Mm]a\b/.test(prose(EGY[k] ?? "")));
     expect(stale).toEqual([]);
+  });
+
+  it("加载一律 Ini:中文含「加载 / 载入」的键必含 Ini", () => {
+    // 第五节把 Khemut、Smen(其实是「定」)、Em Iri(泛指进行中)三种加载写法归一为 Ini。
+    // 反过来不守:Ini 本义「取来」,「正在取下一条」「承自前世」这类中文不写加载的键也用它。
+    // 目前没有例外,所以不设白名单;真出现一个再加,并照 Sekhem 那条补陈旧检查。
+    expect(offenders(KEYS, (v, k) => /加载|载入/.test(ZH[k] ?? "") && !/\bIni\b/.test(prose(v)))).toEqual([]);
   });
 
   it("每词首字母大写:含小词,连字符复合词的每一段都算", () => {

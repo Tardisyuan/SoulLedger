@@ -21,9 +21,12 @@ class ChatSessionSerializer(serializers.Serializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     peer_user = serializers.SerializerMethodField(
-        help_text="对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。")
-    peer_name = serializers.SerializerMethodField(help_text="对方在朋友圈的显示名。")
-    hall = serializers.SerializerMethodField()
+        help_text="对方会话那一世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。")
+    peer_name = serializers.SerializerMethodField(
+        help_text="对方**会话那一世**的显示名 —— 对方转世之后也不变。")
+    hall = serializers.SerializerMethodField(help_text="殿司展示名(简体中文;收件箱)。私聊为空。")
+    hall_names = serializers.SerializerMethodField(
+        help_text="殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。私聊为空。")
     mutual = serializers.SerializerMethodField(help_text="私聊:两人此刻互相关注。收件箱为 false。")
     initiated_by_me = serializers.SerializerMethodField(
         help_text="被节流的私聊由我发起:我只能经 `POST .../messages/` 每 24 小时发一条。")
@@ -36,20 +39,19 @@ class ConversationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
         fields = [
-            "id", "kind", "room_id", "peer_user", "peer_name", "hall",
-            "throttled", "last_request_at", "responded_at", "last_message_at", "created_at",
+            "id", "kind", "room_id", "peer_user", "peer_name", "hall", "hall_names",
+            "throttled", "last_request_at", "responded_at", "last_message_at", "created_at", "closed_at",
             "mutual", "initiated_by_me", "next_request_at", "refusal",
         ]
         read_only_fields = fields
 
     def _peer(self, obj):
-        """对方本世账号。灵魂身份不出库:对方认得的是朋友圈的 user_id 与显示名。"""
-        from apps.soul_accounts.services import current_account_of
-
-        soul_id = self.context.get("soul_id")
-        if obj.kind != ConversationKind.DIRECT or soul_id is None:
+        """对方**会话那一世**的账号 —— 不是对方此刻的本世账号:对方转世之后,这里仍是当时
+        和我说话的那一个。灵魂身份不出库:认得的是朋友圈的 user_id 与显示名。"""
+        account = self.context.get("account")
+        if obj.kind != ConversationKind.DIRECT or account is None:
             return None
-        return current_account_of(obj.soul_b if obj.soul_a_id == soul_id else obj.soul_a)
+        return obj.other_account(account.pk)
 
     def get_peer_user(self, obj) -> int | None:
         peer = self._peer(obj)
@@ -86,7 +88,10 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_hall(self, obj) -> str:
         """殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。"""
-        return obj.tenant.display_name if obj.kind == ConversationKind.OFFICER_INBOX else ""
+        return obj.tenant.hall_names["zh-Hans"] if obj.kind == ConversationKind.OFFICER_INBOX else ""
+
+    def get_hall_names(self, obj) -> dict[str, str] | None:
+        return obj.tenant.hall_names if obj.kind == ConversationKind.OFFICER_INBOX else None
 
 
 class ConversationCreateSerializer(serializers.Serializer):
@@ -118,6 +123,7 @@ class InboxMessageSerializer(serializers.Serializer):
     event_id = serializers.CharField()
     from_officer = serializers.BooleanField()
     sender_name = serializers.CharField()
+    officer_title = serializers.CharField(help_text="回信官员的职位(官员回信;灵魂的信为空)。")
     body = serializers.CharField()
     timestamp = serializers.IntegerField()
 
@@ -127,10 +133,12 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul_a.name", read_only=True)
     soul_code = serializers.CharField(source="soul_a.soul_code", read_only=True)
     tenant_name = serializers.CharField(source="tenant.display_name", read_only=True)
+    hall_names = serializers.DictField(source="tenant.hall_names", child=serializers.CharField(), read_only=True,
+                                       help_text="殿司展示名,按语言:{zh-Hans, en, egy}。")
 
     class Meta:
         model = Conversation
-        fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name",
+        fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name", "hall_names",
                   "last_message_at", "created_at", "closed_at"]
         read_only_fields = fields
 

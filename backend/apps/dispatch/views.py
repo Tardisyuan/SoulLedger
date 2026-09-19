@@ -3,7 +3,7 @@ REST views for dispatch app.
 """
 from django.db import IntegrityError
 from django.db.models import Prefetch
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,11 +14,18 @@ from apps.core.request_local import clear_current_user, set_current_request, set
 from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
-from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, DispatchStatus
+from apps.dispatch.models import (
+    CrossTenantJudgment,
+    CrossTenantJudgmentParticipant,
+    DispatchRecord,
+    DispatchStatus,
+    JudgmentStatus,
+)
 from apps.dispatch.permissions import CrossJudgmentPartyPermission, DispatchPartyPermission
 from apps.dispatch.serializers import (
     CrossTenantJudgmentConcludeSerializer,
     CrossTenantJudgmentListSerializer,
+    CrossTenantJudgmentOrderSerializer,
     CrossTenantJudgmentParticipateSerializer,
     CrossTenantJudgmentSentenceSerializer,
     CrossTenantJudgmentSerializer,
@@ -26,6 +33,7 @@ from apps.dispatch.serializers import (
     DispatchRecordSerializer,
     DispatchRejectSerializer,
     DispatchReturnSerializer,
+    SeatableActorSerializer,
 )
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService, ResidenceReturnBlockedError
 from apps.perm.filters import DataScopeFilter
@@ -441,6 +449,8 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],
         'sentence': ['cross_judgment.create'],
+        'seatable_actors': ['cross_judgment.create'],
+        'order': ['cross_judgment.create'],
         'create': ['cross_judgment.create'],
         'update': ['cross_judgment.create'],
         'partial_update': ['cross_judgment.create'],
@@ -559,25 +569,27 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         refused = self._initiator_or_403(request, judgment)
         if refused is not None:
             return refused
-        request_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
-
         serializer = CrossTenantJudgmentParticipateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tenant_id = serializer.validated_data["participant_tenant"]
         actor_id = serializer.validated_data.get("participant_actor")
         role = serializer.validated_data["role"]
 
-        tenant = Tenant.objects.filter(id=tenant_id).first()
+        if "participant_tenant_code" in serializer.validated_data:
+            tenant = Tenant.objects.filter(code=serializer.validated_data["participant_tenant_code"]).first()
+        else:
+            tenant = Tenant.objects.filter(id=serializer.validated_data["participant_tenant"]).first()
         if not tenant:
             return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # 席位上的神祇属**被邀文明**(2026-09-20 用户决定)。此前这里按**发起方**租户找,
+        # 且字段是整数而 Actor 主键是 UUID —— 永远找不到,静默落成 None。现在找不到或不可担任
+        # 席位就 400(`add_participant` 里判),什么都不写。
         actor = None
         if actor_id:
-            actor_qs = Actor.objects.filter(id=actor_id).select_related("realm")
-            if getattr(request.user, 'role', None) != 'ADMIN' and request_tenant:
-                actor_qs = actor_qs.filter(tenant=request_tenant)
-            actor = actor_qs.first()
+            actor = Actor.all_objects.filter(pk=actor_id, is_deleted=False).first()
+            if actor is None:
+                return Response({"error": "Actor not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             CrossTenantJudgmentService.add_participant(
@@ -588,6 +600,35 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return Response(CrossTenantJudgmentSerializer(judgment).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        parameters=[OpenApiParameter("tenant_code", str, OpenApiParameter.QUERY, required=True,
+                                     description="The civilization being invited.")],
+        responses=SeatableActorSerializer(many=True),
+    )
+    @action(detail=True, methods=["get"], url_path="seatable-actors", pagination_class=None)
+    def seatable_actors(self, request, pk=None):
+        """被邀文明里可担任席位的神祇,供发起方入席时选(2026-09-20 用户决定)。
+
+        只给能入席的人:`cross_judgment.create`、发起方租户、联审 PROPOSED;被邀的不能是发起方自己。
+        只读、字段最小(id 与名字)。**不放宽 `ActorViewSet` 的租户过滤** —— 跨租户读神祇只在这里,
+        且只读这一个被邀租户的、`seatable_actors` 判定过的那些行。
+        """
+        judgment = self.get_object()
+        refused = self._initiator_or_403(request, judgment)
+        if refused is not None:
+            return refused
+        if judgment.status != JudgmentStatus.PROPOSED:
+            return Response({"error": "Seats are chosen only before the bench is convened"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        tenant = Tenant.objects.filter(code=request.query_params.get("tenant_code") or "").first()
+        if tenant is None:
+            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+        if tenant.pk == judgment.initiating_tenant_id:
+            return Response({"error": "The initiating tenant does not seat itself"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        actors = CrossTenantJudgmentService.seatable_actors(tenant)
+        return Response(SeatableActorSerializer(actors, many=True).data)
 
     @extend_schema(request=CrossTenantJudgmentSentenceSerializer, responses=CrossTenantJudgmentSerializer)
     @action(detail=True, methods=["post"])
@@ -619,6 +660,23 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         judgment.refresh_from_db()
+        return Response(CrossTenantJudgmentSerializer(judgment).data)
+
+    @extend_schema(request=CrossTenantJudgmentOrderSerializer, responses=CrossTenantJudgmentSerializer)
+    @action(detail=True, methods=["post"])
+    def order(self, request, pk=None):
+        """发起方重排各站顺序(PROPOSED 时;原属恒为 1,参与方从 2 起)。永久刑期只能排最后(Q5)。"""
+        judgment = self.get_object()
+        refused = self._initiator_or_403(request, judgment)
+        if refused is not None:
+            return refused
+        serializer = CrossTenantJudgmentOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            CrossTenantJudgmentService.reorder_nodes(judgment, serializer.validated_data["participants"])
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        judgment = self.get_queryset().get(pk=judgment.pk)
         return Response(CrossTenantJudgmentSerializer(judgment).data)
 
     @extend_schema(request=None, responses=CrossTenantJudgmentSerializer)

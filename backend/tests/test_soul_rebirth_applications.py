@@ -169,6 +169,20 @@ def test_terminal_cosmologies_and_wrong_states_cannot_apply(eu_tenant, cn_tenant
     assert _submit(settled, django_capture_on_commit_callbacks, form="OTHER").status_code == 400
 
 
+def test_a_disposed_soul_with_a_finished_plan_still_may_not_apply(cn_tenant, django_capture_on_commit_callbacks):
+    """D12(2026-09-19 用户改定):只有 REINCARNATING 能申请。计划已完成而灵魂仍停在 DISPOSED
+    (ADMIN 修过数据的形状)不再放口子 —— 答 soul_state,什么都不写。"""
+    from apps.souls.models import Soul
+
+    account, client = rebirth_ready_soul(cn_tenant)
+    Soul.all_objects.filter(pk=account.soul_id).update(current_state="DISPOSED")
+    listing = client.get(APPLY).data
+    assert listing["can_apply"] is False and listing["reason"] == "soul_state"
+    response = _submit(client, django_capture_on_commit_callbacks)
+    assert response.status_code == 409 and response.data["code"] == "soul_state"
+    assert not RebirthApplication.objects.filter(soul_id=account.soul_id).exists()
+
+
 def test_cross_civilization_is_decided_by_the_initial_reviewer_only(cn_tenant, judge_user, cn_admin,
                                                                     django_capture_on_commit_callbacks):
     account, client = rebirth_ready_soul(cn_tenant)

@@ -13,13 +13,17 @@
 import math
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import F, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, throttling, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from apps.chat import hook
 from apps.chat import services as svc
 from apps.chat.matrix import MatrixError, MatrixNotConfiguredError
 from apps.chat.models import Conversation, ConversationKind
@@ -79,11 +83,13 @@ class MeChatSessionView(ChatView):
 class MeChatConversationsView(ChatView):
     @extend_schema(responses={200: ConversationSerializer(many=True), 403: ChatErrorSerializer})
     def get(self, request):
-        soul_id = self.account.soul_id
+        """**这一世**参与的会话,包括已闭的(只读,带 `closed_at`)。按账号筛,不按灵魂:
+        新一世看不见前世的会话,前世那一个账号也不会因为灵魂转世而多看见什么。"""
+        account = self.account
         rows = Conversation.objects.filter(
-            Q(soul_a_id=soul_id) | Q(soul_b_id=soul_id), closed_at__isnull=True
-        ).select_related("soul_a", "soul_b", "tenant")
-        context = {"soul_id": soul_id, "account": self.account}
+            Q(account_a=account) | Q(account_b=account)
+        ).select_related(*svc.ACCOUNT_JOINS, "tenant")
+        context = {"soul_id": account.soul_id, "account": account}
         return Response(ConversationSerializer(rows, many=True, context=context).data)
 
     @extend_schema(request=ConversationCreateSerializer,
@@ -160,9 +166,9 @@ class MeChatMessagesView(ChatView):
         body.is_valid(raise_exception=True)
         account = self.account
         conversation = Conversation.objects.filter(pk=conversation_id).select_related("tenant").first()
-        if conversation is None or (
-            conversation.soul_a_id != account.soul_id and conversation.soul_b_id != account.soul_id
-        ):
+        # 按这一世的账号认参与方:同一个灵魂的新一世对前世的会话答 404(不是 409 closed ——
+        # 那会说出「这个会话存在」)。
+        if conversation is None or not conversation.has_account(account.pk):
             raise svc.ChatError("会话不存在。", "not_found", status=404)
         if conversation.kind == ConversationKind.OFFICER_INBOX:
             event_id = svc.send_inbox_message(account, conversation, body.validated_data["body"],
@@ -171,6 +177,32 @@ class MeChatMessagesView(ChatView):
             event_id = svc.send_direct_message(account, conversation, body.validated_data["body"],
                                                request=request)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
+
+
+class ChatPushHookView(APIView):
+    """`POST /api/v1/chat/hooks/new-message/` —— Synapse 模块在新消息落库后回调这里。
+
+    **不认任何令牌,只认签名**(`apps/chat/hook.py`,密钥即 grant_secret = `MATRIX_JWT_SECRET`)。
+    签名不对 403、没启用聊天 503:两种都不写任何东西。收件人由会话定(`services.notify_new_message`),
+    回调里的字段只用来找会话与发送者,伪造不出「推给谁」。
+
+    这是内部接口,不进 OpenAPI(App 与 Web 都不调它)。回调失败不影响消息本身:
+    Synapse 在消息落库之后才调,模块把它放进后台进程,异常只记日志。
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = []
+
+    @extend_schema(exclude=True)
+    def post(self, request):
+        if not settings.MATRIX_ENABLED or not settings.MATRIX_JWT_SECRET:
+            return Response({"detail": "聊天未启用。", "code": "chat_not_configured"},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        if not hook.verify(settings.MATRIX_JWT_SECRET, request.data):
+            return Response({"detail": "签名无效。", "code": "bad_signature"}, status=status.HTTP_403_FORBIDDEN)
+        ids = svc.notify_new_message(request.data["room_id"], request.data["event_id"], request.data["sender"])
+        return Response({"queued": len(ids)})
 
 
 class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,

@@ -51,8 +51,9 @@ APPEAL_NODES = [
     ("申诉终审", "FINAL", "ADMIN"),
 ]
 #: 受刑计划完成时灵魂进 REINCARNATING(可转世文明,§3.3);计划完成才开放申请(Q6),所以是它。
-#: DISPOSED 留着:ADMIN 修过数据、计划完成而灵魂没能转移的形状不在这里另拒一次。
-SOUL_STATES_THAT_MAY_APPLY = ("DISPOSED", "REINCARNATING")
+#: **只有它**(2026-09-19 用户改定,设计稿决策记录 D12):DISPOSED 不再放行 —— 「ADMIN 修过数据、
+#: 计划完成而灵魂没能转移」的形状也拒,要申请先把灵魂状态修对。
+SOUL_STATES_THAT_MAY_APPLY = ("REINCARNATING",)
 
 
 def cooldown_days(tenant) -> int:
@@ -71,8 +72,6 @@ def eligibility(account):
         return False, "account_retired", None
     if soul.home_civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
         return False, "terminal_cosmology", None
-    if soul.current_state not in SOUL_STATES_THAT_MAY_APPLY:
-        return False, "soul_state", None
     # Q6:受刑计划**全部完成**才开放(docs/ARCHITECTURE-sentence-plan.md §6)。本世最新的那份计划;
     # 没有计划 = 本世还没结过案,同样不开放。已提交的申请照常可申诉(`can_appeal` 不看这里)。
     from apps.sentence_plan.models import SentencePlan, SentencePlanStatus
@@ -82,7 +81,14 @@ def eligibility(account):
         .order_by("-create_time").first()
     )
     # CANCELLED = 撤销,即赦免剩余刑期、视为完成(2026-09-19 用户决定),同样开放。
-    if plan is None or plan.status not in (SentencePlanStatus.COMPLETED, SentencePlanStatus.CANCELLED):
+    served = plan is not None and plan.status in (SentencePlanStatus.COMPLETED, SentencePlanStatus.CANCELLED)
+    if soul.current_state not in SOUL_STATES_THAT_MAY_APPLY:
+        # 计划期间灵魂保持 DISPOSED(§3.3):那时答「受刑未完」比答「状态不对」说得清楚。
+        # 计划已完成而灵魂仍是 DISPOSED(ADMIN 修过数据)→ soul_state,不放行(D12)。
+        if soul.current_state == "DISPOSED" and not served:
+            return False, "sentence_in_progress", None
+        return False, "soul_state", None
+    if not served:
         return False, "sentence_in_progress", None
     mine = RebirthApplication.objects.filter(soul=soul)
     if mine.filter(status__in=OPEN_APPLICATION_STATUSES).exists():

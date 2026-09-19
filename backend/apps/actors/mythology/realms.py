@@ -79,7 +79,7 @@ CHINESE_REALMS = [
     # fictional element on the strength of a failed search, and "I could not
     # find it" is not "it does not exist". Whoever knows where this came from
     # should replace this note with the answer.
-    ("DY_02_YANGLIU", "杨柳宫", "杨柳宫", "Yangliu Palace", "Yangliu", RealmType.BLISS, 2,
+    ("DY_02_YANGLIU", "杨柳宫", "杨柳宫", "Yangliu Palace", "Yanglju Anpu", RealmType.BLISS, 2,
      "Souls awaiting reunion with loved ones. SOURCE UNKNOWN: no underworld "
      "place by this name appears in 《玉历宝钞》 or 《十王经》; treat as this "
      "project's own element until a source is produced",
@@ -113,11 +113,11 @@ CHINESE_REALMS = [
     ("DY_00_PURGATORY", "待审所", "待审所", "Purgatory Holding", "Daishensuo", RealmType.PURGATORY, 1,
      "Souls awaiting judgment - held before the first court reads the ledger",
      "NONE", False, None),
-    ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Qinguang",
+    ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Qedi 1 - Qinguang",
      RealmType.HELL, 1,
      "Intake court - the Ledger of Life and Death is read and the soul's case "
      "opened; no punishment is administered here", "MENGPO", False, None),
-    ("DY_COURT_02_CHUJIANG", "第二殿", "第二殿楚江王", "Second Court Chujiang", "Chujiang",
+    ("DY_COURT_02_CHUJIANG", "第二殿", "第二殿楚江王", "Second Court Chujiang", "Qedi 2 - Chujiang",
      RealmType.HELL, 2,
      "活大地狱 - the mildest punishment court; thieves and those who wounded "
      "others in life", "MENGPO", False, 100),
@@ -127,22 +127,22 @@ CHINESE_REALMS = [
     # counterpart in the text. Note that filial offence is split across two
     # courts in 《玉历》 — defying one's elders here, failing to keep or bury
     # one's parents at the eighth — and the repo had put all of it at the eighth.
-    ("DY_COURT_03_SONGDI", "第三殿", "第三殿宋帝王", "Third Court Songdi", "Songdi",
+    ("DY_COURT_03_SONGDI", "第三殿", "第三殿宋帝王", "Third Court Songdi", "Qedi 3 - Songdi",
      RealmType.HELL, 3,
      "黑绳大地狱 - 忤逆尊长, 教唆兴讼, 背恩失节: defying one's elders, inciting "
      "litigation, betraying a trust", "MENGPO", False, 80),
-    ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Wuguan",
+    ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Qedi 4 - Wuguan",
      RealmType.HELL, 4,
      "合大地狱 - fraud, withheld dues, falsified accounts", "MENGPO", False, 60),
-    ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yama", "Yanluo",
+    ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yama", "Qedi 5 - Yanluo",
      RealmType.HELL, 5,
      "叫唤大地狱 and the 十六诛心小地狱 - the court that tries the intent behind "
      "the act: malice, ingratitude, envy, miserliness. The 望乡台 stands here",
      "MENGPO", False, 50),
-    ("DY_COURT_06_BIANCHENG", "第六殿", "第六殿卞城王", "Sixth Court Biancheng", "Biancheng",
+    ("DY_COURT_06_BIANCHENG", "第六殿", "第六殿卞城王", "Sixth Court Biancheng", "Qedi 6 - Biancheng",
      RealmType.HELL, 6,
      "大叫唤大地狱 - sacrilege and irreverence", "MENGPO", False, 40),
-    ("DY_COURT_07_TAISHAN", "第七殿", "第七殿泰山王", "Seventh Court Taishan", "Taishan",
+    ("DY_COURT_07_TAISHAN", "第七殿", "第七殿泰山王", "Seventh Court Taishan", "Qedi 7 - Taishan",
      RealmType.HELL, 7,
      "热恼地狱 - desecration of the dead, trafficking in bodies", "MENGPO", False, 30),
     # COURTS 8 AND 9 ARE SWAPPED BETWEEN THE TWO MAJOR SYSTEMS, AND THIS REPO
@@ -154,14 +154,14 @@ CHINESE_REALMS = [
     # find two courts apparently transposed and has no way to tell a version
     # difference from a bug. The rest of the file is 玉历 too (楚江 not 初江,
     # 卞城 not 变成, 泰山 not 太山), so the choice is at least consistent.
-    ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Dushi",
+    ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Qedi 8 - Dushi",
      RealmType.HELL, 8,
      "大热恼地狱 - unfilial conduct and betrayal of one's own house", "MENGPO", False, 20),
-    ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Pingdeng",
+    ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Qedi 9 - Pingdeng",
      RealmType.HELL, 9,
      "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy",
      "MENGPO", False, 10),
-    ("DY_COURT_10_ZHUANLUN", "第十殿", "第十殿转轮王", "Tenth Court Zhuanlun", "Zhuanlun",
+    ("DY_COURT_10_ZHUANLUN", "第十殿", "第十殿转轮王", "Tenth Court Zhuanlun", "Qedi 10 - Zhuanlun",
      RealmType.HELL, 10,
      "The wheel of rebirth - sentences are complete; the next life is assigned "
      "and the broth of forgetting drunk. No punishment is administered here",
@@ -200,7 +200,7 @@ EUROPEAN_REALMS = [
     # `DispositionService._route_european` sends every PURGATORY and RETRY
     # verdict to, state that no memory reset occurs on a mountain whose own
     # description names both rivers.
-    ("EU_PURGATORY", "炼狱", "涤罪所", "Purgatory", "Purgatory", RealmType.PURGATORY, 1,
+    ("EU_PURGATORY", "炼狱", "涤罪所", "Purgatory", "Ta Hesmen", RealmType.PURGATORY, 1,
      "Mount Purgatory entire: Ante-Purgatory (Purg. I-IX), the seven terraces "
      "and the Earthly Paradise at the summit, all of which are its sub-realms. "
      "Every soul admitted here is already saved; the suffering is remedial and "
@@ -729,7 +729,7 @@ REALM_PARENTS = {
 # `tests/test_duat_gates.py::test_a_seeded_duat_gate_names_its_source_edition`
 # is what makes a numbered gate arrive with its source rather than without one.
 EGYPTIAN_REALMS = [
-    ("EG_DUAT_ENTRY", "杜阿特入口", "杜阿特之门", "Gate of Duat", "DuatEntry", RealmType.PURGATORY, 1,
+    ("EG_DUAT_ENTRY", "杜阿特入口", "杜阿特之门", "Gate of Duat", "Sebkhet Duat", RealmType.PURGATORY, 1,
      "Entry to the underworld Duat, where the dead person's own passage west begins. "
      "What this row records is the start of a soul's journey and nothing else; the gates "
      "that passage then meets are seeded separately as EG_SEVEN_ARRWT and "
@@ -762,7 +762,7 @@ EGYPTIAN_REALMS = [
      "have not been transcribed here and inventing them is how this repository has gone "
      "wrong before.",
      "SPELL", False, None),
-    ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Aaru", RealmType.BLISS, 1,
+    ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Sekhet Aaru", RealmType.BLISS, 1,
      "Egyptian paradise - eternal life in the Field of Reeds beyond Duat", "NONE", True, None),
     # EG_AM_TYAT IS GONE, AND IS NOT COMING BACK.
     #
@@ -831,7 +831,7 @@ EGYPTIAN_REALMS = [
     # {HELL, PURGATORY, BLISS, NEUTRAL} none means "ceased to exist", and
     # NEUTRAL ("between") would be a worse lie than HELL — it would file
     # annihilation next to the ferry crossing as another waypoint.
-    ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "Ammit",
+    ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "Ammit - Mut Sen",
      RealmType.HELL, 10,
      "Not a place and not a residence: the outcome recorded when the heart is "
      "heavier than the feather and Ammit devours it. Egyptian sources call this "

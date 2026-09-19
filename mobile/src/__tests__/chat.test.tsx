@@ -23,13 +23,13 @@ import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, useChat, type Chat } from "../chat";
-import { chatMode, chatSections, normalizeCode, sendsThroughBackend } from "../chatRules";
+import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
-import { FindSoulScreen, LettersScreen } from "../screens/letters";
+import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
 import { PROFILE, stubApi } from "./stubApi";
 
@@ -74,7 +74,7 @@ function conv(overrides: Partial<SoulConversation> = {}): SoulConversation {
 const hall = (overrides: Partial<SoulConversation> = {}) =>
   conv({ id: "c-hall", kind: "OFFICER_INBOX", room_id: "!hall:hs.test", peer_user: null, peer_name: "", hall: "第五殿", mutual: false, ...overrides });
 
-const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, txnId: null });
+const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, officerTitle: null, txnId: null });
 
 const facts = (overrides = {}) => ({ now: NOW, peerHasSpoken: false, iHaveSpoken: false, refused: null, ...overrides });
 
@@ -354,8 +354,12 @@ describe("the conversation's eight states", () => {
   });
 
   it("⑥ closed: read-only with the reason, and the composer is gone", () => {
-    openConversation(conv({ refusal: "closed", peer_name: "周芸" }), [msg("e1", PEER, "盖子换了是好事。", NOW - 86_400_000)]);
+    openConversation(conv({ refusal: "closed", peer_name: "周芸", closed_at: new Date(NOW).toISOString() }), [msg("e1", PEER, "盖子换了是好事。", NOW - 86_400_000)]);
     expect(screen.getByTestId("conversation-closed")).toBeTruthy();
+    // The thread ends where the server closed it — after the last letter, dated by `closed_at`.
+    expect(screen.getByTestId("closed-marker").props.children).toBe(`${dayOf(NOW)} 转生 · 会话止于此`);
+    const ids = hostIds(screen.getByTestId("conversation-closed"));
+    expect(ids.indexOf("closed-marker")).toBeGreaterThan(-1);
     expect(screen.getByTestId("closed-reason").props.children).toBe("她已转生去了。这段话留着，不能再添。");
     expect(screen.getByTestId("closed-tag")).toBeTruthy();
     composerGone();
@@ -363,6 +367,7 @@ describe("the conversation's eight states", () => {
 
   it("⑥ peer_retired: the same screen, only the sentence differs", () => {
     openConversation(conv({ refusal: "peer_retired" }));
+    expect(screen.queryByTestId("closed-marker")).toBeNull(); // no `closed_at`: no end marker
     expect(screen.getByTestId("closed-reason").props.children).toBe("这个账号已停用。这段话留着，不能再添。");
     composerGone();
   });
@@ -389,10 +394,20 @@ describe("the conversation's eight states", () => {
   });
 
   it("the hall: officer bubbles, writable; a hall left behind is sealed and offers the current one", () => {
-    openConversation(hall(), [{ ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "崔珏" }]);
+    openConversation(
+      hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } }),
+      [{ ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "崔珏", officerTitle: "判官" }]
+    );
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
-    expect(screen.getByTestId("officer-bubble")).toBeTruthy();
+    // The byline: the hall's display name, the officer's position, the officer — as the backend stamped them.
+    expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿 · 判官 崔珏")).toBeTruthy();
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
+  });
+
+  it("a hall is named in the interface language, falling back to the server's hall", () => {
+    const c = hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } });
+    expect([hallOf(c, "zh-Hans"), hallOf(c, "en"), hallOf(c, "egy")]).toEqual(["第五殿", "The Fifth Court", "Yanluo Qedi"]);
+    expect(hallOf(hall({ hall: "第五殿", hall_names: null }), "en")).toBe("第五殿");
   });
 
   it("a sealed hall has no composer, only the way to the current hall", () => {

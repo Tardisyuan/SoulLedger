@@ -125,6 +125,18 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   `CHAT_REQUEST_INTERVAL_SECONDS` 用默认(86400)。`SYNAPSE_DB_PASSWORD` 是 `synapse` 库账号的密码,
   只有 synapse 服务读(脚本用它建角色并写进 homeserver.yaml;角色已存在时脚本**不改密码** ——
   要换密码,在 db 里 `ALTER ROLE synapse PASSWORD …` 并同步改卷里 homeserver.yaml 的 `database.args.password`)。
+- **新书信推送(Synapse → 后端回调)**:模块配置里的 `push_url`(模板里是 `${MATRIX_PUSH_HOOK_URL}`),指向后端
+  `http://<后端内网地址>/api/v1/chat/hooks/new-message/`(容器网络内,不经 nginx、不对外暴露)。
+  每条 `m.room.message` 落库之后,模块在后台进程里 POST `{room_id, event_id, sender, ts, mac}`;
+  `mac` 用 `grant_secret`(= `MATRIX_JWT_SECRET`)签,后端 `apps/chat/hook.py` 验签、限 5 分钟时间窗,
+  不认令牌。后端按会话定收件人(那一世的本世账号;官员回信推给灵魂,灵魂写给殿司的不推),
+  按收件人的「书信」偏好(`PushPreference.chat`)记推送,走 soul_push 的同一条发送 / 补发 / 回执路径
+  (`SOUL_PUSH_ENABLED` 关着时照常记为 DISABLED)。**回调失败不影响消息本身**:Synapse 在落库之后才调,
+  模块吞掉异常只记 warning;漏掉的那条不补推。不配 `push_url` 就不回调。
+  **`push_url` 的主机名要在后端 `ALLOWED_HOSTS` 里**(例如 `backend`),否则 Django 对回调答 400、
+  一条都推不出去,而消息照常收发 —— 故障是静默的,只在 Synapse 日志里有 `新消息回调失败 … 400`
+  (2026-09-19 对真 Synapse v1.161.0 实测撞到)。
+  改了模块文件要**重启 Synapse**(模块在启动时装载)。
 - 限速:模板把 `rc_login.address` 放宽了 —— 后端代灵魂发言要以该灵魂身份 JWT 登录,所有这类登录
   都来自后端一个地址,默认值下突发用完即 429。服务账号替灵魂转发、改 power level、建房,量随灵魂数
   增长,由下面第 4 步免限速。

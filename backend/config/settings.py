@@ -440,7 +440,12 @@ if not DEBUG:
     # to port 80 and read a 301 as "down". It returns only {"status": "ok"}.
     # `/health/detailed/` is deliberately NOT exempt: it needs an ADMIN session,
     # and a session over plain http is what this redirect exists to prevent.
-    SECURE_REDIRECT_EXEMPT = [r"^health/$"]
+    # `/api/v1/chat/hooks/new-message/` is Synapse calling the backend over the compose network
+    # (plain http to backend:8000, no nginx in between). The policy module cannot add an
+    # X-Forwarded-Proto header, so a 301 here makes every chat push fail silently while messages
+    # still flow. The endpoint accepts no session or token — only a body signed with the shared
+    # grant secret inside a 5-minute window (apps/chat/hook.py) — so plain http leaks nothing.
+    SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^api/v1/chat/hooks/new-message/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True

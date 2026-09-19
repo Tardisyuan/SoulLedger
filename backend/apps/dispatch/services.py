@@ -57,9 +57,9 @@ class DispatchService:
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
-        # 暂居中的灵魂不再转调(保守默认,待用户确认)。调拨由原租户发起;暂居租户若能
-        # 再把它送往第三个文明,「处置执行完毕回归原文明」就要回答「回到哪一站」,
-        # 而暂居链上的每一站都会成为新的回归点。先回归,再由原租户发起下一段。
+        # 暂居中的灵魂不再转调。原是保守默认;受刑计划落地后它就是用户的原话(设计稿
+        # docs/ARCHITECTURE-sentence-plan.md §0):「完成后回到 A,检查还有嘛,有 C,那就去 C」——
+        # 每一站执行完先回原属,再由原属(计划推进,`SentencePlanService.advance`)发起下一段。
         if soul.is_residing:
             raise ValueError(
                 "Soul is residing away from its home tenant; it must return home "
@@ -534,6 +534,9 @@ class CrossTenantJudgmentService:
         """
         if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
+        if participant_actor is not None and not CrossTenantJudgmentService.seatable_actors(
+                participant_tenant).filter(pk=participant_actor.pk).exists():
+            raise ValueError(f"That actor cannot hold a seat for {participant_tenant.code}")
         CrossTenantJudgmentService._check_node_order(judgment, participant_tenant, role, node_order)
 
         participant = CrossTenantJudgmentParticipant.objects.create(
@@ -564,6 +567,23 @@ class CrossTenantJudgmentService:
         return participant
 
     @staticmethod
+    def seatable_actors(tenant):
+        """被邀文明里**可担任席位**的神祇(2026-09-20 用户决定:入席时就选席位上的神祇)。
+
+        判定取现有 actor 模型能表达的最窄一条:属该租户、在任(`is_active`)、未软删、
+        `role == JUDGE` —— 席位(CO_JUDGE / CHAIRMAN / ADVISOR)都是坐在审判席上,
+        而 `ActorRole` 里坐审判席的只有 JUDGE(OVERSEER 是管界域,见 actors_greek.py 里 Minos 那段)。
+        `all_objects` 而不是 `objects`:后者按**当前请求的租户**过滤,而这里要的恰是另一个租户的行。
+        这是 `ActorViewSet` 之外唯一一处跨租户读神祇的地方,只经联审的
+        `seatable-actors` 动作(发起方、PROPOSED)与 `participate` 的校验使用。
+        """
+        from apps.actors.models import Actor, ActorRole
+
+        return Actor.all_objects.filter(
+            tenant=tenant, is_active=True, is_deleted=False, role=ActorRole.JUDGE,
+        ).order_by("name")
+
+    @staticmethod
     def _check_node_order(judgment, participant_tenant, role, node_order):
         """`node_order` 的规则(docs/ARCHITECTURE-sentence-plan.md §2.1、§2.3、§11 N3)。
 
@@ -587,6 +607,35 @@ class CrossTenantJudgmentService:
         CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
         if judgment.participants.filter(node_order=node_order, is_deleted=False).exists():
             raise ValueError(f"node_order {node_order} is already taken")
+
+    @staticmethod
+    @transaction.atomic
+    def reorder_nodes(judgment, participant_ids):
+        """发起方重排各站顺序(设计稿 §2.2「发起方 seat 时给,ACTIVE 前可改」)。
+
+        `participant_ids` 是**全部**带节点的席位(非 ADVISOR)按新顺序排好的 id,依次得 2、3……
+        只在 PROPOSED:开庭之后各方按顺序填了处置,再改顺序就改了别人签过的那一站。
+        Q5 在这里先拦一次:已填的永久刑期只能排最后(结束时 `check_bench_sentences` 再拦一次)。
+        """
+        locked = CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
+        if locked.judgment_id is None:
+            raise ValueError("This cross-tenant judgment is not attached to a judgment; it has no sentence nodes")
+        if locked.status != JudgmentStatus.PROPOSED:
+            raise ValueError("The order can only be changed before the bench is convened")
+        seats = {
+            str(p.pk): p for p in locked.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
+        }
+        wanted = [str(pk) for pk in participant_ids]
+        if sorted(wanted) != sorted(seats):
+            raise ValueError("The new order must list every seat that carries a node, once each")
+        eternal = [i for i, pk in enumerate(wanted) if seats[pk].sentence_is_eternal and seats[pk].sentence_submitted_at]
+        if any(i != len(wanted) - 1 for i in eternal):
+            raise ValueError("An eternal sentence must be the last node")
+        # 先全部腾空再依次写:`unique_cross_judgment_node_order` 是逐条语句检查的,直接对调两个序号会撞。
+        locked.participants.filter(pk__in=list(seats)).update(node_order=None)
+        for order, pk in enumerate(wanted, start=2):
+            CrossTenantJudgmentParticipant.all_objects.filter(pk=pk).update(node_order=order)
+        return locked
 
     @staticmethod
     @transaction.atomic

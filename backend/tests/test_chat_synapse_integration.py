@@ -13,6 +13,10 @@
     docker rm -f soulchat-synapse-test
 
 2026-09-19 实跑:v1.161.0,见报告。
+
+新消息推送那一条(`test_a_new_message_calls_back_through_the_module_and_is_pushed`)还要模块回调得到
+这次的 live_server:homeserver.yaml 的 `push_url` 写 `http://host.docker.internal:18099/api/v1/chat/hooks/new-message/`,
+跑时加 `SYNAPSE_TEST_PUSH=1` 与 `--liveserver 0.0.0.0:18099`。
 """
 import os
 import secrets
@@ -199,3 +203,36 @@ def test_the_request_rule_the_mute_and_retirement_against_synapse(cn_tenant, syn
         return mxid(a) not in members.get("joined", {})
 
     assert _wait_until(a_left)
+    # 会话随之关闭:留下的乙在 Synapse 上也降到 0,拿自己的 token 直接发也被拒。
+    assert _level(b_token, room_id, mxid(b)) == 0
+    assert _say(b_token, room_id, "还在吗")[0] == 403
+
+
+@pytest.mark.skipif(not os.getenv("SYNAPSE_TEST_PUSH"), reason="没有 SYNAPSE_TEST_PUSH:模块的 push_url 没指向本次的 live_server")
+def test_a_new_message_calls_back_through_the_module_and_is_pushed(cn_tenant, synapse, live_server):
+    """真 Synapse 的 `on_new_event` → 模块后台进程 → 后端回调 → 推送记录。
+    homeserver.yaml 里 push_url 指向 `http://host.docker.internal:18099/api/v1/chat/hooks/new-message/`,
+    跑时加 `--liveserver 0.0.0.0:18099 SYNAPSE_TEST_PUSH=1`。"""
+    from apps.soul_push.models import PushDelivery
+    from tests.soul_push_support import TOKEN_B, register
+
+    # push_url 的主机名必须在 ALLOWED_HOSTS 里,否则 Django 答 400(2026-09-19 实测撞到;部署同理)。
+    synapse.ALLOWED_HOSTS = [*synapse.ALLOWED_HOSTS, "host.docker.internal"]
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, b_client = ready_soul(cn_tenant, name="乙")
+    assert register(b_client, TOKEN_B).status_code == 201
+    mutual(a, b)
+    a_token = _login_as_the_app_would(a_client)
+    opened = a_client.post(CONVERSATIONS, {"target_user": b.user_id}, format="json")
+    room_id = opened.data["room_id"]
+    status, sent = _say(a_token, room_id, "月色很好")
+    assert status == 200, sent
+
+    def pushed():
+        return PushDelivery.objects.filter(account=b, kind="chat_message").exists()
+
+    assert _wait_until(pushed)
+    push = PushDelivery.objects.get(account=b, kind="chat_message")
+    assert push.dedupe_key == f"chat:{sent['event_id']}"
+    assert push.data == {"screen": "Conversation", "conversation_id": opened.data["id"], "kind": "chat_message"}
+    assert not PushDelivery.objects.filter(account=a).exists()

@@ -55,6 +55,8 @@ class SoulErrorSerializer(serializers.Serializer):
 class MeTenantSerializer(serializers.Serializer):
     code = serializers.CharField()
     display_name = serializers.CharField()
+    hall_names = serializers.DictField(child=serializers.CharField(), read_only=True,
+                                       help_text="殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。")
 
 
 class MeProfileSerializer(serializers.Serializer):

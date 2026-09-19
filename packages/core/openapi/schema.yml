@@ -1866,6 +1866,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
           description: ''
+  /api/v1/dispatch/cross-tenant-judgments/{id}/order/:
+    post:
+      operationId: v1_dispatch_cross_tenant_judgments_order_create
+      description: 发起方重排各站顺序(PROPOSED 时;原属恒为 1,参与方从 2 起)。永久刑期只能排最后(Q5)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentOrder'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentOrder'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentOrder'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossTenantJudgment'
+          description: ''
   /api/v1/dispatch/cross-tenant-judgments/{id}/participate/:
     post:
       operationId: v1_dispatch_cross_tenant_judgments_participate_create
@@ -1902,6 +1937,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
+          description: ''
+  /api/v1/dispatch/cross-tenant-judgments/{id}/seatable-actors/:
+    get:
+      operationId: v1_dispatch_cross_tenant_judgments_seatable_actors_list
+      description: |-
+        被邀文明里可担任席位的神祇,供发起方入席时选(2026-09-20 用户决定)。
+
+        只给能入席的人:`cross_judgment.create`、发起方租户、联审 PROPOSED;被邀的不能是发起方自己。
+        只读、字段最小(id 与名字)。**不放宽 `ActorViewSet` 的租户过滤** —— 跨租户读神祇只在这里,
+        且只读这一个被邀租户的、`seatable_actors` 判定过的那些行。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: tenant_code
+        schema:
+          type: string
+        description: The civilization being invited.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeatableActor'
           description: ''
   /api/v1/dispatch/cross-tenant-judgments/{id}/sentence/:
     post:
@@ -3852,7 +3935,9 @@ paths:
   /api/v1/me/chat/conversations/:
     get:
       operationId: v1_me_chat_conversations_list
-      description: 把两类异常翻成响应,省得每个方法各写一遍 try。
+      description: |-
+        **这一世**参与的会话,包括已闭的(只读,带 `closed_at`)。按账号筛,不按灵魂:
+        新一世看不见前世的会话,前世那一个账号也不会因为灵魂转世而多看见什么。
       tags:
       - v1
       security:
@@ -7588,6 +7673,10 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: pending_request
+        schema:
+          type: boolean
       - name: search
         required: false
         in: query
@@ -13156,15 +13245,22 @@ components:
           type: integer
           nullable: true
           readOnly: true
-          description: 对方本世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。
+          description: 对方会话那一世账号的 user_id(与朋友圈的 user_id 同一个)。收件箱为空。
         peer_name:
           type: string
           readOnly: true
-          description: 对方在朋友圈的显示名。
+          description: 对方**会话那一世**的显示名 —— 对方转世之后也不变。
         hall:
           type: string
-          description: 殿司名。私聊会话也有租户(建房时双方所在的文明),但那不是收件人,所以只给收件箱。
+          description: 殿司展示名(简体中文;收件箱)。私聊为空。
           readOnly: true
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          readOnly: true
+          description: 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。私聊为空。
         throttled:
           type: boolean
           readOnly: true
@@ -13187,6 +13283,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         mutual:
           type: boolean
           readOnly: true
@@ -13208,8 +13309,10 @@ components:
           description: 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall`
             / `closed`),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。
       required:
+      - closed_at
       - created_at
       - hall
+      - hall_names
       - id
       - initiated_by_me
       - kind
@@ -13378,6 +13481,17 @@ components:
       - initiating_tenant
       - initiating_tenant_code
       - title
+    CrossTenantJudgmentOrder:
+      type: object
+      description: 发起方重排各站:全部带节点席位的 id,按新顺序;服务端依次给 2、3……(`reorder_nodes`)。
+      properties:
+        participants:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - participants
     CrossTenantJudgmentParticipant:
       type: object
       description: Serializer for CrossTenantJudgmentParticipant.
@@ -14343,6 +14457,9 @@ components:
           type: boolean
         sender_name:
           type: string
+        officer_title:
+          type: string
+          description: 回信官员的职位(官员回信;灵魂的信为空)。
         body:
           type: string
         timestamp:
@@ -14351,6 +14468,7 @@ components:
       - body
       - event_id
       - from_officer
+      - officer_title
       - sender_name
       - timestamp
     InitRolePermissionsResult:
@@ -15520,9 +15638,16 @@ components:
           type: string
         display_name:
           type: string
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+          description: 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。
       required:
       - code
       - display_name
+      - hall_names
     MemoryResetMechanismEnum:
       enum:
       - MENGPO
@@ -15959,6 +16084,9 @@ components:
         residence:
           type: boolean
           description: 暂居开始 / 回归(依赖 feat/dispatch-residence)
+        chat:
+          type: boolean
+          description: 新书信:私聊的新消息、殿司的回信
         locale:
           $ref: '#/components/schemas/PushLocaleEnum'
     NotificationTypeEnum:
@@ -16037,6 +16165,12 @@ components:
         tenant_name:
           type: string
           readOnly: true
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+          description: 殿司展示名,按语言:{zh-Hans, en, egy}。
         last_message_at:
           type: string
           format: date-time
@@ -16054,6 +16188,7 @@ components:
       required:
       - closed_at
       - created_at
+      - hall_names
       - id
       - last_message_at
       - soul
@@ -17917,6 +18052,9 @@ components:
         residence:
           type: boolean
           description: 暂居开始 / 回归(依赖 feat/dispatch-residence)
+        chat:
+          type: boolean
+          description: 新书信:私聊的新消息、殿司的回信
         locale:
           $ref: '#/components/schemas/PushLocaleEnum'
     PatchedOrganization:
@@ -19788,6 +19926,32 @@ components:
       description: |-
         * `GLOBAL` - 全局
         * `ORG` - 组织级
+    SeatableActor:
+      type: object
+      description: '`seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁。'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        name_zh:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        name_egy:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - name
+      - name_egy
+      - name_en
+      - name_zh
     SensitiveWord:
       type: object
       properties:
