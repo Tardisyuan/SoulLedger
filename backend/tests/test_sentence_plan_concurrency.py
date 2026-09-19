@@ -324,3 +324,132 @@ def test_opening_a_second_case_in_either_order_is_refused(first):
 @pytest.mark.django_db(transaction=True)
 def test_two_tenants_opening_a_case_on_one_soul_at_once_open_exactly_one():
     _two_tenants_open(plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT"), plan.tenant("EU_HEAVEN_HELL"), _race)
+
+
+# ── G7 锁下复查:把「无锁校验已过、尚未进锁」的窗口钉开 ──────────────────────────
+#
+# 清单 2、7 的两条靠线程自然交错:后到的请求几乎总在对方提交之后才做序列化校验,被
+# **无锁**那一遍挡下。2026-09-19 真 PG 实测:删掉 `perform_create` 里锁下的任一项复查,
+# 两条都仍然绿 —— 窗口从没被打开过。这里不赌调度:开审请求走到 `perform_create` 入口
+# (序列化校验已过、`transaction.atomic()` 与行锁尚未开始)时停下,另一个动作整个做完
+# 并提交,开审才继续。于是它手里的校验结论**必然**已经过期,只有锁下那一遍能拒它。
+#
+# 窗口在锁之外,所以这几条证明的是「复查」,不是「锁」:删掉行锁它们仍绿(对方早已
+# 提交,锁无事可等)。锁由清单 2、7 那两条证明。
+
+
+def _open_after(opener, interloper, *, threaded):
+    """`opener`(开审请求)停在 perform_create 入口,`interloper` 做完并提交后才放行。
+
+    threaded=False:开审在本线程,停下时在另一条线程里跑完 `interloper` 并 join ——
+    另开线程是为了各自一份 contextvars:租户中间件收尾用 clear 不用 reset,同线程嵌套
+    请求会抹掉外层请求的租户。threaded=True:两者各在自己的线程和连接上,开审线程等一个
+    Event,像两个真实的 worker。两种都是确定的,不靠调度运气。
+    """
+    from unittest import mock
+
+    from apps.judgment.views import JudgmentViewSet
+
+    original = JudgmentViewSet.perform_create
+    results = {}
+    paused, resume = threading.Event(), threading.Event()
+    opener_thread = []
+
+    def thread(label, fn):
+        def run():
+            try:
+                results[label] = fn()
+            except Exception as exc:  # 在断言里显形
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        return threading.Thread(target=run, name=label)
+
+    def perform_create(self, serializer):
+        if threading.current_thread() is opener_thread[0]:
+            paused.set()
+            if threaded:
+                assert resume.wait(timeout=30), "interloper 没有放行"
+            else:
+                t = thread("interloper", interloper)
+                t.start()
+                t.join(timeout=30)
+        return original(self, serializer)
+
+    with mock.patch.object(JudgmentViewSet, "perform_create", perform_create):
+        if threaded:
+            a = thread("open", opener)
+            opener_thread.append(a)
+            a.start()
+            assert paused.wait(timeout=30), f"开审没走到 perform_create:{results}"
+            b = thread("interloper", interloper)
+            b.start()
+            b.join(timeout=30)
+            resume.set()
+            a.join(timeout=30)
+        else:
+            opener_thread.append(threading.current_thread())
+            results["open"] = opener()
+    # 窗口确实打开过:开审是过了无锁校验、在锁外停下的,不是被序列化器挡掉的。
+    assert paused.is_set(), results
+    return results
+
+
+def _open_twice_on_one_soul(cn, *, threaded):
+    """复查之一:两件开审都过了无锁的「没有未结案审判」,后进锁的那件必须被拒。"""
+    from apps.judgment.models import open_judgments
+    from apps.souls.models import Soul, SoulState
+
+    soul = Soul.objects.create(name="g7 双开", tenant=cn, current_state=SoulState.ALIVE)
+    first = _client(plan.officer("g7a_first", "JUDGE", cn))
+    second = _client(plan.officer("g7a_second", "JUDGE", cn))
+
+    def open_(client):
+        return lambda: client.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json").status_code
+
+    results = _open_after(open_(first), open_(second), threaded=threaded)
+    assert results == {"interloper": 201, "open": 400}, results
+    assert open_judgments(soul).count() == 1
+    # 未写入:被拒的那件一行都没留下(all_objects 含已删的,不只是「不算未结案」)。
+    assert Judgment.all_objects.filter(soul=soul).count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_case_whose_open_check_went_stale_before_the_lock_is_refused():
+    _open_twice_on_one_soul(plan.tenant("CN_DIYU"), threaded=False)
+
+
+@pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+@pytest.mark.django_db(transaction=True)
+def test_two_cases_past_the_unlocked_check_at_once_open_exactly_one():
+    _open_twice_on_one_soul(plan.tenant("CN_DIYU"), threaded=True)
+
+
+def _open_while_it_goes_home(cn, eg, *, threaded):
+    """复查之二:执行地开审过了无锁的「灵魂在本租户」,随即刑满回归 —— 开审必须在锁下被拒。"""
+    soul, p, record = plan.at_stop(cn, eg)
+    stop = plan.node(p, 2)
+    executor = _client(plan.officer("g7b_exec", "ADMIN", eg))
+    judge = _client(plan.officer("g7b_judge", "JUDGE", eg))
+    results = _open_after(
+        lambda: judge.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json").status_code,
+        _execute(executor, stop.disposition_id),
+        threaded=threaded,
+    )
+    soul.refresh_from_db()
+    assert results == {"interloper": 200, "open": 400}, results
+    assert soul.tenant_id == cn.pk
+    # 没有任何审判写到灵魂已不在的执行地(all_objects:连已删的都没有,即根本没写)。
+    assert not Judgment.all_objects.filter(soul=soul, tenant=eg).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_case_whose_tenant_check_went_stale_before_the_lock_is_refused():
+    _open_while_it_goes_home(plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT"), threaded=False)
+
+
+@pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+@pytest.mark.django_db(transaction=True)
+def test_a_soul_going_home_while_a_case_waits_for_the_lock_strands_no_case():
+    _open_while_it_goes_home(plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT"), threaded=True)
