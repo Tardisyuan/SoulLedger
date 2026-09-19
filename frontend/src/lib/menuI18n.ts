@@ -49,6 +49,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/rebirth-applications": "breadcrumb.menu.rebirth_applications",
   // backend/apps/menus/migrations/0018_add_soul_inbox_menu.py
   "/soul-inbox": "breadcrumb.menu.soul_inbox",
+  // backend/apps/menus/migrations/0019_add_sentence_requests_menu.py
+  "/sentence-requests": "breadcrumb.menu.sentence_requests",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {

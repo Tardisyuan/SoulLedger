@@ -19,6 +19,7 @@ from apps.dispatch.permissions import CrossJudgmentPartyPermission, DispatchPart
 from apps.dispatch.serializers import (
     CrossTenantJudgmentConcludeSerializer,
     CrossTenantJudgmentListSerializer,
+    CrossTenantJudgmentOrderSerializer,
     CrossTenantJudgmentParticipateSerializer,
     CrossTenantJudgmentSentenceSerializer,
     CrossTenantJudgmentSerializer,
@@ -441,6 +442,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],
         'sentence': ['cross_judgment.create'],
+        'order': ['cross_judgment.create'],
         'create': ['cross_judgment.create'],
         'update': ['cross_judgment.create'],
         'partial_update': ['cross_judgment.create'],
@@ -619,6 +621,23 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         judgment.refresh_from_db()
+        return Response(CrossTenantJudgmentSerializer(judgment).data)
+
+    @extend_schema(request=CrossTenantJudgmentOrderSerializer, responses=CrossTenantJudgmentSerializer)
+    @action(detail=True, methods=["post"])
+    def order(self, request, pk=None):
+        """发起方重排各站顺序(PROPOSED 时;原属恒为 1,参与方从 2 起)。永久刑期只能排最后(Q5)。"""
+        judgment = self.get_object()
+        refused = self._initiator_or_403(request, judgment)
+        if refused is not None:
+            return refused
+        serializer = CrossTenantJudgmentOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            CrossTenantJudgmentService.reorder_nodes(judgment, serializer.validated_data["participants"])
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        judgment = self.get_queryset().get(pk=judgment.pk)
         return Response(CrossTenantJudgmentSerializer(judgment).data)
 
     @extend_schema(request=None, responses=CrossTenantJudgmentSerializer)

@@ -377,6 +377,8 @@ export const MENUS = [
   { id: 8, name: "朋友圈审核", path: "/moderation", icon: "ShieldAlert", order: 8, component: "moderation", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
   // backend/apps/menus/migrations/0018_add_soul_inbox_menu.py
   { id: 9, name: "殿司收件箱", path: "/soul-inbox", icon: "Inbox", order: 9, component: "soul-inbox", roles: ["ADMIN"], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  // backend/apps/menus/migrations/0019_add_sentence_requests_menu.py
+  { id: 10, name: "受刑请求", path: "/sentence-requests", icon: "FileCheck", order: 10, component: "sentence-requests", roles: ["ADMIN", "JUDGE"], is_active: true, parent: null, menu_type: "MENU", visible: true },
 ];
 
 export const RECYCLE_BIN_ENTRY = {
@@ -726,6 +728,73 @@ export const INBOX_MESSAGES = [
   { event_id: "$reply", from_officer: true, sender_name: "测试管理员", officer_title: "判官", body: "已收到,正在查", timestamp: 1789700000000 },
   { event_id: "$letter", from_officer: false, sender_name: "写信的灵魂", body: "我想申诉这次判决", timestamp: 1789690000000 },
 ];
+
+// ── Sentence plans (backend/apps/sentence_plan/serializers.py) ──
+
+const SENTENCE_NODE_BASE = {
+  memory_reset: "NONE",
+  dispatch_record_id: null as string | null,
+  added_by_judgment_id: null as string | null,
+  added_by_request_id: null as string | null,
+  removed_by_request_id: null as string | null,
+  reason: "",
+};
+
+/**
+ * GET `/sentence-plans/` — SentencePlanSerializer. SOULS[0] (home CN_DIYU, which
+ * is TEST_USER's tenant) has served stop 1 at home and is serving stop 2 in
+ * EG_DUAT; stop 3 in EU_HEAVEN_HELL has not begun, and EU has asked the
+ * original judge to drop it (case 2.2: the soul has not reached EU yet).
+ */
+export const SENTENCE_PLAN = {
+  id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e01",
+  soul: SOULS[0].id,
+  soul_name: SOULS[0].name,
+  tenant: 1,
+  tenant_code: "CN_DIYU",
+  cycle: 0,
+  status: "ACTIVE",
+  origin_judgment_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  cross_judgment_id: null as string | null,
+  completed_at: null as string | null,
+  cancel_reason: "",
+  nodes: [
+    { ...SENTENCE_NODE_BASE, id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e11", order: 1, tenant_code: "CN_DIYU", is_home: true,
+      status: "COMPLETED", realm_code: "DY_COURT_01_QINGUANG", sentence_years: 3, is_eternal: false,
+      disposition_id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e21", activated_at: "2026-09-01T00:00:00Z", completed_at: "2026-09-02T00:00:00Z" },
+    { ...SENTENCE_NODE_BASE, id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e12", order: 2, tenant_code: "EG_DUAT", is_home: false,
+      status: "ACTIVE", realm_code: "EG_HALL_TWO_TRUTHS", sentence_years: 10, is_eternal: false,
+      disposition_id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e22", activated_at: "2026-09-03T00:00:00Z", completed_at: null as string | null },
+    { ...SENTENCE_NODE_BASE, id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e13", order: 3, tenant_code: "EU_HEAVEN_HELL", is_home: false,
+      status: "PENDING", realm_code: "EU_PURGATORY", sentence_years: 7, is_eternal: false,
+      disposition_id: null as string | null, activated_at: null as string | null, completed_at: null as string | null },
+  ],
+  requests: [
+    {
+      id: "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e31",
+      from_tenant_code: "EU_HEAVEN_HELL",
+      kind: "AMEND",
+      status: "PENDING",
+      changes: { remove: ["5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e13"] },
+      requested_by_judgment_id: null as string | null,
+      reason: "炼狱一站已由另案抵偿",
+      decision_reason: "",
+      decided_at: null as string | null,
+      create_time: "2026-09-10T00:00:00Z",
+    },
+  ],
+  create_time: "2026-09-01T00:00:00Z",
+  update_time: "2026-09-10T00:00:00Z",
+};
+
+/** POST `.../requests/:id/decide/` with ACCEPT — the plan after stop 3 is removed. */
+export const SENTENCE_PLAN_DECIDED = {
+  ...SENTENCE_PLAN,
+  nodes: SENTENCE_PLAN.nodes.map((n) =>
+    n.order === 3 ? { ...n, status: "REMOVED", removed_by_request_id: SENTENCE_PLAN.requests[0].id } : n
+  ),
+  requests: [{ ...SENTENCE_PLAN.requests[0], status: "ACCEPTED", decided_at: "2026-09-11T00:00:00Z" }],
+};
 
 /** POST `.../mark-delivered/` — the REVEALED row, now DELIVERED. */
 export const DELIVERED_CREDENTIAL = {
@@ -1265,6 +1334,15 @@ export class ApiMock {
     }));
     this.on("GET", "/social-moderation/mutes/", paginated(SOCIAL_MUTES));
     this.on("POST", "/social-moderation/mutes/:id/lift/", { ...SOCIAL_MUTES[0], lifted_at: "2026-09-18T04:00:00Z", is_active: false });
+
+    // ── Sentence plans (backend/apps/sentence_plan/views.py) ──
+    // One plan, for the soul panel (`?soul=`) and the request inbox (`?pending_request=true`).
+    this.on("GET", "/sentence-plans/", (call) =>
+      call.query.soul === SOULS[0].id || call.query.pending_request === "true"
+        ? { body: paginated([SENTENCE_PLAN]) }
+        : { body: paginated([]) }
+    );
+    this.on("POST", "/sentence-plans/:id/requests/:id/decide/", SENTENCE_PLAN_DECIDED);
 
     // ── Hall inbox (backend/apps/chat/views.py OfficerInboxViewSet) ──
     this.on("GET", "/chat/inbox/", paginated(INBOX_CONVERSATIONS));

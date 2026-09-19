@@ -8,6 +8,7 @@
 * `POST /{id}/cancel/`                       撤销整份计划(`sentence_plan.cancel`,原属租户)
 """
 from django.db.models import Prefetch
+from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
@@ -18,7 +19,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.sentence_plan import requests as plan_requests
-from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest
+from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestStatus
 from apps.sentence_plan.serializers import (
     SentencePlanCancelSerializer,
     SentencePlanRequestCreateSerializer,
@@ -60,6 +61,26 @@ def _refused(exc):
     return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
 
 
+class SentencePlanFilter(filters.FilterSet):
+    """`pending_request=true`:有一条待原审判官决定的请求 —— Web「受刑请求」收件箱的列表。
+
+    收件箱要的是「等我决定的」与「我提的、还能撤回的」两种;两种都在本租户可读的计划里
+    (决定方是原属,提出方在计划上有节点,D4),所以这一个布尔过滤就够,谁能按哪个按钮由页面按
+    `tenant_code` / `from_tenant_code` 判,服务端再判一次。"""
+
+    pending_request = filters.BooleanFilter(method="_pending_request")
+
+    class Meta:
+        model = SentencePlan
+        fields = ["soul", "status", "cycle"]
+
+    def _pending_request(self, queryset, name, value):
+        pending = SentencePlan.all_objects.filter(
+            requests__status=SentenceRequestStatus.PENDING, requests__is_deleted=False,
+        ).values("pk")
+        return queryset.filter(pk__in=pending) if value else queryset.exclude(pk__in=pending)
+
+
 REQUEST_ID = OpenApiParameter("request_id", OpenApiTypes.UUID, OpenApiParameter.PATH,
                               description="The SentencePlanRequest on this plan.")
 
@@ -81,7 +102,7 @@ class SentencePlanViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     residence_write_actions = ("decide",)
     queryset = SentencePlan.objects.all()
     serializer_class = SentencePlanSerializer
-    filterset_fields = ["soul", "status", "cycle"]
+    filterset_class = SentencePlanFilter
     ordering_fields = ["create_time", "completed_at"]
 
     def get_queryset(self):
