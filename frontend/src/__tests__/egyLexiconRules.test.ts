@@ -243,10 +243,13 @@ describe("egy 词表规则", () => {
     // 笔误一节:标「废止」的异写(Remetch、Sepr、Sep-U、词中大写的 AmMit)、词根表点名的笔误
     // (Djesef、Hemst、Maakher、Mekheru、Iaru、Semen、Wenu)、改用 Ahet 的 Metu、转生统一
     // Wehem Mesut 之后的旧写法 Wehem Ankh。
+    // 第五节:Sethety(早期万能填充,不是词根;按义项分给 Pet-Sesh / Was / Setep / Smen / Nefer / Isfet / Renu)、
+    // 保存 Pedet(→ Sau)、新 Werpet(→ Renpi)、加载 Khemut(→ Ini)。定稿表外的同形也按同键中文判义改掉了。
     const abolished = [
       /Ma'a/, /Medu Sekhem/, /Em Sheemtet/, /Em Maa Seth/, /\bSend\b/, /\bSekhem Ma\b/,
       /\bRemetch\b/, /\bSepr\b/, /\bSep-U\b/, /\bAmMit\b/, /\bDjesef\b/, /\bHemst\b/, /\bMaakher\b/,
       /\bMekheru\b/, /\bIaru\b/, /\bSemen\b/, /\bWenu\b/, /\bMetu\b/, /\bWehem Ankh\b/,
+      /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
     expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /Pert Abuf/.test(v))).toEqual([]);
