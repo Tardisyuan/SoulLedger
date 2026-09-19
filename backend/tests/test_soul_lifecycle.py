@@ -65,13 +65,13 @@ class TestSoulLifecycle:
         assert soul.current_state == SoulState.JUDGING
         assert soul.death_date is not None
 
-        # 3. Create judgment
-        judgment = Judgment.objects.create(
-            soul=soul,
-            civilization=soul.civilization,
-            court="First Court Qinguang",
-            tenant=cn_tenant,
-        )
+        # 3. The judgment `die()` opened. This used to create a second one
+        # beside it; the stray open case went unnoticed until the sentence plan
+        # (docs/ARCHITECTURE-sentence-plan.md §3.3) started asking "is any case
+        # still open?" before completing — an open case now holds the plan.
+        judgment = Judgment.objects.get(soul=soul)
+        judgment.court = "First Court Qinguang"
+        judgment.save(update_fields=["court"])
         assert not judgment.is_final
 
         # 4. Conclude judgment → PASSED

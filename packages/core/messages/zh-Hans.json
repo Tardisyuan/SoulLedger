@@ -2022,7 +2022,8 @@
       "unknown": "出错了({{code}})",
       "screen_title": "簿册未能连上",
       "screen_body": "你的记录仍在。只是此刻取不到。",
-      "section": "这一段没取到。其余部分照常显示。"
+      "section": "这一段没取到。其余部分照常显示。",
+      "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生"
     },
     "lexicon": {
       "eg": {
@@ -2260,12 +2261,68 @@
     "residence_returned": {
       "title": "暂居结束",
       "body": "你已回归原属文明,打开灵魂簿查看。"
+    },
+    "sentence_completed": {
+      "title": "受刑完毕",
+      "body": "你的受刑已全部完毕,可以申请转生,打开灵魂簿查看。"
+    },
+    "sentence_waiting": {
+      "title": "刑满暂留",
+      "body": "本站刑满,等待审判结案后回归,打开灵魂簿查看。"
+    },
+    "sentence_amended": {
+      "title": "受刑计划有变更",
+      "body": "你的受刑计划有变更,打开灵魂簿查看。"
+    },
+    "sentence_pardoned": {
+      "title": "受刑计划已撤销",
+      "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"
     }
   },
   "official_notify": {
     "dispatch_return_blocked": {
       "title": "暂居回归被拦下",
       "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"
+    },
+    "sentence_node_active": {
+      "title": "受刑节点开始",
+      "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"
+    },
+    "sentence_node_done": {
+      "title": "受刑节点结束",
+      "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"
+    },
+    "sentence_node_waiting": {
+      "title": "刑满暂留",
+      "body": "灵魂「{{soul}}」在 {{tenant}} 的第 {{order}} 站刑满，因有未结案审判暂留当地；结案或撤案后回归。"
+    },
+    "sentence_node_refused": {
+      "title": "受刑节点被拒",
+      "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"
+    },
+    "sentence_plan_completed": {
+      "title": "受刑计划完成",
+      "body": "灵魂「{{soul}}」的受刑计划已全部完成。"
+    },
+    "cross_sentence_submitted": {
+      "title": "联审节点已填写",
+      "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"
+    },
+    "sentence_plan_amended": {
+      "title": "受刑计划变更",
+      "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"
+    },
+    "sentence_request_pending": {
+      "title": "受刑计划请求待决",
+      "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原审判官决定。"
+    },
+    "sentence_request_decided": {
+      "title": "受刑计划请求已决定",
+      "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"
+    },
+    "sentence_plan_cancelled": {
+      "title": "受刑计划已撤销",
+      "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"
     }
   },
   "social_moderation": {

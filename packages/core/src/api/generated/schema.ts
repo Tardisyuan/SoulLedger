@@ -3456,6 +3456,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sentence-plans/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 撤销整份计划(Q11,§3.1)。理由必填、写审计;灵魂在外不自动回归。 */
+        post: operations["v1_sentence_plans_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sentence-plans/{id}/requests/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 情况 2.1 / 2.2(§4.1):提出方租户的判官提请求。灵魂在本地 → 400,开加减项审判。 */
+        post: operations["v1_sentence_plans_requests_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sentence-plans/{id}/requests/{request_id}/decide/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 原审判官决定(Q2):只有原属租户(或 ADMIN)。ACCEPT 立刻应用;REOPEN 立刻在原属地开审(Q7)。 */
+        post: operations["v1_sentence_plans_requests_decide_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sentence-plans/{id}/requests/{request_id}/withdraw/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 提出方撤回(§4.2)。 */
+        post: operations["v1_sentence_plans_requests_withdraw_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social-moderation/comments/": {
         parameters: {
             query?: never;
@@ -6099,6 +6167,12 @@ export interface components {
             failed_webhooks_24h: number;
         };
         /**
+         * @description * `ACCEPT` - ACCEPT
+         *     * `REJECT` - REJECT
+         * @enum {string}
+         */
+        DecisionEnum: "ACCEPT" | "REJECT";
+        /**
          * @description * `DIVINE` - Deva (Heaven Path)
          *     * `HUMAN` - Human (Human Path)
          *     * `ASURA` - Asura (Demigod Path)
@@ -7166,9 +7240,19 @@ export interface components {
          *     * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
          *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
          *     * `DISPATCH_RETURN_BLOCKED` - Dispatch Return Blocked
+         *     * `SENTENCE_NODE_ACTIVE` - Sentence Node Active
+         *     * `SENTENCE_NODE_DONE` - Sentence Node Done
+         *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+         *     * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+         *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+         *     * `CROSS_SENTENCE_SUBMITTED` - Cross Sentence Submitted
+         *     * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+         *     * `SENTENCE_REQUEST_PENDING` - Sentence Request Pending
+         *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+         *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerInbox: {
@@ -9227,6 +9311,9 @@ export interface components {
             /** Format: date-time */
             readonly update_time: string;
         };
+        SentencePlanCancel: {
+            reason: string;
+        };
         SentencePlanRequest: {
             /** Format: uuid */
             readonly id: string;
@@ -9242,6 +9329,19 @@ export interface components {
             readonly decided_at: string | null;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        SentencePlanRequestCreate: {
+            kind: components["schemas"]["SentencePlanRequestKindEnum"];
+            changes?: {
+                [key: string]: unknown;
+            };
+            /** @default  */
+            reason: string;
+        };
+        SentencePlanRequestDecide: {
+            decision: components["schemas"]["DecisionEnum"];
+            /** @default  */
+            reason: string;
         };
         /**
          * @description * `AMEND` - 加项 / 减项
@@ -16360,6 +16460,116 @@ export interface operations {
             path: {
                 /** @description A UUID string identifying this Sentence plan. */
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentencePlan"];
+                };
+            };
+        };
+    };
+    v1_sentence_plans_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Sentence plan. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SentencePlanCancel"];
+                "application/x-www-form-urlencoded": components["schemas"]["SentencePlanCancel"];
+                "multipart/form-data": components["schemas"]["SentencePlanCancel"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentencePlan"];
+                };
+            };
+        };
+    };
+    v1_sentence_plans_requests_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Sentence plan. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SentencePlanRequestCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SentencePlanRequestCreate"];
+                "multipart/form-data": components["schemas"]["SentencePlanRequestCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentencePlanRequest"];
+                };
+            };
+        };
+    };
+    v1_sentence_plans_requests_decide_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Sentence plan. */
+                id: string;
+                /** @description The SentencePlanRequest on this plan. */
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SentencePlanRequestDecide"];
+                "application/x-www-form-urlencoded": components["schemas"]["SentencePlanRequestDecide"];
+                "multipart/form-data": components["schemas"]["SentencePlanRequestDecide"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentencePlan"];
+                };
+            };
+        };
+    };
+    v1_sentence_plans_requests_withdraw_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Sentence plan. */
+                id: string;
+                /** @description The SentencePlanRequest on this plan. */
+                request_id: string;
             };
             cookie?: never;
         };

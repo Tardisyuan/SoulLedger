@@ -10,7 +10,7 @@ from apps.events.models import SoulEvent
 from apps.notifications.models import UserNotification
 from apps.soul_accounts.models import RebirthApplication, RebirthApplicationStatus
 from apps.workflow.models import ApprovalWorkflow, CaseType
-from tests.soul_account_support import officer_client, ready_soul
+from tests.soul_account_support import officer_client, ready_soul, rebirth_ready_soul
 
 pytestmark = pytest.mark.django_db
 
@@ -46,7 +46,7 @@ def _submit(client, capture, form="HUMAN"):
 
 def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, judge_user,
                                                                   django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     response = _submit(client, django_capture_on_commit_callbacks)
     assert response.status_code == 201, response.data
     application = RebirthApplication.objects.get(pk=response.data["id"])
@@ -66,7 +66,7 @@ def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, ju
 
 
 def test_only_one_open_application_at_a_time(cn_tenant, django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     assert _submit(client, django_capture_on_commit_callbacks).status_code == 201
     second = _submit(client, django_capture_on_commit_callbacks, form="DIVINE")
     assert second.status_code == 409 and second.data["code"] == "application_open"
@@ -78,7 +78,7 @@ def test_only_one_open_application_at_a_time(cn_tenant, django_capture_on_commit
 def test_the_open_application_rule_is_also_a_database_constraint(cn_tenant, django_capture_on_commit_callbacks):
     from django.db import IntegrityError, transaction
 
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     _submit(client, django_capture_on_commit_callbacks)
     existing = RebirthApplication.objects.get(soul=account.soul)
     with pytest.raises(IntegrityError), transaction.atomic():
@@ -93,7 +93,7 @@ def test_the_open_application_rule_is_also_a_database_constraint(cn_tenant, djan
 
 def test_approval_flows_through_the_workflow_and_notifies_the_soul(cn_tenant, judge_user, cn_admin,
                                                                    django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     application = _decide(judge_user, application, "PASSED", capture=django_capture_on_commit_callbacks)
     assert application.status == "UNDER_REVIEW"
@@ -106,7 +106,7 @@ def test_approval_flows_through_the_workflow_and_notifies_the_soul(cn_tenant, ju
 
 
 def test_appeal_once_then_cooldown(cn_tenant, judge_user, cn_admin, django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     application = _decide(judge_user, application, "FAILED", notes="内部备注:此魂可疑", reason="业障未消",
                           capture=django_capture_on_commit_callbacks)
@@ -150,7 +150,7 @@ def test_appeal_once_then_cooldown(cn_tenant, judge_user, cn_admin, django_captu
 
 
 def test_past_life_applications_are_read_only(cn_tenant, judge_user, django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     application = _decide(judge_user, application, "FAILED", capture=django_capture_on_commit_callbacks)
     # 假装这份申请属于前世:本世账号不能替前世申诉。
@@ -171,7 +171,7 @@ def test_terminal_cosmologies_and_wrong_states_cannot_apply(eu_tenant, cn_tenant
 
 def test_cross_civilization_is_decided_by_the_initial_reviewer_only(cn_tenant, judge_user, cn_admin,
                                                                     django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     url = f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/cross-civilization/"
     guardian = User.objects.create_user(username="g", password="x", role="GUARDIAN", tenant=cn_tenant)
@@ -194,7 +194,7 @@ def test_cross_civilization_is_decided_by_the_initial_reviewer_only(cn_tenant, j
 
 def test_officer_rebirth_list_is_tenant_scoped(cn_tenant, eu_tenant, judge_user,
                                                django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     _submit(client, django_capture_on_commit_callbacks)
     eu_judge = User.objects.create_user(username="eu_judge", password="x", role="JUDGE", tenant=eu_tenant)
     rows = officer_client(eu_judge).get("/api/v1/soul-accounts/rebirth-applications/").data
@@ -207,7 +207,7 @@ def test_officer_rebirth_list_is_tenant_scoped(cn_tenant, eu_tenant, judge_user,
 
 def test_rejecting_a_rebirth_application_requires_a_reason_for_the_soul(cn_tenant, judge_user,
                                                                       django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     url = f"/api/v1/workflows/{application.workflow_id}/approve_node/"
     for body in ({"verdict": "FAILED", "notes": "只有内部备注"},
@@ -247,7 +247,7 @@ OFFICER_KEYS = {
 
 def test_officer_view_carries_the_same_derived_fields_as_me(cn_tenant, judge_user,
                                                             django_capture_on_commit_callbacks):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     officer_url = f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/"
     officer = officer_client(judge_user)
@@ -281,7 +281,7 @@ def test_officer_view_carries_the_same_derived_fields_as_me(cn_tenant, judge_use
 
 
 def _cross_case_initial(cn_tenant, judge_user, capture):
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     return RebirthApplication.objects.get(pk=_submit(client, capture).data["id"]), client
 
 
@@ -335,7 +335,7 @@ def test_appeal_keeps_the_first_rejection_and_cooldown_starts_from_the_latest(
     """申诉时首次驳回的理由与时间留档;申诉被驳回后两次理由都在;冷却起点是最近一次终局驳回。"""
     from django.utils.dateparse import parse_datetime
 
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     application = _decide(judge_user, application, "FAILED", reason="业障未消",
                           capture=django_capture_on_commit_callbacks)
@@ -371,7 +371,7 @@ def test_backfill_restores_the_first_decision_time_of_existing_appeals(cn_tenant
     from django.apps import apps as django_apps
 
     migration = importlib.import_module("apps.soul_accounts.migrations.0002_rebirth_first_rejection")
-    account, client = ready_soul(cn_tenant)
+    account, client = rebirth_ready_soul(cn_tenant)
     application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
     application = _decide(judge_user, application, "FAILED", capture=django_capture_on_commit_callbacks)
     with django_capture_on_commit_callbacks(execute=True):

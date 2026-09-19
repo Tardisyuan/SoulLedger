@@ -1,7 +1,25 @@
-"""只读。写路径在服务层(结案、处置执行);阶段 2 / 3 才有官员可写的端点。"""
+"""计划本身只读;写经服务层(结案、处置执行、请求、撤销)。下面四个输入序列化器只校验形状,
+内容(N2、只能删 PENDING、Q5……)由 `apps/sentence_plan/requests.py` 校验 —— 同一条规则还有
+AMENDMENT 审判结案那条路径要守,写在序列化器里就只守住一边。"""
 from rest_framework import serializers
 
-from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest
+from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestKind
+
+
+class SentencePlanRequestCreateSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=SentenceRequestKind.choices)
+    #: {"add": [{"realm_code", "sentence_years", "reason"}], "remove": ["<node id>"]};REOPEN 不带。
+    changes = serializers.DictField(required=False, allow_empty=True)
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class SentencePlanRequestDecideSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=["ACCEPT", "REJECT"])
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class SentencePlanCancelSerializer(serializers.Serializer):
+    reason = serializers.CharField(allow_blank=False)
 
 
 class SentenceNodeSerializer(serializers.ModelSerializer):
