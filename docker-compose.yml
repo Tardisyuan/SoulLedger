@@ -164,7 +164,7 @@ services:
       MATRIX_PUBLIC_BASEURL: ${MATRIX_PUBLIC_BASEURL:-}
       MATRIX_JWT_SECRET: ${MATRIX_JWT_SECRET:-}
       MATRIX_REGISTRATION_SHARED_SECRET: ${MATRIX_REGISTRATION_SHARED_SECRET:-}
-      # 书信推送回调(模板里的 ${MATRIX_PUSH_HOOK_URL}):compose 网络内直连 backend,不经 nginx。
+      # 书信推送回调(模板 homeserver.soulledger.yaml 里 push_url 的占位 MATRIX_PUSH_HOOK_URL):compose 网络内直连 backend,不经 nginx。
       # backend 必须在 ALLOWED_HOSTS 里;回调路径已在 SECURE_REDIRECT_EXEMPT(否则 301,推送静默失效)。
       MATRIX_PUSH_HOOK_URL: http://backend:8000/api/v1/chat/hooks/new-message/
     healthcheck:
