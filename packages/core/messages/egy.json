@@ -2022,7 +2022,7 @@
       "screen_title": "Nen Aq Er Medjat",
       "screen_body": "Sesh Ek Wenen. Nen Gem Emu.",
       "section": "Sa Pen Nen Gem. Ky Wenen.",
-      "sentence_in_progress": "Wetep Ek Nen Nebt Seth. Dbh Em Khet Wetep"
+      "sentence_in_progress": "Wetep Ek Nen Neb Seth. Dbh Em Khet Wetep"
     },
     "lexicon": {
       "eg": {
@@ -2168,8 +2168,8 @@
       "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."
     },
     "sentence_completed": {
-      "title": "Wetep Nebt Seth",
-      "body": "Wetep Ek Nebt Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."
+      "title": "Wetep Neb Seth",
+      "body": "Wetep Ek Neb Seth; Dbh Ankh Wen. Wen Medjat Ba Er Maa."
     },
     "sentence_waiting": {
       "title": "Hemes Smen",
@@ -2206,8 +2206,8 @@
       "body": "{{tenant}}: Hab Mekher {{order}} En {{soul}} Khesef Seth. Mekher Em Smen."
     },
     "sentence_plan_completed": {
-      "title": "Wetep Nebt Seth",
-      "body": "{{soul}}: Mekher Nebt Wetep Seth."
+      "title": "Wetep Neb Seth",
+      "body": "{{soul}}: Mekher Neb Wetep Seth."
     },
     "cross_sentence_submitted": {
       "title": "Mekher Sesh Seth",
@@ -2227,7 +2227,7 @@
     },
     "sentence_plan_cancelled": {
       "title": "Wetep Sehen Seth",
-      "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Nebt Seth."
+      "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."
     }
   },
   "social_moderation": {
