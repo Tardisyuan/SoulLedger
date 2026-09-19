@@ -955,6 +955,13 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "test_cancelling_a_plan_while_it_advances_leaves_nothing_dispatching",
         "tests/test_sentence_plan_concurrency.py::"
         "test_two_tenants_opening_a_case_on_one_soul_at_once_open_exactly_one",
+        # G7 锁下两项复查(2026-09-19):开审停在 perform_create 入口、对方提交后才进锁,
+        # 窗口被钉开而不靠调度。线程版只在 PG 上跑;串行版
+        # test_a_case_whose_{open,tenant}_check_went_stale_before_the_lock_is_refused 每个引擎都跑。
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_cases_past_the_unlocked_check_at_once_open_exactly_one",
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_a_soul_going_home_while_a_case_waits_for_the_lock_strands_no_case",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
