@@ -223,11 +223,14 @@ def test_at_most_one_node_holds_the_soul(cn):
     _node(plan, 3, status=SentenceNodeStatus.PENDING)
 
 
-def test_exactly_one_home_node_and_it_is_first(cn):
+def test_the_first_node_is_home(cn):
+    """阶段 1 是「原属节点有且只有一个,且 order=1」;N1=(a)(2026-09-19)放宽为「首个节点是原属」:
+    重开审判结案会在后面再加一个原属节点(迁移 sentence_plan 0002)。"""
     plan = _plan(cn)
-    _refused(lambda: _node(plan, 2, is_home=True))
+    _refused(lambda: _node(plan, 1, is_home=False))
     _node(plan, 1, is_home=True)
-    _refused(lambda: _node(plan, 1, is_home=True, status=SentenceNodeStatus.REMOVED))
+    _node(plan, 2, is_home=True)  # 重开审判加的原属节点
+    _refused(lambda: _node(plan, 1, is_home=False, status=SentenceNodeStatus.REMOVED))
 
 
 def test_node_order_is_positive(cn):
