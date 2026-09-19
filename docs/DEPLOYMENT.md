@@ -157,6 +157,15 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
   `setup_matrix` 两次均成功(第二次走「已注册 → JWT 登录」);`test_chat_synapse_integration.py`
   2 passed。停掉 synapse 时 nginx 在、这两条路径 502。
 - 实机验证:`backend/tests/test_chat_synapse_integration.py` 文件头有本机起一个 Synapse 跑它的命令。
+- **已有一台用 SQLite 的 Synapse**(如测试机上手工加进 compose 的那台):`scripts/synapse-migrate-sqlite-to-pg.sh`
+  在那台机器的 compose 目录里执行,用官方 `synapse_port_db` 迁到同一 compose 里的 PostgreSQL,
+  建单独的 `synapse` 角色与 C collation 的库,只换 `homeserver.yaml` 的 `database` 段 ——
+  **server_name 与签名密钥不动**。先等 SQLite 的后台更新跑完(`synapse_port_db` 拒绝迁移有未完成
+  后台更新的库,而新库常有),停机前把 `/data` 整个打包;迁移后核对 server_name、签名密钥 id 与
+  users/rooms/events 行数。任一步失败即停,并打印该阶段的回滚命令(换配置前:直接起回;换配置后:
+  恢复 `homeserver.yaml.sqlite.bak` 再起)。参数与默认值见脚本头。2026-09-19 本机演练(SQLite 版
+  synapse + postgres:16-alpine,只绑 127.0.0.1):迁移 exit 0;迁移后服务账号 JWT 登录、admin 标记、
+  房间与三条消息、迁移前签发的 access token 都在;重跑识别为已迁移、exit 0。
 
 ## 数据库备份与恢复
 
