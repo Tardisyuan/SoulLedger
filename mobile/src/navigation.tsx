@@ -22,6 +22,7 @@ import * as Notifications from "expo-notifications";
 import { useEffect, useRef, useState } from "react";
 import { useColorScheme } from "react-native";
 
+import { ChatProvider, useChat } from "./chat";
 import { AppHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
@@ -38,6 +39,8 @@ import { ChangePasswordScreen, LoginScreen } from "./screens/auth";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen, PastLivesScreen } from "./screens/life";
+import { ConversationScreen } from "./screens/conversation";
+import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
 
 type RootParams = AppStackParams & { Login: undefined; ChangePassword: undefined };
 const Stack = createNativeStackNavigator<RootParams>();
@@ -48,28 +51,60 @@ export const navigationRef = createNavigationContainerRef<RootParams>();
 
 function MainTabs() {
   const { t } = useI18n();
+  const chat = useChat();
+  const unread = Object.values(chat.timeline.rooms).some((room) => room.unread > 0);
   return (
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={({ route, navigation }) => ({
-        header: () => <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />,
+        header: () =>
+          route.name === "Letters" ? (
+            // Chat handoff 1e: iOS "new" is a framed plus in the bar; Android has the FAB, and search here.
+            <AppHeader
+              title={t(TAB_TITLES[route.name])}
+              action={{
+                icon: ANDROID ? "search" : "plus",
+                framed: !ANDROID,
+                label: t("soul_app.chat.new"),
+                testID: "chat-new",
+                onPress: () => navigation.navigate("FindSoul"),
+              }}
+            />
+          ) : (
+            <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
+          ),
       })}
     >
       <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life") }} />
       <Tabs.Screen name="PastLives" component={PastLivesScreen} options={{ title: t("soul_app.tabs.past_lives") }} />
-      <Tabs.Screen name="Applications" component={ApplicationsScreen} options={{ title: t("soul_app.tabs.applications") }} />
+      {/* The tab is a signpost, the screen title the full name (chat handoff 1a): four two-character labels fit 98pt. */}
+      <Tabs.Screen name="Applications" component={ApplicationsScreen} options={{ title: t("soul_app.tabs.rebirth") }} />
+      {/* Not deployed here: no tab at all, rather than one that opens onto "not available" (1b). */}
+      {chat.availability === "not_configured" ? null : (
+        <Tabs.Screen
+          name="Letters"
+          component={LettersScreen}
+          options={{ title: t("soul_app.chat.tab"), tabBarBadge: unread ? t("soul_app.chat.unread") : undefined }}
+        />
+      )}
     </Tabs.Navigator>
   );
 }
 
+/** Each tab's screen title — the full name, even where the tab label is shortened. */
 const TAB_TITLES: Record<string, string> = {
   Life: "soul_app.tabs.life",
   PastLives: "soul_app.tabs.past_lives",
   Applications: "soul_app.tabs.applications",
+  Letters: "soul_app.chat.title",
 };
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
   return <ApplicationDetailScreen id={route.params.id} landed={route.params.landed} />;
+}
+
+function Conversation({ route }: NativeStackScreenProps<AppStackParams, "Conversation">) {
+  return <ConversationScreen id={route.params.id} landed={route.params.landed} />;
 }
 
 /** Notification ids already landed in this process. */
@@ -136,6 +171,7 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
     if (!landing || !signedIn || !navigationRef.isReady()) return;
     pending.current = null;
     if (landing.screen === "ApplicationDetail") navigationRef.navigate("ApplicationDetail", { id: landing.id, landed: true });
+    else if (landing.screen === "Conversation") navigationRef.navigate("Conversation", { id: landing.id, landed: true });
     else navigationRef.navigate("Tabs", { screen: "Life" });
   }, [arrived, signedIn, ready]);
 
@@ -203,6 +239,14 @@ export function RootNavigator() {
               })}
             />
             <Stack.Screen name="NotificationPrimer" component={NotificationPrimerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Conversation" component={Conversation} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="FindSoul"
+              component={FindSoulScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.chat.find.title")} onBack={navigation.goBack} />,
+              })}
+            />
             <Stack.Screen
               name="ApplicationDetail"
               component={Detail}
@@ -214,12 +258,12 @@ export function RootNavigator() {
         );
       }
       body = (
-        <>
+        <ChatProvider enabled={state.status === "signedIn"}>
           <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setReady((n) => n + 1)}>
             <Stack.Navigator>{screens}</Stack.Navigator>
           </NavigationContainer>
           <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
-        </>
+        </ChatProvider>
       );
     }
   }

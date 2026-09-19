@@ -135,7 +135,7 @@ export function installNotificationHandler(): void {
   });
 }
 
-export type Landing = { screen: "ApplicationDetail"; id: string } | { screen: "Life" };
+export type Landing = { screen: "ApplicationDetail"; id: string } | { screen: "Conversation"; id: string } | { screen: "Life" };
 
 /** An application id as the server sends it (a UUID); anything else is not navigated to. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -143,8 +143,11 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Where a tapped notification lands, from its `data` — or `null`: just open the app. */
 export function landingOf(data: unknown): Landing | null {
   if (!data || typeof data !== "object") return null;
-  const { screen, application_id: id } = data as Record<string, unknown>;
+  const { screen, application_id: id, conversation_id: conversation } = data as Record<string, unknown>;
   if (screen === "ApplicationDetail") return typeof id === "string" && ID.test(id) ? { screen, id } : { screen: "Life" };
+  // Reserved: the server sends no chat push yet (no Synapse → push path; see the round's report).
+  // A malformed id opens the app and no more — a letter is not worth guessing at.
+  if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
   if (screen === "Life") return { screen };
   return null;
 }
