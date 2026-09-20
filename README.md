@@ -113,7 +113,7 @@ docker compose up -d db redis   # postgres:16-alpine :5432，redis:7-alpine :637
 ### 整栈 Docker
 
 ```bash
-docker compose up    # 根目录 docker-compose.yml：db、redis、backend、celery、celery-beat、frontend
+docker compose up    # 根目录 docker-compose.yml：db、redis、backend、celery、celery-beat、synapse、frontend
 ```
 
 需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入四种
@@ -146,6 +146,9 @@ bash scripts/start-all.sh      # 前后端后台启动，日志在 scripts/logs/
 bash scripts/status.sh
 bash scripts/stop-all.sh
 bash scripts/install-hooks.sh  # pre-commit：对暂存的前端文件跑 ESLint
+                               # pre-push：后端 pytest / ruff / 迁移检查，前端与
+                               #   packages/core、mobile 的门禁按改动路径挑着跑。
+                               # 钩子是生成出来的副本——改了这个脚本要在主 checkout 重跑它
 ```
 
 注意：`start-all.sh` 打印的前端地址是 `:3000`，实际 dev server 监听 `:3333`。
@@ -160,6 +163,8 @@ bash scripts/install-hooks.sh  # pre-commit：对暂存的前端文件跑 ESLint
 API 文档 (drf-spectacular)     →  http://localhost:8000/api/docs/
 健康检查                        →  http://localhost:8000/health/ 与 /health/detailed/
 WebSocket (channels + daphne)  →  ws://localhost:8000/ws/notifications/
+灵魂端 App (Expo / RN)         →  expo start（mobile/，iOS 与 Android 模拟器）
+Synapse（书信）                →  :8008   （仅回环，无联邦；灵魂之间的私信）
 PostgreSQL 16                  →  :5432   （本地开发回落 SQLite）
 Redis 7                        →  :6379   （Channel Layer + Celery broker）
 ```
@@ -193,7 +198,12 @@ Service → EventBus → HandlerRegistry → ChannelLayer (Redis) → Consumer �
 ```
 
 处理器可按事件类型、按域或全局订阅，注册表内 O(1) 分发。当前发事件的域：soul、
-workflow、notification、dispatch、deathsync、social。
+workflow、notification、dispatch、deathsync、social、scheduler。
+
+**WebSocket 与 webhook 订阅的不是同一批。** scheduler 只进 WebSocket：每五分钟一条的
+运行心跳是运维遥测，不是外部系统会订阅的业务事实。唯一例外按事件类型单独注册——
+`SCHEDULER_RUN_FAILED`（某租户的任务运行到了 FAILURE 或 LOST）会投递给 webhook，
+全局任务则不发，因为它不属于任何租户。
 
 **灵魂状态机**（`backend/apps/souls/models.py` 的 `SoulState`）：
 
@@ -224,7 +234,11 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 | `perm/`、`menus/`、`organizations/`、`tenants/` | RBAC、导航、组织架构、租户 |
 | `audit-logs/`、`events/`、`notifications/` | 审计轨迹、事件日志、通知 |
 | `death-sync/` | 外部死亡登记 API（API Key + HMAC 签名 webhook） |
-| `social/` | 帖子、评论、表态、关注、资料 |
+| `social/`、`social-moderation/` | 帖子、评论、表态、关注、资料，以及内容处置 |
+| `sentence-plans/` | 受刑计划与加减项请求 |
+| `scheduler/` | 定时任务与执行记录（`runs/` 支持多状态、时间区间与搜索） |
+| `soul-accounts/`、`soul-auth/`、`me/` | 灵魂账号开通与凭据交付、灵魂端登录、灵魂自己的接口 |
+| `chat/` | 书信：Matrix 凭据代签与 Synapse 的新消息回调 |
 
 上文提到的按文明读数由 `GET /api/v1/ledger/balance/{soul_id}/` 返回。响应同时携带
 `karmic_balance`（原始净额，系统其余部分据此路由）与 `reading`（该灵魂自身文明使用的
@@ -257,11 +271,17 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 本地：
 
 ```bash
-cd backend && python -m pytest --tb=short -q     # 仓库根 pytest.ini：--cov=apps，--cov-fail-under=80
-                                                 # 但要先隔离 DATABASE_URL 与 REDIS_URL：
+cd backend && .venv/bin/python -m pytest --tb=short -q   # 仓库根 pytest.ini：--cov=apps，--cov-fail-under=80
+                                                 # 解释器写成 .venv/bin/python，不是 PATH 上的 python——
+                                                 # 后者多半没有 Django，而它报的是 ModuleNotFoundError，
+                                                 # 那句话指向「缺依赖」，真正的原因是「解释器选错了」。
+                                                 # 还要先隔离 DATABASE_URL 与 REDIS_URL：
                                                  # 只覆盖数据库，权限缓存键仍会写进共享 Redis。
                                                  # 完整跑法见 CLAUDE.md 的 Build & Test
-cd backend && ruff check .
+cd backend && .venv/bin/ruff check .
+npm run --workspace mobile typecheck          # 灵魂端 App 的三条门禁，pre-push 在
+npm run --workspace mobile lint               # 任何 ^mobile/ 改动上全跑
+npm run --workspace mobile test               # jest + jest-expo
 cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
 # `test:coverage` 而不是 `npm test`:后者是裸 jest,而 jest.config.js 的
 # coverageThreshold 只在传 --coverage 时才评估 —— 实测裸 npm test 输出里
@@ -310,6 +330,11 @@ backend/
     notifications/  通知 + WebSocket Consumer
     death_sync/     外部死亡登记 API 与 webhook
     social/         帖子、评论、表态、关注、资料
+    sentence_plan/  受刑计划：刑罚节点、加减项请求
+    scheduler/      定时任务登记、TaskRun 执行记录、reap/prune 两道恢复
+    soul_accounts/  灵魂自己的账号：开号、凭据待交付、登录限流
+    soul_push/      灵魂端 App 的推送令牌与 Expo 下发
+    chat/           灵魂之间的书信：Matrix 凭据代签、房间策略、新消息回调
     org/            组织架构
     audit/          带 trace_id 的审计日志
     core/           公共 viewset/mixin、权限类、租户收窄、WebSocket 认证、健康检查
@@ -319,14 +344,16 @@ backend/
   tests/            跨应用 pytest 套件（后端测试还有一半在 apps/*/ 里，见「测试与 CI」）
 packages/core/      平台无关层。**不含 DOM** —— 它的 tsconfig 没有 "dom"，
   src/api/          每个后端应用一个类型安全客户端（原 frontend/lib/api/）
-  src/hooks/        六个数据 hook（useSouls / useSocial / useJudgments /
-                    useJudgmentQueue / useDispositions / useReincarnation）
+  src/hooks/        十三个数据 hook（useSouls / useSocial / useSocialModeration /
+                    useJudgments / useJudgmentQueue / useStatutes / useDispositions /
+                    useReincarnation / useSentencePlans / useScheduler /
+                    useSoulAccounts / useSoulChat / useSoulInbox）
   src/platform/     八个宿主能力端口；web 实现在 frontend/lib/platform/web.ts
   src/config/       领域配置：四文明映射、civilizationSigil、workflow-templates
   messages/         i18n：zh-Hans、en、egy（原 frontend/messages/）
   openapi/          schema.yml —— 前端类型的来源，后端有门禁盯着它逐字节一致
 frontend/
-  app/              Next.js App Router 页面（37 个 page.tsx，其中 34 个用 PageShell）
+  app/              Next.js App Router 页面（43 个 page.tsx，其中 40 个用 PageShell）
   src/hooks/        只剩四个视图层 hook：useChartColors / usePermissions /
                     useRowTransitions / useSidebarMenus
   src/components/   UI，含 RBAC 门控组件
@@ -334,6 +361,9 @@ frontend/
   components/ui/    第三个源根：data-table / data-grid / page-section / skeleton
   lib/platform/     平台端口的 web 实现
   e2e/              Playwright 用例
+mobile/             灵魂端 App（Expo SDK 57 / React Native）。平台无关的一切来自
+  src/              packages/core，这里只有屏幕、导航与移动端的端口实现
+config/synapse/     Synapse 的 homeserver 模板与房间策略模块（书信）
 nginx.conf          production 合并里 nginx 的主配置
 scripts/            启停/重启/状态、数据库备份恢复、git hooks
 docs/               神话研究、工程文档、设计交付包——见 docs/README.md
@@ -423,15 +453,24 @@ jsx-a11y，全部 `error` 级：
 
 | 层级 | 技术 |
 |---|---|
-| 前端 | Next.js 16、React 18、TypeScript 5、Tailwind CSS 4、TanStack Query v5、@xyflow/react（流程画布）、Recharts、class-variance-authority |
+| 前端 | Next.js 16、React 19、TypeScript 5、Tailwind CSS 4、TanStack Query v5、@xyflow/react（流程画布）、Recharts、class-variance-authority |
 | 字体 | next/font + Archivo / Source Serif 4 / IBM Plex Mono；`@fontsource-variable/noto-sans-sc`、`-serif-sc` 自托管切片（各 101 片带 `unicode-range`，浏览器只取用到的那几片） |
 | 后端 | Django 5、Django REST Framework、drf-spectacular、channels + daphne |
 | 数据库 | PostgreSQL 16（Docker/生产）、SQLite（本地默认） |
+| 灵魂端 App | Expo SDK 57 + React Native（`mobile/`，与 web 共用 `packages/core`） |
+| 书信 | Matrix / Synapse v1.161（仅本机回环，无联邦；灵魂之间的私信） |
 | 实时 | channels + channels-redis 的 WebSocket |
 | 异步 | Celery 5 + django-celery-beat，Redis broker |
 | 认证 | djangorestframework-simplejwt，Death Sync 另用 API Key |
 | 测试 | pytest + pytest-django + pytest-cov + factory-boy；Jest + React Testing Library；Playwright |
 | 工具链 | ruff、ESLint、TypeScript、Sentry、structlog |
+
+**这里实际装着两份 React。** web 的生产构建与 jest 用的是 Next 自带的那份
+（`next/dist/compiled/react`，`frontend/jest.config.js` 的 `moduleNameMapper` 把
+`react` / `react-dom` 映射过去，`jestRunsNextVendoredReact.test.ts` 守着）；
+`packages/core` 的 vitest 与 `mobile/` 用已安装的 react 19.2.3。Expo 57 钉死 19.2.3，
+而 Next 每个版本只自带 canary，两边取不到同一个版本——升级 next 会顺带换掉 web
+测试里的 React。
 
 ---
 
