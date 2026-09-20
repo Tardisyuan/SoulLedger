@@ -129,7 +129,7 @@ Then point the backend at it, e.g.
 ### Whole stack in Docker
 
 ```bash
-docker compose up    # root docker-compose.yml: db, redis, backend, celery, celery-beat, frontend
+docker compose up    # root docker-compose.yml: db, redis, backend, celery, celery-beat, synapse, frontend
 ```
 
 Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
@@ -161,7 +161,11 @@ python manage.py create_api_key             # for the Death Sync external API
 bash scripts/start-all.sh      # backend + frontend, backgrounded, logs in scripts/logs/
 bash scripts/status.sh
 bash scripts/stop-all.sh
-bash scripts/install-hooks.sh  # pre-commit hook: ESLint on staged frontend files
+bash scripts/install-hooks.sh  # pre-commit: ESLint on staged frontend files
+                               # pre-push: backend pytest / ruff / migration check, plus the
+                               #   frontend, packages/core and mobile gates, picked by what changed.
+                               # The hooks are generated copies — re-run this in the main
+                               #   checkout after editing the script.
 ```
 
 Note: `start-all.sh` prints the frontend URL as `:3000`; the dev server actually
@@ -177,6 +181,8 @@ Backend  (Django 5 + DRF)          →  http://localhost:8000/api/v1/
 API docs (drf-spectacular)         →  http://localhost:8000/api/docs/
 Health                             →  http://localhost:8000/health/  and /health/detailed/
 WebSocket (channels + daphne)      →  ws://localhost:8000/ws/notifications/
+Soul app (Expo / React Native)     →  expo start (mobile/, iOS and Android simulators)
+Synapse (letters)                  →  :8008   (loopback only, no federation)
 PostgreSQL 16                      →  :5432   (SQLite fallback for local dev)
 Redis 7                            →  :6379   (channel layer + Celery broker)
 ```
@@ -221,7 +227,14 @@ Service → EventBus → HandlerRegistry → ChannelLayer (Redis) → Consumer �
 
 Handlers can subscribe by event type, by domain, or globally; dispatch is O(1)
 through the registry. Domains currently emitting: soul, workflow, notification,
-dispatch, deathsync, social.
+dispatch, deathsync, social, scheduler.
+
+**WebSocket and webhooks do not subscribe to the same set.** scheduler is
+WebSocket-only: a run heartbeat every five minutes is operator telemetry, not
+something an external integration subscribes to. The one exception is registered
+by event type — `SCHEDULER_RUN_FAILED` (a tenant's run reached FAILURE or LOST)
+is delivered to webhooks; a GLOBAL run never emits it, because it belongs to no
+tenant.
 
 **Soul state machine** (`SoulState` in `backend/apps/souls/models.py`):
 
@@ -254,7 +267,11 @@ Everything is under `/api/v1/`. Authenticated endpoints expect
 | `perm/`, `menus/`, `organizations/`, `tenants/` | RBAC, navigation, org chart, tenants |
 | `audit-logs/`, `events/`, `notifications/` | Audit trail, event log, notifications |
 | `death-sync/` | External death-registration API (API key + HMAC-signed webhooks) |
-| `social/` | Posts, comments, reactions, follows, profiles |
+| `social/`, `social-moderation/` | Posts, comments, reactions, follows, profiles, and content moderation |
+| `sentence-plans/` | Sentence plans and their amendment requests |
+| `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
+| `soul-accounts/`, `soul-auth/`, `me/` | Soul account provisioning and credential handover, soul-side login, a soul's own endpoints |
+| `chat/` | Letters: Matrix credentials minted by the backend, and Synapse's new-message hook |
 
 The ledger reading described above is served from
 `GET /api/v1/ledger/balance/{soul_id}/`. The response carries both
@@ -292,12 +309,19 @@ workflow file next to each step, including an explicit instruction not to put
 Locally:
 
 ```bash
-cd backend && python -m pytest --tb=short -q     # repo-root pytest.ini: --cov=apps, --cov-fail-under=80
+cd backend && .venv/bin/python -m pytest --tb=short -q   # repo-root pytest.ini: --cov=apps, --cov-fail-under=80
+                                                 # The interpreter is .venv/bin/python, not the one on
+                                                 # PATH: that one usually has no Django, and its
+                                                 # ModuleNotFoundError reads as a missing dependency
+                                                 # when the real cause is the wrong interpreter.
                                                  # Isolate DATABASE_URL *and* REDIS_URL first:
                                                  # overriding only the database still lets the
                                                  # suite write into the shared Redis.
                                                  # Full recipe: CLAUDE.md, Build & Test.
-cd backend && ruff check .
+cd backend && .venv/bin/ruff check .
+npm run --workspace mobile typecheck           # the soul app's three gates; pre-push runs all
+npm run --workspace mobile lint                # three on any ^mobile/ change
+npm run --workspace mobile test                # jest + jest-expo
 cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
 # `test:coverage`, NOT `npm test`. The latter is bare jest, and jest.config.js sets
 # coverageThreshold without collectCoverage — so the threshold is only evaluated when
@@ -347,6 +371,11 @@ backend/
     notifications/  Notifications + WebSocket consumer
     death_sync/     External death-registration API and webhooks
     social/         Posts, comments, reactions, follows, profiles
+    sentence_plan/  Sentence plans: penalty nodes, amendment requests
+    scheduler/      Job registry, TaskRun history, the reap and prune passes
+    soul_accounts/  A soul's own account: provisioning, credential handover, login throttles
+    soul_push/      Expo push tokens and delivery for the soul app
+    chat/           Letters between souls: Matrix credentials, room policy, new-message hook
     org/            Organization chart
     audit/          Audit log with trace_id
     core/           Shared viewsets/mixins, permission classes, tenant scoping,
@@ -358,8 +387,10 @@ backend/
                     apps/*/ — see Testing & CI)
 packages/core/      The platform-independent layer. **No DOM** — its tsconfig omits
   src/api/          One typed client per backend app (was frontend/lib/api/)
-  src/hooks/        The six data hooks (useSouls / useSocial / useJudgments /
-                    useJudgmentQueue / useDispositions / useReincarnation)
+  src/hooks/        Thirteen data hooks (useSouls / useSocial / useSocialModeration /
+                    useJudgments / useJudgmentQueue / useStatutes / useDispositions /
+                    useReincarnation / useSentencePlans / useScheduler /
+                    useSoulAccounts / useSoulChat / useSoulInbox)
   src/platform/     Eight host-capability ports; the web impl is in
                     frontend/lib/platform/web.ts
   src/config/       Domain config: the four-cosmology maps, civilizationSigil,
@@ -368,7 +399,7 @@ packages/core/      The platform-independent layer. **No DOM** — its tsconfig 
   openapi/          schema.yml — the source of the frontend's types, with a backend
                     gate asserting it byte-for-byte
 frontend/
-  app/              Next.js App Router pages (37 page.tsx, 34 of them on PageShell)
+  app/              Next.js App Router pages (43 page.tsx, 40 of them on PageShell)
   src/hooks/        Only four view-layer hooks remain: useChartColors /
                     usePermissions / useRowTransitions / useSidebarMenus
   src/components/   UI, including the RBAC gating components
@@ -376,6 +407,10 @@ frontend/
   components/ui/    A third source root: data-table / data-grid / page-section
   lib/platform/     The web implementation of the platform ports
   e2e/              Playwright specs
+mobile/             The soul app (Expo SDK 57 / React Native). Everything
+  src/              platform-independent comes from packages/core; only screens,
+                    navigation and the mobile ports live here
+config/synapse/     Synapse homeserver template and the room-policy module (letters)
 nginx.conf          the nginx main config the production merge mounts
 scripts/            start/stop/restart/status, DB backup/restore, git hooks
 docs/               Domain research, engineering docs, design handoff — see docs/README.md
@@ -480,15 +515,24 @@ error, no failing assertion. `src/__tests__/viewportHeightContract.test.ts` guar
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16, React 18, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
+| Frontend | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
 | Type | next/font + Archivo / Source Serif 4 / IBM Plex Mono; `@fontsource-variable/noto-sans-sc` and `-serif-sc` self-hosted (101 `unicode-range` slices each, so a browser fetches only what a page uses) |
 | Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
 | Database | PostgreSQL 16 (Docker/production), SQLite (local default) |
+| Soul app | Expo SDK 57 + React Native (`mobile/`, sharing packages/core with the web) |
+| Letters | Matrix / Synapse v1.161 (loopback only, no federation) |
 | Realtime | WebSocket via channels with channels-redis |
 | Async | Celery 5 + django-celery-beat, Redis broker |
 | Auth | djangorestframework-simplejwt, plus API keys for Death Sync |
 | Testing | pytest + pytest-django + pytest-cov + factory-boy; Jest + React Testing Library; Playwright |
 | Tooling | ruff, ESLint, TypeScript, Sentry, structlog |
+
+**There are two copies of React here.** The web production build and jest use the
+one Next vendors (`next/dist/compiled/react`; `frontend/jest.config.js` maps
+`react` / `react-dom` onto it, and `jestRunsNextVendoredReact.test.ts` pins that);
+`packages/core`'s vitest and `mobile/` use the installed react 19.2.3. Expo 57
+pins 19.2.3 and every Next release vendors only a canary, so the two cannot be the
+same version — upgrading next also swaps the React the web tests run on.
 
 ---
 
