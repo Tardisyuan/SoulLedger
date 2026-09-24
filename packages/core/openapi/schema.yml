@@ -6722,6 +6722,83 @@ paths:
               schema:
                 $ref: '#/components/schemas/RoleVersionConflict'
           description: ''
+  /api/v1/perm/role-permissions/changes/:
+    post:
+      operationId: v1_perm_role_permissions_changes_create
+      description: |-
+        POST /api/v1/perm/role-permissions/changes/
+        按格保存权限矩阵的改动：每格一个结果（saved / unchanged / refused / failed）（仅 ADMIN）
+
+        200 even when some cells were refused or failed — the per-cell `status`
+        is the answer. See apps/perm/matrix.py for why cells save independently.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatrixChangesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MatrixChangesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MatrixChangesRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatrixChangesResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/perm/role-permissions/impact/:
+    post:
+      operationId: v1_perm_role_permissions_impact_create
+      description: |-
+        POST /api/v1/perm/role-permissions/impact/
+        保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+
+        Same body as `changes/`; `expected_versions` is accepted and ignored.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatrixChangesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MatrixChangesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MatrixChangesRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatrixImpactResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/perm/role-permissions/init/:
     post:
       operationId: v1_perm_role_permissions_init_create
@@ -6862,6 +6939,65 @@ paths:
       responses:
         '204':
           description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDeleteRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/perm/roles/{id}/copy/:
+    post:
+      operationId: v1_perm_roles_copy_create
+      description: |-
+        POST /api/v1/perm/roles/<pk>/copy/
+        复制为新角色：新 code、同一组授权（仅 ADMIN）
+
+        Copies the source's RolePermission rows — permission, `conditions` and
+        `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
+        FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
+        copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
         '404':
           content:
             application/json:
@@ -15283,6 +15419,193 @@ components:
           type: integer
       required:
       - marked_read
+    MatrixChange:
+      type: object
+      properties:
+        role:
+          type: string
+          maxLength: 20
+        permission_id:
+          type: integer
+        action:
+          $ref: '#/components/schemas/MatrixChangeActionEnum'
+      required:
+      - action
+      - permission_id
+      - role
+    MatrixChangeActionEnum:
+      enum:
+      - grant
+      - revoke
+      type: string
+      description: |-
+        * `grant` - grant
+        * `revoke` - revoke
+    MatrixChangeCodeEnum:
+      enum:
+      - role_not_found
+      - permission_not_found
+      - version_conflict
+      - database_error
+      type: string
+      description: |-
+        * `role_not_found` - role_not_found
+        * `permission_not_found` - permission_not_found
+        * `version_conflict` - version_conflict
+        * `database_error` - database_error
+    MatrixChangeResult:
+      type: object
+      properties:
+        index:
+          type: integer
+          description: Position of the change in the request.
+        role:
+          type: string
+        permission_id:
+          type: integer
+        codename:
+          type: string
+          nullable: true
+        action:
+          $ref: '#/components/schemas/MatrixChangeActionEnum'
+        status:
+          $ref: '#/components/schemas/MatrixChangeStatusEnum'
+        code:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/MatrixChangeCodeEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        detail:
+          type: string
+          nullable: true
+      required:
+      - action
+      - code
+      - codename
+      - detail
+      - index
+      - permission_id
+      - role
+      - status
+    MatrixChangeStatusEnum:
+      enum:
+      - saved
+      - unchanged
+      - refused
+      - failed
+      type: string
+      description: |-
+        * `saved` - saved
+        * `unchanged` - unchanged
+        * `refused` - refused
+        * `failed` - failed
+    MatrixChangesRequest:
+      type: object
+      description: Body of `role-permissions/changes/` and `role-permissions/impact/`.
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixChange'
+        expected_versions:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - changes
+    MatrixChangesResult:
+      type: object
+      properties:
+        saved:
+          type: integer
+        unchanged:
+          type: integer
+        refused:
+          type: integer
+        failed:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixChangeResult'
+        versions:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - failed
+      - refused
+      - results
+      - saved
+      - unchanged
+      - versions
+    MatrixConflict:
+      type: object
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        template_name:
+          type: string
+        tenant_id:
+          type: integer
+          nullable: true
+        civilization:
+          type: string
+        is_active:
+          type: boolean
+        step_order:
+          type: integer
+        step_name:
+          type: string
+        approver_roles:
+          type: array
+          items:
+            type: string
+        caused_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixConflictCause'
+      required:
+      - approver_roles
+      - caused_by
+      - civilization
+      - is_active
+      - step_name
+      - step_order
+      - template_id
+      - template_name
+      - tenant_id
+    MatrixConflictCause:
+      type: object
+      properties:
+        index:
+          type: integer
+        role:
+          type: string
+        permission_id:
+          type: integer
+        codename:
+          type: string
+      required:
+      - codename
+      - index
+      - permission_id
+      - role
+    MatrixImpactResult:
+      type: object
+      properties:
+        required_codenames:
+          type: array
+          items:
+            type: string
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixConflict'
+      required:
+      - conflicts
+      - required_codenames
     MeAccount:
       type: object
       properties:
@@ -19766,6 +20089,15 @@ components:
         user_count:
           type: integer
           readOnly: true
+        member_count:
+          type: integer
+          readOnly: true
+        permission_count:
+          type: integer
+          readOnly: true
+        workflow_template_count:
+          type: integer
+          readOnly: true
         is_builtin:
           type: boolean
           readOnly: true
@@ -19780,11 +20112,14 @@ components:
       - display_name
       - id
       - is_builtin
+      - member_count
       - name
       - organization_name
+      - permission_count
       - update_time
       - user_count
       - version
+      - workflow_template_count
     RoleCreateUpdate:
       type: object
       properties:
@@ -19809,6 +20144,35 @@ components:
       required:
       - display_name
       - name
+    RoleDeleteRefusal:
+      type: object
+      description: |-
+        400 body of `DELETE /perm/roles/<pk>/`. `user_count` comes with
+        `role_in_use`, `templates` with `role_referenced_by_workflow_templates`.
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/RoleDeleteRefusalCodeEnum'
+        user_count:
+          type: integer
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleTemplateReference'
+      required:
+      - code
+      - error
+    RoleDeleteRefusalCodeEnum:
+      enum:
+      - builtin_role
+      - role_in_use
+      - role_referenced_by_workflow_templates
+      type: string
+      description: |-
+        * `builtin_role` - builtin_role
+        * `role_in_use` - role_in_use
+        * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
     RolePermissionAssign:
       type: object
       properties:
@@ -19876,6 +20240,32 @@ components:
       - details
       - permissions
       - role
+    RoleTemplateReference:
+      type: object
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        template_name:
+          type: string
+        tenant_id:
+          type: integer
+          nullable: true
+        civilization:
+          type: string
+        is_active:
+          type: boolean
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowStepRef'
+      required:
+      - civilization
+      - is_active
+      - steps
+      - template_id
+      - template_name
+      - tenant_id
     RoleVersionConflict:
       type: object
       description: |-
@@ -22438,6 +22828,16 @@ components:
       - pending_nodes
       - progress_percent
       - total_nodes
+    WorkflowStepRef:
+      type: object
+      properties:
+        step_order:
+          type: integer
+        step_name:
+          type: string
+      required:
+      - step_name
+      - step_order
     WorkflowTemplate:
       type: object
       description: |-

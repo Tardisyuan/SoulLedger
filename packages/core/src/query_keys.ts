@@ -201,3 +201,14 @@ export const socialKeys = {
     me: ["social", "profiles", "me"] as const,
   },
 };
+
+/**
+ * The permissions page. The two literals are the ones
+ * `frontend/app/permissions/page.tsx` already reads under (`["roles"]`,
+ * `["role-permissions", name]`), so an invalidation from these hooks reaches
+ * the queries that page owns.
+ */
+export const permKeys = {
+  roles: ["roles"] as const,
+  rolePermissions: (roleName: string) => ["role-permissions", roleName] as const,
+};

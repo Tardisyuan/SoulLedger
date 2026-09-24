@@ -2936,6 +2936,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perm/role-permissions/changes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/perm/role-permissions/changes/
+         *     按格保存权限矩阵的改动：每格一个结果（saved / unchanged / refused / failed）（仅 ADMIN）
+         *
+         *     200 even when some cells were refused or failed — the per-cell `status`
+         *     is the answer. See apps/perm/matrix.py for why cells save independently.
+         */
+        post: operations["v1_perm_role_permissions_changes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perm/role-permissions/impact/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/perm/role-permissions/impact/
+         *     保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+         *
+         *     Same body as `changes/`; `expected_versions` is accepted and ignored.
+         */
+        post: operations["v1_perm_role_permissions_impact_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perm/role-permissions/init/": {
         parameters: {
             query?: never;
@@ -3024,6 +3069,31 @@ export interface paths {
          *     更新/删除角色（仅 ADMIN）
          */
         delete: operations["v1_perm_roles_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perm/roles/{id}/copy/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/perm/roles/<pk>/copy/
+         *     复制为新角色：新 code、同一组授权（仅 ADMIN）
+         *
+         *     Copies the source's RolePermission rows — permission, `conditions` and
+         *     `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
+         *     FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
+         *     copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+         */
+        post: operations["v1_perm_roles_copy_create"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6965,6 +7035,83 @@ export interface components {
         MarkAllReadResult: {
             marked_read: number;
         };
+        MatrixChange: {
+            role: string;
+            permission_id: number;
+            action: components["schemas"]["MatrixChangeActionEnum"];
+        };
+        /**
+         * @description * `grant` - grant
+         *     * `revoke` - revoke
+         * @enum {string}
+         */
+        MatrixChangeActionEnum: "grant" | "revoke";
+        /**
+         * @description * `role_not_found` - role_not_found
+         *     * `permission_not_found` - permission_not_found
+         *     * `version_conflict` - version_conflict
+         *     * `database_error` - database_error
+         * @enum {string}
+         */
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error";
+        MatrixChangeResult: {
+            /** @description Position of the change in the request. */
+            index: number;
+            role: string;
+            permission_id: number;
+            codename: string | null;
+            action: components["schemas"]["MatrixChangeActionEnum"];
+            status: components["schemas"]["MatrixChangeStatusEnum"];
+            code: (components["schemas"]["MatrixChangeCodeEnum"] | components["schemas"]["NullEnum"]) | null;
+            detail: string | null;
+        };
+        /**
+         * @description * `saved` - saved
+         *     * `unchanged` - unchanged
+         *     * `refused` - refused
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        MatrixChangeStatusEnum: "saved" | "unchanged" | "refused" | "failed";
+        /** @description Body of `role-permissions/changes/` and `role-permissions/impact/`. */
+        MatrixChangesRequest: {
+            changes: components["schemas"]["MatrixChange"][];
+            expected_versions?: {
+                [key: string]: number;
+            };
+        };
+        MatrixChangesResult: {
+            saved: number;
+            unchanged: number;
+            refused: number;
+            failed: number;
+            results: components["schemas"]["MatrixChangeResult"][];
+            versions: {
+                [key: string]: number;
+            };
+        };
+        MatrixConflict: {
+            /** Format: uuid */
+            template_id: string;
+            template_name: string;
+            tenant_id: number | null;
+            civilization: string;
+            is_active: boolean;
+            step_order: number;
+            step_name: string;
+            approver_roles: string[];
+            caused_by: components["schemas"]["MatrixConflictCause"][];
+        };
+        MatrixConflictCause: {
+            index: number;
+            role: string;
+            permission_id: number;
+            codename: string;
+        };
+        MatrixImpactResult: {
+            required_codenames: string[];
+            conflicts: components["schemas"]["MatrixConflict"][];
+        };
         MeAccount: {
             /** @description 这个账号属于第几世;0 是第一世。 */
             cycle: number;
@@ -9242,6 +9389,9 @@ export interface components {
             organization?: number | null;
             readonly organization_name: string;
             readonly user_count: number;
+            readonly member_count: number;
+            readonly permission_count: number;
+            readonly workflow_template_count: number;
             readonly is_builtin: boolean;
             readonly version: number;
             /** Format: date-time */
@@ -9260,6 +9410,23 @@ export interface components {
             /** @description ORG角色专属组织，GLOBAL角色此字段为空 */
             organization?: number | null;
         };
+        /**
+         * @description 400 body of `DELETE /perm/roles/<pk>/`. `user_count` comes with
+         *     `role_in_use`, `templates` with `role_referenced_by_workflow_templates`.
+         */
+        RoleDeleteRefusal: {
+            error: string;
+            code: components["schemas"]["RoleDeleteRefusalCodeEnum"];
+            user_count?: number;
+            templates?: components["schemas"]["RoleTemplateReference"][];
+        };
+        /**
+         * @description * `builtin_role` - builtin_role
+         *     * `role_in_use` - role_in_use
+         *     * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
+         * @enum {string}
+         */
+        RoleDeleteRefusalCodeEnum: "builtin_role" | "role_in_use" | "role_referenced_by_workflow_templates";
         RolePermissionAssign: {
             role: string;
             permission_ids: number[];
@@ -9294,6 +9461,15 @@ export interface components {
             role: string;
             permissions: string[];
             details: components["schemas"]["Permission"][];
+        };
+        RoleTemplateReference: {
+            /** Format: uuid */
+            template_id: string;
+            template_name: string;
+            tenant_id: number | null;
+            civilization: string;
+            is_active: boolean;
+            steps: components["schemas"]["WorkflowStepRef"][];
         };
         /**
          * @description 409 body of `assign_role_permissions` — a stale-write rejection.
@@ -10424,6 +10600,10 @@ export interface components {
             pending_nodes: number;
             /** Format: double */
             progress_percent: number;
+        };
+        WorkflowStepRef: {
+            step_order: number;
+            step_name: string;
         };
         /**
          * @description Serializer for WorkflowTemplate.
@@ -15913,6 +16093,76 @@ export interface operations {
             };
         };
     };
+    v1_perm_role_permissions_changes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MatrixChangesRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MatrixChangesRequest"];
+                "multipart/form-data": components["schemas"]["MatrixChangesRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatrixChangesResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_perm_role_permissions_impact_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MatrixChangesRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MatrixChangesRequest"];
+                "multipart/form-data": components["schemas"]["MatrixChangesRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatrixImpactResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_perm_role_permissions_init_create: {
         parameters: {
             query?: never;
@@ -16042,6 +16292,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDeleteRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    v1_perm_roles_copy_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreateUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["RoleCreateUpdate"];
+                "multipart/form-data": components["schemas"]["RoleCreateUpdate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
             };
             404: {
                 headers: {
