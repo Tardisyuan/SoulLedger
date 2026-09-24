@@ -72,7 +72,7 @@ MESSAGES = {
         "sentence_waiting": {"title": "Hemes Smen", "body": "Sekhet Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},
         "rebirth_approved": {"title": "Dbh Wehem Mesut Hesy Seth", "body": "Dbh Wehem Mesut Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Wehem Mesut Khesef Seth", "body": "Dbh Wehem Mesut Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
-        "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
+        "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "judgment_result": {"title": "Wedja Khetem", "body": "Wedja Ek Khetem. Wen Medjat Ba Er Maa."},
         "disposition_executed": {"title": "Wetep Iri Seth", "body": "Wetep Ek Iri Seth. Wen Medjat Ba Er Maa."},
         "residence_approved": {"title": "Hemes Taui Ky Hesy", "body": "Ek Er Hemes Em Taui Ky. Wen Medjat Ba Er Maa."},

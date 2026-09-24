@@ -125,7 +125,13 @@ const hasNenKheper = (v: string) => /\bNen Kheper\b/.test(prose(v));
  * 后端副本 apps/soul_push/messages.py 与包逐字一致由后端测试钉住,所以这里守住包就守住了它。
  * 两份清单都反向查陈旧:点名的键不存在、或已不含 Dbh,即红。
  */
-const DBH_OUT_OF_CONTEXT = new Set(["soul_app.errors.soul_state", "soul_app.errors.sentence_in_progress"]);
+// application_open / application_approved:中文点名「转生申请」,2026-09-24 用户定为写全。
+const DBH_OUT_OF_CONTEXT = new Set([
+  "soul_app.errors.soul_state",
+  "soul_app.errors.sentence_in_progress",
+  "soul_app.errors.application_open",
+  "soul_app.errors.application_approved",
+]);
 const DBH_IN_CONTEXT = new Set([
   "soul_app.applications.empty",
   "soul_app.applications.cannot_apply",
