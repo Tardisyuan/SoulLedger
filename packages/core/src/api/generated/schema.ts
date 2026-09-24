@@ -1444,6 +1444,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Autosave the verdict text (`notes`) and the chosen verdict.
+         *
+         *     `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
+         *     "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
+         *     caller last saw. 200 returns the stored draft with the new version and
+         *     `draft_saved_at`; a save that changes nothing is a 200 no-op, so a
+         *     retry is safe. 409 `draft_conflict` when someone saved first (the
+         *     body carries what they saved), 409 `concluded` once the verdict is in.
+         */
+        patch: operations["v1_judgment_draft_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/evidence/{record_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Admit or not admit one ledger record as evidence in this case.
+         *
+         *     `PUT /api/v1/judgment/{id}/evidence/{record_id}/`
+         *     `{"admitted": false, "reason": "..."}` — a reason is required when not
+         *     admitting. PUT because the ruling is a state, and repeating it is a
+         *     no-op. 409 once the case is concluded; 400 for a record that is not
+         *     evidence in this case (another soul's, another life's, another
+         *     tenant's, or a non-scoring entry).
+         */
+        put: operations["v1_judgment_evidence_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/precedents/": {
         parameters: {
             query?: never;
@@ -5808,6 +5860,19 @@ export interface components {
          */
         ActorRoleEnum: "JUDGE" | "EXECUTOR" | "GUARDIAN" | "CONDUIT" | "OVERSEER";
         /**
+         * @description `LedgerService.get_admitted_balance`. `balance` and `not_admitted_net`
+         *     are null unless `reading_kind` is BALANCE (and the judgment is from the
+         *     current life); `reason_code` says which.
+         */
+        AdmittedBalance: {
+            reading_kind: string | null;
+            balance: number | null;
+            not_admitted_count: number;
+            /** Format: double */
+            not_admitted_net: number | null;
+            reason_code: string | null;
+        };
+        /**
          * @description The two configured ceilings on the key. Zero when there is no key on
          *     the request, which is what the health view substitutes rather than
          *     omitting the block.
@@ -6730,6 +6795,38 @@ export interface components {
          * @enum {string}
          */
         EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        /**
+         * @description One ruling on one ledger record in this case. A record with no ruling
+         *     is admitted; only rulings that were made are listed.
+         */
+        EvidenceAdmission: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            record: string;
+            admitted?: boolean;
+            /** @description Why the record is not admitted. Required when admitted is false. */
+            reason?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        /** @description What a ruling returns: the row, and the balance it changed. */
+        EvidenceRulingResult: {
+            admission: components["schemas"]["EvidenceAdmission"];
+            admitted_balance: components["schemas"]["AdmittedBalance"];
+        };
+        /**
+         * @description Input for `PUT /judgment/{id}/evidence/{record_id}/`. Shape only; the
+         *     reason-required rule and which records are evidence here are
+         *     `EvidenceAdmissionService.rule`'s.
+         */
+        EvidenceRulingWrite: {
+            admitted: boolean;
+            /** @default  */
+            reason: string;
+        };
         ExportedDataScope: {
             role: string;
             civilization?: string | null;
@@ -6994,6 +7091,10 @@ export interface components {
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
+            readonly draft_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: date-time */
+            readonly draft_saved_at: string | null;
+            readonly draft_version: number;
         };
         /**
          * @description A ground, with the article inlined.
@@ -7025,6 +7126,68 @@ export interface components {
             /** @default  */
             note: string;
         };
+        /**
+         * @description `GET /judgment/{id}/` — the list shape plus the evidence rulings and the
+         *     admitted balance. Detail only: the balance walks the soul's ledger, which
+         *     the list must not do once per row.
+         */
+        JudgmentDetail: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            soul: string;
+            readonly soul_name: string;
+            readonly civilization: components["schemas"]["CivilizationEnum"];
+            /** Format: uuid */
+            judge?: string | null;
+            readonly judge_name: string;
+            /** @description Court name, e.g. 第一殿 */
+            court?: string;
+            /** Format: uuid */
+            realm_id?: string | null;
+            evidence_json?: unknown;
+            confession?: string;
+            readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            notes?: string;
+            readonly citations: components["schemas"]["JudgmentCitation"][];
+            readonly is_final: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly concluded_at: string | null;
+            readonly kind: components["schemas"]["JudgmentKindEnum"];
+            /** Format: uuid */
+            readonly amends_plan_id: string | null;
+            readonly draft_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: date-time */
+            readonly draft_saved_at: string | null;
+            readonly draft_version: number;
+            readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
+            readonly admitted_balance: components["schemas"]["AdmittedBalance"];
+        };
+        /** @description The draft as stored: what a save returns, and what a 409 hands back. */
+        JudgmentDraft: {
+            readonly notes: string;
+            readonly draft_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly draft_version: number;
+            /** Format: date-time */
+            readonly draft_saved_at: string | null;
+        };
+        /**
+         * @description 409 body of `draft/`. `code` is `draft_conflict` (someone saved first;
+         *     `current` is what they saved) or `concluded` (`current` is null).
+         */
+        JudgmentDraftConflict: {
+            error: string;
+            code: components["schemas"]["JudgmentDraftConflictCodeEnum"];
+            current: components["schemas"]["JudgmentDraft"] | null;
+        };
+        /**
+         * @description * `draft_conflict` - draft_conflict
+         *     * `concluded` - concluded
+         * @enum {string}
+         */
+        JudgmentDraftConflictCodeEnum: "draft_conflict" | "concluded";
         /**
          * @description * `ORIGINAL` - 原审判
          *     * `AMENDMENT` - 加项 / 减项审判
@@ -8854,6 +9017,19 @@ export interface components {
             readonly kind?: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id?: string | null;
+            readonly draft_verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: date-time */
+            readonly draft_saved_at?: string | null;
+            readonly draft_version?: number;
+        };
+        /**
+         * @description Input for `PATCH /judgment/{id}/draft/`. `version` is the
+         *     `draft_version` the caller last saw; either content field may be omitted.
+         */
+        PatchedJudgmentDraftWrite: {
+            version?: number;
+            notes?: string;
+            draft_verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         PatchedMenuButtonCreateUpdate: {
             readonly id?: number;
@@ -13501,7 +13677,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Judgment"];
+                    "application/json": components["schemas"]["JudgmentDetail"];
                 };
             };
         };
@@ -13731,6 +13907,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Judgment"];
+                };
+            };
+        };
+    };
+    v1_judgment_draft_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedJudgmentDraftWrite"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedJudgmentDraftWrite"];
+                "multipart/form-data": components["schemas"]["PatchedJudgmentDraftWrite"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentDraft"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentDraftConflict"];
+                };
+            };
+        };
+    };
+    v1_judgment_evidence_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+                /** @description The ledger record (SoulRecord) being ruled on. */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceRulingWrite"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvidenceRulingWrite"];
+                "multipart/form-data": components["schemas"]["EvidenceRulingWrite"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRulingResult"];
                 };
             };
         };
