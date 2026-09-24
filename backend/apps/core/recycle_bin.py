@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.apps import apps as django_apps
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.soft_delete import SoftDeleteMixin
@@ -73,11 +74,19 @@ def restore_cascade(cascade_id) -> int:
     Reverses exactly the set soft_delete's cascade_id wrote — not more (rows
     from an unrelated delete are never touched), not less (every dependent
     written under this id comes back, not just the parent).
+
+    A registered type with a `listable` filter only restores rows that match
+    it: a row the bin does not list (a soul's own deleted post) is not in the
+    bin, so it cannot come back through it either.
     """
     restored = 0
     for model in _soft_deletable_models():
         manager = _unfiltered_manager(model)
-        for row in manager.filter(delete_cascade_id=cascade_id, is_deleted=True):
+        qs = manager.filter(delete_cascade_id=cascade_id, is_deleted=True)
+        listable = _listable_filter(model)
+        if listable is not None:
+            qs = qs.filter(listable)
+        for row in qs:
             row.restore()
             restored += 1
     return restored
@@ -110,15 +119,28 @@ class BinEntryType:
     model: type
     kind: str  # "reference" | "domain"
     label: Callable[[object], str]
+    #: Which soft-deleted rows of this model belong in the bin. None = all of them.
+    listable: Q | None = None
 
 
 _REGISTRY: dict[str, BinEntryType] = {}
 
 
-def register_bin_type(entity_type: str, model: type, kind: str, label: Callable[[object], str]):
+def register_bin_type(
+    entity_type: str, model: type, kind: str, label: Callable[[object], str], listable: Q | None = None,
+):
     if kind not in ("reference", "domain"):
         raise ValueError(f"unknown recycle bin kind: {kind!r}")
-    _REGISTRY[entity_type] = BinEntryType(entity_type=entity_type, model=model, kind=kind, label=label)
+    _REGISTRY[entity_type] = BinEntryType(
+        entity_type=entity_type, model=model, kind=kind, label=label, listable=listable,
+    )
+
+
+def _listable_filter(model):
+    for bin_type in _REGISTRY.values():
+        if bin_type.model is model:
+            return bin_type.listable
+    return None
 
 
 def registered_types():
@@ -145,6 +167,8 @@ def list_bin_entries(tenant=None, is_admin=False):
     for bin_type in registered_types():
         manager = _unfiltered_manager(bin_type.model)
         qs = manager.filter(is_deleted=True)
+        if bin_type.listable is not None:
+            qs = qs.filter(bin_type.listable)
         if not is_admin and tenant is not None and hasattr(bin_type.model, "tenant_id"):
             qs = qs.filter(tenant=tenant)
         for row in qs.order_by("-deleted_at"):

@@ -5,6 +5,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F, Q
 
 from apps.core.models import AuditUserFields
 
@@ -530,3 +531,9 @@ class SocialMute(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["user", "until"])]
+
+
+#: Deleted by someone other than the author: an officer's moderation DELETE.
+#: The author's own delete (soul app, or the web social views) is not a
+#: moderation decision — it is not in「已处理」and not in the recycle bin.
+DELETED_BY_OFFICER = Q(deleted_by__isnull=False) & ~Q(deleted_by=F("author"))
