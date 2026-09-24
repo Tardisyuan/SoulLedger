@@ -66,13 +66,53 @@ export interface AuthProfile {
   position: string;
 }
 
+/**
+ * One row of `GET /auth/civilizations/` — public, and deliberately bare: the
+ * login page looks the name and shape mark up from `civilization` itself.
+ * There is no tenant to *choose* here: a user has exactly one tenant, and the
+ * token's `tenant_code` comes from it (see `CustomTokenObtainPairSerializer`).
+ */
+export interface PublicCivilization {
+  code: string;
+  civilization: string;
+}
+
+/** 操作员 → /judgment/queue, 管理员 → /dashboard. */
+export type DefaultView = "operator" | "admin";
+
+/** `GET/PATCH /auth/profile/preferences/` — always the caller's own. */
+export interface UserPreferences {
+  default_view: DefaultView | null;
+}
+
+/** The body `/auth/password-help/` answers 200 with, for every username alike. */
+export interface PasswordHelpAccepted {
+  detail: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+  /** 「在此设备上保持登录 30 天」: a 30-day refresh token instead of 7, and a
+   *  cookie that outlives the browser session. */
+  remember?: boolean;
+}
+
 export const authApi = {
-  login: (usernameOrData: string | { username: string; password: string }, password?: string) => {
+  login: (usernameOrData: string | LoginRequest, password?: string) => {
     const data = typeof usernameOrData === "string"
       ? { username: usernameOrData, password: password! }
       : usernameOrData;
     return api.post<LoginResponse>("/auth/login/", data);
   },
+  civilizations: () => api.get<PublicCivilization[]>("/auth/civilizations/"),
+  // Always 200 with the same body, whether or not the account exists — the
+  // page must not branch on anything but the status.
+  requestPasswordHelp: (username: string) =>
+    api.post<PasswordHelpAccepted>("/auth/password-help/", { username }),
+  preferences: () => api.get<UserPreferences>("/auth/profile/preferences/"),
+  updatePreferences: (data: Partial<UserPreferences>) =>
+    api.patch<UserPreferences>("/auth/profile/preferences/", data),
   // 201 body is UserSerializer, not the login envelope — registering does not
   // hand back tokens (backend/apps/authentication/views.py:492).
   register: (data: object) => api.post<AuthProfile>("/auth/register/", data),

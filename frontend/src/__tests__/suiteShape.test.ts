@@ -183,6 +183,7 @@ const COLLECTED_FILES = [
   "proseLinkIsNotColourOnly.test.ts",
   "readingQuantityContract.test.tsx",
   "reducedMotionContract.test.ts",
+  "refreshCookieLifetime.test.ts",
   "searchSelectIsServerFiltered.test.tsx",
   "setup.test.ts",
   "soulFallbackCopyContract.test.tsx",
