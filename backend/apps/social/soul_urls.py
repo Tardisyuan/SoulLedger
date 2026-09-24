@@ -22,6 +22,7 @@ me_social_urlpatterns = [
     path("posts/<uuid:post_id>/comments/", sv.MeSocialCommentsView.as_view(), name="me-social-comments"),
     path("posts/<uuid:post_id>/reaction/", sv.MeSocialReactionView.as_view(), name="me-social-reaction"),
     path("comments/<uuid:comment_id>/", sv.MeSocialCommentView.as_view(), name="me-social-comment"),
+    path("profile/", sv.MeSocialMyProfileView.as_view(), name="me-social-my-profile"),
     path("search/", sv.MeSocialSearchView.as_view(), name="me-social-search"),
     path("following/", sv.MeSocialFollowingView.as_view(), name="me-social-following"),
     path("followers/", sv.MeSocialFollowersView.as_view(), name="me-social-followers"),

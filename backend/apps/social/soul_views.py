@@ -18,8 +18,10 @@ from apps.social import moderation as mod
 from apps.social import soul_circle as circle
 from apps.social.models import Follow, Post, ReportTargetType
 from apps.social.soul_serializers import (
+    SoulCardSerializer,
     SoulCommentCreateSerializer,
     SoulCommentSerializer,
+    SoulDisplayNameRequestSerializer,
     SoulFollowStateSerializer,
     SoulPostCreateSerializer,
     SoulPostSerializer,
@@ -256,6 +258,21 @@ class MeSocialProfileView(SoulSocialView):
         # 以及 PRIVATE 的存在数出来。
         target.post_count = circle.visible_posts_for_soul(request.user).filter(author=target).count()
         return Response(SoulProfileSerializer(target).data)
+
+
+class MeSocialMyProfileView(SoulSocialView):
+    """改自己的朋友圈显示名。拒绝理由见 `soul_circle.rename`。"""
+
+    @extend_schema(
+        operation_id="v1_me_social_rename",
+        request=SoulDisplayNameRequestSerializer,
+        responses={200: SoulCardSerializer, 400: SoulSocialErrorSerializer, **ERRORS},
+    )
+    def patch(self, request):
+        body = SoulDisplayNameRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        user = circle.rename(request.user, body.validated_data["display_name"])
+        return Response(SoulCardSerializer(user).data)
 
 
 class MeSocialFollowView(SoulSocialView):

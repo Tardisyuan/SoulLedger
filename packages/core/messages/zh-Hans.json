@@ -2298,7 +2298,10 @@
       "comment": {
         "pending": "待审",
         "hint": "写评论……",
-        "send": "发送"
+        "send": "发送",
+        "reply": "回复",
+        "reply_to": "回复 {{name}}",
+        "more": "更多评论"
       },
       "muted": {
         "body": "你被禁言，期间不能发帖和评论。写给殿司的书信不受影响。",
@@ -2337,7 +2340,14 @@
       },
       "me": {
         "title": "我的主页",
-        "display_name": "朋友圈显示名"
+        "display_name": "朋友圈显示名",
+        "edit_name": "修改",
+        "name_save": "保存",
+        "name_hint": "2 到 20 个字。本文明里不能与别的灵魂同名。",
+        "name_saved": "显示名已改好",
+        "name_length": "显示名要 2 到 20 个字。",
+        "name_sensitive": "这个名字含有不允许的词，换一个吧。",
+        "name_taken": "本文明已有灵魂叫这个名字。"
       },
       "list": {
         "following_title": "关注 {{n}}",
@@ -2364,6 +2374,13 @@
         "count": "{{n}} 位",
         "not_found": "未找到",
         "result_note": "结果只显示名字与文明徽记。"
+      },
+      "delete": {
+        "action": "删除",
+        "confirm": "确认删除",
+        "post_title": "删除这条帖子？",
+        "comment_title": "删除这条评论？",
+        "body": "删除后他人不再看得到，也不能恢复。"
       }
     }
   },
