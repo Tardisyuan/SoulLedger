@@ -63,7 +63,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
       <Dialog.Portal>
         {/* Backdrop */}
         <Dialog.Backdrop
-          className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-settle ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80"
+          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0"
         />
 
       {/* Centered panel.
@@ -82,18 +82,19 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
        *
        * 外层加 `overflow-y-auto` 是兜底:若某天 body 内部出现不可压缩的元素,
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
-        <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
+        <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
           <Dialog.Popup
-            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+            className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] shadow-overlay transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0"
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[oklch(var(--color-hairline))]">
+            {/* 规范 v1 §3.3:标题 16/600,下接区块边界线;右上角写 Esc(键盘上真正关它的那个键)。 */}
+            <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3 border-b border-[oklch(var(--color-block))]">
               <Dialog.Title className="text-[oklch(var(--color-ink))] text-md">{title}</Dialog.Title>
               <Dialog.Close
-                className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] transition-colors text-md leading-none"
+                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1.5 py-0.5"
                 aria-label="Close"
               >
-                ×
+                Esc
               </Dialog.Close>
             </div>
 
@@ -103,7 +104,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
 
             {/* Footer */}
             {footer && (
-              <div className="shrink-0 px-6 pb-5 border-t border-[oklch(var(--color-hairline))] pt-4">
+              <div className="shrink-0 px-6 pb-5 border-t border-[oklch(var(--color-line))] pt-4">
                 {footer}
               </div>
             )}
@@ -218,14 +219,14 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
    * which the inline SVG never did. It also disables the control, which is why
    * `disabled` no longer repeats `loading ||`.
    */
+  // 按钮右对齐(规范 v1 §3.3),取消是幽按钮。
   const footer = (
-    <div className="flex gap-3">
+    <div className="flex justify-end gap-2">
       <Button
         type="button"
-        variant="secondary"
+        variant="ghost"
         onClick={onClose}
         disabled={loading}
-        className="flex-1"
       >
         {t("common.cancel")}
       </Button>
@@ -235,7 +236,6 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         variant="primary"
         loading={loading}
         disabled={!name.trim()}
-        className="flex-1"
       >
         {loading ? t("souls.form.submitting") : t("souls.form.submit")}
       </Button>
@@ -388,26 +388,25 @@ export function ConfirmDialog({
   return (
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-settle ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80" />
+        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0" />
         {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
          * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
-        <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
-          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+        <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] shadow-overlay transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <AlertDialog.Title className="text-md text-[oklch(var(--color-ink))] mb-2">
+              <AlertDialog.Title className="text-md text-[oklch(var(--color-ink))] pb-2 mb-3 border-b border-[oklch(var(--color-block))]">
                 {title}
               </AlertDialog.Title>
               <AlertDialog.Description className="text-sm text-[oklch(var(--color-ink-muted))]">
                 {message}
               </AlertDialog.Description>
             </div>
-            <div className="shrink-0 px-6 pb-5 flex gap-3">
+            <div className="shrink-0 px-6 pb-5 flex justify-end gap-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghost"
                 onClick={onCancel}
                 disabled={confirmLoading}
-                className="flex-1"
               >
                 {cancelText || t("common.cancel")}
               </Button>
@@ -416,7 +415,6 @@ export function ConfirmDialog({
                 variant={variantButton[variant]}
                 onClick={onConfirm}
                 loading={confirmLoading}
-                className="flex-1"
               >
                 {confirmText || t("common.confirm")}
               </Button>
