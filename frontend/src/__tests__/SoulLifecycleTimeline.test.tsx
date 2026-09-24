@@ -71,6 +71,28 @@ function baseSoul(overrides: Partial<Soul> = {}): Soul {
 
 const noop = () => {};
 
+describe("SoulLifecycleTimeline — no stepper of its own", () => {
+  // 账页顶上曾有一条五格步进条(souls.states.*)。它和详情页顶部的「户头进度」
+  // 是同一件事说两遍,按用户决定删了。`t` 在本文件回显键,所以步进条若回来,
+  // 这些键会原样出现在文本里。
+  it("renders none of the lifecycle state labels the old stepper printed", () => {
+    render(
+      <SoulLifecycleTimeline
+        soul={baseSoul({ current_state: "JUDGING" })}
+        judgments={[]}
+        dispositions={[]}
+        reincarnations={[]}
+        events={[]}
+        ledgerRecords={[]}
+        onOpenJudgmentQueue={noop}
+      />
+    );
+    for (const state of ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING"]) {
+      expect(screen.queryByText(`souls.states.${state}`)).toBeNull();
+    }
+  });
+});
+
 describe("SoulLifecycleTimeline — empty-history soul", () => {
   it("shows dashed 'not yet' placeholder rows instead of an empty box, for a fresh ALIVE soul", () => {
     render(

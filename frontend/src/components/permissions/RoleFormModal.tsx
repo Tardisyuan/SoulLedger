@@ -76,13 +76,12 @@ export function RoleFormModal({
       onClose={handleClose}
       title={title}
       footer={
-        <div className="flex gap-3">
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="secondary"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1"
           >
             {t("common.cancel")}
           </Button>
@@ -97,7 +96,6 @@ export function RoleFormModal({
             onClick={handleSubmit}
             loading={isPending}
             disabled={!name.trim() || !displayName.trim()}
-            className="flex-1"
           >
             {isPending ? t("permissions.submitting") : t("permissions.submit")}
           </Button>
@@ -110,7 +108,7 @@ export function RoleFormModal({
             把 `aria-invalid` 重新挂回每个 input 上,正是先前撤掉的那件事。
             换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色模式下拿到
             的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
-        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-status-error))] text-sm">{error}</p>}
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-danger))] text-sm"><span aria-hidden="true">! </span>{error}</p>}
         {/* A built-in role's name is fixed: the backend compares ADMIN /
             MODERATOR / JUDGE / GUARDIAN / VIEWER by literal and answers 400 to
             a rename, so the field says so up front instead of letting the

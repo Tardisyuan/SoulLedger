@@ -110,13 +110,12 @@ export function PermissionFormModal({
       onClose={handleClose}
       title={title}
       footer={
-        <div className="flex gap-3">
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="secondary"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1"
           >
             {t("common.cancel")}
           </Button>
@@ -131,7 +130,6 @@ export function PermissionFormModal({
             onClick={handleSubmit}
             loading={isPending}
             disabled={!codename.trim() || !name.trim() || !category.trim()}
-            className="flex-1"
           >
             {isPending ? t("permissions.submitting") : t("permissions.submit")}
           </Button>
@@ -144,7 +142,7 @@ export function PermissionFormModal({
             `Field` 就等于把 `aria-invalid` 重新挂回三个 input 上,正是先前撤掉的
             那件事。换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色
             模式下拿到的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
-        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-status-error))] text-sm">{error}</p>}
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-danger))] text-sm"><span aria-hidden="true">! </span>{error}</p>}
         <TextField
           id={codenameId}
           label={t("permissions.codename_label")}

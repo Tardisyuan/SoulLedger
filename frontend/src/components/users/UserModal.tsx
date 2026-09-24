@@ -178,13 +178,12 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
    * 从来没有的 `aria-busy`、以及 190 个手搓按钮里 0 个有的 `active:` 反馈。
    */
   const footer = (
-    <div className="flex gap-3">
+    <div className="flex justify-end gap-2">
       <Button
         type="button"
         variant="secondary"
         onClick={onClose}
         disabled={createMutation.isPending || updateMutation.isPending}
-        className="flex-1"
       >
         {t("common.cancel") || "取消"}
       </Button>
@@ -193,7 +192,6 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         form="user-form"
         variant="primary"
         loading={createMutation.isPending || updateMutation.isPending}
-        className="flex-1"
       >
         {createMutation.isPending || updateMutation.isPending
           ? (t("common.submitting") || "提交中...")
