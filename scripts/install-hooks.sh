@@ -295,8 +295,21 @@ if [ "$RUN_FRONTEND" = 1 ]; then
     cd "$ROOT/frontend" || fail "frontend/ missing"
     echo "  → tsc";   npx tsc --noEmit          || fail "tsc failed"
     echo "  → eslint"; npm run lint --silent    || fail "eslint failed"
-    echo "  → jest";  npx jest --coverage=false --silent 2>&1 | tail -4
-    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "jest failed"
+    # The last 4 lines say "1 failed" and name nothing. 2026-09-25 a push was
+    # refused twice for one test that never failed outside the hook, and there
+    # was no way to tell which. On failure, print the failing files and tests
+    # and keep the whole log.
+    echo "  → jest"
+    JEST_LOG=$(mktemp -t prepush-jest)
+    npx jest --coverage=false --silent >"$JEST_LOG" 2>&1
+    JEST_STATUS=$?
+    tail -4 "$JEST_LOG"
+    if [ "$JEST_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$JEST_LOG" | head -20
+        echo "    full jest log: $JEST_LOG"
+        fail "jest failed"
+    fi
+    rm -f "$JEST_LOG"
     cd "$ROOT" || exit 1
 fi
 
