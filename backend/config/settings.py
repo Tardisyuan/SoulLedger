@@ -559,6 +559,9 @@ SPECTACULAR_SETTINGS = {
         "SentencePlanRequestStatusEnum": "apps.sentence_plan.models.SentenceRequestStatus.choices",
         "SentencePlanStatusEnum": "apps.sentence_plan.models.SentencePlanStatus.choices",
         "SentenceNodeStatusEnum": "apps.sentence_plan.models.SentenceNodeStatus.choices",
+        # 灵魂批量移入回收站的拒绝码。字段名 `code` 太通用,不钉住就叫 `CodeEnum`,
+        # 下一个 `code` 选项集进 schema 时会被改成带哈希的名字。
+        "SoulBatchRecycleErrorCodeEnum": "apps.souls.serializers.SOUL_BATCH_RECYCLE_ERROR_CODES",
     },
 }
 

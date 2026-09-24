@@ -11,7 +11,20 @@ export { api, getApiBaseUrl, PAGE_SIZE } from "./client";
 export { authApi, type UserRole, type BuiltinUserRole, type LoginUser, type LoginResponse, type AuthProfile } from "./auth";
 
 // Souls
-export { soulsApi, type SoulInput, type Soul, type SoulListItem, type SoulRecord, type SoulRecordEntry } from "./souls";
+export {
+  soulsApi,
+  SOUL_BATCH_RECYCLE_ERROR_CODES,
+  soulBatchRecycleErrorOf,
+  type SoulInput,
+  type Soul,
+  type SoulListItem,
+  type SoulRecord,
+  type SoulRecordEntry,
+  type SoulBatchRecycleRequest,
+  type SoulBatchRecycleResult,
+  type SoulBatchRecycleError,
+  type SoulBatchRecycleErrorCode,
+} from "./souls";
 
 // Users
 export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type PaginatedResponse } from "./users";

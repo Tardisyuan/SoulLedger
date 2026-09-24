@@ -104,6 +104,24 @@ class AuditUserViewSetMixin:
     URLconf so the next one to be added is caught rather than counted.
     """
 
+    def initial(self, request, *args, **kwargs):
+        """Set the current user once DRF has authenticated, for EVERY action.
+
+        The perform_* hooks below only run for the stock create / update /
+        destroy. A viewset that overrides `destroy()` or writes from an
+        `@action` never reaches them, so its audit rows were written with no
+        author: `SoulViewSet.destroy`, `archive` and `batch_recycle` all did
+        (measured 2026-09-25: AuditLog.user NULL on a real JWT single delete).
+        `initial()` runs after authentication and before any handler, so this
+        covers every write path on every inheriting viewset at once. The
+        middleware clears it when the request ends; it cannot set it itself,
+        because authentication has not happened yet at that point (see
+        RequestContextMiddleware).
+        """
+        super().initial(request, *args, **kwargs)
+        if getattr(request.user, "is_authenticated", False):
+            set_current_user(request.user)
+
     def perform_create(self, serializer):
         """Set thread-local user before creating."""
         set_current_user(self.request.user)

@@ -5024,6 +5024,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/batch-recycle/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Move several souls to the recycle bin — all of them, or none.
+         *
+         *     EACH SOUL GOES THROUGH EXACTLY WHAT destroy() DOES. The soul is
+         *     reached through get_queryset() (tenant scope, DataScope, not deleted,
+         *     not archived), checked with check_object_permissions() — the two
+         *     halves of get_object() — and deleted with
+         *     Soul.delete_with_cascade(), so the cascade to records and pending
+         *     judgments, the shared cascade id and the audit rows written by the
+         *     post_save signals are the single path's, not a copy of them.
+         *
+         *     REFUSE-ALL, NOT PER-ID RESULTS. The single delete has two outcomes
+         *     besides success: 404 when the soul is not reachable (another tenant's,
+         *     outside the caller's data scope, already deleted, archived, or
+         *     nonexistent — indistinguishable on purpose) and 409 with
+         *     `archivable` when it has a concluded judgment. The batch reports the
+         *     same two, with the same statuses, for the whole request:
+         *
+         *       * 404 `not_found` — some ids are not reachable. Checked before any
+         *         write. The listed ids are the caller's own input, so this says
+         *         nothing the single endpoint's 404 would not.
+         *       * 409 `not_deletable` — some souls have a concluded judgment. Every
+         *         soul is attempted inside one transaction so that ALL blocked ids
+         *         are reported, then the transaction is rolled back.
+         *
+         *     Per-id results were rejected: a 207-style body makes "3 of 5 moved"
+         *     a success the bar has to notice and explain, and it would turn a
+         *     cross-tenant id into a partial success next to real deletions. The
+         *     caller asked for one action on one selection; it either happened or
+         *     the selection is wrong, and the body names every id that makes it so.
+         *
+         *     Before either: 403 without `soul.delete` (destroy's codename), and 400
+         *     with DRF field errors for an empty list, more than 100 ids, a
+         *     non-UUID, a duplicate id, or a reason over 500 characters.
+         */
+        post: operations["v1_souls_batch_recycle_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/": {
         parameters: {
             query?: never;
@@ -9654,6 +9705,44 @@ export interface components {
             readonly last_login: string | null;
             readonly contact_email_masked: string;
             readonly contact_phone_masked: string;
+        };
+        /** @description Request body of `POST /souls/batch-recycle/`. */
+        SoulBatchRecycle: {
+            ids: string[];
+            /** @default  */
+            reason: string;
+        };
+        /** @description One recycled soul. `cascade_id` is what `/recycle-bin/restore/` takes. */
+        SoulBatchRecycleEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            cascade_id: string;
+        };
+        /**
+         * @description 404 / 409 body of `POST /souls/batch-recycle/`. Nothing was recycled.
+         *
+         *     `error` is the same key the single delete's 409 uses; `code` is added so a
+         *     client can branch without parsing prose. `ids` are the offending ones —
+         *     every one of them, not just the first, so one round trip fixes the
+         *     selection. `archivable` is present on 409 only, as on the single delete.
+         */
+        SoulBatchRecycleError: {
+            code: components["schemas"]["SoulBatchRecycleErrorCodeEnum"];
+            error: string;
+            ids: string[];
+            archivable?: boolean;
+        };
+        /**
+         * @description * `not_found` - not_found
+         *     * `not_deletable` - not_deletable
+         * @enum {string}
+         */
+        SoulBatchRecycleErrorCodeEnum: "not_found" | "not_deletable";
+        /** @description 200 body of `POST /souls/batch-recycle/`, in request order. */
+        SoulBatchRecycleResult: {
+            recycled: number;
+            results: components["schemas"]["SoulBatchRecycleEntry"][];
         };
         /** @description 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。 */
         SoulCard: {
@@ -19371,6 +19460,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Soul"];
+                };
+            };
+        };
+    };
+    v1_souls_batch_recycle_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulBatchRecycle"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulBatchRecycle"];
+                "multipart/form-data": components["schemas"]["SoulBatchRecycle"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulBatchRecycleResult"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulBatchRecycleError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulBatchRecycleError"];
                 };
             };
         };
