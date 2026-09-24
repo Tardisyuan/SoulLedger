@@ -558,6 +558,13 @@ SPECTACULAR_SETTINGS = {
         "SentencePlanRequestKindEnum": "apps.sentence_plan.models.SentenceRequestKind.choices",
         "SentencePlanRequestStatusEnum": "apps.sentence_plan.models.SentenceRequestStatus.choices",
         "SentencePlanStatusEnum": "apps.sentence_plan.models.SentencePlanStatus.choices",
+        # 权限矩阵按格保存(apps/perm/matrix.py):`action` 与审计日志的 `action` 撞名,
+        # 不钉住,既有的 `ActionEnum` 会被改成带哈希的名字。`status` / `code` 同理,带前缀钉住。
+        "ActionEnum": "apps.audit.models.AuditAction.choices",
+        "MatrixChangeActionEnum": "apps.perm.matrix.ACTIONS",
+        "MatrixChangeStatusEnum": "apps.perm.matrix.STATUSES",
+        "MatrixChangeCodeEnum": "apps.perm.matrix.RESULT_CODES",
+        "RoleDeleteRefusalCodeEnum": "apps.perm.matrix.ROLE_DELETE_REFUSAL_CODES",
         "SentenceNodeStatusEnum": "apps.sentence_plan.models.SentenceNodeStatus.choices",
         # 灵魂批量移入回收站的拒绝码。字段名 `code` 太通用,不钉住就叫 `CodeEnum`,
         # 下一个 `code` 选项集进 schema 时会被改成带哈希的名字。
