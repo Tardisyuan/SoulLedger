@@ -48,7 +48,7 @@ export const soulSocialApi = {
   status: () => get<SoulSocialStatus>("/me/social/status/"),
   /**
    * This civilization + followed. `author` narrows it to one soul's posts (profile page);
-   * `following` to the souls this one follows (not its own posts).
+   * `following` to its own posts and the souls it follows.
    */
   feed: (params: { page?: number; author?: number; following?: boolean } = {}) =>
     get<PaginatedSoulPosts>("/me/social/feed/", params),
