@@ -22,7 +22,7 @@
 | 永久禁言(`until` 可空) | 不存在:天数 1–365,`until` 非空 | **不加**。代码里没有任何地方需要它,见「待定问题」 |
 | 解除禁言 + 通知 | **已有**:`POST mutes/{id}/lift/`,提交后发 `SOCIAL_UNMUTED`(事件总线 → WebSocketHandler,定向给被禁言账号) | 不另造通知;补了测试 |
 | 已处理列表 | 无 | **新增** `GET handled/` |
-| 恢复可见 | **已有**:`POST posts|comments/{id}/restore/`(HIDDEN → PUBLISHED) | 复用,补了测试;写入处理人 |
+| 恢复可见 | **已有**:`POST posts/{id}/restore/` 与 `comments/{id}/restore/`(HIDDEN → PUBLISHED) | 复用,补了测试;写入处理人 |
 | 隐藏的处理人 / 时间 / 理由 | 只在 AuditLog 里 | **新增** `Post` / `Comment` 的 `moderated_by` / `moderated_at` / `moderation_reason` |
 | 删除的处理人 / 时间 / 理由 | **已有**(软删除的 `deleted_by` / `deleted_at` / `delete_reason`) | 直接读 |
 | 删除的恢复 | 帖子与评论**不在回收站登记表里**(`register_bin_type` 只登了 menu / soul / role) | 按要求不加第二条恢复路径 |
@@ -173,7 +173,7 @@ frontend 第一次跑是红的(3117 passed / 1 failed):`soulLifecycleEventCopy` 
 字段逐项、过滤、倒序、跨文明隔离、码名);恢复可见(回到 PUBLISHED、离开已处理、记处理人;
 删除的 404;别的文明 404)。
 
-每条都改源码看它变红,再还原(还原后与备份逐字节相同,重跑 33 passed):
+租户检查与 MASK 替换各自改源码看它变红,再还原(还原后与备份逐字节相同;还原后重跑新测试 + 两个 schema 测试,33 passed):
 
 | 变异 | 结果 |
 |---|---|
