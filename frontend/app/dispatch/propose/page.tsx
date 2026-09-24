@@ -414,7 +414,7 @@ function ProposeDispatchForm() {
       <aside aria-labelledby="dispatch-flow-title">
         <h2
           id="dispatch-flow-title"
-          className="border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs tracking-widest text-[oklch(var(--color-ink-subtle))]"
+          className="border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]"
         >
           {t("dispatch.flow.title")}
         </h2>
@@ -423,11 +423,11 @@ function ProposeDispatchForm() {
             [t("dispatch.flow.step_propose", { tenant: sourceTenantRow ? tenantName(sourceTenantRow) : sourceCode ?? "" }), t("dispatch.flow.pending_submit")],
             [t("dispatch.flow.step_approve", { tenant: targetTenantRow ? tenantName(targetTenantRow) : t("dispatch.flow.target_unchosen") }), t("dispatch.flow.not_yet")],
             [t("dispatch.flow.step_execute"), t("dispatch.flow.not_yet")],
-          ].map(([step, state], i) => (
+          ].map(([step, when], i) => (
             <li key={i} className="grid grid-cols-[24px_1fr_auto] border-b border-[oklch(var(--color-rule))] py-2">
               <span className="font-mono text-[oklch(var(--color-ink-subtle))]">{i + 1}</span>
               <span className="text-[oklch(var(--color-ink))]">{step}</span>
-              <span className="text-[oklch(var(--color-ink-subtle))]">{state}</span>
+              <span className="text-[oklch(var(--color-ink-subtle))]">{when}</span>
             </li>
           ))}
         </ol>

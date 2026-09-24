@@ -104,8 +104,9 @@ const LazyBarChart = dynamic(
       // A required prop makes "which colour is this series" a question every
       // caller answers.
       //
-      // `color` on a datum overrides it for that bar alone. The pie charts in
-      // this file already read `entry.color`; the bar path had a single series
+      // `color` on a datum overrides it for that bar alone. The pie chart that
+      // used to live in this file (removed 2026-09-24: 规范 v1 has no pies, the
+      // dashboard draws a 图例账 instead) already read `entry.color`; the bar path had a single series
       // fill and no way to say "these bars are four different things", which is
       // exactly what a per-civilization comparison is.
       return function WrappedBarChart({
@@ -187,85 +188,6 @@ const LazyBarChart = dynamic(
   {
     ssr: false,
     loading: () => <ChartSkeleton />,
-  }
-);
-
-// ── Dashboard Pie Chart (with custom colors) ─────────────────────
-const LazyDashboardPieChart = dynamic(
-  () =>
-    import("recharts").then((mod) => {
-      const {
-        PieChart,
-        Pie,
-        Cell,
-        Tooltip,
-        Legend,
-        ResponsiveContainer,
-      } = mod;
-      // `fallbackFill` is required and has no default, for the reason spelled
-      // out on WrappedBarChart below: an optional colour prop with a hardcoded
-      // fallback is how a palette gets bypassed with nothing to catch it. This
-      // one was `"#6b7280"` — stock Tailwind gray-500, declared nowhere in the
-      // stylesheet, invisible to chartColourContract, and a fixed literal in
-      // both themes where every other neutral in the app moves between them.
-      return function WrappedDashboardPieChart({
-        data,
-        height = 240,
-        fallbackFill,
-      }: {
-        data: ChartDataPoint[];
-        height?: number;
-        fallbackFill: string;
-      }) {
-        const animate = !prefersReducedMotion();
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                dataKey="value"
-                isAnimationActive={animate}
-                label={({ name, percent }) =>
-                  `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                }
-                labelLine={false}
-              >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.fill || entry.color || fallbackFill}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  background: "oklch(var(--color-surface-2))",
-                  border: "1px solid oklch(var(--color-hairline))",
-                  borderRadius: 0,
-                  fontSize: 12,
-                }}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: 12 }}
-                formatter={(value) => (
-                  <span className="text-[oklch(var(--color-ink-muted))]">
-                    {value}
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      };
-    }),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton height={280} />,
   }
 );
 
@@ -461,7 +383,6 @@ const LazyLifespanBarChart = dynamic(
 
 export {
   LazyBarChart,
-  LazyDashboardPieChart,
   LazySoulLineChart,
   LazyLifespanBarChart,
   ChartSkeleton,
