@@ -185,7 +185,7 @@
       "cancel_delete": "Sehen",
       "confirm_delete_action": "Nehem Er Per Wehem",
       "deleting": "Em Wehem Seth...",
-      "delete_confirm_message": "Nehem Er Per Wehem; Nen Fekh Djet. Ankh Wehem Em Per Wehem.",
+      "delete_confirm_message": "Nehem Er Per Wehem; Nen Fekh Djet. Ankh Wehem Em Smen Hemsu › Per Wehem; Wedja Hena Wetep Smen.",
       "delete_success": "Aba Wehem Seth",
       "error_update": "Nen Khemen",
       "error_delete": "Nen Wehem Seth",
@@ -1088,8 +1088,8 @@
     "no_realms": "Nen Rekhyu Set"
   },
   "organization": {
-    "title": "Shemsu",
-    "subtitle": "Amset Netjeru Em Kehat - Shemsu",
+    "title": "Sab",
+    "subtitle": "Amset Netjeru Em Kehat - Sab",
     "civilizations": {
       "CHINESE": "Duat Sherer",
       "EGYPTIAN": "Duat Mesjet",
@@ -1097,7 +1097,7 @@
       "GREEK": "Duat Haunebut"
     },
     "root": "Tepy",
-    "organizations_count": "Shemsu Wu {{count}}",
+    "organizations_count": "Sab {{count}}",
     "no_organizations": "Nen Rekhyu Per"
   },
   "actors": {
@@ -1304,7 +1304,7 @@
     "classic_desc": "Gesu Menu Neb: Tut Hena Ren",
     "compact_desc": "Mekher Wa; Maa Medu Em Her",
     "colors": {
-      "ink": "Khesbedj Tepy",
+      "ink": "Khesbedj (Tepy)",
       "amber": "Sesheshet",
       "blue": "Khesbedj",
       "green": "Wadj",
@@ -1650,11 +1650,11 @@
     "comment_error": "Nen Kheme Djed Seth",
     "comment_delete_error": "Nen Wehem Djed Seth",
     "reaction_error": "Nen Kheme Nefer Seth",
-    "follow": "Shemsu",
-    "follows": "Shemsu Wu",
-    "following": "Shemsu",
-    "following_count": "Shemsu Sepu",
-    "followers": "Shemsu Khet",
+    "follow": "Nehes",
+    "follows": "Nehes Neb",
+    "following": "Nehes Seth",
+    "following_count": "Nehes Sepu",
+    "followers": "Nehesu",
     "no_following": "Nen Rekhyu Shemsu",
     "no_followers": "Nen Rekhyu Shemsu Khet",
     "profile": "Aha Pepi",
@@ -1674,7 +1674,7 @@
     "visibility": {
       "PUBLIC": "Er Bu Neb",
       "TENANT": "Em Duat Set",
-      "FOLLOWERS": "Shemsu Neb",
+      "FOLLOWERS": "Nehesu Wa",
       "PRIVATE": "Wa-Ek"
     },
     "visibility_label": "Set Medu Maa",
@@ -1710,13 +1710,13 @@
       "realms": "Iri Ta",
       "actors": "Ren Netjeru",
       "social": "Sesh Kheper",
-      "social_follows": "Shemsu Wu",
+      "social_follows": "Nehes Neb",
       "users": "Iri Remetj",
       "permissions": "Was Hena Netjer",
       "menus": "Iri Menu",
       "audit": "Medew Maa",
       "tenants": "Iri Per Hemes",
-      "organizations": "Kher Shemsu",
+      "organizations": "Kher Sab",
       "group_overview": "Nau Khet",
       "group_soul_ops": "Baku Ba",
       "group_workflow": "Em Her Shemsu",
@@ -2322,7 +2322,7 @@
         "tenant": "Taui Pen",
         "compose_hint": "Sesh Medu…",
         "empty_title": "Nen Medu Djer",
-        "empty_body": "Nehes Ba Em Taui Pen; Medu-Sen Maa Dy. Sesh Medu Tepy.",
+        "empty_body": "Nehes Ba Em Taui Pen: Medu Maa Dy. Sesh Medu Tepy.",
         "write": "Sesh Medu",
         "error": "Nen Ini Shemsu. Medu Ek Wenen; Nen Ini Djer Pen.",
         "more": "Medu Tepyu"
@@ -2353,15 +2353,15 @@
         "hidden": "Imen Seth · Ky Nen Maa",
         "hidden_note": "Wesekhet Imen Seth; Wa-Ek Maa.",
         "comments": "Wesheb {{n}}",
-        "more": "Aa"
+        "more": "Ky"
       },
       "comment": {
         "pending": "Nen Menkh Djer",
         "hint": "Sesh Wesheb…",
         "send": "Hab",
-        "reply": "Weshed",
-        "reply_to": "Weshed {{name}}",
-        "more": "Wesheb Aa"
+        "reply": "Wesheb",
+        "reply_to": "Wesheb Er {{name}}",
+        "more": "Wesheb Ky"
       },
       "muted": {
         "body": "Gerh Ek: Nen Medu, Nen Wesheb. Sesh Er Wesekhet Wenen.",
@@ -2401,12 +2401,12 @@
       "me": {
         "title": "Per Ba Ek",
         "display_name": "Ren Shemsu",
-        "edit_name": "Wehem Ren",
+        "edit_name": "Khemen Ren",
         "name_save": "Sau",
-        "name_hint": "Ren 2–20. Nen Ren Ky Em Taui Pen.",
+        "name_hint": "Ren: Sesh 2–20. Nen Ren Wa Hena Ba Ky Em Taui Pen.",
         "name_saved": "Ren Sau Seth",
-        "name_length": "Ren 2–20.",
-        "name_sensitive": "Medu Djeseru Em Ren Pen.",
+        "name_length": "Ren: Sesh 2–20.",
+        "name_sensitive": "Medu Djeseru Em Ren Pen; Khemen Ren.",
         "name_taken": "Ren Pen Em Ba Ky Em Taui Pen."
       },
       "list": {
@@ -2424,7 +2424,7 @@
         "submit": "Hab Sedjem",
         "done_title": "Sedjem Ini Seth",
         "done_body": "Wesekhet Maa. Nen Sedjem Ek Er Ky.",
-        "limit": "Sedjem Neb Em 24 Unut Seth; Wehem Er Khet."
+        "limit": "Sedjem Em Unut 24 Neb Seth; Wehem Iri Er Khet."
       },
       "search": {
         "title": "Hehy Ba",
@@ -2440,7 +2440,7 @@
         "confirm": "Fekh",
         "post_title": "Fekh Medu Pen?",
         "comment_title": "Fekh Wesheb Pen?",
-        "body": "Ky Nen Maa. Nen Wehem Djer."
+        "body": "Ky Nen Maa; Nen Ankh Wehem."
       }
     }
   },

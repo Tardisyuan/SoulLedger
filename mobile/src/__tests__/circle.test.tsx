@@ -9,11 +9,14 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { CircleScreen, ComposePostScreen, PostScreen, usePaged } from "../screens/circle";
+import { themeFor, type ColorScheme } from "../theme";
+import { ThemeContext } from "../ui";
 import { stubApi } from "./stubApi";
 
 const mockPopTo = jest.fn();
@@ -120,14 +123,15 @@ describe("feed", () => {
 });
 
 describe("reactions", () => {
-  function detail(over: Record<string, unknown> = {}, status: typeof STATUS | typeof MUTED = STATUS) {
+  function detail(over: Record<string, unknown> = {}, status: typeof STATUS | typeof MUTED = STATUS, scheme?: ColorScheme) {
     const calls = stubApi({
       "GET /me/social/posts/p1/": { status: 200, data: post(over) },
       "/me/social/posts/p1/comments/": page([]),
       "/me/social/status/": status,
       "POST /me/social/posts/p1/reaction/": { status: 200, data: { reacted: true, reaction_type: "LIKE" } },
     });
-    wrap(<PostScreen id="p1" />);
+    const screenEl = <PostScreen id="p1" />;
+    wrap(scheme ? <ThemeContext.Provider value={themeFor(null, scheme)}>{screenEl}</ThemeContext.Provider> : screenEl);
     return calls;
   }
   const reacts = (calls: { method: string; url: string }[]) => calls.filter((c) => c.method === "POST");
@@ -151,6 +155,21 @@ describe("reactions", () => {
     fireEvent.press(await screen.findByTestId("lamp-confirm"));
     await waitFor(() => expect(reacts(calls)).toHaveLength(2));
     expect(reacts(calls)[1]).toMatchObject({ body: { reaction_type: "ETERNAL_LIGHT" } });
+  });
+
+  // Design 定稿:浅色下「点灯」反色 —— 深金底、米色字;深色下仍是亮金底、深色字。
+  // 字面色值,不读 t.lamp:主题里两值对调,这里要红。
+  it.each([
+    ["light", "#845A0F", "#FBF1DC"],
+    ["dark", "#F2CC7A", "#241B0C"],
+  ] as const)("%s: the lamp button is %s with %s text", async (scheme, bg, ink) => {
+    detail({}, STATUS, scheme);
+    await waitFor(() => expect(screen.getByTestId("react-ETERNAL_LIGHT").props.accessibilityState.disabled).toBe(false));
+    fireEvent.press(screen.getByTestId("react-ETERNAL_LIGHT"));
+    const button = await screen.findByTestId("lamp-confirm");
+    expect(StyleSheet.flatten(button.props.style)).toMatchObject({ backgroundColor: bg });
+    const label = within(button).getByText("点灯");
+    expect(StyleSheet.flatten(label.props.style)).toMatchObject({ color: ink });
   });
 
   it("once lit, nothing can be pressed and it says why", async () => {
