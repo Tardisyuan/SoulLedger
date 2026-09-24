@@ -21017,6 +21017,8 @@ components:
           type: integer
         reaction_count:
           type: integer
+        reaction_counts:
+          $ref: '#/components/schemas/SoulReactionCounts'
         my_reaction:
           nullable: true
           oneOf:
@@ -21038,6 +21040,7 @@ components:
       - moderation_status
       - my_reaction
       - reaction_count
+      - reaction_counts
       - visibility
     SoulPostCreate:
       type: object
@@ -21095,6 +21098,26 @@ components:
       - is_self
       - post_count
       - user_id
+    SoulReactionCounts:
+      type: object
+      description: 五种表态各自的数。读 `annotate_posts_for` 的 `reactions_<type>` 注解。
+      properties:
+        LIKE:
+          type: integer
+        LOVE:
+          type: integer
+        RESPECT:
+          type: integer
+        SYMPATHY:
+          type: integer
+        ETERNAL_LIGHT:
+          type: integer
+      required:
+      - ETERNAL_LIGHT
+      - LIKE
+      - LOVE
+      - RESPECT
+      - SYMPATHY
     SoulReactionRequest:
       type: object
       properties:

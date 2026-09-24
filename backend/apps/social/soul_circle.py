@@ -180,7 +180,7 @@ def visible_comments_for_soul(viewer, queryset=None):
 
 
 def annotate_posts_for(viewer, qs):
-    """列表要的计数与「我的表态」。计数只数已发布、未删除的评论 —— 待审评论不能经计数泄露存在。
+    """列表要的计数(总数与五种各自的数)与「我的表态」。计数只数已发布、未删除的评论 —— 待审评论不能经计数泄露存在。
 
     ponytail: 每页一次聚合查询;帖子量上来后改为维护专用计数列。
     """
@@ -191,6 +191,12 @@ def annotate_posts_for(viewer, qs):
             distinct=True,
         ),
         visible_reaction_count=Count("reactions", filter=Q(reactions__is_deleted=False), distinct=True),
+        **{
+            f"reactions_{kind.lower()}": Count(
+                "reactions", filter=Q(reactions__is_deleted=False, reactions__reaction_type=kind), distinct=True
+            )
+            for kind in ReactionType.values
+        },
         my_reaction=Subquery(
             Reaction.objects.filter(post=OuterRef("pk"), user=viewer).values("reaction_type")[:1]
         ),
