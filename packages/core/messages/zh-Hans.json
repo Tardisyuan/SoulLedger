@@ -281,6 +281,13 @@
     "date_problem_marker": {
       "error": "日期错误 — 详见灵魂详情",
       "warning": "日期警告 — 详见灵魂详情"
+    },
+    "preview": {
+      "open": "预览",
+      "open_aria": "在侧栏预览 {{name}}",
+      "hint": "J / K 上下条 · Esc",
+      "open_full": "打开完整卷宗 →",
+      "load_error": "详情加载失败。"
     }
   },
   "common": {
