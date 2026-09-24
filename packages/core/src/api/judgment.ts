@@ -335,6 +335,12 @@ export interface JudgmentQueueParams {
   at?: string;
 }
 
+/**
+ * One row of 「据 · 先例」 (`GET /judgment/{id}/precedents/`, backend
+ * apps/judgment/precedents.py). `balance` is null for VIEWER.
+ */
+export type JudgmentPrecedent = components["schemas"]["JudgmentPrecedent"];
+
 export const judgmentApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Judgment>>("/judgment/", { params }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
@@ -360,6 +366,11 @@ export const judgmentApi = {
   statutes: (params?: Record<string, string>) =>
     api.get<PaginatedResponse<Statute>>("/judgment/statutes/", { params }),
   citations: (id: string) => api.get<JudgmentCitation[]>(`/judgment/${id}/citations/`),
+  /** 「据 · 先例」:同租户、同文明的已结案审判,按同殿 → 余额最近 → 共同援引排序。 */
+  precedents: (id: string, limit?: number) =>
+    api.get<JudgmentPrecedent[]>(`/judgment/${id}/precedents/`, {
+      params: limit === undefined ? undefined : { limit },
+    }),
   cite: (id: string, statute: string, note = "") =>
     api.post<JudgmentCitation>(`/judgment/${id}/citations/`, { statute, note }),
   uncite: (id: string, statute: string) =>
