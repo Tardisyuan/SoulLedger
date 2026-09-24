@@ -668,7 +668,17 @@
     "no_activity": "暂无最近活动",
     "no_realm_data": "暂无地域数据",
     "error_load": "加载统计数据失败",
-    "error_export": "导出统计数据失败"
+    "error_export": "导出统计数据失败",
+    "todo": {
+      "approve_dispatch": "待我审批 · 调度",
+      "go_approve": "去审批 →",
+      "judgment_queue": "审判队列",
+      "enter": "进入 →",
+      "none": "无待办",
+      "load_error": "计数加载失败"
+    },
+    "civ_share": "占比",
+    "civ_empty": "尚未入册 · 去登记"
   },
   "ledger": {
     "title": "功德统计",

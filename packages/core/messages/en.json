@@ -668,7 +668,17 @@
     "no_activity": "No recent activity",
     "no_realm_data": "No realm data available",
     "error_load": "Failed to load statistics",
-    "error_export": "Failed to export statistics"
+    "error_export": "Failed to export statistics",
+    "todo": {
+      "approve_dispatch": "Awaiting my approval · dispatch",
+      "go_approve": "Review →",
+      "judgment_queue": "Judgment queue",
+      "enter": "Enter →",
+      "none": "Nothing waiting",
+      "load_error": "Could not load the count"
+    },
+    "civ_share": "Share",
+    "civ_empty": "No souls yet · register one"
   },
   "ledger": {
     "title": "Deed Statistics",

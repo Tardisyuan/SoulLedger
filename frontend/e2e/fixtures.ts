@@ -1092,6 +1092,13 @@ export class ApiMock {
     this.on("GET", "/judgment/", paginated([]));
     this.on("POST", "/judgment/", { ...OPENED_JUDGMENT });
     this.on("GET", "/judgment/:id/", { ...OPENED_JUDGMENT });
+    // After `:id/`, so it wins (routes are unshifted): otherwise "next" is an id
+    // and the dashboard's 审判队列 count reads a judgment body with no `total`.
+    // An empty queue — the cursor's shape (JudgmentQueueCursor) with nothing in it.
+    this.on("GET", "/judgment/next/", {
+      total: 0, remaining: 0, skipped: 0, position: null,
+      judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [],
+    });
 
     // ── Dispatch ──
     this.on("GET", "/dispatch/records/", () => ({

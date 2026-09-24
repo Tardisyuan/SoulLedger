@@ -6,6 +6,11 @@
  *
  *     jest.mock("@/src/components/charts/LazyDashboardCharts", ...)
  *
+ * **2026-09-24 起 dashboard 没有饼图了**(规范 v1 §3.4:图例账代替饼图,
+ * 各文明是账行不是柱)。页上仍用 recharts 的只剩「地域分布」柱状图,所以下面
+ * 的计数断言改对着它;饼图那一半改成了对图例账的断言 —— 零值是一行,不是一块色。
+ * 下面几段说的是饼图时代的事,道理对柱状图一样成立,留着。
+ *
  * 整个图表模块被替换成桩。1689 个通过的单元测试对「饼图能不能画出来」一个字都
  * 没说 —— 它们断言的是「组件收到了正确的 props」,而不是「浏览器里出现了图形」。
  * 那两件事之间隔着 recharts、SVG 布局、以及一整套挂载动画。
@@ -74,102 +79,49 @@ const STATS_WITH_MARKS = {
   ],
 };
 
+/** 地域分布 is the one recharts chart left on the page; one realm is zero on purpose. */
+const REALMS = [
+  { realm_code: "DIYU_5", realm_name: "第五殿", civilization: "CHINESE", count: 40 },
+  { realm_code: "INF_9", realm_name: "Ninth Circle", civilization: "EUROPEAN", count: 24 },
+  { realm_code: "DUAT_1", realm_name: "First Hour", civilization: "EGYPTIAN", count: 0 },
+];
 const NON_ZERO_STATES = STATS_WITH_MARKS.state_distribution.filter(
   (s) => s.count > 0
 ).length;
-const TENANTS_WITH_SOULS = STATS_WITH_MARKS.tenants.filter(
-  (t) => t.total_souls > 0
-).length;
+const REALMS_WITH_SOULS = REALMS.filter((r) => r.count > 0).length;
 
 test.describe("dashboard 的图表", () => {
-  test("饼图与柱状图画出 <path>,不是只画出坐标轴和图例", async ({ page }) => {
+  test("地域柱状图画出 <path>,不是只画出坐标轴", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    api.on("GET", "/ledger/stats/overview/", { ...STATS_WITH_MARKS, souls_by_realm: REALMS });
+
+    await page.goto("/dashboard");
+
+    // 数据确实进了页面 —— 否则下面是在对一个没拿到数据的页面测「没有图形」。
+    await expect(page.getByText("n = 84")).toBeVisible();
+
+    /* 分两段等:先「图表代码到位、series 挂上了」,再「画出了几条 path」。
+     * recharts 是按需取的 551KB chunk,负载下单是下载就可能吃掉 3.5–4.3 秒,
+     * 挂上之后 path 还要约 460ms(animationBegin 400ms)—— 2026-09-18 实测,
+     * 两段合在一个 5 秒窗口里会偶发 `Received: 0`。第一段红 = 图表没挂上,
+     * 第二段红 = 挂上了却没画东西。 */
+    await expect(page.locator(".recharts-bar")).not.toHaveCount(0);
+    await expect(page.locator(".recharts-bar-rectangle path")).toHaveCount(REALMS_WITH_SOULS);
+  });
+
+  test("没有饼图;图例账里零值是一行,不是一块色", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/ledger/stats/overview/", STATS_WITH_MARKS);
 
     await page.goto("/dashboard");
+    const ledger = page.locator("[data-legend-ledger]");
+    await expect(ledger).toBeVisible();
 
-    // KPI 先到,证明数据确实进了页面 —— 否则下面两条断言可能是在对着一个
-    // 根本没拿到数据的页面测「没有图形」,那会以正确的理由给出正确的结果,
-    // 而它守不住任何东西。
-    await expect(page.getByText("84").first()).toBeVisible();
-
-    /* 分两段等,而且**第二段的 5 秒不再被下载时间吃掉** —— 这一句此前写的是
-     * 「懒加载 + 挂载动画都在 toHaveCount 的自动重试窗口里」,那是一句没有量过
-     * 的话,而它是假的。2026-09-18 实测(mobile-chrome,机器同时在跑别的套件):
-     *
-     *   - 图表代码是按需取的:`LazyDashboardPieChart` 要到数据回来、组件第一次
-     *     渲染时才发出 `import("recharts")`,而那个 chunk 是 551KB(gzip 142KB)。
-     *     单进程的 `next start` 在负载下发这一个文件要 **3.5–4.3 秒**(同一时刻
-     *     用 curl 取同一个文件是 0.6–2.9 秒,所以慢在服务端,不在浏览器);
-     *   - 扇区容器挂上之后,`<path>` 还要再等 **约 460ms** 才出现 —— recharts 的
-     *     `animationBegin` 默认 400ms;
-     *   - 这两段加起来超过 `toHaveCount` 默认的 5 秒,于是这条用例在高负载下
-     *     偶发变红,报的是 `Received: 0`。失败样本里容器尺寸一律是 311×240、
-     *     path 也总在容器之后 460ms 出现,**页面本身没有缺陷**。
-     *
-     * 所以:先等「图表代码到位、series 挂上了」,再等「画出了几条 path」。
-     * **如实说明代价:两段各有 5 秒,总允许时间因此放宽到约 10 秒。** 换来的是
-     * 两件事分开报错 —— 第一段红 = 图表没挂上(代码没到 / 组件炸了),第二段红
-     * = 挂上了却没画东西,也就是本文件开头那段「容器在、path 一条都没有」的
-     * 真缺陷。
-     */
-    await expect(page.locator(".recharts-pie")).not.toHaveCount(0);
-    await expect(page.locator(".recharts-bar")).not.toHaveCount(0);
-
-    await expect(page.locator(".recharts-pie-sector path")).toHaveCount(
-      NON_ZERO_STATES
-    );
-    await expect(page.locator(".recharts-bar-rectangle path")).toHaveCount(
-      TENANTS_WITH_SOULS
-    );
-
-    // 想过再加一条「图形占了地方吗」的几何断言,写了、也试着让它红,**没能红**,
-    // 所以删掉了 —— 一个造不出失败场景的断言,没有被证明有效。留下试过的两条路,
-    // 免得下一个人重走:
-    //
-    //   `outerRadius={0}`      → recharts 一条 path 都不出,上面的计数断言先红,
-    //                            几何断言根本走不到。
-    //   `innerRadius=outerRadius` → 零厚度圆环,四条断言全绿。因为 `getBBox()` 量的
-    //                            是路径的**包围盒范围**,不是可见面积;一段零厚度
-    //                            弧线的包围盒照样很大。
-    //
-    // 换句话说,`getBBox` 回答不了「用户看得见吗」。真要守这一层,得比对像素
-    // (Playwright 的截图对比),那是另一件事,不是往这个文件里塞一行 expect。
-  });
-
-  test("零值数据点不产生图形", async ({ page }) => {
-    /** 上一条断言的另一半。若哪天 recharts 开始给 0 值也画一条零宽 path,
-     * 上一条会因为数量对不上而红,但读的人未必知道是这个原因 —— 这一条把
-     * 「0 不该占面积」单独说出来。 */
-    const api = await setupAuthenticatedPage(page);
-    api.on("GET", "/ledger/stats/overview/", {
-      ...STATS_WITH_MARKS,
-      // 一个非零 + 两个零,而不是从前的「三个都是零」。改法的理由在下面。
-      state_distribution: [
-        { state: "ALIVE", label: "在世", count: 7 },
-        { state: "JUDGING", label: "审判中", count: 0 },
-        { state: "LOST", label: "迷失", count: 0 },
-      ],
-      total_souls: 7,
-    });
-
-    await page.goto("/dashboard");
-    await expect(page.getByText("7").first()).toBeVisible();
-
-    /* 「零值不画」要靠一条**自带前提**的断言来说,而不是靠 `toHaveCount(0)`。
-     *
-     * 这一条此前的形状是「三个数据点都是 0,断言 path 数为 0」。那句断言在图表
-     * 代码还没下载完的时候就已经成立 —— 它可以在骨架屏上通过,一个字都没有验证。
-     * 而先等 `.recharts-pie` 挂上也不够:recharts 的 `animationBegin` 默认 400ms,
-     * 容器挂上之后 path 还要约 460ms 才出现,`toHaveCount(0)` 在这段空窗里照样
-     * 立刻成立。这两点都是变异实测出来的 —— 把页面改成「零值也当 1 画」
-     * (`value: Math.max(s.count, 1)`),两个版本都还是绿的;连「等同屏的柱状图
-     * 先画出 2 条 path」也只在 6 次里红 3 次,因为两个图谁先画完并不保证。
-     *
-     * 现在数据里留一个非零项,断言 **path 恰好一条**:这句话只有在「画图阶段
-     * 已经发生」时才可能成立(零条不等于一条),而它同时就是「两个零值没有各
-     * 占一条」。同一变异下 6 次全红(Expected 1,Received 3)。
-     */
-    await expect(page.locator(".recharts-pie-sector path")).toHaveCount(1);
+    await expect(page.locator(".recharts-pie")).toHaveCount(0);
+    // The proportion bar draws only non-zero states…
+    await expect(ledger.locator('[aria-hidden="true"] > span')).toHaveCount(NON_ZERO_STATES);
+    // …while every state, LOST at 0 included, keeps its ledger row with the number in text.
+    await expect(ledger.locator('[data-legend-row="LOST"]')).toContainText("0%");
+    await expect(ledger.locator('[data-legend-row="ALIVE"]')).toContainText("60");
   });
 });
