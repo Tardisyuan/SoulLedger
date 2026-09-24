@@ -5,12 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { DataGrid, FilterBar, parseOrdering, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
+import { DataGrid, parseOrdering, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { groupAuditLogsByTrace, type AuditGroup } from "@/lib/auditGrouping";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { fieldControl } from "@/src/components/ui/Field";
+import { Button } from "@/src/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 const ACTION_OPTIONS = [
   "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
@@ -221,52 +225,56 @@ export default function AuditPage() {
       variant="full"
       title={title}
       filters={
-        <FilterBar
-          /* The slot supplies the surface, the rule line and the padding, so
-             the component's own card chrome comes off — otherwise it is a
-             bordered panel sitting inside a bordered bar. */
-          className="w-full p-0 border-0 bg-transparent"
-          searchValue={search}
-          onSearchChange={(v) => { setSearch(v); setPage(1); }}
-          searchPlaceholder={t("audit.search_placeholder")}
-          chips={[
-            {
-              key: "action",
-              label: t("audit.filter_action"),
-              value: actionFilter,
-              onChange: (v) => { setActionFilter(v); setPage(1); },
-              options: [
-                { value: "", label: t("audit.all_actions") },
-                ...ACTION_OPTIONS.map((a) => ({ value: a, label: t(`audit.actions.${a}`) })),
-              ],
-            },
-            {
-              key: "resource",
-              label: t("audit.filter_resource"),
-              value: resourceFilter,
-              onChange: (v) => { setResourceFilter(v); setPage(1); },
-              options: [
-                { value: "", label: t("audit.all_resources") },
-                ...RESOURCE_OPTIONS,
-              ],
-            },
-            {
-              key: "date",
-              label: t("audit.date_all"),
-              value: datePreset,
-              onChange: (v) => { setDatePreset(v as DatePreset); setPage(1); },
-              options: [
-                { value: "", label: t("audit.date_all") },
-                { value: "7d", label: t("audit.date_7d") },
-                { value: "30d", label: t("audit.date_30d") },
-              ],
-            },
-          ]}
-          isFiltered={isFiltered}
-          onClearAll={clearFilters}
-          clearAllLabel={t("audit.clear_filters")}
-          density={{ compact, onToggle: () => setCompact((c) => !c), label: t("audit.compact") }}
-        />
+        /* 筛选签(规范 v1 §2),与灵魂列表同一套:搜索框用共享的 `fieldControl`,
+           三个枚举筛选各是一枚「维度 · 值 ×」,紧凑是一枚开关签。
+           这里原来是 data-grid 的 `FilterBar` —— 一块自带边框和底色的面板,
+           里面的签是自绘的 listbox。 */
+        <>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder={t("audit.search_placeholder")}
+            aria-label={t("audit.search_placeholder")}
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+          />
+          <FilterChipSelect
+            label={t("audit.filter_action")}
+            value={actionFilter}
+            options={[
+              { value: "", label: t("audit.all_actions") },
+              ...ACTION_OPTIONS.map((a) => ({ value: a, label: t(`audit.actions.${a}`) })),
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("audit.filter_action") })}
+            onChange={(v) => { setActionFilter(v); setPage(1); }}
+          />
+          <FilterChipSelect
+            label={t("audit.filter_resource")}
+            value={resourceFilter}
+            options={[{ value: "", label: t("audit.all_resources") }, ...RESOURCE_OPTIONS]}
+            clearLabel={t("filter.clear_one", { name: t("audit.filter_resource") })}
+            onChange={(v) => { setResourceFilter(v); setPage(1); }}
+          />
+          <FilterChipSelect
+            label={t("audit.timestamp")}
+            value={datePreset}
+            options={[
+              { value: "", label: t("audit.date_all") },
+              { value: "7d", label: t("audit.date_7d") },
+              { value: "30d", label: t("audit.date_30d") },
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("audit.timestamp") })}
+            onChange={(v) => { setDatePreset(v as DatePreset); setPage(1); }}
+          />
+          <FilterChipToggle pressed={compact} onPressedChange={setCompact}>
+            {t("audit.compact")}
+          </FilterChipToggle>
+          {isFiltered && (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+              {t("audit.clear_filters")}
+            </Button>
+          )}
+        </>
       }
     >
       {/* The shell's `pagination` slot stays empty on purpose: DataGrid renders
