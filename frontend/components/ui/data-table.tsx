@@ -26,6 +26,9 @@ export function parseOrdering(ordering: string): SortState | null {
   return { key: desc ? ordering.slice(1) : ordering, direction: desc ? 'desc' : 'asc' }
 }
 
+/** The one link in a `linkedRows` row: its `::after` covers the whole row. */
+export const ROW_LINK = 'after:absolute after:inset-0'
+
 export interface DataTableColumn {
   /**
    * Stable identifier for the column. When `sortable` is set this is also the
@@ -65,6 +68,15 @@ export interface DataTableProps<T> {
    * each line is a decision, and wrong where the page is a scan-and-find.
    */
   density?: 'comfortable' | 'compact'
+  /**
+   * 规范 v1 §3.2: the whole row opens the record, no「查看 →」column. The row
+   * becomes the positioning box and `cursor-pointer`; the caller puts ONE
+   * `<Link className={ROW_LINK}>` in the row (usually on the name) whose
+   * `::after` stretches over the row. Still one tab stop and a real link, so
+   * middle-click and screen readers keep working — an `onClick` on the `<tr>`
+   * would give neither.
+   */
+  linkedRows?: boolean
   columns: DataTableColumn[]
   data?: T[]
   keyExtractor: (item: T, index: number) => string
@@ -175,6 +187,7 @@ export function DataTable<T>({
   errorMessage,
   skeletonRows = 5,
   density = 'comfortable',
+  linkedRows = false,
   sort,
   onSortChange,
   isFiltered,
@@ -393,6 +406,7 @@ export function DataTable<T>({
                     }
                     className={cn(
                       'border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors',
+                      linkedRows && 'relative cursor-pointer',
                       entered.has(rowKey) && 'animate-row-enter',
                       changed.has(rowKey) && 'animate-row-changed'
                     )}
