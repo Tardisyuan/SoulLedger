@@ -108,3 +108,29 @@ def test_a_post_carries_each_reaction_types_count(cn_tenant):
     assert seen["reaction_counts"] == {"LIKE": 2, "LOVE": 0, "RESPECT": 0, "SYMPATHY": 0, "ETERNAL_LIGHT": 1}
     assert seen["reaction_count"] == 3
     assert seen["comment_count"] == 3
+
+
+def test_a_past_lifes_post_takes_no_reaction_and_no_comment(cn_tenant):
+    """前世的帖子封存只读:表态、评论都 409 post_sealed。同一文明本世作者的帖子照常 —— 只测拒绝的话,
+    一个把所有帖子都封死的实现也是绿的。"""
+    from django.utils import timezone
+
+    past, _ = soul(cn_tenant, "前世")
+    live, _ = soul(cn_tenant, "今世")
+    old = post(past, "上一世写的", Visibility.PUBLIC)
+    fresh = post(live, "这一世写的", Visibility.PUBLIC)
+    type(past).objects.filter(pk=past.pk).update(retired_at=timezone.now())
+    _, client = soul(cn_tenant, "读者")
+
+    for res in (
+        react(client, old, ReactionType.LIKE),
+        react(client, old, ReactionType.ETERNAL_LIGHT),
+        client.post(f"{SOCIAL}/posts/{old.pk}/comments/", {"content": "还想说"}, format="json"),
+    ):
+        assert res.status_code == 409, res.content
+        assert res.json()["code"] == "post_sealed"
+    assert Reaction.objects.filter(post=old).count() == 0
+    assert client.get(f"{SOCIAL}/posts/{old.pk}/").status_code == 200, "读照旧"
+
+    assert react(client, fresh, ReactionType.LIKE).status_code == 200
+    assert client.post(f"{SOCIAL}/posts/{fresh.pk}/comments/", {"content": "说一句"}, format="json").status_code == 201

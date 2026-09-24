@@ -8,7 +8,7 @@ test_every_me_route_is_a_soul_api_view` 走真实 URLconf 钉住这一点 ——
 所有查询都从 `request.user` 出发,URL 里不接受任何灵魂 id;**能看见什么由
 `apps/social/soul_circle.py` 一处决定**,本模块只负责把它接成 HTTP。
 """
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
@@ -18,7 +18,6 @@ from apps.social import moderation as mod
 from apps.social import soul_circle as circle
 from apps.social.models import Follow, Post, ReportTargetType
 from apps.social.soul_serializers import (
-    SoulCardSerializer,
     SoulCommentCreateSerializer,
     SoulCommentSerializer,
     SoulFollowStateSerializer,
@@ -27,6 +26,7 @@ from apps.social.soul_serializers import (
     SoulProfileSerializer,
     SoulReactionRequestSerializer,
     SoulReactionStateSerializer,
+    SoulRelationCardSerializer,
     SoulReportRequestSerializer,
     SoulReportResultSerializer,
     SoulSearchResultSerializer,
@@ -61,7 +61,7 @@ def _page(child, name):
 
 PaginatedSoulPosts = _page(SoulPostSerializer, "PaginatedSoulPosts")
 PaginatedSoulComments = _page(SoulCommentSerializer, "PaginatedSoulComments")
-PaginatedSoulCards = _page(SoulCardSerializer, "PaginatedSoulCards")
+PaginatedSoulCards = _page(SoulRelationCardSerializer, "PaginatedSoulCards")
 
 ERRORS = {403: SoulSocialErrorSerializer, 404: SoulSocialErrorSerializer, 409: SoulSocialErrorSerializer}
 
@@ -282,8 +282,12 @@ class MeSocialFollowingView(SoulSocialView):
         ids = Follow.objects.filter(
             **{"follower" if self.relation == "following" else "following": request.user}, tenant=tenant
         ).values_list(f"{self.relation}_id", flat=True)
-        rows = circle.souls_in(tenant, include_retired=True).filter(pk__in=ids)
-        return self.paginate(rows.select_related("soul_account").order_by("display_name", "pk"), SoulCardSerializer)
+        edges = Follow.objects.filter(tenant=tenant)
+        rows = circle.souls_in(tenant, include_retired=True).filter(pk__in=ids).annotate(
+            is_following=Exists(edges.filter(follower=request.user, following=OuterRef("pk"))),
+            is_followed_by=Exists(edges.filter(follower=OuterRef("pk"), following=request.user)),
+        )
+        return self.paginate(rows.select_related("soul_account").order_by("display_name", "pk"), SoulRelationCardSerializer)
 
 
 class MeSocialFollowersView(MeSocialFollowingView):

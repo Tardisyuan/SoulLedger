@@ -7890,7 +7890,7 @@ export interface components {
             count: number;
             next: string | null;
             previous: string | null;
-            results: components["schemas"]["SoulCard"][];
+            results: components["schemas"]["SoulRelationCard"][];
         };
         PaginatedSoulComments: {
             count: number;
@@ -9870,6 +9870,17 @@ export interface components {
         SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
         SoulRefreshRequest: {
             refresh: string;
+        };
+        /** @description 关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。 */
+        SoulRelationCard: {
+            user_id: number;
+            display_name: string;
+            /** Format: uri */
+            readonly avatar: string | null;
+            /** @description false:前世账号,只读、不可关注。 */
+            readonly is_active: boolean;
+            is_following: boolean;
+            is_followed_by: boolean;
         };
         SoulReportRequest: {
             target_type: components["schemas"]["SocialReportTargetEnum"];
