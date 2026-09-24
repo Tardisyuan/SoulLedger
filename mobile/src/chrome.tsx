@@ -41,21 +41,24 @@ export function AppHeader({
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
   const { compact } = useLayout();
+  // Chat handoff 1e (Material): on Android the title sits at the left, with nothing held
+  // open for a back key it does not have, and back is an arrow. iOS: centred, chevron.
+  const android = Platform.OS === "android";
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: t.s0, borderBottomWidth: 1, borderBottomColor: t.hair }}>
-      <View style={[styles.bar, compact && styles.barCompact]}>
+      <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
         {onBack ? (
           <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
-            <Icon name="back" size={17} color={t.inkMuted} strokeWidth={1.4} />
+            <Icon name={android ? "arrow" : "back"} size={android ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
           </Pressable>
-        ) : (
+        ) : android ? null : (
           <View style={styles.icon} />
         )}
         <Txt
           accessibilityRole="header"
           variant="nav"
           numberOfLines={2}
-          style={[styles.title, { textAlign: onBack ? "left" : "center" }]}
+          style={[styles.title, android && !onBack && styles.titleStart, { textAlign: onBack || android ? "left" : "center" }]}
         >
           {title}
         </Txt>
@@ -156,6 +159,8 @@ const styles = StyleSheet.create({
   barCompact: { minHeight: 46, paddingHorizontal: 2 },
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   title: { flex: 1, paddingHorizontal: 4 },
+  /** 16 from the edge, as 1e draws it: the bar's 6 plus this. */
+  titleStart: { paddingLeft: 10 },
   tabs: { flexDirection: "row", borderTopWidth: 1 },
   tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 5, paddingVertical: 6 },
   tabsStacked: { flexDirection: "column", borderTopWidth: 1 },
