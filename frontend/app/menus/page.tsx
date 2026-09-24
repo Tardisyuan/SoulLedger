@@ -18,6 +18,7 @@ import { MenuGatesReference } from "@/src/components/menus/MenuGatesReference";
 import { MenuRowCells } from "@/src/components/menus/MenuRowCells";
 import { MenuFormModal } from "@/src/components/menus/MenuFormModal";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { flattenTree } from "@/src/components/ui/TreeRow";
 
 export default function MenusPage() {
   const { t } = useI18n();
@@ -55,7 +56,14 @@ export default function MenusPage() {
       return res.data;
     },
   });
-  const menus = (data?.results ?? []) as MenuItemFull[];
+  const menus = useMemo(() => (data?.results ?? []) as MenuItemFull[], [data]);
+  // 树表行(第三类 D 组答复:「套平表会丢掉层级」)。每页 20 条是后端定死的,
+  // 所以这是**本页之内**的树:父级在别页的子菜单当作本页的根,不画肘线。
+  // ponytail: per-page tree; a whole-tree view needs every page (organizations does that).
+  const treeRows = useMemo(
+    () => flattenTree(menus, (m) => m.id, (m) => m.parent),
+    [menus]
+  );
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   // GET /perm/permissions/ — used only to check whether a codename (typed or
@@ -206,7 +214,7 @@ export default function MenusPage() {
 
       {/* No `pagination` slot — DataTable renders its own <Pagination>
           (components/ui/data-table.tsx:288) from the four props at the end. */}
-      <DataTable<MenuItemFull>
+      <DataTable<{ item: MenuItemFull; depth: number }>
         caption={t("menus.title")}
         columns={[
           { key: "name", header: t("menus.name") },
@@ -217,12 +225,12 @@ export default function MenusPage() {
           { key: "status", header: t("menus.status") },
           { key: "action", header: t("menus.action"), align: "right", srOnlyHeader: true },
         ]}
-        data={menus}
+        data={treeRows}
         isLoading={isLoading}
         isError={Boolean(error)}
-        keyExtractor={(menu) => String(menu.id)}
-        renderRow={(menu) => (
-          <MenuRowCells menu={menu} onEdit={openEdit} onDelete={setPendingDelete} />
+        keyExtractor={({ item }) => String(item.id)}
+        renderRow={({ item, depth }) => (
+          <MenuRowCells menu={item} depth={depth} onEdit={openEdit} onDelete={setPendingDelete} />
         )}
         emptyMessage={t("menus.no_menus")}
         page={page}

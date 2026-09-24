@@ -6,6 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
+import { TreeName } from "@/src/components/ui/TreeRow";
 import type { MenuItemFull } from "./menuTypes";
 
 type LucideIconName = keyof typeof LucideIcons;
@@ -13,10 +14,13 @@ type LucideIconName = keyof typeof LucideIcons;
 /** One menu row's seven `<td>`s — DataTable supplies the surrounding `<tr>`. */
 export function MenuRowCells({
   menu,
+  depth = 0,
   onEdit,
   onDelete,
 }: {
   menu: MenuItemFull;
+  /** Tree depth within the page (see `flattenTree`); 0 draws no elbow. */
+  depth?: number;
   onEdit: (menu: MenuItemFull) => void;
   onDelete: (menu: MenuItemFull) => void;
 }) {
@@ -33,7 +37,7 @@ export function MenuRowCells({
   return (
     <>
       <td className={`px-4 py-3 ${isDeleted ? "text-[oklch(var(--color-ink-subtle))]" : ""}`}>
-        <div className="flex items-center gap-2">
+        <TreeName depth={depth}>
           {MenuIcon ? (
             <MenuIcon className="w-4 h-4 text-[oklch(var(--color-accent-ink))]" />
           ) : null}
@@ -45,7 +49,7 @@ export function MenuRowCells({
               {t("menus.deleted_badge")}
             </Badge>
           )}
-        </div>
+        </TreeName>
       </td>
       {/* Paths are identifiers — the 02 step, and monospaced. */}
       <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{menu.path}</td>

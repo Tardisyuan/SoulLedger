@@ -29,7 +29,10 @@
     "error_login_failed": "Login failed",
     "confirm_logout": "Confirm Logout",
     "confirm_logout_desc": "Are you sure you want to log out?",
-    "confirm_logout_btn": "Confirm Logout"
+    "confirm_logout_btn": "Confirm Logout",
+    "statute_of_day": "Statute of the day · a different one each visit",
+    "statute_fixed_note": "Statutes can only be read after signing in; these few are quoted verbatim from the corpus and do not change.",
+    "numbering": "How the four civilizations number their articles"
   },
   "home": {
     "console": "Console",
@@ -444,7 +447,8 @@
     "entity_types": {
       "soul": "Soul",
       "menu": "Menu"
-    }
+    },
+    "col_deleted_by": "Deleted by"
   },
   "permissions": {
     "title": "Permission Management",
@@ -942,7 +946,10 @@
       "BATCH_UPDATE": "Batch updated",
       "BATCH_DELETE": "Batch deleted"
     },
-    "needs_audit_read": "Requires the audit.read permission"
+    "needs_audit_read": "Requires the audit.read permission",
+    "repeat_expand": "expand",
+    "repeat_collapse": "collapse",
+    "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row"
   },
   "profile": {
     "title": "Personal Center",
@@ -1339,7 +1346,23 @@
     "system_version": "System Version",
     "just_now": "Just now",
     "minutes_ago": "{{n}}m ago",
-    "hours_ago": "{{n}}h ago"
+    "hours_ago": "{{n}}h ago",
+    "first_run": "First visit · step {{n}} of {{total}}",
+    "setup_intro": "Set these four and you are ready; you can come back here to change them.",
+    "identity": "Confirm who you are",
+    "identity_desc": "Your civilization and role are at the bottom of this page. If they are wrong, ask an administrator.",
+    "default_view": "Default view",
+    "default_view_desc": "What you see first after signing in. Saved in this browser only.",
+    "view_operator": "Operator",
+    "view_operator_desc": "Opens on the judgment queue; keyboard first.",
+    "view_admin_desc": "Opens on the statistics overview.",
+    "prefs": "Language and theme",
+    "prefs_desc": "Interface language and light or dark theme; change them any time from the user menu.",
+    "keys_desc": "These work throughout the judgment queue.",
+    "step_done": "Done",
+    "step_current": "Current",
+    "continue": "Continue",
+    "skip": "Skip and go in"
   },
   "permission": {
     "denied_title": "Permission Denied",

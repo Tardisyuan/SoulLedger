@@ -46,6 +46,11 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     t: (key: string, params?: Record<string, string>) =>
       params ? `${key}(${Object.values(params).join(",")})` : key,
     formatDateTime: (v: string) => `dt(${v})`,
+    // Day headers. Keyed on the local calendar day, so the stub echoes that.
+    formatDate: (v: string) => {
+      const d = new Date(v);
+      return `day(${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()})`;
+    },
     locale: "en",
     hydrated: true,
   }),
@@ -309,5 +314,50 @@ describe("AuditPage table states", () => {
     fireEvent.click(screen.getByText("audit.timestamp"));
 
     await waitFor(() => expect(lastParams().ordering).toBe("timestamp"));
+  });
+});
+
+// ── 合并同类 · 按日分组头 ────────────────────────────────────────────
+
+describe("AuditPage repeats and day headers", () => {
+  const at = (day: number, h: number, m: number) => new Date(2026, 0, day, h, m).toISOString();
+  const burst = [
+    entry({ id: 1, username: "yama", description: "restored A", timestamp: at(3, 10, 2) }),
+    entry({ id: 2, username: "yama", description: "restored B", timestamp: at(3, 10, 1) }),
+    entry({ id: 3, username: "yama", description: "restored C", timestamp: at(3, 10, 0) }),
+    entry({ id: 4, username: "yama", action: "DELETE", description: "deleted D", timestamp: at(2, 9, 0) }),
+  ];
+
+  it("shows a run as its first member with ×N, and expands and collapses it", async () => {
+    mockedList.mockResolvedValue({ data: { count: 4, results: burst } });
+    renderPage();
+
+    const toggle = await screen.findByTestId("audit-repeat-toggle");
+    expect(toggle).toHaveTextContent("×3 · audit.repeat_expand");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("restored A")).toBeInTheDocument();
+    // Absence: the folded members are not merely styled away.
+    expect(screen.queryByText("restored B")).not.toBeInTheDocument();
+    expect(screen.queryByText("restored C")).not.toBeInTheDocument();
+    // Only one toggle: the DELETE row is a different kind and has none.
+    expect(screen.getAllByTestId("audit-repeat-toggle")).toHaveLength(1);
+
+    fireEvent.click(toggle);
+    expect(screen.getByText("restored B")).toBeInTheDocument();
+    expect(screen.getByText("restored C")).toBeInTheDocument();
+    expect(toggle).toHaveTextContent("×3 · audit.repeat_collapse");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(toggle);
+    expect(screen.queryByText("restored B")).not.toBeInTheDocument();
+  });
+
+  it("puts a header above each day, counting that day's events including folded ones", async () => {
+    mockedList.mockResolvedValue({ data: { count: 4, results: burst } });
+    const { container } = renderPage();
+
+    await screen.findByText("restored A");
+    const heads = Array.from(container.querySelectorAll("[data-group-head]")).map((h) => h.textContent);
+    expect(heads).toEqual(["day(2026-1-3) · 3", "day(2026-1-2) · 1"]);
   });
 });

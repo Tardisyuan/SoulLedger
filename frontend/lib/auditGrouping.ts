@@ -78,3 +78,62 @@ export function groupAuditLogsByTrace(entries: AuditLogEntry[]): AuditGroup[] {
     }
   })
 }
+
+/**
+ * 合并同类(第三类 D 组答复:/audit「十行一模一样」)。
+ *
+ * `groupAuditLogsByTrace` folds the writes of ONE request into one event, and
+ * that is exact. This is the second, looser fold: consecutive EVENTS by the
+ * same actor, with the same action(s), on the same resource type(s), each
+ * within `REPEAT_WINDOW_MS` of the one before it, become one run shown as
+ * "×N · 展开". It is a heuristic, so unlike the trace fold it IS reversible —
+ * every run expands back to its members.
+ *
+ * WHY FIVE MINUTES, measured between neighbours rather than from the first:
+ * the shape this exists for is a burst — an operator restoring ten rows, a
+ * retry loop, a page polling VIEW — whose members land seconds apart. Five
+ * minutes covers a human working down a list at a normal pace; the same
+ * action an hour later is a separate sitting and keeps its own row. Chaining
+ * on the gap means a steady burst of any length stays one run.
+ *
+ * A run never crosses a local calendar day, so it never straddles one of the
+ * page's day headers. Resource IDs are deliberately NOT compared — "restored
+ * ten different souls" is the ten identical rows; the IDs are what 展开 shows.
+ */
+export const REPEAT_WINDOW_MS = 5 * 60 * 1000
+
+export interface AuditRun {
+  /** The first member's key — stable while the run is on screen. */
+  key: string
+  members: AuditGroup[]
+}
+
+/** Local calendar day, the unit of the page's group headers. */
+export function localDayKey(timestamp: string): string {
+  const d = new Date(timestamp)
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
+const sameKind = (a: AuditGroup, b: AuditGroup) =>
+  a.username === b.username &&
+  a.distinctActions.join('|') === b.distinctActions.join('|') &&
+  a.resources.join('|') === b.resources.join('|')
+
+export function collapseRepeats(groups: AuditGroup[], windowMs = REPEAT_WINDOW_MS): AuditRun[] {
+  const runs: AuditRun[] = []
+  for (const group of groups) {
+    const run = runs[runs.length - 1]
+    const prev = run?.members[run.members.length - 1]
+    if (
+      prev &&
+      sameKind(prev, group) &&
+      Math.abs(Date.parse(prev.time) - Date.parse(group.time)) <= windowMs &&
+      localDayKey(prev.time) === localDayKey(group.time)
+    ) {
+      run.members.push(group)
+    } else {
+      runs.push({ key: group.key, members: [group] })
+    }
+  }
+  return runs
+}
