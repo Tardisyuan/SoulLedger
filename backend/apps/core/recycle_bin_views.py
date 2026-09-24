@@ -109,6 +109,17 @@ class RecycleBinHardDeleteRequestSerializer(serializers.Serializer):
     id = BinEntryIdField()
 
 
+def _admin_only():
+    # A server rule on top of the codename (2026-09-25): restore and hard
+    # delete are ADMIN's, whatever the grant table says. The matrix refuses
+    # the grant (`admin_only_permission`, apps/perm/matrix.py); this refuses
+    # the act, so a grant written some other way still does nothing.
+    return Response(
+        {"error": "Only ADMIN may restore or permanently delete from the recycle bin."},
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
 class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
     """Not a ModelViewSet — the bin spans multiple models, so there is no
     single queryset to back one. list()/restore()/hard_delete() below each
@@ -139,6 +150,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         responses={
             200: RecycleBinRestoreResultSerializer,
             400: ErrorResponseSerializer,
+            403: ErrorResponseSerializer,
             404: ErrorResponseSerializer,
         },
     )
@@ -152,6 +164,8 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         the bin must not let a user restore eight dependent rows
         independently of their parent.
         """
+        if not is_tenant_exempt(request.user):
+            return _admin_only()
         cascade_id = request.data.get("cascade_id")
         if not cascade_id:
             return Response({"error": "cascade_id is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -172,7 +186,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         # unknown entity type, a domain record, a row still inside its
         # retention window. The view distinguishes them in `error`, not in the
         # status code.
-        responses={204: None, 400: ErrorResponseSerializer},
+        responses={204: None, 400: ErrorResponseSerializer, 403: ErrorResponseSerializer},
     )
     @action(detail=False, methods=["post"], url_path="hard-delete")
     def hard_delete(self, request):
@@ -185,6 +199,8 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         doc's point that the bin should only ever contain things safe to
         destroy is enforced here, not just in the UI.
         """
+        if not is_tenant_exempt(request.user):
+            return _admin_only()
         entity_type = request.data.get("entity_type")
         pk = request.data.get("id")
         if not entity_type or pk is None:

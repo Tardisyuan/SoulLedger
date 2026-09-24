@@ -38,12 +38,11 @@ Each code below is a refusal `assign_role_permissions` already makes:
 * ``role_not_found``        its 404
 * ``permission_not_found``  its 400 "Permission IDs not found"
 * ``version_conflict``      its 409 (per role, when `expected_versions` names it)
-
-Nothing else is refused. In particular there is no "彻底删除仅限 ADMIN" rule to
-encode: `recycle_bin.hard_delete` is ADMIN-only **by default grant**
-(`ROLE_PERMISSIONS`), and `RecycleBinViewSet` gates it by codename alone, so
-granting it to another role works today. Rules like that are listed as open
-questions in the PR, not invented here.
+* ``admin_only_permission`` its 400: granting one of `ADMIN_ONLY_CODENAMES`
+  to any role but ADMIN (maintainer decision, 2026-09-25: recycle-bin restore
+  and hard delete are ADMIN-only as a server rule, and `RecycleBinViewSet`
+  also checks the role, so a stray grant in the table does nothing).
+  Revoking them is never refused.
 """
 from django.db import DatabaseError, transaction
 
@@ -64,11 +63,21 @@ ROLE_NOT_FOUND = "role_not_found"
 PERMISSION_NOT_FOUND = "permission_not_found"
 VERSION_CONFLICT = "version_conflict"
 DATABASE_ERROR = "database_error"
+ADMIN_ONLY_PERMISSION = "admin_only_permission"
+
+ADMIN_ROLE_NAME = "ADMIN"
+#: Codenames only the ADMIN role may hold.
+ADMIN_ONLY_CODENAMES = frozenset({"recycle_bin.restore", "recycle_bin.hard_delete"})
+
+
+def admin_only_violations(role_name, codenames):
+    """The codenames in `codenames` that `role_name` may not be granted."""
+    return set() if role_name == ADMIN_ROLE_NAME else ADMIN_ONLY_CODENAMES & set(codenames)
 
 # Choice sets for the serializers and for ENUM_NAME_OVERRIDES in settings.
 ACTIONS = [GRANT, REVOKE]
 STATUSES = [SAVED, UNCHANGED, REFUSED, FAILED]
-RESULT_CODES = [ROLE_NOT_FOUND, PERMISSION_NOT_FOUND, VERSION_CONFLICT, DATABASE_ERROR]
+RESULT_CODES = [ROLE_NOT_FOUND, PERMISSION_NOT_FOUND, VERSION_CONFLICT, DATABASE_ERROR, ADMIN_ONLY_PERMISSION]
 ROLE_DELETE_REFUSAL_CODES = ["builtin_role", "role_in_use", "role_referenced_by_workflow_templates"]
 
 
@@ -144,6 +153,10 @@ def apply_changes(changes, expected_versions=None):
                                f"Permission ID {change['permission_id']} not found")
                         continue
                     want = change["action"] == GRANT
+                    if want and admin_only_violations(role_name, [permission.codename]):
+                        result(i, REFUSED, ADMIN_ONLY_PERMISSION,
+                               f"{permission.codename} can only be granted to ADMIN", permission.codename)
+                        continue
                     if (permission.pk in held) == want:
                         result(i, UNCHANGED, codename=permission.codename)
                         continue

@@ -7462,9 +7462,10 @@ export interface components {
          *     * `permission_not_found` - permission_not_found
          *     * `version_conflict` - version_conflict
          *     * `database_error` - database_error
+         *     * `admin_only_permission` - admin_only_permission
          * @enum {string}
          */
-        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error";
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission";
         MatrixChangeResult: {
             /** @description Position of the change in the request. */
             index: number;
@@ -17280,6 +17281,14 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     v1_recycle_bin_restore_create: {
@@ -17306,6 +17315,14 @@ export interface operations {
                 };
             };
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
