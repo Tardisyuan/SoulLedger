@@ -194,4 +194,56 @@ VIEWER 余额扣留:序列化器对 VIEWER 返回 `balance: null`(与 `SoulSeria
 
 ## 8. 门禁
 
-GATES_PLACEHOLDER
+环境:云主机,Python 3.11 `backend/.venv`(`requirements.lock` + `requirements-dev.txt`),Node 20.19.5,
+`npx -y npm@11 ci` + `npm rebuild …`,装完 `git checkout -- package-lock.json`。**一次性 Redis 在 6399 上跑着**,
+`REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` 指向 `/0` `/1` `/2`;没有连 115,没有 `.env`。
+后端每条命令前缀 `SECRET_KEY=ci-test-key-not-for-production DEBUG=true DATABASE_URL="sqlite:///:memory:"`。
+所有数字都在提交后的树上跑出来。
+
+| 门禁 | 命令 | 退出码 | 结果 |
+|---|---|---|---|
+| 后端全量 pytest | `cd backend && <前缀> .venv/bin/python -m pytest --tb=short -q` | 0 | **4524 passed / 24 skipped**,覆盖率 93.62%(门槛 80%) |
+| 同一条命令在 `main` @ `4e0b778`(对照) | 同上,干净 worktree | 0 | 4468 passed / 24 skipped |
+| ruff | `cd backend && .venv/bin/ruff check .` | 0 | — |
+| 迁移 | `cd backend && <前缀> .venv/bin/python manage.py makemigrations --check --dry-run` | 0 | No changes detected |
+| schema | `manage.py spectacular --validate --fail-on-warn` | 0 | 0 warnings / 0 errors;生成结果与提交的 `schema.yml` 逐字节相同;`npm run schema:generate` 重新生成了 `schema.ts`(`test_committed_schema_matches_the_backend.py` 在全量里通过) |
+| core typecheck | `npm run --workspace packages/core typecheck` | 0 | — |
+| core lint | `npm run --workspace packages/core lint` | 0 | 0 warnings |
+| core test | `npm run --workspace packages/core test` | 0 | 12 files / 118 passed |
+| 前端 tsc | `cd frontend && npx tsc --noEmit` | 0 | — |
+| 前端 coverage | `cd frontend && npm run test:coverage` | 0 | 168 suites / **3118 passed**;All files 76.12 / 66.97 / 66.52 / 77.05 |
+
+新增测试 50 条:`tests/test_disposition_expiry.py`(20)、`tests/test_disposition_list_sections.py`(17)、
+`tests/test_judgment_precedents.py`(13)。全量从 4468 升到 4524 多出来的另外 6 条,来自仓库里既有的、按注册表
+或迁移参数化的测试,它们把新任务和新迁移也纳入了检查。
+
+前端 coverage 第一次跑是**红**的:`egyLexiconRules` 的登记表按词数统计,新增的两条 egy 文案让
+`Neb` / `Sesh` / `Seth` / `Wetep` 的计数变了。照该文件写明的办法重新生成了
+`support/egyVocabulary.json`(`EGY_VOCAB_WRITE=1 npx jest egyLexiconRules`),再跑是 21/21 绿;上面那一行是之后的全量。
+
+### 变异证明
+
+每一条都是:改源码 → 跑对应的测试文件 → 看它**变红** → 还原。全部 12 条都红(pytest 退出码 1):
+
+| # | 变异 | 变红的文件 |
+|---|---|---|
+| M1 | 边界 `>=` 改成 `>`(周年日当天不算期满) | test_disposition_expiry |
+| M2 | 去掉「没有公元 0 年」那 +1 | test_disposition_expiry |
+| M3 | 去掉租户范围(候选查询与行锁两处) | test_disposition_expiry |
+| M4 | 不设置租户 contextvar | test_disposition_expiry |
+| M5 | 扇出父任务也派发给停用的租户 | test_disposition_expiry |
+| M6 | 候选不再排除永久刑 | test_disposition_expiry |
+| M7 | 列表的 `select_related` 里去掉 `judgment`(N+1) | test_disposition_list_sections |
+| M8 | 去掉 `soul_reborn` 注解 | test_disposition_list_sections |
+| M9 | 在已按 section 过滤的查询集上算计数 | test_disposition_list_sections |
+| M10 | 先例去掉租户过滤 | test_judgment_precedents |
+| M11 | 先例排序去掉「同一殿」 | test_judgment_precedents |
+| M12 | 不对 VIEWER 扣留余额 | test_judgment_precedents |
+
+M3 同时去掉了**两处**守卫(候选查询与行锁复查),因为任何一处单独都挡得住跨租户写入;
+没有单独测过只去掉一处的情况。
+
+### 没跑的
+
+- **PostgreSQL**:这台主机上没有,也不能连 115。见开放问题 7。
+- E2E(playwright):这次没要求,也没跑。
