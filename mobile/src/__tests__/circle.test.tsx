@@ -116,7 +116,7 @@ describe("feed", () => {
 });
 
 describe("reactions", () => {
-  function detail(over: Record<string, unknown> = {}, status = STATUS) {
+  function detail(over: Record<string, unknown> = {}, status: typeof STATUS | typeof MUTED = STATUS) {
     const calls = stubApi({
       "GET /me/social/posts/p1/": { status: 200, data: post(over) },
       "/me/social/posts/p1/comments/": page([]),
