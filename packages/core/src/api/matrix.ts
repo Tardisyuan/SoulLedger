@@ -39,6 +39,8 @@ export interface MatrixCredentials {
   baseUrl: string;
   userId: string;
   accessToken: string;
+  /** The Matrix device this login landed on. Pass it to the next login to stay on it. */
+  deviceId: string | null;
 }
 
 /** A refusal from Synapse (`errcode` = `M_*`), or no answer at all (`errcode` = "", `status` = null). */
@@ -91,13 +93,24 @@ async function call<T>(
   }
 }
 
-/** Trade the backend's one-time login token for a Matrix access token. */
-export async function matrixLogin(grant: MatrixSessionGrant): Promise<MatrixCredentials> {
+/**
+ * Trade the backend's one-time login token for a Matrix access token.
+ *
+ * `deviceId`: log in AS that device again instead of minting a new one. Synapse
+ * de-duplicates `PUT send/{txnId}` per (user, device) — MSC3970 — so a retry
+ * after a fresh login is de-duplicated only if it comes from the same device.
+ */
+export async function matrixLogin(grant: MatrixSessionGrant, deviceId?: string | null): Promise<MatrixCredentials> {
   const baseUrl = trim(grant.homeserver);
-  const data = await call<{ access_token: string; user_id: string }>("POST", `${baseUrl}/_matrix/client/v3/login`, {
-    data: { type: grant.login_type, token: grant.token, initial_device_display_name: "SoulLedger" },
+  const data = await call<{ access_token: string; user_id: string; device_id?: string }>("POST", `${baseUrl}/_matrix/client/v3/login`, {
+    data: {
+      type: grant.login_type,
+      token: grant.token,
+      initial_device_display_name: "SoulLedger",
+      ...(deviceId ? { device_id: deviceId } : {}),
+    },
   });
-  return { baseUrl, userId: data.user_id, accessToken: data.access_token };
+  return { baseUrl, userId: data.user_id, accessToken: data.access_token, deviceId: data.device_id ?? null };
 }
 
 /** Timeline: text messages only. Ephemeral: read receipts only. No presence, no account data. */
