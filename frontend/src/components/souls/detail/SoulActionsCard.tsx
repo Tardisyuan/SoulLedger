@@ -5,6 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
+import { LedgerHeading } from "./SoulLedgerSections";
 
 /** Left column's 操作 card — the state-machine verbs available on this soul. */
 export function SoulActionsCard({
@@ -33,8 +34,8 @@ export function SoulActionsCard({
   const { t } = useI18n();
 
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.actions")}</h2>
+    <section className="space-y-3">
+      <LedgerHeading title={t("souls.detail.actions")} />
       {loading ? (
         <div className="space-y-2">
           <Skeleton className="h-8 w-full" />
@@ -113,6 +114,6 @@ export function SoulActionsCard({
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

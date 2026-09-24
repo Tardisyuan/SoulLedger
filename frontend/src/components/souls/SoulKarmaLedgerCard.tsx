@@ -117,9 +117,10 @@ export function SoulKarmaLedgerCard({
 
   return (
     <div className="space-y-6">
-      {/* 业力总账 */}
-      <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
-        <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+      {/* 业力总账 —— 规范 v1「乙 · 功过」:不再是卡片,区块标由页面画,这里的
+          文明账名(功过格 / 称心 …)降为区块内第一行小字。 */}
+      <div>
+        <h3 className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))] pt-2 mb-2">{ledgerLabel}</h3>
 
         {/* Which life the totals below belong to, and — after a rebirth — the
             carry-over they started from. The ledger is per life (BD-04), so a
@@ -330,8 +331,8 @@ export function SoulKarmaLedgerCard({
           409/REBIRTH_NOT_APPLICABLE for a terminal cosmology resolves this to
           null; see ledgerApi.inheritance's caller in page.tsx). */}
       {inheritance && (
-        <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
-          <p className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">
+        <div>
+          <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 mb-3 border-b border-[oklch(var(--color-block))]">
             {t("ledger.next_life_inheritance")}
           </p>
 

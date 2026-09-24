@@ -99,6 +99,7 @@ const COLLECTED_FILES = [
   "SoulDetailPage.rebirthForm.test.tsx",
   "SoulEditModal.test.tsx",
   "SoulLedgerBook.test.tsx",
+  "SoulLedgerDetail.test.tsx",
   "SoulLifecycleTimeline.test.tsx",
   "SoulReadingPanel.test.tsx",
   "SoulReadingPanelFork.test.tsx",

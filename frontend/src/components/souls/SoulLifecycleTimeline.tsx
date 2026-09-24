@@ -224,10 +224,12 @@ export function SoulLifecycleTimeline({
   const visibleRows = filterRows(rows, tab, includeSystemEvents);
 
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
-      {/* Header + filter tabs */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-        <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase">
+    <div>
+      {/* Header + filter tabs. 规范 v1 灵魂详情:区块标压在区块边界线上,不是卡片;
+          「庚」接在详情页「甲…己」之后。 */}
+      <div className="flex items-end justify-between flex-wrap gap-3 pt-6 pb-1 mb-4 border-b border-[oklch(var(--color-block))]">
+        <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+          <span aria-hidden="true">庚 · </span>
           {tf("souls.detail.timeline.title", "灵魂账页")}
         </h2>
         <div className="flex items-center gap-1 flex-wrap">
