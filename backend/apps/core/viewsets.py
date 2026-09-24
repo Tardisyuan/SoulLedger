@@ -122,6 +122,18 @@ class AuditUserViewSetMixin:
         if getattr(request.user, "is_authenticated", False):
             set_current_user(request.user)
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Clear what initial() set. DRF calls this on every path out of
+        dispatch, exceptions included. The middleware also clears it, but a
+        view called without the middleware (APIRequestFactory in tests)
+        leaked its user into the next test's writes: a later test's
+        Tenant.get_or_create got update_user_id pointing at a user that test
+        never created, and teardown's FK check failed."""
+        try:
+            return super().finalize_response(request, response, *args, **kwargs)
+        finally:
+            clear_current_user()
+
     def perform_create(self, serializer):
         """Set thread-local user before creating."""
         set_current_user(self.request.user)
