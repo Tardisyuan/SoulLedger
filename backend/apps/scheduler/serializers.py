@@ -16,11 +16,16 @@ from apps.scheduler.registry import CRON_FIELDS
 
 class TaskRunSerializer(serializers.ModelSerializer):
     triggered_by_username = serializers.CharField(source="triggered_by.username", read_only=True, allow_null=True)
+    # `tenant` is a pk; RunHistoryPanel mapped it to a code through the job
+    # list and printed the bare pk when the job was not in that list. Null for
+    # a global run.
+    tenant_code = serializers.CharField(source="tenant.code", read_only=True, allow_null=True)
+    tenant_display_name = serializers.CharField(source="tenant.display_name", read_only=True, allow_null=True)
 
     class Meta:
         model = TaskRun
         fields = [
-            "id", "job", "task_name", "celery_task_id", "tenant", "trigger", "status",
+            "id", "job", "task_name", "celery_task_id", "tenant", "tenant_code", "tenant_display_name", "trigger", "status",
             "queued_at", "started_at", "finished_at", "duration_ms", "worker_hostname",
             "error", "result", "triggered_by", "triggered_by_username",
         ]

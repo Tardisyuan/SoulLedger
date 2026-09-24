@@ -5793,6 +5793,8 @@ export interface components {
             evidence_json?: unknown;
             notes?: string;
             readonly approver: number | null;
+            readonly approver_username: string | null;
+            readonly approver_display_name: string | null;
             /** Format: date-time */
             readonly decided_at: string | null;
             /** Format: date-time */
@@ -6221,6 +6223,7 @@ export interface components {
             description: string;
             readonly initiating_tenant: number;
             readonly initiating_tenant_code: string;
+            readonly initiating_tenant_display_name: string;
             readonly status: components["schemas"]["CrossTenantJudgmentStatusEnum"];
             /** Format: date-time */
             readonly concluded_at: string | null;
@@ -6241,6 +6244,7 @@ export interface components {
             title: string;
             initiating_tenant: number;
             readonly initiating_tenant_code: string;
+            readonly initiating_tenant_display_name: string;
             status?: components["schemas"]["CrossTenantJudgmentStatusEnum"];
             /** Format: date-time */
             concluded_at?: string | null;
@@ -6259,6 +6263,7 @@ export interface components {
             judgment: string;
             participant_tenant: number;
             readonly participant_tenant_code: string;
+            readonly participant_tenant_display_name: string;
             /** Format: uuid */
             participant_actor?: string | null;
             readonly participant_actor_name: string | null;
@@ -8333,6 +8338,8 @@ export interface components {
             evidence_json?: unknown;
             notes?: string;
             readonly approver?: number | null;
+            readonly approver_username?: string | null;
+            readonly approver_display_name?: string | null;
             /** Format: date-time */
             readonly decided_at?: string | null;
             /** Format: date-time */
@@ -8437,6 +8444,7 @@ export interface components {
             description?: string;
             readonly initiating_tenant?: number;
             readonly initiating_tenant_code?: string;
+            readonly initiating_tenant_display_name?: string;
             readonly status?: components["schemas"]["CrossTenantJudgmentStatusEnum"];
             /** Format: date-time */
             readonly concluded_at?: string | null;
@@ -10287,6 +10295,8 @@ export interface components {
             readonly task_name: string;
             readonly celery_task_id: string;
             readonly tenant: number | null;
+            readonly tenant_code: string | null;
+            readonly tenant_display_name: string | null;
             readonly trigger: components["schemas"]["TriggerEnum"];
             readonly status: components["schemas"]["TaskRunStatusEnum"];
             /** Format: date-time */

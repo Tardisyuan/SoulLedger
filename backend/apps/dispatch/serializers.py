@@ -191,6 +191,11 @@ class DispatchExecuteSerializer(serializers.Serializer):
 class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
     """Serializer for CrossTenantJudgmentParticipant."""
     participant_tenant_code = serializers.CharField(source="participant_tenant.code", read_only=True)
+    # 显示名在代码之外另给,不取代它:代码是可回溯的原始标识(§4.6),显示名是给人读的。
+    # 此前页面拿不到名字,只能印 `participant_tenant` —— 一个租户主键。
+    participant_tenant_display_name = serializers.CharField(
+        source="participant_tenant.display_name", read_only=True
+    )
     participant_actor_name = serializers.CharField(source="participant_actor.name", read_only=True, allow_null=True)
 
     class Meta:
@@ -200,6 +205,7 @@ class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
             "judgment",
             "participant_tenant",
             "participant_tenant_code",
+            "participant_tenant_display_name",
             "participant_actor",
             "participant_actor_name",
             "role",
@@ -239,6 +245,8 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
     the moment `conclude` gets its own narrower codename.
     """
     initiating_tenant_code = serializers.CharField(source="initiating_tenant.code", read_only=True)
+    # 同上:官员页「发起方」此前印的是 `initiating_tenant`(主键)。
+    initiating_tenant_display_name = serializers.CharField(source="initiating_tenant.display_name", read_only=True)
     participants = CrossTenantJudgmentParticipantSerializer(many=True, read_only=True)
     # 这场联审为哪份原属审判定受刑计划(docs/ARCHITECTURE-sentence-plan.md §2.1,Q12)。
     # 只在 `create` 时给一次,之后不可改:参与方按它填节点,换审判等于换灵魂。
@@ -256,6 +264,7 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "description",
             "initiating_tenant",
             "initiating_tenant_code",
+            "initiating_tenant_display_name",
             "status",
             "concluded_at",
             "conclusion_type",
@@ -345,6 +354,8 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
 class CrossTenantJudgmentListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing cross-tenant judgments."""
     initiating_tenant_code = serializers.CharField(source="initiating_tenant.code", read_only=True)
+    # 同上:官员页「发起方」此前印的是 `initiating_tenant`(主键)。
+    initiating_tenant_display_name = serializers.CharField(source="initiating_tenant.display_name", read_only=True)
 
     class Meta:
         model = CrossTenantJudgment
@@ -353,6 +364,7 @@ class CrossTenantJudgmentListSerializer(serializers.ModelSerializer):
             "title",
             "initiating_tenant",
             "initiating_tenant_code",
+            "initiating_tenant_display_name",
             "status",
             "concluded_at",
             "conclusion_type",

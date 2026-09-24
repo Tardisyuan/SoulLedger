@@ -12790,6 +12790,14 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        approver_username:
+          type: string
+          readOnly: true
+          nullable: true
+        approver_display_name:
+          type: string
+          readOnly: true
+          nullable: true
         decided_at:
           type: string
           format: date-time
@@ -12801,6 +12809,8 @@ components:
           readOnly: true
       required:
       - approver
+      - approver_display_name
+      - approver_username
       - created_at
       - decided_at
       - id
@@ -13694,6 +13704,9 @@ components:
         initiating_tenant_code:
           type: string
           readOnly: true
+        initiating_tenant_display_name:
+          type: string
+          readOnly: true
         status:
           allOf:
           - $ref: '#/components/schemas/CrossTenantJudgmentStatusEnum'
@@ -13733,6 +13746,7 @@ components:
       - id
       - initiating_tenant
       - initiating_tenant_code
+      - initiating_tenant_display_name
       - participants
       - status
       - title
@@ -13753,6 +13767,9 @@ components:
         initiating_tenant_code:
           type: string
           readOnly: true
+        initiating_tenant_display_name:
+          type: string
+          readOnly: true
         status:
           $ref: '#/components/schemas/CrossTenantJudgmentStatusEnum'
         concluded_at:
@@ -13768,6 +13785,7 @@ components:
       - id
       - initiating_tenant
       - initiating_tenant_code
+      - initiating_tenant_display_name
       - title
     CrossTenantJudgmentOrder:
       type: object
@@ -13794,6 +13812,9 @@ components:
         participant_tenant:
           type: integer
         participant_tenant_code:
+          type: string
+          readOnly: true
+        participant_tenant_display_name:
           type: string
           readOnly: true
         participant_actor:
@@ -13843,6 +13864,7 @@ components:
       - participant_actor_name
       - participant_tenant
       - participant_tenant_code
+      - participant_tenant_display_name
       - sentence_is_eternal
       - sentence_memory_reset
       - sentence_notes
@@ -17935,6 +17957,14 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        approver_username:
+          type: string
+          readOnly: true
+          nullable: true
+        approver_display_name:
+          type: string
+          readOnly: true
+          nullable: true
         decided_at:
           type: string
           format: date-time
@@ -18116,6 +18146,9 @@ components:
           type: integer
           readOnly: true
         initiating_tenant_code:
+          type: string
+          readOnly: true
+        initiating_tenant_display_name:
           type: string
           readOnly: true
         status:
@@ -22152,6 +22185,14 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        tenant_code:
+          type: string
+          readOnly: true
+          nullable: true
+        tenant_display_name:
+          type: string
+          readOnly: true
+          nullable: true
         trigger:
           allOf:
           - $ref: '#/components/schemas/TriggerEnum'
@@ -22208,6 +22249,8 @@ components:
       - status
       - task_name
       - tenant
+      - tenant_code
+      - tenant_display_name
       - trigger
       - triggered_by
       - triggered_by_username
