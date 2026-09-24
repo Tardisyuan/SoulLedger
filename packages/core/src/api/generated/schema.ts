@@ -232,6 +232,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/civilizations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /api/v1/auth/civilizations/
+         *     The login page's civilization rows: active tenants that speak for a
+         *     civilization, in the order the civilizations are declared.
+         *
+         *     Public (the page is shown before anyone signs in) and therefore minimal —
+         *     see `PublicCivilizationSerializer`. No authentication at all, so a stale
+         *     access token left in the tab cannot turn the login page's list into a 401.
+         */
+        get: operations["v1_auth_civilizations_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login/": {
         parameters: {
             query?: never;
@@ -323,6 +348,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password-help/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/auth/password-help/
+         *     「忘记密码」 on a console whose accounts an administrator opens: the
+         *     administrators of the account's tenant get an in-app notification and an
+         *     audit row is written. No code, no link, no mail — the administrator resets
+         *     the password through user management as they would anyway.
+         *
+         *     NO USER ENUMERATION, BY CONSTRUCTION. This view never reads the user
+         *     table. Both limits are counted before anything else and refuse
+         *     identically; then the username is handed to
+         *     `tasks.notify_password_help`, which does the lookup in the worker, and
+         *     the same body goes back. Known and unknown usernames take the same path
+         *     through this function, statement for statement.
+         */
+        post: operations["v1_auth_password_help_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/profile/": {
         parameters: {
             query?: never;
@@ -347,6 +402,38 @@ export interface paths {
         patch: operations["v1_auth_profile_partial_update"];
         trace?: never;
     };
+    "/api/v1/auth/profile/preferences/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET   /api/v1/auth/profile/preferences/ — the caller's own preferences
+         *     PATCH /api/v1/auth/profile/preferences/ — merge into them
+         *
+         *     Always `request.user`. There is no id in the path or the body to address
+         *     anyone else by, and an unknown key (a `user`, say) is a 400 rather than
+         *     ignored — see `UserPreferencesSerializer`.
+         */
+        get: operations["v1_auth_profile_preferences_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description GET   /api/v1/auth/profile/preferences/ — the caller's own preferences
+         *     PATCH /api/v1/auth/profile/preferences/ — merge into them
+         *
+         *     Always `request.user`. There is no id in the path or the body to address
+         *     anyone else by, and an unknown key (a `user`, say) is a 400 rather than
+         *     ignored — see `UserPreferencesSerializer`.
+         */
+        patch: operations["v1_auth_profile_preferences_partial_update"];
+        trace?: never;
+    };
     "/api/v1/auth/refresh/": {
         parameters: {
             query?: never;
@@ -359,6 +446,9 @@ export interface paths {
         /**
          * @description POST /api/v1/auth/refresh/
          *     Returns new access token from refresh token.
+         *
+         *     On this app's `RefreshToken`, so a rotated 「保持登录 30 天」 token is
+         *     issued for 30 days again rather than for SimpleJWT's default 7.
          */
         post: operations["v1_auth_refresh_create"];
         delete?: never;
@@ -6191,8 +6281,21 @@ export interface components {
          * @enum {string}
          */
         CurrentStateEnum: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "SETTLED" | "LOST";
-        /** @description Add tenant info to JWT + response. */
+        /**
+         * @description Add tenant info to JWT + response.
+         *
+         *     NO `tenant_code` INPUT, deliberately. A user has exactly one tenant — the
+         *     `User.tenant` FK, null for the global ADMINs — and the token's
+         *     `tenant_code` claim is copied from it in `get_token` below, which is the
+         *     only place `TenantMiddleware` learns a tenant from. There is no membership
+         *     table, no second tenant a user may act in, and no header that selects one
+         *     (FL-12 deleted `X-Tenant-ID`). A tenant chosen at login could therefore
+         *     only be refused or ignored; the login page's civilization rows are
+         *     informational and read `/auth/civilizations/`.
+         */
         CustomTokenObtainPair: {
+            /** @default false */
+            remember: boolean;
             username: string;
             password: string;
         };
@@ -6259,6 +6362,12 @@ export interface components {
          * @enum {string}
          */
         DecisionEnum: "ACCEPT" | "REJECT";
+        /**
+         * @description * `operator` - operator
+         *     * `admin` - admin
+         * @enum {string}
+         */
+        DefaultViewEnum: "operator" | "admin";
         /**
          * @description * `DIVINE` - Deva (Heaven Path)
          *     * `HUMAN` - Human (Human Path)
@@ -7347,9 +7456,10 @@ export interface components {
          *     * `SENTENCE_REQUEST_PENDING` - Sentence Request Pending
          *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
          *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+         *     * `PASSWORD_HELP_REQUESTED` - Password Help Requested
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerInbox: {
@@ -8056,6 +8166,10 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["WebhookConfig"][];
         };
+        /** @description `POST /auth/password-help/` — 「忘记密码」 on an admin-provisioned console. */
+        PasswordHelpRequest: {
+            username: string;
+        };
         /**
          * @description `{"password": "..."}` — the generated password `reset_password` returns.
          *
@@ -8661,6 +8775,16 @@ export interface components {
             readonly created_at?: string;
         };
         /**
+         * @description `User.preferences`, as the API reads and writes it.
+         *
+         *     One key today. Language and theme are not here: both are browser-side
+         *     settings with no server home (the locale is a cookie the middleware reads,
+         *     the theme a localStorage key), and moving them is a separate decision.
+         */
+        PatchedUserPreferences: {
+            default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
+        };
+        /**
          * @description Serializer for updating the profile bio. The avatar has its own upload
          *     endpoint (AvatarUploadSerializer).
          */
@@ -8862,6 +8986,20 @@ export interface components {
             soul_id: string;
             contact_email?: string;
             contact_phone?: string;
+        };
+        /**
+         * @description One row of `GET /auth/civilizations/` — the login page's civilization list.
+         *
+         *     PUBLIC, SO ONLY WHAT THE PAGE DRAWS. The page draws a shape mark and the
+         *     civilization's name, and both are looked up client-side from
+         *     `civilization` (`CIVILIZATION_MARK`, `organization.civilizations.*`), so
+         *     the row carries the tenant code and the civilization and nothing else —
+         *     not `display_name` (an administrative label the page never shows), not
+         *     `settings`, `api_endpoint`, `dispatch_enabled` or any count.
+         */
+        PublicCivilization: {
+            code: string;
+            civilization: string;
         };
         PushDevice: {
             /** Format: uuid */
@@ -10096,9 +10234,15 @@ export interface components {
             counterweight: number;
             heavier_than_feather: boolean;
         };
+        /**
+         * @description SimpleJWT's refresh, on this app's token class — the one whose
+         *     `set_exp` honours the `remember` claim on rotation (see `tokens.py`).
+         *     Same class name as SimpleJWT's so the schema component stays
+         *     `TokenRefresh`.
+         */
         TokenRefresh: {
-            readonly access: string;
             refresh: string;
+            readonly access: string;
         };
         /**
          * @description * `SCHEDULE` - Schedule
@@ -10279,6 +10423,16 @@ export interface components {
             id: number;
             code: string;
             name: string;
+        };
+        /**
+         * @description `User.preferences`, as the API reads and writes it.
+         *
+         *     One key today. Language and theme are not here: both are browser-side
+         *     settings with no server home (the locale is a cookie the middleware reads,
+         *     the theme a localStorage key), and moving them is a separate decision.
+         */
+        UserPreferences: {
+            default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         UserProfile: {
             /** Format: uuid */
@@ -10871,6 +11025,25 @@ export interface operations {
             };
         };
     };
+    v1_auth_civilizations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCivilization"][];
+                };
+            };
+        };
+    };
     v1_auth_login_create: {
         parameters: {
             query?: never;
@@ -10993,6 +11166,49 @@ export interface operations {
             };
         };
     };
+    v1_auth_password_help_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordHelpRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordHelpRequest"];
+                "multipart/form-data": components["schemas"]["PasswordHelpRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     v1_auth_profile_retrieve: {
         parameters: {
             query?: never;
@@ -11033,6 +11249,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_auth_profile_preferences_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPreferences"];
+                };
+            };
+        };
+    };
+    v1_auth_profile_preferences_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedUserPreferences"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedUserPreferences"];
+                "multipart/form-data": components["schemas"]["PatchedUserPreferences"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPreferences"];
                 };
             };
             400: {

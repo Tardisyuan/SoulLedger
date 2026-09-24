@@ -31,3 +31,10 @@ class PasswordResetThrottle(ClientIPRateThrottle):
     """
 
     scope = "password_reset"
+
+
+class PasswordHelpThrottle(ClientIPRateThrottle):
+    """「忘记密码」 help requests: 5 per hour per IP. Called by
+    `password_help_request`, which also counts per username."""
+
+    scope = "password_help"
