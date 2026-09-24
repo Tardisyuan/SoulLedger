@@ -27,6 +27,8 @@
     "error_invalid_token": "Invalid token",
     "error_token_expired": "Token has expired",
     "error_login_failed": "Login failed",
+    "error_attempts_left": "Invalid username or password · {{count}} attempt(s) left",
+    "error_locked": "Locked. Try again in {{minutes}} min",
     "confirm_logout": "Confirm Logout",
     "confirm_logout_desc": "Are you sure you want to log out?",
     "confirm_logout_btn": "Confirm Logout",
@@ -459,6 +461,7 @@
       "soul": "Soul",
       "menu": "Menu"
     },
+    "col_location": "Original location",
     "col_deleted_by": "Deleted by"
   },
   "permissions": {
@@ -713,6 +716,8 @@
       "judgment_queue": "Judgment queue",
       "enter": "Enter →",
       "none": "Nothing waiting",
+      "death_sync_anomaly": "Death sync anomalies",
+      "go_view": "View →",
       "load_error": "Could not load the count"
     },
     "civ_share": "Share",
@@ -1174,6 +1179,7 @@
     "select_tenant": "Select tenant...",
     "reason": "Reason",
     "reason_placeholder": "Reason for dispatch...",
+    "reason_too_short": "At least {{min}} characters, {{count}} so far",
     "submitting": "Submitting...",
     "submit_proposal": "Submit Proposal",
     "soul_prefix": "Soul #",
@@ -1456,6 +1462,7 @@
     "subtitle": "External death registrations and sync status",
     "registrations": "Registrations",
     "no_registrations": "No death registrations yet",
+    "anomaly_count": "{{count}} failed",
     "requested": "Requested",
     "duration": "Duration",
     "reference": "Reference",

@@ -76,10 +76,32 @@ class TestDispatchRecordCRUD:
             "source_tenant": str(self.tenant_a.pk),
             "target_tenant": str(self.tenant_b.pk),
             "soul": str(self.soul.pk),
-            "reason": "Transfer",
+            "reason": "Transfer to tenant B for the pending hearing",
         }, format="json")
         assert resp.status_code == status.HTTP_201_CREATED
         assert resp.data["status"] == "PROPOSED"
+
+    def _propose(self, reason):
+        return self.client.post(f"{BASE}/records/", {
+            "source_tenant": str(self.tenant_a.pk),
+            "target_tenant": str(self.tenant_b.pk),
+            "soul": str(self.soul.pk),
+            "reason": reason,
+        }, format="json")
+
+    def test_a_reason_under_20_characters_is_refused(self):
+        # 19 characters, 57 bytes in UTF-8: a byte count would let it through.
+        reason = "一" * 19
+        assert len(reason.encode()) == 57
+        resp = self._propose(reason)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["reason"][0].code == "reason_too_short"
+        assert not DispatchRecord.objects.filter(soul=self.soul).exists()
+
+    def test_twenty_characters_pass_and_padding_does_not_count(self):
+        assert self._propose("   " + "a" * 19 + "   ").status_code == status.HTTP_400_BAD_REQUEST
+        resp = self._propose("一" * 20)
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
 
     def test_retrieve_dispatch_record(self):
         rec = DispatchRecord.objects.create(

@@ -79,6 +79,34 @@ describe("LoginPage", () => {
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 
+  it("says how many tries are left when the server counts them", async () => {
+    mockedLogin.mockRejectedValue({
+      response: {
+        status: 401,
+        data: { detail: "No active account found with the given credentials", remaining_attempts: 3 },
+      },
+    });
+    render(<LoginPage />);
+    fillAndSubmit();
+
+    const alert = await screen.findByTestId("login-error");
+    expect(alert).toHaveTextContent('! auth.error_attempts_left(3)');
+    // The count replaces the bare message; it is not shown beside it.
+    expect(screen.queryByText("auth.error_invalid_credentials")).not.toBeInTheDocument();
+  });
+
+  it("says the address is locked, in whole minutes, on 429 login_locked", async () => {
+    mockedLogin.mockRejectedValue({
+      response: { status: 429, data: { error: "x", code: "login_locked", retry_after: 601 } },
+    });
+    render(<LoginPage />);
+    fillAndSubmit();
+
+    const alert = await screen.findByTestId("login-error");
+    expect(alert).toHaveTextContent('! auth.error_locked(11)');
+    expect(alert).not.toHaveTextContent("auth.error_login_failed");
+  });
+
   it("toggles the password between hidden and shown", () => {
     render(<LoginPage />);
     const input = screen.getByLabelText(/auth\.password/) as HTMLInputElement;

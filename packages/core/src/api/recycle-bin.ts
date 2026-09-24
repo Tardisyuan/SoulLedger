@@ -1,4 +1,7 @@
 import { api } from "./client";
+import type { components } from "./generated/schema";
+
+export type RecycleBinLocation = components["schemas"]["RecycleBinLocation"];
 
 /**
  * One row in the global recycle bin (Stage 4 §4.7) — a soft-deleted PARENT
@@ -15,6 +18,12 @@ export interface RecycleBinEntry {
   kind: "reference" | "domain";
   id: string | number;
   label: string;
+  /**
+   * 原位置, derived from the row's existing fields: a soul's civilization code,
+   * an ORG role's organization name, or a menu's / role's parent name. Null
+   * for a top-level row.
+   */
+  location: RecycleBinLocation | null;
   deleted_at: string | null;
   deleted_by: string | null;
   delete_reason: string;

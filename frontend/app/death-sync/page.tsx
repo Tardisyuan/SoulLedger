@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { api, PAGE_SIZE } from "@soulledger/core/api";
+import { deathSyncApi, PAGE_SIZE, type DeathRegistration } from "@soulledger/core/api";
 import { DataTable } from "@/components/ui/data-table";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -11,17 +12,7 @@ import { IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
-
-interface DeathRegistration {
-  id: string;
-  source_system: string;
-  status: string;
-  idempotency_key: string;
-  source_reference_id: string;
-  request_timestamp: string;
-  processing_duration_ms: number | null;
-  error_message: string;
-}
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 
 /**
  * Sync status → badge tone. 规范 v1:徽章无底色,颜色之外配一枚字形(`StatusBadge`)。
@@ -40,21 +31,50 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   PARTIAL: "warning",
 };
 
+const STATUSES = Object.keys(STATUS_TONES);
+
 export default function DeathSyncPage() {
+  // useSearchParams needs a Suspense boundary or the route opts out of static
+  // rendering (Next.js App Router) — same as app/judgment/queue/page.tsx.
+  return (
+    <Suspense fallback={null}>
+      <DeathSyncRoute />
+    </Suspense>
+  );
+}
+
+function DeathSyncRoute() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
+  const router = useRouter();
+  const pathname = usePathname();
+  // The status filter lives in the URL, so the dashboard's 「死亡同步异常」 cell
+  // can link straight to `?status=FAILED` and the filter survives a reload.
+  const status = useSearchParams().get("status") ?? "";
 
   // Page in the key and on the wire — `DeathRegistrationReadViewSet` is a DRF
   // ReadOnlyModelViewSet and paginates at PAGE_SIZE; this read one page and
   // offered no way to the rest (FL-09). Same shape as `app/dispatch/page.tsx`.
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["death-sync", "registrations", page],
-    queryFn: () => api.get("/death-sync/registrations/", { params: { page: String(page) } }).then(r => r.data),
+    queryKey: ["death-sync", "registrations", page, status],
+    queryFn: async () =>
+      (await deathSyncApi.registrations({ page: String(page), ...(status ? { status } : {}) })).data,
     enabled: !!user,
     placeholderData: (previous) => previous,
   });
   const registrations = data?.results ?? [];
+  // A server-side count, not the length of one page.
+  const summary = useQuery({
+    queryKey: ["death-sync", "summary"],
+    queryFn: async () => (await deathSyncApi.summary()).data,
+    enabled: !!user,
+  });
+
+  const setStatus = (next: string) => {
+    setPage(1);
+    router.replace(next ? `${pathname}?status=${encodeURIComponent(next)}` : pathname);
+  };
 
   return (
     <PageShell
@@ -68,6 +88,29 @@ export default function DeathSyncPage() {
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
     >
       <PageSection title={t("death_sync.registrations") || "Registrations"}>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <FilterChipSelect
+            label={t("death_sync.status_label")}
+            value={status}
+            options={[
+              { value: "", label: t("filter.all") },
+              ...STATUSES.map((s) => ({ value: s, label: t(`death_sync.status.${s}`) })),
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("death_sync.status_label") })}
+            onChange={setStatus}
+          />
+          {summary.data && summary.data.anomaly_count > 0 && (
+            <button
+              type="button"
+              data-testid="death-sync-anomalies"
+              onClick={() => setStatus(summary.data.anomaly_status)}
+              className="text-sm text-[oklch(var(--color-danger))] underline"
+            >
+              <span aria-hidden="true">! </span>
+              {t("death_sync.anomaly_count", { count: String(summary.data.anomaly_count) })}
+            </button>
+          )}
+        </div>
         {/* 账页表格(规范 v1 §2)。没有详情路由,所以不是整行链接。
             失败与空仍分开:DataTable 的失败行是「! 加载失败」+ 重试。 */}
         <DataTable<DeathRegistration>

@@ -5,7 +5,9 @@ import hashlib
 import json
 
 from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,6 +26,7 @@ from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
     DeathRegistrationCreateSerializer,
     DeathRegistrationRequestSerializer,
+    DeathRegistrationSummarySerializer,
     DeathSyncHealthSerializer,
     ExternalApiKeySerializer,
     WebhookConfigSerializer,
@@ -260,6 +263,25 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminPermission, TenantPermission]
     queryset = DeathRegistrationRequest.objects.all()
     serializer_class = DeathRegistrationRequestSerializer
+    # `?status=FAILED`. django-filter builds a ChoiceFilter from the model's
+    # choices, so an unknown status is a 400, not a silently empty page.
+    filterset_fields = ["status"]
+
+    @extend_schema(responses=DeathRegistrationSummarySerializer)
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        """How many of this tenant's registrations need a human.
+
+        FAILED is the only anomalous state a row is ever written in: PENDING
+        and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
+        its job, and PARTIAL is a batch-level answer no row carries. The status
+        goes on the wire so the dashboard links to the same filter it counted.
+        """
+        anomaly = DeathRegistrationStatus.FAILED
+        return Response({
+            "anomaly_status": anomaly,
+            "anomaly_count": self.get_queryset().filter(status=anomaly).count(),
+        })
 
     def get_queryset(self):
         # `admin_bypass=False`: an ADMIN sees their own tenant's registrations,

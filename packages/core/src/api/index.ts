@@ -16,6 +16,8 @@ export {
   type LoginResponse,
   type LoginRequest,
   type AuthProfile,
+  type LoginFailedBody,
+  type LoginLockedBody,
   type PublicCivilization,
   type DefaultView,
   type UserPreferences,
@@ -129,7 +131,7 @@ export { organizationsApi, type Organization } from "./organizations";
 export { notificationsApi, type Notification } from "./notifications";
 
 // Dispatch
-export { dispatchApi, crossTenantJudgmentsApi, type DispatchRecord, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
+export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
 
 // Social
 export { socialApi, type Post, type Comment, type Reaction, type Follow, type UserProfile } from "./social";
@@ -166,5 +168,8 @@ export {
   type SoulContactUpdate,
 } from "./soul-accounts";
 
+// Death sync (browser read side)
+export { deathSyncApi, type DeathRegistration, type DeathRegistrationStatus, type DeathRegistrationSummary } from "./death-sync";
+
 // Recycle bin
-export { recycleBinApi, type RecycleBinEntry, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";
+export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";

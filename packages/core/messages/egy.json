@@ -27,6 +27,8 @@
     "error_invalid_token": "Menf Her Tepy",
     "error_token_expired": "Menf Wehem Seth",
     "error_login_failed": "Nen Aq",
+    "error_attempts_left": "Aq / Sekhem Nen Maat · Wehem {{count}}",
+    "error_locked": "Aq Aashu. Wehem Er {{minutes}} At",
     "confirm_logout": "Per Aq?",
     "confirm_logout_desc": "Per Aq Pen?",
     "confirm_logout_btn": "Per Aq",
@@ -459,6 +461,7 @@
       "soul": "Ka",
       "menu": "Menu"
     },
+    "col_location": "T3 Khet",
     "col_deleted_by": "Wehem Iri"
   },
   "permissions": {
@@ -713,6 +716,8 @@
       "judgment_queue": "Sheemtet Wu",
       "enter": "Aq →",
       "none": "Nen Em Set Medu",
+      "death_sync_anomaly": "Wepet Ru Kehat · Nen Iri",
+      "go_view": "Smen →",
       "load_error": "Nen Ini"
     },
     "civ_share": "Redu",
@@ -1170,6 +1175,7 @@
     "tenants_error": "Nen Ini Sesh Per-Hemsu. Wehem Iri.",
     "soul_search_more": "Medu {{shown}} / {{count}} — Shesep Her Ren",
     "reason_placeholder": "Medu Hab-Ba...",
+    "reason_too_short": "Sesh {{min}} Er Hry · Sesh {{count}}",
     "target_soul": "Aba Setep Seth",
     "select_tenant": "Setep Per Hemes...",
     "submitting": "Em Wetjes...",
@@ -1456,6 +1462,7 @@
     "subtitle": "Medew Wepet Ru Ahet - Set Medu Kehat",
     "registrations": "Medew Wepet Ru",
     "no_registrations": "Nen Rekhyu Medew Wepet Ru",
+    "anomaly_count": "Nen Iri {{count}}",
     "requested": "Sesep Seth",
     "duration": "Petep Seth",
     "reference": "Medu Ahet",
