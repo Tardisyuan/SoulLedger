@@ -92,6 +92,8 @@ describe("soul_app copy", () => {
       ...Object.keys(SOUL_STATE_BADGES).map((s) => `soul_app.soul_states.${s}`),
       // Lexicon keys are built from the civilization and the word, also out of the harvest's sight.
       ...(["neutral", "cn", "eu", "eg", "gr"] as const).flatMap((civ) => LEXICON_WORDS.map((w) => lexiconKey(civ, w))),
+      // The report form reads the moderation section's reasons by member (egy settled there).
+      ...["SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "OTHER"].map((r) => `social_moderation.reason.${r}`),
       "common.value.unrecorded",
       "common.value.unrecognized",
       // The settings switches and the primer's list build their keys from the category.

@@ -61,6 +61,12 @@ export type AppStackParams = {
   FindSoul: undefined;
   ComposePost: undefined;
   CirclePost: { id: string };
+  SoulProfile: { userId: number };
+  MyCircle: undefined;
+  CircleFollows: { relation: "following" | "followers" };
+  CircleSearch: undefined;
+  /** `preview`: the post / comment text, or the soul's name — shown so the reporter sees what they report. */
+  CircleReport: { target: "POST" | "COMMENT" | "USER"; id: string; preview: string };
 };
 
 /**
