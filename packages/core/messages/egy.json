@@ -50,7 +50,7 @@
       "GREEK": "Yunan"
     },
     "civ_desc": {
-      "CHINESE": "Medu Yama, Mu Meng Po, Sesh Wehem-Ankh",
+      "CHINESE": "Yama Em Wesekhet 10, Mu Meng Po, Wehem Mesut Em Wat 6",
       "EUROPEAN": "Wedja Meseh, Ta Hesmen, Duat En Dante, Itru Lethe",
       "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Aaru",
       "GREEK": "Khemet Wedja, Sesh Er, Mu Lethe"
@@ -1659,8 +1659,8 @@
     "following": "Nehes Seth",
     "following_count": "Nehes Sepu",
     "followers": "Nehesu",
-    "no_following": "Nen Rekhyu Shemsu",
-    "no_followers": "Nen Rekhyu Shemsu Khet",
+    "no_following": "Nen Nehes Djer",
+    "no_followers": "Nen Nehesu Djer",
     "profile": "Aha Pepi",
     "all": "Wetu",
     "back": "Khet",
@@ -1682,7 +1682,7 @@
       "PRIVATE": "Wa-Ek"
     },
     "visibility_label": "Set Medu Maa",
-    "follow_error": "Nen Shemsu Seth",
+    "follow_error": "Nen Nehes",
     "reactions": "Sehed"
   },
   "tenants": {
@@ -2392,7 +2392,7 @@
         "followed": "Nehes Seth",
         "mutual": "Senb",
         "follows_you": "Nehes Ek",
-        "more_hint": "Er Khet Nehes: Maa Aa. Medu Ky Nehesu Wa.",
+        "more_hint": "Er Khet Nehes: Maa Ky. Medu Ky Nehesu Wa.",
         "reborn": "Wehem Mesut Seth",
         "reborn_body": "Ankh Pen Khetem Seth. Medu Khetem; Nen Nehes, Nen Sehed, Nen Wesheb.",
         "menu": {
