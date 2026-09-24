@@ -1,0 +1,232 @@
+"""认领、释放、改派、暂缓 —— 审判队列「谁在办」的唯一写入路径。
+
+`Judgment.claimed_by` / `deferred_*` 只在这里写。视图负责两件事:这件案子在调用者的
+租户里(`get_object()` 或批量时的范围查询),以及调用者持有哪些码名;这里负责剩下的
+一切 —— 案子此刻的状态允许这个动作吗,以及两个人同时来时只有一个赢。
+
+并发。每个动作都在 `transaction.atomic()` 里先 `select_for_update(of=("self",))`
+锁住案子这一行,**锁到之后再读**认领人。两个官员同时认领同一件案子:第二个在行锁上
+等,拿到锁时读到的已是第一个写下的 `claimed_by`,于是得到 409 `already_claimed`,
+而不是覆盖它。`of=("self",)` 是 `apps/core/lock_join_guard.py` 要求的写法:锁案子,
+不顺带锁住它的灵魂与租户。SQLite 没有行锁,真正的等待只在 PostgreSQL 上可测 ——
+`tests/test_concurrency.py::TestJudgmentClaimConcurrency`。
+
+拒绝是 `ClaimRefusedError`,带一个稳定的 `code`,视图原样转成响应体。409 是「请求
+合法、调用者也有权,但案子此刻不接受」(与 `destroy` / `cite_statute` 同一区分);
+403 是「这件案子不是你的,你又没有改派权」。
+
+历史。写入一律 `save(update_fields=…)` 而不是 `QuerySet.update()`:前者经过审计
+信号,每次认领 / 释放 / 改派 / 暂缓都留下一行带前后值的 AuditLog;后者不经信号,
+历史就没了。结案不碰这几列,所以已结案的案子仍带着最后的认领人。
+"""
+from django.db import transaction
+from django.utils import timezone
+
+from apps.judgment.models import Judgment
+
+#: 一次批量最多多少件。与需求一致;超过的请求在序列化器上 400,不截断。
+BATCH_LIMIT = 100
+
+_SAVE_FIELDS_BOOKKEEPING = ("version", "update_user", "update_time")
+
+
+class ClaimRefusedError(Exception):
+    """案子此刻不接受这个动作。`code` 是给客户端分支用的稳定键。"""
+
+    def __init__(self, message: str, code: str, status: int = 409, **extra):
+        super().__init__(message)
+        self.code = code
+        self.status = status
+        self.extra = extra
+
+    def as_payload(self) -> dict:
+        return {"error": str(self), "code": self.code, **self.extra}
+
+
+def _lock(pk) -> Judgment:
+    return Judgment.all_objects.select_for_update(of=("self",)).get(pk=pk)
+
+
+def _lock_many(pks) -> list[Judgment]:
+    # 按主键排序加锁:两个批量请求以不同顺序锁同一组行,会互相等成死锁。
+    return list(Judgment.all_objects.select_for_update(of=("self",)).filter(pk__in=pks).order_by("pk"))
+
+
+def _assert_pending(judgment: Judgment) -> None:
+    """已结案、已撤案、已归档的案子不再有「谁在办」。
+
+    与 `open_judgments` 同一组列;`is_archived` 额外排除,因为队列(`_pending_queue`)
+    也排除它。结案后认领信息保留,但不能再改。
+    """
+    if judgment.verdict is not None or judgment.is_final or judgment.is_deleted or judgment.is_archived:
+        raise ClaimRefusedError("This judgment is no longer pending.", "not_pending")
+
+
+def _holder(judgment: Judgment) -> dict:
+    return {"claimed_by": judgment.claimed_by_id}
+
+
+def _save(judgment: Judgment, *fields: str) -> None:
+    judgment.save(update_fields=[*fields, *_SAVE_FIELDS_BOOKKEEPING])
+
+
+def _assert_may_act_on(judgment: Judgment, user, may_override: bool) -> None:
+    """别人认领的案子,只有持改派权的人能替他释放或暂缓。"""
+    if judgment.claimed_by_id not in (None, user.pk) and not may_override:
+        raise ClaimRefusedError(
+            "This judgment is claimed by another officer.", "not_claimant", status=403, **_holder(judgment)
+        )
+
+
+# ---------------------------------------------------------------------------
+# 单件动作的规则(锁已由调用方拿到)
+# ---------------------------------------------------------------------------
+
+
+def _apply_claim(judgment: Judgment, user) -> None:
+    _assert_pending(judgment)
+    if judgment.claimed_by_id == user.pk:
+        return  # 幂等:重复认领自己的案子不写、不改 claimed_at
+    if judgment.claimed_by_id is not None:
+        raise ClaimRefusedError(
+            "This judgment is already claimed by another officer.", "already_claimed", **_holder(judgment)
+        )
+    judgment.claimed_by = user
+    judgment.claimed_at = timezone.now()
+    _save(judgment, "claimed_by", "claimed_at")
+
+
+def _apply_release(judgment: Judgment, user, may_override: bool) -> None:
+    _assert_pending(judgment)
+    if judgment.claimed_by_id is None:
+        raise ClaimRefusedError("This judgment is not claimed.", "not_claimed")
+    _assert_may_act_on(judgment, user, may_override)
+    judgment.claimed_by = None
+    judgment.claimed_at = None
+    _save(judgment, "claimed_by", "claimed_at")
+
+
+def _apply_reassign(judgment: Judgment, target) -> None:
+    _assert_pending(judgment)
+    if judgment.claimed_by_id == target.pk:
+        return
+    judgment.claimed_by = target
+    judgment.claimed_at = timezone.now()
+    _save(judgment, "claimed_by", "claimed_at")
+
+
+def _apply_defer(judgment: Judgment, user, reason: str, may_override: bool) -> None:
+    _assert_pending(judgment)
+    if judgment.deferred_at is not None:
+        raise ClaimRefusedError("This judgment is already deferred.", "already_deferred")
+    _assert_may_act_on(judgment, user, may_override)
+    judgment.deferred_at = timezone.now()
+    judgment.deferred_by = user
+    judgment.defer_reason = reason
+    _save(judgment, "deferred_at", "deferred_by", "defer_reason")
+
+
+def _apply_undefer(judgment: Judgment, user, may_override: bool) -> None:
+    _assert_pending(judgment)
+    if judgment.deferred_at is None:
+        raise ClaimRefusedError("This judgment is not deferred.", "not_deferred")
+    _assert_may_act_on(judgment, user, may_override)
+    judgment.deferred_at = None
+    judgment.deferred_by = None
+    judgment.defer_reason = ""
+    _save(judgment, "deferred_at", "deferred_by", "defer_reason")
+
+
+# ---------------------------------------------------------------------------
+# 入口
+# ---------------------------------------------------------------------------
+
+
+def claim(pk, user) -> Judgment:
+    with transaction.atomic():
+        judgment = _lock(pk)
+        _apply_claim(judgment, user)
+    return judgment
+
+
+def release(pk, user, *, may_override: bool) -> Judgment:
+    with transaction.atomic():
+        judgment = _lock(pk)
+        _apply_release(judgment, user, may_override)
+    return judgment
+
+
+def reassign(pk, target) -> Judgment:
+    with transaction.atomic():
+        judgment = _lock(pk)
+        assert_assignable(target, judgment.tenant_id)
+        _apply_reassign(judgment, target)
+    return judgment
+
+
+def defer(pk, user, reason: str, *, may_override: bool) -> Judgment:
+    with transaction.atomic():
+        judgment = _lock(pk)
+        _apply_defer(judgment, user, reason, may_override)
+    return judgment
+
+
+def undefer(pk, user, *, may_override: bool) -> Judgment:
+    with transaction.atomic():
+        judgment = _lock(pk)
+        _apply_undefer(judgment, user, may_override)
+    return judgment
+
+
+def batch(pks, operation: str, user, *, target=None, reason: str = "", may_override: bool = False) -> list[Judgment]:
+    """一次对最多 `BATCH_LIMIT` 件案子做同一个动作。**全有或全无。**
+
+    任何一件被拒,`ClaimRefusedError` 带着那件的 `id` 抛出,整个事务回滚 —— 前面已经
+    写下的几件也一起撤回。调用方(视图)已确认每个 id 都在调用者的租户里。
+    """
+    with transaction.atomic():
+        judgments = _lock_many(pks)
+        if len(judgments) != len(set(pks)):
+            # 视图查过范围之后、加锁之前被硬删的行。软删的仍在,由 `_assert_pending` 拒。
+            found = {j.pk for j in judgments}
+            raise ClaimRefusedError(
+                "Some judgments were not found.", "not_found", status=404,
+                missing=[str(pk) for pk in pks if pk not in found],
+            )
+        for judgment in judgments:
+            try:
+                if operation == "claim":
+                    _apply_claim(judgment, user)
+                elif operation == "reassign":
+                    assert_assignable(target, judgment.tenant_id)
+                    _apply_reassign(judgment, target)
+                elif operation == "defer":
+                    _apply_defer(judgment, user, reason, may_override)
+                else:  # pragma: no cover — the serializer's ChoiceField is the gate
+                    raise ValueError(operation)
+            except ClaimRefusedError as exc:
+                exc.extra["id"] = str(judgment.pk)
+                raise
+    return judgments
+
+
+def assert_assignable(target, tenant_id) -> None:
+    """改派的对象必须是这件案子所在租户里、能办案的在职官员。
+
+    「能办案」= 持有 `judgment.execute`,问的是与视图同一个 `check_permission`,
+    所以数据库里撤掉了某人的授权,他就不再能被改派到。灵魂账号(role=SOUL)在
+    checker 里一律无权,自然被挡住。
+    """
+    from apps.perm.checker import check_permission
+
+    # 「没有这个人」与「这个人在别的租户」答同一句话:不同的答复就是一个跨租户的
+    # 用户枚举口子。
+    if (
+        target is None
+        or not target.is_active
+        or getattr(target, "is_deleted", False)
+        or target.tenant_id != tenant_id
+    ):
+        raise ClaimRefusedError("No such officer in this judgment's tenant.", "invalid_assignee", status=400)
+    if not check_permission(target, "judgment.execute"):
+        raise ClaimRefusedError("That officer cannot work judgments.", "invalid_assignee", status=400)

@@ -46,6 +46,9 @@ export const judgmentKeys = {
    * that root.
    */
   precedents: (id: string, limit?: number) => [...judgmentKeys.all, "precedents", id, limit ?? null] as const,
+  /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
+  queueCounts: (params?: { court?: string; search?: string }) =>
+    [...judgmentKeys.all, "queue-counts", params ?? null] as const,
 };
 
 export const workflowKeys = {

@@ -46,6 +46,13 @@ export {
   type QueueLedgerRecord,
   type QueuePriorCycle,
   type QueueRealm,
+  type JudgmentQueueGroup,
+  type JudgmentQueueCounts,
+  type JudgmentQueueCountsParams,
+  type JudgmentBatchOperation,
+  type JudgmentBatchPayload,
+  type JudgmentBatchResult,
+  type JudgmentClaimRefusal,
 } from "./judgment";
 
 // Ledger

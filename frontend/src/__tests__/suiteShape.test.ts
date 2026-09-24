@@ -200,6 +200,7 @@ const COLLECTED_FILES = [
   "truncatedValuesAreRecoverable.test.ts",
   "unreadBadgeCountsTheWholeInbox.test.tsx",
   "useDispositions.test.ts",
+  "useJudgmentClaims.test.ts",
   "useJudgmentQueue.test.tsx",
   "useJudgments.test.ts",
   "usePermissionMatrix.test.tsx",
