@@ -6,7 +6,8 @@ import { api, type Organization, type PaginatedResponse } from "@soulledger/core
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ClipboardList, Landmark, Scale } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
@@ -16,7 +17,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
-// this page renders a parent/child tree (buildTree/renderTree below), so a paged view would
+// this page renders a parent/child tree (flattenTree/renderTable below), so a paged view would
 // split a node from its children onto different pages and break the tree. Fetch every page
 // up front instead — confirmed via curl that `/organizations/` is standard DRF pagination
 // (`{count,next,previous,results}`, page_size fixed at 20, `?page_size=` is ignored).
@@ -97,41 +98,12 @@ function OrganizationsPageContent() {
     return acc;
   }, {} as Record<string, Organization[]>);
 
-  // Build tree structure for display
-  const buildTree = (orgs: Organization[]): Record<string, Organization[]> => {
-    const tree: Record<string, Organization[]> = {};
-    orgs.forEach(org => {
-      const parentKey = String(org.parent ?? "root");
-      if (!tree[parentKey]) tree[parentKey] = [];
-      tree[parentKey].push(org);
-    });
-    // Sort by level and sort
-    Object.keys(tree).forEach(key => {
-      tree[key].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-    });
-    return tree;
-  };
-
   const toggleCollapse = (civ: string) => {
     setCollapsed(prev => ({ ...prev, [civ]: !prev[civ] }));
   };
 
-  /** Depth-first, siblings in `sort` order: the tree as table rows. */
-  const flattenTree = (orgs: Organization[]): { org: Organization; depth: number }[] => {
-    const tree = buildTree(orgs);
-    const out: { org: Organization; depth: number }[] = [];
-    const walk = (parentId: number | null, depth: number) => {
-      for (const org of tree[String(parentId ?? "root")] || []) {
-        out.push({ org, depth });
-        walk(org.id, depth + 1);
-      }
-    };
-    walk(null, 0);
-    return out;
-  };
-
   /* 账页(规范 v1 §2):树不再装在卡片框里,而是一张表 —— 表头 11 px 等宽,
-     下接区块边界,行与行之间是行线。层级靠名称列的缩进和图标说,不靠框。
+     下接区块边界,行与行之间是行线。层级靠名称列的缩进和 └ 肘线说,不靠框。
      机构没有详情路由,所以不是整行链接。 */
   const renderTable = (orgs: Organization[]) => (
     <table className="w-full text-sm">
@@ -142,27 +114,22 @@ function OrganizationsPageContent() {
         </tr>
       </thead>
       <tbody>
-        {flattenTree(orgs).map(({ org, depth }) => (
+        {/* 树表行(第三类 B 组):层级由缩进加 └ 肘线说,三枚按深度换的 lucide
+            图标一起去掉 —— 它们说的是同一件事,而肘线还说清了「挂在谁下面」。
+            兄弟按 `sort` 排,与改动前一致。 */}
+        {flattenTree(
+          [...orgs].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
+          (o) => o.id,
+          (o) => o.parent,
+        ).map(({ item: org, depth }) => (
           <tr key={org.id} className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors">
-            <td className="py-2 pr-3" style={{ paddingLeft: `${depth * 20 + 12}px` }}>
-              <div className="flex items-center gap-2">
-                {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
-                    purpose — those are identity marks carrying measured font-coverage
-                    reasoning. These three are chrome. */}
-                <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))] shrink-0">
-                  {depth === 0 ? (
-                    <Landmark className="w-4 h-4" />
-                  ) : depth === 1 ? (
-                    <Scale className="w-4 h-4" />
-                  ) : (
-                    <ClipboardList className="w-4 h-4" />
-                  )}
-                </span>
-                <span className="font-medium text-[oklch(var(--color-ink))]">{org.name}</span>
+            <td className="py-2 px-3">
+              <TreeName depth={depth}>
+                <span className={depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}>{org.name}</span>
                 <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
                   {org.level === 0 ? t("organization.root") : `L${org.level}`}
                 </Badge>
-              </div>
+              </TreeName>
             </td>
             <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{org.code}</td>
           </tr>

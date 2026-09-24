@@ -7,7 +7,7 @@
  * below ("renders for an anonymous visitor"). The rest covers the two bits
  * of real logic: the hour-of-day greeting and the relative timestamp.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WelcomePage from "@/app/welcome/page";
 import { auditApi, ledgerApi, permApi } from "@soulledger/core/api";
@@ -37,6 +37,8 @@ const keyEcho = (key: string, params?: Record<string, string>) =>
 let mockTranslate: typeof keyEcho = keyEcho;
 
 jest.mock("@/src/contexts/I18nContext", () => ({
+  // The checklist's 语言与主题 step renders the real LanguageSwitcher.
+  LOCALE_LABELS: jest.requireActual("@/src/contexts/I18nContext").LOCALE_LABELS,
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) => mockTranslate(key, params),
     formatDate: () => "FORMATTED_DATE",
@@ -103,7 +105,8 @@ describe("WelcomePage quick stats", () => {
     renderPage();
 
     expect(await screen.findByText("77")).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument();
+    // Scoped to the KPI cells: the checklist's fourth step marker is also "4".
+    expect(screen.getByText("4", { selector: "[data-kpi]" })).toBeInTheDocument();
     expect(screen.getByText("60")).toBeInTheDocument();
     expect(screen.getByText("13")).toBeInTheDocument();
   });
@@ -171,7 +174,12 @@ describe("WelcomePage identity", () => {
     const roleCell = screen.getByText(zh("welcome.user_role")).nextElementSibling as HTMLElement;
     expect(roleCell.querySelector("[data-missing='unrecorded']")).not.toBeNull();
     expect(roleCell).not.toHaveTextContent("ADMIN");
-    expect(screen.queryByText(zh("users.roles.ADMIN"))).not.toBeInTheDocument();
+    // Anywhere it could be read as the visitor's role. The checklist's 默认视图
+    // step offers 「管理员」 as a way of working — a choice, not an identity —
+    // so that one button is excluded by name, not the whole page.
+    expect(
+      screen.queryAllByText(zh("users.roles.ADMIN")).filter((el) => !el.closest("[data-testid='welcome-view-admin']"))
+    ).toHaveLength(0);
   });
 
   it("prefers display_name over username", async () => {
@@ -333,5 +341,49 @@ describe("WelcomePage activity feed", () => {
     expect(hrefs).toEqual(expect.arrayContaining(["/souls", "/workflow", "/judgment", "/ledger", "/audit"]));
     // `/settings` was in this list and has never been a route.
     expect(hrefs).not.toContain("/settings");
+  });
+});
+
+// ── 首次进入清单 ─────────────────────────────────────────────────────
+
+describe("WelcomePage first-run checklist", () => {
+  const stepStates = () =>
+    Array.from(document.querySelectorAll("[data-step-state]")).map((li) => li.getAttribute("data-step-state"));
+
+  beforeEach(() => localStorage.clear());
+
+  it("starts an anonymous visitor on 确认身份 with a way to sign in", async () => {
+    renderPage();
+    await waitFor(() => expect(stepStates()).toEqual(["current", "future", "future", "future"]));
+    expect(screen.getByRole("link", { name: "auth.login" })).toHaveAttribute("href", "/login");
+  });
+
+  it("stores the default view locally and moves on once it is chosen", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    renderPage();
+
+    await waitFor(() => expect(stepStates()).toEqual(["done", "current", "future", "future"]));
+    // Unchosen, 跳过 goes where login always went.
+    expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/dashboard");
+
+    fireEvent.click(screen.getByTestId("welcome-view-operator"));
+
+    expect(localStorage.getItem("soulledger_default_view")).toBe("operator");
+    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "false");
+    expect(stepStates()).toEqual(["done", "done", "current", "future"]);
+    expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/judgment/queue");
+  });
+
+  it("lists only keys the app actually binds", async () => {
+    renderPage();
+    const keys = await waitFor(() => {
+      const found = Array.from(document.querySelectorAll("dt")).map((dt) => dt.textContent);
+      expect(found.length).toBeGreaterThan(0);
+      return found;
+    });
+    expect(keys).toEqual(["1–4", "S", "U", "N", "Esc", "? / H"]);
+    // The design's ⌘K / Q / ⌘⏎ / ⌘Z have no handler anywhere in the app.
+    for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z"]) expect(keys).not.toContain(invented);
   });
 });
