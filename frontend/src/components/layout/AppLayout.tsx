@@ -335,9 +335,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <ConnectionBanner />
+        {/* Zero-height sticky anchor: the banner floats over the page's top
+            padding instead of pushing the page down. It appears a moment
+            after load when the socket fails, and in the flow that 28px shift
+            moved buttons under the pointer mid-click — the E2E avatar test
+            clicked 编辑资料 into empty space 1 time in 16. */}
+        <div className="sticky top-12 z-filters h-0 md:top-10">
+          <div className="absolute inset-x-0 top-0">
+            <ConnectionBanner />
+          </div>
+        </div>
 
-        <div className="min-h-[calc(100vh-2.5rem)]">{children}</div>
+        <div data-testid="app-content" className="min-h-[calc(100vh-2.5rem)]">{children}</div>
       </main>
 
       <SettingsDrawer
