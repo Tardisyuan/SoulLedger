@@ -1351,7 +1351,8 @@
   },
   "filter": {
     "all": "全部",
-    "clear_all": "清除全部"
+    "clear_all": "清除全部",
+    "clear_one": "清除「{{name}}」筛选"
   },
   "death_sync": {
     "title": "死亡同步",

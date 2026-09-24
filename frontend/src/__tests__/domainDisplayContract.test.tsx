@@ -152,6 +152,8 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
     "Node status/verdict feed both a rendered span (which sets title) and DomainText's missingReason prop, a string.",
   [path.join("app", "souls", "page.tsx")]:
     "Status badge whose className is a per-state token lookup; sets title={soul.current_state} inline.",
+  [path.join("src", "components", "souls", "SoulPreviewDrawer.tsx")]:
+    "The list's status badge again, in the list's preview drawer; sets title={soul.current_state} inline.",
   [path.join("app", "souls", "[id]", "page.tsx")]:
     "Same status badge as the list; sets title={soul?.current_state} inline.",
   [path.join("src", "components", "judgment", "JudgmentQueueContext.tsx")]:

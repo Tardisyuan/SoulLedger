@@ -8,7 +8,6 @@
  * fetch is an error bar under the header, not an empty drawer.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulsPage from "@/app/souls/page";
 
@@ -37,8 +36,9 @@ jest.mock("@soulledger/core/api", () => ({
   soulsApi: { list: jest.fn().mockResolvedValue({ data: { count: 0, results: [] } }) },
 }));
 
-jest.mock("@/src/components/rbac/RequirePermission", () => ({
-  RequirePermission: ({ children }: { children: ReactNode }) => <>{children}</>,
+// The real gate runs (suiteShape forbids stubbing it); an ADMIN session lets it through.
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: { role: "ADMIN" } }),
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
