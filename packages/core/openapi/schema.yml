@@ -3198,7 +3198,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Judgment'
+                $ref: '#/components/schemas/JudgmentDetail'
           description: ''
     put:
       operationId: v1_judgment_update
@@ -3532,6 +3532,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Judgment'
+          description: ''
+  /api/v1/judgment/{id}/draft/:
+    patch:
+      operationId: v1_judgment_draft_partial_update
+      description: |-
+        Autosave the verdict text (`notes`) and the chosen verdict.
+
+        `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
+        "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
+        caller last saw. 200 returns the stored draft with the new version and
+        `draft_saved_at`; a save that changes nothing is a 200 no-op, so a
+        retry is safe. 409 `draft_conflict` when someone saved first (the
+        body carries what they saved), 409 `concluded` once the verdict is in.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedJudgmentDraftWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedJudgmentDraftWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedJudgmentDraftWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentDraft'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentDraftConflict'
+          description: ''
+  /api/v1/judgment/{id}/evidence/{record_id}/:
+    put:
+      operationId: v1_judgment_evidence_update
+      description: |-
+        Admit or not admit one ledger record as evidence in this case.
+
+        `PUT /api/v1/judgment/{id}/evidence/{record_id}/`
+        `{"admitted": false, "reason": "..."}` — a reason is required when not
+        admitting. PUT because the ruling is a state, and repeating it is a
+        no-op. 409 once the case is concluded; 400 for a record that is not
+        evidence in this case (another soul's, another life's, another
+        tenant's, or a non-scoring entry).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        description: The ledger record (SoulRecord) being ruled on.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceRulingWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvidenceRulingWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvidenceRulingWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceRulingResult'
           description: ''
   /api/v1/judgment/next/:
     get:
@@ -12452,6 +12550,34 @@ components:
         * `GUARDIAN` - Guardian
         * `CONDUIT` - Soul Conduit / Guide
         * `OVERSEER` - Overseer / Admin
+    AdmittedBalance:
+      type: object
+      description: |-
+        `LedgerService.get_admitted_balance`. `balance` and `not_admitted_net`
+        are null unless `reading_kind` is BALANCE (and the judgment is from the
+        current life); `reason_code` says which.
+      properties:
+        reading_kind:
+          type: string
+          nullable: true
+        balance:
+          type: integer
+          nullable: true
+        not_admitted_count:
+          type: integer
+        not_admitted_net:
+          type: number
+          format: double
+          nullable: true
+        reason_code:
+          type: string
+          nullable: true
+      required:
+      - balance
+      - not_admitted_count
+      - not_admitted_net
+      - reading_kind
+      - reason_code
     ApiKeyRateLimit:
       type: object
       description: |-
@@ -13198,6 +13324,14 @@ components:
         * `EUROPEAN` - European Heaven/Hell
         * `EGYPTIAN` - Egyptian Duat
         * `GREEK` - Greek Underworld
+    CodeEnum:
+      enum:
+      - draft_conflict
+      - concluded
+      type: string
+      description: |-
+        * `draft_conflict` - draft_conflict
+        * `concluded` - concluded
     Comment:
       type: object
       properties:
@@ -14275,6 +14409,62 @@ components:
         * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
+    EvidenceAdmission:
+      type: object
+      description: |-
+        One ruling on one ledger record in this case. A record with no ruling
+        is admitted; only rulings that were made are listed.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        record:
+          type: string
+          format: uuid
+        admitted:
+          type: boolean
+        reason:
+          type: string
+          description: Why the record is not admitted. Required when admitted is false.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - record
+      - update_time
+    EvidenceRulingResult:
+      type: object
+      description: 'What a ruling returns: the row, and the balance it changed.'
+      properties:
+        admission:
+          $ref: '#/components/schemas/EvidenceAdmission'
+        admitted_balance:
+          $ref: '#/components/schemas/AdmittedBalance'
+      required:
+      - admission
+      - admitted_balance
+    EvidenceRulingWrite:
+      type: object
+      description: |-
+        Input for `PUT /judgment/{id}/evidence/{record_id}/`. Shape only; the
+        reason-required rule and which records are evidence here are
+        `EvidenceAdmissionService.rule`'s.
+      properties:
+        admitted:
+          type: boolean
+        reason:
+          type: string
+          default: ''
+      required:
+      - admitted
     ExportedDataScope:
       type: object
       properties:
@@ -14772,12 +14962,29 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        draft_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        draft_saved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        draft_version:
+          type: integer
+          readOnly: true
       required:
       - amends_plan_id
       - citations
       - civilization
       - concluded_at
       - created_at
+      - draft_saved_at
+      - draft_verdict
+      - draft_version
       - id
       - is_final
       - judge_name
@@ -14831,6 +15038,161 @@ components:
           default: ''
       required:
       - statute
+    JudgmentDetail:
+      type: object
+      description: |-
+        `GET /judgment/{id}/` — the list shape plus the evidence rulings and the
+        admitted balance. Detail only: the balance walks the soul's ledger, which
+        the list must not do once per row.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+        soul_name:
+          type: string
+          readOnly: true
+        civilization:
+          allOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          readOnly: true
+        judge:
+          type: string
+          format: uuid
+          nullable: true
+        judge_name:
+          type: string
+          readOnly: true
+        court:
+          type: string
+          description: Court name, e.g. 第一殿
+          maxLength: 255
+        evidence_json: {}
+        confession:
+          type: string
+        verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        notes:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/JudgmentCitation'
+          readOnly: true
+        is_final:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        concluded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentKindEnum'
+          readOnly: true
+        amends_plan_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        draft_saved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        draft_version:
+          type: integer
+          readOnly: true
+        evidence_admissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceAdmission'
+          readOnly: true
+        admitted_balance:
+          allOf:
+          - $ref: '#/components/schemas/AdmittedBalance'
+          readOnly: true
+      required:
+      - admitted_balance
+      - amends_plan_id
+      - citations
+      - civilization
+      - concluded_at
+      - created_at
+      - draft_saved_at
+      - draft_verdict
+      - draft_version
+      - evidence_admissions
+      - id
+      - is_final
+      - judge_name
+      - kind
+      - soul
+      - soul_name
+      - verdict
+    JudgmentDraft:
+      type: object
+      description: 'The draft as stored: what a save returns, and what a 409 hands
+        back.'
+      properties:
+        notes:
+          type: string
+          readOnly: true
+        draft_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        draft_version:
+          type: integer
+          readOnly: true
+        draft_saved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - draft_saved_at
+      - draft_verdict
+      - draft_version
+      - notes
+    JudgmentDraftConflict:
+      type: object
+      description: |-
+        409 body of `draft/`. `code` is `draft_conflict` (someone saved first;
+        `current` is what they saved) or `concluded` (`current` is null).
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/CodeEnum'
+        current:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentDraft'
+          nullable: true
+      required:
+      - code
+      - current
+      - error
     JudgmentKindEnum:
       enum:
       - ORIGINAL
@@ -18064,6 +18426,36 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        draft_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        draft_saved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        draft_version:
+          type: integer
+          readOnly: true
+    PatchedJudgmentDraftWrite:
+      type: object
+      description: |-
+        Input for `PATCH /judgment/{id}/draft/`. `version` is the
+        `draft_version` the caller last saw; either content field may be omitted.
+      properties:
+        version:
+          type: integer
+          minimum: 0
+        notes:
+          type: string
+        draft_verdict:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
     PatchedMenuButtonCreateUpdate:
       type: object
       properties:
