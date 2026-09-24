@@ -33,6 +33,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useChat, type Outgoing } from "../chat";
+import { useCommittedSend } from "../composing";
 import { bubbleStamp, chatMode, dayOf, daysLeft, type ChatMode } from "../chatRules";
 import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
@@ -533,25 +534,8 @@ function Dock({
   const t = useTheme();
   const { t: tr } = useI18n();
   const input = useRef<TextInput>(null);
-  const committing = useRef(false);
   const pad = { paddingBottom: 14 + bottom, borderTopColor: t.hair };
-  /**
-   * iOS, pinyin (any composing keyboard): the syllables still being composed —
-   * UIKit's "marked text" — are already in `draft` (RN reports the field's text,
-   * marked part included), yet the keyboard has not committed them. Sending
-   * `draft` would send them as they stand. So the send key first has the field
-   * resign: UIKit commits the marked text on the way out, and `onEndEditing`
-   * then reports the committed text — that is what is sent. The field takes
-   * focus straight back, so the keyboard stays for the next letter.
-   * Android reports composing text the same way, but the handoff asked for iOS.
-   */
-  const press = () => {
-    if (!draft.trim()) return;
-    if (Platform.OS !== "ios" || !input.current?.isFocused()) return onSend(draft);
-    committing.current = true;
-    input.current.blur();
-    input.current.focus();
-  };
+  const { press, onEndEditing } = useCommittedSend(input, draft, onSend);
   switch (mode.kind) {
     case "outgoing_locked":
       return (
@@ -597,11 +581,7 @@ function Dock({
             accessibilityLabel={tr(placeholder)}
             value={draft}
             onChangeText={onDraft}
-            onEndEditing={(e) => {
-              if (!committing.current) return;
-              committing.current = false;
-              onSend(e.nativeEvent.text);
-            }}
+            onEndEditing={onEndEditing}
             placeholder={tr(placeholder)}
             placeholderTextColor={t.inkSubtle}
             multiline
