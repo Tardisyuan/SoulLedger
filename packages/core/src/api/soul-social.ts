@@ -33,6 +33,7 @@ export type PaginatedSoulCards = Schemas["PaginatedSoulCards"];
  * (`not_found`, `account_retired`). `muted` also carries `muted_until`.
  */
 export const SOUL_SOCIAL_ERROR_CODES = [
+  "eternal_light_locked",
   "muted",
   "not_author",
   "parent_not_found",
@@ -45,8 +46,12 @@ const get = <T>(url: string, params?: object) => soulHttp.get<T>(url, { params }
 export const soulSocialApi = {
   /** Ask first: `can_write` false while muted; `reports_remaining` of the 24 h allowance. */
   status: () => get<SoulSocialStatus>("/me/social/status/"),
-  /** This civilization + followed. `author` narrows it to one soul's posts (profile page). */
-  feed: (params: { page?: number; author?: number } = {}) => get<PaginatedSoulPosts>("/me/social/feed/", params),
+  /**
+   * This civilization + followed. `author` narrows it to one soul's posts (profile page);
+   * `following` to the souls this one follows (not its own posts).
+   */
+  feed: (params: { page?: number; author?: number; following?: boolean } = {}) =>
+    get<PaginatedSoulPosts>("/me/social/feed/", params),
   /** 201 with `moderation_status`: PENDING when it hit the word list — show that, it is not visible yet. */
   createPost: (content: string, visibility: SoulPostVisibility = "TENANT") =>
     soulHttp.post<SoulPost>("/me/social/feed/", { content, visibility }).then((r) => r.data),
@@ -59,7 +64,10 @@ export const soulSocialApi = {
       .post<SoulComment>(`/me/social/posts/${postId}/comments/`, { content, ...(parent ? { parent } : {}) })
       .then((r) => r.data),
   deleteComment: (id: string) => soulHttp.delete(`/me/social/comments/${id}/`).then(() => undefined),
-  /** Same type again removes it; a different type switches. The response is the state after. */
+  /**
+   * One reaction per soul per post: same type again removes it, a different type switches.
+   * ETERNAL_LIGHT is final — after it, any call is 409 `eternal_light_locked`.
+   */
   react: (postId: string, reaction_type: SoulReactionType = "LIKE") =>
     soulHttp.post<SoulReactionState>(`/me/social/posts/${postId}/reaction/`, { reaction_type }).then((r) => r.data),
   /** Display name (contains) or soul code (exact). The code is never returned. */
