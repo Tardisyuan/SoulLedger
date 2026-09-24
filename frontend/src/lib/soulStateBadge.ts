@@ -33,44 +33,44 @@ import type { SoulListItem } from "@soulledger/core/api";
 export type SoulState = SoulListItem["current_state"];
 
 /**
- * Every state carries its own `--color-status-<state>` token, tinted to 10% for
- * the fill and full strength for the ink — the same depth `EnumBadge` uses and
- * `dataGridToneContract` caps, and the same six tokens `lib/chart-colors.ts`
- * mirrors for the charts (pinned by `civilizationColourContract`). Badge and
- * chart legend therefore draw from one palette rather than two that happen to
- * agree today.
- *
- * DISPOSED AND LOST WERE NOT ALWAYS HERE. Both held
- * `bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]` — the
- * unknown-state fill below — so 已处置 and 迷失 were indistinguishable from each
- * other and from a state the UI does not recognise, while
- * `--color-status-disposed` (285 55% 66% dark / 285 52% 44% light) and
- * `--color-status-lost` (225 10% 58% / 225 10% 42%) sat declared and unused by
- * either page. Measured on the 10% tint over `--color-surface-1`: disposed
- * 5.58:1 dark / 5.30:1 light, lost 5.21:1 / 4.79:1 — both clear of the 4.5:1 AA
- * floor, and lost is at the same light-mode ratio ALIVE already ships at.
+ * Every state draws its own `--color-status-<state>` token as text + a 1 px
+ * border, no fill (规范 v1 §2 徽章). The tokens resolve to the five semantic
+ * colours (§1.2: 存活 success · 审判中 warning · 已处置 ink · 轮回中 accent ·
+ * 迷失 ink-subtle), and every state also has a glyph below — colour is never the
+ * only channel. `lib/chart-colors.ts` mirrors the same tokens for the charts.
  */
 export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
-  ALIVE: "bg-[oklch(var(--color-status-alive)/0.1)] text-[oklch(var(--color-status-alive))]",
-  JUDGING: "bg-[oklch(var(--color-status-judging)/0.1)] text-[oklch(var(--color-status-judging))]",
-  DISPOSED: "bg-[oklch(var(--color-status-disposed)/0.1)] text-[oklch(var(--color-status-disposed))]",
-  REINCARNATING: "bg-[oklch(var(--color-status-reincarnating)/0.1)] text-[oklch(var(--color-status-reincarnating))]",
-  LOST: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
-  SETTLED: "bg-[oklch(var(--color-status-settled)/0.1)] text-[oklch(var(--color-status-settled))]",
+  ALIVE: "text-[oklch(var(--color-status-alive))] border border-[oklch(var(--color-status-alive))]",
+  JUDGING: "text-[oklch(var(--color-status-judging))] border border-[oklch(var(--color-status-judging))]",
+  DISPOSED: "text-[oklch(var(--color-status-disposed))] border border-[oklch(var(--color-status-disposed))]",
+  REINCARNATING: "text-[oklch(var(--color-status-reincarnating))] border border-[oklch(var(--color-status-reincarnating))]",
+  LOST: "text-[oklch(var(--color-status-lost))] border border-[oklch(var(--color-status-lost))]",
+  SETTLED: "text-[oklch(var(--color-status-settled))] border border-[oklch(var(--color-status-settled))]",
 };
 
 /**
- * A state this build has no colour for — a value the API grew and the UI has
- * not caught up with, or no state at all because the record failed to load.
- *
- * Deliberately NOT one of the six. Painting an unknown state in a lifecycle
- * colour is a claim about which state it is; surface-3 with muted ink says
- * "this badge has no colour to give you", which is the true statement. The
- * detail page used to fall back to `"ALIVE"` here, so a soul that failed to
- * load wore the green of a living one beside the words 「未记录」.
+ * 规范 v1 §1.2:领域状态 = 颜色 + 字形,不单靠颜色。已处置 ■(墨)与轮回中 ↻(强调)
+ * 从此一眼可分;SETTLED(已结清)不在规范的五态里,用 □ 与「已处置」■ 成对。
+ */
+export const SOUL_STATE_GLYPH: Record<SoulState, string> = {
+  ALIVE: "○",
+  JUDGING: "◐",
+  DISPOSED: "■",
+  REINCARNATING: "↻",
+  LOST: "×",
+  SETTLED: "□",
+};
+
+/** The glyph for a state off the wire; an unknown state gets "?" rather than a guess. */
+export function soulStateGlyph(state: string | null | undefined): string {
+  return state && state in SOUL_STATE_GLYPH ? SOUL_STATE_GLYPH[state as SoulState] : "?";
+}
+
+/**
+ * A state the payload carries but this table does not know. No colour claim.
  */
 export const UNKNOWN_SOUL_STATE_BADGE_CLASS =
-  "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]";
+  "text-[oklch(var(--color-ink-muted))] border border-dashed border-[oklch(var(--color-line))]";
 
 /** The badge classes for a state off the wire, which may be absent or unknown. */
 export function soulStateBadgeClass(state: string | null | undefined): string {

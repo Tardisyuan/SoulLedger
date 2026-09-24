@@ -74,7 +74,7 @@ export default function HomePage() {
               <Button>:它导航,不触发动作。 */}
           <a
             href={user ? "/dashboard" : "/login"}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[oklch(var(--color-accent))] text-black border border-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] hover:border-[oklch(var(--color-accent-hover))] transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] border border-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent-hover))] transition-colors"
           >
             {t("home.console")}
             <ExternalLink className="w-4 h-4" />

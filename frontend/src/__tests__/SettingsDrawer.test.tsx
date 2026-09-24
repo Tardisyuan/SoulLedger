@@ -2,7 +2,8 @@
  * Tests for SettingsDrawer component
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
+import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
+import { renderHook } from "@testing-library/react";
 import { HUE_READBACK_SLACK_DEG, hslHueOfOklch } from "./support/globalsCssTokens";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -142,9 +143,9 @@ describe("SettingsDrawer", () => {
 
   it("renders accent color preset buttons", () => {
     renderDrawer();
-    // Should have 6 color preset buttons (Amber, Blue, Green, Purple, Red, Rose)
+    // Ink blue (the palette default, 规范 v1) + Amber, Blue, Green, Purple, Red, Rose
     const colorButtons = document.querySelectorAll(".grid.grid-cols-3 button");
-    expect(colorButtons.length).toBe(6);
+    expect(colorButtons.length).toBe(7);
   });
 
   it("renders custom hex input", () => {
@@ -190,7 +191,7 @@ describe("the accent picker writes the whole accent, not a third of it", () => {
   it("sets accent, hover and ink together", () => {
     renderDrawer();
 
-    const blue = document.querySelectorAll<HTMLButtonElement>(".grid.grid-cols-3 button")[1];
+    const blue = document.querySelectorAll<HTMLButtonElement>(".grid.grid-cols-3 button")[2];
     fireEvent.click(blue);
 
     expect(readToken("--color-accent")).not.toBe("");
@@ -222,6 +223,26 @@ describe("the accent picker writes the whole accent, not a third of it", () => {
     expect(lightnessOf(readToken("--color-accent-hover"))).not.toBe(
       lightnessOf(readToken("--color-accent"))
     );
+  });
+
+  it("writes nothing inline when nothing was chosen, so the palette's ink blue shows", () => {
+    // It used to write the old amber default onto <html> on every mount, which
+    // overrode the stylesheet everywhere — the primary button came out amber.
+    renderHook(() => useAccentColor());
+    for (const token of ["--color-accent", "--color-accent-hover", "--color-accent-ink"]) {
+      expect(readToken(token)).toBe("");
+    }
+  });
+
+  it("choosing the ink-blue default removes a previous pick", () => {
+    renderDrawer();
+    const swatches = document.querySelectorAll<HTMLButtonElement>(".grid.grid-cols-3 button");
+    fireEvent.click(swatches[2]);
+    expect(readToken("--color-accent")).not.toBe("");
+    fireEvent.click(swatches[0]);
+    for (const token of ["--color-accent", "--color-accent-hover", "--color-accent-ink"]) {
+      expect(readToken(token)).toBe("");
+    }
   });
 
   it("refuses a custom hex too dark for the black label on primary buttons", () => {

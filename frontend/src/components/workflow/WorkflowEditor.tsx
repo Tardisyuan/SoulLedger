@@ -1125,7 +1125,7 @@ export default function WorkflowEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={addNode}
-            className="px-3 py-1.5 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black text-sm font-medium transition-colors"
+            className="px-3 py-1.5 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>

@@ -1246,6 +1246,7 @@
     "classic_desc": "带图标和标签的完整侧边栏",
     "compact_desc": "仅图标，悬停时显示工具提示",
     "colors": {
+      "ink": "墨蓝（默认）",
       "amber": "琥珀",
       "blue": "蓝色",
       "green": "绿色",

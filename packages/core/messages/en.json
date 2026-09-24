@@ -1246,6 +1246,7 @@
     "classic_desc": "Full sidebar with icons and labels",
     "compact_desc": "Icons only with tooltips on hover",
     "colors": {
+      "ink": "Ink blue (default)",
       "amber": "Amber",
       "blue": "Blue",
       "green": "Green",

@@ -52,7 +52,7 @@ export function SoulActionsCard({
               <button
                 onClick={onDie}
                 disabled={!!actionLoading}
-                className="w-full py-2 px-4 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black disabled:opacity-50 text-sm font-medium transition-colors"
+                className="w-full py-2 px-4 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] disabled:opacity-50 text-sm font-medium transition-colors"
               >
                 {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
               </button>
@@ -65,7 +65,7 @@ export function SoulActionsCard({
                 <button
                   onClick={onStartJudgment}
                   disabled={!!actionLoading}
-                  className="w-full py-2 px-4 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent)/0.8)] disabled:opacity-50 text-black text-sm font-medium transition-colors"
+                  className="w-full py-2 px-4 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] disabled:opacity-50 text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
                 >
                   {actionLoading === "judge" ? t("souls.detail.processing") : t("souls.detail.start_judgment")}
                 </button>

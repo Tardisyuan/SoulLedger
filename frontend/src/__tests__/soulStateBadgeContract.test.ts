@@ -25,6 +25,7 @@ import path from "node:path";
 
 import {
   SOUL_STATE_BADGE_CLASSES,
+  SOUL_STATE_GLYPH,
   UNKNOWN_SOUL_STATE_BADGE_CLASS,
   soulStateBadgeClass,
 } from "@/src/lib/soulStateBadge";
@@ -77,9 +78,17 @@ describe("each state wears the token named after it", () => {
     const found = utilities(SOUL_STATE_BADGE_CLASSES[state as keyof typeof SOUL_STATE_BADGE_CLASSES]);
     // Equality, not "contains": "the right token is present" stays true while
     // the wrong one sits beside it.
-    expect(found.bg).toEqual([token, "0.1"]);
+    // 规范 v1 §2: no fill — text and border in the state's own token.
     expect(found.text).toEqual([token, "1"]);
-    expect(Object.keys(found).sort()).toEqual(["bg", "text"]);
+    expect(found.border).toEqual([token, "1"]);
+    expect(Object.keys(found).sort()).toEqual(["border", "text"]);
+  });
+
+  it("every state has its own glyph, and no two share one (§1.2: not colour alone)", () => {
+    const states = readSoulStates();
+    const glyphs = states.map((s) => SOUL_STATE_GLYPH[s as keyof typeof SOUL_STATE_GLYPH]);
+    expect(glyphs.every(Boolean)).toBe(true);
+    expect(new Set(glyphs).size).toBe(states.length);
   });
 });
 

@@ -95,7 +95,7 @@ describe("the error state exists at all, on every control", () => {
     // AA on a light canvas). `red-500` follows neither.
     render(<TextField label="Name" error="太长了" />);
     expect(screen.getByRole("alert").className).toContain(
-      "text-[oklch(var(--color-status-error))]"
+      "text-[oklch(var(--color-danger))]"
     );
     expect(CODE).not.toMatch(/\b(?:text|border|bg)-red-\d/);
   });
@@ -104,9 +104,11 @@ describe("the error state exists at all, on every control", () => {
     // Otherwise the field stops looking wrong at exactly the moment the user
     // goes to fix it.
     const invalid = fieldControl({ invalid: true });
-    expect(invalid).toContain("border-[oklch(var(--color-status-error))]");
-    expect(invalid).toContain("focus-visible:border-[oklch(var(--color-status-error))]");
-    expect(invalid).not.toContain("focus-visible:border-[oklch(var(--color-accent))]");
+    expect(invalid).toContain("border-[oklch(var(--color-danger))]");
+    expect(invalid).toContain("focus-visible:border-[oklch(var(--color-danger))]");
+    // 规范 v1: the error field also carries a 2 px danger underline.
+    expect(invalid).toContain("shadow-[inset_0_-2px_0_oklch(var(--color-danger))]");
+    expect(invalid).not.toContain("focus-visible:border-[oklch(var(--color-block))]");
   });
 });
 
@@ -127,7 +129,7 @@ describe("focus-visible, not focus", () => {
 
   it.each(FIELD_SIZES)("%s uses focus-visible for its focus border", (size) => {
     const classes = fieldControl({ size }).split(/\s+/);
-    expect(classes).toContain("focus-visible:border-[oklch(var(--color-accent))]");
+    expect(classes).toContain("focus-visible:border-[oklch(var(--color-block))]");
     expect(classes.filter((c) => /^focus:/.test(c))).toEqual([]);
   });
 
@@ -273,16 +275,12 @@ describe("label wiring and shape", () => {
   });
 });
 
-describe("padding lands on the same ladder Button uses", () => {
-  it("emits exactly three pairs, all on the 4/8/12/16 grid", () => {
-    const pairs = FIELD_SIZES.map((size: FieldSize) =>
-      fieldControl({ size })
-        .split(/\s+/)
-        .filter((c) => /^p[xy]-/.test(c))
-        .sort()
-        .join(" ")
+describe("heights line up with Button (28 / 32 / 40)", () => {
+  it("each size carries Button's height as a minimum, so a textarea can grow", () => {
+    const heights = FIELD_SIZES.map((size: FieldSize) =>
+      fieldControl({ size }).split(/\s+/).filter((c) => /^min-h-\d+$/.test(c)).join(" ")
     );
-    expect(pairs).toEqual(["px-2 py-1", "px-3 py-2", "px-4 py-3"]);
+    expect(heights).toEqual(["min-h-7", "min-h-8", "min-h-10"]);
   });
 
   it("carries the type scale beside the ink colour", () => {
@@ -293,9 +291,10 @@ describe("padding lands on the same ladder Button uses", () => {
     expect(md).toContain("text-[oklch(var(--color-ink))]");
   });
 
-  it("styles disabled on every size, not 29% of them", () => {
+  it("styles disabled on every size with the disabled pair, not a fade", () => {
     for (const size of FIELD_SIZES) {
-      expect(fieldControl({ size })).toContain("disabled:opacity-50");
+      expect(fieldControl({ size })).toContain("disabled:bg-[oklch(var(--color-disabled-surface))]");
+      expect(fieldControl({ size })).not.toContain("disabled:opacity-50");
     }
   });
 });
