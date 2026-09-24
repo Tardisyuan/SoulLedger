@@ -79,6 +79,16 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         related_name="judgments_conducted",
     )
     court = models.CharField(max_length=255, blank=True, help_text="Court name, e.g. 第一殿")
+    # 审判所在的界域(行程拓扑的一站)。`court` 是自由文本,`realm` 是外键;两者并存,
+    # 不互相推导 —— 存量行由 judgment/0024 只在 `court` 与某一殿的名字**逐字**相同时回填,
+    # 其余留空。写入时的租户校验在 JudgmentSerializer.validate_realm_id。
+    realm = models.ForeignKey(
+        "realms.Realm",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="judgments",
+    )
     evidence_json = models.JSONField(default=dict)
     confession = models.TextField(blank=True)
     judgment_method = models.CharField(

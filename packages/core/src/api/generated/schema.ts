@@ -4931,6 +4931,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/{id}/path/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The soul's route through the realms, oldest stop first (行程拓扑).
+         *
+         *     A separate endpoint rather than a field on the soul detail: the entries
+         *     are scoped **per entry**, not per soul — a stop served while residing in
+         *     another tenant belongs to that tenant — so they need their own
+         *     `scope_to_tenant` pass, and the soul list / detail payloads (and their
+         *     query counts) stay as they were.
+         */
+        get: operations["v1_souls_path_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/souls/{id}/records/": {
         parameters: {
             query?: never;
@@ -5965,6 +5990,13 @@ export interface components {
          * @enum {string}
          */
         CivilizationEnum: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "GREEK";
+        /**
+         * @description * `INFERNO` - 地狱
+         *     * `PURGATORIO` - 炼狱
+         *     * `PARADISO` - 天堂
+         * @enum {string}
+         */
+        CommediaRegionEnum: "INFERNO" | "PURGATORIO" | "PARADISO";
         Comment: {
             /** Format: uuid */
             readonly id: string;
@@ -6387,6 +6419,8 @@ export interface components {
             judgment?: string | null;
             /** Format: uuid */
             destination_realm?: string | null;
+            /** Format: uuid */
+            readonly realm_id: string | null;
             readonly realm_code: string;
             readonly realm_name: string | null;
             memory_reset?: components["schemas"]["MemoryResetMechanismEnum"];
@@ -6572,6 +6606,13 @@ export interface components {
             unusable_merit: number;
         };
         /**
+         * @description * `LEFT` - 左(塔尔塔罗斯)
+         *     * `MIDDLE` - 中
+         *     * `RIGHT` - 右(至福岛)
+         * @enum {string}
+         */
+        GreekForkEnum: "LEFT" | "MIDDLE" | "RIGHT";
+        /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
          *     `poena` is null in every response this code can currently produce:
@@ -6687,6 +6728,8 @@ export interface components {
             readonly judge_name: string;
             /** @description Court name, e.g. 第一殿 */
             court?: string;
+            /** Format: uuid */
+            realm_id?: string | null;
             evidence_json?: unknown;
             confession?: string;
             readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -8333,6 +8376,8 @@ export interface components {
             judgment?: string | null;
             /** Format: uuid */
             destination_realm?: string | null;
+            /** Format: uuid */
+            readonly realm_id?: string | null;
             readonly realm_code?: string;
             readonly realm_name?: string | null;
             memory_reset?: components["schemas"]["MemoryResetMechanismEnum"];
@@ -8406,6 +8451,8 @@ export interface components {
             readonly judge_name?: string;
             /** @description Court name, e.g. 第一殿 */
             court?: string;
+            /** Format: uuid */
+            realm_id?: string | null;
             evidence_json?: unknown;
             confession?: string;
             readonly verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -8957,7 +9004,54 @@ export interface components {
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
             is_eternal?: boolean;
             cycle_limit?: number | null;
+            /** @description Position along the civilization's route (Chinese: court number 1-10) */
+            order?: number | null;
+            /**
+             * @description Chinese only: 殿 / 门 / 层 / 道
+             *
+             *     * `HALL` - 殿
+             *     * `GATE` - 门
+             *     * `LAYER` - 层
+             *     * `PATH` - 道
+             */
+            kind?: (components["schemas"]["RealmKindEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description How many souls the realm holds at once; null = not recorded */
+            capacity?: number | null;
+            /** @description European only: circle (Inferno) or terrace (Purgatorio) number */
+            level?: number | null;
+            /** @description European only: ring (7th circle) or bolgia (8th circle) number */
+            sublevel?: number | null;
+            /**
+             * @description European only: which cantica the realm belongs to
+             *
+             *     * `INFERNO` - 地狱
+             *     * `PURGATORIO` - 炼狱
+             *     * `PARADISO` - 天堂
+             */
+            region?: (components["schemas"]["CommediaRegionEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description Egyptian only: hour of the night, 1-12 */
+            hour?: number | null;
+            /** @description Egyptian only: gate number */
+            gate?: number | null;
+            /** @description Egyptian only: the hall where the heart is weighed; null elsewhere */
+            is_judgment_hall?: boolean | null;
+            /**
+             * @description Greek only: which road out of the judgment place
+             *
+             *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中
+             *     * `RIGHT` - 右(至福岛)
+             */
+            fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
         };
+        /**
+         * @description * `HALL` - 殿
+         *     * `GATE` - 门
+         *     * `LAYER` - 层
+         *     * `PATH` - 道
+         * @enum {string}
+         */
+        RealmKindEnum: "HALL" | "GATE" | "LAYER" | "PATH";
         /** @description Lightweight serializer for list views. */
         RealmList: {
             /** Format: uuid */
@@ -8969,6 +9063,48 @@ export interface components {
             realm_type: components["schemas"]["RealmTypeEnum"];
             /** @description Severity or bliss tier */
             tier?: number;
+            /** Format: uuid */
+            parent_realm?: string | null;
+            is_eternal?: boolean;
+            /** @description Position along the civilization's route (Chinese: court number 1-10) */
+            order?: number | null;
+            /**
+             * @description Chinese only: 殿 / 门 / 层 / 道
+             *
+             *     * `HALL` - 殿
+             *     * `GATE` - 门
+             *     * `LAYER` - 层
+             *     * `PATH` - 道
+             */
+            kind?: (components["schemas"]["RealmKindEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description How many souls the realm holds at once; null = not recorded */
+            capacity?: number | null;
+            /** @description European only: circle (Inferno) or terrace (Purgatorio) number */
+            level?: number | null;
+            /** @description European only: ring (7th circle) or bolgia (8th circle) number */
+            sublevel?: number | null;
+            /**
+             * @description European only: which cantica the realm belongs to
+             *
+             *     * `INFERNO` - 地狱
+             *     * `PURGATORIO` - 炼狱
+             *     * `PARADISO` - 天堂
+             */
+            region?: (components["schemas"]["CommediaRegionEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description Egyptian only: hour of the night, 1-12 */
+            hour?: number | null;
+            /** @description Egyptian only: gate number */
+            gate?: number | null;
+            /** @description Egyptian only: the hall where the heart is weighed; null elsewhere */
+            is_judgment_hall?: boolean | null;
+            /**
+             * @description Greek only: which road out of the judgment place
+             *
+             *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中
+             *     * `RIGHT` - 右(至福岛)
+             */
+            fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /**
          * @description Serializer that resolves the best-fit name based on Accept-Language header.
@@ -9764,6 +9900,23 @@ export interface components {
             refresh: string;
             soul_code: string;
             account: components["schemas"]["MeAccount"];
+        };
+        /**
+         * @description One stop in `GET /souls/{id}/path/`. `realm_code` rides along because it
+         *     is the join key the frontend already uses for realms (realmCodes.ts).
+         */
+        SoulPathEntry: {
+            /** Format: uuid */
+            readonly id: string;
+            /** @description 1-based position in the soul's path */
+            readonly sequence: number;
+            /** Format: uuid */
+            readonly realm_id: string | null;
+            readonly realm_code: string | null;
+            /** Format: date-time */
+            readonly entered_at: string;
+            /** Format: date-time */
+            readonly left_at: string | null;
         };
         SoulPost: {
             /** Format: uuid */
@@ -19221,6 +19374,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerSummary"];
+                };
+            };
+        };
+    };
+    v1_souls_path_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `CHINESE` - Chinese Diyu
+                 *     * `EUROPEAN` - European Heaven/Hell
+                 *     * `EGYPTIAN` - Egyptian Duat
+                 *     * `GREEK` - Greek Underworld
+                 */
+                civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                created_after?: string;
+                created_before?: string;
+                /**
+                 * @description * `ALIVE` - Alive
+                 *     * `JUDGING` - Under Judgment
+                 *     * `DISPOSED` - Disposed
+                 *     * `REINCARNATING` - Reincarnating
+                 *     * `SETTLED` - Settled (Final)
+                 *     * `LOST` - Lost/Suspended
+                 */
+                current_state?: "ALIVE" | "DISPOSED" | "JUDGING" | "LOST" | "REINCARNATING" | "SETTLED";
+                death_date_after?: string;
+                death_date_before?: string;
+                has_date_problem?: boolean;
+                karma_max?: number;
+                karma_min?: number;
+                karmic_balance_max?: number;
+                karmic_balance_min?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                /**
+                 * @description * `ALIVE` - Alive
+                 *     * `JUDGING` - Under Judgment
+                 *     * `DISPOSED` - Disposed
+                 *     * `REINCARNATING` - Reincarnating
+                 *     * `SETTLED` - Settled (Final)
+                 *     * `LOST` - Lost/Suspended
+                 */
+                state?: "ALIVE" | "DISPOSED" | "JUDGING" | "LOST" | "REINCARNATING" | "SETTLED";
+                tenant__code?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Soul. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulPathEntry"][];
                 };
             };
         };

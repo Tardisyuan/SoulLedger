@@ -514,6 +514,12 @@ SPECTACULAR_SETTINGS = {
         # imports the class rather than restating the four values — the comment
         # there says why — so there is exactly one set with two routes to it.
         "MemoryResetMechanismEnum": "apps.disposition.models.MemoryResetMechanism.choices",
+        # apps.realms 行程拓扑:`kind` 已被另一个选项集(reference/domain)占用,不钉住
+        # 就是带哈希的 `KindD0cEnum`。`region` / `fork` 是太通用的字段名,一并钉住,
+        # 免得下一个同名字段把它们改名。
+        "RealmKindEnum": "apps.realms.models.RealmKind.choices",
+        "CommediaRegionEnum": "apps.realms.models.CommediaRegion.choices",
+        "GreekForkEnum": "apps.realms.models.GreekFork.choices",
         # apps.scheduler: `status` and `scope` are both names other components
         # already use for different choice sets. Naming only the new set is not
         # enough — the collision check counts every set under the field name,
