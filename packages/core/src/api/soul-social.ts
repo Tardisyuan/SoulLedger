@@ -14,6 +14,7 @@ import type { components } from "./generated/schema";
 type Schemas = components["schemas"];
 export type SoulCard = Schemas["SoulCard"];
 export type SoulSearchResult = Schemas["SoulSearchResult"];
+export type SoulRelationCard = Schemas["SoulRelationCard"];
 export type SoulProfile = Schemas["SoulProfile"];
 export type SoulPost = Schemas["SoulPost"];
 export type SoulComment = Schemas["SoulComment"];
@@ -37,6 +38,7 @@ export const SOUL_SOCIAL_ERROR_CODES = [
   "muted",
   "not_author",
   "parent_not_found",
+  "post_sealed",
   "report_limit",
   "self_report",
 ] as const;

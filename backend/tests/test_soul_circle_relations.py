@@ -167,3 +167,22 @@ def test_moderation_events_reach_the_author(cn_tenant, admin_user, django_captur
         ("SOCIAL_MUTED", [author.user_id]),
         ("SOCIAL_UNMUTED", [author.user_id]),
     ]
+
+
+def test_follow_lists_say_both_directions_per_row(cn_tenant):
+    """关注 / 被关注列表每行带两个方向,App 据此画回关 / 已关注 / 互相关注。只断言一个方向为真的话,
+    把两个字段都写成 True 的实现也是绿的 —— 所以四种组合都列出来。"""
+    me, client = soul(cn_tenant, "我")
+    mutual, _ = soul(cn_tenant, "互关")
+    fan, _ = soul(cn_tenant, "粉")
+    idol, _ = soul(cn_tenant, "偶像")
+    follow(me, mutual)
+    follow(mutual, me)
+    follow(fan, me)
+    follow(me, idol)
+
+    def rows(path):
+        return {r["display_name"]: (r["is_following"], r["is_followed_by"]) for r in client.get(f"{SOCIAL}/{path}/").json()["results"]}
+
+    assert rows("followers") == {"互关": (True, True), "粉": (False, True)}
+    assert rows("following") == {"互关": (True, True), "偶像": (True, False)}

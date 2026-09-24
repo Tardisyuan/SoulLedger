@@ -27,6 +27,12 @@ class SoulSearchResultSerializer(SoulCardSerializer):
     is_following = serializers.BooleanField()
 
 
+class SoulRelationCardSerializer(SoulCardSerializer):
+    """关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。"""
+    is_following = serializers.BooleanField()
+    is_followed_by = serializers.BooleanField()
+
+
 class SoulProfileSerializer(SoulCardSerializer):
     is_self = serializers.BooleanField()
     is_following = serializers.BooleanField()

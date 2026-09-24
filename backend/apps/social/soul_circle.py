@@ -258,11 +258,18 @@ def delete_own_post(user, post_id):
     post.soft_delete(user=user, reason="author")
 
 
+def _ensure_not_sealed(post):
+    """前世账号的帖子封存只读(2026-09-24 用户决定):不能再表态、评论。读与举报照旧。"""
+    if not is_current_soul(post.author):
+        raise SocialError("这一世已止,帖子封存只读。", "post_sealed", 409)
+
+
 def create_comment(author, post_id, content, parent_id=None):
     tenant = ensure_can_write(author)
     post = visible_posts_for_soul(author).filter(pk=post_id, moderation_status=ModerationStatus.PUBLISHED).first()
     if post is None:
         raise _not_found()
+    _ensure_not_sealed(post)
     parent = None
     if parent_id is not None:
         parent = visible_comments_for_soul(author).filter(
@@ -309,6 +316,7 @@ def toggle_reaction(user, post_id, reaction_type):
     post = visible_posts_for_soul(user).filter(pk=post_id, moderation_status=ModerationStatus.PUBLISHED).first()
     if post is None:
         raise _not_found()
+    _ensure_not_sealed(post)
     with transaction.atomic():
         Post.objects.select_for_update().filter(pk=post.pk).exists()
         before = Reaction.objects.filter(user=user, post=post).first()

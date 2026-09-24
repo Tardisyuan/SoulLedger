@@ -17129,7 +17129,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/SoulCard'
+            $ref: '#/components/schemas/SoulRelationCard'
       required:
       - count
       - next
@@ -21280,6 +21280,34 @@ components:
           type: string
       required:
       - refresh
+    SoulRelationCard:
+      type: object
+      description: 关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          description: false:前世账号,只读、不可关注。
+        is_following:
+          type: boolean
+        is_followed_by:
+          type: boolean
+      required:
+      - avatar
+      - display_name
+      - is_active
+      - is_followed_by
+      - is_following
+      - user_id
     SoulReportRequest:
       type: object
       properties:
