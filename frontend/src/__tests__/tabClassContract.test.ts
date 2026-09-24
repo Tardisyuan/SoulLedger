@@ -2,7 +2,7 @@
  * The bottom-rule tab is spelled in exactly one place.
  *
  * ── THE DEFECT THIS EXISTS FOR ────────────────────────────────────────────
- * The string `px-4 py-2 text-03 font-medium transition-colors border-b-2
+ * The string `px-4 py-2 text-sm font-medium transition-colors border-b-2
  * -mb-px` was written SIX times: five inline copies (judgment, dashboard,
  * workflow, and twice in workflow/[id]) and one that had already been given a
  * name in `app/notifications/page.tsx`. Naming it there also REORDERED the

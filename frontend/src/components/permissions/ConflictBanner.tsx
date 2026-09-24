@@ -23,7 +23,7 @@ export function ConflictBanner({
 
   return (
     <div role="alert" className="bg-[oklch(var(--color-status-error))]/10 border border-[oklch(var(--color-status-error))]/40 p-4 flex items-center justify-between gap-4">
-      <p className="text-03 text-[oklch(var(--color-status-error))]">
+      <p className="text-sm text-[oklch(var(--color-status-error))]">
         {t("permissions.matrix.conflict_message", {
           role: roleMeta[conflict.role]?.display_name || conflict.role,
           expected: String(conflict.expected),

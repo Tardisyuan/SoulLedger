@@ -263,7 +263,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         />
 
         {/* 三个字段先前搬到了 `TextField`,另外三个没有 —— 于是同一张表单里
-            两种标签写法(`text-01 uppercase` 与 `text-02`)、两套 focus 语义
+            两种标签写法(`text-2xs uppercase` 与 `text-xs`)、两套 focus 语义
             (`focus-visible:` 与 `focus:`)并排站着。补齐的是剩下三个,不是
             新的决定。`SelectField` 把四个 `<option>` 换成一个数组;`className`
             落在 `Field` 的外壳上,所以 `flex-1` 仍旧是那两栏各占一半。 */}

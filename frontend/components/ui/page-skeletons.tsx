@@ -8,7 +8,7 @@
  * <PageSpinner />`. Seven routes with completely different shapes, one centred
  * ring, and no hint of what was about to appear. Meanwhile `app/dashboard`
  * already had a same-shape skeleton, and its comment gives the reason this
- * matters beyond looks: the page it stands in for has `text-08` figures in it,
+ * matters beyond looks: the page it stands in for has `text-xl` figures in it,
  * and a loading state that does not hold their height lets the whole page jump
  * a line when the data lands.
  *
@@ -64,7 +64,7 @@ function PageHead({ withTabs }: { withTabs?: boolean }) {
  * and `rows` body rows.
  *
  * `h-11` per row rather than a guess: `DataTable`'s default `comfortable`
- * density is `px-4 py-3` at `text-03`, which its own prop comment measures at
+ * density is `px-4 py-3` at `text-sm`, which its own prop comment measures at
  * ~44px. A skeleton row shorter than the real one shifts the page upward as
  * the data lands, which is the specific harm this is here to avoid.
  */

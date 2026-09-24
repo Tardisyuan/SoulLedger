@@ -289,7 +289,7 @@ describe("padding lands on the same ladder Button uses", () => {
     // Same `cn()` collision that cost Button its `text-black`; the control
     // string has `text-ink` and `text-0N` in it.
     const md = fieldControl({ size: "md" }).split(/\s+/);
-    expect(md).toContain("text-03");
+    expect(md).toContain("text-sm");
     expect(md).toContain("text-[oklch(var(--color-ink))]");
   });
 

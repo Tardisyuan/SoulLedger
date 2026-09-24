@@ -46,7 +46,7 @@ export function ReactionBar({ postId, commentId }: ReactionBarProps) {
             key={type}
             onClick={() => handleToggle(type)}
             disabled={toggleReaction.isPending}
-            className={`text-04 px-2 py-1 transition-colors ${
+            className={`text-sm px-2 py-1 transition-colors ${
               isActive
                 ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
                 : "hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]"

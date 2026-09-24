@@ -8,7 +8,7 @@
  *   2. 标题上方一条 **24px × 2px** 的短线，颜色取区块边界线 `--color-block`。失败模式是
  *      有人给它兜一个彩色 fallback：`--civ-mark` 在未映射租户下是灰色
  *      （`app/globals.css:57`），那是刻意的，灰色说的是「没有文明」。
- *   3. `text-01` 标题 + `text-04` 原因。
+ *   3. `text-2xs` 标题 + `text-sm` 原因。
  */
 import { render } from "@testing-library/react";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -95,14 +95,14 @@ describe("EmptyState · 那条短线", () => {
 });
 
 describe("EmptyState · 排版", () => {
-  it("标题 text-01，原因 text-04 + text-[oklch(var(--color-ink-subtle))]", () => {
+  it("标题 text-2xs，原因 text-sm + text-[oklch(var(--color-ink-subtle))]", () => {
     const { container } = render(
       <EmptyState title="尚无判决" reason="这一卷还没有任何灵魂被登记。" />
     );
     const title = container.querySelector<HTMLElement>("[data-empty-state-title]")!;
     const reason = container.querySelector<HTMLElement>("[data-empty-state-reason]")!;
-    expect(title.className).toMatch(/\btext-01\b/);
-    expect(reason.className).toMatch(/\btext-04\b/);
+    expect(title.className).toMatch(/\btext-2xs\b/);
+    expect(reason.className).toMatch(/\btext-sm\b/);
     expect(reason.className).toContain("text-[oklch(var(--color-ink-subtle))]");
   });
 

@@ -102,7 +102,7 @@ export default function UsersPage() {
         </>
       }
       backLink={
-        <Link href="/" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+        <Link href="/" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
           ← {t("nav.home")}
         </Link>
       }

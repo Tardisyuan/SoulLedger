@@ -120,7 +120,7 @@ export default function WelcomePage() {
   // 三个 emoji(🌙 ☀️ 🌤️)去掉了,不是因为「不严肃」,是因为它们是这一页
   // 唯一一处字形不由本仓库的三支字族决定的内容 —— emoji 由操作系统的字体
   // 提供,苹果、Windows、Android 各画各的,而它现在要坐在 PageShell 那个
-  // `text-07`(32px,字距 -0.02em)的标题里。一个 32px 的彩色系统字形挨着
+  // `text-lg`(32px,字距 -0.02em)的标题里。一个 32px 的彩色系统字形挨着
   // 32px 的排版字,两者的基线、字重、色彩都不受这套设计系统管辖。
   // 时段本身没有信息量 —— 问候语已经说了「上午好」。
   const getGreeting = () => {
@@ -212,21 +212,21 @@ export default function WelcomePage() {
               <div className="flex items-center justify-between mb-3">
                 <span className={stat.color}>{stat.icon}</span>
                 {stat.trend && (
-                  <span className="text-02 text-[oklch(var(--color-status-success))] flex items-center gap-1">
+                  <span className="text-xs text-[oklch(var(--color-status-success))] flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> {stat.trend}
                   </span>
                 )}
               </div>
-              {/* `text-07`(32px),不是 dashboard 那档 `text-08`(56px)。同样
+              {/* `text-lg`(32px),不是 dashboard 那档 `text-xl`(56px)。同样
                   四个数字,两个页面给两档,是因为两页在说不同的话:dashboard
                   是读数页,这四个数就是那一页的主体;这里它们是问候语旁边的
                   一行近况,和标题平级。`tabular-nums` 让四张卡的数字对齐 ——
                   这里不做千位分隔,`stat.value` 是 `number | string` 联合,
                   非数字那一支是字面量 "-"。 */}
-              <div data-kpi="" className="text-07 tabular-nums text-[oklch(var(--color-ink))]">
+              <div data-kpi="" className="text-lg tabular-nums text-[oklch(var(--color-ink))]">
                 {loading ? "..." : stat.value}
               </div>
-              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mt-1">{stat.label}</div>
+              <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -243,7 +243,7 @@ export default function WelcomePage() {
             source of truth to wire it to.
             The grid collapsed with it — one panel does not need three columns. */}
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-            <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
+            <h2 className="text-md text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
               {t("welcome.quick_actions")}
             </h2>
@@ -255,7 +255,7 @@ export default function WelcomePage() {
                   className="flex flex-col items-center justify-center gap-2 p-4 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors group"
                 >
                   {action.icon}
-                  <span className="text-03 font-medium">{action.label}</span>
+                  <span className="text-sm font-medium">{action.label}</span>
                   <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               ))}
@@ -264,7 +264,7 @@ export default function WelcomePage() {
 
         {/* Recent Activity */}
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
+          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
             {t("welcome.recent_activity")}
           </h2>
@@ -279,22 +279,22 @@ export default function WelcomePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-02 px-2 py-1 bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink-muted))]">
+                    <span className="text-xs px-2 py-1 bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink-muted))]">
                       <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
-                    <span className="text-02 text-[oklch(var(--color-ink-subtle))]">
+                    <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
                       {formatTimestamp(activity.timestamp)}
                     </span>
                   </div>
-                  <div className="text-03 text-[oklch(var(--color-ink))]">{activity.description}</div>
-                  <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">by {activity.user}</div>
+                  <div className="text-sm text-[oklch(var(--color-ink))]">{activity.description}</div>
+                  <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">by {activity.user}</div>
                 </div>
               </div>
             ))}
           </div>
           <Link
             href="/audit"
-            className="mt-4 text-03 text-[oklch(var(--color-accent-ink))] hover:underline flex items-center gap-1"
+            className="mt-4 text-sm text-[oklch(var(--color-accent-ink))] hover:underline flex items-center gap-1"
           >
             {t("welcome.view_all_activity")}
             <ArrowRight className="w-4 h-4" />
@@ -311,8 +311,8 @@ export default function WelcomePage() {
               <Globe className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             </div>
             <div>
-              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.current_civilization")}</div>
-              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1">{user?.tenant?.display_name || "SoulLedger"}</div>
+              <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.current_civilization")}</div>
+              <div className="text-md font-semibold text-[oklch(var(--color-ink))] mt-1">{user?.tenant?.display_name || "SoulLedger"}</div>
             </div>
           </div>
           <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
@@ -320,8 +320,8 @@ export default function WelcomePage() {
               <Shield className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             </div>
             <div>
-              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
-              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1"><RoleName value={user?.role} /></div>
+              <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
+              <div className="text-md font-semibold text-[oklch(var(--color-ink))] mt-1"><RoleName value={user?.role} /></div>
             </div>
           </div>
           <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
@@ -329,8 +329,8 @@ export default function WelcomePage() {
               <Sparkles className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             </div>
             <div>
-              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.system_version")}</div>
-              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1">v0.1</div>
+              <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.system_version")}</div>
+              <div className="text-md font-semibold text-[oklch(var(--color-ink))] mt-1">v0.1</div>
             </div>
           </div>
         </div>

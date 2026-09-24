@@ -235,7 +235,7 @@ function SchedulerPageContent() {
                 className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]"
                 data-group={group.key}
               >
-                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-muted))]">
+                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
                   <button
                     type="button"
                     aria-expanded={open}
@@ -262,7 +262,7 @@ function SchedulerPageContent() {
                   <div id={bodyId} className="border-t border-[oklch(var(--color-hairline))]">
                     <div
                       aria-hidden="true"
-                      className={`hidden px-4 py-2 text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${JOB_ROW_GRID}`}
+                      className={`hidden px-4 py-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${JOB_ROW_GRID}`}
                     >
                       <span />
                       <span>{t("scheduler.fields.schedule")}</span>

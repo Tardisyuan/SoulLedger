@@ -81,7 +81,7 @@ export default function SocialFeedPage() {
   const pagination = paged
     ? {
         count: (
-          <p className="text-03 text-[oklch(var(--color-ink-muted))]">
+          <p className="text-sm text-[oklch(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(totalPages),
@@ -127,7 +127,7 @@ export default function SocialFeedPage() {
           // buttons and could not tell which view was showing.
           // `components/ui/data-grid/FilterBar.tsx:181` already does this.
           aria-pressed={tab === key}
-          className={`px-3 py-2 -mb-px text-03 font-medium border-b-2 transition-colors ${
+          className={`px-3 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
             tab === key
               ? "border-[oklch(var(--color-accent))] text-[oklch(var(--color-accent-ink))]"
               : "border-transparent text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"

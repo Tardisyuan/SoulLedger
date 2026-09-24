@@ -81,7 +81,7 @@ export function figures(root: HTMLElement): Figure[] {
 // Both scales, deliberately.
 //
 // `text-lg|xl|2xl|3xl` + `font-bold` is what a headline figure looked like
-// before Stage 11. `text-06|07|08` is what it looks like after — and those
+// before Stage 11. `text-md|07|08` is what it looks like after — and those
 // three carry `fontWeight: 600` in `tailwind.config.js`'s fontSize table, so a
 // migrated figure needs no separate weight class and would not match a
 // `font-bold` requirement at all.
@@ -95,22 +95,23 @@ export function figures(root: HTMLElement): Figure[] {
 //
 // 迁移完成后这条注释里的「287 处」已是历史:`src/components/` 下的旧档现在是 0。
 // 两档并列的写法要留着 —— 见下面 DIGITS 那段。
-const FIGURE_SIZE = /(^|\s)(text-(lg|xl|2xl|3xl)|text-0[678])(\s|$)/;
-const BOLD = /(^|\s)(font-bold|text-0[678])(\s|$)/;
+// 规范 v1 七档里的「头条数字」档:md(16/600)、lg(22/600)、xl(28,仪表盘数字)。
+const FIGURE_SIZE = /(^|\s)text-(md|lg|xl)(\s|$)/;
+const BOLD = /(^|\s)(font-bold|font-semibold|text-(md|lg|xl))(\s|$)/;
 
 // 尺寸与字重合起来说的是「这东西画得像个头条」,**不是**「这东西是个数字」。
-// 八档字号把这两件事彻底分开了:`text-06` 在 tailwind.config.js 里是**区块/面板
+// 八档字号把这两件事彻底分开了:`text-md` 在 tailwind.config.js 里是**区块/面板
 // 标题**那一档(22px,自带 600),而它同时落在上面两个正则里。于是每有一个面板标题
-// 被**正确地**迁到 text-06,这个数字契约就白收进一个非数字 —— 遵守设计系统本身
+// 被**正确地**迁到 text-md,这个数字契约就白收进一个非数字 —— 遵守设计系统本身
 // 就会把标题走进来,这不是迁移期残留,是随迁移推进而增长的。
 //
 // 三个 agent 各自独立撞出同一形状,合计 10 处冒名者:两个对话框标题、一个关闭 `×`、
 // 三个 <h1>、两个 <h2>、一个区块标题,外加两个纯装饰字形 —— PageError 的 `!` 与
 // PermissionDenied 的 🔒。后两个尤其能说明问题:它们原本是 text-6xl,而 FIGURE_SIZE
-// 只列到 3xl,所以它们本来在 band 外,是迁到 text-08 之后**走进来的**。
+// 只列到 3xl,所以它们本来在 band 外,是迁到 text-xl 之后**走进来的**。
 // 若有东西渲染它们,这个契约会报出一条 textContent 为「🔒」的「未分类头条数字」。
 //
-// 为什么判据不是「收窄到 text-07/08」:🔒 和 `!` 都是 text-08,收窄一个都拦不住。
+// 为什么判据不是「收窄到 text-lg/08」:🔒 和 `!` 都是 text-xl,收窄一个都拦不住。
 // 尺寸永远分不开「一个大数字」和「一个大字形」。
 //
 // 为什么判据**也不是**「有 data-quantity 才算」—— 这是三个 agent 都提的方向,而它

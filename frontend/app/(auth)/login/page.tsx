@@ -101,8 +101,8 @@ export default function LoginPage() {
             Same accent-foreground mistake as FollowButton, on the one control
             every user presses. */}
         <div className="text-center mb-6">
-          <h1 className="text-07 text-[oklch(var(--color-ink))] mb-2">{t("nav.title")}</h1>
-          <p className="text-04 text-[oklch(var(--color-ink-muted))]">{t("home.hero_subtitle")}</p>
+          <h1 className="text-lg text-[oklch(var(--color-ink))] mb-2">{t("nav.title")}</h1>
+          <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("home.hero_subtitle")}</p>
         </div>
 
         <form
@@ -110,7 +110,7 @@ export default function LoginPage() {
           onSubmit={handleSubmit}
           className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-6"
         >
-          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-6 text-center">
+          <h2 className="text-md text-[oklch(var(--color-ink))] mb-6 text-center">
             {t("auth.login")}
           </h2>
 
@@ -158,7 +158,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="text-center text-03 text-[oklch(var(--color-ink-subtle))] mt-6">
+        <p className="text-center text-sm text-[oklch(var(--color-ink-subtle))] mt-6">
           <Link href="/" className="text-[oklch(var(--color-accent-ink))] hover:underline">
             {t("nav.home")}
           </Link>

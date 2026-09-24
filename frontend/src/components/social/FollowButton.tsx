@@ -21,7 +21,7 @@ export function FollowButton({ userId }: { userId: string }) {
     <button
       onClick={handleClick}
       disabled={toggleFollow.isPending}
-      className={`px-4 py-1.5 text-03 font-medium transition-colors ${
+      className={`px-4 py-1.5 text-sm font-medium transition-colors ${
         isFollowing
           ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] border border-[oklch(var(--color-hairline))]"
           // `text-black`, not `text-white`. Accent is one colour in both themes

@@ -371,7 +371,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 id={titleId} className="text-06 text-[oklch(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
+            <h2 id={titleId} className="text-md text-[oklch(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
             <button
               onClick={onClose}
               aria-label={t("common.close")}
@@ -383,11 +383,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Theme Section */}
           <div className="mb-6">
-            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={toggleTheme}
-                className={`flex-1 py-2 px-3 text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   theme === "light"
                     ? "bg-[oklch(var(--color-accent))] text-black"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
@@ -400,7 +400,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
               <button
                 onClick={toggleTheme}
-                className={`flex-1 py-2 px-3 text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   theme === "dark"
                     ? "bg-[oklch(var(--color-accent))] text-black"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
@@ -416,7 +416,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Accent Color Section */}
           <div className="mb-6">
-            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ACCENT_COLORS.map((color) => (
                 <button
@@ -438,12 +438,12 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-03 text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+                className="flex-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
               />
               <button
                 onClick={handleCustomHex}
                 aria-describedby={customHexError ? "accent-hex-error" : undefined}
-                className="px-4 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))] transition-colors"
+                className="px-4 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))] transition-colors"
               >
                 {t("settings.apply") || "Apply"}
               </button>
@@ -452,7 +452,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               <p
                 id="accent-hex-error"
                 role="alert"
-                className="mt-2 text-02 text-[oklch(var(--color-status-error))]"
+                className="mt-2 text-xs text-[oklch(var(--color-status-error))]"
               >
                 {customHexError}
               </p>
@@ -461,11 +461,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Navigation Mode Section */}
           <div className="mb-6">
-            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => onNavModeChange("classic")}
-                className={`flex-1 py-2 px-3 text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   navMode === "classic"
                     ? "bg-[oklch(var(--color-accent))] text-black"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
@@ -475,7 +475,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
               <button
                 onClick={() => onNavModeChange("compact")}
-                className={`flex-1 py-2 px-3 text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   navMode === "compact"
                     ? "bg-[oklch(var(--color-accent))] text-black"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
@@ -484,7 +484,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 {t("settings.compact") || "Compact"}
               </button>
             </div>
-            <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2">
+            <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">
               {navMode === "compact"
                 ? (t("settings.compact_desc") || "Icons only with tooltips on hover")
                 : (t("settings.classic_desc") || "Full sidebar with icons and labels")}

@@ -117,7 +117,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
     return (
       <section>
         <BookHeading title={t("ledger.book.title")} />
-        <p className="text-03 text-[oklch(var(--color-ink-subtle))]">{t("ledger.book.empty")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("ledger.book.empty")}</p>
       </section>
     );
   }
@@ -170,14 +170,14 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                   {/* 116px and `whitespace-nowrap`: an ancient date reads
                       "44 BCE · March 15" and wrapping it puts the month on its
                       own line, which makes the column look like two rows. */}
-                  <BodyCell className="font-mono text-02 text-[oklch(var(--color-ink-subtle))] whitespace-nowrap">
+                  <BodyCell className="font-mono text-xs text-[oklch(var(--color-ink-subtle))] whitespace-nowrap">
                     {eventDate ?? formatDate(record.recorded_at)}
                   </BodyCell>
 
                   {/* 事目 stays ink. Colouring the prose as well as the figure
                       would turn the page into a signal lamp and cost the two
                       numerals the only job the colour has. */}
-                  <BodyCell className="font-sans text-03 text-[oklch(var(--color-ink-muted))]">
+                  <BodyCell className="font-sans text-sm text-[oklch(var(--color-ink-muted))]">
                     {record.description}
                   </BodyCell>
 
@@ -233,7 +233,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
             <tr className="border-t-3 border-[oklch(var(--color-ink))]">
               <FootCell first />
               <FootCell />
-              <FootCell className="font-sans text-01 uppercase text-[oklch(var(--color-ink-subtle))]">
+              <FootCell className="font-sans text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
                 {t("ledger.book.total")}
               </FootCell>
               <FootCell numeric>
@@ -274,7 +274,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
 
 function BookHeading({ title }: { title: string }) {
   return (
-    <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink-subtle))] pb-2 mb-3">
+    <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink-subtle))] pb-2 mb-3">
       {title}
     </h2>
   );
@@ -307,13 +307,13 @@ function HeadCell({
   return (
     <th
       scope="col"
-      className={`text-01 uppercase font-normal px-2 py-2 align-bottom ${
+      className={`text-2xs uppercase font-normal px-2 py-2 align-bottom ${
         numeric ? "text-right" : "text-left"
       } ${rule(first)} ${className || "text-[oklch(var(--color-ink-subtle))]"}`}
     >
       {children}
       {scale ? (
-        <span data-quantity-scale="" className="block text-01 font-normal text-[oklch(var(--color-ink-tertiary))]">
+        <span data-quantity-scale="" className="block text-2xs font-normal text-[oklch(var(--color-ink-tertiary))]">
           {t("ledger.figure_scale_weight")}
         </span>
       ) : null}
@@ -392,7 +392,7 @@ function Amount({
     <span
       data-quantity={RECORD_QUANTITIES.original_weight}
       data-quantity-field={field}
-      className={`font-mono text-03 tabular-nums ${className}`}
+      className={`font-mono text-sm tabular-nums ${className}`}
     >
       {sign}
       {value}

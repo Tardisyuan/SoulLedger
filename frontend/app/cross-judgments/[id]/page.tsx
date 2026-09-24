@@ -130,7 +130,7 @@ export default function CrossJudgmentDetailPage() {
     return (
       <PageShell
       density="document" variant="prose" title={t("crossJudgments.title")} backLink={backLink}>
-        <p className="text-04 text-[oklch(var(--color-status-error))]">{error}</p>
+        <p className="text-sm text-[oklch(var(--color-status-error))]">{error}</p>
       </PageShell>
     );
   }
@@ -182,16 +182,16 @@ export default function CrossJudgmentDetailPage() {
            reasoning in prose — carried none, and set the opinion at
            `text-ink-muted`, the weight of a subtitle.
 
-           `text-05` and full ink, matching the other three sites exactly. */}
+           `text-md` and full ink, matching the other three sites exactly. */}
       {loading ? (
         <Skeleton className="h-4 w-full mb-6" />
       ) : judgment?.description && (
-        <p className="font-serif text-05 text-[oklch(var(--color-ink))] mb-6">{judgment.description}</p>
+        <p className="font-serif text-quote text-[oklch(var(--color-ink))] mb-6">{judgment.description}</p>
       )}
 
       {/* Participants */}
       <div className="mb-6">
-        <h2 className="text-06 text-[oklch(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
+        <h2 className="text-md text-[oklch(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-16 w-full" />
@@ -203,13 +203,13 @@ export default function CrossJudgmentDetailPage() {
               <div key={i} className="flex items-center gap-3 bg-[oklch(var(--color-surface-2))] px-4 py-2">
                 <User aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                 <div>
-                  <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
+                  <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
                   {/* `DomainEnum`,不是裸成员。`p.role` 是
                       `ParticipantRole`(ADVISOR / CO_JUDGE / CHAIRMAN),而三份
                       bundle 里**一个 participant-role 键都没有** —— 页面上印的
                       一直是 SCREAMING_SNAKE 原样,正是 §4.6 要消除的那种。
                       键已补进 `crossJudgments.participant_roles`。 */}
-                  <p className="text-02 text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
+                  <p className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
                     <span>{p.participant_tenant}</span>
                     {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
                         专用字形,`domainDisplayContract` 会把它当成手写的缺失
@@ -225,7 +225,7 @@ export default function CrossJudgmentDetailPage() {
             ))}
           </div>
         ) : (
-          <p className="text-04 text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
+          <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
         )}
       </div>
 
@@ -238,11 +238,11 @@ export default function CrossJudgmentDetailPage() {
       {/* Conclusion (if concluded) */}
       {!loading && judgment?.status === "CONCLUDED" && (
         <div className="bg-[oklch(var(--color-surface-2))] p-4">
-          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
+          <h2 className="text-md text-[oklch(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
           {/* `DomainEnum`, not the bare member. Twenty lines above, this same
               file spends five lines arguing that `p.role` must not reach the
               screen as SCREAMING_SNAKE — and then printed `PASS` / `FAIL`
-              verbatim at text-06 bold, as the conclusion of a
+              verbatim at text-md bold, as the conclusion of a
               cross-civilization tribunal. It was the largest text on the panel
               and the only untranslated string on the page.
               `crossJudgments.conclusion_types` now carries both members in all
@@ -254,7 +254,7 @@ export default function CrossJudgmentDetailPage() {
               `DomainEnum` renders that italic with the raw value in `title`,
               and renders nothing-recorded as `MissingValue`; the old ternary
               silently painted both cases as ordinary ink. */}
-          <p className={`text-06 font-bold ${
+          <p className={`text-md font-bold ${
             judgment.conclusion_type === "PASS" ? "text-[oklch(var(--color-status-success))]" :
             judgment.conclusion_type === "FAIL" ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-ink))]"
           }`}>

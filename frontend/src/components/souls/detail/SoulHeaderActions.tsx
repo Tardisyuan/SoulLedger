@@ -115,7 +115,7 @@ export function SoulHeaderActions({
                     close(true);
                     onDelete();
                   }}
-                  className="w-full text-left px-3 py-1 text-03 text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)] transition-colors"
+                  className="w-full text-left px-3 py-1 text-sm text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)] transition-colors"
                 >
                   {t("souls.detail.delete")}
                 </button>

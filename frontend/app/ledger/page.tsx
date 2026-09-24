@@ -125,14 +125,14 @@ function LedgerPageContent() {
                       aria-hidden="true"
                       className={`w-3 h-3 rounded-full shrink-0 ${STATE_DOT[item.state] ?? "bg-[oklch(var(--color-status-error))]"}`}
                     />
-                    <span title={item.state} className="text-03 text-[oklch(var(--color-ink))] truncate">
+                    <span title={item.state} className="text-sm text-[oklch(var(--color-ink))] truncate">
                       {stateLabel(item.state, item.label)}
                     </span>
                   </span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-12" />
                   ) : (
-                    <span className="text-03 font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">{item.count}</span>
+                    <span className="text-sm font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">{item.count}</span>
                   )}
                 </li>
               ))}
@@ -175,15 +175,15 @@ function LedgerPageContent() {
                 {ledgerStats.souls_by_realm.map((item) => (
                   <li key={item.realm_code} className="flex items-center justify-between gap-4 py-2">
                     <span className="min-w-0">
-                      <span className="text-03 text-[oklch(var(--color-ink))]">{item.realm_name}</span>
-                      <span className="text-02 text-[oklch(var(--color-ink-subtle))] ml-2">
+                      <span className="text-sm text-[oklch(var(--color-ink))]">{item.realm_name}</span>
+                      <span className="text-xs text-[oklch(var(--color-ink-subtle))] ml-2">
                         (<DomainEnum namespace="souls.civilizations" value={item.civilization} />)
                       </span>
                     </span>
                     {isLoading ? (
                       <Skeleton className="h-4 w-12" />
                     ) : (
-                      <span className="text-03 font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">{item.count}</span>
+                      <span className="text-sm font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">{item.count}</span>
                     )}
                   </li>
                 ))}
@@ -200,14 +200,14 @@ function LedgerPageContent() {
               <ul className="divide-y divide-[oklch(var(--color-hairline))]">
                 {ledgerStats.recent_activity.slice(0, 10).map((activity) => (
                   <li key={activity.id} className="flex items-start gap-3 py-3">
-                    <span className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0 pt-px">
+                    <span className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0 pt-px">
                       <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-03 text-[oklch(var(--color-ink))]">
+                      <span className="block text-sm text-[oklch(var(--color-ink))]">
                         {activity.description || <DomainEnum namespace="audit.actions" value={activity.action} />}
                       </span>
-                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-02 font-mono text-[oklch(var(--color-ink-subtle))]">
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs font-mono text-[oklch(var(--color-ink-subtle))]">
                         <span>{activity.user}</span>
                         <span aria-hidden="true">·</span>
                         <span>{activity.resource}</span>
@@ -254,7 +254,7 @@ const STATE_DOT: Record<string, string> = {
 /**
  * 一个总计数字。
  *
- * `text-07` 而不是 `text-08`:三个figure 等阶,08 档留给单一主数字。这三个都是
+ * `text-lg` 而不是 `text-xl`:三个figure 等阶,08 档留给单一主数字。这三个都是
  * 计数,标签写在数字之上说出它数的是什么 —— 计数自带名词,量纲自带标尺词,
  * 这是 `QuantityFigure` 那条规则在没有权重的一页上的样子。
  */
@@ -269,11 +269,11 @@ function OverviewFigure({
 }) {
   return (
     <div>
-      <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
+      <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         <Skeleton className="h-10 w-20 mt-2" />
       ) : (
-        <div data-overview-figure="" className="text-07 font-mono tabular-nums text-[oklch(var(--color-ink))] mt-2">
+        <div data-overview-figure="" className="text-lg font-mono tabular-nums text-[oklch(var(--color-ink))] mt-2">
           {value ?? 0}
         </div>
       )}
@@ -281,11 +281,11 @@ function OverviewFigure({
   );
 }
 
-/** 区块标题:`text-01` uppercase + 2px ink-subtle 下划线(取代 font-bold 做层级)。 */
+/** 区块标题:`text-2xs` uppercase + 2px ink-subtle 下划线(取代 font-bold 做层级)。 */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink-subtle))] pb-2 mb-3">
+      <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink-subtle))] pb-2 mb-3">
         {title}
       </h2>
       {children}
@@ -294,7 +294,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function SectionError({ label }: { label: string }) {
-  return <p className="text-03 text-[oklch(var(--color-status-error))]">{label}</p>;
+  return <p className="text-sm text-[oklch(var(--color-status-error))]">{label}</p>;
 }
 
 

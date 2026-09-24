@@ -122,7 +122,7 @@ const VERDICT_SEAL: Record<VerdictMember, string> = {
  * The band must not change height when a verdict lands: a page that reflows at
  * the moment of judgment moves everything below it under the reader's eye.
  * `h-[124px]` is a FIXED height, not a minimum, so no content can grow it —
- * 56px (text-08 at line-height 1) + 8 + 18px (text-02 at 1.5) = 82px of content
+ * 56px (text-xl at line-height 1) + 8 + 18px (text-xs at 1.5) = 82px of content
  * against 124 − 32 (py-4) − 4 (borders, border-box) = 88px of room; the pending
  * state puts one 16px line in the same box. `border-t-3` over `border-b` reads
  * as a stamp pressed DOWN, heavy edge first. Only the top border's COLOUR
@@ -272,7 +272,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const backLink = (
     <Link
       href="/judgment"
-      className="text-02 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors"
+      className="text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors"
     >
       {t("judgment.detail.back_to_list")}
     </Link>
@@ -303,7 +303,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <EmptyState
           title={t("judgment.detail.not_found")}
           action={
-            <Link href="/judgment" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors">
+            <Link href="/judgment" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors">
               {t("common.back_to_list")}
             </Link>
           }
@@ -370,12 +370,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         {isFinal && ordered ? (
           <>
             <div className="min-w-0 flex-1">
-              <p className={`text-08 ${VERDICT_INK[ordered]}`}>
+              <p className={`text-xl ${VERDICT_INK[ordered]}`}>
                 <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
               </p>
               {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
               <p
-                className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] mt-2 truncate"
+                className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] mt-2 truncate"
                 title={
                   [judgment.judge_name, judgment.concluded_at && formatDateTime(judgment.concluded_at)]
                     .filter(Boolean)
@@ -397,7 +397,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           </>
         ) : (
           <>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] flex-1">{t("judgment.pending")}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] flex-1">{t("judgment.pending")}</p>
             <Button
               type="button"
               variant="ghost"
@@ -432,10 +432,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const marked = isFinal ? isOrdered : isChosen;
               const clause = (
                 <>
-                  <span className="font-mono tabular-nums text-02 text-[oklch(var(--color-ink-tertiary))]">
+                  <span className="font-mono tabular-nums text-xs text-[oklch(var(--color-ink-tertiary))]">
                     {toHanNumeral(index + 1)}
                   </span>
-                  <span className={`text-05 ${marked ? VERDICT_INK[member] : "text-[oklch(var(--color-ink))]"}`}>
+                  <span className={`text-md ${marked ? VERDICT_INK[member] : "text-[oklch(var(--color-ink))]"}`}>
                     <DomainEnum namespace="judgment.verdicts" value={member} />
                   </span>
                 </>
@@ -514,9 +514,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               to carry: a confession in italic reads as an aside, and italic is
               then unavailable for what italic is for. */}
           {judgment.confession ? (
-            <p className="font-serif text-05 text-[oklch(var(--color-ink))] mt-4">{judgment.confession}</p>
+            <p className="font-serif text-quote text-[oklch(var(--color-ink))] mt-4">{judgment.confession}</p>
           ) : (
-            <p className="text-04 text-[oklch(var(--color-ink-subtle))] mt-4">
+            <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-4">
               <MissingValue kind="unrecorded" />
             </p>
           )}
@@ -528,9 +528,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {isFinal ? (
             /* The bench's own sentence, so sans — the other half of the rule. */
             judgment.notes ? (
-              <p className="font-sans text-04 text-[oklch(var(--color-ink))] mt-4">{judgment.notes}</p>
+              <p className="font-sans text-sm text-[oklch(var(--color-ink))] mt-4">{judgment.notes}</p>
             ) : (
-              <p className="text-04 text-[oklch(var(--color-ink-subtle))] mt-4">
+              <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-4">
                 <MissingValue kind="unrecorded" />
               </p>
             )
@@ -548,7 +548,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 }}
                 rows={5}
                 placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-4 border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-sans text-04 text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
+                className="block w-full mt-4 border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-sans text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
               />
             </>
           )}
@@ -585,8 +585,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               className="mt-1 h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
             />
             <label htmlFor={createWorkflowId} className="cursor-pointer min-w-0">
-              <span className="text-03 text-[oklch(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
-              <span className="text-02 text-[oklch(var(--color-ink-subtle))] block mt-1 max-w-prose">
+              <span className="text-sm text-[oklch(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
+              <span className="text-xs text-[oklch(var(--color-ink-subtle))] block mt-1 max-w-prose">
                 {t("judgment.detail.create_workflow_hint")}
               </span>
             </label>
@@ -618,8 +618,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
-      <dt className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{label}</dt>
-      <dd className="text-03 text-[oklch(var(--color-ink))] min-w-0 wrap-break-word">{children}</dd>
+      <dt className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</dt>
+      <dd className="text-sm text-[oklch(var(--color-ink))] min-w-0 wrap-break-word">{children}</dd>
     </div>
   );
 }

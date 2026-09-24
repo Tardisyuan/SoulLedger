@@ -197,9 +197,9 @@ export function RunHistoryPanel({ jobs, jobName, showTenant, realtimeConnected }
                 run={run}
                 formatDateTime={formatDateTime}
                 heading={
-                  <p className="text-03 font-medium text-[oklch(var(--color-ink))] break-words">
+                  <p className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
                     {nameOfTask.get(run.task_name) ?? run.task_name}
-                    <span className="text-02 font-normal text-[oklch(var(--color-ink-muted))]">
+                    <span className="text-xs font-normal text-[oklch(var(--color-ink-muted))]">
                       {" · "}
                       {run.tenant === null
                         ? t("scheduler.groups.global")

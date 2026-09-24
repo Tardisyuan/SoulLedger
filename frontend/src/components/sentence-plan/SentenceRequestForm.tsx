@@ -48,7 +48,7 @@ export function SentenceRequestForm({ plan }: { plan: SentencePlan }) {
     (n) => n.tenant_code === mine && CURRENT_NODE_STATUSES.includes(n.status) && n.status !== "DISPATCHING"
   );
   if (soulIsHere) {
-    return <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.file.soul_is_here")}</p>;
+    return <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.file.soul_is_here")}</p>;
   }
 
   const changes = kind === "AMEND" ? draftToChanges(draft) : undefined;
@@ -108,7 +108,7 @@ export function SentenceRequestForm({ plan }: { plan: SentencePlan }) {
           {kind === "AMEND" ? (
             <PlanChangesEditor plan={plan} tenantCode={mine} draft={draft} onChange={setDraft} />
           ) : (
-            <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.file.reopen_hint")}</p>
+            <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.file.reopen_hint")}</p>
           )}
           <TextAreaField
             label={t(kind === "REOPEN" ? "sentence_plan.file.reason_reopen" : "sentence_plan.file.reason")}

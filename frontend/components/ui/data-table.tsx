@@ -54,7 +54,7 @@ export interface DataTableColumn {
 
 export interface DataTableProps<T> {
   /**
-   * Row height. `compact` is `py-2` (~36px at text-03) against
+   * Row height. `compact` is `py-2` (~36px at text-sm) against
    * `comfortable`'s `py-3` (~44px) — an 18% reduction, which at 20 rows a
    * page is the difference between the table fitting one 1080p viewport and
    * not.
@@ -257,13 +257,13 @@ export function DataTable<T>({
           后果不止一条横向滚动条:所有 `fixed inset-0` 的遮罩与弹窗按 457 铺开、
           居中在 228,一半落在可视区外,里面的按钮「可见、可用、可滚动到」却点不动。 */}
       <div className="relative overflow-x-auto border border-[oklch(var(--color-hairline))]">
-        {/* `text-03` (13px), not `text-sm` (14px). Every body cell that does not
+        {/* `text-sm` (13px), not `text-sm` (14px). Every body cell that does not
             set its own size inherits from here, so this one class is the base
             size of thirteen pages' tables — and it was the single largest block
             of text still outside the eight-step scale. 13px is tighter than what
             it replaces: the scale buys hierarchy from the span between steps,
             not by growing rows, and the table is where density is defended. */}
-        <table className={cn("w-full text-03", bodyDensity)} aria-busy={isLoading || undefined}>
+        <table className={cn("w-full text-sm", bodyDensity)} aria-busy={isLoading || undefined}>
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>

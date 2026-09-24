@@ -118,7 +118,7 @@ describe("DashboardPage overview", () => {
     await screen.findByTestId("pie");
     // Selected by `data-kpi`, not by class name. This used to filter on
     // `text-2xl font-bold`, which pinned the test to one rung of the old type
-    // scale: when Stage 11 moved KPI values to `text-08` (56px) the filter
+    // scale: when Stage 11 moved KPI values to `text-xl` (56px) the filter
     // matched none of the four cards, silently fell through to two unrelated
     // numbers elsewhere on the page, and reported a data bug that did not
     // exist. A test for "the payload reaches the cards" must not fail because

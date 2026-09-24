@@ -4,20 +4,20 @@ import { extendTailwindMerge } from "tailwind-merge"
 /**
  * tailwind-merge, taught about the eight-step type scale.
  *
- * WHY THIS IS NOT THE STOCK `twMerge`. Stage 11 A2 added `text-01` … `text-08`
+ * WHY THIS IS NOT THE STOCK `twMerge`. Stage 11 A2 added `text-2xs` … `text-xl`
  * to `tailwind.config.js`'s `fontSize`. tailwind-merge does not read the
  * Tailwind config — it ships a hardcoded table of class groups — and its
  * `font-size` group only recognises the t-shirt names (`text-xs` … `text-9xl`)
- * plus arbitrary lengths. `text-02` matches none of those, so it falls through
+ * plus arbitrary lengths. `text-xs` matches none of those, so it falls through
  * to the group that accepts anything after `text-`: **text-COLOR**.
  *
  * The consequence is that a font size and a text colour in the same `cn()` call
  * were treated as the same property, and the later one deleted the earlier one:
  *
- *   cn("bg-accent text-black border-accent", "px-2 py-1 text-02")
- *     → "bg-accent border-accent px-2 py-1 text-02"      // text-black gone
- *   cn("text-01 uppercase text-[oklch(var(--color-ink-subtle))]")
- *     → "uppercase text-[oklch(var(--color-ink-subtle))]"  // text-01 gone
+ *   cn("bg-accent text-black border-accent", "px-2 py-1 text-xs")
+ *     → "bg-accent border-accent px-2 py-1 text-xs"      // text-black gone
+ *   cn("text-2xs uppercase text-[oklch(var(--color-ink-subtle))]")
+ *     → "uppercase text-[oklch(var(--color-ink-subtle))]"  // text-2xs gone
  *
  * Note the second line: it happens inside a single string, so "keep them in
  * separate arguments" is not a workaround. Nor is reordering — that only
@@ -38,8 +38,10 @@ const twMerge = extendTailwindMerge({
     classGroups: {
       // Registering these as font sizes does two things: it stops them
       // colliding with text colours, and it makes them collide with each
-      // other, so `cn("text-02", "text-05")` still resolves to `text-05`.
-      "font-size": [{ text: ["01", "02", "03", "04", "05", "06", "07", "08"] }],
+      // other, so `cn("text-xs", "text-md")` still resolves to `text-md`.
+      // 规范 v1 的七档里,tailwind-merge 自带表认得 xs / sm / md / lg / xl / 2xs(t-shirt 名),
+      // 不认得 `quote`;七个全登记,不依赖它的内置表恰好覆盖哪些。
+      "font-size": [{ text: ["2xs", "xs", "sm", "md", "quote", "lg", "xl"] }],
     },
   },
 })

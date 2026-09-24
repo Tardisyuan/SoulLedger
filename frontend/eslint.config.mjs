@@ -78,8 +78,10 @@ const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
 const BASELINE_FILE = "eslint.design-guard-baseline.json";
 const LEGACY = JSON.parse(fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"));
 
-// 八档字号是**新增**的,旧档仍可解析 —— 这些是被禁的旧档。
-const LEGACY_TYPE = /^-?text-(?:xs|sm|base|lg|xl|[2-9]xl)$/;
+// 字号七档 = 规范 v1 §1.4:2xs / xs / sm / md / quote / lg / xl(@theme 里 `--text-*: initial`
+// 清掉了其余)。被禁的是 Tailwind 其余默认名与八档时代的 01…08 —— 后者已不生成任何 CSS,
+// 写了等于没写字号。
+const LEGACY_TYPE = /^-?text-(?:base|[3-9]xl|2xl|0[1-8])$/;
 
 // 八档字号的第二个绕道:**任意值**。`text-sm` 抓得到,`text-[11px]` 抓不到 ——
 // 后者绕开具名档位,直接把像素写进方括号,拿到的却是同一个「不在这套系统里的字号」。
@@ -284,9 +286,9 @@ const designSystem = {
     "type-scale": makeGuard("type", (raw, report) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (LEGACY_TYPE.test(bare)) {
-          report(chunk, at, `\`${bare}\` 不在八档字号里。用 text-01…text-08(11/12/13/15/18/22/32/56px),见 app/globals.css 的 @theme`);
+          report(chunk, at, `\`${bare}\` 不在七档字号里。用 text-2xs / xs / sm / md / quote / lg / xl(11/12/13/16/20/22/28px,规范 v1 §1.4),见 app/globals.css 的 @theme`);
         } else if (ARBITRARY_TYPE.test(chunk)) {
-          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-01…text-08(11/12/13/15/18/22/32/56px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
+          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-2xs…text-xl(11/12/13/16/20/22/28px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
         }
       }
     }),

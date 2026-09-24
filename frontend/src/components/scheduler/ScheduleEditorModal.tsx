@@ -172,13 +172,13 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
             aria-expanded={advanced}
             aria-controls={`${idBase}-advanced`}
             onClick={() => setAdvanced((open) => !open)}
-            className="text-03 text-[oklch(var(--color-accent-ink))] underline underline-offset-2"
+            className="text-sm text-[oklch(var(--color-accent-ink))] underline underline-offset-2"
           >
             {t("scheduler.editor.advanced")}
           </button>
           {advanced && (
             <fieldset id={`${idBase}-advanced`} className="mt-3">
-              <legend className="text-02 text-[oklch(var(--color-ink-muted))] mb-2">{t("scheduler.editor.cron_hint")}</legend>
+              <legend className="text-xs text-[oklch(var(--color-ink-muted))] mb-2">{t("scheduler.editor.cron_hint")}</legend>
               {/* Three columns at phone width: five would leave ~56px per field at 393px, narrower than the uppercase labels. */}
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {CRON_FIELDS.map((name) => (
@@ -199,7 +199,7 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
                 ))}
               </div>
               {cronErrors.length > 0 && (
-                <p role="alert" className="mt-2 text-02 text-[oklch(var(--color-status-error))] break-words">
+                <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-status-error))] break-words">
                   {cronErrors.join(" ")}
                 </p>
               )}
@@ -217,15 +217,15 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
         />
 
         <section aria-live="polite" className="border-t border-[oklch(var(--color-hairline))] pt-3">
-          <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-2">
+          <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-2">
             {t("scheduler.editor.preview")} · {timezone}
           </h3>
           {preview.runs === null ? (
-            <p className="text-03 text-[oklch(var(--color-status-warning))]">{t("scheduler.editor.preview_invalid")}</p>
+            <p className="text-sm text-[oklch(var(--color-status-warning))]">{t("scheduler.editor.preview_invalid")}</p>
           ) : preview.runs.length === 0 ? (
-            <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("scheduler.editor.preview_none")}</p>
+            <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("scheduler.editor.preview_none")}</p>
           ) : (
-            <ol className="space-y-1 font-mono text-03 text-[oklch(var(--color-ink))]" data-testid="cron-preview">
+            <ol className="space-y-1 font-mono text-sm text-[oklch(var(--color-ink))]" data-testid="cron-preview">
               {preview.runs.map((run) => (
                 <li key={run.getTime()}>
                   {formatDateTime(run, { timeZone: timezone, dateStyle: "medium", timeStyle: "short" })}

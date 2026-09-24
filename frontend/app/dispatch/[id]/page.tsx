@@ -165,7 +165,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const backLink = (
     <Link
       href="/dispatch"
-      className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
+      className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
     >
       ← {t("common.back_to_list")}
     </Link>
@@ -240,23 +240,23 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.soul")}</p>
-            <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{dispatch.soul_name || dispatch.soul}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.soul")}</p>
+            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{dispatch.soul_name || dispatch.soul}</p>
           </div>
           <div>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
-            <p title={dispatch.status} className="text-04 font-medium text-[oklch(var(--color-ink))]">{statusLabel}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
+            <p title={dispatch.status} className="text-sm font-medium text-[oklch(var(--color-ink))]">{statusLabel}</p>
           </div>
           <div>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>
-            <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{dispatch.source_tenant_code}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>
+            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{dispatch.source_tenant_code}</p>
           </div>
           <div>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.target_tenant")}</p>
-            <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{dispatch.target_tenant_code}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.target_tenant")}</p>
+            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{dispatch.target_tenant_code}</p>
           </div>
           <div>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.proposed_by")}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.proposed_by")}</p>
             {/* `MissingValue`, NOT `|| dispatch.dispatched_by`.
                 `dispatched_by` is the proposing user's integer primary key —
                 `ForeignKey(User, on_delete=SET_NULL)` with no `source=`
@@ -270,7 +270,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                 name should be — which no exception suspends. "Nobody recorded
                 this name" is a fact worth showing; a primary key is not. Same
                 shape as `app/judgment/page.tsx`'s `soul_name`. */}
-            <p className="text-04 font-medium text-[oklch(var(--color-ink))]">
+            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">
               {dispatch.dispatched_by_name ? (
                 dispatch.dispatched_by_name
               ) : (
@@ -279,35 +279,35 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             </p>
           </div>
           <div>
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>
-            {/* Timestamps take the meta slot (text-02) and tabular figures, so
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>
+            {/* Timestamps take the meta slot (text-xs) and tabular figures, so
                 three of them stacked in a grid line up digit for digit. */}
-            <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.proposed_at)}</p>
+            <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.proposed_at)}</p>
           </div>
           {dispatch.decided_at && (
             <div>
-              <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.decided_at")}</p>
-              <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.decided_at)}</p>
+              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.decided_at")}</p>
+              <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.decided_at)}</p>
             </div>
           )}
           {dispatch.executed_at && (
             <div>
-              <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.executed_at")}</p>
-              <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
+              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.executed_at")}</p>
+              <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
             </div>
           )}
           {dispatch.returned_at && (
             <div>
-              <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.returned_at")}</p>
-              <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.returned_at)}</p>
+              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.returned_at")}</p>
+              <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.returned_at)}</p>
             </div>
           )}
         </div>
 
         {dispatch.reason && (
           <div className="mt-4 pt-4 border-t border-[oklch(var(--color-hairline))]">
-            <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("dispatch.reason")}</p>
-            <p className="text-04 text-[oklch(var(--color-ink))]">{dispatch.reason}</p>
+            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("dispatch.reason")}</p>
+            <p className="text-sm text-[oklch(var(--color-ink))]">{dispatch.reason}</p>
           </div>
         )}
       </div>
@@ -315,7 +315,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       {/* Actions */}
       {isProposed && (
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <div className="flex gap-3">
             <RequirePermission permissions="dispatch.approve">
               {/* Was `approveMutation.mutate()` fired straight from the click,
@@ -344,7 +344,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
       {isApproved && (
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <RequirePermission permissions="dispatch.execute">
             <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
               {t("dispatch.execute")}
@@ -355,7 +355,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
       {isResiding && (
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <RequirePermission permissions="dispatch.return">
             <Button type="button" variant="secondary" onClick={() => setShowReturnModal(true)}>
               {t("dispatch.return_home")}
@@ -392,7 +392,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-ink-muted))]">
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">
           {t("dispatch.approve_warning")}
         </p>
       </BaseModal>
@@ -450,7 +450,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-ink-muted))]">
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">
           {t("dispatch.execute_warning")}
         </p>
       </BaseModal>
@@ -480,7 +480,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-ink-muted))] mb-3">
+        <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-3">
           {t("dispatch.return_home_warning")}
         </p>
         <TextAreaField

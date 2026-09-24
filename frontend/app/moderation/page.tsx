@@ -50,7 +50,7 @@ type Tab = "reports" | "content" | "words" | "mutes";
 const TABS: Tab[] = ["reports", "content", "words", "mutes"];
 const MUTE_DAYS = [1, 3, 7, 30];
 const ROW = "p-4 space-y-2 border-b border-[oklch(var(--color-hairline))] last:border-b-0";
-const MUTED_TEXT = "text-02 text-[oklch(var(--color-ink-subtle))]";
+const MUTED_TEXT = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function useFailureToast() {
   const { t } = useI18n();
@@ -117,7 +117,7 @@ function ReportsTab() {
                 {r.content_status && <DomainEnum namespace="social_moderation.moderation_status" value={r.content_status} />}
                 <span className={MUTED_TEXT}>{formatDateTime(r.last_reported_at)}</span>
               </div>
-              <p className="text-03 text-[oklch(var(--color-ink))] break-words">
+              <p className="text-sm text-[oklch(var(--color-ink))] break-words">
                 {r.target_user?.display_name}
                 {r.content_excerpt && <span className="text-[oklch(var(--color-ink-muted))]">:{r.content_excerpt}</span>}
               </p>
@@ -209,10 +209,10 @@ function ContentTab() {
             <li key={row.id} data-content-id={row.id} className={ROW}>
               <div className="flex flex-wrap items-center gap-2">
                 <DomainEnum namespace="social_moderation.moderation_status" value={row.moderation_status} />
-                <span className="text-03 font-medium">{row.author?.display_name}</span>
+                <span className="text-sm font-medium">{row.author?.display_name}</span>
                 <span className={MUTED_TEXT}>{formatDateTime(row.create_time)}</span>
               </div>
-              <p className="text-03 text-[oklch(var(--color-ink-muted))] whitespace-pre-wrap break-words">{row.content}</p>
+              <p className="text-sm text-[oklch(var(--color-ink-muted))] whitespace-pre-wrap break-words">{row.content}</p>
               <div className="flex flex-wrap gap-2">
                 {row.moderation_status === "PENDING" && (
                   <Button type="button" size="sm" variant="primary" disabled={busy} onClick={() => act(row.id, "approve")}>
@@ -297,7 +297,7 @@ function WordsTab() {
       >
         {rows.map((w) => (
           <li key={w.id} className={`${ROW} flex items-center justify-between gap-4 space-y-0`}>
-            <span className="font-mono text-03 break-all">{w.word}</span>
+            <span className="font-mono text-sm break-all">{w.word}</span>
             <span className="flex items-center gap-3">
               <span className={MUTED_TEXT}>{formatDateTime(w.created_at)}</span>
               <Button type="button" size="sm" variant="danger" onClick={() => setRemoving({ id: w.id, word: w.word })}>
@@ -345,7 +345,7 @@ function MutesTab() {
       {rows.map((m) => (
         <li key={m.id} data-mute-id={m.id} className={`${ROW} flex flex-wrap items-center justify-between gap-4 space-y-0`}>
           <span className="min-w-0 space-y-1">
-            <span className="block text-03 font-medium">{m.user?.display_name}</span>
+            <span className="block text-sm font-medium">{m.user?.display_name}</span>
             <span className={`block ${MUTED_TEXT}`}>
               {t("social_moderation.fields.until")} {formatDateTime(m.until)}
               {m.reason && ` · ${m.reason}`}

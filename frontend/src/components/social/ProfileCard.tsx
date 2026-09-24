@@ -38,7 +38,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
     <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-6">
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <div className="w-16 h-16 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-06 text-[oklch(var(--color-accent-ink))] overflow-hidden shrink-0">
+        <div className="w-16 h-16 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-md text-[oklch(var(--color-accent-ink))] overflow-hidden shrink-0">
           {profile.avatar ? (
             <img
               src={profile.avatar}
@@ -53,14 +53,14 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-06 text-[oklch(var(--color-ink))] truncate" title={profile.username}>
+            <h2 className="text-md text-[oklch(var(--color-ink))] truncate" title={profile.username}>
               {profile.username}
             </h2>
             {isOwnProfile ? (
               <button
                 type="button"
                 onClick={() => setIsEditOpen(true)}
-                className="px-4 py-1.5 text-03 font-medium border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] transition-colors"
+                className="px-4 py-1.5 text-sm font-medium border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] transition-colors"
               >
                 {t("social.edit_profile") || "Edit profile"}
               </button>
@@ -69,11 +69,11 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
             )}
           </div>
           {profile.bio && (
-            <p className="text-04 text-[oklch(var(--color-ink-muted))] mt-1 whitespace-pre-wrap">
+            <p className="text-sm text-[oklch(var(--color-ink-muted))] mt-1 whitespace-pre-wrap">
               {profile.bio}
             </p>
           )}
-          <div className="flex gap-4 mt-3 text-02">
+          <div className="flex gap-4 mt-3 text-xs">
             <span className="text-[oklch(var(--color-ink-muted))]">
               <strong className="font-mono tabular-nums text-[oklch(var(--color-ink))]">{profile.post_count}</strong>{" "}
               {t("social.posts") || "posts"}
@@ -93,7 +93,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
       <div className="mt-4 pt-3 border-t border-[oklch(var(--color-hairline))]/50">
         <Link
           href={`/social/profile/${profile.user}`}
-          className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
+          className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
         >
           {t("social.view_all_posts") || "View all posts"} →
         </Link>

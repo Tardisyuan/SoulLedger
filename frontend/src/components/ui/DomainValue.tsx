@@ -198,7 +198,7 @@ export interface IdentifierChipProps {
 
 const IDENTIFIER_VARIANT_CLASSES: Record<"chip" | "inline", string> = {
   chip:
-    "font-mono text-02 px-1.5 py-0.5 bg-[oklch(var(--color-surface-2))] " +
+    "font-mono text-xs px-1.5 py-0.5 bg-[oklch(var(--color-surface-2))] " +
     "border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] " +
     "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors",
   // No fill at all, so nothing here can approach the 0.1 badge-tint cap

@@ -29,10 +29,10 @@ function StatCardInner({
       data-kpi-card=""
       className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]"
     >
-      <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
+      <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         // 骨架屏得和它替换的东西一样高,否则数据落地时整行会往下跳一格。
-        // text-08 是 56px / line-height 1,所以 h-14。
+        // text-xl 是 56px / line-height 1,所以 h-14。
         <Skeleton className="h-14 w-24 mt-2" />
       ) : (
         // `data-kpi` 是给测试用的锚:DashboardPage.test.tsx 原先靠
@@ -41,7 +41,7 @@ function StatCardInner({
         // 字号说的是「它现在多大」——只有前者是测试真正关心的。
         //
         // `mt-2` 必须和骨架屏的一致,而它此前是缺的。上面那条注释说两者得一样高,
-        // 否则数据落地时整行会跳 —— **高度**确实对上了(h-14 对 text-08 的 56px/1),
+        // 否则数据落地时整行会跳 —— **高度**确实对上了(h-14 对 text-xl 的 56px/1),
         // **外边距**没有:骨架屏带 mt-2,这里没有,于是加载时整条 KPI 高 8px,数据
         // 到达时往上弹回去。对齐了盒子、没对齐盒子周围的空隙,留下的正是那条注释
         // 写来防止的缺陷,差在隔壁一个属性上。
@@ -53,7 +53,7 @@ function StatCardInner({
         // 落地态,断言两者相等。把这里的 `mt-2` 删掉并重新 build,那条 E2E 实测
         // 报「加载时 113.9375px,数据落地后 105.9375px —— 差 -8.00px」,
         // chromium 与 mobile-chrome 上是同一组数(退出码 1)。
-        <div data-kpi="" className={`text-08 tabular-nums mt-2 ${color}`}>
+        <div data-kpi="" className={`text-xl tabular-nums mt-2 ${color}`}>
           {/* `value ?? 0` printed a confident, grouped **0** for a value the
               API did not send — the exact defect class this repo already
               eradicated from the souls balance column. A KPI reading 0 is a

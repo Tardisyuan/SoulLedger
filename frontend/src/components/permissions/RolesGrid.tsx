@@ -37,9 +37,9 @@ export function RolesGrid({
       {roles.map((role) => (
         <div key={role.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-3 hover:border-[oklch(var(--color-accent))]/30 transition-colors">
           <div className="min-w-0 flex-1">
-            <h3 title={role.display_name || role.name} className="font-medium text-[oklch(var(--color-ink))] truncate text-03">{role.display_name || role.name}</h3>
-            <p title={role.name} className="text-02 text-[oklch(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
-            <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
+            <h3 title={role.display_name || role.name} className="font-medium text-[oklch(var(--color-ink))] truncate text-sm">{role.display_name || role.name}</h3>
+            <p title={role.name} className="text-xs text-[oklch(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
+            <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
           </div>
           <div className="flex gap-2 mt-2">
             <Button

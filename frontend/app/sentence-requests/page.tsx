@@ -28,7 +28,7 @@ import { SentenceRequestActions } from "@/src/components/sentence-plan/SentenceR
  */
 
 const PANEL = "border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]";
-const MUTED = "text-02 text-[oklch(var(--color-ink-subtle))]";
+const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function SentenceRequestsContent() {
   const { t, formatDateTime } = useI18n();
@@ -56,7 +56,7 @@ function SentenceRequestsContent() {
               return (
                 <li key={plan.id} data-plan-id={plan.id} className={`${PANEL} p-4 space-y-2`}>
                   <p className="flex flex-wrap items-center gap-2">
-                    <Link href={`/souls/${plan.soul}`} className="text-04 font-medium text-[oklch(var(--color-accent-ink))] underline underline-offset-2">
+                    <Link href={`/souls/${plan.soul}`} className="text-sm font-medium text-[oklch(var(--color-accent-ink))] underline underline-offset-2">
                       {plan.soul_name}
                     </Link>
                     <Badge tone={PLAN_TONES[plan.status] ?? "neutral"}>
@@ -64,7 +64,7 @@ function SentenceRequestsContent() {
                     </Badge>
                     {mine === plan.tenant_code && <Badge tone="accent">{t("sentence_plan.awaiting_you")}</Badge>}
                   </p>
-                  <p className="flex flex-wrap items-center gap-2 text-03">
+                  <p className="flex flex-wrap items-center gap-2 text-sm">
                     <DomainEnum namespace="sentence_plan.request_kinds" value={request.kind} />
                     <span className={MUTED}>
                       {t("sentence_plan.request_from")} <TenantName code={request.from_tenant_code} />
@@ -75,7 +75,7 @@ function SentenceRequestsContent() {
                     </span>
                   </p>
                   <RequestChanges request={request} plan={plan} />
-                  {request.reason && <p className="text-03 text-[oklch(var(--color-ink-muted))]">{request.reason}</p>}
+                  {request.reason && <p className="text-sm text-[oklch(var(--color-ink-muted))]">{request.reason}</p>}
                   <SentenceRequestActions plan={plan} request={request} />
                 </li>
               );

@@ -68,7 +68,7 @@ export default function CrossJudgmentsPage() {
       variant="full"
       pagination={{
         count: (
-          <p className="text-03 text-[oklch(var(--color-ink-muted))]">
+          <p className="text-sm text-[oklch(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))),
@@ -124,8 +124,8 @@ export default function CrossJudgmentsPage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-04 font-semibold text-[oklch(var(--color-ink))]">{j.title}</h3>
-                    <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
+                    <h3 className="text-sm font-semibold text-[oklch(var(--color-ink))]">{j.title}</h3>
+                    <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
                       {t("crossJudgments.initiated_by")}: {j.initiating_tenant_code}
                     </p>
                   </div>

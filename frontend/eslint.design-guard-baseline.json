@@ -2,9 +2,6 @@
   "app/not-found.tsx": {
     "type": 2
   },
-  "components/LanguageSwitcher.tsx": {
-    "type": 2
-  },
   "components/ui/data-grid/ActionsMenu.tsx": {
     "space": 1
   },

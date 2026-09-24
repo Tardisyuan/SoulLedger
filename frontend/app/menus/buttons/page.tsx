@@ -197,8 +197,8 @@ export default function MenuButtonsPage() {
           <>
             <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">{btn.name}</td>
             {/* Codenames are identifiers, which is what the 02 step is for. */}
-            <td className="px-4 py-3 text-02 font-mono text-[oklch(var(--color-ink-muted))]">{btn.code}</td>
-            <td className="px-4 py-3 text-02 font-mono text-[oklch(var(--color-ink-muted))]">{btn.permission}</td>
+            <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{btn.code}</td>
+            <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{btn.permission}</td>
             <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">{btn.order}</td>
             <td className="px-4 py-3">
               {/* is_active IS a system state — the gate is either in force or
@@ -271,7 +271,7 @@ export default function MenuButtonsPage() {
             {/* Not `error`: an unknown codename is a warning, not a rejection —
                 the form still submits, and a red field would say otherwise. */}
             {permissionsLoaded && form.permission.trim() && !realCodenames.has(form.permission.trim()) && (
-              <p className="text-02 text-[oklch(var(--color-status-warning))]">
+              <p className="text-xs text-[oklch(var(--color-status-warning))]">
                 {t("menu_buttons.permission_mismatch_warning", { codename: form.permission.trim() })}
               </p>
             )}
@@ -303,7 +303,7 @@ export default function MenuButtonsPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor={isActiveId} className="text-03 text-[oklch(var(--color-ink))]">{t("menus.active")}</label>
+            <label htmlFor={isActiveId} className="text-sm text-[oklch(var(--color-ink))]">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button

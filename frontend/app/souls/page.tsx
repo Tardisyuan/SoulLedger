@@ -211,7 +211,7 @@ export default function SoulsPage() {
               onBlur={() => setPage(1)}
               className={cn(fieldControl({ size: "md" }), "w-20")}
             />
-            <span className="text-03 text-[oklch(var(--color-ink-muted))]">-</span>
+            <span className="text-sm text-[oklch(var(--color-ink-muted))]">-</span>
             <input
               type="number"
               placeholder={t("souls.balance_max")}
@@ -341,14 +341,14 @@ export default function SoulsPage() {
             </td>
             {showsDeathColumn && (
               /* 02 档：日期是元数据，不是正文。 */
-              <td className="px-4 py-3 text-02 text-[oklch(var(--color-ink-muted))]">
+              <td className="px-4 py-3 text-xs text-[oklch(var(--color-ink-muted))]">
                 <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
               </td>
             )}
             <td className="px-4 py-3">
               <Link
                 href={`/souls/${soul.id}`}
-                className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
+                className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
               >
                 {t("souls.view")} →
               </Link>

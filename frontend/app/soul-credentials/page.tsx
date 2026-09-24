@@ -116,7 +116,7 @@ function CredentialsPageContent() {
     <EmptyState title={t("soul_accounts.credentials.empty.filtered")} />
   );
 
-  const label = "md:hidden text-01 uppercase text-[oklch(var(--color-ink-subtle))]";
+  const label = "md:hidden text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
 
   return (
     <PageShell
@@ -142,7 +142,7 @@ function CredentialsPageContent() {
       <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]">
         <div
           aria-hidden="true"
-          className={`hidden px-4 py-2 text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${ROW_GRID}`}
+          className={`hidden px-4 py-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${ROW_GRID}`}
         >
           <span>{t("soul_accounts.fields.soul")}</span>
           <span>{t("soul_accounts.fields.cycle")}</span>
@@ -161,35 +161,35 @@ function CredentialsPageContent() {
                 className={`p-4 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-hairline))] last:border-b-0 ${ROW_GRID}`}
               >
                 <div className="min-w-0 space-y-1">
-                  <p className="text-03 font-medium text-[oklch(var(--color-ink))] break-words">
+                  <p className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
                     <Link href={`/souls/${c.soul}`} className="underline text-[oklch(var(--color-accent-ink))]">
                       {c.soul_name}
                     </Link>
                   </p>
-                  <p className="font-mono text-02 text-[oklch(var(--color-ink-tertiary))] break-all">{c.soul_code}</p>
+                  <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all">{c.soul_code}</p>
                   <DomainEnum namespace="soul_accounts.credential_status" value={c.status} className={credentialBadgeClass(c.status)} />
                 </div>
                 <div className="min-w-0">
                   <p className={label}>{t("soul_accounts.fields.cycle")}</p>
-                  <p className="text-03">{t("soul_accounts.life", { n: lifeNumber(c.cycle) })}</p>
+                  <p className="text-sm">{t("soul_accounts.life", { n: lifeNumber(c.cycle) })}</p>
                 </div>
                 <div className="min-w-0">
                   <p className={label}>{t("soul_accounts.fields.reason")}</p>
-                  <p className="text-03 text-[oklch(var(--color-ink-muted))] break-words">{t(reason.key, reason.params)}</p>
+                  <p className="text-sm text-[oklch(var(--color-ink-muted))] break-words">{t(reason.key, reason.params)}</p>
                   {c.revealed_at && (
-                    <p className="text-02 text-[oklch(var(--color-ink-subtle))] break-words">
+                    <p className="text-xs text-[oklch(var(--color-ink-subtle))] break-words">
                       {t("soul_accounts.credentials.revealed_by", { by: c.revealed_by ?? "", time: formatDateTime(c.revealed_at) })}
                     </p>
                   )}
                   {c.delivered_at && (
-                    <p className="text-02 text-[oklch(var(--color-ink-subtle))] break-words">
+                    <p className="text-xs text-[oklch(var(--color-ink-subtle))] break-words">
                       {t("soul_accounts.credentials.delivered_by", { by: c.delivered_by ?? "", time: formatDateTime(c.delivered_at) })}
                     </p>
                   )}
                 </div>
                 <div className="min-w-0">
                   <p className={label}>{t("soul_accounts.fields.expires_at")}</p>
-                  <p className="font-mono text-02">{formatDateTime(c.expires_at)}</p>
+                  <p className="font-mono text-xs">{formatDateTime(c.expires_at)}</p>
                   {expired && c.status !== "DELIVERED" && <Badge tone="error">{t("soul_accounts.credentials.expired")}</Badge>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
@@ -223,7 +223,7 @@ function CredentialsPageContent() {
                   {canManage && expired && c.status !== "DELIVERED" && (
                     <Link
                       href={`/souls/${c.soul}#soul-account`}
-                      className="text-03 underline text-[oklch(var(--color-accent-ink))]"
+                      className="text-sm underline text-[oklch(var(--color-accent-ink))]"
                     >
                       {t("soul_accounts.credentials.actions.go_reset")}
                     </Link>

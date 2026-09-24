@@ -228,7 +228,7 @@ export default function NotificationsPage() {
            Bell over a centred reason. It is not being downgraded to a bare
            `<p>`: the icon's job (say "this region is deliberately empty, not
            broken") passes to EmptyState's 24×2 `--civ-mark` rule, the reason
-           keeps its own line at text-04, and the third element the old one
+           keeps its own line at text-sm, and the third element the old one
            never had — a way out — goes in the `action` slot. An empty UNREAD
            list is the case where a way out exists and means something, so the
            action is offered there and withheld on `all`, where "show
@@ -275,18 +275,18 @@ export default function NotificationsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <h2
-                    className={`text-03 font-medium ${
+                    className={`text-sm font-medium ${
                       notification.is_read ? "text-[oklch(var(--color-ink-muted))]" : "text-[oklch(var(--color-ink))]"
                     }`}
                   >
                     {notification.title}
                   </h2>
-                  <span className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] shrink-0">
+                  <span className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] shrink-0">
                     {formatDate(notification.created_at)}
                   </span>
                 </div>
                 <p
-                  className={`mt-1 text-03 ${
+                  className={`mt-1 text-sm ${
                     notification.is_read ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink-muted))]"
                   }`}
                 >

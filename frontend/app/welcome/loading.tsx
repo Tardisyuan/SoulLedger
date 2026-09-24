@@ -14,7 +14,7 @@ export default function Loading() {
     <div className="bg-[oklch(var(--color-canvas))]">
       <header className="border-b border-[oklch(var(--color-hairline))]">
         <div className="max-w-page mx-auto px-6 pt-10 pb-6">
-          {/* h-10 对着 text-07 的 32px × 1.2 行高;h-6 对着 text-04 的副标题。 */}
+          {/* h-10 对着 text-lg 的 32px × 1.2 行高;h-6 对着 text-sm 的副标题。 */}
           <div className="h-10 w-80 bg-[oklch(var(--color-hairline))] animate-pulse" />
           <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] animate-pulse mt-3" />
         </div>

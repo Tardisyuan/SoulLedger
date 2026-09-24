@@ -43,7 +43,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { soulStateBadgeClass } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
-const BADGE_SHAPE = "px-2 py-1 text-01";
+const BADGE_SHAPE = "px-2 py-1 text-2xs";
 
 // 「还没到」的那一份,每种一个模块级常量。
 // 这不是洁癖:这些数组是 prop,`?? []` 每次渲染都造一个新数组,而下游
@@ -325,12 +325,12 @@ export default function SoulDetailPage() {
         variant="page"
         title={t("souls.detail.not_found")}
         backLink={
-          <a href="/souls" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+          <a href="/souls" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
             ← {t("souls.detail.back_to_list")}
           </a>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
+        <p className="text-sm text-[oklch(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
       </PageShell>
     );
   }
@@ -371,7 +371,7 @@ export default function SoulDetailPage() {
   const readOnlyAway = Boolean(soul?.is_residing && soul.home_tenant && soul.home_tenant.code === tenantCode);
 
   const backLink = (
-    <a href="/souls" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+    <a href="/souls" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
       ← {t("souls.detail.back_to_list")}
     </a>
   );
@@ -530,8 +530,8 @@ export default function SoulDetailPage() {
             />
           ) : (
             <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 title={soul?.civilization} className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
-              <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
+              <h2 title={soul?.civilization} className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+              <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}
 

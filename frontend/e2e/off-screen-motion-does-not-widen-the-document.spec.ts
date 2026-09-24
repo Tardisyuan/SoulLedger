@@ -126,6 +126,8 @@ test.describe("屏外动效不撑宽文档", () => {
     await expect(page.locator("body")).not.toBeEmpty();
     await page.waitForLoadState("networkidle");
 
+    // Settings lives in the user menu since 规范 v1; open the menu, then the drawer.
+    await page.getByTestId("user-menu").click();
     const gear = page.getByRole("button", { name: /settings|设置/i }).first();
     await expect(gear).toBeVisible();
 

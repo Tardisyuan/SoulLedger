@@ -52,7 +52,7 @@ function RebirthApplicationsContent() {
     />
   );
 
-  const label = "md:hidden text-01 uppercase text-[oklch(var(--color-ink-subtle))]";
+  const label = "md:hidden text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
 
   return (
     <PageShell
@@ -107,7 +107,7 @@ function RebirthApplicationsContent() {
       <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]">
         <div
           aria-hidden="true"
-          className={`hidden px-4 py-2 text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${ROW_GRID}`}
+          className={`hidden px-4 py-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${ROW_GRID}`}
         >
           <span>{t("soul_accounts.fields.soul")}</span>
           <span>{t("soul_accounts.fields.cycle")}</span>
@@ -124,18 +124,18 @@ function RebirthApplicationsContent() {
               className={`p-4 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-hairline))] last:border-b-0 ${ROW_GRID}`}
             >
               <div className="min-w-0 space-y-1">
-                <Link href={`/souls/${a.soul}`} className="text-03 font-medium underline text-[oklch(var(--color-accent-ink))] break-words">
+                <Link href={`/souls/${a.soul}`} className="text-sm font-medium underline text-[oklch(var(--color-accent-ink))] break-words">
                   {a.soul_name}
                 </Link>
-                <p className="font-mono text-02 text-[oklch(var(--color-ink-tertiary))] break-all">{a.soul_code}</p>
+                <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all">{a.soul_code}</p>
               </div>
               <div className="min-w-0">
                 <p className={label}>{t("soul_accounts.fields.cycle")}</p>
-                <p className="text-03">{t("soul_accounts.life", { n: lifeNumber(a.cycle) })}</p>
+                <p className="text-sm">{t("soul_accounts.life", { n: lifeNumber(a.cycle) })}</p>
               </div>
               <div className="min-w-0">
                 <p className={label}>{t("soul_accounts.rebirth.fields.desired_form")}</p>
-                <DomainEnum namespace="reincarnation.forms" value={a.desired_form} className="text-03" />
+                <DomainEnum namespace="reincarnation.forms" value={a.desired_form} className="text-sm" />
               </div>
               <div className="min-w-0 space-y-1">
                 <p className={label}>{t("soul_accounts.fields.status")}</p>
@@ -143,7 +143,7 @@ function RebirthApplicationsContent() {
               </div>
               <div className="min-w-0">
                 <p className={label}>{t("soul_accounts.rebirth.fields.created_at")}</p>
-                <p className="font-mono text-02">{formatDateTime(a.created_at)}</p>
+                <p className="font-mono text-xs">{formatDateTime(a.created_at)}</p>
               </div>
               <div className="flex md:justify-end">
                 <Button type="button" size="sm" variant="secondary" onClick={() => setSelected(a)}>

@@ -73,7 +73,7 @@ function TenantsPageContent() {
               // with. Pagination.tsx is off-limits this wave, so the page gives
               // the slot what the slot asks for.
               count: (
-                <p className="text-03 text-[oklch(var(--color-ink-muted))]">
+                <p className="text-sm text-[oklch(var(--color-ink-muted))]">
                   {t("pagination.info", {
                     page: String(page),
                     total: String(totalPages),
@@ -115,8 +115,8 @@ function TenantsPageContent() {
               className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center justify-between gap-4"
             >
               <div className="min-w-0">
-                <p title={tenant.display_name} className="text-03 font-medium text-[oklch(var(--color-ink))] truncate">{tenant.display_name}</p>
-                <p title={tenant.code} className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] mt-1 truncate">
+                <p title={tenant.display_name} className="text-sm font-medium text-[oklch(var(--color-ink))] truncate">{tenant.display_name}</p>
+                <p title={tenant.code} className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] mt-1 truncate">
                   {t("tenants.code") || "Code"}: {tenant.code}
                 </p>
               </div>

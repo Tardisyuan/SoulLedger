@@ -149,13 +149,13 @@ function JudgmentQueuePageContent() {
               )}
             </td>
             {/* 02 档：日期是元数据，不是正文。 */}
-            <td className="px-4 py-3 text-02 text-[oklch(var(--color-ink-muted))]">
+            <td className="px-4 py-3 text-xs text-[oklch(var(--color-ink-muted))]">
               {formatDate(judgment.created_at)}
             </td>
             <td className="px-4 py-3">
               <Link
                 href={`/judgment/${judgment.id}`}
-                className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
+                className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
               >
                 {t("judgment.view")} →
               </Link>

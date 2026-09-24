@@ -79,7 +79,7 @@ export function TimezoneSelect({ value, onChange, error }: Props) {
         )}
       </Field>
       {common.length === 0 && rest.length === 0 && (
-        <p className="text-02 text-[oklch(var(--color-ink-muted))]">{t("scheduler.editor.timezone_none")}</p>
+        <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("scheduler.editor.timezone_none")}</p>
       )}
     </div>
   );

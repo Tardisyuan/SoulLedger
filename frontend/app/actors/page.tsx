@@ -102,11 +102,11 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
 
               This is the "a placeholder claims the data is missing while the
               data is present" shape, at 130 cards. */}
-          <h3 title={actor.name} className="text-04 font-semibold text-[oklch(var(--color-ink))] truncate">{actor.name}</h3>
-          <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
+          <h3 title={actor.name} className="text-sm font-semibold text-[oklch(var(--color-ink))] truncate">{actor.name}</h3>
+          <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
             {actor.display_name || actor.name}
           </p>
-          <p className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">
+          <p className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
             <DomainText value={actor.display_title} />
           </p>
         </div>
@@ -244,16 +244,16 @@ function ActorsPageContent() {
                     aria-expanded={!isCollapsed}
                     className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] transition-colors text-left"
                   >
-                    <span className="text-06" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
+                    <span className="text-md" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
                     <div className="flex-1">
-                      {/* `font-semibold` 删掉,不是改样式:`--text-06--font-weight: 600`
-                          已经把 600 带进 `.text-06`,再写一次逐像素相同。留着的坏处是
-                          它读起来像「不写就不粗」,于是下一个人会在 `text-01` 上补一个
+                      {/* `font-semibold` 删掉,不是改样式:`--text-md--font-weight: 600`
+                          已经把 600 带进 `.text-md`,再写一次逐像素相同。留着的坏处是
+                          它读起来像「不写就不粗」,于是下一个人会在 `text-2xs` 上补一个
                           ——而那一档同样自带 600。 */}
-                      <h2 className="text-06 text-[oklch(var(--color-ink))]">
+                      <h2 className="text-md text-[oklch(var(--color-ink))]">
                         <DomainEnum namespace="actors.civilizations" value={civ} />
                       </h2>
-                      <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
+                      <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
                         {t("actors.count", { count: String(total) })}
                       </p>
                     </div>
@@ -282,7 +282,7 @@ function ActorsPageContent() {
                           >
                             <Scale aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-04 font-semibold text-[oklch(var(--color-ink))] truncate">
+                              <h3 className="text-sm font-semibold text-[oklch(var(--color-ink))] truncate">
                                 {t("actors.assessors.title")}
                               </h3>
                             </div>

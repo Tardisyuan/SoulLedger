@@ -180,7 +180,8 @@ test.describe("Authenticated shell", () => {
     // Not redirected — the seeded cookie satisfied middleware.
     await expect(page).toHaveURL(/\/dashboard/);
 
-    const sidebar = page.locator("aside");
+    // Two <aside>s since 规范 v1: the in-grid sidebar (md+) and the phone drawer. The visible one.
+    const sidebar = page.locator("aside:visible");
     await expect(sidebar).toBeVisible();
     for (const [name, href] of [
       ["灵魂", "/souls"],

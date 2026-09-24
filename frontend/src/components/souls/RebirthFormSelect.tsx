@@ -158,12 +158,12 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
       {/* `aria-hidden`: the group already carries this exact string as its
           `aria-label`, so without this a screen reader reads the heading and
           then the group's name — the same words twice, in a row. */}
-      <p aria-hidden="true" className="text-01 uppercase text-[oklch(var(--color-ink-muted))]">
+      <p aria-hidden="true" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
         {tf("reincarnation.form_label", "轮回形态")}
       </p>
       {groups.map((group) => (
         <div key={group.key} className="space-y-1.5">
-          <p className={`text-02 font-medium ${GROUP_TONE[group.key].label}`}>{group.label}</p>
+          <p className={`text-xs font-medium ${GROUP_TONE[group.key].label}`}>{group.label}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {group.forms.map((form) => {
               const selected = form === value;
@@ -184,7 +184,7 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
                   disabled={disabled}
                   onKeyDown={(event) => onKeyDown(event, index)}
                   onClick={() => onChange(form)}
-                  className={`px-2 py-1.5 border text-03 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-2 py-1.5 border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
                   }`}
                 >

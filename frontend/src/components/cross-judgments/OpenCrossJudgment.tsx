@@ -74,7 +74,7 @@ export function OpenCrossJudgment({ judgmentId, soulName }: { judgmentId: string
           </div>
         }
       >
-        <p className="text-03 text-[oklch(var(--color-ink-muted))] mb-3">{t("sentence_plan.cross.open_hint")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-3">{t("sentence_plan.cross.open_hint")}</p>
         <div className="space-y-3">
           <TextField
             label={t("sentence_plan.cross.title_label")}

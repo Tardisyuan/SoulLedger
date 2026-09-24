@@ -53,14 +53,14 @@ export function ConnectionStatus() {
       {/* `role="status"`: the link dropping is a change the operator did not
           make and needs told about, and the dot alone says nothing to a
           screen reader. */}
-      <span role="status" className="text-01 text-[oklch(var(--color-ink-subtle))] hidden sm:inline">
+      <span role="status" className="text-2xs text-[oklch(var(--color-ink-subtle))] hidden sm:inline">
         {label}
       </span>
       {canRetry && (
         <button
           type="button"
           onClick={reconnect}
-          className="text-01 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline underline-offset-2 transition-colors"
+          className="text-2xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline underline-offset-2 transition-colors"
         >
           {t("connection.retry")}
         </button>
@@ -83,7 +83,7 @@ export function ConnectionBanner() {
   return (
     <div
       role="status"
-      className="flex items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 py-1 text-02 text-[oklch(var(--color-warning))] md:px-10"
+      className="flex items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 py-1 text-xs text-[oklch(var(--color-warning))] md:px-10"
     >
       <span aria-hidden="true">!</span>
       <span className="flex-1">{t(`connection.${status}`)}</span>

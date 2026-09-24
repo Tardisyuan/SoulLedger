@@ -176,7 +176,7 @@ describe("the scan is looking at something", () => {
 
 describe("the scanner does not depend on line breaks", () => {
   it("sees an element whose content sits on the next line", () => {
-    const src = '<h2\n  className="text-06 truncate"\n>\n  {profile.username}\n</h2>';
+    const src = '<h2\n  className="text-md truncate"\n>\n  {profile.username}\n</h2>';
     expect(offendersIn("x.tsx", src)).toEqual(["x.tsx:1"]);
   });
 
