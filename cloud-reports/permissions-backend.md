@@ -56,6 +56,14 @@ The request body is the same as for `changes/`; `expected_versions` is ignored.
   - It copies the source's RolePermission rows, including `conditions` and `data_scope`, and writes one PERMISSION_CHANGE audit row (`copied_from`).
   - It does **not** copy `parent`, FieldPermission or RowLevelDataScope.
 
+### `packages/core`
+- `permApi.applyChanges`, `permApi.impact`, `permApi.roles.copy`, plus types taken from the generated schema.
+- The `Role` type gains the three count fields.
+- `permKeys` uses the same literal query keys that `app/permissions/page.tsx` already uses.
+- `hooks/usePermissionMatrix.ts`:
+  - hooks: `useRoles`, `useApplyMatrixChanges` (invalidates only roles that had a saved cell), `useMatrixImpact`, `useCopyRole`, `useDeleteRole`;
+  - helpers: `summarizeMatrixSave` (counts, and the set of cells that were not saved), `roleDeleteRefusal`.
+
 ## Save semantics: per-cell savepoints (not all-or-nothing + dry-run)
 
 The implementation is in `apps/perm/matrix.py`, whose module docstring explains the reasoning in full.
