@@ -32,7 +32,17 @@
     "confirm_logout_btn": "Confirm Logout",
     "statute_of_day": "Statute of the day · a different one each visit",
     "statute_fixed_note": "Statutes can only be read after signing in; these few are quoted verbatim from the corpus and do not change.",
-    "numbering": "How the four civilizations number their articles"
+    "numbering": "How the four civilizations number their articles",
+    "civilization": "Civilization",
+    "civilization_note": "Your account decides the civilization; you enter it on sign-in. The marked one is where this device last signed in.",
+    "remember_me": "Keep me signed in on this device for {{days}} days",
+    "forgot_password": "Forgot password",
+    "forgot_desc": "Accounts are opened by your hall's administrator. Enter your username and they will be notified to reset your password.",
+    "forgot_submit": "Notify administrator",
+    "forgot_sent": "Your hall's administrator has been notified",
+    "forgot_failed": "Could not send. Try again later",
+    "rate_limited": "Too many requests. Try again later",
+    "back_to_login": "Back to sign in"
   },
   "home": {
     "console": "Console",
@@ -2547,6 +2557,10 @@
     }
   },
   "official_notify": {
+    "password_help_requested": {
+      "title": "Password help requested",
+      "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."
+    },
     "dispatch_return_blocked": {
       "title": "Residence return blocked",
       "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."

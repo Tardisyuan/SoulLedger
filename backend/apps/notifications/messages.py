@@ -20,6 +20,7 @@ MESSAGES = {
         "sentence_node_refused": {"title": "受刑节点被拒", "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"},
         "sentence_plan_completed": {"title": "受刑计划完成", "body": "灵魂「{{soul}}」的受刑计划已全部完成。"},
         "cross_sentence_submitted": {"title": "联审节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
+        "password_help_requested": {"title": "忘记密码求助", "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请到用户管理为其重置。"},
         "dispatch_return_blocked": {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
@@ -36,6 +37,7 @@ MESSAGES = {
         "sentence_node_refused": {"title": "Sentence stop refused", "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."},
         "sentence_plan_completed": {"title": "Sentence plan completed", "body": "Soul {{soul}} has served every stop of its sentence plan."},
         "cross_sentence_submitted": {"title": "Joint sentence submitted", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
+        "password_help_requested": {"title": "Password help requested", "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."},
         "dispatch_return_blocked": {
             "title": "Residence return blocked",
             "body": (
@@ -55,6 +57,7 @@ MESSAGES = {
         "sentence_node_refused": {"title": "Sekhet Khesef Seth", "body": "{{tenant}}: Hab Sekhet {{order}} En {{soul}} Khesef Seth. Sekhet Em Smen."},
         "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Sekhet Neb Wetep Seth."},
         "cross_sentence_submitted": {"title": "Sekhet Sesh Seth", "body": "{{tenant}}: Sekhet {{order}} En {{soul}} Sesh Seth."},
+        "password_help_requested": {"title": "Nen Rekh Sekhem", "body": "{{username}}: Nen Rekh Sekhem. Wehem Sekhem Em Iri Netjeru."},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
@@ -75,6 +78,7 @@ KIND_BY_TYPE = {
     "SENTENCE_REQUEST_PENDING": "sentence_request_pending",
     "SENTENCE_REQUEST_DECIDED": "sentence_request_decided",
     "SENTENCE_PLAN_CANCELLED": "sentence_plan_cancelled",
+    "PASSWORD_HELP_REQUESTED": "password_help_requested",
 }
 
 
