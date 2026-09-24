@@ -1,6 +1,7 @@
 """
 REST views for Soul app.
 """
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -24,7 +25,15 @@ from apps.souls.dates import (
 from apps.souls.filters import SoulFilter
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
-from apps.souls.serializers import SoulListSerializer, SoulRecordSerializer, SoulSerializer, SoulTransitionSerializer
+from apps.souls.serializers import (
+    SoulBatchRecycleErrorSerializer,
+    SoulBatchRecycleResultSerializer,
+    SoulBatchRecycleSerializer,
+    SoulListSerializer,
+    SoulRecordSerializer,
+    SoulSerializer,
+    SoulTransitionSerializer,
+)
 
 
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -55,6 +64,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # destroy() below) — gated on the same codename as the delete it
         # stands in for, not a new one.
         'archive': ['soul.delete'],
+        # The batch form of destroy — the same codename, not a new one.
+        'batch_recycle': ['soul.delete'],
         'correct_settlement': ['soul.correct_settlement'],
     }
     # `reincarnations` because life_index counts them, and the date checks on
@@ -146,6 +157,121 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        request=SoulBatchRecycleSerializer,
+        responses={
+            200: SoulBatchRecycleResultSerializer,
+            404: SoulBatchRecycleErrorSerializer,
+            409: SoulBatchRecycleErrorSerializer,
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="batch-recycle")
+    def batch_recycle(self, request):
+        """Move several souls to the recycle bin — all of them, or none.
+
+        EACH SOUL GOES THROUGH EXACTLY WHAT destroy() DOES. The soul is
+        reached through get_queryset() (tenant scope, DataScope, not deleted,
+        not archived), checked with check_object_permissions() — the two
+        halves of get_object() — and deleted with
+        Soul.delete_with_cascade(), so the cascade to records and pending
+        judgments, the shared cascade id and the audit rows written by the
+        post_save signals are the single path's, not a copy of them.
+
+        REFUSE-ALL, NOT PER-ID RESULTS. The single delete has two outcomes
+        besides success: 404 when the soul is not reachable (another tenant's,
+        outside the caller's data scope, already deleted, archived, or
+        nonexistent — indistinguishable on purpose) and 409 with
+        `archivable` when it has a concluded judgment. The batch reports the
+        same two, with the same statuses, for the whole request:
+
+          * 404 `not_found` — some ids are not reachable. Checked before any
+            write. The listed ids are the caller's own input, so this says
+            nothing the single endpoint's 404 would not.
+          * 409 `not_deletable` — some souls have a concluded judgment. Every
+            soul is attempted inside one transaction so that ALL blocked ids
+            are reported, then the transaction is rolled back.
+
+        Per-id results were rejected: a 207-style body makes "3 of 5 moved"
+        a success the bar has to notice and explain, and it would turn a
+        cross-tenant id into a partial success next to real deletions. The
+        caller asked for one action on one selection; it either happened or
+        the selection is wrong, and the body names every id that makes it so.
+
+        Before either: 403 without `soul.delete` (destroy's codename), and 400
+        with DRF field errors for an empty list, more than 100 ids, a
+        non-UUID, a duplicate id, or a reason over 500 characters.
+        """
+        serializer = SoulBatchRecycleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ids = serializer.validated_data["ids"]
+        reason = serializer.validated_data["reason"]
+
+        # get_queryset() honours ?show_deleted=true; a recycle never should.
+        reachable = set(
+            self.get_queryset().filter(pk__in=ids, is_deleted=False).values_list("pk", flat=True)
+        )
+        missing = [pk for pk in ids if pk not in reachable]
+        if missing:
+            return self._batch_not_found(missing)
+
+        with transaction.atomic():
+            # Locked through the unfiltered manager rather than get_queryset():
+            # that one carries select_related over nullable FKs and may carry
+            # DISTINCT from the DataScope filter, and PostgreSQL refuses FOR
+            # UPDATE on either. Scope was decided above; this only re-reads.
+            locked = {
+                soul.pk: soul
+                for soul in Soul.all_objects.select_for_update().filter(
+                    pk__in=ids, is_deleted=False, is_archived=False
+                )
+            }
+            gone = [pk for pk in ids if pk not in locked]
+            if gone:
+                # Deleted or archived by someone else between the two reads.
+                return self._batch_not_found(gone)
+
+            results, blocked, archivable = [], [], True
+            for pk in ids:
+                soul = locked[pk]
+                self.check_object_permissions(request, soul)
+                try:
+                    cascade_id = soul.delete_with_cascade(user=request.user, reason=reason)
+                except DeletionNotAllowedError as exc:
+                    blocked.append(pk)
+                    archivable = archivable and exc.archivable
+                    continue
+                results.append({"id": pk, "cascade_id": cascade_id})
+
+            if blocked:
+                transaction.set_rollback(True)
+                return Response(
+                    {
+                        "code": "not_deletable",
+                        "error": (
+                            "These souls have a concluded judgment and cannot be "
+                            "deleted. Archive them instead. Nothing was deleted."
+                        ),
+                        "ids": blocked,
+                        "archivable": archivable,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+        return Response(
+            SoulBatchRecycleResultSerializer({"recycled": len(results), "results": results}).data
+        )
+
+    @staticmethod
+    def _batch_not_found(ids):
+        return Response(
+            {
+                "code": "not_found",
+                "error": "These souls were not found. Nothing was deleted.",
+                "ids": ids,
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):

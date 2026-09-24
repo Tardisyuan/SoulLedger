@@ -13,6 +13,15 @@ export const soulKeys = {
   ledger: (id: string) => [...soulKeys.all, "ledger", id] as const,
 };
 
+/**
+ * The global recycle bin. Same literal `app/recycle-bin/page.tsx` has always
+ * used for its list query (`["recycle-bin"]`), so invalidating this reaches it
+ * without touching the page.
+ */
+export const recycleBinKeys = {
+  all: ["recycle-bin"] as const,
+};
+
 export const judgmentKeys = {
   all: ["judgments"] as const,
   list: (params?: Record<string, string>) => [...judgmentKeys.all, "list", params] as const,

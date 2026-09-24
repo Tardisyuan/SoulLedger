@@ -4,7 +4,13 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useSouls, useCreateSoul, useUpdateSoul, useDeleteSoul } from "@soulledger/core/hooks/useSouls";
+import {
+  useSouls,
+  useCreateSoul,
+  useUpdateSoul,
+  useDeleteSoul,
+  useBatchRecycleSouls,
+} from "@soulledger/core/hooks/useSouls";
 import { soulsApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
@@ -23,6 +29,7 @@ jest.mock("@soulledger/core/api", () => ({
     create: jest.fn().mockResolvedValue({ data: {} }),
     update: jest.fn().mockResolvedValue({ data: {} }),
     delete: jest.fn().mockResolvedValue({}),
+    batchRecycle: jest.fn().mockResolvedValue({ data: { recycled: 2, results: [] } }),
   },
 }));
 
@@ -261,5 +268,53 @@ describe("useDeleteSoul behavior", () => {
       expect.any(String),
       "error"
     );
+  });
+});
+
+describe("useBatchRecycleSouls behavior", () => {
+  const body = { ids: ["soul-1", "soul-2"], reason: "重复录入" };
+
+  it("posts the ids and reason to soulsApi.batchRecycle", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useBatchRecycleSouls(), { wrapper });
+    await act(async () => {
+      result.current.mutate(body);
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(soulsApi.batchRecycle).toHaveBeenCalledWith(body);
+  });
+
+  // Seeded queries rather than asserting the call's arguments: the recycle
+  // bin page keys its list by a literal (`["recycle-bin"]` in
+  // app/recycle-bin/page.tsx), so what matters is that the query stored under
+  // that literal goes stale — not that some key was passed.
+  it("invalidates the soul list and the recycle bin, and nothing else", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData(["souls", "list", undefined], { results: [], count: 0 });
+    queryClient.setQueryData(["recycle-bin"], { results: [], count: 0 });
+    queryClient.setQueryData(["judgments", "list", undefined], { results: [], count: 0 });
+    const { result } = renderHook(() => useBatchRecycleSouls(), { wrapper });
+    await act(async () => {
+      result.current.mutate(body);
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const stale = (key: readonly unknown[]) => queryClient.getQueryState(key)?.isInvalidated;
+    expect(stale(["souls", "list", undefined])).toBe(true);
+    expect(stale(["recycle-bin"])).toBe(true);
+    expect(stale(["judgments", "list", undefined])).toBe(false);
+    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.delete_to_recycle_bin", "success");
+  });
+
+  it("on a refusal invalidates nothing — nothing was recycled", async () => {
+    (soulsApi.batchRecycle as jest.Mock).mockRejectedValueOnce(new Error("fail"));
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useBatchRecycleSouls(), { wrapper });
+    await act(async () => {
+      result.current.mutate(body);
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.error_delete", "error");
+    expect(mockShowToast).not.toHaveBeenCalledWith("souls.detail.delete_to_recycle_bin", "success");
   });
 });

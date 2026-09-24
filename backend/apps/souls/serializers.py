@@ -649,3 +649,69 @@ class SoulTransitionSerializer(serializers.Serializer):
     """Serializer for state transition requests."""
     new_state = serializers.ChoiceField(choices=SoulState.choices)
     reason = serializers.CharField(max_length=500, required=False, default="")
+
+
+#: Upper bound on one `POST /souls/batch-recycle/`. Every id is a full
+#: `Soul.delete_with_cascade` (the soul, its records, its pending judgments,
+#: one audit row each) inside ONE transaction holding row locks, so the cap
+#: bounds how long that transaction can run, not just the payload size.
+SOUL_BATCH_RECYCLE_MAX = 100
+
+
+class SoulBatchRecycleSerializer(serializers.Serializer):
+    """Request body of `POST /souls/batch-recycle/`."""
+    ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        min_length=1,
+        max_length=SOUL_BATCH_RECYCLE_MAX,
+    )
+    # Same column the single delete writes (SoftDeleteMixin.delete_reason,
+    # max_length=500) — bounded here because PostgreSQL enforces the width
+    # and SQLite does not.
+    reason = serializers.CharField(max_length=500, required=False, default="", allow_blank=True)
+
+    def validate_ids(self, value):
+        # Refused rather than de-duplicated: a duplicate means the caller's
+        # selection is not what it thinks it is, and quietly recycling N-1
+        # souls while reporting N would hide that.
+        seen, duplicates = set(), []
+        for pk in value:
+            if pk in seen and pk not in duplicates:
+                duplicates.append(pk)
+            seen.add(pk)
+        if duplicates:
+            raise serializers.ValidationError(
+                f"Duplicate ids: {', '.join(str(pk) for pk in duplicates)}."
+            )
+        return value
+
+
+class SoulBatchRecycleEntrySerializer(serializers.Serializer):
+    """One recycled soul. `cascade_id` is what `/recycle-bin/restore/` takes."""
+    id = serializers.UUIDField()
+    cascade_id = serializers.UUIDField()
+
+
+class SoulBatchRecycleResultSerializer(serializers.Serializer):
+    """200 body of `POST /souls/batch-recycle/`, in request order."""
+    recycled = serializers.IntegerField()
+    results = SoulBatchRecycleEntrySerializer(many=True)
+
+
+#: The `code` of a refused batch. Pinned in SPECTACULAR_SETTINGS
+#: ENUM_NAME_OVERRIDES as `SoulBatchRecycleErrorCodeEnum`.
+SOUL_BATCH_RECYCLE_ERROR_CODES = [("not_found", "not_found"), ("not_deletable", "not_deletable")]
+
+
+class SoulBatchRecycleErrorSerializer(serializers.Serializer):
+    """404 / 409 body of `POST /souls/batch-recycle/`. Nothing was recycled.
+
+    `error` is the same key the single delete's 409 uses; `code` is added so a
+    client can branch without parsing prose. `ids` are the offending ones —
+    every one of them, not just the first, so one round trip fixes the
+    selection. `archivable` is present on 409 only, as on the single delete.
+    """
+    code = serializers.ChoiceField(choices=SOUL_BATCH_RECYCLE_ERROR_CODES)
+    error = serializers.CharField()
+    ids = serializers.ListField(child=serializers.UUIDField())
+    archivable = serializers.BooleanField(required=False)
