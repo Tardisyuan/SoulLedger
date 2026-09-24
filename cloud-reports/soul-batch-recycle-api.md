@@ -109,7 +109,7 @@
 
 ## 顺带发现(没有修,另开任务)
 
-**单删的审计行没有记录操作人。** `SoulViewSet.destroy()` 覆盖了 DRF 的 destroy,直接调用 `delete_with_cascade`,从不经过 `AuditUserViewSetMixin.perform_destroy`,而当前审计用户只在那里设置。实测:通过真实 JWT 请求做一次单删,写出的是 `[('soul', …, None), ('soulrecord', …, None)]`,`AuditLog.user` 为 NULL(行上的 `deleted_by` 是对的)。`archive` 也有同样的问题。批量接口按要求**原样复用**了单删的行为,所以现在也是 NULL。测试 `test_audit_rows_are_the_single_deletes_rows` 断言「批量的审计作者等于单删的审计作者」,而不是写死 NULL:以后只修 destroy 而漏了批量,这条测试就会变红。
+**单删的审计行没有记录操作人。** `SoulViewSet.destroy()` 覆盖了 DRF 的 destroy,直接调用 `delete_with_cascade`,从不经过 `AuditUserViewSetMixin.perform_destroy`,而当前审计用户只在那里设置。实测:通过真实 JWT 请求做一次单删,写出的是 `[('soul', …, None), ('soulrecord', …, None)]`,`AuditLog.user` 为 NULL(行上的 `deleted_by` 是对的)。`archive` 同样绕过了 `perform_destroy`,推断有同样的问题,但**没有实测**。批量接口按要求**原样复用**了单删的行为,所以现在也是 NULL。测试 `test_audit_rows_are_the_single_deletes_rows` 断言「批量的审计作者等于单删的审计作者」,而不是写死 NULL:以后只修 destroy 而漏了批量,这条测试就会变红。
 
 ## 其它说明
 
