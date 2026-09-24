@@ -32,8 +32,10 @@ function StatCardInner({
       <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         // 骨架屏得和它替换的东西一样高,否则数据落地时整行会往下跳一格。
-        // text-xl 是 56px / line-height 1,所以 h-14。
-        <Skeleton className="h-14 w-24 mt-2" />
+        // text-xl 是 28px / 行高 32px(规范 v1 七档里的 xl),所以 h-8。
+        // 改字号的那一轮把 text-xl 从 56/1 换成 28/32,这里还写着 h-14,
+        // 于是加载态高 24px —— 正是下面 E2E 守的那种跳动。
+        <Skeleton className="h-8 w-24 mt-2" />
       ) : (
         // `data-kpi` 是给测试用的锚:DashboardPage.test.tsx 原先靠
         // `className.includes("text-2xl font-bold")` 认出这四张卡,那把断言
@@ -41,7 +43,7 @@ function StatCardInner({
         // 字号说的是「它现在多大」——只有前者是测试真正关心的。
         //
         // `mt-2` 必须和骨架屏的一致,而它此前是缺的。上面那条注释说两者得一样高,
-        // 否则数据落地时整行会跳 —— **高度**确实对上了(h-14 对 text-xl 的 56px/1),
+        // 否则数据落地时整行会跳 —— **高度**确实对上了(当时是 h-14 对 text-xl 的 56px/1),
         // **外边距**没有:骨架屏带 mt-2,这里没有,于是加载时整条 KPI 高 8px,数据
         // 到达时往上弹回去。对齐了盒子、没对齐盒子周围的空隙,留下的正是那条注释
         // 写来防止的缺陷,差在隔壁一个属性上。

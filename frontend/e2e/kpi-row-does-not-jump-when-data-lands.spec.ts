@@ -40,7 +40,7 @@ import { expect, test, LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
  *
  * 不是拟合来的,而且**不是从今天的读数往上取整来的** —— 它是「同一个盒子模型算
  * 两次」这件事本身允许的误差。两个状态的内容高度由同一组整数 rem 决定
- * (`h-14` = 3.5rem;`text-xl` 的 line-height 是 1),所以理想值是 0;留 0.5 是
+ * (`h-8` = 2rem;`text-xl` 的行高是 32px),所以理想值是 0;留 0.5 是
  * 因为 `getBoundingClientRect()` 给的是设备像素折算回 CSS px 的浮点数,而
  * mobile-chrome 的 deviceScaleFactor 是 2.75,折算可以在末位上差一点点。
  *

@@ -330,7 +330,7 @@ export default function SoulDetailPage() {
         title={t("souls.detail.not_found")}
         backLink={
           <a href="/souls" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
-            ← {t("souls.detail.back_to_list")}
+            {t("souls.detail.back_to_list")}
           </a>
         }
       >
@@ -377,7 +377,7 @@ export default function SoulDetailPage() {
 
   const backLink = (
     <a href="/souls" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
-      ← {t("souls.detail.back_to_list")}
+      {t("souls.detail.back_to_list")}
     </a>
   );
 
