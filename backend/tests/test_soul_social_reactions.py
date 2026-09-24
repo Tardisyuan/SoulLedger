@@ -65,7 +65,7 @@ def test_one_souls_eternal_light_does_not_lock_anyone_else(cn_tenant):
     assert react(other, row, ReactionType.LIKE).json()["reacted"] is False
 
 
-def test_the_following_feed_holds_only_followed_authors(cn_tenant):
+def test_the_following_feed_holds_me_and_followed_authors(cn_tenant):
     me, client = soul(cn_tenant, "我")
     followed, _ = soul(cn_tenant, "关注的")
     stranger, _ = soul(cn_tenant, "陌生人")
@@ -75,7 +75,7 @@ def test_the_following_feed_holds_only_followed_authors(cn_tenant):
     mine = post(me, visibility=Visibility.PUBLIC)
 
     assert feed_ids(client) == {str(theirs.pk), str(strangers.pk), str(mine.pk)}
-    assert feed_ids(client, following="true") == {str(theirs.pk)}
+    assert feed_ids(client, following="true") == {str(theirs.pk), str(mine.pk)}
 
 
 def test_a_past_life_profile_says_it_is_not_active(cn_tenant):

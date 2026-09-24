@@ -1994,8 +1994,8 @@ export interface paths {
          *     所以动态流就是 `visible_posts_for_soul` 本身,按时间倒序。
          *
          *     `?author=<user_id>` 是同一个查询加一个作者过滤 —— 个人主页的帖子列表用它,
-         *     不另开一条可见性路径。`?following=true` 同理,只留此刻关注着的人的帖子(App「关注」子页),
-         *     不含自己的。
+         *     不另开一条可见性路径。`?following=true` 同理,只留自己和此刻关注着的人的帖子
+         *     (App「关注」子页)。
          */
         get: operations["v1_me_social_feed_retrieve"];
         put?: never;
@@ -2004,8 +2004,8 @@ export interface paths {
          *     所以动态流就是 `visible_posts_for_soul` 本身,按时间倒序。
          *
          *     `?author=<user_id>` 是同一个查询加一个作者过滤 —— 个人主页的帖子列表用它,
-         *     不另开一条可见性路径。`?following=true` 同理,只留此刻关注着的人的帖子(App「关注」子页),
-         *     不含自己的。
+         *     不另开一条可见性路径。`?following=true` 同理,只留自己和此刻关注着的人的帖子
+         *     (App「关注」子页)。
          */
         post: operations["v1_me_social_feed_create"];
         delete?: never;
@@ -13979,7 +13979,7 @@ export interface operations {
             query?: {
                 /** @description 只看这个灵魂的帖子(user_id)。 */
                 author?: number;
-                /** @description true:只看我关注的人的帖子。 */
+                /** @description true:只看自己和我关注的人的帖子。 */
                 following?: boolean;
             };
             header?: never;
