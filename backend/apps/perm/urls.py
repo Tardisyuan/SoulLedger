@@ -14,6 +14,8 @@ urlpatterns = [
     path("role-permissions/", views.get_role_permissions, name="role-permissions"),
     path("role-permissions/assign/", views.assign_role_permissions, name="assign"),
     path("role-permissions/init/", views.init_role_permissions, name="init-role-permissions"),
+    path("role-permissions/changes/", views.apply_matrix_changes, name="matrix-changes"),
+    path("role-permissions/impact/", views.matrix_impact, name="matrix-impact"),
     path("roles/", views.list_roles, name="list-roles"),
     path("roles/create/", views.create_role, name="create-role"),
     # Declared before the <int:pk> detail route so "create"/"init" style
@@ -24,6 +26,7 @@ urlpatterns = [
         name="role-permissions-detail",
     ),
     path("roles/<int:pk>/", views.update_delete_role, name="detail-role"),
+    path("roles/<int:pk>/copy/", views.copy_role, name="copy-role"),
     path("roles/init/", views.init_roles, name="init-roles"),
     # `init/` (views.init_permissions) removed 2026-08-30. It seeded
     # Permission rows without the matching RolePermission grants, and

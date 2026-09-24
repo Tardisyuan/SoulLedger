@@ -3,6 +3,7 @@ Permission serializers
 """
 from rest_framework import serializers
 
+from .matrix import ACTIONS, RESULT_CODES, ROLE_DELETE_REFUSAL_CODES, STATUSES
 from .models import Permission, Role, RolePermission
 
 
@@ -55,20 +56,54 @@ class RoleSerializer(serializers.ModelSerializer):
     # guard: "N users are affected" is what turns a grant/removal from an
     # abstract diff into a consequence worth reading before confirming.
     user_count = serializers.SerializerMethodField()
-    # True for the five `UserRole` constants: the role form makes `name`
-    # read-only for these, because the server refuses to rename or bin them.
+    # The role table's three columns. `member_count` differs from `user_count`
+    # on purpose: it counts every non-deleted holder, active or not — the
+    # number `update_delete_role` refuses a delete over — while `user_count`
+    # stays what the matrix's "N users affected" guard has always shown.
+    member_count = serializers.SerializerMethodField()
+    # RolePermission rows, i.e. the ticks the matrix shows for this role. Not
+    # the effective set: ADMIN is allowed everything by the checker's
+    # short-circuit whatever this says.
+    permission_count = serializers.SerializerMethodField()
+    # Templates whose stored steps designate this role (approver_type ROLE).
+    # See apps/perm/matrix.py::role_template_references.
+    workflow_template_count = serializers.SerializerMethodField()
+    # True for the five `UserRole` constants: the server refuses to bin them.
     is_builtin = serializers.SerializerMethodField()
 
     class Meta:
         model = Role
         fields = [
             "id", "name", "display_name", "scope", "organization", "organization_name",
-            "user_count", "is_builtin", "version", "update_time",
+            "user_count", "member_count", "permission_count", "workflow_template_count",
+            "is_builtin", "version", "update_time",
         ]
         read_only_fields = ["version", "update_time"]
 
     def get_is_builtin(self, obj) -> bool:
         return obj.is_builtin
+
+    # The three counts below read a value `list_roles` annotated or put in the
+    # context when there is one, so the list is not three queries per row.
+    def get_member_count(self, obj) -> int:
+        annotated = getattr(obj, "member_count_annotated", None)
+        if annotated is not None:
+            return annotated
+        from apps.authentication.models import User
+        return User.objects.filter(role=obj.name).count()
+
+    def get_permission_count(self, obj) -> int:
+        annotated = getattr(obj, "permission_count_annotated", None)
+        if annotated is not None:
+            return annotated
+        return RolePermission.objects.filter(role=obj).count()
+
+    def get_workflow_template_count(self, obj) -> int:
+        refs = self.context.get("template_refs")
+        if refs is None:
+            from .matrix import role_template_references
+            refs = role_template_references()
+        return len(refs.get(obj.name, []))
 
     # `-> int` is load-bearing for the document, not decoration. This method
     # was invisible to drf-spectacular for as long as `list_roles` was an
@@ -92,7 +127,117 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Role name must contain only letters and underscores"
             )
-        return value.upper()
+        value = value.upper()
+        # The role code is fixed once the row exists — built-in or not. Sending
+        # the current name back is fine (the edit form does); a different one
+        # is refused here, before the view is reached.
+        if self.instance is not None and value != self.instance.name:
+            raise serializers.ValidationError(
+                "A role's code cannot be changed after creation; "
+                "use 'copy as new role' to get the same grants under another code.",
+                code="immutable",
+            )
+        return value
+
+
+# ── Matrix save / impact ────────────────────────────────────────────────
+
+
+class MatrixChangeSerializer(serializers.Serializer):
+    role = serializers.CharField(max_length=20)
+    permission_id = serializers.IntegerField()
+    action = serializers.ChoiceField(choices=ACTIONS)
+
+
+class MatrixChangesRequestSerializer(serializers.Serializer):
+    """Body of `role-permissions/changes/` and `role-permissions/impact/`."""
+
+    changes = MatrixChangeSerializer(many=True, allow_empty=False, max_length=2000)
+    # {role name: version the client loaded}. A role named here whose version
+    # moved has all its cells refused `version_conflict`; roles not named are
+    # not checked, as with `assign`'s optional `expected_version`.
+    expected_versions = serializers.DictField(child=serializers.IntegerField(), required=False)
+
+    def validate_changes(self, value):
+        seen = set()
+        for change in value:
+            cell = (change["role"], change["permission_id"])
+            if cell in seen:
+                raise serializers.ValidationError(
+                    f"Cell {cell[0]}/{cell[1]} appears more than once; send one change per cell."
+                )
+            seen.add(cell)
+        return value
+
+
+class MatrixChangeResultSerializer(serializers.Serializer):
+    index = serializers.IntegerField(help_text="Position of the change in the request.")
+    role = serializers.CharField()
+    permission_id = serializers.IntegerField()
+    codename = serializers.CharField(allow_null=True)
+    action = serializers.ChoiceField(choices=ACTIONS)
+    status = serializers.ChoiceField(choices=STATUSES)
+    code = serializers.ChoiceField(choices=RESULT_CODES, allow_null=True)
+    detail = serializers.CharField(allow_null=True)
+
+
+class MatrixChangesResultSerializer(serializers.Serializer):
+    saved = serializers.IntegerField()
+    unchanged = serializers.IntegerField()
+    refused = serializers.IntegerField()
+    failed = serializers.IntegerField()
+    results = MatrixChangeResultSerializer(many=True)
+    # Every role the request named that exists: its version after the call —
+    # the value to send as `expected_versions[role]` next time.
+    versions = serializers.DictField(child=serializers.IntegerField())
+
+
+class WorkflowStepRefSerializer(serializers.Serializer):
+    step_order = serializers.IntegerField()
+    step_name = serializers.CharField()
+
+
+class TemplateRefFieldsSerializer(serializers.Serializer):
+    template_id = serializers.UUIDField()
+    template_name = serializers.CharField()
+    tenant_id = serializers.IntegerField(allow_null=True)
+    civilization = serializers.CharField()
+    is_active = serializers.BooleanField()
+
+
+class RoleTemplateReferenceSerializer(TemplateRefFieldsSerializer):
+    steps = WorkflowStepRefSerializer(many=True)
+
+
+class MatrixConflictCauseSerializer(serializers.Serializer):
+    index = serializers.IntegerField()
+    role = serializers.CharField()
+    permission_id = serializers.IntegerField()
+    codename = serializers.CharField()
+
+
+class MatrixConflictSerializer(TemplateRefFieldsSerializer):
+    step_order = serializers.IntegerField()
+    step_name = serializers.CharField()
+    approver_roles = serializers.ListField(child=serializers.CharField())
+    caused_by = MatrixConflictCauseSerializer(many=True)
+
+
+class MatrixImpactResultSerializer(serializers.Serializer):
+    # The codenames `approve_node` requires — the only grants whose revocation
+    # can leave a step without an approver.
+    required_codenames = serializers.ListField(child=serializers.CharField())
+    conflicts = MatrixConflictSerializer(many=True)
+
+
+class RoleDeleteRefusalSerializer(serializers.Serializer):
+    """400 body of `DELETE /perm/roles/<pk>/`. `user_count` comes with
+    `role_in_use`, `templates` with `role_referenced_by_workflow_templates`."""
+
+    error = serializers.CharField()
+    code = serializers.ChoiceField(choices=ROLE_DELETE_REFUSAL_CODES)
+    user_count = serializers.IntegerField(required=False)
+    templates = RoleTemplateReferenceSerializer(many=True, required=False)
 
 
 # ── Doc-only response shapes ─────────────────────────────────────────────

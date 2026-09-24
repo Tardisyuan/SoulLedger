@@ -26,8 +26,9 @@ class UserRole(models.TextChoices):
     because the code compares them as literals (`role == 'ADMIN'` in the
     checker, the tenant scoping, IsAdminPermission, ROLE_HIERARCHY, ...), which
     is exactly why `PUT /perm/roles/<pk>/` refuses to rename them and DELETE
-    refuses to bin them. A custom role has none of those comparisons and can
-    be renamed freely, with `User.role` cascaded.
+    refuses to bin them. Since 2026-09-24 no role's name can change after
+    creation, built-in or custom (`RoleCreateUpdateSerializer.validate_name`);
+    "copy as new role" is the way to the same grants under another code.
 
     MODERATOR was missing here while three other places already knew about it:
     `apps/perm/models.py::ROLE_PERMISSIONS` grants it a strictly larger set
