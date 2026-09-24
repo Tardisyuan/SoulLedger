@@ -352,7 +352,7 @@ def test_a_cancelled_stop_goes_back_to_pending_too(cn, eg):
 def test_a_manual_dispatch_is_refused_while_a_plan_is_in_progress(cn, eg):
     soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
     mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
-    body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动"}
+    body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动调拨：灵魂需移送目标文明受审，理由写足二十字"}
 
     response = mod.post("/api/v1/dispatch/records/", body, format="json")
 
@@ -363,7 +363,7 @@ def test_a_manual_dispatch_is_refused_while_a_plan_is_in_progress(cn, eg):
 def test_a_soul_without_a_plan_can_still_be_dispatched_by_hand(cn, eg):
     soul = Soul.objects.create(name="无计划", tenant=cn, current_state=SoulState.DISPOSED)
     mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
-    body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动"}
+    body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动调拨：灵魂需移送目标文明受审，理由写足二十字"}
     assert mod.post("/api/v1/dispatch/records/", body, format="json").status_code == 201
 
 

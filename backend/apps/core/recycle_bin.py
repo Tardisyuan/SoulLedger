@@ -121,18 +121,28 @@ class BinEntryType:
     label: Callable[[object], str]
     #: Which soft-deleted rows of this model belong in the bin. None = all of them.
     listable: Q | None = None
+    #: Where the row lived (the bin's 「原位置」), read off existing fields:
+    #: `{"kind": "civilization" | "organization" | "parent", "value": str}`,
+    #: or None for a top-level row with nothing above it.
+    location: Callable[[object], dict | None] = lambda row: None
 
 
 _REGISTRY: dict[str, BinEntryType] = {}
 
 
 def register_bin_type(
-    entity_type: str, model: type, kind: str, label: Callable[[object], str], listable: Q | None = None,
+    entity_type: str,
+    model: type,
+    kind: str,
+    label: Callable[[object], str],
+    listable: Q | None = None,
+    location: Callable[[object], dict | None] | None = None,
 ):
     if kind not in ("reference", "domain"):
         raise ValueError(f"unknown recycle bin kind: {kind!r}")
+    extra = {"location": location} if location is not None else {}
     _REGISTRY[entity_type] = BinEntryType(
-        entity_type=entity_type, model=model, kind=kind, label=label, listable=listable,
+        entity_type=entity_type, model=model, kind=kind, label=label, listable=listable, **extra,
     )
 
 
@@ -188,6 +198,7 @@ def list_bin_entries(tenant=None, is_admin=False):
                 "kind": bin_type.kind,
                 "id": row.pk,
                 "label": bin_type.label(row),
+                "location": bin_type.location(row),
                 "deleted_at": deleted_at,
                 "deleted_by": getattr(row.deleted_by, "username", None) if row.deleted_by_id else None,
                 "delete_reason": row.delete_reason,

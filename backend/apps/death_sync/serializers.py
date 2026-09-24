@@ -139,6 +139,17 @@ class DeathSyncSystemHealthSerializer(serializers.Serializer):
     failed_webhooks_24h = serializers.IntegerField()
 
 
+class DeathRegistrationSummarySerializer(serializers.Serializer):
+    """200 body of `registrations/summary/`. Doc-only.
+
+    `anomaly_count` counts this tenant's rows in `anomaly_status`, which is
+    the value `registrations/?status=` takes to list exactly those rows.
+    """
+
+    anomaly_status = serializers.CharField()
+    anomaly_count = serializers.IntegerField()
+
+
 class DeathSyncHealthSerializer(serializers.Serializer):
     """200 body of `DeathSyncHealthView`. Doc-only; see apps/core/schema.py."""
 

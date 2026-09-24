@@ -15,4 +15,13 @@ class PermConfig(AppConfig):
 
         from .models import Role
 
-        register_bin_type("role", Role, "reference", lambda role: role.name)
+        def location(role):
+            # An ORG role belongs to its organization; a GLOBAL one hangs, if
+            # anywhere, under the role it inherits from.
+            if role.organization_id:
+                return {"kind": "organization", "value": role.organization.name}
+            if role.parent_id:
+                return {"kind": "parent", "value": role.parent.display_name}
+            return None
+
+        register_bin_type("role", Role, "reference", lambda role: role.name, location=location)

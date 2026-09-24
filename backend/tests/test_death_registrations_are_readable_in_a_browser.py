@@ -26,7 +26,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.death_sync.models import DeathRegistrationRequest, ExternalApiKey
+from apps.death_sync.models import DeathRegistrationRequest, DeathRegistrationStatus, ExternalApiKey
 from apps.tenants.models import Tenant
 
 User = get_user_model()
@@ -137,3 +137,48 @@ def test_the_machine_endpoint_still_refuses_a_jwt(registrations):
         f"the API-key endpoint accepted a JWT ({resp.status_code}); its "
         f"queryset is scoped by api_key, not by tenant"
     )
+
+
+def _failed_rows(mine, theirs):
+    """One FAILED row in each tenant, beside the fixture's PENDING ones."""
+    for tenant, key in ((mine, "mine-failed"), (theirs, "theirs-failed")):
+        _, key_hash, prefix = ExternalApiKey.generate_key()
+        api_key = ExternalApiKey.objects.create(
+            tenant=tenant, name=f"k-{key}", system_type="HOSPITAL",
+            key_hash=key_hash, key_prefix=prefix,
+        )
+        DeathRegistrationRequest.objects.create(
+            tenant=tenant, api_key=api_key, source_system="HOSP", idempotency_key=key,
+            source_payload={}, status=DeathRegistrationStatus.FAILED,
+        )
+
+
+@pytest.mark.django_db
+def test_the_list_filters_by_status(registrations):
+    mine, theirs, admin = registrations
+    _failed_rows(mine, theirs)
+    client = _jwt_client(admin, mine)
+
+    body = str(client.get("/api/v1/death-sync/registrations/", {"status": "FAILED"}).data)
+    assert "mine-failed" in body
+    assert "mine-1" not in body, "the PENDING row came through a FAILED filter"
+    assert "theirs-failed" not in body
+
+    assert client.get("/api/v1/death-sync/registrations/", {"status": "NOPE"}).status_code == 400
+
+
+@pytest.mark.django_db
+def test_the_summary_counts_this_tenants_failed_rows_only(registrations):
+    mine, theirs, admin = registrations
+    _failed_rows(mine, theirs)
+    resp = _jwt_client(admin, mine).get("/api/v1/death-sync/registrations/summary/")
+    assert resp.status_code == 200
+    assert resp.data == {"anomaly_status": "FAILED", "anomaly_count": 1}
+
+
+@pytest.mark.django_db
+def test_the_summary_is_admin_only_like_the_list(registrations):
+    mine, _, _ = registrations
+    viewer = User.objects.create_user(username="dr_viewer2", password="x", role="VIEWER", tenant=mine)
+    resp = _jwt_client(viewer, mine).get("/api/v1/death-sync/registrations/summary/")
+    assert resp.status_code == 403

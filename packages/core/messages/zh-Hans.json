@@ -27,6 +27,8 @@
     "error_invalid_token": "无效的令牌",
     "error_token_expired": "令牌已过期",
     "error_login_failed": "登录失败",
+    "error_attempts_left": "账号或密码错误 · 还可以再试 {{count}} 次",
+    "error_locked": "已锁定，{{minutes}} 分钟后再试",
     "confirm_logout": "确认退出登录",
     "confirm_logout_desc": "确定要退出当前账号吗？",
     "confirm_logout_btn": "确认退出",
@@ -459,6 +461,7 @@
       "soul": "灵魂",
       "menu": "菜单"
     },
+    "col_location": "原位置",
     "col_deleted_by": "删除人"
   },
   "permissions": {
@@ -713,6 +716,8 @@
       "judgment_queue": "审判队列",
       "enter": "进入 →",
       "none": "无待办",
+      "death_sync_anomaly": "死亡同步异常",
+      "go_view": "去查看 →",
       "load_error": "计数加载失败"
     },
     "civ_share": "占比",
@@ -1174,6 +1179,7 @@
     "select_tenant": "选择租户...",
     "reason": "理由",
     "reason_placeholder": "调度理由...",
+    "reason_too_short": "至少 {{min}} 字，现在 {{count}} 字",
     "submitting": "提交中...",
     "submit_proposal": "提交提案",
     "soul_prefix": "灵魂 #",
@@ -1456,6 +1462,7 @@
     "subtitle": "外部死亡登记接入与同步状态",
     "registrations": "登记记录",
     "no_registrations": "暂无死亡登记记录",
+    "anomaly_count": "异常 {{count}} 条",
     "requested": "请求时间",
     "duration": "耗时",
     "reference": "外部编号",

@@ -386,6 +386,7 @@ export const RECYCLE_BIN_ENTRY = {
   kind: "domain" as const,
   id: "33333333-3333-4333-8333-333333333333",
   label: "误删的渡魂人",
+  location: { kind: "civilization" as const, value: "CHINESE" },
   deleted_at: "2026-08-11T09:30:00Z",
   deleted_by: "test_admin",
   delete_reason: "录入重复",
@@ -1040,7 +1041,7 @@ export class ApiMock {
   registerDefaults(): this {
     this.on("POST", "/auth/login/", (call) => {
       if (call.body?.username !== TEST_USER.username) {
-        return { status: 401, body: { detail: "No active account found with the given credentials" } };
+        return { status: 401, body: { detail: "No active account found with the given credentials", remaining_attempts: 4 } };
       }
       return {
         body: {
@@ -1259,6 +1260,8 @@ export class ApiMock {
         request_timestamp: "2026-08-30T09:00:00Z",
       },
     ]));
+    // The dashboard's 死亡同步异常 cell (ADMIN) and the /death-sync shortcut.
+    this.on("GET", "/death-sync/registrations/summary/", { anomaly_status: "FAILED", anomaly_count: 0 });
 
     // ── Recycle bin ──
     this.on("GET", "/recycle-bin/", { results: [RECYCLE_BIN_ENTRY], count: 1 });

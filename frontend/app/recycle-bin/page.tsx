@@ -18,7 +18,7 @@ import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 
 /**
  * Global recycle bin (Stage 4 §4.7) — one screen listing soft-deleted
- * PARENT rows across every registered entity type (today: souls and
+ * PARENT rows across every registered entity type (today: souls, roles and
  * menus — see backend/apps/core/recycle_bin.py's registry), each with a
  * dependent count rather than its cascaded rows listed separately.
  *
@@ -103,6 +103,7 @@ export default function RecycleBinPage() {
           columns={[
             { key: "type", header: t("recycle_bin.col_type") },
             { key: "label", header: t("recycle_bin.col_item") },
+            { key: "location", header: t("recycle_bin.col_location") },
             { key: "dependents", header: t("recycle_bin.col_dependents") },
             { key: "deleted", header: t("recycle_bin.col_deleted") },
             { key: "deleted_by", header: t("recycle_bin.col_deleted_by") },
@@ -138,6 +139,16 @@ export default function RecycleBinPage() {
                   </div>
                 )}
               </td>
+              {/* 原位置: a soul's civilization (an enum, localised), otherwise the
+                  name of the organization / parent it hung under — a name,
+                  shown as written. Null is a top-level row: a missing value. */}
+              <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]" data-testid="bin-location">
+                {entry.location?.kind === "civilization" ? (
+                  <DomainEnum namespace="souls.civilizations" value={entry.location.value} />
+                ) : (
+                  <DomainText value={entry.location?.value ?? null} />
+                )}
+              </td>
               <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
                 {entry.dependent_count > 0
                   ? t("recycle_bin.dependent_count", {
@@ -152,10 +163,7 @@ export default function RecycleBinPage() {
               </td>
               {/* 删除人 is its own column now (第三类 D 组答复). `deleted_by` is the
                   username or null — null is a row no session deleted (a cascade,
-                  a command), so it renders as a missing value, not as "system".
-                  「原位置」 was asked for too and is NOT here: the bin API
-                  (`apps/core/recycle_bin.py::list_bin_entries`) returns no parent
-                  or location field, and the entity type already has a column. */}
+                  a command), so it renders as a missing value, not as "system". */}
               <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
                 <DomainText value={entry.deleted_by} />
               </td>

@@ -95,7 +95,7 @@ def test_the_four_request_soul_theft_chain_is_broken(two_tenants, attacker):
             "source_tenant": tenant_b.pk,
             "target_tenant": tenant_b.pk,
             "soul": str(own.pk),
-            "reason": "seed",
+            "reason": "seed record for the theft chain test",
         },
         format="json",
     )
@@ -147,7 +147,7 @@ def test_each_party_field_is_refused_on_its_own(two_tenants, attacker):
             "source_tenant": tenant_b.pk,
             "target_tenant": tenant_b.pk,
             "soul": str(own.pk),
-            "reason": "seed",
+            "reason": "seed record for the per-field refusal test",
         },
         format="json",
     )
@@ -194,7 +194,7 @@ def test_a_dispatch_can_still_be_proposed_and_its_reason_edited(two_tenants, att
             "source_tenant": tenant_b.pk,
             "target_tenant": tenant_a.pk,
             "soul": str(soul.pk),
-            "reason": "original reason",
+            "reason": "original reason, long enough to be proposed",
         },
         format="json",
     )

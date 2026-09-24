@@ -141,6 +141,45 @@ class TestLoginRateLimiting:
             assert resp.status_code == 429
             assert "error" in resp.data
 
+    def test_failed_login_reports_remaining_attempts(self, django_user_model):
+        """Each 401 says how many tries are left: 4, 3, 2, 1, 0 — then 429."""
+        self._create_user(django_user_model)
+
+        with patch("django.core.cache.cache", self.mock_cache):
+            seen = []
+            for _ in range(5):
+                resp = self._login("ratelimit_user", "Wrong!")
+                assert resp.status_code == 401
+                # The message the page already maps is still there.
+                assert resp.data["detail"] == "No active account found with the given credentials"
+                seen.append(resp.data["remaining_attempts"])
+            assert seen == [4, 3, 2, 1, 0]
+
+    def test_429_carries_code_and_retry_after(self, django_user_model):
+        """The lockout body is machine-readable: a stable code and seconds left."""
+        self._create_user(django_user_model)
+
+        with patch("django.core.cache.cache", self.mock_cache):
+            for _ in range(5):
+                self._login("ratelimit_user", "Wrong!")
+
+            with patch("apps.authentication.views.time.time", return_value=self.mock_cache.get("login_rate_until:127.0.0.1") - 600):
+                resp = self._login("ratelimit_user", "Wrong!")
+            assert resp.status_code == 429
+            assert resp.data["code"] == "login_locked"
+            assert resp.data["retry_after"] == 600
+            assert resp["Retry-After"] == "600"
+            assert "remaining_attempts" not in resp.data
+
+    def test_successful_login_body_has_no_attempt_fields(self, django_user_model):
+        self._create_user(django_user_model)
+
+        with patch("django.core.cache.cache", self.mock_cache):
+            self._login("ratelimit_user", "Wrong!")
+            resp = self._login("ratelimit_user", "Correct123!")
+            assert resp.status_code == 200
+            assert "remaining_attempts" not in resp.data
+
 
 # ---------------------------------------------------------------------------
 # Registration rate limiting (DRF RegisterThrottle, scope='register')

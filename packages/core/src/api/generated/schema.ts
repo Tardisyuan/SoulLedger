@@ -817,6 +817,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/death-sync/registrations/summary/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description How many of this tenant's registrations need a human.
+         *
+         *     FAILED is the only anomalous state a row is ever written in: PENDING
+         *     and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
+         *     its job, and PARTIAL is a batch-level answer no row carries. The status
+         *     goes on the wire so the dashboard links to the same filter it counted.
+         */
+        get: operations["v1_death_sync_registrations_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/webhooks/": {
         parameters: {
             query?: never;
@@ -6770,6 +6794,16 @@ export interface components {
          * @enum {string}
          */
         DeathRegistrationRequestStatusEnum: "PENDING" | "ACCEPTED" | "PROCESSED" | "FAILED" | "DUPLICATE" | "PARTIAL";
+        /**
+         * @description 200 body of `registrations/summary/`. Doc-only.
+         *
+         *     `anomaly_count` counts this tenant's rows in `anomaly_status`, which is
+         *     the value `registrations/?status=` takes to list exactly those rows.
+         */
+        DeathRegistrationSummary: {
+            anomaly_status: string;
+            anomaly_count: number;
+        };
         /** @description `name` and `system_type` are null when the request carries no api key. */
         DeathSyncApiKeyHealth: {
             name: string | null;
@@ -7729,6 +7763,27 @@ export interface components {
             record_count: number;
             records: components["schemas"]["LedgerRecordSummary"][];
             reading: components["schemas"]["LedgerReading"];
+        };
+        /**
+         * @description Doc-only: the 401 body of `LoginView` for wrong credentials.
+         *
+         *     `remaining_attempts` is how many more failures this client IP may make
+         *     before the next request is refused with 429 (0 means the next one is).
+         */
+        LoginFailedResponse: {
+            detail: string;
+            remaining_attempts?: number;
+        };
+        /**
+         * @description Doc-only: the 429 body of `LoginView` once the limiter has tripped.
+         *
+         *     `code` is always `login_locked`; `retry_after` is seconds until the
+         *     window ends (also sent as the `Retry-After` header).
+         */
+        LoginLockedResponse: {
+            error: string;
+            code: string;
+            retry_after: number;
         };
         /** @description Serializer for login log entries. */
         LoginLog: {
@@ -10208,6 +10263,7 @@ export interface components {
             kind: components["schemas"]["KindEnum"];
             id: number | string;
             label: string;
+            location: components["schemas"]["RecycleBinLocation"] | null;
             /** Format: date-time */
             deleted_at: string | null;
             deleted_by: string | null;
@@ -10239,6 +10295,22 @@ export interface components {
             results: components["schemas"]["RecycleBinEntry"][];
             count: number;
         };
+        /**
+         * @description `civilization` (a soul: the value is the civilization code),
+         *     `organization` (an ORG role: the organization's name) or `parent` (a menu
+         *     or role under another: the parent's name).
+         */
+        RecycleBinLocation: {
+            kind: components["schemas"]["RecycleBinLocationKindEnum"];
+            value: string;
+        };
+        /**
+         * @description * `civilization` - civilization
+         *     * `organization` - organization
+         *     * `parent` - parent
+         * @enum {string}
+         */
+        RecycleBinLocationKindEnum: "civilization" | "organization" | "parent";
         /**
          * @description Restore is keyed by cascade id, not by row: the whole set deleted
          *     together comes back together.
@@ -12176,7 +12248,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": components["schemas"]["LoginFailedResponse"];
                 };
             };
             429: {
@@ -12184,7 +12256,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["LoginLockedResponse"];
                 };
             };
         };
@@ -12943,6 +13015,15 @@ export interface operations {
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description * `PENDING` - Pending Validation
+                 *     * `ACCEPTED` - Accepted - Processing
+                 *     * `PROCESSED` - Processed Successfully
+                 *     * `FAILED` - Processing Failed
+                 *     * `DUPLICATE` - Duplicate - Already Processed
+                 *     * `PARTIAL` - Partially Processed (batch)
+                 */
+                status?: "ACCEPTED" | "DUPLICATE" | "FAILED" | "PARTIAL" | "PENDING" | "PROCESSED";
             };
             header?: never;
             path?: never;
@@ -12978,6 +13059,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeathRegistrationRequest"];
+                };
+            };
+        };
+    };
+    v1_death_sync_registrations_summary_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeathRegistrationSummary"];
                 };
             };
         };

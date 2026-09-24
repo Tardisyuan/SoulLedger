@@ -600,13 +600,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetailResponse'
+                $ref: '#/components/schemas/LoginFailedResponse'
           description: ''
         '429':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/LoginLockedResponse'
           description: ''
   /api/v1/auth/login-logs/:
     get:
@@ -1545,6 +1545,24 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACCEPTED
+          - DUPLICATE
+          - FAILED
+          - PARTIAL
+          - PENDING
+          - PROCESSED
+        description: |-
+          * `PENDING` - Pending Validation
+          * `ACCEPTED` - Accepted - Processing
+          * `PROCESSED` - Processed Successfully
+          * `FAILED` - Processing Failed
+          * `DUPLICATE` - Duplicate - Already Processed
+          * `PARTIAL` - Partially Processed (batch)
       tags:
       - v1
       security:
@@ -1605,6 +1623,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationRequest'
+          description: ''
+  /api/v1/death-sync/registrations/summary/:
+    get:
+      operationId: v1_death_sync_registrations_summary_retrieve
+      description: |-
+        How many of this tenant's registrations need a human.
+
+        FAILED is the only anomalous state a row is ever written in: PENDING
+        and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
+        its job, and PARTIAL is a batch-level answer no row carries. The status
+        goes on the wire so the dashboard links to the same filter it counted.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathRegistrationSummary'
           description: ''
   /api/v1/death-sync/webhooks/:
     get:
@@ -14975,6 +15014,21 @@ components:
         * `FAILED` - Processing Failed
         * `DUPLICATE` - Duplicate - Already Processed
         * `PARTIAL` - Partially Processed (batch)
+    DeathRegistrationSummary:
+      type: object
+      description: |-
+        200 body of `registrations/summary/`. Doc-only.
+
+        `anomaly_count` counts this tenant's rows in `anomaly_status`, which is
+        the value `registrations/?status=` takes to list exactly those rows.
+      properties:
+        anomaly_status:
+          type: string
+        anomaly_count:
+          type: integer
+      required:
+      - anomaly_count
+      - anomaly_status
     DeathSyncApiKeyHealth:
       type: object
       description: '`name` and `system_type` are null when the request carries no
@@ -17019,6 +17073,38 @@ components:
       - records
       - soul_id
       - soul_name
+    LoginFailedResponse:
+      type: object
+      description: |-
+        Doc-only: the 401 body of `LoginView` for wrong credentials.
+
+        `remaining_attempts` is how many more failures this client IP may make
+        before the next request is refused with 429 (0 means the next one is).
+      properties:
+        detail:
+          type: string
+        remaining_attempts:
+          type: integer
+      required:
+      - detail
+    LoginLockedResponse:
+      type: object
+      description: |-
+        Doc-only: the 429 body of `LoginView` once the limiter has tripped.
+
+        `code` is always `login_locked`; `retry_after` is seconds until the
+        window ends (also sent as the `Retry-After` header).
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+      - retry_after
     LoginLog:
       type: object
       description: Serializer for login log entries.
@@ -21850,6 +21936,10 @@ components:
             format: uuid
         label:
           type: string
+        location:
+          allOf:
+          - $ref: '#/components/schemas/RecycleBinLocation'
+          nullable: true
         deleted_at:
           type: string
           format: date-time
@@ -21881,6 +21971,7 @@ components:
       - id
       - kind
       - label
+      - location
       - retention_days
     RecycleBinHardDeleteRequest:
       type: object
@@ -21918,6 +22009,30 @@ components:
       required:
       - count
       - results
+    RecycleBinLocation:
+      type: object
+      description: |-
+        `civilization` (a soul: the value is the civilization code),
+        `organization` (an ORG role: the organization's name) or `parent` (a menu
+        or role under another: the parent's name).
+      properties:
+        kind:
+          $ref: '#/components/schemas/RecycleBinLocationKindEnum'
+        value:
+          type: string
+      required:
+      - kind
+      - value
+    RecycleBinLocationKindEnum:
+      enum:
+      - civilization
+      - organization
+      - parent
+      type: string
+      description: |-
+        * `civilization` - civilization
+        * `organization` - organization
+        * `parent` - parent
     RecycleBinRestoreRequest:
       type: object
       description: |-

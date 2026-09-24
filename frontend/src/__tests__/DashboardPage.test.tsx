@@ -13,7 +13,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "@/app/dashboard/page";
-import { dispatchApi, judgmentApi, ledgerApi } from "@soulledger/core/api";
+import { deathSyncApi, dispatchApi, judgmentApi, ledgerApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
 
 const mockReplace = jest.fn();
@@ -28,6 +28,7 @@ jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn(), exportStats: jest.fn() },
   dispatchApi: { proposed: jest.fn() },
   judgmentApi: { next: jest.fn() },
+  deathSyncApi: { summary: jest.fn() },
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
@@ -61,6 +62,7 @@ jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
 const mockedStats = ledgerApi.statsOverview as jest.Mock;
 const mockedProposed = dispatchApi.proposed as jest.Mock;
 const mockedNext = judgmentApi.next as jest.Mock;
+const mockedDeathSummary = deathSyncApi.summary as jest.Mock;
 const mockedExport = ledgerApi.exportStats as jest.Mock;
 
 const baseStats = {
@@ -116,6 +118,7 @@ beforeEach(() => {
   mockedStats.mockResolvedValue({ data: baseStats });
   mockedProposed.mockResolvedValue({ data: { count: 1, results: [] } });
   mockedNext.mockResolvedValue({ data: { total: 0 } });
+  mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 3 } });
 });
 
 // ── Overview tab ─────────────────────────────────────────────────────
@@ -233,6 +236,22 @@ describe("DashboardPage overview", () => {
       expect(await screen.findByText("dashboard.todo.load_error")).toBeInTheDocument();
     });
 
+    it("counts death-sync anomalies for an admin and links to the status the server counted", async () => {
+      mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 3 } });
+      renderPage();
+      const link = await screen.findByRole("link", { name: "dashboard.todo.go_view" });
+      expect(link).toHaveAttribute("href", "/death-sync?status=FAILED");
+      expect(screen.getByText("dashboard.todo.death_sync_anomaly")).toBeInTheDocument();
+    });
+
+    it("has no death-sync cell, and asks nothing, for a non-admin who holds the other two", async () => {
+      mockUser = { role: "JUDGE", permissions: ["dispatch.read", "judgment.read"] };
+      renderPage();
+      await screen.findByText("dashboard.todo.approve_dispatch");
+      expect(screen.queryByText("dashboard.todo.death_sync_anomaly")).not.toBeInTheDocument();
+      expect(mockedDeathSummary).not.toHaveBeenCalled();
+    });
+
     it("is not shown, and asks nothing, for someone who may open neither page", async () => {
       mockUser = { role: "VIEWER", permissions: [] };
       renderPage();
@@ -240,6 +259,7 @@ describe("DashboardPage overview", () => {
       expect(screen.queryByText("dashboard.todo.approve_dispatch")).not.toBeInTheDocument();
       expect(mockedProposed).not.toHaveBeenCalled();
       expect(mockedNext).not.toHaveBeenCalled();
+      expect(mockedDeathSummary).not.toHaveBeenCalled();
     });
   });
 
