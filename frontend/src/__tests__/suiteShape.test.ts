@@ -125,6 +125,7 @@ const COLLECTED_FILES = [
   "a11yEngineBaseline.test.tsx",
   "accessTokenNeverBecomesACookie.test.ts",
   "api.test.ts",
+  "arrowNotDoubled.test.ts",
   "auditGrouping.test.ts",
   "chartColourContract.test.ts",
   "civilizationCopyCoverage.test.ts",

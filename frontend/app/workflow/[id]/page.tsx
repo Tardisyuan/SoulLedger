@@ -211,7 +211,7 @@ export default function WorkflowDetailPage() {
 
   const backLink = (
     <Link href="/workflow" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
-      ← {t("workflow.detail.back_to_list")}
+      {t("workflow.detail.back_to_list")}
     </Link>
   );
 
