@@ -22,11 +22,11 @@ import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { ChatContext, ChatProvider, useChat, type Chat } from "../chat";
+import { ChatContext, ChatProvider, OUTBOX_KEY, readOutbox, useChat, type Chat } from "../chat";
 import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform, persistentStore } from "../platform";
 import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
@@ -488,9 +488,16 @@ class FakeSynapse {
   offline = false;
   /** Take the next send in, then drop the response — the case the txn id exists for. */
   loseNextSendResponse = false;
+  /** A send does not wake the long-poll: its echo is not seen before the retry. */
+  quiet = false;
   events: MatrixEvent[] = [];
+  /** `device|txn` → event id: Synapse's transaction cache is per (user, device) — MSC3970. `clear()` = it expired. */
   txns = new Map<string, string>();
+  /** The device each event was sent from: `unsigned.transaction_id` is echoed to that device only. */
+  eventDevice = new Map<string, string>();
   sends: string[] = [];
+  logins: Record<string, unknown>[] = [];
+  private devices = 0;
   private waiters: (() => void)[] = [];
 
   release() {
@@ -504,17 +511,24 @@ class FakeSynapse {
       const body = config.data ? JSON.parse(config.data as string) : undefined;
       const ok = (data: unknown) => ({ status: 200, data, headers: {}, config, statusText: "" }) as AxiosResponse;
       if (this.offline) throw new AxiosError("Network Error", "ERR_NETWORK", config);
-      if (method === "POST" && url === "/_matrix/client/v3/login") return ok({ access_token: "tok-me", user_id: ME });
+      if (method === "POST" && url === "/_matrix/client/v3/login") {
+        this.logins.push(body);
+        // Like Synapse: the device asked for, or a new one.
+        const device = typeof body.device_id === "string" ? body.device_id : `DEV${++this.devices}`;
+        return ok({ access_token: `tok-${device}`, user_id: ME, device_id: device });
+      }
+      const device = String(config.headers?.Authorization ?? "").replace(/^Bearer tok-/, "");
       const send = url.match(/\/rooms\/([^/]+)\/send\/m\.room\.message\/([^/]+)$/);
       if (method === "PUT" && send) {
         const txn = decodeURIComponent(send[2]);
         this.sends.push(txn);
-        let eventId = this.txns.get(txn);
+        let eventId = this.txns.get(`${device}|${txn}`);
         if (!eventId) {
           eventId = `$e${this.events.length}`;
-          this.txns.set(txn, eventId);
+          this.txns.set(`${device}|${txn}`, eventId);
+          this.eventDevice.set(eventId, device);
           this.events.push({ event_id: eventId, type: "m.room.message", sender: ME, origin_server_ts: NOW, content: { msgtype: "m.text", body: body.body }, unsigned: { transaction_id: txn } });
-          this.release();
+          if (!this.quiet) this.release();
         }
         if (this.loseNextSendResponse) {
           this.loseNextSendResponse = false;
@@ -528,7 +542,9 @@ class FakeSynapse {
           await new Promise<void>((resolve) => this.waiters.push(resolve));
           if (this.offline) throw new AxiosError("Network Error", "ERR_NETWORK", config);
         }
-        const events = this.events.slice(since);
+        const events = this.events
+          .slice(since)
+          .map((e) => (this.eventDevice.get(e.event_id) === device ? e : { ...e, unsigned: {} }));
         return ok({
           next_batch: String(this.events.length),
           rooms: events.length ? { join: { "!direct:hs.test": { timeline: { events } } } } : {},
@@ -560,18 +576,21 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
 
   afterEach(() => synapse.release());
 
-  function start() {
+  function start(account = "SL-CN-000042") {
     return render(
-      <ChatProvider enabled>
+      <ChatProvider account={account}>
         <Probe />
       </ChatProvider>
     );
   }
 
+  const stored = () => JSON.parse(persistentStore.get(OUTBOX_KEY) ?? "null");
+
   it("a send whose response was lost is queued, and the retry reuses the txn id — one letter, not two", async () => {
     const view = start();
     await waitFor(() => expect(probe.availability).toBe("ready"));
     synapse.loseNextSendResponse = true;
+    synapse.quiet = true; // the retry goes out before the echo: Synapse's own de-duplication is what holds
     await act(async () => probe.send(conv(), "枯树那边风大"));
     await waitFor(() => expect(probe.outbox[0]?.state).toBe("queued"));
     expect(probe.availability).toBe("unavailable");
@@ -597,6 +616,106 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
     // The echo carries the txn id back, so the pending bubble and the timeline message are one.
     await waitFor(() => expect(probe.timeline.rooms["!direct:hs.test"]?.messages[0]?.txnId).toBe(probe.outbox[0].txnId));
     view.unmount();
+  });
+
+  describe("across a restart (the outbox is on disk)", () => {
+    beforeEach(() => persistentStore.remove(OUTBOX_KEY));
+
+    it("killed with a letter queued: the next start sends it, with the txn id it was given", async () => {
+      synapse.offline = true;
+      const first = start();
+      await waitFor(() => expect(probe.availability).toBe("unavailable"));
+      await act(async () => probe.send(conv(), "枯树那边风大"));
+      const txn = probe.outbox[0].txnId;
+      expect(stored()).toMatchObject({ owner: "SL-CN-000042", items: [{ txnId: txn, body: "枯树那边风大" }] });
+      first.unmount();
+
+      synapse.offline = false;
+      const second = start();
+      await waitFor(() => expect(probe.outbox[0]?.state).toBe("sent"));
+      expect(synapse.sends).toEqual([txn]);
+      expect(synapse.events.map((e) => e.content.body)).toEqual(["枯树那边风大"]);
+      // Confirmed: nothing left on disk.
+      await waitFor(() => expect(persistentStore.get(OUTBOX_KEY)).toBeNull());
+      second.unmount();
+    });
+
+    it("killed after Synapse took it but the answer was lost: the next start logs in as the SAME device — one letter", async () => {
+      const first = start();
+      await waitFor(() => expect(probe.availability).toBe("ready"));
+      synapse.loseNextSendResponse = true;
+      await act(async () => probe.send(conv(), "枯树那边风大"));
+      await waitFor(() => expect(probe.outbox[0]?.state).toBe("queued"));
+      expect(stored()).toMatchObject({ device: "DEV1" });
+      first.unmount();
+
+      const second = start();
+      await waitFor(() => expect(probe.outbox[0]?.state).toBe("sent"));
+      expect(synapse.logins[1]).toMatchObject({ device_id: "DEV1" });
+      expect(synapse.events).toHaveLength(1);
+      second.unmount();
+    });
+
+    it("past Synapse's transaction cache: the letter's own echo in /sync says it arrived — it is not sent again", async () => {
+      const first = start();
+      await waitFor(() => expect(probe.availability).toBe("ready"));
+      synapse.loseNextSendResponse = true;
+      await act(async () => probe.send(conv(), "枯树那边风大"));
+      await waitFor(() => expect(probe.outbox[0]?.state).toBe("queued"));
+      first.unmount();
+
+      synapse.txns.clear(); // an hour later: Synapse no longer remembers the txn id
+      const second = start();
+      await waitFor(() => expect(probe.outbox[0]?.state).toBe("sent"));
+      expect(synapse.sends).toHaveLength(1);
+      expect(synapse.events).toHaveLength(1);
+      expect(probe.outbox[0].eventId).toBe(synapse.events[0].event_id);
+      second.unmount();
+    });
+
+    it("restored while the conversation list cannot load: the letter keeps waiting, it is not dropped as unknown", async () => {
+      synapse.offline = true;
+      const first = start();
+      await waitFor(() => expect(probe.availability).toBe("unavailable"));
+      await act(async () => probe.send(conv(), "枯树那边风大"));
+      first.unmount();
+
+      synapse.offline = false;
+      stubApi({
+        "/me/chat/conversations/": "offline",
+        "/me/chat/session/": { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } },
+      });
+      const second = start();
+      await waitFor(() => expect(probe.availability).toBe("ready"));
+      expect(probe.outbox[0]?.state).toBe("queued");
+      expect(stored()?.items).toHaveLength(1);
+      expect(synapse.sends).toEqual([]);
+      second.unmount();
+    });
+
+    it("another account signing in finds nothing of the last one's, and its record replaces it", async () => {
+      synapse.offline = true;
+      const first = start("SL-CN-000042");
+      await waitFor(() => expect(probe.availability).toBe("unavailable"));
+      await act(async () => probe.send(conv(), "枯树那边风大"));
+      first.unmount();
+
+      const second = start("SL-EU-000007");
+      await waitFor(() => expect(probe.availability).toBe("unavailable"));
+      expect(probe.outbox).toEqual([]);
+      await waitFor(() => expect(persistentStore.get(OUTBOX_KEY)).toBeNull());
+      synapse.offline = false;
+      await act(async () => probe.reconnect());
+      expect(synapse.sends).toEqual([]);
+      second.unmount();
+    });
+
+    it("what is on disk is checked before it is sent: garbage and foreign shapes read as nothing", () => {
+      persistentStore.set(OUTBOX_KEY, "{not json");
+      expect(readOutbox("SL-CN-000042").items).toEqual([]);
+      persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: "SL-CN-000042", items: [{ txnId: 1 }, { txnId: "t", conversationId: "c", roomId: "r", body: "b", ts: 1, state: "sending" }] }));
+      expect(readOutbox("SL-CN-000042").items).toEqual([{ txnId: "t", conversationId: "c", roomId: "r", body: "b", ts: 1, state: "queued", refused: undefined }]);
+    });
   });
 });
 

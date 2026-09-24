@@ -13,8 +13,20 @@
  * QUEUEING (handoff 1c ⑦). Only "no answer at all" queues: Synapse or the
  * backend unreachable (`chat_unavailable`). A queued Matrix send is retried
  * with the SAME txn id, which Synapse de-duplicates, so a lost response cannot
- * post twice. ponytail: the outbox lives in memory — an app killed while
- * offline loses its queue; persist it (platform().persistent) if that matters.
+ * post twice.
+ *
+ * THE OUTBOX OUTLIVES THE PROCESS. Letters not yet confirmed (queued, or in
+ * flight when the app died) are kept in `platform().persistent` under
+ * `OUTBOX_KEY`, stamped with the account they belong to, and sent again on the
+ * next start with their original txn id. Another account signing in finds
+ * nothing (and overwrites the record); signing out removes it (`clearOutbox`).
+ * The same txn id only de-duplicates if Synapse sees it from the same device,
+ * for 30–60 minutes (its transaction cache, keyed by user + device, MSC3970) —
+ * so the record also keeps the Matrix device id, and the next login asks for
+ * that device again. Past the cache's lifetime, the guard is the echo: a letter
+ * whose txn id already came back in /sync was delivered, and is not sent again.
+ * The backend path (throttled rooms, the hall) takes no txn id at all; a letter
+ * there whose response was lost can still post twice, today as before.
  */
 import { soulErrorStatus } from "@soulledger/core/api/soul";
 import {
@@ -34,6 +46,7 @@ import {
   type MatrixClient,
   type TimelineState,
 } from "@soulledger/core/api/matrix";
+import { platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { sendsThroughBackend } from "./chatRules";
@@ -115,12 +128,50 @@ function isOffline(error: unknown): boolean {
 let counter = 0;
 const newTxn = () => `sl${Date.now().toString(36)}.${(counter++).toString(36)}`;
 
-export function ChatProvider({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+/** In `platform().persistent`: `{ owner, device, items }` — one account's unconfirmed letters. */
+export const OUTBOX_KEY = "soulledger_chat_outbox";
+interface StoredOutbox {
+  owner: string;
+  device: string | null;
+  items: Outgoing[];
+}
+
+const isStoredItem = (o: unknown): o is Outgoing => {
+  const x = o as Record<string, unknown> | null;
+  return !!x && ["txnId", "conversationId", "roomId", "body"].every((k) => typeof x[k] === "string") && typeof x.ts === "number";
+};
+
+/** This account's record, or an empty one. Anything else on disk (another account, an old build, garbage) reads as empty. */
+export function readOutbox(owner: string): StoredOutbox {
+  try {
+    const raw = JSON.parse(platform().persistent.get(OUTBOX_KEY) ?? "null");
+    if (raw?.owner === owner && Array.isArray(raw.items)) {
+      return {
+        owner,
+        device: typeof raw.device === "string" ? raw.device : null,
+        // Whatever it was doing when the app stopped, it is waiting now.
+        items: raw.items.filter(isStoredItem).map((o: Outgoing) => ({ ...o, state: "queued" as const, refused: undefined })),
+      };
+    }
+  } catch {
+    // Unreadable: nothing to resend.
+  }
+  return { owner, device: null, items: [] };
+}
+
+/** Sign-out: this device keeps no letters of a soul who has left it. */
+export const clearOutbox = () => platform().persistent.remove(OUTBOX_KEY);
+
+/** What is worth keeping: not yet confirmed, and not refused (a refusal is final). */
+const unconfirmed = (o: Outgoing) => o.state === "queued" || o.state === "sending";
+
+export function ChatProvider({ account, children }: { account: string | null; children: ReactNode }) {
+  const enabled = account !== null;
   const [availability, setAvailability] = useState<Availability>("probing");
   const [conversations, setConversations] = useState<SoulConversation[] | null>(null);
   const [timeline, setTimeline] = useState<TimelineState>(EMPTY_TIMELINE);
   const [me, setMe] = useState<string | null>(null);
-  const [outbox, setOutbox] = useState<Outgoing[]>([]);
+  const [outbox, setOutbox] = useState<Outgoing[]>(() => (account ? readOutbox(account).items : []));
   const [refused, setRefused] = useState<Record<string, Refused>>({});
   const client = useRef<MatrixClient | null>(null);
   const since = useRef<string | null>(null);
@@ -129,10 +180,43 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
   const convs = useRef<SoulConversation[]>([]);
   const outboxRef = useRef<Outgoing[]>([]);
   const availabilityRef = useRef<Availability>(availability);
+  /** The Matrix device to log in as (persisted with the outbox). */
+  const device = useRef<string | null>(null);
+  /** txn id → event id, for every echo of my own sends /sync has brought. */
+  const echoed = useRef(new Map<string, string>());
+  /** The conversation list has loaded at least once: an unknown conversation id then really is unknown. */
+  const listed = useRef(false);
+  // Each account starts from its own record, and a signed-out provider holds nobody's letters.
+  // Swapped during render (React's "adjusting state when a prop changes"), so no commit, and so
+  // no save below, ever pairs one account's name with another account's letters.
+  const [outboxOwner, setOutboxOwner] = useState(account);
+  if (outboxOwner !== account) {
+    setOutboxOwner(account);
+    setOutbox(account ? readOutbox(account).items : []);
+  }
+  // Declared before the save below: on an account's first commit its device goes to disk with its letters.
+  useEffect(() => {
+    device.current = account ? readOutbox(account).device : null;
+    echoed.current = new Map();
+    listed.current = false;
+  }, [account]);
+
+  const save = useCallback(
+    (items: Outgoing[]) => {
+      if (!account) return;
+      const record: StoredOutbox = { owner: account, device: device.current, items: items.filter(unconfirmed) };
+      // Nothing waiting: nothing on disk (the device id only matters to a letter that is waiting).
+      if (record.items.length) platform().persistent.set(OUTBOX_KEY, JSON.stringify(record));
+      else clearOutbox();
+    },
+    [account]
+  );
+
   useEffect(() => {
     outboxRef.current = outbox;
     availabilityRef.current = availability;
-  }, [outbox, availability]);
+    save(outbox);
+  }, [outbox, availability, save]);
   const [listError, setListError] = useState(false);
   const [gone, setGone] = useState<Record<string, SoulConversation>>({});
 
@@ -144,6 +228,7 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
       const vanished = convs.current.filter((p) => !rows.some((r) => r.id === p.id));
       if (vanished.length) setGone((g) => ({ ...g, ...Object.fromEntries(vanished.map((v) => [v.id, { ...v, refusal: "closed" }])) }));
       convs.current = rows;
+      listed.current = true;
       known.current = new Set(rows.map((c) => c.room_id));
       setConversations(rows);
       setRefused({});
@@ -160,8 +245,12 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
 
   const deliver = useCallback(
     async (o: Outgoing) => {
+      // Its echo already came back (a restart after the response was lost): delivered, do not post again.
+      const seen = echoed.current.get(o.txnId);
+      if (seen) return patch(o.txnId, { state: "sent", eventId: seen });
       const c = convs.current.find((row) => row.id === o.conversationId);
-      if (!c) return patch(o.txnId, { state: "failed" });
+      // Before the list has loaded (a restored letter, the list unreachable), unknown is not gone: keep waiting.
+      if (!c) return patch(o.txnId, { state: listed.current ? "failed" : "queued" });
       patch(o.txnId, { state: "sending" });
       try {
         const matrix = client.current;
@@ -207,7 +296,12 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
     async function connect(): Promise<boolean> {
       try {
         const grant = await soulChatApi.session();
-        const creds = await matrixLogin(grant);
+        const creds = await matrixLogin(grant, device.current);
+        if (!alive) return false;
+        if (creds.deviceId && creds.deviceId !== device.current) {
+          device.current = creds.deviceId;
+          save(outboxRef.current);
+        }
         client.current = matrixClient(creds);
         if (alive) setMe(creds.userId);
         return true;
@@ -229,6 +323,11 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
           const response = await client.current!.sync(since.current, since.current ? POLL_MS : 0);
           if (!alive) return;
           since.current = response.next_batch;
+          for (const room of Object.values(response.rooms?.join ?? {})) {
+            for (const e of room.timeline?.events ?? []) {
+              if (e.unsigned?.transaction_id) echoed.current.set(e.unsigned.transaction_id, e.event_id);
+            }
+          }
           setTimeline((state) => applySync(state, response));
           if (availabilityRef.current !== "ready") {
             setAvailability("ready");
@@ -255,7 +354,7 @@ export function ChatProvider({ enabled, children }: { enabled: boolean; children
       client.current = null;
       since.current = null;
     };
-  }, [enabled, reload, flush]);
+  }, [enabled, reload, flush, save]);
 
   const value = useMemo<Chat>(
     () => ({
