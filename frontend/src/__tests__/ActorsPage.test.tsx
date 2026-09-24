@@ -344,17 +344,17 @@ describe("enum display", () => {
     expect(heading.textContent).toBe("Egyptian Duat");
   });
 
-  it("tints no badge past the 0.1 cap the light-mode tokens were measured at", async () => {
+  it("fills no badge at all — 规范 v1 §2 badges are text and a 1 px border", async () => {
     const { container } = renderPage();
     await waitForRoster();
 
-    // Same cap as src/__tests__/dataGridToneContract.test.ts, applied to the
-    // badges this page rolls by hand instead of through the shared grid.
+    // This used to cap the fills at 0.1 (the depth dataGridToneContract
+    // holds the grid to). The spec since removed badge fills entirely, so
+    // the cap became an absence — and the presence half below keeps it from
+    // passing on a page that simply rendered no badges.
     const html = container.innerHTML;
-    const tints = [...html.matchAll(/bg-\[oklch\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)];
-    expect(tints.length).toBeGreaterThan(0);
-    for (const [, alpha] of tints) {
-      expect(Number(alpha)).toBeLessThanOrEqual(0.1);
-    }
+    expect([...html.matchAll(/bg-\[oklch\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)]).toEqual([]);
+    const conduit = container.querySelector<HTMLElement>('[data-actor-card="孟婆"] [title="CONDUIT"]')!;
+    expect(conduit.className).toContain("border-[oklch(var(--color-status-success))]");
   });
 });

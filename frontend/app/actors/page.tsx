@@ -11,7 +11,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, Scale, User } from "lucide-react";
+import { ChevronDown, Scale } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -22,27 +22,25 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
- * Role badge fills. Every tint is 0.1 — the depth the light-mode
- * `--color-status-*` tokens were re-measured against in 5e580e3, and the cap
- * `src/__tests__/dataGridToneContract.test.ts` holds the shared grid to. A
- * deeper fill here would fail AA against the same ink without changing a
- * single token.
+ * Role badge colours. 规范 v1 §2「徽章 · 只有常态」: no fill — the text and the
+ * 1 px border share one token. The 0.1 tints these used to carry are gone with
+ * every other badge fill.
  */
 const ROLE_BADGE_CLASSES: Record<string, string> = {
-  JUDGE: "bg-[oklch(var(--color-accent)/0.1)] text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent)/0.3)]",
-  GUARDIAN: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info)/0.3)]",
-  EXECUTOR: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
-  CONDUIT: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.3)]",
+  JUDGE: "text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent))]",
+  GUARDIAN: "text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info))]",
+  EXECUTOR: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
+  CONDUIT: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
   // OVERSEER was missing — `ActorRole` has five members and all three message
   // bundles carry `actors.roles.OVERSEER`, so the label was right and only the
   // colour fell to the fallback. Hades is an OVERSEER.
-  OVERSEER: "bg-[oklch(var(--color-status-judging)/0.1)] text-[oklch(var(--color-status-judging))] border-[oklch(var(--color-status-judging)/0.3)]",
+  OVERSEER: "text-[oklch(var(--color-status-judging))] border-[oklch(var(--color-status-judging))]",
 };
 const ROLE_BADGE_FALLBACK =
-  "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline-tertiary))]";
+  "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]";
 
 /**
- * Badge geometry from `Badge`, fill from the table above.
+ * Badge geometry from `Badge`, colour from the table above.
  *
  * `tone: null` and not a tone name: cva reads `null` as "skip this variant
  * *including* its default", so the base geometry arrives with no fill at all
@@ -78,39 +76,38 @@ interface CivilizationGroup {
   bench: Actor[];
 }
 
-function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
+/**
+ * One actor as a ledger row (规范 v1 §2). `data-actor-card` keeps its old name
+ * because it is the test anchor, not a description of the shape: the row is
+ * still the unit that carries name, role and seat together.
+ *
+ * No detail route exists for an actor, so the row is not a link.
+ */
+function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
   return (
-    <div
+    <tr
       data-actor-card={actor.name}
-      className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent))]/30 transition-colors"
+      className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
     >
-      <div className="flex items-start gap-3">
-        {/* `icon` is not a field on ANY actor serializer -- the model column is
-            `icon_url`, and this expression was always undefined. (All 130 rows
-            on the test box have `icon_url` empty too, so nothing visible
-            changes; the dead read is removed so the next person does not
-            "fix" it by adding an `icon` field.) */}
-        <User aria-hidden="true" className="w-6 h-6 text-[oklch(var(--color-ink-subtle))] shrink-0" />
-        <div className="flex-1 min-w-0">
-          {/* `display_name` and `display_title` are localized by the backend
-              and are in this very response. `name_zh`, `title` and
-              `description` are NOT on `ActorListSerializer` -- they live on the
-              detail and localized serializers. So every one of the 130 cards
-              rendered its title as MissingValue「未记载」while the localized
-              title sat unread in the same payload, and the second line fell
-              back to repeating the English canonical name.
+      <td className="px-4 py-2">
+        {/* `display_name` and `display_title` are localized by the backend
+            and are in this very response. `name_zh`, `title` and
+            `description` are NOT on `ActorListSerializer` -- they live on the
+            detail and localized serializers. So every one of the 130 cards
+            rendered its title as MissingValue「未记载」while the localized
+            title sat unread in the same payload.
 
-              This is the "a placeholder claims the data is missing while the
-              data is present" shape, at 130 cards. */}
-          <h3 title={actor.name} className="text-sm font-semibold text-[oklch(var(--color-ink))] truncate">{actor.name}</h3>
-          <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
-            {actor.display_name || actor.name}
-          </p>
-          <p className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
-            <DomainText value={actor.display_title} />
-          </p>
+            `icon` is not a field on ANY actor serializer either (the model
+            column is `icon_url`, empty on all 130 rows), so no icon column. */}
+        <div className="font-medium text-[oklch(var(--color-ink))]">{actor.name}</div>
+        <div className="text-xs text-[oklch(var(--color-ink-subtle))]">
+          {actor.display_name || actor.name}
+          {" · "}
+          <DomainText value={actor.display_title} />
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
+      </td>
+      <td className="px-4 py-2 text-right">
+        <div className="flex items-center justify-end gap-1">
           {/* The raw member reaches `title` and never the text node — the
               component carries the attribute itself. */}
           <DomainEnum
@@ -119,17 +116,29 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
             className={roleBadgeClass(ROLE_BADGE_CLASSES[actor.role] ?? ROLE_BADGE_FALLBACK)}
           />
           {seatLabel && (
-            <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "font-mono tabular-nums")}>
+            <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "tabular-nums")}>
               {seatLabel}
             </span>
           )}
         </div>
-      </div>
-      {/* `description` is not on the list serializer either. Removed rather
-          than left as a permanently-false condition: a read that can never be
-          true reads as "descriptions are optional", which is not what is
-          happening -- the list endpoint does not send them at all. */}
-    </div>
+      </td>
+    </tr>
+  );
+}
+
+/** The table a group of actor rows sits in: mono 2xs header over the block line. */
+function ActorTable({ children, ...rest }: { children: React.ReactNode } & React.HTMLAttributes<HTMLTableElement>) {
+  const { t } = useI18n();
+  return (
+    <table className="w-full text-sm" {...rest}>
+      <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+        <tr className="border-b border-[oklch(var(--color-block))]">
+          <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
+          <th scope="col" className="px-3 py-2 text-right font-normal">{t("users.role")}</th>
+        </tr>
+      </thead>
+      <tbody>{children}</tbody>
+    </table>
   );
 }
 
@@ -196,19 +205,9 @@ function ActorsPageContent() {
         {isError ? (
           <QueryError onRetry={() => refetch()} />
         ) : isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="space-y-2">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <div key={i} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-                <div className="flex items-start gap-3">
-                  <Skeleton className="h-8 w-8" />
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-3 w-1/3" />
-                  </div>
-                  <Skeleton className="h-6 w-12" />
-                </div>
-              </div>
+              <Skeleton key={i} className="h-9 w-full" />
             ))}
           </div>
         ) : actors.length === 0 ? (
@@ -236,13 +235,13 @@ function ActorsPageContent() {
                   /* `data-civilization` is a test anchor. No colour: 规范 v1 §1.8 took
                      civilization out of the colour layer — the section header names it. */
                   data-civilization={civ}
-                  className="border-t border-[oklch(var(--color-block))] p-4"
+                  className="border-t border-[oklch(var(--color-block))]"
                 >
                   {/* Civilization Header */}
                   <button
                     onClick={() => toggleCollapse(civ)}
                     aria-expanded={!isCollapsed}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] transition-colors text-left"
+                    className="w-full flex items-center gap-3 mb-2 py-3 hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                   >
                     <span className="text-md" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
                     <div className="flex-1">
@@ -253,7 +252,7 @@ function ActorsPageContent() {
                       <h2 className="text-md text-[oklch(var(--color-ink))]">
                         <DomainEnum namespace="actors.civilizations" value={civ} />
                       </h2>
-                      <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
+                      <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
                         {t("actors.count", { count: String(total) })}
                       </p>
                     </div>
@@ -264,11 +263,11 @@ function ActorsPageContent() {
                     <div className="space-y-4">
                       {/* Named gods, flat */}
                       {principals.length > 0 && (
-                        <div data-principals={civ} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <ActorTable data-principals={civ}>
                           {principals.map((actor) => (
-                            <ActorCard key={actor.id} actor={actor} />
+                            <ActorRow key={actor.id} actor={actor} />
                           ))}
-                        </div>
+                        </ActorTable>
                       )}
 
                       {/* The bench of forty-two, folded behind one row */}
@@ -278,7 +277,7 @@ function ActorsPageContent() {
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
                             aria-label={t("actors.assessors.toggle")}
-                            className="w-full flex items-center gap-3 px-4 py-2 bg-[oklch(var(--color-surface-1))] border border-dashed border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-3 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                           >
                             <Scale aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -286,22 +285,22 @@ function ActorsPageContent() {
                                 {t("actors.assessors.title")}
                               </h3>
                             </div>
-                            <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "font-mono tabular-nums")}>
+                            <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "tabular-nums")}>
                               {t("actors.assessors.count", { count: String(bench.length) })}
                             </span>
                             <ChevronDown className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
                           </button>
 
                           {isBenchOpen && (
-                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <ActorTable>
                               {bench.map((actor) => (
-                                <ActorCard
+                                <ActorRow
                                   key={actor.id}
                                   actor={actor}
                                   seatLabel={t("actors.assessors.seat", { index: String(seatOf(actor)) })}
                                 />
                               ))}
-                            </div>
+                            </ActorTable>
                           )}
                         </div>
                       )}
