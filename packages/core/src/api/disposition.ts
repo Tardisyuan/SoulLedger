@@ -17,6 +17,12 @@ export interface Disposition {
   executed_at: string | null;
   memory_reset: string;
   sentence_years?: number | null;
+  /**
+   * When the term began being counted (DispositionSerializer's HistoricalDateField
+   * over term_start_year/month/day — BCE-capable, so a signed year). Null = not
+   * recorded; it is deliberately NOT derived from `executed_at` (see the model).
+   */
+  term_start?: { year: number; month: number | null; day: number | null } | null;
   notes: string;
   created_at: string;
 }

@@ -904,6 +904,16 @@
       "empty_reason": "Nen Medu Em Sesh Pen.",
       "citations_absent": "Nen Dema Em Wepet Ten.",
       "sigil_absent": "Nen Tep Medu En Medu Pen."
+    },
+    "waiting": "Em Smen",
+    "waiting_days": "Hru {{n}}",
+    "desk": {
+      "statute_search": "Shesep Medu",
+      "statute_search_empty": "Nen Rekhyu Medu",
+      "cite": "Djed",
+      "cited": "Djed Seth",
+      "uncite": "Khemu Djed {{code}}",
+      "cite_error": "Nen Djed"
     }
   },
   "audit": {
@@ -1613,7 +1623,17 @@
     "execute_warning": "Iri Seth Mut Aba Hemsu Per Djewet Seth Ahet. Nen Shemsu Seth Em Her Tepy.",
     "execute_success": "Wetep Iri Seth",
     "executed_success": "Wetep Iri Seth",
-    "execute_error": "Nen Iri Wetep"
+    "execute_error": "Nen Iri Wetep",
+    "section_pending": "Nen Iri",
+    "section_running": "Em Iri",
+    "section_expired": "Renpet Khetem",
+    "section_empty": "Nen Rekhyu",
+    "term_eternal": "Em Tepy Seth · Nen Ahet",
+    "term_unrecorded": "Nen Sesh Renpet",
+    "start_unrecorded": "Nen Sesh Ahet",
+    "days_left": "Hru {{n}} Khery",
+    "expired_on": "Renpet Khetem {{date}}",
+    "arrange_reincarnation": "Iri Aru Her Tepy"
   },
   "reincarnation": {
     "reborn_success": "Aru Her Tepy Shesep Seth",
