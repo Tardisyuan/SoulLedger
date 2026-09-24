@@ -236,6 +236,11 @@ class ReincarnationService:
 
             retire_account_for_rebirth(soul, ended_cycle=cycle_count - 1)
 
+            # 行程拓扑:转世即离开冥界。通常执行处置时已经关了那一站;这里兜住
+            # 没有经过执行就转世的路径(例如没有处置的 `complete_rebirth`)。
+            from apps.realms.path import SoulPathService
+            SoulPathService.leave(soul)
+
         EventService.log(
             soul,
             "REINCARNATION_COMPLETED",

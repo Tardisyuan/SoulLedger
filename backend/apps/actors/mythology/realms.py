@@ -27,7 +27,7 @@ Splitting this file is a rewrite of its commentary, not a move of its data. If
 it is done, do it as its own change with the cross-references rewritten one by
 one — not as a line-count exercise.
 """
-from apps.realms.models import RealmType
+from apps.realms.models import CommediaRegion, GreekFork, RealmKind, RealmType
 
 # --------------------------------------------------------------------------
 # Realms
@@ -663,6 +663,15 @@ REALM_PARENTS = {
     # it. Both statements are needed — a summit that is only "tier 8" would sort
     # correctly and belong nowhere.
     "EU_EARTHLY_PARADISE": "EU_PURGATORY",
+    # THE TWO ROADS HANG OFF THE FORK. This is the one widening of what
+    # `parent_realm` means, made for the route-topology contract ("Greek:
+    # parent = the judgment place"): Tartarus and the Isles are not *parts* of
+    # the meadow the way a terrace is part of the mountain, they are the two
+    # branches out of it — Gorgias 524a, "the two ways leading, one to the
+    # Isles of the Blest, and the other to Tartarus". Which branch is which is
+    # REALM_TOPOLOGY's `fork`, at the bottom of this file.
+    "GR_TARTARUS": "EU_PLATO_MEADOW",
+    "GR_ISLES_OF_THE_BLESSED": "EU_PLATO_MEADOW",
 }
 
 # THE GATES OF THE DUAT ARE THE DEAD PERSON'S, NOT RA'S.
@@ -842,3 +851,88 @@ EGYPTIAN_REALMS = [
      "already recorded against it still resolve.",
      "SPELL", True, None),
 ]
+
+
+# --------------------------------------------------------------------------
+# ROUTE TOPOLOGY — the columns the officer console's 行程拓扑 draws from.
+#
+# realm_code -> {column: value}. A row absent from this map, and a column
+# absent from a row, is NULL: "this civilization does not use it, or nothing
+# here supports a value". Kept as a map beside the tables, like REALM_PARENTS,
+# so the fifty-odd rows above do not each grow ten mostly-None columns — and so
+# every value that IS set sits next to the reason it can be.
+#
+# CHINESE. `order` is the court number and `kind` is 殿, for the ten courts
+# only. They are the one line of 地府: a soul passes them in order, first to
+# tenth. The holding pen, 杨柳宫 and the first heaven get neither: none of them
+# is a court and none has a position on that line (DY_00_PURGATORY is *before*
+# the first court, but "0" is not a court number and the contract counts
+# 1-10). No 门 / 层 / 道 rows exist to carry those kinds — the 小地狱 were
+# retired by realms/0012, and 六道 are not seeded as realms.
+#
+# EUROPEAN. `region` is the cantica. `level` is the circle for the nine circles
+# and the terrace for the seven terraces — the same number `tier` carries on
+# those rows, which is why the two columns agree there and nowhere else. The
+# summit is level 8 for the reason its `tier` is 8 (see EU_EARTHLY_PARADISE
+# above): it is above the seventh terrace on the same mountain, not an eighth
+# terrace. The crossing is in the Inferno (canto III) but on no circle, so it
+# has a region and no level. `sublevel` (the seventh circle's rings, the
+# eighth's bolgie) is set on nothing: no ring or bolgia is seeded as a realm.
+#
+# EGYPTIAN. `is_judgment_hall` is True on the Hall of Two Truths and False on
+# the other Egyptian rows — a real answer for this civilization, where the
+# other three leave it NULL. **`hour` and `gate` are set on nothing, and that
+# is the lore, not an omission.** The twelve hours are the Amduat's and the
+# twelve gates the Book of Gates', both about Ra's night journey and neither
+# about the dead person (see "THE GATES OF THE DUAT ARE THE DEAD PERSON'S" above
+# EGYPTIAN_REALMS). The dead person's gates are BD 144-147, seeded as two sets
+# precisely because no single gate's name or order has been obtained; a gate
+# number on EG_SEVEN_ARRWT would be the position nothing here can support.
+#
+# GREEK. `fork` places each road out of the meadow. LEFT / RIGHT are Plato's own
+# words and not a drawing convention: Republic X 614c-d has the judges send
+# the just to the right and upward through the heaven, and the unjust to the
+# left and downward. MIDDLE is in the contract's vocabulary and on no row — the
+# middle road is Asphodel, which this table refuses (see GREEK_REALMS above).
+# The meadow and the crossing are not roads and carry no fork.
+# --------------------------------------------------------------------------
+_COURT_ORDER = {
+    "DY_COURT_01_QINGUANG": 1,
+    "DY_COURT_02_CHUJIANG": 2,
+    "DY_COURT_03_SONGDI": 3,
+    "DY_COURT_04_WUGUAN": 4,
+    "DY_COURT_05_YANLUO": 5,
+    "DY_COURT_06_BIANCHENG": 6,
+    "DY_COURT_07_TAISHAN": 7,
+    "DY_COURT_08_DUSHI": 8,
+    "DY_COURT_09_PINGDENG": 9,
+    "DY_COURT_10_ZHUANLUN": 10,
+}
+_CIRCLES = ("1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH", "9TH")
+_TERRACES = (
+    "EU_PURGATORY_T1_PRIDE", "EU_PURGATORY_T2_ENVY", "EU_PURGATORY_T3_WRATH",
+    "EU_PURGATORY_T4_SLOTH", "EU_PURGATORY_T5_AVARICE", "EU_PURGATORY_T6_GLUTTONY",
+    "EU_PURGATORY_T7_LUST",
+)
+
+REALM_TOPOLOGY = {
+    **{code: {"order": n, "kind": RealmKind.HALL} for code, n in _COURT_ORDER.items()},
+    **{
+        f"EU_HELL_{c}": {"region": CommediaRegion.INFERNO, "level": n}
+        for n, c in enumerate(_CIRCLES, start=1)
+    },
+    "EU_ACHERON": {"region": CommediaRegion.INFERNO},
+    "EU_PURGATORY": {"region": CommediaRegion.PURGATORIO},
+    **{
+        code: {"region": CommediaRegion.PURGATORIO, "level": n}
+        for n, code in enumerate(_TERRACES, start=1)
+    },
+    "EU_EARTHLY_PARADISE": {"region": CommediaRegion.PURGATORIO, "level": 8},
+    "EU_HEAVEN": {"region": CommediaRegion.PARADISO},
+    **{
+        row[0]: {"is_judgment_hall": row[0] == "EG_HALL_TWO_TRUTHS"}
+        for row in EGYPTIAN_REALMS
+    },
+    "GR_TARTARUS": {"fork": GreekFork.LEFT},
+    "GR_ISLES_OF_THE_BLESSED": {"fork": GreekFork.RIGHT},
+}

@@ -28,6 +28,10 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # birth_date is — a term that began in 399 BCE is the case the three
     # columns exist for. See apps.souls.fields.HistoricalDateField.
     term_start = HistoricalDateField(prefix="term_start")
+    # 行程拓扑契约的 `disposition.realm_id`。**不是新列**:就是 `destination_realm`
+    # 的主键,在契约的名字下再给一次。只读 —— 写仍然走 `destination_realm`,
+    # 那里有租户校验。
+    realm_id = serializers.UUIDField(source="destination_realm_id", read_only=True, allow_null=True)
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_realm_name(self, obj) -> str | None:
@@ -43,7 +47,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         model = Disposition
         fields = [
             "id", "soul", "soul_name", "judgment", "destination_realm",
-            "realm_code", "realm_name", "memory_reset", "is_eternal",
+            "realm_id", "realm_code", "realm_name", "memory_reset", "is_eternal",
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at", "sentence_node_id",
         ]
