@@ -13,23 +13,27 @@
  * 第五节「设置 / 加载 / Sethety 收口」给了 35 行与 5 个词根(ROOTS_CLOSE):其中 5 个键前几节已有,净增 30。
  * 第六节「Sethet / Seshem / Pert 收口」(末轮)给了 74 行与 12 个词根(ROOTS_FINAL):其中 1 个键前几节已有
  * (soul_accounts.reveal.failed,回填为 Nen Maa),净增 73。
- * 定稿同时把后定的值**回填**到早先各节的行里,所以全表 794 行、761 个键,每个键全表只有一个值。
+ * 第七节「「失败」写法与零星收口」给了 30 行与 4 个词根(ROOTS_LATE):其中 12 个键前几节已有(Nen Kheper 叠用去除),
+ * 净增 18。
+ * 定稿同时把后定的值**回填**到早先各节的行里,所以全表十节 824 行、779 个键,每个键全表只有一个值。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
- * 按 SECTIONS 九节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
+ * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
  * (生成时断言同键各行值相同),`JSON.stringify(table, null, 2)` 落盘。改定稿就整份重生成。这里钉住:
  *
- * - 修订表 761 个键与包里逐字一致(键 → 修订后 egy);
+ * - 修订表 779 个键与包里逐字一致(键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
  * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
+ * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单两键(第七节);
+ * - Dbh 政策:推送 / 申请类页面副题 / 点名键写全 Dbh Wehem Mesut,点名的页内键只写 Dbh(第四节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12、小词 18 个,
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4、小词 18 个,
  *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
@@ -87,12 +91,12 @@ const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
 /**
  * 仍含单词 Ma 的键 —— 这些 Ma 不是否定(「有误」「移至」等早期写法),按同键中文判过义。
  * 否定一律 Nen:任何不在这里的 Ma 都是漏改的否定。
- * 第六节把「Ma Sethet」四处改写(Culpa (Isfet)、Khet Hru、Ankh Nen Maat、Maa Khet Wa),它们随之移出。
+ * 第六节把「Ma Sethet」四处改写(Culpa (Isfet)、Khet Hru、Ankh Nen Maat、Maa Khet Wa),它们随之移出;
+ * 第七节把 souls.date_problem_marker.error 改成 Khet Hru,它也移出。
  */
 const MA_NOT_NEGATION = new Set([
   "souls.categories.COWARDICE",
   "souls.detail.delete_to_recycle_bin",
-  "souls.date_problem_marker.error",
   "menus.delete_confirm_title",
   "menus.delete_confirm_action",
   "permissions.matrix.only_differences",
@@ -104,13 +108,47 @@ const MA_NOT_NEGATION = new Set([
  * 第六节:「Pert Abuf」整个废止(它是密码的旧写法,误贴到了调度上;调度统一 Hab-Ba)。Pert 本义「出」,
  * 「杜阿特入口」写成 Duat Pert 是把入口写成了出口(→ Duat Aq)。Pert 若再出现,只许在调度键里。
  */
+/**
+ * 第七节:失败一律 Nen + 具体动词(登录 Nen Aq、更新 Nen Khemen、判决未通过 Nen Menkh、任务没跑成 Nen Iri……)。
+ * Nen Kheper(「未成」)只留给确无具体动词可指的两处 —— 泛指的「失败」与「若持续失败」。
+ * 不是失败义的也不用它:未结案 Nen Khetem、未了结 Nen Wetep。
+ */
+const NEN_KHEPER_ALLOWED = new Set(["souls.detail.failed", "judgment.queue.error_body"]);
+const hasNenKheper = (v: string) => /\bNen Kheper\b/.test(prose(v));
+
+/**
+ * 第四节「Dbh 政策」(转生申请):上下文已明确时只写 Dbh,脱离上下文一律 Dbh Wehem Mesut。
+ * - 脱离上下文:soul_push.* 整个命名空间(锁屏上没有页面)、页面副题(中文含「申请」的 subtitle 键)、
+ *   下面 DBH_OUT_OF_CONTEXT 点名的键 —— 其中每一个 Dbh 都必须带 Wehem Mesut。
+ * - 页内:DBH_IN_CONTEXT 点名的键(申请页内、本世页内的空态与错误)只写 Dbh,不许补全。
+ * 页面副题要求中文含「申请」:受刑计划的「请求」也写 Dbh(Dbh Wetep),不在本政策内。
+ * 后端副本 apps/soul_push/messages.py 与包逐字一致由后端测试钉住,所以这里守住包就守住了它。
+ * 两份清单都反向查陈旧:点名的键不存在、或已不含 Dbh,即红。
+ */
+const DBH_OUT_OF_CONTEXT = new Set(["soul_app.errors.soul_state", "soul_app.errors.sentence_in_progress"]);
+const DBH_IN_CONTEXT = new Set([
+  "soul_app.applications.empty",
+  "soul_app.applications.cannot_apply",
+  "soul_app.life.no_applications",
+  "soul_app.errors.cooldown",
+  "soul_app.errors.appeal_used",
+  "soul_app.errors.not_appealable",
+]);
+const hasDbh = (v: string) => /\bDbh\b/.test(prose(v));
+/** 有一个 Dbh 后面没跟 Wehem Mesut。 */
+const hasBareDbh = (v: string) => /\bDbh\b(?! Wehem Mesut\b)/.test(prose(v));
+const isDbhOutOfContext = (k: string) =>
+  k.startsWith("soul_push.") ||
+  DBH_OUT_OF_CONTEXT.has(k) ||
+  (/(^|[._])subtitle$/.test(k) && (ZH[k] ?? "").includes("申请"));
+
 const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(k);
 
 /**
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 761 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 779 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -151,7 +189,7 @@ const words = (k: string) =>
 
 /**
  * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、一词一义词根 14 个、收口词根 5 个、末轮收口词根 12 个、
- * 语法小词 18 个,逐字照抄。
+ * 第七节词根 4 个、语法小词 18 个,逐字照抄。
  * 「Duat / Pet」「Er Hry」按空格拆成词;连字符写法(Djes-Ef、Neb-Medu、Hemet-Sesh……)照抄为一个词形。
  */
 const ROOTS = [
@@ -188,11 +226,16 @@ const ROOTS_CLOSE = ["Pet-Sesh", "Setep", "Renu", "Nefer", "Isfet"];
 const ROOTS_FINAL = [
   "Iri", "Seshem", "Khedu", "Medew", "Sepdet", "Djedu", "Hetep", "Unemu", "Menkh", "Bek", "Wen", "Tut-Hesb",
 ];
+/**
+ * 「失败」写法与零星收口(第七节)。Hab-Ba(调拨 / 遣魂)此前全库 17 次却失登,这里补登;Kheper 只表「成为、发生」;
+ * Khetem 结案与失败无关;Menmen(连续)为新词,与 Wehem(再一次)分开。
+ */
+const ROOTS_LATE = ["Hab-Ba", "Kheper", "Khetem", "Menmen"];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
@@ -219,9 +262,9 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 761 个键与包里逐字一致", () => {
+  it("修订表 779 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(761);
+    expect(Object.keys(table)).toHaveLength(779);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -265,6 +308,30 @@ describe("egy 词表规则", () => {
       /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/, /\bPert Abuf\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
+  });
+
+  it("失败一律 Nen + 动词:Nen Kheper 只在白名单两键里出现", () => {
+    expect(offenders(KEYS, (v, k) => hasNenKheper(v) && !NEN_KHEPER_ALLOWED.has(k))).toEqual([]);
+    // 白名单里的键若已不存在或不再含 Nen Kheper,就该删掉 —— 留着会替将来的「未成」背书。
+    const stale = [...NEN_KHEPER_ALLOWED].filter((k) => !hasNenKheper(EGY[k] ?? ""));
+    expect(stale).toEqual([]);
+  });
+
+  it("Dbh 政策:脱离上下文的键每个 Dbh 都写全 Dbh Wehem Mesut", () => {
+    expect(offenders(KEYS, (v, k) => isDbhOutOfContext(k) && hasBareDbh(v))).toEqual([]);
+    // 推送里至少还有 Dbh(否则这条对 soul_push 什么都没守),点名的键必须存在且含 Dbh。
+    expect(KEYS.filter((k) => k.startsWith("soul_push.") && hasDbh(EGY[k])).length).toBeGreaterThan(0);
+    expect([...DBH_OUT_OF_CONTEXT].filter((k) => !hasDbh(EGY[k] ?? ""))).toEqual([]);
+  });
+
+  it("Dbh 政策:页内键只写 Dbh,不补全 Wehem Mesut", () => {
+    expect(
+      [...DBH_IN_CONTEXT].filter((k) => /\bDbh Wehem Mesut\b/.test(prose(EGY[k] ?? ""))).map((k) => `${k}: ${EGY[k]}`)
+    ).toEqual([]);
+    // 清单陈旧:键不存在或已不含 Dbh。
+    expect([...DBH_IN_CONTEXT].filter((k) => !hasDbh(EGY[k] ?? ""))).toEqual([]);
+    // 两份清单不许重叠。
+    expect([...DBH_IN_CONTEXT].filter((k) => isDbhOutOfContext(k))).toEqual([]);
   });
 
   it("Pert 只在调度键里出现(入口是 Aq,不是 Pert)", () => {
