@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
+import { DISPATCH_REASON_MIN_CHARS, dispatchApi, dispatchReasonLength, soulsApi, ledgerApi } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -151,6 +151,14 @@ function ProposeDispatchForm() {
   const sourceTenantRow = tenants.find((tn) => tn.tenant_code === sourceCode);
   const targetTenantRow = tenants.find((tn) => tn.tenant_code === form.target_tenant_code);
   const dirty = Boolean(form.reason.trim() || form.target_tenant_code || (!soulId && form.soul_id));
+  // Live, as the operator types (设计「! 至少 20 字，现在 N 字」). Empty is left
+  // to the submit-time required check rather than shouting before anything
+  // was written. Counted the way the server counts: code points, trimmed.
+  const reasonLength = dispatchReasonLength(form.reason);
+  const reasonTooShort =
+    reasonLength > 0 && reasonLength < DISPATCH_REASON_MIN_CHARS
+      ? t("dispatch.reason_too_short", { min: String(DISPATCH_REASON_MIN_CHARS), count: String(reasonLength) })
+      : undefined;
 
   /**
    * Server field name → the control that holds it. The form keys and the API
@@ -189,6 +197,7 @@ function ProposeDispatchForm() {
     if (!(soulId || form.soul_id)) missing.soul_id = t("common.field_required");
     if (!form.target_tenant_code) missing.target_tenant_code = t("common.field_required");
     if (!form.reason.trim()) missing.reason = t("common.field_required");
+    else if (reasonTooShort) missing.reason = reasonTooShort;
     if (Object.keys(missing).length > 0) {
       setFieldErrors(missing);
       // The attributes have to be in the document first, so this runs after
@@ -380,7 +389,7 @@ function ProposeDispatchForm() {
           name="reason"
           label={t("dispatch.reason")}
           required
-          error={fieldErrors.reason}
+          error={fieldErrors.reason ?? reasonTooShort}
           value={form.reason}
           onChange={e => {
             setFieldErrors(({ reason: _drop, ...rest }) => rest);

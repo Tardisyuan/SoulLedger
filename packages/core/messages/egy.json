@@ -1164,6 +1164,7 @@
     "tenants_error": "Nen Ini Sesh Per-Hemsu. Wehem Iri.",
     "soul_search_more": "Medu {{shown}} / {{count}} — Shesep Her Ren",
     "reason_placeholder": "Medu Hab-Ba...",
+    "reason_too_short": "Sesh {{min}} Er Hry · Sesh {{count}}",
     "target_soul": "Aba Setep Seth",
     "select_tenant": "Setep Per Hemes...",
     "submitting": "Em Wetjes...",

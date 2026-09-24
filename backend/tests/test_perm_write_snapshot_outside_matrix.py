@@ -683,7 +683,7 @@ def test_dispatch_record_create(role_clients, snapshot_tenants, role):
             "source_tenant": home.id,
             "target_tenant": other.id,
             "soul": str(soul.id),
-            "reason": f"proposed by {role}",
+            "reason": f"proposed by {role} for the write snapshot",
         },
         format="json",
     )

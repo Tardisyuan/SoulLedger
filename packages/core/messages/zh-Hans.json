@@ -1168,6 +1168,7 @@
     "select_tenant": "选择租户...",
     "reason": "理由",
     "reason_placeholder": "调度理由...",
+    "reason_too_short": "至少 {{min}} 字，现在 {{count}} 字",
     "submitting": "提交中...",
     "submit_proposal": "提交提案",
     "soul_prefix": "灵魂 #",

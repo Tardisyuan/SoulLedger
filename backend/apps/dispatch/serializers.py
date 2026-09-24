@@ -6,6 +6,11 @@ from rest_framework import serializers
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord
 from apps.judgment.models import Judgment
 
+#: A proposal's reason is what the target tenant decides on. Counted in
+#: characters (`len` of a str, not bytes), after trimming whitespace, so
+#: twenty CJK characters pass and twenty spaces do not.
+DISPATCH_REASON_MIN_CHARS = 20
+
 
 class DispatchRecordSerializer(serializers.ModelSerializer):
     """Serializer for DispatchRecord.
@@ -131,6 +136,17 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
                     for field in blocked
                 })
         return attrs
+
+    def validate_reason(self, value):
+        """Proposals only. A PATCH of an existing record is left as it was,
+        and `DispatchService.propose()` called by the sentence plan (the
+        system proposing a leg) does not come through this serializer."""
+        if self.instance is None and len(value.strip()) < DISPATCH_REASON_MIN_CHARS:
+            raise serializers.ValidationError(
+                f"The reason must be at least {DISPATCH_REASON_MIN_CHARS} characters.",
+                code="reason_too_short",
+            )
+        return value
 
 
 class DispatchRecordListSerializer(serializers.ModelSerializer):
