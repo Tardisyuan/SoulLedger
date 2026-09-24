@@ -904,6 +904,16 @@
       "empty_reason": "No article in this corpus has been transcribed.",
       "citations_absent": "This response does not carry a citation count.",
       "sigil_absent": "This article has no transcribed number."
+    },
+    "waiting": "Waiting",
+    "waiting_days": "{{n}} d",
+    "desk": {
+      "statute_search": "Search articles",
+      "statute_search_empty": "No article matches",
+      "cite": "Cite",
+      "cited": "Cited",
+      "uncite": "Withdraw {{code}}",
+      "cite_error": "The citation did not save"
     }
   },
   "audit": {
@@ -1613,7 +1623,17 @@
     "execute_warning": "Executing sends the soul to its destination realm and cannot be undone.",
     "execute_success": "Disposition executed",
     "executed_success": "Disposition executed",
-    "execute_error": "Failed to execute disposition"
+    "execute_error": "Failed to execute disposition",
+    "section_pending": "Awaiting execution",
+    "section_running": "In progress",
+    "section_expired": "Term served",
+    "section_empty": "None here",
+    "term_eternal": "Eternal · not timed",
+    "term_unrecorded": "Term not recorded",
+    "start_unrecorded": "Start not recorded",
+    "days_left": "{{n}} days left",
+    "expired_on": "Served {{date}}",
+    "arrange_reincarnation": "Arrange rebirth"
   },
   "reincarnation": {
     "reborn_success": "Reincarnation started",

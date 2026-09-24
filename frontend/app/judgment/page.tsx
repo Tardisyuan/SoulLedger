@@ -2,73 +2,77 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@soulledger/core/api";
-import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { DataTable, parseOrdering, ROW_LINK } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
-import { Badge } from "@/src/components/ui/Badge";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { Kbd } from "@/src/components/judgment/JudgmentDesk";
+import { useHotkeys } from "@/src/lib/hotkeys";
+import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
 
 /**
- * Verdicts keep the `--color-verdict-*` palette rather than moving onto
- * `Badge`'s five tones. The tones are the system-feedback layer (success /
- * warning / error), and `src/__tests__/statusTokenLayering.test.ts` is an
- * entire file about not painting domain enums with it: PASSED is not "success",
- * it is a judgement on a soul. So the geometry comes from `Badge` — which is
- * also the only place allowed the 2px vertical padding a badge needs — and the
- * fill/ink come from this map through `className`.
+ * 审判队列(规范 v1 第三类 A·02)。
+ *
+ * 稿子按「谁在处理」分组 —— 我认领 / 待认领 / 他人认领 / 暂缓 —— 并给批量认领、改派、暂缓。
+ * 这些都画不出来,因为后端没有「认领」:`Judgment.judge` 是神话里的判官(一个 Actor,
+ * 阎罗王、米诺斯),不是正在处理这件案子的操作员;没有认领接口、没有批量接口、没有
+ * 持久的「暂缓」(队列里的「延后」按设计只活在本次会话,`JudgmentViewSet._requested_skips`
+ * 写明了为什么不落库)。按不存在的字段分组,就是在印一份没人记录过的名单。所以:
+ * 不分组、不画勾选列与批量条、不画认领标,单件认领的 C 键也没有可接的动作。
+ *
+ * 画得出来的那部分照稿:28 px 紧凑行(只用在这一页)、待审 / 已结案 分段切换带两边的真实
+ * 计数、「进入队列」主按钮与 Q 键、整行点进审判台。等待天数由 `created_at` 算出 ——
+ * 队列本身就是按它先进先出的(`_pending_queue` 的 `order_by("created_at")`)。
  */
-const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-[oklch(var(--color-verdict-passed)/0.1)] text-[oklch(var(--color-verdict-passed))]",
-  FAILED: "bg-[oklch(var(--color-verdict-failed)/0.1)] text-[oklch(var(--color-verdict-failed))]",
-  PURGATORY: "bg-[oklch(var(--color-verdict-purgatory)/0.1)] text-[oklch(var(--color-verdict-purgatory))]",
-  RETRY: "bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))]",
-};
+
+type Tab = "pending" | "concluded";
 
 function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
-  const [tab, setTab] = useState<"pending" | "concluded">("pending");
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
+  const [now] = useState(() => Date.now());
 
-  // Fetch judgments with filter based on tab.
-  // Params live in the queryKey, so tab/page/ordering changes refetch on their own.
-  const {
-    data: judgmentData,
-    isLoading: judgmentLoading,
-    isError: judgmentIsError,
-  } = useQuery({
-    queryKey: ["judgments", tab, page, ordering],
+  const listQuery = (which: Tab, p: number) => ({
+    queryKey: ["judgments", which, p, ordering],
     queryFn: async () => {
-      const params: Record<string, string> = { page: String(page) };
-      params.has_verdict = tab === "pending" ? "false" : "true";
+      const params: Record<string, string> = { page: String(p) };
+      params.has_verdict = which === "pending" ? "false" : "true";
       if (ordering) params.ordering = ordering;
       const res = await judgmentApi.list(params);
       return res.data;
     },
   });
+  // Params live in the queryKey, so tab/page/ordering changes refetch on their own.
+  const { data: judgmentData, isLoading, isError, refetch } = useQuery(listQuery(tab, page));
+  // 另一段只为分段切换上的计数:取它的第一页(与切过去时第一眼看到的是同一份缓存)。
+  const other: Tab = tab === "pending" ? "concluded" : "pending";
+  const { data: otherData } = useQuery(listQuery(other, 1));
+  const counts: Record<Tab, number | undefined> = {
+    [tab]: judgmentData?.count,
+    [other]: otherData?.count,
+  } as Record<Tab, number | undefined>;
 
-  // Paginated list — `results` is always present, so the `?? judgmentData`
-  // fallback the expression used to carry was unreachable.
   const judgments = judgmentData?.results ?? [];
   const totalPages = judgmentData ? Math.ceil(judgmentData.count / PAGE_SIZE) : 0;
 
-  const tabs = [
-    { key: "pending", label: t("judgment.pending") },
-    { key: "concluded", label: t("judgment.concluded") },
-  ] as const;
+  useHotkeys({ q: () => router.push("/judgment/queue") });
+
+  const pending = tab === "pending";
+  const waitingDays = (j: Judgment) => Math.max(0, Math.floor((now - new Date(j.created_at).getTime()) / 86_400_000));
 
   return (
-    /* `page` (1200px). The list was clamped to 1024 by a `max-w-5xl` it chose
-       for itself; six columns are wider than that judgement allowed for. */
     <PageShell
-      variant="page"
+      variant="full"
       title={
         <>
           {t("judgment.title")}
@@ -77,35 +81,50 @@ function JudgmentQueuePageContent() {
       }
       actions={
         /* The list answers "which judgments exist"; the queue (§4.2) answers
-           "what do I decide next". This is how an operator enters it. An
-           anchor, not a Button — it navigates — so it borrows the button's
-           class recipe rather than its element. */
-        <Link href="/judgment/queue" className={buttonVariants({ variant: "primary", size: "md" })}>
+           "what do I decide next". An anchor, not a Button — it navigates. */
+        <Link href="/judgment/queue" className={`${buttonVariants({ variant: "primary", size: "md" })} gap-2`}>
           {t("judgment.queue.enter")}
+          <Kbd>Q</Kbd>
         </Link>
       }
-      tabs={tabs.map((tabItem) => (
-        <button
-          key={tabItem.key}
-          type="button"
-          onClick={() => { setTab(tabItem.key); setPage(1); }}
-          className={`${TAB_BASE} ${tab === tabItem.key ? TAB_ON : TAB_OFF}`}
-        >
-          {tabItem.label}
-        </button>
-      ))}
+      tabs={
+        /* 分段切换 Segmented:当前 = 墨底。`aria-pressed`,不是 role="tab" —— 它不控制
+           一组 tabpanel,只换同一张表的问题(同 app/notifications 那条的理由)。 */
+        <div className="my-2 inline-flex border border-[oklch(var(--color-block))] text-xs">
+          {(["pending", "concluded"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={tab === key}
+              onClick={() => { setTab(key); setPage(1); }}
+              className={`flex items-center gap-2 px-3 py-1 ${
+                tab === key
+                  ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
+                  : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+              }`}
+            >
+              {t(key === "pending" ? "judgment.pending" : "judgment.concluded")}
+              {counts[key] !== undefined && <span className="font-mono tabular-nums">{counts[key]}</span>}
+            </button>
+          ))}
+        </div>
+      }
     >
-      {/* No `pagination` slot — DataTable renders its own <Pagination>
-          (components/ui/data-table.tsx:288) from the four props at the bottom. */}
       <DataTable<Judgment>
+        density="compact"
+        linkedRows
         caption={t("judgment.title")}
         columns={[
           { key: "soul_name", header: t("judgment.soul_name") },
           { key: "civilization", header: t("judgment.civilization") },
           { key: "court", header: t("judgment.court") },
-          { key: "verdict", header: t("judgment.verdict") },
-          { key: "created_at", header: t("judgment.created"), sortable: true },
-          { key: "action", header: t("judgment.action") },
+          ...(pending ? [] : [{ key: "verdict", header: t("judgment.verdict") }]),
+          {
+            key: "created_at",
+            header: pending ? t("judgment.waiting") : t("judgment.created"),
+            sortable: true,
+            align: "right" as const,
+          },
         ]}
         data={judgments}
         /* Tab, page and sort — the three things that make this a different
@@ -113,55 +132,49 @@ function JudgmentQueuePageContent() {
            row between the two tabs without any of them changing, which is the
            case this exists to show. */
         transitionKey={`${tab}|${page}|${ordering}`}
-        isLoading={judgmentLoading}
-        isError={judgmentIsError}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         keyExtractor={(judgment) => String(judgment.id)}
-        renderRow={(judgment) => (
-          <>
-            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">
-              {/* `MissingValue`,不是 UUID。`judgment.soul` 是主键;
-                  `soul_name || soul` 在名字缺失时把一串 UUID 印成灵魂名 ——
-                  兜底方向违反 IDENTIFIER_POLICY(标识符不做名字的兜底)。
-                  「没有记录名字」是一个可以显示的事实,一串 UUID 不是。 */}
-              {judgment.soul_name ? (
-                judgment.soul_name
-              ) : (
-                <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />
+        renderRow={(judgment) => {
+          const bench = [judgment.court, judgment.judge_name].filter(Boolean).join(" · ");
+          return (
+            <>
+              <td className="px-3 font-medium text-[oklch(var(--color-ink))] whitespace-nowrap max-w-64 truncate" title={judgment.soul_name || undefined}>
+                <Link href={`/judgment/${judgment.id}`} className={ROW_LINK}>
+                  {/* `MissingValue`,不是 UUID:`soul_name || soul` 在名字缺失时把主键印成
+                      灵魂名 —— 兜底方向违反 IDENTIFIER_POLICY。 */}
+                  {judgment.soul_name ? (
+                    judgment.soul_name
+                  ) : (
+                    <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />
+                  )}
+                </Link>
+              </td>
+              <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
+                <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
+              </td>
+              <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-64 truncate" title={bench || undefined}>
+                {bench || <MissingValue kind="unrecorded" />}
+              </td>
+              {!pending && (
+                <td className={`px-3 text-xs whitespace-nowrap ${verdictInk(judgment.verdict)}`}>
+                  {judgment.verdict && (
+                    <>
+                      <span aria-hidden="true">{verdictGlyph(judgment.verdict)} </span>
+                      <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
+                    </>
+                  )}
+                </td>
               )}
-            </td>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
-              <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
-            </td>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
-              {judgment.court}
-            </td>
-            <td className="px-4 py-3">
-              {judgment.verdict ? (
-                <Badge className={VERDICT_COLORS[judgment.verdict]}>
-                  <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
-                </Badge>
-              ) : (
-                /* JUDGING is a soul-lifecycle state, not a system verdict —
-                   hence `--color-status-judging` rather than a Badge tone. */
-                <Badge className="bg-[oklch(var(--color-status-judging)/0.1)] text-[oklch(var(--color-status-judging))]">
-                  {t("judgment.pending")}
-                </Badge>
-              )}
-            </td>
-            {/* 02 档：日期是元数据，不是正文。 */}
-            <td className="px-4 py-3 text-xs text-[oklch(var(--color-ink-muted))]">
-              {formatDate(judgment.created_at)}
-            </td>
-            <td className="px-4 py-3">
-              <Link
-                href={`/judgment/${judgment.id}`}
-                className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
-              >
-                {t("judgment.view")} →
-              </Link>
-            </td>
-          </>
-        )}
+              <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
+                {pending
+                  ? t("judgment.waiting_days", { n: String(waitingDays(judgment)) })
+                  : formatDate(judgment.concluded_at ?? judgment.created_at)}
+              </td>
+            </>
+          );
+        }}
         sort={parseOrdering(ordering)}
         onSortChange={(next) => {
           setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");

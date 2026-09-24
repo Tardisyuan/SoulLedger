@@ -163,7 +163,10 @@ describe("段落里的链接不是只靠颜色", () => {
   it("扫到的段落里确实有带链接的那种", () => {
     // 上一条只证明「有 <p>」。这条证明剪链接子树那段逻辑没有把所有东西都剪没。
     expect(SCAN.proseLinks.length).toBeGreaterThan(0);
-    expect(SCAN.proseLinks.map((l) => l.file)).toContain(path.join("app", "disposition", "page.tsx"));
+    // 2026-09-25:此前钉的是 `app/disposition/page.tsx` —— 处置页按规范 v1 改成账行后,
+    // 灵魂名不再是句子里的链接(它独占一格,周围没有文字可混淆),那个段落也就不存在了。
+    // 钉住仍在的那一个,「扫描器扫到了段落内链接」这条自证照旧成立。
+    expect(SCAN.proseLinks.map((l) => l.file)).toContain(path.join("app", "sentence-requests", "page.tsx"));
   });
 
   it("每个段落内链接要么静息态可辨,要么和周围文字有 3:1", () => {

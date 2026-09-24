@@ -904,6 +904,16 @@
       "empty_reason": "这套语料尚无转录条文。",
       "citations_absent": "本次响应不带引用计数。",
       "sigil_absent": "此条无转录节号。"
+    },
+    "waiting": "等待",
+    "waiting_days": "{{n}} 天",
+    "desk": {
+      "statute_search": "检索律条",
+      "statute_search_empty": "没有匹配的律条",
+      "cite": "引用",
+      "cited": "已引用",
+      "uncite": "撤回引用 {{code}}",
+      "cite_error": "引用未能保存"
     }
   },
   "audit": {
@@ -1613,7 +1623,17 @@
     "execute_warning": "执行后灵魂将被送往目标领域,该操作不可撤销。",
     "execute_success": "处置已执行",
     "executed_success": "处置已执行",
-    "execute_error": "执行处置失败"
+    "execute_error": "执行处置失败",
+    "section_pending": "待执行",
+    "section_running": "执行中",
+    "section_expired": "期满",
+    "section_empty": "本段暂无",
+    "term_eternal": "永恒 · 不计时",
+    "term_unrecorded": "期限未记录",
+    "start_unrecorded": "起算未记录",
+    "days_left": "余 {{n}} 天",
+    "expired_on": "期满 {{date}}",
+    "arrange_reincarnation": "安排轮回"
   },
   "reincarnation": {
     "reborn_success": "轮回已启动",
