@@ -162,8 +162,14 @@ export function readOutbox(owner: string): StoredOutbox {
   return { owner, device: null, items: [] };
 }
 
+/** How many sign-outs have cleared the outbox (see `save` in ChatProvider). */
+let signOuts = 0;
+
 /** Sign-out: this device keeps no letters of a soul who has left it. */
-export const clearOutbox = () => platform().persistent.remove(OUTBOX_KEY);
+export const clearOutbox = () => {
+  signOuts += 1;
+  platform().persistent.remove(OUTBOX_KEY);
+};
 
 /** What is worth keeping: not yet confirmed, and not refused (a refusal is final). */
 const unconfirmed = (o: Outgoing) => o.state === "queued" || o.state === "sending";
@@ -189,6 +195,8 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   const echoed = useRef(new Map<string, string>());
   /** The conversation list has loaded at least once: an unknown conversation id then really is unknown. */
   const listed = useRef(false);
+  /** The sign-outs already counted when this account's session began. */
+  const signOutsSeen = useRef(signOuts);
   // Each account starts from its own record, and a signed-out provider holds nobody's letters.
   // Swapped during render (React's "adjusting state when a prop changes"), so no commit, and so
   // no save below, ever pairs one account's name with another account's letters.
@@ -200,17 +208,24 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   // Declared before the save below: on an account's first commit its device goes to disk with its letters.
   useEffect(() => {
     device.current = account ? readOutbox(account).device : null;
+    signOutsSeen.current = signOuts;
     echoed.current = new Map();
     listed.current = false;
   }, [account]);
 
   const save = useCallback(
     (items: Outgoing[]) => {
-      if (!account) return;
+      // A sign-out since this session began has already taken these letters off the device, so it is not
+      // this save's to undo. The save that tried is a passive effect from a commit before the sign-out.
+      // `clearOutbox` runs before the sign-out's setState, and React flushes a pending effect before it
+      // renders the next update, so without this the letters went back to disk under the old account.
+      // It happened whenever such an effect was still pending: 5 of 5 runs of session.test's
+      // "a session that expires on its own (401)" once its 401 was answered inside act (2026-09-24).
+      if (!account || signOutsSeen.current !== signOuts) return;
       const record: StoredOutbox = { owner: account, device: device.current, items: items.filter(unconfirmed) };
       // Nothing waiting: nothing on disk (the device id only matters to a letter that is waiting).
       if (record.items.length) platform().persistent.set(OUTBOX_KEY, JSON.stringify(record));
-      else clearOutbox();
+      else platform().persistent.remove(OUTBOX_KEY);
     },
     [account]
   );
