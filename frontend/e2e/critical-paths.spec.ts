@@ -56,13 +56,14 @@ test.describe("Critical path: login and create a soul", () => {
     // cell must be the "not applicable" mark. Located by the cell's own
     // `data-missing`, not by a glyph: this used to look for an em dash, which
     // the row did contain — in the death-date column. The balance cell renders
-    // a middle dot (`MISSING_GLYPH.inapplicable`), so a balance that degraded
-    // to a netted `0` stayed green. `app/souls/page.tsx` has exactly one
-    // `inapplicable` site, so the count pins the column as well as the kind.
+    // the word 不适用 (规范 v1 §2: 「不适用」用字, since 3b1fa189 — it was a
+    // middle dot before), so a balance that degraded to a netted `0` stayed
+    // green. `app/souls/page.tsx` has exactly one `inapplicable` site, so the
+    // count pins the column as well as the kind.
     await expect(rows.first()).toContainText("+42");
     await expect(rows.first().locator('[data-missing="inapplicable"]')).toHaveCount(0);
     await expect(rows.nth(1).locator('[data-missing="inapplicable"]')).toHaveCount(1);
-    await expect(rows.nth(1).locator('[data-missing="inapplicable"]')).toHaveText("·");
+    await expect(rows.nth(1).locator('[data-missing="inapplicable"]')).toHaveText("不适用");
 
     // ── Create ──
     await page.getByRole("button", { name: "+ 创建灵魂" }).click();
