@@ -137,6 +137,8 @@ describe("Breadcrumb", () => {
           "breadcrumb.menu.group_settings": "System Settings",
           "breadcrumb.aria_label": "Breadcrumb",
           "breadcrumb.home": "Dashboard",
+          "breadcrumb.detail": "Detail",
+          "breadcrumb.menu.cross_judgments": "Cross-civ Judgments",
         };
         return map[key] ?? key;
       },
@@ -190,6 +192,24 @@ describe("Breadcrumb", () => {
     // Both Chinese originals should also be present, as the muted gloss.
     expect(screen.getAllByText("系统设置").length).toBeGreaterThan(0);
     expect(screen.getAllByText("审计日志").length).toBeGreaterThan(0);
+  });
+
+  it("a route the menu tree does not hold reads its sidebar name, not the raw path segment", () => {
+    // /judgment/<id> in the E2E build showed 「judgment / 详情」: no crumb came
+    // from the menu tree, and breadcrumb.<segment> does not exist. The sidebar
+    // label for the same route does (breadcrumb.menu.<segment>, - as _).
+    mockPathname = "/cross-judgments/12";
+    render(<Breadcrumb menus={menus} />);
+    expect(screen.getByText("Cross-civ Judgments")).toBeInTheDocument();
+    expect(screen.getByText("Detail")).toBeInTheDocument();
+    expect(screen.queryByText("cross-judgments")).not.toBeInTheDocument();
+  });
+
+  it("an unknown segment still falls back to itself rather than to a key", () => {
+    mockPathname = "/no-such-route";
+    render(<Breadcrumb menus={menus} />);
+    expect(screen.getByText("no-such-route")).toBeInTheDocument();
+    expect(screen.queryByText(/breadcrumb\./)).not.toBeInTheDocument();
   });
 
   it("shows only the Chinese name, with no separate gloss, under zh-Hans", () => {

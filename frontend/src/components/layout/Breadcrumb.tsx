@@ -58,10 +58,13 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
     return value === key ? fallback : value;
   };
 
+  // 路由段先查 breadcrumb.<段>，再查侧栏同名菜单项 breadcrumb.menu.<段>（- 换 _），
+  // 最后才落回原始段：菜单树没加载或没收录该路由时（/judgment/<id> 的首段），
+  // 此前显示的是英文原文 "judgment"。
   const segmentLabel = (segment: string) =>
     ID_SEGMENT.test(segment)
       ? label("breadcrumb.detail", "详情")
-      : label(`breadcrumb.${segment}`, segment);
+      : label(`breadcrumb.${segment}`, label(`breadcrumb.menu.${segment.replace(/-/g, "_")}`, segment));
 
   const trail = matchTrail(menus, pathname);
   const crumbs: Crumb[] = [];
