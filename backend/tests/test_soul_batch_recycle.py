@@ -161,11 +161,29 @@ def test_audit_rows_are_the_single_deletes_rows(world, django_capture_on_commit_
         ("soul", str(a.pk)),
         ("soulrecord", str(world["record"].pk)),
     ])
-    # Whoever the single delete records as the author, the batch records too.
-    # (Today that is NULL for both: destroy() bypasses perform_destroy, the
-    # only place the audit user is set — reported, not fixed, in this change.
-    # Fixing it in destroy alone turns this red, which is the point.)
-    assert {u for _, _, u in batch} == {u for _, _, u in single}
+    # Both paths record the officer who pressed the button. This used to be
+    # NULL for both: destroy() and batch_recycle bypass perform_destroy, which
+    # was the only place the audit user was set. AuditUserViewSetMixin.initial
+    # now sets it for every action (apps/core/viewsets.py).
+    clerk_id = world["clerk_user"].pk
+    assert {u for _, _, u in single} == {clerk_id}
+    assert {u for _, _, u in batch} == {clerk_id}
+
+
+@pytest.mark.django_db
+def test_archive_records_its_author_too(world, django_capture_on_commit_callbacks):
+    """`archive` is another @action write that never reached perform_*; the
+    report that found the NULL author inferred it here and did not measure it."""
+    a, _, _ = world["souls"]
+    Judgment.objects.create(soul=a, civilization=Civilization.CHINESE, verdict="HEAVEN")
+    before = set(AuditLog.objects.values_list("pk", flat=True))
+    with django_capture_on_commit_callbacks(execute=True):
+        response = world["admin"].post(f"/api/v1/souls/{a.pk}/archive/", {"reason": "结案归档"}, format="json")
+    assert response.status_code == 200, response.content
+    rows = AuditLog.objects.exclude(pk__in=before).filter(resource="soul", resource_id=str(a.pk))
+    assert rows.exists()
+    admin_id = User.objects.get(username="br_admin").pk
+    assert set(rows.values_list("user_id", flat=True)) == {admin_id}
 
 
 @pytest.mark.django_db
