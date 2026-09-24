@@ -321,3 +321,27 @@ def test_a_duplicate_id_is_400_and_nothing_moves(world):
     assert response.status_code == 400, response.content
     assert str(a.pk) in str(response.json()["ids"])
     assert _deleted(a, b) == [False, False]
+
+
+@pytest.mark.django_db
+def test_a_view_called_without_the_middleware_leaves_no_current_user(world):
+    """initial() sets the audit user; finalize_response() must clear it.
+
+    Without the clear, a view called straight through APIRequestFactory (no
+    RequestContextMiddleware) kept its user in the contextvar, and the NEXT
+    test's writes recorded it: test_a_leap_day_soul_can_have_its_ledger_read
+    failed at teardown on tenants_tenant.update_user_id pointing at a user
+    that test never created."""
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
+    from apps.core.request_local import get_current_user
+    from apps.souls.views import SoulViewSet
+
+    admin = User.objects.get(username="br_admin")
+    request = APIRequestFactory().get("/api/v1/souls/")
+    force_authenticate(request, user=admin)
+    response = SoulViewSet.as_view({"get": "list"})(request)
+    # A request that got past authentication and permissions, so initial()
+    # did set the user — otherwise this would prove nothing.
+    assert response.status_code == 200, response.data
+    assert get_current_user() is None
