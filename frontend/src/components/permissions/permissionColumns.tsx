@@ -32,7 +32,9 @@ export function buildPermissionColumns({
       type: "actions",
       key: "actions",
       header: t("souls.action"),
-      width: "112px",
+      // 112px folded 「编辑权限」 into one character per line (1440px, measured
+      // 2026-09-24); the label plus the overflow trigger needs about 150.
+      width: "160px",
       menuLabel: t("common.row_actions"),
       // Edit inline as the one primary verb; delete stays behind the
       // overflow trigger, separated from the safe action — §3's resolution

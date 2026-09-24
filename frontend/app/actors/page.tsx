@@ -235,7 +235,7 @@ function ActorsPageContent() {
                   /* `data-civilization` is a test anchor. No colour: 规范 v1 §1.8 took
                      civilization out of the colour layer — the section header names it. */
                   data-civilization={civ}
-                  className="border-t border-[oklch(var(--color-block))]"
+                  className="border-t border-[oklch(var(--color-block))] first:border-t-0"
                 >
                   {/* Civilization Header */}
                   <button
