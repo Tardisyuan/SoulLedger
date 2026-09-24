@@ -26,7 +26,7 @@
     "error_invalid_credentials": "Aq / Sekhem Nen Maat",
     "error_invalid_token": "Menf Her Tepy",
     "error_token_expired": "Menf Wehem Seth",
-    "error_login_failed": "Nen Kheper Aq",
+    "error_login_failed": "Nen Aq",
     "confirm_logout": "Per Aq?",
     "confirm_logout_desc": "Per Aq Pen?",
     "confirm_logout_btn": "Per Aq"
@@ -167,7 +167,7 @@
       "render_judgment": "Hemsu Sheemtet Seth",
       "start_judgment": "Shesep Sheemtet",
       "verdict_passed": "Menkh",
-      "verdict_failed": "Nen Kheper",
+      "verdict_failed": "Nen Menkh",
       "verdict_purgatory": "Khet Her Tepy",
       "verdict_retry": "Khemu",
       "reincarnate": "Aru Her Tepy →",
@@ -187,7 +187,7 @@
       "deleting": "Em Wehem Seth...",
       "delete_confirm_message": "Sesen Wehem Seth Wu? Nen Shemsu Seth Em Her Tepy.",
       "delete_success": "Aba Wehem Seth",
-      "error_update": "Nen Kheper Em Khemen",
+      "error_update": "Nen Khemen",
       "error_delete": "Nen Wehem Seth",
       "failed": "Nen Kheper",
       "no_ledger": "Nen Rekhyu Medew Unemu",
@@ -226,7 +226,7 @@
       },
       "date_problems": {
         "title": "Khet Hru",
-        "ack_error": "Nen Kheper Aha",
+        "ack_error": "Nen Iri",
         "acknowledge": "Wehem Rekh",
         "revoke": "Iri Wehem",
         "acknowledged_by": "Wehem Rekh Ren {{user}} Hru {{date}}",
@@ -279,7 +279,7 @@
     "balance_not_applicable": "Nen Unemu — Nau Aba Hemsu",
     "balance_withheld": "Unemu Imen — Nen Maa Em Ami Pen",
     "date_problem_marker": {
-      "error": "Ma Sethet Hru — Nau Aba Hemsu",
+      "error": "Khet Hru — Maa Mekher Ba",
       "warning": "Khet Hru — Nau Aba Hemsu"
     }
   },
@@ -584,7 +584,7 @@
     },
     "verdicts": {
       "passed": "Menkh",
-      "failed": "Nen Kheper",
+      "failed": "Nen Menkh",
       "confirmed": "Sesen Seth",
       "rejected": "Khesef",
       "skipped": "Iri Tepy"
@@ -722,7 +722,7 @@
     "view": "Smen",
     "verdicts": {
       "passed": "Menkh",
-      "failed": "Nen Kheper",
+      "failed": "Nen Menkh",
       "purgatory": "Khet Her Tepy",
       "retry": "Sheemtet Wu"
     },
@@ -814,7 +814,7 @@
       "notes": "Medu Seth",
       "render_verdict": "Hemsu Unemu",
       "conclude_success": "Wedja Khetem Seth",
-      "conclude_error": "Nen Kheper Khetem Wedja",
+      "conclude_error": "Nen Khetem Wedja",
       "select_verdict": "Sesep Unemu Seth",
       "concluding": "Em Khetem...",
       "conclude": "Khetem",
@@ -825,7 +825,7 @@
     "create_success": "Wedja Iri Seth",
     "create_error": "Nen Shemsu Em Kheme Sheemtet",
     "conclude_success": "Wedja Khetem Seth",
-    "conclude_error": "Nen Kheper Khetem",
+    "conclude_error": "Nen Khetem",
     "no_evidence": "Nen Medu Maat Djer",
     "grounds": {
       "title": "Medu Djedu",
@@ -920,7 +920,7 @@
     "password_mismatch": "Sekhem Sen Nen Wa",
     "password_too_short": "Sekhem Sesh 8 Er Hry",
     "password_changed": "Sekhem Khemen Seth",
-    "password_change_failed": "Nen Kheper Khemen Sekhem",
+    "password_change_failed": "Nen Khemen Sekhem",
     "profile_updated": "Pepi Em Wepet",
     "profile_update_failed": "Pepi Em Hedj",
     "avatar": "Wer Aha",
@@ -1126,7 +1126,7 @@
     "return_home_reason": "Medu Seneb Kehat",
     "return_home_success": "Seth Iyi Er Per Tepy",
     "return_home_error": "Nen Seneb Kehat",
-    "return_home_blocked_open_judgment": "Wedja Nen Kheper; Nen Seneb Kehat",
+    "return_home_blocked_open_judgment": "Wedja Nen Khetem Djer: Khetem Er Fekh Er Tepy, Khet Hemes Wetep.",
     "approve": "Sesen",
     "reject": "Khesef",
     "execute": "Iri Seth",
@@ -1139,7 +1139,7 @@
     "rejected_success": "Khesef Seth",
     "executed_success": "Iri Seth Abuf",
     "approve_error": "Nen Sesen Seth",
-    "reject_error": "Nen Kheper Khesef",
+    "reject_error": "Nen Khesef",
     "execute_error": "Nen Iri Seth",
     "propose_error": "Nen Sesen Hab-Ba Seth",
     "states": {
@@ -1357,7 +1357,7 @@
       "PENDING": "Em Set Medu",
       "ACCEPTED": "Em Sesep",
       "PROCESSED": "Iri Seth",
-      "FAILED": "Nen Kheper",
+      "FAILED": "Nen Iri",
       "DUPLICATE": "Sen Medu",
       "PARTIAL": "Herep Seth"
     }
@@ -1423,10 +1423,10 @@
         "go_reset": "Wehem Sekhem"
       },
       "retry_sent": "Wehem Hab Seth",
-      "retry_failed": "Nen Kheper Wehem Hab",
+      "retry_failed": "Nen Hab",
       "retry_not_pending": "Nen Em Djeret Djer; Nen Wehem Hab",
       "delivered_ok": "Sesh Djeret Seth",
-      "deliver_failed": "Nen Kheper Sesh Djeret",
+      "deliver_failed": "Nen Sesh Djeret",
       "deliver_not_revealed": "Maa Seth Tepy, Er Sesh Djeret",
       "empty": {
         "pending": "Nen Sekhem Tepy Em Djeret",
@@ -1487,7 +1487,7 @@
       "retired_cannot_reset": "Aq Khetem Em Wehem Mesut; Nen Wehem",
       "soul_alive": "Ba Em Ankh; Nen Iri Aq Ba",
       "soul_not_found": "Nen Gem Ba",
-      "failed": "Nen Kheper; Wehem Iri"
+      "failed": "Nen Iri. Wehem Iri."
     },
     "rebirth": {
       "title": "Dbh Wehem Mesut",
@@ -1549,7 +1549,7 @@
     "execute_warning": "Iri Seth Mut Aba Hemsu Per Djewet Seth Ahet. Nen Shemsu Seth Em Her Tepy.",
     "execute_success": "Wetep Iri Seth",
     "executed_success": "Wetep Iri Seth",
-    "execute_error": "Nen Kheper Iri Wetep"
+    "execute_error": "Nen Iri Wetep"
   },
   "reincarnation": {
     "reborn_success": "Aru Her Tepy Shesep Seth",
@@ -1600,8 +1600,8 @@
     "profile": "Aha Pepi",
     "all": "Wetu",
     "back": "Khet",
-    "delete_post_confirm": "Sesen Wehem Sesh Seth? Nen Kheperu Em Khet.",
-    "delete_comment_confirm": "Sesen Wehem Djed Seth? Nen Kheperu Em Khet.",
+    "delete_post_confirm": "Fekh Medu Pen? Nen Wehem Djer.",
+    "delete_comment_confirm": "Fekh Wesheb Pen? Nen Wehem Djer.",
     "edit_profile": "Khemen Aha Pepi",
     "bio_label": "Medu Aha",
     "bio_placeholder": "Djed Aha Netjer...",
@@ -1696,7 +1696,7 @@
     "rebuild_confirm_title": "Wehem Iri Ahet Neb?",
     "rebuild_confirm_message": "Sesh Ahet Nen Wenen Er Per Neb Em Sesh Tepy; Nen Em Sesh Tepy: Khetem. Wen, Sesh Ahet, Ahet Sepat En Sab: Wenen.",
     "rebuild_done": "Kheper: {{created}} Iri, {{updated}} Khemen, {{removed}} Khetem, {{legacy_removed}} Sesh Tepy Khetem",
-    "rebuild_failed": "Nen Kheper Wehem Iri Ahet",
+    "rebuild_failed": "Nen Wehem Iri Ahet",
     "manage_hint": "Wen, Khemen Ahet, Iri: Was scheduler.manage",
     "groups": {
       "global": "Baku Ta Neb",
@@ -1708,7 +1708,7 @@
       "all": "Neb",
       "disabled": "Khetem Wa",
       "overdue": "Ahet Sesh, Nen Iri",
-      "failing": "Nen Kheper Wehem"
+      "failing": "Menmen Nen Iri"
     },
     "fields": {
       "schedule": "Ahet",
@@ -1723,7 +1723,7 @@
       "death_sync_cleanup_old_requests_for_tenant": "Khetem Dbh Mut Tepy",
       "authentication_flush_expired_tokens": "Khetem Menf Mut",
       "events_retry_pending_webhooks": "Wehem Hab Webhook Em Smen",
-      "scheduler_reap_stale_runs": "Khetem Sesh Iri Nen Kheper",
+      "scheduler_reap_stale_runs": "Khetem Sesh Iri Nen Wetep",
       "scheduler_check_overdue": "Maa Baku Ahet Sesh",
       "scheduler_prune_runs": "Khetem Sesh Iri Tepy",
       "soul_push_sweep": "Sedjem Ba: Wehem Smen Hena Maa Sesh Iri"
@@ -1732,7 +1732,7 @@
       "PENDING": "Em Smen",
       "RUNNING": "Em Iri",
       "SUCCESS": "Kheper",
-      "FAILURE": "Nen Kheper",
+      "FAILURE": "Nen Iri",
       "RETRY": "Em Wehem",
       "SKIPPED": "Sen Seth",
       "LOST": "Nen Gem"
@@ -1745,7 +1745,7 @@
       "disabled": "Khetem",
       "overdue": "Ahet Sesh, Nen Iri",
       "overdue_detail": "Ahet {{time}} Er Iri; Nen Sesh Iri Er Djer",
-      "failures": "Nen Kheper Wehem {{count}}",
+      "failures": "Menmen Nen Iri {{count}}",
       "never_run": "Nen Iri Djer",
       "not_scheduled": "Khetem, Nen Iri"
     },
@@ -1765,12 +1765,12 @@
       "queued": "Em Smen; Kheperu Wehem Maa Djes-Ef",
       "locked": "Iri Wa Em Iri; Wehem Er Khet Khetem-Ef",
       "enqueue_failed": "Nen Smen: Sa Baku Nen Wenen; Wehem Er Khet",
-      "failed": "Nen Kheper Dbh Iri"
+      "failed": "Nen Dbh Iri"
     },
     "toggle": {
       "enabled": "Wen Seth",
       "disabled": "Khetem Seth",
-      "failed": "Nen Kheper Wen"
+      "failed": "Nen Khemen Wen-Khetem"
     },
     "editor": {
       "title": "Khemen Ahet · {{job}}",
@@ -1845,10 +1845,10 @@
       "weekly": "{{weekday}} Neb Em {{time}}"
     },
     "events": {
-      "SCHEDULER_RUN_FAILED": "Iri Baku Ahet: Nen Kheper"
+      "SCHEDULER_RUN_FAILED": "Iri Baku Ahet: Nen Iri"
     },
     "realtime": {
-      "run_failed": "Iri «{{job}}»: Nen Kheper",
+      "run_failed": "Iri «{{job}}»: Nen Iri",
       "run_lost": "Iri «{{job}}»: Nen Gem"
     },
     "tabs": {
@@ -2432,7 +2432,7 @@
     "mute_lifted": "Fekh Seth",
     "mute_expired": "Mut",
     "done": "Kheper",
-    "failed": "Nen Kheper",
+    "failed": "Nen Iri",
     "errors": {
       "already_resolved": "Sedjem Pen Wetep Seth (Sab Ky)",
       "invalid_transition": "Kheperu Khet Khemen Seth. Wehem Maa Er Iri.",
@@ -2468,7 +2468,7 @@
     "reply_hint": "Ba Maa Wesheb Wesekhet; Ren Ek Em Sesh.",
     "send": "Hab",
     "sent": "Wesheb Seth",
-    "failed": "Nen Kheper. Wehem Iri",
+    "failed": "Nen Iri. Wehem Iri.",
     "errors": {
       "closed": "Ba Wehem Mesut Seth; Medu Khetem Seth",
       "not_inbox": "Nen Sesh Wesekhet",
@@ -2561,7 +2561,7 @@
       "soul_state": "Set Medu Tepy Nen Dy",
       "reason_required": "Medu Em Tepy",
       "not_found": "Nen Dbh",
-      "failed": "Nen Kheper",
+      "failed": "Nen Iri",
       "invalid_changes": "Khemen Isfet",
       "empty_changes": "Her Er Fekh Sekhet",
       "foreign_node": "Her Sekhet Em Aset Ahamet Ek Wa",
