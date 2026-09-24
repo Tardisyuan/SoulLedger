@@ -10,6 +10,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -27,7 +28,6 @@ import { SentenceRequestActions } from "@/src/components/sentence-plan/SentenceR
  * 按钮规则在 `SentenceRequestActions`。已决定的请求留在灵魂详情的计划面板里看。
  */
 
-const PANEL = "border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function SentenceRequestsContent() {
@@ -49,20 +49,20 @@ function SentenceRequestsContent() {
         <EmptyState title={t("sentence_plan.inbox_empty")} reason={t("sentence_plan.inbox_empty_reason")} />
       ) : (
         <>
-          <ul aria-label={t("sentence_plan.inbox_title")} className="space-y-4">
+          {/* 账页(规范 v1 §2):不装框,行与行之间是行线,顶上是区块边界线。
+              行尾的决定 / 撤回按钮照旧(`SentenceRequestActions`,灵魂详情的计划面板也用它)。 */}
+          <ul aria-label={t("sentence_plan.inbox_title")} className="border-t border-[oklch(var(--color-block))]">
             {plans.map((plan) => {
               const request = plan.requests.find((r) => r.status === "PENDING");
               if (!request) return null;
               return (
-                <li key={plan.id} data-plan-id={plan.id} className={`${PANEL} p-4 space-y-2`}>
+                <li key={plan.id} data-plan-id={plan.id} className="px-3 py-3 space-y-2 border-b border-[oklch(var(--color-rule))]">
                   <p className="flex flex-wrap items-center gap-2">
-                    <Link href={`/souls/${plan.soul}`} className="text-sm font-medium text-[oklch(var(--color-accent-ink))] underline underline-offset-2">
+                    <Link href={`/souls/${plan.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline underline-offset-2">
                       {plan.soul_name}
                     </Link>
-                    <Badge tone={PLAN_TONES[plan.status] ?? "neutral"}>
-                      <DomainEnum namespace="sentence_plan.plan_states" value={plan.status} />
-                    </Badge>
-                    {mine === plan.tenant_code && <Badge tone="accent">{t("sentence_plan.awaiting_you")}</Badge>}
+                    <StatusBadge namespace="sentence_plan.plan_states" value={plan.status} tone={PLAN_TONES[plan.status] ?? "neutral"} />
+                    {mine === plan.tenant_code && <Badge tone="accent" glyph="→">{t("sentence_plan.awaiting_you")}</Badge>}
                   </p>
                   <p className="flex flex-wrap items-center gap-2 text-sm">
                     <DomainEnum namespace="sentence_plan.request_kinds" value={request.kind} />
@@ -71,7 +71,7 @@ function SentenceRequestsContent() {
                       {" · "}
                       {t("sentence_plan.home")} <TenantName code={plan.tenant_code} />
                       {" · "}
-                      {formatDateTime(request.create_time)}
+                      <span className="font-mono">{formatDateTime(request.create_time)}</span>
                     </span>
                   </p>
                   <RequestChanges request={request} plan={plan} />

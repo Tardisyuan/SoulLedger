@@ -20,8 +20,10 @@ const REBIRTH_TONE: Record<string, BadgeTone> = {
   APPROVED: "success",
 };
 
-export const credentialBadgeClass = (status: string) => badgeVariants({ tone: CREDENTIAL_TONE[status] ?? "neutral" });
-export const rebirthBadgeClass = (status: string) => badgeVariants({ tone: REBIRTH_TONE[status] ?? "neutral" });
+export const credentialTone = (status: string): BadgeTone => CREDENTIAL_TONE[status] ?? "neutral";
+export const rebirthTone = (status: string): BadgeTone => REBIRTH_TONE[status] ?? "neutral";
+export const credentialBadgeClass = (status: string) => badgeVariants({ tone: credentialTone(status) });
+export const rebirthBadgeClass = (status: string) => badgeVariants({ tone: rebirthTone(status) });
 
 /** The filter buttons on the pending-delivery page, in the order an officer works through them. */
 export const CREDENTIAL_FILTERS = ["PENDING", "REVEALED", "DELIVERED", "VOID", ""] as const;

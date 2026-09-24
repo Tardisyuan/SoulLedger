@@ -17,8 +17,30 @@ import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
+import { cn } from "@/lib/utils";
 
 type FilterType = "all" | "unread";
+
+/**
+ * Notifications under their local calendar day, days in first-seen order (the
+ * API returns newest first, so that is newest day first). A Map rather than
+ * "start a new group when the day changes": an out-of-order row joins its day
+ * instead of opening a second header for the same date. Only `created_at` is
+ * read — no field the notifications API does not already send.
+ */
+function groupByDay(items: Notification[], formatDay: (_iso: string) => string) {
+  const days = new Map<string, { key: string; label: string; items: Notification[] }>();
+  for (const item of items) {
+    const d = new Date(item.created_at);
+    const key = Number.isNaN(d.getTime())
+      ? "unknown"
+      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const day = days.get(key) ?? { key, label: formatDay(item.created_at), items: [] };
+    day.items.push(item);
+    days.set(key, day);
+  }
+  return [...days.values()];
+}
 
 /*
  * The three tab constants used to be declared here, and this page was the only
@@ -34,7 +56,7 @@ type FilterType = "all" | "unread";
  */
 
 export default function NotificationsPage() {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, formatDate: formatDay } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterType>("all");
@@ -204,7 +226,7 @@ export default function NotificationsPage() {
       skeleton={
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 border border-[oklch(var(--color-hairline))] space-y-3">
+            <div key={i} className="px-3 py-3 border-b border-[oklch(var(--color-rule))] space-y-3">
               <div className="flex items-start gap-3">
                 <Skeleton className="h-8 w-8" />
                 <div className="flex-1 space-y-2">
@@ -250,23 +272,44 @@ export default function NotificationsPage() {
         )
       }
     >
-      <div className="space-y-3">
-        {notifications.map((notification) => (
+      {/* 账页(规范 v1 §2):不装框、不铺底,条与条之间是行线;按天分组,
+          组头是一行 32 px 的等宽日期,下接区块边界线(第三类 A 审判队列的组头)。
+          未读 = 行首 6 px 强调色方块 + 标题 600(第三类 C 收件箱的 `dot` / `nst`),
+          不再是一圈淡蓝边框 —— 方块之外还有字重,不只靠颜色。 */}
+      {groupByDay(notifications, formatDay).map((day) => (
+        <section key={day.key} aria-label={day.label} data-notification-day={day.key} className="mt-3 first:mt-0">
+          <div
+            aria-hidden="true"
+            className="flex h-8 items-center justify-between border-b border-[oklch(var(--color-block))] px-3 font-mono text-xs"
+          >
+            <span className="font-semibold text-[oklch(var(--color-ink))]">
+              {day.label}{" "}
+              <span className="font-normal text-[oklch(var(--color-ink-subtle))]">· {day.items.length}</span>
+            </span>
+          </div>
+          {day.items.map((notification) => (
           <div
             key={notification.id}
-            className={`p-4 border transition-colors ${
-              notification.is_read
-                ? "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))]"
-                : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-accent)/0.3)]"
-            }`}
+            data-unread={notification.is_read ? undefined : ""}
+            className="px-3 py-3 border-b border-[oklch(var(--color-rule))] transition-colors hover:bg-[oklch(var(--color-surface-2))]"
           >
             <div className="flex items-start gap-3">
+              {/* Unread mark: a 6 px square, not a dot. Drawn on every row
+                  (transparent when read) so read and unread titles line up. */}
+              <span
+                aria-hidden="true"
+                data-unread-mark={notification.is_read ? undefined : ""}
+                className={cn(
+                  "mt-[7px] h-1.5 w-1.5 shrink-0",
+                  notification.is_read ? "bg-transparent" : "bg-[oklch(var(--color-accent))]"
+                )}
+              />
               {/* Icon */}
               {(() => {
                 const IconComponent = getNotificationIcon(notification.notification_type ?? "");
                 return (
-                  <div className="w-10 h-10 bg-[oklch(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
-                    <IconComponent aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
+                  <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                    <IconComponent aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-muted))]" />
                   </div>
                 );
               })()}
@@ -275,9 +318,12 @@ export default function NotificationsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <h2
-                    className={`text-sm font-medium ${
-                      notification.is_read ? "text-[oklch(var(--color-ink-muted))]" : "text-[oklch(var(--color-ink))]"
-                    }`}
+                    className={cn(
+                      "text-sm font-medium",
+                      notification.is_read
+                        ? "text-[oklch(var(--color-ink-muted))]"
+                        : "font-semibold text-[oklch(var(--color-ink))]"
+                    )}
                   >
                     {notification.title}
                   </h2>
@@ -316,15 +362,11 @@ export default function NotificationsPage() {
                   </Button>
                 )}
               </div>
-
-              {/* Unread Indicator */}
-              {!notification.is_read && (
-                <span aria-hidden="true" className="w-2 h-2 bg-[oklch(var(--color-accent))] shrink-0 mt-2" />
-              )}
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </section>
+      ))}
     </PageShell>
   );
 }

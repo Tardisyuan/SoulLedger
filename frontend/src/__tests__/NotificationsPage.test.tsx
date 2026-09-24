@@ -28,6 +28,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string) => key,
     formatDateTime: (v: string) => `dt(${v})`,
+    formatDate: (v: string) => `d(${v})`,
     locale: "en",
     hydrated: true,
   }),
@@ -259,5 +260,70 @@ describe("NotificationsPage mark-as-read", () => {
     // 同样会绿。
     await waitFor(() => expect(unread).toHaveAttribute("aria-pressed", "true"));
     expect(all).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+// ── Unread mark and day groups (规范 v1 + 第三类 C 收件箱) ─────────────
+
+describe("NotificationsPage unread mark", () => {
+  it("draws the accent square and the 600 title on an unread row, and neither on a read one", async () => {
+    mockedList.mockResolvedValue({
+      data: {
+        results: [
+          notification({ id: 1, is_read: false, title: "Unread one" }),
+          notification({ id: 2, is_read: true, title: "Read one" }),
+        ],
+      },
+    });
+    const { container } = renderPage();
+    await screen.findByText("Unread one");
+
+    const rowOf = (title: string) => screen.getByText(title).closest("[data-notification-day] > div:not([aria-hidden])") as HTMLElement;
+    const unread = rowOf("Unread one");
+    const read = rowOf("Read one");
+
+    // Presence on the unread row…
+    const mark = unread.querySelector("[data-unread-mark]");
+    expect(mark).not.toBeNull();
+    expect(mark!.className).toContain("bg-[oklch(var(--color-accent))]");
+    expect(screen.getByText("Unread one").className).toContain("font-semibold");
+    // …and absence on the read one: the square is still drawn (so titles line
+    // up) but carries neither the marker attribute nor the accent fill.
+    expect(read.querySelector("[data-unread-mark]")).toBeNull();
+    expect(read.innerHTML).not.toContain("bg-[oklch(var(--color-accent))]");
+    expect(screen.getByText("Read one").className).not.toContain("font-semibold");
+    // One mark per unread row, not per page.
+    expect(container.querySelectorAll("[data-unread-mark]")).toHaveLength(1);
+  });
+});
+
+describe("NotificationsPage day groups", () => {
+  it("puts each notification under its own local day, one header per day, newest day first", async () => {
+    // Local-time ISO strings (no `Z`), so the day boundary does not move with
+    // the machine's timezone. The third row is out of order on purpose: it
+    // must join the first day, not open a second header for the same date.
+    mockedList.mockResolvedValue({
+      data: {
+        results: [
+          notification({ id: 1, title: "Jan 2 late", created_at: "2026-01-02T21:00:00" }),
+          notification({ id: 2, title: "Jan 1", created_at: "2026-01-01T10:00:00" }),
+          notification({ id: 3, title: "Jan 2 early", created_at: "2026-01-02T00:30:00" }),
+        ],
+      },
+    });
+    const { container } = renderPage();
+    await screen.findByText("Jan 1");
+
+    const days = [...container.querySelectorAll<HTMLElement>("[data-notification-day]")];
+    expect(days.map((d) => d.dataset.notificationDay)).toEqual(["2026-01-02", "2026-01-01"]);
+
+    const titlesIn = (day: HTMLElement) => [...day.querySelectorAll("h2")].map((h) => h.textContent);
+    expect(titlesIn(days[0])).toEqual(["Jan 2 late", "Jan 2 early"]);
+    expect(titlesIn(days[1])).toEqual(["Jan 1"]);
+
+    // The header names the day (formatDate, not formatDateTime) and counts its rows.
+    expect(days[0]).toHaveAttribute("aria-label", "d(2026-01-02T21:00:00)");
+    expect(days[0].firstElementChild).toHaveTextContent("d(2026-01-02T21:00:00) · 2");
+    expect(days[1].firstElementChild).toHaveTextContent("d(2026-01-01T10:00:00) · 1");
   });
 });

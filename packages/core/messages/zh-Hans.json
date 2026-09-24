@@ -1240,7 +1240,9 @@
     "conclusion_types": {
       "PASS": "通过",
       "FAIL": "否决"
-    }
+    },
+    "case_title": "标题",
+    "status_label": "状态"
   },
   "users": {
     "title": "用户管理",
@@ -1420,7 +1422,9 @@
       "FAILED": "处理失败",
       "DUPLICATE": "重复",
       "PARTIAL": "部分处理"
-    }
+    },
+    "source_system": "来源系统",
+    "status_label": "状态"
   },
   "soul_accounts": {
     "refresh": "刷新",
@@ -1678,7 +1682,8 @@
       "PRIVATE": "私密"
     },
     "visibility_label": "帖子可见范围",
-    "follow_error": "关注操作失败"
+    "follow_error": "关注操作失败",
+    "reactions": "表态"
   },
   "tenants": {
     "active": "启用",
