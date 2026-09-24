@@ -10,7 +10,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
-import { User } from "lucide-react";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgmentStops";
 import { CrossJudgmentSeatForm } from "@/src/components/cross-judgments/CrossJudgmentSeatForm";
 
@@ -30,6 +30,17 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   CONCLUDED: "success",
   CANCELLED: "neutral",
 };
+
+/** 规范 v1 §1.2:状态 = 颜色 + 字形。未知状态给「?」。 */
+const STATUS_GLYPH: Record<string, string> = {
+  PROPOSED: "◐",
+  ACTIVE: "▸",
+  CONCLUDED: "■",
+  CANCELLED: "×",
+};
+
+/** 结论的字形与字色,与灵魂详情「丙 · 审判」的判决同一套(✓ / ✕)。 */
+const CONCLUSION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕" };
 
 export default function CrossJudgmentDetailPage() {
   const { t } = useI18n();
@@ -129,8 +140,11 @@ export default function CrossJudgmentDetailPage() {
   if (error && !judgment) {
     return (
       <PageShell
-      density="document" variant="prose" title={t("crossJudgments.title")} backLink={backLink}>
-        <p className="text-sm text-[oklch(var(--color-status-error))]">{error}</p>
+      density="document" variant="page" title={t("crossJudgments.title")} backLink={backLink}>
+        <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true">! </span>
+          {error}
+        </p>
       </PageShell>
     );
   }
@@ -138,7 +152,7 @@ export default function CrossJudgmentDetailPage() {
   return (
     <PageShell
       density="document"
-      variant="prose"
+      variant="page"
       backLink={backLink}
       title={loading ? <Skeleton className="h-8 w-64" /> : judgment?.title}
       subtitle={
@@ -165,11 +179,10 @@ export default function CrossJudgmentDetailPage() {
                 {t("crossJudgments.activate")}
               </Button>
             )}
-            <DomainEnum
-              namespace="crossJudgments.states"
-              value={judgment?.status}
-              className={badgeVariants({ tone: STATUS_TONES[judgment?.status ?? ""] ?? "neutral" })}
-            />
+            <span className={badgeVariants({ tone: STATUS_TONES[judgment?.status ?? ""] ?? "neutral" })}>
+              <span aria-hidden="true">{STATUS_GLYPH[judgment?.status ?? ""] ?? "?"}</span>
+              <DomainEnum namespace="crossJudgments.states" value={judgment?.status} />
+            </span>
           </div>
         )
       }
@@ -186,31 +199,44 @@ export default function CrossJudgmentDetailPage() {
       {loading ? (
         <Skeleton className="h-4 w-full mb-6" />
       ) : judgment?.description && (
-        <p className="font-serif text-quote text-[oklch(var(--color-ink))] mb-6">{judgment.description}</p>
+        <blockquote className="max-w-[72ch] mb-2 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] text-pretty">
+          {judgment.description}
+        </blockquote>
       )}
 
-      {/* Participants */}
-      <div className="mb-6">
-        <h2 className="text-md text-[oklch(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
-        {loading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : judgment?.participants && judgment.participants.length > 0 ? (
-          <div className="space-y-2">
-            {judgment.participants.map((p: import("@soulledger/core/api").CrossTenantJudgmentParticipant, i: number) => (
-              <div key={i} className="flex items-center gap-3 bg-[oklch(var(--color-surface-2))] px-4 py-2">
-                <User aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
+      {/* 规范 v1 详情页原型:两栏账页(393 px 折单栏),区块标压线,行线代替卡片。 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+        <div className="min-w-0">
+          <LedgerHeading
+            mark="甲"
+            title={t("crossJudgments.participants")}
+            count={loading ? undefined : judgment?.participants.length}
+          />
+          {loading ? (
+            <div className="space-y-2 pt-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : judgment?.participants && judgment.participants.length > 0 ? (
+            <ul className="text-sm">
+              {judgment.participants.map((p: import("@soulledger/core/api").CrossTenantJudgmentParticipant, i: number) => (
+                <li
+                  key={i}
+                  className="grid grid-cols-[1fr_auto] gap-x-3 py-1.5 border-b border-[oklch(var(--color-rule))]"
+                >
+                  <span
+                    title={p.participant_actor_name || p.participant_actor || undefined}
+                    className="min-w-0 truncate font-medium text-[oklch(var(--color-ink))]"
+                  >
+                    {p.participant_actor_name || p.participant_actor}
+                  </span>
                   {/* `DomainEnum`,不是裸成员。`p.role` 是
                       `ParticipantRole`(ADVISOR / CO_JUDGE / CHAIRMAN),而三份
                       bundle 里**一个 participant-role 键都没有** —— 页面上印的
                       一直是 SCREAMING_SNAKE 原样,正是 §4.6 要消除的那种。
                       键已补进 `crossJudgments.participant_roles`。 */}
-                  <p className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
-                    <span>{p.participant_tenant}</span>
+                  <span className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
+                    <span className="font-mono">{p.participant_tenant}</span>
                     {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
                         专用字形,`domainDisplayContract` 会把它当成手写的缺失
                         标记报红 —— 而这里它只是两个存在的值之间的分隔符。 */}
@@ -219,52 +245,55 @@ export default function CrossJudgmentDetailPage() {
                       namespace="crossJudgments.participant_roles"
                       value={p.role}
                     />
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
-        )}
-      </div>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="py-2 text-sm text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
+          )}
 
-      {/* 发起方请各文明入席(PROPOSED;按租户代码,N3=(a) 带站 / 顾问不带)。 */}
-      {!loading && judgment && <CrossJudgmentSeatForm judgment={judgment} />}
+          {/* Conclusion (if concluded) */}
+          {!loading && judgment?.status === "CONCLUDED" && (
+            <section>
+              <LedgerHeading mark="乙" title={t("crossJudgments.verdict")} />
+              {/* `DomainEnum`, not the bare member. Twenty lines above, this same
+                  file spends five lines arguing that `p.role` must not reach the
+                  screen as SCREAMING_SNAKE — and then printed `PASS` / `FAIL`
+                  verbatim at text-md bold, as the conclusion of a
+                  cross-civilization tribunal. It was the largest text on the panel
+                  and the only untranslated string on the page.
+                  `crossJudgments.conclusion_types` now carries both members in all
+                  three bundles; the raw value stays reachable in `title`.
 
-      {/* 挂了原审判的联审定下受刑计划的各站(docs/ARCHITECTURE-sentence-plan.md §2.1)。 */}
-      {!loading && judgment?.judgment && <CrossJudgmentStops judgment={judgment} />}
-
-      {/* Conclusion (if concluded) */}
-      {!loading && judgment?.status === "CONCLUDED" && (
-        <div className="bg-[oklch(var(--color-surface-2))] p-4">
-          <h2 className="text-md text-[oklch(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
-          {/* `DomainEnum`, not the bare member. Twenty lines above, this same
-              file spends five lines arguing that `p.role` must not reach the
-              screen as SCREAMING_SNAKE — and then printed `PASS` / `FAIL`
-              verbatim at text-md bold, as the conclusion of a
-              cross-civilization tribunal. It was the largest text on the panel
-              and the only untranslated string on the page.
-              `crossJudgments.conclusion_types` now carries both members in all
-              three bundles; the raw value stays reachable in `title`.
-
-              The model's own field is a bare `CharField(null=True)` whose
-              help_text reads "PASS or FAIL" — the choices live only in the
-              serializer — so an unrecognised member is genuinely possible.
-              `DomainEnum` renders that italic with the raw value in `title`,
-              and renders nothing-recorded as `MissingValue`; the old ternary
-              silently painted both cases as ordinary ink. */}
-          <p className={`text-md font-bold ${
-            judgment.conclusion_type === "PASS" ? "text-[oklch(var(--color-status-success))]" :
-            judgment.conclusion_type === "FAIL" ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-ink))]"
-          }`}>
-            <DomainEnum
-              namespace="crossJudgments.conclusion_types"
-              value={judgment.conclusion_type}
-            />
-          </p>
+                  The model's own field is a bare `CharField(null=True)` whose
+                  help_text reads "PASS or FAIL" — the choices live only in the
+                  serializer — so an unrecognised member is genuinely possible.
+                  `DomainEnum` renders that italic with the raw value in `title`,
+                  and renders nothing-recorded as `MissingValue`; the old ternary
+                  silently painted both cases as ordinary ink. */}
+              <p className={`py-2 text-md font-semibold ${
+                judgment.conclusion_type === "PASS" ? "text-[oklch(var(--color-success))]" :
+                judgment.conclusion_type === "FAIL" ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink))]"
+              }`}>
+                <span aria-hidden="true">{CONCLUSION_GLYPH[judgment.conclusion_type ?? ""] ?? "?"} </span>
+                <DomainEnum
+                  namespace="crossJudgments.conclusion_types"
+                  value={judgment.conclusion_type}
+                />
+              </p>
+            </section>
+          )}
         </div>
-      )}
+
+        <div className="min-w-0">
+          {/* 发起方请各文明入席(PROPOSED;按租户代码,N3=(a) 带站 / 顾问不带)。 */}
+          {!loading && judgment && <CrossJudgmentSeatForm judgment={judgment} />}
+
+          {/* 挂了原审判的联审定下受刑计划的各站(docs/ARCHITECTURE-sentence-plan.md §2.1)。 */}
+          {!loading && judgment?.judgment && <CrossJudgmentStops judgment={judgment} />}
+        </div>
+      </div>
     </PageShell>
   );
 }

@@ -19,14 +19,28 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
 const STATUS_COLORS: Record<string, string> = {
-  PROPOSED: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))]",
-  APPROVED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
-  REJECTED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]",
-  EXECUTED: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))]",
-  RETURNED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
-  CANCELLED: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
+  PROPOSED: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
+  APPROVED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
+  REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
+  EXECUTED: "text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info))]",
+  RETURNED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
+  CANCELLED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
+};
+
+/**
+ * 规范 v1 §1.2:状态 = 颜色 + 字形。APPROVED 与 RETURNED 同色,只有字形分得开。
+ * 未知状态给「?」,不猜。
+ */
+const STATUS_GLYPH: Record<string, string> = {
+  PROPOSED: "◐",
+  APPROVED: "✓",
+  REJECTED: "✕",
+  EXECUTED: "→",
+  RETURNED: "↩",
+  CANCELLED: "×",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -57,8 +71,13 @@ const STATUS_LABELS: Record<string, string> = {
  * `app/dispatch/page.tsx` are new code and go through tones instead.
  */
 function statusBadgeClass(status: string): string {
-  return cn(badgeVariants({ tone: null }), "border-transparent", STATUS_COLORS[status] || "");
+  return cn(badgeVariants({ tone: null }), STATUS_COLORS[status] || "border-dashed text-[oklch(var(--color-ink-muted))]");
 }
+
+/** 账行:dt / dd 一对,行线分隔(与灵魂详情「甲 · 身份」同一份写法)。 */
+const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
+const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
+const DD_TIME = `${DD} font-mono text-xs tabular-nums`;
 
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -225,38 +244,33 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
      is exactly as ambiguous to a reader as to the regex. */
   const statusBadge = (
     <span title={dispatch.status} className={statusBadgeClass(dispatch.status)}>
+      <span aria-hidden="true">{STATUS_GLYPH[dispatch.status] ?? "?"}</span>
       {statusLabel}
     </span>
   );
 
   return (
     <PageShell
-      variant="prose"
+      variant="page"
       backLink={backLink}
       title={t("dispatch.detail_title")}
       actions={statusBadge}
     >
-      {/* Info Card */}
-      <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 mb-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.soul")}</p>
-            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{dispatch.soul_name || dispatch.soul}</p>
-          </div>
-          <div>
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
-            <p title={dispatch.status} className="text-sm font-medium text-[oklch(var(--color-ink))]">{statusLabel}</p>
-          </div>
-          <div>
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>
-            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{dispatch.source_tenant_code}</p>
-          </div>
-          <div>
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.target_tenant")}</p>
-            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{dispatch.target_tenant_code}</p>
-          </div>
-          <div>
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.proposed_by")}</p>
+      {/* 规范 v1 详情页原型:两栏账页,393 px 折单栏。卡片撤掉,区块之间只有区块标
+          压着的那条线;时间一律等宽。 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+        <section className="min-w-0">
+          <LedgerHeading mark="甲" title={t("dispatch.detail_title")} />
+          <dl className="grid grid-cols-[7rem_1fr] text-sm">
+            <dt className={DT}>{t("dispatch.soul")}</dt>
+            <dd className={`${DD} font-medium`}>{dispatch.soul_name || dispatch.soul}</dd>
+            <dt className={DT}>{t("dispatch.status")}</dt>
+            <dd title={dispatch.status} className={DD}>{statusLabel}</dd>
+            <dt className={DT}>{t("dispatch.source_tenant")}</dt>
+            <dd className={`${DD} font-mono text-xs`}>{dispatch.source_tenant_code}</dd>
+            <dt className={DT}>{t("dispatch.target_tenant")}</dt>
+            <dd className={`${DD} font-mono text-xs`}>{dispatch.target_tenant_code}</dd>
+            <dt className={DT}>{t("dispatch.proposed_by")}</dt>
             {/* `MissingValue`, NOT `|| dispatch.dispatched_by`.
                 `dispatched_by` is the proposing user's integer primary key —
                 `ForeignKey(User, on_delete=SET_NULL)` with no `source=`
@@ -270,99 +284,98 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                 name should be — which no exception suspends. "Nobody recorded
                 this name" is a fact worth showing; a primary key is not. Same
                 shape as `app/judgment/page.tsx`'s `soul_name`. */}
-            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">
+            <dd className={DD}>
               {dispatch.dispatched_by_name ? (
                 dispatch.dispatched_by_name
               ) : (
                 <MissingValue kind="unrecorded" reason={t("dispatch.proposer_account_removed")} />
               )}
-            </p>
-          </div>
-          <div>
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>
-            {/* Timestamps take the meta slot (text-xs) and tabular figures, so
-                three of them stacked in a grid line up digit for digit. */}
-            <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.proposed_at)}</p>
-          </div>
-          {dispatch.decided_at && (
-            <div>
-              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.decided_at")}</p>
-              <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.decided_at)}</p>
-            </div>
+            </dd>
+          </dl>
+        </section>
+
+        <div className="min-w-0">
+          <LedgerHeading mark="乙" title={t("dispatch.flow.title")} />
+          <dl className="grid grid-cols-[7rem_1fr] text-sm">
+            <dt className={DT}>{t("dispatch.proposed_at")}</dt>
+            <dd className={DD_TIME}>{formatDateTime(dispatch.proposed_at)}</dd>
+            {dispatch.decided_at && (
+              <>
+                <dt className={DT}>{t("dispatch.decided_at")}</dt>
+                <dd className={DD_TIME}>{formatDateTime(dispatch.decided_at)}</dd>
+              </>
+            )}
+            {dispatch.executed_at && (
+              <>
+                <dt className={DT}>{t("dispatch.executed_at")}</dt>
+                <dd className={DD_TIME}>{formatDateTime(dispatch.executed_at)}</dd>
+              </>
+            )}
+            {dispatch.returned_at && (
+              <>
+                <dt className={DT}>{t("dispatch.returned_at")}</dt>
+                <dd className={DD_TIME}>{formatDateTime(dispatch.returned_at)}</dd>
+              </>
+            )}
+          </dl>
+
+          {dispatch.reason && (
+            <>
+              <LedgerHeading mark="丙" title={t("dispatch.reason")} />
+              <p className="py-2 max-w-[72ch] text-sm text-[oklch(var(--color-ink))] text-pretty border-b border-[oklch(var(--color-rule))]">
+                {dispatch.reason}
+              </p>
+            </>
           )}
-          {dispatch.executed_at && (
-            <div>
-              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.executed_at")}</p>
-              <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
-            </div>
-          )}
-          {dispatch.returned_at && (
-            <div>
-              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("dispatch.returned_at")}</p>
-              <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink))]">{formatDateTime(dispatch.returned_at)}</p>
-            </div>
+
+          {/* 操作:仍是三道权限门各管一个按钮,状态决定出现哪一组。 */}
+          {(isProposed || isApproved || isResiding) && (
+            <section>
+              <LedgerHeading title={t("dispatch.actions")} />
+              <div className="flex flex-wrap justify-end gap-2 pt-3">
+                {isProposed && (
+                  <>
+                    <RequirePermission permissions="dispatch.reject">
+                      <Button type="button" variant="danger" onClick={() => setShowRejectModal(true)}>
+                        {t("dispatch.reject")}
+                      </Button>
+                    </RequirePermission>
+                    <RequirePermission permissions="dispatch.approve">
+                      {/* Was `approveMutation.mutate()` fired straight from the click,
+                          while reject and execute — on this same page — each opened a
+                          confirmation. Approving is the cross-tenant handover: it is
+                          the one of the three whose consequence reaches another
+                          tenant's ledger. */}
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => setShowApproveModal(true)}
+                        loading={approveMutation.isPending}
+                      >
+                        {t("dispatch.approve")}
+                      </Button>
+                    </RequirePermission>
+                  </>
+                )}
+                {isApproved && (
+                  <RequirePermission permissions="dispatch.execute">
+                    <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
+                      {t("dispatch.execute")}
+                    </Button>
+                  </RequirePermission>
+                )}
+                {isResiding && (
+                  <RequirePermission permissions="dispatch.return">
+                    <Button type="button" variant="secondary" onClick={() => setShowReturnModal(true)}>
+                      {t("dispatch.return_home")}
+                    </Button>
+                  </RequirePermission>
+                )}
+              </div>
+            </section>
           )}
         </div>
-
-        {dispatch.reason && (
-          <div className="mt-4 pt-4 border-t border-[oklch(var(--color-hairline))]">
-            <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("dispatch.reason")}</p>
-            <p className="text-sm text-[oklch(var(--color-ink))]">{dispatch.reason}</p>
-          </div>
-        )}
       </div>
-
-      {/* Actions */}
-      {isProposed && (
-        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
-          <div className="flex gap-3">
-            <RequirePermission permissions="dispatch.approve">
-              {/* Was `approveMutation.mutate()` fired straight from the click,
-                  while reject and execute — on this same page, in this same
-                  card — each opened a confirmation. Approving is the
-                  cross-tenant handover: it is the one of the three whose
-                  consequence reaches another tenant's ledger. */}
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setShowApproveModal(true)}
-                loading={approveMutation.isPending}
-              >
-                {t("dispatch.approve")}
-              </Button>
-            </RequirePermission>
-
-            <RequirePermission permissions="dispatch.reject">
-              <Button type="button" variant="danger" onClick={() => setShowRejectModal(true)}>
-                {t("dispatch.reject")}
-              </Button>
-            </RequirePermission>
-          </div>
-        </div>
-      )}
-
-      {isApproved && (
-        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
-          <RequirePermission permissions="dispatch.execute">
-            <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
-              {t("dispatch.execute")}
-            </Button>
-          </RequirePermission>
-        </div>
-      )}
-
-      {isResiding && (
-        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
-          <RequirePermission permissions="dispatch.return">
-            <Button type="button" variant="secondary" onClick={() => setShowReturnModal(true)}>
-              {t("dispatch.return_home")}
-            </Button>
-          </RequirePermission>
-        </div>
-      )}
 
       {/* All three confirmations go through BaseModal (Base UI Dialog).
           The reject and execute dialogs were hand-rolled `fixed inset-0
@@ -377,7 +390,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => setShowApproveModal(false)}
         title={t("dispatch.confirm_approve")}
         footer={
-          <div className="flex gap-3 justify-end">
+          <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setShowApproveModal(false)}>
               {t("common.cancel")}
             </Button>
@@ -402,7 +415,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => { setShowRejectModal(false); setRejectReason(""); }}
         title={t("dispatch.reject_reason")}
         footer={
-          <div className="flex gap-3 justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -435,7 +448,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => setShowExecuteModal(false)}
         title={t("dispatch.confirm_execute")}
         footer={
-          <div className="flex gap-3 justify-end">
+          <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setShowExecuteModal(false)}>
               {t("common.cancel")}
             </Button>
@@ -460,7 +473,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => { setShowReturnModal(false); setReturnReason(""); }}
         title={t("dispatch.confirm_return_home")}
         footer={
-          <div className="flex gap-3 justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="secondary"
