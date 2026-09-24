@@ -135,7 +135,7 @@ worker 里(`apps/authentication/tasks.py::notify_password_help`):
 
 | 门禁 | 命令 | 退出码 | 结果 |
 |---|---|---|---|
-| 后端全量 | `cd backend && <prefix> .venv/bin/python -m pytest --tb=short -q` | (运行中) | 待补 |
+| 后端全量 | `cd backend && <prefix> .venv/bin/python -m pytest --tb=short -q` | 0 | 4514 passed / 24 skipped(38 分钟) |
 | ruff | `cd backend && .venv/bin/ruff check .` | 0 | All checks passed! |
 | 迁移 | `cd backend && <prefix> .venv/bin/python manage.py makemigrations --check --dry-run` | 0 | No changes detected |
 | schema | `tests/test_schema_has_no_warnings.py` + `test_committed_schema_matches_the_backend.py` + `test_e2e_fixtures_match_the_serializers.py` | 0 | 10 passed(0 warning / 0 error);`schema.yml` 与 `generated/schema.ts` 已按仓库的两条命令重生成 |
