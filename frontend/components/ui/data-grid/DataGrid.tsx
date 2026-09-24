@@ -62,6 +62,8 @@ export interface DataGridProps<T> {
   selection?: DataGridSelection<T>
   /** Comfortable (44px rows, decisions) or compact (36px rows, scan-and-find) — §4. */
   density?: 'comfortable' | 'compact'
+  /** Forwarded to DataTable — see its `groupHeader`. */
+  groupHeader?: (item: T, index: number) => React.ReactNode | null
   className?: string
 }
 
@@ -124,6 +126,7 @@ export function DataGrid<T>({
   onPageChange,
   selection,
   density = 'comfortable',
+  groupHeader,
   className,
 }: DataGridProps<T>) {
   // Row height is DataTable's now — DataGrid forwards the choice rather
@@ -243,6 +246,7 @@ export function DataGrid<T>({
         data={data}
         keyExtractor={keyExtractor}
         renderRow={renderRow}
+        groupHeader={groupHeader}
         caption={caption}
         isLoading={isLoading}
         isError={isError}

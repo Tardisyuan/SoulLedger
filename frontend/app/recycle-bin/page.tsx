@@ -14,6 +14,7 @@ import { Button } from "@/src/components/ui/Button";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
+import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 
 /**
  * Global recycle bin (Stage 4 §4.7) — one screen listing soft-deleted
@@ -104,6 +105,7 @@ export default function RecycleBinPage() {
             { key: "label", header: t("recycle_bin.col_item") },
             { key: "dependents", header: t("recycle_bin.col_dependents") },
             { key: "deleted", header: t("recycle_bin.col_deleted") },
+            { key: "deleted_by", header: t("recycle_bin.col_deleted_by") },
             { key: "action", header: t("recycle_bin.col_action"), align: "right", srOnlyHeader: true },
           ]}
           data={entries}
@@ -147,9 +149,15 @@ export default function RecycleBinPage() {
               </td>
               <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
                 <DomainText value={entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : null} />
-                {entry.deleted_by && (
-                  <div>{t("recycle_bin.deleted_by", { user: entry.deleted_by })}</div>
-                )}
+              </td>
+              {/* 删除人 is its own column now (第三类 D 组答复). `deleted_by` is the
+                  username or null — null is a row no session deleted (a cascade,
+                  a command), so it renders as a missing value, not as "system".
+                  「原位置」 was asked for too and is NOT here: the bin API
+                  (`apps/core/recycle_bin.py::list_bin_entries`) returns no parent
+                  or location field, and the entity type already has a column. */}
+              <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
+                <DomainText value={entry.deleted_by} />
               </td>
               <td className="px-4 py-3 text-right">
                 <div className="flex justify-end gap-1">
@@ -175,37 +183,39 @@ export default function RecycleBinPage() {
                       {t("recycle_bin.restore")}
                     </Button>
                   </RequirePermission>
+                  {/* 彻底删除 moved off the row into a ⋯ menu (第三类 D 组答复:行尾只留
+                      「恢复」). Same gate as before, the one the backend enforces —
+                      `recycle_bin.hard_delete` — so a caller without it gets no ⋯ at
+                      all rather than a menu with a dead item. Only `reference` rows
+                      can be hard-deleted (`recycle_bin.py::hard_delete`). The
+                      "not eligible for N days" reason used to be a `title` on a
+                      wrapper span; a disabled menu item cannot show a tooltip
+                      either, so it is written into the item instead. */}
                   {entry.kind === "reference" && (
                     <RequirePermission permissions="recycle_bin.hard_delete">
-                      {/* The title sits on the WRAPPER, not on the button.
-                          Button's base class list carries
-                          `disabled:pointer-events-none`, and an element with
-                          pointer-events:none never receives the hover that
-                          shows a native tooltip — so `title` on the disabled
-                          button itself would be unreachable exactly when it
-                          has something to say ("not eligible for another N
-                          days"). The span is not disabled, so it still gets
-                          the hover. */}
-                      <span
-                        className="inline-flex"
-                        title={
-                          entry.hard_delete_eligible
-                            ? undefined
-                            : t("recycle_bin.hard_delete_not_yet_eligible", {
-                                days: String(entry.retention_days ?? 30),
-                              })
-                        }
-                      >
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          type="button"
-                          onClick={() => setConfirmHardDelete(entry)}
-                          disabled={!entry.hard_delete_eligible}
-                        >
-                          {t("recycle_bin.hard_delete")}
-                        </Button>
-                      </span>
+                      <ActionsMenu
+                        menuLabel={t("souls.detail.more_actions")}
+                        items={[
+                          {
+                            key: "hard-delete",
+                            tone: "danger",
+                            disabled: !entry.hard_delete_eligible,
+                            onSelect: () => setConfirmHardDelete(entry),
+                            label: entry.hard_delete_eligible ? (
+                              t("recycle_bin.hard_delete")
+                            ) : (
+                              <>
+                                {t("recycle_bin.hard_delete")}
+                                <span className="block text-2xs text-[oklch(var(--color-ink-subtle))]">
+                                  {t("recycle_bin.hard_delete_not_yet_eligible", {
+                                    days: String(entry.retention_days ?? 30),
+                                  })}
+                                </span>
+                              </>
+                            ),
+                          },
+                        ]}
+                      />
                     </RequirePermission>
                   )}
                 </div>

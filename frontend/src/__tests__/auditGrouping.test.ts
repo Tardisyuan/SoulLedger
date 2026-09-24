@@ -4,7 +4,7 @@
  * populated per-request by backend/apps/audit/signals.py's
  * _get_trace_id() — not a client-side actor+verb+timestamp heuristic.
  */
-import { groupAuditLogsByTrace } from "@/lib/auditGrouping";
+import { collapseRepeats, groupAuditLogsByTrace, REPEAT_WINDOW_MS } from "@/lib/auditGrouping";
 import type { AuditLogEntry } from "@soulledger/core/api/audit";
 
 function entry(overrides: Partial<AuditLogEntry>): AuditLogEntry {
@@ -104,5 +104,64 @@ describe("groupAuditLogsByTrace", () => {
 
     const groups = groupAuditLogsByTrace(rows);
     expect(groups.map((g) => g.traceId)).toEqual(["trace-newest", "trace-oldest"]);
+  });
+});
+
+/**
+ * 合并同类 — the heuristic fold on top of the exact one. Every rule below has
+ * its own split case, because "these ten rows became one" is only half the
+ * claim: the other half is that a row which differs in ANY compared field (or
+ * sits past the window, or across midnight) keeps its own line.
+ */
+describe("collapseRepeats", () => {
+  // Local wall-clock times, so the day-boundary cases mean the same thing in
+  // any TZ the suite runs under.
+  const at = (day: number, h: number, m: number, s = 0, ms = 0) =>
+    new Date(2026, 0, day, h, m, s, ms).toISOString();
+  let nextId = 1;
+  const ev = (over: Partial<AuditLogEntry>) => entry({ id: nextId++, ...over });
+  const runsOf = (rows: AuditLogEntry[], windowMs?: number) =>
+    collapseRepeats(groupAuditLogsByTrace(rows), windowMs).map((r) => r.members.map((g) => g.entries[0].id));
+
+  beforeEach(() => {
+    nextId = 1;
+  });
+
+  it("folds consecutive same-actor, same-action, same-resource events into one run", () => {
+    const rows = [0, 1, 2].map((m) => ev({ timestamp: at(2, 10, m), resource_id: String(m) }));
+    expect(runsOf(rows)).toEqual([[1, 2, 3]]);
+  });
+
+  it("merges at exactly the window and splits one millisecond past it", () => {
+    const edge = [ev({ timestamp: at(2, 10, 0) }), ev({ timestamp: at(2, 10, 5) })];
+    expect(runsOf(edge)).toEqual([[1, 2]]);
+    nextId = 1;
+    const past = [ev({ timestamp: at(2, 10, 0) }), ev({ timestamp: at(2, 10, 5, 0, 1) })];
+    expect(runsOf(past)).toEqual([[1], [2]]);
+    expect(REPEAT_WINDOW_MS).toBe(5 * 60 * 1000);
+  });
+
+  it("chains on the gap between neighbours, not the distance from the first", () => {
+    const rows = [0, 4, 8, 12].map((m) => ev({ timestamp: at(2, 10, m) }));
+    expect(runsOf(rows)).toEqual([[1, 2, 3, 4]]);
+  });
+
+  it.each([
+    ["actor", { username: "judge" }],
+    ["action", { action: "UPDATE" }],
+    ["resource type", { resource: "menu" }],
+  ])("keeps a row apart when its %s differs", (_label, over) => {
+    const rows = [ev({ timestamp: at(2, 10, 0) }), ev({ timestamp: at(2, 10, 1), ...over }), ev({ timestamp: at(2, 10, 2) })];
+    expect(runsOf(rows)).toEqual([[1], [2], [3]]);
+  });
+
+  it("does not merge across local midnight even inside the window", () => {
+    const rows = [ev({ timestamp: at(2, 23, 59) }), ev({ timestamp: at(3, 0, 1) })];
+    expect(runsOf(rows)).toEqual([[1], [2]]);
+  });
+
+  it("works on newest-first input too (the page's default order)", () => {
+    const rows = [ev({ timestamp: at(2, 10, 2) }), ev({ timestamp: at(2, 10, 1) }), ev({ timestamp: at(2, 10, 0) })];
+    expect(runsOf(rows)).toEqual([[1, 2, 3]]);
   });
 });

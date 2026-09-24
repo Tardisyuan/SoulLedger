@@ -29,7 +29,10 @@
     "error_login_failed": "登录失败",
     "confirm_logout": "确认退出登录",
     "confirm_logout_desc": "确定要退出当前账号吗？",
-    "confirm_logout_btn": "确认退出"
+    "confirm_logout_btn": "确认退出",
+    "statute_of_day": "今日律条 · 每次进入换一条",
+    "statute_fixed_note": "律条要登录后才能读取，这里的几条摘自语料库原文，固定不变。",
+    "numbering": "四文明编号法"
   },
   "home": {
     "console": "控制台",
@@ -444,7 +447,8 @@
     "entity_types": {
       "soul": "灵魂",
       "menu": "菜单"
-    }
+    },
+    "col_deleted_by": "删除人"
   },
   "permissions": {
     "title": "权限管理",
@@ -952,7 +956,10 @@
       "BATCH_UPDATE": "批量更新",
       "BATCH_DELETE": "批量删除"
     },
-    "needs_audit_read": "需要「查看审计日志」权限（audit.read）"
+    "needs_audit_read": "需要「查看审计日志」权限（audit.read）",
+    "repeat_expand": "展开",
+    "repeat_collapse": "收起",
+    "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行"
   },
   "profile": {
     "title": "个人中心",
@@ -1349,7 +1356,23 @@
     "system_version": "系统版本",
     "just_now": "刚刚",
     "minutes_ago": "{{n}}分钟前",
-    "hours_ago": "{{n}}小时前"
+    "hours_ago": "{{n}}小时前",
+    "first_run": "首次进入 · 第 {{n}} 步 / 共 {{total}} 步",
+    "setup_intro": "设好下面四项就可以开始了，之后回到本页还能再改。",
+    "identity": "确认身份",
+    "identity_desc": "所属文明与角色见本页底部。不对请联系管理员。",
+    "default_view": "默认视图",
+    "default_view_desc": "决定登录后先看到什么。只保存在这个浏览器里。",
+    "view_operator": "操作员",
+    "view_operator_desc": "进来先看审判队列；快捷键优先。",
+    "view_admin_desc": "进来先看统计概览。",
+    "prefs": "语言与主题",
+    "prefs_desc": "界面语言与明暗主题，随时可在用户菜单里再改。",
+    "keys_desc": "审判队列里通用。",
+    "step_done": "已完成",
+    "step_current": "当前",
+    "continue": "继续",
+    "skip": "跳过，直接进入"
   },
   "permission": {
     "denied_title": "权限不足",

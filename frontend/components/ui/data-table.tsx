@@ -1,5 +1,6 @@
 "use client"
 
+import { Fragment } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { TableSkeleton } from './skeleton'
 import { Pagination } from '@/src/components/ui/Pagination'
@@ -82,6 +83,13 @@ export interface DataTableProps<T> {
   keyExtractor: (item: T, index: number) => string
   /** Returns the `<td>` cells for one row; the `<tr>` is supplied by the table. */
   renderRow: (item: T, index: number) => React.ReactNode
+  /**
+   * 分组头(第三类 A 组 `isHead`):return a node to draw a full-width head row
+   * ABOVE this row, or null for none. Called per row with its index, so the
+   * caller decides where a group starts (e.g. the audit trail's day change).
+   * A `<th scope="colgroup">`, so the head is announced as a header.
+   */
+  groupHeader?: (item: T, index: number) => React.ReactNode | null
   /** Describes the table for screen readers. Rendered as an `sr-only` caption. */
   caption: string
 
@@ -180,6 +188,7 @@ export function DataTable<T>({
   data,
   keyExtractor,
   renderRow,
+  groupHeader,
   caption,
   isLoading,
   isError,
@@ -398,9 +407,24 @@ export function DataTable<T>({
             >
               {data?.map((item, index) => {
                 const rowKey = keyExtractor(item, index)
+                const head = groupHeader?.(item, index)
                 return (
+                  <Fragment key={rowKey}>
+                  {head != null && (
+                    <tr data-group-head="" className="border-b border-[oklch(var(--color-block))]">
+                      <th
+                        scope="colgroup"
+                        colSpan={columns.length}
+                        className="px-4 pt-4 pb-1 text-left font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]"
+                      >
+                        {/* Sticky: at 393 px wide tables scroll sideways, and a
+                            head that scrolls away with the first column is a
+                            day nobody can see. */}
+                        <span className="sticky left-4">{head}</span>
+                      </th>
+                    </tr>
+                  )}
                   <tr
-                    key={rowKey}
                     data-row-state={
                       entered.has(rowKey) ? 'entered' : changed.has(rowKey) ? 'changed' : undefined
                     }
@@ -413,6 +437,7 @@ export function DataTable<T>({
                   >
                     {renderRow(item, index)}
                   </tr>
+                  </Fragment>
                 )
               })}
               {/* ROWS ON THEIR WAY OUT, and every one of them is inert.

@@ -15,6 +15,7 @@ import { auditApi, ledgerApi, type LedgerStatsOverview } from "@soulledger/core/
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RoleName } from "@/src/components/users/RoleName";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { WelcomeChecklist } from "@/src/components/welcome/WelcomeChecklist";
 import {
   Users,
   Scale,
@@ -202,6 +203,11 @@ export default function WelcomePage() {
       subtitle={`${t("home.hero_subtitle")} · ${formatDate(new Date(), { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`}
     >
       <div className="space-y-6">
+        {/* 首次进入清单(第三类 D 组 10b)在最上面;下面原有的近况、快捷操作、
+            最近活动与身份卡照旧 —— 清单第 1 步「确认身份」指向的就是底部那两张卡。
+            设计稿把这一页画在壳外;这里仍在壳内,因为下面这些都是壳内内容。 */}
+        <WelcomeChecklist signedIn={Boolean(user)} />
+
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickStats.map((stat, i) => (

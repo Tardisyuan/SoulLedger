@@ -9,7 +9,15 @@ import { DataGrid, parseOrdering, type DataGridColumn, type EnumValue } from "@/
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { groupAuditLogsByTrace, type AuditGroup } from "@/lib/auditGrouping";
+import {
+  collapseRepeats,
+  groupAuditLogsByTrace,
+  localDayKey,
+  REPEAT_WINDOW_MS,
+  type AuditGroup,
+  type AuditRun,
+} from "@/lib/auditGrouping";
+import { TreeName } from "@/src/components/ui/TreeRow";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
@@ -31,6 +39,13 @@ const RESOURCE_OPTIONS = [
 ];
 
 type DatePreset = "" | "7d" | "30d";
+
+/** One grid row: an event, the run it belongs to, and whether it leads that run. */
+interface AuditRow {
+  group: AuditGroup;
+  run: AuditRun;
+  lead: boolean;
+}
 
 /**
  * §1's "operator" tint for audit verbs, kept off the feedback palette (Stage
@@ -57,7 +72,7 @@ function actionEnumValue(action: string, t: (key: string) => string): EnumValue 
 }
 
 export default function AuditPage() {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDate, formatDateTime } = useI18n();
   // `hasPermission("audit.read")`, not `isAdmin`.
   //
   // The backend grants `audit.read` to ADMIN **and MODERATOR**
@@ -132,6 +147,35 @@ export default function AuditPage() {
 
   const groups = useMemo(() => groupAuditLogsByTrace(filteredLogs), [filteredLogs]);
 
+  // 合并同类 + 按日分组头(第三类 D 组答复)。A collapsed run shows only its
+  // first member; `expanded` holds the run keys the operator opened. Day counts
+  // are EVENTS on this page, not runs — "12" under a day should not shrink
+  // because some of them were folded.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const rows = useMemo<AuditRow[]>(
+    () =>
+      collapseRepeats(groups).flatMap((run) =>
+        (expanded.has(run.key) ? run.members : run.members.slice(0, 1)).map((group, i) => ({
+          group,
+          run,
+          lead: i === 0,
+        }))
+      ),
+    [groups, expanded]
+  );
+  const dayCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const g of groups) counts.set(localDayKey(g.time), (counts.get(localDayKey(g.time)) ?? 0) + 1);
+    return counts;
+  }, [groups]);
+  const toggleRun = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
   const isFiltered = Boolean(actionFilter || resourceFilter || datePreset || search);
   const clearFilters = () => {
@@ -142,14 +186,14 @@ export default function AuditPage() {
     setPage(1);
   };
 
-  const columns: DataGridColumn<AuditGroup>[] = [
+  const columns: DataGridColumn<AuditRow>[] = [
     {
       type: "timestamp",
       key: "timestamp",
       header: t("audit.timestamp"),
       sortable: true,
       width: "212px",
-      value: (g) => g.time,
+      value: (r) => r.group.time,
       format: (v) => formatDateTime(v),
     },
     {
@@ -157,14 +201,14 @@ export default function AuditPage() {
       key: "user",
       header: t("audit.user"),
       width: "150px",
-      value: (g) => g.userDisplay,
+      value: (r) => r.group.userDisplay,
     },
     {
       type: "enum",
       key: "action",
       header: t("audit.action"),
       width: "128px",
-      value: (g) => {
+      value: ({ group: g }) => {
         const base = actionEnumValue(g.action, t);
         if (g.distinctActions.length <= 1) return base;
         return {
@@ -178,23 +222,44 @@ export default function AuditPage() {
       type: "text",
       key: "affected",
       header: t("audit.affected"),
-      value: (g) => (
-        <div>
-          <div className="text-[oklch(var(--color-ink))]">
-            {g.descriptions.length > 0 ? g.descriptions.join(" · ") : g.resources.join(" + ")}
-          </div>
-          {/* 02 档正是 ID / 时间戳 / 资源标识那一档。`mt-0.5`(2px) 不在节奏
-              阶梯上，收到最小的一格 `mt-1`(4px)。 */}
-          <div className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] mt-1">{g.resourceDetail}</div>
-        </div>
-      ),
+      value: ({ group: g, run, lead }) => {
+        const repeats = run.members.length;
+        const open = expanded.has(run.key);
+        return (
+          // A run's later members sit one level in, under the lead's └ —
+          // the same tree-row mark /menus uses, for the same "belongs to the
+          // row above" meaning.
+          <TreeName depth={lead ? 0 : 1}>
+            <div className="min-w-0">
+              <div className="text-[oklch(var(--color-ink))]">
+                {g.descriptions.length > 0 ? g.descriptions.join(" · ") : g.resources.join(" + ")}
+                {lead && repeats > 1 && (
+                  <button
+                    type="button"
+                    data-testid="audit-repeat-toggle"
+                    aria-expanded={open}
+                    title={t("audit.repeat_rule", { minutes: String(REPEAT_WINDOW_MS / 60000) })}
+                    onClick={() => toggleRun(run.key)}
+                    className="ml-2 font-mono text-xs text-[oklch(var(--color-accent-ink))] hover:underline"
+                  >
+                    ×{repeats} · {open ? t("audit.repeat_collapse") : t("audit.repeat_expand")}
+                  </button>
+                )}
+              </div>
+              {/* 02 档正是 ID / 时间戳 / 资源标识那一档。`mt-0.5`(2px) 不在节奏
+                  阶梯上，收到最小的一格 `mt-1`(4px)。 */}
+              <div className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] mt-1">{g.resourceDetail}</div>
+            </div>
+          </TreeName>
+        );
+      },
     },
     {
       type: "identifier",
       key: "ip",
       header: t("audit.ip_address"),
       width: "132px",
-      value: (g) => g.ip,
+      value: (r) => r.group.ip,
     },
   ];
 
@@ -280,15 +345,20 @@ export default function AuditPage() {
       {/* The shell's `pagination` slot stays empty on purpose: DataGrid renders
           its own <Pagination> off the four props below, and filling both would
           put two pagination bars on the page. */}
-      <DataGrid<AuditGroup>
+      <DataGrid<AuditRow>
         caption={t("audit.title")}
         columns={columns}
-        data={groups}
+        data={rows}
+        groupHeader={(r, i) => {
+          const day = localDayKey(r.group.time);
+          if (i > 0 && localDayKey(rows[i - 1].group.time) === day) return null;
+          return `${formatDate(r.group.time, { year: "numeric", month: "long", day: "numeric", weekday: "short" })} · ${dayCounts.get(day) ?? 0}`;
+        }}
         density={compact ? "compact" : "comfortable"}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
-        keyExtractor={(g) => g.key}
+        keyExtractor={(r) => r.group.key}
         sort={parseOrdering(ordering)}
         onSortChange={(next) => {
           setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
