@@ -2132,6 +2132,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/social/profile/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 改自己的朋友圈显示名。拒绝理由见 `soul_circle.rename`。 */
+        patch: operations["v1_me_social_rename"];
+        trace?: never;
+    };
     "/api/v1/me/social/reports/": {
         parameters: {
             query?: never;
@@ -8583,6 +8600,10 @@ export interface components {
             readonly inherited_merit?: number;
             readonly inherited_demerit?: number;
         };
+        /** @description 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。 */
+        PatchedSoulDisplayNameRequest: {
+            display_name?: string;
+        };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
          *     about themselves.
@@ -14385,6 +14406,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulReactionState"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSoulDisplayNameRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSoulDisplayNameRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSoulDisplayNameRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulCard"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
                 };
             };
             403: {

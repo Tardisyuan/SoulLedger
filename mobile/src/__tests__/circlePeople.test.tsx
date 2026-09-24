@@ -5,7 +5,7 @@
  * otherwise pass.
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -205,5 +205,59 @@ describe("report", () => {
     fireEvent.press(screen.getByTestId("report-submit"));
     expect(await screen.findByTestId("report-done")).toBeTruthy();
     expect(calls[0].body).toEqual({ target_type: "COMMENT", target_id: "c1", reason: "ABUSE", detail: "" });
+  });
+});
+
+describe("changing my circle name", () => {
+  function mine(rename: { status: number; data?: unknown }) {
+    const calls = stubApi({
+      "/me/social/status/": { status: 200, data: { user_id: 1, can_write: true, muted_until: null, reports_remaining: 10 } },
+      "GET /me/social/users/1/": { status: 200, data: profile({ user_id: 1, display_name: "陈砚舟", is_self: true }) },
+      "/me/social/feed/": page([]),
+      "PATCH /me/social/profile/": rename,
+    });
+    wrap(<MyCircleScreen />);
+    return calls;
+  }
+  const profileReads = (calls: { method: string; url: string }[]) => calls.filter((c) => c.method === "GET" && c.url === "/me/social/users/1/").length;
+
+  it("tap the name, edit, save: the new name is sent and my page is read again", async () => {
+    const calls = mine({ status: 200, data: { user_id: 1, display_name: "砚舟", avatar: null, is_active: true } });
+    fireEvent.press(await screen.findByTestId("edit-name"));
+    expect(screen.getByTestId("name-input").props.value).toBe("陈砚舟");
+    fireEvent.changeText(screen.getByTestId("name-input"), " 砚舟 ");
+    fireEvent.press(screen.getByTestId("name-save"));
+    await waitFor(() => expect(profileReads(calls)).toBe(2));
+    await waitFor(() => expect(screen.queryByTestId("rename")).toBeNull());
+    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ display_name: "砚舟" }]);
+    expect(profileReads(calls)).toBe(2);
+  });
+
+  it.each([
+    ["display_name_taken", 409, "本文明已有灵魂叫这个名字。"],
+    ["display_name_sensitive", 400, "这个名字含有不允许的词，换一个吧。"],
+    ["display_name_length", 400, "显示名要 2 到 20 个字。"],
+  ])("refused with %s: the reason is said under the field, which stays open", async (code, status, text) => {
+    const calls = mine({ status, data: { detail: "x", code } });
+    fireEvent.press(await screen.findByTestId("edit-name"));
+    fireEvent.changeText(screen.getByTestId("name-input"), "林照微");
+    fireEvent.press(screen.getByTestId("name-save"));
+    expect(await screen.findByTestId("name-refusal")).toBeTruthy();
+    expect(within(screen.getByTestId("name-refusal")).getByText(text)).toBeTruthy();
+    expect(screen.getByTestId("name-input").props.value).toBe("林照微");
+    expect(profileReads(calls)).toBe(1);
+    // Typing again clears the refusal.
+    fireEvent.changeText(screen.getByTestId("name-input"), "林照");
+    expect(screen.queryByTestId("name-refusal")).toBeNull();
+  });
+
+  it("cancel sends nothing", async () => {
+    const calls = mine({ status: 200, data: {} });
+    fireEvent.press(await screen.findByTestId("edit-name"));
+    fireEvent.changeText(screen.getByTestId("name-input"), "别的");
+    fireEvent.press(screen.getByTestId("name-cancel"));
+    expect(screen.queryByTestId("rename")).toBeNull();
+    await act(async () => {});
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
   });
 });

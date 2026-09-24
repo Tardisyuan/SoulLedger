@@ -242,36 +242,58 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
 
 // ── feed ───────────────────────────────────────────────────────────────
 
+type Page<T> = { results: T[]; next?: string | null };
+
 /**
- * One list of posts — a feed sub-page, or one soul's posts — a page at a time.
+ * A list read a page at a time: the feed, one soul's posts, one post's comments.
  * What is held is tagged with the query it answers, so a switch shows nothing
- * stale, and a late answer for another query is dropped.
+ * stale; a late answer (another query, or overtaken by a newer request) is
+ * dropped; a row already held is not added twice (the list moved under the
+ * pages between two requests). `reload` re-reads every page held so far, so a
+ * refresh does not fold the list back to its first page.
  */
-export function useFeed(query: { following?: boolean; author?: number }, enabled = true) {
-  const tag = JSON.stringify(query);
-  const [held, setHeld] = useState<{ tag: string; posts: SoulPost[] | null; next: number | null; error: unknown }>({
+export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page: number) => Promise<Page<T>>, enabled = true) {
+  const [held, setHeld] = useState<{ tag: string; rows: T[] | null; pages: number; next: number | null; error: unknown }>({
     tag,
-    posts: null,
+    rows: null,
+    pages: 0,
     next: null,
     error: null,
   });
   const [loading, setLoading] = useState(true);
   const ticket = useRef(0);
+  const fetchRef = useRef(fetchPage);
+  fetchRef.current = fetchPage;
+  const pagesRef = useRef(0);
+  pagesRef.current = held.tag === tag ? held.pages : 0;
+  /** Read pages `from`..`to`; from 1 replaces what is held, otherwise appends. */
   const run = useCallback(
-    async (page: number) => {
+    async (from: number, to: number) => {
       const mine = ++ticket.current;
       setLoading(true);
       try {
-        const res = await soulSocialApi.feed({ ...JSON.parse(tag), page });
+        const got: T[] = [];
+        let res: Page<T> = { results: [] };
+        let last = from;
+        for (; last <= to; last++) {
+          res = await fetchRef.current(last);
+          got.push(...res.results);
+          if (!res.next || last === to) break;
+        }
         if (mine !== ticket.current) return;
-        setHeld((prev) => ({
-          tag,
-          posts: page === 1 || prev.tag !== tag ? res.results : [...(prev.posts ?? []), ...res.results],
-          next: res.next ? page + 1 : null,
-          error: null,
-        }));
+        setHeld((prev) => {
+          const base = from === 1 || prev.tag !== tag ? [] : (prev.rows ?? []);
+          const seen = new Set(base.map((r) => r.id));
+          const rows = [...base];
+          for (const r of got) {
+            if (seen.has(r.id)) continue;
+            seen.add(r.id);
+            rows.push(r);
+          }
+          return { tag, rows, pages: last, next: res.next ? last + 1 : null, error: null };
+        });
       } catch (e) {
-        if (mine === ticket.current) setHeld((prev) => (prev.tag === tag ? { ...prev, error: e } : { tag, posts: null, next: null, error: e }));
+        if (mine === ticket.current) setHeld((prev) => (prev.tag === tag ? { ...prev, error: e } : { tag, rows: null, pages: 0, next: null, error: e }));
       } finally {
         if (mine === ticket.current) setLoading(false);
       }
@@ -279,18 +301,25 @@ export function useFeed(query: { following?: boolean; author?: number }, enabled
     [tag]
   );
   useEffect(() => {
-    if (enabled) void run(1);
+    if (enabled) void run(1, 1);
   }, [run, enabled]);
-  const reload = useCallback(() => run(1), [run]);
+  const reload = useCallback(() => run(1, Math.max(1, pagesRef.current)), [run]);
   const current = held.tag === tag;
   const next = current ? held.next : null;
   return {
-    posts: current ? held.posts : null,
+    rows: current ? held.rows : null,
     error: current ? held.error : null,
     loading,
     reload,
-    more: next ? () => void run(next) : null,
+    more: next ? () => void run(next, next) : null,
   };
+}
+
+/** One list of posts — a feed sub-page, or one soul's posts. */
+export function useFeed(query: { following?: boolean; author?: number }, enabled = true) {
+  const tag = JSON.stringify(query);
+  const { rows, ...rest } = usePaged<SoulPost>(tag, (page) => soulSocialApi.feed({ ...query, page }), enabled);
+  return { posts: rows, ...rest };
 }
 
 /** Posts, and the "earlier posts" button while there are more. */
@@ -572,7 +601,22 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
   );
 }
 
-function CommentRow({ c, onAuthor, onReport }: { c: SoulComment; onAuthor: () => void; onReport: () => void }) {
+function CommentRow({
+  c,
+  parent,
+  onAuthor,
+  onMore,
+  onReply,
+}: {
+  c: SoulComment;
+  /** The comment this one answers, when it is among those loaded; not guessed when it is not. */
+  parent?: SoulComment;
+  onAuthor: () => void;
+  /** Mine: delete. Anyone else's: report. */
+  onMore: () => void;
+  /** Absent when nothing can be written here (muted, a sealed post) or this comment cannot be answered. */
+  onReply?: () => void;
+}) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
@@ -589,14 +633,91 @@ function CommentRow({ c, onAuthor, onReport }: { c: SoulComment; onAuthor: () =>
           <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
           {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="accent" /> : null}
         </View>
+        {parent ? (
+          <Txt testID={`reply-to-${c.id}`} variant="caption" tone="subtle" style={styles.replyTo}>
+            {tr("soul_app.circle.comment.reply_to", { name: parent.author.display_name })}
+          </Txt>
+        ) : null}
         <Txt style={[styles.commentBody, { color: t.inkMuted, fontFamily: quoteFamily(c.content) }]}>{c.content}</Txt>
+        {onReply ? (
+          <Txt testID={`comment-reply-${c.id}`} accessibilityRole="button" variant="caption" tone="subtle" style={styles.replyButton} onPress={onReply}>
+            {tr("soul_app.circle.comment.reply")}
+          </Txt>
+        ) : null}
       </View>
-      {c.is_mine ? null : (
-        <Pressable testID={`comment-more-${c.id}`} accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.report.comment")} onPress={onReport} style={styles.commentMore}>
-          <Icon name="more" size={14} color={t.inkSubtle} strokeWidth={2} />
-        </Pressable>
-      )}
+      <Pressable
+        testID={`comment-more-${c.id}`}
+        accessibilityRole="button"
+        accessibilityLabel={tr(c.is_mine ? "soul_app.circle.delete.action" : "soul_app.circle.report.comment")}
+        onPress={onMore}
+        style={styles.commentMore}
+      >
+        <Icon name="more" size={14} color={t.inkSubtle} strokeWidth={2} />
+      </Pressable>
     </View>
+  );
+}
+
+/**
+ * Deleting my own post or comment: "⋯" opens 删除 / 取消, and 删除 asks once
+ * more before anything is sent. Deleting cannot be undone, so it is never one tap.
+ */
+function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | "comment"; id: string } | null; onClose: () => void; onDeleted: () => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const insets = useSafeAreaInsets();
+  const fail = useFailure();
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const close = () => {
+    setAsking(false);
+    onClose();
+  };
+  const remove = async () => {
+    if (!target || busy) return;
+    setBusy(true);
+    try {
+      await (target.kind === "post" ? soulSocialApi.deletePost(target.id) : soulSocialApi.deleteComment(target.id));
+      setAsking(false);
+      onDeleted();
+    } catch (e) {
+      fail(e);
+      close();
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal visible={!!target} transparent animationType="fade" onRequestClose={close}>
+      <View style={styles.scrim}>
+        <Pressable style={styles.fill} onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
+        {asking ? (
+          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 28 + insets.bottom }]}>
+            <Txt variant="title" style={styles.sheetTitle}>
+              {tr(target?.kind === "post" ? "soul_app.circle.delete.post_title" : "soul_app.circle.delete.comment_title")}
+            </Txt>
+            <Txt variant="caption" tone="muted">
+              {tr("soul_app.circle.delete.body")}
+            </Txt>
+            <Button testID="delete-confirm" kind="danger" title={tr("soul_app.circle.delete.confirm")} busy={busy} onPress={() => void remove()} />
+            <Button testID="delete-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={close} />
+          </View>
+        ) : (
+          <View testID="delete-menu" accessibilityViewIsModal style={[styles.menu, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
+            <Pressable testID="delete-row" accessibilityRole="button" onPress={() => setAsking(true)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+              <Txt variant="bodyLg" tone="neg">
+                {tr("soul_app.circle.delete.action")}
+              </Txt>
+            </Pressable>
+            <Pressable testID="delete-menu-cancel" accessibilityRole="button" onPress={close} style={styles.menuCancel}>
+              <Txt variant="body" tone="muted">
+                {tr("soul_app.common.cancel")}
+              </Txt>
+            </Pressable>
+          </View>
+        )}
+      </View>
+    </Modal>
   );
 }
 
@@ -607,30 +728,35 @@ export function PostScreen({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const fail = useFailure();
   const post = useRemote(useCallback(() => soulSocialApi.post(id), [id]));
-  // ponytail: first page of comments only (20); a "more" like the feed's when threads grow.
-  const comments = useRemote(useCallback(() => soulSocialApi.comments(id), [id]));
+  const comments = usePaged<SoulComment>(id, (page) => soulSocialApi.comments(id, page));
   const status = useRemote(soulSocialApi.status);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [replyTo, setReplyTo] = useState<SoulComment | null>(null);
+  const [deleting, setDeleting] = useState<{ kind: "post" | "comment"; id: string } | null>(null);
   const input = useRef<TextInput>(null);
   const navigation = useNavigation<Nav>();
   const openSoul = useOpenSoul();
   const p = post.data;
 
-  // The title bar's "⋯" (1d): report — only on someone else's post.
+  // The title bar's "⋯" (1d): delete on my own post, report on anyone else's.
   useEffect(() => {
-    if (!p || p.is_mine) return;
+    if (!p) return;
     navigation.setOptions({
       header: () => (
         <AppHeader
           title={tr("soul_app.circle.post.title")}
           onBack={navigation.goBack}
-          action={{
-            icon: "more",
-            label: tr("soul_app.circle.report.post"),
-            testID: "post-more",
-            onPress: () => navigation.navigate("CircleReport", { target: "POST", id: p.id, preview: p.content }),
-          }}
+          action={
+            p.is_mine
+              ? { icon: "more", label: tr("soul_app.circle.delete.action"), testID: "post-more", onPress: () => setDeleting({ kind: "post", id: p.id }) }
+              : {
+                  icon: "more",
+                  label: tr("soul_app.circle.report.post"),
+                  testID: "post-more",
+                  onPress: () => navigation.navigate("CircleReport", { target: "POST", id: p.id, preview: p.content }),
+                }
+          }
         />
       ),
     });
@@ -648,8 +774,9 @@ export function PostScreen({ id }: { id: string }) {
     if (sending || !text.trim()) return;
     setSending(true);
     try {
-      await soulSocialApi.comment(id, text.trim());
+      await soulSocialApi.comment(id, text.trim(), replyTo?.id);
       setDraft("");
+      setReplyTo(null);
       void comments.reload();
       void post.reload();
     } catch (e) {
@@ -659,6 +786,14 @@ export function PostScreen({ id }: { id: string }) {
     }
   };
   const { press, onEndEditing } = useCommittedSend(input, draft, (text) => void send(text));
+  const deleted = () => {
+    const was = deleting;
+    setDeleting(null);
+    if (was?.kind === "post") return navigation.goBack();
+    if (replyTo && replyTo.id === was?.id) setReplyTo(null);
+    void comments.reload();
+    void post.reload();
+  };
 
   if (post.error && !post.data) {
     return (
@@ -674,10 +809,12 @@ export function PostScreen({ id }: { id: string }) {
   // Pending / hidden posts, and a past life's, take neither reactions nor comments (the server refuses too).
   const open = p?.moderation_status === "PUBLISHED" && p.author.is_active;
   const muted = status.data && !status.data.can_write;
+  const canWrite = open && !!status.data && !muted;
+  const byId = new Map((comments.rows ?? []).map((c) => [c.id, c]));
 
   return (
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: t.s0 }]} behavior="padding" keyboardVerticalOffset={-insets.bottom}>
-      <Screen edges={["left", "right"]} testID="circle-post" refreshing={post.loading && !!p} onRefresh={() => void post.reload()}>
+      <Screen edges={["left", "right"]} testID="circle-post" refreshing={post.loading && !!p} onRefresh={() => void Promise.all([post.reload(), comments.reload()])}>
         {!p ? (
           <View style={[styles.pad, { paddingHorizontal: gutter }]}>
             <Skeleton lines={5} testID="post-loading" />
@@ -689,14 +826,38 @@ export function PostScreen({ id }: { id: string }) {
             <Txt variant="section" style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
               {tr("soul_app.circle.post.comments", { n: String(p.comment_count) })}
             </Txt>
-            {comments.data ? comments.data.results.map((c) => (
-                <CommentRow
-                  key={c.id}
-                  c={c}
-                  onAuthor={() => openSoul(c.author, c.is_mine)}
-                  onReport={() => navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })}
-                />
-              )) : <View style={[styles.pad, { paddingHorizontal: gutter }]}><Skeleton lines={2} /></View>}
+            {comments.rows ? (
+              <>
+                {comments.rows.map((c) => (
+                  <CommentRow
+                    key={c.id}
+                    c={c}
+                    parent={c.parent ? byId.get(c.parent) : undefined}
+                    onAuthor={() => openSoul(c.author, c.is_mine)}
+                    onMore={() =>
+                      c.is_mine ? setDeleting({ kind: "comment", id: c.id }) : navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })
+                    }
+                    onReply={
+                      canWrite && c.moderation_status === "PUBLISHED"
+                        ? () => {
+                            setReplyTo(c);
+                            input.current?.focus();
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+                {comments.more ? (
+                  <View style={styles.more}>
+                    <SmallButton testID="comments-more" title={tr("soul_app.circle.comment.more")} onPress={comments.more} />
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+                <Skeleton lines={2} />
+              </View>
+            )}
           </>
         )}
       </Screen>
@@ -705,34 +866,47 @@ export function PostScreen({ id }: { id: string }) {
           {muted ? (
             <MutedLock until={status.data?.muted_until ?? null} />
           ) : (
-            <View testID="comment-composer" style={styles.composer}>
-              <TextInput
-                ref={input}
-                testID="comment-body"
-                accessibilityLabel={tr("soul_app.circle.comment.hint")}
-                value={draft}
-                onChangeText={setDraft}
-                onEndEditing={onEndEditing}
-                placeholder={tr("soul_app.circle.comment.hint")}
-                placeholderTextColor={t.inkSubtle}
-                multiline
-                maxLength={COMMENT_MAX}
-                style={[styles.commentInput, { borderColor: t.hair2, backgroundColor: t.s0, color: t.ink, fontFamily: quoteFamily(draft || tr("soul_app.circle.comment.hint")) }]}
-              />
-              <Pressable
-                testID="comment-send"
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
-                disabled={!draft.trim() || sending || !status.data}
-                onPress={press}
-                style={({ pressed }) => [styles.send, { backgroundColor: pressed ? t.mark : t.accent, opacity: draft.trim() ? 1 : 0.6 }]}
-              >
-                <Txt style={[styles.sendText, { color: t.onAccent }]}>{tr("soul_app.circle.comment.send")}</Txt>
-              </Pressable>
-            </View>
+            <>
+              {replyTo ? (
+                <View testID="replying" style={styles.replying}>
+                  <Txt variant="caption" tone="muted" style={styles.fill} numberOfLines={1}>
+                    {tr("soul_app.circle.comment.reply_to", { name: replyTo.author.display_name })}
+                  </Txt>
+                  <Txt testID="reply-cancel" accessibilityRole="button" variant="caption" tone="subtle" onPress={() => setReplyTo(null)}>
+                    {tr("soul_app.common.cancel")}
+                  </Txt>
+                </View>
+              ) : null}
+              <View testID="comment-composer" style={styles.composer}>
+                <TextInput
+                  ref={input}
+                  testID="comment-body"
+                  accessibilityLabel={tr("soul_app.circle.comment.hint")}
+                  value={draft}
+                  onChangeText={setDraft}
+                  onEndEditing={onEndEditing}
+                  placeholder={tr("soul_app.circle.comment.hint")}
+                  placeholderTextColor={t.inkSubtle}
+                  multiline
+                  maxLength={COMMENT_MAX}
+                  style={[styles.commentInput, { borderColor: t.hair2, backgroundColor: t.s0, color: t.ink, fontFamily: quoteFamily(draft || tr("soul_app.circle.comment.hint")) }]}
+                />
+                <Pressable
+                  testID="comment-send"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
+                  disabled={!draft.trim() || sending || !status.data}
+                  onPress={press}
+                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? t.mark : t.accent, opacity: draft.trim() ? 1 : 0.6 }]}
+                >
+                  <Txt style={[styles.sendText, { color: t.onAccent }]}>{tr("soul_app.circle.comment.send")}</Txt>
+                </Pressable>
+              </View>
+            </>
           )}
         </View>
       ) : null}
+      <DeleteSheet target={deleting} onClose={() => setDeleting(null)} onDeleted={deleted} />
     </KeyboardAvoidingView>
   );
 }
@@ -790,6 +964,12 @@ const styles = StyleSheet.create({
   commentName: { fontSize: 13, lineHeight: 18 },
   commentBody: { marginTop: 5, fontSize: 14.5, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  replyTo: { marginTop: 3 },
+  replyButton: { marginTop: 6, alignSelf: "flex-start", paddingVertical: 4 },
+  replying: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 2, paddingBottom: 8 },
+  menu: { borderTopWidth: 1 },
+  menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },
+  menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 10 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
   commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
