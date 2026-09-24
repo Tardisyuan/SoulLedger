@@ -29,7 +29,8 @@ export function AppHeader({
 }: {
   title: string;
   onBack?: () => void;
-  action?: HeaderAction;
+  /** One, or several side by side (朋友圈 1a: find people, my page). */
+  action?: HeaderAction | HeaderAction[];
   /**
    * The person icon, top right, on all three tabs. Round 1 had it open the
    * sign-out sheet; since round 4 it opens the settings page (language,
@@ -52,7 +53,8 @@ export function AppHeader({
             <Icon name={android ? "arrow" : "back"} size={android ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
           </Pressable>
         ) : android ? null : (
-          <View style={styles.icon} />
+          // iOS centres the title: as wide on the left as the actions are on the right.
+          <View style={[styles.icon, { width: 44 * (Array.isArray(action) ? action.length : 1) }]} />
         )}
         <Txt
           accessibilityRole="header"
@@ -63,19 +65,18 @@ export function AppHeader({
           {title}
         </Txt>
         {action ? (
-          <Pressable
-            testID={action.testID}
-            accessibilityRole="button"
-            accessibilityLabel={action.label}
-            onPress={action.onPress}
-            style={({ pressed }) => [
-              styles.icon,
-              action.framed && { borderWidth: 1, borderColor: t.accent },
-              pressed && { backgroundColor: t.s1 },
-            ]}
-          >
-            <Icon name={action.icon} size={18} color={action.framed ? t.accent : t.inkMuted} strokeWidth={1.4} />
-          </Pressable>
+          (Array.isArray(action) ? action : [action]).map((a) => (
+            <Pressable
+              key={a.testID}
+              testID={a.testID}
+              accessibilityRole="button"
+              accessibilityLabel={a.label}
+              onPress={a.onPress}
+              style={({ pressed }) => [styles.icon, a.framed && { borderWidth: 1, borderColor: t.accent }, pressed && { backgroundColor: t.s1 }]}
+            >
+              <Icon name={a.icon} size={18} color={a.framed ? t.accent : t.inkMuted} strokeWidth={1.4} />
+            </Pressable>
+          ))
         ) : onAccount ? (
           <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.settings.title")} onPress={onAccount} style={styles.icon}>
             <Icon name="person" size={18} color={t.inkSubtle} strokeWidth={1.2} />

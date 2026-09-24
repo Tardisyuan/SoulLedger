@@ -12,8 +12,7 @@
  *   end time in mono;
  * - pending / hidden content is its author's alone, and says so.
  *
- * Next round (not here): profiles, my page, search, report — so authors and the
- * title bar's search / "me" are not tappable yet.
+ * Profiles, my page, search and report are in ./circlePeople.
  */
 import { soulErrorCode, soulErrorMessage } from "@soulledger/core/api/soul";
 import {
@@ -30,6 +29,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../chrome";
 import { useCommittedSend } from "../composing";
 import { Icon } from "../emblems";
 import { useToast } from "../feedback";
@@ -77,13 +77,19 @@ const VISIBILITY: { value: SoulPostVisibility; label: string; hint: string }[] =
 const visLabel = (v: string) => VISIBILITY.find((o) => o.value === v)?.label ?? "soul_app.circle.compose.vis.tenant";
 
 /** A refusal as copy: the circle's own codes first, then the app's shared table. */
-function useFailure() {
+const REFUSALS: Record<string, string> = {
+  muted: "soul_app.circle.muted.body",
+  eternal_light_locked: "soul_app.circle.react.lamp_locked",
+  post_sealed: "soul_app.circle.profile.reborn_body",
+  report_limit: "soul_app.circle.report.limit",
+};
+
+export function useFailure() {
   const { t } = useI18n();
   const toast = useToast();
   return (e: unknown) => {
     const code = soulErrorCode(e);
-    if (code === "muted") return toast(t("soul_app.circle.muted.body"), "failure");
-    if (code === "eternal_light_locked") return toast(t("soul_app.circle.react.lamp_locked"), "failure");
+    if (code && code in REFUSALS) return toast(t(REFUSALS[code]), "failure");
     const m = soulErrorMessage(e);
     toast(t(m.key, m.params), "failure");
   };
@@ -160,7 +166,7 @@ export function MutedLock({ until, testID = "muted-lock" }: { until: string | nu
   );
 }
 
-function PostCard({ post, onPress, full }: { post: SoulPost; onPress?: () => void; full?: boolean }) {
+export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; onPress?: () => void; onAuthor?: () => void; full?: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
@@ -170,10 +176,12 @@ function PostCard({ post, onPress, full }: { post: SoulPost; onPress?: () => voi
   const body = (
     <>
       <View style={styles.cardHead}>
-        <Glyph text={post.author.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={36} />
+        <Pressable testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={4}>
+          <Glyph text={post.author.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={36} />
+        </Pressable>
         <View style={styles.fill}>
           <View style={styles.line}>
-            <Txt style={[styles.name, { color: reborn ? t.inkSubtle : t.ink }]} numberOfLines={1}>
+            <Txt style={[styles.name, { color: reborn ? t.inkSubtle : t.ink }]} numberOfLines={1} onPress={onAuthor}>
               {post.author.display_name}
             </Txt>
             {reborn ? <Tag testID={`reborn-${post.id}`} text={tr("soul_app.circle.post.reborn")} tone="quiet" /> : null}
@@ -235,13 +243,14 @@ function PostCard({ post, onPress, full }: { post: SoulPost; onPress?: () => voi
 // ── feed ───────────────────────────────────────────────────────────────
 
 /**
- * One sub-page of the feed, a page at a time. What is held is tagged with the
- * sub-page it answers, so a switch shows nothing stale, and a late answer for
- * the other sub-page is dropped.
+ * One list of posts — a feed sub-page, or one soul's posts — a page at a time.
+ * What is held is tagged with the query it answers, so a switch shows nothing
+ * stale, and a late answer for another query is dropped.
  */
-function useFeed(following: boolean) {
-  const [held, setHeld] = useState<{ following: boolean; posts: SoulPost[] | null; next: number | null; error: unknown }>({
-    following,
+export function useFeed(query: { following?: boolean; author?: number }, enabled = true) {
+  const tag = JSON.stringify(query);
+  const [held, setHeld] = useState<{ tag: string; posts: SoulPost[] | null; next: number | null; error: unknown }>({
+    tag,
     posts: null,
     next: null,
     error: null,
@@ -253,35 +262,60 @@ function useFeed(following: boolean) {
       const mine = ++ticket.current;
       setLoading(true);
       try {
-        const res = await soulSocialApi.feed({ following, page });
+        const res = await soulSocialApi.feed({ ...JSON.parse(tag), page });
         if (mine !== ticket.current) return;
         setHeld((prev) => ({
-          following,
-          posts: page === 1 || prev.following !== following ? res.results : [...(prev.posts ?? []), ...res.results],
+          tag,
+          posts: page === 1 || prev.tag !== tag ? res.results : [...(prev.posts ?? []), ...res.results],
           next: res.next ? page + 1 : null,
           error: null,
         }));
       } catch (e) {
-        if (mine === ticket.current) setHeld((prev) => (prev.following === following ? { ...prev, error: e } : { following, posts: null, next: null, error: e }));
+        if (mine === ticket.current) setHeld((prev) => (prev.tag === tag ? { ...prev, error: e } : { tag, posts: null, next: null, error: e }));
       } finally {
         if (mine === ticket.current) setLoading(false);
       }
     },
-    [following]
+    [tag]
   );
   useEffect(() => {
-    void run(1);
-  }, [run]);
+    if (enabled) void run(1);
+  }, [run, enabled]);
   const reload = useCallback(() => run(1), [run]);
-  const mineNow = held.following === following;
-  const next = mineNow ? held.next : null;
+  const current = held.tag === tag;
+  const next = current ? held.next : null;
   return {
-    posts: mineNow ? held.posts : null,
-    error: mineNow ? held.error : null,
+    posts: current ? held.posts : null,
+    error: current ? held.error : null,
     loading,
     reload,
     more: next ? () => void run(next) : null,
   };
+}
+
+/** Posts, and the "earlier posts" button while there are more. */
+export function PostList({ feed, onAuthor }: { feed: ReturnType<typeof useFeed>; onAuthor: (post: SoulPost) => void }) {
+  const { t: tr } = useI18n();
+  const navigation = useNavigation<Nav>();
+  return (
+    <FadeIn>
+      {(feed.posts ?? []).map((p) => (
+        <PostCard key={p.id} post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={() => onAuthor(p)} />
+      ))}
+      {feed.more ? (
+        <View style={styles.more}>
+          <SmallButton testID="circle-more" title={tr("soul_app.circle.feed.more")} onPress={feed.more} />
+        </View>
+      ) : null}
+    </FadeIn>
+  );
+}
+
+/** A soul's page: mine is "my page", anyone else's is their profile. */
+export function useOpenSoul() {
+  const navigation = useNavigation<Nav>();
+  return (card: { user_id: number }, isMine: boolean) =>
+    isMine ? navigation.navigate("MyCircle") : navigation.navigate("SoulProfile", { userId: card.user_id });
 }
 
 export function CircleScreen() {
@@ -291,7 +325,8 @@ export function CircleScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<{ Circle: { pendingId?: string } | undefined }, "Circle">>();
   const [following, setFollowing] = useState(true);
-  const feed = useFeed(following);
+  const feed = useFeed({ following });
+  const openSoul = useOpenSoul();
   useReloadOnRefocus(feed.reload);
   const pendingId = route.params?.pendingId;
   const justPending = feed.posts?.some((p) => p.id === pendingId && p.moderation_status === "PENDING");
@@ -357,16 +392,7 @@ export function CircleScreen() {
           <Button testID="circle-write" title={tr("soul_app.circle.feed.write")} onPress={write} />
         </View>
       ) : (
-        <FadeIn>
-          {feed.posts.map((p) => (
-            <PostCard key={p.id} post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} />
-          ))}
-          {feed.more ? (
-            <View style={styles.more}>
-              <SmallButton testID="circle-more" title={tr("soul_app.circle.feed.more")} onPress={feed.more} />
-            </View>
-          ) : null}
-        </FadeIn>
+        <PostList feed={feed} onAuthor={(p) => openSoul(p.author, p.is_mine)} />
       )}
     </Screen>
   );
@@ -546,21 +572,30 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
   );
 }
 
-function CommentRow({ c }: { c: SoulComment }) {
+function CommentRow({ c, onAuthor, onReport }: { c: SoulComment; onAuthor: () => void; onReport: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   return (
     <View testID={`comment-${c.id}`} style={[styles.comment, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Glyph text={c.author.display_name} tone={c.author.is_active ? "muted" : "subtle"} dotted={!c.author.is_active} size={28} />
+      <Pressable accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={4}>
+        <Glyph text={c.author.display_name} tone={c.author.is_active ? "muted" : "subtle"} dotted={!c.author.is_active} size={28} />
+      </Pressable>
       <View style={styles.fill}>
         <View style={styles.line}>
-          <Txt style={styles.commentName}>{c.author.display_name}</Txt>
+          <Txt style={styles.commentName} onPress={onAuthor}>
+            {c.author.display_name}
+          </Txt>
           <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
           {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="accent" /> : null}
         </View>
         <Txt style={[styles.commentBody, { color: t.inkMuted, fontFamily: quoteFamily(c.content) }]}>{c.content}</Txt>
       </View>
+      {c.is_mine ? null : (
+        <Pressable testID={`comment-more-${c.id}`} accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.report.comment")} onPress={onReport} style={styles.commentMore}>
+          <Icon name="more" size={14} color={t.inkSubtle} strokeWidth={2} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -578,6 +613,28 @@ export function PostScreen({ id }: { id: string }) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const input = useRef<TextInput>(null);
+  const navigation = useNavigation<Nav>();
+  const openSoul = useOpenSoul();
+  const p = post.data;
+
+  // The title bar's "⋯" (1d): report — only on someone else's post.
+  useEffect(() => {
+    if (!p || p.is_mine) return;
+    navigation.setOptions({
+      header: () => (
+        <AppHeader
+          title={tr("soul_app.circle.post.title")}
+          onBack={navigation.goBack}
+          action={{
+            icon: "more",
+            label: tr("soul_app.circle.report.post"),
+            testID: "post-more",
+            onPress: () => navigation.navigate("CircleReport", { target: "POST", id: p.id, preview: p.content }),
+          }}
+        />
+      ),
+    });
+  }, [p, navigation, tr]);
 
   const react = async (type: SoulReactionType) => {
     try {
@@ -614,7 +671,6 @@ export function PostScreen({ id }: { id: string }) {
       </Screen>
     );
   }
-  const p = post.data;
   // Pending / hidden posts, and a past life's, take neither reactions nor comments (the server refuses too).
   const open = p?.moderation_status === "PUBLISHED" && p.author.is_active;
   const muted = status.data && !status.data.can_write;
@@ -628,12 +684,19 @@ export function PostScreen({ id }: { id: string }) {
           </View>
         ) : (
           <>
-            <PostCard post={p} full />
+            <PostCard post={p} full onAuthor={() => openSoul(p.author, p.is_mine)} />
             {open ? <ReactionBar post={p} status={status.data} onReact={(type) => void react(type)} /> : null}
             <Txt variant="section" style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
               {tr("soul_app.circle.post.comments", { n: String(p.comment_count) })}
             </Txt>
-            {comments.data ? comments.data.results.map((c) => <CommentRow key={c.id} c={c} />) : <View style={[styles.pad, { paddingHorizontal: gutter }]}><Skeleton lines={2} /></View>}
+            {comments.data ? comments.data.results.map((c) => (
+                <CommentRow
+                  key={c.id}
+                  c={c}
+                  onAuthor={() => openSoul(c.author, c.is_mine)}
+                  onReport={() => navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })}
+                />
+              )) : <View style={[styles.pad, { paddingHorizontal: gutter }]}><Skeleton lines={2} /></View>}
           </>
         )}
       </Screen>
@@ -726,6 +789,7 @@ const styles = StyleSheet.create({
   comment: { flexDirection: "row", gap: 10, paddingVertical: 13, borderBottomWidth: 1 },
   commentName: { fontSize: 13, lineHeight: 18 },
   commentBody: { marginTop: 5, fontSize: 14.5, lineHeight: 24 },
+  commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 10 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
   commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },

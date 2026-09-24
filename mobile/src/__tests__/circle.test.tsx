@@ -18,10 +18,11 @@ import { stubApi } from "./stubApi";
 
 const mockPopTo = jest.fn();
 const mockNavigate = jest.fn();
+const mockSetOptions = jest.fn();
 let mockParams: object | undefined;
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  useNavigation: () => ({ navigate: mockNavigate, popTo: mockPopTo, goBack: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate, popTo: mockPopTo, goBack: jest.fn(), setOptions: mockSetOptions }),
   useRoute: () => ({ params: mockParams }),
   useFocusEffect: () => {},
 }));
@@ -63,6 +64,7 @@ beforeEach(() => {
   installMobilePlatform();
   mockPopTo.mockReset();
   mockNavigate.mockReset();
+  mockSetOptions.mockReset();
   mockParams = undefined;
 });
 
@@ -176,6 +178,29 @@ describe("reactions", () => {
     expect(screen.getByText("你被禁言，期间不能发帖和评论。写给殿司的书信不受影响。")).toBeTruthy();
     expect(screen.getByText("2026-09-25 00:00")).toBeTruthy();
     expect(screen.queryByTestId("comment-composer")).toBeNull();
+  });
+
+  it("⋯ (report) on someone else's post and comment, never on mine", async () => {
+    stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post() },
+      "/me/social/posts/p1/comments/": page([
+        { id: "c1", post: "p1", parent: null, author: { user_id: 7, display_name: "许南", avatar: null, is_active: true }, content: "春笋", moderation_status: "PUBLISHED", is_mine: false, create_time: "2026-09-17T09:30:00Z" },
+        { id: "c2", post: "p1", parent: null, author: { user_id: 1, display_name: "我", avatar: null, is_active: true }, content: "我的", moderation_status: "PUBLISHED", is_mine: true, create_time: "2026-09-17T09:31:00Z" },
+      ]),
+      "/me/social/status/": STATUS,
+    });
+    wrap(<PostScreen id="p1" />);
+    fireEvent.press(await screen.findByTestId("comment-more-c1"));
+    expect(mockNavigate).toHaveBeenCalledWith("CircleReport", { target: "COMMENT", id: "c1", preview: "春笋" });
+    expect(screen.queryByTestId("comment-more-c2")).toBeNull();
+    await waitFor(() => expect(mockSetOptions).toHaveBeenCalled());
+  });
+
+  it("my own post: no ⋯ in the title bar", async () => {
+    detail({ is_mine: true });
+    await screen.findByTestId("reactions");
+    await act(async () => {});
+    expect(mockSetOptions).not.toHaveBeenCalled();
   });
 
   it("a pending post takes no reactions and no comments", async () => {

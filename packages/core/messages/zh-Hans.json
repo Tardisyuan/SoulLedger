@@ -2292,7 +2292,8 @@
         "pending_note": "含有需要人工确认的词，审核通过后他人才能看到。你无需做什么。",
         "hidden": "已隐藏 · 他人不可见",
         "hidden_note": "这条被殿司隐藏，只有你还看得到。",
-        "comments": "评论 {{n}}"
+        "comments": "评论 {{n}}",
+        "more": "更多"
       },
       "comment": {
         "pending": "待审",
@@ -2314,6 +2315,55 @@
         "lamp_locked": "已点长明灯 · 不可更改",
         "lamp_confirm": "点灯",
         "lamp_cancel": "先不点"
+      },
+      "profile": {
+        "following": "关注",
+        "followers": "被关注",
+        "follow": "关注",
+        "follow_back": "回关",
+        "followed": "已关注",
+        "mutual": "互相关注",
+        "follows_you": "关注了你",
+        "more_hint": "关注之后可能看到更多——有的帖子只给关注者看。",
+        "reborn": "已转世",
+        "reborn_body": "此世已止。帖子封存只读，不能再关注、表态或评论。",
+        "menu": {
+          "letter": "发书信",
+          "letter_mutual": "互关 · 直接进会话",
+          "letter_request": "非互关 · 先发私聊请求",
+          "letter_rule": "对方回复或回关之前，每 24 小时只能再发一条。规则同书信。",
+          "report": "举报此人"
+        }
+      },
+      "me": {
+        "title": "我的主页",
+        "display_name": "朋友圈显示名"
+      },
+      "list": {
+        "following_title": "关注 {{n}}",
+        "followers_title": "被关注 {{n}}",
+        "reborn_note": "已转世的灵魂留在列表里但不再有按钮。"
+      },
+      "report": {
+        "post": "举报帖子",
+        "comment": "举报评论",
+        "user": "举报此人",
+        "reason": "原因",
+        "detail": "补充说明",
+        "detail_hint": "说说发生了什么",
+        "submit": "提交举报",
+        "done_title": "已收到举报",
+        "done_body": "殿司会查看。处理结果不单独通知你；被举报的一方不会知道是谁举报的。",
+        "limit": "24 小时内的举报次数已用完，稍后再来。"
+      },
+      "search": {
+        "title": "找人",
+        "hint": "显示名或完整灵魂编号",
+        "scope": "只在 {{civ}} 里找。按显示名可模糊匹配；按灵魂编号须输完整 10 位。",
+        "by_code": "编号精确匹配",
+        "count": "{{n}} 位",
+        "not_found": "未找到",
+        "result_note": "结果只显示名字与文明徽记。"
       }
     }
   },

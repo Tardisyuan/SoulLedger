@@ -40,6 +40,7 @@ import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen } from "./screens/life";
 import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
+import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, SoulProfileScreen } from "./screens/circlePeople";
 import { ConversationScreen } from "./screens/conversation";
 import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
 
@@ -72,8 +73,14 @@ function MainTabs() {
               }}
             />
           ) : route.name === "Circle" ? (
-            // 1a puts search and "my page" here (next round); settings stay on the life tab.
-            <AppHeader title={t(TAB_TITLES[route.name])} />
+            // 1a: find people and my page; settings stay on the life tab.
+            <AppHeader
+              title={t(TAB_TITLES[route.name])}
+              action={[
+                { icon: "search", label: t("soul_app.circle.search.title"), testID: "circle-search-open", onPress: () => navigation.navigate("CircleSearch") },
+                { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigation.navigate("MyCircle") },
+              ]}
+            />
           ) : (
             <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
           ),
@@ -114,6 +121,18 @@ function Conversation({ route }: NativeStackScreenProps<AppStackParams, "Convers
 
 function CirclePost({ route }: NativeStackScreenProps<AppStackParams, "CirclePost">) {
   return <PostScreen id={route.params.id} />;
+}
+
+function SoulProfile({ route }: NativeStackScreenProps<AppStackParams, "SoulProfile">) {
+  return <SoulProfileScreen userId={route.params.userId} />;
+}
+
+function CircleFollows({ route }: NativeStackScreenProps<AppStackParams, "CircleFollows">) {
+  return <FollowListScreen relation={route.params.relation} />;
+}
+
+function CircleReport({ route }: NativeStackScreenProps<AppStackParams, "CircleReport">) {
+  return <ReportScreen target={route.params.target} id={route.params.id} preview={route.params.preview} />;
 }
 
 /** Notification ids already landed in this process. */
@@ -268,6 +287,24 @@ export function RootNavigator() {
               component={CirclePost}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.circle.post.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            {/* These draw their own title bar: a name, a count, or the "⋯" that depends on what loaded. */}
+            <Stack.Screen name="SoulProfile" component={SoulProfile} options={{ headerShown: false }} />
+            <Stack.Screen name="CircleFollows" component={CircleFollows} options={{ headerShown: false }} />
+            <Stack.Screen name="CircleReport" component={CircleReport} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="MyCircle"
+              component={MyCircleScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.circle.me.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="CircleSearch"
+              component={CircleSearchScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.circle.search.title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen

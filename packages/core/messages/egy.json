@@ -2292,7 +2292,8 @@
         "pending_note": "Medu Djeseru Em. Ky Maa Er Khet Menkh. Nen Iri Ek.",
         "hidden": "Imen Seth · Ky Nen Maa",
         "hidden_note": "Wesekhet Imen Seth; Wa-Ek Maa.",
-        "comments": "Wesheb {{n}}"
+        "comments": "Wesheb {{n}}",
+        "more": "Aa"
       },
       "comment": {
         "pending": "Nen Menkh Djer",
@@ -2314,6 +2315,55 @@
         "lamp_locked": "Khabes Wen Seth · Nen Khemen",
         "lamp_confirm": "Wen Khabes",
         "lamp_cancel": "Nen Djer Pen"
+      },
+      "profile": {
+        "following": "Nehes",
+        "followers": "Nehesu",
+        "follow": "Nehes",
+        "follow_back": "Nehes Wehem",
+        "followed": "Nehes Seth",
+        "mutual": "Senb",
+        "follows_you": "Nehes Ek",
+        "more_hint": "Er Khet Nehes: Maa Aa. Medu Ky Nehesu Wa.",
+        "reborn": "Wehem Mesut Seth",
+        "reborn_body": "Ankh Pen Khetem Seth. Medu Khetem; Nen Nehes, Nen Sehed, Nen Wesheb.",
+        "menu": {
+          "letter": "Hab Sesh",
+          "letter_mutual": "Senb · Wen Sesh",
+          "letter_request": "Nen Senb · Dbh Tepy",
+          "letter_rule": "Er Wesheb Er Nehes: Wa Em 24 Unut.",
+          "report": "Sedjem Ba"
+        }
+      },
+      "me": {
+        "title": "Per Ba Ek",
+        "display_name": "Ren Shemsu"
+      },
+      "list": {
+        "following_title": "Nehes {{n}}",
+        "followers_title": "Nehesu {{n}}",
+        "reborn_note": "Ba Wehem Mesut Seth Wenen; Nen Iri."
+      },
+      "report": {
+        "post": "Sedjem Medu",
+        "comment": "Sedjem Wesheb",
+        "user": "Sedjem Ba",
+        "reason": "Khet",
+        "detail": "Medu Ky",
+        "detail_hint": "Djed Iri",
+        "submit": "Hab Sedjem",
+        "done_title": "Sedjem Ini Seth",
+        "done_body": "Wesekhet Maa. Nen Sedjem Ek Er Ky.",
+        "limit": "Sedjem Neb Em 24 Unut Seth; Wehem Er Khet."
+      },
+      "search": {
+        "title": "Hehy Ba",
+        "hint": "Ren Er Ren Ba Neb",
+        "scope": "Em {{civ}} Wa. Ren Ba: 10 Neb.",
+        "by_code": "Ren Ba Mi",
+        "count": "Ba {{n}}",
+        "not_found": "Nen Gem",
+        "result_note": "Ren Hena Taui Wa."
       }
     }
   },

@@ -2292,7 +2292,8 @@
         "pending_note": "It contains a word that needs a person to check it. Others see it once it passes. Nothing is needed from you.",
         "hidden": "Hidden · others cannot see it",
         "hidden_note": "The hall hid this; only you can still see it.",
-        "comments": "{{n}} comments"
+        "comments": "{{n}} comments",
+        "more": "More"
       },
       "comment": {
         "pending": "Pending",
@@ -2314,6 +2315,55 @@
         "lamp_locked": "Lamp lit · cannot be changed",
         "lamp_confirm": "Light it",
         "lamp_cancel": "Not now"
+      },
+      "profile": {
+        "following": "Following",
+        "followers": "Followers",
+        "follow": "Follow",
+        "follow_back": "Follow back",
+        "followed": "Following",
+        "mutual": "Mutual",
+        "follows_you": "Follows you",
+        "more_hint": "You may see more after following; some posts are for followers only.",
+        "reborn": "Reborn",
+        "reborn_body": "This life has ended. Posts are sealed and read-only; no following, reactions or comments.",
+        "menu": {
+          "letter": "Send a letter",
+          "letter_mutual": "Mutual · opens the chat",
+          "letter_request": "Not mutual · send a request first",
+          "letter_rule": "Until they reply or follow back, one more every 24 hours. Same as letters.",
+          "report": "Report this soul"
+        }
+      },
+      "me": {
+        "title": "My page",
+        "display_name": "Circle name"
+      },
+      "list": {
+        "following_title": "{{n}} following",
+        "followers_title": "{{n}} followers",
+        "reborn_note": "Reborn souls stay in the list without buttons."
+      },
+      "report": {
+        "post": "Report post",
+        "comment": "Report comment",
+        "user": "Report soul",
+        "reason": "Reason",
+        "detail": "Details",
+        "detail_hint": "Say what happened",
+        "submit": "Submit report",
+        "done_title": "Report received",
+        "done_body": "The hall will look at it. You get no separate result; the other side never learns who reported.",
+        "limit": "You have used this 24 hours' reports; try again later."
+      },
+      "search": {
+        "title": "Find people",
+        "hint": "Name or full soul code",
+        "scope": "Only within {{civ}}. Names match loosely; a soul code must be all 10 characters.",
+        "by_code": "Exact code match",
+        "count": "{{n}} souls",
+        "not_found": "Not found",
+        "result_note": "Results show only a name and civilization mark."
       }
     }
   },
