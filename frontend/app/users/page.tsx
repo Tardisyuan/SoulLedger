@@ -18,6 +18,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 
 export default function UsersPage() {
   const { t } = useI18n();
@@ -114,8 +115,8 @@ export default function UsersPage() {
         </RequirePermission>
       }
       filters={
-        /* Both controls take the shared `fieldControl` skin rather than
-           `Field`: the row is 32px of content height and a `Field` stacks a
+        /* The search box takes the shared `fieldControl` skin rather than
+           `Field` (the role filter is a chip, below): the row is 32px of content height and a `Field` stacks a
            visible label above its control, which does not fit and would push
            the sticky bar to twice its height. The accessible name therefore
            rides on `aria-label` — the same call `app/souls/page.tsx` already
@@ -134,25 +135,18 @@ export default function UsersPage() {
             }}
             className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
           />
-          <select
+          {/* 筛选签(规范 v1 §2)。选项仍来自角色表,不是写死的清单:
+              MODERATOR 曾经从一份手写清单里漏掉,整行无法筛选。 */}
+          <FilterChipSelect
+            label={t("users.role")}
             value={roleFilter}
-            aria-label={t("users.role")}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
+            options={[{ value: "", label: t("users.all_roles") }, ...roleFilterOptions]}
+            clearLabel={t("filter.clear_one", { name: t("users.role") })}
+            onChange={(v) => {
+              setRoleFilter(v);
               setPage(1);
             }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            <option value="">{t("users.all_roles")}</option>
-            {/* Was five literal <option>s — and before that four: MODERATOR
-                was missing here and from all three message bundles while the
-                backend granted it a larger set than JUDGE, so its rows
-                rendered as "unrecognised value" and could not be filtered.
-                A list restated here drifts; the role table cannot. */}
-            {roleFilterOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          />
         </>
       }
     >
@@ -170,7 +164,7 @@ export default function UsersPage() {
           { key: "role", header: t("users.role"), sortable: true },
           { key: "tenant", header: t("users.tenant") },
           { key: "status", header: t("users.status") },
-          { key: "actions", header: t("users.actions"), align: "right" },
+          { key: "actions", header: t("users.actions"), align: "right", srOnlyHeader: true },
         ]}
         data={users}
         isLoading={isLoading}
@@ -186,27 +180,9 @@ export default function UsersPage() {
               {user.email}
             </td>
             <td className="px-4 py-3">
-              {/* The four role tints are unchanged, only re-housed: `Badge`
-                  owns the 2px vertical padding a badge needs (it is the one
-                  file `eslint.config.mjs` exempts from the spacing rhythm for
-                  exactly that class), so a hand-rolled `py-0.5` span is the
-                  one shape this row cannot keep. Which palette a *role*
-                  should draw from is a live question — see the
-                  `ROLE_BADGE_CLASSES` entry in statusTokenLayering.test.ts —
-                  and answering it is not this pass's job, so the tints stay
-                  put and stay inline rather than becoming a named map that
-                  would enrol this page as a fifth recorded offender. */}
-              <Badge
-                className={
-                  user.role === "ADMIN"
-                    ? "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]"
-                    : user.role === "JUDGE"
-                    ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
-                    : user.role === "GUARDIAN"
-                    ? "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))]"
-                    : "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]"
-                }
-              >
+              {/* 规范 v1 §2「徽章 · 只有常态」:无底色,字与 1 px 边同色。角色是身份,
+                  不是系统状态,所以不借反馈色 —— 一律中性,名字本身区分。 */}
+              <Badge>
                 {customRoleLabel(user.role) ?? (
                   <DomainEnum namespace="users.roles" value={user.role} />
                 )}
@@ -216,14 +192,15 @@ export default function UsersPage() {
               {user.tenant?.display_name || user.tenant?.code || "-"}
             </td>
             <td className="px-4 py-3">
-              <span className={user.is_active ? "text-[oklch(var(--color-status-success))]" : "text-[oklch(var(--color-status-error))]"}>
+              {/* 状态 = 颜色 + 字形(规范 v1 §1.2),不只靠颜色。 */}
+              <Badge tone={user.is_active ? "success" : "neutral"} glyph={user.is_active ? "✓" : "○"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
-              </span>
+              </Badge>
             </td>
             <td className="px-4 py-3 text-right">
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex items-center justify-end gap-1">
                 <RequirePermission permissions="user.manage">
-                  <Button type="button" size="sm" onClick={() => setEditingUser(user)}>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setEditingUser(user)}>
                     {t("common.edit")}
                   </Button>
                 </RequirePermission>
@@ -231,6 +208,7 @@ export default function UsersPage() {
                   <Button
                     type="button"
                     size="sm"
+                    variant="ghost"
                     onClick={() => toggleStatusMutation.mutate({
                       id: String(user.id),
                       isActive: !user.is_active,
@@ -241,7 +219,7 @@ export default function UsersPage() {
                   </Button>
                 </RequirePermission>
                 <RequirePermission permissions="user.manage">
-                  <Button type="button" size="sm" variant="danger" onClick={() => setDeleteUser(user)}>
+                  <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-danger))]" onClick={() => setDeleteUser(user)}>
                     {t("common.delete")}
                   </Button>
                 </RequirePermission>
