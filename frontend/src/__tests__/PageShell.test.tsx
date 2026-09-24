@@ -369,6 +369,8 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  *     text-sm font-semibold 4 处   actors 卡片行 ×2、cross-judgments 行、realms 卡片行
  *     text-sm font-medium   1 处   JudgmentGroundsPanel 条文行
  *
+ * (2026-09-24:cross-judgments 的卡片行改成了账页表格,行标题不再是 `<h3>`,条目已删。)
+ *
  * 两边**没有结构上的分界线**。最直接的反例是同一种东西的两种写法:
  * `permissions/RolesGrid.tsx:40` 与 `app/realms/page.tsx:161` 都是
  * `grid-cols-1 sm:2 lg:3 xl:4` 的卡片网格、都是 `min-w-0 truncate` 的标题加一行
@@ -392,7 +394,6 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  */
 const H3_ROLE_EXEMPTIONS = new Map<string, string>([
   ["app/actors/page.tsx", "text-sm font-semibold"],
-  ["app/cross-judgments/page.tsx", "text-sm font-semibold"],
   ["app/realms/page.tsx", "text-sm font-semibold"],
 ]);
 

@@ -1240,7 +1240,9 @@
     "conclusion_types": {
       "PASS": "Passed",
       "FAIL": "Rejected"
-    }
+    },
+    "case_title": "Title",
+    "status_label": "Status"
   },
   "users": {
     "title": "User Management",
@@ -1420,7 +1422,9 @@
       "FAILED": "Failed",
       "DUPLICATE": "Duplicate",
       "PARTIAL": "Partial"
-    }
+    },
+    "source_system": "Source system",
+    "status_label": "Status"
   },
   "soul_accounts": {
     "refresh": "Refresh",
@@ -1678,7 +1682,8 @@
       "PRIVATE": "Private"
     },
     "visibility_label": "Post visibility",
-    "follow_error": "Follow action failed"
+    "follow_error": "Follow action failed",
+    "reactions": "Reactions"
   },
   "tenants": {
     "active": "Active",

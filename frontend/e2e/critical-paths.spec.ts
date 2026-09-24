@@ -182,7 +182,14 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
 
     // The pending card must name both civilizations — the whole point of a
     // cross-tenant dispatch is that it leaves one cosmology for another.
-    const pendingCard = pendingSection.locator(`a[href="/dispatch/${PROPOSED_DISPATCH.id}"]`);
+    //
+    // The row, not the anchor: since 规范 v1 the list is a DataTable with
+    // `linkedRows`, so the link wraps only the soul's name and stretches over
+    // the row through `::after`. The route and the badge sit in sibling cells
+    // of the same `<tr>`. Clicking the row still lands on the link's overlay.
+    const pendingCard = pendingSection.locator("tr", {
+      has: page.locator(`a[href="/dispatch/${PROPOSED_DISPATCH.id}"]`),
+    });
     await expect(pendingCard).toContainText("CN_DIYU → EG_DUAT");
     // §4.6, both halves. The badge carries the translated copy in its text
     // node and the raw member in `title`; asserting the title is what makes
