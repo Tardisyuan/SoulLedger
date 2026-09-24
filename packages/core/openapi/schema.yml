@@ -1407,6 +1407,24 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACCEPTED
+          - DUPLICATE
+          - FAILED
+          - PARTIAL
+          - PENDING
+          - PROCESSED
+        description: |-
+          * `PENDING` - Pending Validation
+          * `ACCEPTED` - Accepted - Processing
+          * `PROCESSED` - Processed Successfully
+          * `FAILED` - Processing Failed
+          * `DUPLICATE` - Duplicate - Already Processed
+          * `PARTIAL` - Partially Processed (batch)
       tags:
       - v1
       security:
@@ -1467,6 +1485,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationRequest'
+          description: ''
+  /api/v1/death-sync/registrations/summary/:
+    get:
+      operationId: v1_death_sync_registrations_summary_retrieve
+      description: |-
+        How many of this tenant's registrations need a human.
+
+        FAILED is the only anomalous state a row is ever written in: PENDING
+        and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
+        its job, and PARTIAL is a batch-level answer no row carries. The status
+        goes on the wire so the dashboard links to the same filter it counted.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathRegistrationSummary'
           description: ''
   /api/v1/death-sync/webhooks/:
     get:
@@ -13796,6 +13835,21 @@ components:
         * `FAILED` - Processing Failed
         * `DUPLICATE` - Duplicate - Already Processed
         * `PARTIAL` - Partially Processed (batch)
+    DeathRegistrationSummary:
+      type: object
+      description: |-
+        200 body of `registrations/summary/`. Doc-only.
+
+        `anomaly_count` counts this tenant's rows in `anomaly_status`, which is
+        the value `registrations/?status=` takes to list exactly those rows.
+      properties:
+        anomaly_status:
+          type: string
+        anomaly_count:
+          type: integer
+      required:
+      - anomaly_count
+      - anomaly_status
     DeathSyncApiKeyHealth:
       type: object
       description: '`name` and `system_type` are null when the request carries no

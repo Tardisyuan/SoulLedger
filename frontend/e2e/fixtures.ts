@@ -1245,6 +1245,8 @@ export class ApiMock {
         request_timestamp: "2026-08-30T09:00:00Z",
       },
     ]));
+    // The dashboard's 死亡同步异常 cell (ADMIN) and the /death-sync shortcut.
+    this.on("GET", "/death-sync/registrations/summary/", { anomaly_status: "FAILED", anomaly_count: 0 });
 
     // ── Recycle bin ──
     this.on("GET", "/recycle-bin/", { results: [RECYCLE_BIN_ENTRY], count: 1 });
