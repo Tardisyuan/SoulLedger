@@ -112,6 +112,21 @@ function renderPage() {
 const notesBox = () => screen.getByLabelText("judgment.detail.notes") as HTMLTextAreaElement;
 
 /**
+ * Flake fix (2026-09-24): every wait below used Testing Library's default
+ * 1000ms. Nothing here is a real timer — no debounce, no autosave — it is a
+ * mocked promise (`mockResolvedValue`) resolving through a real QueryClient
+ * and a real render. Reproduced red 1/20 under `--runInBand` with 16 `yes`
+ * processes pinning all 8 cores (green 20/20 unloaded, 20/20 under 6 `yes`
+ * processes): the failure was the FIRST wait, before either test touches the
+ * field, with `notesBox().value` still `""` — the initial fetch had not yet
+ * reached the effect a full second in. That is a CI/shared-machine timing
+ * margin, not a defect in the touched/untouched logic this file exists to
+ * guard (`app/judgment/[id]/page.tsx`'s `notesTouched` ref). Raised, not
+ * removed: a genuinely-broken guard still fails well inside this budget.
+ */
+const ASYNC_TIMEOUT = 5000;
+
+/**
  * The server now says `notes`; make the page refetch and wait for it to LAND.
  *
  * "Landed" is observed through a different field of the same payload — the
@@ -126,7 +141,7 @@ async function refetchWith(notes: string) {
   await act(async () => {
     await queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(ID) });
   });
-  await screen.findByText(LANDED);
+  await screen.findByText(LANDED, {}, { timeout: ASYNC_TIMEOUT });
 }
 
 beforeEach(() => {
@@ -138,7 +153,7 @@ beforeEach(() => {
 describe("the notes draft survives a refetch", () => {
   it("keeps what the operator typed when the server answers again", async () => {
     renderPage();
-    await waitFor(() => expect(notesBox().value).toBe("server draft"));
+    await waitFor(() => expect(notesBox().value).toBe("server draft"), { timeout: ASYNC_TIMEOUT });
 
     fireEvent.change(notesBox(), { target: { value: "my own reasoning" } });
     expect(notesBox().value).toBe("my own reasoning");
@@ -149,17 +164,20 @@ describe("the notes draft survives a refetch", () => {
     // text did not land on top of it.
     expect(notesBox().value).toBe("my own reasoning");
     expect(notesBox().value).not.toContain("revised elsewhere");
-  });
+  }, 15000);
 
   it("still follows the server while the field is untouched", async () => {
     // The other half of the rule, so that "never overwrite" cannot be the
     // accidental implementation: an operator who has not typed should see the
     // record as it now is.
     renderPage();
-    await waitFor(() => expect(notesBox().value).toBe("server draft"));
+    await waitFor(() => expect(notesBox().value).toBe("server draft"), { timeout: ASYNC_TIMEOUT });
 
     await refetchWith("server draft, revised elsewhere");
 
-    await waitFor(() => expect(notesBox().value).toBe("server draft, revised elsewhere"));
-  });
+    await waitFor(
+      () => expect(notesBox().value).toBe("server draft, revised elsewhere"),
+      { timeout: ASYNC_TIMEOUT }
+    );
+  }, 15000);
 });
