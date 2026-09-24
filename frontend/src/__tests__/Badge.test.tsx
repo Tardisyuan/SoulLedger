@@ -173,7 +173,7 @@ describe("geometry and content", () => {
   it("carries the 11 px label slot of the type scale, not a bare text-xs", () => {
     // 规范 v1: badges are 11 / 16 mono. This is also the assertion that goes
     // red if `cn()` starts eating the scale — the tone strings end in a colour.
-    expect(classesOf(<Badge tone="error">X</Badge>)).toContain("text-01");
+    expect(classesOf(<Badge tone="error">X</Badge>)).toContain("text-2xs");
   });
 
   it("does not wrap mid-label inside a narrow cell", () => {

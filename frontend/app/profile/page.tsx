@@ -123,11 +123,11 @@ export default function ProfilePage() {
           role="alert"
           className="mb-6 border border-[oklch(var(--color-status-error)/0.5)] bg-[oklch(var(--color-status-error)/0.08)] px-4 py-3 flex items-center justify-between gap-4"
         >
-          <p className="text-03 text-[oklch(var(--color-ink))]">{t("profile.load_failed")}</p>
+          <p className="text-sm text-[oklch(var(--color-ink))]">{t("profile.load_failed")}</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors shrink-0"
+            className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors shrink-0"
           >
             {t("error.retry")}
           </button>
@@ -141,14 +141,14 @@ export default function ProfilePage() {
       >
         {/* Username (read-only) */}
         <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
+          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
             {t("profile.username")}
           </label>
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
             <span
-              className="text-04 text-[oklch(var(--color-ink))] font-medium truncate"
+              className="text-sm text-[oklch(var(--color-ink))] font-medium truncate"
               title={profile?.username || user?.username}
             >
               {profile?.username || user?.username}
@@ -158,7 +158,7 @@ export default function ProfilePage() {
 
         {/* Email */}
         <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
+          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
             {t("profile.email")}
           </label>
           {editingField === "email" ? (
@@ -183,7 +183,7 @@ export default function ProfilePage() {
                 <Skeleton className="h-4 w-48" />
               ) : (
                 <span
-                  className="text-04 text-[oklch(var(--color-ink))] truncate"
+                  className="text-sm text-[oklch(var(--color-ink))] truncate"
                   title={profile?.email || user?.email || undefined}
                 >
                   {profile?.email || user?.email || "-"}
@@ -209,7 +209,7 @@ export default function ProfilePage() {
 
         {/* First Name */}
         <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
+          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
             {t("profile.first_name")}
           </label>
           {editingField === "first_name" ? (
@@ -233,7 +233,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-[oklch(var(--color-ink))] truncate" title={profile?.first_name || undefined}>
+                <span className="text-sm text-[oklch(var(--color-ink))] truncate" title={profile?.first_name || undefined}>
                   {profile?.first_name || "-"}
                 </span>
               )}
@@ -257,7 +257,7 @@ export default function ProfilePage() {
 
         {/* Last Name */}
         <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
+          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
             {t("profile.last_name")}
           </label>
           {editingField === "last_name" ? (
@@ -281,7 +281,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-[oklch(var(--color-ink))] truncate" title={profile?.last_name || undefined}>
+                <span className="text-sm text-[oklch(var(--color-ink))] truncate" title={profile?.last_name || undefined}>
                   {profile?.last_name || "-"}
                 </span>
               )}
@@ -305,7 +305,7 @@ export default function ProfilePage() {
 
         {/* Role (read-only) */}
         <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
+          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
             {t("profile.role")}
           </label>
           {isLoading ? (
@@ -319,14 +319,14 @@ export default function ProfilePage() {
 
         {/* Tenant (read-only) */}
         <div className="flex items-center px-4 py-3">
-          <label className="w-32 text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
+          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
             {t("profile.tenant")}
           </label>
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
             <span
-              className="text-04 text-[oklch(var(--color-ink))] truncate"
+              className="text-sm text-[oklch(var(--color-ink))] truncate"
               title={user?.tenant?.display_name || user?.tenant?.code || undefined}
             >
               {/* /auth/profile/ is UserSerializer, which has no `tenant`

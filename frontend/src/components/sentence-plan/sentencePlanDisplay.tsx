@@ -78,7 +78,7 @@ export function RequestChanges({ request, plan }: { request: SentencePlanRequest
   const orderOf = (id: string) => plan.nodes.find((n) => n.id === id)?.order;
   if (request.kind === "REOPEN") return null;
   return (
-    <ul className="text-03 text-[oklch(var(--color-ink))] space-y-1">
+    <ul className="text-sm text-[oklch(var(--color-ink))] space-y-1">
       {(changes.add ?? []).map((a, i) => (
         <li key={`add-${i}`} data-change="add">
           {t("sentence_plan.request_add")} <TenantName code={a.tenant_code ?? request.from_tenant_code} />

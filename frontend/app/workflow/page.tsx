@@ -157,8 +157,8 @@ export default function WorkflowPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 {/* 06 是区块标题那一档。 */}
-                <h2 className="text-06 text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
-                <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
+                <h2 className="text-md text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
+                <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">
                 <Button
@@ -202,7 +202,7 @@ export default function WorkflowPage() {
                   <div className="space-y-2">
                     {/* 01 是 uppercase 小标签那一档，这两行原本是 `text-xs
                         font-semibold` 拼出来的同一个东西。 */}
-                    <div className="text-01 uppercase text-[oklch(var(--color-ink-muted))] px-2">{t("workflow.custom_templates")}</div>
+                    <div className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] px-2">{t("workflow.custom_templates")}</div>
                     {templates.map((tmpl: BackendTemplate) => (
                       /* Stays a plain <button>, not `Button`. These are
                          selectable list rows: full-width, left-aligned, two
@@ -222,8 +222,8 @@ export default function WorkflowPage() {
                             : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
                         }`}
                       >
-                        <div title={tmpl.name} className="text-03 font-medium truncate">{tmpl.name}</div>
-                        <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
+                        <div title={tmpl.name} className="text-sm font-medium truncate">{tmpl.name}</div>
+                        <div className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
                           <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} /> · <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                         </div>
                       </button>
@@ -233,10 +233,10 @@ export default function WorkflowPage() {
 
                 {/* 预定义模板列表 */}
                 <div className="space-y-2">
-                  <div className="text-01 uppercase text-[oklch(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
+                  <div className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
-                      <div className="text-02 text-[oklch(var(--color-accent-ink))] px-2 py-1 font-medium">
+                      <div className="text-xs text-[oklch(var(--color-accent-ink))] px-2 py-1 font-medium">
                         {t(`workflow.civilizations.${civ}`)}
                       </div>
                       {civTemplates.map((tmpl) => (
@@ -247,7 +247,7 @@ export default function WorkflowPage() {
                             setSelectedTemplate(tmpl.key);
                             setEditingTemplateId(null); // 预定义模板用selectedTemplate
                           }}
-                          className={`w-full text-left px-3 py-2 border transition-colors text-03 ${
+                          className={`w-full text-left px-3 py-2 border transition-colors text-sm ${
                             selectedTemplate === tmpl.key && !editingTemplateId
                               ? "bg-[oklch(var(--color-accent))]/10 border-[oklch(var(--color-accent))] text-[oklch(var(--color-ink))]"
                               : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"

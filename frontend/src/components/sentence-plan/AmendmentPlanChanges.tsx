@@ -26,8 +26,8 @@ export function AmendmentPlanChanges({
   const plan = useSentencePlan(planId);
   return (
     <section className="mt-10 space-y-3" data-testid="amendment-plan-changes" aria-label={t("sentence_plan.amend.title")}>
-      <h2 className="text-06 text-[oklch(var(--color-ink))]">{t("sentence_plan.amend.title")}</h2>
-      <p className="text-03 text-[oklch(var(--color-ink-muted))] max-w-prose">{t("sentence_plan.amend.hint")}</p>
+      <h2 className="text-md text-[oklch(var(--color-ink))]">{t("sentence_plan.amend.title")}</h2>
+      <p className="text-sm text-[oklch(var(--color-ink-muted))] max-w-prose">{t("sentence_plan.amend.hint")}</p>
       {plan.isLoading ? (
         <Skeleton className="h-24 w-full" />
       ) : plan.data ? (

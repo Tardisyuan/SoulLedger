@@ -30,10 +30,10 @@ export function WorkflowInfoCard({
     <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
       {/* 01 是 uppercase 小标签那一档 —— 区块标题原本用 `text-sm` +
           `font-semibold` + `uppercase` 三个类拼出这个效果。 */}
-      <h2 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">
+      <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("workflow.detail.info")}
       </h2>
-      <dl className="grid grid-cols-2 gap-4 text-03">
+      <dl className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <dt className="text-[oklch(var(--color-ink-muted))]">{t("workflow.detail.soul")}</dt>
           <dd className="text-[oklch(var(--color-ink))] font-medium">{workflow.soul_name || workflow.soul}</dd>

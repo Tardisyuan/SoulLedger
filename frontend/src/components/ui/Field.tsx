@@ -91,9 +91,9 @@ export const fieldControl = cva(
   {
     variants: {
       size: {
-        sm: "px-2 py-1 text-02",
-        md: "px-3 py-2 text-03",
-        lg: "px-4 py-3 text-04",
+        sm: "px-2 py-1 text-xs",
+        md: "px-3 py-2 text-sm",
+        lg: "px-4 py-3 text-sm",
       },
       invalid: {
         // `focus-visible:`, not `focus:` — see the note above.
@@ -170,7 +170,7 @@ export function Field({
     <div className={cn("flex flex-col gap-1", className)}>
       <label
         htmlFor={controlId}
-        className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]"
+        className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]"
       >
         {label}
         {required ? (
@@ -223,7 +223,7 @@ export function Field({
       })}
 
       {description ? (
-        <span id={descriptionId} className="text-02 text-[oklch(var(--color-ink-tertiary))]">
+        <span id={descriptionId} className="text-xs text-[oklch(var(--color-ink-tertiary))]">
           {description}
         </span>
       ) : null}
@@ -232,7 +232,7 @@ export function Field({
         // `role="alert"` and not a plain span: this text appears after a
         // submit, i.e. after focus has already moved on, so it has to announce
         // itself rather than wait to be navigated to.
-        <span id={errorId} role="alert" className="text-02 text-[oklch(var(--color-status-error))]">
+        <span id={errorId} role="alert" className="text-xs text-[oklch(var(--color-status-error))]">
           {error}
         </span>
       ) : null}

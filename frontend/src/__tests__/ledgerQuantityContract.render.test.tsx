@@ -314,9 +314,9 @@ describe("no unclassified headline number", () => {
     // 这段原本写的是「The soul name and section headings are not numerals and
     // are not bold-and-figure-sized here」。那句在旧档下为真 —— 标题当时用
     // `font-semibold`,而 BOLD 只认 `font-bold`,所以标题进不了主体集合。
-    // 八档字号之后它**按构造为假**:`text-06` 是标题档,而它同时落在 BOLD 与
-    // FIGURE_SIZE 里,于是每个被正确迁到 text-06 的面板标题都会自己走进来。
-    // 实测:往这张卡里注入一个 `text-06` 的标题和一个 `text-08` 的 🔒,旧判据
+    // 八档字号之后它**按构造为假**:`text-md` 是标题档,而它同时落在 BOLD 与
+    // FIGURE_SIZE 里,于是每个被正确迁到 text-md 的面板标题都会自己走进来。
+    // 实测:往这张卡里注入一个 `text-md` 的标题和一个 `text-xl` 的 🔒,旧判据
     // 把两者都报成「未分类头条数字」,其中一条的 textContent 就是「🔒」。
     //
     // 这句话读起来像已核实的结论,所以没有人再推导一遍 —— 它替一段没跑过的

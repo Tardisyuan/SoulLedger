@@ -64,7 +64,7 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
  * the foreground is now `--color-civ-ink-*`, not `--color-civ-mark-*`. That was
  * the half of the recipe this map had missed: `accent`'s own comment says "the
  * foreground is --color-accent-ink, NOT --color-accent ... a badge is text", and
- * a badge here is `text-02`, 12px, needing 4.5:1. Drawn at the mark's own
+ * a badge here is `text-xs`, 12px, needing 4.5:1. Drawn at the mark's own
  * lightness on `mark/0.2`, four of the eight civilization x theme combinations
  * failed on the surfaces this page actually uses — cn 3.93 / eu 3.92 dark,
  * eg 3.58 / gr 3.64 light. The fill and the border keep the mark; only the
@@ -139,12 +139,12 @@ function OrganizationsPageContent() {
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 title={org.name} className="text-03 font-medium text-[oklch(var(--color-ink))] truncate">{org.name}</h3>
+          <h3 title={org.name} className="text-sm font-medium text-[oklch(var(--color-ink))] truncate">{org.name}</h3>
           <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
             {org.level === 0 ? t("organization.root") : `L${org.level}`}
           </Badge>
         </div>
-        <p title={org.code} className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] truncate">{org.code}</p>
+        <p title={org.code} className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] truncate">{org.code}</p>
       </div>
     </div>
   );
@@ -212,10 +212,10 @@ function OrganizationsPageContent() {
                 onClick={() => toggleCollapse(category)}
                 className="w-full justify-start mb-4 text-left"
               >
-                <span aria-hidden="true" className="text-06">{info.icon}</span>
+                <span aria-hidden="true" className="text-md">{info.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span title={info.name} className="block text-06 text-[oklch(var(--color-ink))] truncate">{info.name}</span>
-                  <span className="block text-04 text-[oklch(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
+                  <span title={info.name} className="block text-md text-[oklch(var(--color-ink))] truncate">{info.name}</span>
+                  <span className="block text-sm text-[oklch(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
                 </span>
                 <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
               </Button>

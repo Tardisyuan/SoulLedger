@@ -282,7 +282,7 @@ function DashboardContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* State distribution pie chart */}
               <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.state_distribution")}</h2>
+                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.state_distribution")}</h2>
                 {loading ? (
                   <div className="h-[240px] flex items-center justify-center">
                     <Skeleton className="h-[200px] w-[200px] rounded-full" />
@@ -296,7 +296,7 @@ function DashboardContent() {
 
               {/* tenant comparison bar chart */}
               <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_civilization")}</h2>
+                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_civilization")}</h2>
                 {loading ? (
                   <div className="h-[240px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
@@ -309,7 +309,7 @@ function DashboardContent() {
 
             {/* Per-tenant breakdown */}
             <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
+              <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
               {/* `md:grid-cols-3` alongside a hardcoded three cards was
                   self-consistent and wrong together; with four civilizations
                   the fourth card needs somewhere to go. */}
@@ -360,10 +360,10 @@ function DashboardContent() {
                           />
                           <span className="font-medium text-[oklch(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
                         </div>
-                        <div className="text-06 tabular-nums text-[oklch(var(--color-accent-ink))] mb-3">{groupDigits(stats.tenants[i].total_souls)}</div>
+                        <div className="text-md tabular-nums text-[oklch(var(--color-accent-ink))] mb-3">{groupDigits(stats.tenants[i].total_souls)}</div>
                         <div className="space-y-1">
                           {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
-                            <div key={state} className="flex justify-between text-02">
+                            <div key={state} className="flex justify-between text-xs">
                               <span title={state} className="text-[oklch(var(--color-ink-muted))]">{stateLabel(state)}</span>
                               <span style={{ color: STATE_COLORS[state] || CHART_SERIES.neutral }}>{count as number}</span>
                             </div>
@@ -380,7 +380,7 @@ function DashboardContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Balance distribution */}
               <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.balance_distribution")}</h2>
+                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.balance_distribution")}</h2>
                 {loading ? (
                   <div className="h-[180px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
@@ -392,7 +392,7 @@ function DashboardContent() {
 
               {/* Souls by Realm */}
               <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_realm")}</h2>
+                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_realm")}</h2>
                 {loading ? (
                   <div className="h-[180px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
@@ -400,7 +400,7 @@ function DashboardContent() {
                 ) : realmChartData.length > 0 ? (
                   <LazyBarChart data={realmChartData} dataKey="count" fill={CHART_SERIES.realm} height={180} name={t("dashboard.chart_souls")} />
                 ) : (
-                  <div className="h-[180px] flex items-center justify-center text-[oklch(var(--color-ink-muted))] text-03">
+                  <div className="h-[180px] flex items-center justify-center text-[oklch(var(--color-ink-muted))] text-sm">
                     {t("dashboard.no_realm_data")}
                   </div>
                 )}
@@ -409,7 +409,7 @@ function DashboardContent() {
 
             {/* Recent Activity - grouped by action type */}
             <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.recent_activity")}</h2>
+              <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.recent_activity")}</h2>
               {loading ? (
                 <div className="space-y-3">
                   {[0, 1, 2].map((i) => (
@@ -450,16 +450,16 @@ function DashboardContent() {
                             <DomainEnum
                               namespace="audit.actions"
                               value={action === "OTHER" ? null : action}
-                              className={`text-02 px-2 py-1 border font-medium ${actionColors[action] || actionColors.OTHER}`}
+                              className={`text-xs px-2 py-1 border font-medium ${actionColors[action] || actionColors.OTHER}`}
                             />
-                            <span className="text-02 text-[oklch(var(--color-ink-muted))]">{t("dashboard.activity_count", { count: String(logs.length) })}</span>
+                            <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.activity_count", { count: String(logs.length) })}</span>
                           </div>
                           <div className="space-y-1 pl-2 border-l-2 border-[oklch(var(--color-hairline))]">
                             {logs.map((log) => (
                               <div key={log.id} className="flex items-start gap-3 py-1 px-2 hover:bg-[oklch(var(--color-surface-2))] transition-colors">
                                 <div className="flex-1 min-w-0">
-                                  <span title={log.description || log.resource} className="text-03 text-[oklch(var(--color-ink))] truncate">{log.description || log.resource}</span>
-                                  <div className="text-02 text-[oklch(var(--color-ink-muted))]">
+                                  <span title={log.description || log.resource} className="text-sm text-[oklch(var(--color-ink))] truncate">{log.description || log.resource}</span>
+                                  <div className="text-xs text-[oklch(var(--color-ink-muted))]">
                                     {log.user} · {formatTimestamp(log.timestamp)}
                                   </div>
                                 </div>
@@ -481,15 +481,15 @@ function DashboardContent() {
             {/* Ledger-only cards that don't already appear on the Overview tab */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("admin.avg_balance")}</div>
+                <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("admin.avg_balance")}</div>
                 {loading ? (
                   <Skeleton className="h-8 w-24 mt-2" />
                 ) : (
-                  <div data-kpi="" className="text-08 tabular-nums text-[oklch(var(--color-accent-ink))] mt-2">{avgBalance.toFixed(2)}</div>
+                  <div data-kpi="" className="text-xl tabular-nums text-[oklch(var(--color-accent-ink))] mt-2">{avgBalance.toFixed(2)}</div>
                 )}
               </div>
               <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("admin.state_breakdown")}</div>
+                <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("admin.state_breakdown")}</div>
                 {loading ? (
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-full" />
@@ -499,7 +499,7 @@ function DashboardContent() {
                 ) : (
                   <div className="space-y-1">
                     {stats?.state_distribution?.map((s) => (
-                      <div key={s.state} className="flex justify-between text-03">
+                      <div key={s.state} className="flex justify-between text-sm">
                         <span title={s.state} className="text-[oklch(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
                         <span className="font-medium">{s.count}</span>
                       </div>
@@ -511,7 +511,7 @@ function DashboardContent() {
 
             {/* Top Souls by Balance Table */}
             <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">
+              <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">
                 {t("admin.top_balance")}
               </h2>
               <DataTable<LedgerStatsOverview["souls_by_realm"][number]>

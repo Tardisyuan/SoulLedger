@@ -155,13 +155,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <Link
         href="/"
         prefetch={true}
-        className={`flex h-10 shrink-0 items-center border-b border-[oklch(var(--color-block))] font-mono text-01 tracking-label text-[oklch(var(--color-ink))] ${collapsed ? "justify-center" : "px-3"}`}
+        className={`flex h-10 shrink-0 items-center border-b border-[oklch(var(--color-block))] font-mono text-2xs tracking-label text-[oklch(var(--color-ink))] ${collapsed ? "justify-center" : "px-3"}`}
       >
         {collapsed ? "SL" : "SOULLEDGER"}
       </Link>
       <nav aria-label={drawerLabel} className="flex-1 overflow-y-auto">
         {menus.length === 0 && !collapsed ? (
-          <p className="px-3 py-4 text-02 text-[oklch(var(--color-ink-subtle))]">{t("menus.no_menus")}</p>
+          <p className="px-3 py-4 text-xs text-[oklch(var(--color-ink-subtle))]">{t("menus.no_menus")}</p>
         ) : null}
         {menus.map((menu, index) => (
           <SidebarGroup
@@ -176,7 +176,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
       {/* 底部原来的暗条删除;版本号放在最底一行。 */}
-      <p className={`shrink-0 border-t border-[oklch(var(--color-line))] py-2 font-mono text-01 text-[oklch(var(--color-ink-subtle))] ${collapsed ? "text-center" : "px-3"}`}>
+      <p className={`shrink-0 border-t border-[oklch(var(--color-line))] py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] ${collapsed ? "text-center" : "px-3"}`}>
         {collapsed ? "v0.1" : t("footer.version")}
       </p>
     </>
@@ -228,32 +228,32 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {user ? (
               <Popover.Root>
                 <Popover.Trigger
-                  className="flex items-center gap-1 text-02 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                  className="flex items-center gap-1 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
                   aria-label={unreadCount > 0 ? `${t("notifications.title")} (${unreadCount})` : t("notifications.title")}
                 >
                   <span className="hidden sm:inline">{t("notifications.title")}</span>
                   <span aria-hidden="true" className="sm:hidden">◔</span>
                   {unreadCount > 0 ? (
-                    <span className="font-mono text-01 text-[oklch(var(--color-accent))]">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                    <span className="font-mono text-2xs text-[oklch(var(--color-accent))]">{unreadCount > 99 ? "99+" : unreadCount}</span>
                   ) : null}
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
                     <Popover.Popup className="w-80 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay focus:outline-hidden">
                       <div className="flex items-center justify-between border-b border-[oklch(var(--color-block))] px-4 py-2">
-                        <h3 className="text-03 font-medium text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
-                        <Link href="/notifications" className="text-02 text-[oklch(var(--color-accent))] hover:underline">
+                        <h3 className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
+                        <Link href="/notifications" className="text-xs text-[oklch(var(--color-accent))] hover:underline">
                           {t("notifications.view_all")}
                         </Link>
                       </div>
                       {notifications.length === 0 ? (
-                        <p className="px-4 py-4 text-03 text-[oklch(var(--color-ink-subtle))]">{t("notifications.empty")}</p>
+                        <p className="px-4 py-4 text-sm text-[oklch(var(--color-ink-subtle))]">{t("notifications.empty")}</p>
                       ) : (
                         <div className="max-h-64 overflow-y-auto">
                           {notifications.slice(0, 5).map((n: Notification) => (
                             <div key={n.id} className="border-b border-[oklch(var(--color-rule))] px-4 py-2">
-                              <p className="text-03 text-[oklch(var(--color-ink))]">{n.message || n.title}</p>
-                              <p className="mt-1 font-mono text-01 text-[oklch(var(--color-ink-subtle))]">{formatDateTime(n.created_at)}</p>
+                              <p className="text-sm text-[oklch(var(--color-ink))]">{n.message || n.title}</p>
+                              <p className="mt-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{formatDateTime(n.created_at)}</p>
                             </div>
                           ))}
                         </div>
@@ -268,7 +268,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Popover.Root>
                 <Popover.Trigger
                   data-testid="user-menu"
-                  className="max-w-40 truncate text-02 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                  className="max-w-40 truncate text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
                   title={user.display_name || user.username}
                 >
                   {user.display_name || user.username} ▾
@@ -280,21 +280,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         href="/profile"
                         className="block border-b border-[oklch(var(--color-block))] px-3 py-2 hover:bg-[oklch(var(--color-surface-2))]"
                       >
-                        <span className="block truncate text-03 text-[oklch(var(--color-ink))]" title={user.display_name || user.username}>
+                        <span className="block truncate text-sm text-[oklch(var(--color-ink))]" title={user.display_name || user.username}>
                           {user.display_name || user.username}
                         </span>
-                        <span className="font-mono text-01 text-[oklch(var(--color-ink-subtle))]">
+                        <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
                           <DomainEnum namespace="users.roles" value={user.role} />
                         </span>
                       </Link>
                       <div className="flex items-center justify-between gap-3 border-b border-[oklch(var(--color-rule))] px-3 py-1">
-                        <span className="text-02 text-[oklch(var(--color-ink-muted))]">{t("nav.language")}</span>
+                        <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("nav.language")}</span>
                         <LanguageSwitcher />
                       </div>
                       <button
                         type="button"
                         onClick={toggleTheme}
-                        className="flex min-h-8 w-full items-center justify-between border-b border-[oklch(var(--color-rule))] px-3 text-02 text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-8 w-full items-center justify-between border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         <span>{t("settings.theme")}</span>
                         <span className="text-[oklch(var(--color-ink))]">{theme === "dark" ? t("settings.dark") : t("settings.light")} ›</span>
@@ -302,14 +302,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <button
                         type="button"
                         onClick={() => setSettingsOpen(true)}
-                        className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-02 text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("nav.settings")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setLogoutConfirmOpen(true)}
-                        className="flex min-h-8 w-full items-center px-3 text-02 text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-8 w-full items-center px-3 text-xs text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("auth.logout")}
                       </button>
@@ -318,7 +318,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Portal>
               </Popover.Root>
             ) : (
-              <Link href="/login" className="border border-[oklch(var(--color-ink))] px-3 py-1 text-02 font-medium text-[oklch(var(--color-ink))]">
+              <Link href="/login" className="border border-[oklch(var(--color-ink))] px-3 py-1 text-xs font-medium text-[oklch(var(--color-ink))]">
                 {t("auth.login")}
               </Link>
             )}

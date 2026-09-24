@@ -55,7 +55,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
       >
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="text-06 text-[oklch(var(--color-ink))] min-w-0 break-words">
+            <h2 id={titleId} className="text-md text-[oklch(var(--color-ink))] min-w-0 break-words">
               {t("scheduler.runs.title", { job: jobName })}
             </h2>
             <button
@@ -135,14 +135,14 @@ export function TaskRunItem({
       {heading}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <DomainEnum namespace="scheduler.status" value={run.status} className={runStatusBadgeClass(run.status)} />
-        <DomainEnum namespace="scheduler.trigger" value={run.trigger} className="text-02 text-[oklch(var(--color-ink-muted))]" />
+        <DomainEnum namespace="scheduler.trigger" value={run.trigger} className="text-xs text-[oklch(var(--color-ink-muted))]" />
         {run.triggered_by_username && (
-          <span className="text-02 text-[oklch(var(--color-ink-muted))] break-all">
+          <span className="text-xs text-[oklch(var(--color-ink-muted))] break-all">
             {t("scheduler.runs.triggered_by")}: {run.triggered_by_username}
           </span>
         )}
       </div>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-02">
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
         <dt className="text-[oklch(var(--color-ink-subtle))]">{t("scheduler.runs.queued_at")}</dt>
         <dd className="font-mono">{formatDateTime(run.queued_at)}</dd>
         <dt className="text-[oklch(var(--color-ink-subtle))]">{t("scheduler.runs.started_at")}</dt>
@@ -173,7 +173,7 @@ export function TaskRunItem({
             <pre
               id={errorId}
               aria-label={t("scheduler.runs.error")}
-              className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-02 text-[oklch(var(--color-ink))]"
+              className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
             >
               {run.error}
             </pre>

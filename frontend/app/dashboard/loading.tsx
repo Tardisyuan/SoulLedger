@@ -7,7 +7,7 @@
  * 换掉的是一个手搓双环转圈,它的两个环写着 `border-amber-500/20` 与
  * `border-t-amber-500` —— Tailwind 原生调色板(基线里的 `palette: 2`),而
  * amber-500 恰好就是 --color-accent 的值,于是一个「正在加载」用掉了全站的
- * 强调色。骨架屏还多做一件转圈做不到的事:KPI 现在是 `text-08`(56px),
+ * 强调色。骨架屏还多做一件转圈做不到的事:KPI 现在是 `text-xl`(56px),
  * 加载态若不占住那个高度,数据落地时整页会往下跳一格。
  *
  * 没有 `min-h-screen` —— AppLayout 的槽位已经是 min-h-[calc(100vh-4rem)]。

@@ -63,7 +63,7 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
   return (
     <BaseModal isOpen onClose={onClose} title={t("soul_accounts.rebirth.detail_title", { name: a.soul_name })}>
       <div className="space-y-4">
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-03">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
           {row(t("soul_accounts.fields.soul_code"), <span className="font-mono">{a.soul_code}</span>)}
           {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(a.cycle) }))}
           {row(t("soul_accounts.fields.status"), <DomainEnum namespace="soul_accounts.rebirth_status" value={a.status} className={rebirthBadgeClass(a.status)} />)}
@@ -87,28 +87,28 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
         </dl>
 
         <section>
-          <h3 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.statement")}</h3>
-          <p className="text-03 whitespace-pre-wrap break-words">{a.statement || <MissingValue kind="unrecorded" reason={t("soul_accounts.rebirth.statement_empty")} />}</p>
+          <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.statement")}</h3>
+          <p className="text-sm whitespace-pre-wrap break-words">{a.statement || <MissingValue kind="unrecorded" reason={t("soul_accounts.rebirth.statement_empty")} />}</p>
         </section>
         {a.appeal_workflow && (
           <section>
-            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.appeal_statement")}</h3>
-            <p className="text-03 whitespace-pre-wrap break-words">
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.appeal_statement")}</h3>
+            <p className="text-sm whitespace-pre-wrap break-words">
               {a.appeal_statement || <MissingValue kind="unrecorded" reason={t("soul_accounts.rebirth.statement_empty")} />}
             </p>
           </section>
         )}
         {a.rejection_reason && (
           <section>
-            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.rejection_reason")}</h3>
-            <p className="text-03 whitespace-pre-wrap break-words">{a.rejection_reason}</p>
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.rebirth.fields.rejection_reason")}</h3>
+            <p className="text-sm whitespace-pre-wrap break-words">{a.rejection_reason}</p>
           </section>
         )}
 
         {canDecide && (
           <section className="border-t border-[oklch(var(--color-hairline))] pt-3 space-y-2" data-testid="cross-civilization-decision">
-            <h3 className="text-03 font-medium">{t("soul_accounts.rebirth.cross_title")}</h3>
-            <p className="text-02 text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.rebirth.cross_hint")}</p>
+            <h3 className="text-sm font-medium">{t("soul_accounts.rebirth.cross_title")}</h3>
+            <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.rebirth.cross_hint")}</p>
             <div className="flex flex-wrap gap-2">
               {[false, true].map((value) => (
                 <Button
@@ -128,7 +128,7 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
           </section>
         )}
 
-        <Link href={`/workflow/${a.appeal_workflow ?? a.workflow}`} className="inline-block text-03 underline text-[oklch(var(--color-accent-ink))]">
+        <Link href={`/workflow/${a.appeal_workflow ?? a.workflow}`} className="inline-block text-sm underline text-[oklch(var(--color-accent-ink))]">
           {t("soul_accounts.rebirth.open_workflow")}
         </Link>
       </div>

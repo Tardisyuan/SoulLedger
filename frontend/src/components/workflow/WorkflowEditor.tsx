@@ -1029,7 +1029,7 @@ export default function WorkflowEditor({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors duration-state"
+            className="px-4 py-2 border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors duration-state"
           >
             {t("common.cancel")}
           </button>
@@ -1072,13 +1072,13 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
             aria-label={t("workflow.editor.template_name_placeholder")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -1094,7 +1094,7 @@ export default function WorkflowEditor({
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
@@ -1111,7 +1111,7 @@ export default function WorkflowEditor({
             value={templatePriority}
             onChange={(e) => setTemplatePriority(Number(e.target.value))}
             aria-label={t("workflow.detail.priority")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           >
             {priorityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -1125,7 +1125,7 @@ export default function WorkflowEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={addNode}
-            className="px-3 py-1.5 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
+            className="px-3 py-1.5 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black text-sm font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>
@@ -1137,9 +1137,9 @@ export default function WorkflowEditor({
                spacing rhythm (1/2/3/4/6/10/16) and this file's legacy quota for
                that is already spent, so a ninth would have to be bought by
                raising the baseline. 32px is the same height `px-3 py-1.5` on
-               text-03 produces, border included — border-box — so the row still
+               text-sm produces, border included — border-box — so the row still
                lines up. */
-            className="px-3 h-8 inline-flex items-center bg-[oklch(var(--color-surface-3))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] text-03 font-medium border border-[oklch(var(--color-hairline))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 h-8 inline-flex items-center bg-[oklch(var(--color-surface-3))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] text-sm font-medium border border-[oklch(var(--color-hairline))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t("workflow.editor.auto_layout")}
           </button>
@@ -1151,7 +1151,7 @@ export default function WorkflowEditor({
           <span
             role="status"
             aria-live="polite"
-            className="text-02 text-[oklch(var(--color-ink-muted))]"
+            className="text-xs text-[oklch(var(--color-ink-muted))]"
           >
             {relayouting ? t("workflow.editor.relayouting") : ""}
           </span>
@@ -1174,7 +1174,7 @@ export default function WorkflowEditor({
           <button
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
-            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-03 font-medium border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t("workflow.editor.delete_selected")}
           </button>
@@ -1185,7 +1185,7 @@ export default function WorkflowEditor({
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending || (!!templateId && isTemplateLoading)}
-            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-03 font-medium transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
           </button>
@@ -1271,7 +1271,7 @@ export default function WorkflowEditor({
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Controls className="bg-[oklch(var(--color-surface-1))]! border-[oklch(var(--color-hairline))]! !" />
-          <Panel position="top-left" className="bg-[oklch(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[oklch(var(--color-hairline))] text-02 text-[oklch(var(--color-ink-muted))]">
+          <Panel position="top-left" className="bg-[oklch(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[oklch(var(--color-hairline))] text-xs text-[oklch(var(--color-ink-muted))]">
             {/* The keyboard half of the hint, and the only place `E` is
                 visible. It reuses `workflow.editor.edit_node` — the modal's own
                 title — rather than introducing a fourth string in three
@@ -1280,7 +1280,7 @@ export default function WorkflowEditor({
                 `JudgmentQueueConsole.tsx` already uses for its key hints. */}
             <span>{t("workflow.editor.hint")}</span>
             {" · "}
-            <kbd className="font-mono text-02 px-1 bg-[oklch(var(--color-surface-3))]">E</kbd>{" "}
+            <kbd className="font-mono text-xs px-1 bg-[oklch(var(--color-surface-3))]">E</kbd>{" "}
             {t("workflow.editor.edit_node")}
           </Panel>
         </ReactFlow>

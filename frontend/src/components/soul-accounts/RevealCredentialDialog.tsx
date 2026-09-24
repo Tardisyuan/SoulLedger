@@ -97,7 +97,7 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
           </div>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-ink))]">
+        <p className="text-sm text-[oklch(var(--color-ink))]">
           {t("soul_accounts.reveal.confirm_body", {
             name: credential.soul_name,
             code: credential.soul_code,
@@ -126,14 +126,14 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
       }
     >
       <div className="space-y-4">
-        <p role="alert" className="text-03 text-[oklch(var(--color-status-warning))]">
+        <p role="alert" className="text-sm text-[oklch(var(--color-status-warning))]">
           {t("soul_accounts.reveal.shown_warning")}
         </p>
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-03">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
           <dt className="text-[oklch(var(--color-ink-subtle))]">{t("soul_accounts.fields.soul_code")}</dt>
           <dd className="font-mono break-all text-[oklch(var(--color-ink))]">{secret.soul_code}</dd>
           <dt className="text-[oklch(var(--color-ink-subtle))]">{t("soul_accounts.reveal.password_label")}</dt>
-          <dd className="font-mono text-05 break-all select-all text-[oklch(var(--color-ink))]" data-testid="revealed-password">
+          <dd className="font-mono text-md break-all select-all text-[oklch(var(--color-ink))]" data-testid="revealed-password">
             {secret.password}
           </dd>
           <dt className="text-[oklch(var(--color-ink-subtle))]">{t("soul_accounts.fields.expires_at")}</dt>

@@ -121,7 +121,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
    * primitive with it: `aria-busy` and a `<Spinner>` in place of the inline
    * `animate-spin` SVG, `active:` feedback that none of the 190 hand-rolled
    * buttons had, and one `disabled:` answer instead of this file's private one.
-   * The label size moves text-04 → text-03 (the primitive's `md`), which is
+   * The label size moves text-sm → text-sm (the primitive's `md`), which is
    * what its six sibling modals already used — this file was the odd one.
    */
   const footer = (
@@ -169,9 +169,9 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
           could dismiss without clicking elsewhere — is gone, while Tab still
           shows it. A click into the text inputs still matches, so they keep it.
 
-          Control text goes text-04 → text-03 (the primitive's `md`), matching
+          Control text goes text-sm → text-sm (the primitive's `md`), matching
           the six sibling modals; the labels move to the shared
-          `text-01 uppercase` treatment for the same reason. */}
+          `text-2xs uppercase` treatment for the same reason. */}
       <form id="soul-edit-form" onSubmit={handleSubmit} className="space-y-4">
         <TextField
           id={nameId}

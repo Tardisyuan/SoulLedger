@@ -79,11 +79,11 @@ const badge = cva(
     // padding, 12px type, medium weight, hairline border. Changing the vertical
     // padding here changes every table row in the app, which is why
     // eslint.config.mjs exempts it by class name rather than by budget.
-    // `text-02` IS 12px — it is the eight-step scale's slot for IDs and meta,
+    // `text-xs` IS 12px — it is the eight-step scale's slot for IDs and meta,
     // which is what a badge is — but it also brings 0.04em tracking, which a
     // bare `text-xs` did not, and short uppercase-ish labels need it.
     // 规范 v1: 11 / 16 IBM Plex Mono, 400, 1 px border, 2 px / 6 px padding.
-    "px-1.5 py-0.5 font-mono text-01 font-normal border",
+    "px-1.5 py-0.5 font-mono text-2xs font-normal border",
     // A badge is a label, not a paragraph. Wrapping one mid-word inside a table
     // cell is how the 66 hand-rolled ones each discovered `whitespace-nowrap`
     // separately.

@@ -253,20 +253,20 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-accent))] transition-colors min-w-[120px]"
+          className="flex items-center gap-2 px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-accent))] transition-colors min-w-[120px]"
         >
           {SelectedIcon ? (
             <SelectedIcon className="w-4 h-4 text-[oklch(var(--color-accent-ink))]" />
           ) : (
             <span className="text-[oklch(var(--color-ink-muted))]">{t("icon_picker.select")}</span>
           )}
-          {value && <span className="text-[oklch(var(--color-ink-subtle))] ml-auto text-02">{value}</span>}
+          {value && <span className="text-[oklch(var(--color-ink-subtle))] ml-auto text-xs">{value}</span>}
         </button>
         {value && (
           <button
             type="button"
             onClick={() => onChange("")}
-            className="text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-status-error))] text-02"
+            className="text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-status-error))] text-xs"
           >
             {t("icon_picker.clear")}
           </button>
@@ -285,7 +285,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("icon_picker.search")}
             aria-label={t("icon_picker.search")}
-            className="w-full bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="w-full bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           />
 
           {!search && (
@@ -295,7 +295,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   key={cat.label}
                   type="button"
                   onClick={() => setActiveCategory(cat.label)}
-                  className={`px-2 py-1 text-02 transition-colors ${
+                  className={`px-2 py-1 text-xs transition-colors ${
                     activeCategory === cat.label
                       ? "bg-[oklch(var(--color-accent))] text-black"
                       : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
@@ -337,7 +337,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           </div>
 
           {displayIcons.length === 0 && (
-            <p className="text-center text-[oklch(var(--color-ink-muted))] text-04 py-4">{t("icon_picker.no_results")}</p>
+            <p className="text-center text-[oklch(var(--color-ink-muted))] text-sm py-4">{t("icon_picker.no_results")}</p>
           )}
         </div>
       </BaseModal>

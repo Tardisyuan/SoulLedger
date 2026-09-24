@@ -74,7 +74,7 @@ export default function HomePage() {
               <Button>:它导航,不触发动作。 */}
           <a
             href={user ? "/dashboard" : "/login"}
-            className="inline-flex items-center gap-2 px-3 py-2 text-03 font-medium bg-[oklch(var(--color-accent))] text-black border border-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] hover:border-[oklch(var(--color-accent-hover))] transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[oklch(var(--color-accent))] text-black border border-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] hover:border-[oklch(var(--color-accent-hover))] transition-colors"
           >
             {t("home.console")}
             <ExternalLink className="w-4 h-4" />
@@ -99,17 +99,17 @@ export default function HomePage() {
         <header className="mb-10 md:mb-14">
           {/* 八档字级表最上面那两档。迁移前是 `text-4xl md:text-5xl lg:text-6xl`
               —— 三个断点、三个表外字号。 */}
-          <h1 className="text-07 md:text-08 mb-4 text-[oklch(var(--color-accent-ink))]">
+          <h1 className="text-lg md:text-xl mb-4 text-[oklch(var(--color-accent-ink))]">
             {t("home.hero_title")}
           </h1>
-          <p className="text-[oklch(var(--color-accent-ink))]/80 text-05 mb-2">{t("home.hero_subtitle")}</p>
-          <p className="text-[oklch(var(--color-ink-subtle))] text-04 max-w-prose">
+          <p className="text-[oklch(var(--color-accent-ink))]/80 text-md mb-2">{t("home.hero_subtitle")}</p>
+          <p className="text-[oklch(var(--color-ink-subtle))] text-sm max-w-prose">
             {t("home.hero_description")}
           </p>
         </header>
 
         <section>
-          <h2 className="text-06 mb-6 md:mb-10 text-[oklch(var(--color-ink-muted))]">
+          <h2 className="text-md mb-6 md:mb-10 text-[oklch(var(--color-ink-muted))]">
             {t("home.civilizations_title")}
           </h2>
           {/* Rendered from CIVILIZATION_OPTIONS, not from three hand-written
@@ -153,24 +153,24 @@ export default function HomePage() {
         {/* Footer with version */}
         <div className="mt-10 md:mt-14 text-center">
           {locale === "zh-Hans" && (
-            <p className="text-[oklch(var(--color-ink-subtle))] text-03">
+            <p className="text-[oklch(var(--color-ink-subtle))] text-sm">
               万古轮回皆有录
             </p>
           )}
           {locale === "en" && (
-            <p className="text-[oklch(var(--color-ink-subtle))] text-03 italic">
+            <p className="text-[oklch(var(--color-ink-subtle))] text-sm italic">
               Every soul weighed, every life recorded
             </p>
           )}
           {locale === "egy" && (
             <p
-              className="text-[oklch(var(--color-accent-ink))] text-02"
+              className="text-[oklch(var(--color-accent-ink))] text-xs"
               style={{ fontFamily: "'Noto Sans Egyptian Hieroglyphs', sans-serif" }}
             >
               𓇳 𓋹 𓎛 𓃭
             </p>
           )}
-          <p className="text-[oklch(var(--color-ink-subtle))] text-03 mt-1">
+          <p className="text-[oklch(var(--color-ink-subtle))] text-sm mt-1">
             {t("footer.version")}
           </p>
         </div>
@@ -222,10 +222,10 @@ function CivilizationCard({
         // note: "文明身份线与判决落印带,全站只有这两处"). The eyebrow says in
         // words what the rule says in colour, because a colour alone is not
         // available to everyone.
-        <p className="text-01 uppercase text-[oklch(var(--color-accent-ink))] mb-2">{ownLabel}</p>
+        <p className="text-2xs uppercase text-[oklch(var(--color-accent-ink))] mb-2">{ownLabel}</p>
       )}
       <p
-        className="text-06 mb-1"
+        className="text-md mb-1"
         style={
           isEgyptian
             ? { fontFamily: "'Noto Sans Egyptian Hieroglyphs', sans-serif" }
@@ -234,8 +234,8 @@ function CivilizationCard({
       >
         {title}
       </p>
-      <p className="text-02 text-[oklch(var(--color-ink-muted))] mb-3 md:mb-4">{subtitle}</p>
-      <p className="text-[oklch(var(--color-ink))] text-03 leading-relaxed">{description}</p>
+      <p className="text-xs text-[oklch(var(--color-ink-muted))] mb-3 md:mb-4">{subtitle}</p>
+      <p className="text-[oklch(var(--color-ink))] text-sm leading-relaxed">{description}</p>
     </div>
   );
 }

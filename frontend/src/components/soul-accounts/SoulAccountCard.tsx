@@ -58,7 +58,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
     body = (
       <div className="space-y-4">
         {current ? (
-          <dl className="space-y-2 text-03" data-testid="current-soul-account">
+          <dl className="space-y-2 text-sm" data-testid="current-soul-account">
             {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(current.cycle) }))}
             {row(t("soul_accounts.fields.soul_code"), <span className="font-mono break-all">{current.soul_code}</span>)}
             {row(t("soul_accounts.account.origin_label"), <DomainEnum namespace="soul_accounts.origin" value={current.origin} />)}
@@ -94,7 +94,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
             {row(t("soul_accounts.account.contact_phone"), current.contact_phone_masked || <MissingValue kind="unrecorded" />)}
           </dl>
         ) : (
-          <p className="text-03 text-[oklch(var(--color-ink-muted))]">
+          <p className="text-sm text-[oklch(var(--color-ink-muted))]">
             {soul.current_state === "ALIVE" ? t("soul_accounts.account.alive_no_account") : t("soul_accounts.account.none")}
           </p>
         )}
@@ -110,17 +110,17 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
           </Button>
         )}
         {current?.must_change_password && (
-          <Link href="/soul-credentials" className="block text-02 underline text-[oklch(var(--color-accent-ink))]">
+          <Link href="/soul-credentials" className="block text-xs underline text-[oklch(var(--color-accent-ink))]">
             {t("soul_accounts.account.pending_link")}
           </Link>
         )}
 
         {accounts.length > 0 && (
           <div>
-            <h3 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("soul_accounts.account.chain")}</h3>
+            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("soul_accounts.account.chain")}</h3>
             <ol className="space-y-2" data-testid="soul-account-chain">
               {accounts.map((a) => (
-                <li key={a.id} className="text-02 border-l-2 border-[oklch(var(--color-hairline))] pl-3">
+                <li key={a.id} className="text-xs border-l-2 border-[oklch(var(--color-hairline))] pl-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-[oklch(var(--color-ink))]">{t("soul_accounts.life", { n: lifeNumber(a.cycle) })}</span>
                     <DomainEnum namespace="soul_accounts.origin" value={a.origin} className="text-[oklch(var(--color-ink-muted))]" />
@@ -145,7 +145,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
 
   return (
     <section id="soul-account" className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-      <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("soul_accounts.account.title")}</h2>
+      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("soul_accounts.account.title")}</h2>
       {body}
       {modal === "provision" && (
         <AccountCredentialModal mode="provision" soulId={soul.id} soulName={soul.name} onClose={() => setModal(null)} />

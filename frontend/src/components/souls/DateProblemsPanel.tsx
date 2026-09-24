@@ -108,7 +108,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
 
   return (
     <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
-      <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">
+      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">
         {t("souls.detail.date_problems.title")}
       </h2>
       <div className="space-y-2">
@@ -124,7 +124,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                 aria-expanded={isOpen}
                 className="w-full flex items-center justify-between px-3 py-2 text-left"
               >
-                <span className="flex items-center gap-2 text-03">
+                <span className="flex items-center gap-2 text-sm">
                   <span
                     aria-hidden="true"
                     className={
@@ -140,10 +140,10 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))] text-02 px-1.5 py-0.5">
+                  <span className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))] text-xs px-1.5 py-0.5">
                     {group.length}
                   </span>
-                  <span className="text-[oklch(var(--color-ink-subtle))] text-02" aria-hidden="true">
+                  <span className="text-[oklch(var(--color-ink-subtle))] text-xs" aria-hidden="true">
                     {isOpen ? "▲" : "▼"}
                   </span>
                 </span>
@@ -151,7 +151,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
               {isOpen && (
                 <div className="px-3 pb-3 space-y-3 border-t border-[oklch(var(--color-hairline))] pt-2">
                   {group.map((occ, idx) => (
-                    <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-03 text-[oklch(var(--color-ink-muted))] space-y-1">
+                    <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-sm text-[oklch(var(--color-ink-muted))] space-y-1">
                       {occ.recordLabel && (
                         <div className="text-[oklch(var(--color-ink))] font-medium">{occ.recordLabel}</div>
                       )}

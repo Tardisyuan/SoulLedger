@@ -45,7 +45,7 @@ const spinner = cva(
   {
     variants: {
       size: {
-        // 16px — inline, sits on a line of text-03/text-04 without lifting it.
+        // 16px — inline, sits on a line of text-sm/text-sm without lifting it.
         sm: "w-4 h-4",
         // 24px — beside a heading, or in a panel that is loading in place.
         md: "w-6 h-6",

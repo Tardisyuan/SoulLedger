@@ -176,7 +176,7 @@ const NUMERIC_TONE_CLASSES: Record<'success' | 'error' | 'neutral', string> = {
  * used to carry beyond Badge's own classes was `rounded` (a dead class:
  * borderRadius.DEFAULT is 0, so it emitted `border-radius: 0` and only made a
  * reader think a decision had been taken — Badge deliberately writes no radius
- * at all), `text-xs` (12px, the size `text-02` also is, minus the 0.04em
+ * at all), `text-xs` (12px, the size `text-xs` also is, minus the 0.04em
  * tracking short badge labels want), and a hand-written tone lookup. Badge
  * replaces the last two and drops the first, and adds the `whitespace-nowrap`
  * this one lacked and every hand-rolled badge in the app rediscovered on its

@@ -155,11 +155,11 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
       <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent))] transition-colors cursor-pointer">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{t("dispatch.soul_prefix")}
+            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("dispatch.soul_prefix")}
               {/* `soul_name` is in the same response and was going unread;
                   the card printed the primary key instead. */}
               {dispatch.soul_name || <MissingValue kind="unrecorded" />}</p>
-            <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
+            <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
             </p>
             {/* `proposed_at` was in the response and unread, so this card
@@ -167,7 +167,7 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
                 Mono + tabular-nums so the timestamps line up digit for digit
                 down a column of cards, which is what makes "oldest first"
                 readable at a glance. */}
-            <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink-subtle))] mt-1">
+            <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))] mt-1">
               {dispatch.proposed_at ? (
                 formatDateTime(dispatch.proposed_at)
               ) : (
@@ -185,7 +185,7 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
           />
         </div>
         {dispatch.reason && (
-          <p className="mt-2 text-03 text-[oklch(var(--color-ink-muted))]">{dispatch.reason}</p>
+          <p className="mt-2 text-sm text-[oklch(var(--color-ink-muted))]">{dispatch.reason}</p>
         )}
       </div>
     </Link>

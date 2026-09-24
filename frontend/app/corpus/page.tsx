@@ -236,7 +236,7 @@ export default function CorpusPage() {
       pagination={{
         count:
           total > 0 ? (
-            <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink-subtle))]">
+            <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))]">
               {t("pagination.info", {
                 page: String(page),
                 total: String(totalPages),
@@ -353,13 +353,13 @@ function CorpusCard({
       className="border-t border-[oklch(var(--color-block))] pt-4"
     >
       <header className="flex items-baseline gap-3 mb-4">
-        <h2 className="text-06 text-[oklch(var(--color-ink))]">
+        <h2 className="text-md text-[oklch(var(--color-ink))]">
           <DomainEnum namespace="judgment.statute_corpus" value={group.corpus} />
         </h2>
-        <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">
+        <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
           <DomainEnum namespace="souls.civilizations" value={group.civilization} />
         </p>
-        <p className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink-subtle))] ml-auto">
+        <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))] ml-auto">
           {/* `group.statutes` holds only the rows on *this page* (PAGE_SIZE
               20, both ends). Rendering that as "N articles" reported 功過格
               as 20 when it has 74, and split any corpus that straddles a page
@@ -398,7 +398,7 @@ function CorpusCard({
                  Comes from the sigil table, so it cannot drift from the
                  formatter that produced the cells below it. */
               title={known ? sigilSystemName(group.civilization) : undefined}
-              className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] text-right pb-2 pr-2"
+              className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-right pb-2 pr-2"
             >
               {t("judgment.corpus.col_sigil")}
             </th>
@@ -413,14 +413,14 @@ function CorpusCard({
                 `civ === "GREEK"` so that a fifth cosmology which also names no
                 offences gets the right table instead of the Greek accident. */}
             {namesOffences ? (
-              <th scope="col" className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] text-left pb-2 pr-3">
+              <th scope="col" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-left pb-2 pr-3">
                 {t("judgment.corpus.col_offence")}
               </th>
             ) : null}
-            <th scope="col" className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] text-left pb-2 pr-3">
+            <th scope="col" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-left pb-2 pr-3">
               {t("judgment.corpus.col_text")}
             </th>
-            <th scope="col" className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] text-right pb-2">
+            <th scope="col" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-right pb-2">
               {t("judgment.corpus.col_citations")}
             </th>
           </tr>
@@ -463,7 +463,7 @@ function StatuteRow({
 
   return (
     <tr className="border-b border-[oklch(var(--color-hairline))] last:border-b-0">
-      <td className="text-02 font-mono text-right align-top py-3 pr-2 text-[oklch(var(--color-ink-subtle))]">
+      <td className="text-xs font-mono text-right align-top py-3 pr-2 text-[oklch(var(--color-ink-subtle))]">
         <DomainText
           value={sigil}
           missingKind="unrecorded"
@@ -472,13 +472,13 @@ function StatuteRow({
       </td>
       {namesOffences ? (
         <td className="align-top py-3 pr-3">
-          <p className="text-03 text-[oklch(var(--color-ink))]">{statute.display_title}</p>
+          <p className="text-sm text-[oklch(var(--color-ink))]">{statute.display_title}</p>
           {/* Inside the offence column on purpose: the polarity says what KIND
               of naming this is — 功 or 過, a prohibition or a declaration of
               innocence — and a corpus that names no offences has no such kind
               to report. Putting it in its own column would hand Greece a column
               of "rule of the court" repeated twenty times. */}
-          <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mt-1">
+          <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mt-1">
             <DomainEnum namespace="judgment.statute_polarity" value={statute.polarity} />
           </p>
         </td>
@@ -487,7 +487,7 @@ function StatuteRow({
           `text_en`: the Egyptian Forty-Two are DERIVED — their `text_*` columns
           are empty by design and the body is read from the assessor's own
           record, so the resolved field is the only one with anything in it. */}
-      <td className="font-serif text-05 text-[oklch(var(--color-ink))] align-top py-3 pr-3">
+      <td className="font-serif text-quote text-[oklch(var(--color-ink))] align-top py-3 pr-3">
         <DomainText value={statute.display_text} missingKind="unrecorded" />
       </td>
       <td className="text-right align-top py-3">

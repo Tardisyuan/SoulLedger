@@ -75,12 +75,12 @@ export function PlanChangesEditor({
   return (
     <div className="space-y-4">
       <fieldset className="space-y-3">
-        <legend className="text-03 font-medium mb-1">{t("sentence_plan.file.add_title")}</legend>
+        <legend className="text-sm font-medium mb-1">{t("sentence_plan.file.add_title")}</legend>
         {draft.add.map((a, index) => {
           const eternal = realms.data?.find((r) => r.realm_code === a.realm_code)?.is_eternal;
           return (
             <div key={index} data-add-row={index} className="space-y-2 border-l-2 border-[oklch(var(--color-hairline))] pl-3">
-              <p className="text-03">
+              <p className="text-sm">
                 <TenantName code={tenantCode} />
               </p>
               <SelectField
@@ -96,7 +96,7 @@ export function PlanChangesEditor({
                 ]}
               />
               {eternal && (
-                <p className="text-02 text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.cross.eternal_hint")}</p>
+                <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.cross.eternal_hint")}</p>
               )}
               <TextField
                 label={t("sentence_plan.cross.years")}
@@ -133,12 +133,12 @@ export function PlanChangesEditor({
       </fieldset>
 
       <fieldset className="space-y-1">
-        <legend className="text-03 font-medium mb-1">{t("sentence_plan.file.remove_title")}</legend>
+        <legend className="text-sm font-medium mb-1">{t("sentence_plan.file.remove_title")}</legend>
         {pending.length === 0 ? (
-          <p className="text-02 text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.file.no_pending")}</p>
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.file.no_pending")}</p>
         ) : (
           pending.map((n) => (
-            <label key={n.id} className="flex items-center gap-2 text-03 cursor-pointer">
+            <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={draft.remove.includes(n.id)}
@@ -147,7 +147,7 @@ export function PlanChangesEditor({
               />
               <span>{t("sentence_plan.stop", { order: String(n.order) })}</span>
               <TenantName code={n.tenant_code} />
-              <span className="text-02 text-[oklch(var(--color-ink-subtle))]">
+              <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
                 <DomainEnum namespace="realms.names" value={n.realm_code || null} />
               </span>
             </label>

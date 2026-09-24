@@ -23,9 +23,9 @@ export function SoulInfoCard({
 
   return (
     <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-      <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
+      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
       {loading ? (
-        <div className="space-y-2 text-03">
+        <div className="space-y-2 text-sm">
           {[1,2,3,4,5].map(i => (
             <div key={i} className="flex justify-between">
               <Skeleton className="h-3 w-16" />
@@ -34,7 +34,7 @@ export function SoulInfoCard({
           ))}
         </div>
       ) : (
-        <dl className="space-y-2 text-03">
+        <dl className="space-y-2 text-sm">
           {/* Soul ID now lives in the header as a copyable chip —
               a second, non-interactive, truncated copy here was
               redundant and couldn't be pasted into anything. */}

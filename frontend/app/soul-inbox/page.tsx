@@ -29,7 +29,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
  */
 
 const PANEL = "border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]";
-const MUTED_TEXT = "text-02 text-[oklch(var(--color-ink-subtle))]";
+const MUTED_TEXT = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 /** 殿司展示名,按界面语言(`hall_names`,backend `Tenant.hall_names`);没有就退回租户名。 */
 function hallOf(c: InboxConversation, locale: string): string {
@@ -73,7 +73,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   return (
     <section aria-label={t("soul_inbox.thread_label", { name: conversation.soul_name })} className={`${PANEL} p-4 space-y-4`}>
       <header className="flex flex-wrap items-center gap-2">
-        <span className="text-03 font-medium">{conversation.soul_name}</span>
+        <span className="text-sm font-medium">{conversation.soul_name}</span>
         <span className={`${MUTED_TEXT} font-mono`}>{conversation.soul_code}</span>
         {conversation.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
       </header>
@@ -97,7 +97,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
                 {" · "}
                 {formatDateTime(new Date(m.timestamp).toISOString())}
               </p>
-              <p className="text-03 text-[oklch(var(--color-ink))] whitespace-pre-wrap break-words">{m.body}</p>
+              <p className="text-sm text-[oklch(var(--color-ink))] whitespace-pre-wrap break-words">{m.body}</p>
             </li>
           ))}
         </ol>
@@ -157,7 +157,7 @@ function SoulInboxContent() {
                   onClick={() => setSelectedId(r.id)}
                   className="w-full text-left p-4 space-y-1 hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-surface-2))]">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-03 font-medium">{r.soul_name}</span>
+                    <span className="text-sm font-medium">{r.soul_name}</span>
                     {r.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
                   </span>
                   <span className={`block ${MUTED_TEXT}`}>

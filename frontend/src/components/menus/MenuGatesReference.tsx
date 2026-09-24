@@ -46,13 +46,13 @@ export function MenuGatesReference() {
        — so the two tables on this page read as one table style even though
        only one of them is the component. */
     <details className="mb-4 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))]">
-      <summary className="cursor-pointer px-4 py-3 text-03 font-medium text-[oklch(var(--color-ink))]">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-[oklch(var(--color-ink))]">
         {t("menus.gates_title")}
       </summary>
       <div className="px-4 pb-4">
-        <p className="text-03 text-[oklch(var(--color-ink-muted))] mb-3">{t("menus.gates_intro")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-3">{t("menus.gates_intro")}</p>
         <div className="overflow-x-auto">
-          <table className="w-full text-03 border-collapse">
+          <table className="w-full text-sm border-collapse">
             <thead className="bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]">
               <tr className="text-left border-b border-[oklch(var(--color-hairline))]">
                 <th className="px-4 py-3 font-medium">{t("menus.gate_col_name")}</th>
@@ -71,7 +71,7 @@ export function MenuGatesReference() {
             </tbody>
           </table>
         </div>
-        <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2">{t("menus.gates_footnote")}</p>
+        <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">{t("menus.gates_footnote")}</p>
       </div>
     </details>
   );

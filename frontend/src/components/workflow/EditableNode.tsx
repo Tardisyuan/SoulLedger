@@ -45,16 +45,16 @@ function EditableNodeComponent({
       } ${colorClass}`}
     >
       <Handle type="target" position={Position.Top} className="bg-[oklch(var(--color-accent))]!" />
-      <div className="text-03 font-semibold text-[oklch(var(--color-ink))]">{data.label}</div>
-      <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
+      <div className="text-sm font-semibold text-[oklch(var(--color-ink))]">{data.label}</div>
+      <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
-        <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1 flex items-center gap-1">
+        <div className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1 flex items-center gap-1">
           <Landmark aria-hidden="true" className="w-3 h-3" />
           {data.courtCode}
         </div>
       )}
       {data.approverRole && (
-        <div className="text-02 text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
+        <div className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
           <User aria-hidden="true" className="w-3 h-3" />
           {data.approverRole}
         </div>

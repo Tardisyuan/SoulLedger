@@ -99,7 +99,7 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
         if (tenantCode) seat.mutate();
       }}
     >
-      <h2 className="text-06 text-[oklch(var(--color-ink))]">{t("sentence_plan.cross.seat_title")}</h2>
+      <h2 className="text-md text-[oklch(var(--color-ink))]">{t("sentence_plan.cross.seat_title")}</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <SelectField
           label={t("sentence_plan.cross.seat_tenant")}
@@ -132,7 +132,7 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
       {tenantCode &&
         actors.data &&
         (actors.data.length === 0 ? (
-          <p className="text-02 text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.cross.seat_actor_empty")}</p>
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("sentence_plan.cross.seat_actor_empty")}</p>
         ) : (
           <SelectField
             label={t("sentence_plan.cross.seat_actor")}
@@ -157,7 +157,7 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
           />
         ))}
       {judgment.judgment && (
-        <p className="text-02 text-[oklch(var(--color-ink-subtle))]" data-testid="seat-stop">
+        <p className="text-xs text-[oklch(var(--color-ink-subtle))]" data-testid="seat-stop">
           {carriesStop
             ? t("sentence_plan.cross.seat_order", { order: String(nextOrder) })
             : t("sentence_plan.cross.seat_advisor_hint")}

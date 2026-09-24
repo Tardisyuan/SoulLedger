@@ -112,34 +112,34 @@ function BalanceReading({
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
-        <span className="text-04 text-[oklch(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
+        <span className="text-sm text-[oklch(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
         <Figure
           field="merit"
           quantity={q.merit}
           t={t}
-          className="text-06 tabular-nums text-[oklch(var(--color-karma-merit))]"
+          className="text-md tabular-nums text-[oklch(var(--color-karma-merit))]"
         >
           +{reading.merit}
         </Figure>
       </div>
       <div className="flex justify-between items-center">
-        <span className="text-04 text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
+        <span className="text-sm text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
         <Figure
           field="demerit"
           quantity={q.demerit}
           t={t}
-          className="text-06 tabular-nums text-[oklch(var(--color-karma-demerit))]"
+          className="text-md tabular-nums text-[oklch(var(--color-karma-demerit))]"
         >
           -{reading.demerit}
         </Figure>
       </div>
       <div className="border-t border-[oklch(var(--color-hairline))] pt-2 flex justify-between items-center">
-        <span className="text-04 text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
+        <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
         <Figure
           field="balance"
           quantity={q.balance}
           t={t}
-          className={`text-06 tabular-nums ${
+          className={`text-md tabular-nums ${
             reading.balance >= 0 ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"
           }`}
         >
@@ -177,7 +177,7 @@ function ThresholdReading({
           field="ratio"
           quantity="ratio"
           t={t}
-          className={`text-07 tabular-nums ${
+          className={`text-lg tabular-nums ${
             failed ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-karma-merit))]"
           }`}
         >
@@ -193,7 +193,7 @@ function ThresholdReading({
             the same "a number is not the kind it looks like" defect this whole
             change is about, one field along. The scale word is interpolated
             rather than written into the sentence so there is one copy of it. */}
-        <span className="text-02 text-[oklch(var(--color-ink-muted))] mt-1 text-center">
+        <span className="text-xs text-[oklch(var(--color-ink-muted))] mt-1 text-center">
           {t("souls.detail.reading.threshold_hint", {
             weight: String(reading.heart_weight),
             counterweight: String(reading.counterweight),
@@ -203,7 +203,7 @@ function ThresholdReading({
       </div>
       <div className="flex justify-center">
         <span
-          className={`px-2 py-0.5 text-02 font-bold ${
+          className={`px-2 py-0.5 text-xs font-bold ${
             failed
               ? "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]"
               : "bg-[oklch(var(--color-karma-merit)/0.1)] text-[oklch(var(--color-karma-merit))]"
@@ -233,12 +233,12 @@ function GuiltAndPenaltyReading({
             numeral borrowed the caption's grammar and read as "22 of
             something". It names its scale now; the caption keeps its noun. */}
         <div className="flex justify-between items-center">
-          <span className="text-04 text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
+          <span className="text-sm text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
           <Figure
             field="culpa"
             quantity={READING_QUANTITIES.GUILT_AND_PENALTY.culpa}
             t={t}
-            className="text-06 tabular-nums text-[oklch(var(--color-karma-demerit))]"
+            className="text-md tabular-nums text-[oklch(var(--color-karma-demerit))]"
           >
             {reading.culpa}
           </Figure>
@@ -246,7 +246,7 @@ function GuiltAndPenaltyReading({
         {/* `culpa_record_count` is classified a count and deliberately stays in
             this sentence: a second numeral of culpa's size beside culpa is the
             confusion, not the fix. */}
-        <div className="text-02 text-[oklch(var(--color-ink-subtle))] text-right mt-0.5">
+        <div className="text-xs text-[oklch(var(--color-ink-subtle))] text-right mt-0.5">
           {t("souls.detail.reading.culpa_records", { count: String(reading.culpa_record_count) })}
         </div>
       </div>
@@ -257,7 +257,7 @@ function GuiltAndPenaltyReading({
           never read as something that offsets or compares against culpa. */}
       <div className="border-t border-dashed border-[oklch(var(--color-hairline))] pt-3">
         <div className="flex justify-between items-center">
-          <span className="text-04 text-[oklch(var(--color-ink-muted))]">{t("souls.detail.reading.poena_label")}</span>
+          <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.reading.poena_label")}</span>
           {/* aria-hidden, not aria-labelled. The label used to be the same key
               as the <p> directly below, so a screen reader announced the
               explanation twice — once as the value and once as itself. The
@@ -274,13 +274,13 @@ function GuiltAndPenaltyReading({
               duration the ledger merely has no start date for. */}
           <span
             data-quantity-absent="poena"
-            className="text-06 text-[oklch(var(--color-ink-subtle))]"
+            className="text-md text-[oklch(var(--color-ink-subtle))]"
             aria-hidden="true"
           >
             —
           </span>
         </div>
-        <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
+        <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
           {t("souls.detail.reading.poena_unavailable_heading")}
         </p>
         {/* One bullet per member the backend actually sent, not three
@@ -290,7 +290,7 @@ function GuiltAndPenaltyReading({
             derived from the member so a member with no copy shows the raw key
             — ugly, and therefore self-reporting — instead of vanishing. */}
         {reading.poena_missing.length > 0 && (
-          <ul className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+          <ul className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
             {reading.poena_missing.map((missing) => (
               <li key={missing}>{t(`souls.detail.reading.poena_missing_${missing.toLowerCase()}`)}</li>
             ))}
@@ -315,7 +315,7 @@ function UnrenderableReading({ kind, t }: { kind: string; t: TFunc }) {
       role="status"
       className="border border-dashed border-[oklch(var(--color-status-warning))] p-3"
     >
-      <p className="text-02 text-[oklch(var(--color-status-warning))]">
+      <p className="text-xs text-[oklch(var(--color-status-warning))]">
         {t("souls.detail.reading.unrenderable_kind", { kind })}
       </p>
     </div>
@@ -344,7 +344,7 @@ function UnavailableReading({
 
   return (
     <div className="space-y-3">
-      <p className="text-04 text-[oklch(var(--color-ink-muted))]">
+      <p className="text-sm text-[oklch(var(--color-ink-muted))]">
         {t(`souls.detail.reading.unavailable_${slug}_explanation`)}
       </p>
 
@@ -363,22 +363,22 @@ function UnavailableReading({
           road count to this box is making exactly the comparison the review
           caught, and the box is the place it is least defended against. */}
       <div className="border border-dashed border-[oklch(var(--color-hairline))] p-3 space-y-1.5">
-        <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">
+        <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>
-        <div className="flex justify-between text-03">
+        <div className="flex justify-between text-sm">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.merit")}</span>
           <Figure field="merit_score" quantity={SUMMARY_QUANTITIES.merit_score} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
             {meritScore}
           </Figure>
         </div>
-        <div className="flex justify-between text-03">
+        <div className="flex justify-between text-sm">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.demerit")}</span>
           <Figure field="demerit_score" quantity={SUMMARY_QUANTITIES.demerit_score} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
             {demeritScore}
           </Figure>
         </div>
-        <div className="flex justify-between text-03 border-t border-[oklch(var(--color-hairline))] pt-1">
+        <div className="flex justify-between text-sm border-t border-[oklch(var(--color-hairline))] pt-1">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
           <Figure field="karmic_balance" quantity={SUMMARY_QUANTITIES.karmic_balance} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
             {karmicBalance}
@@ -386,7 +386,7 @@ function UnavailableReading({
         </div>
       </div>
 
-      <p className="text-02 text-[oklch(var(--color-status-warning))]">
+      <p className="text-xs text-[oklch(var(--color-status-warning))]">
         {t(`souls.detail.reading.unavailable_${slug}_cta`)}
       </p>
     </div>

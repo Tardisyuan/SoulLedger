@@ -85,7 +85,7 @@ export default function DispositionPage() {
           <div key={d.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-03 font-medium text-[oklch(var(--color-ink))]">
+                <p className="text-sm font-medium text-[oklch(var(--color-ink))]">
                   {t("disposition.soul")}:{" "}
                   {/* 静息态就带 `underline`,不是只在 `hover:` 上。这是本仓唯一一个
                       **段落内**链接(周围有文字、同一行),而 WCAG 1.4.1 对这种链接
@@ -100,7 +100,7 @@ export default function DispositionPage() {
                     {d.soul_name || d.soul}
                   </Link>
                 </p>
-                <p className="text-03 text-[oklch(var(--color-ink-subtle))] mt-1">
+                <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-1">
                   {t("disposition.realm")}: <DomainText value={d.realm_name || d.destination_realm} />
                 </p>
               </div>
@@ -124,7 +124,7 @@ export default function DispositionPage() {
               </div>
             </div>
             {d.notes && (
-              <p className="mt-2 text-03 text-[oklch(var(--color-ink-muted))]">{d.notes}</p>
+              <p className="mt-2 text-sm text-[oklch(var(--color-ink-muted))]">{d.notes}</p>
             )}
           </div>
         ))}

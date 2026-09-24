@@ -36,7 +36,7 @@ import { SentenceRequestForm } from "./SentenceRequestForm";
  */
 
 const PANEL = "bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]";
-const MUTED = "text-02 text-[oklch(var(--color-ink-subtle))]";
+const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function NodeRow({ node, current }: { node: SentenceNode; current: boolean }) {
   const { t } = useI18n();
@@ -50,7 +50,7 @@ function NodeRow({ node, current }: { node: SentenceNode; current: boolean }) {
         gone ? "opacity-60" : ""
       }`}
     >
-      <span className="text-03 font-medium tabular-nums">{t("sentence_plan.stop", { order: String(node.order) })}</span>
+      <span className="text-sm font-medium tabular-nums">{t("sentence_plan.stop", { order: String(node.order) })}</span>
       <TenantName code={node.tenant_code} />
       {node.is_home && <Badge tone="neutral">{t("sentence_plan.home")}</Badge>}
       <span className={MUTED}>
@@ -111,7 +111,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
         {plan.completed_at && <span className={MUTED}>{formatDateTime(plan.completed_at)}</span>}
       </header>
       {plan.status === "CANCELLED" && plan.cancel_reason && (
-        <p className="text-03 text-[oklch(var(--color-ink-muted))]">
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">
           {t("sentence_plan.cancel_reason_shown", { reason: plan.cancel_reason })}
         </p>
       )}
@@ -124,11 +124,11 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
 
       {plan.requests.length > 0 && (
         <div>
-          <h3 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-2">{t("sentence_plan.requests_title")}</h3>
+          <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-2">{t("sentence_plan.requests_title")}</h3>
           <ul className="space-y-3">
             {plan.requests.map((r) => (
               <li key={r.id} data-request-id={r.id} className="space-y-1">
-                <p className="flex flex-wrap items-center gap-2 text-03">
+                <p className="flex flex-wrap items-center gap-2 text-sm">
                   <DomainEnum namespace="sentence_plan.request_kinds" value={r.kind} />
                   <Badge tone={REQUEST_TONES[r.status] ?? "neutral"}>
                     <DomainEnum namespace="sentence_plan.request_states" value={r.status} />
@@ -140,7 +140,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
                   </span>
                 </p>
                 <RequestChanges request={r} plan={plan} />
-                {r.reason && <p className="text-03 text-[oklch(var(--color-ink-muted))]">{r.reason}</p>}
+                {r.reason && <p className="text-sm text-[oklch(var(--color-ink-muted))]">{r.reason}</p>}
                 {r.decision_reason && (
                   <p className={MUTED}>{t("sentence_plan.decision_reason_shown", { reason: r.decision_reason })}</p>
                 )}
@@ -178,7 +178,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
           </div>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-ink-muted))] mb-3">{t("sentence_plan.cancel_warning")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-3">{t("sentence_plan.cancel_warning")}</p>
         <TextAreaField
           label={t("sentence_plan.cancel_reason")}
           value={reason}
@@ -199,13 +199,13 @@ export function SentencePlanCard({ soulId }: { soulId: string }) {
 
   return (
     <div className={PANEL} data-testid="sentence-plan-card">
-      <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("sentence_plan.panel_title")}</h2>
+      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("sentence_plan.panel_title")}</h2>
       {plans.isLoading ? (
         <Skeleton className="h-16 w-full" />
       ) : plans.isError && !plans.data ? (
         <QueryError onRetry={() => plans.refetch()} />
       ) : rows.length === 0 ? (
-        <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.none")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.none")}</p>
       ) : (
         <div className="space-y-6">
           {rows.map((p) => (

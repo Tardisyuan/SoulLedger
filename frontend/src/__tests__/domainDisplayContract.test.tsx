@@ -60,7 +60,7 @@ const ENUM_FIELDS = [
   "disposition_type",
   "action",
   // Added 2026-09-02, after `conclusion_type` shipped as a raw member.
-  // `app/cross-judgments/[id]` printed `PASS` / `FAIL` verbatim at text-06 bold
+  // `app/cross-judgments/[id]` printed `PASS` / `FAIL` verbatim at text-md bold
   // — the conclusion of a cross-civilization tribunal, the largest text on the
   // panel — with all 2049 tests green, because this list had never been told
   // the field existed. The rule ran, could go red, and was looking at the wrong

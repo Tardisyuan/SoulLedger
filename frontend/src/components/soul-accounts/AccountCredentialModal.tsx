@@ -96,7 +96,7 @@ export function AccountCredentialModal(props: Props) {
       }
     >
       <div className="space-y-4">
-        <p className="text-04 text-[oklch(var(--color-ink))]">{t(`${prefix}_body`)}</p>
+        <p className="text-sm text-[oklch(var(--color-ink))]">{t(`${prefix}_body`)}</p>
         <TextField
           label={t("soul_accounts.account.contact_email")}
           type="email"

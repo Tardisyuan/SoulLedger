@@ -46,7 +46,7 @@
  */
 
 /** Geometry and type, identical in both states. */
-export const TAB_BASE = "px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px";
+export const TAB_BASE = "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px";
 
 /**
  * The selected tab. `--color-accent-ink`, NOT `--color-accent`: this is text,

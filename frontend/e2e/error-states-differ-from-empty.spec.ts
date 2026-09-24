@@ -77,7 +77,8 @@ async function bodyTextWith(
   // for both states, so the comparison was between two identical blanks and
   // the test "passed" for /tenants while telling me nothing. Wait for a
   // control the shell always renders, then read.
-  await page.getByRole("button", { name: /登出|Log ?out/i }).waitFor({
+  // (规范 v1 moved sign-out into the user menu; its trigger is the control now.)
+  await page.getByTestId("user-menu").waitFor({
     state: "visible",
     timeout: 15_000,
   });

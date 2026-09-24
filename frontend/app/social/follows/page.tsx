@@ -48,7 +48,7 @@ export default function FollowsPage() {
       backLink={
         <Link
           href="/social"
-          className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
+          className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
         >
           ← {t("social.back")}
         </Link>
@@ -68,7 +68,7 @@ export default function FollowsPage() {
           // buttons and could not tell which view was showing.
           // `components/ui/data-grid/FilterBar.tsx:181` already does this.
           aria-pressed={tab === key}
-          className={`px-3 py-2 -mb-px text-03 font-medium border-b-2 transition-colors ${
+          className={`px-3 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
             tab === key
               ? "border-[oklch(var(--color-accent))] text-[oklch(var(--color-accent-ink))]"
               : "border-transparent text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
@@ -112,12 +112,12 @@ export default function FollowsPage() {
               >
                 {/* rounded-full stays: an avatar is an identity mark, one of
                     the two shapes the radius scale still has a value for. */}
-                <div className="w-10 h-10 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-03 font-bold text-[oklch(var(--color-accent-ink))] shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-sm font-bold text-[oklch(var(--color-accent-ink))] shrink-0">
                   {userName?.charAt(0)?.toUpperCase() || "?"}
                 </div>
                 <Link
                   href={`/social/profile/${userId}`}
-                  className="text-04 font-medium text-[oklch(var(--color-ink))] hover:underline flex-1"
+                  className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline flex-1"
                 >
                   {userName || userId}
                 </Link>

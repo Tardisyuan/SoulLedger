@@ -143,8 +143,8 @@ function RealmsPageContent() {
               >
                 <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">{config.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span title={t(config.nameKey)} className="block text-06 text-[oklch(var(--color-ink))] truncate">{t(config.nameKey)}</span>
-                  <span className="block text-04 text-[oklch(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</span>
+                  <span title={t(config.nameKey)} className="block text-md text-[oklch(var(--color-ink))] truncate">{t(config.nameKey)}</span>
+                  <span className="block text-sm text-[oklch(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</span>
                 </span>
                 <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
               </Button>
@@ -158,8 +158,8 @@ function RealmsPageContent() {
                         <div className="flex items-start gap-3">
                           <div aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">{typeConfig.icon}</div>
                           <div className="flex-1 min-w-0">
-                            <h3 title={t(`realms.names.${realm.realm_code}`) || realm.name_en} className="text-04 font-semibold text-[oklch(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
-                            <p title={t(`realms.codes.${realm.realm_code}`) || realm.name_local} className="text-03 text-[oklch(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
+                            <h3 title={t(`realms.names.${realm.realm_code}`) || realm.name_en} className="text-sm font-semibold text-[oklch(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
+                            <p title={t(`realms.codes.${realm.realm_code}`) || realm.name_local} className="text-sm text-[oklch(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
                           </div>
                         </div>
                         <div className="mt-2 flex items-center justify-between">

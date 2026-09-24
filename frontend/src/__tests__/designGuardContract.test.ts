@@ -96,7 +96,7 @@ describe("设计系统规则覆盖到每一个存放源码的目录", () => {
    *  两次都不是规则坏了,是名单选错了。所以这里断言的是**路径**,而每条断言
    *  用的是一段五条规则都会命中的代码 —— 只要 glob 漏掉这个目录,五条一起哑。 */
   const OFFENDING =
-    '<div className="text-sm p-5 rounded-lg bg-red-500" style={{ color: "#ef4444" }} />';
+    '<div className="text-base p-5 rounded-lg bg-red-500" style={{ color: "#ef4444" }} />';
   const DIRECTORIES = [
     "app/__design_guard_probe__.tsx",
     "src/__design_guard_probe__.tsx",
@@ -130,7 +130,8 @@ describe("设计系统规则覆盖到每一个存放源码的目录", () => {
 
 describe("设计系统守卫:每条规则单独可证伪", () => {
   const cases: Array<[string, string, string]> = [
-    ["design-system/type-scale", "旧档字号", '<div className="text-sm" />'],
+    ["design-system/type-scale", "旧档字号(Tailwind 默认名)", '<div className="text-base" />'],
+    ["design-system/type-scale", "旧档字号(八档时代的名字)", '<div className="text-03" />'],
     ["design-system/spacing-rhythm", "节奏外间距", '<div className="p-5" />'],
     ["design-system/dead-radius", "归零的死圆角", '<div className="rounded-lg" />'],
     ["design-system/no-raw-palette", "裸调色板", '<div className="bg-red-500" />'],
@@ -165,7 +166,7 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   // 到那时最省事的做法就是把整条规则删掉。带斜杠的不透明度写法要一并钉住:
   // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
-    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
+    'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs rounded-full rounded-focus bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
     'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-civ-mark-cn)/0.4)] shadow-[0_0_0_1px_oklch(var(--color-hairline))]" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
@@ -186,7 +187,7 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
 
   it("这些规则都是 error,不是 warn(裸 `eslint .` 遇到 warning 退出码仍是 0)", () => {
     const all = lintAll([
-      'export const P = () => (<div className="p-5 text-sm rounded-lg bg-red-500" onClick={() => {}}>x</div>);\n',
+      'export const P = () => (<div className="p-5 text-base rounded-lg bg-red-500" onClick={() => {}}>x</div>);\n',
     ])[0];
     const guarded = all.filter(
       (m) => m.ruleId?.startsWith("design-system/") || m.ruleId?.startsWith("jsx-a11y/"),
@@ -336,7 +337,7 @@ describe("RHYTHM_EXEMPT 豁免没有过期", () => {
 
 /**
  * tailwind-merge 不读 Tailwind 的配置 —— 它有自己硬编码的分组表。所以
- * `text-01`…`text-08` 这批**新增**字号,除非在 lib/utils.ts 里显式登记进
+ * `text-2xs`…`text-xl` 这批**新增**字号,除非在 lib/utils.ts 里显式登记进
  * font-size 组,否则会掉进 text-COLOR 组,和文字色互相吞掉。
  *
  * 这两处现在是手工同步的。下面这个测试遍历的是**字阶的真实来源**,断言的是
@@ -349,19 +350,20 @@ describe("RHYTHM_EXEMPT 豁免没有过期", () => {
  * run」,**它的 64 条测试连同它一起消失**。套件数没变,只有总条数掉了,而那正是
  * 只看「N passed」时最容易漏掉的形状。现在读 `@theme` 里的 `--text-NN`。
  */
-describe("tailwind-merge 认识八档字号", () => {
+describe("tailwind-merge 认识七档字号", () => {
   const themeCss = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
-  // `--text-01: 11px;` 而不是 `--text-01--line-height:` —— 只取档位本身。
+  // `--text-2xs: 11px;` 而不是 `--text-2xs--line-height:` —— 只取档位本身;
+  // `--text-*: initial` 不是档位(值是 initial,名字带 *)。
   const scale: string[] = [
     ...new Set(
-      [...themeCss.matchAll(/^\s*--text-(\d{2}):\s*[^;]+;/gm)].map((m) => m[1])
+      [...themeCss.matchAll(/^\s*--text-([a-z0-9]+):\s*[^;]+;/gm)].map((m) => m[1])
     ),
   ].sort();
 
   it("字阶的来源确实读到了东西", () => {
     // 不是 `> 0`:空遍历会让下面每一条 it.each 悄悄不存在,而套件仍然是绿的。
-    // 八档是这套体系当下的形状,加第九档要在这里改一次数字,那是刻意的。
-    expect(scale).toEqual(["01", "02", "03", "04", "05", "06", "07", "08"]);
+    // 七档是规范 v1 §1.4 的形状,加一档要在这里改一次,那是刻意的。
+    expect(scale).toEqual(["2xs", "lg", "md", "quote", "sm", "xl", "xs"]);
   });
 
   it.each(scale)("text-%s 不与文字色互相吞掉", (step) => {

@@ -78,7 +78,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
               : t("scheduler.editor.presets.custom");
   const last = job.last_run;
   const lastDuration = last?.duration_ms == null ? null : durationParts(last.duration_ms);
-  const label = "md:hidden text-01 uppercase text-[oklch(var(--color-ink-subtle))]";
+  const label = "md:hidden text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
 
   return (
     <li
@@ -86,10 +86,10 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
       data-job-id={job.id}
     >
       <div className="min-w-0 space-y-1">
-        <h3 className="text-03 font-medium text-[oklch(var(--color-ink))] break-words">
+        <h3 className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
           <DomainEnum namespace={JOB_DESCRIPTION_NAMESPACE} value={jobDescriptionMember(job)} />
         </h3>
-        <p className="font-mono text-02 text-[oklch(var(--color-ink-tertiary))] break-all" title={job.periodic_task_name}>
+        <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all" title={job.periodic_task_name}>
           {job.periodic_task_name}
         </p>
         <div className="flex flex-wrap gap-1">
@@ -110,8 +110,8 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
 
       <div className="min-w-0">
         <p className={label}>{t("scheduler.fields.schedule")}</p>
-        <p className="text-03 text-[oklch(var(--color-ink))]">{readable ?? <MissingValue kind="unrecorded" />}</p>
-        <p className="font-mono text-02 text-[oklch(var(--color-ink-muted))] break-all">
+        <p className="text-sm text-[oklch(var(--color-ink))]">{readable ?? <MissingValue kind="unrecorded" />}</p>
+        <p className="font-mono text-xs text-[oklch(var(--color-ink-muted))] break-all">
           {cron ? joinCron(cron) : null} · <span title={t("scheduler.fields.timezone")}>{job.timezone}</span>
         </p>
       </div>
@@ -121,7 +121,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
         {last ? (
           <>
             <DomainEnum namespace="scheduler.status" value={last.status} className={runStatusBadgeClass(last.status)} />
-            <p className="font-mono text-02 text-[oklch(var(--color-ink-muted))]">
+            <p className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
               {formatDateTime(last.started_at ?? last.queued_at)}
               {lastDuration && ` · ${t(lastDuration.key, { value: lastDuration.value })}`}
             </p>
@@ -133,7 +133,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
 
       <div className="min-w-0">
         <p className={label}>{t("scheduler.fields.next_run")}</p>
-        <p className="font-mono text-02 text-[oklch(var(--color-ink))]">
+        <p className="font-mono text-xs text-[oklch(var(--color-ink))]">
           {job.next_run_at ? (
             formatDateTime(job.next_run_at)
           ) : (

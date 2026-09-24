@@ -32,7 +32,7 @@ import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
  */
 
 const ROW = "flex flex-wrap items-center gap-x-2 gap-y-1 bg-[oklch(var(--color-surface-2))] px-4 py-2";
-const MUTED = "text-02 text-[oklch(var(--color-ink-subtle))]";
+const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function errorText(error: unknown): string | null {
   const text = (error as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
@@ -149,18 +149,18 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
 
   return (
     <section className="mb-6" aria-label={t("sentence_plan.cross.title")}>
-      <h2 className="text-06 text-[oklch(var(--color-ink))] mb-1">{t("sentence_plan.cross.title")}</h2>
+      <h2 className="text-md text-[oklch(var(--color-ink))] mb-1">{t("sentence_plan.cross.title")}</h2>
       <p className={`${MUTED} mb-3`}>{t("sentence_plan.cross.hint")}</p>
       <ol className="space-y-2">
         <li className={ROW} data-stop="1">
-          <span className="text-03 font-medium tabular-nums">{t("sentence_plan.stop", { order: "1" })}</span>
+          <span className="text-sm font-medium tabular-nums">{t("sentence_plan.stop", { order: "1" })}</span>
           <TenantName code={judgment.initiating_tenant_code} />
           <Badge tone="neutral">{t("sentence_plan.home")}</Badge>
           <span className={MUTED}>{t("sentence_plan.cross.home_stop")}</span>
         </li>
         {ordered.map((seat, index) => (
           <li key={seat.id} className={ROW} data-stop={index + 2} data-participant-id={seat.id}>
-            <span className="text-03 font-medium tabular-nums">
+            <span className="text-sm font-medium tabular-nums">
               {t("sentence_plan.stop", { order: String(index + 2) })}
             </span>
             <TenantName code={seat.participant_tenant_code} />
@@ -197,7 +197,7 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
         ))}
       </ol>
       {misplacedEternal && (
-        <p role="alert" className="mt-2 text-03 text-[oklch(var(--color-status-warning))]">
+        <p role="alert" className="mt-2 text-sm text-[oklch(var(--color-status-warning))]">
           {t("sentence_plan.cross.eternal_not_last")}
         </p>
       )}

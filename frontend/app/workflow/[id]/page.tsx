@@ -184,14 +184,14 @@ export default function WorkflowDetailPage() {
   }
 
   const backLink = (
-    <Link href="/workflow" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+    <Link href="/workflow" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
       ← {t("workflow.detail.back_to_list")}
     </Link>
   );
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center gap-3 py-10 text-03 text-[oklch(var(--color-ink-muted))]">
+      <div className="flex items-center justify-center gap-3 py-10 text-sm text-[oklch(var(--color-ink-muted))]">
         <Spinner label={t("workflow.detail.loading")} />
         {t("workflow.detail.loading")}
       </div>
@@ -206,7 +206,7 @@ export default function WorkflowDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-10">
         <QueryError onRetry={() => refetch()} />
-        <Link href="/workflow" className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline">
+        <Link href="/workflow" className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline">
           {t("workflow.detail.back_to_list")}
         </Link>
       </div>
@@ -216,8 +216,8 @@ export default function WorkflowDetailPage() {
   if (!workflow) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-10">
-        <div className="text-03 text-[oklch(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
-        <Link href="/workflow" className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline">
+        <div className="text-sm text-[oklch(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
+        <Link href="/workflow" className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline">
           {t("workflow.detail.back_to_list")}
         </Link>
       </div>
@@ -279,15 +279,15 @@ export default function WorkflowDetailPage() {
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
           <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-            <h2 className="text-01 uppercase text-[oklch(var(--color-accent-ink))] mb-3">
+            <h2 className="text-2xs uppercase text-[oklch(var(--color-accent-ink))] mb-3">
               {t("workflow.detail.current_node")}
             </h2>
             <div className="mb-4 p-3 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))]">
-              <div className="text-03 font-medium text-[oklch(var(--color-ink))]">{currentNode.node_name}</div>
-              <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">
+              <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{currentNode.node_name}</div>
+              <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                 <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} /> · <DomainText value={currentNode.court_code} />
               </div>
-              <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
+              <div className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
                 {t("workflow.detail.order")}: {currentNode.node_order}
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function WorkflowDetailPage() {
                 <label> named no control at all: five radios share the group,
                 so there was no single `htmlFor` it could ever have carried. */}
             <fieldset className="space-y-2 mb-4">
-              <legend className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-2">
+              <legend className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">
                 {t("workflow.detail.select_verdict")}
               </legend>
               <div className="grid grid-cols-2 gap-2">
@@ -312,7 +312,7 @@ export default function WorkflowDetailPage() {
                 ].map((opt) => (
                   <label
                     key={opt.key}
-                    className={`flex items-center gap-2 p-2 border cursor-pointer transition-colors text-03 ${
+                    className={`flex items-center gap-2 p-2 border cursor-pointer transition-colors text-sm ${
                       selectedVerdict === opt.key
                         ? "border-[oklch(var(--color-accent))] bg-[oklch(var(--color-accent))]/10"
                         : "border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))]"
@@ -409,7 +409,7 @@ export default function WorkflowDetailPage() {
                 <div className="mt-4 space-y-2">
                   <label
                     htmlFor="escalate-reason"
-                    className="block text-02 text-[oklch(var(--color-ink-muted))]"
+                    className="block text-xs text-[oklch(var(--color-ink-muted))]"
                   >
                     {t("workflow.detail.escalate_reason_label")}
                   </label>
@@ -419,7 +419,7 @@ export default function WorkflowDetailPage() {
                     onChange={(e) => setEscalateReason(e.target.value)}
                     placeholder={t("workflow.detail.escalate_reason_placeholder")}
                     rows={3}
-                    className="w-full px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03"
+                    className="w-full px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm"
                   />
                   <Button
                     type="button"
@@ -466,7 +466,7 @@ export default function WorkflowDetailPage() {
             }
           >
             <h2
-              className={`text-01 uppercase mb-2 ${
+              className={`text-2xs uppercase mb-2 ${
                 hasRejection
                   ? "text-[oklch(var(--color-status-error))]"
                   : "text-[oklch(var(--color-status-success))]"
@@ -476,13 +476,13 @@ export default function WorkflowDetailPage() {
                 ? t("workflow.detail.completed_with_rejection")
                 : t("workflow.detail.completed")}
             </h2>
-            <p className="text-03 text-[oklch(var(--color-ink-muted))]">
+            <p className="text-sm text-[oklch(var(--color-ink-muted))]">
               {hasRejection
                 ? t("workflow.detail.completed_with_rejection_message")
                 : t("workflow.detail.completed_message")}
             </p>
             {workflow.completed_at && (
-              <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2">
+              <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">
                 {t("workflow.detail.completed_at")}: {formatDateTime(workflow.completed_at)}
               </p>
             )}
@@ -548,7 +548,7 @@ export default function WorkflowDetailPage() {
                     {/* Node indicator. `rounded-full` survives the corner purge
                         on purpose: it is one of the two shapes that still mean
                         something — a round mark is an identity token. */}
-                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-02 font-medium ${nodeColor}`}>
+                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${nodeColor}`}>
                       {isPast ? (
                         <span>{node.verdict?.[0] || "D"}</span>
                       ) : (
@@ -559,12 +559,12 @@ export default function WorkflowDetailPage() {
                     {/* Node details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-03 font-medium text-[oklch(var(--color-ink))]">{node.node_name}</span>
+                        <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{node.node_name}</span>
                         {isCurrent && (
                           <Badge tone="accent">{t("workflow.detail.current")}</Badge>
                         )}
                       </div>
-                      <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">
+                      <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                         <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={node.court_code} />
                       </div>
 
@@ -585,16 +585,16 @@ export default function WorkflowDetailPage() {
                               {nodeVerdictLabel}
                             </Badge>
                             {node.decided_at && (
-                              <span className="text-02 text-[oklch(var(--color-ink-subtle))]">
+                              <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
                                 {formatDateTime(node.decided_at)}
                               </span>
                             )}
                           </div>
                           {node.notes && (
-                            <p className="text-03 text-[oklch(var(--color-ink-muted))] italic">&ldquo;{node.notes}&rdquo;</p>
+                            <p className="text-sm text-[oklch(var(--color-ink-muted))] italic">&ldquo;{node.notes}&rdquo;</p>
                           )}
                           {node.approver != null && (
-                            <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
+                            <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
                               {t("workflow.detail.approver")}:{" "}
                               {/* `MissingValue`, not the raw `node.approver` value. That field is
                                   the deciding user's integer primary key: `ApprovalNodeSerializer`

@@ -52,10 +52,10 @@ function PageLink({
       href={menu.path}
       prefetch={true}
       aria-current={active ? "page" : undefined}
-      className={`${ROW} ${nested ? "pl-8 pr-3 text-02" : "px-3 gap-2"} ${active ? CURRENT : IDLE}`}
+      className={`${ROW} ${nested ? "pl-8 pr-3 text-xs" : "px-3 gap-2"} ${active ? CURRENT : IDLE}`}
     >
-      {number ? <span aria-hidden="true" className="font-mono text-01 text-[oklch(var(--color-ink-subtle))]">{number}</span> : null}
-      <span className={`truncate ${nested ? "" : "font-mono text-01 uppercase tracking-label text-[oklch(var(--color-ink))]"}`}>
+      {number ? <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{number}</span> : null}
+      <span className={`truncate ${nested ? "" : "font-mono text-2xs uppercase tracking-label text-[oklch(var(--color-ink))]"}`}>
         {label}
       </span>
     </Link>
@@ -92,7 +92,7 @@ function SidebarGroupInner({
           <Link
             href={menu.path}
             aria-label={label}
-            className={`${ROW} justify-center font-mono text-01 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]`}
+            className={`${ROW} justify-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]`}
           >
             {number}
           </Link>
@@ -100,14 +100,14 @@ function SidebarGroupInner({
           <button
             type="button"
             aria-label={label}
-            className={`${ROW} w-full justify-center font-mono text-01 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]`}
+            className={`${ROW} w-full justify-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]`}
           >
             {number}
           </button>
         )}
         {children.length ? (
           <div className="invisible absolute left-full top-0 z-drawer w-50 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] opacity-0 shadow-overlay group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-            <p className="px-3 py-1 font-mono text-01 text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))]">
+            <p className="px-3 py-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))]">
               {number} {label}
             </p>
             {children.map((child) => (
@@ -131,11 +131,11 @@ function SidebarGroupInner({
         aria-expanded={open}
         className={`${ROW} w-full justify-between gap-2 px-3 text-left hover:bg-[oklch(var(--color-surface-2))]`}
       >
-        <span className="flex min-w-0 items-center gap-2 font-mono text-01 uppercase tracking-label">
+        <span className="flex min-w-0 items-center gap-2 font-mono text-2xs uppercase tracking-label">
           <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">{number}</span>
           <span className="truncate text-[oklch(var(--color-ink))]">{label}</span>
         </span>
-        <span aria-hidden="true" className="font-mono text-01 text-[oklch(var(--color-ink-subtle))]">
+        <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
           {open ? "−" : "+"}
         </span>
       </button>

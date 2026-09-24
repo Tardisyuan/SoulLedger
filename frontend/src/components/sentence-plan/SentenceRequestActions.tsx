@@ -109,7 +109,7 @@ export function SentenceRequestActions({ plan, request }: { plan: SentencePlan; 
           </div>
         }
       >
-        <p className="text-04 text-[oklch(var(--color-ink-muted))] mb-3">
+        <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-3">
           {t(
             decision === "REJECT"
               ? "sentence_plan.reject_warning"

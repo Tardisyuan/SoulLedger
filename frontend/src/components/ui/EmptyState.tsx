@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  *    这是全站少数几处直接读 `--civ-mark` 的地方之一（另一处是
  *    `src/components/layout/TenantSignal.tsx`）。
  *
- * 3) `text-01` 标题 + `text-04` 一句原因 + 一个动作。原因写成一句话，不是一个
+ * 3) `text-2xs` 标题 + `text-sm` 一句原因 + 一个动作。原因写成一句话，不是一个
  *    名词短语：「还没有灵魂被登记」而不是「无数据」。
  *
  * **`--civ-mark` 在未映射租户下是灰色（`app/globals.css:57`，`215 8% 57%`），
@@ -26,9 +26,9 @@ import { cn } from "@/lib/utils";
  * 不要在这里给它兜一个彩色 fallback。
  */
 export interface EmptyStateProps {
-  /** 标题，`text-01`。一个短语。 */
+  /** 标题，`text-2xs`。一个短语。 */
   title: React.ReactNode;
-  /** 一句原因，`text-04` + `text-ink-subtle`。为什么这里是空的。 */
+  /** 一句原因，`text-sm` + `text-ink-subtle`。为什么这里是空的。 */
   reason?: React.ReactNode;
   /** 一个动作。**一个** —— 空态不是工具栏。 */
   action?: React.ReactNode;
@@ -46,12 +46,12 @@ export function EmptyState({ title, reason, action, className }: EmptyStateProps
         className="block w-6 border-t-2 border-[oklch(var(--color-block))]"
       />
 
-      <p data-empty-state-title="" className="text-01 text-[oklch(var(--color-ink))] mt-4">
+      <p data-empty-state-title="" className="text-2xs text-[oklch(var(--color-ink))] mt-4">
         {title}
       </p>
 
       {reason ? (
-        <p data-empty-state-reason="" className="text-04 text-[oklch(var(--color-ink-subtle))] mt-2">
+        <p data-empty-state-reason="" className="text-sm text-[oklch(var(--color-ink-subtle))] mt-2">
           {reason}
         </p>
       ) : null}

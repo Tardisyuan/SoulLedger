@@ -53,33 +53,33 @@ describe("the class merge does not eat the eight-step type scale", () => {
    *
    * `tailwind-merge` ships a fixed table of class groups and does not read
    * `tailwind.config.js`. Its `font-size` group knows `text-xs`…`text-9xl` and
-   * arbitrary lengths; `text-02` matches none of them and falls through to the
+   * arbitrary lengths; `text-xs` matches none of them and falls through to the
    * catch-all group for `text-*`, which is text-COLOR. So the size and the
    * colour were treated as one property and the later one deleted the earlier.
    * `lib/utils.ts` now registers 01–08 as font sizes.
    */
   it("keeps a font size and a text colour that are written together", () => {
-    expect(cn("bg-[oklch(var(--color-accent))] text-black border-[oklch(var(--color-accent))]", "px-2 py-1 text-02").split(/\s+/)).toEqual(
-      expect.arrayContaining(["text-black", "text-02"])
+    expect(cn("bg-[oklch(var(--color-accent))] text-black border-[oklch(var(--color-accent))]", "px-2 py-1 text-xs").split(/\s+/)).toEqual(
+      expect.arrayContaining(["text-black", "text-xs"])
     );
     // Same string, not just separate arguments — the collision was never about
     // argument boundaries, so a fix that only worked across them would be fake.
-    expect(cn("text-01 uppercase text-[oklch(var(--color-ink-subtle))]").split(/\s+/)).toEqual(
-      expect.arrayContaining(["text-01", "text-[oklch(var(--color-ink-subtle))]"])
+    expect(cn("text-2xs uppercase text-[oklch(var(--color-ink-subtle))]").split(/\s+/)).toEqual(
+      expect.arrayContaining(["text-2xs", "text-[oklch(var(--color-ink-subtle))]"])
     );
   });
 
   it("still collapses two font sizes against each other", () => {
     // The other half of the fix, and the half a careless patch drops: telling
     // tailwind-merge these are font sizes has to make them conflict with each
-    // OTHER, or `cn(base, "text-05")` would emit two sizes and the winner would
+    // OTHER, or `cn(base, "text-md")` would emit two sizes and the winner would
     // be decided by stylesheet order instead of by the caller.
-    expect(cn("text-02 text-05")).toBe("text-05");
+    expect(cn("text-xs text-md")).toBe("text-md");
     expect(cn("text-black text-white")).toBe("text-white");
     // Added on review: the t-shirt scale must keep conflicting with itself too.
     // `extend` is additive, but a careless `override` of the font-size group
     // would drop `text-xs`…`text-9xl` from it, and the two scales coexist
-    // during migration by design — `text-sm` and `text-03` both live would be
+    // during migration by design — `text-sm` and `text-sm` both live would be
     // harder to diagnose than the bug this fixes, because it renders a size,
     // just not the one anybody chose.
     expect(cn("text-sm text-lg")).toBe("text-lg");
@@ -87,15 +87,15 @@ describe("the class merge does not eat the eight-step type scale", () => {
 
   it("does not make the two scales conflict with each other", () => {
     // The corollary, and the one an over-eager fix gets wrong: `text-sm` and
-    // `text-03` ARE the same property, so they must collapse.
-    expect(cn("text-sm text-03")).toBe("text-03");
-    expect(cn("text-03 text-sm")).toBe("text-sm");
+    // `text-sm` ARE the same property, so they must collapse.
+    expect(cn("text-sm text-sm")).toBe("text-sm");
+    expect(cn("text-sm text-sm")).toBe("text-sm");
   });
 
   it("carries the size class through to the rendered button, for every size", () => {
     // The end-to-end version. If the merge regresses, this is the assertion
     // that reports it as a Button defect rather than a utils curiosity.
-    const expected: Record<ButtonSize, string> = { sm: "text-02", md: "text-03", lg: "text-04" };
+    const expected: Record<ButtonSize, string> = { sm: "text-xs", md: "text-sm", lg: "text-sm" };
     for (const size of BUTTON_SIZES) {
       expect(classesOf("primary", size)).toContain(expected[size]);
     }
@@ -263,7 +263,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-[oklch(var(--color-surface-2))]", "px-3", "py-2", "text-03"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-[oklch(var(--color-surface-2))]", "px-3", "py-2", "text-sm"]));
   });
 
   it("disables and marks itself busy while loading", () => {

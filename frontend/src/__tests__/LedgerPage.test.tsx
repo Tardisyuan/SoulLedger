@@ -249,7 +249,7 @@ describe("LedgerPage with a sparse payload", () => {
     // the next selector: `text-3xl` is not merely a different size, it is one
     // of the classes `design-system/type-scale` now forbids, so the assertion
     // was pinned to a class the design system had committed to deleting. Naming
-    // `text-07` here would buy the same debt at the next scale change. The hook
+    // `text-lg` here would buy the same debt at the next scale change. The hook
     // says "this element is an overview figure", which is the thing the
     // assertion is actually about and is stable across restyling.
     const overviewZeros = screen

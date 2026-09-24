@@ -119,7 +119,7 @@ export function SoulKarmaLedgerCard({
     <div className="space-y-6">
       {/* 业力总账 */}
       <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
-        <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+        <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
 
         {/* Which life the totals below belong to, and — after a rebirth — the
             carry-over they started from. The ledger is per life (BD-04), so a
@@ -128,7 +128,7 @@ export function SoulKarmaLedgerCard({
             numerals are the same magnitudes the next-life preview draws, so
             they take that table's kinds. */}
         {life && (
-          <div className="mb-3 flex justify-between items-baseline gap-2 text-02 text-[oklch(var(--color-ink-muted))]">
+          <div className="mb-3 flex justify-between items-baseline gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
             <span>{t("souls.detail.life_number", { n: String(life.index + 1) })}</span>
             {life.index > 0 && life.inheritedMerit !== undefined && life.inheritedDemerit !== undefined && (
               <span className="inline-flex items-baseline gap-2">
@@ -162,7 +162,7 @@ export function SoulKarmaLedgerCard({
         />
 
         <div className="mt-4 pt-3 border-t border-[oklch(var(--color-hairline))] space-y-1.5">
-          <p className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-1.5">
+          <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1.5">
             {tf("ledger.raw_vs_decayed", "原始 / 衰减后")}
           </p>
           {/* Five weight sums, and until now five bare numerals — directly under
@@ -176,7 +176,7 @@ export function SoulKarmaLedgerCard({
               they are sums of, rather than from a literal typed here; the
               decayed pair and the balance are `LedgerSummary`'s own fields and
               take theirs from that payload's table. */}
-          <div className="flex justify-between text-02">
+          <div className="flex justify-between text-xs">
             <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.raw_merit", "原始 功德")}</span>
             <Figure
               field="raw_merit"
@@ -187,7 +187,7 @@ export function SoulKarmaLedgerCard({
               +{rawMerit}
             </Figure>
           </div>
-          <div className="flex justify-between text-02">
+          <div className="flex justify-between text-xs">
             <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.raw_demerit", "原始 罪业")}</span>
             <Figure
               field="raw_demerit"
@@ -198,7 +198,7 @@ export function SoulKarmaLedgerCard({
               -{rawDemerit}
             </Figure>
           </div>
-          <div className="flex justify-between text-02">
+          <div className="flex justify-between text-xs">
             <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.decayed_merit", "衰减后 功德")}</span>
             <Figure
               field="merit_score"
@@ -209,7 +209,7 @@ export function SoulKarmaLedgerCard({
               +{meritScore}
             </Figure>
           </div>
-          <div className="flex justify-between text-02">
+          <div className="flex justify-between text-xs">
             <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.decayed_demerit", "衰减后 罪业")}</span>
             <Figure
               field="demerit_score"
@@ -254,12 +254,12 @@ export function SoulKarmaLedgerCard({
           {reading.kind === "BALANCE" && (
             <>
               <div className="flex justify-between items-center pt-1">
-                <span className="text-04 text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
+                <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
                 <Figure
                   field="karmic_balance"
                   quantity={SUMMARY_QUANTITIES.karmic_balance}
                   t={t}
-                  className={`text-06 tabular-nums ${
+                  className={`text-md tabular-nums ${
                     karmicBalance >= 0 ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"
                   }`}
                 >
@@ -272,7 +272,7 @@ export function SoulKarmaLedgerCard({
           )}
 
           <div className="border border-dashed border-[oklch(var(--color-hairline))] p-2 mt-2">
-            <p className="text-02 text-[oklch(var(--color-ink-subtle))]">
+            <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
               {tf(
                 "ledger.advisory_disclaimer",
                 "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出"
@@ -286,13 +286,13 @@ export function SoulKarmaLedgerCard({
             every count on screen does and what no magnitude can do. Promoting it
             to a numeral beside the weight sums above is the confusion, not the
             fix — the same call `culpa_record_count` gets one card higher. */}
-        <div className="text-02 text-[oklch(var(--color-ink-subtle))] text-right mt-3">
+        <div className="text-xs text-[oklch(var(--color-ink-subtle))] text-right mt-3">
           {recordCount} {t("souls.detail.records")}
         </div>
 
         {records.length > 0 && (
           <div className="mt-4">
-            <p className="text-02 text-[oklch(var(--color-ink-muted))] mb-2">{t("ledger.timeline")}</p>
+            <p className="text-xs text-[oklch(var(--color-ink-muted))] mb-2">{t("ledger.timeline")}</p>
             <LazyLifespanBarChart
               data={getLifespanChartData(records)}
               seriesNames={{
@@ -304,7 +304,7 @@ export function SoulKarmaLedgerCard({
                 a code comment and nowhere on screen. Two swatches at the same
                 opacities the bars use, so the mapping is read off the chart
                 rather than remembered. */}
-            <div className="mt-2 flex items-center gap-4 text-02 text-[oklch(var(--color-ink-muted))]">
+            <div className="mt-2 flex items-center gap-4 text-xs text-[oklch(var(--color-ink-muted))]">
               <span className="inline-flex items-center gap-2">
                 <span
                   aria-hidden="true"
@@ -331,7 +331,7 @@ export function SoulKarmaLedgerCard({
           null; see ledgerApi.inheritance's caller in page.tsx). */}
       {inheritance && (
         <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
-          <p className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">
+          <p className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">
             {t("ledger.next_life_inheritance")}
           </p>
 
@@ -369,7 +369,7 @@ export function SoulKarmaLedgerCard({
           {reading.civilization === "CHINESE" && (
             <div data-inheritance-bars="" className="space-y-2.5 mb-3">
               <div>
-                <div className="flex justify-between text-02 font-mono text-[oklch(var(--color-karma-merit))] mb-1">
+                <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-karma-merit))] mb-1">
                   <span>{t("souls.detail.merit")} {meritScore}</span>
                   <span>→ {inheritance.inherited_merit}</span>
                 </div>
@@ -381,7 +381,7 @@ export function SoulKarmaLedgerCard({
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-02 font-mono text-[oklch(var(--color-karma-demerit))] mb-1">
+                <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-karma-demerit))] mb-1">
                   <span>{t("souls.detail.demerit")} {demeritScore}</span>
                   <span>→ {inheritance.inherited_demerit}</span>
                 </div>
@@ -402,7 +402,7 @@ export function SoulKarmaLedgerCard({
               the same argument BALANCE makes about netting merit against
               demerit, which is why this row exists only where a next life
               does. */}
-          <div className="flex justify-between text-02">
+          <div className="flex justify-between text-xs">
             <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-karma-merit))]">
               <span>{t("souls.detail.merit")}:</span>
               <Figure
@@ -426,7 +426,7 @@ export function SoulKarmaLedgerCard({
               </Figure>
             </span>
           </div>
-          <div className="flex justify-between text-02 mt-1">
+          <div className="flex justify-between text-xs mt-1">
             <span className="text-[oklch(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
             <Figure
               field="inherited_balance"
@@ -442,7 +442,7 @@ export function SoulKarmaLedgerCard({
               {inheritance.inherited_merit - inheritance.inherited_demerit}
             </Figure>
           </div>
-          <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2">
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">
             {/* Now a real bundle key in all three catalogues rather than a
                 Chinese `tf` fallback that shipped untranslated to every
                 locale, and the numbers are the API's rather than this file's.
@@ -459,7 +459,7 @@ export function SoulKarmaLedgerCard({
               demerit: String(ratePct(inheritance.inheritance_demerit_rate)),
             })}
           </p>
-          <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>
         </div>
       )}
     </div>

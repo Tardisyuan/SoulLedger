@@ -62,43 +62,43 @@ export function MatrixSaveConfirmModal({
       }
     >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-        <p className="text-03 text-[oklch(var(--color-status-warning))]">{t("permissions.matrix.confirm_replace_notice")}</p>
+        <p className="text-sm text-[oklch(var(--color-status-warning))]">{t("permissions.matrix.confirm_replace_notice")}</p>
         {diffs.map((diff) => (
           <div key={diff.role} className="border border-[oklch(var(--color-hairline))] p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-[oklch(var(--color-ink))] text-03">
+              <h4 className="font-semibold text-[oklch(var(--color-ink))] text-sm">
                 {/* A role the meta table does not know falls back to its translated
                     built-in name, never to the raw member (§4.6; found by ENUM_FIELDS
                     gaining `role`). */}
                 {roleMeta[diff.role]?.display_name || <DomainEnum namespace="users.roles" value={diff.role} />}
               </h4>
-              <span className="text-02 font-mono text-[oklch(var(--color-ink-muted))]">{diff.beforeCount} → {diff.afterCount}</span>
+              <span className="text-xs font-mono text-[oklch(var(--color-ink-muted))]">{diff.beforeCount} → {diff.afterCount}</span>
             </div>
             {diff.tier >= 2 && (
-              <p className="text-02 text-[oklch(var(--color-ink-muted))]">
+              <p className="text-xs text-[oklch(var(--color-ink-muted))]">
                 {t("permissions.matrix.confirm_user_count", { count: String(roleMeta[diff.role]?.user_count ?? 0) })}
               </p>
             )}
             {diff.addedCodenames.length > 0 && (
-              <p className="text-02 text-[oklch(var(--color-status-success))] font-mono">+ {diff.addedCodenames.join(", ")}</p>
+              <p className="text-xs text-[oklch(var(--color-status-success))] font-mono">+ {diff.addedCodenames.join(", ")}</p>
             )}
             {diff.removedCodenames.length > 0 && (
               <div>
-                <p className="text-02 text-[oklch(var(--color-status-error))] mb-1">{t("permissions.matrix.confirm_removed_label")}</p>
-                <ul className="text-02 font-mono text-[oklch(var(--color-status-error))] list-disc list-inside space-y-1">
+                <p className="text-xs text-[oklch(var(--color-status-error))] mb-1">{t("permissions.matrix.confirm_removed_label")}</p>
+                <ul className="text-xs font-mono text-[oklch(var(--color-status-error))] list-disc list-inside space-y-1">
                   {diff.removedCodenames.map((c) => <li key={c}>{c}</li>)}
                 </ul>
               </div>
             )}
             {diff.tier === 3 && (
               <div className="mt-2 space-y-2 border-t border-[oklch(var(--color-hairline))] pt-2">
-                <p className="text-02 text-[oklch(var(--color-status-error))] font-medium">
+                <p className="text-xs text-[oklch(var(--color-status-error))] font-medium">
                   {t("permissions.matrix.confirm_clear_warning", { role: diff.role })}
                 </p>
                 {diff.removesMenuRead && (
-                  <p className="text-02 text-[oklch(var(--color-status-error))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
+                  <p className="text-xs text-[oklch(var(--color-status-error))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
                 )}
-                <label htmlFor={`type-confirm-${diff.role}`} className="block text-02 text-[oklch(var(--color-ink-muted))]">
+                <label htmlFor={`type-confirm-${diff.role}`} className="block text-xs text-[oklch(var(--color-ink-muted))]">
                   {t("permissions.matrix.confirm_type_role_label", { role: diff.role })}
                 </label>
                 <input
@@ -107,7 +107,7 @@ export function MatrixSaveConfirmModal({
                   value={typedRoleNames[diff.role] ?? ""}
                   onChange={(e) => onTypedRoleNameChange(diff.role, e.target.value)}
                   placeholder={diff.role}
-                  className="w-full px-2 py-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 font-mono text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+                  className="w-full px-2 py-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm font-mono text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
                 />
               </div>
             )}

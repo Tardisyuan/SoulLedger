@@ -15,7 +15,7 @@
  * 文件末尾的 `describe("PageShell density")` 里还有三条**扫源码**的守卫:一条路由
  * 里每个壳的 density 要一致、`<h2>` 的三个角色、顶层区块节奏跟着 density 走。
  * 它们读文件而不是渲染树,因为那三件事都由**页面怎么写**决定,壳看不见;而且
- * jsdom 不解析自定义属性,`text-06` 的 600 在渲染断言里根本不存在。
+ * jsdom 不解析自定义属性,`text-md` 的 600 在渲染断言里根本不存在。
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
@@ -151,7 +151,7 @@ describe("PageShell · 滚动行为", () => {
 });
 
 describe("PageShell · 页头两行", () => {
-  it("每页仅一处 h1，用 text-07", () => {
+  it("每页仅一处 h1，用 text-lg", () => {
     const { container } = render(
       <PageShell title="判决卷宗" subtitle="一句副标题" eyebrow="LEDGER / 0042">
         <h2>区块标题</h2>
@@ -160,22 +160,22 @@ describe("PageShell · 页头两行", () => {
     const h1s = container.querySelectorAll("h1");
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent("判决卷宗");
-    expect(h1s[0].className).toMatch(/\btext-07\b/);
+    expect(h1s[0].className).toMatch(/\btext-lg\b/);
   });
 
-  it("eyebrow 是 text-01 + font-mono + uppercase", () => {
+  it("eyebrow 是 text-2xs + font-mono + uppercase", () => {
     const { container } = render(<PageShell title="T" eyebrow="LEDGER / 0042">body</PageShell>);
     const eyebrow = container.querySelector<HTMLElement>("[data-page-shell-eyebrow]")!;
     expect(eyebrow).toHaveTextContent("LEDGER / 0042");
-    expect(eyebrow.className).toMatch(/\btext-01\b/);
+    expect(eyebrow.className).toMatch(/\btext-2xs\b/);
     expect(eyebrow.className).toMatch(/\bfont-mono\b/);
     expect(eyebrow.className).toMatch(/\buppercase\b/);
   });
 
-  it("副标题是 text-04 + text-[oklch(var(--color-ink-subtle))]", () => {
+  it("副标题是 text-sm + text-[oklch(var(--color-ink-subtle))]", () => {
     const { container } = render(<PageShell title="T" subtitle="一句副标题">body</PageShell>);
     const sub = container.querySelector<HTMLElement>("[data-page-shell-subtitle]")!;
-    expect(sub.className).toMatch(/\btext-04\b/);
+    expect(sub.className).toMatch(/\btext-sm\b/);
     expect(sub.className).toContain("text-[oklch(var(--color-ink-subtle))]");
   });
 
@@ -295,7 +295,7 @@ describe("PageShell · 分页位", () => {
 // ---------------------------------------------------------------------------
 // 源码扫描共用的三件小工具。下面 describe 里三条守卫(density 一致、`<h2>` 两个
 // 角色、顶层区块节奏)都读源文件而不是渲染树 —— 它们盯的是**页面怎么写**,而
-// 那件事在 jsdom 里看不见:`text-06` 的 600 来自 `--text-06--font-weight`,
+// 那件事在 jsdom 里看不见:`text-md` 的 600 来自 `--text-md--font-weight`,
 // 而 jsdom 不解析自定义属性,于是渲染断言对一个什么都没 emit 的 token 也是绿的。
 
 const FRONTEND = path.join(__dirname, "..", "..");
@@ -342,7 +342,7 @@ function lineAt(src: string, index: number): number {
  * 里,一屏几十个,13px `font-medium`)。2026-09-07 定角色时那条被记成豁免,
  * 理由写的是「规则的依据不覆盖这一例」,不是「这一例可以违规」—— 那句话把
  * 后续动作也一起写好了:要么补上依据,要么这条永远挂着。2026-09-10 补上了
- * 依据,`text-03 font-medium` 成为第三个角色(列表行标题,见
+ * 依据,`text-sm font-medium` 成为第三个角色(列表行标题,见
  * `src/components/ui/PageShell.tsx` 文件头第 4 条),于是这条豁免自己作废,
  * 按下面 `stale` 那段的要求删掉。
  *
@@ -365,9 +365,9 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  *
  * 唯一没有答案的是**列表行标题该钉哪一档**:
  *
- *     text-03 font-medium   2 处   organizations 树行、RolesGrid 卡片行
- *     text-04 font-semibold 4 处   actors 卡片行 ×2、cross-judgments 行、realms 卡片行
- *     text-04 font-medium   1 处   JudgmentGroundsPanel 条文行
+ *     text-sm font-medium   2 处   organizations 树行、RolesGrid 卡片行
+ *     text-sm font-semibold 4 处   actors 卡片行 ×2、cross-judgments 行、realms 卡片行
+ *     text-sm font-medium   1 处   JudgmentGroundsPanel 条文行
  *
  * 两边**没有结构上的分界线**。最直接的反例是同一种东西的两种写法:
  * `permissions/RolesGrid.tsx:40` 与 `app/realms/page.tsx:161` 都是
@@ -375,7 +375,7 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  * 次要信息,一个 13px medium、一个 15px semibold。"密集行 vs 卡片"这条线划不出来。
  *
  * 两边各自也都自洽:两组的标题都恰好比**自己那张卡的第二行**高一档
- * (text-04 上面配 text-03、text-03 上面配 text-02)。所以这不是「五处写错了」,
+ * (text-sm 上面配 text-sm、text-sm 上面配 text-xs)。所以这不是「五处写错了」,
  * 是同一个角色的两种约定,3:5,而**任何一边都没有缺陷可以拿来判**。
  *
  * 按 `CLAUDE.md`「A split needs a defect to justify it, not a number」,这一轮
@@ -385,12 +385,15 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  * 这张表和 `H2_ROLE_EXEMPTIONS` 一样**会自我作废**:下面要求每个键都真的命中,
  * 一旦这些 `<h3>` 被改标签、改排版或删掉,守卫就报红要求删掉对应条目。
  * 一份不会陈旧的白名单才是这个仓库真正怕的东西。
+ *
+ * 2026-09-24 规范 v1 把 15px 并入 13px(七档里没有 15):上面的类名已随之换成新档名,
+ * 两种约定从「13 medium 对 15 semibold」变成只剩字重之差;JudgmentGroundsPanel
+ * 那一处因此正好落在列表行标题的角色上,条目已删。
  */
 const H3_ROLE_EXEMPTIONS = new Map<string, string>([
-  ["app/actors/page.tsx", "text-04 font-semibold"],
-  ["app/cross-judgments/page.tsx", "text-04 font-semibold"],
-  ["app/realms/page.tsx", "text-04 font-semibold"],
-  ["src/components/judgment/JudgmentGroundsPanel.tsx", "text-04 font-medium"],
+  ["app/actors/page.tsx", "text-sm font-semibold"],
+  ["app/cross-judgments/page.tsx", "text-sm font-semibold"],
+  ["app/realms/page.tsx", "text-sm font-semibold"],
 ]);
 
 /**
@@ -485,22 +488,22 @@ describe("PageShell density", () => {
   /**
    * 规则一:`<h2>` 只有三个角色,各钉一个 step。
    *
-   *     区块标签 (eyebrow)  text-01 uppercase     卡片/图表/区段上方那行小字
-   *     面板标题             text-06              一整块面板/区段的标题
-   *     列表行标题           text-03 font-medium  列表/信息流里每一行的题头
+   *     区块标签 (eyebrow)  text-2xs uppercase     卡片/图表/区段上方那行小字
+   *     面板标题             text-md              一整块面板/区段的标题
+   *     列表行标题           text-sm font-medium  列表/信息流里每一行的题头
    *
    * 规矩本身写在 `src/components/ui/PageShell.tsx` 的文件头第 4 条 —— 壳拥有
-   * `<h1>`(text-07)与 eyebrow(text-01 font-mono uppercase),`<h2>` 归页面,
+   * `<h1>`(text-lg)与 eyebrow(text-2xs font-mono uppercase),`<h2>` 归页面,
    * 于是这条规矩**在壳里只是散文**,没有任何东西执行它。这条守卫是执行的那一半。
    *
    * 四种失败各自断言,因为它们看起来一点都不像:
-   *   - 用了三档之外的(text-05 一类):同一个语义槽出现第四种字号;
-   *   - `text-01` 没有 `uppercase`:11px + 0.1em 字距的正文,读起来是坏掉的标签;
-   *   - `text-06` 上再写 `font-semibold`:**逐像素相同**,所以它永远不会被看出来。
-   *     `--text-06--font-weight` 已经是 600。留着的坏处不是渲染,是它读起来像
+   *   - 用了三档之外的(text-md 一类):同一个语义槽出现第四种字号;
+   *   - `text-2xs` 没有 `uppercase`:11px + 0.1em 字距的正文,读起来是坏掉的标签;
+   *   - `text-md` 上再写 `font-semibold`:**逐像素相同**,所以它永远不会被看出来。
+   *     `--text-md--font-weight` 已经是 600。留着的坏处不是渲染,是它读起来像
    *     「不写就不粗」—— 上一轮删掉 4 处,第 5 处(actors)是 2026-09-07 删的。
-   *   - `text-03` **没有** `font-medium`:和上一条正好相反,这里的 weight 是
-   *     **有作用的**。`--text-03` 没有伴生的 `--text-03--font-weight`(带 weight
+   *   - `text-sm` **没有** `font-medium`:和上一条正好相反,这里的 weight 是
+   *     **有作用的**。`--text-sm` 没有伴生的 `--text-sm--font-weight`(带 weight
    *     的只有 01/06/07/08 四个标题级),所以去掉 `font-medium` 之后,标题会和
    *     它下面那条 `<p>` 正文同为 400 —— 一个看得见的缺陷,而不是一处空操作。
    *     两条并排放在这里是有意的:同一个 `font-*` 类,在一档上是噪音、在另一档
@@ -535,7 +538,7 @@ describe("PageShell density", () => {
           file: path.relative(FRONTEND, file).split(path.sep).join("/"),
           line: lineAt(src, m.index),
           tag: m[0],
-          steps: [...new Set(m[0].match(/\btext-0[1-8]\b/g) ?? [])],
+          steps: [...new Set(m[0].match(/(?<![\w-])text-(?:2xs|xs|sm|md|quote|lg|xl)(?![\w-])/g) ?? [])],
         });
       }
     }
@@ -552,24 +555,24 @@ describe("PageShell density", () => {
         why =
           `pins ${h.steps.length} type steps (${h.steps.join(", ") || "none"}) — ` +
           `an <h2> declares exactly one`;
-      } else if (step === "text-01" && !/\buppercase\b/.test(h.tag)) {
-        why = `text-01 without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
-      } else if (step === "text-06" && /\bfont-semibold\b/.test(h.tag)) {
+      } else if (step === "text-2xs" && !/\buppercase\b/.test(h.tag)) {
+        why = `text-2xs without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
+      } else if (step === "text-md" && /\bfont-semibold\b/.test(h.tag)) {
         why =
-          `font-semibold on text-06 is a no-op — --text-06--font-weight is already 600, ` +
+          `font-semibold on text-md is a no-op — --text-md--font-weight is already 600, ` +
           `so this renders byte-identical and reads as "it would be light without me"`;
-      } else if (step === "text-03" && !/\bfont-medium\b/.test(h.tag)) {
-        // 与上一条相反的方向,故意挨着放:`--text-03` 没有伴生 weight,所以
+      } else if (step === "text-sm" && !/\bfont-medium\b/.test(h.tag)) {
+        // 与上一条相反的方向,故意挨着放:`--text-sm` 没有伴生 weight,所以
         // 这里的 font-medium 是**唯一**把行标题和它下面那条 <p> 分开的东西。
         why =
-          `text-03 without font-medium — the list-row title role is "text-03 font-medium", ` +
-          `and unlike text-06 this weight is load-bearing: --text-03 has no companion ` +
-          `--text-03--font-weight, so without it the heading renders at the same 400 as the ` +
+          `text-sm without font-medium — the list-row title role is "text-sm font-medium", ` +
+          `and unlike text-md this weight is load-bearing: --text-sm has no companion ` +
+          `--text-sm--font-weight, so without it the heading renders at the same 400 as the ` +
           `<p> beneath it`;
-      } else if (step !== "text-01" && step !== "text-06" && step !== "text-03") {
+      } else if (step !== "text-2xs" && step !== "text-md" && step !== "text-sm") {
         why =
-          `${step} is none of the three roles (eyebrow = text-01 uppercase, ` +
-          `panel title = text-06, list-row title = text-03 font-medium)`;
+          `${step} is none of the three roles (eyebrow = text-2xs uppercase, ` +
+          `panel title = text-md, list-row title = text-sm font-medium)`;
       }
       if (why === null) continue;
 
@@ -593,9 +596,9 @@ describe("PageShell density", () => {
     if (offenders.length > 0) {
       throw new Error(
         `<h2> has exactly three roles and each pins one step: the eyebrow label is ` +
-          `"text-01 uppercase", the panel title is "text-06" (its 600 comes from ` +
-          `--text-06--font-weight, so font-semibold beside it is a no-op), and the ` +
-          `list-row title is "text-03 font-medium" (--text-03 has no companion weight, ` +
+          `"text-2xs uppercase", the panel title is "text-md" (its 600 comes from ` +
+          `--text-md--font-weight, so font-semibold beside it is a no-op), and the ` +
+          `list-row title is "text-sm font-medium" (--text-sm has no companion weight, ` +
           `so there the font-medium is required, not redundant). The rule is ` +
           `written in src/components/ui/PageShell.tsx's file header.\n\n` +
           offenders.join("\n")
@@ -607,21 +610,21 @@ describe("PageShell density", () => {
   /**
    * 规则一之二:`<h3>` 用的是**同样的三个角色**,同样的三档。
    *
-   *     区块标签 (eyebrow)  text-01 uppercase     面板/区段里每一组上方那行小字
-   *     面板标题             text-06              这一整块浮层/抽屉/callout 自己的题
-   *     列表行标题           text-03 font-medium  列表/网格里每一行的题头
+   *     区块标签 (eyebrow)  text-2xs uppercase     面板/区段里每一组上方那行小字
+   *     面板标题             text-md              这一整块浮层/抽屉/callout 自己的题
+   *     列表行标题           text-sm font-medium  列表/网格里每一行的题头
    *
    * **为什么是同样三个,而不是「比 h2 小一级」的另一套。** 2026-09-10 用这条守卫
    * 自己的 `collectTsx` / `blankComments` 数了 `app/` 与 `src/components/` 的全部
-   * `<h3>`:**18 个**,四档 —— text-01 uppercase、text-03 font-medium、
-   * text-04(4 处 semibold / 1 处 medium)、text-06,另有 2 处**一个 `text-0N` 都
+   * `<h3>`:**18 个**,四档 —— text-2xs uppercase、text-sm font-medium、
+   * text-sm(4 处 semibold / 1 处 medium)、text-md,另有 2 处**一个 `text-0N` 都
    * 不写**。读上下文之后,18 个落进的语义槽只有三个,而且**每一个槽都已经有
    * 一处逐字符吻合 `<h2>` 那一档的 `<h3>`**:
    *
-   *     区块标签    JudgmentQueueConsole:614 与 QueueContext 的四处,text-01 uppercase
-   *     面板标题    workflow/page/TemplatePreview.tsx:145,text-06(它的行注释就写着
+   *     区块标签    JudgmentQueueConsole:614 与 QueueContext 的四处,text-2xs uppercase
+   *     面板标题    workflow/page/TemplatePreview.tsx:145,text-md(它的行注释就写着
    *                 「06 是区块标题那一档」)
-   *     列表行标题  organizations:142 与 permissions/RolesGrid.tsx:40,text-03 font-medium
+   *     列表行标题  organizations:142 与 permissions/RolesGrid.tsx:40,text-sm font-medium
    *
    * 所以这套体系不是从五个样本归纳出来的 —— 每一档都有见证,而普查里**没有出现
    * 第四种语义**。反过来说也成立:排版档跟着**角色**走,不跟着标签深度走。同一个
@@ -633,18 +636,18 @@ describe("PageShell density", () => {
    *
    *   改了(缺陷,与选哪一档无关):
    *     - `AppLayout.tsx:382`、`MatrixLegend.tsx:27` 此前**一个 `text-0N` 都没有**,
-   *       字号来自祖先的一个工具类(MatrixLegend 的外层是 `text-03`,于是它的
+   *       字号来自祖先的一个工具类(MatrixLegend 的外层是 `text-sm`,于是它的
    *       "标题"和自己下面的说明段落同为 13px)。刻度存在的全部理由就是字号从刻度
-   *       来 —— 两处都补成面板标题档 `text-06`,并删掉那句 `font-semibold`(空操作)。
+   *       来 —— 两处都补成面板标题档 `text-md`,并删掉那句 `font-semibold`(空操作)。
    *       320px 的浮层上放 22px 标题不是本轮新定的:同宽的 `SettingsDrawer` 抽屉
-   *       标题本来就是 `<h2 className="text-06">`。
+   *       标题本来就是 `<h2 className="text-md">`。
    *     - `SettingsDrawer.tsx` 的 386/419/464 是"主题 / 强调色 / 导航模式"三个
-   *       **设置分组的组头**,不是列表行 —— 它们和上面那五个 `text-01 uppercase`
+   *       **设置分组的组头**,不是列表行 —— 它们和上面那五个 `text-2xs uppercase`
    *       的队列面板组头连 `text-ink-muted` 和 `mb-3` 都逐字相同,只是写成了
-   *       13px medium。改成 `text-01 uppercase`。
+   *       13px medium。改成 `text-2xs uppercase`。
    *
    *   **这三处顺带证伪了一句已经写进 `PageShell.tsx` 的话。** 那里 2026-09-10 记着
-   *   「同一天扫 `<h3>`,`text-03 font-medium` 有 5 处,**全是同一种东西**」——
+   *   「同一天扫 `<h3>`,`text-sm font-medium` 有 5 处,**全是同一种东西**」——
    *   其中三处是设置抽屉的组头,是区块标签不是列表行。`<h2>` 第三个角色的证据
    *   因此不是"六次",是**三次**(notifications 的 `<h2>` 加 organizations、
    *   RolesGrid 两个 `<h3>`);那句话已按实测改掉。角色本身仍然成立,厚度不同。
@@ -671,7 +674,7 @@ describe("PageShell density", () => {
           file: path.relative(FRONTEND, file).split(path.sep).join("/"),
           line: lineAt(src, m.index),
           tag: m[0],
-          steps: [...new Set(m[0].match(/\btext-0[1-8]\b/g) ?? [])],
+          steps: [...new Set(m[0].match(/(?<![\w-])text-(?:2xs|xs|sm|md|quote|lg|xl)(?![\w-])/g) ?? [])],
         });
       }
     }
@@ -686,9 +689,9 @@ describe("PageShell density", () => {
     // 从未运行过的,而它照样绿 —— 和下面 density 那条的 `observed` 是同一个理由。
     const conforming = (step: string, extra: (_tag: string) => boolean) =>
       found.filter((h) => h.steps.length === 1 && h.steps[0] === step && extra(h.tag)).length;
-    expect(conforming("text-01", (t) => /\buppercase\b/.test(t))).toBeGreaterThan(0);
-    expect(conforming("text-06", () => true)).toBeGreaterThan(0);
-    expect(conforming("text-03", (t) => /\bfont-medium\b/.test(t))).toBeGreaterThan(0);
+    expect(conforming("text-2xs", (t) => /\buppercase\b/.test(t))).toBeGreaterThan(0);
+    expect(conforming("text-md", () => true)).toBeGreaterThan(0);
+    expect(conforming("text-sm", (t) => /\bfont-medium\b/.test(t))).toBeGreaterThan(0);
 
     const offenders: string[] = [];
     const exemptionsHit = new Set<string>();
@@ -702,21 +705,21 @@ describe("PageShell density", () => {
           `pins ${h.steps.length} type steps (${h.steps.join(", ") || "none"}) — ` +
           `an <h3> declares exactly one, and a heading with none takes its size from ` +
           `whatever utility class an ancestor happens to carry`;
-      } else if (step === "text-01" && !/\buppercase\b/.test(h.tag)) {
-        why = `text-01 without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
-      } else if (step === "text-06" && /\bfont-semibold\b/.test(h.tag)) {
+      } else if (step === "text-2xs" && !/\buppercase\b/.test(h.tag)) {
+        why = `text-2xs without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
+      } else if (step === "text-md" && /\bfont-semibold\b/.test(h.tag)) {
         why =
-          `font-semibold on text-06 is a no-op — --text-06--font-weight is already 600, ` +
+          `font-semibold on text-md is a no-op — --text-md--font-weight is already 600, ` +
           `so this renders byte-identical and reads as "it would be light without me"`;
-      } else if (step === "text-03" && !/\bfont-medium\b/.test(h.tag)) {
+      } else if (step === "text-sm" && !/\bfont-medium\b/.test(h.tag)) {
         why =
-          `text-03 without font-medium — the list-row title role is "text-03 font-medium", ` +
-          `and --text-03 has no companion --text-03--font-weight, so without it the heading ` +
+          `text-sm without font-medium — the list-row title role is "text-sm font-medium", ` +
+          `and --text-sm has no companion --text-sm--font-weight, so without it the heading ` +
           `renders at the same 400 as the text beneath it`;
-      } else if (step !== "text-01" && step !== "text-06" && step !== "text-03") {
+      } else if (step !== "text-2xs" && step !== "text-md" && step !== "text-sm") {
         why =
-          `${step} is none of the three roles (eyebrow = text-01 uppercase, ` +
-          `panel title = text-06, list-row title = text-03 font-medium)`;
+          `${step} is none of the three roles (eyebrow = text-2xs uppercase, ` +
+          `panel title = text-md, list-row title = text-sm font-medium)`;
       }
       if (why === null) continue;
 
@@ -740,8 +743,8 @@ describe("PageShell density", () => {
     if (offenders.length > 0) {
       throw new Error(
         `<h3> carries the same three roles as <h2>, at the same three steps: the eyebrow ` +
-          `label is "text-01 uppercase", the panel title is "text-06", and the list-row ` +
-          `title is "text-03 font-medium". The step follows the ROLE, not the heading ` +
+          `label is "text-2xs uppercase", the panel title is "text-md", and the list-row ` +
+          `title is "text-sm font-medium". The step follows the ROLE, not the heading ` +
           `depth — a row title written <h3> because it sits inside a panel is the same ` +
           `row title. The rule is written in src/components/ui/PageShell.tsx's file header.\n\n` +
           offenders.join("\n")

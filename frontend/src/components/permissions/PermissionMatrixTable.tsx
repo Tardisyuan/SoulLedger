@@ -95,11 +95,11 @@ function FragmentCategory({
           比较(sticky 挂在单元格上,不挂在 <tr> 上),所以角单元格 z-30 稳定地
           压在同行其它分类格 z-20 之上,而整行仍在表头 z-30/z-40 之下。 */}
       <tr>
-        <td className="sticky top-[44px] left-0 z-30 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-3 py-1 text-02 uppercase text-[oklch(var(--color-ink-muted))] font-semibold">
+        <td className="sticky top-[44px] left-0 z-30 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-3 py-1 text-xs uppercase text-[oklch(var(--color-ink-muted))] font-semibold">
           {category}
         </td>
         {roleNames.map((role) => (
-          <td key={role} className="sticky top-[44px] z-20 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-2 py-1 text-02 text-center text-[oklch(var(--color-ink-subtle))] font-mono">
+          <td key={role} className="sticky top-[44px] z-20 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-2 py-1 text-xs text-center text-[oklch(var(--color-ink-subtle))] font-mono">
             {categoryTally(perms, role)}
           </td>
         ))}
@@ -111,8 +111,8 @@ function FragmentCategory({
            所以整行改用同一个不透明值,冻结格靠 group-hover 跟上。 */
         <tr key={perm.id} className="group hover:bg-[oklch(var(--color-surface-2))]">
           <td className="sticky left-0 z-10 bg-[oklch(var(--color-canvas))] group-hover:bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))]/50 px-3 py-1 transition-colors">
-            <div className="font-mono text-02 text-[oklch(var(--color-ink))]">{perm.codename}</div>
-            <div className="text-02 text-[oklch(var(--color-ink-subtle))]">{perm.name}</div>
+            <div className="font-mono text-xs text-[oklch(var(--color-ink))]">{perm.codename}</div>
+            <div className="text-xs text-[oklch(var(--color-ink-subtle))]">{perm.name}</div>
           </td>
           {roleNames.map((role) => (
             <td key={role} className="border-b border-[oklch(var(--color-hairline))]/50 px-1 py-1 text-center">
@@ -171,7 +171,7 @@ export function PermissionMatrixTable({
   }
 
   if (roleNames.length === 0) {
-    return <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>;
+    return <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>;
   }
 
   return (
@@ -199,7 +199,7 @@ export function PermissionMatrixTable({
        collapse 下边框归表格而不归单元格,sticky 单元格滚动时边框会
        留在原地。 */
     <div className="overflow-auto max-h-[65vh] border border-[oklch(var(--color-hairline))]">
-      <table className="w-full border-separate border-spacing-0 text-03">
+      <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr className="h-11">
             <th className="sticky top-0 left-0 z-40 bg-[oklch(var(--color-surface-1))] border-b border-[oklch(var(--color-hairline))] text-left px-3 font-medium text-[oklch(var(--color-ink-muted))] min-w-[200px]">
@@ -208,7 +208,7 @@ export function PermissionMatrixTable({
             {roleNames.map((role) => (
               <th key={role} className="sticky top-0 z-30 bg-[oklch(var(--color-surface-1))] border-b border-[oklch(var(--color-hairline))] px-2 font-medium text-[oklch(var(--color-ink))] min-w-[110px] text-center">
                 <div>{roleMeta[role]?.display_name || role}</div>
-                <div className="text-02 font-normal text-[oklch(var(--color-ink-subtle))] font-mono">
+                <div className="text-xs font-normal text-[oklch(var(--color-ink-subtle))] font-mono">
                   {categoryTally(allPerms, role)}
                 </div>
               </th>

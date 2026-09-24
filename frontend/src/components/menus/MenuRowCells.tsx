@@ -48,7 +48,7 @@ export function MenuRowCells({
         </div>
       </td>
       {/* Paths are identifiers — the 02 step, and monospaced. */}
-      <td className="px-4 py-3 text-02 font-mono text-[oklch(var(--color-ink-muted))]">{menu.path}</td>
+      <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{menu.path}</td>
       <td className="px-4 py-3">
         <Badge>{t(`menus.menu_types.${menu.menu_type ?? "MENU"}`)}</Badge>
       </td>
@@ -96,7 +96,7 @@ export function MenuRowCells({
             </>
           )}
           {isDeleted && (
-            <span className="text-02 text-[oklch(var(--color-ink-subtle))]">
+            <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
               {t("recycle_bin.manage_from_bin")}
             </span>
           )}

@@ -363,7 +363,7 @@ describe("SoulReadingPanel — a magnitude names its scale and nothing else does
  * The sizes this component draws a figure at — both scales, deliberately.
  *
  * `text-lg|xl|2xl|3xl` + `font-bold` is what a headline figure looked like
- * before the type migration; `text-06|07|08` is what it looks like after, and
+ * before the type migration; `text-md|07|08` is what it looks like after, and
  * those three carry `fontWeight: 600` in `tailwind.config.js`'s fontSize table,
  * so a migrated figure needs no separate weight class and would not match a
  * `font-bold` requirement at all.
@@ -379,8 +379,9 @@ describe("SoulReadingPanel — a magnitude names its scale and nothing else does
  * nothing, so the subject set has to be floored separately or the rule goes
  * quiet again the next time these class names move.
  */
-const FIGURE_SIZE = /(^|\s)(text-(lg|xl|2xl|3xl)|text-0[678])(\s|$)/;
-const BOLD = /(^|\s)(font-bold|text-0[678])(\s|$)/;
+// 规范 v1 七档里的「头条数字」档:md(16/600)、lg(22/600)、xl(28,仪表盘数字)。
+const FIGURE_SIZE = /(^|\s)text-(md|lg|xl)(\s|$)/;
+const BOLD = /(^|\s)(font-bold|font-semibold|text-(md|lg|xl))(\s|$)/;
 
 /**
  * How many figure-sized slots each reading actually draws. Measured by running
