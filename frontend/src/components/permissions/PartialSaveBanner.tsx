@@ -35,7 +35,7 @@ export function PartialSaveBanner({
     <div
       role="status"
       data-partial-save=""
-      className="bg-[oklch(var(--color-status-warning))]/10 border border-[oklch(var(--color-status-warning))]/40 p-4 flex items-start justify-between gap-4"
+      className="bg-[oklch(var(--color-warning-tint))] shadow-[inset_3px_0_0_oklch(var(--color-warning))] p-4 flex items-start justify-between gap-4"
     >
       <div className="min-w-0">
         <p className="text-sm text-[oklch(var(--color-ink))]">

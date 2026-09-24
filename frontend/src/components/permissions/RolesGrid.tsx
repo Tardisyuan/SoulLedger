@@ -2,10 +2,10 @@
 
 import { Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/src/components/ui/Button";
 
-/** The role cards under 「角色」, plus their loading placeholder. */
+/** The role table under 「角色」. */
 export function RolesGrid({
   roles,
   isLoading,
@@ -19,50 +19,47 @@ export function RolesGrid({
 }) {
   const { t } = useI18n();
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-            <Skeleton className="h-4 w-2/3 mb-2" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
+  /* 账页(规范 v1 §2):卡片网格换成表格。角色没有详情路由,所以不是整行链接;
+     编辑 / 删除是这一块真正的工作,留在行尾,做成紧凑的幽灵按钮。
+     加载时由 DataTable 出同列宽的骨架。 */
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-      {roles.map((role) => (
-        <div key={role.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-3 hover:border-[oklch(var(--color-accent))]/30 transition-colors">
-          <div className="min-w-0 flex-1">
-            <h3 title={role.display_name || role.name} className="font-medium text-[oklch(var(--color-ink))] truncate text-sm">{role.display_name || role.name}</h3>
-            <p title={role.name} className="text-xs text-[oklch(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
-            <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => onEdit(role)}
-              className="flex-1"
-            >
-              {t("permissions.edit_role")}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              onClick={() => onDelete(role)}
-              className="flex-1"
-            >
-              {t("permissions.delete_role")}
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
+    <DataTable<Role>
+      caption={t("permissions.roles_title")}
+      columns={[
+        { key: "role", header: t("users.role") },
+        { key: "holders", header: t("audit.user") },
+        { key: "actions", header: t("users.actions"), align: "right", srOnlyHeader: true },
+      ]}
+      data={roles}
+      isLoading={isLoading}
+      keyExtractor={(role) => String(role.id)}
+      renderRow={(role) => (
+        <>
+          <td className="px-4 py-3">
+            <div className="font-medium text-[oklch(var(--color-ink))]">{role.display_name || role.name}</div>
+            <div className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{role.name}</div>
+          </td>
+          <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
+            {t("permissions.matrix.role_users", { count: String(role.user_count) })}
+          </td>
+          <td className="px-4 py-3 text-right">
+            <div className="flex justify-end gap-1">
+              <Button type="button" variant="ghost" size="sm" onClick={() => onEdit(role)}>
+                {t("permissions.edit_role")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-[oklch(var(--color-danger))]"
+                onClick={() => onDelete(role)}
+              >
+                {t("permissions.delete_role")}
+              </Button>
+            </div>
+          </td>
+        </>
+      )}
+    />
   );
 }

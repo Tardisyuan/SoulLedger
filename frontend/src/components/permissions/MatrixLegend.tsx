@@ -23,7 +23,7 @@ export function MatrixLegend({
   if (!nonSubsetPair && !countParadox) return null;
 
   return (
-    <div className="bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-4 mb-4 text-sm space-y-2">
+    <div className="border-t border-b border-[oklch(var(--color-rule))] py-3 mb-4 text-sm space-y-2">
       {/* 面板标题这一档是 `text-md`,见 `src/components/ui/PageShell.tsx` 文件头。
           此前这里一个 `text-0N` 都没写,于是标题的字号来自**外层那个 `text-sm`**
           —— 它和自己下面的说明段落同为 13px,只靠 weight 分开。字号从刻度来,
