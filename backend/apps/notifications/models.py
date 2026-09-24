@@ -40,6 +40,8 @@ class NotificationType(models.TextChoices):
     SENTENCE_REQUEST_PENDING = "SENTENCE_REQUEST_PENDING", "Sentence Request Pending"
     SENTENCE_REQUEST_DECIDED = "SENTENCE_REQUEST_DECIDED", "Sentence Request Decided"
     SENTENCE_PLAN_CANCELLED = "SENTENCE_PLAN_CANCELLED", "Sentence Plan Cancelled"
+    # 登录页「忘记密码」→ 本殿管理员(apps/authentication/tasks.py::notify_password_help)。
+    PASSWORD_HELP_REQUESTED = "PASSWORD_HELP_REQUESTED", "Password Help Requested"
 
 
 class UserNotification(AuditUserFields, models.Model):

@@ -53,6 +53,47 @@ const session: KeyValueStore = {
 };
 
 /**
+ * How long the refresh cookie lives — read off the token itself.
+ *
+ * 「在此设备上保持登录 30 天」 is a claim in the refresh token (`remember`,
+ * `backend/apps/authentication/tokens.py`), not a flag this adapter is told
+ * about. Reading it here is what keeps the cookie right after a silent
+ * refresh: `rotateRefreshToken` writes the rotated token through this same
+ * `set`, knowing nothing about how the operator signed in, and the rotated
+ * token carries the claim forward.
+ *
+ * - remembered: `max-age` = the token's own remaining lifetime (30 days on a
+ *   fresh token), so cookie and token expire together;
+ * - otherwise: no `max-age` and no `expires` — a session cookie, gone when the
+ *   browser session ends. The token's own 7-day `exp` stays the upper bound
+ *   the server enforces. Until this, every sign-in was a 7-day cookie, i.e.
+ *   everybody was "remembered" and the checkbox would have had nothing to
+ *   turn on.
+ *
+ * Only the lifetime is decided here; `path`, `SameSite=Lax` and the
+ * protocol-keyed `Secure` in `set` below are unchanged. The payload is read,
+ * never trusted: a token this cannot parse gets the session lifetime, the
+ * shorter of the two.
+ */
+export function refreshCookieLifetime(token: string, nowSeconds = Math.floor(Date.now() / 1000)): string {
+  const claims = readJwtClaims(token);
+  if (claims?.remember !== true || typeof claims.exp !== "number") return "";
+  return `; max-age=${Math.max(0, Math.floor(claims.exp - nowSeconds))}`;
+}
+
+function readJwtClaims(token: string): Record<string, unknown> | null {
+  const payload = token.split(".")[1];
+  if (!payload || typeof atob === "undefined") return null;
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const claims: unknown = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")));
+    return claims && typeof claims === "object" ? (claims as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The persistent half: a cookie, plus `localStorage` on the read path.
  *
  * WHY A COOKIE AND NOT `localStorage`. `frontend/middleware.ts` runs on the
@@ -85,8 +126,8 @@ const session: KeyValueStore = {
  * The alternative, leaving it as one cookie write, is worse in three ways that
  * are all specific rather than stylistic: a held verdict (a soul's name, a
  * verdict, the operator's note) would be sent to the Next server on every
- * request to this origin, for no reader; it would carry `max-age=604800` — a
- * seven-day lifetime on a record whose design lifetime is eight seconds; and
+ * request to this origin, for no reader; it would carry the refresh token's lifetime —
+ * days, on a record whose design lifetime is eight seconds; and
  * cookies are capped near 4KB per origin, shared with the refresh token.
  */
 const persistent: KeyValueStore = {
@@ -119,7 +160,7 @@ const persistent: KeyValueStore = {
       typeof location !== "undefined" && location.protocol === "https:"
         ? "; Secure"
         : "";
-    document.cookie = `${key}=${value}; path=/; max-age=604800; SameSite=Lax${secure}`;
+    document.cookie = `${key}=${value}; path=/${refreshCookieLifetime(value)}; SameSite=Lax${secure}`;
   },
   remove(key) {
     if (typeof document === "undefined") return;
@@ -152,7 +193,7 @@ export const webPlatform: PlatformAdapter = {
   //
   // The package splits `persistent` from `secure` because "survives a restart"
   // and "is a bearer credential" are different properties, and a React Native
-  // adapter that conflates them puts a seven-day refresh token into AsyncStorage
+  // adapter that conflates them puts a 7- or 30-day refresh token into AsyncStorage
   // plaintext. A browser has no such choice to make: the refresh token has to be
   // a cookie so `frontend/middleware.ts` can read it (see the note over
   // `persistent` above), and a cookie is the most protected store this platform

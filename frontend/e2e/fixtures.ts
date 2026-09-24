@@ -1204,6 +1204,21 @@ export class ApiMock {
         is_active: true,
       },
     ]));
+    // The login page's public civilization rows (`/auth/civilizations/`).
+    this.on("GET", "/auth/civilizations/", [
+      { code: "CN_DIYU", civilization: "CHINESE" },
+      { code: "EU_HEAVEN_HELL", civilization: "EUROPEAN" },
+      { code: "EG_DUAT", civilization: "EGYPTIAN" },
+      { code: "GR_HADES", civilization: "GREEK" },
+    ]);
+    // 默认视图 on the server. Unset, so login lands where it always did
+    // (/dashboard); a PATCH answers with what it was sent, as the view does.
+    this.on("GET", "/auth/profile/preferences/", { default_view: null });
+    this.on("PATCH", "/auth/profile/preferences/", (call) => ({
+      body: { default_view: null, ...(call.body as object) },
+    }));
+    // 忘记密码: one body for every username, as the backend answers.
+    this.on("POST", "/auth/password-help/", { detail: "请求已受理" });
     this.on("GET", "/auth/profile/", {
       id: TEST_USER.id,
       username: TEST_USER.username,

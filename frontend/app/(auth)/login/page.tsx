@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
-import { authApi } from "@soulledger/core/api";
+import { authApi, type PublicCivilization } from "@soulledger/core/api";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { formatSigil } from "@soulledger/core/config/civilizationSigil";
 import { loginSchema } from "@soulledger/core/validations/schemas";
@@ -23,23 +23,131 @@ import { defaultViewRoute } from "@/src/lib/defaultView";
  * 登录(第三类 D 组 10a):壳外页,左右各半。左半「今日律条」+ 四文明编号法,
  * 右半表单。窄屏律条缩到 20px 放在表单上方,编号法一行隐藏 —— 它是装饰。
  *
- * What the design drew and this page deliberately does not have:
- * - 文明单选行. `authApi.login(username, password)` takes no tenant; the tenant
- *   comes back on the user (`tokens.user.tenant`). A radio that changes nothing
- *   the request carries would be a control that lies.
- * - 「在此设备上保持登录 30 天」. There is no remember-me in the API; refresh
- *   lifetime is the backend's setting, not a login-time choice.
- * - 「还可以再试 N 次」. `LoginView` counts attempts per IP in cache
- *   (5 / 15 min) but returns no count, only a 429 once the limit is hit.
- * - 忘记密码. No such route or endpoint exists for staff accounts.
+ * How the design's four account controls landed:
+ * - 文明行: a LIST, not radios. A user has exactly one tenant (`User.tenant`)
+ *   and the token's `tenant_code` is copied from it, so login takes no tenant
+ *   and a radio would be a control that changes nothing the request carries.
+ *   The rows come from the public `/auth/civilizations/`; the marked row is
+ *   the civilization this device last signed in to (`LAST_TENANT_KEY`).
+ * - 「在此设备上保持登录 30 天」: `remember` on the login request. The server
+ *   issues a 30-day refresh token carrying a `remember` claim, and
+ *   `lib/platform/web.ts` sizes the cookie from it; unticked, the cookie is a
+ *   session cookie.
+ * - 忘记密码: accounts are opened by an administrator, so it notifies them
+ *   (`/auth/password-help/`) — no reset link. The confirmation is the same
+ *   sentence whatever username was typed.
+ * - Still absent: 「还可以再试 N 次」. `LoginView` counts attempts per IP in
+ *   cache (5 / 15 min) but returns no count, only a 429 once the limit is hit.
  */
 const CIVS = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"] as const;
+
+/** The tenant code this device last signed in to — only ever used to mark a row. */
+const LAST_TENANT_KEY = "soulledger_last_tenant";
+
+const REMEMBER_DAYS = 30;
+
+function readLastTenant(): string | null {
+  try {
+    return localStorage.getItem(LAST_TENANT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLastTenant(code: string | undefined): void {
+  try {
+    if (code) localStorage.setItem(LAST_TENANT_KEY, code);
+  } catch {
+    // Storage disabled: the rows simply go unmarked next time.
+  }
+}
+
+/**
+ * 忘记密码. Posts the username and shows ONE confirmation for every answer the
+ * server can give with a 200 — the endpoint never says whether the account
+ * exists, and this form must not reintroduce the difference by branching on
+ * anything but the status.
+ */
+function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; onClose: () => void }) {
+  const { t } = useI18n();
+  const [username, setUsername] = useState(initialUsername);
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim()) return;
+    setState("sending");
+    setError(null);
+    try {
+      await authApi.requestPasswordHelp(username.trim());
+      setState("sent");
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setError(t(status === 429 ? "auth.rate_limited" : "auth.forgot_failed"));
+      setState("idle");
+    }
+  };
+
+  if (state === "sent") {
+    return (
+      <div className="flex flex-col gap-4" data-testid="password-help-sent">
+        <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
+        <p role="status" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-sm text-[oklch(var(--color-ink))]">
+          {t("auth.forgot_sent")}
+        </p>
+        <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
+          {t("auth.back_to_login")}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-4" data-testid="password-help-form">
+      <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
+      <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("auth.forgot_desc")}</p>
+      <TextField
+        id="password-help-username"
+        name="username"
+        autoComplete="username"
+        type="text"
+        label={t("auth.username")}
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+      />
+      {error && (
+        <div
+          role="alert"
+          className="border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] px-4 py-3 text-sm font-medium text-[oklch(var(--color-danger))]"
+        >
+          {error}
+        </div>
+      )}
+      <Button
+        type="submit"
+        variant="primary"
+        disabled={state === "sending" || !username.trim()}
+        loading={state === "sending"}
+        className="w-full h-10 max-sm:h-12"
+      >
+        {t("auth.forgot_submit")}
+      </Button>
+      <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
+        {t("auth.back_to_login")}
+      </Button>
+    </form>
+  );
+}
 
 export default function LoginPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const { setUser } = useTenant();
   const [form, setForm] = useState({ username: "", password: "" });
+  const [remember, setRemember] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   // Inline, not a toast (设计「错误」态). The toast used to be the only surface,
@@ -53,6 +161,25 @@ export default function LoginPage() {
     setStatuteIndex(Math.floor(Math.random() * LOGIN_STATUTES.length));
   }, []);
   const statute = LOGIN_STATUTES[statuteIndex];
+
+  // 文明行. Fetched after mount (the list is public) and marked from this
+  // device's last sign-in. A failed fetch leaves the list out: it is
+  // information, and signing in does not depend on it.
+  const [civilizations, setCivilizations] = useState<PublicCivilization[]>([]);
+  const [lastTenant, setLastTenant] = useState<string | null>(null);
+  useEffect(() => {
+    setLastTenant(readLastTenant());
+    let cancelled = false;
+    authApi
+      .civilizations()
+      .then((res) => {
+        if (!cancelled) setCivilizations(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // `loginSchema` had ZERO consumers. It sat in lib/validations/schemas.ts
   // beside `judgmentCreateSchema`, which drifted to three civilizations while
@@ -80,7 +207,7 @@ export default function LoginPage() {
     setLoginError(null);
 
     try {
-      const res = await authApi.login(form.username, form.password);
+      const res = await authApi.login({ username: form.username, password: form.password, remember });
 
       const tokens = res.data;
       // Through the ports, the same way `rotateRefreshToken` writes them. This
@@ -96,11 +223,13 @@ export default function LoginPage() {
       // Populate TenantContext so downstream components have tenant/user info
       if (tokens.user) {
         setUser(tokens.user);
+        writeLastTenant(tokens.user.tenant?.code);
       }
 
       showToast(t("auth.login_success"), "success");
-      // /dashboard unless the operator picked 操作员 on /welcome.
-      window.location.href = defaultViewRoute();
+      // The operator's saved 默认视图, asked of the server with the token just
+      // stored; /dashboard when there is none.
+      window.location.href = await defaultViewRoute();
       return;
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })
@@ -170,85 +299,141 @@ export default function LoginPage() {
         </section>
 
         <div className="flex justify-center px-4 py-6 md:px-14 md:py-14">
-          <form ref={formRef} onSubmit={handleSubmit} className="flex w-full max-w-[360px] flex-col gap-4">
-            <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.login")}</h2>
+          <div className="flex w-full max-w-[360px] flex-col gap-4">
+            {helpOpen ? (
+              <PasswordHelp initialUsername={form.username} onClose={() => setHelpOpen(false)} />
+            ) : (
+              <form ref={formRef} onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+                <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.login")}</h2>
 
-            <TextField
-              id="login-username"
-              name="username"
-              autoComplete="username"
-              type="text"
-              label={t("auth.username")}
-              value={form.username}
-              onChange={(e) => {
-                clearFieldError("username");
-                setForm({ ...form, username: e.target.value });
-              }}
-              error={getError("username")}
-              placeholder="admin"
-              required
-            />
-            <div className="relative">
-              <TextField
-                id="login-password"
-                name="password"
-                autoComplete="current-password"
-                type={showPassword ? "text" : "password"}
-                label={t("auth.password")}
-                value={form.password}
-                onChange={(e) => {
-                  clearFieldError("password");
-                  setForm({ ...form, password: e.target.value });
-                }}
-                error={getError("password")}
-                placeholder="••••••••"
-                required
-              />
-              {/* In the label row rather than inside the input: the input's
-                  bottom edge moves when an error line appears under it. The
-                  visible word is the whole name — an aria-label containing
-                  「密码」 would make `getByLabel("密码")` match two elements. */}
-              <button
-                type="button"
-                aria-controls="login-password"
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-0 top-0 text-xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
-              >
-                {showPassword ? t("soul_app.common.hide") : t("soul_app.common.show")}
-              </button>
-            </div>
+                {civilizations.length > 0 && (
+                  <section aria-labelledby="login-civilization-label" className="flex flex-col gap-1.5">
+                    <p id="login-civilization-label" className="text-xs text-[oklch(var(--color-ink-muted))]">
+                      {t("auth.civilization")}
+                    </p>
+                    <ul data-testid="login-civilizations" className="m-0 p-0 list-none border-t border-[oklch(var(--color-rule))]">
+                      {civilizations.map((row) => {
+                        const marked = row.code === lastTenant;
+                        return (
+                          <li
+                            key={row.code}
+                            aria-current={marked ? "true" : undefined}
+                            className={
+                              "flex items-center gap-2 border-b border-[oklch(var(--color-rule))] px-2 py-1.5 text-sm " +
+                              // An ink bar, not a ●/○ glyph: ● is already the
+                              // European shape mark right beside it.
+                              (marked
+                                ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
+                                : "text-[oklch(var(--color-ink-muted))]")
+                            }
+                          >
+                            <span aria-hidden="true">{CIVILIZATION_MARK[row.civilization] ?? ""}</span>
+                            <span>{t(`organization.civilizations.${row.civilization}`)}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("auth.civilization_note")}</p>
+                  </section>
+                )}
 
-            {loginError && (
-              <div
-                role="alert"
-                data-testid="login-error"
-                className="border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] px-4 py-3 text-sm font-medium text-[oklch(var(--color-danger))]"
-              >
-                <span aria-hidden="true">! </span>
-                {loginError}
-              </div>
+                <TextField
+                  id="login-username"
+                  name="username"
+                  autoComplete="username"
+                  type="text"
+                  label={t("auth.username")}
+                  value={form.username}
+                  onChange={(e) => {
+                    clearFieldError("username");
+                    setForm({ ...form, username: e.target.value });
+                  }}
+                  error={getError("username")}
+                  placeholder="admin"
+                  required
+                />
+                <div className="relative">
+                  <TextField
+                    id="login-password"
+                    name="password"
+                    autoComplete="current-password"
+                    type={showPassword ? "text" : "password"}
+                    label={t("auth.password")}
+                    value={form.password}
+                    onChange={(e) => {
+                      clearFieldError("password");
+                      setForm({ ...form, password: e.target.value });
+                    }}
+                    error={getError("password")}
+                    placeholder="••••••••"
+                    required
+                  />
+                  {/* In the label row rather than inside the input: the input's
+                      bottom edge moves when an error line appears under it. The
+                      visible word is the whole name — an aria-label containing
+                      「密码」 would make `getByLabel("密码")` match two elements. */}
+                  <button
+                    type="button"
+                    aria-controls="login-password"
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-0 top-0 text-xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
+                  >
+                    {showPassword ? t("soul_app.common.hide") : t("soul_app.common.show")}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <label className="flex items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                    <input
+                      type="checkbox"
+                      name="remember"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                    />
+                    {t("auth.remember_me", { days: String(REMEMBER_DAYS) })}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setHelpOpen(true)}
+                    className="shrink-0 text-xs text-[oklch(var(--color-accent-ink))] underline"
+                  >
+                    {t("auth.forgot_password")}
+                  </button>
+                </div>
+
+                {loginError && (
+                  <div
+                    role="alert"
+                    data-testid="login-error"
+                    className="border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] px-4 py-3 text-sm font-medium text-[oklch(var(--color-danger))]"
+                  >
+                    <span aria-hidden="true">! </span>
+                    {loginError}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={loading}
+                  loading={loading}
+                  className="w-full h-10 max-sm:h-12"
+                >
+                  {loading ? t("auth.logging_in") : t("auth.login")}
+                  {!loading && (
+                    <span aria-hidden="true" className="font-mono text-2xs opacity-80">⏎</span>
+                  )}
+                </Button>
+
+                <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                  <Link href="/" className="text-[oklch(var(--color-accent-ink))] underline">
+                    {t("nav.home")}
+                  </Link>
+                </p>
+              </form>
             )}
-
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={loading}
-              loading={loading}
-              className="w-full h-10 max-sm:h-12"
-            >
-              {loading ? t("auth.logging_in") : t("auth.login")}
-              {!loading && (
-                <span aria-hidden="true" className="font-mono text-2xs opacity-80">⏎</span>
-              )}
-            </Button>
-
-            <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
-              <Link href="/" className="text-[oklch(var(--color-accent-ink))] underline">
-                {t("nav.home")}
-              </Link>
-            </p>
-          </form>
+          </div>
         </div>
       </main>
     </div>

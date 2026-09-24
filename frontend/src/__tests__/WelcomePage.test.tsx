@@ -10,7 +10,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WelcomePage from "@/app/welcome/page";
-import { auditApi, ledgerApi, permApi } from "@soulledger/core/api";
+import { auditApi, authApi, ledgerApi, permApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -20,6 +20,8 @@ jest.mock("@soulledger/core/api", () => ({
   // (RoleName); empty by default, so the built-ins below still resolve
   // through DomainEnum.
   permApi: { roles: { list: jest.fn() } },
+  // 默认视图 lives on the server (`/auth/profile/preferences/`).
+  authApi: { preferences: jest.fn(), updatePreferences: jest.fn() },
 }));
 
 let mockUser: Record<string, unknown> | null = null;
@@ -358,7 +360,16 @@ describe("WelcomePage first-run checklist", () => {
     expect(screen.getByRole("link", { name: "auth.login" })).toHaveAttribute("href", "/login");
   });
 
-  it("stores the default view locally and moves on once it is chosen", async () => {
+  const LEGACY_KEY = "soulledger_default_view";
+  const mockedPrefs = authApi.preferences as jest.Mock;
+  const mockedSavePrefs = authApi.updatePreferences as jest.Mock;
+
+  beforeEach(() => {
+    mockedPrefs.mockResolvedValue({ data: { default_view: null } });
+    mockedSavePrefs.mockImplementation(async (body: { default_view: string | null }) => ({ data: body }));
+  });
+
+  it("saves the default view on the server, not in this browser, and moves on", async () => {
     mockUser = { username: "yama", role: "JUDGE" };
     renderPage();
 
@@ -368,11 +379,80 @@ describe("WelcomePage first-run checklist", () => {
 
     fireEvent.click(screen.getByTestId("welcome-view-operator"));
 
-    expect(localStorage.getItem("soulledger_default_view")).toBe("operator");
+    await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" }));
+    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
     expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "false");
     expect(stepStates()).toEqual(["done", "done", "current", "future"]);
     expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/judgment/queue");
+  });
+
+  it("shows the value the server has, from any browser", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    mockedPrefs.mockResolvedValue({ data: { default_view: "operator" } });
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true")
+    );
+    expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/judgment/queue");
+    expect(mockedSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it("migrates a value this browser stored before, once, and then forgets it", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    localStorage.setItem(LEGACY_KEY, "operator");
+    const first = renderPage();
+    await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" }));
+    await waitFor(() => expect(localStorage.getItem(LEGACY_KEY)).toBeNull());
+    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true");
+    first.unmount();
+
+    // Next visit: the server has it now, and nothing is written again.
+    mockedPrefs.mockResolvedValue({ data: { default_view: "operator" } });
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true")
+    );
+    expect(mockedSavePrefs).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the local value for next time when the migration cannot be saved", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    localStorage.setItem(LEGACY_KEY, "operator");
+    mockedSavePrefs.mockRejectedValue(new Error("offline"));
+    renderPage();
+    await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalled());
+    expect(localStorage.getItem(LEGACY_KEY)).toBe("operator");
+  });
+
+  it("lets the server's value win over a stale local one, and clears the local one", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    localStorage.setItem(LEGACY_KEY, "operator");
+    mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "true"));
+    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "false");
+    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
+    expect(mockedSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it("puts the previous choice back when a save fails", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
+    mockedSavePrefs.mockRejectedValue(new Error("offline"));
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "true"));
+    fireEvent.click(screen.getByTestId("welcome-view-operator"));
+    await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "true"));
+    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("asks nothing for an anonymous visitor, and offers no choice it cannot save", async () => {
+    renderPage();
+    await waitFor(() => expect(stepStates()).toEqual(["current", "future", "future", "future"]));
+    expect(screen.getByTestId("welcome-view-operator")).toBeDisabled();
+    expect(screen.getByTestId("welcome-view-admin")).toBeDisabled();
+    expect(mockedPrefs).not.toHaveBeenCalled();
   });
 
   it("lists only keys the app actually binds", async () => {
