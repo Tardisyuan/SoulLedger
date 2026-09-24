@@ -2,7 +2,7 @@
  * Tests for DataTable component
  */
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -257,5 +257,28 @@ describe("row density reaches the body, not just the header", () => {
     const { container } = dense();
     // 规范 v1:行高 36 px。
     expect(container.querySelector("thead th")?.className ?? "").toContain("py-2");
+  });
+});
+
+describe("linked rows (规范 v1: the whole row opens the record)", () => {
+  it("makes each body row the box the row link stretches over", () => {
+    const { container } = renderTable({ linkedRows: true });
+    const trs = container.querySelectorAll("tbody tr");
+    expect(trs).toHaveLength(2);
+    trs.forEach((tr) => expect(tr.className.split(/\s+/)).toEqual(expect.arrayContaining(["relative", "cursor-pointer"])));
+  });
+
+  it("changes nothing for tables that do not opt in", () => {
+    // Without `relative` on the row, a ROW_LINK's ::after would stretch over the
+    // nearest positioned ancestor instead — the whole table, or the page.
+    const { container } = renderTable();
+    container.querySelectorAll("tbody tr").forEach((tr) => {
+      expect(tr.className).not.toMatch(/\brelative\b/);
+      expect(tr.className).not.toContain("cursor-pointer");
+    });
+  });
+
+  it("stretches the link with an absolutely positioned ::after", () => {
+    expect(ROW_LINK.split(" ")).toEqual(expect.arrayContaining(["after:absolute", "after:inset-0"]));
   });
 });

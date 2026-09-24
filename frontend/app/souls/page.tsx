@@ -8,7 +8,7 @@ import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { DataTable, ROW_LINK, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { isColumnUninformative, resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PAGE_SIZE, soulsApi, type SoulListItem } from "@soulledger/core/api";
@@ -256,6 +256,7 @@ export default function SoulsPage() {
           (the judgment list) stay `comfortable`. */}
       <DataTable<SoulListItem>
         density="compact"
+        linkedRows
         caption={t("souls.title")}
         columns={[
           { key: "name", header: t("souls.name"), sortable: true },
@@ -263,7 +264,6 @@ export default function SoulsPage() {
           { key: "state", header: t("souls.state") },
           { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
           ...(showsDeathColumn ? [{ key: "death", header: t("souls.death") }] : []),
-          { key: "action", header: t("souls.action") },
         ]}
         data={souls}
         /* The query's identity, so a page turn or a filter change re-baselines
@@ -297,7 +297,9 @@ export default function SoulsPage() {
                     {marker.glyph}
                   </span>
                 )}
-                {soul.name}
+                <Link href={`/souls/${soul.id}`} className={ROW_LINK}>
+                  {soul.name}
+                </Link>
               </span>
             </td>
             <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
@@ -346,14 +348,6 @@ export default function SoulsPage() {
                 <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
               </td>
             )}
-            <td className="px-4 py-3">
-              <Link
-                href={`/souls/${soul.id}`}
-                className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
-              >
-                {t("souls.view")} →
-              </Link>
-            </td>
           </>
           );
         }}
