@@ -15,18 +15,39 @@ does not have (`DispositionService.create_from_judgment` with an unmapped
 tenant) certainly took the soul out of the court, and where it went is not
 known. Recording "left" is true; inventing a destination would not be.
 
-The callers, and the ones deliberately not hooked, are listed in
-cloud-reports/realm-path-fields.md.
+The callers, and the ones deliberately not hooked, are listed in the
+realm-path-fields cloud report (kept in the project memory directory).
 
-Nothing here backfills. The first row for any soul is written by the first
-move after this module shipped; a path that starts mid-way is honest, a path
-whose early `entered_at`s were derived from `created_at` would not be.
+Death is the first station (maintainer decision, 2026-09-25): the ALIVE ->
+JUDGING edge in `Soul.transition_to` calls `enter_on_death`, which puts the
+soul in its civilization's entry realm (`ENTRY_REALM_CODES`). Souls that died
+before that hook have their first station written once, by
+`manage.py backfill_soul_entry_path`, from the recorded death date — never
+from `created_at`.
 """
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from apps.realms.models import SoulPathEntry
+from apps.realms.models import Realm, SoulPathEntry
+from apps.souls.models import Civilization
+
+# Where a soul stands the moment it dies, before any court has taken its case.
+# Codes verified against apps/actors/mythology/realms.py (the seed).
+ENTRY_REALM_CODES = {
+    Civilization.CHINESE: "DY_00_PURGATORY",   # 待审所
+    Civilization.EGYPTIAN: "EG_DUAT_ENTRY",    # 杜阿特入口
+    Civilization.GREEK: "GR_ACHERON",          # 冥府:阿刻戎渡口
+    Civilization.EUROPEAN: "EU_ACHERON",       # 地狱篇:阿刻戎渡口
+}
+
+
+def entry_realm_for(soul):
+    """The live entry realm of the soul's civilization in the soul's own tenant, or None."""
+    code = ENTRY_REALM_CODES.get(soul.civilization)
+    if code is None or soul.tenant_id is None:
+        return None
+    return Realm.all_objects.filter(tenant_id=soul.tenant_id, realm_code=code, is_deleted=False).first()
 
 
 class SoulPathService:
@@ -64,6 +85,14 @@ class SoulPathService:
                 entered_at=at,
                 tenant_id=tenant_id if tenant_id is not None else realm.tenant_id,
             )
+
+    @classmethod
+    def enter_on_death(cls, soul, *, at=None):
+        """First station: the civilization's entry realm. No such realm in the tenant writes nothing."""
+        realm = entry_realm_for(soul)
+        if realm is None:
+            return None
+        return cls.enter(soul, realm, tenant_id=soul.tenant_id, at=at)
 
     @classmethod
     def leave(cls, soul, *, realm=None, at=None):
