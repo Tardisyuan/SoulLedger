@@ -203,7 +203,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
           to prevent. */}
       <div className="min-w-0">
         <p
-          className="font-mono tabular-nums text-03 text-[oklch(var(--civ-ink))]"
+          className="font-mono tabular-nums text-03 text-[oklch(var(--color-ink-subtle))]"
           title={system}
         >
           {sigil ?? <MissingValue kind="unrecorded" reason={system} />}

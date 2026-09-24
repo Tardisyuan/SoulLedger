@@ -73,10 +73,10 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
  * this one, and a civilization is a domain identity, not a system state.
  */
 const CATEGORY_COLORS: Record<string, string> = {
-  CHINESE: "bg-[oklch(var(--color-civ-mark-cn)/0.2)] text-[oklch(var(--color-civ-ink-cn))] border-[oklch(var(--color-civ-mark-cn)/0.4)]",
-  EUROPEAN: "bg-[oklch(var(--color-civ-mark-eu)/0.2)] text-[oklch(var(--color-civ-ink-eu))] border-[oklch(var(--color-civ-mark-eu)/0.4)]",
-  EGYPTIAN: "bg-[oklch(var(--color-civ-mark-eg)/0.2)] text-[oklch(var(--color-civ-ink-eg))] border-[oklch(var(--color-civ-mark-eg)/0.4)]",
-  GREEK: "bg-[oklch(var(--color-civ-mark-gr)/0.2)] text-[oklch(var(--color-civ-ink-gr))] border-[oklch(var(--color-civ-mark-gr)/0.4)]",
+  CHINESE: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line))]",
+  EUROPEAN: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line))]",
+  EGYPTIAN: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line))]",
+  GREEK: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line))]",
 };
 
 function OrganizationsPageContent() {

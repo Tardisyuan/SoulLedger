@@ -1,4 +1,5 @@
 import dagre from "@dagrejs/dagre";
+import { CHART_COLORS } from "@/lib/chart-colors";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 export interface TemplateNode {
@@ -73,37 +74,28 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
 }
 
 /**
- * The arrow every edge in this editor is drawn with.
+ * The arrow every edge in this editor is drawn with, in the theme's accent.
  *
- * The hex is deliberate and is the reason this module has to stay under
- * `src/components/workflow/`. `markerEnd` is handed to @xyflow/react, which
- * renders it into a standalone SVG `<marker>` defs tree — `oklch(var(--…))` has
- * no custom properties to resolve against in there and the arrowheads come out
- * unpainted. `eslint.config.mjs`'s HEX_ALLOW grants the exception by PATH
- * PREFIX, so moving this file elsewhere turns the exception back into an error.
+ * A LITERAL colour, not `oklch(var(--…))`: `markerEnd` is handed to
+ * @xyflow/react, which renders it into an SVG `<marker>` defs tree, and this
+ * module records that the arrowheads came out unpainted from a var() there.
+ * The literal is `CHART_CHROME.accent` — per theme, pinned to globals.css by
+ * chartColourContract — so the edge follows the palette without a hex here.
  *
  * Written once rather than FOUR times: the two hydration paths, `onConnect`,
- * and `addNode`'s auto-connect used to each carry their own copy — and it HAD
- * drifted. `387c29c` introduced all four as byte-identical `#d97706`;
- * `051bf9a` (a batch commit whose message says nothing about edge colour)
- * recoloured three of them to `#f59e0b` and missed the fourth. The three it
- * changed sit at 12-space indentation; the one it missed sits at 14, nested in
- * a ternary array. That fourth copy then stayed two shades off for two years.
+ * and `addNode`'s auto-connect each used to carry a copy, and one drifted
+ * (`387c29c` → `051bf9a`). `workflowEdgeArrowSingleSource.test.ts` asserts the
+ * single source.
  *
- * This docstring used to say "three times". It was counting the same three,
- * so the de-duplication that was written to stop the drift had already missed
- * the instance that was drifting. `workflowEdgeArrowSingleSource.test.ts` now
- * asserts the count instead of this sentence claiming it.
+ * ponytail: the theme is read when the edge is built; an edge drawn before a
+ * theme switch keeps the old accent until the editor reloads.
  */
-const EDGE_ARROW = {
-  markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-  style: { stroke: "#f59e0b", strokeWidth: 2 },
-} as const;
-
 export function edgeArrow() {
+  const theme = typeof document !== "undefined" && document.documentElement.classList.contains("light") ? "light" : "dark";
+  const color = CHART_COLORS[theme].CHART_CHROME.accent;
   return {
-    markerEnd: { ...EDGE_ARROW.markerEnd },
-    style: { ...EDGE_ARROW.style },
+    markerEnd: { type: MarkerType.ArrowClosed, color },
+    style: { stroke: color, strokeWidth: 2 },
   };
 }
 

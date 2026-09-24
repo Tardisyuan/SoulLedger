@@ -13,35 +13,6 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
-import {
-  CIVILIZATION_SHORT_CODES,
-  TENANT_CODE_TO_CIVILIZATION,
-} from "@soulledger/core/config/civilizations";
-
-/**
- * The 3px identity rule down the left edge of a tenant row.
- *
- * `tailwind.config.js` reserves `border-3` for exactly two things — "文明身份线
- * 与判决落印带" — and a tenant IS a civilization here (`tenants.subtitle` reads
- * 各文明体系的租户配置), so this is that line rather than a new decoration.
- *
- * Derived through `TENANT_CODE_TO_CIVILIZATION` → `CIVILIZATION_SHORT_CODES`
- * rather than written as a four-member map, because a fifth civilization added
- * to `src/config/civilizations.ts` already carries its own prefix and would get
- * the rule for free. The colour has to arrive as an inline custom-property
- * reference and not a class: `--civ-mark` is stamped per *logged-in* tenant by
- * the `[data-civ]` rules in globals.css, and this list shows every tenant at
- * once, so each row names its own `--color-civ-mark-*` directly — the same
- * direct naming globals.css records for the dashboard swatch.
- *
- * An unmapped code gets no rule at all rather than a grey one: 3px of hairline
- * would read as an identity that happens to be dull.
- */
-function civMark(tenantCode: string): string | undefined {
-  const civilization = TENANT_CODE_TO_CIVILIZATION[tenantCode];
-  const prefix = civilization ? CIVILIZATION_SHORT_CODES[civilization] : undefined;
-  return prefix ? `oklch(var(--color-civ-mark-${prefix}))` : undefined;
-}
 
 function TenantsPageContent() {
   const { t } = useI18n();
@@ -138,12 +109,10 @@ function TenantsPageContent() {
     >
       <div className="space-y-3">
         {tenants.map((tenant: Tenant) => {
-          const mark = civMark(tenant.code);
           return (
             <div
               key={tenant.id}
-              className={`bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center justify-between gap-4${mark ? " border-l-3" : ""}`}
-              style={mark ? { borderLeftColor: mark } : undefined}
+              className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center justify-between gap-4"
             >
               <div className="min-w-0">
                 <p title={tenant.display_name} className="text-03 font-medium text-[oklch(var(--color-ink))] truncate">{tenant.display_name}</p>

@@ -68,15 +68,18 @@ jest.mock("@soulledger/core/api", () => ({
 
 jest.mock("@/src/components/connection-status", () => ({
   ConnectionStatus: () => <span data-testid="connection-status" />,
+  ConnectionBanner: () => null,
 }));
 
 jest.mock("@/src/hooks/useSidebarMenus", () => ({
   ...jest.requireActual("@/src/hooks/useSidebarMenus"),
-  // Empty on purpose: it pins the focusable set inside the drawer to exactly
-  // two — the masthead link and the collapse button — so "first" and "last"
-  // below mean something fixed rather than whatever the menu fixture happened
-  // to render.
-  useSidebarMenus: () => ({ data: [] }),
+  // One page on purpose: it pins the focusable set inside the drawer to exactly
+  // two — the wordmark link and that page's link (the drawer has no collapse
+  // button since 规范 v1; the rail is a viewport state) — so "first" and "last"
+  // below mean something fixed rather than whatever a menu fixture rendered.
+  useSidebarMenus: () => ({
+    data: [{ id: 1, name: "概览", path: "/dashboard", icon: null, order: 0, component: null, roles: [], is_active: true, parent: null, children: [] }],
+  }),
 }));
 
 import { AppLayout } from "@/src/components/layout/AppLayout";
@@ -193,7 +196,7 @@ describe("AppLayout's phone drawer has a keyboard way in, round and out", () => 
     renderLayout();
     fireEvent.click(hamburger());
 
-    const scrim = document.querySelector(".fixed.inset-0.bg-black\\/50");
+    const scrim = document.querySelector(".fixed.inset-0.z-scrim");
     expect(scrim).toBeTruthy();
     expect(scrim!.tagName).toBe("BUTTON");
 

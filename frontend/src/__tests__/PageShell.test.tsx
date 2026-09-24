@@ -104,10 +104,11 @@ describe("PageShell · variant 决定列宽", () => {
     }
   });
 
-  it("full 下仍然保留 px-6 的水平留白（不设上限 ≠ 顶到边）", () => {
+  it("full 下仍然保留规范 v1 的页边距（桌面 40px / 手机 16px；不设上限 ≠ 顶到边）", () => {
     const { container } = renderFull("full");
     for (const slot of WIDTH_SLOTS) {
-      expect(widthBox(container, slot).className).toMatch(/\bpx-6\b/);
+      expect(widthBox(container, slot).className).toMatch(/\bpx-4\b/);
+      expect(widthBox(container, slot).className).toMatch(/\bmd:px-10\b/);
     }
   });
 });
@@ -421,7 +422,7 @@ describe("PageShell density", () => {
     const body = container.querySelector("[data-page-shell-body]");
     expect(body).toHaveAttribute("data-density", "document");
     expect(body?.className).toContain("pt-10");
-    expect(body?.className).toContain("pb-16");
+    expect(body?.className).toContain("pb-14");
     expect(body?.className).not.toContain("py-6");
   });
 

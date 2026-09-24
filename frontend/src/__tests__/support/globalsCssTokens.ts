@@ -25,7 +25,6 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { CIVILIZATION_CODES, CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
 export const FRONTEND_ROOT = path.join(__dirname, "..", "..", "..");
 export const GLOBALS_CSS = path.join(FRONTEND_ROOT, "app", "globals.css");
@@ -125,33 +124,6 @@ export function lastDeclarationOffset(selector: string, name: string): number {
  */
 export const LIGHT_EFFECTIVE_TOKENS: Record<string, string> = { ...ROOT_TOKENS, ...LIGHT_TOKENS };
 
-/**
- * The ramp a screen with NO `[data-civ]` renders — logged out, or a tenant this
- * deployment maps to no cosmology.
- *
- * Before Stage 11 there was nothing to read: the fallback was the value
- * `--civ-hue: 240` interpolated into the same declarations every tenant used,
- * and at 13% saturation "the neutral branch" and "some tenant's branch" were
- * taken to be the same pixels anyway. The tinted ramp made 240° a deep
- * blue-violet 8° from European, so globals.css now declares the untinted ramp
- * outright under `:root:not([data-civ])` / `.light:not([data-civ])`.
- *
- * "THE SAME PIXELS ANYWAY" WAS max-channel TALKING. Re-measured in ΔE00 on
- * that old dark ramp, the 240° fallback sat 5.36-9.40 from Greek and
- * 4.26-7.27 from Egyptian — a colour, not a neutral, and only European was
- * genuinely close to it. This map's reason for existing is unchanged; what
- * changes is that reading it is not merely a Stage 11 concern.
- *
- * `readTokens(":root")` and `readTokens("\\.light")` do NOT see these blocks —
- * their patterns require the selector to be followed by whitespace and `{`,
- * and here it is followed by `:not(`. That is load-bearing in both directions:
- * the tenant-facing maps stay free of fallback values, and this map is the only
- * place the fallback can be measured. Read it wherever the subject is the
- * screen with no cosmology; `TOKENS_BY_THEME` remains the answer for a tenant.
- */
-export const NO_CIV_ROOT_TOKENS = readTokens(":root:not\\(\\[data-civ\\]\\)");
-export const NO_CIV_LIGHT_TOKENS = readTokens("\\.light:not\\(\\[data-civ\\]\\)");
-
 export type ThemeName = "dark" | "light";
 
 /** The two themes, as `ThemeContext` names them. Iterate this, never a literal pair. */
@@ -166,25 +138,6 @@ export const TOKENS_BY_THEME: Record<ThemeName, Record<string, string>> = {
   dark: ROOT_TOKENS,
   light: LIGHT_EFFECTIVE_TOKENS,
 };
-
-/**
- * What a browser computes for a screen with no `[data-civ]`, per theme.
- *
- * The cascade, spelled out because the order is the whole content of it: both
- * `:not([data-civ])` selectors are (0,2,0) and beat plain `:root` / `.light`
- * (0,1,0) wherever they sit, so between the two of them only source order
- * decides — and `.light:not([data-civ])` is written after
- * `:root:not([data-civ])` in globals.css for exactly that reason.
- */
-export const NO_CIV_TOKENS_BY_THEME: Record<ThemeName, Record<string, string>> = {
-  dark: { ...ROOT_TOKENS, ...NO_CIV_ROOT_TOKENS },
-  light: { ...ROOT_TOKENS, ...LIGHT_TOKENS, ...NO_CIV_ROOT_TOKENS, ...NO_CIV_LIGHT_TOKENS },
-};
-
-/** The literal a mirror entry has to carry for a token as the NO-cosmology screen renders it. */
-export function noCivLiteralOfIn(theme: ThemeName, name: string): string {
-  return asChartLiteral(resolveTriple(NO_CIV_TOKENS_BY_THEME[theme], name));
-}
 
 /** Suffixes of every token matching a `--prefix-<suffix>` family, sorted. */
 export function suffixesOf(tokens: Record<string, string>, family: string): string[] {
@@ -235,87 +188,6 @@ export function literalOfIn(theme: ThemeName, name: string): string {
 /** The dark-theme literal a mirror entry has to carry for the named token. */
 export function literalOf(name: string): string {
   return literalOfIn("dark", name);
-}
-
-/**
- * The `[data-civ="X"]` rules, mapped to the token each points `--civ-hue` at.
- * These are what actually retint the surface ramp; tokens without a rule are
- * inert, which is precisely how GREEK rendered on the neutral 240° fallback
- * while looking, in the stylesheet, fully wired up.
- */
-export interface CivAttrRule {
-  /** The token `--civ-mark` is pointed at, or undefined if the rule omits it. */
-  mark?: string;
-  /** The token `--civ-ink` is pointed at, or undefined if the rule omits it. */
-  ink?: string;
-  /**
-   * `{"--color-surface-1": "--color-civ-surface-1-cn", …}` from the tenant's
-   * `:root[data-civ='…']` rule — the five ramp planes and the per-tenant token
-   * each is pointed at. Empty if that rule is missing, which is the same
-   * silent-neutral failure the `hue` field used to catch.
-   */
-  ramp: Record<string, string>;
-}
-
-/**
- * The `[data-civ="…"]` rules, as {prefix: {hue, mark}}.
- *
- * Both aliases in one parser rather than one function per alias: two regex
- * readers of one stylesheet is the defect this whole support file exists to
- * stop, and a second reader is how the two would drift into disagreeing about
- * what a rule even is. The declarations are read individually inside each
- * rule body, so adding a third alias does not silently empty the map — which
- * is what the previous whole-body regex would have done the moment
- * `--civ-mark` was added beside `--civ-hue`.
- */
-export function readCivAttrRules(): Record<string, CivAttrRule> {
-  const rules: Record<string, CivAttrRule> = {};
-  // Quote style and line breaks are NOT part of the contract. This pattern
-  // required `[data-civ="cn"] { … }` on one line with double quotes, and the
-  // Tailwind v4 upgrade — which reformats the stylesheet it rewrites — turned
-  // them into multi-line blocks with single quotes. The parser then found
-  // nothing and the assertion compared two empty lists' worth of civilizations,
-  // which is the shape this whole file exists to prevent.
-  //
-  // TWO SELECTORS PER TENANT SINCE THE OKLCH MIGRATION, AND THE LEADING
-  // `(:root)?` IS WHAT KEEPS THEM APART. The aliases live on plain
-  // `[data-civ='cn']` because a nested restamp — app/actors/page.tsx and
-  // app/corpus/page.tsx both do one per section — has to reach `--civ-mark`.
-  // The ramp lives on `:root[data-civ='cn']` because it must NOT: while the
-  // planes were `[--civ-hue] …` a nested attribute could not move them
-  // (a custom property's var()s are substituted where it is declared), and
-  // declaring the expanded literals on the plain selector handed the subtree a
-  // retint it never had — 9.8% of the /actors screenshot.
-  //
-  // A single `\[data-civ=…\]` pattern matches both blocks, and the second one
-  // seen would have overwritten the first with an entry holding no aliases at
-  // all. Captured separately and merged.
-  const blockPattern = /(:root)?\[data-civ=['"]([\w-]+)['"]\]\s*\{([^}]*)\}/g;
-  for (const block of css.matchAll(blockPattern)) {
-    const [, rootScoped, prefix, body] = block;
-    const entry: CivAttrRule = rules[prefix] ?? { ramp: {} };
-    if (rootScoped) {
-      for (const decl of body.matchAll(
-        /(--color-(?:canvas|surface-\d+)):\s*var\((--[\w-]+)\)\s*;/g
-      )) {
-        entry.ramp[decl[1]] = decl[2];
-      }
-    } else {
-      for (const decl of body.matchAll(/--civ-(mark|ink):\s*var\((--[\w-]+)\)\s*;/g)) {
-        entry[decl[1] as "mark" | "ink"] = decl[2];
-      }
-    }
-    rules[prefix] = entry;
-  }
-  if (Object.keys(rules).length === 0) {
-    // Loud, not empty. An empty map makes every caller's `toEqual([])` pass.
-    throw new Error(
-      `Parsed no [data-civ] rules out of ${GLOBALS_CSS}. Fix this parser — ` +
-        `an empty result turns every civilization assertion into a comparison ` +
-        `of two empty lists.`
-    );
-  }
-  return rules;
 }
 
 /**
@@ -381,43 +253,6 @@ export const FEEDBACK_STATUS_TOKENS: string[] = suffixesOf(ROOT_TOKENS, "--color
   .filter((suffix) => !readSoulStates().some((state) => state.toLowerCase() === suffix))
   .map((suffix) => `--color-status-${suffix}`)
   .sort();
-
-/**
- * The one prefix rule, and it is now written once for real: this reads
- * `CIVILIZATION_SHORT_CODES` from config/civilizations rather than re-deriving
- * the split, which is what this comment used to claim while the production code
- * kept its own copy. A helper under `__tests__/` cannot be imported by
- * `TenantContext`, so "written once" was true of this file and of nothing else.
- *
- * Keyed by tenant code rather than by civilization because the CSS token
- * families and the `[data-civ]` rules are keyed by the prefix, and the callers
- * here start from a tenant. A *fifth* civilization turns these tests red the
- * moment it is added to the config — the enumeration point Greek slipped
- * through.
- */
-export const CIV_PREFIX_BY_TENANT_CODE = Object.fromEntries(
-  Object.entries(CIVILIZATION_CODES).map(([civ, code]) => [code, CIVILIZATION_SHORT_CODES[civ]])
-) as Record<string, string>;
-
-export const TENANT_CODES = Object.values(CIVILIZATION_CODES) as string[];
-export const CIV_PREFIXES = [...new Set(Object.values(CIV_PREFIX_BY_TENANT_CODE))].sort();
-
-// ---------------------------------------------------------------------------
-// The surface ramp, resolved per tenant.
-//
-// `resolveTriple` above answers "what does surface-1 look like on the neutral
-// 240° fallback". These answer "what does it look like for THIS civilization".
-//
-// This comment used to end "the answers are all the same colour", which was
-// Stage 9's finding and was left standing through Stage 11's retint. It is
-// false twice over now: the ramp does carry the tenant, and the metric that
-// made "the same colour" sound defensible for the closer pairs was
-// `maxChannelDelta`, which cannot see hue. Measured in ΔE00 the four answers
-// are 4.11 to 20.87 apart depending on pair, surface and theme — no two of
-// them are the same colour anywhere on the ramp except light-mode canvas,
-// which `.light` declares as flat `0 0% 100%` for every tenant and which is
-// not in `SURFACE_TOKENS`.
-// ---------------------------------------------------------------------------
 
 /** Every `--color-surface-N` token, derived from the stylesheet rather than listed. */
 export const SURFACE_TOKENS: string[] = suffixesOf(ROOT_TOKENS, "--color-surface").map(
@@ -568,35 +403,6 @@ export function rgbToOklchTriple([r, g, b]: Rgb): string {
   return `${trim(L, 6)} ${trim(C, 6)} ${trim(H, 4)}`;
 }
 
-/**
- * A ramp token resolved as the named civilization renders it, instead of as
- * the neutral `:root` fallback.
- *
- * IT USED TO SUBSTITUTE A HUE AND NOW IT LOOKS UP A TOKEN, because the
- * stylesheet stopped being able to factor the ramp that way. While the planes
- * were `[--civ-hue] 47% 7%`, one number per tenant described all five; in
- * OKLCH the same HSL saturation and lightness across the four tenant hues
- * spreads L by up to 0.057 and C by up to 0.010, so there is no shared pair to
- * hold constant and each plane is a literal — `--color-civ-surface-1-cn` and
- * its fifteen siblings, declared per theme exactly as `--color-civ-mark-*`
- * already was.
- *
- * `TOKENS_BY_THEME` is not mutated.
- */
-export function resolveRampForCiv(theme: ThemeName, prefix: string, name: string): string {
-  const tokens = TOKENS_BY_THEME[theme];
-  const plane = /^--color-(canvas|surface-\d+)$/.exec(name);
-  // A token outside the ramp has no per-tenant form and is the same colour on
-  // every screen, so it passes through — callers hand this one helper every
-  // token in a class string rather than branching, and the ink tokens are the
-  // reason. Unchanged from when the ramp was `[--civ-hue] …`.
-  if (plane === null) return resolveTriple(tokens, name);
-  const perTenant = `--color-civ-${plane[1]}-${prefix}`;
-  if (tokens[perTenant] === undefined) {
-    throw new Error(`No \`${perTenant}\` in the ${theme} tokens of ${GLOBALS_CSS}.`);
-  }
-  return resolveTriple(tokens, perTenant);
-}
 
 /**
  * The widest single-channel gap between two colours, 0-255.
@@ -621,15 +427,6 @@ export function maxChannelDelta(
   return Math.max(...a.map((v, i) => Math.abs(v - b[i])));
 }
 
-/** Every unordered pair of civilization prefixes. */
-export function civPairs(): [string, string][] {
-  const out: [string, string][] = [];
-  for (let i = 0; i < CIV_PREFIXES.length; i += 1) {
-    for (let j = i + 1; j < CIV_PREFIXES.length; j += 1) out.push([CIV_PREFIXES[i], CIV_PREFIXES[j]]);
-  }
-  if (out.length === 0) throw new Error("No civilization pairs — CIV_PREFIXES is too short to compare.");
-  return out;
-}
 
 // ---------------------------------------------------------------------------
 // WCAG 2.x contrast.

@@ -12,7 +12,6 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
 import {
   CIVILIZATION_OPTIONS,
-  CIVILIZATION_SHORT_CODES,
   isCivilizationOption,
 } from "@soulledger/core/config/civilizations";
 import {
@@ -351,16 +350,7 @@ function CorpusCard({
       data-corpus={group.corpus}
       data-civilization={group.civilization}
       data-names-offences={namesOffences ? "true" : "false"}
-      /* `--civ-mark` is aliased by the `[data-civ="cn"|"eu"|"eg"|"gr"]` rules in
-         globals.css, which TenantProvider normally stamps on <html>. Restamping
-         it here re-points the alias for this subtree, so the rule takes the
-         colour of the civilization whose corpus this is rather than the colour
-         of whoever is logged in — the two differ as soon as anyone browses a
-         corpus that is not their own. No `var(--civ-mark, …)` fallback: an
-         unmapped civilization is meant to come out neutral grey, and grey says
-         "no cosmology", which is true. */
-      data-civ={CIVILIZATION_SHORT_CODES[group.civilization]}
-      className="border-t-3 border-[oklch(var(--civ-mark))] pt-4"
+      className="border-t border-[oklch(var(--color-block))] pt-4"
     >
       <header className="flex items-baseline gap-3 mb-4">
         <h2 className="text-06 text-[oklch(var(--color-ink))]">
@@ -473,7 +463,7 @@ function StatuteRow({
 
   return (
     <tr className="border-b border-[oklch(var(--color-hairline))] last:border-b-0">
-      <td className="text-02 font-mono text-right align-top py-3 pr-2 text-[oklch(var(--civ-ink))]">
+      <td className="text-02 font-mono text-right align-top py-3 pr-2 text-[oklch(var(--color-ink-subtle))]">
         <DomainText
           value={sigil}
           missingKind="unrecorded"

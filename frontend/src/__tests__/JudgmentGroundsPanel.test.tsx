@@ -126,12 +126,8 @@ describe("JudgmentGroundsPanel", () => {
     expect(merit).toBeTruthy();
     // Different tones, and neither is the other's.
     expect(offence?.parentElement?.className).not.toBe(merit?.parentElement?.className);
-    // The 0.1 badge-tint cap applies to the FILL (borders are 0.3 by the
-    // shared convention in ENUM_TONE_CLASSES). Nothing here declares its own
-    // background, so every `bg-` on the panel comes from that one place.
-    const fills = container.innerHTML.match(/bg-\[oklch\(var\(--color-status-[a-z]+\)\/[\d.]+\)\]/g) ?? [];
-    expect(fills.length).toBeGreaterThan(0);
-    expect(fills.every((fill) => fill.endsWith("/0.1)]"))).toBe(true);
+    // Badges carry no fill (规范 v1 §2); the distinction is the text colour and glyph.
+    expect(container.innerHTML).not.toMatch(/bg-\[oklch\(var\(--color-status-/);
   });
 
   it("carries the raw enum member in title and never into the text node", () => {

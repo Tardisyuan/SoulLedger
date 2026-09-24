@@ -6,7 +6,7 @@
  * `aria-selected`,也没有 `aria-pressed`,也没有 `aria-current`。读屏用户听到的是
  * 两个一模一样的按钮,分不出当前在看哪一个视图。
  *
- * 同一类问题在侧栏是更重的一版:`SidebarMenuItem` 把可见文字整个放在
+ * 同一类问题在侧栏是更重的一版:侧栏项(当时的 `SidebarMenuItem`)把可见文字整个放在
  * `{!collapsed && …}` 里而**不给替代**,所以紧凑/轨道模式下整条主导航是一列
  * 没有可访问名称的 `<svg>`。改动之前这个文件里
  * `aria-label|title=|aria-current` 的计数是 **0**。
@@ -31,7 +31,8 @@
  * **没有覆盖** —— 写在这里,而不是拿一个我自己写对的合成 tab 条冒充覆盖。
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { SidebarMenuItem } from "@/src/components/layout/SidebarMenuItem";
+import { useState } from "react";
+import { SidebarGroup } from "@/src/components/layout/SidebarMenuItem";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 
 const mockPathname = jest.fn(() => "/souls");
@@ -82,9 +83,15 @@ const PARENT = menu({
   children: [menu({ id: 4, name: "菜单", path: "/menus", icon: "List" })],
 });
 
-describe("折叠侧栏:图标不是名字", () => {
+/** The sidebar's accordion state lives in AppLayout; this harness holds it for one group. */
+function Group({ menu, collapsed = false }: { menu: SidebarMenu; collapsed?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return <SidebarGroup menu={menu} index={0} collapsed={collapsed} open={open} onToggle={() => setOpen((o) => !o)} />;
+}
+
+describe("折叠侧栏:编号不是名字", () => {
   it("折叠时每一项仍然有可访问名称", () => {
-    render(<SidebarMenuItem menu={LEAF} collapsed />);
+    render(<Group menu={LEAF} collapsed />);
 
     // 缺席断言在这条里是主角:改动前这里**没有任何**可访问名称,
     // `getByRole("link", { name })` 是唯一能区分「名字在」和「名字不在」的问法
@@ -96,17 +103,17 @@ describe("折叠侧栏:图标不是名字", () => {
   });
 
   it("展开时名称也在,而不是只在折叠时才补", () => {
-    render(<SidebarMenuItem menu={LEAF} collapsed={false} />);
+    render(<Group menu={LEAF} />);
     expect(screen.getByRole("link", { name: "灵魂" })).toBeInTheDocument();
   });
 
   it("当前页用 aria-current 说出来,不只靠底色", () => {
-    render(<SidebarMenuItem menu={LEAF} collapsed={false} />);
+    render(<Group menu={LEAF} />);
     expect(screen.getByRole("link", { name: "灵魂" })).toHaveAttribute("aria-current", "page");
   });
 
   it("不是当前页的就不许挂 aria-current", () => {
-    render(<SidebarMenuItem menu={OTHER} collapsed={false} />);
+    render(<Group menu={OTHER} />);
     expect(screen.getByRole("link", { name: "审判" })).not.toHaveAttribute("aria-current");
   });
 
@@ -115,14 +122,14 @@ describe("折叠侧栏:图标不是名字", () => {
     // `getByRole("button", { name: "设置" })` 靠内容就能找到它 —— 实测把
     // `aria-label` 从按钮上删掉,那一条依然绿。折叠态没有可见文字,所以
     // `aria-label` 是唯一的名字来源,这条才真的在检验它。
-    render(<SidebarMenuItem menu={PARENT} collapsed />);
+    render(<Group menu={PARENT} collapsed />);
 
     expect(screen.getByRole("button", { name: "设置" })).toBeInTheDocument();
     expect(screen.queryByText("设置")).not.toBeInTheDocument();
   });
 
   it("有子项的那个按钮报告自己的展开状态", () => {
-    render(<SidebarMenuItem menu={PARENT} collapsed={false} />);
+    render(<Group menu={PARENT} />);
 
     const toggle = screen.getByRole("button", { name: "设置" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");

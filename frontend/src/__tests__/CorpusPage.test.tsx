@@ -210,7 +210,7 @@ describe("corpus grouping", () => {
     // Each card's only rule is the 3px civilization mark on top. Any bottom or
     // side border would close the card into a box and re-join the pair.
     for (const node of container.querySelectorAll<HTMLElement>("[data-corpus]")) {
-      expect(node.className).toMatch(/\bborder-t-3\b/);
+      expect(node.className).toMatch(/\bborder-t\b/);
       expect(node.className).not.toMatch(/\bborder-(b|l|r|y|x)\b/);
     }
   });

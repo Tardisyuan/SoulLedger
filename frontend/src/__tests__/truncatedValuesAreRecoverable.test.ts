@@ -108,12 +108,6 @@ const EXEMPT = [
     file: "src/components/layout/SidebarMenuItem.tsx",
     why: "同一轮已经给这两处加了 `aria-label={label}` —— 同一串字,再加 title 是第三份拷贝",
   },
-  {
-    file: "src/components/layout/TenantSignal.tsx",
-    why:
-      "被截断的是文明的译名,外层 span 带 `title={civilization}`(原始成员,§4.6 刻意的分工)。" +
-      "在内层再加 title 会在悬停时盖掉原始成员 —— 正是那段注释要防的形状",
-  },
 ];
 
 /** Comments blanked to spaces, so offsets and line numbers survive. */

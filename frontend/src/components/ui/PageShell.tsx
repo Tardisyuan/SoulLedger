@@ -153,11 +153,12 @@ export type PageShellDensity = "table" | "document";
 /**
  * 正文槽的纵向节奏,按密度。
  *
- * 只有纵向:左右一律 `px-6`,因为列宽归 `variant` 管,两个 prop 各管一件事。
+ * 只有纵向不同:左右一律规范 v1 的页边距(桌面 40 px、393 px 下 16 px),因为
+ * 列宽归 `variant` 管,两个 prop 各管一件事。
  */
 const BODY_CLASS: Record<PageShellDensity, string> = {
-  table: "px-6 py-6",
-  document: "px-6 pt-10 pb-16",
+  table: "px-4 md:px-10 py-6",
+  document: "px-4 md:px-10 pt-10 pb-14",
 };
 
 export interface PageShellPagination {
@@ -284,7 +285,7 @@ export function PageShell({
         data-page-shell-header=""
         className="border-b border-[oklch(var(--color-hairline))]"
       >
-        <div className={cn(width, "px-6 pt-10 pb-6")}>
+        <div className={cn(width, "px-4 md:px-10 pt-10 pb-6")}>
           {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
               两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
               （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
@@ -344,7 +345,7 @@ export function PageShell({
           所有标签页而不是当前这个。 */}
       {tabs ? (
         <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-hairline))]">
-          <div className={cn(width, "px-6 flex items-center gap-1")}>{tabs}</div>
+          <div className={cn(width, "px-4 md:px-10 flex items-center gap-1")}>{tabs}</div>
         </div>
       ) : null}
 
@@ -372,7 +373,7 @@ export function PageShell({
           <div
             className={cn(
               width,
-              "px-6 h-14 py-3 flex items-center gap-3 overflow-x-auto"
+              "px-4 md:px-10 h-14 py-3 flex items-center gap-3 overflow-x-auto"
             )}
           >
             {filters}
@@ -385,7 +386,7 @@ export function PageShell({
       </div>
 
       {pagination ? (
-        <div data-page-shell-pagination="" className={cn(width, "px-6 pb-6")}>
+        <div data-page-shell-pagination="" className={cn(width, "px-4 md:px-10 pb-6")}>
           <div className="border-t-2 border-[oklch(var(--color-ink-subtle))] pt-3 min-h-14 flex items-center justify-between gap-4">
             <div data-page-shell-pagination-count="" className="min-w-0">
               {pagination.count}

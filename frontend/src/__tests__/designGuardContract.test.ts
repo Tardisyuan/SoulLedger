@@ -317,21 +317,21 @@ describe("RHYTHM_EXEMPT 豁免没有过期", () => {
     (m) => [m[1], [...m[2].matchAll(/"([^"]+)"/g)].map((c) => c[1])] as const,
   );
 
-  it("解析得出条目(正则失效的话下面两条会变成空遍历、恒绿)", () => {
-    expect(entries.length).toBeGreaterThan(0);
+  it("找得到那张表(锚点失效的话下面两条会变成空遍历、恒绿)", () => {
+    // 表现在是空的(规范 v1 收了 0.5 之后唯一一条过期删除),所以断的是
+    // 「锚点在」与「表体里除了注释没有别的」,而不是「条目数 > 0」。
+    expect(anchor).not.toBeNull();
+    expect(entries).toEqual([]);
   });
 
-  it.each(entries.map(([f]) => f))("%s 仍然存在", (rel) => {
-    expect(fs.existsSync(path.join(ROOT, rel))).toBe(true);
-  });
-
-  it.each(entries.flatMap(([f, cs]) => cs.map((c) => [f, c])))(
-    "%s 仍然在用 %s",
-    (rel, cls) => {
+  // 一条 it 遍历,而不是 it.each:表是空的,jest 对空表的 .each 直接报错。
+  it("每一条豁免的文件还在、类名还在用", () => {
+    for (const [rel, classes] of entries) {
+      expect(fs.existsSync(path.join(ROOT, rel))).toBe(true);
       const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
-      expect(src).toContain(cls);
-    },
-  );
+      for (const cls of classes) expect(src).toContain(cls);
+    }
+  });
 });
 
 /**

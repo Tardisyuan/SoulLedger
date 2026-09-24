@@ -43,7 +43,7 @@ export function EmptyState({ title, reason, action, className }: EmptyStateProps
       <span
         data-empty-state-mark=""
         aria-hidden="true"
-        className="block w-6 border-t-2 border-[oklch(var(--civ-mark))]"
+        className="block w-6 border-t-2 border-[oklch(var(--color-block))]"
       />
 
       <p data-empty-state-title="" className="text-01 text-[oklch(var(--color-ink))] mt-4">

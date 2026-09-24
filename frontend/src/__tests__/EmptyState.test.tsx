@@ -5,7 +5,7 @@
  *   1. **居左**。失败模式是有人为了「好看」加回 `text-center` —— 而
  *      「标题渲染出来了」在居中的时候照样是绿的，所以必须直接断言那几个类名
  *      不在树里。
- *   2. 标题上方一条 **24px × 2px** 的短线，颜色取 `--civ-mark`。失败模式是
+ *   2. 标题上方一条 **24px × 2px** 的短线，颜色取区块边界线 `--color-block`。失败模式是
  *      有人给它兜一个彩色 fallback：`--civ-mark` 在未映射租户下是灰色
  *      （`app/globals.css:57`），那是刻意的，灰色说的是「没有文明」。
  *   3. `text-01` 标题 + `text-04` 原因。
@@ -78,15 +78,11 @@ describe("EmptyState · 那条短线", () => {
       .toBeTruthy();
   });
 
-  it("颜色直接取 --civ-mark，没有 fallback —— 未映射租户下的灰是刻意的", () => {
+  it("颜色是区块边界线 --color-block,不按文明染色(规范 v1 §1.8)", () => {
     const { container } = render(<EmptyState title="尚无判决" />);
     const mark = container.querySelector<HTMLElement>("[data-empty-state-mark]")!;
-    expect(mark.className).toContain("border-[oklch(var(--civ-mark))]");
-    // `var(--civ-mark, …)` 的第二个参数就是 fallback；出现逗号即违规。
-    expect(mark.className).not.toMatch(/var\(--civ-mark\s*,/);
-    // 也不许改用别的颜色 token 顶替。
-    expect(mark.className).not.toMatch(/--color-civ-mark-/);
-    expect(mark.className).not.toMatch(/--color-accent/);
+    expect(mark.className).toContain("border-[oklch(var(--color-block))]");
+    expect(mark.className).not.toMatch(/civ-/);
   });
 
   it("短线是标记不是内容，对读屏隐藏", () => {
