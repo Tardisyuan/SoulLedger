@@ -19,7 +19,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, readOutbox, useChat, type Chat } from "../chat";
@@ -415,6 +415,62 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall_sealed")).toBeTruthy();
     expect(screen.getByTestId("go-current-hall")).toBeTruthy();
     composerGone();
+  });
+});
+
+describe("the send key and a composing keyboard (iOS pinyin: marked text)", () => {
+  // The native field, as UIKit drives it: focused while typing; resigning commits the marked text
+  // and then reports the committed text in onEndEditing. Only these three methods are doubled.
+  function nativeField() {
+    jest.spyOn(TextInput.prototype, "isFocused").mockReturnValue(true);
+    const calls: string[] = [];
+    jest.spyOn(TextInput.prototype, "blur").mockImplementation(() => void calls.push("blur"));
+    jest.spyOn(TextInput.prototype, "focus").mockImplementation(() => void calls.push("focus"));
+    return calls;
+  }
+
+  it("the send key commits first and sends what was committed — never the syllables still being composed", () => {
+    const calls = nativeField();
+    const chat = openConversation(conv());
+    // Mid-composition: the field's text includes the marked syllables.
+    fireEvent.changeText(screen.getByTestId("compose"), "明天ming'tian");
+    fireEvent.press(screen.getByTestId("send"));
+    expect(chat.send).not.toHaveBeenCalled();
+    // Resign (UIKit commits the marked text), then straight back: the keyboard stays.
+    expect(calls).toEqual(["blur", "focus"]);
+    fireEvent(screen.getByTestId("compose"), "endEditing", { nativeEvent: { text: "明天见" } });
+    expect(chat.send).toHaveBeenCalledTimes(1);
+    expect(chat.send).toHaveBeenCalledWith(expect.objectContaining({ id: "c-direct" }), "明天见");
+    expect(screen.getByTestId("compose").props.value).toBe("");
+  });
+
+  it("the field ending on its own (keyboard dismissed) sends nothing", () => {
+    nativeField();
+    const chat = openConversation(conv());
+    fireEvent.changeText(screen.getByTestId("compose"), "明天见");
+    fireEvent(screen.getByTestId("compose"), "endEditing", { nativeEvent: { text: "明天见" } });
+    expect(chat.send).not.toHaveBeenCalled();
+    expect(screen.getByTestId("compose").props.value).toBe("明天见");
+  });
+
+  it("the field not focused (nothing can be composing): the send key sends at once", () => {
+    const calls = nativeField();
+    jest.spyOn(TextInput.prototype, "isFocused").mockReturnValue(false);
+    const chat = openConversation(conv());
+    fireEvent.changeText(screen.getByTestId("compose"), "明天见");
+    fireEvent.press(screen.getByTestId("send"));
+    expect(calls).toEqual([]);
+    expect(chat.send).toHaveBeenCalledWith(expect.objectContaining({ id: "c-direct" }), "明天见");
+  });
+
+  it("Android is unchanged: the send key sends at once", () => {
+    const calls = nativeField();
+    jest.replaceProperty(Platform, "OS", "android");
+    const chat = openConversation(conv());
+    fireEvent.changeText(screen.getByTestId("compose"), "明天见");
+    fireEvent.press(screen.getByTestId("send"));
+    expect(calls).toEqual([]);
+    expect(chat.send).toHaveBeenCalledWith(expect.objectContaining({ id: "c-direct" }), "明天见");
   });
 });
 
