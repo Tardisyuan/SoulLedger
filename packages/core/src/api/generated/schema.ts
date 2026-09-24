@@ -1762,6 +1762,11 @@ export interface paths {
          *
          *     **互关(或已解除节流)的私聊不走这里** —— 那种房间灵魂直接用 Matrix 发,后端不在
          *     消息路径上。这里照样接受,因为客户端不必分两条路;服务层判断之后仍然代发一次。
+         *
+         *     带 `txn_id` 的重发(App 丢了响应、或重启后续送)回第一次的 event_id,不再发。
+         *     不能交给 Synapse 去重:后端代发不带客户端的设备,而被节流的房间里重发会先撞上
+         *     24 小时限制,答 429 —— 信其实已经送到。
+         *     ponytail: 同一个 txn_id 的两个请求**同时**到达仍可能各发一条;App 同一封信不并发送。
          */
         post: operations["v1_me_chat_conversations_messages_create"];
         delete?: never;
@@ -7203,6 +7208,7 @@ export interface components {
         MenuTypeEnum: "DIRECTORY" | "MENU" | "BUTTON";
         MessageSend: {
             body: string;
+            txn_id?: string;
         };
         MessageSent: {
             event_id: string;

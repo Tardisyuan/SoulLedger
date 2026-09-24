@@ -337,3 +337,39 @@ def test_the_audit_trail_never_contains_a_message_body(cn_tenant, matrix):  # no
     for row in AuditLog.objects.all():
         assert secret not in row.description
         assert secret not in str(row.changes or "")
+
+
+# ── 重发同一个 txn_id ────────────────────────────────────────────────────────
+
+
+def test_a_resent_txn_id_is_answered_with_the_first_event_and_not_sent_again(cn_tenant, matrix):  # noqa: F811
+    """App 丢了响应后用同一个 txn_id 重发:回第一次的 event_id,Synapse 只收到一条。
+    被节流的房间是要紧的那一种 —— 不去重的话,重发先撞 24 小时限制答 429,而信其实已送到。
+    变异:views.py 里不读缓存(去掉 `cache.get` 那一支)→ 第二次 429,红。
+    变异:缓存键不含 txn_id → 下面第三封(新 txn)也被当成重发,红。"""
+    from tests.chat_support import FakeMatrix
+
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(cn_tenant, name="乙")
+    follow(a, b)
+    conversation = _open(a_client, b).data
+    url = f"{CONVERSATIONS}{conversation['id']}/messages/"
+
+    first = a_client.post(url, {"body": "打扰", "txn_id": "m1.t1"}, format="json")
+    again = a_client.post(url, {"body": "打扰", "txn_id": "m1.t1"}, format="json")
+    assert first.status_code == 201 and again.status_code == 201
+    assert again.data["event_id"] == first.data["event_id"]
+    assert [m["body"] for _, m in FakeMatrix.sent] == ["打扰"]
+
+    other = a_client.post(url, {"body": "再打扰", "txn_id": "m1.t2"}, format="json")
+    assert other.status_code == 429 and other.data["code"] == "request_throttled"
+
+
+def test_a_txn_id_is_only_url_safe_characters(cn_tenant, matrix):  # noqa: F811
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(cn_tenant, name="乙")
+    mutual(a, b)
+    conversation = _open(a_client, b).data
+    bad = a_client.post(f"{CONVERSATIONS}{conversation['id']}/messages/",
+                        {"body": "x", "txn_id": "a/b"}, format="json")
+    assert bad.status_code == 400

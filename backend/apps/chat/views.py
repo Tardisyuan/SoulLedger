@@ -14,6 +14,7 @@ import math
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import F, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -155,7 +156,14 @@ class MeChatMessagesView(ChatView):
 
     **互关(或已解除节流)的私聊不走这里** —— 那种房间灵魂直接用 Matrix 发,后端不在
     消息路径上。这里照样接受,因为客户端不必分两条路;服务层判断之后仍然代发一次。
+
+    带 `txn_id` 的重发(App 丢了响应、或重启后续送)回第一次的 event_id,不再发。
+    不能交给 Synapse 去重:后端代发不带客户端的设备,而被节流的房间里重发会先撞上
+    24 小时限制,答 429 —— 信其实已经送到。
+    ponytail: 同一个 txn_id 的两个请求**同时**到达仍可能各发一条;App 同一封信不并发送。
     """
+
+    TXN_TTL_SECONDS = 7 * 24 * 3600  # 发件箱在本机可以躺过重启与断网,比 Synapse 的 30–60 分钟长得多
 
     @extend_schema(request=MessageSendSerializer,
                    responses={201: MessageSentSerializer, 403: ChatErrorSerializer,
@@ -170,12 +178,18 @@ class MeChatMessagesView(ChatView):
         # 那会说出「这个会话存在」)。
         if conversation is None or not conversation.has_account(account.pk):
             raise svc.ChatError("会话不存在。", "not_found", status=404)
+        txn_id = body.validated_data.get("txn_id")
+        txn_key = f"chat:txn:{account.pk}:{conversation.pk}:{txn_id}" if txn_id else None
+        if txn_key and (sent := cache.get(txn_key)):
+            return Response({"event_id": sent}, status=status.HTTP_201_CREATED)
         if conversation.kind == ConversationKind.OFFICER_INBOX:
             event_id = svc.send_inbox_message(account, conversation, body.validated_data["body"],
                                               request=request)
         else:
             event_id = svc.send_direct_message(account, conversation, body.validated_data["body"],
                                                request=request)
+        if txn_key:
+            cache.set(txn_key, event_id, self.TXN_TTL_SECONDS)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
 
 

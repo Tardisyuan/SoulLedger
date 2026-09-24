@@ -19,14 +19,17 @@
  * flight when the app died) are kept in `platform().persistent` under
  * `OUTBOX_KEY`, stamped with the account they belong to, and sent again on the
  * next start with their original txn id. Another account signing in finds
- * nothing (and overwrites the record); signing out removes it (`clearOutbox`).
+ * nothing (and overwrites the record); signing out, or the session ending on
+ * its own (401 / 403 in `session.tsx`), removes it (`clearOutbox`).
  * The same txn id only de-duplicates if Synapse sees it from the same device,
  * for 30–60 minutes (its transaction cache, keyed by user + device, MSC3970) —
  * so the record also keeps the Matrix device id, and the next login asks for
  * that device again. Past the cache's lifetime, the guard is the echo: a letter
  * whose txn id already came back in /sync was delivered, and is not sent again.
- * The backend path (throttled rooms, the hall) takes no txn id at all; a letter
- * there whose response was lost can still post twice, today as before.
+ * The backend path (throttled rooms, the hall) gets the txn id too and keeps it
+ * for 7 days: sent again, it answers with the first event id and posts nothing
+ * — which also keeps a throttled room's resend from being refused as a second
+ * request.
  */
 import { soulErrorStatus } from "@soulledger/core/api/soul";
 import {
@@ -255,7 +258,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
       try {
         const matrix = client.current;
         if (!sendsThroughBackend(c) && !matrix) throw new MatrixRequestError("not signed in to Synapse", "", null);
-        const eventId = sendsThroughBackend(c) ? await soulChatApi.send(c.id, o.body) : await matrix!.send(c.room_id, o.txnId, o.body);
+        const eventId = sendsThroughBackend(c) ? await soulChatApi.send(c.id, o.body, o.txnId) : await matrix!.send(c.room_id, o.txnId, o.body);
         patch(o.txnId, { state: "sent", eventId });
         // The backend may have lifted the throttle, or moved the next request time.
         if (c.throttled) void reload();
