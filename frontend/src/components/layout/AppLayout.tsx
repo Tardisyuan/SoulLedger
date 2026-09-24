@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Fragment } from "react";
+import React, { useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,39 +12,61 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
 import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
-import { ConnectionStatus } from "@/src/components/connection-status";
+import { ConnectionBanner } from "@/src/components/connection-status";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
-import { TenantSignal } from "@/src/components/layout/TenantSignal";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
-import { SidebarMenuItem } from "@/src/components/layout/SidebarMenuItem";
+import { SidebarGroup, groupOfPath } from "@/src/components/layout/SidebarMenuItem";
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
-import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
+import { useTheme } from "@/src/contexts/ThemeContext";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
+/** ≥ 1024 px shows the 200 px sidebar; below it (and in compact mode) the 56 px number rail. */
+function useWideViewport(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      if (typeof window.matchMedia !== "function") return () => {};
+      const mq = window.matchMedia("(min-width: 1024px)");
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    // No matchMedia (jsdom): treat as wide — the rail is the narrow-screen fallback.
+    () => (typeof window.matchMedia === "function" ? window.matchMedia("(min-width: 1024px)").matches : true),
+    () => true
+  );
+}
+
+/**
+ * The shell, 规范 v1 §3「同一个壳」: 200 px sidebar + 40 px masthead
+ * (breadcrumb · notifications · user menu) + content with 40 px side margins.
+ *
+ * - ≤ 1024 px the sidebar is the 56 px number rail (01–06); hovering a group
+ *   floats its pages. The settings drawer's "compact" mode keeps the rail on
+ *   wide screens too.
+ * - < 768 px the sidebar is a drawer opened from ☰ in a 48 px masthead.
+ * - The connection state left the masthead: it appears only when the link is
+ *   down, as a warning bar under it (`ConnectionBanner`).
+ * - Language / theme / settings / sign-out moved into the user menu (brief §4.4:
+ *   eight masthead controls became three; nothing was removed).
+ */
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t, formatDateTime } = useI18n();
-  const [collapsed, setCollapsed] = useState(false);
   const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const { user, tenantCode, logout } = useTenant();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout } = useTenant();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const [prevPathname, setPrevPathname] = useState(pathname);
+  const wide = useWideViewport();
+  const rail = navMode === "compact" || !wide;
 
-  /**
-   * Close the mobile menu on navigation. It used to also drive a progress bar,
-   * and that bar was removed rather than kept beside `RouteProgress`:
-   *
-   * it lit up when `pathname !== prevPathname` — that is, once the route had
-   * ALREADY changed — and then showed for a fixed 300ms. A progress indicator
-   * that starts when the wait ends and runs on a timer unrelated to the work.
-   * `RouteProgress` starts on `history.pushState` and finishes when the new
-   * route is on screen, which is the thing this was standing in for.
-   */
+  // Close the mobile drawer on navigation (RouteProgress owns the progress bar).
   useEffect(() => {
     if (pathname !== prevPathname) {
       setPrevPathname(pathname);
@@ -52,17 +74,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, prevPathname]);
 
-  // Apply accent color on mount
+  // The accent picker's stored choice (default ink blue), applied on mount.
   useAccentColor();
 
-  // Hydrate nav mode from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem(NAV_MODE_KEY);
-      if (saved === "compact" || saved === "classic") {
-        setNavMode(saved);
-        setCollapsed(saved === "compact");
-      }
+      if (saved === "compact" || saved === "classic") setNavMode(saved);
     } catch {
       // localStorage unavailable (SSR or private browsing)
     }
@@ -75,7 +93,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     } catch {
       // localStorage unavailable
     }
-    setCollapsed(mode === "compact");
   };
 
   const handleLogout = async () => {
@@ -87,11 +104,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const { data: menus = [] } = useSidebarMenus();
 
-  // 菜单树里每一条非空 path,摊平。
-  //
-  // `isMenuPathActive` 用它判断「有没有更具体的菜单项也命中这条路由」——
-  // `/social/follows` 存在,所以 `/social` 在那一页不高亮;`/souls/42` 不存在,
-  // 所以 `/souls` 在详情页照常高亮。从真实菜单树取,不写死名单。
+  // Every non-empty menu path, flattened: `isMenuPathActive` lights an ancestor
+  // only when no more specific menu item also matches (/social vs /social/follows).
   const allMenuPaths = useMemo(() => {
     const out: string[] = [];
     const walk = (items: readonly SidebarMenu[]) => {
@@ -104,401 +118,224 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return out;
   }, [menus]);
 
-  // `count`, not `results.length`: results is one page (PAGE_SIZE 20), so with
-  // 21 unread the badge said 20. `count` is the whole unread inbox. (FL-15)
+  // Accordion: one group open at a time; the current page's group by default,
+  // and again whenever navigation lands in another group.
+  const currentGroup = useMemo(() => groupOfPath(menus, pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
+  const [openGroup, setOpenGroup] = useState<number | null>(null);
+  const [openFor, setOpenFor] = useState<number | null>(null);
+  if (currentGroup !== openFor) {
+    setOpenFor(currentGroup);
+    setOpenGroup(currentGroup);
+  }
+
+  // `count`, not `results.length`: results is one page, the badge is the whole unread inbox. (FL-15)
   const { data: unread } = useQuery({
     queryKey: notificationKeys.unreadCount,
     queryFn: async () => {
       const res = await notificationsApi.list({ is_read: "false" });
       return { count: res.data.count, results: res.data.results };
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
     enabled: !!user,
   });
   const unreadCount = unread?.count ?? 0;
   const notifications = unread?.results ?? [];
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const sidebarWidth = collapsed ? "w-16" : "w-56";
-
-  // The drawer's accessible name. `nav.mobile_menu` is not in the three
-  // messages bundles yet — adding a key is a three-file change with a parity
-  // contract over it (`domainNamespaceContract`), so it is being requested
-  // rather than smuggled in here. Until it lands, `t()` returns the key
-  // unchanged, and this falls back the same way `Breadcrumb` below already
-  // does for its own keys: compare against the key, and supply real copy when
-  // they match. The day the key exists, all three locales start working with
-  // no further edit.
+  // `nav.mobile_menu` may be missing from a bundle; `t()` then echoes the key.
   const mobileMenuName = t("nav.mobile_menu");
   const drawerLabel = mobileMenuName === "nav.mobile_menu" ? "导航菜单" : mobileMenuName;
-
-  // Escape, focus trap, focus return — see useDrawerA11y's header for why the
-  // scrim alone was never the fix.
   const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({
     open: mobileMenuOpen,
     onClose: () => setMobileMenuOpen(false),
     label: drawerLabel,
   });
 
-  return (
-    <div className="min-h-screen bg-[oklch(var(--color-canvas))]">
-      {/* Mobile scrim. A `<button>` rather than a `<div onClick>`: this is a
-          click target, and spelling it as one is what makes it announce and
-          behave like the control it already was. It is not the keyboard's way
-          out — Escape is, and the trap above keeps Tab from ever reaching this
-          — but a scrim carrying a click handler and no role is precisely the
-          shape `jsx-a11y/no-static-element-interactions` exists to catch. */}
-      {/* Mounted always, hidden by `visibility` rather than by unmounting, and
-          that is what lets it fade. The drawer beside it now takes 240ms to
-          slide out; a scrim that unmounts on the same click vanishes on frame
-          one and leaves the drawer sliding over a bare page. Either both move
-          or neither should.
+  const sidebar = (collapsed: boolean) => (
+    <>
+      <Link
+        href="/"
+        prefetch={true}
+        className={`flex h-10 shrink-0 items-center border-b border-[oklch(var(--color-block))] font-mono text-01 tracking-label text-[oklch(var(--color-ink))] ${collapsed ? "justify-center" : "px-3"}`}
+      >
+        {collapsed ? "SL" : "SOULLEDGER"}
+      </Link>
+      <nav aria-label={drawerLabel} className="flex-1 overflow-y-auto">
+        {menus.length === 0 && !collapsed ? (
+          <p className="px-3 py-4 text-02 text-[oklch(var(--color-ink-subtle))]">{t("menus.no_menus")}</p>
+        ) : null}
+        {menus.map((menu, index) => (
+          <SidebarGroup
+            key={menu.id}
+            menu={menu}
+            index={index}
+            collapsed={collapsed}
+            open={openGroup === menu.id}
+            onToggle={() => setOpenGroup((g) => (g === menu.id ? null : menu.id))}
+            allMenuPaths={allMenuPaths}
+          />
+        ))}
+      </nav>
+      {/* 底部原来的暗条删除;版本号放在最底一行。 */}
+      <p className={`shrink-0 border-t border-[oklch(var(--color-line))] py-2 font-mono text-01 text-[oklch(var(--color-ink-subtle))] ${collapsed ? "text-center" : "px-3"}`}>
+        {collapsed ? "v0.1" : t("footer.version")}
+      </p>
+    </>
+  );
 
-          `visibility` and not just `opacity`: a `visibility: hidden` element is
-          out of the accessibility tree and out of the tab order, so the closed
-          scrim is not a focusable control sitting on top of every page — which
-          is the whole reason it was conditionally mounted to begin with. It is
-          also the one discrete property that waits out the transition before
-          flipping, so the fade-out plays in full and the element only then
-          becomes unreachable. `display: none` would transition neither. */}
+  return (
+    <div className={`min-h-screen bg-[oklch(var(--color-canvas))] md:grid ${rail ? "md:grid-cols-[56px_1fr]" : "md:grid-cols-[200px_1fr]"}`}>
+      {/* Mobile scrim: a real button (it is a click target), hidden by `visibility` so it can fade. */}
       <button
         type="button"
         aria-label={t("common.close")}
-        className={`fixed inset-0 bg-black/50 z-scrim md:hidden transition-[opacity,visibility] duration-settle ${
-          mobileMenuOpen ? "visible opacity-100 ease-enter" : "invisible opacity-0 ease-exit"
+        className={`fixed inset-0 z-scrim bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] md:hidden transition-[opacity,visibility] duration-200 ${
+          mobileMenuOpen ? "visible opacity-100" : "invisible opacity-0"
         }`}
         onClick={() => setMobileMenuOpen(false)}
       />
 
-      {/* `transition-[width,transform]`, and `transform` is the half that was
-         missing. The desktop collapse animates `width`; the mobile drawer
-         opens and closes with `translate-x-0` / `-translate-x-full` on this
-         same element. With only `width` in the property list the drawer had
-         no transition at all — it teleported, on every open and every close,
-         for as long as this markup has existed. Nothing reported it because a
-         missing transition looks exactly like a fast one.
+      {/* Desktop / tablet: in the grid, sticky. */}
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] md:flex">
+        {sidebar(rail)}
+      </aside>
 
-         Both properties are on `duration-settle` (240ms) and `ease-enter`,
-         which is what the rest of the app spends on a change of this size. */}
+      {/* Phone: a drawer from ☰. */}
       <aside
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[oklch(var(--color-surface-1))] border-r border-[oklch(var(--color-hairline))] z-sidebar transition-[width,transform] duration-settle ease-enter flex flex-col
-          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        className={`fixed left-0 top-0 z-sidebar flex h-full w-50 flex-col border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] transition-transform duration-200 md:hidden ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        {/* Logo */}
-        <nav className={`h-16 border-b border-[oklch(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
-          <Link href="/" prefetch={true} className="flex items-center gap-2.5 overflow-hidden">
-            {collapsed ? (
-              /* Collapsed: Scale icon over the two-letter tenant code. The code
-                 is stacked rather than dropped because collapsing already takes
-                 the civilization name away, and colour alone is not a signal
-                 this palette can carry — see TenantSignal's header. */
-              <span className="flex flex-col items-center gap-1">
-                <svg className="w-7 h-7 shrink-0 text-[oklch(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3v18" stroke="currentColor"/>
-                  <path d="M5 8l7-5 7 5" stroke="currentColor"/>
-                  <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
-                  <circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/>
-                  <path d="M5 16l7 5 7-5" stroke="currentColor"/>
-                  <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
-                  <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
-                </svg>
-                <TenantSignal tenantCode={tenantCode} variant="rail" />
-              </span>
-            ) : (
-              /* Expanded: Scale + text */
-              <>
-                <svg className="w-7 h-7 shrink-0 text-[oklch(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3v18"/>
-                  <path d="M5 8l7-5 7 5"/>
-                  <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
-                  <circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/>
-                  <path d="M5 16l7 5 7-5"/>
-                  <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
-                  <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
-                </svg>
-                {/* The wordmark gains a second line and the masthead does not
-                    grow: the <nav> is already h-16 around a single 15px line,
-                    so an 11px name fits inside the existing box. `min-w-0` is
-                    what lets the name truncate instead of pushing the scale
-                    icon out of a fixed 224px rail. */}
-                <span className="flex flex-col min-w-0">
-                  <span className="text-[oklch(var(--color-accent-ink))] font-bold tracking-wide truncate leading-tight">
-                    SoulLedger
-                  </span>
-                  <TenantSignal tenantCode={tenantCode} variant="line" />
-                </span>
-              </>
-            )}
-          </Link>
-        </nav>
-
-        {/* Menu */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2">
-          {menus.length === 0 && !collapsed && (
-            <p className="text-02 text-[oklch(var(--color-ink-subtle))] px-2 py-4 text-center">
-              {t("menus.no_menus")}
-            </p>
-          )}
-          {menus.map((menu) => (
-            <SidebarMenuItem
-              key={menu.id}
-              menu={menu}
-              collapsed={collapsed}
-              allMenuPaths={allMenuPaths}
-            />
-          ))}
-        </nav>
-
-        {/* Bottom: toggle + footer */}
-        <div className="border-t border-[oklch(var(--color-hairline))] flex items-center">
-          {collapsed ? (
-            /* Collapsed: centered toggle */
-            <div className="w-full flex justify-center">
-              <button
-                onClick={() => setCollapsed(!collapsed)}
-                className="w-8 h-8 flex items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
-                title={t("nav.expand_menu")}
-                aria-label={t("nav.expand_menu")}
-                aria-expanded={false}
-              >
-                →
-              </button>
-            </div>
-          ) : (
-            /* Expanded: button in left 1/4 (centered), footer in right 3/4 (centered) */
-            <>
-              <div className="w-1/4 flex justify-center">
-                <button
-                  onClick={() => setCollapsed(!collapsed)}
-                  className="w-8 h-8 flex items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
-                  title={t("nav.collapse_menu")}
-                  aria-label={t("nav.collapse_menu")}
-                  aria-expanded={true}
-                >
-                  ←
-                </button>
-              </div>
-              <div className="w-3/4 flex justify-center pr-4">
-                <div className="text-02 text-[oklch(var(--color-ink-subtle))]">
-                  {t("footer.version")}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        {sidebar(false)}
       </aside>
 
-      {/* Main content */}
-      <main className={`transition-[margin-left] duration-settle ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
-
-        {/* Top header */}
-        <header className="sticky top-0 z-masthead h-16 bg-[oklch(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[oklch(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
-          {/* Mobile hamburger */}
-          {/* `--color-accent-ink`, not `--color-accent`, and that goes for
-              every hover in this masthead. In light mode the two are
-              `32 92% 31%` and `38 92% 50%`; the bare accent measures 2.13:1 on
-              canvas, so hovering an ink-subtle glyph (4.53:1) in it makes the
-              affordance LESS visible than its resting state, under both the
-              4.5:1 text floor and the 3:1 non-text floor. The token's own note
-              in globals.css states the rule, `app/welcome/page.tsx:134-138`
-              applied it to stat icons, and `Badge.tsx:70-74` to badge text. */}
+      <main className="min-w-0">
+        <header className="sticky top-0 z-masthead flex h-12 items-center gap-3 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 md:h-10 md:px-10">
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))]"
+            className="flex h-10 w-10 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden"
             aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
             aria-expanded={mobileMenuOpen}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
+            ☰
           </button>
 
-          {/* The tenant chip, phone only. Below `md` the sidebar is
-              `-translate-x-full` — off-canvas until the hamburger opens it — so
-              the masthead's signal is not on screen at all, and a phone is
-              where someone is most likely to have been dropped into a link with
-              no context. It sits here, on the breadcrumb side, and never in the
-              right cluster below: that cluster's own comment records the 393px
-              wrapping overflow that made a button unreachable, and a chip there
-              would re-run it. This side already truncates by design, and the
-              chip is a fixed 52px whatever the tenant and whatever the locale. */}
-          <span className="md:hidden">
-            <TenantSignal tenantCode={tenantCode} variant="chip" />
-          </span>
-
-          {/* Breadcrumb / Page title area */}
           <Breadcrumb menus={menus} />
 
-          {/* Right controls.
-              `shrink-0 whitespace-nowrap` is load-bearing, not cosmetic: this
-              cluster is a flex item of an `h-16 items-center` header, so if
-              flexbox squeezes it the greeting/label text wraps onto several
-              lines, the cluster grows past 64px and — because the header is
-              `sticky z-masthead` — the overflow lands on top of the page below and
-              swallows clicks (the `+ 创建灵魂` button on /souls was
-              unreachable at 393px for exactly this reason). Keeping it on one
-              line caps its height; the `hidden sm:*` gates below keep that one
-              line narrow enough to fit a phone. */}
-          <div className="flex shrink-0 items-center gap-2 md:gap-3 whitespace-nowrap">
-            {/* WebSocket Connection Status */}
-            <ConnectionStatus />
-
-            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
-
-            {/* Notification Bell with Popover */}
-            {user && (
-              /* Base UI's Popover, not @headlessui's. The anatomy gains a
-                 `Positioner`, and that is the substantive difference: the panel
-                 used to be `absolute right-0 mt-2` inside a `relative` wrapper,
-                 which pins it to the trigger and lets it run off-screen on a
-                 narrow viewport. `Positioner` uses Floating UI underneath, so
-                 it flips and shifts to stay on screen — the bell sits at the
-                 right edge of the masthead, which is exactly where that
-                 matters. */
+          <div className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+            {user ? (
               <Popover.Root>
                 <Popover.Trigger
-                  className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors p-1"
-                  aria-label={
-                    unreadCount > 0
-                      ? `${t("notifications.title")} (${unreadCount})`
-                      : t("notifications.title")
-                  }
+                  className="flex items-center gap-1 text-02 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                  aria-label={unreadCount > 0 ? `${t("notifications.title")} (${unreadCount})` : t("notifications.title")}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[oklch(var(--color-accent))] text-black text-01 rounded-full flex items-center justify-center">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
+                  <span className="hidden sm:inline">{t("notifications.title")}</span>
+                  <span aria-hidden="true" className="sm:hidden">◔</span>
+                  {unreadCount > 0 ? (
+                    <span className="font-mono text-01 text-[oklch(var(--color-accent))]">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                  ) : null}
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
-                    <Popover.Popup className="w-80 origin-top-right bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] shadow-xl focus:outline-hidden transition duration-press ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        {/* 弹层自己的标题 = 面板标题档 `text-06`(PageShell.tsx 文件头)。
-                            此前不写字号,它就跟着弹层继承的正文走。同宽(w-80)的
-                            `SettingsDrawer` 的抽屉标题是 `<h2 className="text-06">`
-                            —— 320px 的浮层上放 22px 标题是这里既有的做法,不是新定的。
-                            `font-semibold` 删掉:`--text-06--font-weight` 已经是 600。 */}
-                        <h3 className="text-06 text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
-                        <Link href="/notifications" className="text-02 text-[oklch(var(--color-accent-ink))] hover:underline">
+                    <Popover.Popup className="w-80 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay focus:outline-hidden">
+                      <div className="flex items-center justify-between border-b border-[oklch(var(--color-block))] px-4 py-2">
+                        <h3 className="text-03 font-medium text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
+                        <Link href="/notifications" className="text-02 text-[oklch(var(--color-accent))] hover:underline">
                           {t("notifications.view_all")}
                         </Link>
                       </div>
                       {notifications.length === 0 ? (
-                        <p className="text-03 text-[oklch(var(--color-ink-subtle))] text-center py-4">
-                          {t("notifications.empty")}
-                        </p>
+                        <p className="px-4 py-4 text-03 text-[oklch(var(--color-ink-subtle))]">{t("notifications.empty")}</p>
                       ) : (
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                        <div className="max-h-64 overflow-y-auto">
                           {notifications.slice(0, 5).map((n: Notification) => (
-                            <div key={n.id} className="p-2 hover:bg-[oklch(var(--color-surface-2))] cursor-pointer">
+                            <div key={n.id} className="border-b border-[oklch(var(--color-rule))] px-4 py-2">
                               <p className="text-03 text-[oklch(var(--color-ink))]">{n.message || n.title}</p>
-                              <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
-                                {formatDateTime(n.created_at)}
-                              </p>
+                              <p className="mt-1 font-mono text-01 text-[oklch(var(--color-ink-subtle))]">{formatDateTime(n.created_at)}</p>
                             </div>
                           ))}
                         </div>
                       )}
-                    </div>
-                  </Popover.Popup>
+                    </Popover.Popup>
                   </Popover.Positioner>
                 </Popover.Portal>
               </Popover.Root>
-            )}
-
-            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
-
-            {/* The locale <select> is the widest control in this row; below
-                `sm` it is dropped rather than allowed to squeeze its
-                neighbours into wrapping. Locale is still switchable from the
-                settings drawer. */}
-            <div className="hidden sm:block">
-              <LanguageSwitcher />
-            </div>
-
-            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
-
-            {/* Theme toggle. Shared with the public landing page's masthead
-                (`app/page.tsx`), which is not wrapped by this layout —
-                `AppLayoutWrapper`'s PUBLIC_PATHS hands `/` its children
-                directly — and so draws its own header. See ThemeToggle.tsx for
-                the three ways the two copies had already diverged. */}
-            <ThemeToggle />
-
-            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
-
-            {/* Settings gear */}
-            <button
-              onClick={() => setSettingsOpen(true)}
-              title={t("nav.settings")}
-              aria-label={t("nav.settings")}
-              className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors p-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-
-            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
+            ) : null}
 
             {user ? (
-              <>
-                {/* Hidden below `sm` (the profile page is still reachable
-                    from the sidebar); `max-w`+`truncate` above it so a long
-                    display_name cannot re-introduce the wrapping this row was
-                    fixed for. */}
-                <Link
-                  href="/profile"
-                  className="hidden sm:block max-w-40 truncate text-[oklch(var(--color-ink-muted))] text-03 hover:text-[oklch(var(--color-accent-ink))] transition-colors"
+              <Popover.Root>
+                <Popover.Trigger
+                  data-testid="user-menu"
+                  className="max-w-40 truncate text-02 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
                   title={user.display_name || user.username}
                 >
-                  {t("nav.greeting", { username: user.display_name || user.username })}
-                </Link>
-                <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
-                <button
-                  onClick={() => setLogoutConfirmOpen(true)}
-                  className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-status-error))] text-03 transition-colors"
-                >
-                  {t("auth.logout")}
-                </button>
-              </>
+                  {user.display_name || user.username} ▾
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
+                    <Popover.Popup className="w-60 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay focus:outline-hidden">
+                      <Link
+                        href="/profile"
+                        className="block border-b border-[oklch(var(--color-block))] px-3 py-2 hover:bg-[oklch(var(--color-surface-2))]"
+                      >
+                        <span className="block truncate text-03 text-[oklch(var(--color-ink))]" title={user.display_name || user.username}>
+                          {user.display_name || user.username}
+                        </span>
+                        <span className="font-mono text-01 text-[oklch(var(--color-ink-subtle))]">
+                          <DomainEnum namespace="users.roles" value={user.role} />
+                        </span>
+                      </Link>
+                      <div className="flex items-center justify-between gap-3 border-b border-[oklch(var(--color-rule))] px-3 py-1">
+                        <span className="text-02 text-[oklch(var(--color-ink-muted))]">{t("nav.language")}</span>
+                        <LanguageSwitcher />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleTheme}
+                        className="flex min-h-8 w-full items-center justify-between border-b border-[oklch(var(--color-rule))] px-3 text-02 text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                      >
+                        <span>{t("settings.theme")}</span>
+                        <span className="text-[oklch(var(--color-ink))]">{theme === "dark" ? t("settings.dark") : t("settings.light")} ›</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-02 text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                      >
+                        {t("nav.settings")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLogoutConfirmOpen(true)}
+                        className="flex min-h-8 w-full items-center px-3 text-02 text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-surface-2))]"
+                      >
+                        {t("auth.logout")}
+                      </button>
+                    </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
             ) : (
-              <Link
-                href="/login"
-                className="bg-[oklch(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[oklch(var(--color-accent))] hover:text-black! transition-colors"
-              >
+              <Link href="/login" className="border border-[oklch(var(--color-ink))] px-3 py-1 text-02 font-medium text-[oklch(var(--color-ink))]">
                 {t("auth.login")}
               </Link>
             )}
           </div>
         </header>
 
-        {/* Page content */}
-        <div className="min-h-[calc(100vh-4rem)]">
-          {children}
-        </div>
+        <ConnectionBanner />
+
+        <div className="min-h-[calc(100vh-2.5rem)]">{children}</div>
       </main>
 
-      {/* Settings Drawer */}
       <SettingsDrawer
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         navMode={navMode}
         onNavModeChange={handleNavModeChange}
       />
-
-      {/* Logout Confirmation Dialog */}
       <LogoutConfirmDialog
         open={logoutConfirmOpen}
         onClose={() => setLogoutConfirmOpen(false)}

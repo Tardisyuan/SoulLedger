@@ -11,7 +11,6 @@ import {
 } from "react";
 import { permApi } from "@soulledger/core/api";
 import type { UserRole } from "@soulledger/core/api";
-import { CIVILIZATION_SHORT_CODE_SET } from "@soulledger/core/config/civilizations";
 import {
   ACCESS_TOKEN_KEY,
   REFRESH_TOKEN_KEY,
@@ -109,40 +108,6 @@ const TenantContext = createContext<TenantContextValue>({
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const tenantCode = user?.tenant?.code ?? null;
-
-  // Surface-first civilization identity (globals.css §4.9 / Stage 5 §2):
-  // stamp [data-civ] on <html> so the [data-civ="cn"|"eu"|"eg"|"gr"] rules
-  // there can point --civ-hue at this tenant's hue and retint surface-1..4.
-  // Tenant codes are CN_DIYU / EU_HEAVEN_HELL / EG_DUAT / GR_HADES (backend
-  // TENANT_CIVILIZATION, apps/souls/models.py) — the prefix before the first
-  // underscore is exactly the [data-civ] suffix. An unmapped or absent
-  // tenant clears the attribute, which leaves --civ-hue at its neutral
-  // :root/.light fallback rather than guessing a civilization.
-  //
-  // `gr` was missing from this list until Stage 9, and THIS omission — not
-  // any missing token — is why every Greek screen rendered on the neutral
-  // 240° fallback: the attribute was deleted, so no [data-civ] rule matched
-  // and --civ-hue never left :root. Adding a fifth civilization means adding
-  // it here as well as in globals.css; a whitelist that silently falls
-  // through to `delete` cannot report its own gap, so
-  // src/__tests__/TenantContext.test.tsx asserts one stamped attribute per
-  // member of CIVILIZATION_CODES.
-  //
-  // The allowlist used to be the literal or-chain `civ === "cn" || civ ===
-  // "eu" || …`, which is the shape that was missing `gr`. It now tests
-  // membership of CIVILIZATION_SHORT_CODE_SET, derived in config/civilizations
-  // from the same CIVILIZATION_CODES map a fifth civilization has to be added
-  // to anyway — so the gap this comment describes can no longer be opened by
-  // forgetting a clause here. Adding the [data-civ] rule to globals.css is
-  // still a hand edit, and still the thing the colour contract test holds.
-  useEffect(() => {
-    const civ = tenantCode?.split("_")[0]?.toLowerCase();
-    if (civ && CIVILIZATION_SHORT_CODE_SET.has(civ)) {
-      document.documentElement.dataset.civ = civ;
-    } else {
-      delete document.documentElement.dataset.civ;
-    }
-  }, [tenantCode]);
 
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server

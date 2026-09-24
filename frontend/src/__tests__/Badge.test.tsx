@@ -112,6 +112,7 @@ describe("Badge and EnumBadge cannot drift apart", () => {
       "accent",
       "error",
       "info",
+      "ink",
       "neutral",
       "success",
       "warning",
@@ -134,22 +135,18 @@ describe("Badge and EnumBadge cannot drift apart", () => {
     }
   });
 
-  it("keeps the fill at a 10% tint, which is the measured figure", () => {
-    // columns.tsx records that 16% drops light-mode error badge text to 4.37:1,
-    // under the 4.5:1 AA floor. This asserts the number, not just "a tint".
-    for (const tone of ["success", "warning", "error", "info"] as const) {
-      expect(BADGE_TONE_CLASSES[tone]).toContain(`/0.1)]`);
-      expect(BADGE_TONE_CLASSES[tone]).not.toContain(`/0.16)]`);
+  it("has no fill: the tone is the text and a same-colour border (规范 v1 §2 徽章)", () => {
+    // A tint over a row was the one place badge text could drop under AA; with
+    // no fill the text colour sits on the row's own ground, which
+    // inkOnSurfaceContract measures for every text token.
+    for (const tone of BADGE_TONES) {
+      const classes = BADGE_TONE_CLASSES[tone];
+      expect(classes).not.toMatch(/\bbg-/);
+      const text = /text-\[oklch\(var\((--[\w-]+)\)\)\]/.exec(classes)?.[1];
+      const border = /border-\[oklch\(var\((--[\w-]+)\)\)\]/.exec(classes)?.[1];
+      expect(text).toBeDefined();
+      expect(border).toBe(text);
     }
-  });
-
-  it("uses accent-INK, not accent, for the accent tone's text", () => {
-    // They are the same value in dark mode and deliberately different in light
-    // (32 92% 34% vs 38 92% 50%), because accent-on-surface text fails AA on a
-    // light canvas. A badge is text. Asserting the absence matters here: both
-    // present would still look right in dark mode, which is where it gets read.
-    expect(BADGE_TONE_CLASSES.accent).toContain("text-[oklch(var(--color-accent-ink))]");
-    expect(BADGE_TONE_CLASSES.accent).not.toContain("text-[oklch(var(--color-accent))]");
   });
 });
 
@@ -170,14 +167,13 @@ describe("shape", () => {
 describe("geometry and content", () => {
   it("keeps EnumBadge's geometry so the two are swappable without a visual diff", () => {
     const classes = classesOf(<Badge>X</Badge>);
-    expect(classes).toEqual(expect.arrayContaining(["px-2", "py-0.5", "font-medium", "border"]));
+    expect(classes).toEqual(expect.arrayContaining(["px-1.5", "py-0.5", "font-mono", "font-normal", "border"]));
   });
 
-  it("carries the type-scale slot for meta text, not a bare text-xs", () => {
-    // 12px either way, but text-02 also brings 0.04em tracking. This is also
-    // the assertion that goes red if `cn()` starts eating the scale again —
-    // the tone strings all end in a text colour.
-    expect(classesOf(<Badge tone="error">X</Badge>)).toContain("text-02");
+  it("carries the 11 px label slot of the type scale, not a bare text-xs", () => {
+    // 规范 v1: badges are 11 / 16 mono. This is also the assertion that goes
+    // red if `cn()` starts eating the scale — the tone strings end in a colour.
+    expect(classesOf(<Badge tone="error">X</Badge>)).toContain("text-01");
   });
 
   it("does not wrap mid-label inside a narrow cell", () => {

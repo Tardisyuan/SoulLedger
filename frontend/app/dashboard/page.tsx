@@ -45,7 +45,7 @@ function DashboardContent() {
   // theme has to pick the table. `REALM_COLORS` used to be imported here and
   // never read — the realm histogram is single-series and fills with
   // CHART_SERIES.realm — so it is not destructured.
-  const { STATE_COLORS, CIVILIZATION_COLORS, CHART_SERIES } = useChartColors();
+  const { STATE_COLORS, CHART_SERIES } = useChartColors();
   const searchParams = useSearchParams();
   const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 
@@ -206,7 +206,7 @@ function DashboardContent() {
   const tenantData = stats?.tenants?.map((tenant) => ({
     name: getDisplayNameForTenant(tenant.tenant_code),
     total: tenant.total_souls,
-    color: CIVILIZATION_COLORS[tenant.tenant_code] ?? CHART_SERIES.neutral,
+    color: CHART_SERIES.balance,
     ...tenant.state_breakdown,
   })) ?? [];
 
@@ -355,7 +355,7 @@ function DashboardContent() {
                             className="w-3 h-3 rounded-full"
                             style={{
                               backgroundColor:
-                                CIVILIZATION_COLORS[stats.tenants[i].tenant_code] ?? CHART_SERIES.neutral,
+                                CHART_SERIES.balance,
                             }}
                           />
                           <span className="font-medium text-[oklch(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>

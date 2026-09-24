@@ -12,7 +12,6 @@
  */
 import { readFileSync } from "node:fs";
 import {
-  CIV_PREFIXES,
   GLOBALS_CSS,
   LIGHT_TOKENS,
   ROOT_TOKENS,
@@ -20,7 +19,6 @@ import {
   THEMES,
   TOKENS_BY_THEME,
   oklchTripleToRgb,
-  resolveRampForCiv,
   resolveTriple,
 } from "./support/globalsCssTokens";
 
@@ -142,16 +140,13 @@ const NON_TEXT_FLOOR = 3;
 
 /**
  * Every background a focused control's ring can land on, per theme, derived
- * rather than listed: the canvas, plus each surface step resolved once for the
- * neutral `--civ-hue` fallback and once per civilization ramp.
+ * rather than listed: the canvas plus each surface step. One ramp for every
+ * tenant since 规范 v1 took civilization out of the colour layer.
  */
 function ringBackgrounds(theme: (typeof THEMES)[number]): { label: string; triple: string }[] {
   const out = [{ label: "canvas", triple: resolveTriple(TOKENS_BY_THEME[theme], "--color-canvas") }];
   for (const surface of SURFACE_TOKENS) {
-    out.push({ label: `neutral ${surface}`, triple: resolveTriple(TOKENS_BY_THEME[theme], surface) });
-    for (const civ of CIV_PREFIXES) {
-      out.push({ label: `${civ} ${surface}`, triple: resolveRampForCiv(theme, civ, surface) });
-    }
+    out.push({ label: surface, triple: resolveTriple(TOKENS_BY_THEME[theme], surface) });
   }
   return out;
 }
@@ -172,8 +167,8 @@ describe("the focus-ring checks are looking at something", () => {
     // but it can never silently narrow to nothing.
     for (const theme of THEMES) {
       const backgrounds = ringBackgrounds(theme);
-      expect(backgrounds).toHaveLength(1 + SURFACE_TOKENS.length * (CIV_PREFIXES.length + 1));
-      expect(backgrounds.length).toBeGreaterThan(10);
+      expect(backgrounds).toHaveLength(1 + SURFACE_TOKENS.length);
+      expect(backgrounds.length).toBeGreaterThanOrEqual(5);
       expect(backgrounds.map((b) => b.label)).toContain("canvas");
     }
   });
@@ -246,16 +241,13 @@ describe("--color-focus is a token of its own, in both themes", () => {
     }
   });
 
-  it("is not the accent's value, so re-pointing it is red rather than invisible", () => {
-    // Compared as text AND as pixels: `38 92% 50%` and `38.0 92% 50%` are the
-    // same colour written two ways, and a "tidy-up" that copies the accent's
-    // triple across is the thing this is here to catch.
+  it("is the ink blue itself, not a reference the accent picker can re-point", () => {
+    // 规范 v1: the ring IS the accent colour (2 px ink blue). It stays a literal
+    // because the settings drawer writes --color-accent inline: a var() here
+    // would hand the user's pale pick the only focus indicator.
     for (const theme of THEMES) {
-      const focus = TOKENS_BY_THEME[theme][FOCUS_TOKEN];
-      const accent = TOKENS_BY_THEME[theme][ACCENT_TOKEN];
-      expect(accent).toBeDefined();
-      expect(focus).not.toEqual(accent);
-      expect(oklchTripleToRgb(focus)).not.toEqual(oklchTripleToRgb(accent));
+      expect(TOKENS_BY_THEME[theme][FOCUS_TOKEN]).toEqual(TOKENS_BY_THEME[theme][ACCENT_TOKEN]);
+      expect(TOKENS_BY_THEME[theme][FOCUS_TOKEN]).not.toContain("var(");
     }
   });
 });
@@ -273,19 +265,9 @@ describe("the focus ring-3 clears WCAG 1.4.11 on every surface it can land on", 
         ratio: true,
       });
     }
-    expect(measured.length).toBeGreaterThan(10);
+    expect(measured.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("the accent this ring-3 used to borrow would fail that floor in light mode", () => {
-    // The reason the token exists, re-derived rather than quoted. If a future
-    // accent value ever cleared 3:1 everywhere, this goes red and someone gets
-    // to re-read the argument — which is still the runtime-clobber one, and
-    // survives on its own.
-    const accent = oklchTripleToRgb(TOKENS_BY_THEME.light[ACCENT_TOKEN]);
-    const failures = ringBackgrounds("light").filter(
-      ({ triple }) => contrastRatio(accent, oklchTripleToRgb(triple)) < NON_TEXT_FLOOR
-    );
-    expect(failures.length).toBe(ringBackgrounds("light").length);
-  });
+
 });
 

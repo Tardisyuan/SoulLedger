@@ -48,32 +48,22 @@ import { cn } from "@/lib/utils";
  * for that. Reaching for `pill` because it looks softer is the misuse.
  */
 
-/** The app's one badge tone table. `ENUM_TONE_CLASSES` is a view onto five of these six. */
+/**
+ * The app's one badge tone table. `ENUM_TONE_CLASSES` is a view onto it.
+ *
+ * 规范 v1 §2「徽章 · 只有常态」: no fill — the colour is the text and a 1 px
+ * border in the same token, over whatever the row is. Colour is never the only
+ * channel: domain badges carry a glyph too (○ ◐ ■ ↻ × / ✓ ✕ ◇ ↺, §1.2).
+ */
 export const BADGE_TONE_CLASSES = {
-  neutral:
-    "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline-tertiary))]",
-  success:
-    "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.3)]",
-  warning:
-    "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.3)]",
-  error:
-    "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
-  info: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info)/0.3)]",
-  /**
-   * Sixth tone, deliberately NOT projected into `ENUM_TONE_CLASSES` — the data
-   * grid has no use for it, and its 20% fill is outside the 10% cap
-   * src/__tests__/dataGridToneContract.test.ts enforces on the grid's tones.
-   * 4 of the 66 badges do use it: the "current tenant" / "this one" marker
-   * written by hand as `bg-[oklch(var(--color-accent))]/20
-   * text-[oklch(var(--color-accent-ink))]`.
-   *
-   * Note the foreground is `--color-accent-ink`, NOT `--color-accent`. They are
-   * the same value in dark mode and deliberately different in light
-   * (`32 92% 31%` vs `38 92% 50%`) precisely because accent-on-surface text
-   * fails AA in light mode at the accent's own lightness. A badge is text.
-   */
-  accent:
-    "bg-[oklch(var(--color-accent)/0.2)] text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent)/0.4)]",
+  neutral: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]",
+  /** 已处置 ■ — ink, not a hue (§1.2 split it from 轮回中). */
+  ink: "text-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]",
+  success: "text-[oklch(var(--color-success))] border-[oklch(var(--color-success))]",
+  warning: "text-[oklch(var(--color-warning))] border-[oklch(var(--color-warning))]",
+  error: "text-[oklch(var(--color-danger))] border-[oklch(var(--color-danger))]",
+  info: "text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]",
+  accent: "text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]",
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONE_CLASSES;
@@ -92,7 +82,8 @@ const badge = cva(
     // `text-02` IS 12px — it is the eight-step scale's slot for IDs and meta,
     // which is what a badge is — but it also brings 0.04em tracking, which a
     // bare `text-xs` did not, and short uppercase-ish labels need it.
-    "px-2 py-0.5 text-02 font-medium border",
+    // 规范 v1: 11 / 16 IBM Plex Mono, 400, 1 px border, 2 px / 6 px padding.
+    "px-1.5 py-0.5 font-mono text-01 font-normal border",
     // A badge is a label, not a paragraph. Wrapping one mid-word inside a table
     // cell is how the 66 hand-rolled ones each discovered `whitespace-nowrap`
     // separately.

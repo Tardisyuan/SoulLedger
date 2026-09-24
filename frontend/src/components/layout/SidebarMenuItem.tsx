@@ -1,138 +1,157 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
-import { getIconByName } from "../../lib/icons";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { type SidebarMenu } from "@/src/hooks/useSidebarMenus";
+import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { isMenuPathActive } from "@/src/lib/menuPath";
+
+/**
+ * The sidebar, 规范 v1「侧栏与导航」:
+ *
+ * - 一级 = 等宽编号 + 组名(`01 概览`)。有子项的一级不可点,只切换展开;没有
+ *   子项的一级(概览)本身是页面。
+ * - **一次只展开一组**(手风琴),当前页所在组默认展开 —— 展开态由调用方
+ *   (AppLayout)持有,这里只报告点击。
+ * - 二级 = 页面,可点。当前项 `surface-2 底 + 左 3 px 墨线 + 500`,不再用强调色
+ *   整块填充。每行下一条行线(rule)。
+ * - 收成编号栏(56 px)时只剩编号;悬停一组浮出它的页面(393 px 下整个侧栏是抽屉,
+ *   不走这条)。
+ *
+ * 无权限的页面由后端菜单树直接不给,这里不做灰化。
+ */
 
 /** 稳定引用 —— 默认值写成字面量会让 `React.memo` 每次都失效。 */
 const EMPTY_PATHS: readonly string[] = [];
 
-/**
- * 侧边栏的一行菜单项（有子项时是可展开的分组）。原先长在 AppLayout.tsx 里，
- * 随文件一起越过 500 行的上限之后搬到这里；代码逐字未改。
- *
- * 仍然是 `React.memo` 包一层：整棵菜单树在每次 AppLayout 重渲染时都会重跑，
- * 而 `menu` 引用来自 useSidebarMenus 的缓存，是稳定的。
- */
-function SidebarMenuItemInner({
+const ROW = "flex items-center min-h-8 border-b border-[oklch(var(--color-rule))] transition-colors duration-150 ease-out";
+const CURRENT = "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))] text-[oklch(var(--color-ink))] font-medium";
+const IDLE = "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]";
+
+const labelOf = (menu: SidebarMenu, t: (k: string) => string) => (menu.path === "/" ? t("nav.welcome") : menu.name);
+
+/** One page row (二级, or a childless 一级). */
+function PageLink({
   menu,
-  collapsed,
-  depth = 0,
-  allMenuPaths = EMPTY_PATHS,
+  number,
+  allMenuPaths,
+  nested,
 }: {
   menu: SidebarMenu;
-  collapsed: boolean;
-  allMenuPaths?: readonly string[];
-  depth?: number;
+  number?: string;
+  allMenuPaths: readonly string[];
+  nested: boolean;
 }) {
   const pathname = usePathname();
-  const [expanded, setExpanded] = useState(false);
-  const hasChildren = menu.children && menu.children.length > 0;
   const { t } = useI18n();
-
   const active = isMenuPathActive(pathname, menu.path, allMenuPaths);
-
-  const indent = collapsed ? "" : depth > 0 ? "ml-4" : "";
-
-  /**
-   * The item's name, computed once and used in three places.
-   *
-   * WHY THIS EXISTS AT ALL. The visible label was rendered inside
-   * `{!collapsed && …}` and nothing took its place — so in compact/rail mode
-   * the ENTIRE primary navigation was a column of lucide `<svg>`s with no
-   * accessible name. Not "hard to read": no name. Measured before this change,
-   * `grep -c 'aria-label\|title=\|aria-current'` on this file was **0**.
-   *
-   * Collapsed mode is not a corner: `AppLayout.tsx:234` and `:248` reach it,
-   * and the settings drawer has a "compact" nav mode (`AppLayout.tsx:78`) an
-   * operator can leave on permanently.
-   *
-   * The `aria-label` is set UNCONDITIONALLY rather than only when collapsed.
-   * With a visible label present it names the same thing the label says, which
-   * costs nothing; gating it on `collapsed` would make the accessible name
-   * depend on a layout state, which is the kind of conditional correctness
-   * that survives until someone changes the condition.
-   */
-  const label = menu.path === "/" ? t("nav.welcome") : menu.name;
-
-  if (hasChildren) {
-    return (
-      <div className={indent}>
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          aria-label={label}
-          // The button controls the child list rendered below it, and said so
-          // nowhere. A collapsed/expanded disclosure that does not announce
-          // its state leaves a screen reader user pressing it to find out.
-          aria-expanded={expanded}
-          className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-3"} h-12 transition-colors ${
-            active
-              ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
-              : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
-          }`}
-        >
-          <span className={`shrink-0 w-8 h-8 flex items-center justify-center ${active ? "bg-[oklch(var(--color-accent))]/20" : ""}`}>
-            {(() => {
-              const IconComponent = getIconByName(menu.icon);
-              return <IconComponent className="w-5 h-5" />;
-            })()}
-          </span>
-          {!collapsed && (
-            <>
-              <span className="flex-1 text-left text-03 truncate">{label}</span>
-              {hasChildren && (
-                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform duration-settle ${expanded ? "rotate-90" : ""}`} />
-              )}
-            </>
-          )}
-        </button>
-        {expanded && !collapsed && (
-          <div className="mt-1">
-            {menu.children!.map((child) => (
-              <SidebarMenuItem
-                key={child.id}
-                menu={child}
-                collapsed={collapsed}
-                depth={depth + 1}
-                allMenuPaths={allMenuPaths}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
+  const label = labelOf(menu, t);
   return (
     <Link
       href={menu.path}
       prefetch={true}
-      aria-label={label}
-      // The active item was signalled by background and text colour alone.
-      // `Breadcrumb.tsx:154` already sets this for the same fact — the trail
-      // knew which page you were on and the navigation beside it did not.
       aria-current={active ? "page" : undefined}
-      className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 transition-colors ${indent} ${
-        active
-          ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
-          : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
-      }`}
+      className={`${ROW} ${nested ? "pl-8 pr-3 text-02" : "px-3 gap-2"} ${active ? CURRENT : IDLE}`}
     >
-      <span className={`shrink-0 w-8 h-8 flex items-center justify-center ${active ? "bg-[oklch(var(--color-accent))]/20" : ""}`}>
-        {(() => {
-          const IconComponent = getIconByName(menu.icon);
-          return <IconComponent className="w-5 h-5" />;
-        })()}
+      {number ? <span aria-hidden="true" className="font-mono text-01 text-[oklch(var(--color-ink-subtle))]">{number}</span> : null}
+      <span className={`truncate ${nested ? "" : "font-mono text-01 uppercase tracking-label text-[oklch(var(--color-ink))]"}`}>
+        {label}
       </span>
-      {!collapsed && <span className="text-03 truncate">{label}</span>}
     </Link>
   );
 }
 
-export const SidebarMenuItem = React.memo(SidebarMenuItemInner);
+function SidebarGroupInner({
+  menu,
+  index,
+  collapsed,
+  open,
+  onToggle,
+  allMenuPaths = EMPTY_PATHS,
+}: {
+  menu: SidebarMenu;
+  /** 0-based position among the top-level groups; shown as 01, 02, … */
+  index: number;
+  collapsed: boolean;
+  open: boolean;
+  onToggle: () => void;
+  allMenuPaths?: readonly string[];
+}) {
+  const { t } = useI18n();
+  const number = String(index + 1).padStart(2, "0");
+  const label = labelOf(menu, t);
+  const children = menu.children ?? [];
+
+  if (collapsed) {
+    // 编号栏:只剩编号。一组的页面在悬停 / 聚焦时浮出,不改变侧栏宽度。
+    const only = !children.length && !isDirectory(menu);
+    return (
+      <div className="group relative">
+        {only ? (
+          <Link
+            href={menu.path}
+            aria-label={label}
+            className={`${ROW} justify-center font-mono text-01 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]`}
+          >
+            {number}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            aria-label={label}
+            className={`${ROW} w-full justify-center font-mono text-01 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]`}
+          >
+            {number}
+          </button>
+        )}
+        {children.length ? (
+          <div className="invisible absolute left-full top-0 z-drawer w-50 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] opacity-0 shadow-overlay group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+            <p className="px-3 py-1 font-mono text-01 text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))]">
+              {number} {label}
+            </p>
+            {children.map((child) => (
+              <PageLink key={child.id} menu={child} allMenuPaths={allMenuPaths} nested />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (!children.length && !isDirectory(menu)) {
+    return <PageLink menu={menu} number={number} allMenuPaths={allMenuPaths} nested={false} />;
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className={`${ROW} w-full justify-between gap-2 px-3 text-left hover:bg-[oklch(var(--color-surface-2))]`}
+      >
+        <span className="flex min-w-0 items-center gap-2 font-mono text-01 uppercase tracking-label">
+          <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">{number}</span>
+          <span className="truncate text-[oklch(var(--color-ink))]">{label}</span>
+        </span>
+        <span aria-hidden="true" className="font-mono text-01 text-[oklch(var(--color-ink-subtle))]">
+          {open ? "−" : "+"}
+        </span>
+      </button>
+      {open
+        ? children.map((child) => <PageLink key={child.id} menu={child} allMenuPaths={allMenuPaths} nested />)
+        : null}
+    </div>
+  );
+}
+
+export const SidebarGroup = React.memo(SidebarGroupInner);
+
+/** Which top-level group holds the current page — the one open by default. */
+export function groupOfPath(menus: readonly SidebarMenu[], pathname: string, allMenuPaths: readonly string[]): number | null {
+  const holds = (m: SidebarMenu): boolean =>
+    isMenuPathActive(pathname, m.path, allMenuPaths) || (m.children ?? []).some(holds);
+  const i = menus.findIndex(holds);
+  return i < 0 ? null : menus[i].id;
+}

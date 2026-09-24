@@ -68,3 +68,30 @@ export function ConnectionStatus() {
     </div>
   );
 }
+
+/**
+ * 规范 v1: the connection state is not a standing masthead control any more.
+ * It appears only when the link is down — a warning bar under the masthead,
+ * with the reason and a retry. Connected or still connecting: nothing.
+ */
+export function ConnectionBanner() {
+  const { status, reconnect } = useWebSocket();
+  const { user } = useTenant();
+  const { t } = useI18n();
+  if (!user || status === "connected" || status === "connecting") return null;
+  const canRetry = status === "failed" || status === "disconnected";
+  return (
+    <div
+      role="status"
+      className="flex items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 py-1 text-02 text-[oklch(var(--color-warning))] md:px-10"
+    >
+      <span aria-hidden="true">!</span>
+      <span className="flex-1">{t(`connection.${status}`)}</span>
+      {canRetry ? (
+        <button type="button" onClick={reconnect} className="underline underline-offset-2">
+          {t("connection.retry")}
+        </button>
+      ) : null}
+    </div>
+  );
+}

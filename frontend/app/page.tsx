@@ -83,7 +83,7 @@ export default function HomePage() {
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-10 md:py-16">
+      <main className="container mx-auto px-4 py-10 md:py-14">
         {/* LEFT-ANCHORED, not centred, and that is the whole change.
             "Centred everything" — centred h1, centred subtitle, centred
             section heading, symmetric 2x2 grid, centred footer — is the one
@@ -96,7 +96,7 @@ export default function HomePage() {
 
             The second asymmetry is in the grid below — the civilization the
             viewer actually belongs to is marked. */}
-        <header className="mb-10 md:mb-16">
+        <header className="mb-10 md:mb-14">
           {/* 八档字级表最上面那两档。迁移前是 `text-4xl md:text-5xl lg:text-6xl`
               —— 三个断点、三个表外字号。 */}
           <h1 className="text-07 md:text-08 mb-4 text-[oklch(var(--color-accent-ink))]">
@@ -151,7 +151,7 @@ export default function HomePage() {
         </section>
 
         {/* Footer with version */}
-        <div className="mt-10 md:mt-16 text-center">
+        <div className="mt-10 md:mt-14 text-center">
           {locale === "zh-Hans" && (
             <p className="text-[oklch(var(--color-ink-subtle))] text-03">
               万古轮回皆有录
