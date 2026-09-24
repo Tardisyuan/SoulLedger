@@ -54,6 +54,7 @@ export function stateAfterFailedMe(error: unknown): SessionState {
   if (status === 401) return { status: "signedOut" };
   // e.g. 403 initial_password_expired: this session can go nowhere; say why.
   clearSoulTokens();
+  clearOutbox();
   return { status: "signedOut", notice: soulErrorMessage(error) };
 }
 
@@ -71,7 +72,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [enter]);
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setState({ status: "signedOut" }));
+    // An expired session ends like a sign-out: the unsent letters leave the device too.
+    setUnauthorizedHandler(() => {
+      clearOutbox();
+      setState({ status: "signedOut" });
+    });
     const off = onSoulPasswordChangeRequired(() =>
       setState((prev) => (prev.status === "mustChangePassword" ? prev : { status: "mustChangePassword", expiresAt: null }))
     );

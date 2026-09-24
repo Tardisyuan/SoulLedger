@@ -130,6 +130,23 @@ describe("a stored session", () => {
     expect(screen.queryByTestId("profile-card")).toBeNull();
   });
 
+  it("a session that expires on its own (401) takes the unsent letters off the device too", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const letter = { txnId: "t1", conversationId: "c1", roomId: "!r", body: "枯树那边风大", ts: 1, state: "queued" };
+    persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: PROFILE.soul_code, device: "DEV1", items: [letter] }));
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 401, data: { code: "token_not_valid" } },
+      "/soul-auth/refresh/": { status: 401, data: { code: "token_not_valid" } },
+      "/me/chat/conversations/": "offline",
+      "/me/chat/session/": "offline",
+    });
+    renderApp();
+    await screen.findByTestId("login-submit");
+    expect(persistentStore.get(OUTBOX_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(OUTBOX_KEY)).toBeNull();
+  });
+
   it("offline at start-up → a retry screen, and the session is kept", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     stubApi({ "/me/": "offline" });

@@ -76,10 +76,13 @@ export const soulChatApi = {
    * Through the backend: a throttled room (the request channel; 429
    * `request_throttled` with `retry_at`) and the hall inbox. Free rooms go to
    * Synapse directly — though this path accepts them too.
+   *
+   * `txnId`: the same id sent again gets the first send's event id back and
+   * nothing is posted twice (the backend remembers it for 7 days).
    */
-  send: (conversationId: string, body: string) =>
+  send: (conversationId: string, body: string, txnId?: string) =>
     soulHttp
-      .post<{ event_id: string }>(`/me/chat/conversations/${conversationId}/messages/`, { body })
+      .post<{ event_id: string }>(`/me/chat/conversations/${conversationId}/messages/`, txnId ? { body, txn_id: txnId } : { body })
       .then((r) => r.data.event_id),
   /** The whole code, any case; no prefix or fuzzy matching. POST so the code stays out of URLs and logs. */
   lookup: (soul_code: string) =>

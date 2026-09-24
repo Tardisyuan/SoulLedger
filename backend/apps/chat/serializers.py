@@ -111,6 +111,9 @@ class MessageSendSerializer(serializers.Serializer):
     # 与 Matrix 的 `max_event_size` 相比很小。上限存在是因为这段文字会原样进一个
     # 我们不控制其解析的系统;正文长度不是产品决定,是边界校验。
     body = serializers.CharField(max_length=4000, trim_whitespace=True)
+    # App 发件箱给每封信的事务号。同一个号重发,回的是第一次的 event_id,不再发第二条 ——
+    # 见 `MeChatMessagesView`。可省:Web 不重发。
+    txn_id = serializers.RegexField(r"^[A-Za-z0-9._~-]+$", max_length=64, required=False)
 
 
 class MessageSentSerializer(serializers.Serializer):

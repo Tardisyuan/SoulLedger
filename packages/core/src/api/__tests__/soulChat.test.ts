@@ -66,10 +66,12 @@ describe("soulChatApi", () => {
 
   it("sends through the backend's request channel with the body, and opens the hall inbox by kind", async () => {
     await soulChatApi.send("c-1", "在吗");
+    await soulChatApi.send("c-1", "在吗", "sl1.a");
     await soulChatApi.openInbox();
     await soulChatApi.session();
     expect(calls.map((c) => [c.method, c.url, c.body])).toEqual([
       ["post", "/me/chat/conversations/c-1/messages/", { body: "在吗" }],
+      ["post", "/me/chat/conversations/c-1/messages/", { body: "在吗", txn_id: "sl1.a" }],
       ["post", "/me/chat/conversations/", { kind: "OFFICER_INBOX" }],
       ["get", "/me/chat/session/", undefined],
     ]);
