@@ -49,6 +49,7 @@ const ENUM_FIELDS = [
   "civilization",
   "verdict",
   "judgment_verdict",
+  "draft_verdict",
   "node_type",
   "case_type",
   "caseType",

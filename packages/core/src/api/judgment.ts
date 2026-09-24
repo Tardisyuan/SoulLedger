@@ -1,13 +1,14 @@
 import { api } from "./client";
+import type { components } from "./generated/schema";
 import type { LedgerSummary } from "./ledger";
 import type { NumericFields } from "./ledgerQuantities";
 import type { SentenceRequestChanges } from "./sentence-plans";
 import type { PaginatedResponse } from "./users";
 
 /**
- * JudgmentSerializer (backend/apps/judgment/serializers.py:10). The viewset
- * has no get_serializer_class override, so list and detail return the very
- * same fields — there is no separate "judgment detail" shape.
+ * JudgmentSerializer (backend/apps/judgment/serializers.py). The list returns
+ * this shape; the detail (`GET /judgment/{id}/`) returns `JudgmentDetail`,
+ * which adds the evidence rulings and the admitted balance.
  *
  * `judgment_method` was declared here and is not in the serializer's field
  * list; it never arrives.
@@ -47,6 +48,49 @@ export interface Judgment {
   kind?: "ORIGINAL" | "AMENDMENT" | "REOPEN";
   /** The plan an AMENDMENT / REOPEN case changes; null on an ORIGINAL. */
   amends_plan_id?: string | null;
+  /**
+   * The verdict draft. `notes` above IS the draft text until the case is
+   * concluded; these carry the chosen-but-not-filed verdict, when the draft
+   * was last autosaved, and the version a `saveDraft` must send back.
+   * Written only through `judgmentApi.saveDraft`.
+   */
+  draft_verdict?: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
+  draft_saved_at?: string | null;
+  draft_version?: number;
+}
+
+type Schemas = components["schemas"];
+/** One ruling on one ledger record in this case. No row = admitted. */
+export type EvidenceAdmission = Schemas["EvidenceAdmission"];
+/**
+ * `LedgerService.get_admitted_balance`. `balance` / `not_admitted_net` are
+ * null unless `reading_kind === "BALANCE"`; `reason_code` says why
+ * (`BALANCE_NOT_APPLICABLE`, `NOT_CURRENT_LIFE`, or the reading's own
+ * `TENANT_NOT_MAPPED`). Render the null as "not applicable", the way
+ * `JudgmentQueueContext` renders a non-BALANCE ledger balance.
+ */
+export type AdmittedBalance = Schemas["AdmittedBalance"];
+export type EvidenceRulingResult = Schemas["EvidenceRulingResult"];
+export type JudgmentDraft = Schemas["JudgmentDraft"];
+/** 409 body of `saveDraft`: `draft_conflict` carries what beat you in `current`. */
+export type JudgmentDraftConflict = Schemas["JudgmentDraftConflict"];
+
+export interface JudgmentDetail extends Judgment {
+  evidence_admissions: EvidenceAdmission[];
+  admitted_balance: AdmittedBalance;
+}
+
+export interface EvidenceRulingPayload {
+  admitted: boolean;
+  /** Required (non-blank) when `admitted` is false. */
+  reason?: string;
+}
+
+export interface JudgmentDraftPayload {
+  /** The `draft_version` last seen. A stale one answers 409 `draft_conflict`. */
+  version: number;
+  notes?: string;
+  draft_verdict?: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
 }
 
 /**
@@ -295,7 +339,13 @@ export const judgmentApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Judgment>>("/judgment/", { params }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
   conclude: (id: string, data: ConcludeJudgmentPayload | object) => api.post<Judgment>(`/judgment/${id}/conclude/`, data),
-  get: (id: string) => api.get<Judgment>(`/judgment/${id}/`),
+  get: (id: string) => api.get<JudgmentDetail>(`/judgment/${id}/`),
+  /** Admit / not admit one ledger record as evidence. 409 once concluded. */
+  ruleEvidence: (id: string, recordId: string, data: EvidenceRulingPayload) =>
+    api.put<EvidenceRulingResult>(`/judgment/${id}/evidence/${recordId}/`, data),
+  /** Autosave the verdict text and chosen verdict. Idempotent; 409 on a stale version. */
+  saveDraft: (id: string, data: JudgmentDraftPayload) =>
+    api.patch<JudgmentDraft>(`/judgment/${id}/draft/`, data),
   /**
    * Skips travel as repeated `skip=` params rather than one comma-joined
    * value: both are accepted by the endpoint, and the repeated form keeps a

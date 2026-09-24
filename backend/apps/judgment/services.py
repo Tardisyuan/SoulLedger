@@ -258,3 +258,149 @@ class JudgmentConclusionService:
         EventService.log_judgment_concluded(judgment)
 
         return True
+
+
+class JudgmentFrozenError(Exception):
+    """The judgment has been concluded; its evidence rulings and draft are
+    part of the record. 409, the same answer `assert_amendable` gives the
+    grounds — the request is well-formed, the case is past accepting it."""
+
+
+class EvidenceRefusedError(Exception):
+    """This record cannot be ruled on in this case, or the ruling is incomplete
+    (not admitted without a reason). 400."""
+
+
+class DraftConflictError(Exception):
+    """The draft moved since the caller loaded it. Carries the judgment as it
+    now stands so the 409 can hand the caller the current text and version."""
+
+    def __init__(self, judgment):
+        super().__init__("The draft was saved by someone else since you loaded it.")
+        self.judgment = judgment
+
+
+def _assert_open(judgment):
+    if judgment.is_final or judgment.verdict is not None:
+        raise JudgmentFrozenError(
+            "This judgment has been concluded; its evidence and draft can no longer be changed."
+        )
+
+
+class EvidenceAdmissionService:
+    """Ruling one ledger record admitted or not admitted in one judgment.
+
+    The judgment row is locked before the open-case check, so a ruling racing
+    `conclude/` either lands before the verdict or is refused after it —
+    never written onto a concluded case.
+    """
+
+    SCORED_TYPES = ("MERIT", "DEMERIT")
+
+    @classmethod
+    def rule(cls, judgment, record_id, admitted: bool, reason: str = ""):
+        from apps.judgment.models import EvidenceAdmission, Judgment
+        from apps.ledger.models import SoulRecord
+
+        reason = (reason or "").strip()
+        if not admitted and not reason:
+            raise EvidenceRefusedError("A reason is required when a record is not admitted.")
+        with transaction.atomic():
+            locked = Judgment.all_objects.select_for_update().get(pk=judgment.pk)
+            _assert_open(locked)
+            # One message whether the id is unknown, another soul's or another
+            # tenant's: the caller learns nothing about records outside this case.
+            record = SoulRecord.objects.filter(
+                pk=record_id, soul_id=locked.soul_id, cycle=locked.cycle,
+            ).first()
+            if record is None:
+                raise EvidenceRefusedError(f"Record {record_id} is not evidence in this case.")
+            if record.record_type not in cls.SCORED_TYPES:
+                raise EvidenceRefusedError(
+                    f"Record {record_id} is a {record.record_type} entry; only merit and "
+                    f"demerit records are evidence that can be admitted or not."
+                )
+            row = EvidenceAdmission.objects.filter(judgment=locked, record=record).first()
+            if row is None:
+                row = EvidenceAdmission(judgment=locked, record=record, tenant=locked.tenant)
+            row.admitted = admitted
+            row.reason = "" if admitted else reason
+            row.save()
+            return row
+
+    @staticmethod
+    def not_admitted_ids(judgment):
+        return list(
+            judgment.evidence_admissions.filter(admitted=False).values_list("record_id", flat=True)
+        )
+
+    @classmethod
+    def admitted_balance(cls, judgment) -> dict:
+        from apps.ledger.services import LedgerService
+
+        return LedgerService.get_admitted_balance(
+            judgment.soul, judgment.cycle, cls.not_admitted_ids(judgment)
+        )
+
+
+class JudgmentDraftService:
+    """Autosave of the verdict text (`notes`) and the chosen verdict.
+
+    OPTIMISTIC CONCURRENCY ON `draft_version`. The write is one conditional
+    UPDATE — `WHERE draft_version = <expected> AND verdict IS NULL AND NOT
+    is_final` — so two officers saving against the same version cannot both
+    win on any database: the second matches no row and gets a 409 carrying
+    the text that beat it. Last-write-wins is what this replaces.
+
+    IDEMPOTENT. A save whose fields already equal what is stored is a no-op
+    that answers 200 with the stored state, whatever version it carries: a
+    retried request whose first attempt landed must not come back as a
+    conflict with itself, and it overwrites nothing.
+    """
+
+    FIELDS = ("notes", "draft_verdict")
+
+    @classmethod
+    def save(cls, judgment, expected_version: int, changes: dict):
+        from django.db.models import F
+
+        from apps.core.request_local import get_current_user
+        from apps.judgment.models import Judgment
+
+        changes = {k: v for k, v in changes.items() if k in cls.FIELDS}
+        current = Judgment.all_objects.get(pk=judgment.pk)
+        _assert_open(current)
+        if all(getattr(current, k) == v for k, v in changes.items()):
+            return current
+        if current.draft_version != expected_version:
+            raise DraftConflictError(current)
+
+        now = timezone.now()
+        values = dict(changes, draft_saved_at=now, update_time=now,
+                      draft_version=F("draft_version") + 1, version=F("version") + 1)
+        user = get_current_user()
+        if user is not None and user.is_authenticated:
+            values["update_user"] = user
+        updated = Judgment.all_objects.filter(
+            pk=judgment.pk, draft_version=expected_version,
+            verdict__isnull=True, is_final=False,
+        ).update(**values)
+        current = Judgment.all_objects.get(pk=judgment.pk)
+        if not updated:
+            # Lost a race between the read above and the write: say which one.
+            _assert_open(current)
+            raise DraftConflictError(current)
+        return current
+
+    @staticmethod
+    def touch_after_plain_update(judgment):
+        """A `notes` write through the plain PATCH/PUT still moves the draft
+        version, so an autosave loaded before it gets a 409 instead of
+        silently replacing it."""
+        from django.db.models import F
+
+        from apps.judgment.models import Judgment
+
+        Judgment.all_objects.filter(pk=judgment.pk).update(
+            draft_version=F("draft_version") + 1, draft_saved_at=timezone.now(),
+        )
