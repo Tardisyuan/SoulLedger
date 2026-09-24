@@ -188,6 +188,29 @@ class LoginResponseSerializer(serializers.Serializer):
     user = UserWithTenantSerializer()
 
 
+class LoginFailedResponseSerializer(serializers.Serializer):
+    """Doc-only: the 401 body of `LoginView` for wrong credentials.
+
+    `remaining_attempts` is how many more failures this client IP may make
+    before the next request is refused with 429 (0 means the next one is).
+    """
+
+    detail = serializers.CharField()
+    remaining_attempts = serializers.IntegerField(required=False)
+
+
+class LoginLockedResponseSerializer(serializers.Serializer):
+    """Doc-only: the 429 body of `LoginView` once the limiter has tripped.
+
+    `code` is always `login_locked`; `retry_after` is seconds until the
+    window ends (also sent as the `Retry-After` header).
+    """
+
+    error = serializers.CharField()
+    code = serializers.CharField()
+    retry_after = serializers.IntegerField()
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Add tenant info to JWT + response."""
 

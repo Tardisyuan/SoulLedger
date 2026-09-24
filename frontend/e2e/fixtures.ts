@@ -1040,7 +1040,7 @@ export class ApiMock {
   registerDefaults(): this {
     this.on("POST", "/auth/login/", (call) => {
       if (call.body?.username !== TEST_USER.username) {
-        return { status: 401, body: { detail: "No active account found with the given credentials" } };
+        return { status: 401, body: { detail: "No active account found with the given credentials", remaining_attempts: 4 } };
       }
       return {
         body: {

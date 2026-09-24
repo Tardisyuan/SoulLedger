@@ -27,6 +27,8 @@
     "error_invalid_token": "Menf Her Tepy",
     "error_token_expired": "Menf Wehem Seth",
     "error_login_failed": "Nen Aq",
+    "error_attempts_left": "Aq / Sekhem Nen Maat · Wehem {{count}}",
+    "error_locked": "Aq Aashu. Wehem Er {{minutes}} At",
     "confirm_logout": "Per Aq?",
     "confirm_logout_desc": "Per Aq Pen?",
     "confirm_logout_btn": "Per Aq",

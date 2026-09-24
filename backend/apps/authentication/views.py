@@ -2,7 +2,9 @@
 Auth views: register, login, logout, profile.
 """
 import logging
+import math
 import secrets
+import time
 
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -10,6 +12,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -28,6 +31,8 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
+    LoginFailedResponseSerializer,
+    LoginLockedResponseSerializer,
     LoginLogSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
@@ -466,6 +471,11 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         return qs
 
 
+#: The login brute-force limiter: failures per client IP inside one window.
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 900
+
+
 def _get_client_ip(request):
     """Delegates to the one validated implementation.
 
@@ -493,8 +503,8 @@ class LoginView(TokenObtainPairView):
         responses={
             200: LoginResponseSerializer,
             # simplejwt's AuthenticationFailed: {"detail": "No active account ..."}
-            401: DetailResponseSerializer,
-            429: ErrorResponseSerializer,
+            401: LoginFailedResponseSerializer,
+            429: LoginLockedResponseSerializer,
         },
     )
     def post(self, request, *args, **kwargs):
@@ -506,9 +516,24 @@ class LoginView(TokenObtainPairView):
         ip_address = _get_client_ip(request)
         from django.core.cache import cache
         rate_key = f"login_rate:{ip_address}"
+        # When the window ends, as an epoch second. The counter's own TTL is
+        # not readable through Django's cache API (LocMem has no `ttl`), and
+        # `/login` needs it to say 「M 分钟后再试」 rather than a bare refusal.
+        until_key = f"login_rate_until:{ip_address}"
         attempts = cache.get(rate_key, 0)
-        if attempts >= 5:
-            return Response({"error": "登录尝试过于频繁，请15分钟后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        if attempts >= LOGIN_MAX_ATTEMPTS:
+            until = cache.get(until_key)
+            retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
+            return Response(
+                {"error": "登录尝试过于频繁，请稍后再试", "code": "login_locked", "retry_after": retry_after},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(retry_after)},
+            )
+
+        def _count_failure():
+            cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
+            return max(0, LOGIN_MAX_ATTEMPTS - (attempts + 1))
 
         # Capture request metadata before authentication
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
@@ -531,7 +556,7 @@ class LoginView(TokenObtainPairView):
                 )
             else:
                 # Login failed (but returned response) - increment rate counter
-                cache.set(rate_key, attempts + 1, timeout=900)
+                _count_failure()
                 LoginLog.objects.create(
                     username=username,
                     status='FAILED',
@@ -542,7 +567,7 @@ class LoginView(TokenObtainPairView):
             return response
         except Exception as e:
             # Login failed due to exception - increment rate counter
-            cache.set(rate_key, attempts + 1, timeout=900)
+            remaining = _count_failure()
             LoginLog.objects.create(
                 username=username,
                 status='FAILED',
@@ -550,6 +575,10 @@ class LoginView(TokenObtainPairView):
                 user_agent=user_agent,
                 failure_reason=str(e)[:200],
             )
+            if isinstance(e, AuthenticationFailed):
+                # Wrong credentials: the same `detail` as before, plus how many
+                # tries this address has left before the 429 above.
+                e.detail = {"detail": e.detail, "remaining_attempts": remaining}
             raise
 
 
