@@ -77,31 +77,36 @@ import { cn } from "@/lib/utils";
  * The control skin, shared by input / select / textarea so the three cannot
  * drift apart the way the 42 signatures did.
  *
- * Padding is the same 4/8/12/16 ladder `Button` uses, so a field and the button
- * beside it line up: sm 8/4, md 12/8, lg 16/12.
+ * Heights match `Button` (28 / 32 / 40, 规范 v1 §1.7), so a field and the button
+ * beside it line up; `min-h` rather than `h` so a <textarea> can grow.
  */
 export const fieldControl = cva(
   [
     "block w-full border bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
     "placeholder:text-[oklch(var(--color-ink-subtle))]",
-    "transition-[border-color] duration-state",
-    // Disabled on every control, not 29% of them.
-    "disabled:opacity-50 disabled:cursor-not-allowed",
+    "transition-[border-color,box-shadow] duration-150 ease-out",
+    // 393 px: a ≥ 44 px target (§1.7).
+    "max-sm:min-h-11",
+    // Disabled / read-only: the disabled pair, not a faded copy (规范 v1 §2 输入框「只读同此」).
+    "disabled:cursor-not-allowed disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))]",
+    "read-only:bg-[oklch(var(--color-disabled-surface))]",
   ],
   {
     variants: {
+      // min-h, not h: the same recipe serves <textarea>.
       size: {
-        sm: "px-2 py-1 text-xs",
-        md: "px-3 py-2 text-sm",
-        lg: "px-4 py-3 text-sm",
+        sm: "min-h-7 px-2 py-1 text-xs",
+        md: "min-h-8 px-3 py-1.5 text-sm",
+        lg: "min-h-10 px-3 py-2 text-sm",
       },
       invalid: {
-        // `focus-visible:`, not `focus:` — see the note above.
-        false: "border-[oklch(var(--color-hairline))] focus-visible:border-[oklch(var(--color-accent))]",
-        // An invalid field keeps its error border through focus. Letting focus
-        // repaint it accent would mean the field stops looking wrong at exactly
-        // the moment the user goes to fix it.
-        true: "border-[oklch(var(--color-status-error))] focus-visible:border-[oklch(var(--color-status-error))]",
+        // Rest: structure line; hover: ink-subtle; focus: block line (the ring is
+        // the global square :focus-visible, flush on inputs).
+        false:
+          "border-[oklch(var(--color-line))] hover:border-[oklch(var(--color-ink-subtle))] focus-visible:border-[oklch(var(--color-block))]",
+        // Error: danger border plus a 2 px danger underline, and it keeps them
+        // through focus — the field must not stop looking wrong as the user fixes it.
+        true: "border-[oklch(var(--color-danger))] shadow-[inset_0_-2px_0_oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",
       },
     },
     defaultVariants: { size: "md", invalid: false },
@@ -232,7 +237,9 @@ export function Field({
         // `role="alert"` and not a plain span: this text appears after a
         // submit, i.e. after focus has already moved on, so it has to announce
         // itself rather than wait to be navigated to.
-        <span id={errorId} role="alert" className="text-xs text-[oklch(var(--color-status-error))]">
+        <span id={errorId} role="alert" className="text-xs text-[oklch(var(--color-danger))]">
+          {/* 规范 v1: an error starts with "!" — not colour alone. */}
+          <span aria-hidden="true">! </span>
           {error}
         </span>
       ) : null}

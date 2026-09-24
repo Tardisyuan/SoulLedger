@@ -297,7 +297,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   onClick={() => setActiveCategory(cat.label)}
                   className={`px-2 py-1 text-xs transition-colors ${
                     activeCategory === cat.label
-                      ? "bg-[oklch(var(--color-accent))] text-black"
+                      ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                       : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
                   }`}
                 >

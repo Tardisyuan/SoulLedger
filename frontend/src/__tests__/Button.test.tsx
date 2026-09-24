@@ -156,42 +156,31 @@ describe("interaction states are on every variant and every size", () => {
   });
 });
 
-describe("the primary button's foreground is the one that passes AA", () => {
-  /**
-   * `--color-accent` is hsl(38 92% 50%) = #f59e0b, relative luminance 0.441199.
-   *   vs black  (0.441199 + 0.05) / 0.05          = 9.82 : 1   ✓ AA and AAA
-   *   vs white  1.05 / (0.441199 + 0.05)          = 2.14 : 1   ✗ fails at any size
-   * The repo had 47 `text-black` primaries and 16 `text-white` ones. The 16 are
-   * a defect, not a preference.
-   */
-  it.each(BUTTON_SIZES)("primary/%s is black on accent", (size) => {
+describe("规范 v1 §2 按钮:主 = 墨色实底,危险 = 次按钮 + 危险色", () => {
+  it.each(BUTTON_SIZES)("primary/%s is canvas text on an ink fill", (size) => {
     const classes = classesOf("primary", size);
-    expect(classes).toContain("text-black");
-    expect(classes).toContain("bg-[oklch(var(--color-accent))]");
+    expect(classes).toContain("bg-[oklch(var(--color-ink))]");
+    expect(classes).toContain("text-[oklch(var(--color-canvas))]");
+    // Absence too: the accent fill is what the spec retired (琥珀曾同时是按钮、地府、审判中).
+    expect(classes.join(" ")).not.toMatch(/bg-\[oklch\(var\(--color-accent/);
   });
 
-  it.each(BUTTON_SIZES)("primary/%s is never white on accent", (size) => {
-    // Asserting the absence as well as the presence: `text-black text-white`
-    // both present would satisfy the test above while rendering whichever the
-    // stylesheet ordered last.
-    expect(classesOf("primary", size)).not.toContain("text-white");
-  });
-
-  it("records the arithmetic, not just the conclusion", () => {
-    // A future reader changing this to white needs to meet the number, not a
-    // preference. If the comment goes, so does the reason.
-    expect(SOURCE).toContain("9.82");
-    expect(SOURCE).toContain("2.14");
-  });
-
-  it("does not fill danger with the error token, which fails AA in dark mode", () => {
-    // `bg-[oklch(var(--color-status-error))]` + white text measures 3.59:1 in the
-    // dark theme (5.84:1 light). Danger is the 10% tint instead.
+  it("danger is never a solid red fill", () => {
     for (const size of BUTTON_SIZES) {
       const classes = classesOf("danger", size);
-      expect(classes).toContain("bg-[oklch(var(--color-status-error)/0.1)]");
-      expect(classes).not.toContain("bg-[oklch(var(--color-status-error))]");
-      expect(classes).not.toContain("text-white");
+      expect(classes).toContain("text-[oklch(var(--color-danger))]");
+      expect(classes).toContain("border-[oklch(var(--color-danger))]");
+      expect(classes).toContain("bg-transparent");
+      expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(danger|status-error)\)/);
+    }
+  });
+
+  it("disabled uses the disabled pair, not a faded copy", () => {
+    for (const [variant, size] of MATRIX) {
+      const classes = classesOf(variant, size);
+      expect(classes).toContain("disabled:bg-[oklch(var(--color-disabled-surface))]");
+      expect(classes).toContain("disabled:text-[oklch(var(--color-disabled-ink))]");
+      expect(classes).not.toContain("disabled:opacity-50");
     }
   });
 });
@@ -223,39 +212,16 @@ describe("focus is left to the global rule", () => {
   });
 });
 
-describe("eighteen padding pairs collapse to three on the 4/8/12/16 grid", () => {
-  const PAD = /^p[xy]-(.+)$/;
-  const GRID = ["1", "2", "3", "4"]; // 4px, 8px, 12px, 16px
-
-  it("emits exactly three distinct padding pairs across the twelve cells", () => {
-    const pairs = new Set(
-      MATRIX.map(([variant, size]) =>
-        classesOf(variant, size).filter((c) => PAD.test(c)).sort().join(" ")
-      )
-    );
-    expect([...pairs].sort()).toEqual(["px-2 py-1", "px-3 py-2", "px-4 py-3"]);
+describe("三档高度:28(表格内)/ 32(控件)/ 40", () => {
+  it("each size is one fixed height, the same for every variant", () => {
+    for (const [variant, size] of MATRIX) {
+      const h = classesOf(variant, size).filter((c) => /^h-\d+$/.test(c));
+      expect(h).toEqual([{ sm: "h-7", md: "h-8", lg: "h-10" }[size]]);
+    }
   });
 
-  it("puts every padding step on the grid", () => {
-    const offGrid = MATRIX.flatMap(([variant, size]) =>
-      classesOf(variant, size)
-        .map((c) => PAD.exec(c))
-        .filter((m): m is RegExpExecArray => m !== null)
-        .filter((m) => !GRID.includes(m[1]))
-        .map((m) => `${variant}/${size}: ${m[0]}`)
-    );
-    expect(offGrid).toEqual([]);
-  });
-
-  it("keeps the ladder monotone so the three sizes read as one button", () => {
-    const x = BUTTON_SIZES.map(
-      (size) => classesOf("primary", size).find((c) => c.startsWith("px-"))!
-    );
-    const y = BUTTON_SIZES.map(
-      (size) => classesOf("primary", size).find((c) => c.startsWith("py-"))!
-    );
-    expect(x).toEqual(["px-2", "px-3", "px-4"]);
-    expect(y).toEqual(["py-1", "py-2", "py-3"]);
+  it("is a ≥ 44 px target on a phone (§1.7)", () => {
+    for (const [variant, size] of MATRIX) expect(classesOf(variant, size)).toContain("max-sm:min-h-11");
   });
 });
 
@@ -263,7 +229,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-[oklch(var(--color-surface-2))]", "px-3", "py-2", "text-sm"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-block))]", "h-8", "px-3", "text-sm"]));
   });
 
   it("disables and marks itself busy while loading", () => {

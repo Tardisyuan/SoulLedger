@@ -238,7 +238,7 @@ export function SoulLifecycleTimeline({
               onClick={() => setTab(tabKey)}
               className={`px-2.5 py-1 text-sm transition-colors ${
                 tab === tabKey
-                  ? "bg-[oklch(var(--color-accent))] text-black font-medium"
+                  ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] font-medium"
                   : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
               }`}
             >
@@ -274,7 +274,7 @@ export function SoulLifecycleTimeline({
               <div
                 className={`px-2 py-1 text-xs font-medium whitespace-nowrap text-center flex-1 ${
                   state === "now"
-                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : state === "done"
                       ? "text-[oklch(var(--color-ink-muted))]"
                       : "text-[oklch(var(--color-ink-subtle))] border border-dashed border-[oklch(var(--color-hairline-strong))]"
@@ -421,7 +421,7 @@ export function SoulLifecycleTimeline({
                     <button
                       type="button"
                       onClick={() => openJudgment && onOpenJudgmentQueue(openJudgment.id)}
-                      className="px-3 py-1.5 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black text-sm font-medium transition-colors"
+                      className="px-3 py-1.5 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
                     >
                       {tf("souls.detail.timeline.open_in_queue", "在审判队列中打开")}
                     </button>

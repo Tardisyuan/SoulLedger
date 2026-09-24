@@ -91,7 +91,9 @@ describe("the three missing semantics are distinguishable on screen", () => {
     // `title` 保留,而且和可访问名称是同一串:它仍然是有鼠标的人查一个点最快的
     // 办法,把它拿掉是用一个受众换另一个受众。
     expect(el.getAttribute("title")).toBe(el.getAttribute("aria-label"));
-    expect(el.textContent).toBe(MISSING_GLYPH.inapplicable);
+    // 规范 v1:「不适用」用字,不用符号。
+    expect(el.textContent).toBe("不适用");
+    expect(el.textContent).not.toBe(MISSING_GLYPH.inapplicable);
   });
 
   it("没有 reason 时,可访问名称就是种类名 —— 不留一个悬空的破折号", () => {
@@ -259,7 +261,8 @@ describe("<DomainText>", () => {
 
   it.each(["", null, undefined] as const)("treats %p as the missing kind it was told", (value) => {
     const { container } = renderWithI18n(<DomainText value={value} missingKind="inapplicable" />);
-    expect(container.textContent).toBe(MISSING_GLYPH.inapplicable);
+    // 规范 v1:「不适用」用字,不用符号。
+    expect(container.textContent).toBe("不适用");
   });
 });
 

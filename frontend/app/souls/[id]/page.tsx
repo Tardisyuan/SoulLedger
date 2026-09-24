@@ -40,7 +40,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { soulStateBadgeClass } from "@/src/lib/soulStateBadge";
+import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 const BADGE_SHAPE = "px-2 py-1 text-2xs";
@@ -389,6 +389,7 @@ export default function SoulDetailPage() {
         title={soul?.current_state}
         className={`${BADGE_SHAPE} ${soulStateBadgeClass(soul?.current_state)}`}
       >
+        <span aria-hidden="true">{soulStateGlyph(soul?.current_state)} </span>
         {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
       </span>
       {generation !== null && (

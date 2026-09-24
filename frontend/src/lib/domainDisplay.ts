@@ -60,7 +60,7 @@ export type MissingKind = "unrecorded" | "zero" | "inapplicable";
 export const MISSING_GLYPH: Record<MissingKind, string> = {
   unrecorded: "—", // em dash
   zero: "0",
-  inapplicable: "·", // middle dot
+  inapplicable: "·", // middle dot — kept for the glyph table; <MissingValue> prints the word (规范 v1)
 };
 
 /**

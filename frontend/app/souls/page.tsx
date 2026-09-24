@@ -17,7 +17,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
-import { soulStateBadgeClass } from "@/src/lib/soulStateBadge";
+import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -312,6 +312,7 @@ export default function SoulsPage() {
                   byte-identical copies, one here and one on the detail page. */}
               <Badge
                 title={soul.current_state}
+                glyph={soulStateGlyph(soul.current_state)}
                 className={soulStateBadgeClass(soul.current_state)}
               >
                 {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}

@@ -29,7 +29,7 @@ export function PageError({ error, reset }: PageErrorProps) {
         </p>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-[oklch(var(--color-accent))] text-black text-sm font-medium hover:opacity-90 transition-opacity"
+          className="px-4 py-2 bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium hover:opacity-90 transition-opacity"
         >
           {t("error.retry")}
         </button>

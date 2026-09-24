@@ -20,7 +20,16 @@ import { X, Sun, Moon } from "lucide-react";
  *
  * They are painted from `value` now. There is nothing left to disagree.
  */
+/**
+ * "Nothing chosen": the stylesheet's own accent (规范 v1 ink blue, one value per
+ * theme). Not a hex — choosing it removes the inline tokens instead of writing some.
+ */
+const INK_DEFAULT = "default";
+
 const ACCENT_COLORS = [
+  // 规范 v1 的强调色。选它 = 清掉行内覆盖,回到样式表按主题给的墨蓝(深浅两值不同,
+  // 所以不能写成一个 hex)。
+  { name: "Ink", value: INK_DEFAULT },
   { name: "Amber", value: "#f59e0b" },
   { name: "Blue", value: "#3b82f6" },
   { name: "Green", value: "#22c55e" },
@@ -110,8 +119,10 @@ function solveInkLightness(hue: number, sat: number): number {
   return 5;
 }
 
-/** Whether black label text on this fill clears AA — primary buttons use
- *  `text-black`, so an accent that fails this makes them unreadable. */
+/** Whether black text on this colour clears AA, i.e. the colour is light enough.
+ *  Dark mode reads the accent itself as link / selection text on a near-black
+ *  canvas (only light mode solves a darker accent-ink), so a pick that fails
+ *  this would be unreadable there. */
 export function accentTakesBlackText(hex: string): boolean {
   const [h, sPct, lPct] = hexToHslTriple(hex).split(" ");
   const lum = luminance(parseInt(h, 10), parseInt(sPct, 10), parseInt(lPct, 10));
@@ -122,21 +133,6 @@ const NAV_MODE_KEY = "soulledger_nav_mode";
 const ACCENT_COLOR_KEY = "soulledger_accent_color";
 
 /** `--transition-duration-settle`, the length of both drawer keyframes. */
-/**
- * The accent nothing has chosen yet — the initial `accentColor` state, and what
- * `useAccentColor` writes when storage holds nothing valid or is unreadable.
- * Written three times before this, which is three places for one value to drift.
- *
- * It is a LITERAL on purpose and must stay one. It equals `globals.css`'s
- * `--color-accent: 38 92% 50%` by value, but pointing it at `var(--color-accent)`
- * would make the inline style this module writes onto `document.documentElement`
- * its own input — see the `--color-focus` note in `globals.css` for the same trap
- * one token over. `ACCENT_COLORS[0].value` is deliberately NOT collapsed into it
- * either: that one is user-selectable data, and sharing the literal would assert
- * that the default must always be a palette entry.
- */
-const DEFAULT_ACCENT_HEX = "#f59e0b";
-
 const MOUNT_LINGER_MS = 240;
 
 /**
@@ -230,7 +226,7 @@ interface SettingsDrawerProps {
 export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: SettingsDrawerProps) {
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
-  const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_HEX);
+  const [accentColor, setAccentColor] = useState(INK_DEFAULT);
   const [customHex, setCustomHex] = useState("");
 
   // The drawer's name comes from the heading it already renders, not from a
@@ -311,6 +307,16 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
   }, [theme]);
 
   const applyAccentColor = (color: string) => {
+    if (color === INK_DEFAULT) {
+      setAccentColor(INK_DEFAULT);
+      try {
+        localStorage.removeItem(ACCENT_COLOR_KEY);
+      } catch {
+        // localStorage unavailable
+      }
+      clearAccentTokens();
+      return;
+    }
     if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
     setAccentColor(color);
     try {
@@ -330,11 +336,9 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       setCustomHexError(t("settings.accent_hex_invalid"));
       return;
     }
-    // The six presets all pass; the free-text field is the hole. Primary
-    // buttons label the accent fill with `text-black` (Button.tsx settled that
-    // for 47 call sites), so an accent too dark for black text makes every
-    // primary button in the app unreadable — and nothing else would have
-    // stopped it.
+    // The presets all pass; the free-text field is the hole. In dark mode the
+    // accent is read as text on a near-black canvas as it stands, so a colour
+    // too dark for black text on it is too dark for that — see accentTakesBlackText.
     if (!accentTakesBlackText(customHex)) {
       setCustomHexError(t("settings.accent_hex_too_dark"));
       return;
@@ -389,7 +393,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   theme === "light"
-                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
@@ -402,7 +406,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   theme === "dark"
-                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
@@ -422,7 +426,9 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 <button
                   key={color.value}
                   onClick={() => applyAccentColor(color.value)}
-                  style={{ backgroundColor: color.value }}
+                  // The default swatch paints the palette's own ink blue: --color-focus is
+                  // that value written as a literal the picker never overrides.
+                  style={{ backgroundColor: color.value === INK_DEFAULT ? "oklch(var(--color-focus))" : color.value }}
                   className={`h-10 transition-colors ${
                     accentColor === color.value
                       ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[oklch(var(--color-accent))] scale-105"
@@ -467,7 +473,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={() => onNavModeChange("classic")}
                 className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   navMode === "classic"
-                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
@@ -477,7 +483,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={() => onNavModeChange("compact")}
                 className={`flex-1 py-2 px-3 text-sm transition-colors ${
                   navMode === "compact"
-                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
@@ -496,18 +502,30 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
   );
 }
 
+/** Remove every inline accent token, so the stylesheet's per-theme ink blue applies. */
+function clearAccentTokens() {
+  for (const name of ["--color-accent", "--color-accent-hover", "--color-accent-ink"]) {
+    document.documentElement.style.removeProperty(name);
+  }
+}
+
+/**
+ * On mount: a saved pick writes its three tokens; nothing saved writes nothing
+ * (it used to write the old amber default inline, which overrode the palette on
+ * every page). The drawer re-applies a saved pick on theme change.
+ */
 export function useAccentColor() {
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(ACCENT_COLOR_KEY);
-      if (saved && /^#[0-9a-fA-F]{6}$/.test(saved)) {
-        document.documentElement.style.setProperty("--color-accent", hexToOklch(saved));
-      } else {
-        document.documentElement.style.setProperty("--color-accent", hexToOklch(DEFAULT_ACCENT_HEX));
-      }
+      saved = localStorage.getItem(ACCENT_COLOR_KEY);
     } catch {
       // localStorage unavailable (SSR or private browsing)
-      document.documentElement.style.setProperty("--color-accent", hexToOklch(DEFAULT_ACCENT_HEX));
+    }
+    if (!saved || !/^#[0-9a-fA-F]{6}$/.test(saved)) return;
+    const theme = document.documentElement.classList.contains("light") ? "light" : "dark";
+    for (const [name, value] of Object.entries(accentTokens(saved, theme))) {
+      document.documentElement.style.setProperty(name, value);
     }
   }, []);
 }

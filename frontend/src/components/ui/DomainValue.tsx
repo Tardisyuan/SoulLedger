@@ -75,7 +75,8 @@ export function MissingValue({ kind, reason, className }: MissingValueProps) {
       className={`${MISSING_INK[kind]}${className ? ` ${className}` : ""}`}
       data-missing={kind}
     >
-      {MISSING_GLYPH[kind]}
+      {/* 规范 v1 §2 空状态:「不适用」用字(存活灵魂的死亡日期),只有「未记录」才用 —。 */}
+      {kind === "inapplicable" ? name : MISSING_GLYPH[kind]}
     </span>
   );
 }
