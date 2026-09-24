@@ -286,7 +286,7 @@
   "common": {
     "close": "Khetem",
     "cancel": "Sehen",
-    "save": "Serudj",
+    "save": "Sau",
     "loading": "Em Ini...",
     "edit": "Khemen Seth",
     "delete": "Wehem Seth",
@@ -326,7 +326,7 @@
     "create": "Kheme Menu",
     "edit": "Khemen Menu",
     "delete": "Wehem Seth",
-    "save": "Serudj",
+    "save": "Sau",
     "name": "Ren",
     "path": "Wat",
     "icon": "Tut",
@@ -2033,11 +2033,11 @@
       "weak_password": "Sekhem Renpi Nen Wser. Setep Ky, Aa Er Hry.",
       "password_change_required": "Khemen Sekhem Tepy Er Tepy",
       "account_retired": "Aq Khetem",
-      "application_open": "Dbh Wa Em Wedja",
+      "application_open": "Dbh Wehem Mesut Wa Em Wedja",
       "cooldown": "Er Khet Khesef: Nen Dbh Em Ahet Qebeh",
       "terminal_cosmology": "Nen Wehem Mesut Em Taui Ek. Wat Dy Pehwy.",
       "soul_state": "Kheperu Ek Nen Dbh Wehem Mesut",
-      "application_approved": "Dbh Ankh Pen Hesy Seth",
+      "application_approved": "Dbh Wehem Mesut Ankh Pen Hesy Seth",
       "appeal_used": "Dbh Pen Nehet Seth",
       "not_appealable": "Dbh Pen Nen Nehet Emu",
       "past_life_read_only": "Ankh Tepyu Maa Wa",
@@ -2267,7 +2267,7 @@
     },
     "rebirth_appeal_rejected": {
       "title": "Nehet Khesef Seth",
-      "body": "Nehet Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
+      "body": "Nehet Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "judgment_result": {
       "title": "Wedja Khetem",
@@ -2589,7 +2589,7 @@
       "move_down": "Sekhet {{order}} Er Khery",
       "save_order": "Sau Qed",
       "order_saved": "Qed Sau Seth",
-      "order_error": "Nen Serudj",
+      "order_error": "Nen Sau Qed",
       "eternal_not_last": "Wetep Djet Em Pehwy; Wedja Pehwy Khesef",
       "no_stops": "Nen Netjeru Sekhet",
       "open": "Shesep Sheemtet Seth Em Kehat",
