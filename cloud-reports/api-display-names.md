@@ -83,7 +83,7 @@
 
 | 门禁 | 命令 | 退出码 | 结果 |
 |---|---|---|---|
-| 全量 pytest | `SECRET_KEY=… DEBUG=true DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 CELERY_*=… .venv/bin/python -m pytest --tb=short -q` | (运行中) | 待补:本提交时全量套件尚未跑完 |
+| 全量 pytest | `SECRET_KEY=… DEBUG=true DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 CELERY_*=… .venv/bin/python -m pytest --tb=short -q` | 0 | 4477 passed, 24 skipped(36 分 27 秒) |
 | ruff | `.venv/bin/ruff check .` | 0 | All checks passed! |
 | 迁移 | `makemigrations --check --dry-run` | 0 | No changes detected |
 | schema:warning / error | `manage.py spectacular --fail-on-warn --validate` | 0 | 0 个 warning,0 个 error;输出与提交的 `schema.yml` 逐字节相同 |
