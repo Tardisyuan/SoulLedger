@@ -159,6 +159,10 @@ class User(AuditUserFields, AbstractUser):
         help_text="职位：如 第一殿殿主",
     )
     avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True)
+    # Per-user console settings that should follow the operator to another
+    # browser. Shape and allowed keys: `UserPreferencesSerializer`; served by
+    # `GET/PATCH /auth/profile/preferences/`, and only for `request.user`.
+    preferences = models.JSONField(default=dict, blank=True)
 
     # Declared first so it becomes _base_manager (used by refresh_from_db(),
     # etc) — keeps create_user/create_superuser and stays unfiltered so

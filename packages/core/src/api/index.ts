@@ -8,7 +8,19 @@
 export { api, getApiBaseUrl, PAGE_SIZE } from "./client";
 
 // Auth
-export { authApi, type UserRole, type BuiltinUserRole, type LoginUser, type LoginResponse, type AuthProfile } from "./auth";
+export {
+  authApi,
+  type UserRole,
+  type BuiltinUserRole,
+  type LoginUser,
+  type LoginResponse,
+  type LoginRequest,
+  type AuthProfile,
+  type PublicCivilization,
+  type DefaultView,
+  type UserPreferences,
+  type PasswordHelpAccepted,
+} from "./auth";
 
 // Souls
 export {

@@ -32,7 +32,17 @@
     "confirm_logout_btn": "Per Aq",
     "statute_of_day": "Djedu Hru Pen · Ky Em Aq Neb",
     "statute_fixed_note": "Djedu: Aq Tepy. Djedu Pen Em Sesh Wa, Nen Khemen.",
-    "numbering": "Ren Djedu Em Aset Ahamet Neb"
+    "numbering": "Ren Djedu Em Aset Ahamet Neb",
+    "civilization": "Aset Ahamet",
+    "civilization_note": "Aset Ahamet Em Aq. Ahet Pen: Aq Tepy.",
+    "remember_me": "Aq Em Hru {{days}}",
+    "forgot_password": "Nen Rekh Sekhem",
+    "forgot_desc": "Aq Em Netjer Em Tepy. Sesh Ren Aba: Hab Er Netjer Em Tepy, Wehem Sekhem.",
+    "forgot_submit": "Hab Er Netjer Em Tepy",
+    "forgot_sent": "Hab Seth Er Netjer Em Tepy",
+    "forgot_failed": "Nen Hab. Wehem Er Khet",
+    "rate_limited": "Aq Aashu. Wehem Er Khet",
+    "back_to_login": "Wehem Er Aq"
   },
   "home": {
     "console": "Wetep Khet",
@@ -2549,6 +2559,10 @@
     }
   },
   "official_notify": {
+    "password_help_requested": {
+      "title": "Nen Rekh Sekhem",
+      "body": "{{username}}: Nen Rekh Sekhem. Wehem Sekhem Em Iri Netjeru."
+    },
     "dispatch_return_blocked": {
       "title": "Ankh Er Taui Khesef",
       "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."

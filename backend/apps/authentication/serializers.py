@@ -6,6 +6,10 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer as SimpleJWTTokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
+
+from .tokens import RefreshToken
 
 User = get_user_model()
 
@@ -189,7 +193,23 @@ class LoginResponseSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Add tenant info to JWT + response."""
+    """Add tenant info to JWT + response.
+
+    NO `tenant_code` INPUT, deliberately. A user has exactly one tenant — the
+    `User.tenant` FK, null for the global ADMINs — and the token's
+    `tenant_code` claim is copied from it in `get_token` below, which is the
+    only place `TenantMiddleware` learns a tenant from. There is no membership
+    table, no second tenant a user may act in, and no header that selects one
+    (FL-12 deleted `X-Tenant-ID`). A tenant chosen at login could therefore
+    only be refused or ignored; the login page's civilization rows are
+    informational and read `/auth/civilizations/`.
+    """
+
+    token_class = RefreshToken
+
+    # 「在此设备上保持登录 30 天」. See `tokens.py` for why the choice is a
+    # claim in the refresh token rather than a flag the server remembers.
+    remember = serializers.BooleanField(default=False, write_only=True)
 
     @classmethod
     def get_token(cls, user):
@@ -208,10 +228,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        data = super().validate(attrs)
-        user = self.user
-        data["user"] = UserWithTenantSerializer(user).data
+        # TokenObtainPairSerializer.validate, restated so the token can be
+        # marked *before* it is serialised: `super().validate` would hand back
+        # strings already carrying the default expiry.
+        data = super(TokenObtainPairSerializer, self).validate(attrs)
+        refresh = self.get_token(self.user)
+        if attrs.get("remember"):
+            refresh.remember()
+        data["refresh"] = str(refresh)
+        data["access"] = str(refresh.access_token)
+        if simplejwt_settings.UPDATE_LAST_LOGIN:
+            from django.contrib.auth.models import update_last_login
+
+            update_last_login(None, self.user)
+        data["user"] = UserWithTenantSerializer(self.user).data
         return data
+
+
+class TokenRefreshSerializer(SimpleJWTTokenRefreshSerializer):
+    """SimpleJWT's refresh, on this app's token class — the one whose
+    `set_exp` honours the `remember` claim on rotation (see `tokens.py`).
+    Same class name as SimpleJWT's so the schema component stays
+    `TokenRefresh`."""
+
+    token_class = RefreshToken
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -517,3 +557,54 @@ class PasswordResetResultSerializer(serializers.Serializer):
     """
 
     password = serializers.CharField()
+
+
+# ---------------------------------------------------------------------------
+# Login page: civilizations, password help. Account: preferences.
+# ---------------------------------------------------------------------------
+
+
+class PublicCivilizationSerializer(serializers.Serializer):
+    """One row of `GET /auth/civilizations/` — the login page's civilization list.
+
+    PUBLIC, SO ONLY WHAT THE PAGE DRAWS. The page draws a shape mark and the
+    civilization's name, and both are looked up client-side from
+    `civilization` (`CIVILIZATION_MARK`, `organization.civilizations.*`), so
+    the row carries the tenant code and the civilization and nothing else —
+    not `display_name` (an administrative label the page never shows), not
+    `settings`, `api_endpoint`, `dispatch_enabled` or any count.
+    """
+
+    code = serializers.CharField()
+    civilization = serializers.CharField()
+
+
+class PasswordHelpRequestSerializer(serializers.Serializer):
+    """`POST /auth/password-help/` — 「忘记密码」 on an admin-provisioned console."""
+
+    username = serializers.CharField(max_length=150, trim_whitespace=True)
+
+
+class UserPreferencesSerializer(serializers.Serializer):
+    """`User.preferences`, as the API reads and writes it.
+
+    One key today. Language and theme are not here: both are browser-side
+    settings with no server home (the locale is a cookie the middleware reads,
+    the theme a localStorage key), and moving them is a separate decision.
+    """
+
+    DEFAULT_VIEWS = ("operator", "admin")
+
+    #: 操作员 → /judgment/queue, 管理员 → /dashboard (`frontend/src/lib/defaultView.ts`).
+    #: Null until the operator picks one.
+    default_view = serializers.ChoiceField(choices=DEFAULT_VIEWS, allow_null=True, required=False)
+
+    def to_internal_value(self, data):
+        # Unknown keys are refused rather than silently dropped: this is a
+        # JSON column, and a client that believes it saved `theme` should hear
+        # that it did not.
+        if isinstance(data, dict):
+            unknown = sorted(set(data) - set(self.fields))
+            if unknown:
+                raise serializers.ValidationError({key: ["Unknown preference."] for key in unknown})
+        return super().to_internal_value(data)

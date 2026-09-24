@@ -9,7 +9,7 @@ from django.core.mail import send_mail
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -31,14 +31,18 @@ from .serializers import (
     LoginLogSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
+    PasswordHelpRequestSerializer,
     PasswordResetResultSerializer,
+    PublicCivilizationSerializer,
     RegisterSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
+    TokenRefreshSerializer,
     UserBatchUpdateResultSerializer,
     UserCreateSerializer,
     UserImportResultSerializer,
     UserManagementSerializer,
+    UserPreferencesSerializer,
     UserRoleSerializer,
     UserSerializer,
     UserUpdateSerializer,
@@ -557,8 +561,12 @@ class RefreshView(TokenRefreshView):
     """
     POST /api/v1/auth/refresh/
     Returns new access token from refresh token.
+
+    On this app's `RefreshToken`, so a rotated 「保持登录 30 天」 token is
+    issued for 30 days again rather than for SimpleJWT's default 7.
     """
     permission_classes = [AllowAny]
+    serializer_class = TokenRefreshSerializer
 
 
 @extend_schema(
@@ -869,3 +877,147 @@ def set_new_password(request):
     cache.delete(f"pwd_reset:{email}")
 
     return Response({"detail": "密码重置成功"})
+
+
+#: Help requests accepted for one username per window, counted before any
+#: lookup (see `password_help_request`). Paired with `PasswordHelpThrottle`
+#: (5 per hour per IP): this bounds how often one account's administrators can
+#: be paged, the throttle bounds how many usernames one client can try.
+MAX_PASSWORD_HELP_PER_USERNAME = 3
+PASSWORD_HELP_WINDOW_SECONDS = 3600
+
+#: The one body `password_help_request` ever answers 200 with. A module
+#: constant so the tests compare against the thing itself.
+PASSWORD_HELP_ACCEPTED = {"detail": "请求已受理"}
+
+
+@extend_schema(
+    request=None,
+    responses={200: PublicCivilizationSerializer(many=True)},
+)
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def civilizations_view(request):
+    """
+    GET /api/v1/auth/civilizations/
+    The login page's civilization rows: active tenants that speak for a
+    civilization, in the order the civilizations are declared.
+
+    Public (the page is shown before anyone signs in) and therefore minimal —
+    see `PublicCivilizationSerializer`. No authentication at all, so a stale
+    access token left in the tab cannot turn the login page's list into a 401.
+    """
+    from apps.souls.models import TENANT_CIVILIZATION, Civilization
+    from apps.tenants.models import Tenant
+
+    order = {value: i for i, value in enumerate(Civilization.values)}
+    tenants = Tenant.objects.filter(is_active=True, code__in=TENANT_CIVILIZATION).only("code")
+    rows = sorted(
+        ({"code": t.code, "civilization": TENANT_CIVILIZATION[t.code].value} for t in tenants),
+        key=lambda row: order[row["civilization"]],
+    )
+    return Response(PublicCivilizationSerializer(rows, many=True).data)
+
+
+@extend_schema(
+    request=PasswordHelpRequestSerializer,
+    responses={
+        # One 200 body for every username — existing, unknown, inactive, a
+        # soul account. See the view.
+        200: DetailResponseSerializer,
+        400: OpenApiTypes.OBJECT,
+        429: ErrorResponseSerializer,
+    },
+)
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def password_help_request(request):
+    """
+    POST /api/v1/auth/password-help/
+    「忘记密码」 on a console whose accounts an administrator opens: the
+    administrators of the account's tenant get an in-app notification and an
+    audit row is written. No code, no link, no mail — the administrator resets
+    the password through user management as they would anyway.
+
+    NO USER ENUMERATION, BY CONSTRUCTION. This view never reads the user
+    table. Both limits are counted before anything else and refuse
+    identically; then the username is handed to
+    `tasks.notify_password_help`, which does the lookup in the worker, and
+    the same body goes back. Known and unknown usernames take the same path
+    through this function, statement for statement.
+    """
+    from django.core.cache import cache
+
+    from apps.core.client_ip import get_client_ip
+
+    from .tasks import notify_password_help
+    from .throttles import PasswordHelpThrottle
+
+    too_frequent = Response(
+        {"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS
+    )
+    if not PasswordHelpThrottle().allow_request(request, None):
+        return too_frequent
+
+    serializer = PasswordHelpRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data["username"]
+
+    # Normalised so a case variant is not a fresh bucket. The task's lookup
+    # stays exact, as login's is.
+    rate_key = f"pwd_help_rate:{username.lower()}"
+    attempts = cache.get(rate_key, 0)
+    if attempts >= MAX_PASSWORD_HELP_PER_USERNAME:
+        return too_frequent
+    cache.set(rate_key, attempts + 1, timeout=PASSWORD_HELP_WINDOW_SECONDS)
+
+    args = (username, get_client_ip(request), request.META.get("HTTP_USER_AGENT", "")[:500])
+    try:
+        notify_password_help.delay(*args)
+    except Exception:
+        # Broker down. Run it here rather than drop a request the page is
+        # about to tell the operator was delivered. This path is taken for
+        # every username alike, so it discloses nothing about any one of them
+        # beyond "the broker is down".
+        logger.warning("password help: enqueue failed, running inline", exc_info=False)
+        notify_password_help.run(*args)
+
+    return Response(PASSWORD_HELP_ACCEPTED)
+
+
+@extend_schema(
+    methods=["GET"],
+    request=None,
+    responses={200: UserPreferencesSerializer},
+)
+@extend_schema(
+    methods=["PATCH"],
+    request=UserPreferencesSerializer,
+    responses={200: UserPreferencesSerializer, 400: OpenApiTypes.OBJECT},
+)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def preferences_view(request):
+    """
+    GET   /api/v1/auth/profile/preferences/ — the caller's own preferences
+    PATCH /api/v1/auth/profile/preferences/ — merge into them
+
+    Always `request.user`. There is no id in the path or the body to address
+    anyone else by, and an unknown key (a `user`, say) is a 400 rather than
+    ignored — see `UserPreferencesSerializer`.
+    """
+    user = request.user
+    if request.method == "PATCH":
+        serializer = UserPreferencesSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user.preferences = {**(user.preferences or {}), **serializer.validated_data}
+        user.save(update_fields=["preferences"])
+    return Response(UserPreferencesSerializer(_preferences_with_defaults(user)).data)
+
+
+def _preferences_with_defaults(user):
+    """Every declared key present, null where unset, so a client reads one shape."""
+    stored = user.preferences or {}
+    return {name: stored.get(name) for name in UserPreferencesSerializer().fields}

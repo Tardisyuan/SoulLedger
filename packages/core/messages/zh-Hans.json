@@ -32,7 +32,17 @@
     "confirm_logout_btn": "确认退出",
     "statute_of_day": "今日律条 · 每次进入换一条",
     "statute_fixed_note": "律条要登录后才能读取，这里的几条摘自语料库原文，固定不变。",
-    "numbering": "四文明编号法"
+    "numbering": "四文明编号法",
+    "civilization": "文明",
+    "civilization_note": "文明由账号决定，登录后自动进入所属文明。标记的是此设备上次登录的文明。",
+    "remember_me": "在此设备上保持登录 {{days}} 天",
+    "forgot_password": "忘记密码",
+    "forgot_desc": "账号由本殿管理员开通。输入用户名，本殿管理员会收到通知并为你重置密码。",
+    "forgot_submit": "通知管理员",
+    "forgot_sent": "已通知本殿管理员",
+    "forgot_failed": "未能发送，请稍后再试",
+    "rate_limited": "请求过于频繁，请稍后再试",
+    "back_to_login": "返回登录"
   },
   "home": {
     "console": "控制台",
@@ -2549,6 +2559,10 @@
     }
   },
   "official_notify": {
+    "password_help_requested": {
+      "title": "忘记密码求助",
+      "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请到用户管理为其重置。"
+    },
     "dispatch_return_blocked": {
       "title": "暂居回归被拦下",
       "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"
