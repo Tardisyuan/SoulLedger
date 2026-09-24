@@ -258,7 +258,7 @@ export function RootNavigator() {
         );
       }
       body = (
-        <ChatProvider enabled={state.status === "signedIn"}>
+        <ChatProvider account={state.status === "signedIn" ? state.profile.soul_code : null}>
           <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setReady((n) => n + 1)}>
             <Stack.Navigator>{screens}</Stack.Navigator>
           </NavigationContainer>

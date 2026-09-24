@@ -21,6 +21,7 @@ import {
 import { getRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { clearOutbox } from "./chat";
 import { setUnauthorizedHandler } from "./platform";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 
@@ -114,6 +115,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    */
   const signOut = useCallback(() => {
     const refresh = getRefreshToken();
+    clearOutbox();
     setState({ status: "signedOut" });
     const end = () => {
       if (getRefreshToken() === refresh) clearSoulTokens();

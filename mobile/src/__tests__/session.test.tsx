@@ -11,7 +11,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
-import { installMobilePlatform, sessionStore } from "../platform";
+import { OUTBOX_KEY } from "../chat";
+import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
 import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
@@ -208,5 +209,28 @@ describe("a stored session", () => {
     await screen.findByTestId("login-submit");
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
     await waitFor(() => expect(calls.some((c) => c.url === "/soul-auth/logout/")).toBe(true));
+  });
+
+  it("sign-out takes this soul's unsent letters off the device", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const letter = { txnId: "t1", conversationId: "c1", roomId: "!r", body: "枯树那边风大", ts: 1, state: "queued" };
+    persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: PROFILE.soul_code, device: "DEV1", items: [letter] }));
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/soul-auth/logout/": { status: 204 },
+      "/me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, locale: "zh-Hans" } },
+      // Chat unreachable: the letter stays queued, on disk, until sign-out.
+      "/me/chat/conversations/": "offline",
+      "/me/chat/session/": "offline",
+    });
+    renderApp();
+    fireEvent.press(await screen.findByTestId("header-account"));
+    expect(JSON.parse(persistentStore.get(OUTBOX_KEY) ?? "null")?.items).toHaveLength(1);
+    fireEvent.press(await screen.findByTestId("logout"));
+    fireEvent.press(await screen.findByTestId("logout-confirm"));
+    await screen.findByTestId("login-submit");
+    expect(persistentStore.get(OUTBOX_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(OUTBOX_KEY)).toBeNull();
   });
 });
