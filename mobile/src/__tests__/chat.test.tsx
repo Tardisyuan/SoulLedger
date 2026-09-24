@@ -830,7 +830,7 @@ describe("the fourth tab", () => {
     secure.clear();
     secure.set(REFRESH_TOKEN_KEY, "R");
     await AsyncStorage.clear();
-    stubApi({
+    const calls = stubApi({
       "/auth/soul/refresh/": { status: 200, data: { access: "A", refresh: "R2" } },
       "/me/": { status: 200, data: PROFILE },
       "/me/life/": { status: 200, data: { cycle: 1, records: [], judgments: [], dispositions: [], rebirth_applications: [], reincarnation: null } },
@@ -847,6 +847,7 @@ describe("the fourth tab", () => {
       </SafeAreaProvider>
     );
     await screen.findByTestId("tab-Life");
+    return calls;
   }
 
   it("four tabs: 本世 / 转生 / 书信 / 朋友圈 — 前世 is no tab; 转生申请's tab reads 转生 while its screen keeps the full name", async () => {
@@ -862,13 +863,16 @@ describe("the fourth tab", () => {
     expect(await screen.findByText("转生申请")).toBeTruthy();
   });
 
-  it("chat not configured here: no 书信 tab at all", async () => {
+  it("chat not configured here: no 书信 tab at all, and the session is asked for once, not every 5 s", async () => {
     jest.restoreAllMocks();
-    await signedIn({
+    const calls = await signedIn({
       "/me/chat/conversations/": { status: 503, data: { code: "chat_not_configured" } },
       "/me/chat/session/": { status: 503, data: { code: "chat_not_configured" } },
     });
     await waitFor(() => expect(screen.queryByTestId("tab-Letters")).toBeNull(), { timeout: 5000 });
     expect(screen.getByTestId("tab-Applications")).toBeTruthy();
-  });
+    // Longer than one RETRY_MS (5 s): the retry loop used to ask again here, forever.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 6_000)));
+    expect(calls.filter((c) => c.url === "/me/chat/session/")).toHaveLength(1);
+  }, 20_000);
 });
