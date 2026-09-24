@@ -112,4 +112,4 @@ export {
 } from "./soul-accounts";
 
 // Recycle bin
-export { recycleBinApi, type RecycleBinEntry, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";
+export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";

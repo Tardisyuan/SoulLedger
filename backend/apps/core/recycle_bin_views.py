@@ -46,6 +46,15 @@ class BinEntryIdField(serializers.Field):
 RECYCLE_BIN_KINDS = ["reference", "domain"]
 
 
+class RecycleBinLocationSerializer(serializers.Serializer):
+    """`civilization` (a soul: the value is the civilization code),
+    `organization` (an ORG role: the organization's name) or `parent` (a menu
+    or role under another: the parent's name)."""
+
+    kind = serializers.ChoiceField(choices=["civilization", "organization", "parent"])
+    value = serializers.CharField()
+
+
 class RecycleBinEntrySerializer(serializers.Serializer):
     """One row of the bin — always a cascade PARENT, never a dependent.
 
@@ -63,6 +72,9 @@ class RecycleBinEntrySerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=RECYCLE_BIN_KINDS)
     id = BinEntryIdField()
     label = serializers.CharField()
+    #: 原位置 — where the row lived, derived from its existing fields. See
+    #: `recycle_bin.BinEntryType.location`. Null for a top-level row.
+    location = RecycleBinLocationSerializer(allow_null=True)
     deleted_at = serializers.DateTimeField(allow_null=True)
     #: The username, not the user id — null for a row deleted with no user.
     deleted_by = serializers.CharField(allow_null=True)

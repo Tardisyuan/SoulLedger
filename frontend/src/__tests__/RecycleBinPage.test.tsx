@@ -22,7 +22,8 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}(${Object.values(params).join(",")})` : key,
+      key === "souls.civilizations.CHINESE" ? "中国地府"
+        : params ? `${key}(${Object.values(params).join(",")})` : key,
     formatDateTime: (v: string) => v,
     locale: "en",
     hydrated: true,
@@ -36,6 +37,7 @@ const row = (over: Partial<RecycleBinEntry> = {}): RecycleBinEntry => ({
   kind: "reference",
   id: 7,
   label: "旧菜单",
+  location: { kind: "parent", value: "系统设置" },
   deleted_at: "2026-09-01T10:00:00Z",
   deleted_by: "yama",
   delete_reason: "",
@@ -128,5 +130,31 @@ describe("RecycleBinPage columns", () => {
     expect(within(first).getByText("yama")).toBeInTheDocument();
     expect(second.querySelector("[data-missing]")).not.toBeNull();
     expect(second).not.toHaveTextContent("null");
+  });
+
+  it("shows 原位置: a civilization localised, a parent by name, a top-level row as missing", async () => {
+    mockUser = { role: "JUDGE", permissions: READ_RESTORE };
+    (recycleBinApi.list as jest.Mock).mockResolvedValue({
+      data: {
+        results: [
+          row(),
+          row({ id: "s-1", entity_type: "soul", kind: "domain", label: "白鹤龄", cascade_id: "c-s",
+                location: { kind: "civilization", value: "CHINESE" } }),
+          row({ id: 9, label: "顶层", cascade_id: "c-9", location: null }),
+        ],
+        count: 3,
+      },
+    });
+    renderPage();
+
+    await screen.findByText("旧菜单");
+    expect(screen.getByRole("columnheader", { name: "recycle_bin.col_location" })).toBeInTheDocument();
+    const [parent, civ, top] = screen.getAllByTestId("bin-location");
+    expect(parent).toHaveTextContent("系统设置");
+    // Through the civilization namespace, not the raw code on its own.
+    expect(civ.querySelector('[title="CHINESE"]')).not.toBeNull();
+    expect(civ).toHaveTextContent("中国地府");
+    expect(top.querySelector("[data-missing]")).not.toBeNull();
+    expect(top).not.toHaveTextContent("null");
   });
 });

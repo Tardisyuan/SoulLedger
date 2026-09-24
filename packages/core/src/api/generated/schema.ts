@@ -9126,6 +9126,7 @@ export interface components {
             kind: components["schemas"]["KindEnum"];
             id: number | string;
             label: string;
+            location: components["schemas"]["RecycleBinLocation"] | null;
             /** Format: date-time */
             deleted_at: string | null;
             deleted_by: string | null;
@@ -9157,6 +9158,22 @@ export interface components {
             results: components["schemas"]["RecycleBinEntry"][];
             count: number;
         };
+        /**
+         * @description `civilization` (a soul: the value is the civilization code),
+         *     `organization` (an ORG role: the organization's name) or `parent` (a menu
+         *     or role under another: the parent's name).
+         */
+        RecycleBinLocation: {
+            kind: components["schemas"]["RecycleBinLocationKindEnum"];
+            value: string;
+        };
+        /**
+         * @description * `civilization` - civilization
+         *     * `organization` - organization
+         *     * `parent` - parent
+         * @enum {string}
+         */
+        RecycleBinLocationKindEnum: "civilization" | "organization" | "parent";
         /**
          * @description Restore is keyed by cascade id, not by row: the whole set deleted
          *     together comes back together.

@@ -26,4 +26,7 @@ class SoulsConfig(AppConfig):
         # as a "domain" entity — soft-deletable while it has no concluded
         # judgment, archivable instead once it does. See
         # Soul.has_concluded_judgment and Soul.delete_with_cascade.
-        register_bin_type("soul", Soul, "domain", lambda soul: soul.name)
+        register_bin_type(
+            "soul", Soul, "domain", lambda soul: soul.name,
+            location=lambda soul: {"kind": "civilization", "value": soul.civilization},
+        )

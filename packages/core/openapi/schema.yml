@@ -19453,6 +19453,10 @@ components:
             format: uuid
         label:
           type: string
+        location:
+          allOf:
+          - $ref: '#/components/schemas/RecycleBinLocation'
+          nullable: true
         deleted_at:
           type: string
           format: date-time
@@ -19484,6 +19488,7 @@ components:
       - id
       - kind
       - label
+      - location
       - retention_days
     RecycleBinHardDeleteRequest:
       type: object
@@ -19521,6 +19526,30 @@ components:
       required:
       - count
       - results
+    RecycleBinLocation:
+      type: object
+      description: |-
+        `civilization` (a soul: the value is the civilization code),
+        `organization` (an ORG role: the organization's name) or `parent` (a menu
+        or role under another: the parent's name).
+      properties:
+        kind:
+          $ref: '#/components/schemas/RecycleBinLocationKindEnum'
+        value:
+          type: string
+      required:
+      - kind
+      - value
+    RecycleBinLocationKindEnum:
+      enum:
+      - civilization
+      - organization
+      - parent
+      type: string
+      description: |-
+        * `civilization` - civilization
+        * `organization` - organization
+        * `parent` - parent
     RecycleBinRestoreRequest:
       type: object
       description: |-

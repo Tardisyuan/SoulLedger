@@ -450,6 +450,7 @@
       "soul": "灵魂",
       "menu": "菜单"
     },
+    "col_location": "原位置",
     "col_deleted_by": "删除人"
   },
   "permissions": {

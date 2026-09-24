@@ -110,15 +110,26 @@ class BinEntryType:
     model: type
     kind: str  # "reference" | "domain"
     label: Callable[[object], str]
+    #: Where the row lived (the bin's 「原位置」), read off existing fields:
+    #: `{"kind": "civilization" | "organization" | "parent", "value": str}`,
+    #: or None for a top-level row with nothing above it.
+    location: Callable[[object], dict | None] = lambda row: None
 
 
 _REGISTRY: dict[str, BinEntryType] = {}
 
 
-def register_bin_type(entity_type: str, model: type, kind: str, label: Callable[[object], str]):
+def register_bin_type(
+    entity_type: str,
+    model: type,
+    kind: str,
+    label: Callable[[object], str],
+    location: Callable[[object], dict | None] | None = None,
+):
     if kind not in ("reference", "domain"):
         raise ValueError(f"unknown recycle bin kind: {kind!r}")
-    _REGISTRY[entity_type] = BinEntryType(entity_type=entity_type, model=model, kind=kind, label=label)
+    extra = {"location": location} if location is not None else {}
+    _REGISTRY[entity_type] = BinEntryType(entity_type=entity_type, model=model, kind=kind, label=label, **extra)
 
 
 def registered_types():
@@ -164,6 +175,7 @@ def list_bin_entries(tenant=None, is_admin=False):
                 "kind": bin_type.kind,
                 "id": row.pk,
                 "label": bin_type.label(row),
+                "location": bin_type.location(row),
                 "deleted_at": deleted_at,
                 "deleted_by": getattr(row.deleted_by, "username", None) if row.deleted_by_id else None,
                 "delete_reason": row.delete_reason,

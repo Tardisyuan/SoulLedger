@@ -252,6 +252,39 @@ class TestRecycleBinListing:
         assert menu_entries[0]["retention_days"] == 30
         assert menu_entries[0]["hard_delete_eligible"] is False  # just deleted, inside the window
 
+    def _entry(self, entity_type, pk):
+        entries = list_bin_entries(tenant=self.tenant, is_admin=True)
+        return next(e for e in entries if e["entity_type"] == entity_type and e["id"] == pk)
+
+    def test_location_of_a_soul_is_its_civilization(self):
+        self.soul.delete_with_cascade(user=self.admin)
+        assert self._entry("soul", self.soul.pk)["location"] == {
+            "kind": "civilization", "value": self.soul.civilization,
+        }
+        assert self.soul.civilization == Civilization.CHINESE
+
+    def test_location_of_a_menu_is_its_parent_or_nothing(self):
+        parent = Menu.objects.create(name="Parent Dir", path="", roles=["ADMIN"])
+        child = Menu.objects.create(name="Child", path="/child", roles=["ADMIN"], parent=parent)
+        child.soft_delete(user=self.admin)
+        self.menu.soft_delete(user=self.admin)
+        assert self._entry("menu", child.pk)["location"] == {"kind": "parent", "value": "Parent Dir"}
+        assert self._entry("menu", self.menu.pk)["location"] is None
+
+    def test_location_of_a_role_is_its_organization_then_its_parent(self):
+        from apps.org.models import Organization
+        from apps.perm.models import Role
+
+        org = Organization.objects.create(name="中国地府", code="DIYU_RB", category="CHINESE", level=0)
+        base = Role.objects.create(name="RB_BASE", display_name="基础角色", scope="GLOBAL")
+        in_org = Role.objects.create(name="RB_ORG", display_name="x", organization=org, parent=base)
+        child = Role.objects.create(name="RB_CHILD", display_name="y", scope="GLOBAL", parent=base)
+        for role in (in_org, child, base):
+            role.soft_delete(user=self.admin)
+        assert self._entry("role", in_org.pk)["location"] == {"kind": "organization", "value": "中国地府"}
+        assert self._entry("role", child.pk)["location"] == {"kind": "parent", "value": "基础角色"}
+        assert self._entry("role", base.pk)["location"] is None
+
     def test_domain_entry_has_no_hard_delete_window(self):
         self.soul.delete_with_cascade(user=self.admin)
         entries = list_bin_entries(tenant=self.tenant, is_admin=True)
@@ -288,6 +321,9 @@ class TestRecycleBinAPI:
         assert resp.status_code == status.HTTP_200_OK
         ids = [(e["entity_type"], e["id"]) for e in resp.data["results"]]
         assert ("menu", self.menu.pk) in ids
+        row = next(e for e in resp.data["results"] if e["entity_type"] == "menu" and e["id"] == self.menu.pk)
+        # 原位置 is on the wire, null for a top-level menu.
+        assert "location" in row and row["location"] is None
 
     def test_restore_via_cascade_id_brings_the_menu_back(self):
         self.menu.soft_delete(user=self.admin, reason="oops")
