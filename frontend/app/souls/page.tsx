@@ -18,6 +18,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
+import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
 
 /**
@@ -131,7 +132,7 @@ export default function SoulsPage() {
   const showsDeathColumn = !isColumnUninformative(souls, (s) => Boolean(s.death_date));
 
   const states = [
-    { value: "", label: t("souls.all_states") },
+    { value: "", label: t("filter.all") },
     { value: "ALIVE", label: t("souls.states.ALIVE") },
     { value: "JUDGING", label: t("souls.states.JUDGING") },
     { value: "DISPOSED", label: t("souls.states.DISPOSED") },
@@ -143,7 +144,7 @@ export default function SoulsPage() {
   // from this filter is one whose souls cannot be filtered for at all, and the
   // dropdown looks complete either way.
   const civilizations = [
-    { value: "", label: t("souls.all_civilizations") },
+    { value: "", label: t("filter.all") },
     ...CIVILIZATION_OPTIONS.map((civ) => ({
       value: civ,
       label: t(`souls.civilizations.${civ}`),
@@ -196,32 +197,28 @@ export default function SoulsPage() {
             onChange={(e) => setSearchInput(e.target.value)}
             className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[160px]")}
           />
-          <select
+          {/* 筛选签(规范 v1 §2):「状态 · 审判中 ×」。在生效的那一枚有
+              下 2 px 强调线和清除用的 ×,不只靠颜色说「这条筛选开着」。 */}
+          <FilterChipSelect
+            label={t("souls.filter_state")}
             value={stateFilter}
-            aria-label={t("souls.filter_state")}
-            onChange={(e) => {
-              setStateFilter(e.target.value);
+            options={states}
+            clearLabel={t("filter.clear_one", { name: t("souls.filter_state") })}
+            onChange={(v) => {
+              setStateFilter(v);
               setPage(1);
             }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            {states.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-          <select
+          />
+          <FilterChipSelect
+            label={t("souls.filter_civilization")}
             value={civilizationFilter}
-            aria-label={t("souls.filter_civilization")}
-            onChange={(e) => {
-              setCivilizationFilter(e.target.value);
+            options={civilizations}
+            clearLabel={t("filter.clear_one", { name: t("souls.filter_civilization") })}
+            onChange={(v) => {
+              setCivilizationFilter(v);
               setPage(1);
             }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            {civilizations.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+          />
           <div className="flex items-center gap-1 shrink-0">
             <input
               type="number"
@@ -247,26 +244,18 @@ export default function SoulsPage() {
               client-side slice of the current page — the badge count and
               the toggle's own result set both come from the same query
               param, so they agree even across pages. */}
-          <Button
-            type="button"
-            onClick={() => {
-              setProblemsOnly((v) => !v);
+          <FilterChipToggle
+            pressed={problemsOnly}
+            onPressedChange={(next) => {
+              setProblemsOnly(next);
               setPage(1);
             }}
-            aria-pressed={problemsOnly}
-            className={cn(
-              "shrink-0",
-              problemsOnly &&
-                "bg-[oklch(var(--color-status-warning)/0.1)] border-[oklch(var(--color-status-warning)/0.4)] text-[oklch(var(--color-status-warning))] hover:bg-[oklch(var(--color-status-warning)/0.2)] hover:border-[oklch(var(--color-status-warning)/0.4)]"
-            )}
           >
             {t("souls.date_problem_filter")}
             {typeof problemCountQuery.data === "number" && (
-              <Badge className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))]">
-                {problemCountQuery.data}
-              </Badge>
+              <span className="font-mono text-[oklch(var(--color-ink-subtle))]">{problemCountQuery.data}</span>
             )}
-          </Button>
+          </FilterChipToggle>
         </>
       }
     >

@@ -1351,7 +1351,8 @@
   },
   "filter": {
     "all": "Neb",
-    "clear_all": "Khet Semau"
+    "clear_all": "Khet Semau",
+    "clear_one": "Khet {{name}}"
   },
   "death_sync": {
     "title": "Wepet Ru Kehat",

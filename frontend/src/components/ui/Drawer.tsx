@@ -53,7 +53,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
           className="fixed inset-y-0 right-0 z-dialog flex w-full sm:w-[480px] flex-col bg-[oklch(var(--color-canvas))] border-l border-[oklch(var(--color-block))] shadow-overlay transition-transform duration-200 ease-out data-ending-style:translate-x-full data-starting-style:translate-x-full"
         >
           <div className="flex shrink-0 items-baseline justify-between gap-3 px-4 py-3 border-b border-[oklch(var(--color-block))]">
-            <Dialog.Title className="text-md text-[oklch(var(--color-ink))] truncate">{title}</Dialog.Title>
+            <Dialog.Title className="min-w-0 break-words text-md text-[oklch(var(--color-ink))]">{title}</Dialog.Title>
             <span className="flex items-baseline gap-3 shrink-0">
               {hint && <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{hint}</span>}
               <Dialog.Close

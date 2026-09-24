@@ -1351,7 +1351,8 @@
   },
   "filter": {
     "all": "All",
-    "clear_all": "Clear All"
+    "clear_all": "Clear All",
+    "clear_one": "Clear the {{name}} filter"
   },
   "death_sync": {
     "title": "Death Sync",
