@@ -225,8 +225,10 @@ class Realm(AuditUserFields, models.Model):
 class SoulPathEntry(models.Model):
     """灵魂行程的一站:进入某个界域的时刻,和离开的时刻(还在就是 null)。
 
-    行只由 `apps.realms.path.SoulPathService` 写,在各流程自己的事务里。**不回填**:
-    本表出现之前的移动没有可信的进入时间,编一个就是伪造行程。
+    行由 `apps.realms.path.SoulPathService` 写,在各流程自己的事务里。本表出现之前的
+    移动没有可信的进入时间,不回填;唯一的例外是死亡那一站(2026-09-25 用户决定):
+    `manage.py backfill_soul_entry_path` 按记录的死亡日期,给还没有任何一站的亡魂
+    写入口界域,离开时间留空。
 
     `tenant` 是这一站发生在哪个租户(界域所在的租户),不是灵魂的原属 —— 暂居在外时
     的那几站属于暂居地。读路径用 `scope_to_tenant`,与处置同一规则(含暂居只读例外)。
