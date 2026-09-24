@@ -80,7 +80,7 @@ def _enter_judgment_realm(soul, judgment):
     since moved on. Only ORIGINAL: an AMENDMENT is heard while the soul serves
     a sentence plan stop, and a REOPEN while it is DISPOSED — in both the soul
     is in its sentence realm, and whether a retrial walks it back to a court is
-    an open question (cloud-reports/realm-path-fields.md), not something to
+    an open question (云端报告 realm-path-fields(已移出仓库,存于项目记忆目录)), not something to
     decide here. A case with no realm writes nothing.
     """
     from apps.judgment.models import JudgmentKind
