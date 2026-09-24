@@ -11185,6 +11185,78 @@ paths:
               schema:
                 $ref: '#/components/schemas/Soul'
           description: ''
+  /api/v1/souls/batch-recycle/:
+    post:
+      operationId: v1_souls_batch_recycle_create
+      description: |-
+        Move several souls to the recycle bin — all of them, or none.
+
+        EACH SOUL GOES THROUGH EXACTLY WHAT destroy() DOES. The soul is
+        reached through get_queryset() (tenant scope, DataScope, not deleted,
+        not archived), checked with check_object_permissions() — the two
+        halves of get_object() — and deleted with
+        Soul.delete_with_cascade(), so the cascade to records and pending
+        judgments, the shared cascade id and the audit rows written by the
+        post_save signals are the single path's, not a copy of them.
+
+        REFUSE-ALL, NOT PER-ID RESULTS. The single delete has two outcomes
+        besides success: 404 when the soul is not reachable (another tenant's,
+        outside the caller's data scope, already deleted, archived, or
+        nonexistent — indistinguishable on purpose) and 409 with
+        `archivable` when it has a concluded judgment. The batch reports the
+        same two, with the same statuses, for the whole request:
+
+          * 404 `not_found` — some ids are not reachable. Checked before any
+            write. The listed ids are the caller's own input, so this says
+            nothing the single endpoint's 404 would not.
+          * 409 `not_deletable` — some souls have a concluded judgment. Every
+            soul is attempted inside one transaction so that ALL blocked ids
+            are reported, then the transaction is rolled back.
+
+        Per-id results were rejected: a 207-style body makes "3 of 5 moved"
+        a success the bar has to notice and explain, and it would turn a
+        cross-tenant id into a partial success next to real deletions. The
+        caller asked for one action on one selection; it either happened or
+        the selection is wrong, and the body names every id that makes it so.
+
+        Before either: 403 without `soul.delete` (destroy's codename), and 400
+        with DRF field errors for an empty list, more than 100 ids, a
+        non-UUID, a duplicate id, or a reason over 500 characters.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulBatchRecycle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulBatchRecycle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulBatchRecycle'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulBatchRecycleResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulBatchRecycleError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulBatchRecycleError'
+          description: ''
   /api/v1/tenants/:
     get:
       operationId: v1_tenants_list
@@ -20776,6 +20848,83 @@ components:
       - soul_code
       - soul_name
       - username
+    SoulBatchRecycle:
+      type: object
+      description: Request body of `POST /souls/batch-recycle/`.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+          minItems: 1
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - ids
+    SoulBatchRecycleEntry:
+      type: object
+      description: One recycled soul. `cascade_id` is what `/recycle-bin/restore/`
+        takes.
+      properties:
+        id:
+          type: string
+          format: uuid
+        cascade_id:
+          type: string
+          format: uuid
+      required:
+      - cascade_id
+      - id
+    SoulBatchRecycleError:
+      type: object
+      description: |-
+        404 / 409 body of `POST /souls/batch-recycle/`. Nothing was recycled.
+
+        `error` is the same key the single delete's 409 uses; `code` is added so a
+        client can branch without parsing prose. `ids` are the offending ones —
+        every one of them, not just the first, so one round trip fixes the
+        selection. `archivable` is present on 409 only, as on the single delete.
+      properties:
+        code:
+          $ref: '#/components/schemas/SoulBatchRecycleErrorCodeEnum'
+        error:
+          type: string
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        archivable:
+          type: boolean
+      required:
+      - code
+      - error
+      - ids
+    SoulBatchRecycleErrorCodeEnum:
+      enum:
+      - not_found
+      - not_deletable
+      type: string
+      description: |-
+        * `not_found` - not_found
+        * `not_deletable` - not_deletable
+    SoulBatchRecycleResult:
+      type: object
+      description: 200 body of `POST /souls/batch-recycle/`, in request order.
+      properties:
+        recycled:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulBatchRecycleEntry'
+      required:
+      - recycled
+      - results
     SoulCard:
       type: object
       description: 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。

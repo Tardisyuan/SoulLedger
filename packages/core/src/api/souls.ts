@@ -1,8 +1,12 @@
+import axios from "axios";
 import { api } from "./client";
 import type { PaginatedResponse } from "./users";
 import type { LedgerSummary } from "./ledger";
 import type { HistoricalDate } from "../domain/dates";
 import type { CivilizationOption } from "@soulledger/core/config/civilizations";
+import type { components } from "./generated/schema";
+
+type Schemas = components["schemas"];
 
 export interface SoulInput {
   name: string;
@@ -150,6 +154,60 @@ export interface SoulRecordEntry {
 // ledger row — a soul record is SoulRecordEntry above.
 export type SoulRecord = Soul;
 
+/**
+ * Body of POST /souls/batch-recycle/ — 1 to 100 distinct soul ids.
+ *
+ * `reason` is optional on the wire (`required: [ids]` in the schema) but the
+ * generated type makes it required: openapi-typescript treats a field with a
+ * `default` as always present, which is true of the backend's validated data,
+ * not of what a client must send. So it is loosened here, and only here.
+ */
+export type SoulBatchRecycleRequest = Omit<Schemas["SoulBatchRecycle"], "reason"> &
+  Partial<Pick<Schemas["SoulBatchRecycle"], "reason">>;
+/** 200 body: every id recycled, in request order, each with its own cascade id. */
+export type SoulBatchRecycleResult = Schemas["SoulBatchRecycleResult"];
+/**
+ * 404 / 409 body. The batch is all-or-nothing: on either status NOTHING was
+ * recycled, and `ids` names every offending id. 400 (malformed, empty, over
+ * 100, duplicate ids) is DRF's ordinary field-error body, not this shape.
+ */
+export type SoulBatchRecycleError = Schemas["SoulBatchRecycleError"];
+
+/**
+ * The `code`s a refused batch carries — `not_found` (404: another tenant's,
+ * already deleted, archived or nonexistent; indistinguishable, as on the single
+ * delete) and `not_deletable` (409: a concluded judgment; `archivable` says
+ * archive is the way). Checked both ways against the generated enum below.
+ */
+export const SOUL_BATCH_RECYCLE_ERROR_CODES = [
+  "not_found",
+  "not_deletable",
+] as const satisfies readonly Schemas["SoulBatchRecycleErrorCodeEnum"][];
+
+export type SoulBatchRecycleErrorCode = (typeof SOUL_BATCH_RECYCLE_ERROR_CODES)[number];
+
+// The reverse direction `satisfies` cannot give: a code the backend adds and
+// this list lacks is a compile error here, not a silently unhandled branch.
+const _everyBatchRecycleCodeIsListed: Record<Schemas["SoulBatchRecycleErrorCodeEnum"], SoulBatchRecycleErrorCode> = {
+  not_found: "not_found",
+  not_deletable: "not_deletable",
+};
+void _everyBatchRecycleCodeIsListed;
+
+/**
+ * The refusal body of a failed `batchRecycle`, or `null` when the failure is
+ * anything else (400 field errors, 403, network). Reads `code` rather than the
+ * status so a 404 from a proxy is not mistaken for a named-ids refusal.
+ */
+export function soulBatchRecycleErrorOf(error: unknown): SoulBatchRecycleError | null {
+  if (!axios.isAxiosError(error)) return null;
+  const data = error.response?.data as Partial<SoulBatchRecycleError> | undefined;
+  if (!data || !Array.isArray(data.ids)) return null;
+  return (SOUL_BATCH_RECYCLE_ERROR_CODES as readonly unknown[]).includes(data.code)
+    ? (data as SoulBatchRecycleError)
+    : null;
+}
+
 export const soulsApi = {
   list: (params?: {
     page?: number;
@@ -170,6 +228,9 @@ export const soulsApi = {
   create: (data: object) => api.post<Soul>("/souls/", data),
   update: (id: string, data: Partial<SoulInput>) => api.patch<Soul>(`/souls/${id}/`, data),
   delete: (id: string) => api.delete<void>(`/souls/${id}/`),
+  // All or nothing — see SoulBatchRecycleError. Same codename as `delete`.
+  batchRecycle: (data: SoulBatchRecycleRequest) =>
+    api.post<SoulBatchRecycleResult>("/souls/batch-recycle/", data),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
   karma: (id: string) => api.get<LedgerSummary>(`/souls/${id}/karma/`),
