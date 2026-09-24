@@ -348,3 +348,30 @@ def unfollow(user, target_id):
         raise _not_found()
     FollowService.unfollow(user, target, tenant)
     return target
+
+
+DISPLAY_NAME_MIN = 2
+DISPLAY_NAME_MAX = 20
+
+
+def rename(user, display_name):
+    """改朋友圈显示名(2026-09-24 用户决定)。显示名是 `User.display_name` 本身 —— 名片、
+    搜索、主页读的都是它,所以没有第二份。
+
+    * 敏感词**直接拒**,不走「先发后审」:名字出现在别人的每一条动态流里,
+      不存在「审核通过前只有本人看得见」的名字。
+    * 同文明另一个本世灵魂已经叫这个名字(不分大小写)→ 拒:防冒名。前世账号不占名。
+    """
+    tenant = ensure_can_write(user)
+    name = (display_name or "").strip()
+    if not DISPLAY_NAME_MIN <= len(name) <= DISPLAY_NAME_MAX:
+        raise SocialError("显示名要 2 到 20 个字。", "display_name_length", 400)
+    from apps.social.moderation import hits_sensitive_word
+
+    if hits_sensitive_word(tenant, name):
+        raise SocialError("显示名含有不允许的词。", "display_name_sensitive", 400)
+    if souls_in(tenant).exclude(pk=user.pk).filter(display_name__iexact=name).exists():
+        raise SocialError("本文明已有灵魂叫这个名字。", "display_name_taken", 409)
+    user.display_name = name
+    user.save(update_fields=["display_name"])
+    return user

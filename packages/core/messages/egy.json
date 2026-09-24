@@ -2358,7 +2358,10 @@
       "comment": {
         "pending": "Nen Menkh Djer",
         "hint": "Sesh Wesheb…",
-        "send": "Hab"
+        "send": "Hab",
+        "reply": "Weshed",
+        "reply_to": "Weshed {{name}}",
+        "more": "Wesheb Aa"
       },
       "muted": {
         "body": "Gerh Ek: Nen Medu, Nen Wesheb. Sesh Er Wesekhet Wenen.",
@@ -2397,7 +2400,14 @@
       },
       "me": {
         "title": "Per Ba Ek",
-        "display_name": "Ren Shemsu"
+        "display_name": "Ren Shemsu",
+        "edit_name": "Wehem Ren",
+        "name_save": "Sau",
+        "name_hint": "Ren 2–20. Nen Ren Ky Em Taui Pen.",
+        "name_saved": "Ren Sau Seth",
+        "name_length": "Ren 2–20.",
+        "name_sensitive": "Medu Djeseru Em Ren Pen.",
+        "name_taken": "Ren Pen Em Ba Ky Em Taui Pen."
       },
       "list": {
         "following_title": "Nehes {{n}}",
@@ -2424,6 +2434,13 @@
         "count": "Ba {{n}}",
         "not_found": "Nen Gem",
         "result_note": "Ren Hena Taui Wa."
+      },
+      "delete": {
+        "action": "Fekh",
+        "confirm": "Fekh",
+        "post_title": "Fekh Medu Pen?",
+        "comment_title": "Fekh Wesheb Pen?",
+        "body": "Ky Nen Maa. Nen Wehem Djer."
       }
     }
   },

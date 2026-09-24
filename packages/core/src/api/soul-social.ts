@@ -34,6 +34,9 @@ export type PaginatedSoulCards = Schemas["PaginatedSoulCards"];
  * (`not_found`, `account_retired`). `muted` also carries `muted_until`.
  */
 export const SOUL_SOCIAL_ERROR_CODES = [
+  "display_name_length",
+  "display_name_sensitive",
+  "display_name_taken",
   "eternal_light_locked",
   "muted",
   "not_author",
@@ -74,6 +77,13 @@ export const soulSocialApi = {
     soulHttp.post<SoulReactionState>(`/me/social/posts/${postId}/reaction/`, { reaction_type }).then((r) => r.data),
   /** Display name (contains) or soul code (exact). The code is never returned. */
   search: (q: string) => get<SoulSearchResult[]>("/me/social/search/", { q }),
+  /**
+   * Change this soul's circle display name. Refusals, all leaving the old name in place:
+   * 400 `display_name_length` (2–20 after trim), 400 `display_name_sensitive` (never saved
+   * as pending), 409 `display_name_taken` (another current soul here has it, any case).
+   */
+  rename: (display_name: string) =>
+    soulHttp.patch<SoulCard>("/me/social/profile/", { display_name }).then((r) => r.data),
   profile: (userId: number) => get<SoulProfile>(`/me/social/users/${userId}/`),
   follow: (userId: number) => soulHttp.post(`/me/social/users/${userId}/follow/`).then(() => true),
   unfollow: (userId: number) => soulHttp.delete(`/me/social/users/${userId}/follow/`).then(() => false),

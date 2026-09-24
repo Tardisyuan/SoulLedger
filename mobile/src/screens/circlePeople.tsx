@@ -6,6 +6,7 @@
  * soul code (not even one found by its code), a past life has no follow button
  * and no "⋯", and search answers every miss with the same one sentence.
  */
+import { soulErrorCode } from "@soulledger/core/api/soul";
 import { soulChatErrorMessage } from "@soulledger/core/api/soul-chat";
 import {
   soulSocialApi,
@@ -29,7 +30,7 @@ import { useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
-import { Button, Empty, Notice, Screen, Skeleton, SmallButton, Txt, useLayout, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, Screen, Skeleton, SmallButton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PostList, useFailure, useFeed } from "./circle";
 import { Glyph, Tag } from "./letters";
@@ -255,6 +256,71 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
 
 // ── me ─────────────────────────────────────────────────────────────────
 
+/** The server's refusals for a new name (soul_circle.rename); each leaves the old name in place. */
+const RENAME_REFUSALS: Record<string, string> = {
+  display_name_length: "soul_app.circle.me.name_length",
+  display_name_sensitive: "soul_app.circle.me.name_sensitive",
+  display_name_taken: "soul_app.circle.me.name_taken",
+};
+
+/** Editing my circle name in place. The rules are the server's; a refusal is said under the field. */
+function RenameField({ value, onChange, onDone, onCancel }: { value: string; onChange: (v: string) => void; onDone: () => void; onCancel: () => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const fail = useFailure();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const input = useRef<TextInput>(null);
+  const save = async (text: string) => {
+    if (busy) return;
+    setBusy(true);
+    setRefusal(null);
+    try {
+      await soulSocialApi.rename(text.trim());
+      toast(tr("soul_app.circle.me.name_saved"), "success");
+      onDone();
+    } catch (e) {
+      setBusy(false);
+      const code = soulErrorCode(e);
+      if (code && code in RENAME_REFUSALS) setRefusal(RENAME_REFUSALS[code]);
+      else fail(e);
+    }
+  };
+  const { press, onEndEditing } = useCommittedSend(input, value, (text) => void save(text));
+  return (
+    <View testID="rename" style={styles.rename}>
+      <TextInput
+        ref={input}
+        testID="name-input"
+        accessibilityLabel={tr("soul_app.circle.me.display_name")}
+        value={value}
+        onChangeText={(v) => {
+          onChange(v);
+          setRefusal(null);
+        }}
+        onEndEditing={onEndEditing}
+        autoFocus
+        maxLength={20}
+        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.hair2, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(value) }]}
+      />
+      {refusal ? (
+        <Txt testID="name-refusal" variant="caption" tone="negInk" accessibilityRole="alert">
+          {tr(refusal)}
+        </Txt>
+      ) : (
+        <Txt variant="caption" tone="subtle">
+          {tr("soul_app.circle.me.name_hint")}
+        </Txt>
+      )}
+      <View style={styles.row}>
+        <Button testID="name-save" title={tr("soul_app.circle.me.name_save")} onPress={press} busy={busy} disabled={!value.trim()} style={styles.fill} />
+        <Button testID="name-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={onCancel} style={styles.fill} />
+      </View>
+    </View>
+  );
+}
+
 export function MyCircleScreen() {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -264,6 +330,10 @@ export function MyCircleScreen() {
   const me = useRemote(useCallback(async () => soulSocialApi.profile((await soulSocialApi.status()).user_id), []));
   const feed = useFeed({ author: me.data?.user_id ?? 0 }, !!me.data);
   const mine = me.data ? feed : null;
+  // A post deleted from its own page comes back here.
+  useReloadOnRefocus(feed.reload);
+  /** The name being edited; null when not editing. */
+  const [name, setName] = useState<string | null>(null);
 
   return (
     <Screen edges={["left", "right"]} testID="my-circle" refreshing={me.loading && !!me.data} onRefresh={() => void Promise.all([me.reload(), feed.reload()])}>
@@ -282,13 +352,22 @@ export function MyCircleScreen() {
           <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
             <View style={styles.row}>
               <Glyph text={me.data.display_name} tone="muted" size={60} />
-              <View style={styles.fill}>
+              <Pressable
+                testID="edit-name"
+                accessibilityRole="button"
+                accessibilityLabel={`${tr("soul_app.circle.me.display_name")} · ${tr("soul_app.circle.me.edit_name")}`}
+                disabled={name !== null}
+                onPress={() => setName(me.data?.display_name ?? "")}
+                style={styles.fill}
+              >
                 <Txt variant="title">{me.data.display_name}</Txt>
                 <Txt variant="caption" tone="subtle">
                   {tr("soul_app.circle.me.display_name")}
+                  {name === null ? ` · ${tr("soul_app.circle.me.edit_name")}` : ""}
                 </Txt>
-              </View>
+              </Pressable>
             </View>
+            {name !== null ? <RenameField value={name} onChange={setName} onDone={() => { setName(null); void me.reload(); }} onCancel={() => setName(null)} /> : null}
             <View style={[styles.countBox, { borderColor: t.hair }]}>
               <Count testID="my-following" n={me.data.following_count} label={tr("soul_app.circle.profile.following")} onPress={() => navigation.navigate("CircleFollows", { relation: "following" })} />
               <Count testID="my-followers" n={me.data.followers_count} label={tr("soul_app.circle.profile.followers")} onPress={() => navigation.navigate("CircleFollows", { relation: "followers" })} />
@@ -629,4 +708,6 @@ const styles = StyleSheet.create({
   dotInner: { width: 8, height: 8, borderRadius: 999 },
   detail: { minHeight: 86, borderWidth: 1, padding: 12, fontSize: 13.5, lineHeight: 21, textAlignVertical: "top" },
   submit: { marginTop: 18 },
+  rename: { gap: 8 },
+  nameInput: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 16 },
 });

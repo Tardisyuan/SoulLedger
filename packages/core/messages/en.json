@@ -2358,7 +2358,10 @@
       "comment": {
         "pending": "Pending",
         "hint": "Write a comment…",
-        "send": "Send"
+        "send": "Send",
+        "reply": "Reply",
+        "reply_to": "Reply to {{name}}",
+        "more": "More comments"
       },
       "muted": {
         "body": "You are muted: no posts or comments until then. Letters to the hall are not affected.",
@@ -2397,7 +2400,14 @@
       },
       "me": {
         "title": "My page",
-        "display_name": "Circle name"
+        "display_name": "Circle name",
+        "edit_name": "Edit",
+        "name_save": "Save",
+        "name_hint": "2 to 20 characters. No other soul in this civilization may already have it.",
+        "name_saved": "Name changed",
+        "name_length": "A name is 2 to 20 characters.",
+        "name_sensitive": "That name contains a word that is not allowed. Try another.",
+        "name_taken": "Another soul in this civilization already has that name."
       },
       "list": {
         "following_title": "{{n}} following",
@@ -2424,6 +2434,13 @@
         "count": "{{n}} souls",
         "not_found": "Not found",
         "result_note": "Results show only a name and civilization mark."
+      },
+      "delete": {
+        "action": "Delete",
+        "confirm": "Delete",
+        "post_title": "Delete this post?",
+        "comment_title": "Delete this comment?",
+        "body": "Once deleted, others can no longer see it, and it cannot be brought back."
       }
     }
   },
