@@ -849,14 +849,15 @@ describe("the fourth tab", () => {
     await screen.findByTestId("tab-Life");
   }
 
-  it("书信 is the fourth tab; 转生申请's tab reads 转生 while its screen keeps the full name", async () => {
+  it("four tabs: 本世 / 转生 / 书信 / 朋友圈 — 前世 is no tab; 转生申请's tab reads 转生 while its screen keeps the full name", async () => {
     jest.restoreAllMocks(); // real time: the navigator's own timers
     await signedIn({
       "/me/chat/conversations/": { status: 200, data: [] },
       "/me/chat/session/": { status: 503, data: { code: "chat_unavailable" } },
     });
-    const labels = ["tab-Life", "tab-PastLives", "tab-Applications", "tab-Letters"].map((id) => screen.getByTestId(id).props.accessibilityLabel);
-    expect(labels).toEqual(["本世", "前世", "转生", "书信"]);
+    const tabs = screen.getAllByRole("tab").map((tab) => tab.props.accessibilityLabel);
+    expect(tabs).toEqual(["本世", "转生", "书信", "朋友圈"]);
+    expect(screen.queryByTestId("tab-PastLives")).toBeNull();
     fireEvent.press(screen.getByTestId("tab-Applications"));
     expect(await screen.findByText("转生申请")).toBeTruthy();
   });

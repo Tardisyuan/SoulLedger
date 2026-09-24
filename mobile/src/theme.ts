@@ -53,9 +53,14 @@ export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
   },
 };
 
+/**
+ * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
+ * one reaction and nowhere else in the app. The handoff draws dark only
+ * (oklch 0.860 0.110 85 on 0.230 0.030 80); the light pair is ours, same hue.
+ */
 export const semantic = {
-  dark: { pos: "#82CB92", neg: "#F4928A", negStrong: "#C25D58", negInk: "#FED2CD", negBg: "#301715" },
-  light: { pos: "#197037", neg: "#AC3031", negStrong: "#C13C3B", negInk: "#94151D", negBg: "#FFEDEB" },
+  dark: { pos: "#82CB92", neg: "#F4928A", negStrong: "#C25D58", negInk: "#FED2CD", negBg: "#301715", lamp: "#F2CC7A", lampBg: "#241B0C" },
+  light: { pos: "#197037", neg: "#AC3031", negStrong: "#C13C3B", negInk: "#94151D", negBg: "#FFEDEB", lamp: "#845A0F", lampBg: "#FBF1DC" },
 } as const;
 
 /** pt. `space[5]` (20) is the screen gutter. */
@@ -84,6 +89,8 @@ export interface Theme {
   negStrong: string;
   negInk: string;
   negBg: string;
+  lamp: string;
+  lampBg: string;
 }
 
 export function civKeyOf(civilization: string | null | undefined): CivKey {

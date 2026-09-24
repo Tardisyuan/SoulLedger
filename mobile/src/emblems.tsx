@@ -101,7 +101,10 @@ export type IconName =
   | "plus"
   | "search"
   | "send"
-  | "clock";
+  | "clock"
+  | "circle"
+  | "lamp"
+  | "lampLit";
 
 const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   ledger: { box: 16, body: [<Rect key="a" x={3} y={2.5} width={10} height={11} />, <Path key="b" d="M5.5 2.5v11M3 6.5h10" />] },
@@ -130,12 +133,30 @@ const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   search: { box: 18, body: [<Circle key="a" cx={8} cy={8} r={5.5} />, <Path key="b" d="M12 12l4 4" />] },
   send: { box: 20, body: <Path d="M3 17L17 10 3 3v5.5L11 10l-8 1.5z" /> },
   clock: { box: 12, body: [<Circle key="a" cx={6} cy={6} r={4.6} />, <Path key="b" d="M6 3.4V6l1.8 1.3" />] },
+  // 朋友圈 handoff: the tab (two souls), and the eternal light — unlit, and lit (the flame filled).
+  circle: {
+    box: 16,
+    body: [
+      <Circle key="a" cx={5.5} cy={5.5} r={2.3} />,
+      <Circle key="b" cx={10.5} cy={5.5} r={2.3} />,
+      <Path key="c" d="M1.5 13.5c.6-2.3 2-3.5 4-3.5s3.4 1.2 4 3.5M9.5 10.2c.3-.1.6-.2 1-.2 2 0 3.4 1.2 4 3.5" />,
+    ],
+  },
+  lamp: { box: 16, body: [<Path key="a" d="M8 2.2c1.6 1.9 2.2 3.1 2.2 4.2a2.2 2.2 0 01-4.4 0c0-1.1.6-2.3 2.2-4.2z" />, <Path key="b" d="M4.5 10.5h7M5.5 10.5l.8 3.3h3.4l.8-3.3" />] },
+  // The one filled glyph: the lit flame takes the stroke colour (`currentColor`, set on the Svg).
+  lampLit: {
+    box: 16,
+    body: [
+      <Path key="a" d="M8 2.2c1.6 1.9 2.2 3.1 2.2 4.2a2.2 2.2 0 01-4.4 0c0-1.1.6-2.3 2.2-4.2z" fill="currentColor" />,
+      <Path key="b" d="M4.5 10.5h7M5.5 10.5l.8 3.3h3.4l.8-3.3" />,
+    ],
+  },
 };
 
 export function Icon({ name, size, color, strokeWidth = 1.3 }: { name: IconName; size: number; color: string; strokeWidth?: number }) {
   const icon = ICONS[name];
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${icon.box} ${icon.box}`} fill="none" stroke={color} strokeWidth={strokeWidth}>
+    <Svg width={size} height={size} viewBox={`0 0 ${icon.box} ${icon.box}`} fill="none" stroke={color} color={color} strokeWidth={strokeWidth}>
       {icon.body}
     </Svg>
   );

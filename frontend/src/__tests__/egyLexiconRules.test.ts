@@ -33,7 +33,7 @@
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4、小词 18 个,
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 21、小词 18 个,
  *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
@@ -237,11 +237,20 @@ const ROOTS_FINAL = [
  * Khetem 结案与失败无关;Menmen(连续)为新词,与 Wehem(再一次)分开。
  */
 const ROOTS_LATE = ["Hab-Ba", "Kheper", "Khetem", "Menmen"];
+/**
+ * 灵魂端 App 新增词根(一之八,21 个):书信 6、受刑 6、朋友圈 9。并表时与已定词根冲突的 8 处已按定稿改写
+ * (关注 Mehy → Nehes、念 Ib-Aa → Sekha、表态 Ib-Djed → Sehed、互关复用 Senb、可见范围 Aat Maa 不新造……)。
+ */
+const ROOTS_APP = [
+  "Shemes", "Hen", "Sedja", "Weshed", "Senb", "Ates",
+  "Shepet", "Sekhet-Shepet", "Ahau", "Nedj", "Wetep-Neb", "Khemen-Shepet",
+  "Sehed", "Hai", "Sekha", "Dua", "Iakeb", "Khabes", "Nehes", "Nehesu", "Wen-Neb",
+];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的

@@ -1,4 +1,4 @@
-import { soulApi, soulErrorMessage, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
+import { soulApi, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
@@ -27,7 +27,6 @@ import {
   GUTTER,
   Hairline,
   Screen,
-  ScreenError,
   Section,
   SectionError,
   Skeleton,
@@ -414,12 +413,14 @@ export function MyLifeScreen() {
     dispositions: false,
     applications: false,
   });
+  const [refreshes, setRefreshes] = useState(0);
   if (state.status !== "signedIn") return null;
   const me = state.profile;
   const unrecorded = t("common.value.unrecorded");
 
   const refresh = () => {
     void life.reload();
+    setRefreshes((n) => n + 1);
     refreshProfile().catch(() => {});
   };
 
@@ -456,6 +457,7 @@ export function MyLifeScreen() {
           <Skeleton lines={4} testID="life-loading" />
         </Block>
       )}
+      <PastLivesSection lex={residence.home} reloadKey={refreshes} />
       {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
       <View style={styles.foot}>
         <EmblemDivider />
@@ -513,53 +515,56 @@ function PastLife({ life, open, onToggle, lex }: { life: MeLife; open: boolean; 
   );
 }
 
-export function PastLivesScreen() {
+/**
+ * 前世, folded into the life tab as its last section (朋友圈 handoff 1a: the tab
+ * went to 朋友圈). Closed until asked for; its lives open one at a time, sealed.
+ */
+export function PastLivesSection({ lex, reloadKey }: { lex: CivKey; reloadKey: number }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const lives = useRemote(soulApi.pastLives);
-  const residence = useResidence();
-  const { gutter } = useLayout();
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
-  if (lives.error && !lives.data) {
-    return (
-      <Screen scroll={false} edges={["left", "right"]}>
-        <ScreenError error={soulErrorMessage(lives.error)} onRetry={lives.reload} />
-      </Screen>
-    );
-  }
+  const { reload } = lives;
+  useEffect(() => {
+    if (reloadKey) void reload();
+  }, [reloadKey, reload]);
   return (
-    <Screen refreshing={lives.loading && !!lives.data} onRefresh={lives.reload} edges={["left", "right"]}>
-      <View style={[styles.readOnly, { paddingHorizontal: gutter, backgroundColor: t.s1, borderBottomColor: t.hair }]}>
-        <View style={styles.nudge}>
-          <Icon name="lock" size={15} color={t.inkSubtle} strokeWidth={1.2} />
-        </View>
-        <Txt variant="caption" tone="muted" style={styles.fill}>
-          {tr(lexiconKey(residence.home, "past_read_only"))}
-        </Txt>
-      </View>
-      {!lives.data ? (
-        <Block>
-          <Skeleton lines={3} />
-        </Block>
+    <Section
+      testID="section-past_lives"
+      title={tr("soul_app.past_lives.title")}
+      count={lives.data ? (lives.data.length ? String(lives.data.length) : tr("soul_app.common.empty")) : undefined}
+      open={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+    >
+      {lives.error && !lives.data ? (
+        <SectionError testID="past-lives-error" onRetry={lives.reload} />
+      ) : !lives.data ? (
+        <Skeleton lines={3} />
       ) : lives.data.length === 0 ? (
-        <Empty testID="past-lives-empty" text={tr(lexiconKey(residence.home, "no_past_lives"))} />
+        <Empty testID="past-lives-empty" text={tr(lexiconKey(lex, "no_past_lives"))} />
       ) : (
-        <FadeIn>
+        <View style={[styles.pastList, { borderColor: t.hair }]}>
           {[...lives.data].reverse().map((life) => (
             <PastLife
               key={life.cycle}
               life={life}
               open={open === life.cycle}
               onToggle={() => setOpen((o) => (o === life.cycle ? null : life.cycle))}
-              lex={residence.home}
+              lex={lex}
             />
           ))}
-          <Txt variant="caption" tone="subtle" style={styles.end}>
-            {tr("soul_app.past_lives.end")}
-          </Txt>
-        </FadeIn>
+          <View style={[styles.readOnly, { backgroundColor: t.s1 }]}>
+            <View style={styles.nudge}>
+              <Icon name="lock" size={15} color={t.inkSubtle} strokeWidth={1.2} />
+            </View>
+            <Txt variant="caption" tone="subtle" style={styles.fill}>
+              {tr(lexiconKey(lex, "past_read_only"))} {tr("soul_app.past_lives.end")}
+            </Txt>
+          </View>
+        </View>
       )}
-    </Screen>
+    </Section>
   );
 }
 
@@ -599,14 +604,14 @@ const styles = StyleSheet.create({
   score: { flex: 1, paddingHorizontal: GUTTER, paddingVertical: 18, gap: 4 },
   scoreLabel: { letterSpacing: 1.8 },
   foot: { paddingTop: 26, paddingBottom: 34 },
-  readOnly: { flexDirection: "row", gap: 9, paddingHorizontal: GUTTER, paddingVertical: 14, borderBottomWidth: 1 },
+  readOnly: { flexDirection: "row", gap: 9, paddingHorizontal: 14, paddingVertical: 12 },
+  pastList: { borderWidth: 1 },
   nudge: { marginTop: 3 },
   pastLife: { borderBottomWidth: 1, opacity: 0.92 },
-  pastHead: { flexDirection: "row", alignItems: "flex-start", gap: 14, paddingHorizontal: GUTTER, paddingVertical: 18 },
+  pastHead: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
   pastNo: { paddingTop: 4, letterSpacing: 0.8 },
-  sealed: { marginHorizontal: GUTTER, marginBottom: GUTTER, borderWidth: 1, paddingTop: 34 },
+  sealed: { marginHorizontal: 14, marginBottom: 14, borderWidth: 1, paddingTop: 34 },
   stamp: { position: "absolute", right: 12, top: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3 },
   stampText: { fontSize: 10, letterSpacing: 1.6 },
   sealedFoot: { paddingHorizontal: GUTTER, paddingVertical: 12 },
-  end: { textAlign: "center", paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 34 },
 });

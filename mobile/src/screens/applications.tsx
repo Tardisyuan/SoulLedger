@@ -46,8 +46,11 @@ import {
 import { useResidence } from "./life";
 
 export type AppStackParams = {
-  /** `screen` picks the tab (a push landing on the life tab). */
-  Tabs: { screen: "Life" | "PastLives" | "Applications" | "Letters" } | undefined;
+  /**
+   * `screen` picks the tab (a push landing on the life tab). The circle's
+   * `pendingId`: the post just sent went to review — the feed says so over it.
+   */
+  Tabs: { screen: "Life" | "Applications" | "Letters" | "Circle"; params?: { pendingId?: string } } | undefined;
   NewApplication: undefined;
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
@@ -56,6 +59,8 @@ export type AppStackParams = {
   /** `landed`: opened from a tapped notification — the newest letter from the other side is highlighted once. */
   Conversation: { id: string; landed?: boolean };
   FindSoul: undefined;
+  ComposePost: undefined;
+  CirclePost: { id: string };
 };
 
 /**

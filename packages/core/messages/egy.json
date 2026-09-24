@@ -2254,6 +2254,67 @@
         "invalid_code": "Ren Ba: Sesh 10.",
         "self": "Nen Sesh Er Ek Djes-Ef."
       }
+    },
+    "circle": {
+      "tab": "Shemsu",
+      "feed": {
+        "following": "Nehes",
+        "tenant": "Taui Pen",
+        "compose_hint": "Sesh Medu…",
+        "empty_title": "Nen Medu Djer",
+        "empty_body": "Nehes Ba Em Taui Pen; Medu-Sen Maa Dy. Sesh Medu Tepy.",
+        "write": "Sesh Medu",
+        "error": "Nen Ini Shemsu. Medu Ek Wenen; Nen Ini Djer Pen.",
+        "more": "Medu Tepyu"
+      },
+      "compose": {
+        "title": "Sesh Medu",
+        "visibility": "Aat Maa",
+        "vis": {
+          "public": "Wen-Neb",
+          "public_hint": "Ba Neb Em Taui Pen. Nen Er Taui Ky.",
+          "tenant": "Taui Pen",
+          "tenant_hint": "Ba Em Aq, Em Taui Pen.",
+          "followers": "Nehesu Wa",
+          "followers_hint": "Ba Nehes Ek.",
+          "private": "Wa-Ek",
+          "private_hint": "Wa-Ek."
+        },
+        "scope_note": "Shemsu Em Taui Emu Wa. Em Hemes: Taui Hemes.",
+        "submit": "Hab",
+        "pending_title": "Hab Seth; Nen Menkh Djer",
+        "pending_body": "Wa-Ek Maa Er Menkh. Er Khet Menkh: Maa Em Aat Maa Ek."
+      },
+      "post": {
+        "title": "Medu",
+        "reborn": "Wehem Mesut Seth",
+        "pending": "Nen Menkh Djer · Wa-Ek",
+        "pending_note": "Medu Djeseru Em. Ky Maa Er Khet Menkh. Nen Iri Ek.",
+        "hidden": "Imen Seth · Ky Nen Maa",
+        "hidden_note": "Wesekhet Imen Seth; Wa-Ek Maa.",
+        "comments": "Wesheb {{n}}"
+      },
+      "comment": {
+        "pending": "Nen Menkh Djer",
+        "hint": "Sesh Wesheb…",
+        "send": "Hab"
+      },
+      "muted": {
+        "body": "Gerh Ek: Nen Medu, Nen Wesheb. Sesh Er Wesekhet Wenen.",
+        "until": "Er {{time}}"
+      },
+      "react": {
+        "like": "Hai",
+        "love": "Sekha",
+        "respect": "Dua",
+        "sympathy": "Iakeb",
+        "eternal_light": "Khabes Djet",
+        "lamp_confirm_title": "Khabes Djet N {{name}}?",
+        "lamp_confirm_body": "Khabes Nen Sehen; Nen Khemen Er Sehed Ky.",
+        "lamp_locked": "Khabes Wen Seth · Nen Khemen",
+        "lamp_confirm": "Wen Khabes",
+        "lamp_cancel": "Nen Djer Pen"
+      }
     }
   },
   "soul_push": {

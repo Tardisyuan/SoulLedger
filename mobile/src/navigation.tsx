@@ -38,7 +38,8 @@ import {
 import { ChangePasswordScreen, LoginScreen } from "./screens/auth";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
-import { MyLifeScreen, PastLivesScreen } from "./screens/life";
+import { MyLifeScreen } from "./screens/life";
+import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
 import { ConversationScreen } from "./screens/conversation";
 import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
 
@@ -70,13 +71,16 @@ function MainTabs() {
                 onPress: () => navigation.navigate("FindSoul"),
               }}
             />
+          ) : route.name === "Circle" ? (
+            // 1a puts search and "my page" here (next round); settings stay on the life tab.
+            <AppHeader title={t(TAB_TITLES[route.name])} />
           ) : (
             <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
           ),
       })}
     >
+      {/* Four tabs (朋友圈 handoff 1a): 本世 / 转生 / 书信 / 朋友圈. 前世 is the life tab's last section now. */}
       <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life") }} />
-      <Tabs.Screen name="PastLives" component={PastLivesScreen} options={{ title: t("soul_app.tabs.past_lives") }} />
       {/* The tab is a signpost, the screen title the full name (chat handoff 1a): four two-character labels fit 98pt. */}
       <Tabs.Screen name="Applications" component={ApplicationsScreen} options={{ title: t("soul_app.tabs.rebirth") }} />
       {/* Not deployed here: no tab at all, rather than one that opens onto "not available" (1b). */}
@@ -87,6 +91,7 @@ function MainTabs() {
           options={{ title: t("soul_app.chat.tab"), tabBarBadge: unread ? t("soul_app.chat.unread") : undefined }}
         />
       )}
+      <Tabs.Screen name="Circle" component={CircleScreen} options={{ title: t("soul_app.circle.tab") }} />
     </Tabs.Navigator>
   );
 }
@@ -94,9 +99,9 @@ function MainTabs() {
 /** Each tab's screen title — the full name, even where the tab label is shortened. */
 const TAB_TITLES: Record<string, string> = {
   Life: "soul_app.tabs.life",
-  PastLives: "soul_app.tabs.past_lives",
   Applications: "soul_app.tabs.applications",
   Letters: "soul_app.chat.title",
+  Circle: "soul_app.circle.tab",
 };
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
@@ -105,6 +110,10 @@ function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDe
 
 function Conversation({ route }: NativeStackScreenProps<AppStackParams, "Conversation">) {
   return <ConversationScreen id={route.params.id} landed={route.params.landed} />;
+}
+
+function CirclePost({ route }: NativeStackScreenProps<AppStackParams, "CirclePost">) {
+  return <PostScreen id={route.params.id} />;
 }
 
 /** Notification ids already landed in this process. */
@@ -245,6 +254,20 @@ export function RootNavigator() {
               component={FindSoulScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.chat.find.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="ComposePost"
+              component={ComposePostScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.circle.compose.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="CirclePost"
+              component={CirclePost}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.circle.post.title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen
