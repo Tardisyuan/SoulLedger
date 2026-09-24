@@ -119,6 +119,35 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     kind = models.CharField(max_length=10, choices=JudgmentKind.choices, default=JudgmentKind.ORIGINAL)
     amends_plan_id = models.UUIDField(null=True, blank=True, db_index=True)
 
+    # 认领与暂缓(审判队列按「谁在办」分组)。**不是 `judge`**:`judge` 是神话里的审判者
+    # (一个 Actor),这两列是办这件案子的官员(一个 User)。
+    #
+    # 列在 Judgment 上而不是另起一张表:一件案子同一时刻只有一个认领人,认领竞争锁的
+    # 就是这一行(与结案读的是同一行),队列分组是单表谓词、不用子查询。历史不靠第二张表:
+    # 每次认领 / 释放 / 改派 / 暂缓都走 `save(update_fields=…)`,审计信号为它写一行带
+    # 前后值的 UPDATE(apps/audit/signals.py `_on_pre_save`);结案**不清**认领人,
+    # 所以已结案的案子仍答得出「最后是谁办的」。写入只经 `apps/judgment/claims.py`。
+    claimed_by = models.ForeignKey(
+        "authentication.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claimed_judgments",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    # 暂缓:持久化,与认领正交(暂缓不释放认领)。`deferred_at` 非空即在「暂缓」组,
+    # 且默认不出现在 `/judgment/next/`。理由必填,由 `JudgmentDeferSerializer` 在边界
+    # 上校验长度 —— 500 是列宽,PostgreSQL 会强制它而 SQLite 不会(见 CLAUDE.md)。
+    deferred_at = models.DateTimeField(null=True, blank=True)
+    deferred_by = models.ForeignKey(
+        "authentication.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="deferred_judgments",
+    )
+    defer_reason = models.CharField(max_length=500, blank=True, default="")
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Judgment"
@@ -129,6 +158,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
             models.Index(fields=["verdict"]),
             models.Index(fields=["is_final"]),
             models.Index(fields=["soul", "cycle"]),
+            models.Index(fields=["tenant", "deferred_at", "claimed_by"]),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager

@@ -942,7 +942,9 @@ def test_seeding_actually_moved_those_codenames_onto_the_db_path(unseeded_famili
     """
     from apps.perm.models import Permission
 
-    assert len(unseeded_families_seeded_in_db) == 14, unseeded_families_seeded_in_db
+    # 15 since 2026-09-24: `judgment.assign` (reassigning a queue case) joined
+    # the judgment family and is unseeded like the other three.
+    assert len(unseeded_families_seeded_in_db) == 15, unseeded_families_seeded_in_db
     for codename in unseeded_families_seeded_in_db:
         assert Permission.objects.filter(codename=codename).exists(), codename
 

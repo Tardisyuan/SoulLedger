@@ -286,6 +286,12 @@ DEFAULT_PERMISSIONS = [
     ("judgment.read", "查看审判", "judgment"),
     ("judgment.create", "创建审判", "judgment"),
     ("judgment.execute", "执行审判", "judgment"),
+    # 改派审判(队列认领,2026-09-24):把一件案子交给另一位官员,或替别人释放 / 暂缓。
+    # 分配别人的工作,比办案(judgment.execute)更严 —— 持有者 ADMIN、MODERATOR(殿主);
+    # JUDGE 不持有,审判官之间不能互相派活。与 judgment.* 其余三条一样不由迁移播种
+    # (走 ROLE_PERMISSIONS 的字典路径);部署库若已为 judgment.* 建了 Permission 行,
+    # 要同时给 MODERATOR 建这一条的 RolePermission,否则数据库路径对它答「无」。
+    ("judgment.assign", "改派审判", "judgment"),
     # disposition 权限（read + execute 二元，没有 disposition.manage）
     ("disposition.read", "查看处置", "disposition"),
     ("disposition.execute", "执行处置", "disposition"),
@@ -404,7 +410,7 @@ ROLE_PERMISSIONS = {
     "ADMIN": [
         "soul.read", "soul.create", "soul.update", "soul.delete", "soul.die", "soul.transition",
         "soul.correct_settlement",
-        "judgment.read", "judgment.create", "judgment.execute",
+        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign",
         "ledger.read", "ledger.manage",
         "reincarnation.read", "reincarnation.manage", "reincarnation.complete", "reincarnation.reborn",
         "disposition.read", "disposition.execute",
@@ -478,7 +484,7 @@ ROLE_PERMISSIONS = {
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete",
         "workflow.escalate",
         "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition",
-        "judgment.read", "judgment.create", "judgment.execute",
+        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign",
         "disposition.read", "disposition.execute",
         "reincarnation.read", "reincarnation.manage",
         "reincarnation.reborn", "reincarnation.complete",

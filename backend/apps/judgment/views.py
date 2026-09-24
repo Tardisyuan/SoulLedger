@@ -3,12 +3,14 @@ REST views for Judgment app.
 """
 import uuid
 
-from django.db.models import Count
+from django.db.models import Count, Q
 from django_filters import rest_framework as filters
+from django_filters.utils import translate_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
@@ -16,13 +18,22 @@ from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.judgment import claims
+from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import Judgment, Statute
 from apps.judgment.serializers import (
+    JudgmentBatchResultSerializer,
+    JudgmentBatchSerializer,
     JudgmentCitationSerializer,
     JudgmentCitationWriteSerializer,
+    JudgmentClaimRefusalSerializer,
     JudgmentConcludeSerializer,
+    JudgmentDeferSerializer,
+    JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
+    JudgmentReassignSerializer,
     JudgmentSerializer,
+    QueueGroup,
     StatuteSerializer,
 )
 from apps.judgment.services import (
@@ -46,14 +57,40 @@ from apps.souls.serializers import SoulSerializer
 QUEUE_SKIP_LIMIT = 200
 
 
+#: 「未结案」在队列里的定义。与 `_pending_queue` 同一组列,写一次。
+PENDING = Q(verdict__isnull=True, is_final=False, is_archived=False)
+
+
+def group_q(group: str, user) -> Q:
+    """一个队列组的谓词(不含 `PENDING`)。四个组互斥:暂缓优先,其余按认领人分。"""
+    not_deferred = Q(deferred_at__isnull=True)
+    if group == QueueGroup.MINE:
+        return not_deferred & Q(claimed_by=user)
+    if group == QueueGroup.UNCLAIMED:
+        return not_deferred & Q(claimed_by__isnull=True)
+    if group == QueueGroup.OTHERS:
+        return not_deferred & Q(claimed_by__isnull=False) & ~Q(claimed_by=user)
+    if group == QueueGroup.DEFERRED:
+        return Q(deferred_at__isnull=False)
+    raise ValueError(group)
+
+
 class JudgmentFilter(filters.FilterSet):
     """Custom filter for Judgment - handles verdict=null for pending judgments."""
     has_verdict = filters.BooleanFilter(field_name="verdict", lookup_expr="isnull", exclude=True)
     verdict_null = filters.BooleanFilter(field_name="verdict", lookup_expr="isnull")
+    # 队列分组。**隐含「未结案」**:「待认领」问的是还有谁没人办,一件已结案、认领人
+    # 为空的旧案子不在其中。
+    group = filters.ChoiceFilter(choices=QueueGroup.CHOICES, method="filter_group")
+    # 殿。`court` 是自由文本列(「第一殿」),按原值精确匹配。
+    court = filters.CharFilter(field_name="court", lookup_expr="exact")
 
     class Meta:
         model = Judgment
         fields = ["soul", "civilization", "verdict", "is_final"]
+
+    def filter_group(self, queryset, name, value):
+        return queryset.filter(PENDING & group_q(value, self.request.user))
 
 
 class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -103,15 +140,31 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'citations': ['judgment.read'],
         'cite_statute': ['judgment.execute'],
         'uncite': ['judgment.execute'],
+        # 认领 / 释放 / 暂缓 / 撤销暂缓是办案人对自己手上的案子做的事,与结案同一码名。
+        # 替别人释放或暂缓不另立码名:动作体里要求 `judgment.assign`(见 `_may_override`)。
+        'claim': ['judgment.execute'],
+        'release': ['judgment.execute'],
+        'defer': ['judgment.execute'],
+        'undefer': ['judgment.execute'],
+        # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN 与 MODERATOR
+        # (殿主)持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
+        'reassign': ['judgment.assign'],
+        # 批量:与单件同一码名。`operation=reassign` 在动作体里再要 `judgment.assign` ——
+        # 这里是静态表,看不见请求体。
+        'batch': ['judgment.execute'],
+        'queue_counts': ['judgment.read'],
     }
     queryset = (
         Judgment.objects
-        .select_related("soul", "soul__tenant", "tenant")
+        .select_related("soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by")
         .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
     )
     serializer_class = JudgmentSerializer
     filterset_class = JudgmentFilter
+    # 按灵魂名(包含)或 id(灵魂的或案子的,精确)搜。`=` 是 iexact,对 UUID 列
+    # 不经 `get_prep_value`,所以一个不是 UUID 的词只是匹配不到,不会 500。
+    search_fields = ["soul__name", "=soul__id", "=id"]
     # 暂居只读例外(apps/core/tenant.py)。不含 `next_pending`:那是待办队列,
     # 原属租户对暂居地的案子什么都做不了。
     residence_read_actions = ("list", "retrieve", "citations")
@@ -214,11 +267,12 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         opens a new proceeding, and the oldest pending case is the one that has
         been waiting longest.
         """
-        return (
-            self.get_queryset()
-            .filter(verdict__isnull=True, is_final=False, is_archived=False)
-            .order_by("created_at")
-        )
+        queue = self.get_queryset().filter(PENDING)
+        # 暂缓的案子默认不在队列里 —— 暂缓的意思就是「现在别递给我」。
+        # `?include_deferred=true` 显式要回它们(去「暂缓」组里处理某一件时)。
+        if self.request.query_params.get("include_deferred", "").lower() not in ("1", "true", "yes"):
+            queue = queue.filter(deferred_at__isnull=True)
+        return queue.order_by("created_at")
 
     @staticmethod
     def _requested_skips(request):
@@ -251,7 +305,17 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 break
         return seen
 
-    @extend_schema(responses=JudgmentQueueCursorSerializer)
+    @extend_schema(
+        responses=JudgmentQueueCursorSerializer,
+        parameters=[
+            OpenApiParameter(
+                "include_deferred",
+                OpenApiTypes.BOOL,
+                OpenApiParameter.QUERY,
+                description="Also hand out deferred (暂缓) cases. Off by default.",
+            ),
+        ],
+    )
     @action(detail=False, methods=["get"], url_path="next")
     def next_pending(self, request):
         """The next case to rule on, with everything needed to rule on it.
@@ -357,6 +421,171 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             realms.order_by("tier", "realm_code"), many=True, context=context
         ).data
         return Response(payload)
+
+    # ------------------------------------------------------------------
+    # Claim / release / reassign / defer (apps/judgment/claims.py)
+    # ------------------------------------------------------------------
+
+    def _may_override(self) -> bool:
+        """能替别人释放、暂缓、改派 —— 即持有 `judgment.assign`。"""
+        from apps.perm.checker import check_permission
+
+        return check_permission(self.request.user, "judgment.assign")
+
+    def _claim_response(self, run):
+        """跑一个认领类动作;拒绝转成带 `code` 的响应,成功返回案子本身。
+
+        `get_object()` 在前:它走 DataScopeViewSetMixin 的租户范围,别的租户的案子
+        在这里就是 404,根本到不了行锁。
+        """
+        judgment = self.get_object()
+        try:
+            updated = run(judgment.pk)
+        except ClaimRefusedError as exc:
+            return Response(exc.as_payload(), status=exc.status)
+        return Response(JudgmentSerializer(
+            self.get_queryset().get(pk=updated.pk), context=self.get_serializer_context()
+        ).data)
+
+    _CLAIM_RESPONSES = {200: JudgmentSerializer, 403: JudgmentClaimRefusalSerializer, 409: JudgmentClaimRefusalSerializer}
+
+    @extend_schema(request=None, responses=_CLAIM_RESPONSES)
+    @action(detail=True, methods=["post"])
+    def claim(self, request, pk=None):
+        """认领这件案子。已被别人认领 → 409 `already_claimed`;重复认领自己的 → 200,不写。"""
+        return self._claim_response(lambda pk: claims.claim(pk, request.user))
+
+    @extend_schema(request=None, responses=_CLAIM_RESPONSES)
+    @action(detail=True, methods=["post"])
+    def release(self, request, pk=None):
+        """释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。"""
+        override = self._may_override()
+        return self._claim_response(lambda pk: claims.release(pk, request.user, may_override=override))
+
+    @extend_schema(
+        request=JudgmentReassignSerializer,
+        responses={**_CLAIM_RESPONSES, 400: JudgmentClaimRefusalSerializer},
+    )
+    @action(detail=True, methods=["post"])
+    def reassign(self, request, pk=None):
+        """改派给同一租户里能办案的另一位官员。`{"to": <user id>}`。"""
+        serializer = JudgmentReassignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target = self._assignee(serializer.validated_data["to"])
+        return self._claim_response(lambda pk: claims.reassign(pk, target))
+
+    @extend_schema(request=JudgmentDeferSerializer, responses=_CLAIM_RESPONSES)
+    @action(detail=True, methods=["post"])
+    def defer(self, request, pk=None):
+        """暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。"""
+        serializer = JudgmentDeferSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reason = serializer.validated_data["reason"]
+        override = self._may_override()
+        return self._claim_response(
+            lambda pk: claims.defer(pk, request.user, reason, may_override=override)
+        )
+
+    @extend_schema(request=None, responses=_CLAIM_RESPONSES)
+    @action(detail=True, methods=["post"])
+    def undefer(self, request, pk=None):
+        """撤销暂缓,案子回到它按认领人所属的组。"""
+        override = self._may_override()
+        return self._claim_response(lambda pk: claims.undefer(pk, request.user, may_override=override))
+
+    @staticmethod
+    def _assignee(user_id):
+        """改派对象。找不到就是 None,由 `claims.assert_assignable` 答 400 —— 与「在别的
+        租户」同一句话,不在这里提前答出不同的状态码。"""
+        from apps.authentication.models import User
+
+        return User.objects.filter(pk=user_id).first()
+
+    @extend_schema(
+        request=JudgmentBatchSerializer,
+        responses={
+            200: JudgmentBatchResultSerializer,
+            400: JudgmentClaimRefusalSerializer,
+            403: JudgmentClaimRefusalSerializer,
+            404: JudgmentClaimRefusalSerializer,
+            409: JudgmentClaimRefusalSerializer,
+        },
+    )
+    @action(detail=False, methods=["post"])
+    def batch(self, request):
+        """一次认领 / 改派 / 暂缓至多 100 件。**全有或全无。**
+
+        `POST /judgment/batch/` `{"operation": "claim"|"reassign"|"defer", "ids": [...],
+        "to": <user id>, "reason": "…"}`
+
+        范围:每个 id 都必须在 `self.get_queryset()` 里 —— 与单件动作的 `get_object()`
+        同一条租户范围。有任何一个不在(别的租户、已删除、不存在),整批 404,并在
+        `missing` 里列出是哪些;不做「能做的先做」,因为那会让一次越权的请求改掉一部分。
+
+        拒绝:任何一件被拒(已被别人认领、已结案…),整个事务回滚,响应带那件的 `id`。
+        """
+        serializer = JudgmentBatchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        operation, ids = data["operation"], data["ids"]
+        override = self._may_override()
+        if operation == "reassign" and not override:
+            return Response(
+                {"error": "Permission denied: judgment.assign", "code": "permission_denied"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        visible = set(self.get_queryset().filter(pk__in=ids).values_list("pk", flat=True))
+        missing = [str(pk) for pk in ids if pk not in visible]
+        if missing:
+            return Response(
+                {"error": "Some judgments were not found.", "code": "not_found", "missing": missing},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        target = self._assignee(data["to"]) if operation == "reassign" else None
+        try:
+            done = claims.batch(
+                ids, operation, request.user,
+                target=target, reason=data.get("reason", ""), may_override=override,
+            )
+        except ClaimRefusedError as exc:
+            return Response(exc.as_payload(), status=exc.status)
+        return Response({"operation": operation, "count": len(done), "ids": [str(j.pk) for j in done]})
+
+    @extend_schema(
+        responses=JudgmentQueueCountsSerializer,
+        parameters=[
+            OpenApiParameter("court", OpenApiTypes.STR, OpenApiParameter.QUERY, description="殿, exact."),
+            OpenApiParameter(
+                "search", OpenApiTypes.STR, OpenApiParameter.QUERY,
+                description="Soul name (contains) or soul / judgment id (exact).",
+            ),
+        ],
+    )
+    @action(detail=False, methods=["get"], url_path="queue-counts")
+    def queue_counts(self, request):
+        """四个组各几件,一条查询。
+
+        `court` 与 `search` 与列表同样生效(标签上的数跟着当前筛选走);`group` 被忽略。
+        范围与列表相同:`self.get_queryset()`,即 DataScopeViewSetMixin 的租户范围。
+        """
+        params = request.query_params.copy()
+        params.pop("group", None)
+        filterset = JudgmentFilter(params, queryset=self.get_queryset().filter(PENDING), request=request)
+        if not filterset.is_valid():
+            raise translate_validation(filterset.errors)
+        queryset = filterset.qs
+        queryset = SearchFilter().filter_queryset(request, queryset, self)
+        user = request.user
+        counts = queryset.aggregate(
+            total=Count("pk"),
+            **{
+                group: Count("pk", filter=group_q(group, user))
+                for group, _label in QueueGroup.CHOICES
+            },
+        )
+        return Response(counts)
 
     # ------------------------------------------------------------------
     # Cited grounds
