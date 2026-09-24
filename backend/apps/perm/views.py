@@ -19,12 +19,16 @@ from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permis
 from .serializers import (
     InitRolePermissionsResultSerializer,
     InitRolesResultSerializer,
+    MatrixChangesRequestSerializer,
+    MatrixChangesResultSerializer,
+    MatrixImpactResultSerializer,
     PermissionCreateUpdateSerializer,
     PermissionExportSerializer,
     PermissionImportRequestSerializer,
     PermissionImportResultSerializer,
     PermissionSerializer,
     RoleCreateUpdateSerializer,
+    RoleDeleteRefusalSerializer,
     RolePermissionAssignResultSerializer,
     RolePermissionAssignSerializer,
     RolePermissionsSerializer,
@@ -371,8 +375,24 @@ def list_roles(request):
     GET /api/v1/perm/roles/
     获取所有角色列表
     """
-    roles = Role.objects.all()
-    serializer = RoleSerializer(roles, many=True)
+    from django.db.models import Count, IntegerField, OuterRef, Q, Subquery
+    from django.db.models.functions import Coalesce
+
+    from apps.authentication.models import User
+
+    from .matrix import role_template_references
+
+    holders = (
+        User.objects.filter(role=OuterRef("name")).order_by()
+        .values("role").annotate(n=Count("pk")).values("n")
+    )
+    roles = Role.objects.annotate(
+        permission_count_annotated=Count("permissions", filter=Q(permissions__is_deleted=False)),
+        member_count_annotated=Coalesce(Subquery(holders, output_field=IntegerField()), 0),
+    )
+    serializer = RoleSerializer(
+        roles, many=True, context={"template_refs": role_template_references()}
+    )
     return Response(serializer.data)
 
 
@@ -419,23 +439,6 @@ def _role_name_taken(name):
     return None
 
 
-def _rename_role_in_menus(old_name, new_name):
-    """`Menu.roles` is a JSON list of role NAMES (apps/menus/models.py:49), so
-    a rename has to be cascaded there too or the renamed role loses its
-    navigation. Python-side because JSONField `contains` is unsupported on
-    SQLite; menus are few. Returns the number of menus touched."""
-    from apps.menus.models import Menu
-
-    touched = 0
-    for menu in Menu.all_objects.all():
-        roles = menu.roles or []
-        if old_name in roles:
-            menu.roles = [new_name if r == old_name else r for r in roles]
-            menu.save(update_fields=["roles"])
-            touched += 1
-    return touched
-
-
 @extend_schema(
     methods=["PUT"],
     request=RoleCreateUpdateSerializer,
@@ -444,7 +447,7 @@ def _rename_role_in_menus(old_name, new_name):
 @extend_schema(
     methods=["DELETE"],
     request=None,
-    responses={204: None, 404: ErrorResponseSerializer},
+    responses={204: None, 400: RoleDeleteRefusalSerializer, 404: ErrorResponseSerializer},
 )
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
@@ -464,63 +467,19 @@ def update_delete_role(request, pk):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        old_name = role.name
-        new_name = serializer.validated_data.get("name", old_name)
-        renaming = new_name != old_name
-        if renaming:
-            if role.is_builtin:
-                # `'ADMIN'` and the other four are compared as literals across
-                # the codebase (checker, tenant scoping, IsAdminPermission,
-                # ROLE_HIERARCHY, ROLE_PERMISSIONS, the menu views ...);
-                # renaming the row would not rename any of those.
-                return Response(
-                    {"error": f"'{old_name}' is a built-in role; its name is fixed because "
-                              "the code compares it by literal. Other fields can be changed."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            taken = _role_name_taken(new_name)
-            if taken:
-                return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
-
-        # BP-07: `User.role` is a name, not an FK. Renaming the row without
-        # cascading left every holder with a name no role had (denied
-        # everything once the 300s cache ran out) and the cache still
-        # answering for the OLD name until then. One transaction: the row,
-        # its holders, the menus that list it, and the audit row that says
-        # how many moved.
-        with transaction.atomic():
-            serializer.save()
-            if renaming:
-                from apps.authentication.models import User
-
-                moved = User.all_objects.filter(role=old_name).update(role=new_name)
-                menus = _rename_role_in_menus(old_name, new_name)
-                invalidate_role_permissions(old_name)
-                invalidate_role_permissions(new_name)
-
-                from apps.audit.models import AuditAction, AuditLog
-
-                AuditLog.objects.create(
-                    tenant=getattr(request, "tenant", None),
-                    user=request.user,
-                    action=AuditAction.PERMISSION_CHANGE,
-                    resource="role",
-                    resource_id=str(role.pk),
-                    changes={
-                        "name": [old_name, new_name],
-                        "users_reassigned": moved,
-                        "menus_updated": menus,
-                    },
-                    description=f"Role {old_name} renamed to {new_name}; {moved} users re-pointed"[:500],
-                    ip_address=get_client_ip(request),
-                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
-                )
+        # The role code (`name`) is immutable — RoleCreateUpdateSerializer
+        # refuses a different one — so this save can no longer rename. The
+        # rename cascade that lived here (BP-07: User.role, Menu.roles, both
+        # cache names, an audit row) went with it; `git log -S
+        # _rename_role_in_menus` has it if renaming ever comes back.
+        serializer.save()
         return Response(RoleSerializer(role).data)
 
     elif request.method == "DELETE":
         if role.is_builtin:
             return Response(
-                {"error": f"'{role.name}' is a built-in role and cannot be deleted."},
+                {"error": f"'{role.name}' is a built-in role and cannot be deleted.",
+                 "code": "builtin_role"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         from apps.authentication.models import User
@@ -533,7 +492,25 @@ def update_delete_role(request, pk):
                 {
                     "error": f"Role '{role.name}' is still held by {holders} user(s); "
                              "reassign them before deleting it.",
+                    "code": "role_in_use",
                     "user_count": holders,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from .matrix import role_template_references
+
+        # A template step that designates this role would, once the role is
+        # gone, resolve to a role nobody can hold — every workflow built from
+        # it stuck at that step. Refused with the list, so the operator knows
+        # which templates to edit first.
+        templates = role_template_references().get(role.name, [])
+        if templates:
+            return Response(
+                {
+                    "error": f"Role '{role.name}' is designated as approver by "
+                             f"{len(templates)} workflow template(s); change those steps first.",
+                    "code": "role_referenced_by_workflow_templates",
+                    "templates": templates,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -548,6 +525,135 @@ def update_delete_role(request, pk):
             )
         invalidate_role_permissions(role.name)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    request=RoleCreateUpdateSerializer,
+    responses={201: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def copy_role(request, pk):
+    """
+    POST /api/v1/perm/roles/<pk>/copy/
+    复制为新角色：新 code、同一组授权（仅 ADMIN）
+
+    Copies the source's RolePermission rows — permission, `conditions` and
+    `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
+    FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
+    copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+    """
+    try:
+        source = Role.objects.get(pk=pk)
+    except Role.DoesNotExist:
+        return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = RoleCreateUpdateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    name = serializer.validated_data["name"]
+    taken = _role_name_taken(name)
+    if taken:
+        return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        role = serializer.save(
+            scope=serializer.validated_data.get("scope", source.scope),
+            organization=serializer.validated_data.get("organization", source.organization),
+        )
+        grants = list(RolePermission.objects.filter(role=source).select_related("permission"))
+        # bulk_create sends no post_save — so the audit row and the cache
+        # invalidation are both written here, as in assign_role_permissions.
+        RolePermission.objects.bulk_create([
+            RolePermission(
+                role=role, permission=g.permission, conditions=g.conditions, data_scope=g.data_scope
+            )
+            for g in grants
+        ])
+        from apps.audit.models import AuditAction, AuditLog
+
+        AuditLog.objects.create(
+            tenant=getattr(request, "tenant", None),
+            user=request.user,
+            action=AuditAction.PERMISSION_CHANGE,
+            resource="role",
+            resource_id=str(role.pk),
+            changes={
+                "copied_from": source.name,
+                "permissions": {"old": [], "new": sorted(g.permission.codename for g in grants)},
+            },
+            description=f"Role {name} created as a copy of {source.name}"[:500],
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+        )
+        # A name nobody held may still have cached denials (a user whose role
+        # string pointed at no row asks too).
+        transaction.on_commit(lambda: invalidate_role_permissions(name))
+    return Response(RoleSerializer(role).data, status=status.HTTP_201_CREATED)
+
+
+# ── Permission matrix: per-cell save and "what breaks" ────────────────
+
+
+@extend_schema(
+    request=MatrixChangesRequestSerializer,
+    responses={200: MatrixChangesResultSerializer, 400: OpenApiTypes.OBJECT},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def apply_matrix_changes(request):
+    """
+    POST /api/v1/perm/role-permissions/changes/
+    按格保存权限矩阵的改动：每格一个结果（saved / unchanged / refused / failed）（仅 ADMIN）
+
+    200 even when some cells were refused or failed — the per-cell `status`
+    is the answer. See apps/perm/matrix.py for why cells save independently.
+    """
+    from .matrix import FAILED, REFUSED, SAVED, UNCHANGED, apply_changes
+
+    serializer = MatrixChangesRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    results, versions = apply_changes(
+        serializer.validated_data["changes"],
+        serializer.validated_data.get("expected_versions"),
+    )
+
+    def count(status_):
+        return sum(1 for r in results if r["status"] == status_)
+
+    return Response({
+        "saved": count(SAVED),
+        "unchanged": count(UNCHANGED),
+        "refused": count(REFUSED),
+        "failed": count(FAILED),
+        "results": results,
+        "versions": versions,
+    })
+
+
+@extend_schema(
+    request=MatrixChangesRequestSerializer,
+    responses={200: MatrixImpactResultSerializer, 400: OpenApiTypes.OBJECT},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def matrix_impact(request):
+    """
+    POST /api/v1/perm/role-permissions/impact/
+    保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+
+    Same body as `changes/`; `expected_versions` is accepted and ignored.
+    """
+    from .matrix import approve_codenames, impact_of_changes
+
+    serializer = MatrixChangesRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        "required_codenames": approve_codenames(),
+        "conflicts": impact_of_changes(serializer.validated_data["changes"]),
+    })
 
 
 @extend_schema(request=None, responses={200: InitRolesResultSerializer})

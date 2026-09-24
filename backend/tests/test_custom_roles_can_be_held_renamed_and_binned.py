@@ -1,4 +1,5 @@
-"""自建角色是一等角色:能被持有、能改名并级联、能删进回收站再恢复。
+"""自建角色是一等角色:能被持有、能删进回收站再恢复。(「能改名并级联」于 2026-09-24
+被「角色 code 创建后不可改」取代,见下文 BP-07 一节。)
 
 2026-09-12 审计 BP-06 / BP-07 / BP-11,用户决策「允许改名并级联」。修之前:
 
@@ -125,60 +126,27 @@ def test_a_custom_role_holder_gets_the_roles_grants(world):
     assert check_permission(user, "soul.delete") is False
 
 
-# ── BP-07: renaming a custom role cascades ───────────────────────────────
+# ── BP-07 superseded: a role's code is immutable ─────────────────────────
+#
+# 2026-09-12 the decision was "allow rename and cascade"; 2026-09-24 (the
+# permissions-page redesign) made every role's code immutable instead, so the
+# three rename-cascade tests that stood here are gone with the cascade. The
+# refusal itself is pinned in tests/test_perm_matrix_and_role_table.py.
 
 
 @pytest.mark.django_db
-def test_renaming_a_custom_role_moves_its_holders_and_both_cache_entries(world):
+def test_renaming_a_custom_role_is_refused_and_moves_nobody(world):
     holder = User.objects.create_user(username="cr_rename_holder", password="x", role="SCRIBE", tenant=world["tenant"])
-    # Populate the cache under both names, so a stale answer has somewhere to live.
-    assert check_permission(RoleHolder("SCRIBE"), "ledger.read") is True
-    assert check_permission(RoleHolder("ARCHIVIST"), "ledger.read") is False
-
     response = world["client"].put(
-        f"{ROLES}{world['scribe'].pk}/",
-        {"name": "ARCHIVIST", "display_name": "档案官"},
-        format="json",
+        f"{ROLES}{world['scribe'].pk}/", {"name": "ARCHIVIST", "display_name": "档案官"}, format="json"
     )
-    assert response.status_code == 200, response.content
-    assert response.data["name"] == "ARCHIVIST"
-
-    holder.refresh_from_db()
-    assert holder.role == "ARCHIVIST", "持有旧名的用户没有跟着改名"
-    # 旧名不再是任何角色:缓存里那条 True 必须已经失效。
-    assert check_permission(RoleHolder("SCRIBE"), "ledger.read") is False, (
-        "旧名的缓存条目还在 —— 300s 内旧名照旧通过"
-    )
-    assert check_permission(RoleHolder("ARCHIVIST"), "ledger.read") is True
-    assert response.data["user_count"] == 1
-
-
-@pytest.mark.django_db
-def test_renaming_records_how_many_users_were_moved(world):
-    from apps.audit.models import AuditAction, AuditLog
-
-    User.objects.create_user(username="cr_a1", password="x", role="SCRIBE", tenant=world["tenant"])
-    User.objects.create_user(username="cr_a2", password="x", role="SCRIBE", tenant=world["tenant"])
-    response = world["client"].put(
-        f"{ROLES}{world['scribe'].pk}/", {"name": "ARCHIVIST"}, format="json"
-    )
-    assert response.status_code == 200, response.content
-    row = (
-        AuditLog.objects.filter(action=AuditAction.PERMISSION_CHANGE, resource="role", resource_id=str(world["scribe"].pk))
-        .order_by("-timestamp")
-        .first()
-    )
-    assert row is not None, "改名没有留下 PERMISSION_CHANGE 审计行"
-    assert row.changes["name"] == ["SCRIBE", "ARCHIVIST"], row.changes
-    assert row.changes["users_reassigned"] == 2, row.changes
-
-
-@pytest.mark.django_db
-def test_renaming_onto_a_taken_name_is_a_400_not_a_500(world):
-    response = world["client"].put(f"{ROLES}{world['scribe'].pk}/", {"name": "JUDGE"}, format="json")
     assert response.status_code == 400, response.content
     world["scribe"].refresh_from_db()
+    holder.refresh_from_db()
     assert world["scribe"].name == "SCRIBE"
+    assert world["scribe"].display_name == "书记", "被拒的请求改了别的字段"
+    assert holder.role == "SCRIBE"
+    assert check_permission(RoleHolder("SCRIBE"), "ledger.read") is True
 
 
 @pytest.mark.django_db
@@ -187,7 +155,7 @@ def test_a_builtin_roles_name_is_read_only(world, builtin):
     role = Role.objects.get(name=builtin)
     response = world["client"].put(f"{ROLES}{role.pk}/", {"name": "SOMETHING_ELSE"}, format="json")
     assert response.status_code == 400, response.content
-    assert "built-in" in str(response.data).lower() or "内置" in str(response.data), response.data
+    assert "cannot be changed" in str(response.data), response.data
     role.refresh_from_db()
     assert role.name == builtin
 

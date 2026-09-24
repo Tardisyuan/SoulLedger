@@ -190,6 +190,7 @@ const COLLECTED_FILES = [
   "useDispositions.test.ts",
   "useJudgmentQueue.test.tsx",
   "useJudgments.test.ts",
+  "usePermissionMatrix.test.tsx",
   "usePermissions.test.ts",
   "useReincarnation.test.ts",
   "useRowTransitions.test.ts",

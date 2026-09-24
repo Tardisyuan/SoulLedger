@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { components } from "./generated/schema";
 
 export interface Permission {
   id: number;
@@ -30,11 +31,21 @@ export interface Role {
    */
   user_count: number;
   /**
-   * One of the five `UserRole` constants the backend compares by literal
+   * Every non-deleted holder, active or not — the number DELETE refuses over
+   * (`role_in_use`). `user_count` above counts active holders only.
+   */
+  member_count: number;
+  /** RolePermission rows — the matrix's ticks, not ADMIN's effective set. */
+  permission_count: number;
+  /** Workflow templates with a step whose `approver_role` is this role. */
+  workflow_template_count: number;
+  /**
+   * One of the built-in `UserRole` constants the backend compares by literal
    * (`role === "ADMIN"` in the checker, tenant scoping, IsAdminPermission…).
-   * The server refuses to rename or delete these (400), so the role form makes
-   * `name` read-only for them. A custom role is renameable; the backend
-   * cascades the new name into every `User.role` that held the old one.
+   * The server refuses to delete these (400 `builtin_role`). No role's `name`
+   * (its code) can change after creation — built-in or not; a PUT with a
+   * different name is a 400 whose `name[0]` is the immutability message.
+   * "Copy as new role" (`permApi.roles.copy`) is the way to a new code.
    */
   is_builtin: boolean;
   /**
@@ -90,6 +101,34 @@ export interface PermissionImportResult {
   };
 }
 
+type Schemas = components["schemas"];
+
+/**
+ * Per-cell matrix save — POST /perm/role-permissions/changes/
+ * (backend/apps/perm/matrix.py). One result per change, in request order:
+ * `saved`, `unchanged` (the cell was already in that state), `refused` with a
+ * `code` (`role_not_found` / `permission_not_found` / `version_conflict`) or
+ * `failed` (`database_error`, that cell rolled back alone). 200 whatever the
+ * mix; `versions` is each named role's version after the call.
+ */
+export type MatrixChange = Schemas["MatrixChange"];
+export type MatrixChangeResult = Schemas["MatrixChangeResult"];
+export type MatrixChangesResult = Schemas["MatrixChangesResult"];
+/**
+ * "What breaks" — POST /perm/role-permissions/impact/, read-only. Each
+ * conflict is a template step that some role could approve before the
+ * changes and none can after, with the revokes (`caused_by[].index` into the
+ * request's `changes`) that cause it.
+ */
+export type MatrixImpactResult = Schemas["MatrixImpactResult"];
+export type MatrixConflict = Schemas["MatrixConflict"];
+/**
+ * 400 body of DELETE /perm/roles/{id}/. `templates` comes with
+ * `role_referenced_by_workflow_templates`, `user_count` with `role_in_use`.
+ */
+export type RoleDeleteRefusal = Schemas["RoleDeleteRefusal"];
+export type RoleCopyPayload = Pick<Role, "name" | "display_name"> & Partial<Pick<Role, "scope" | "organization">>;
+
 export const permApi = {
   // Current user's own role permissions (self only — see backend docstring
   // on get_role_permissions for the enumeration guard). Used to refetch the
@@ -114,7 +153,19 @@ export const permApi = {
     create: (data: Partial<Role>) => api.post<Role>("/perm/roles/create/", data),
     update: (id: number, data: Partial<Role>) => api.put<Role>(`/perm/roles/${id}/`, data),
     delete: (id: number) => api.delete<void>(`/perm/roles/${id}/`),
+    /** 复制为新角色: same RolePermission rows, new code. 201 with the new Role. */
+    copy: (id: number, data: RoleCopyPayload) => api.post<Role>(`/perm/roles/${id}/copy/`, data),
   },
+
+  /** Per-cell save. `expectedVersions` maps role name → the version the matrix loaded. */
+  applyChanges: (changes: MatrixChange[], expectedVersions?: Record<string, number>) =>
+    api.post<MatrixChangesResult>("/perm/role-permissions/changes/", {
+      changes,
+      ...(expectedVersions ? { expected_versions: expectedVersions } : {}),
+    }),
+  /** Read-only pre-check: template steps these changes would leave without an approver. */
+  impact: (changes: MatrixChange[]) =>
+    api.post<MatrixImpactResult>("/perm/role-permissions/impact/", { changes }),
 
   // Role-Permission assignment.
   // Read and write sit on different routes: the reader is ADMIN-only and keyed

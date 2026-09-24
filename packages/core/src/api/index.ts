@@ -56,7 +56,22 @@ export { reincarnationApi, type Reincarnation } from "./reincarnation";
 export { eventsApi, type SoulEvent } from "./events";
 
 // Permissions
-export { permApi, type Permission, type Role, type RolePermissions, type PermissionAssignResult, type RolePermissionConflict, type PermissionImportResult } from "./perm";
+export {
+  permApi,
+  type Permission,
+  type Role,
+  type RolePermissions,
+  type PermissionAssignResult,
+  type RolePermissionConflict,
+  type PermissionImportResult,
+  type MatrixChange,
+  type MatrixChangeResult,
+  type MatrixChangesResult,
+  type MatrixImpactResult,
+  type MatrixConflict,
+  type RoleDeleteRefusal,
+  type RoleCopyPayload,
+} from "./perm";
 
 // Menus
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
