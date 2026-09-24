@@ -133,7 +133,7 @@ class Realm(AuditUserFields, models.Model):
     cycle_limit = models.IntegerField(null=True, blank=True)
 
     # ------------------------------------------------------------------
-    # 行程拓扑(官员端「行程拓扑」图所需;契约见 cloud-reports/realm-path-fields.md)。
+    # 行程拓扑(官员端「行程拓扑」图所需;契约见 云端报告 realm-path-fields(已移出仓库,存于项目记忆目录))。
     #
     # 全部可空:一个文明用不到的列就是 null,而 null 的意思是「不适用或没有出处」,
     # 不是 0。已有的列不重复:契约里的 id / parent_id / code / is_eternal 就是

@@ -1,6 +1,6 @@
 """行程拓扑所需的数据:realm 的拓扑列、judgment/disposition 的 realm_id、灵魂的 path。
 
-契约与取舍见 cloud-reports/realm-path-fields.md。这个文件守五件事:
+契约与取舍见 云端报告 realm-path-fields(已移出仓库,存于项目记忆目录)。这个文件守五件事:
 
 1. 种子:拓扑列只落在神话数据支持的行上,**其余是 NULL** —— 每条都同时断言
    「该有的有」与「不该有的没有」;

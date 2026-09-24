@@ -7,7 +7,7 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.realms.models import Realm, SoulPathEntry
 
-#: 行程拓扑的列(cloud-reports/realm-path-fields.md)。契约里的 parent_id / code /
+#: 行程拓扑的列(云端报告 realm-path-fields(已移出仓库,存于项目记忆目录))。契约里的 parent_id / code /
 #: is_eternal 就是已有的 `parent_realm` / `realm_code` / `is_eternal`,不另起别名。
 TOPOLOGY_FIELDS = [
     "order", "kind", "capacity",
