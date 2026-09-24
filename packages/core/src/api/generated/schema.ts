@@ -1419,6 +1419,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/claim/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 认领这件案子。已被别人认领 → 409 `already_claimed`;重复认领自己的 → 200,不写。 */
+        post: operations["v1_judgment_claim_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/conclude/": {
         parameters: {
             query?: never;
@@ -1438,6 +1455,23 @@ export interface paths {
          *     concluded judgment whose stated basis never landed.
          */
         post: operations["v1_judgment_conclude_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/defer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。 */
+        post: operations["v1_judgment_defer_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1522,6 +1556,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/reassign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 改派给同一租户里能办案的另一位官员。`{"to": <user id>}`。 */
+        post: operations["v1_judgment_reassign_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/release/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。 */
+        post: operations["v1_judgment_release_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/undefer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 撤销暂缓,案子回到它按认领人所属的组。 */
+        post: operations["v1_judgment_undefer_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/batch/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 一次认领 / 改派 / 暂缓至多 100 件。**全有或全无。**
+         *
+         *     `POST /judgment/batch/` `{"operation": "claim"|"reassign"|"defer", "ids": [...],
+         *     "to": <user id>, "reason": "…"}`
+         *
+         *     范围:每个 id 都必须在 `self.get_queryset()` 里 —— 与单件动作的 `get_object()`
+         *     同一条租户范围。有任何一个不在(别的租户、已删除、不存在),整批 404,并在
+         *     `missing` 里列出是哪些;不做「能做的先做」,因为那会让一次越权的请求改掉一部分。
+         *
+         *     拒绝:任何一件被拒(已被别人认领、已结案…),整个事务回滚,响应带那件的 `id`。
+         */
+        post: operations["v1_judgment_batch_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/next/": {
         parameters: {
             query?: never;
@@ -1566,6 +1679,28 @@ export interface paths {
          *     would drive the client's error boundary instead.
          */
         get: operations["v1_judgment_next_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/queue-counts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 四个组各几件,一条查询。
+         *
+         *     `court` 与 `search` 与列表同样生效(标签上的数跟着当前筛选走);`group` 被忽略。
+         *     范围与列表相同:`self.get_queryset()`,即 DataScopeViewSetMixin 的租户范围。
+         */
+        get: operations["v1_judgment_queue_counts_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7095,6 +7230,42 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at: string | null;
             readonly draft_version: number;
+            readonly claimed_by: number | null;
+            readonly claimed_by_name: string | null;
+            /** Format: date-time */
+            readonly claimed_at: string | null;
+            /** Format: date-time */
+            readonly deferred_at: string | null;
+            readonly deferred_by: number | null;
+            readonly deferred_by_name: string | null;
+            readonly defer_reason: string;
+            /**
+             * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+             *
+             *     `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+             *     希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+             *     `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+             *     在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+             */
+            readonly karmic_balance: number | null;
+            /**
+             * @description `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+             *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+             */
+            readonly evidence_count: number;
+        };
+        /** @description `POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。 */
+        JudgmentBatch: {
+            operation: components["schemas"]["OperationEnum"];
+            ids: string[];
+            to?: number;
+            reason?: string;
+        };
+        /** @description `POST /judgment/batch/` 成功时的响应。被拒时是 `JudgmentClaimRefusalSerializer`。 */
+        JudgmentBatchResult: {
+            operation: string;
+            count: number;
+            ids: string[];
         };
         /**
          * @description A ground, with the article inlined.
@@ -7125,6 +7296,29 @@ export interface components {
             statute: string;
             /** @default  */
             note: string;
+        };
+        /**
+         * @description 认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+         *
+         *     `claimed_by` 只在 `already_claimed` / `not_claimant` 上有;`id` 只在批量里有,
+         *     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+         */
+        JudgmentClaimRefusal: {
+            error: string;
+            code: string;
+            claimed_by?: number | null;
+            /** Format: uuid */
+            id?: string;
+            missing?: string[];
+        };
+        /**
+         * @description `POST /judgment/{id}/defer/` 的输入。理由必填。
+         *
+         *     `max_length` 等于列宽 500:PostgreSQL 强制 varchar(n)、SQLite 不管,不在这里拦,
+         *     超长的理由在 SQLite 上绿、在生产上 500(CLAUDE.md 记过 `Statute.source` 这一回)。
+         */
+        JudgmentDefer: {
+            reason: string;
         };
         /**
          * @description `GET /judgment/{id}/` — the list shape plus the evidence rulings and the
@@ -7162,6 +7356,29 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at: string | null;
             readonly draft_version: number;
+            readonly claimed_by: number | null;
+            readonly claimed_by_name: string | null;
+            /** Format: date-time */
+            readonly claimed_at: string | null;
+            /** Format: date-time */
+            readonly deferred_at: string | null;
+            readonly deferred_by: number | null;
+            readonly deferred_by_name: string | null;
+            readonly defer_reason: string;
+            /**
+             * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+             *
+             *     `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+             *     希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+             *     `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+             *     在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+             */
+            readonly karmic_balance: number | null;
+            /**
+             * @description `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+             *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+             */
+            readonly evidence_count: number;
             readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
         };
@@ -7220,6 +7437,19 @@ export interface components {
             readonly shared_statutes: number;
         };
         /**
+         * @description `GET /judgment/queue-counts/`:四个组各有几件未结案的案子。
+         *
+         *     四个数互斥且相加等于 `total`(见 `QueueGroup`)。`court` 与 `search` 参数照样
+         *     生效,所以标签上的数与当前筛选下的列表一致;`group` 参数被忽略 —— 数的就是各组。
+         */
+        JudgmentQueueCounts: {
+            mine: number;
+            unclaimed: number;
+            others: number;
+            deferred: number;
+            total: number;
+        };
+        /**
          * @description The envelope `GET /api/v1/judgment/next/` returns.
          *
          *     Schema-only, never instantiated. This is the response a judgment client
@@ -7250,6 +7480,10 @@ export interface components {
             ledger: components["schemas"]["LedgerSummary"] | null;
             prior_cycles: components["schemas"]["Reincarnation"][];
             realm_options: components["schemas"]["RealmLocalized"][];
+        };
+        /** @description `POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。 */
+        JudgmentReassign: {
+            to: number;
         };
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
@@ -7974,6 +8208,13 @@ export interface components {
         OfficerReply: {
             body: string;
         };
+        /**
+         * @description * `claim` - claim
+         *     * `reassign` - reassign
+         *     * `defer` - defer
+         * @enum {string}
+         */
+        OperationEnum: "claim" | "reassign" | "defer";
         Organization: {
             readonly id: number;
             /** @description 组织名称：如 第一殿、冥王厅 */
@@ -9022,6 +9263,29 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at?: string | null;
             readonly draft_version?: number;
+            readonly claimed_by?: number | null;
+            readonly claimed_by_name?: string | null;
+            /** Format: date-time */
+            readonly claimed_at?: string | null;
+            /** Format: date-time */
+            readonly deferred_at?: string | null;
+            readonly deferred_by?: number | null;
+            readonly deferred_by_name?: string | null;
+            readonly defer_reason?: string;
+            /**
+             * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+             *
+             *     `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+             *     希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+             *     `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+             *     在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+             */
+            readonly karmic_balance?: number | null;
+            /**
+             * @description `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+             *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+             */
+            readonly evidence_count?: number;
         };
         /**
          * @description Input for `PATCH /judgment/{id}/draft/`. `version` is the
@@ -13602,6 +13866,14 @@ export interface operations {
                  *     * `GREEK` - Greek Underworld
                  */
                 civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                court?: string;
+                /**
+                 * @description * `mine` - 我认领
+                 *     * `unclaimed` - 待认领
+                 *     * `others` - 他人认领
+                 *     * `deferred` - 暂缓
+                 */
+                group?: "deferred" | "mine" | "others" | "unclaimed";
                 has_verdict?: boolean;
                 is_final?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -13798,6 +14070,14 @@ export interface operations {
                  *     * `GREEK` - Greek Underworld
                  */
                 civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                court?: string;
+                /**
+                 * @description * `mine` - 我认领
+                 *     * `unclaimed` - 待认领
+                 *     * `others` - 他人认领
+                 *     * `deferred` - 暂缓
+                 */
+                group?: "deferred" | "mine" | "others" | "unclaimed";
                 has_verdict?: boolean;
                 is_final?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -13884,6 +14164,44 @@ export interface operations {
             };
         };
     };
+    v1_judgment_claim_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
     v1_judgment_conclude_create: {
         parameters: {
             query?: never;
@@ -13908,6 +14226,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Judgment"];
+                };
+            };
+        };
+    };
+    v1_judgment_defer_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgmentDefer"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentDefer"];
+                "multipart/form-data": components["schemas"]["JudgmentDefer"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -14003,9 +14365,197 @@ export interface operations {
             };
         };
     };
-    v1_judgment_next_retrieve: {
+    v1_judgment_reassign_create: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgmentReassign"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentReassign"];
+                "multipart/form-data": components["schemas"]["JudgmentReassign"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_release_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_undefer_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_batch_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgmentBatch"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentBatch"];
+                "multipart/form-data": components["schemas"]["JudgmentBatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentBatchResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_next_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Also hand out deferred (暂缓) cases. Off by default. */
+                include_deferred?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -14018,6 +14568,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentQueueCursor"];
+                };
+            };
+        };
+    };
+    v1_judgment_queue_counts_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 殿, exact. */
+                court?: string;
+                /** @description Soul name (contains) or soul / judgment id (exact). */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentQueueCounts"];
                 };
             };
         };

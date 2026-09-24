@@ -3105,6 +3105,24 @@ paths:
           * `EGYPTIAN` - Egyptian Duat
           * `GREEK` - Greek Underworld
       - in: query
+        name: court
+        schema:
+          type: string
+      - in: query
+        name: group
+        schema:
+          type: string
+          enum:
+          - deferred
+          - mine
+          - others
+          - unclaimed
+        description: |-
+          * `mine` - 我认领
+          * `unclaimed` - 待认领
+          * `others` - 他人认领
+          * `deferred` - 暂缓
+      - in: query
         name: has_verdict
         schema:
           type: boolean
@@ -3374,6 +3392,24 @@ paths:
           * `EGYPTIAN` - Egyptian Duat
           * `GREEK` - Greek Underworld
       - in: query
+        name: court
+        schema:
+          type: string
+      - in: query
+        name: group
+        schema:
+          type: string
+          enum:
+          - deferred
+          - mine
+          - others
+          - unclaimed
+        description: |-
+          * `mine` - 我认领
+          * `unclaimed` - 待认领
+          * `others` - 他人认领
+          * `deferred` - 暂缓
+      - in: query
         name: has_verdict
         schema:
           type: boolean
@@ -3509,6 +3545,41 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/judgment/{id}/claim/:
+    post:
+      operationId: v1_judgment_claim_create
+      description: 认领这件案子。已被别人认领 → 409 `already_claimed`;重复认领自己的 → 200,不写。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
   /api/v1/judgment/{id}/conclude/:
     post:
       operationId: v1_judgment_conclude_create
@@ -3550,6 +3621,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Judgment'
+          description: ''
+  /api/v1/judgment/{id}/defer/:
+    post:
+      operationId: v1_judgment_defer_create
+      description: '暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentDefer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentDefer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentDefer'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
   /api/v1/judgment/{id}/draft/:
     patch:
@@ -3687,6 +3805,190 @@ paths:
                 items:
                   $ref: '#/components/schemas/JudgmentPrecedent'
           description: ''
+  /api/v1/judgment/{id}/reassign/:
+    post:
+      operationId: v1_judgment_reassign_create
+      description: '改派给同一租户里能办案的另一位官员。`{"to": <user id>}`。'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentReassign'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentReassign'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentReassign'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/{id}/release/:
+    post:
+      operationId: v1_judgment_release_create
+      description: 释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/{id}/undefer/:
+    post:
+      operationId: v1_judgment_undefer_create
+      description: 撤销暂缓,案子回到它按认领人所属的组。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/batch/:
+    post:
+      operationId: v1_judgment_batch_create
+      description: |-
+        一次认领 / 改派 / 暂缓至多 100 件。**全有或全无。**
+
+        `POST /judgment/batch/` `{"operation": "claim"|"reassign"|"defer", "ids": [...],
+        "to": <user id>, "reason": "…"}`
+
+        范围:每个 id 都必须在 `self.get_queryset()` 里 —— 与单件动作的 `get_object()`
+        同一条租户范围。有任何一个不在(别的租户、已删除、不存在),整批 404,并在
+        `missing` 里列出是哪些;不做「能做的先做」,因为那会让一次越权的请求改掉一部分。
+
+        拒绝:任何一件被拒(已被别人认领、已结案…),整个事务回滚,响应带那件的 `id`。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentBatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentBatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentBatch'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentBatchResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
   /api/v1/judgment/next/:
     get:
       operationId: v1_judgment_next_retrieve
@@ -3725,6 +4027,12 @@ paths:
         done" is a successful, renderable answer and the counts still matter
         (they say whether the queue was empty or merely skipped dry); a 404
         would drive the client's error boundary instead.
+      parameters:
+      - in: query
+        name: include_deferred
+        schema:
+          type: boolean
+        description: Also hand out deferred (暂缓) cases. Off by default.
       tags:
       - v1
       security:
@@ -3735,6 +4043,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentQueueCursor'
+          description: ''
+  /api/v1/judgment/queue-counts/:
+    get:
+      operationId: v1_judgment_queue_counts_retrieve
+      description: |-
+        四个组各几件,一条查询。
+
+        `court` 与 `search` 与列表同样生效(标签上的数跟着当前筛选走);`group` 被忽略。
+        范围与列表相同:`self.get_queryset()`,即 DataScopeViewSetMixin 的租户范围。
+      parameters:
+      - in: query
+        name: court
+        schema:
+          type: string
+        description: 殿, exact.
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Soul name (contains) or soul / judgment id (exact).
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentQueueCounts'
           description: ''
   /api/v1/judgment/statutes/:
     get:
@@ -15662,22 +16000,116 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        claimed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        claimed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        claimed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        deferred_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        defer_reason:
+          type: string
+          readOnly: true
+        karmic_balance:
+          type: integer
+          nullable: true
+          description: |-
+            功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+
+            `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+            希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+            `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+            在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+          readOnly: true
+        evidence_count:
+          type: integer
+          description: |-
+            `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+            (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+          readOnly: true
       required:
       - amends_plan_id
       - citations
       - civilization
+      - claimed_at
+      - claimed_by
+      - claimed_by_name
       - concluded_at
       - created_at
+      - defer_reason
+      - deferred_at
+      - deferred_by
+      - deferred_by_name
       - draft_saved_at
       - draft_verdict
       - draft_version
+      - evidence_count
       - id
       - is_final
       - judge_name
+      - karmic_balance
       - kind
       - soul
       - soul_name
       - verdict
+    JudgmentBatch:
+      type: object
+      description: '`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。'
+      properties:
+        operation:
+          $ref: '#/components/schemas/OperationEnum'
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+          minItems: 1
+        to:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - ids
+      - operation
+    JudgmentBatchResult:
+      type: object
+      description: '`POST /judgment/batch/` 成功时的响应。被拒时是 `JudgmentClaimRefusalSerializer`。'
+      properties:
+        operation:
+          type: string
+        count:
+          type: integer
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - count
+      - ids
+      - operation
     JudgmentCitation:
       type: object
       description: |-
@@ -15724,6 +16156,45 @@ components:
           default: ''
       required:
       - statute
+    JudgmentClaimRefusal:
+      type: object
+      description: |-
+        认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+
+        `claimed_by` 只在 `already_claimed` / `not_claimant` 上有;`id` 只在批量里有,
+        指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        claimed_by:
+          type: integer
+          nullable: true
+        id:
+          type: string
+          format: uuid
+        missing:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - code
+      - error
+    JudgmentDefer:
+      type: object
+      description: |-
+        `POST /judgment/{id}/defer/` 的输入。理由必填。
+
+        `max_length` 等于列宽 500:PostgreSQL 强制 varchar(n)、SQLite 不管,不在这里拦,
+        超长的理由在 SQLite 上绿、在生产上 500(CLAUDE.md 记过 `Statute.source` 这一回)。
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - reason
     JudgmentDetail:
       type: object
       description: |-
@@ -15811,6 +16282,52 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        claimed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        claimed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        claimed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        deferred_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        defer_reason:
+          type: string
+          readOnly: true
+        karmic_balance:
+          type: integer
+          nullable: true
+          description: |-
+            功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+
+            `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+            希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+            `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+            在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+          readOnly: true
+        evidence_count:
+          type: integer
+          description: |-
+            `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+            (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+          readOnly: true
         evidence_admissions:
           type: array
           items:
@@ -15825,15 +16342,24 @@ components:
       - amends_plan_id
       - citations
       - civilization
+      - claimed_at
+      - claimed_by
+      - claimed_by_name
       - concluded_at
       - created_at
+      - defer_reason
+      - deferred_at
+      - deferred_by
+      - deferred_by_name
       - draft_saved_at
       - draft_verdict
       - draft_version
       - evidence_admissions
+      - evidence_count
       - id
       - is_final
       - judge_name
+      - karmic_balance
       - kind
       - soul
       - soul_name
@@ -15964,6 +16490,30 @@ components:
       - shared_statutes
       - soul
       - verdict
+    JudgmentQueueCounts:
+      type: object
+      description: |-
+        `GET /judgment/queue-counts/`:四个组各有几件未结案的案子。
+
+        四个数互斥且相加等于 `total`(见 `QueueGroup`)。`court` 与 `search` 参数照样
+        生效,所以标签上的数与当前筛选下的列表一致;`group` 参数被忽略 —— 数的就是各组。
+      properties:
+        mine:
+          type: integer
+        unclaimed:
+          type: integer
+        others:
+          type: integer
+        deferred:
+          type: integer
+        total:
+          type: integer
+      required:
+      - deferred
+      - mine
+      - others
+      - total
+      - unclaimed
     JudgmentQueueCursor:
       type: object
       description: |-
@@ -16026,6 +16576,15 @@ components:
       - skipped
       - soul
       - total
+    JudgmentReassign:
+      type: object
+      description: '`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。'
+      properties:
+        to:
+          type: integer
+          minimum: 1
+      required:
+      - to
     KarmaBucket:
       type: object
       description: |-
@@ -17722,6 +18281,16 @@ components:
           maxLength: 4000
       required:
       - body
+    OperationEnum:
+      enum:
+      - claim
+      - reassign
+      - defer
+      type: string
+      description: |-
+        * `claim` - claim
+        * `reassign` - reassign
+        * `defer` - defer
     Organization:
       type: object
       properties:
@@ -19491,6 +20060,52 @@ components:
           nullable: true
         draft_version:
           type: integer
+          readOnly: true
+        claimed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        claimed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        claimed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        deferred_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        defer_reason:
+          type: string
+          readOnly: true
+        karmic_balance:
+          type: integer
+          nullable: true
+          description: |-
+            功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+
+            `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+            希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+            `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+            在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+          readOnly: true
+        evidence_count:
+          type: integer
+          description: |-
+            `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+            (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
           readOnly: true
     PatchedJudgmentDraftWrite:
       type: object
