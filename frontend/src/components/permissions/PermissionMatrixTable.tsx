@@ -110,12 +110,12 @@ function FragmentCategory({
            格子拿不到 <tr> 的半透明底 —— 两边不同色就等于把「这一行」画成两段。
            所以整行改用同一个不透明值,冻结格靠 group-hover 跟上。 */
         <tr key={perm.id} className="group hover:bg-[oklch(var(--color-surface-2))]">
-          <td className="sticky left-0 z-10 bg-[oklch(var(--color-canvas))] group-hover:bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))]/50 px-3 py-1 transition-colors">
+          <td className="sticky left-0 z-10 bg-[oklch(var(--color-canvas))] group-hover:bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-rule))] px-3 py-1 transition-colors">
             <div className="font-mono text-xs text-[oklch(var(--color-ink))]">{perm.codename}</div>
             <div className="text-xs text-[oklch(var(--color-ink-subtle))]">{perm.name}</div>
           </td>
           {roleNames.map((role) => (
-            <td key={role} className="border-b border-[oklch(var(--color-hairline))]/50 px-1 py-1 text-center">
+            <td key={role} className="border-b border-[oklch(var(--color-rule))] px-1 py-1 text-center">
               <MatrixCell
                 granted={checked?.[role]?.has(perm.id) ?? false}
                 disabled={isSaving}
@@ -198,15 +198,15 @@ export function PermissionMatrixTable({
        表格也从 border-collapse 换成 border-separate + border-spacing-0:
        collapse 下边框归表格而不归单元格,sticky 单元格滚动时边框会
        留在原地。 */
-    <div className="overflow-auto max-h-[65vh] border border-[oklch(var(--color-hairline))]">
+    <div className="overflow-auto max-h-[65vh]">
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr className="h-11">
-            <th className="sticky top-0 left-0 z-40 bg-[oklch(var(--color-surface-1))] border-b border-[oklch(var(--color-hairline))] text-left px-3 font-medium text-[oklch(var(--color-ink-muted))] min-w-[200px]">
+            <th className="sticky top-0 left-0 z-40 bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-block))] text-left px-3 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))] min-w-[200px]">
               {t("permissions.matrix.codename_col")}
             </th>
             {roleNames.map((role) => (
-              <th key={role} className="sticky top-0 z-30 bg-[oklch(var(--color-surface-1))] border-b border-[oklch(var(--color-hairline))] px-2 font-medium text-[oklch(var(--color-ink))] min-w-[110px] text-center">
+              <th key={role} className="sticky top-0 z-30 bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-block))] px-2 font-medium text-[oklch(var(--color-ink))] min-w-[110px] text-center">
                 <div>{roleMeta[role]?.display_name || role}</div>
                 <div className="text-xs font-normal text-[oklch(var(--color-ink-subtle))] font-mono">
                   {categoryTally(allPerms, role)}

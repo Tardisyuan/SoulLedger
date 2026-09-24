@@ -1,6 +1,9 @@
 "use client";
 
 import { useI18n } from "@/src/contexts/I18nContext";
+import { cn } from "@/lib/utils";
+import { fieldControl } from "@/src/components/ui/Field";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { Button } from "@/src/components/ui/Button";
 
 /** Filter box, differences-only toggle, pending count and the save button. */
@@ -33,19 +36,13 @@ export function MatrixToolbar({
         onChange={(e) => onFilterTextChange(e.target.value)}
         placeholder={t("permissions.matrix.filter_placeholder")}
         aria-label={t("permissions.matrix.filter_placeholder")}
-        className="flex-1 min-w-[200px] px-3 py-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+        className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
       />
-      <label className="flex items-center gap-2 text-sm text-[oklch(var(--color-ink-muted))] cursor-pointer">
-        <input
-          type="checkbox"
-          checked={onlyDifferences}
-          onChange={(e) => onOnlyDifferencesChange(e.target.checked)}
-          className="accent-[oklch(var(--color-accent))]"
-        />
+      <FilterChipToggle pressed={onlyDifferences} onPressedChange={onOnlyDifferencesChange}>
         {t("permissions.matrix.only_differences")}
-      </label>
+      </FilterChipToggle>
       <div className="flex-1" />
-      <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
+      <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
         {pendingCount > 0
           ? t("permissions.matrix.pending_count", { count: String(pendingCount) })
           : t("permissions.matrix.no_changes")}

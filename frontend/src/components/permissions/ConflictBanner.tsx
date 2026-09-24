@@ -22,8 +22,8 @@ export function ConflictBanner({
   const { t } = useI18n();
 
   return (
-    <div role="alert" className="bg-[oklch(var(--color-status-error))]/10 border border-[oklch(var(--color-status-error))]/40 p-4 flex items-center justify-between gap-4">
-      <p className="text-sm text-[oklch(var(--color-status-error))]">
+    <div role="alert" className="bg-[oklch(var(--color-danger-tint))] shadow-[inset_3px_0_0_oklch(var(--color-danger))] p-4 flex items-center justify-between gap-4">
+      <p className="text-sm text-[oklch(var(--color-danger))]">
         {t("permissions.matrix.conflict_message", {
           role: roleMeta[conflict.role]?.display_name || conflict.role,
           expected: String(conflict.expected),
