@@ -200,7 +200,8 @@ export function DataTable<T>({
     transitionKey ?? ''
   )
 
-  const cellPadding = density === 'compact' ? 'px-4 py-2' : 'px-4 py-3'
+  // 规范 v1 §2 表格:行高 36,紧凑 28(仅审判队列用)。
+  const cellPadding = density === 'compact' ? 'px-3 py-1' : 'px-3 py-2'
   /**
    * The body rows come from `renderRow`, which every caller hand-writes — 40
    * `px-4 py-3` `<td>`s across app/. So a `density` prop alone would only have
@@ -212,7 +213,7 @@ export function DataTable<T>({
    * branch — `comfortable` emits no override at all, so nothing changes for
    * the ten pages that do not opt in.
    */
-  const bodyDensity = density === 'compact' ? '[&_tbody_td]:py-2' : ''
+  const bodyDensity = density === 'compact' ? '[&_tbody_td]:py-1' : ''
   const { t } = useI18n()
 
   const isEmpty = !isLoading && !isError && !data?.length
@@ -256,7 +257,8 @@ export function DataTable<T>({
 
           后果不止一条横向滚动条:所有 `fixed inset-0` 的遮罩与弹窗按 457 铺开、
           居中在 228,一半落在可视区外,里面的按钮「可见、可用、可滚动到」却点不动。 */}
-      <div className="relative overflow-x-auto border border-[oklch(var(--color-hairline))]">
+      {/* 账页不装框:表格没有外框,表头下接区块边界线,行与行之间是行线(规范 v1 §2)。 */}
+      <div className="relative overflow-x-auto">
         {/* `text-sm` (13px), not `text-sm` (14px). Every body cell that does not
             set its own size inherits from here, so this one class is the base
             size of thirteen pages' tables — and it was the single largest block
@@ -272,8 +274,8 @@ export function DataTable<T>({
               ))}
             </colgroup>
           )}
-          <thead className="bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]">
-            <tr className="border-b border-[oklch(var(--color-hairline))]">
+          <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+            <tr className="border-b border-[oklch(var(--color-block))]">
               {columns.map((column) => {
                 const align = ALIGN_CLASS[column.align ?? 'left']
                 const isSortable = Boolean(column.sortable && onSortChange)
@@ -283,7 +285,7 @@ export function DataTable<T>({
                     scope="col"
                     aria-sort={ariaSort(column)}
                     className={cn(
-                      'font-medium',
+                      'font-normal',
                       align,
                       isSortable ? 'p-0' : cellPadding,
                       column.headerClassName
@@ -294,7 +296,7 @@ export function DataTable<T>({
                         type="button"
                         onClick={() => handleSort(column)}
                         className={cn(
-                          'group flex w-full items-center gap-1.5 font-medium',
+                          'group flex w-full items-center gap-1.5 font-normal',
                           cellPadding,
                           'hover:text-[oklch(var(--color-ink))] transition-colors',
                           // Focus ring comes from the global :focus-visible rule
@@ -328,8 +330,10 @@ export function DataTable<T>({
           {isError && (
             <tbody>
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <p className="text-[oklch(var(--color-status-error))]">
+                <td colSpan={columns.length} className="px-3 py-6 bg-[oklch(var(--color-danger-tint))] shadow-[inset_3px_0_0_oklch(var(--color-danger))]">
+                  {/* 规范 v1 空状态「! 加载失败」:写原因,给重试;不靠颜色,前面有「!」。 */}
+                  <p className="text-[oklch(var(--color-danger))]">
+                    <span aria-hidden="true">! </span>
                     {errorMessage ?? t('common.error')}
                   </p>
                   {onRetry && (
@@ -388,7 +392,7 @@ export function DataTable<T>({
                       entered.has(rowKey) ? 'entered' : changed.has(rowKey) ? 'changed' : undefined
                     }
                     className={cn(
-                      'border-b border-[oklch(var(--color-hairline))] last:border-0 hover:bg-[oklch(var(--color-surface-2))] transition-colors',
+                      'border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors',
                       entered.has(rowKey) && 'animate-row-enter',
                       changed.has(rowKey) && 'animate-row-changed'
                     )}
@@ -413,7 +417,7 @@ export function DataTable<T>({
                   key={`leaving-${key}`}
                   aria-hidden="true"
                   data-row-state="leaving"
-                  className="border-b border-[oklch(var(--color-hairline))] last:border-0 pointer-events-none animate-row-exit"
+                  className="border-b border-[oklch(var(--color-rule))] pointer-events-none animate-row-exit"
                 >
                   {renderRow(item, index)}
                 </tr>

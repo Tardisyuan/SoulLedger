@@ -47,10 +47,12 @@ export function PageSection({
   actions,
 }: PageSectionProps) {
   return (
-    <div className={cn('bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4', className)}>
+    // 规范 v1 §2「卡片 = 区块」:1 px 结构线框,无底色、无阴影、无圆角;标题是 11 px 等宽
+    // 栏目标签,下接区块边界线。
+    <div className={cn('border border-[oklch(var(--color-line))] px-3 py-3', className)}>
       {title && (
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h3 className="text-md text-[oklch(var(--color-ink))]">{title}</h3>
+        <div className="flex items-center justify-between gap-3 pb-1 mb-3 border-b border-[oklch(var(--color-block))]">
+          <h3 className="font-mono text-2xs uppercase text-[oklch(var(--color-ink))]">{title}</h3>
           {actions}
         </div>
       )}
@@ -60,7 +62,8 @@ export function PageSection({
         // the only text that says something went wrong. `role="alert"` because
         // a failure appearing in place of content is not something the reader
         // was looking for.
-        <div role="alert" className="text-[oklch(var(--color-status-error))] text-sm py-4 text-center">
+        <div role="alert" className="text-[oklch(var(--color-danger))] text-sm py-4">
+          <span aria-hidden="true">! </span>
           {String(error)}
         </div>
       ) : (

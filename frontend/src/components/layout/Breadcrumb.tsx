@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Home } from "lucide-react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menuGlossParts } from "@/src/lib/menuI18n";
@@ -112,27 +111,18 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
       aria-label={label("breadcrumb.aria_label", "面包屑导航")}
       className="flex-1 min-w-0"
     >
-      <ol className="flex items-center gap-1 text-sm min-w-0 overflow-hidden">
-        <li className="shrink-0">
-          <Link
-            href="/dashboard"
-            prefetch={true}
-            /* accent-INK on hover, like the crumb links below it and the
-               masthead icons beside it. The bare accent measures 2.13:1 on
-               canvas in light mode, so this home glyph would have hovered
-               DARKER-to-lighter out of legibility; see AppLayout.tsx's note in
-               the same header row. */
-            className="flex items-center text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors"
-            title={label("breadcrumb.home", "仪表盘")}
-          >
-            <Home className="w-4 h-4" />
-          </Link>
-        </li>
+      {/* 规范 v1「页头 · 面包屑」:等宽、斜杠分隔;链接悬停下划线,当前页 600 不可点
+          (aria-current)。不再有首页图标 —— 侧栏第一项就是概览。 */}
+      <ol className="flex items-center gap-2 font-mono text-xs min-w-0 overflow-hidden">
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
           return (
             <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[oklch(var(--color-ink-subtle))]" />
+              {i > 0 ? (
+                <span aria-hidden="true" className="shrink-0 text-[oklch(var(--color-ink-subtle))]">
+                  /
+                </span>
+              ) : null}
               {crumb.href && !isLast ? (
                 <Link
                   href={crumb.href}
@@ -148,7 +138,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                    * 两处:那条规则按行匹配,而它自己的表头写明了代价 ——「跨行写开的
                    * 元素这条规则看不见」。这里就是那个代价的实例。 */
                   title={crumb.label}
-                  className="truncate text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] transition-colors"
+                  className="truncate text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] hover:underline"
                 >
                   {crumb.label}
                   {crumb.gloss && (
@@ -160,7 +150,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                   title={crumb.label}
                   className={`truncate ${
                     isLast
-                      ? "text-[oklch(var(--color-ink))] font-medium"
+                      ? "text-[oklch(var(--color-ink))] font-semibold"
                       : "text-[oklch(var(--color-ink-subtle))]"
                   }`}
                   aria-current={isLast ? "page" : undefined}
