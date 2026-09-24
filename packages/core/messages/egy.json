@@ -1159,7 +1159,25 @@
     },
     "confirm_approve": "Sesen Hab-Ba Em Kehat Seth?",
     "approve_warning": "Er Khet Hesy: Per-Hemsu Setep Aba Was Wetep En Ba Pen. Sesh Em Medew Maa.",
-    "proposer_account_removed": "Netjer Sesen Wehem Seth; Nen Rekhyu Ren"
+    "proposer_account_removed": "Netjer Sesen Wehem Seth; Nen Rekhyu Ren",
+    "propose_subtitle": "Hab-Ba Aba Er Per Hemes Setep Seth: Per Hemes Setep Seth Hesy, Iri Seth.",
+    "soul_from_detail": "Em Medu Aba; Nen Wehem",
+    "soul_from_detail_error": "Nen Ini Aba. Setep Wehem.",
+    "source_label": "Tepy",
+    "discard": "Khet…",
+    "discard_title": "Khet Hab-Ba Pen?",
+    "discard_message": "Nen Sau Medu — Hab-Ba Nen Sesh Tepy.",
+    "discard_keep": "Wehem Sesh",
+    "discard_confirm": "Khet",
+    "flow": {
+      "title": "Wat Hesy · Hab-Ba",
+      "step_propose": "Per Hemes Tepy · {{tenant}} Wetjes",
+      "step_approve": "Per Hemes Setep Seth · {{tenant}} Hesy",
+      "step_execute": "Per Hemes Setep Seth · Iri Seth",
+      "target_unchosen": "Nen Setep",
+      "pending_submit": "Em Wetjes",
+      "not_yet": "Nen Shesep"
+    }
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
