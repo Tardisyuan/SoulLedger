@@ -49,6 +49,7 @@ export function JudgmentEvidenceColumn({ evidence }: { evidence: Record<string, 
   return (
     <section className="min-w-0">
       <JudgmentSectionHead
+        mark="丙"
         title={t("judgment.detail.evidence")}
         meta={entries.length > 0 ? String(entries.length) : undefined}
       />

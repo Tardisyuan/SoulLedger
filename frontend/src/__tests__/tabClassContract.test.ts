@@ -91,7 +91,8 @@ describe("the six strips read it from there", () => {
    */
   const EXPECTED_IMPORTERS = [
     "app/dashboard/page.tsx",
-    "app/judgment/page.tsx",
+    // app/judgment/page.tsx 于 2026-09-25 离开:审判队列的「待审 / 已结案」改成规范 v1 的
+    // 分段切换 Segmented(墨底为当前),不再是下划线页签条。
     // 2026-09-18:朋友圈审核的四个分区(举报 / 待审 / 敏感词 / 禁言),第七条读它的条带。
     "app/moderation/page.tsx",
     "app/notifications/page.tsx",

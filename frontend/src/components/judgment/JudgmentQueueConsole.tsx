@@ -293,10 +293,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           aria-valuemin={0}
           aria-valuemax={Math.max(progress.total, 1)}
           aria-label={progressText}
-          className="h-1 bg-[oklch(var(--color-surface-3))] overflow-hidden"
+          className="h-[3px] bg-[oklch(var(--color-surface-3))] overflow-hidden"
         >
           <div
-            className="h-full bg-[oklch(var(--color-accent))] transition-[width]"
+            className="h-full bg-[oklch(var(--color-ink))] transition-[width]"
             style={{ width: `${Math.min(100, (progress.position / Math.max(progress.total, 1)) * 100)}%` }}
           />
         </div>
