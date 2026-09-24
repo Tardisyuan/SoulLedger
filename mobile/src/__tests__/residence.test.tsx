@@ -223,7 +223,7 @@ describe("a native soul of the Duat", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    await pressTab("tab-PastLives");
+    fireEvent.press(await screen.findByTestId("section-past_lives-toggle"));
     expect((await screen.findByTestId("past-lives-empty")).props.children).toBe("杜阿特没有前世。你只有这一世，此后不再入簿。");
   });
 
@@ -235,7 +235,7 @@ describe("a native soul of the Duat", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    await pressTab("tab-PastLives");
+    fireEvent.press(await screen.findByTestId("section-past_lives-toggle"));
     expect((await screen.findByTestId("past-lives-empty")).props.children).toBe("没有前世记录");
   });
 });

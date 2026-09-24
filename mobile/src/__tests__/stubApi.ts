@@ -25,11 +25,11 @@ export async function pressTab(testID: string) {
 export type Reply = { status: number; data?: unknown } | "offline";
 
 export function stubApi(routes: Record<string, Reply | Reply[]>) {
-  const calls: { method: string; url: string; body: unknown }[] = [];
+  const calls: { method: string; url: string; body: unknown; params?: Record<string, unknown> }[] = [];
   soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
     const url = config.url ?? "";
     const method = (config.method ?? "get").toUpperCase();
-    calls.push({ method, url, body: config.data ? JSON.parse(config.data as string) : undefined });
+    calls.push({ method, url, body: config.data ? JSON.parse(config.data as string) : undefined, params: config.params });
     const route = routes[`${method} ${url}`] ?? routes[url];
     const reply = Array.isArray(route) ? (route.length > 1 ? route.shift() : route[0]) : route;
     if (!reply) throw new Error(`unscripted request: ${method} ${url}`);

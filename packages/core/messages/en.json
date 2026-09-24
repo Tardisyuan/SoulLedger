@@ -2254,6 +2254,67 @@
         "invalid_code": "A soul code has 10 characters.",
         "self": "You cannot write to yourself."
       }
+    },
+    "circle": {
+      "tab": "Circle",
+      "feed": {
+        "following": "Following",
+        "tenant": "This civilization",
+        "compose_hint": "Write something…",
+        "empty_title": "Nothing to read yet",
+        "empty_body": "Follow souls in this civilization and their posts appear here. Or write the first one.",
+        "write": "Write",
+        "error": "Could not reach the circle. Your posts are still there; they just cannot be fetched now.",
+        "more": "Earlier posts"
+      },
+      "compose": {
+        "title": "New post",
+        "visibility": "Who can see it",
+        "vis": {
+          "public": "Public",
+          "public_hint": "Every soul in this civilization, including those who do not follow you. Never beyond it.",
+          "tenant": "This civilization",
+          "tenant_hint": "Signed-in souls in this civilization.",
+          "followers": "Followers only",
+          "followers_hint": "Souls who follow you.",
+          "private": "Only me",
+          "private_hint": "Only you."
+        },
+        "scope_note": "The circle is only your current civilization. While residing elsewhere, you see that one.",
+        "submit": "Post",
+        "pending_title": "Posted; under review",
+        "pending_body": "Only you can see it until it passes review. Then it shows to the audience you chose, without a separate notice."
+      },
+      "post": {
+        "title": "Post",
+        "reborn": "Reborn",
+        "pending": "Pending · only you",
+        "pending_note": "It contains a word that needs a person to check it. Others see it once it passes. Nothing is needed from you.",
+        "hidden": "Hidden · others cannot see it",
+        "hidden_note": "The hall hid this; only you can still see it.",
+        "comments": "{{n}} comments"
+      },
+      "comment": {
+        "pending": "Pending",
+        "hint": "Write a comment…",
+        "send": "Send"
+      },
+      "muted": {
+        "body": "You are muted: no posts or comments until then. Letters to the hall are not affected.",
+        "until": "Until {{time}}"
+      },
+      "react": {
+        "like": "Like",
+        "love": "Love",
+        "respect": "Respect",
+        "sympathy": "Sympathy",
+        "eternal_light": "Eternal light",
+        "lamp_confirm_title": "Light an eternal lamp for {{name}}?",
+        "lamp_confirm_body": "Once lit, the lamp cannot be taken back or changed to another reaction.",
+        "lamp_locked": "Lamp lit · cannot be changed",
+        "lamp_confirm": "Light it",
+        "lamp_cancel": "Not now"
+      }
     }
   },
   "soul_push": {

@@ -7,7 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { ApplicationDetailScreen, ApplicationsScreen } from "../screens/applications";
-import { PastLivesScreen } from "../screens/life";
+import { PastLivesSection } from "../screens/life";
 import { application, life, stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -44,13 +44,14 @@ describe("past lives", () => {
         ],
       },
     });
-    wrap(<PastLivesScreen />);
+    wrap(<PastLivesSection lex="cn" reloadKey={0} />);
+    fireEvent.press(screen.getByTestId("section-past_lives-toggle"));
     await screen.findByTestId("past-life-0");
     fireEvent.press(screen.getByTestId("past-life-0-toggle"));
     expect(screen.getByText("已驳回")).toBeTruthy();
-    // The one button on the screen is the disclosure that opened this life — it
-    // shows or hides the record and does nothing to it.
-    expect(screen.queryAllByRole("button").map((b) => b.props.testID)).toEqual(["past-life-0-toggle"]);
+    // The only buttons are the disclosures that opened the section and this life —
+    // they show or hide the record and do nothing to it.
+    expect(screen.queryAllByRole("button").map((b) => b.props.testID)).toEqual(["section-past_lives-toggle", "past-life-0-toggle"]);
     expect(screen.getByTestId("past-life-0-toggle").props.accessibilityState).toMatchObject({ expanded: true });
     expect(screen.queryByText("申诉")).toBeNull();
     expect(screen.queryByText("提交申请")).toBeNull();

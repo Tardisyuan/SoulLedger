@@ -102,14 +102,15 @@ describe("the settings page is the one place for language and sign-out", () => {
     await act(async () => {}); // the page's permission read settles before the test ends
   });
 
-  it("the same icon is on all three tabs", async () => {
+  it("the same icon is on 本世 and 转生 (朋友圈 has search and my page there instead, 1a)", async () => {
     signedIn({
       "/me/past-lives/": { status: 200, data: [] },
       "/me/rebirth-applications/": { status: 200, data: { can_apply: true, reason: null, cooldown_until: null, results: [] } },
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    for (const [tab, loaded] of [["tab-PastLives", "past-lives-empty"], ["tab-Applications", "eligibility"]]) {
+    expect(screen.getAllByTestId("header-account").length).toBeGreaterThan(0);
+    for (const [tab, loaded] of [["tab-Applications", "eligibility"]]) {
       await pressTab(tab);
       expect(screen.getAllByTestId("header-account").length).toBeGreaterThan(0);
       await screen.findByTestId(loaded); // …and its request answered

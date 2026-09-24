@@ -2254,6 +2254,67 @@
         "invalid_code": "灵魂编号须为 10 位。",
         "self": "不能写信给自己。"
       }
+    },
+    "circle": {
+      "tab": "朋友圈",
+      "feed": {
+        "following": "关注",
+        "tenant": "本文明",
+        "compose_hint": "写点什么……",
+        "empty_title": "还没有可看的帖子",
+        "empty_body": "关注本文明的灵魂后，他们的帖子会出现在这里。也可以先写第一条。",
+        "write": "写一条",
+        "error": "朋友圈未能连上。你的帖子都还在，只是此刻取不到。",
+        "more": "更早的帖子"
+      },
+      "compose": {
+        "title": "写帖子",
+        "visibility": "谁能看到",
+        "vis": {
+          "public": "公开",
+          "public_hint": "本文明所有灵魂，包括没关注你的。不出本文明。",
+          "tenant": "本文明",
+          "tenant_hint": "本文明已登录的灵魂。",
+          "followers": "仅关注者",
+          "followers_hint": "关注了你的灵魂。",
+          "private": "仅自己",
+          "private_hint": "只有你。"
+        },
+        "scope_note": "朋友圈只在你当前所在的文明里。暂居时，看到的是暂居地。",
+        "submit": "发出",
+        "pending_title": "已发出，正在审核",
+        "pending_body": "审核通过前只有你看得到。通过后按你选的范围显示，不会另行通知。"
+      },
+      "post": {
+        "title": "帖子",
+        "reborn": "已转世",
+        "pending": "待审 · 仅你可见",
+        "pending_note": "含有需要人工确认的词，审核通过后他人才能看到。你无需做什么。",
+        "hidden": "已隐藏 · 他人不可见",
+        "hidden_note": "这条被殿司隐藏，只有你还看得到。",
+        "comments": "评论 {{n}}"
+      },
+      "comment": {
+        "pending": "待审",
+        "hint": "写评论……",
+        "send": "发送"
+      },
+      "muted": {
+        "body": "你被禁言，期间不能发帖和评论。写给殿司的书信不受影响。",
+        "until": "至 {{time}}"
+      },
+      "react": {
+        "like": "喜",
+        "love": "念",
+        "respect": "敬",
+        "sympathy": "悲",
+        "eternal_light": "长明灯",
+        "lamp_confirm_title": "为 {{name}} 点一盏长明灯？",
+        "lamp_confirm_body": "点灯后不可撤回，也不能再换成别的表态。",
+        "lamp_locked": "已点长明灯 · 不可更改",
+        "lamp_confirm": "点灯",
+        "lamp_cancel": "先不点"
+      }
     }
   },
   "soul_push": {

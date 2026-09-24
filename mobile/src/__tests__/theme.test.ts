@@ -37,6 +37,9 @@ const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string
   { path: (s) => semantic[s].negStrong, triples: ["0.600 0.130 25", "0.550 0.170 25"] },
   { path: (s) => semantic[s].negInk, triples: ["0.900 0.050 25", "0.430 0.160 25"] },
   { path: (s) => semantic[s].negBg, triples: ["0.240 0.040 25", "0.960 0.020 25"] },
+  // 朋友圈 handoff 1e draws the lamp dark only; the light pair is not from the handoff.
+  { path: (s) => semantic[s].lamp, triples: ["0.860 0.110 85", "0.500 0.100 75"] },
+  { path: (s) => semantic[s].lampBg, triples: ["0.230 0.030 80", "0.960 0.030 85"] },
 ];
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -70,7 +73,7 @@ describe("tokens are the design's OKLCH table, converted", () => {
   });
 
   it("the transcription covers every row of the table (a short list checks nothing)", () => {
-    expect(DESIGN_OKLCH).toHaveLength(24);
+    expect(DESIGN_OKLCH).toHaveLength(26); // 24 from 灵魂簿 App 1h, 2 lamp rows from 朋友圈 1e
   });
 });
 
@@ -87,6 +90,8 @@ describe("contrast holds in all ten skins (the handoff claims ≥ 4.6:1; WCAG AA
     ["neg", "s0"],
     ["pos", "s0"],
     ["negInk", "negBg"],
+    ["lamp", "lampBg"],
+    ["lamp", "s0"],
   ];
   const cases = KEYS.flatMap((key) =>
     SCHEMES.map((scheme) => [key, scheme] as const)

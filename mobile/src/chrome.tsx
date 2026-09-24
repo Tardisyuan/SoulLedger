@@ -88,7 +88,7 @@ export function AppHeader({
   );
 }
 
-const TAB_ICONS: Record<string, IconName> = { Life: "ledger", PastLives: "lock", Applications: "cycle", Letters: "letter" };
+const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cycle", Letters: "letter", Circle: "circle" };
 
 /**
  * Chat handoff 1e: the selected tab is a 2px mark rule on top on iOS, and the
