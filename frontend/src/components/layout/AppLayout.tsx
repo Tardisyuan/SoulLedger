@@ -55,6 +55,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t, formatDateTime } = useI18n();
   const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useTenant();
@@ -265,7 +266,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : null}
 
             {user ? (
-              <Popover.Root>
+              // Controlled so 设置 can close it: the settings drawer is a modal
+              // dialog, and a popover left open under it is a second dialog on
+              // screen (the off-screen-motion E2E found exactly that).
+              <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
                 <Popover.Trigger
                   data-testid="user-menu"
                   className="max-w-40 truncate text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
@@ -301,14 +305,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSettingsOpen(true)}
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setSettingsOpen(true);
+                        }}
                         className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("nav.settings")}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setLogoutConfirmOpen(true)}
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setLogoutConfirmOpen(true);
+                        }}
                         className="flex min-h-8 w-full items-center px-3 text-xs text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("auth.logout")}
