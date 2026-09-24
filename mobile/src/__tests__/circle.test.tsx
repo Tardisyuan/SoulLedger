@@ -7,22 +7,23 @@
  * other four still work, or a screen that disables everything would pass.
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { CircleScreen, ComposePostScreen, PostScreen } from "../screens/circle";
+import { CircleScreen, ComposePostScreen, PostScreen, usePaged } from "../screens/circle";
 import { stubApi } from "./stubApi";
 
 const mockPopTo = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
+const mockGoBack = jest.fn();
 let mockParams: object | undefined;
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  useNavigation: () => ({ navigate: mockNavigate, popTo: mockPopTo, goBack: jest.fn(), setOptions: mockSetOptions }),
+  useNavigation: () => ({ navigate: mockNavigate, popTo: mockPopTo, goBack: mockGoBack, setOptions: mockSetOptions }),
   useRoute: () => ({ params: mockParams }),
   useFocusEffect: () => {},
 }));
@@ -65,6 +66,7 @@ beforeEach(() => {
   mockPopTo.mockReset();
   mockNavigate.mockReset();
   mockSetOptions.mockReset();
+  mockGoBack.mockReset();
   mockParams = undefined;
 });
 
@@ -180,7 +182,7 @@ describe("reactions", () => {
     expect(screen.queryByTestId("comment-composer")).toBeNull();
   });
 
-  it("⋯ (report) on someone else's post and comment, never on mine", async () => {
+  it("⋯ on someone else's comment reports it; on mine it does not", async () => {
     stubApi({
       "GET /me/social/posts/p1/": { status: 200, data: post() },
       "/me/social/posts/p1/comments/": page([
@@ -192,15 +194,21 @@ describe("reactions", () => {
     wrap(<PostScreen id="p1" />);
     fireEvent.press(await screen.findByTestId("comment-more-c1"));
     expect(mockNavigate).toHaveBeenCalledWith("CircleReport", { target: "COMMENT", id: "c1", preview: "春笋" });
-    expect(screen.queryByTestId("comment-more-c2")).toBeNull();
+    mockNavigate.mockReset();
+    fireEvent.press(screen.getByTestId("comment-more-c2"));
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("delete-menu")).toBeTruthy();
     await waitFor(() => expect(mockSetOptions).toHaveBeenCalled());
   });
 
-  it("my own post: no ⋯ in the title bar", async () => {
-    detail({ is_mine: true });
-    await screen.findByTestId("reactions");
-    await act(async () => {});
-    expect(mockSetOptions).not.toHaveBeenCalled();
+  it("the title bar's ⋯ reports someone else's post", async () => {
+    detail();
+    await waitFor(() => expect(mockSetOptions).toHaveBeenCalled());
+    const action = headerAction();
+    expect(action.label).toBe("举报帖子");
+    act(() => action.onPress());
+    expect(mockNavigate).toHaveBeenCalledWith("CircleReport", { target: "POST", id: "p1", preview: "想念母亲做的腌笃鲜。" });
+    expect(screen.queryByTestId("delete-menu")).toBeNull();
   });
 
   it("a pending post takes no reactions and no comments", async () => {
@@ -234,5 +242,179 @@ describe("posting", () => {
     wrap(<ComposePostScreen />);
     expect(await screen.findByTestId("muted-lock")).toBeTruthy();
     expect(screen.queryByTestId("post-submit")).toBeNull();
+  });
+});
+
+/** The title bar's action as the screen last set it (the header is the navigator's; mocked here). */
+function headerAction() {
+  const { header } = mockSetOptions.mock.calls.at(-1)[0];
+  return header().props.action as { label: string; onPress: () => void };
+}
+
+function comment(id: string, over: Record<string, unknown> = {}) {
+  return {
+    id,
+    post: "p1",
+    parent: null,
+    author: { user_id: 7, display_name: "许南", avatar: null, is_active: true },
+    content: `评论${id}`,
+    moderation_status: "PUBLISHED",
+    is_mine: false,
+    create_time: "2026-09-17T09:30:00Z",
+    ...over,
+  };
+}
+const MINE = { user_id: 1, display_name: "我", avatar: null, is_active: true };
+const sent = (calls: { method: string; url: string; body: unknown }[], method: string) => calls.filter((c) => c.method === method);
+
+describe("deleting my own", () => {
+  it("post: ⋯ → 删除 → asked again → only then DELETE, and back to the list", async () => {
+    const calls = stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post({ is_mine: true, author: MINE }) },
+      "/me/social/posts/p1/comments/": page([]),
+      "/me/social/status/": STATUS,
+      "DELETE /me/social/posts/p1/": { status: 204 },
+    });
+    wrap(<PostScreen id="p1" />);
+    await waitFor(() => expect(mockSetOptions).toHaveBeenCalled());
+    const action = headerAction();
+    expect(action.label).toBe("删除");
+    act(() => action.onPress());
+    expect(mockNavigate).not.toHaveBeenCalled();
+    fireEvent.press(await screen.findByTestId("delete-row"));
+    expect(screen.getByText("删除这条帖子？")).toBeTruthy();
+    expect(sent(calls, "DELETE")).toHaveLength(0);
+
+    // 取消 on the second step sends nothing either.
+    fireEvent.press(screen.getByTestId("delete-cancel"));
+    await waitFor(() => expect(screen.queryByTestId("delete-confirm-sheet")).toBeNull());
+    expect(sent(calls, "DELETE")).toHaveLength(0);
+
+    act(() => headerAction().onPress());
+    fireEvent.press(await screen.findByTestId("delete-row"));
+    fireEvent.press(screen.getByTestId("delete-confirm"));
+    await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    expect(sent(calls, "DELETE").map((c) => c.url)).toEqual(["/me/social/posts/p1/"]);
+  });
+
+  it("comment: the same two steps, then the comments and the count are read again", async () => {
+    const calls = stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post({ comment_count: 2 }) },
+      "/me/social/posts/p1/comments/": page([comment("c1"), comment("c2", { is_mine: true, author: MINE })]),
+      "/me/social/status/": STATUS,
+      "DELETE /me/social/comments/c2/": { status: 204 },
+    });
+    wrap(<PostScreen id="p1" />);
+    fireEvent.press(await screen.findByTestId("comment-more-c2"));
+    expect(mockNavigate).not.toHaveBeenCalled();
+    fireEvent.press(await screen.findByTestId("delete-row"));
+    expect(screen.getByText("删除这条评论？")).toBeTruthy();
+    expect(sent(calls, "DELETE")).toHaveLength(0);
+    const before = calls.length;
+    fireEvent.press(screen.getByTestId("delete-confirm"));
+    await waitFor(() =>
+      expect(calls.slice(before).map((c) => `${c.method} ${c.url}`)).toEqual(
+        expect.arrayContaining(["DELETE /me/social/comments/c2/", "GET /me/social/posts/p1/comments/", "GET /me/social/posts/p1/"])
+      )
+    );
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+});
+
+describe("replying", () => {
+  function open(rows: unknown[]) {
+    const calls = stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post() },
+      "/me/social/posts/p1/comments/": page(rows),
+      "/me/social/status/": STATUS,
+      "POST /me/social/posts/p1/comments/": { status: 201, data: comment("new") },
+    });
+    wrap(<PostScreen id="p1" />);
+    return calls;
+  }
+
+  it("回复 puts the composer in reply mode and the send carries the parent", async () => {
+    const calls = open([comment("c1")]);
+    fireEvent.press(await screen.findByTestId("comment-reply-c1"));
+    expect(within(screen.getByTestId("replying")).getByText("回复 许南")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("comment-body"), "谢谢");
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
+    expect(sent(calls, "POST")[0].body).toEqual({ content: "谢谢", parent: "c1" });
+    await waitFor(() => expect(screen.queryByTestId("replying")).toBeNull());
+  });
+
+  it("cancelled, it is a plain comment again — no parent at all", async () => {
+    const calls = open([comment("c1")]);
+    fireEvent.press(await screen.findByTestId("comment-reply-c1"));
+    fireEvent.press(screen.getByTestId("reply-cancel"));
+    expect(screen.queryByTestId("replying")).toBeNull();
+    fireEvent.changeText(screen.getByTestId("comment-body"), "一句");
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
+    expect(sent(calls, "POST")[0].body).toEqual({ content: "一句" });
+  });
+
+  it("a reply names whom it answers when that comment is loaded, and guesses nothing when it is not", async () => {
+    open([
+      comment("c1"),
+      comment("c3", { parent: "c1", author: { user_id: 8, display_name: "顾衡", avatar: null, is_active: true } }),
+      comment("c4", { parent: "not-loaded" }),
+    ]);
+    expect(await screen.findByTestId("reply-to-c3")).toBeTruthy();
+    expect(within(screen.getByTestId("reply-to-c3")).getByText("回复 许南")).toBeTruthy();
+    expect(screen.queryByTestId("reply-to-c1")).toBeNull();
+    expect(screen.queryByTestId("reply-to-c4")).toBeNull();
+  });
+
+  it("muted: no 回复 anywhere", async () => {
+    stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post() },
+      "/me/social/posts/p1/comments/": page([comment("c1")]),
+      "/me/social/status/": MUTED,
+    });
+    wrap(<PostScreen id="p1" />);
+    await screen.findByTestId("muted-lock");
+    expect(screen.getByTestId("comment-c1")).toBeTruthy();
+    expect(screen.queryByTestId("comment-reply-c1")).toBeNull();
+  });
+});
+
+describe("more comments", () => {
+  it("更多评论 reads the next page and adds it below; a row already shown is not shown twice", async () => {
+    const calls = stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post({ comment_count: 3 }) },
+      "/me/social/posts/p1/comments/": [
+        { status: 200, data: { count: 3, next: "?page=2", previous: null, results: [comment("c1"), comment("c2")] } },
+        { status: 200, data: { count: 3, next: null, previous: "?page=1", results: [comment("c2"), comment("c3")] } },
+      ],
+      "/me/social/status/": STATUS,
+    });
+    wrap(<PostScreen id="p1" />);
+    fireEvent.press(await screen.findByTestId("comments-more"));
+    expect(await screen.findByTestId("comment-c3")).toBeTruthy();
+    expect(screen.getAllByTestId("comment-c2")).toHaveLength(1);
+    expect(screen.getByTestId("comment-c1")).toBeTruthy();
+    expect(calls.filter((c) => c.url === "/me/social/posts/p1/comments/").map((c) => c.params?.page)).toEqual([1, 2]);
+    expect(screen.queryByTestId("comments-more")).toBeNull();
+  });
+});
+
+describe("usePaged", () => {
+  type Row = { id: string };
+  type Answer = { results: Row[]; next: string | null };
+
+  it("an answer overtaken by a newer request is dropped", async () => {
+    const answers: ((a: Answer) => void)[] = [];
+    const fetchPage = () => new Promise<Answer>((resolve) => answers.push(resolve));
+    const { result } = renderHook(() => usePaged<Row>("t", fetchPage));
+    await act(async () => answers[0]({ results: [{ id: "a" }], next: "?page=2" }));
+    expect(result.current.rows).toEqual([{ id: "a" }]);
+
+    act(() => result.current.more?.()); // page 2; its answer is held back
+    act(() => void result.current.reload()); // page 1 again, newer
+    await act(async () => answers[2]({ results: [{ id: "a2" }], next: null }));
+    await act(async () => answers[1]({ results: [{ id: "late" }], next: null }));
+    expect(result.current.rows).toEqual([{ id: "a2" }]);
   });
 });
