@@ -214,8 +214,8 @@ VIEWER 余额扣留:序列化器对 VIEWER 返回 `balance: null`(与 `SoulSeria
 | 前端 coverage | `cd frontend && npm run test:coverage` | 0 | 168 suites / **3118 passed**;All files 76.12 / 66.97 / 66.52 / 77.05 |
 
 新增测试 50 条:`tests/test_disposition_expiry.py`(20)、`tests/test_disposition_list_sections.py`(17)、
-`tests/test_judgment_precedents.py`(13)。全量从 4468 升到 4524 多出来的另外 6 条,来自仓库里既有的、按注册表
-或迁移参数化的测试,它们把新任务和新迁移也纳入了检查。
+`tests/test_judgment_precedents.py`(13)。全量从 4468 升到 4524 是 +56,比这 50 条多 6 条。
+**这 6 条的来源没有核对**;推测是既有的参数化测试(按迁移或注册表展开)把新迁移、新任务也纳入了,但没有逐条确认。
 
 前端 coverage 第一次跑是**红**的:`egyLexiconRules` 的登记表按词数统计,新增的两条 egy 文案让
 `Neb` / `Sesh` / `Seth` / `Wetep` 的计数变了。照该文件写明的办法重新生成了
@@ -234,7 +234,7 @@ VIEWER 余额扣留:序列化器对 VIEWER 返回 `balance: null`(与 `SoulSeria
 | M5 | 扇出父任务也派发给停用的租户 | test_disposition_expiry |
 | M6 | 候选不再排除永久刑 | test_disposition_expiry |
 | M7 | 列表的 `select_related` 里去掉 `judgment`(N+1) | test_disposition_list_sections |
-| M8 | 去掉 `soul_reborn` 注解 | test_disposition_list_sections |
+| M8 | 去掉 `soul_reborn` 注解 | test_disposition_list_sections(`-x` 下先红的是 `soul_reborn` 过滤那条,不一定是 N+1 那条) |
 | M9 | 在已按 section 过滤的查询集上算计数 | test_disposition_list_sections |
 | M10 | 先例去掉租户过滤 | test_judgment_precedents |
 | M11 | 先例排序去掉「同一殿」 | test_judgment_precedents |
