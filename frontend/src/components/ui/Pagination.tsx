@@ -56,13 +56,15 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
     if (next !== page) onPageChange(next);
   };
 
+  // 规范 v1 §2 分页:32 px 方格、等宽 12 px;悬停 surface-2、按下 surface-3,
+  // 禁用用 disabled 墨色(首页的「上一页」)。
   const stepButton =
-    "px-3 py-1.5 text-sm bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors";
+    "h-8 min-w-8 px-2 font-mono text-xs border border-transparent text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] active:bg-[oklch(var(--color-surface-3))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:pointer-events-none max-sm:min-h-11";
 
   return (
     <div className="flex items-center justify-between mt-4 px-2">
       {showInfo && (
-        <p className="text-xs text-[oklch(var(--color-ink-muted))]">
+        <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
           {t("pagination.info", {
             page: String(page),
             total: String(totalPages),
@@ -107,7 +109,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
             }
           }}
           aria-label={t("pagination.jump")}
-          className="w-14 px-2 py-1.5 text-sm font-mono tabular-nums text-center bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))]"
+          className="h-8 w-14 px-2 font-mono text-xs tabular-nums text-center bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-block))] font-semibold text-[oklch(var(--color-ink))]"
         />
 
         <button

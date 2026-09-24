@@ -9,7 +9,7 @@
     "space": 1
   },
   "components/ui/data-table.tsx": {
-    "space": 2
+    "space": 1
   },
   "src/components/judgment/JudgmentQueueConsole.tsx": {
     "space": 1

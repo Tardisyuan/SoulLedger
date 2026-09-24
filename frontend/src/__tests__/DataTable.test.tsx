@@ -236,7 +236,8 @@ describe("row density reaches the body, not just the header", () => {
 
   it("emits the body override only when compact", () => {
     const { container, unmount } = dense("compact");
-    expect(container.querySelector("table")?.className).toContain("[&_tbody_td]:py-2");
+    // 规范 v1:紧凑行 28 px。
+    expect(container.querySelector("table")?.className).toContain("[&_tbody_td]:py-1");
     unmount();
 
     // Comfortable must add nothing — the ten pages that never opt in should be
@@ -248,12 +249,13 @@ describe("row density reaches the body, not just the header", () => {
   it("compacts the header cells too, so the two do not disagree", () => {
     const { container } = dense("compact");
     const header = container.querySelector("thead th");
-    expect(header?.className ?? "").toContain("py-2");
-    expect(header?.className ?? "").not.toContain("py-3");
+    expect(header?.className ?? "").toContain("py-1");
+    expect(header?.className ?? "").not.toContain("py-2");
   });
 
   it("leaves the header at the comfortable padding by default", () => {
     const { container } = dense();
-    expect(container.querySelector("thead th")?.className ?? "").toContain("py-3");
+    // 规范 v1:行高 36 px。
+    expect(container.querySelector("thead th")?.className ?? "").toContain("py-2");
   });
 });
