@@ -128,6 +128,14 @@ describe("login", () => {
     expect(client.userId).toBe(ME);
     expect(synapse.calls[0]).toMatchObject({ method: "POST", url: "/_matrix/client/v3/login", auth: undefined });
     expect(synapse.calls[0].body).toMatchObject({ type: "org.matrix.login.jwt", token: "jwt-for-me" });
+    // No device asked for: Synapse mints one, and the caller learns which.
+    expect(synapse.calls[0].body).not.toHaveProperty("device_id");
+    expect((await matrixLogin({ homeserver: HS, login_type: "org.matrix.login.jwt", token: "jwt-for-me" })).deviceId).toBe("D1");
+  });
+
+  it("asks for the device it was on before, so a retried txn id stays de-duplicated (MSC3970)", async () => {
+    await matrixLogin({ homeserver: HS, login_type: "org.matrix.login.jwt", token: "jwt-for-me" }, "D1");
+    expect(synapse.calls[0].body).toMatchObject({ device_id: "D1" });
   });
 
   it("a refused token surfaces Synapse's errcode", async () => {
