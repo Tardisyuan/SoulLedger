@@ -27,6 +27,7 @@
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
  * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
  * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单两键(第七节);
+ * - Dbh 政策:推送 / 申请类页面副题 / 点名键写全 Dbh Wehem Mesut,点名的页内键只写 Dbh(第四节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
@@ -114,6 +115,32 @@ const MA_NOT_NEGATION = new Set([
  */
 const NEN_KHEPER_ALLOWED = new Set(["souls.detail.failed", "judgment.queue.error_body"]);
 const hasNenKheper = (v: string) => /\bNen Kheper\b/.test(prose(v));
+
+/**
+ * 第四节「Dbh 政策」(转生申请):上下文已明确时只写 Dbh,脱离上下文一律 Dbh Wehem Mesut。
+ * - 脱离上下文:soul_push.* 整个命名空间(锁屏上没有页面)、页面副题(中文含「申请」的 subtitle 键)、
+ *   下面 DBH_OUT_OF_CONTEXT 点名的键 —— 其中每一个 Dbh 都必须带 Wehem Mesut。
+ * - 页内:DBH_IN_CONTEXT 点名的键(申请页内、本世页内的空态与错误)只写 Dbh,不许补全。
+ * 页面副题要求中文含「申请」:受刑计划的「请求」也写 Dbh(Dbh Wetep),不在本政策内。
+ * 后端副本 apps/soul_push/messages.py 与包逐字一致由后端测试钉住,所以这里守住包就守住了它。
+ * 两份清单都反向查陈旧:点名的键不存在、或已不含 Dbh,即红。
+ */
+const DBH_OUT_OF_CONTEXT = new Set(["soul_app.errors.soul_state", "soul_app.errors.sentence_in_progress"]);
+const DBH_IN_CONTEXT = new Set([
+  "soul_app.applications.empty",
+  "soul_app.applications.cannot_apply",
+  "soul_app.life.no_applications",
+  "soul_app.errors.cooldown",
+  "soul_app.errors.appeal_used",
+  "soul_app.errors.not_appealable",
+]);
+const hasDbh = (v: string) => /\bDbh\b/.test(prose(v));
+/** 有一个 Dbh 后面没跟 Wehem Mesut。 */
+const hasBareDbh = (v: string) => /\bDbh\b(?! Wehem Mesut\b)/.test(prose(v));
+const isDbhOutOfContext = (k: string) =>
+  k.startsWith("soul_push.") ||
+  DBH_OUT_OF_CONTEXT.has(k) ||
+  (/(^|[._])subtitle$/.test(k) && (ZH[k] ?? "").includes("申请"));
 
 const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(k);
 
@@ -288,6 +315,23 @@ describe("egy 词表规则", () => {
     // 白名单里的键若已不存在或不再含 Nen Kheper,就该删掉 —— 留着会替将来的「未成」背书。
     const stale = [...NEN_KHEPER_ALLOWED].filter((k) => !hasNenKheper(EGY[k] ?? ""));
     expect(stale).toEqual([]);
+  });
+
+  it("Dbh 政策:脱离上下文的键每个 Dbh 都写全 Dbh Wehem Mesut", () => {
+    expect(offenders(KEYS, (v, k) => isDbhOutOfContext(k) && hasBareDbh(v))).toEqual([]);
+    // 推送里至少还有 Dbh(否则这条对 soul_push 什么都没守),点名的键必须存在且含 Dbh。
+    expect(KEYS.filter((k) => k.startsWith("soul_push.") && hasDbh(EGY[k])).length).toBeGreaterThan(0);
+    expect([...DBH_OUT_OF_CONTEXT].filter((k) => !hasDbh(EGY[k] ?? ""))).toEqual([]);
+  });
+
+  it("Dbh 政策:页内键只写 Dbh,不补全 Wehem Mesut", () => {
+    expect(
+      [...DBH_IN_CONTEXT].filter((k) => /\bDbh Wehem Mesut\b/.test(prose(EGY[k] ?? ""))).map((k) => `${k}: ${EGY[k]}`)
+    ).toEqual([]);
+    // 清单陈旧:键不存在或已不含 Dbh。
+    expect([...DBH_IN_CONTEXT].filter((k) => !hasDbh(EGY[k] ?? ""))).toEqual([]);
+    // 两份清单不许重叠。
+    expect([...DBH_IN_CONTEXT].filter((k) => isDbhOutOfContext(k))).toEqual([]);
   });
 
   it("Pert 只在调度键里出现(入口是 Aq,不是 Pert)", () => {
