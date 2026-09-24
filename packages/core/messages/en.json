@@ -2577,6 +2577,23 @@
       "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
       "words": "No words yet",
       "mutes": "No mutes"
+    },
+    "word_category": {
+      "NONE": "Uncategorized",
+      "PRIVACY": "Privacy",
+      "ABUSE": "Abuse",
+      "INDUCEMENT": "Boundary-crossing inducement",
+      "CONFIDENTIAL": "Confidential",
+      "OFFICIAL_DEFAMATION": "Defaming officials"
+    },
+    "word_action": {
+      "REVIEW": "Send to review",
+      "HIDE": "Hide",
+      "MASK": "Replace with ***"
+    },
+    "handling": {
+      "HIDDEN": "Hidden",
+      "DELETED": "Deleted"
     }
   },
   "soul_inbox": {

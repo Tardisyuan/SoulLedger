@@ -8,6 +8,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.social import soul_views as sv
 from apps.social.moderation_views import (
+    HandledContentViewSet,
     ModeratedCommentViewSet,
     ModeratedPostViewSet,
     ReportViewSet,
@@ -37,5 +38,6 @@ moderation_router.register(r"posts", ModeratedPostViewSet, basename="social-mode
 moderation_router.register(r"comments", ModeratedCommentViewSet, basename="social-moderation-comment")
 moderation_router.register(r"sensitive-words", SensitiveWordViewSet, basename="social-moderation-word")
 moderation_router.register(r"mutes", SocialMuteViewSet, basename="social-moderation-mute")
+moderation_router.register(r"handled", HandledContentViewSet, basename="social-moderation-handled")
 
 moderation_urlpatterns = [path("", include(moderation_router.urls))]

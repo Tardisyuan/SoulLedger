@@ -2577,6 +2577,23 @@
       "content_reason": "Khet Gem Medu Djeseru Wa Em Maat; Khet Sedjem Em Aat Sedjem.",
       "words": "Nen Medu Djeseru Djer",
       "mutes": "Nen Sesh Gerh"
+    },
+    "word_category": {
+      "NONE": "Nen Sesh",
+      "PRIVACY": "Wa-Ek",
+      "ABUSE": "Medu Kher",
+      "INDUCEMENT": "Medu Isfet",
+      "CONFIDENTIAL": "Khet Khetem",
+      "OFFICIAL_DEFAMATION": "Medu Kher Er Sab"
+    },
+    "word_action": {
+      "REVIEW": "Em Maat",
+      "HIDE": "Imen Khet",
+      "MASK": "Imen Medu"
+    },
+    "handling": {
+      "HIDDEN": "Imen Seth",
+      "DELETED": "Fekh Seth"
     }
   },
   "soul_inbox": {

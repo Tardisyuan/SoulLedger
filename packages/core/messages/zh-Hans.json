@@ -2577,6 +2577,23 @@
       "content_reason": "只有命中敏感词的内容会进待审;被举报的内容在举报队列里",
       "words": "还没有敏感词",
       "mutes": "没有禁言记录"
+    },
+    "word_category": {
+      "NONE": "未分类",
+      "PRIVACY": "隐私",
+      "ABUSE": "辱骂",
+      "INDUCEMENT": "越界诱导",
+      "CONFIDENTIAL": "机密",
+      "OFFICIAL_DEFAMATION": "诽谤官员"
+    },
+    "word_action": {
+      "REVIEW": "送审",
+      "HIDE": "隐藏",
+      "MASK": "替换 ***"
+    },
+    "handling": {
+      "HIDDEN": "已隐藏",
+      "DELETED": "已删除"
     }
   },
   "soul_inbox": {

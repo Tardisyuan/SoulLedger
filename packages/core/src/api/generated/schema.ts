@@ -3727,6 +3727,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/social-moderation/handled/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+         *
+         *     * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
+         *       (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
+         *     * 删除:软删除且删除人不是作者本人 —— 作者删自己的东西不是审核处理。读 `deleted_*`。
+         *       删除的行不在这里恢复:帖子与评论不在回收站的登记表里,本分支不另开恢复路径。
+         *
+         *     两个模型各自过 `scope_to_tenant`,再 UNION 成一个查询 —— 分页与计数在数据库里做。
+         */
+        get: operations["v1_social_moderation_handled_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social-moderation/mutes/": {
         parameters: {
             query?: never;
@@ -3754,7 +3780,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        /** @description 解除。通知走既有的事件总线:`SOCIAL_UNMUTED` 定向发给被禁言的账号(WebSocket)。 */
         post: operations["v1_social_moderation_mutes_lift_create"];
         delete?: never;
         options?: never;
@@ -3946,10 +3972,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。 */
+        /**
+         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         */
         get: operations["v1_social_moderation_sensitive_words_list"];
         put?: never;
-        /** @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。 */
+        /**
+         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         */
         post: operations["v1_social_moderation_sensitive_words_create"];
         delete?: never;
         options?: never;
@@ -3967,8 +3999,31 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。 */
+        /**
+         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         */
         delete: operations["v1_social_moderation_sensitive_words_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/sensitive-words/batch-delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 同单条删除一样的码名与租户范围;全有或全无,一次最多 200 条。任何一个 id 不在本文明
+         *     词表里 → 404,`missing` 列出它们,一条都不删。
+         */
+        post: operations["v1_social_moderation_sensitive_words_batch_delete_create"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6591,6 +6646,29 @@ export interface components {
             poena: number | null;
             poena_missing: string[];
         };
+        /**
+         * @description 「已处理」的一行,帖子与评论同一形状(见 moderation_views.HandledContentViewSet)。
+         *
+         *     * `handling`:HIDDEN 可经 `POST {posts|comments}/{id}/restore/` 恢复可见;DELETED 走回收站的
+         *       规则(帖子与评论目前不在回收站里,所以没有恢复入口)。
+         *     * `handled_by` 为空:系统处理(命中 HIDE 动作的敏感词,`reason` 是 `sensitive_word:<词>`),
+         *       或处理人的账号已不存在。
+         *     * `post`:评论所在的帖子;帖子行是它自己。
+         */
+        HandledContent: {
+            type: components["schemas"]["SocialHandledTypeEnum"];
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            post: string;
+            readonly author: components["schemas"]["ModerationAuthor"];
+            excerpt: string;
+            handling: components["schemas"]["SocialHandlingEnum"];
+            reason: string;
+            readonly handled_by: components["schemas"]["ModerationAuthor"] | null;
+            /** Format: date-time */
+            handled_at: string | null;
+        };
         /** @description 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。 */
         InboxMessage: {
             event_id: string;
@@ -7617,6 +7695,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Follow"][];
+        };
+        PaginatedHandledContentList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["HandledContent"][];
         };
         PaginatedInitialCredentialList: {
             /** @example 123 */
@@ -9359,13 +9452,28 @@ export interface components {
             readonly name_en: string;
             readonly name_egy: string;
         };
+        /**
+         * @description `category` 空串 = 未分类(0007 之前加的词);中文名在 i18n 包 `social_moderation.word_category`。
+         *     `hits_30d` 只在列表里有值(`moderation.with_recent_hits` 注解),新建返回 0。
+         */
         SensitiveWord: {
             /** Format: uuid */
             readonly id: string;
             word: string;
+            /** @default  */
+            category: components["schemas"]["SocialSensitiveWordCategoryEnum"] | components["schemas"]["BlankEnum"];
+            /** @default REVIEW */
+            action: components["schemas"]["SocialSensitiveWordActionEnum"];
+            readonly hits_30d: number;
             readonly created_by: components["schemas"]["ModerationAuthor"] | null;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        SensitiveWordBatchDelete: {
+            ids: string[];
+        };
+        SensitiveWordBatchDeleteResult: {
+            deleted: number;
         };
         SentenceNode: {
             /** Format: uuid */
@@ -9523,12 +9631,28 @@ export interface components {
          */
         SeverityEnum: "error" | "warning";
         /**
+         * @description * `POST` - Post
+         *     * `COMMENT` - Comment
+         * @enum {string}
+         */
+        SocialHandledTypeEnum: "POST" | "COMMENT";
+        /**
+         * @description * `HIDDEN` - Hidden
+         *     * `DELETED` - Deleted
+         * @enum {string}
+         */
+        SocialHandlingEnum: "HIDDEN" | "DELETED";
+        /**
          * @description * `PUBLISHED` - Published
          *     * `PENDING` - Pending review
          *     * `HIDDEN` - Hidden
          * @enum {string}
          */
         SocialModerationStatusEnum: "PUBLISHED" | "PENDING" | "HIDDEN";
+        /**
+         * @description `created_at` 是开始,`until` 是结束(没有永久禁言:天数 1–365,`until` 永不为空)。
+         *     `created_by` 是执行人,`lifted_by` 是解除人;两者都可能为空(账号被删)。
+         */
         SocialMute: {
             /** Format: uuid */
             readonly id: string;
@@ -9538,8 +9662,10 @@ export interface components {
             readonly reason: string;
             /** Format: date-time */
             readonly created_at: string;
+            readonly created_by: components["schemas"]["ModerationAuthor"] | null;
             /** Format: date-time */
             readonly lifted_at: string | null;
+            readonly lifted_by: components["schemas"]["ModerationAuthor"] | null;
             readonly is_active: boolean;
         };
         /**
@@ -9573,6 +9699,22 @@ export interface components {
          * @enum {string}
          */
         SocialReportTargetEnum: "POST" | "COMMENT" | "USER";
+        /**
+         * @description * `REVIEW` - Send to review
+         *     * `HIDE` - Hide
+         *     * `MASK` - Mask with ***
+         * @enum {string}
+         */
+        SocialSensitiveWordActionEnum: "REVIEW" | "HIDE" | "MASK";
+        /**
+         * @description * `PRIVACY` - Privacy
+         *     * `ABUSE` - Abuse
+         *     * `INDUCEMENT` - Boundary-crossing inducement
+         *     * `CONFIDENTIAL` - Confidential
+         *     * `OFFICIAL_DEFAMATION` - Defaming officials
+         * @enum {string}
+         */
+        SocialSensitiveWordCategoryEnum: "PRIVACY" | "ABUSE" | "INDUCEMENT" | "CONFIDENTIAL" | "OFFICIAL_DEFAMATION";
         /**
          * @description Soul detail. Field access is enforced in two layers, deliberately.
          *
@@ -17093,6 +17235,36 @@ export interface operations {
             };
         };
     };
+    v1_social_moderation_handled_list: {
+        parameters: {
+            query?: {
+                /** @description 只看隐藏或只看删除 */
+                handling?: "DELETED" | "HIDDEN";
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description 只看帖子或只看评论 */
+                type?: "COMMENT" | "POST";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHandledContentList"];
+                };
+            };
+        };
+    };
     v1_social_moderation_mutes_list: {
         parameters: {
             query?: {
@@ -17669,6 +17841,63 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_batch_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SensitiveWordBatchDelete"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordBatchDelete"];
+                "multipart/form-data": components["schemas"]["SensitiveWordBatchDelete"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWordBatchDeleteResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
             };
         };
     };
