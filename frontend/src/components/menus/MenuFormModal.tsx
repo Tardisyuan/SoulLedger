@@ -177,7 +177,7 @@ export function MenuFormModal({
               onChange={(icon) => { setForm({ ...form, icon }); setIconError(false); }}
             />
             {iconError ? (
-              <p className="text-xs text-[oklch(var(--color-status-error))]">{t("menus.icon_missing_error")}</p>
+              <p role="alert" className="text-xs text-[oklch(var(--color-danger))]"><span aria-hidden="true">! </span>{t("menus.icon_missing_error")}</p>
             ) : (
               <p className="text-xs text-[oklch(var(--color-ink-tertiary))]">{t("menus.icon_required_hint")}</p>
             )}

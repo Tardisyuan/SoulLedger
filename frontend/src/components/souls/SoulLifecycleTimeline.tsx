@@ -33,25 +33,6 @@ import {
   type FutureStageKey,
 } from "./soulLifecycleRows";
 
-const PIPELINE_STEPS = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "ALIVE_NEXT"] as const;
-
-function currentStepPosition(state: string, hasReincarnated: boolean): number {
-  switch (state) {
-    case "ALIVE":
-      return hasReincarnated ? 4 : 0;
-    case "JUDGING":
-      return 1;
-    case "DISPOSED":
-    case "SETTLED":
-    case "LOST":
-      return 2;
-    case "REINCARNATING":
-      return 3;
-    default:
-      return 0;
-  }
-}
-
 interface SoulLifecycleTimelineProps {
   soul: Soul;
   judgments: Judgment[];
@@ -90,8 +71,6 @@ export function SoulLifecycleTimeline({
   const [includeSystemEvents, setIncludeSystemEvents] = useState(false);
   const [expandedSystemGroups, setExpandedSystemGroups] = useState<Record<string, boolean>>({});
 
-  const hasReincarnated = reincarnations.length > 0;
-  const currentPos = currentStepPosition(soul.current_state, hasReincarnated);
   const isSettled = soul.current_state === "SETTLED";
 
   // The row for the disposition that actually closed the account — the
@@ -263,39 +242,9 @@ export function SoulLifecycleTimeline({
         </div>
       </div>
 
-      {/* Stepper */}
-      <div className="flex items-center mb-5 overflow-x-auto">
-        {PIPELINE_STEPS.map((step, i) => {
-          const state = i < currentPos ? "done" : i === currentPos ? "now" : "future";
-          const label =
-            step === "ALIVE" || step === "ALIVE_NEXT"
-              ? t("souls.states.ALIVE")
-              : t(`souls.states.${step}`);
-          return (
-            <div key={step} className="flex items-center flex-1 min-w-[72px]">
-              <div
-                className={`px-2 py-1 text-xs font-medium whitespace-nowrap text-center flex-1 ${
-                  state === "now"
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : state === "done"
-                      ? "text-[oklch(var(--color-ink-muted))]"
-                      : "text-[oklch(var(--color-ink-subtle))] border border-dashed border-[oklch(var(--color-hairline-strong))]"
-                }`}
-              >
-                {label}
-              </div>
-              {i < PIPELINE_STEPS.length - 1 && (
-                <div
-                  className={`h-px flex-1 min-w-[8px] ${
-                    i < currentPos ? "bg-[oklch(var(--color-ink-muted))]" : "border-t border-dashed border-[oklch(var(--color-hairline-strong))]"
-                  }`}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
+      {/* 这里曾有一条「存活 → 审判 → 处置 → 轮回 → 存活」的步进条。详情页顶部的
+          「户头进度」(SoulLedgerProgress)画的是同一件事,两条并存就是同一个状态
+          说两遍;按用户决定删去这一条,账页只留时间线本身。 */}
       {/* Spine */}
       <div>
         {visibleRows.length === 0 ? (

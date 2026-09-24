@@ -199,7 +199,8 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
                 ))}
               </div>
               {cronErrors.length > 0 && (
-                <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-status-error))] break-words">
+                <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-danger))] break-words">
+                  <span aria-hidden="true">! </span>
                   {cronErrors.join(" ")}
                 </p>
               )}

@@ -19,6 +19,7 @@ import { Button } from "@/src/components/ui/Button";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SelectField, TextAreaField, TextField } from "@/src/components/ui/Field";
 import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
 /*
  * 联审定下的各站(docs/ARCHITECTURE-sentence-plan.md §2.1、Q1、Q5、Q12、Q16)。
@@ -31,7 +32,7 @@ import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
  *   服务端的 `order/` 与联审结束校验各再拦一次。
  */
 
-const ROW = "flex flex-wrap items-center gap-x-2 gap-y-1 bg-[oklch(var(--color-surface-2))] px-4 py-2";
+const ROW = "flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 border-b border-[oklch(var(--color-rule))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function errorText(error: unknown): string | null {
@@ -149,9 +150,9 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
 
   return (
     <section className="mb-6" aria-label={t("sentence_plan.cross.title")}>
-      <h2 className="text-md text-[oklch(var(--color-ink))] mb-1">{t("sentence_plan.cross.title")}</h2>
-      <p className={`${MUTED} mb-3`}>{t("sentence_plan.cross.hint")}</p>
-      <ol className="space-y-2">
+      <LedgerHeading mark="丁" title={t("sentence_plan.cross.title")} />
+      <p className={`${MUTED} py-1.5`}>{t("sentence_plan.cross.hint")}</p>
+      <ol>
         <li className={ROW} data-stop="1">
           <span className="text-sm font-medium tabular-nums">{t("sentence_plan.stop", { order: "1" })}</span>
           <TenantName code={judgment.initiating_tenant_code} />
@@ -202,12 +203,12 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
         </p>
       )}
       {draft && (
-        <div className="mt-3 flex gap-2">
-          <Button type="button" size="sm" loading={saveOrder.isPending} disabled={misplacedEternal} onClick={() => saveOrder.mutate()}>
-            {t("sentence_plan.cross.save_order")}
-          </Button>
+        <div className="mt-3 flex justify-end gap-2">
           <Button type="button" size="sm" variant="secondary" onClick={() => setDraft(null)}>
             {t("common.cancel")}
+          </Button>
+          <Button type="button" size="sm" loading={saveOrder.isPending} disabled={misplacedEternal} onClick={() => saveOrder.mutate()}>
+            {t("sentence_plan.cross.save_order")}
           </Button>
         </div>
       )}

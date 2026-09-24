@@ -12,6 +12,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
 /** The name in the reader's language, falling back to the primary name. */
 function actorName(a: SeatableActor, locale: string): string {
@@ -92,14 +93,14 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
 
   return (
     <form
-      className="mb-6 space-y-3 bg-[oklch(var(--color-surface-2))] p-4"
+      className="mb-6 space-y-3"
       aria-label={t("sentence_plan.cross.seat_title")}
       onSubmit={(e) => {
         e.preventDefault();
         if (tenantCode) seat.mutate();
       }}
     >
-      <h2 className="text-md text-[oklch(var(--color-ink))]">{t("sentence_plan.cross.seat_title")}</h2>
+      <LedgerHeading mark="丙" title={t("sentence_plan.cross.seat_title")} />
       <div className="grid gap-3 sm:grid-cols-2">
         <SelectField
           label={t("sentence_plan.cross.seat_tenant")}
@@ -163,9 +164,11 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
             : t("sentence_plan.cross.seat_advisor_hint")}
         </p>
       )}
-      <Button type="submit" size="sm" loading={seat.isPending} disabled={!tenantCode}>
-        {t("sentence_plan.cross.seat_submit")}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="submit" size="sm" loading={seat.isPending} disabled={!tenantCode}>
+          {t("sentence_plan.cross.seat_submit")}
+        </Button>
+      </div>
     </form>
   );
 }

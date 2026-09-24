@@ -125,13 +125,12 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
    * what its six sibling modals already used — this file was the odd one.
    */
   const footer = (
-    <div className="flex gap-3">
+    <div className="flex justify-end gap-2">
       <Button
         type="button"
         variant="secondary"
         onClick={onClose}
         disabled={updateMutation.isPending}
-        className="flex-1"
       >
         {t("common.cancel")}
       </Button>
@@ -141,7 +140,6 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
         variant="primary"
         loading={updateMutation.isPending}
         disabled={!name.trim()}
-        className="flex-1"
       >
         {updateMutation.isPending ? t("souls.form.updating") : t("common.save")}
       </Button>
