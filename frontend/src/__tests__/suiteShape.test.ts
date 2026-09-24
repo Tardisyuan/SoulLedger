@@ -93,6 +93,11 @@ const COLLECTED_FILES = [
   "SentencePlanPanels.test.tsx",
   "SentencePlanForms.test.tsx",
   "JudgmentAmendmentConclude.test.tsx",
+  // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。
+  "JudgmentDesk.test.tsx",
+  "JudgmentListPage.test.tsx",
+  "DispositionPage.sections.test.tsx",
+  "hotkeys.test.tsx",
   "SoulHeaderActions.test.tsx",
   "SoulDetailPage.cacheInvalidation.test.tsx",
   "SoulDetailPage.inheritance.test.tsx",

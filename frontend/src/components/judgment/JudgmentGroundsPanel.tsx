@@ -104,12 +104,12 @@ function statuteRef(statute: Statute): StatuteRef {
 }
 
 /**
- * The heading rule every part of the judgment document uses — 主文, 事实, 理由,
- * 附引条文, 灵魂信息.
+ * The heading rule every part of the judgment document uses — 甲 身份, 丙 证据,
+ * 丁 判词, 据 条文 …
  *
- * `border-b-2 border-ink-subtle` is the section underline from
- * tailwind.config.js's four-step border ladder, and it is what carries
- * hierarchy on this page instead of a heavier heading weight.
+ * 规范 v1(第三类 A·01):等宽小字、下压 1 px 区块边界线,和灵魂账页的
+ * `LedgerHeading` 是同一个样子;`mark` 是天干序号(甲乙丙丁戊),可省。
+ * It was `border-b-2 border-ink-subtle` with sans text before the ledger pass.
  *
  * Exported from here rather than restated at each site: five sections across
  * three files spelling out the same class string is the copy-then-drift shape
@@ -119,20 +119,21 @@ export function JudgmentSectionHead({
   title,
   meta,
   id,
+  mark,
 }: {
   title: ReactNode;
   /** Right-aligned count or figure. Mono + tabular, so columns of them line up. */
   meta?: ReactNode;
   id?: string;
+  mark?: string;
 }) {
   return (
-    <div className="flex items-baseline gap-3 border-b-2 border-[oklch(var(--color-ink-subtle))] pb-2">
-      <h2 id={id} className="text-2xs uppercase text-[oklch(var(--color-ink))] flex-1">
+    <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+      <h2 id={id} className="flex-1 text-2xs uppercase">
+        {mark && <span aria-hidden="true">{mark} · </span>}
         {title}
       </h2>
-      {meta ? (
-        <span className="font-mono tabular-nums text-xs text-[oklch(var(--color-ink-subtle))]">{meta}</span>
-      ) : null}
+      {meta ? <span className="tabular-nums">{meta}</span> : null}
     </div>
   );
 }
@@ -141,7 +142,7 @@ export function JudgmentGroundsPanel({ citations }: { citations: JudgmentCitatio
   const { t } = useI18n();
 
   return (
-    <section className="mt-10">
+    <section>
       <JudgmentSectionHead
         title={t("judgment.grounds.title")}
         meta={

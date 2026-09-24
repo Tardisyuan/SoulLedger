@@ -29,6 +29,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     t: (key: string, params?: Record<string, string>) =>
       params ? `${key}:${Object.values(params).join(",")}` : key,
     formatDateTime: (v: string) => v,
+    formatDate: (v: string) => v,
     locale: "zh-Hans",
     hydrated: true,
   }),
