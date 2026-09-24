@@ -68,13 +68,12 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
    * and adds the `active:` nudge and `aria-busy` this never had.
    */
   const footer = (
-    <div className="flex gap-3">
+    <div className="flex justify-end gap-2">
       <Button
         type="button"
         variant="secondary"
         onClick={onClose}
         disabled={updateMutation.isPending}
-        className="flex-1"
       >
         {t("common.cancel")}
       </Button>
@@ -83,7 +82,6 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
         form="profile-edit-form"
         variant="primary"
         loading={updateMutation.isPending}
-        className="flex-1"
       >
         {updateMutation.isPending ? (t("common.loading") || "Loading...") : (t("common.save") || "Save")}
       </Button>

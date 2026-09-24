@@ -4,29 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { Button } from "@/src/components/ui/Button";
 import { FollowButton } from "./FollowButton";
 import { ProfileEditModal } from "./ProfileEditModal";
 import type { UserProfile } from "@soulledger/core/api";
 
 /**
- * 身份卡 —— 页面的主语,不是页面上的一块面板。
+ * 身份段 —— 页面的主语。规范 v1 详情页原型:卡片撤掉(无底色、无阴影、无框),
+ * 头像是全站唯一保留圆角的东西;三个计数是账行,数字等宽右对齐。
  *
- * **`p-6` 是有意留下的,不要收敛成 `p-4`。** 全站同一个配方(surface-1 底 +
- * hairline 边)2026-09-10 实测是 **53 处 `p-4` 对 2 处 `p-6`**,而剩下的两处
- * `p-6` 恰好是同一类东西:这里,和 `app/(auth)/login/page.tsx:108` 那张登录卡。
- * 一次审计只看数字会把 2 报成漂移 —— 2aa8494 那一轮就是这么把
- * `dispatch/[id]` 的三处 p-6 收掉的,那三处收得对(它们是并排的详情面板,
- * 内边距要和邻居一致)。这一处不同,理由是结构上的:
- *
- *   - 卡里第一件东西是 **64px 的头像**(`w-16 h-16`)。面板的内边距要贴合文本
- *     行高;身份卡的内边距要贴合那个头像的视觉重量,24px 是它的下限,16px 会
- *     让头像顶到边上。
- *   - 它在 `app/social/profile/[id]/page.tsx:102` 是**整页唯一的一张卡**,
- *     底下跟的是帖子列表,没有并排的兄弟面板可以和它对齐内边距。登录卡同理。
- *
- * 所以判据不是「p-6 还是 p-4」,是「这块东西有没有需要对齐内边距的邻居」。
- * 没有邻居 + 有一个大头像 = 身份卡 = `p-6`。写在这里是因为上一轮就是这么判的,
- * 但**没写下来**,于是下一轮审计只会重新数一遍 53 比 2 再报一次。
+ * 这里曾是一张 `p-6` 的身份卡,注释论证过它为什么不收成 `p-4`。卡没了,那段
+ * 论证也就没有对象了 —— 页面上只剩行线与区块标。
  */
 export function ProfileCard({ profile }: { profile: UserProfile }) {
   const { t } = useI18n();
@@ -34,10 +22,15 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
   const isOwnProfile = user && String(user.id) === String(profile.user);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const counts: [number, string][] = [
+    [profile.post_count, t("social.posts") || "posts"],
+    [profile.followers_count, t("social.followers") || "followers"],
+    [profile.following_count, t("social.following_count") || "following"],
+  ];
+
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-6">
-      <div className="flex items-start gap-4">
-        {/* Avatar */}
+    <section>
+      <div className="flex items-center gap-4 pb-3 border-b border-[oklch(var(--color-block))]">
         <div className="w-16 h-16 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-md text-[oklch(var(--color-accent-ink))] overflow-hidden shrink-0">
           {profile.avatar ? (
             <img
@@ -49,48 +42,34 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
             profile.username.charAt(0).toUpperCase()
           )}
         </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <h2 className="text-md text-[oklch(var(--color-ink))] truncate" title={profile.username}>
-              {profile.username}
-            </h2>
-            {isOwnProfile ? (
-              <button
-                type="button"
-                onClick={() => setIsEditOpen(true)}
-                className="px-4 py-1.5 text-sm font-medium border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] transition-colors"
-              >
-                {t("social.edit_profile") || "Edit profile"}
-              </button>
-            ) : (
-              <FollowButton userId={profile.user} />
-            )}
-          </div>
-          {profile.bio && (
-            <p className="text-sm text-[oklch(var(--color-ink-muted))] mt-1 whitespace-pre-wrap">
-              {profile.bio}
-            </p>
-          )}
-          <div className="flex gap-4 mt-3 text-xs">
-            <span className="text-[oklch(var(--color-ink-muted))]">
-              <strong className="font-mono tabular-nums text-[oklch(var(--color-ink))]">{profile.post_count}</strong>{" "}
-              {t("social.posts") || "posts"}
-            </span>
-            <span className="text-[oklch(var(--color-ink-muted))]">
-              <strong className="font-mono tabular-nums text-[oklch(var(--color-ink))]">{profile.followers_count}</strong>{" "}
-              {t("social.followers") || "followers"}
-            </span>
-            <span className="text-[oklch(var(--color-ink-muted))]">
-              <strong className="font-mono tabular-nums text-[oklch(var(--color-ink))]">{profile.following_count}</strong>{" "}
-              {t("social.following_count") || "following"}
-            </span>
-          </div>
-        </div>
+        <h2 className="flex-1 min-w-0 text-md text-[oklch(var(--color-ink))] truncate" title={profile.username}>
+          {profile.username}
+        </h2>
+        {isOwnProfile ? (
+          <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditOpen(true)}>
+            {t("social.edit_profile") || "Edit profile"}
+          </Button>
+        ) : (
+          <FollowButton userId={profile.user} />
+        )}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-[oklch(var(--color-hairline))]/50">
+      {profile.bio && (
+        <p className="py-2 max-w-[72ch] text-sm text-[oklch(var(--color-ink-muted))] whitespace-pre-wrap border-b border-[oklch(var(--color-rule))]">
+          {profile.bio}
+        </p>
+      )}
+
+      <dl className="grid grid-cols-[1fr_auto] max-w-sm text-sm">
+        {counts.map(([n, label]) => (
+          <div key={label} className="contents">
+            <dt className="py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]">{label}</dt>
+            <dd className="py-1.5 border-b border-[oklch(var(--color-rule))] text-right font-mono tabular-nums text-[oklch(var(--color-ink))]">{n}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="pt-2">
         <Link
           href={`/social/profile/${profile.user}`}
           className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
@@ -106,6 +85,6 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
           profile={profile}
         />
       )}
-    </div>
+    </section>
   );
 }

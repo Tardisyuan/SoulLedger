@@ -22,14 +22,16 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 export function WorkflowNodeHistory({
   nodes,
   verdictColors,
+  verdictGlyphs,
 }: {
   nodes: ApprovalNode[];
   verdictColors: Record<string, string>;
+  verdictGlyphs: Record<string, string>;
 }) {
   const { t, formatDateTime } = useI18n();
 
   return (
-    <div className="space-y-3">
+    <ol>
       {nodes
         .filter((n) => n.status !== "PENDING")
         .sort((a, b) => {
@@ -38,20 +40,20 @@ export function WorkflowNodeHistory({
           return aTime - bTime;
         })
         .map((node) => (
-          <div key={node.id} className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-            <div className="flex items-center justify-between mb-2">
+          <li key={node.id} className="py-3 border-b border-[oklch(var(--color-rule))]">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{node.node_name}</span>
               {/* <DomainEnum> sets its own `title` from the raw member —
                   that is the whole point of the component — so this one
                   needs no hand-rolled attribute, unlike the string-form
                   badge in the Nodes tab above. It nests inside Badge for
                   the same reason the status badge does. */}
-              <Badge className={verdictColors[node.verdict ?? ""] || ""}>
+              <Badge className={verdictColors[node.verdict ?? ""] || ""} glyph={verdictGlyphs[node.verdict ?? ""] ?? "?"}>
                 <DomainEnum namespace="workflow.verdicts" value={node.verdict} />
               </Badge>
             </div>
             <div className="text-xs text-[oklch(var(--color-ink-muted))]">
-              {t("workflow.detail.decided_at")}: <DomainText value={node.decided_at ? formatDateTime(node.decided_at) : null} />
+              {t("workflow.detail.decided_at")}: <DomainText className="font-mono" value={node.decided_at ? formatDateTime(node.decided_at) : null} />
             </div>
             {node.notes && (
               <p className="text-sm text-[oklch(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
@@ -84,7 +86,7 @@ export function WorkflowNodeHistory({
                 <MissingValue kind="unrecorded" reason={t("workflow.detail.approver_name_absent")} />
               </p>
             )}
-          </div>
+          </li>
         ))}
       {nodes.filter((n) => n.status !== "PENDING").length === 0 && (
         /* Was a centred `py-8` (32px — not a step on the ladder) div.
@@ -92,6 +94,6 @@ export function WorkflowNodeHistory({
            yet" is a note in the file, not a poster. */
         <EmptyState title={t("workflow.detail.no_history")} />
       )}
-    </div>
+    </ol>
   );
 }

@@ -6,13 +6,13 @@ import { authApi } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
-import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
 /**
  * Role → badge tone. `GUARDIAN` and the roles below it used to reach for
@@ -121,9 +121,12 @@ export default function ProfilePage() {
       {isError && (
         <div
           role="alert"
-          className="mb-6 border border-[oklch(var(--color-status-error)/0.5)] bg-[oklch(var(--color-status-error)/0.08)] px-4 py-3 flex items-center justify-between gap-4"
+          className="mb-6 py-2 border-b border-[oklch(var(--color-rule))] flex items-center justify-between gap-4"
         >
-          <p className="text-sm text-[oklch(var(--color-ink))]">{t("profile.load_failed")}</p>
+          <p className="text-sm text-[oklch(var(--color-danger))]">
+            <span aria-hidden="true">! </span>
+            {t("profile.load_failed")}
+          </p>
           <button
             type="button"
             onClick={() => refetch()}
@@ -134,212 +137,82 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Basic Info Section */}
-      <PageSection
-        title={t("profile.basic_info")}
-        className="mb-6"
-      >
-        {/* Username (read-only) */}
-        <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
-            {t("profile.username")}
-          </label>
-          {isLoading ? (
-            <Skeleton className="h-4 w-32" />
-          ) : (
-            <span
-              className="text-sm text-[oklch(var(--color-ink))] font-medium truncate"
-              title={profile?.username || user?.username}
-            >
-              {profile?.username || user?.username}
-            </span>
-          )}
-        </div>
+      {/* 规范 v1:区块标压线,行线代替卡片;标签在左,值在右,393 px 下同样两列。 */}
+      <section className="mb-6">
+        <LedgerHeading mark="甲" title={t("profile.basic_info")} />
+        <dl className="grid grid-cols-[8rem_1fr] max-sm:grid-cols-[6rem_1fr] text-sm">
+          <dt className={DT}>{t("profile.username")}</dt>
+          <dd className={DD}>
+            {isLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
+              <span className="font-medium truncate" title={profile?.username || user?.username}>
+                {profile?.username || user?.username}
+              </span>
+            )}
+          </dd>
 
-        {/* Email */}
-        <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
-            {t("profile.email")}
-          </label>
-          {editingField === "email" ? (
-            <div className="flex-1 min-w-0 flex gap-2">
-              <input
-                type="email"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className={cn(fieldControl({ size: "sm" }), "flex-1")}
-                autoFocus
-              />
-              <Button variant="primary" size="sm" type="button" onClick={() => handleEditSave("email")}>
-                {t("common.save")}
-              </Button>
-              <Button variant="secondary" size="sm" type="button" onClick={() => setEditingField(null)}>
-                {t("common.cancel")}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              {isLoading ? (
-                <Skeleton className="h-4 w-48" />
-              ) : (
-                <span
-                  className="text-sm text-[oklch(var(--color-ink))] truncate"
-                  title={profile?.email || user?.email || undefined}
-                >
-                  {profile?.email || user?.email || "-"}
-                </span>
-              )}
-              {!isLoading && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  className="ml-auto"
-                  onClick={() => {
-                    setEditingField("email");
-                    setEditValue(profile?.email || user?.email || "");
-                  }}
-                >
-                  {t("common.edit")}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+          {(
+            [
+              ["email", "email", t("profile.email"), profile?.email || user?.email || "", "w-48"],
+              ["first_name", "text", t("profile.first_name"), profile?.first_name || "", "w-24"],
+              ["last_name", "text", t("profile.last_name"), profile?.last_name || "", "w-24"],
+            ] as const
+          ).map(([field, type, label, value, skeleton]) => (
+            <EditableRow
+              key={field}
+              field={field}
+              type={type}
+              label={label}
+              value={value}
+              loading={isLoading}
+              skeletonClass={skeleton}
+              editing={editingField === field}
+              draft={editValue}
+              onDraft={setEditValue}
+              onEdit={() => {
+                setEditingField(field);
+                setEditValue(value);
+              }}
+              onSave={() => handleEditSave(field)}
+              onCancel={() => setEditingField(null)}
+            />
+          ))}
 
-        {/* First Name */}
-        <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
-            {t("profile.first_name")}
-          </label>
-          {editingField === "first_name" ? (
-            <div className="flex-1 min-w-0 flex gap-2">
-              <input
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className={cn(fieldControl({ size: "sm" }), "flex-1")}
-                autoFocus
-              />
-              <Button variant="primary" size="sm" type="button" onClick={() => handleEditSave("first_name")}>
-                {t("common.save")}
-              </Button>
-              <Button variant="secondary" size="sm" type="button" onClick={() => setEditingField(null)}>
-                {t("common.cancel")}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              {isLoading ? (
-                <Skeleton className="h-4 w-24" />
-              ) : (
-                <span className="text-sm text-[oklch(var(--color-ink))] truncate" title={profile?.first_name || undefined}>
-                  {profile?.first_name || "-"}
-                </span>
-              )}
-              {!isLoading && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  className="ml-auto"
-                  onClick={() => {
-                    setEditingField("first_name");
-                    setEditValue(profile?.first_name || "");
-                  }}
-                >
-                  {t("common.edit")}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+          <dt className={DT}>{t("profile.role")}</dt>
+          <dd className={DD}>
+            {isLoading ? (
+              <Skeleton className="h-5 w-20" />
+            ) : (
+              <Badge tone={ROLE_TONES[role] ?? "neutral"}>
+                {t(`users.roles.${role}`)}
+              </Badge>
+            )}
+          </dd>
 
-        {/* Last Name */}
-        <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
-            {t("profile.last_name")}
-          </label>
-          {editingField === "last_name" ? (
-            <div className="flex-1 min-w-0 flex gap-2">
-              <input
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className={cn(fieldControl({ size: "sm" }), "flex-1")}
-                autoFocus
-              />
-              <Button variant="primary" size="sm" type="button" onClick={() => handleEditSave("last_name")}>
-                {t("common.save")}
-              </Button>
-              <Button variant="secondary" size="sm" type="button" onClick={() => setEditingField(null)}>
-                {t("common.cancel")}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              {isLoading ? (
-                <Skeleton className="h-4 w-24" />
-              ) : (
-                <span className="text-sm text-[oklch(var(--color-ink))] truncate" title={profile?.last_name || undefined}>
-                  {profile?.last_name || "-"}
-                </span>
-              )}
-              {!isLoading && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  className="ml-auto"
-                  onClick={() => {
-                    setEditingField("last_name");
-                    setEditValue(profile?.last_name || "");
-                  }}
-                >
-                  {t("common.edit")}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Role (read-only) */}
-        <div className="flex items-center px-4 py-3 border-b border-[oklch(var(--color-hairline))]">
-          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
-            {t("profile.role")}
-          </label>
-          {isLoading ? (
-            <Skeleton className="h-5 w-20" />
-          ) : (
-            <Badge tone={ROLE_TONES[role] ?? "neutral"}>
-              {t(`users.roles.${role}`)}
-            </Badge>
-          )}
-        </div>
-
-        {/* Tenant (read-only) */}
-        <div className="flex items-center px-4 py-3">
-          <label className="w-32 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] shrink-0">
-            {t("profile.tenant")}
-          </label>
-          {isLoading ? (
-            <Skeleton className="h-4 w-32" />
-          ) : (
-            <span
-              className="text-sm text-[oklch(var(--color-ink))] truncate"
-              title={user?.tenant?.display_name || user?.tenant?.code || undefined}
-            >
-              {/* /auth/profile/ is UserSerializer, which has no `tenant`
-                  field at all — the two leading branches this expression
-                  used to start with were dead. */}
-              {user?.tenant?.display_name || user?.tenant?.code || "-"}
-            </span>
-          )}
-        </div>
-      </PageSection>
+          <dt className={DT}>{t("profile.tenant")}</dt>
+          <dd className={DD}>
+            {isLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
+              <span
+                className="truncate"
+                title={user?.tenant?.display_name || user?.tenant?.code || undefined}
+              >
+                {/* /auth/profile/ is UserSerializer, which has no `tenant`
+                    field at all — the two leading branches this expression
+                    used to start with were dead. */}
+                {user?.tenant?.display_name || user?.tenant?.code || "-"}
+              </span>
+            )}
+          </dd>
+        </dl>
+      </section>
 
       {/* Change Password Section */}
-      <PageSection title={t("profile.change_password")}>
+      <section>
+        <LedgerHeading mark="乙" title={t("profile.change_password")} />
+        <div className="pt-3">
         {!isLoading && !showPasswordForm ? (
           <Button variant="secondary" type="button" onClick={() => setShowPasswordForm(true)}>
             {t("profile.change_password")}
@@ -349,7 +222,7 @@ export default function ProfilePage() {
             <Skeleton className="h-10 w-full" />
           </div>
         ) : showPasswordForm ? (
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          <form onSubmit={handlePasswordSubmit} className="max-w-[440px] space-y-4">
             <TextField
               type="password"
               label={t("profile.old_password")}
@@ -373,16 +246,7 @@ export default function ProfilePage() {
               minLength={8}
               required
             />
-            <div className="flex gap-2 pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                loading={changePasswordMutation.isPending}
-              >
-                {changePasswordMutation.isPending
-                  ? (t("common.loading"))
-                  : (t("common.save"))}
-              </Button>
+            <div className="flex justify-end gap-2 border-t border-[oklch(var(--color-block))] pt-3">
               <Button
                 type="button"
                 variant="secondary"
@@ -393,10 +257,104 @@ export default function ProfilePage() {
               >
                 {t("common.cancel")}
               </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={changePasswordMutation.isPending}
+              >
+                {changePasswordMutation.isPending
+                  ? (t("common.loading"))
+                  : (t("common.save"))}
+              </Button>
             </div>
           </form>
         ) : null}
-      </PageSection>
+        </div>
+      </section>
     </PageShell>
+  );
+}
+
+/** 一对 dt / dd 的行线与字色(与灵魂详情「甲 · 身份」同一份写法)。 */
+const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))] self-stretch flex items-center";
+const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0 flex items-center gap-2";
+
+/**
+ * 一条可就地编辑的账行。邮箱 / 名 / 姓原是三段逐字相同的标记,只差字段名;
+ * 编辑时控件的 `id` 与左侧 `<label htmlFor>` 成对 —— 此前那三个 `<label>` 不指向
+ * 任何控件,输入框没有可读的名字。
+ */
+function EditableRow({
+  field,
+  type,
+  label,
+  value,
+  loading,
+  skeletonClass,
+  editing,
+  draft,
+  onDraft,
+  onEdit,
+  onSave,
+  onCancel,
+}: {
+  field: string;
+  type: "email" | "text";
+  label: string;
+  value: string;
+  loading: boolean;
+  skeletonClass: string;
+  editing: boolean;
+  draft: string;
+  onDraft: (v: string) => void;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useI18n();
+  const inputId = `profile-${field}`;
+  return (
+    <>
+      <dt className={DT}>
+        {editing ? <label htmlFor={inputId}>{label}</label> : label}
+      </dt>
+      <dd className={cn(DD, editing && "flex-wrap")}>
+        {editing ? (
+          <>
+            <input
+              id={inputId}
+              type={type}
+              value={draft}
+              onChange={(e) => onDraft(e.target.value)}
+              className={cn(fieldControl({ size: "sm" }), "flex-1 min-w-40")}
+              autoFocus
+            />
+            <span className="flex gap-2 ml-auto">
+              <Button variant="secondary" size="sm" type="button" onClick={onCancel}>
+                {t("common.cancel")}
+              </Button>
+              <Button variant="primary" size="sm" type="button" onClick={onSave}>
+                {t("common.save")}
+              </Button>
+            </span>
+          </>
+        ) : (
+          <>
+            {loading ? (
+              <Skeleton className={`h-4 ${skeletonClass}`} />
+            ) : (
+              <span className="truncate" title={value || undefined}>
+                {value || "-"}
+              </span>
+            )}
+            {!loading && (
+              <Button variant="ghost" size="sm" type="button" className="ml-auto" onClick={onEdit}>
+                {t("common.edit")}
+              </Button>
+            )}
+          </>
+        )}
+      </dd>
+    </>
   );
 }

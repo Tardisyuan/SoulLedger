@@ -27,21 +27,47 @@ import { Spinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
+import { WorkflowLinearPreview } from "@/src/components/workflow/detail/WorkflowLinearPreview";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.5)]",
-  APPROVED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.5)]",
-  REJECTED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.5)]",
-  SKIPPED: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost)/0.5)]",
-  ESCALATED: "bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry)/0.5)]",
+  PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
+  APPROVED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
+  REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
+  SKIPPED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
+  ESCALATED: "text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry))]",
 };
 
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
-  FAILED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]",
-  CONFIRMED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
-  REJECTED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]",
-  SKIPPED: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
+  PASSED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
+  FAILED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
+  CONFIRMED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
+  REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
+  SKIPPED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
+};
+
+/**
+ * 规范 v1 §1.2:状态 = 颜色 + 字形。两张表与上面两张颜色表同键;未知成员给「?」。
+ * 判决的 ✓ / ✕ 与灵魂详情「丙 · 审判」同形(src/lib/verdictGlyph.ts)。
+ */
+const STATUS_GLYPH: Record<string, string> = {
+  // 审批流本身的状态(页头徽章)与节点状态共用这张表;前四个只出现在审批流上。
+  IN_PROGRESS: "▸",
+  APPEAL: "↺",
+  EXCEPTION: "!",
+  COMPLETED: "■",
+  PENDING: "◐",
+  APPROVED: "✓",
+  REJECTED: "✕",
+  SKIPPED: "»",
+  ESCALATED: "↑",
+};
+const VERDICT_GLYPH: Record<string, string> = {
+  PASSED: "✓",
+  FAILED: "✕",
+  CONFIRMED: "✓",
+  REJECTED: "✕",
+  SKIPPED: "»",
 };
 
 // NODE_TYPE_KEYS used to bridge TRIAL -> workflow.node_type.trial by hand,
@@ -252,7 +278,7 @@ export default function WorkflowDetailPage() {
        badge anywhere else is a spacing violation by construction. That is the
        exemption working: the geometry has one home. `DomainEnum` still renders
        its own span inside, and that span is what carries `title={raw}`. */
-    <Badge className={statusColor}>
+    <Badge className={statusColor} glyph={STATUS_GLYPH[workflow.status] ?? "?"}>
       <DomainEnum namespace="workflow.status" value={workflow.status} />
     </Badge>
   );
@@ -267,28 +293,38 @@ export default function WorkflowDetailPage() {
         <div className="flex items-center gap-2">
           {statusBadge}
           {workflow.is_appeal && (
-            <Badge className="bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))]">
+            <Badge className="text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry))]" glyph="↺">
               {t("workflow.detail.appeal")}
             </Badge>
           )}
         </div>
       }
     >
-      <div className="space-y-6">
-        <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} />
+      {/* 规范 v1 详情页原型:两栏账页(393 px 折单栏)。左栏是整条审批流的事 ——
+          信息、当前节点的决定、结案;右栏是节点账与历史。卡片撤掉,只剩区块标与行线。 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10 gap-y-6">
+        <div className="min-w-0 space-y-6">
+        <div>
+          <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} />
+          {/* 甲 之下:整条流程的线性预览,当前节点只在实例运行中时标出。 */}
+          <WorkflowLinearPreview
+            nodes={sortedNodes}
+            currentNodeId={workflow.status !== "COMPLETED" ? workflow.current_node ?? null : null}
+            endLabel={statusLabel("COMPLETED")}
+            label={t("workflow.detail.nodes")}
+          />
+        </div>
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
-          <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-            <h2 className="text-2xs uppercase text-[oklch(var(--color-accent-ink))] mb-3">
-              {t("workflow.detail.current_node")}
-            </h2>
-            <div className="mb-4 p-3 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))]">
+          <section>
+            <LedgerHeading mark="乙" title={t("workflow.detail.current_node")} />
+            <div className="mb-4 py-2 border-b border-[oklch(var(--color-rule))] border-l-[3px] border-l-[oklch(var(--color-ink))] pl-3">
               <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{currentNode.node_name}</div>
               <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                 <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} /> · <DomainText value={currentNode.court_code} />
               </div>
               <div className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
-                {t("workflow.detail.order")}: {currentNode.node_order}
+                {t("workflow.detail.order")}: <span className="font-mono">{currentNode.node_order}</span>
               </div>
             </div>
 
@@ -302,7 +338,7 @@ export default function WorkflowDetailPage() {
               <legend className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">
                 {t("workflow.detail.select_verdict")}
               </legend>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col border-t border-[oklch(var(--color-block))]">
                 {[
                   { key: "PASSED", label: t("workflow.verdicts.passed") },
                   { key: "FAILED", label: t("workflow.verdicts.failed") },
@@ -312,10 +348,10 @@ export default function WorkflowDetailPage() {
                 ].map((opt) => (
                   <label
                     key={opt.key}
-                    className={`flex items-center gap-2 p-2 border cursor-pointer transition-colors text-sm ${
+                    className={`flex min-h-8 max-sm:min-h-11 items-center gap-3 px-2 border-b border-[oklch(var(--color-rule))] cursor-pointer transition-colors text-sm ${
                       selectedVerdict === opt.key
-                        ? "border-[oklch(var(--color-accent))] bg-[oklch(var(--color-accent))]/10"
-                        : "border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))]"
+                        ? "bg-[oklch(var(--color-surface-2))]"
+                        : "hover:bg-[oklch(var(--color-surface-2))]"
                     }`}
                   >
                     <input
@@ -360,13 +396,11 @@ export default function WorkflowDetailPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[oklch(var(--color-block))] pt-3">
               <RequirePermission permissions="workflow.approve">
                 <Button
                   type="button"
                   variant="primary"
-                  size="lg"
-                  className="flex-1"
                   onClick={handleApproveNode}
                   loading={approveMutation.isPending}
                 >
@@ -378,7 +412,7 @@ export default function WorkflowDetailPage() {
               <RequirePermission permissions="workflow.advance">
                 <Button
                   type="button"
-                  size="lg"
+                  variant="secondary"
                   onClick={() => advanceMutation.mutate()}
                   loading={advanceMutation.isPending}
                 >
@@ -394,8 +428,7 @@ export default function WorkflowDetailPage() {
               <RequirePermission permissions="workflow.escalate">
                 <Button
                   type="button"
-                  size="lg"
-                  variant="secondary"
+                  variant="ghost"
                   onClick={() => setEscalateOpen((v) => !v)}
                   aria-expanded={escalateOpen}
                 >
@@ -407,20 +440,15 @@ export default function WorkflowDetailPage() {
             {escalateOpen && (
               <RequirePermission permissions="workflow.escalate">
                 <div className="mt-4 space-y-2">
-                  <label
-                    htmlFor="escalate-reason"
-                    className="block text-xs text-[oklch(var(--color-ink-muted))]"
-                  >
-                    {t("workflow.detail.escalate_reason_label")}
-                  </label>
-                  <textarea
+                  <TextAreaField
                     id="escalate-reason"
+                    label={t("workflow.detail.escalate_reason_label")}
                     value={escalateReason}
                     onChange={(e) => setEscalateReason(e.target.value)}
                     placeholder={t("workflow.detail.escalate_reason_placeholder")}
                     rows={3}
-                    className="w-full px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm"
                   />
+                  <div className="flex justify-end">
                   <Button
                     type="button"
                     onClick={() => {
@@ -437,10 +465,11 @@ export default function WorkflowDetailPage() {
                   >
                     {t("workflow.detail.escalate")}
                   </Button>
+                  </div>
                 </div>
               </RequirePermission>
             )}
-          </div>
+          </section>
         )}
 
         {/* Completed State */}
@@ -458,37 +487,34 @@ export default function WorkflowDetailPage() {
              `ApprovalWorkflowStatus.REJECTED` exists and is assigned nowhere
              (four of its seven members are), so the status field cannot answer
              this. The nodes can. */
-          <div
-            className={
-              hasRejection
-                ? "bg-[oklch(var(--color-status-error)/0.1)] p-4 border border-[oklch(var(--color-status-error)/0.3)]"
-                : "bg-[oklch(var(--color-status-success)/0.1)] p-4 border border-[oklch(var(--color-status-success)/0.3)]"
-            }
-          >
+          <section>
             <h2
-              className={`text-2xs uppercase mb-2 ${
+              className={`pt-6 pb-1 border-b border-[oklch(var(--color-block))] font-mono text-2xs uppercase tracking-widest ${
                 hasRejection
                   ? "text-[oklch(var(--color-status-error))]"
                   : "text-[oklch(var(--color-status-success))]"
               }`}
             >
+              <span aria-hidden="true">{hasRejection ? "✕" : "✓"} </span>
               {hasRejection
                 ? t("workflow.detail.completed_with_rejection")
                 : t("workflow.detail.completed")}
             </h2>
-            <p className="text-sm text-[oklch(var(--color-ink-muted))]">
+            <p className="py-2 text-sm text-[oklch(var(--color-ink-muted))]">
               {hasRejection
                 ? t("workflow.detail.completed_with_rejection_message")
                 : t("workflow.detail.completed_message")}
             </p>
             {workflow.completed_at && (
-              <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">
-                {t("workflow.detail.completed_at")}: {formatDateTime(workflow.completed_at)}
+              <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                {t("workflow.detail.completed_at")}: <span className="font-mono">{formatDateTime(workflow.completed_at)}</span>
               </p>
             )}
-          </div>
+          </section>
         )}
+        </div>
 
+        <div className="min-w-0">
         {/* Tabs — and these deliberately do NOT go into PageShell's `tabs`
             slot, unlike the two page-level tab strips on /judgment and
             /workflow.
@@ -504,7 +530,7 @@ export default function WorkflowDetailPage() {
             switching to History. What does move is the spelling: same gap, same
             hairline rule, same 03 label as the two strips that are in the slot,
             so they read as one control even though only two of them sit in it. */}
-        <div className="flex gap-1 border-b border-[oklch(var(--color-hairline))]">
+        <div className="flex gap-1 border-b border-[oklch(var(--color-block))]">
           <button
             type="button"
             onClick={() => setActiveTab("nodes")}
@@ -523,7 +549,7 @@ export default function WorkflowDetailPage() {
 
         {/* Nodes Tab */}
         {activeTab === "nodes" && (
-          <div className="space-y-3">
+          <ol>
             {sortedNodes.map((node, idx) => {
               const isCurrent = workflow.current_node === node.id;
               const isPast = node.status !== "PENDING";
@@ -532,28 +558,19 @@ export default function WorkflowDetailPage() {
               const nodeVerdictLabel = verdictLabel(node.verdict);
 
               return (
-                <div
+                <li
                   key={node.id}
-                  className={`bg-[oklch(var(--color-surface-1))] p-4 border ${
-                    // The accent border is the "current node" signal on its own.
-                    // It used to also carry `shadow-lg shadow-accent/10`, a glow
-                    // on an in-flow card — `DESIGN.md:50-57` puts layering on the
-                    // 1px rule, and the five surviving `shadow-*` uses are all
-                    // overlays (drawer, popover, two menus, one dropdown), which
-                    // genuinely cannot separate from the page any other way.
-                    isCurrent ? "border-[oklch(var(--color-accent))]/50" : "border-[oklch(var(--color-hairline))]"
+                  className={`py-3 border-b border-[oklch(var(--color-rule))] ${
+                    // 当前节点:surface-2 底 + 左 3 px 墨线,与侧栏当前项同一个记号
+                    // (规范 v1)。不再是强调色描边的卡片。
+                    isCurrent ? "bg-[oklch(var(--color-surface-2))] border-l-[3px] border-l-[oklch(var(--color-ink))] pl-2" : ""
                   }`}
                 >
-                  <div className="flex items-start gap-4">
-                    {/* Node indicator. `` survives the corner purge
-                        on purpose: it is one of the two shapes that still mean
-                        something — a round mark is an identity token. */}
-                    <div className={`shrink-0 w-8 h-8 flex items-center justify-center text-xs font-medium ${nodeColor}`}>
-                      {isPast ? (
-                        <span>{node.verdict?.[0] || "D"}</span>
-                      ) : (
-                        <span>{idx + 1}</span>
-                      )}
+                  <div className="flex items-start gap-3">
+                    {/* 序号栏:等宽序号;已决的节点在序号后带判决字形。 */}
+                    <div className="shrink-0 w-8 pt-0.5 font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
+                      {String(idx + 1).padStart(2, "0")}
+                      {isPast && <span aria-hidden="true" className="ml-1">{VERDICT_GLYPH[node.verdict ?? ""] ?? "?"}</span>}
                     </div>
 
                     {/* Node details */}
@@ -570,7 +587,7 @@ export default function WorkflowDetailPage() {
 
                       {/* Verdict and notes for completed nodes */}
                       {isPast && (
-                        <div className="mt-3 pt-3 border-t border-[oklch(var(--color-hairline))]">
+                        <div className="mt-2">
                           <div className="flex items-center gap-2 mb-2">
                             {/* `title` stays on the element that directly wraps
                                 the label string, and stays within three lines
@@ -579,13 +596,14 @@ export default function WorkflowDetailPage() {
                                 it is the whole reason the raw member is still
                                 recoverable from this badge. */}
                             <Badge
-                              title={node.verdict ?? undefined}
+                              glyph={VERDICT_GLYPH[node.verdict ?? ""] ?? "?"}
                               className={VERDICT_COLORS[node.verdict ?? ""] || ""}
+                              title={node.verdict ?? undefined}
                             >
                               {nodeVerdictLabel}
                             </Badge>
                             {node.decided_at && (
-                              <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                              <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
                                 {formatDateTime(node.decided_at)}
                               </span>
                             )}
@@ -626,25 +644,21 @@ export default function WorkflowDetailPage() {
                     </div>
 
                     {/* Status badge */}
-                    <Badge title={node.status} className={`border ${nodeColor}`}>
+                    <Badge title={node.status} className={nodeColor} glyph={STATUS_GLYPH[node.status] ?? "?"}>
                       {nodeStatusLabel}
                     </Badge>
                   </div>
-
-                  {/* Connector line */}
-                  {idx < sortedNodes.length - 1 && (
-                    <div className="ml-4 mt-2 pl-4 border-l-2 border-[oklch(var(--color-hairline))] h-4" />
-                  )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ol>
         )}
 
         {/* History Tab */}
         {activeTab === "history" && (
-          <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} />
+          <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} />
         )}
+        </div>
       </div>
     </PageShell>
   );

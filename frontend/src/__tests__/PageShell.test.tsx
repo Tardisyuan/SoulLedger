@@ -542,7 +542,12 @@ describe("PageShell density", () => {
         });
       }
     }
-    expect(found.length).toBeGreaterThanOrEqual(30);
+    // 25,不是 30。这是扫描面的下限,不是规矩本身:2026-09-25 详情页改版把
+    // 调度 / 联审 / 审批流 / 个人资料上的手写 `<h2>` 换成了 `LedgerHeading`
+    // (src/components/souls/detail/SoulLedgerSections.tsx),它渲染的 `<h2>`
+    // 只在那一个文件里出现一次,于是字面计数从 30 以上落到 29。落差是「同一个
+    // 标签改由一个组件画」,不是扫描漏了目录 —— 下一行对 `src/` 的断言仍在守那个。
+    expect(found.length).toBeGreaterThanOrEqual(25);
     // 具体地断言 `src/components/` 那一半在场 —— 它是上一轮整个漏掉的那一半。
     expect(found.filter((h) => h.file.startsWith("src/")).length).toBeGreaterThanOrEqual(10);
 
