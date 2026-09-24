@@ -30,6 +30,7 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.social import moderation as mod
 from apps.social.models import (
+    DELETED_BY_OFFICER,
     Comment,
     ModerationStatus,
     Post,
@@ -298,7 +299,7 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
     def _part(self, base, model, kind, handling):
         qs = base.filter(author__role="SOUL")
         hidden = Q(is_deleted=False, moderation_status=ModerationStatus.HIDDEN)
-        deleted = Q(is_deleted=True, deleted_by__isnull=False) & ~Q(deleted_by=F("author"))
+        deleted = Q(is_deleted=True) & DELETED_BY_OFFICER
         qs = qs.filter({"HIDDEN": hidden, "DELETED": deleted}.get(handling, hidden | deleted))
 
         def pick(if_deleted, if_hidden, field):
