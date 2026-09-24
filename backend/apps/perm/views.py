@@ -13,6 +13,7 @@ from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
+from apps.perm.matrix import ADMIN_ONLY_PERMISSION, admin_only_violations
 from apps.perm.services import get_role_permission_codenames
 
 from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
@@ -281,6 +282,16 @@ def assign_role_permissions(request):
         if invalid_ids:
             return Response(
                 {"error": f"Permission IDs not found: {invalid_ids}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        refused = admin_only_violations(
+            role.name, Permission.objects.filter(id__in=permission_ids).values_list("codename", flat=True)
+        )
+        if refused:
+            return Response(
+                {"error": f"{', '.join(sorted(refused))} can only be granted to ADMIN",
+                 "code": ADMIN_ONLY_PERMISSION},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -562,6 +573,9 @@ def copy_role(request, pk):
             organization=serializer.validated_data.get("organization", source.organization),
         )
         grants = list(RolePermission.objects.filter(role=source).select_related("permission"))
+        # A copy is never ADMIN, so ADMIN-only codenames are left behind
+        # (apps/perm/matrix.py::ADMIN_ONLY_CODENAMES).
+        grants = [g for g in grants if not admin_only_violations(role.name, [g.permission.codename])]
         # bulk_create sends no post_save — so the audit row and the cache
         # invalidation are both written here, as in assign_role_permissions.
         RolePermission.objects.bulk_create([

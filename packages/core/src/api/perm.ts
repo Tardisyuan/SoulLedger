@@ -107,7 +107,8 @@ type Schemas = components["schemas"];
  * Per-cell matrix save — POST /perm/role-permissions/changes/
  * (backend/apps/perm/matrix.py). One result per change, in request order:
  * `saved`, `unchanged` (the cell was already in that state), `refused` with a
- * `code` (`role_not_found` / `permission_not_found` / `version_conflict`) or
+ * `code` (`role_not_found` / `permission_not_found` / `version_conflict` /
+ * `admin_only_permission`: recycle-bin restore / hard delete to a non-ADMIN role) or
  * `failed` (`database_error`, that cell rolled back alone). 200 whatever the
  * mix; `versions` is each named role's version after the call.
  */
