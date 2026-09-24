@@ -5,17 +5,15 @@ import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { EmptyState } from "@/src/components/ui/EmptyState";
-import { QueryError } from "@/src/components/ui/PageError";
-import { Pagination } from "@/src/components/ui/Pagination";
+import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { buttonVariants } from "@/src/components/ui/Button";
-import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
+import { type BadgeTone } from "@/src/components/ui/Badge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
@@ -25,9 +23,8 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  * The detail route keeps a `--color-status-*` map instead, because that one is
  * registered by name in `src/__tests__/statusTokenLayering.test.ts` and moving
  * it would delete a record rather than settle it. This map is new, so it takes
- * the route the tone table exists for. The two render the same colours: a tone
- * is the same token at the same 10% fill, plus the border the detail page's
- * pairs never named.
+ * the route the tone table exists for. 规范 v1 起徽章没有底色,每个 tone 另配
+ * 一枚字形(`StatusBadge`),所以列表不只靠颜色说状态。
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
   PROPOSED: "warning",
@@ -98,97 +95,101 @@ function DispatchPageContent() {
         </Link>
       }
     >
-      {/* Pending Proposals - skeleton while loading */}
+      {/* 账页表格(规范 v1 §2):整行点进详情,不再是一叠卡片。加载、失败、空与分页交给
+          DataTable —— 失败仍与空分开(「! 加载失败」+ 重试,不是「暂无」)。 */}
       <PageSection title={t("dispatch.pending")} isRefreshing={proposedStale} className="mb-6">
-        {loadingProposed ? (
-          <ListSkeleton count={3} />
-        ) : proposedError ? (
-          <QueryError onRetry={() => refetchProposed()} />
-        ) : proposed.length === 0 ? (
-          <EmptyState title={t("dispatch.no_pending")} />
-        ) : (
-          <div className="space-y-3">
-            {proposed.map((d: DispatchRecord) => (
-              <DispatchCard key={d.id} dispatch={d} />
-            ))}
-          </div>
-        )}
-        <Pagination
+        <DispatchTable
+          rows={proposed}
+          isLoading={loadingProposed}
+          isError={proposedError}
+          onRetry={() => refetchProposed()}
+          emptyMessage={t("dispatch.no_pending")}
           page={proposedPage}
-          totalPages={Math.max(1, Math.ceil((proposedData?.count ?? 0) / PAGE_SIZE))}
           count={proposedData?.count ?? 0}
           onPageChange={setProposedPage}
+          caption={t("dispatch.pending")}
         />
       </PageSection>
 
-      {/* History - skeleton while loading */}
       <PageSection title={t("dispatch.history")} isRefreshing={historyStale}>
-        {loadingHistory ? (
-          <ListSkeleton count={5} />
-        ) : historyError ? (
-          <QueryError onRetry={() => refetchHistory()} />
-        ) : history.length === 0 ? (
-          <EmptyState title={t("dispatch.no_history")} />
-        ) : (
-          <div className="space-y-3">
-            {history.map((d: DispatchRecord) => (
-              <DispatchCard key={d.id} dispatch={d} />
-            ))}
-          </div>
-        )}
-        <Pagination
+        <DispatchTable
+          rows={history}
+          isLoading={loadingHistory}
+          isError={historyError}
+          onRetry={() => refetchHistory()}
+          emptyMessage={t("dispatch.no_history")}
           page={historyPage}
-          totalPages={Math.max(1, Math.ceil((historyData?.count ?? 0) / PAGE_SIZE))}
           count={historyData?.count ?? 0}
           onPageChange={setHistoryPage}
+          caption={t("dispatch.history")}
         />
       </PageSection>
     </PageShell>
   );
 }
 
-function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
+function DispatchTable({
+  rows, isLoading, isError, onRetry, emptyMessage, page, count, onPageChange, caption,
+}: {
+  rows: DispatchRecord[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  emptyMessage: string;
+  page: number;
+  count: number;
+  onPageChange: (_page: number) => void;
+  caption: string;
+}) {
   const { t, formatDateTime } = useI18n();
-
   return (
-    <Link href={`/dispatch/${dispatch.id}`} className="block">
-      <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent))] transition-colors cursor-pointer">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("dispatch.soul_prefix")}
-              {/* `soul_name` is in the same response and was going unread;
-                  the card printed the primary key instead. */}
-              {dispatch.soul_name || <MissingValue kind="unrecorded" />}</p>
-            <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
-              {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
-            </p>
-            {/* `proposed_at` was in the response and unread, so this card
-                carried no time at all — a queue that cannot be triaged by age.
-                Mono + tabular-nums so the timestamps line up digit for digit
-                down a column of cards, which is what makes "oldest first"
-                readable at a glance. */}
-            <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))] mt-1">
-              {dispatch.proposed_at ? (
-                formatDateTime(dispatch.proposed_at)
-              ) : (
-                <MissingValue kind="unrecorded" />
-              )}
-            </p>
-          </div>
-          {/* <DomainEnum> renders exactly one span, so passing the badge
-              classes to it makes the badge itself the enum — no wrapper, and
-              the raw member reaches `title` for free (BRIEF §4.6). */}
-          <DomainEnum
-            namespace="dispatch.states"
-            value={dispatch.status}
-            className={badgeVariants({ tone: STATUS_TONES[dispatch.status] ?? "neutral" })}
-          />
-        </div>
-        {dispatch.reason && (
-          <p className="mt-2 text-sm text-[oklch(var(--color-ink-muted))]">{dispatch.reason}</p>
-        )}
-      </div>
-    </Link>
+    <DataTable<DispatchRecord>
+      linkedRows
+      caption={caption}
+      columns={[
+        { key: "soul", header: t("dispatch.soul") },
+        { key: "route", header: `${t("dispatch.source_tenant")} → ${t("dispatch.target_tenant")}` },
+        { key: "proposed_at", header: t("dispatch.proposed_at") },
+        { key: "status", header: t("dispatch.status") },
+      ]}
+      data={rows}
+      isLoading={isLoading}
+      isError={isError}
+      onRetry={onRetry}
+      emptyMessage={emptyMessage}
+      skeletonRows={3}
+      keyExtractor={(d) => String(d.id)}
+      renderRow={(d) => (
+        <>
+          <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))]">
+            {/* `soul_name` is in the same response and was going unread;
+                the card printed the primary key instead. */}
+            <Link href={`/dispatch/${d.id}`} className={ROW_LINK}>
+              {d.soul_name || <MissingValue kind="unrecorded" />}
+            </Link>
+            {d.reason && (
+              <p className="text-xs font-normal text-[oklch(var(--color-ink-muted))]">{d.reason}</p>
+            )}
+          </td>
+          <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+            {d.source_tenant_code} → {d.target_tenant_code}
+          </td>
+          {/* `proposed_at` was in the response and unread, so the queue could
+              not be triaged by age. Mono + tabular-nums so the timestamps line
+              up digit for digit down the column. */}
+          <td className="px-3 py-2 font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
+            {d.proposed_at ? formatDateTime(d.proposed_at) : <MissingValue kind="unrecorded" />}
+          </td>
+          <td className="px-3 py-2">
+            <StatusBadge namespace="dispatch.states" value={d.status} tone={STATUS_TONES[d.status] ?? "neutral"} />
+          </td>
+        </>
+      )}
+      page={page}
+      totalPages={Math.max(1, Math.ceil(count / PAGE_SIZE))}
+      totalCount={count}
+      onPageChange={onPageChange}
+    />
   );
 }
 

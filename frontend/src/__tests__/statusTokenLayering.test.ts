@@ -223,13 +223,12 @@ const ENUM_MAPS_STILL_ON_FEEDBACK_TOKENS: Record<string, string> = {
     "JUDGE/GUARDIAN/EXECUTOR/CONDUIT are actor identities. There is no " +
     "identity palette for them — --color-civ-mark-* is tenant identity, not " +
     "role — so this needs a palette decision, not a rename.",
-  "app/death-sync/page.tsx::STATUS_COLORS":
-    "PENDING/ACCEPTED/PROCESSED/FAILED/DUPLICATE/PARTIAL are the outcome of a " +
-    "sync OPERATION, which is what the feedback layer is for. Recorded rather " +
-    "than fixed because the argument for moving it is weak, not absent: it is " +
-    "still rendered as a badge on a row.",
+  // `app/death-sync/page.tsx::STATUS_COLORS` left this register on 2026-09-24
+  // (规范 v1 列表改版): it became a tone map, which is what its entry here said
+  // the fix would be.
   "app/dispatch/[id]/page.tsx::STATUS_COLORS":
-    "PROPOSED/APPROVED/REJECTED/EXECUTED/RETURNED/CANCELLED — same shape as death-sync: " +
+    "PROPOSED/APPROVED/REJECTED/EXECUTED/RETURNED/CANCELLED — the same shape the " +
+    "death-sync list had before it moved to tones: " +
     "the state of a request being processed, not a judgement about a soul.",
   "app/workflow/[id]/page.tsx::STATUS_COLORS":
     "PENDING/APPROVED/REJECTED/SKIPPED/ESCALATED are approval-step states. " +

@@ -20,7 +20,8 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
@@ -28,14 +29,16 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { RevealCredentialDialog } from "@/src/components/soul-accounts/RevealCredentialDialog";
 import {
   CREDENTIAL_FILTERS,
-  credentialBadgeClass,
+  credentialTone,
   credentialReason,
   failureKey,
   isExpired,
   lifeNumber,
 } from "@/src/components/soul-accounts/soulAccountsView";
 
-const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2fr)_minmax(0,1.3fr)_auto] md:items-center md:gap-4";
+// 操作列定宽,不是 `auto`:表头那一格是空的,`auto` 在表头里解成 0、在数据行里解成
+// 按钮宽,两边的 fr 列于是按不同的余量分配,表头与数据错开(2026-09-25 截图里实测)。
+const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2fr)_minmax(0,1.3fr)_10rem] md:items-center md:gap-4";
 
 function CredentialsPageContent() {
   const { t, formatDateTime } = useI18n();
@@ -89,19 +92,18 @@ function CredentialsPageContent() {
   const filters = (
     <div role="group" aria-label={t("soul_accounts.credentials.filters.label")} className="flex flex-wrap gap-2">
       {CREDENTIAL_FILTERS.map((value) => (
-        <Button
+        /* 筛选签(规范 v1 §2),仍是 aria-pressed 的单选:再按一下已按下的签不改变筛选 ——
+           「全部」本身就是其中一枚签,不是「什么都不按」。 */
+        <FilterChipToggle
           key={value || "all"}
-          type="button"
-          size="sm"
-          variant={status === value ? "primary" : "secondary"}
-          aria-pressed={status === value}
-          onClick={() => {
+          pressed={status === value}
+          onPressedChange={() => {
             setStatus(value);
             setPage(1);
           }}
         >
           {t(`soul_accounts.credentials.filters.${value || "all"}`)}
-        </Button>
+        </FilterChipToggle>
       ))}
     </div>
   );
@@ -116,7 +118,7 @@ function CredentialsPageContent() {
     <EmptyState title={t("soul_accounts.credentials.empty.filtered")} />
   );
 
-  const label = "md:hidden text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
+  const label = "md:hidden font-mono text-2xs text-[oklch(var(--color-ink-subtle))]";
 
   return (
     <PageShell
@@ -139,10 +141,11 @@ function CredentialsPageContent() {
           : undefined
       }
     >
-      <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]">
+      {/* 账页(规范 v1 §2):不装框;表头 11 px 等宽,下接区块边界线,行与行之间是行线。 */}
+      <div>
         <div
           aria-hidden="true"
-          className={`hidden px-4 py-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${ROW_GRID}`}
+          className={`hidden px-3 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${ROW_GRID}`}
         >
           <span>{t("soul_accounts.fields.soul")}</span>
           <span>{t("soul_accounts.fields.cycle")}</span>
@@ -158,16 +161,16 @@ function CredentialsPageContent() {
               <li
                 key={c.id}
                 data-credential-id={c.id}
-                className={`p-4 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-hairline))] last:border-b-0 ${ROW_GRID}`}
+                className={`px-3 py-3 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${ROW_GRID}`}
               >
                 <div className="min-w-0 space-y-1">
                   <p className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
-                    <Link href={`/souls/${c.soul}`} className="underline text-[oklch(var(--color-accent-ink))]">
+                    <Link href={`/souls/${c.soul}`} className="hover:underline">
                       {c.soul_name}
                     </Link>
                   </p>
                   <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all">{c.soul_code}</p>
-                  <DomainEnum namespace="soul_accounts.credential_status" value={c.status} className={credentialBadgeClass(c.status)} />
+                  <StatusBadge namespace="soul_accounts.credential_status" value={c.status} tone={credentialTone(c.status)} />
                 </div>
                 <div className="min-w-0">
                   <p className={label}>{t("soul_accounts.fields.cycle")}</p>
@@ -190,18 +193,18 @@ function CredentialsPageContent() {
                 <div className="min-w-0">
                   <p className={label}>{t("soul_accounts.fields.expires_at")}</p>
                   <p className="font-mono text-xs">{formatDateTime(c.expires_at)}</p>
-                  {expired && c.status !== "DELIVERED" && <Badge tone="error">{t("soul_accounts.credentials.expired")}</Badge>}
+                  {expired && c.status !== "DELIVERED" && <Badge tone="error" glyph="✕">{t("soul_accounts.credentials.expired")}</Badge>}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <div className="flex flex-wrap items-center gap-1 md:justify-end">
                   {canManage && c.status === "PENDING" && !expired && (
                     <>
-                      <Button type="button" size="sm" variant="warning" onClick={() => setRevealing(c)}>
+                      <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-warning))]" onClick={() => setRevealing(c)}>
                         {t("soul_accounts.credentials.actions.reveal")}
                       </Button>
                       <Button
                         type="button"
                         size="sm"
-                        variant="secondary"
+                        variant="ghost"
                         loading={retry.isPending && retry.variables === c.id}
                         onClick={() => doRetry(c)}
                       >
@@ -213,7 +216,8 @@ function CredentialsPageContent() {
                     <Button
                       type="button"
                       size="sm"
-                      variant="primary"
+                      variant="ghost"
+                      className="text-[oklch(var(--color-accent-ink))]"
                       loading={deliver.isPending && deliver.variables === c.id}
                       onClick={() => doDeliver(c)}
                     >
@@ -223,7 +227,7 @@ function CredentialsPageContent() {
                   {canManage && expired && c.status !== "DELIVERED" && (
                     <Link
                       href={`/souls/${c.soul}#soul-account`}
-                      className="text-sm underline text-[oklch(var(--color-accent-ink))]"
+                      className="px-2 text-xs underline text-[oklch(var(--color-accent-ink))]"
                     >
                       {t("soul_accounts.credentials.actions.go_reset")}
                     </Link>

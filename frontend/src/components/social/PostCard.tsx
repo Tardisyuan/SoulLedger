@@ -86,11 +86,12 @@ export function PostCard({ post }: { post: Post }) {
       </Link>
 
       <div className="flex items-center gap-4 mt-3 text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">
-        <span className="flex items-center gap-1">
-          💬 {post.comment_count}
+        {/* 文字 + 数字,不是 emoji(规范 v1:图标不用 emoji,状态与计数都要读得出来)。 */}
+        <span>
+          {t("social.comments")} {post.comment_count}
         </span>
-        <span className="flex items-center gap-1">
-          ❤️ {post.reaction_count}
+        <span>
+          {t("social.reactions")} {post.reaction_count}
         </span>
       </div>
 

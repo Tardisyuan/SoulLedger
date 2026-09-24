@@ -2,8 +2,9 @@
 
 import { useToggleFollow, useFollowing } from "@soulledger/core/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Button } from "@/src/components/ui/Button";
 
-export function FollowButton({ userId }: { userId: string }) {
+export function FollowButton({ userId, className }: { userId: string; className?: string }) {
   const { t } = useI18n();
   const toggleFollow = useToggleFollow();
   const { data } = useFollowing();
@@ -17,22 +18,23 @@ export function FollowButton({ userId }: { userId: string }) {
     toggleFollow.mutate(userId);
   };
 
+  // The `Button` primitive (规范 v1 §2) rather than hand-written classes: 28 px
+  // in a row, and "already following" is the quieter ghost so a column of them
+  // does not read as a column of calls to action.
   return (
-    <button
+    <Button
+      type="button"
+      size="sm"
+      variant={isFollowing ? "ghost" : "secondary"}
       onClick={handleClick}
       disabled={toggleFollow.isPending}
-      className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-        isFollowing
-          ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] border border-[oklch(var(--color-hairline))]"
-          // Not following: the primary button (规范 v1: ink fill, canvas text).
-          : "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] hover:bg-[oklch(var(--color-ink-muted))]"
-      } disabled:opacity-50`}
+      className={className}
     >
       {toggleFollow.isPending
         ? "..."
         : isFollowing
           ? t("social.following") || "Following"
           : t("social.follow") || "Follow"}
-    </button>
+    </Button>
   );
 }
