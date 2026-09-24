@@ -27,6 +27,8 @@
     "error_invalid_token": "Invalid token",
     "error_token_expired": "Token has expired",
     "error_login_failed": "Login failed",
+    "error_attempts_left": "Invalid username or password · {{count}} attempt(s) left",
+    "error_locked": "Locked. Try again in {{minutes}} min",
     "confirm_logout": "Confirm Logout",
     "confirm_logout_desc": "Are you sure you want to log out?",
     "confirm_logout_btn": "Confirm Logout",

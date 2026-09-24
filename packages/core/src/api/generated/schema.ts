@@ -6906,6 +6906,27 @@ export interface components {
             records: components["schemas"]["LedgerRecordSummary"][];
             reading: components["schemas"]["LedgerReading"];
         };
+        /**
+         * @description Doc-only: the 401 body of `LoginView` for wrong credentials.
+         *
+         *     `remaining_attempts` is how many more failures this client IP may make
+         *     before the next request is refused with 429 (0 means the next one is).
+         */
+        LoginFailedResponse: {
+            detail: string;
+            remaining_attempts?: number;
+        };
+        /**
+         * @description Doc-only: the 429 body of `LoginView` once the limiter has tripped.
+         *
+         *     `code` is always `login_locked`; `retry_after` is seconds until the
+         *     window ends (also sent as the `Retry-After` header).
+         */
+        LoginLockedResponse: {
+            error: string;
+            code: string;
+            retry_after: number;
+        };
         /** @description Serializer for login log entries. */
         LoginLog: {
             readonly id: number;
@@ -10899,7 +10920,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": components["schemas"]["LoginFailedResponse"];
                 };
             };
             429: {
@@ -10907,7 +10928,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["LoginLockedResponse"];
                 };
             };
         };

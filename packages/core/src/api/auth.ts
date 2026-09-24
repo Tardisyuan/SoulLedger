@@ -1,5 +1,6 @@
 import { api } from "./client";
 import { getRefreshToken } from "../platform/index";
+import type { components } from "./generated/schema";
 
 /**
  * The five BUILT-IN roles — `apps.authentication.models.UserRole`.
@@ -47,6 +48,11 @@ export interface LoginResponse {
   refresh: string;
   user: LoginUser;
 }
+
+/** 401 body of POST /auth/login/ for wrong credentials: tries left before 429. */
+export type LoginFailedBody = components["schemas"]["LoginFailedResponse"];
+/** 429 body of POST /auth/login/: `code` is `login_locked`, `retry_after` in seconds. */
+export type LoginLockedBody = components["schemas"]["LoginLockedResponse"];
 
 /**
  * UserSerializer (backend/apps/authentication/serializers.py:142) — the

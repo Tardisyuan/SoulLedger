@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
-import { authApi } from "@soulledger/core/api";
+import { authApi, type LoginFailedBody, type LoginLockedBody } from "@soulledger/core/api";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { formatSigil } from "@soulledger/core/config/civilizationSigil";
 import { loginSchema } from "@soulledger/core/validations/schemas";
@@ -29,8 +29,6 @@ import { defaultViewRoute } from "@/src/lib/defaultView";
  *   the request carries would be a control that lies.
  * - 「在此设备上保持登录 30 天」. There is no remember-me in the API; refresh
  *   lifetime is the backend's setting, not a login-time choice.
- * - 「还可以再试 N 次」. `LoginView` counts attempts per IP in cache
- *   (5 / 15 min) but returns no count, only a 429 once the limit is hit.
  * - 忘记密码. No such route or endpoint exists for staff accounts.
  */
 const CIVS = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"] as const;
@@ -103,8 +101,21 @@ export default function LoginPage() {
       window.location.href = defaultViewRoute();
       return;
     } catch (err: unknown) {
-      const raw = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail || "Login failed";
+      const response = (err as { response?: { status?: number; data?: Partial<LoginFailedBody & LoginLockedBody> } })
+        ?.response;
+      const data = response?.data;
+      // `LoginView` counts failures per IP (5 / 15 min). The 429 used to be
+      // `{error}` only, which nothing here read, so a lockout said 「登录失败」.
+      if (response?.status === 429 && data?.code === "login_locked") {
+        const minutes = Math.max(1, Math.ceil((data.retry_after ?? 900) / 60));
+        setLoginError(t("auth.error_locked", { minutes: String(minutes) }));
+        return;
+      }
+      if (typeof data?.remaining_attempts === "number") {
+        setLoginError(t("auth.error_attempts_left", { count: String(data.remaining_attempts) }));
+        return;
+      }
+      const raw = data?.detail || "Login failed";
 
       // Map backend error messages to i18n keys
       const msgKey: Record<string, string> = {

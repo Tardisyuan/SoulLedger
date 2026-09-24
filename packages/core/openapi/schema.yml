@@ -576,13 +576,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetailResponse'
+                $ref: '#/components/schemas/LoginFailedResponse'
           description: ''
         '429':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/LoginLockedResponse'
           description: ''
   /api/v1/auth/login-logs/:
     get:
@@ -15177,6 +15177,38 @@ components:
       - records
       - soul_id
       - soul_name
+    LoginFailedResponse:
+      type: object
+      description: |-
+        Doc-only: the 401 body of `LoginView` for wrong credentials.
+
+        `remaining_attempts` is how many more failures this client IP may make
+        before the next request is refused with 429 (0 means the next one is).
+      properties:
+        detail:
+          type: string
+        remaining_attempts:
+          type: integer
+      required:
+      - detail
+    LoginLockedResponse:
+      type: object
+      description: |-
+        Doc-only: the 429 body of `LoginView` once the limiter has tripped.
+
+        `code` is always `login_locked`; `retry_after` is seconds until the
+        window ends (also sent as the `Retry-After` header).
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+      - retry_after
     LoginLog:
       type: object
       description: Serializer for login log entries.

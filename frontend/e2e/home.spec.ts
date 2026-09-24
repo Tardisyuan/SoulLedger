@@ -124,7 +124,7 @@ test.describe("Login page", () => {
     await page.getByLabel("密码").fill("wrong-password");
     await page.getByRole("button", { name: "登录" }).click();
 
-    await expect(page.getByText("账号或密码错误")).toBeVisible();
+    await expect(page.getByText("账号或密码错误 · 还可以再试 4 次")).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
     expect(api.countOf("POST", "/auth/login/")).toBe(1);
   });
