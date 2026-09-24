@@ -76,6 +76,16 @@ fi
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT" || exit 1
 
+# Git runs hooks with GIT_DIR (and friends) in the environment. Every gate
+# below inherits it, and a test that shells out to git from a subdirectory
+# then treats that subdirectory as the repository root: `git ls-files -- app`
+# run from frontend/ returned nothing, so designGuardContract reported every
+# baseline file as untracked and refused the push (2026-09-25, twice) — while
+# ledgerPaletteContract's `git grep` for leftover civilization tokens also
+# found nothing and passed, green for the wrong reason. From here on git
+# finds the repository from the working directory, as it does outside a hook.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY
+
 # Optional per-machine settings, e.g. a DATABASE_URL for a developer whose
 # default database is not usable for tests. Gitignored: it describes one
 # machine, not the project.
