@@ -555,6 +555,14 @@ SPECTACULAR_SETTINGS = {
         "SocialReportResolutionEnum": "apps.social.models.ReportResolution.choices",
         "SocialReportStatusEnum": "apps.social.models.ReportStatus.choices",
         "SocialModerationStatusEnum": "apps.social.models.ModerationStatus.choices",
+        # 敏感词的 `action` / `category` 与「已处理」的 `type` / `handling`:字段名都太通用,
+        # `action` 一进 schema,审计的 `ActionEnum` 就被改名成 `Action364Enum`。
+        # 新的带 Social 前缀,审计那个钉在既有名字上。
+        "ActionEnum": "apps.audit.models.AuditAction.choices",
+        "SocialSensitiveWordActionEnum": "apps.social.models.SensitiveWordAction.choices",
+        "SocialSensitiveWordCategoryEnum": "apps.social.models.SensitiveWordCategory.choices",
+        "SocialHandledTypeEnum": "apps.social.moderation_serializers.HANDLED_TYPES",
+        "SocialHandlingEnum": "apps.social.moderation_serializers.HANDLING_CHOICES",
         # 聊天的 `kind`(DIRECT / OFFICER_INBOX)。按字段名会与别处的 `kind` 撞成带哈希的名字。
         "ConversationKindEnum": "apps.chat.models.ConversationKind.choices",
         # 受刑计划(docs/ARCHITECTURE-sentence-plan.md):`kind` 与 `status` 两个字段名在别处已有

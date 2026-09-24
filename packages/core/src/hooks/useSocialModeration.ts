@@ -5,7 +5,10 @@ import {
   socialModerationApi,
   type ContentAction,
   type ContentKind,
+  type HandledContent,
+  type HandledFilters,
   type ModerationFilters,
+  type NewSensitiveWord,
   type ReportResolution,
 } from "../api/social-moderation";
 import { socialModerationKeys } from "../query_keys";
@@ -47,6 +50,14 @@ export function useSocialMutes(page = 1) {
   });
 }
 
+export function useHandledContent(filters: HandledFilters) {
+  return useQuery({
+    queryKey: socialModerationKeys.handled({ ...filters }),
+    queryFn: async () => (await socialModerationApi.handled(filters)).data,
+    placeholderData: (previous) => previous,
+  });
+}
+
 function useModerationWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const qc = useQueryClient();
   return useMutation({
@@ -70,11 +81,26 @@ export function useModerateContent() {
 }
 
 export function useAddSensitiveWord() {
-  return useModerationWrite(async (word: string) => (await socialModerationApi.addWord(word)).data);
+  return useModerationWrite(async (word: string | NewSensitiveWord) => (await socialModerationApi.addWord(word)).data);
 }
 
 export function useRemoveSensitiveWord() {
   return useModerationWrite(async (id: string) => (await socialModerationApi.removeWord(id)).status);
+}
+
+export function useRemoveSensitiveWords() {
+  return useModerationWrite(async (ids: string[]) => (await socialModerationApi.removeWords(ids)).data);
+}
+
+/**
+ * 恢复可见 for a HIDDEN row of the handled list — the existing `restore` action on
+ * its post or comment. DELETED rows have no restore here (recycle-bin rules).
+ */
+export function useRestoreVisible() {
+  return useModerationWrite(
+    async ({ row, reason }: { row: Pick<HandledContent, "type" | "id">; reason?: string }) =>
+      (await socialModerationApi.act(row.type === "POST" ? "posts" : "comments", row.id, "restore", reason)).status
+  );
 }
 
 export function useLiftMute() {
