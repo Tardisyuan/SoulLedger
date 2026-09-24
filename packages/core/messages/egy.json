@@ -281,6 +281,13 @@
     "date_problem_marker": {
       "error": "Khet Hru — Maa Mekher Ba",
       "warning": "Khet Hru — Nau Aba Hemsu"
+    },
+    "preview": {
+      "open": "Maa",
+      "open_aria": "Maa {{name}}",
+      "hint": "J / K Em Khet · Em Tepy · Esc",
+      "open_full": "Wen Sesh Neb →",
+      "load_error": "Nen Ini Medu."
     }
   },
   "common": {

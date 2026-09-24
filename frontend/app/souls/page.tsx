@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useSouls } from "@soulledger/core/hooks/useSouls";
@@ -18,6 +18,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
+import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -59,6 +60,17 @@ export default function SoulsPage() {
   const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [problemsOnly, setProblemsOnly] = useState(false);
+  // The previewed row's id, not its index: a background refetch can reorder
+  // the page, and the drawer must keep showing the soul it was opened on.
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewButtons = useRef(new Map<string, HTMLButtonElement>());
+  // Last id shown — NOT cleared on close, because the drawer asks where to put
+  // focus after `previewId` has already gone back to null.
+  const lastPreviewId = useRef<string | null>(null);
+  const openPreview = (id: string) => {
+    lastPreviewId.current = id;
+    setPreviewId(id);
+  };
 
   // Debounce the search box so typing doesn't fire a request per keystroke.
   useEffect(() => {
@@ -84,6 +96,15 @@ export default function SoulsPage() {
   const { data, isLoading, isError, isPlaceholderData, refetch } = useSouls(params);
   const souls = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
+
+  // J / K step within the page on screen; at either end they do nothing
+  // rather than silently turning the page under the reader.
+  const previewIndex = previewId === null ? -1 : souls.findIndex((s) => String(s.id) === previewId);
+  const previewSoul = previewIndex >= 0 ? souls[previewIndex] : null;
+  const stepPreview = (delta: number) => {
+    const next = souls[previewIndex + delta];
+    return next ? () => openPreview(String(next.id)) : undefined;
+  };
 
   // Independent of `problemsOnly` — this is the toggle's own badge count, so
   // it has to be visible before the toggle is switched on. A single extra
@@ -300,6 +321,23 @@ export default function SoulsPage() {
                 <Link href={`/souls/${soul.id}`} className={ROW_LINK}>
                   {soul.name}
                 </Link>
+                {/* The drawer's trigger. The row stays one link to the full
+                    record (click, middle-click, screen readers — unchanged);
+                    this is a separate, visible control lifted above the row
+                    link's `::after` overlay, so previewing is an explicit ask
+                    and a plain row click still does what it did before. */}
+                <button
+                  type="button"
+                  ref={(el) => {
+                    if (el) previewButtons.current.set(String(soul.id), el);
+                    else previewButtons.current.delete(String(soul.id));
+                  }}
+                  onClick={() => openPreview(String(soul.id))}
+                  aria-label={t("souls.preview.open_aria", { name: soul.name })}
+                  className="relative z-[1] ml-2 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:underline"
+                >
+                  {t("souls.preview.open")}
+                </button>
               </span>
             </td>
             <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
@@ -363,6 +401,14 @@ export default function SoulsPage() {
         totalPages={totalPages}
         totalCount={data?.count}
         onPageChange={setPage}
+      />
+
+      <SoulPreviewDrawer
+        soul={previewSoul}
+        onClose={() => setPreviewId(null)}
+        onNext={stepPreview(1)}
+        onPrev={stepPreview(-1)}
+        finalFocus={() => previewButtons.current.get(lastPreviewId.current ?? "") ?? null}
       />
 
       <SoulCreateModal

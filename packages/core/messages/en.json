@@ -281,6 +281,13 @@
     "date_problem_marker": {
       "error": "Date error — see soul detail",
       "warning": "Date warning — see soul detail"
+    },
+    "preview": {
+      "open": "Preview",
+      "open_aria": "Preview {{name}} in a side panel",
+      "hint": "J / K next · previous · Esc",
+      "open_full": "Open the full record →",
+      "load_error": "Could not load the details."
     }
   },
   "common": {
