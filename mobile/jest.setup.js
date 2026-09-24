@@ -91,3 +91,14 @@ const failOnActWarnings = () => {
 };
 afterEach(failOnActWarnings);
 afterAll(failOnActWarnings);
+
+// findBy/waitFor wait 5 s, not RNTL's default 1 s. Most suites here boot the whole
+// app (session, navigator, every tab) and wait for a screen that follows a mocked
+// response. Measured 2026-09-24, "401 whose refresh the server refuses": 138–160 ms
+// idle, 466–650 ms with 12 busy processes on 4 cores, and once past 1000 ms. That run
+// failed "Unable to find … login-submit" while the tree it printed contained
+// login-submit. The screen was right and the budget was too short. Jest's own
+// per-test timeout goes to 15 s (jest.config.js) so that a real miss still reports
+// what it could not find, instead of "Exceeded timeout of 5000 ms".
+const { configure } = require("@testing-library/react-native");
+configure({ asyncUtilTimeout: 5000 });

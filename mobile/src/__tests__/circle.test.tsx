@@ -287,7 +287,7 @@ describe("deleting my own", () => {
 
     // 取消 on the second step sends nothing either.
     fireEvent.press(screen.getByTestId("delete-cancel"));
-    await waitFor(() => expect(screen.queryByTestId("delete-confirm-sheet")).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("delete-confirm-sheet")).not.toBeOnTheScreen());
     expect(sent(calls, "DELETE")).toHaveLength(0);
 
     act(() => headerAction().onPress());
@@ -341,7 +341,7 @@ describe("replying", () => {
     fireEvent.press(screen.getByTestId("comment-send"));
     await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
     expect(sent(calls, "POST")[0].body).toEqual({ content: "谢谢", parent: "c1" });
-    await waitFor(() => expect(screen.queryByTestId("replying")).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("replying")).not.toBeOnTheScreen());
   });
 
   it("cancelled, it is a plain comment again — no parent at all", async () => {
