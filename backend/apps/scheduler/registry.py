@@ -82,6 +82,10 @@ REGISTRY: tuple[JobSpec, ...] = (
         "death_sync.cleanup_old_requests_for_tenant", TENANT, "0 2 * * *",
         kwargs={"days": 90, "batch_size": 1000}, max_runtime=1800,
     ),
+    # 处置期满(apps/disposition/expiry.py):刑期走完的处置记下 `expired_at`。
+    # 每天一次足够 —— 期满以日计;排在 02:00 之后,避开上面三条的时段。幂等,
+    # 所以漏跑一天由第二天补上,不会重复发事件。
+    JobSpec("disposition.expire_due_for_tenant", TENANT, "30 2 * * *", max_runtime=1800),
     # ---- global jobs ---------------------------------------------------------
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make

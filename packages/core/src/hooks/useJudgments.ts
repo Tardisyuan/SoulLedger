@@ -31,6 +31,19 @@ export function useJudgment(id: string) {
   });
 }
 
+/** 「据 · 先例」 for one judgment — see `judgmentApi.precedents`. */
+export function useJudgmentPrecedents(id: string, limit?: number) {
+  return useQuery({
+    queryKey: judgmentKeys.precedents(id, limit),
+    queryFn: async () => {
+      const res = await judgmentApi.precedents(id, limit);
+      return res.data;
+    },
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+}
+
 // ── Mutations ────────────────────────────────────────────────────────
 
 export function useCreateJudgment() {

@@ -34,6 +34,7 @@ export {
   judgmentApi,
   type Judgment,
   type JudgmentCitation,
+  type JudgmentPrecedent,
   type Statute,
   type StatuteCorpus,
   type StatutePolarity,
@@ -60,7 +61,14 @@ export { actorsApi, type Actor } from "./actors";
 export { workflowApi, requiresReasonForSoul, REBIRTH_APPLICATION_CASE_TYPE, REJECTION_REASON_FOR_SOUL_MAX, type ApprovalWorkflow, type ApprovalWorkflowListItem, type ApprovalNode, type WorkflowTemplate, type WorkflowTemplateListItem, type WorkflowTemplateNode } from "./workflow";
 
 // Disposition
-export { dispositionApi, type Disposition } from "./disposition";
+export {
+  dispositionApi,
+  type Disposition,
+  type DispositionListParams,
+  type DispositionPage,
+  type DispositionSection,
+  type DispositionSectionCounts,
+} from "./disposition";
 
 // Reincarnation
 export { reincarnationApi, type Reincarnation } from "./reincarnation";

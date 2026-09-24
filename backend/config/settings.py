@@ -538,6 +538,11 @@ SPECTACULAR_SETTINGS = {
         # judgment 的 Verdict 撞名;不钉住,既有的 `VerdictEnum` 会被改成带哈希的名字,
         # frontend 的 enumsMatchTheSchema 测试按名字找它。
         "VerdictEnum": "apps.judgment.models.Verdict.choices",
+        # 处置列表的 `soul_state` 与灵魂的 `current_state` 是同一个选项集;钉在既有的
+        # `CurrentStateEnum` 上,客户端类型名不变。
+        "CurrentStateEnum": "apps.souls.models.SoulState.choices",
+        # 处置列表的三段(`section`)。字段名太通用,带前缀钉住。
+        "DispositionSectionEnum": "apps.disposition.models.DispositionSection.choices",
         "NodeDecisionVerdictEnum": "apps.workflow.serializers.NODE_DECISION_VERDICTS",
         # apps.soul_push:`platform` 与 `locale` 是太通用的字段名,不钉住的话,下一个同名字段
         # 进 schema 时这两个会被改成带哈希的名字,客户端的类型名跟着变。
@@ -557,8 +562,7 @@ SPECTACULAR_SETTINGS = {
         "SocialModerationStatusEnum": "apps.social.models.ModerationStatus.choices",
         # 敏感词的 `action` / `category` 与「已处理」的 `type` / `handling`:字段名都太通用,
         # `action` 一进 schema,审计的 `ActionEnum` 就被改名成 `Action364Enum`。
-        # 新的带 Social 前缀,审计那个钉在既有名字上。
-        "ActionEnum": "apps.audit.models.AuditAction.choices",
+        # 新的带 Social 前缀;审计那个钉在既有名字上(见下面权限矩阵那段的 `ActionEnum`)。
         "SocialSensitiveWordActionEnum": "apps.social.models.SensitiveWordAction.choices",
         "SocialSensitiveWordCategoryEnum": "apps.social.models.SensitiveWordCategory.choices",
         "SocialHandledTypeEnum": "apps.social.moderation_serializers.HANDLED_TYPES",

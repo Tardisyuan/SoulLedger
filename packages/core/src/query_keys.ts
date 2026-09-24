@@ -40,6 +40,12 @@ export const judgmentKeys = {
    * invalidate of `judgmentKeys.all` has to reach these pages too.
    */
   statutes: (params?: Record<string, string>) => [...judgmentKeys.all, "statutes", params] as const,
+  /**
+   * 「据 · 先例」. Under `judgmentKeys.all` because a verdict landing anywhere
+   * in the tenant can change the ranking, and concluding already invalidates
+   * that root.
+   */
+  precedents: (id: string, limit?: number) => [...judgmentKeys.all, "precedents", id, limit ?? null] as const,
 };
 
 export const workflowKeys = {
@@ -63,7 +69,7 @@ export const permissionKeys = {
 
 export const dispositionKeys = {
   all: ["dispositions"] as const,
-  list: (params?: Record<string, string>) => [...dispositionKeys.all, "list", params] as const,
+  list: (params?: Record<string, string | undefined>) => [...dispositionKeys.all, "list", params] as const,
 };
 
 /**
