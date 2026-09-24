@@ -1,11 +1,16 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { dispositionApi } from "../api/index";
+import { dispositionApi, type DispositionListParams } from "../api/index";
 import { notify } from "../platform/index";
 import { dispositionKeys } from "../query_keys";
 
-export function useDispositions(params?: Record<string, string>) {
+/**
+ * One page of dispositions. Pass `section` for one of the three sections; the
+ * response's `section_counts` are the totals of all three under the same
+ * filters, so a section tab can show its real count while another is open.
+ */
+export function useDispositions(params?: DispositionListParams) {
   return useQuery({
     queryKey: dispositionKeys.list(params),
     queryFn: async () => {

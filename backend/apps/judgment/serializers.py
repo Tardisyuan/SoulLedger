@@ -7,7 +7,7 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
-from apps.judgment.models import Judgment, JudgmentCitation, Statute, open_judgments
+from apps.judgment.models import Judgment, JudgmentCitation, Statute, Verdict, open_judgments
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
@@ -236,3 +236,43 @@ class JudgmentQueueCursorSerializer(serializers.Serializer):
     ledger = LedgerSummarySerializer(allow_null=True)
     prior_cycles = ReincarnationSerializer(many=True)
     realm_options = RealmLocalizedSerializer(many=True)
+
+
+class JudgmentPrecedentSerializer(serializers.Serializer):
+    """One row of 「据 · 先例」 — see apps/judgment/precedents.py for the ranking.
+
+    `balance` is withheld (null) for VIEWER, the rule SoulSerializer applies to
+    `karmic_balance`. VIEWER holds no judgment.* codename and cannot reach this
+    endpoint today; the withholding is here so that granting it the read later
+    does not also grant it the scores."""
+    id = serializers.UUIDField(read_only=True)
+    soul = serializers.UUIDField(source="soul_id", read_only=True)
+    name = serializers.CharField(source="soul.name", read_only=True)
+    verdict = serializers.ChoiceField(choices=Verdict.choices, read_only=True)
+    court = serializers.CharField(read_only=True)
+    concluded_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    balance = serializers.SerializerMethodField()
+    realm_code = serializers.SerializerMethodField()
+    realm_name = serializers.SerializerMethodField()
+    same_court = serializers.BooleanField(read_only=True)
+    shared_statutes = serializers.IntegerField(read_only=True)
+
+    def get_balance(self, obj) -> int | None:
+        from apps.souls.serializers import _is_viewer
+
+        if _is_viewer(self.context):
+            return None
+        return obj.balance
+
+    @staticmethod
+    def _realm(obj):
+        disposition = getattr(obj, "disposition", None)
+        return disposition.destination_realm if disposition is not None else None
+
+    def get_realm_code(self, obj) -> str | None:
+        realm = self._realm(obj)
+        return realm.realm_code if realm is not None else None
+
+    def get_realm_name(self, obj) -> str | None:
+        realm = self._realm(obj)
+        return realm.get_localized_name(locale_from_context(self.context)) if realm is not None else None

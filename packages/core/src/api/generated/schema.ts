@@ -1444,6 +1444,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/precedents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Concluded judgments like this one — the judgment desk's 「据 · 先例」.
+         *
+         *     `GET /api/v1/judgment/{id}/precedents/?limit=5`
+         *
+         *     Same tenant and civilization as this judgment, ranked by same court,
+         *     then closest balance, then shared cited statutes. The ranking and what
+         *     is excluded are written down in apps/judgment/precedents.py. A bare
+         *     array, not a page: it is a short ranked list, not a collection to walk.
+         */
+        get: operations["v1_judgment_precedents_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/next/": {
         parameters: {
             query?: never;
@@ -6407,7 +6433,27 @@ export interface components {
             readonly created_at: string;
             /** Format: uuid */
             readonly sentence_node_id: string | null;
+            /** Format: date-time */
+            readonly expired_at: string | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            readonly term_end: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            readonly section: components["schemas"]["DispositionSectionEnum"];
+            readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly soul_state: components["schemas"]["CurrentStateEnum"];
+            /** @description The soul has been reborn since the life this disposition belongs to. */
+            readonly soul_reborn: boolean;
         };
+        /**
+         * @description * `pending` - 待执行
+         *     * `executing` - 执行中
+         *     * `expired` - 期满
+         * @enum {string}
+         */
+        DispositionSectionEnum: "pending" | "executing" | "expired";
         /**
          * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
          *
@@ -6426,6 +6472,7 @@ export interface components {
          *     * `JUDGMENT_INITIATED` - Judgment Initiated
          *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
          *     * `DISPOSITION_CREATED` - Disposition Created
+         *     * `DISPOSITION_EXPIRED` - Disposition Expired
          *     * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
          *     * `KARMA_RECALCULATED` - Karma Recalculated
          *     * `WORKFLOW_CREATED` - Workflow Created
@@ -6467,7 +6514,7 @@ export interface components {
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
         ExportedDataScope: {
             role: string;
             civilization?: string | null;
@@ -6738,6 +6785,30 @@ export interface components {
          * @enum {string}
          */
         JudgmentKindEnum: "ORIGINAL" | "AMENDMENT" | "REOPEN";
+        /**
+         * @description One row of 「据 · 先例」 — see apps/judgment/precedents.py for the ranking.
+         *
+         *     `balance` is withheld (null) for VIEWER, the rule SoulSerializer applies to
+         *     `karmic_balance`. VIEWER holds no judgment.* codename and cannot reach this
+         *     endpoint today; the withholding is here so that granting it the read later
+         *     does not also grant it the scores.
+         */
+        JudgmentPrecedent: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly name: string;
+            readonly verdict: components["schemas"]["VerdictEnum"];
+            readonly court: string;
+            /** Format: date-time */
+            readonly concluded_at: string | null;
+            readonly balance: number | null;
+            readonly realm_code: string | null;
+            readonly realm_name: string | null;
+            readonly same_court: boolean;
+            readonly shared_statutes: number;
+        };
         /**
          * @description The envelope `GET /api/v1/judgment/next/` returns.
          *
@@ -7587,6 +7658,11 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Disposition"][];
+            section_counts: {
+                pending: number;
+                executing: number;
+                expired: number;
+            };
         };
         PaginatedExternalApiKeyList: {
             /** @example 123 */
@@ -8353,6 +8429,19 @@ export interface components {
             readonly created_at?: string;
             /** Format: uuid */
             readonly sentence_node_id?: string | null;
+            /** Format: date-time */
+            readonly expired_at?: string | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            readonly term_end?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            readonly section?: components["schemas"]["DispositionSectionEnum"];
+            readonly verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly soul_state?: components["schemas"]["CurrentStateEnum"];
+            /** @description The soul has been reborn since the life this disposition belongs to. */
+            readonly soul_reborn?: boolean;
         };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         PatchedExternalApiKey: {
@@ -12447,7 +12536,14 @@ export interface operations {
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description * `pending` - 待执行
+                 *     * `executing` - 执行中
+                 *     * `expired` - 期满
+                 */
+                section?: "executing" | "expired" | "pending";
                 soul?: string;
+                soul_reborn?: boolean;
             };
             header?: never;
             path?: never;
@@ -12657,6 +12753,7 @@ export interface operations {
                  *     * `JUDGMENT_INITIATED` - Judgment Initiated
                  *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
                  *     * `DISPOSITION_CREATED` - Disposition Created
+                 *     * `DISPOSITION_EXPIRED` - Disposition Expired
                  *     * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
                  *     * `KARMA_RECALCULATED` - Karma Recalculated
                  *     * `WORKFLOW_CREATED` - Workflow Created
@@ -12697,7 +12794,7 @@ export interface operations {
                  *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -13060,6 +13157,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Judgment"];
+                };
+            };
+        };
+    };
+    v1_judgment_precedents_list: {
+        parameters: {
+            query?: {
+                /** @description How many precedents (default 5, at most 20). */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentPrecedent"][];
                 };
             };
         };

@@ -2628,10 +2628,26 @@ paths:
         schema:
           type: string
       - in: query
+        name: section
+        schema:
+          type: string
+          enum:
+          - executing
+          - expired
+          - pending
+        description: |-
+          * `pending` - 待执行
+          * `executing` - 执行中
+          * `expired` - 期满
+      - in: query
         name: soul
         schema:
           type: string
           format: uuid
+      - in: query
+        name: soul_reborn
+        schema:
+          type: boolean
       tags:
       - v1
       security:
@@ -2906,6 +2922,7 @@ paths:
           - DISPATCH_REJECTED
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
+          - DISPOSITION_EXPIRED
           - JUDGMENT_CONCLUDED
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
@@ -2950,6 +2967,7 @@ paths:
           * `JUDGMENT_INITIATED` - Judgment Initiated
           * `JUDGMENT_CONCLUDED` - Judgment Concluded
           * `DISPOSITION_CREATED` - Disposition Created
+          * `DISPOSITION_EXPIRED` - Disposition Expired
           * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
           * `KARMA_RECALCULATED` - Karma Recalculated
           * `WORKFLOW_CREATED` - Workflow Created
@@ -3532,6 +3550,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Judgment'
+          description: ''
+  /api/v1/judgment/{id}/precedents/:
+    get:
+      operationId: v1_judgment_precedents_list
+      description: |-
+        Concluded judgments like this one — the judgment desk's 「据 · 先例」.
+
+        `GET /api/v1/judgment/{id}/precedents/?limit=5`
+
+        Same tenant and civilization as this judgment, ranked by same court,
+        then closest balance, then shared cited statutes. The ranking and what
+        is excluded are written down in apps/judgment/precedents.py. A bare
+        array, not a page: it is a short ranked list, not a collection to walk.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: How many precedents (default 5, at most 20).
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JudgmentPrecedent'
           description: ''
   /api/v1/judgment/next/:
     get:
@@ -14156,16 +14212,77 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        expired_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        term_end:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+          readOnly: true
+        section:
+          allOf:
+          - $ref: '#/components/schemas/DispositionSectionEnum'
+          readOnly: true
+        verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        soul_state:
+          allOf:
+          - $ref: '#/components/schemas/CurrentStateEnum'
+          readOnly: true
+        soul_reborn:
+          type: boolean
+          description: The soul has been reborn since the life this disposition belongs
+            to.
+          readOnly: true
       required:
       - created_at
       - executed_at
+      - expired_at
       - id
       - is_executed
       - realm_code
       - realm_name
+      - section
       - sentence_node_id
       - soul
       - soul_name
+      - soul_reborn
+      - soul_state
+      - term_end
+      - verdict
+    DispositionSectionEnum:
+      enum:
+      - pending
+      - executing
+      - expired
+      type: string
+      description: |-
+        * `pending` - 待执行
+        * `executing` - 执行中
+        * `expired` - 期满
     ErrorResponse:
       type: object
       description: |-
@@ -14188,6 +14305,7 @@ components:
       - JUDGMENT_INITIATED
       - JUDGMENT_CONCLUDED
       - DISPOSITION_CREATED
+      - DISPOSITION_EXPIRED
       - REINCARNATION_TRIGGERED
       - KARMA_RECALCULATED
       - WORKFLOW_CREATED
@@ -14236,6 +14354,7 @@ components:
         * `JUDGMENT_INITIATED` - Judgment Initiated
         * `JUDGMENT_CONCLUDED` - Judgment Concluded
         * `DISPOSITION_CREATED` - Disposition Created
+        * `DISPOSITION_EXPIRED` - Disposition Expired
         * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
         * `KARMA_RECALCULATED` - Karma Recalculated
         * `WORKFLOW_CREATED` - Workflow Created
@@ -14841,6 +14960,69 @@ components:
         * `ORIGINAL` - 原审判
         * `AMENDMENT` - 加项 / 减项审判
         * `REOPEN` - 重开审判
+    JudgmentPrecedent:
+      type: object
+      description: |-
+        One row of 「据 · 先例」 — see apps/judgment/precedents.py for the ranking.
+
+        `balance` is withheld (null) for VIEWER, the rule SoulSerializer applies to
+        `karmic_balance`. VIEWER holds no judgment.* codename and cannot reach this
+        endpoint today; the withholding is here so that granting it the read later
+        does not also grant it the scores.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        verdict:
+          allOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          readOnly: true
+        court:
+          type: string
+          readOnly: true
+        concluded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        balance:
+          type: integer
+          nullable: true
+          readOnly: true
+        realm_code:
+          type: string
+          nullable: true
+          readOnly: true
+        realm_name:
+          type: string
+          nullable: true
+          readOnly: true
+        same_court:
+          type: boolean
+          readOnly: true
+        shared_statutes:
+          type: integer
+          readOnly: true
+      required:
+      - balance
+      - concluded_at
+      - court
+      - id
+      - name
+      - realm_code
+      - realm_name
+      - same_court
+      - shared_statutes
+      - soul
+      - verdict
     JudgmentQueueCursor:
       type: object
       description: |-
@@ -16664,6 +16846,7 @@ components:
       required:
       - count
       - results
+      - section_counts
       properties:
         count:
           type: integer
@@ -16682,6 +16865,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Disposition'
+        section_counts:
+          type: object
+          properties:
+            pending:
+              type: integer
+            executing:
+              type: integer
+            expired:
+              type: integer
+          required:
+          - pending
+          - executing
+          - expired
     PaginatedExternalApiKeyList:
       type: object
       required:
@@ -17936,6 +18132,51 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        expired_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        term_end:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+          readOnly: true
+        section:
+          allOf:
+          - $ref: '#/components/schemas/DispositionSectionEnum'
+          readOnly: true
+        verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        soul_state:
+          allOf:
+          - $ref: '#/components/schemas/CurrentStateEnum'
+          readOnly: true
+        soul_reborn:
+          type: boolean
+          description: The soul has been reborn since the life this disposition belongs
+            to.
+          readOnly: true
     PatchedExternalApiKey:
       type: object
       description: Serializer for ExternalApiKey (hides key_hash, shows raw_key on

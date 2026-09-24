@@ -97,6 +97,7 @@
       "JUDGMENT_INITIATED": "Judgment opened",
       "JUDGMENT_CONCLUDED": "Judgment concluded",
       "DISPOSITION_CREATED": "Disposition issued",
+      "DISPOSITION_EXPIRED": "Disposition expired",
       "REINCARNATION_TRIGGERED": "Reincarnation triggered",
       "KARMA_RECALCULATED": "Ledger recalculated",
       "WORKFLOW_CREATED": "Workflow created",
@@ -1720,6 +1721,7 @@
     "jobs": {
       "ledger_recalculate_tenant": "Recalculate merit ledgers",
       "judgment_auto_conclude_stale_for_tenant": "Auto-conclude stale judgments",
+      "disposition_expire_due_for_tenant": "Mark expired dispositions",
       "death_sync_cleanup_old_requests_for_tenant": "Clean up old death-sync requests",
       "authentication_flush_expired_tokens": "Flush expired tokens",
       "events_retry_pending_webhooks": "Retry pending webhooks",

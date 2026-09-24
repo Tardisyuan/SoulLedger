@@ -1,17 +1,63 @@
 """
 REST views for Disposition app.
 """
+from django.db.models import Count, Exists, OuterRef
+from django_filters import rest_framework as filters
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.disposition.models import Disposition
+from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSection
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
 from apps.disposition.services import DispositionService
+from apps.reincarnation.models import Reincarnation
+
+
+class DispositionFilter(filters.FilterSet):
+    """`section` 选页面的一段;`soul_reborn=false` 让「期满」段藏起已经转世的灵魂。
+
+    `soul_reborn` 是普通过滤项,所以它也作用于分段计数(计数只忽略 `section`
+    本身)—— 页面藏了哪些行,计数就不数哪些行。"""
+    section = filters.ChoiceFilter(choices=DispositionSection.choices, method="filter_section")
+    soul_reborn = filters.BooleanFilter(field_name="soul_reborn_flag")
+
+    class Meta:
+        model = Disposition
+        fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
+
+    def filter_section(self, queryset, name, value):
+        return queryset.filter(SECTION_FILTERS[value])
+
+
+class DispositionPagination(PageNumberPagination):
+    """The project page envelope plus `section_counts`: how many rows each of the
+    three sections holds under the same filters as this page, ignoring
+    `section` itself. The /disposition page shows these instead of counting the
+    rows it happens to have loaded."""
+
+    def paginate_queryset(self, queryset, request, view=None):
+        self.section_counts = view.section_counts() if view is not None else None
+        return super().paginate_queryset(queryset, request, view)
+
+    def get_paginated_response(self, data):
+        response = super().get_paginated_response(data)
+        response.data["section_counts"] = self.section_counts
+        return response
+
+    def get_paginated_response_schema(self, schema):
+        schema = super().get_paginated_response_schema(schema)
+        schema["properties"]["section_counts"] = {
+            "type": "object",
+            "properties": {s.value: {"type": "integer"} for s in DispositionSection},
+            "required": [s.value for s in DispositionSection],
+        }
+        schema["required"] = [*schema.get("required", []), "section_counts"]
+        return schema
 
 
 # TenantCreateMixin was absent, so POST wrote `tenant = NULL` and the row was
@@ -50,10 +96,16 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         'archive': ['disposition.execute'],
     }
     queryset = Disposition.objects.select_related(
-        "soul", "soul__tenant", "destination_realm", "tenant"
-    ).all()
+        "soul", "soul__tenant", "destination_realm", "tenant", "judgment"
+    ).annotate(
+        # 这一世之后是否已经转世 —— 一个子查询,不是每行一次(serializer 的 get_soul_reborn)。
+        soul_reborn_flag=Exists(
+            Reincarnation.objects.filter(soul=OuterRef("soul"), cycle_count__gt=OuterRef("cycle"))
+        ),
+    )
     serializer_class = DispositionSerializer
-    filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
+    filterset_class = DispositionFilter
+    pagination_class = DispositionPagination
     # 暂居只读例外(apps/core/tenant.py)。
     residence_read_actions = ("list", "retrieve")
     ordering_fields = ["created_at", "executed_at"]
@@ -81,6 +133,20 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         if not show_archived:
             qs = qs.filter(is_archived=False)
         return qs
+
+    def section_counts(self) -> dict:
+        """Per-section totals under this request's filters, minus `section`.
+
+        One aggregate query. The filterset is rebuilt without `section` rather
+        than counting the page's own queryset, which `section` has already cut
+        down to one section."""
+        params = self.request.query_params.copy()
+        params.pop("section", None)
+        qs = DispositionFilter(params, queryset=self.get_queryset(), request=self.request).qs
+        counts = qs.aggregate(**{
+            section.value: Count("pk", filter=q) for section, q in SECTION_FILTERS.items()
+        })
+        return {key: counts[key] or 0 for key in counts}
 
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):

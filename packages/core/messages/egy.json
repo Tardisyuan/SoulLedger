@@ -94,6 +94,7 @@
       "JUDGMENT_INITIATED": "Wedja Tepy Seth",
       "JUDGMENT_CONCLUDED": "Sheemtet Abuf Seth",
       "DISPOSITION_CREATED": "Wetep Iri Seth",
+      "DISPOSITION_EXPIRED": "Wetep Neb Seth",
       "REINCARNATION_TRIGGERED": "Wehem Mesut Tepy Seth",
       "KARMA_RECALCULATED": "Unemu Seth Khemu",
       "WORKFLOW_CREATED": "Wat Hesy Iri Seth",
@@ -1720,6 +1721,7 @@
     "jobs": {
       "ledger_recalculate_tenant": "Wehem Hesb Sesh Maat",
       "judgment_auto_conclude_stale_for_tenant": "Khetem Wedja Tepy Djes-Ef",
+      "disposition_expire_due_for_tenant": "Sesh Wetep Neb Seth",
       "death_sync_cleanup_old_requests_for_tenant": "Khetem Dbh Mut Tepy",
       "authentication_flush_expired_tokens": "Khetem Menf Mut",
       "events_retry_pending_webhooks": "Wehem Hab Webhook Em Smen",
