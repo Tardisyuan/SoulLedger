@@ -17,6 +17,7 @@ import type { MenuFormState, MenuItemFull, MenuTypeOption } from "@/src/componen
 import { MenuGatesReference } from "@/src/components/menus/MenuGatesReference";
 import { MenuRowCells } from "@/src/components/menus/MenuRowCells";
 import { MenuFormModal } from "@/src/components/menus/MenuFormModal";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 
 export default function MenusPage() {
   const { t } = useI18n();
@@ -196,17 +197,9 @@ export default function MenusPage() {
         /* Recycle bin (Stage 4 §4.7): absent by default — a deleted row only
            ever renders when this is on. It is a filter over the list, so it
            lives in the filter slot rather than floating above the table. */
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="menus-show-deleted"
-            checked={showDeleted}
-            onChange={(e) => setShowDeleted(e.target.checked)}
-          />
-          <label htmlFor="menus-show-deleted" className="text-sm text-[oklch(var(--color-ink-muted))]">
-            {t("menus.show_deleted")}
-          </label>
-        </div>
+        <FilterChipToggle pressed={showDeleted} onPressedChange={setShowDeleted}>
+          {t("menus.show_deleted")}
+        </FilterChipToggle>
       }
     >
       <MenuGatesReference />
@@ -220,9 +213,9 @@ export default function MenusPage() {
           { key: "path", header: t("menus.path") },
           { key: "type", header: t("menus.type") },
           { key: "roles", header: t("menus.roles") },
-          { key: "order", header: t("menus.order") },
+          { key: "order", header: t("menus.order"), align: "right" },
           { key: "status", header: t("menus.status") },
-          { key: "action", header: t("menus.action"), align: "right" },
+          { key: "action", header: t("menus.action"), align: "right", srOnlyHeader: true },
         ]}
         data={menus}
         isLoading={isLoading}

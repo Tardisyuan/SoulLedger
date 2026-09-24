@@ -41,7 +41,7 @@ export function MenuRowCells({
             {menu.name}
           </span>
           {isDeleted && (
-            <Badge className="shrink-0 text-[oklch(var(--color-ink-subtle))]">
+            <Badge className="shrink-0" glyph="↺">
               {t("menus.deleted_badge")}
             </Badge>
           )}
@@ -55,21 +55,21 @@ export function MenuRowCells({
       <td className="px-4 py-3">
         <div className="flex flex-wrap gap-1">
           {menu.roles.map((role) => (
-            <Badge key={role} tone="accent">
+            <Badge key={role}>
               {t(`users.roles.${role}`)}
             </Badge>
           ))}
         </div>
       </td>
-      <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">{menu.order}</td>
+      <td className="px-4 py-3 text-right font-mono text-[oklch(var(--color-ink-muted))]">{menu.order}</td>
       <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-1">
           {/* is_active and visible are gates being in force or not —
               a system state, so the tone table applies here. */}
-          <Badge tone={menu.is_active ? "success" : "neutral"}>
+          <Badge tone={menu.is_active ? "success" : "neutral"} glyph={menu.is_active ? "✓" : "○"}>
             {menu.is_active ? t("menus.active") : t("menus.inactive")}
           </Badge>
-          <Badge className={menu.visible !== false ? undefined : "text-[oklch(var(--color-ink-subtle))]"}>
+          <Badge>
             {menu.visible !== false ? t("menus.shown_label") : t("menus.hidden_label")}
           </Badge>
         </div>
@@ -77,16 +77,16 @@ export function MenuRowCells({
       <td className="px-4 py-3 text-right">
         {/* See app/permissions/page.tsx: inline siblings concatenate
             their labels in the accessibility tree and on copy. */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
           {!isDeleted && (
             <>
               <RequirePermission permissions="menu.manage">
-                <Button type="button" size="sm" onClick={() => onEdit(menu)}>
+                <Button type="button" size="sm" variant="ghost" onClick={() => onEdit(menu)}>
                   {t("menus.edit")}
                 </Button>
               </RequirePermission>
               <RequirePermission permissions="menu.manage">
-                <Button type="button" size="sm" variant="danger" onClick={() => onDelete(menu)}>
+                <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-danger))]" onClick={() => onDelete(menu)}>
                   {t("menus.delete")}
                 </Button>
               </RequirePermission>

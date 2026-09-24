@@ -12,8 +12,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { SelectField, TextField, fieldControl } from "@/src/components/ui/Field";
-import { cn } from "@/lib/utils";
+import { SelectField, TextField } from "@/src/components/ui/Field";
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 
 export default function MenuButtonsPage() {
   const { t } = useI18n();
@@ -24,7 +24,6 @@ export default function MenuButtonsPage() {
 
   // Unique prefix so field ids never collide across multiple Modal instances.
   const formId = useId();
-  const menuFilterId = `${formId}-menu-filter`;
   const nameId = `${formId}-name`;
   const codeId = `${formId}-code`;
   const permissionId = `${formId}-permission`;
@@ -159,22 +158,20 @@ export default function MenuButtonsPage() {
         /* This select was sitting in the title bar next to the create button,
            where it read as a page action rather than as what it is — the one
            filter this list has. It belongs in the sticky slot with every other
-           page's filters, on the shared `fieldControl` skin. */
-        <select
-          id={menuFilterId}
-          value={selectedMenuId ?? ""}
-          onChange={(e) => {
-            setSelectedMenuId(e.target.value ? Number(e.target.value) : undefined);
+           page's filters, as a filter chip (规范 v1 §2). */
+        <FilterChipSelect
+          label={t("menu_buttons.filter_by_menu")}
+          value={selectedMenuId === undefined ? "" : String(selectedMenuId)}
+          options={[
+            { value: "", label: t("menu_buttons.all_menus") },
+            ...menus.map((m) => ({ value: String(m.id), label: m.name })),
+          ]}
+          clearLabel={t("filter.clear_one", { name: t("menu_buttons.filter_by_menu") })}
+          onChange={(v) => {
+            setSelectedMenuId(v ? Number(v) : undefined);
             setPage(1);
           }}
-          aria-label={t("menu_buttons.filter_by_menu") === "menu_buttons.filter_by_menu" ? "Filter by menu" : t("menu_buttons.filter_by_menu")}
-          className={cn(fieldControl({ size: "md" }), "w-auto")}
-        >
-          <option value="">{t("menu_buttons.all_menus")}</option>
-          {menus.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
+        />
       }
     >
       {/* No `pagination` slot — DataTable renders its own <Pagination>
@@ -185,9 +182,9 @@ export default function MenuButtonsPage() {
           { key: "name", header: t("menu_buttons.name") },
           { key: "code", header: t("menu_buttons.code") },
           { key: "permission", header: t("menu_buttons.permission") },
-          { key: "order", header: t("menus.order") },
+          { key: "order", header: t("menus.order"), align: "right" },
           { key: "status", header: t("menus.status") },
-          { key: "action", header: t("menus.action"), align: "right" },
+          { key: "action", header: t("menus.action"), align: "right", srOnlyHeader: true },
         ]}
         data={buttons}
         isLoading={isLoading}
@@ -199,26 +196,26 @@ export default function MenuButtonsPage() {
             {/* Codenames are identifiers, which is what the 02 step is for. */}
             <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{btn.code}</td>
             <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{btn.permission}</td>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">{btn.order}</td>
+            <td className="px-4 py-3 text-right font-mono text-[oklch(var(--color-ink-muted))]">{btn.order}</td>
             <td className="px-4 py-3">
               {/* is_active IS a system state — the gate is either in force or
                   it is not — so this one legitimately takes a Badge tone
                   rather than a domain palette. */}
-              <Badge tone={btn.is_active ? "success" : "neutral"}>
+              <Badge tone={btn.is_active ? "success" : "neutral"} glyph={btn.is_active ? "✓" : "○"}>
                 {btn.is_active ? t("menus.active") : t("menus.inactive")}
               </Badge>
             </td>
             <td className="px-4 py-3 text-right">
               {/* See app/permissions/page.tsx: inline siblings concatenate
                   their labels in the accessibility tree and on copy. */}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-1">
                 <RequirePermission permissions="menu.manage">
-                  <Button type="button" size="sm" onClick={() => openEdit(btn)}>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => openEdit(btn)}>
                     {t("menus.edit")}
                   </Button>
                 </RequirePermission>
                 <RequirePermission permissions="menu.manage">
-                  <Button type="button" size="sm" variant="danger" onClick={() => deleteMutation.mutate(btn.id)}>
+                  <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-danger))]" onClick={() => deleteMutation.mutate(btn.id)}>
                     {t("menus.delete")}
                   </Button>
                 </RequirePermission>

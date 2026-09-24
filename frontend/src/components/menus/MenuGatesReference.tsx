@@ -37,35 +37,31 @@ export function MenuGatesReference() {
        signature, and would hang a `<caption class="sr-only">`, a bordered
        card and a pagination-capable footer off a paragraph.
 
-       What WAS wrong is the part that is fixed below. The brief counted
-       three header spellings across the app's hand-written tables; this one
-       was the "no background at all" variant, with `text-ink-subtle` heads
-       and a `py-1.5` row height on nobody's ladder. Its `<thead>` is now
-       character-for-character DataTable's own — `bg-surface-2
-       text-ink-muted`, `px-4 py-3 font-medium`, hairline rule under the row
-       — so the two tables on this page read as one table style even though
-       only one of them is the component. */
-    <details className="mb-4 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))]">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-[oklch(var(--color-ink))]">
+       Its `<thead>` follows DataTable's own (规范 v1 §2): 11 px mono header
+       over the block line, rule lines between rows, no fill, no box — so the
+       two tables on this page read as one table style even though only one of
+       them is the component. */
+    <details className="mb-4 border-b border-[oklch(var(--color-rule))]">
+      <summary className="cursor-pointer py-2 text-sm font-medium text-[oklch(var(--color-ink))]">
         {t("menus.gates_title")}
       </summary>
-      <div className="px-4 pb-4">
+      <div className="pb-4">
         <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-3">{t("menus.gates_intro")}</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
-            <thead className="bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]">
-              <tr className="text-left border-b border-[oklch(var(--color-hairline))]">
-                <th className="px-4 py-3 font-medium">{t("menus.gate_col_name")}</th>
-                <th className="px-4 py-3 font-medium">{t("menus.gate_col_effect")}</th>
-                <th className="px-4 py-3 font-medium">{t("menus.gate_col_nonadmin")}</th>
+            <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+              <tr className="text-left border-b border-[oklch(var(--color-block))]">
+                <th className="px-3 py-2 font-normal">{t("menus.gate_col_name")}</th>
+                <th className="px-3 py-2 font-normal">{t("menus.gate_col_effect")}</th>
+                <th className="px-3 py-2 font-normal">{t("menus.gate_col_nonadmin")}</th>
               </tr>
             </thead>
             <tbody className="text-[oklch(var(--color-ink-muted))]">
               {GATE_ROWS.map((row) => (
-                <tr key={row.name} className="border-b border-[oklch(var(--color-hairline))] last:border-0">
-                  <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))] whitespace-nowrap">{t(row.name)}</td>
-                  <td className="px-4 py-3">{t(row.effect)}</td>
-                  <td className="px-4 py-3">{t(row.nonadmin)}</td>
+                <tr key={row.name} className="border-b border-[oklch(var(--color-rule))] last:border-0">
+                  <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))] whitespace-nowrap">{t(row.name)}</td>
+                  <td className="px-3 py-2">{t(row.effect)}</td>
+                  <td className="px-3 py-2">{t(row.nonadmin)}</td>
                 </tr>
               ))}
             </tbody>
