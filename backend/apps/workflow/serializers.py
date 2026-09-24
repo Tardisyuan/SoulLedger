@@ -195,6 +195,14 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     POST a node into tenant B's live approval chain and get a 201.
     """
 
+    # `approver` is the deciding user's pk. The web detail page had nothing
+    # else to show and rendered MissingValue in its place (see the comment at
+    # the `approver` line of `app/workflow/[id]/page.tsx`). Username is the
+    # recoverable identifier, display_name the readable one; both null while
+    # the node is undecided or the account is gone.
+    approver_username = serializers.CharField(source="approver.username", read_only=True, allow_null=True)
+    approver_display_name = serializers.CharField(source="approver.display_name", read_only=True, allow_null=True)
+
     class Meta:
         model = ApprovalNode
         fields = [
@@ -214,6 +222,8 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "evidence_json",
             "notes",
             "approver",
+            "approver_username",
+            "approver_display_name",
             "decided_at",
             "created_at",
         ]
