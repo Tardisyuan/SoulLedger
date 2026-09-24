@@ -7,7 +7,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { readDefaultView, routeForView, writeDefaultView, type DefaultView } from "@/src/lib/defaultView";
+import { loadDefaultView, routeForView, saveDefaultView, type DefaultView } from "@/src/lib/defaultView";
 
 /**
  * 首次进入四步清单(第三类 D 组 10b)。步骤行 StepRow:已完成 = 墨底 ✓,
@@ -31,9 +31,24 @@ const TOTAL = 4;
 
 export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
   const { t } = useI18n();
-  // Read after mount: localStorage is not there on the server render.
+  // The server's value, once there is a session to ask with (`/welcome` is a
+  // public path). Loading it also migrates a choice this browser stored in
+  // the localStorage era — see `src/lib/defaultView.ts`.
   const [view, setView] = useState<DefaultView | null>(null);
-  useEffect(() => setView(readDefaultView()), []);
+  useEffect(() => {
+    if (!signedIn) return;
+    let cancelled = false;
+    loadDefaultView()
+      .then((saved) => {
+        if (!cancelled) setView(saved);
+      })
+      .catch(() => {
+        // Unreadable: the step shows unchosen, which is what it is.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
   const [advanced, setAdvanced] = useState(0);
 
   // What the data already settles, and how far 继续 has been pressed; the
@@ -43,9 +58,14 @@ export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
   const current = Math.max(settled, advanced);
   const state = (i: number) => (i < current ? "done" : i === current ? "current" : "future");
 
+  // Optimistic, then settled by the server's answer; a failed save puts the
+  // previous value back rather than showing a choice that was not kept.
   const choose = (next: DefaultView) => {
-    writeDefaultView(next);
+    const previous = view;
     setView(next);
+    saveDefaultView(next)
+      .then(setView)
+      .catch(() => setView(previous));
   };
 
   const steps: { title: string; desc: React.ReactNode; body?: React.ReactNode }[] = [
@@ -70,6 +90,8 @@ export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
               type="button"
               aria-pressed={view === option}
               data-testid={`welcome-view-${option}`}
+              // Saved per user on the server, so there has to be a user.
+              disabled={!signedIn}
               onClick={() => choose(option)}
               className={cn(
                 "px-3 py-2 text-left border",

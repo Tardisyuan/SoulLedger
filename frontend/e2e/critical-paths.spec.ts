@@ -29,7 +29,7 @@ test.describe("Critical path: login and create a soul", () => {
     // ── The login actually took ──
     await expect(page).toHaveURL(/\/dashboard/);
     const loginCall = api.lastCall("POST", "/auth/login/");
-    expect(loginCall?.body).toEqual({ username: TEST_USER.username, password: "correct-horse-battery" });
+    expect(loginCall?.body).toEqual({ username: TEST_USER.username, password: "correct-horse-battery", remember: false });
 
     // The refresh token must reach a real cookie — middleware.ts reads it
     // server-side on every subsequent navigation, so a token stashed only in

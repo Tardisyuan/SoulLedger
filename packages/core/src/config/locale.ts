@@ -36,9 +36,9 @@ export type Locale = "zh-Hans" | "en" | "egy";
  * 服务端拿到的是 `nullAdapter`,`get` 恒返回 `null` —— `<html lang>` 会永久停在
  * 默认语言,而这正是这个文件头记着的那次 500 的同一类故障:四个绿灯,首页错。
  *
- * 三、web 那份 `persistent.set` 写死了 refresh token 的属性(`max-age=604800`,
- * 见 `frontend/lib/platform/web.ts`)。语言 cookie 现在写的是一年。走端口意味着
- * 语言偏好从一年悄悄缩成七天,没有任何东西会报出来。
+ * 三、web 那份 `persistent.set` 写的是 refresh token 的属性(寿命按令牌定:会话 cookie
+ * 或 30 天,见 `frontend/lib/platform/web.ts` 的 `refreshCookieLifetime`)。语言 cookie
+ * 现在写的是一年。走端口意味着语言偏好从一年悄悄变成别的寿命,没有任何东西会报出来。
  *
  * 需要改的时候要改的是**名字**(`LOCALE_STORAGE_KEY` 之类),不是位置;那要同时
  * 动 `middleware.ts`、`I18nContext.tsx` 和 `middlewareAuthGate.test.ts`。 */

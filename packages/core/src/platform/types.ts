@@ -31,8 +31,8 @@
  * implementation of "survives a restart" is AsyncStorage, which is unencrypted
  * plaintext on disk, world-readable to anything that can read the app's
  * sandbox. A tenant id there is a tenant id. A refresh token there is a
- * seven-day credential (see the `max-age=604800` in
- * `frontend/lib/platform/web.ts`) sitting in a plaintext file.
+ * 7-day credential — 30 with 「保持登录」 (see `refreshCookieLifetime` in
+ * `frontend/lib/platform/web.ts`) — sitting in a plaintext file.
  *
  * A single `persistent` port cannot express that difference, so an RN adapter
  * written against it would be *correct* — one store, one implementation — and
