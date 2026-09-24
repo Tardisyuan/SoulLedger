@@ -57,6 +57,28 @@ export interface Judgment {
   draft_verdict?: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
   draft_saved_at?: string | null;
   draft_version?: number;
+  /**
+   * The officer (a User pk) working this case — NOT `judge`, which is the
+   * mythological judge (an Actor). Written only by claim / release / reassign
+   * (`apps/judgment/claims.py`); kept after conclusion as the last holder.
+   */
+  claimed_by?: number | null;
+  claimed_by_name?: string | null;
+  claimed_at?: string | null;
+  /** 暂缓. Non-null puts the case in the `deferred` group and out of `next/`. */
+  deferred_at?: string | null;
+  deferred_by?: number | null;
+  deferred_by_name?: string | null;
+  /** Empty string when not deferred. */
+  defer_reason?: string;
+  /**
+   * merit − demerit, for CHINESE cases only; null for every other cosmology
+   * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
+   * floor `SoulSerializer` keeps.
+   */
+  karmic_balance?: number | null;
+  /** Entries in `evidence_json` — the number the detail page's facts column shows. */
+  evidence_count?: number;
 }
 
 type Schemas = components["schemas"];
@@ -91,6 +113,61 @@ export interface JudgmentDraftPayload {
   version: number;
   notes?: string;
   draft_verdict?: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
+}
+
+
+/** The four queue groups. Mutually exclusive over pending cases; deferred wins. */
+export type JudgmentQueueGroup = "mine" | "unclaimed" | "others" | "deferred";
+
+/** `GET /judgment/queue-counts/`. The four add up to `total`. */
+export interface JudgmentQueueCounts {
+  mine: number;
+  unclaimed: number;
+  others: number;
+  deferred: number;
+  total: number;
+}
+
+/** Filters `queue-counts/` honours — the list's, minus `group`. */
+export interface JudgmentQueueCountsParams {
+  court?: string;
+  search?: string;
+}
+
+export type JudgmentBatchOperation = "claim" | "reassign" | "defer";
+
+/** `POST /judgment/batch/`. At most 100 ids; all or nothing. */
+export interface JudgmentBatchPayload {
+  operation: JudgmentBatchOperation;
+  ids: string[];
+  /** User pk. Required for `reassign`. */
+  to?: number;
+  /** Required for `defer`. At most 500 characters. */
+  reason?: string;
+}
+
+export interface JudgmentBatchResult {
+  operation: JudgmentBatchOperation;
+  count: number;
+  ids: string[];
+}
+
+/**
+ * The body of a refused claim-family request (403 / 404 / 409, and 400 for a
+ * bad assignee). Branch on `code`, not on `error`:
+ * `already_claimed` · `not_claimed` · `not_claimant` · `not_pending` ·
+ * `already_deferred` · `not_deferred` · `invalid_assignee` · `not_found` ·
+ * `permission_denied`.
+ */
+export interface JudgmentClaimRefusal {
+  error: string;
+  code: string;
+  /** On `already_claimed` / `not_claimant`: who holds it. */
+  claimed_by?: number | null;
+  /** On a batch: the case that rolled the whole batch back. */
+  id?: string;
+  /** On a batch 404: the ids outside the caller's scope. */
+  missing?: string[];
 }
 
 /**
@@ -333,6 +410,8 @@ export interface JudgmentQueueParams {
   skip?: string[];
   /** Enter the queue on a named case (deep link from a soul's lifecycle spine). */
   at?: string;
+  /** Hand out deferred (暂缓) cases too. They are left out by default. */
+  includeDeferred?: boolean;
 }
 
 /**
@@ -379,7 +458,17 @@ export const judgmentApi = {
     const search = new URLSearchParams();
     for (const id of params?.skip ?? []) search.append("skip", id);
     if (params?.at) search.set("at", params.at);
+    if (params?.includeDeferred) search.set("include_deferred", "true");
     const qs = search.toString();
     return api.get<JudgmentQueueCursor>(`/judgment/next/${qs ? `?${qs}` : ""}`);
   },
+  claim: (id: string) => api.post<Judgment>(`/judgment/${id}/claim/`, {}),
+  release: (id: string) => api.post<Judgment>(`/judgment/${id}/release/`, {}),
+  /** Needs `judgment.assign` (ADMIN, MODERATOR). `to` is a User pk in the case's tenant. */
+  reassign: (id: string, to: number) => api.post<Judgment>(`/judgment/${id}/reassign/`, { to }),
+  defer: (id: string, reason: string) => api.post<Judgment>(`/judgment/${id}/defer/`, { reason }),
+  undefer: (id: string) => api.post<Judgment>(`/judgment/${id}/undefer/`, {}),
+  batch: (payload: JudgmentBatchPayload) => api.post<JudgmentBatchResult>("/judgment/batch/", payload),
+  queueCounts: (params?: JudgmentQueueCountsParams) =>
+    api.get<JudgmentQueueCounts>("/judgment/queue-counts/", { params }),
 };
