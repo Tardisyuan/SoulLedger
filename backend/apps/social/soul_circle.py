@@ -34,6 +34,7 @@ from apps.social.models import (
     ModerationStatus,
     Post,
     Reaction,
+    ReactionType,
     SocialMute,
     Visibility,
 )
@@ -292,13 +293,22 @@ class ReactionState:
 
 
 def toggle_reaction(user, post_id, reaction_type):
-    """同一类型再点一次是取消,换类型是改。返回表态后的状态。"""
+    """每人每帖一条表态:同一类型再点一次是取消,换类型是改。返回表态后的状态。
+
+    **长明灯点了就锁死**(2026-09-24 用户决定):已有 ETERNAL_LIGHT 时,再点它(取消)
+    或换成别的都拒绝 —— 在这里拒,不靠 App 藏入口。锁帖子行,让同一帖子上的表态串行:
+    否则两个并发请求都读到「还没有表态」,后一个会把刚点的长明灯改掉。
+    """
     tenant = ensure_can_write(user)
     post = visible_posts_for_soul(user).filter(pk=post_id, moderation_status=ModerationStatus.PUBLISHED).first()
     if post is None:
         raise _not_found()
-    before = Reaction.objects.filter(user=user, post=post).first()
-    ReactionService.add_reaction(user=user, reaction_type=reaction_type, post=post, tenant=tenant)
+    with transaction.atomic():
+        Post.objects.select_for_update().filter(pk=post.pk).exists()
+        before = Reaction.objects.filter(user=user, post=post).first()
+        if before is not None and before.reaction_type == ReactionType.ETERNAL_LIGHT:
+            raise SocialError("长明灯已点,不可取消或更改。", "eternal_light_locked", 409)
+        ReactionService.add_reaction(user=user, reaction_type=reaction_type, post=post, tenant=tenant)
     if before is not None and before.reaction_type == reaction_type:
         return ReactionState(False, None)
     return ReactionState(True, reaction_type)
