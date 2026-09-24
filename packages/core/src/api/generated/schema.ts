@@ -9760,6 +9760,7 @@ export interface components {
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
             comment_count: number;
             reaction_count: number;
+            reaction_counts: components["schemas"]["SoulReactionCounts"];
             my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly is_mine: boolean;
             /** Format: date-time */
@@ -9786,6 +9787,14 @@ export interface components {
             following_count: number;
             /** @description 当前查看者看得见的帖子数。 */
             post_count: number;
+        };
+        /** @description 五种表态各自的数。读 `annotate_posts_for` 的 `reactions_<type>` 注解。 */
+        SoulReactionCounts: {
+            LIKE: number;
+            LOVE: number;
+            RESPECT: number;
+            SYMPATHY: number;
+            ETERNAL_LIGHT: number;
         };
         SoulReactionRequest: {
             /** @default LIKE */

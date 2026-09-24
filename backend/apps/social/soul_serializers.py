@@ -37,6 +37,15 @@ class SoulProfileSerializer(SoulCardSerializer):
     post_count = serializers.IntegerField(help_text="当前查看者看得见的帖子数。")
 
 
+class SoulReactionCountsSerializer(serializers.Serializer):
+    """五种表态各自的数。读 `annotate_posts_for` 的 `reactions_<type>` 注解。"""
+    LIKE = serializers.IntegerField(source="reactions_like")
+    LOVE = serializers.IntegerField(source="reactions_love")
+    RESPECT = serializers.IntegerField(source="reactions_respect")
+    SYMPATHY = serializers.IntegerField(source="reactions_sympathy")
+    ETERNAL_LIGHT = serializers.IntegerField(source="reactions_eternal_light")
+
+
 class SoulPostSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     author = SoulCardSerializer()
@@ -48,6 +57,7 @@ class SoulPostSerializer(serializers.Serializer):
     )
     comment_count = serializers.IntegerField(source="visible_comment_count")
     reaction_count = serializers.IntegerField(source="visible_reaction_count")
+    reaction_counts = SoulReactionCountsSerializer(source="*")
     my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True)
     is_mine = serializers.SerializerMethodField()
     create_time = serializers.DateTimeField()

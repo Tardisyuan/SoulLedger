@@ -89,3 +89,22 @@ def test_a_past_life_profile_says_it_is_not_active(cn_tenant):
 
     assert client.get(f"{SOCIAL}/users/{past.user_id}/").json()["is_active"] is False
     assert client.get(f"{SOCIAL}/users/{live.user_id}/").json()["is_active"] is True
+
+
+def test_a_post_carries_each_reaction_types_count(cn_tenant):
+    """卡片上的表态汇总按种类分开数。删掉的(取消的)不算,评论多不会把表态数乘上去。"""
+    author, _ = soul(cn_tenant, "作者")
+    row = post(author)
+    clients = [soul(cn_tenant, f"读者{i}")[1] for i in range(4)]
+    react(clients[0], row, ReactionType.LIKE)
+    react(clients[1], row, ReactionType.LIKE)
+    react(clients[2], row, ReactionType.ETERNAL_LIGHT)
+    react(clients[3], row, ReactionType.SYMPATHY)
+    react(clients[3], row, ReactionType.SYMPATHY)  # 取消
+    for text in ("一", "二", "三"):
+        clients[0].post(f"{SOCIAL}/posts/{row.pk}/comments/", {"content": text}, format="json")
+
+    seen = clients[0].get(f"{SOCIAL}/posts/{row.pk}/").json()
+    assert seen["reaction_counts"] == {"LIKE": 2, "LOVE": 0, "RESPECT": 0, "SYMPATHY": 0, "ETERNAL_LIGHT": 1}
+    assert seen["reaction_count"] == 3
+    assert seen["comment_count"] == 3
