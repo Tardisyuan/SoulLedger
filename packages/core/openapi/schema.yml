@@ -4939,6 +4939,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulSocialError'
           description: ''
+  /api/v1/me/social/profile/:
+    patch:
+      operationId: v1_me_social_rename
+      description: 改自己的朋友圈显示名。拒绝理由见 `soul_circle.rename`。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSoulDisplayNameRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSoulDisplayNameRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSoulDisplayNameRequest'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulCard'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
   /api/v1/me/social/reports/:
     post:
       operationId: v1_me_social_reports_create
@@ -18379,6 +18429,13 @@ components:
         inherited_demerit:
           type: integer
           readOnly: true
+    PatchedSoulDisplayNameRequest:
+      type: object
+      description: 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。
+      properties:
+        display_name:
+          type: string
+          maxLength: 100
     PatchedUser:
       type: object
       description: |-

@@ -105,6 +105,11 @@ class SoulReactionStateSerializer(serializers.Serializer):
     reaction_type = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True)
 
 
+class SoulDisplayNameRequestSerializer(serializers.Serializer):
+    """长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。"""
+    display_name = serializers.CharField(max_length=100, allow_blank=True, trim_whitespace=False)
+
+
 class SoulFollowStateSerializer(serializers.Serializer):
     following = serializers.BooleanField()
 
