@@ -80,12 +80,14 @@ function renderPage() {
 const lastParams = () => mockedList.mock.calls[mockedList.mock.calls.length - 1][0];
 
 /**
- * The filter chips are a custom listbox (§7 forbids native <select>), so
- * picking a value means opening the trigger then clicking the option.
+ * The filter chips are 规范 v1 `FilterChipSelect`s: a native <select> inside
+ * the chip, named by the chip's dimension. Picking a value is choosing the
+ * option whose visible label is `optionLabel`.
  */
-function pickChip(currentTriggerLabel: string, optionLabel: string) {
-  fireEvent.click(screen.getByRole("button", { name: new RegExp(currentTriggerLabel) }));
-  fireEvent.click(within(screen.getByRole("listbox")).getByText(optionLabel));
+function pickChip(dimensionLabel: string, optionLabel: string) {
+  const select = screen.getByRole("combobox", { name: dimensionLabel }) as HTMLSelectElement;
+  const option = within(select).getByText(optionLabel) as HTMLOptionElement;
+  fireEvent.change(select, { target: { value: option.value } });
 }
 
 beforeEach(() => {
@@ -168,7 +170,7 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.all_actions", "audit.actions.DELETE");
+    pickChip("audit.filter_action", "audit.actions.DELETE");
 
     await waitFor(() => expect(lastParams().action).toBe("DELETE"));
   });
@@ -177,7 +179,7 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.all_resources", "User");
+    pickChip("audit.filter_resource", "User");
 
     await waitFor(() => expect(lastParams().resource).toBe("user"));
   });
@@ -186,7 +188,7 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.date_all", "audit.date_7d");
+    pickChip("audit.timestamp", "audit.date_7d");
 
     await waitFor(() => expect(lastParams().start_date).toMatch(/^\d{4}-\d{2}-\d{2}$/));
     expect(lastParams().end_date).toBeUndefined();
@@ -196,11 +198,11 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.date_all", "audit.date_7d");
+    pickChip("audit.timestamp", "audit.date_7d");
     await waitFor(() => expect(lastParams().start_date).toBeDefined());
     const sevenDay = lastParams().start_date;
 
-    pickChip("audit.date_7d", "audit.date_30d");
+    pickChip("audit.timestamp", "audit.date_30d");
     await waitFor(() => expect(lastParams().start_date).not.toBe(sevenDay));
 
     expect(lastParams().start_date < sevenDay).toBe(true);
@@ -252,7 +254,7 @@ describe("AuditPage filter clearing", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.all_actions", "audit.actions.DELETE");
+    pickChip("audit.filter_action", "audit.actions.DELETE");
     fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "zz" } });
     await waitFor(() => expect(screen.getByText("audit.clear_filters")).toBeInTheDocument());
 
