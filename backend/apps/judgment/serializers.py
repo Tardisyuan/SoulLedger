@@ -7,12 +7,13 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
+from apps.judgment.claims import BATCH_LIMIT
 from apps.judgment.models import Judgment, JudgmentCitation, Statute, open_judgments
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
-from apps.souls.models import SoulState
-from apps.souls.serializers import SoulSerializer
+from apps.souls.models import Civilization, SoulState
+from apps.souls.serializers import SoulSerializer, _is_viewer
 
 
 def _locale_from(context) -> str:
@@ -109,6 +110,12 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judge_name = serializers.CharField(source="judge.name", read_only=True)
     citations = JudgmentCitationSerializer(many=True, read_only=True)
+    # 认领 / 暂缓(apps/judgment/claims.py)。全部只读:只有那几个动作能写,它们在行锁下写。
+    claimed_by_name = serializers.SerializerMethodField()
+    deferred_by_name = serializers.SerializerMethodField()
+    # 队列一行要显示的两个数,免得每行再请求一次灵魂与证据。
+    karmic_balance = serializers.SerializerMethodField()
+    evidence_count = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
 
@@ -120,15 +127,65 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "citations",
             "is_final", "created_at", "concluded_at",
             "kind", "amends_plan_id",
+            "claimed_by", "claimed_by_name", "claimed_at",
+            "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
+            "karmic_balance", "evidence_count",
         ]
         # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
         # 不由 POST 的 body 定 —— 灵魂有进行中的计划即 AMENDMENT;REOPEN 只由批准请求时开。
-        read_only_fields = ["civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id"]
+        read_only_fields = [
+            "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id",
+            "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
+        ]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
     # (the ApprovalNodeSerializer shape) because DRF strips read-only fields
     # before `validate` runs and would otherwise answer 200 to a forgery.
     _DECIDED_BY_CONCLUDE = ("verdict", "is_final", "concluded_at")
+    # 同理:认领与暂缓只经 claim / release / reassign / defer / undefer 写,那条路径在
+    # 案子的行锁下检查「已被别人认领」。一个 PATCH 能写 `claimed_by`,就能绕过那把锁。
+    _WRITTEN_BY_CLAIM_ACTIONS = ("claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason")
+
+    @staticmethod
+    def _user_name(user) -> str | None:
+        if user is None:
+            return None
+        return user.display_name or user.username
+
+    def get_claimed_by_name(self, obj) -> str | None:
+        return self._user_name(obj.claimed_by)
+
+    def get_deferred_by_name(self, obj) -> str | None:
+        return self._user_name(obj.deferred_by)
+
+    def get_karmic_balance(self, obj) -> int | None:
+        """功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+
+        `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+        希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+        `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+        在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+        """
+        if obj.civilization != Civilization.CHINESE:
+            return None
+        return obj.soul.karmic_balance
+
+    def get_evidence_count(self, obj) -> int:
+        """`evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+        (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。"""
+        evidence = obj.evidence_json
+        if isinstance(evidence, dict | list):
+            return len(evidence)
+        return 0
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # VIEWER 默认不持有任何 judgment.* 码名,到不了这里;但权限矩阵可以授予它
+        # judgment.read,而功过分数对 VIEWER 的隐藏是写死的底线(SoulSerializer 的
+        # docstring:数据库规则只能收窄,不能放宽)。这里守同一条底线。
+        if _is_viewer(self.context):
+            data.pop("karmic_balance", None)
+        return data
 
     def validate_soul(self, value):
         value = same_tenant_or_404_message(value, self.context, "soul")
@@ -162,6 +219,15 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
                     "soul; a plain field write does neither."
                 )
                 for f in blocked
+            })
+        claim_fields = [f for f in self._WRITTEN_BY_CLAIM_ACTIONS if f in self.initial_data]
+        if claim_fields:
+            raise serializers.ValidationError({
+                f: (
+                    "Not settable through this endpoint. Use claim/, release/, "
+                    "reassign/, defer/ or undefer/, which check the case under its row lock."
+                )
+                for f in claim_fields
             })
         if "soul" in attrs:
             attrs["civilization"] = attrs["soul"].civilization
@@ -236,3 +302,95 @@ class JudgmentQueueCursorSerializer(serializers.Serializer):
     ledger = LedgerSummarySerializer(allow_null=True)
     prior_cycles = ReincarnationSerializer(many=True)
     realm_options = RealmLocalizedSerializer(many=True)
+
+
+# ---------------------------------------------------------------------------
+# 认领、暂缓、改派、队列分组(apps/judgment/claims.py)
+# ---------------------------------------------------------------------------
+
+
+class QueueGroup:
+    """队列的四个组。互斥,并在未结案的案子上穷尽:暂缓优先,其余按认领人分。"""
+
+    MINE = "mine"
+    UNCLAIMED = "unclaimed"
+    OTHERS = "others"
+    DEFERRED = "deferred"
+    CHOICES = [
+        (MINE, "我认领"),
+        (UNCLAIMED, "待认领"),
+        (OTHERS, "他人认领"),
+        (DEFERRED, "暂缓"),
+    ]
+
+
+class JudgmentDeferSerializer(serializers.Serializer):
+    """`POST /judgment/{id}/defer/` 的输入。理由必填。
+
+    `max_length` 等于列宽 500:PostgreSQL 强制 varchar(n)、SQLite 不管,不在这里拦,
+    超长的理由在 SQLite 上绿、在生产上 500(CLAUDE.md 记过 `Statute.source` 这一回)。
+    """
+
+    reason = serializers.CharField(max_length=500, allow_blank=False, trim_whitespace=True)
+
+
+class JudgmentReassignSerializer(serializers.Serializer):
+    """`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。"""
+
+    to = serializers.IntegerField(min_value=1)
+
+
+class JudgmentBatchSerializer(serializers.Serializer):
+    """`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。"""
+
+    operation = serializers.ChoiceField(choices=["claim", "reassign", "defer"])
+    ids = serializers.ListField(
+        child=serializers.UUIDField(), min_length=1, max_length=BATCH_LIMIT
+    )
+    to = serializers.IntegerField(min_value=1, required=False)
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=False, trim_whitespace=True)
+
+    def validate(self, attrs):
+        # 重复的 id 不是两件案子;去重后再数,免得「100 件」里有一半是同一件。
+        attrs["ids"] = list(dict.fromkeys(attrs["ids"]))
+        if attrs["operation"] == "reassign" and "to" not in attrs:
+            raise serializers.ValidationError({"to": ["Required for reassign."]})
+        if attrs["operation"] == "defer" and not attrs.get("reason"):
+            raise serializers.ValidationError({"reason": ["Required for defer."]})
+        return attrs
+
+
+class JudgmentBatchResultSerializer(serializers.Serializer):
+    """`POST /judgment/batch/` 成功时的响应。被拒时是 `JudgmentClaimRefusalSerializer`。"""
+
+    operation = serializers.CharField()
+    count = serializers.IntegerField()
+    ids = serializers.ListField(child=serializers.UUIDField())
+
+
+class JudgmentClaimRefusalSerializer(serializers.Serializer):
+    """认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+
+    `claimed_by` 只在 `already_claimed` / `not_claimant` 上有;`id` 只在批量里有,
+    指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+    """
+
+    error = serializers.CharField()
+    code = serializers.CharField()
+    claimed_by = serializers.IntegerField(required=False, allow_null=True)
+    id = serializers.UUIDField(required=False)
+    missing = serializers.ListField(child=serializers.UUIDField(), required=False)
+
+
+class JudgmentQueueCountsSerializer(serializers.Serializer):
+    """`GET /judgment/queue-counts/`:四个组各有几件未结案的案子。
+
+    四个数互斥且相加等于 `total`(见 `QueueGroup`)。`court` 与 `search` 参数照样
+    生效,所以标签上的数与当前筛选下的列表一致;`group` 参数被忽略 —— 数的就是各组。
+    """
+
+    mine = serializers.IntegerField()
+    unclaimed = serializers.IntegerField()
+    others = serializers.IntegerField()
+    deferred = serializers.IntegerField()
+    total = serializers.IntegerField()

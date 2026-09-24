@@ -720,6 +720,123 @@ class TestReincarnationTriggerHoldsTheDispositionLock:
 
 
 # ---------------------------------------------------------------------------
+# 审判认领(apps/judgment/claims.py):两个官员同时认领同一件案子,只有一个赢。
+#
+# 规则在 `_apply_claim` 里:锁到案子这一行之后再读 `claimed_by`,非空且不是自己就
+# 409 `already_claimed`。锁在前、读在后,输家读到的就是赢家刚提交的认领;锁一旦被
+# 挪走(或读挪到锁前),两个人都读到空,都写下自己,后写的覆盖先写的,两个人都拿到 200。
+# 串行的那一半(锁到之后读到别人的认领 → 409)在 tests/test_judgment_claim.py,
+# 每个引擎都跑。
+# ---------------------------------------------------------------------------
+
+
+def _pending_case(tenant):
+    from apps.judgment.models import Judgment
+
+    soul = Soul.objects.create(name="claim probe", tenant=tenant, current_state=SoulState.JUDGING)
+    return Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=tenant)
+
+
+@pytest.mark.django_db(transaction=True)
+class TestJudgmentClaimConcurrency:
+    def test_the_claim_check_runs_inside_the_row_locked_transaction(self, db, cn_tenant):
+        """Serial, so it runs on every engine. Same probe as BD-15's: with
+        `transaction=True` nothing outside the service is atomic, so
+        `in_atomic_block` at the moment the rule is applied answers exactly
+        "is the `select_for_update` block still open"."""
+        from unittest.mock import patch
+
+        from django.db import transaction
+
+        from apps.judgment import claims
+
+        case = _pending_case(cn_tenant)
+        client = _admin_client(cn_tenant, "claim_serial")
+        real_apply = claims._apply_claim
+        seen = []
+
+        def spy(judgment, user):
+            seen.append(transaction.get_connection().in_atomic_block)
+            return real_apply(judgment, user)
+
+        with patch.object(claims, "_apply_claim", spy):
+            response = client.post(f"/api/v1/judgment/{case.id}/claim/", {}, format="json")
+
+        assert response.status_code == 200, response.data
+        assert seen == [True], (
+            f"_apply_claim ran with in_atomic_block={seen}: the row lock was already "
+            "released, so a second claimer could read the case as unclaimed"
+        )
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_two_officers_claiming_one_case_at_once_exactly_one_wins(self, db, cn_tenant):
+        """Two real connections.
+
+        A takes the row lock and lingers inside the rule; B, arriving meanwhile,
+        must wait on that lock and then read A's claim: 409 `already_claimed`.
+        Without the lock B does not wait, reads the case as unclaimed, and both
+        get 200 — the later write silently replacing the earlier.
+        """
+        import time
+        from unittest.mock import patch
+
+        from django.db import connections
+
+        from apps.judgment import claims
+        from apps.judgment.models import Judgment
+
+        case = _pending_case(cn_tenant)
+        clients = {
+            "a": _admin_client(cn_tenant, "claim_a"),
+            "b": _admin_client(cn_tenant, "claim_b"),
+        }
+        real_apply = claims._apply_claim
+        a_inside = threading.Event()
+        results = {}
+        codes = {}
+        b_waited = {"seconds": None}
+
+        def lingering_apply(judgment, user):
+            if threading.current_thread().name == "a":
+                a_inside.set()
+                time.sleep(1.0)
+            return real_apply(judgment, user)
+
+        def post(label):
+            try:
+                if label == "b":
+                    assert a_inside.wait(timeout=10), "A never reached the claim rule"
+                    started = time.monotonic()
+                response = clients[label].post(f"/api/v1/judgment/{case.id}/claim/", {}, format="json")
+                results[label] = response.status_code
+                codes[label] = response.data.get("code")
+                if label == "b":
+                    b_waited["seconds"] = time.monotonic() - started
+            except Exception as exc:  # surfaced in the assertions below
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        with patch.object(claims, "_apply_claim", lingering_apply):
+            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=30)
+
+        assert results == {"a": 200, "b": 409}, (
+            f"{results}: the first claimer should win and the second should be told "
+            f"'already claimed' after waiting for it, not overwrite it"
+        )
+        assert codes.get("b") == "already_claimed", codes
+        assert b_waited["seconds"] is not None and b_waited["seconds"] > 0.5, (
+            f"B did not wait on A's row lock ({b_waited})"
+        )
+        winner = User.objects.get(username="claim_a")
+        assert Judgment.all_objects.get(pk=case.pk).claimed_by_id == winner.pk
+
+
+# ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
 
@@ -962,6 +1079,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "test_two_cases_past_the_unlocked_check_at_once_open_exactly_one",
         "tests/test_sentence_plan_concurrency.py::"
         "test_a_soul_going_home_while_a_case_waits_for_the_lock_strands_no_case",
+        # 2026-09-24 审判认领:第二个认领人必须在案子的行锁上等,拿到锁后读到第一个的
+        # 认领并得到 409。SQLite 没有行锁可等。串行版本
+        # test_the_claim_check_runs_inside_the_row_locked_transaction 与
+        # tests/test_judgment_claim.py 的 409 测试每个引擎都跑。
+        here + "TestJudgmentClaimConcurrency::test_two_officers_claiming_one_case_at_once_exactly_one_wins",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
