@@ -302,26 +302,30 @@ def test_opening_a_case_in_a_court_puts_the_soul_there_and_moving_the_case_moves
                       format="json")
     assert resp.status_code == 201, resp.data
     assert str(resp.data["realm_id"]) == str(_court(1).pk)
-    [entry] = _path(soul)
-    assert (entry.realm_id, entry.sequence, entry.left_at, entry.tenant_id) == (_court(1).pk, 1, None, cn.pk)
+    # Filing the case is the death (ALIVE -> JUDGING): 待审所 first, then the court.
+    holding, entry = _path(soul)
+    assert (holding.realm_id, holding.sequence) == (_realm("DY_00_PURGATORY").pk, 1)
+    assert holding.left_at is not None and holding.left_at == entry.entered_at
+    assert (entry.realm_id, entry.sequence, entry.left_at, entry.tenant_id) == (_court(1).pk, 2, None, cn.pk)
 
     moved = judge.patch(f"/api/v1/judgment/{resp.data['id']}/", {"realm_id": str(_court(2).pk)}, format="json")
     assert moved.status_code == 200, moved.data
-    first, second = _path(soul)
+    _, first, second = _path(soul)
     assert first.left_at is not None and first.left_at == second.entered_at
-    assert (second.realm_id, second.sequence, second.left_at) == (_court(2).pk, 2, None)
+    assert (second.realm_id, second.sequence, second.left_at) == (_court(2).pk, 3, None)
 
     # A PATCH that does not touch the realm is not a move.
     assert judge.patch(f"/api/v1/judgment/{resp.data['id']}/", {"notes": "x"}, format="json").status_code == 200
-    assert len(_path(soul)) == 2
+    assert len(_path(soul)) == 3
 
 
 @pytest.mark.django_db
-def test_a_case_with_no_realm_writes_no_path(cn):
+def test_a_case_with_no_realm_writes_only_the_death_station(cn):
     judge = officer_client(plan.officer("cn_judge", "JUDGE", cn))
     soul = Soul.objects.create(name="无殿", tenant=cn, current_state=SoulState.ALIVE)
     assert judge.post("/api/v1/judgment/", {"soul": str(soul.pk), "court": "第一殿"}, format="json").status_code == 201
-    assert _path(soul) == []
+    # Only the death station (待审所); no court, so no second stop.
+    assert [(e.realm_id, e.left_at) for e in _path(soul)] == [(_realm("DY_00_PURGATORY").pk, None)]
     soul.refresh_from_db()
     assert soul.current_state == SoulState.JUDGING
 

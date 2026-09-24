@@ -638,6 +638,12 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
                 provision_on_death(locked_soul, account_origin)
 
+                # 行程第一站:本文明的入口界域(待审所 / 杜阿特入口 / 阿刻戎渡口),
+                # 与状态变化同一个事务。建审判时随后的 `_enter_judgment_realm` 再把它送上殿。
+                from apps.realms.path import SoulPathService
+
+                SoulPathService.enter_on_death(locked_soul)
+
         # Log outside the transaction to avoid holding locks during external calls
         log_soul_state_change(locked_soul, old_state, new_state, reason)
         # Sync back to self instance. Copy the raw year/month/day (not via
