@@ -296,7 +296,11 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         };
       });
 
-    async function connect(): Promise<boolean> {
+    // "stop" = the backend says chat is not configured here (503 chat_not_configured).
+    // That is a deployment fact, not a transient fault: asking again every RETRY_MS
+    // only produced a 503 every 5 s for as long as the app was open. The loop ends;
+    // a remount (sign-in, `enabled` flipping) starts it again.
+    async function connect(): Promise<boolean | "stop"> {
       try {
         const grant = await soulChatApi.session();
         const creds = await matrixLogin(grant, device.current);
@@ -309,18 +313,22 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         if (alive) setMe(creds.userId);
         return true;
       } catch (error) {
-        if (alive) setAvailability(soulChatErrorCode(error) === "chat_not_configured" ? "not_configured" : "unavailable");
-        return false;
+        const notConfigured = soulChatErrorCode(error) === "chat_not_configured";
+        if (alive) setAvailability(notConfigured ? "not_configured" : "unavailable");
+        return notConfigured ? "stop" : false;
       }
     }
 
     async function run() {
       await reload();
       while (alive) {
-        if (!client.current && !(await connect())) {
-          if (!alive) return;
-          await pause(RETRY_MS);
-          continue;
+        if (!client.current) {
+          const connected = await connect();
+          if (!alive || connected === "stop") return;
+          if (!connected) {
+            await pause(RETRY_MS);
+            continue;
+          }
         }
         try {
           const response = await client.current!.sync(since.current, since.current ? POLL_MS : 0);
