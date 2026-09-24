@@ -1159,7 +1159,25 @@
     },
     "confirm_approve": "Approve this cross-tenant dispatch?",
     "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log.",
-    "proposer_account_removed": "the proposing account has been deleted, so no name is available"
+    "proposer_account_removed": "the proposing account has been deleted, so no name is available",
+    "propose_subtitle": "Send a soul to reside in another civilization for judgment: the target approves, then the target executes.",
+    "soul_from_detail": "Carried from the detail page; cannot be changed",
+    "soul_from_detail_error": "Could not load the soul carried from the detail page. Choose it again here.",
+    "source_label": "Source",
+    "discard": "Discard…",
+    "discard_title": "Discard this dispatch?",
+    "discard_message": "What you have entered will not be kept — dispatches have no drafts.",
+    "discard_keep": "Keep editing",
+    "discard_confirm": "Discard",
+    "flow": {
+      "title": "Approval flow · cross-civilization dispatch",
+      "step_propose": "Source · {{tenant}} submits",
+      "step_approve": "Target · {{tenant}} approves",
+      "step_execute": "Target · executes",
+      "target_unchosen": "not chosen",
+      "pending_submit": "To submit",
+      "not_yet": "Not yet"
+    }
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
