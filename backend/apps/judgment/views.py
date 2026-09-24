@@ -14,19 +14,31 @@ from rest_framework.response import Response
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment.models import Judgment, Statute
 from apps.judgment.serializers import (
+    EvidenceRulingResultSerializer,
+    EvidenceRulingWriteSerializer,
     JudgmentCitationSerializer,
     JudgmentCitationWriteSerializer,
     JudgmentConcludeSerializer,
+    JudgmentDetailSerializer,
+    JudgmentDraftConflictSerializer,
+    JudgmentDraftSerializer,
+    JudgmentDraftWriteSerializer,
     JudgmentQueueCursorSerializer,
     JudgmentSerializer,
     StatuteSerializer,
 )
 from apps.judgment.services import (
     CitationRefusedError,
+    DraftConflictError,
+    EvidenceAdmissionService,
+    EvidenceRefusedError,
+    JudgmentDraftService,
+    JudgmentFrozenError,
     JudgmentNotConcludableError,
     StatuteCitationService,
 )
@@ -103,6 +115,12 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'citations': ['judgment.read'],
         'cite_statute': ['judgment.execute'],
         'uncite': ['judgment.execute'],
+        # Ruling evidence in or out and saving the verdict draft are part of
+        # deciding the case, so they need exactly what `conclude` needs: the
+        # officer who may conclude may do these, and nobody else. Same
+        # codename, same tenant scoping through `get_object`.
+        'rule_evidence': ['judgment.execute'],
+        'save_draft': ['judgment.execute'],
     }
     queryset = (
         Judgment.objects
@@ -116,6 +134,27 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     # 原属租户对暂居地的案子什么都做不了。
     residence_read_actions = ("list", "retrieve", "citations")
     ordering_fields = ["created_at", "concluded_at"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == "retrieve":
+            qs = qs.prefetch_related("evidence_admissions")
+        return qs
+
+    def get_serializer_class(self):
+        # Detail only: the admitted balance walks the soul's ledger.
+        if self.action == "retrieve":
+            return JudgmentDetailSerializer
+        return super().get_serializer_class()
+
+    def perform_update(self, serializer):
+        # `notes` is the verdict draft (see `Judgment.draft_version`). A write
+        # to it through the plain PATCH/PUT moves the draft version too, so an
+        # autosave that loaded the old text is refused instead of overwriting.
+        before = serializer.instance.notes
+        super().perform_update(serializer)
+        if "notes" in serializer.validated_data and serializer.instance.notes != before:
+            JudgmentDraftService.touch_after_plain_update(serializer.instance)
 
     def perform_create(self, serializer):
         # `super()`, not a bare `serializer.save()`.
@@ -465,6 +504,95 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # ------------------------------------------------------------------
+    # Evidence admission and the verdict draft
+    # ------------------------------------------------------------------
+
+    @extend_schema(
+        request=EvidenceRulingWriteSerializer,
+        responses={200: EvidenceRulingResultSerializer},
+        parameters=[
+            OpenApiParameter(
+                "record_id",
+                OpenApiTypes.UUID,
+                OpenApiParameter.PATH,
+                description="The ledger record (SoulRecord) being ruled on.",
+            )
+        ],
+    )
+    @action(detail=True, methods=["put"], url_path=r"evidence/(?P<record_id>[^/.]+)")
+    def rule_evidence(self, request, pk=None, record_id=None):
+        """Admit or not admit one ledger record as evidence in this case.
+
+        `PUT /api/v1/judgment/{id}/evidence/{record_id}/`
+        `{"admitted": false, "reason": "..."}` — a reason is required when not
+        admitting. PUT because the ruling is a state, and repeating it is a
+        no-op. 409 once the case is concluded; 400 for a record that is not
+        evidence in this case (another soul's, another life's, another
+        tenant's, or a non-scoring entry).
+        """
+        judgment = self.get_object()
+        serializer = EvidenceRulingWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # A custom action is not `perform_*`, so AuditUserViewSetMixin does
+        # not set the author for it; without this the row's create_user is None.
+        set_current_user(request.user)
+        set_current_request(request)
+        try:
+            admission = EvidenceAdmissionService.rule(
+                judgment, record_id,
+                serializer.validated_data["admitted"], serializer.validated_data.get("reason", ""),
+            )
+        except JudgmentFrozenError as exc:
+            return Response({"error": str(exc), "code": "concluded"}, status=status.HTTP_409_CONFLICT)
+        except EvidenceRefusedError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        finally:
+            clear_current_user()
+        return Response(EvidenceRulingResultSerializer({
+            "admission": admission,
+            "admitted_balance": EvidenceAdmissionService.admitted_balance(judgment),
+        }).data)
+
+    @extend_schema(
+        request=JudgmentDraftWriteSerializer,
+        responses={200: JudgmentDraftSerializer, 409: JudgmentDraftConflictSerializer},
+    )
+    @action(detail=True, methods=["patch"], url_path="draft")
+    def save_draft(self, request, pk=None):
+        """Autosave the verdict text (`notes`) and the chosen verdict.
+
+        `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
+        "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
+        caller last saw. 200 returns the stored draft with the new version and
+        `draft_saved_at`; a save that changes nothing is a 200 no-op, so a
+        retry is safe. 409 `draft_conflict` when someone saved first (the
+        body carries what they saved), 409 `concluded` once the verdict is in.
+        """
+        judgment = self.get_object()
+        serializer = JudgmentDraftWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        version = data.pop("version")
+        set_current_user(request.user)
+        set_current_request(request)
+        try:
+            saved = JudgmentDraftService.save(judgment, version, data)
+        except JudgmentFrozenError as exc:
+            return Response(
+                {"error": str(exc), "code": "concluded", "current": None},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except DraftConflictError as exc:
+            return Response(
+                {"error": str(exc), "code": "draft_conflict",
+                 "current": JudgmentDraftSerializer(exc.judgment).data},
+                status=status.HTTP_409_CONFLICT,
+            )
+        finally:
+            clear_current_user()
+        return Response(JudgmentDraftSerializer(saved).data)
 
     @action(detail=True, methods=["post"])
     def conclude(self, request, pk=None):
