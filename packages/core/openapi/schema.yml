@@ -11040,6 +11040,144 @@ paths:
               schema:
                 $ref: '#/components/schemas/LedgerSummary'
           description: ''
+  /api/v1/souls/{id}/path/:
+    get:
+      operationId: v1_souls_path_list
+      description: |-
+        The soul's route through the realms, oldest stop first (行程拓扑).
+
+        A separate endpoint rather than a field on the soul detail: the entries
+        are scoped **per entry**, not per soul — a stop served while residing in
+        another tenant belongs to that tenant — so they need their own
+        `scope_to_tenant` pass, and the soul list / detail payloads (and their
+        query counts) stay as they were.
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+          enum:
+          - CHINESE
+          - EGYPTIAN
+          - EUROPEAN
+          - GREEK
+        description: |-
+          * `CHINESE` - Chinese Diyu
+          * `EUROPEAN` - European Heaven/Hell
+          * `EGYPTIAN` - Egyptian Duat
+          * `GREEK` - Greek Underworld
+      - in: query
+        name: created_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_before
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: current_state
+        schema:
+          type: string
+          enum:
+          - ALIVE
+          - DISPOSED
+          - JUDGING
+          - LOST
+          - REINCARNATING
+          - SETTLED
+        description: |-
+          * `ALIVE` - Alive
+          * `JUDGING` - Under Judgment
+          * `DISPOSED` - Disposed
+          * `REINCARNATING` - Reincarnating
+          * `SETTLED` - Settled (Final)
+          * `LOST` - Lost/Suspended
+      - in: query
+        name: death_date_after
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: death_date_before
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: has_date_problem
+        schema:
+          type: boolean
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Soul.
+        required: true
+      - in: query
+        name: karma_max
+        schema:
+          type: number
+      - in: query
+        name: karma_min
+        schema:
+          type: number
+      - in: query
+        name: karmic_balance_max
+        schema:
+          type: number
+      - in: query
+        name: karmic_balance_min
+        schema:
+          type: number
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - ALIVE
+          - DISPOSED
+          - JUDGING
+          - LOST
+          - REINCARNATING
+          - SETTLED
+        description: |-
+          * `ALIVE` - Alive
+          * `JUDGING` - Under Judgment
+          * `DISPOSED` - Disposed
+          * `REINCARNATING` - Reincarnating
+          * `SETTLED` - Settled (Final)
+          * `LOST` - Lost/Suspended
+      - in: query
+        name: tenant__code
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SoulPathEntry'
+          description: ''
   /api/v1/souls/{id}/records/:
     get:
       operationId: v1_souls_records_list
@@ -13416,6 +13554,16 @@ components:
         * `EUROPEAN` - European Heaven/Hell
         * `EGYPTIAN` - Egyptian Duat
         * `GREEK` - Greek Underworld
+    CommediaRegionEnum:
+      enum:
+      - INFERNO
+      - PURGATORIO
+      - PARADISO
+      type: string
+      description: |-
+        * `INFERNO` - 地狱
+        * `PURGATORIO` - 炼狱
+        * `PARADISO` - 天堂
     Comment:
       type: object
       properties:
@@ -14331,6 +14479,11 @@ components:
           type: string
           format: uuid
           nullable: true
+        realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         realm_code:
           type: string
           readOnly: true
@@ -14392,6 +14545,7 @@ components:
       - id
       - is_executed
       - realm_code
+      - realm_id
       - realm_name
       - sentence_node_id
       - soul
@@ -14727,6 +14881,16 @@ components:
       - offset
       - unoffset_demerit
       - unusable_merit
+    GreekForkEnum:
+      enum:
+      - LEFT
+      - MIDDLE
+      - RIGHT
+      type: string
+      description: |-
+        * `LEFT` - 左(塔尔塔罗斯)
+        * `MIDDLE` - 中
+        * `RIGHT` - 右(至福岛)
     GuiltAndPenaltyReading:
       type: object
       description: |-
@@ -14965,6 +15129,10 @@ components:
           type: string
           description: Court name, e.g. 第一殿
           maxLength: 255
+        realm_id:
+          type: string
+          format: uuid
+          nullable: true
         evidence_json: {}
         confession:
           type: string
@@ -18309,6 +18477,11 @@ components:
           type: string
           format: uuid
           nullable: true
+        realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         realm_code:
           type: string
           readOnly: true
@@ -18455,6 +18628,10 @@ components:
           type: string
           description: Court name, e.g. 第一殿
           maxLength: 255
+        realm_id:
+          type: string
+          format: uuid
+          nullable: true
         evidence_json: {}
         confession:
           type: string
@@ -19569,12 +19746,98 @@ components:
         cycle_limit:
           type: integer
           nullable: true
+        order:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'Position along the civilization''s route (Chinese: court number
+            1-10)'
+        kind:
+          nullable: true
+          description: |-
+            Chinese only: 殿 / 门 / 层 / 道
+
+            * `HALL` - 殿
+            * `GATE` - 门
+            * `LAYER` - 层
+            * `PATH` - 道
+          oneOf:
+          - $ref: '#/components/schemas/RealmKindEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        capacity:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: How many souls the realm holds at once; null = not recorded
+        level:
+          type: integer
+          maximum: 9
+          minimum: 1
+          nullable: true
+          description: 'European only: circle (Inferno) or terrace (Purgatorio) number'
+        sublevel:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'European only: ring (7th circle) or bolgia (8th circle) number'
+        region:
+          nullable: true
+          description: |-
+            European only: which cantica the realm belongs to
+
+            * `INFERNO` - 地狱
+            * `PURGATORIO` - 炼狱
+            * `PARADISO` - 天堂
+          oneOf:
+          - $ref: '#/components/schemas/CommediaRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hour:
+          type: integer
+          maximum: 12
+          minimum: 1
+          nullable: true
+          description: 'Egyptian only: hour of the night, 1-12'
+        gate:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'Egyptian only: gate number'
+        is_judgment_hall:
+          type: boolean
+          nullable: true
+          description: 'Egyptian only: the hall where the heart is weighed; null elsewhere'
+        fork:
+          nullable: true
+          description: |-
+            Greek only: which road out of the judgment place
+
+            * `LEFT` - 左(塔尔塔罗斯)
+            * `MIDDLE` - 中
+            * `RIGHT` - 右(至福岛)
+          oneOf:
+          - $ref: '#/components/schemas/GreekForkEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - civilization
       - id
       - name_local
       - realm_code
       - realm_type
+    RealmKindEnum:
+      enum:
+      - HALL
+      - GATE
+      - LAYER
+      - PATH
+      type: string
+      description: |-
+        * `HALL` - 殿
+        * `GATE` - 门
+        * `LAYER` - 层
+        * `PATH` - 道
     RealmList:
       type: object
       description: Lightweight serializer for list views.
@@ -19597,6 +19860,86 @@ components:
         tier:
           type: integer
           description: Severity or bliss tier
+        parent_realm:
+          type: string
+          format: uuid
+          nullable: true
+        is_eternal:
+          type: boolean
+        order:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'Position along the civilization''s route (Chinese: court number
+            1-10)'
+        kind:
+          nullable: true
+          description: |-
+            Chinese only: 殿 / 门 / 层 / 道
+
+            * `HALL` - 殿
+            * `GATE` - 门
+            * `LAYER` - 层
+            * `PATH` - 道
+          oneOf:
+          - $ref: '#/components/schemas/RealmKindEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        capacity:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: How many souls the realm holds at once; null = not recorded
+        level:
+          type: integer
+          maximum: 9
+          minimum: 1
+          nullable: true
+          description: 'European only: circle (Inferno) or terrace (Purgatorio) number'
+        sublevel:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'European only: ring (7th circle) or bolgia (8th circle) number'
+        region:
+          nullable: true
+          description: |-
+            European only: which cantica the realm belongs to
+
+            * `INFERNO` - 地狱
+            * `PURGATORIO` - 炼狱
+            * `PARADISO` - 天堂
+          oneOf:
+          - $ref: '#/components/schemas/CommediaRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hour:
+          type: integer
+          maximum: 12
+          minimum: 1
+          nullable: true
+          description: 'Egyptian only: hour of the night, 1-12'
+        gate:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'Egyptian only: gate number'
+        is_judgment_hall:
+          type: boolean
+          nullable: true
+          description: 'Egyptian only: the hall where the heart is weighed; null elsewhere'
+        fork:
+          nullable: true
+          description: |-
+            Greek only: which road out of the judgment place
+
+            * `LEFT` - 左(塔尔塔罗斯)
+            * `MIDDLE` - 中
+            * `RIGHT` - 右(至福岛)
+          oneOf:
+          - $ref: '#/components/schemas/GreekForkEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - civilization
       - id
@@ -21621,6 +21964,45 @@ components:
       - account
       - refresh
       - soul_code
+    SoulPathEntry:
+      type: object
+      description: |-
+        One stop in `GET /souls/{id}/path/`. `realm_code` rides along because it
+        is the join key the frontend already uses for realms (realmCodes.ts).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sequence:
+          type: integer
+          readOnly: true
+          description: 1-based position in the soul's path
+        realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        realm_code:
+          type: string
+          readOnly: true
+          nullable: true
+        entered_at:
+          type: string
+          format: date-time
+          readOnly: true
+        left_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - entered_at
+      - id
+      - left_at
+      - realm_code
+      - realm_id
+      - sequence
     SoulPost:
       type: object
       properties:

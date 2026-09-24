@@ -15,6 +15,7 @@ from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
+from apps.realms.serializers import SoulPathEntrySerializer
 from apps.souls.dates import (
     ERROR,
     check_record_date,
@@ -54,6 +55,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'karma': ['soul.read'],
         'add_record': ['soul.update'],
         'records': ['soul.read'],
+        'path': ['soul.read'],
         # Acknowledging a warning mutates the record (three new columns),
         # the same way add_record mutates the soul's records — so it is
         # gated the same way add_record is, rather than inventing a new
@@ -73,7 +75,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     queryset = Soul.objects.select_related("tenant", "home_tenant").prefetch_related("records", "reincarnations").all()
     filterset_class = SoulFilter
     # 暂居只读例外(apps/core/tenant.py):原属租户读得到暂居在外的灵魂。只列 GET 动作。
-    residence_read_actions = ("list", "retrieve", "karma", "records")
+    residence_read_actions = ("list", "retrieve", "karma", "records", "path")
     search_fields = SoulFilter.search_fields
     ordering_fields = SoulFilter.ordering_fields
 
@@ -445,6 +447,27 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         records = soul.records.all()
         serializer = SoulRecordSerializer(records, many=True)
         return Response(serializer.data)
+
+    @extend_schema(responses=SoulPathEntrySerializer(many=True))
+    @action(detail=True, methods=["get"], pagination_class=None)
+    def path(self, request, pk=None):
+        """The soul's route through the realms, oldest stop first (行程拓扑).
+
+        A separate endpoint rather than a field on the soul detail: the entries
+        are scoped **per entry**, not per soul — a stop served while residing in
+        another tenant belongs to that tenant — so they need their own
+        `scope_to_tenant` pass, and the soul list / detail payloads (and their
+        query counts) stay as they were.
+        """
+        from apps.realms.models import SoulPathEntry
+
+        soul = self.get_object()
+        entries = scope_to_tenant(
+            SoulPathEntry.objects.filter(soul=soul).select_related("realm"),
+            request,
+            residence_read=residence_read_allowed(self),
+        ).order_by("sequence")
+        return Response(SoulPathEntrySerializer(entries, many=True).data)
 
     @extend_schema(
         parameters=[

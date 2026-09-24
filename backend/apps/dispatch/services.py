@@ -262,6 +262,10 @@ class DispatchService:
             old_tenant = soul.tenant
             soul.tenant = dispatch_record.target_tenant
             soul.save()
+            # 行程拓扑:离开源租户里所在的那一站。到达的那一站(若有)由下面
+            # `on_dispatch_executed` 建处置时记;手动调拨没有目的界域,只记离开。
+            from apps.realms.path import SoulPathService
+            SoulPathService.leave(soul)
             dispatch_record.soul = soul
 
             # Create soul event
@@ -359,6 +363,9 @@ class DispatchService:
             )
             locked.tenant_id = locked.home_tenant_id
             locked.save()
+            # 行程拓扑:离开暂居地的那一站(已随处置执行关掉时这里什么都不写)。
+            from apps.realms.path import SoulPathService
+            SoulPathService.leave(locked)
             home = locked.home_tenant
             if record is not None and not record.transition_to(DispatchStatus.RETURNED, returned_at=timezone.now()):
                 raise ValueError(f"Cannot return dispatch in status: {record.status}")

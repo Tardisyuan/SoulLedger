@@ -56,6 +56,25 @@ class JudgmentFilter(filters.FilterSet):
         fields = ["soul", "civilization", "verdict", "is_final"]
 
 
+def _enter_judgment_realm(soul, judgment):
+    """The soul stands in the court its open ORIGINAL case is heard in.
+
+    Only an open case (no verdict yet): a concluded one whose `realm` is
+    corrected afterwards says where the case *was* heard, and the soul has
+    since moved on. Only ORIGINAL: an AMENDMENT is heard while the soul serves
+    a sentence plan stop, and a REOPEN while it is DISPOSED — in both the soul
+    is in its sentence realm, and whether a retrial walks it back to a court is
+    an open question (cloud-reports/realm-path-fields.md), not something to
+    decide here. A case with no realm writes nothing.
+    """
+    from apps.judgment.models import JudgmentKind
+    from apps.realms.path import SoulPathService
+
+    if judgment.realm_id is None or judgment.verdict is not None or judgment.kind != JudgmentKind.ORIGINAL:
+        return
+    SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
+
+
 class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Judgment CRUD + conclude action.
@@ -170,6 +189,18 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 judgment.kind, judgment.amends_plan_id = JudgmentKind.AMENDMENT, plan.pk
             if soul.current_state == SoulState.ALIVE:
                 soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
+            _enter_judgment_realm(soul, judgment)
+
+    def perform_update(self, serializer):
+        """Moving an open case to another court moves the soul there too (行程拓扑)."""
+        from django.db import transaction
+
+        with transaction.atomic():
+            realm_before = serializer.instance.realm_id
+            super().perform_update(serializer)
+            judgment = serializer.instance
+            if judgment.realm_id != realm_before:
+                _enter_judgment_realm(judgment.soul, judgment)
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete a pending judgment, or refuse with a clear reason

@@ -122,8 +122,9 @@ EXEMPT: dict[str, str] = {
 #: 动作只读可见;其余一切动作、一切写方法照旧只按 tenant。
 RESIDENCE_READABLE: dict[str, tuple[tuple[str, ...], str]] = {
     "SoulViewSet": (
-        ("list", "retrieve", "karma", "records"),
-        "灵魂列表、详情、功过总账与功过记录 —— 原属文明要知道自己的灵魂在别处的状况。"
+        ("list", "retrieve", "karma", "records", "path"),
+        "灵魂列表、详情、功过总账、功过记录与行程(path)—— 原属文明要知道自己的灵魂在别处的状况。"
+        "path 的每一站仍按行过 scope_to_tenant:原属读得到暂居地的站,暂居地读不到原属的站。"
         "写动作(die / transition / add_record / 确认日期警告 / archive / 更正终局)不纳入。",
     ),
     "JudgmentViewSet": (
