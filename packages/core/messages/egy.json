@@ -29,7 +29,10 @@
     "error_login_failed": "Nen Aq",
     "confirm_logout": "Per Aq?",
     "confirm_logout_desc": "Per Aq Pen?",
-    "confirm_logout_btn": "Per Aq"
+    "confirm_logout_btn": "Per Aq",
+    "statute_of_day": "Djedu Hru Pen · Ky Em Aq Neb",
+    "statute_fixed_note": "Djedu: Aq Tepy. Djedu Pen Em Sesh Wa, Nen Khemen.",
+    "numbering": "Ren Djedu Em Aset Ahamet Neb"
   },
   "home": {
     "console": "Wetep Khet",
@@ -444,7 +447,8 @@
     "entity_types": {
       "soul": "Ka",
       "menu": "Menu"
-    }
+    },
+    "col_deleted_by": "Wehem Iri"
   },
   "permissions": {
     "title": "Iri Was",
@@ -952,7 +956,10 @@
       "BATCH_UPDATE": "Khemen Seth Wu",
       "BATCH_DELETE": "Wehem Seth Wu"
     },
-    "needs_audit_read": "Sesen Was audit.read"
+    "needs_audit_read": "Sesen Was audit.read",
+    "repeat_expand": "Wep",
+    "repeat_collapse": "Imen",
+    "repeat_rule": "Ren Wa, Iri Wa, Khet Wa: {{minutes}} At"
   },
   "profile": {
     "title": "Aha Pepi",
@@ -1406,7 +1413,23 @@
     "view_all_activity": "Maa Khedu Neb",
     "system_version": "Kehat Redit",
     "hours_ago": "{{n}}h Khet",
-    "agent_status": "Set Medu Ba"
+    "agent_status": "Set Medu Ba",
+    "first_run": "Aq Tepy · {{n}} / {{total}}",
+    "setup_intro": "Smen Pen Neb, Er Aq. Wehem Smen Em Per Pen.",
+    "identity": "Maa Ren",
+    "identity_desc": "Aset Ahamet Hena Ami: Em Khet Per Pen. Nen Maat: Medu Netjer Em Tepy.",
+    "default_view": "Maa Tepy",
+    "default_view_desc": "Maa Tepy Em Aq. Wa Em Per Pen.",
+    "view_operator": "Iri Medu",
+    "view_operator_desc": "Sheemtet-Set En Wepwawet Tepy; Djed-Tep Tepy",
+    "view_admin_desc": "Medew Aba Hemsu Seth Tepy",
+    "prefs": "Medew Seth Hena Hetep",
+    "prefs_desc": "Medew Seth Hena Hetep: Smen Em Ami Neb.",
+    "keys_desc": "Djed-Tep: Sheemtet-Set En Wepwawet",
+    "step_done": "Wetep Seth",
+    "step_current": "Em Tepy",
+    "continue": "Em Khet",
+    "skip": "Iri Tepy, Aq"
   },
   "search": {
     "placeholder": "Shesed...",
