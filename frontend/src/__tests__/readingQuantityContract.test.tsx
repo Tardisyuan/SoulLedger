@@ -394,9 +394,14 @@ const BOLD = /(^|\s)(font-bold|font-semibold|text-(md|lg|xl))(\s|$)/;
  * is the whole point of it — so it has no headline figure to classify. The
  * entry is written out rather than omitted so that the zero reads as a decision
  * someone made, not as a kind that fell out of the table.
+ *
+ * BALANCE 3 → 1 (2026-09-24, 规范 v1「乙 · 功过」):merit and demerit are now
+ * ledger rows in the 收 / 支 columns at body size; only 结 (the balance) is a
+ * headline. Both still carry data-quantity — the classification this file
+ * exists for is unchanged, only how many of them are drawn large.
  */
 const FIGURE_FLOOR: Record<string, number> = {
-  BALANCE: 3,
+  BALANCE: 1,
   THRESHOLD: 1,
   GUILT_AND_PENALTY: 2,
   SENTENCE: 3,

@@ -29,6 +29,7 @@ import {
   UNKNOWN_SOUL_STATE_BADGE_CLASS,
   soulStateBadgeClass,
 } from "@/src/lib/soulStateBadge";
+import { VERDICT_GLYPH } from "@/src/lib/verdictGlyph";
 import { ROOT_TOKENS, readSoulStates } from "./support/globalsCssTokens";
 
 /** `{utility: [token, alpha]}` for every `x-[oklch(var(--t)/a)]` in a class string. */
@@ -89,6 +90,18 @@ describe("each state wears the token named after it", () => {
     const glyphs = states.map((s) => SOUL_STATE_GLYPH[s as keyof typeof SOUL_STATE_GLYPH]);
     expect(glyphs.every(Boolean)).toBe(true);
     expect(new Set(glyphs).size).toBe(states.length);
+  });
+
+  // 灵魂详情页「丙 · 审判」把判决字形与页头的状态字形画在同一页上,所以两张表
+  // 不仅各自不重,彼此也不能相交 —— 否则 ◇ 补过 与某个状态会读成同一件事。
+  it("every verdict has its own glyph, none shared with a soul state", () => {
+    const verdicts = Object.keys(VERDICT_GLYPH) as (keyof typeof VERDICT_GLYPH)[];
+    expect(verdicts.sort()).toEqual(["FAILED", "PASSED", "PURGATORY", "RETRY"]);
+    const glyphs = verdicts.map((v) => VERDICT_GLYPH[v]);
+    expect(glyphs.every(Boolean)).toBe(true);
+    expect(new Set(glyphs).size).toBe(verdicts.length);
+    const stateGlyphs = new Set(Object.values(SOUL_STATE_GLYPH));
+    expect(glyphs.filter((g) => stateGlyphs.has(g))).toEqual([]);
   });
 });
 

@@ -109,44 +109,63 @@ function BalanceReading({
   // then have to refuse, in the same slot, for the same number.
   const q = READING_QUANTITIES.BALANCE;
 
+  // 规范 v1「乙 · 功过」:收 / 支 / 结 三列账。功德记在收列、罪业记在支列,
+  // 余额落在结列、压在 3 px 双线上 —— 双线在账簿里就是「到此结清」。
+  // 收、支是账行,正文字号;只有结是头条数字(text-md)。
+  const cell = "py-1.5 border-b border-[oklch(var(--color-rule))]";
+  const last = "py-1.5 border-b border-[oklch(var(--color-block))]";
+  const total = "py-2 border-b-[3px] border-double border-[oklch(var(--color-block))]";
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-[oklch(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
+    <div data-testid="balance-ledger" className="grid grid-cols-[1fr_auto_auto_auto] text-sm [&>*:not(:nth-child(4n+1))]:pl-4">
+      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]" />
+      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right">{t("souls.detail.ledger.col_in")}</span>
+      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right">{t("souls.detail.ledger.col_out")}</span>
+      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right">{t("souls.detail.ledger.col_net")}</span>
+
+      <span className={cell}>{t("souls.detail.merit")}</span>
+      <span className={`${cell} text-right`}>
         <Figure
           field="merit"
           quantity={q.merit}
           t={t}
-          className="text-md tabular-nums text-[oklch(var(--color-karma-merit))]"
+          className="font-mono tabular-nums text-[oklch(var(--color-karma-merit))]"
         >
           +{reading.merit}
         </Figure>
-      </div>
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
+      </span>
+      <span className={cell} />
+      <span className={cell} />
+
+      <span className={last}>{t("souls.detail.demerit")}</span>
+      <span className={last} />
+      <span className={`${last} text-right`}>
         <Figure
           field="demerit"
           quantity={q.demerit}
           t={t}
-          className="text-md tabular-nums text-[oklch(var(--color-karma-demerit))]"
+          className="font-mono tabular-nums text-[oklch(var(--color-karma-demerit))]"
         >
           -{reading.demerit}
         </Figure>
-      </div>
-      <div className="border-t border-[oklch(var(--color-hairline))] pt-2 flex justify-between items-center">
-        <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
+      </span>
+      <span className={last} />
+
+      <span className={`${total} font-semibold`}>{t("souls.detail.balance")}</span>
+      <span className={total} />
+      <span className={total} />
+      <span className={`${total} text-right`}>
         <Figure
           field="balance"
           quantity={q.balance}
           t={t}
-          className={`text-md tabular-nums ${
+          className={`text-md font-mono tabular-nums ${
             reading.balance >= 0 ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"
           }`}
         >
           {reading.balance >= 0 ? "+" : ""}
           {reading.balance}
         </Figure>
-      </div>
+      </span>
     </div>
   );
 }

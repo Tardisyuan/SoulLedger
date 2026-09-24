@@ -329,8 +329,11 @@ describe("no unclassified headline number", () => {
   // 而它们从未被跑过就写进了断言。`figureSlots` 选的是「看起来像头条数字」的元素
   // (粗体 + 头条字号),它们是 `figures()` 那 11 个带 data-quantity 元素里的一个子集
   // —— 其余画在更小的字号上。这三个数是棘轮:卡片少画一个头条数字就会红。
+  // 2026-09-24 规范 v1「乙 · 功过」把 BALANCE 面板改成收 / 支 / 结三列账:功德、罪业
+  // 是账行(正文字号),只有结(余额)仍是头条 —— 于是 4 → 2(面板的余额 + 衰减区的余额)。
+  // 这是有意的版式决定,不是漏画:两个数仍在,仍带 data-quantity,见上面 figures() 的各条。
 
-    expect(figureSlots(container).length).toBeGreaterThanOrEqual(4);
+    expect(figureSlots(container).length).toBeGreaterThanOrEqual(2);
     expect(unclassifiedHeadlines(container)).toEqual([]);
   });
 

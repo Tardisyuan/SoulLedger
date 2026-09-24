@@ -31,6 +31,10 @@ import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
+import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
+import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { latest } from "@/src/components/souls/detail/soulProgress";
+import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
 import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -43,7 +47,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
-const BADGE_SHAPE = "px-2 py-1 text-2xs";
+const BADGE_SHAPE = "px-1.5 py-px font-mono text-2xs";
 
 // 「还没到」的那一份,每种一个模块级常量。
 // 这不是洁癖:这些数组是 prop,`?? []` 每次渲染都造一个新数组,而下游
@@ -368,6 +372,7 @@ export default function SoulDetailPage() {
   // 够不到的地方。提出来之后,每个窗口里唯一的 `title=` 都是 HTML 属性。
   // 暂居只读(2026-09-18):原属租户的官员看得到暂居在外的灵魂,但写操作后端一律 404。
   // 不给写按钮,比给了再失败诚实。暂居地自己的官员不受影响。
+  const lastJudgment = latest(judgments, (j) => j.created_at);
   const readOnlyAway = Boolean(soul?.is_residing && soul.home_tenant && soul.home_tenant.code === tenantCode);
 
   const backLink = (
@@ -381,7 +386,7 @@ export default function SoulDetailPage() {
   const headerTitle = loading ? (
     <Skeleton className="h-8 w-48" />
   ) : (
-    <span className="flex items-center gap-3 flex-wrap">
+    <span className="flex items-baseline gap-3 flex-wrap">
       <span>{soul?.name}</span>
       {/* §4.6 逐字:这个徽章曾经写着「ALIVE — 存活」,原始枚举和它的译名并排。
           枚举现在只住在 `title` 里 —— 排查的人看得见,读页面的人看不见。 */}
@@ -414,6 +419,15 @@ export default function SoulDetailPage() {
   ) : (
     <span className="flex items-center gap-2 flex-wrap">
       <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />
+      {/* 规范 v1 页头副行「文明 · 殿 · 判官」:殿与判官取最近一份判决的
+          `court` / `judge_name`。没有判决、或判决没写,就不出现 —— 这是摘要,
+          空着的那一格在「丙 · 审判」里有它的 MissingValue。 */}
+      {[lastJudgment?.court, lastJudgment?.judge_name].filter(Boolean).map((part, i) => (
+        <span key={i} className="contents">
+          <span aria-hidden="true">·</span>
+          <span>{part}</span>
+        </span>
+      ))}
       {/* previous_identity 与 dateRangeText 合并成一句(Stage 3 文档缺陷 #4)
           —— 生卒日期属于 birth_name 那一世,不属于标题上那个当前名字,拆成
           两段独立的尾巴会让这份归属变得含糊。下面生命周期脊柱上的分世带负责
@@ -478,10 +492,23 @@ export default function SoulDetailPage() {
       subtitle={headerSubtitle}
       actions={headerActions}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Soul info + ledger */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Soul Card */}
+      {/* 户头进度 + 行程 —— 规范 v1 灵魂详情,正文第一段,通栏。 */}
+      {!loading && soul && (
+        <SoulLedgerProgress
+          soul={soul}
+          judgments={judgments}
+          dispositions={dispositions}
+          reincarnations={reincarnations}
+          birthDisplay={birthDisplay}
+          deathDisplay={deathDisplay}
+        />
+      )}
+
+      {/* 两栏账:宽屏 1 : 1.3,393 px 下单栏(规范 v1 `--cols`)。卡片撤掉,区块
+          之间只有区块标压着的那条线。 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+        {/* Left column: 甲 身份 · 乙 功过 · 操作 · 账号 · 受刑计划 */}
+        <div className="min-w-0 space-y-6">
           <SoulInfoCard
             soul={soul}
             loading={loading}
@@ -492,9 +519,12 @@ export default function SoulDetailPage() {
           {/* 业力总账 — Stage 3 doc's left-column ledger card: the existing
               SoulReadingPanel (unchanged) plus the raw-vs-decayed breakdown,
               lifespan chart, and next-life inheritance preview, all moved
-              out of this ad hoc box into their own component. */}
+              out of this ad hoc box into their own component.
+              规范 v1:「乙 · 功过」区块,逐条账页(功过台账)跟在它自己的合计下面。 */}
+          <section>
+          <LedgerHeading mark="乙" title={t("souls.detail.ledger.karma")} />
           {loading ? (
-            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))] space-y-3">
+            <div className="pt-3 space-y-3">
               <div className="flex justify-between items-center">
                 <Skeleton className="h-4 w-12" />
                 <Skeleton className="h-6 w-12" />
@@ -530,11 +560,20 @@ export default function SoulDetailPage() {
               }
             />
           ) : (
-            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 title={soul?.civilization} className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+            <div className="pt-2">
+              <h3 title={soul?.civilization} className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{ledgerLabel}</h3>
               <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}
+          {/* 功过台账 —— 逐条账页。这一页原本有功过格的每一个部分,唯独没有
+              「条」;它曾放在宽栏,因为六列定宽账页在 1/3 栏里会永远横向滚动。
+              两栏改成 1 : 1.3 之后左栏够宽,于是它回到自己的合计下面。 */}
+          {!loading && ledger && (
+            <div className="mt-6">
+              <SoulLedgerBook records={ledger.records} />
+            </div>
+          )}
+          </section>
 
           {/* Action Buttons */}
           {!readOnlyAway && <SoulActionsCard
@@ -566,7 +605,7 @@ export default function SoulDetailPage() {
           )}
         </div>
 
-        {/* Right column: Timeline */}
+        {/* Right column: 丙 审判 · 丁 处置 · 戊 轮回 · 己 事件日志 · 庚 灵魂账页 */}
         <SoulTimelineColumn
           soul={soul}
           loading={loading}
