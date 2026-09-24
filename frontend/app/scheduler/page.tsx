@@ -23,6 +23,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { QueryError } from "@/src/components/ui/PageError";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ListSkeleton } from "@/components/ui/skeleton";
@@ -174,17 +175,15 @@ function SchedulerPageContent() {
 
   const filters = (
     <div role="group" aria-label={t("scheduler.filters.label")} className="flex flex-wrap gap-2">
+      {/* 筛选签(规范 v1 §2)。单选:按下一枚即换成它,再按一下回到「全部」。 */}
       {JOB_FILTERS.map((value) => (
-        <Button
+        <FilterChipToggle
           key={value}
-          type="button"
-          size="sm"
-          variant={filter === value ? "primary" : "secondary"}
-          aria-pressed={filter === value}
-          onClick={() => setFilter(value)}
+          pressed={filter === value}
+          onPressedChange={(pressed) => setFilter(pressed ? value : "all")}
         >
           {t(`scheduler.filters.${value}`)}
-        </Button>
+        </FilterChipToggle>
       ))}
     </div>
   );
@@ -232,10 +231,10 @@ function SchedulerPageContent() {
             return (
               <section
                 key={group.key}
-                className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]"
+                className="border-t border-[oklch(var(--color-block))]"
                 data-group={group.key}
               >
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+                <h2 className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
                   <button
                     type="button"
                     aria-expanded={open}
@@ -248,7 +247,7 @@ function SchedulerPageContent() {
                         return next;
                       })
                     }
-                    className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                    className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left hover:bg-[oklch(var(--color-surface-2))] transition-colors"
                   >
                     <span className="min-w-0 break-words">
                       {group.tenantCode === null ? t("scheduler.groups.global") : t("scheduler.groups.tenant", { code: group.tenantCode })}
@@ -259,10 +258,10 @@ function SchedulerPageContent() {
                   </button>
                 </h2>
                 {open && (
-                  <div id={bodyId} className="border-t border-[oklch(var(--color-hairline))]">
+                  <div id={bodyId}>
                     <div
                       aria-hidden="true"
-                      className={`hidden px-4 py-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${JOB_ROW_GRID}`}
+                      className={`hidden px-4 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${JOB_ROW_GRID}`}
                     >
                       <span />
                       <span>{t("scheduler.fields.schedule")}</span>

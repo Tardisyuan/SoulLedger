@@ -445,8 +445,12 @@ describe("run history tab", () => {
     const call = schedulerApi.runs.mock.lastCall![0] as Record<string, unknown>;
     expect(call.job).toBeUndefined();
     const statuses = within(panel).getByRole("group", { name: tZh("scheduler.runs.status_filter") });
-    const pressed = within(statuses).getAllByRole("button").filter((b) => b.getAttribute("aria-pressed") === "true");
-    expect(pressed.map((b) => b.textContent)).toEqual([tZh("scheduler.status.FAILURE"), tZh("scheduler.status.LOST")]);
+    // By accessible name, not textContent: a pressed filter chip also draws an
+    // aria-hidden「×」, which is chrome, not part of the label.
+    expect(within(statuses).getAllByRole("button", { pressed: true })).toEqual([
+      within(statuses).getByRole("button", { name: tZh("scheduler.status.FAILURE") }),
+      within(statuses).getByRole("button", { name: tZh("scheduler.status.LOST") }),
+    ]);
     const row = await within(panel).findByTitle("LOST");
     const item = row.closest("li")!;
     expect(item).toHaveTextContent(tZh("scheduler.jobs.events_retry_pending_webhooks"));
