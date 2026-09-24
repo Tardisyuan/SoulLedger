@@ -15,7 +15,7 @@ function StatCardInner({
   isLoading,
   color = "text-[oklch(var(--color-ink))]",
 }: {
-  label: string;
+  label: React.ReactNode;
   value?: number;
   isLoading: boolean;
   color?: string;
@@ -27,15 +27,13 @@ function StatCardInner({
     // 见 `e2e/kpi-row-does-not-jump-when-data-lands.spec.ts`。
     <div
       data-kpi-card=""
-      className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]"
+      className="py-3 pr-4"
     >
-      <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
+      <div className="text-xs text-[oklch(var(--color-ink-muted))]">{label}</div>
       {isLoading ? (
         // 骨架屏得和它替换的东西一样高,否则数据落地时整行会往下跳一格。
-        // text-xl 是 28px / 行高 32px(规范 v1 七档里的 xl),所以 h-8。
-        // 改字号的那一轮把 text-xl 从 56/1 换成 28/32,这里还写着 h-14,
-        // 于是加载态高 24px —— 正是下面 E2E 守的那种跳动。
-        <Skeleton className="h-8 w-24 mt-2" />
+        // 值是 text-lg:28px 行高,所以 h-7;两边都是 mt-1。
+        <Skeleton className="h-7 w-12 mt-1" />
       ) : (
         // `data-kpi` 是给测试用的锚:DashboardPage.test.tsx 原先靠
         // `className.includes("text-2xl font-bold")` 认出这四张卡,那把断言
@@ -43,7 +41,7 @@ function StatCardInner({
         // 字号说的是「它现在多大」——只有前者是测试真正关心的。
         //
         // `mt-2` 必须和骨架屏的一致,而它此前是缺的。上面那条注释说两者得一样高,
-        // 否则数据落地时整行会跳 —— **高度**确实对上了(当时是 h-14 对 text-xl 的 56px/1),
+        // 否则数据落地时整行会跳 —— **高度**确实对上了(h-14 对 text-xl 的 56px/1),
         // **外边距**没有:骨架屏带 mt-2,这里没有,于是加载时整条 KPI 高 8px,数据
         // 到达时往上弹回去。对齐了盒子、没对齐盒子周围的空隙,留下的正是那条注释
         // 写来防止的缺陷,差在隔壁一个属性上。
@@ -55,7 +53,7 @@ function StatCardInner({
         // 落地态,断言两者相等。把这里的 `mt-2` 删掉并重新 build,那条 E2E 实测
         // 报「加载时 113.9375px,数据落地后 105.9375px —— 差 -8.00px」,
         // chromium 与 mobile-chrome 上是同一组数(退出码 1)。
-        <div data-kpi="" className={`text-xl tabular-nums mt-2 ${color}`}>
+        <div data-kpi="" className={`font-mono text-lg tabular-nums mt-1 ${color}`}>
           {/* `value ?? 0` printed a confident, grouped **0** for a value the
               API did not send — the exact defect class this repo already
               eradicated from the souls balance column. A KPI reading 0 is a

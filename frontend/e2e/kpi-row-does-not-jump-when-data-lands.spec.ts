@@ -1,5 +1,5 @@
 /**
- * `/dashboard` 顶部那四张 KPI 卡,在**加载态**与**数据落地后**必须一样高。
+ * `/dashboard` 顶部那一行生命周期 KPI 卡(规范 v1 起五张:五个生命周期状态),在**加载态**与**数据落地后**必须一样高。
  *
  * ── 为什么这条只能是 E2E ────────────────────────────────────────────────────
  *
@@ -28,7 +28,7 @@
  * 只比较内容那一格,恰好会漏掉这次的缺陷,因为出问题的就是**间隙**。
  *
  * `[data-kpi]` 只在数据落地后才存在(`StatCard.tsx` 的三元的另一支),所以
- * 「4 张卡 + 0 个值」是加载态的定义,「4 张卡 + 4 个值」是落地态的定义。
+ * 「5 张卡 + 0 个值」是加载态的定义,「5 张卡 + 5 个值」是落地态的定义。
  * 这两条计数同时也是「扫到了东西」的断言:一个没渲染出来的页面给出的是
  * 「0 张卡」而不是「高度相等」。
  */
@@ -40,7 +40,7 @@ import { expect, test, LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
  *
  * 不是拟合来的,而且**不是从今天的读数往上取整来的** —— 它是「同一个盒子模型算
  * 两次」这件事本身允许的误差。两个状态的内容高度由同一组整数 rem 决定
- * (`h-8` = 2rem;`text-xl` 的行高是 32px),所以理想值是 0;留 0.5 是
+ * (2026-09-24 起是 `h-7` = 1.75rem 对 `text-lg` 的 28 px 行高,两边都是 `mt-1`;此前是 `h-14` 对 `text-xl`),所以理想值是 0;留 0.5 是
  * 因为 `getBoundingClientRect()` 给的是设备像素折算回 CSS px 的浮点数,而
  * mobile-chrome 的 deviceScaleFactor 是 2.75,折算可以在末位上差一点点。
  *
@@ -73,7 +73,7 @@ test("KPI 条在数据落地时不跳:加载态与落地态的卡片一样高", 
   const values = page.locator("[data-kpi]");
 
   // ── 加载态 ──
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(5);
   await expect(values).toHaveCount(0);
   const loading = await cards.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
 
@@ -85,8 +85,8 @@ test("KPI 条在数据落地时不跳:加载态与落地态的卡片一样高", 
 
   // ── 放行,等数据落地 ──
   release();
-  await expect(values).toHaveCount(4);
-  await expect(cards).toHaveCount(4);
+  await expect(values).toHaveCount(5);
+  await expect(cards).toHaveCount(5);
   const loaded = await cards.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
 
   // ── 判决 ──

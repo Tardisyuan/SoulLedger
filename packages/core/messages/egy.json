@@ -304,6 +304,13 @@
     "date_problem_marker": {
       "error": "Khet Hru — Maa Mekher Ba",
       "warning": "Khet Hru — Nau Aba Hemsu"
+    },
+    "preview": {
+      "open": "Maa",
+      "open_aria": "Maa {{name}}",
+      "hint": "J / K Em Khet · Em Tepy · Esc",
+      "open_full": "Wen Sesh Neb →",
+      "load_error": "Nen Ini Medu."
     }
   },
   "common": {
@@ -684,7 +691,17 @@
     "no_activity": "Nen Khedu Pehwy",
     "no_realm_data": "Nen Medew Ahet",
     "error_load": "Nen Ini Sesh Hesb",
-    "error_export": "Nen Wehem Medew"
+    "error_export": "Nen Wehem Medew",
+    "todo": {
+      "approve_dispatch": "Em Set Medu · Hab-Ba",
+      "go_approve": "Hesy →",
+      "judgment_queue": "Sheemtet Wu",
+      "enter": "Aq →",
+      "none": "Nen Em Set Medu",
+      "load_error": "Nen Ini"
+    },
+    "civ_share": "Redu",
+    "civ_empty": "Nen Aba · Iri Aba"
   },
   "ledger": {
     "title": "Medew Unemu Seth",
@@ -1175,7 +1192,25 @@
     },
     "confirm_approve": "Sesen Hab-Ba Em Kehat Seth?",
     "approve_warning": "Er Khet Hesy: Per-Hemsu Setep Aba Was Wetep En Ba Pen. Sesh Em Medew Maa.",
-    "proposer_account_removed": "Netjer Sesen Wehem Seth; Nen Rekhyu Ren"
+    "proposer_account_removed": "Netjer Sesen Wehem Seth; Nen Rekhyu Ren",
+    "propose_subtitle": "Hab-Ba Aba Er Per Hemes Setep Seth: Per Hemes Setep Seth Hesy, Iri Seth.",
+    "soul_from_detail": "Em Medu Aba; Nen Wehem",
+    "soul_from_detail_error": "Nen Ini Aba. Setep Wehem.",
+    "source_label": "Tepy",
+    "discard": "Khet…",
+    "discard_title": "Khet Hab-Ba Pen?",
+    "discard_message": "Nen Sau Medu — Hab-Ba Nen Sesh Tepy.",
+    "discard_keep": "Wehem Sesh",
+    "discard_confirm": "Khet",
+    "flow": {
+      "title": "Wat Hesy · Hab-Ba",
+      "step_propose": "Per Hemes Tepy · {{tenant}} Wetjes",
+      "step_approve": "Per Hemes Setep Seth · {{tenant}} Hesy",
+      "step_execute": "Per Hemes Setep Seth · Iri Seth",
+      "target_unchosen": "Nen Setep",
+      "pending_submit": "Em Wetjes",
+      "not_yet": "Nen Shesep"
+    }
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
@@ -1367,7 +1402,8 @@
   },
   "filter": {
     "all": "Neb",
-    "clear_all": "Khet Semau"
+    "clear_all": "Khet Semau",
+    "clear_one": "Khet {{name}}"
   },
   "death_sync": {
     "title": "Wepet Ru Kehat",

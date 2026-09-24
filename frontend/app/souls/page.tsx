@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useSouls } from "@soulledger/core/hooks/useSouls";
@@ -18,6 +18,8 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
+import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -59,6 +61,17 @@ export default function SoulsPage() {
   const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [problemsOnly, setProblemsOnly] = useState(false);
+  // The previewed row's id, not its index: a background refetch can reorder
+  // the page, and the drawer must keep showing the soul it was opened on.
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewButtons = useRef(new Map<string, HTMLButtonElement>());
+  // Last id shown — NOT cleared on close, because the drawer asks where to put
+  // focus after `previewId` has already gone back to null.
+  const lastPreviewId = useRef<string | null>(null);
+  const openPreview = (id: string) => {
+    lastPreviewId.current = id;
+    setPreviewId(id);
+  };
 
   // Debounce the search box so typing doesn't fire a request per keystroke.
   useEffect(() => {
@@ -85,6 +98,15 @@ export default function SoulsPage() {
   const souls = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
+  // J / K step within the page on screen; at either end they do nothing
+  // rather than silently turning the page under the reader.
+  const previewIndex = previewId === null ? -1 : souls.findIndex((s) => String(s.id) === previewId);
+  const previewSoul = previewIndex >= 0 ? souls[previewIndex] : null;
+  const stepPreview = (delta: number) => {
+    const next = souls[previewIndex + delta];
+    return next ? () => openPreview(String(next.id)) : undefined;
+  };
+
   // Independent of `problemsOnly` — this is the toggle's own badge count, so
   // it has to be visible before the toggle is switched on. A single extra
   // list request (page_size irrelevant, only `.count` is read), not one per
@@ -110,7 +132,7 @@ export default function SoulsPage() {
   const showsDeathColumn = !isColumnUninformative(souls, (s) => Boolean(s.death_date));
 
   const states = [
-    { value: "", label: t("souls.all_states") },
+    { value: "", label: t("filter.all") },
     { value: "ALIVE", label: t("souls.states.ALIVE") },
     { value: "JUDGING", label: t("souls.states.JUDGING") },
     { value: "DISPOSED", label: t("souls.states.DISPOSED") },
@@ -122,7 +144,7 @@ export default function SoulsPage() {
   // from this filter is one whose souls cannot be filtered for at all, and the
   // dropdown looks complete either way.
   const civilizations = [
-    { value: "", label: t("souls.all_civilizations") },
+    { value: "", label: t("filter.all") },
     ...CIVILIZATION_OPTIONS.map((civ) => ({
       value: civ,
       label: t(`souls.civilizations.${civ}`),
@@ -175,32 +197,28 @@ export default function SoulsPage() {
             onChange={(e) => setSearchInput(e.target.value)}
             className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[160px]")}
           />
-          <select
+          {/* 筛选签(规范 v1 §2):「状态 · 审判中 ×」。在生效的那一枚有
+              下 2 px 强调线和清除用的 ×,不只靠颜色说「这条筛选开着」。 */}
+          <FilterChipSelect
+            label={t("souls.filter_state")}
             value={stateFilter}
-            aria-label={t("souls.filter_state")}
-            onChange={(e) => {
-              setStateFilter(e.target.value);
+            options={states}
+            clearLabel={t("filter.clear_one", { name: t("souls.filter_state") })}
+            onChange={(v) => {
+              setStateFilter(v);
               setPage(1);
             }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            {states.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-          <select
+          />
+          <FilterChipSelect
+            label={t("souls.filter_civilization")}
             value={civilizationFilter}
-            aria-label={t("souls.filter_civilization")}
-            onChange={(e) => {
-              setCivilizationFilter(e.target.value);
+            options={civilizations}
+            clearLabel={t("filter.clear_one", { name: t("souls.filter_civilization") })}
+            onChange={(v) => {
+              setCivilizationFilter(v);
               setPage(1);
             }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            {civilizations.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+          />
           <div className="flex items-center gap-1 shrink-0">
             <input
               type="number"
@@ -226,26 +244,18 @@ export default function SoulsPage() {
               client-side slice of the current page — the badge count and
               the toggle's own result set both come from the same query
               param, so they agree even across pages. */}
-          <Button
-            type="button"
-            onClick={() => {
-              setProblemsOnly((v) => !v);
+          <FilterChipToggle
+            pressed={problemsOnly}
+            onPressedChange={(next) => {
+              setProblemsOnly(next);
               setPage(1);
             }}
-            aria-pressed={problemsOnly}
-            className={cn(
-              "shrink-0",
-              problemsOnly &&
-                "bg-[oklch(var(--color-status-warning)/0.1)] border-[oklch(var(--color-status-warning)/0.4)] text-[oklch(var(--color-status-warning))] hover:bg-[oklch(var(--color-status-warning)/0.2)] hover:border-[oklch(var(--color-status-warning)/0.4)]"
-            )}
           >
             {t("souls.date_problem_filter")}
             {typeof problemCountQuery.data === "number" && (
-              <Badge className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))]">
-                {problemCountQuery.data}
-              </Badge>
+              <span className="font-mono text-[oklch(var(--color-ink-subtle))]">{problemCountQuery.data}</span>
             )}
-          </Button>
+          </FilterChipToggle>
         </>
       }
     >
@@ -300,6 +310,23 @@ export default function SoulsPage() {
                 <Link href={`/souls/${soul.id}`} className={ROW_LINK}>
                   {soul.name}
                 </Link>
+                {/* The drawer's trigger. The row stays one link to the full
+                    record (click, middle-click, screen readers — unchanged);
+                    this is a separate, visible control lifted above the row
+                    link's `::after` overlay, so previewing is an explicit ask
+                    and a plain row click still does what it did before. */}
+                <button
+                  type="button"
+                  ref={(el) => {
+                    if (el) previewButtons.current.set(String(soul.id), el);
+                    else previewButtons.current.delete(String(soul.id));
+                  }}
+                  onClick={() => openPreview(String(soul.id))}
+                  aria-label={t("souls.preview.open_aria", { name: soul.name })}
+                  className="relative z-[1] ml-2 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:underline"
+                >
+                  {t("souls.preview.open")}
+                </button>
               </span>
             </td>
             <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
@@ -363,6 +390,14 @@ export default function SoulsPage() {
         totalPages={totalPages}
         totalCount={data?.count}
         onPageChange={setPage}
+      />
+
+      <SoulPreviewDrawer
+        soul={previewSoul}
+        onClose={() => setPreviewId(null)}
+        onNext={stepPreview(1)}
+        onPrev={stepPreview(-1)}
+        finalFocus={() => previewButtons.current.get(lastPreviewId.current ?? "") ?? null}
       />
 
       <SoulCreateModal

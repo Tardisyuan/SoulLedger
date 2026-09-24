@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -11,11 +11,25 @@ import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/d
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
-import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
+import { TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { focusFirstInvalid } from "@/src/lib/submitErrorFocus";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { useSoul } from "@soulledger/core/hooks/useSouls";
+import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
+import { NUMBERING_SAMPLE } from "@/src/lib/civilizationIdentity";
+import { cn } from "@/lib/utils";
 
+// `useSearchParams` needs a Suspense boundary under the App Router build.
 export default function ProposeDispatchPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProposeDispatchForm />
+    </Suspense>
+  );
+}
+
+function ProposeDispatchForm() {
   const { t } = useI18n();
   const { user } = useTenant();
   const { showToast } = useToast();
@@ -32,6 +46,18 @@ export default function ProposeDispatchPage() {
    */
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null);
+  /**
+   * 规范 v1「发起移交」: the soul is carried in from its detail page and is not
+   * editable there (`?soul=<id>`). Without the parameter the search field below
+   * is the way in, as before. If the carried soul cannot be loaded the form
+   * says so and falls back to the search field rather than proposing blind.
+   */
+  const carriedSoulId = useSearchParams().get("soul") ?? "";
+  const carried = useSoul(carriedSoulId);
+  const carriedSoul = carriedSoulId && !carried.isError ? carried.data : undefined;
+  const [discardOpen, setDiscardOpen] = useState(false);
+  // Everything downstream reads this, never `form.soul_id` directly.
+  const soulId = carriedSoul ? carriedSoulId : "";
   const [form, setForm] = useState({
     soul_id: "",
     target_tenant_code: "",
@@ -115,20 +141,16 @@ export default function ProposeDispatchPage() {
   }));
 
   /**
-   * `tn`, not `t`. The old spelling shadowed the i18n `t` inside both the
-   * filter and the map — it happened to be harmless because neither callback
-   * translated anything, but a single `t("…")` added inside one of them would
-   * have called a tenant record.
+   * The civilizations as a radio list (规范 v1「目标文明」): every tenant, the
+   * source one included but disabled and marked 「来源」, so the reader sees the
+   * whole set rather than "all but one". Each row carries its civilization's
+   * numbering sample — identity by numbering law, not by colour (§1.8).
    */
-  const tenantOptions: SelectOption[] = [
-    { value: "", label: t("dispatch.select_tenant") },
-    ...tenants
-      .filter((tn: { tenant_code: string }) => tn.tenant_code !== user?.tenant?.code)
-      .map((tn: { tenant_code: string; tenant_name: string }) => ({
-        value: tn.tenant_code,
-        label: `${tn.tenant_name} (${tn.tenant_code})`,
-      })),
-  ];
+  const sourceCode = user?.tenant?.code;
+  const tenantName = (tn: { tenant_code: string; tenant_name: string }) => tn.tenant_name || tn.tenant_code;
+  const sourceTenantRow = tenants.find((tn) => tn.tenant_code === sourceCode);
+  const targetTenantRow = tenants.find((tn) => tn.tenant_code === form.target_tenant_code);
+  const dirty = Boolean(form.reason.trim() || form.target_tenant_code || (!soulId && form.soul_id));
 
   /**
    * Server field name → the control that holds it. The form keys and the API
@@ -164,7 +186,7 @@ export default function ProposeDispatchPage() {
     // `aria-required` only — there is no native or client-side gate — so an
     // untouched select used to round-trip to the server just to be told.
     const missing: Record<string, string> = {};
-    if (!form.soul_id) missing.soul_id = t("common.field_required");
+    if (!(soulId || form.soul_id)) missing.soul_id = t("common.field_required");
     if (!form.target_tenant_code) missing.target_tenant_code = t("common.field_required");
     if (!form.reason.trim()) missing.reason = t("common.field_required");
     if (Object.keys(missing).length > 0) {
@@ -192,7 +214,7 @@ export default function ProposeDispatchPage() {
       await dispatchApi.propose({
         source_tenant: sourceTenant.tenant_id,
         target_tenant: targetTenant.tenant_id,
-        soul: form.soul_id,
+        soul: soulId || form.soul_id,
         reason: form.reason,
       });
       router.push("/dispatch");
@@ -216,14 +238,34 @@ export default function ProposeDispatchPage() {
     }
   };
 
+  const tenantError =
+    fieldErrors.target_tenant_code ?? (tenantsError ? t("dispatch.tenants_error") : undefined);
+
   return (
-    <PageShell variant="prose" title={t("dispatch.propose")}>
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-        {/* While the list is in flight the control stays in place, disabled,
+    <PageShell variant="page" title={t("dispatch.propose")} subtitle={t("dispatch.propose_subtitle")}>
+      <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {carriedSoul ? (
+          // Read-only, in the disabled pair (规范 v1 输入框「只读同此」).
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-[oklch(var(--color-ink))]">{t("dispatch.target_soul")}</span>
+            <div
+              aria-readonly="true"
+              className="flex min-h-8 items-center gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))] px-3 text-sm text-[oklch(var(--color-ink-muted))]"
+            >
+              {carriedSoul.name}
+              <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" title={carriedSoul.id}>
+                {carriedSoul.id.slice(0, 8)}
+              </span>
+            </div>
+            <span className="text-xs text-[oklch(var(--color-ink-tertiary))]">{t("dispatch.soul_from_detail")}</span>
+          </div>
+        ) : (
+        /* While the list is in flight the control stays in place, disabled,
             holding a single "Loading…" option. The skeleton it replaces sat
             *beside* the label rather than under it, so the field's own label
             vanished for as long as the query took and the row changed height
-            when it came back. */}
+            when it came back. */
         <SearchSelectField
           id="soul_id"
           name="soul_id"
@@ -235,7 +277,14 @@ export default function ProposeDispatchPage() {
           // A server-side validation error on this field still wins: that one
           // is about what the operator typed, this one about whether the list
           // is trustworthy at all.
-          error={fieldErrors.soul_id ?? (soulsError ? t("dispatch.soul_search_error") : undefined)}
+          error={
+            fieldErrors.soul_id ??
+            (soulsError
+              ? t("dispatch.soul_search_error")
+              : carriedSoulId && carried.isError
+                ? t("dispatch.soul_from_detail_error")
+                : undefined)
+          }
           value={form.soul_id}
           onValueChange={(next) => {
             setFieldErrors(({ soul_id: _drop, ...rest }) => rest);
@@ -244,7 +293,7 @@ export default function ProposeDispatchPage() {
           options={soulOptions}
           searchText={soulSearchInput}
           onSearchTextChange={setSoulSearchInput}
-          loading={soulsLoading}
+          loading={soulsLoading || (Boolean(carriedSoulId) && carried.isLoading)}
           searching={soulsStale}
           placeholder={t("dispatch.soul_search_placeholder")}
           loadingText={t("common.loading")}
@@ -264,30 +313,67 @@ export default function ProposeDispatchPage() {
               : undefined
           }
         />
+        )}
 
-        <SelectField
-          id="target_tenant_code"
-          name="target_tenant_code"
-          label={t("dispatch.target_tenant")}
-          required
-          disabled={tenantsLoading}
-          error={
-            fieldErrors.target_tenant_code ??
-            (tenantsError ? t("dispatch.tenants_error") : undefined)
-          }
-          value={form.target_tenant_code}
-          onChange={e => {
-            setFieldErrors(({ target_tenant_code: _drop, ...rest }) => rest);
-            setForm({ ...form, target_tenant_code: e.target.value });
-          }}
-          options={
-            tenantsLoading
-              ? [{ value: "", label: t("common.loading") }]
-              : tenantsError
-                ? [{ value: "", label: t("dispatch.tenants_error") }]
-                : tenantOptions
-          }
-        />
+        <fieldset
+          aria-describedby={tenantError ? "target_tenant_code-error" : undefined}
+          aria-busy={tenantsLoading || undefined}
+          className="flex flex-col gap-1.5"
+        >
+          <legend className="mb-1.5 text-xs font-medium text-[oklch(var(--color-ink))]">
+            {t("dispatch.target_tenant")}
+            <span aria-hidden="true" className="ml-1 text-[oklch(var(--color-status-error))]">*</span>
+          </legend>
+          <div className="flex flex-col border-t border-[oklch(var(--color-block))]">
+            {tenants.map((tn) => {
+              const isSource = tn.tenant_code === sourceCode;
+              const checked = form.target_tenant_code === tn.tenant_code;
+              return (
+                <label
+                  key={tn.tenant_code}
+                  className={cn(
+                    "flex min-h-8 max-sm:min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-2 text-sm",
+                    isSource
+                      ? "cursor-not-allowed text-[oklch(var(--color-disabled-ink))]"
+                      : "cursor-pointer text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]",
+                    checked && "bg-[oklch(var(--color-surface-2))]"
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="target_tenant_code"
+                    value={tn.tenant_code}
+                    checked={checked}
+                    disabled={isSource}
+                    // Not on the disabled source row: focusFirstInvalid takes the
+                    // first `[aria-invalid]` in DOM order, and a disabled radio
+                    // cannot take focus.
+                    aria-invalid={tenantError && !isSource ? true : undefined}
+                    onChange={() => {
+                      setFieldErrors(({ target_tenant_code: _drop, ...rest }) => rest);
+                      setForm({ ...form, target_tenant_code: tn.tenant_code });
+                    }}
+                    // Square box, square 6 px accent mark when chosen (规范 v1: 方角).
+                    className="size-3.5 shrink-0 appearance-none border border-[oklch(var(--color-line))] checked:border-[oklch(var(--color-block))] checked:bg-[oklch(var(--color-accent))] checked:shadow-[inset_0_0_0_3px_oklch(var(--color-canvas))] disabled:border-[oklch(var(--color-disabled-ink))]"
+                  />
+                  {tenantName(tn)}
+                  <span className={cn("ml-auto", isSource ? "text-xs" : "font-mono text-xs text-[oklch(var(--color-ink-subtle))]")}>
+                    {isSource ? t("dispatch.source_label") : NUMBERING_SAMPLE[getCivilizationFromTenantCode(tn.tenant_code)] ?? ""}
+                  </span>
+                </label>
+              );
+            })}
+            {tenantsLoading && (
+              <span className="flex min-h-8 items-center px-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</span>
+            )}
+          </div>
+          {tenantError ? (
+            <span id="target_tenant_code-error" role="alert" className="text-xs text-[oklch(var(--color-danger))]">
+              <span aria-hidden="true">! </span>
+              {tenantError}
+            </span>
+          ) : null}
+        </fieldset>
 
         <TextAreaField
           id="reason"
@@ -304,17 +390,62 @@ export default function ProposeDispatchPage() {
           placeholder={t("dispatch.reason_placeholder")}
         />
 
-        <div className="flex gap-3">
+        {/* No 「存草稿」: the dispatch API has no draft state — a record is
+            PROPOSED the moment it exists (backend/apps/dispatch/models.py). */}
+        <div className="flex flex-wrap gap-2 border-t border-[oklch(var(--color-block))] pt-3">
           <RequirePermission permissions="dispatch.manage">
             <Button type="submit" variant="primary" loading={loading}>
               {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
             </Button>
           </RequirePermission>
-          <Button type="button" variant="secondary" onClick={() => router.back()}>
-            {t("common.cancel")}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => (dirty ? setDiscardOpen(true) : router.back())}
+          >
+            {t("dispatch.discard")}
           </Button>
         </div>
       </form>
+
+      {/* 审批流 — what actually happens to this record, per the state machine
+          in backend/apps/dispatch/models.py: PROPOSED → the target approves
+          (views.py: "Only target tenant can approve") → the target executes. */}
+      <aside aria-labelledby="dispatch-flow-title">
+        <h2
+          id="dispatch-flow-title"
+          className="border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]"
+        >
+          {t("dispatch.flow.title")}
+        </h2>
+        <ol className="text-sm">
+          {[
+            [t("dispatch.flow.step_propose", { tenant: sourceTenantRow ? tenantName(sourceTenantRow) : sourceCode ?? "" }), t("dispatch.flow.pending_submit")],
+            [t("dispatch.flow.step_approve", { tenant: targetTenantRow ? tenantName(targetTenantRow) : t("dispatch.flow.target_unchosen") }), t("dispatch.flow.not_yet")],
+            [t("dispatch.flow.step_execute"), t("dispatch.flow.not_yet")],
+          ].map(([step, when], i) => (
+            <li key={i} className="grid grid-cols-[24px_1fr_auto] border-b border-[oklch(var(--color-rule))] py-2">
+              <span className="font-mono text-[oklch(var(--color-ink-subtle))]">{i + 1}</span>
+              <span className="text-[oklch(var(--color-ink))]">{step}</span>
+              <span className="text-[oklch(var(--color-ink-subtle))]">{when}</span>
+            </li>
+          ))}
+        </ol>
+      </aside>
+      </div>
+
+      <ConfirmDialog
+        isOpen={discardOpen}
+        title={t("dispatch.discard_title")}
+        message={t("dispatch.discard_message")}
+        cancelText={t("dispatch.discard_keep")}
+        confirmText={t("dispatch.discard_confirm")}
+        onCancel={() => setDiscardOpen(false)}
+        onConfirm={() => {
+          setDiscardOpen(false);
+          router.back();
+        }}
+      />
     </PageShell>
   );
 }

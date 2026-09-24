@@ -6,13 +6,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { ledgerApi, LedgerStatsOverview } from "@soulledger/core/api";
-import {
-  LazyDashboardPieChart,
-  LazyBarChart,
-} from "@/src/components/charts/LazyDashboardCharts";
+import Link from "next/link";
+import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
+import { dispatchApi, judgmentApi } from "@soulledger/core/api";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import { LegendLedger, sharePercent } from "@/src/components/dashboard/LegendLedger";
+import { BalanceHistogram } from "@/src/components/dashboard/BalanceHistogram";
+import { soulStateGlyph } from "@/src/lib/soulStateBadge";
+import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
-import { getDisplayNameForTenant } from "@soulledger/core/config/civilizations";
+import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useChartColors } from "@/src/hooks/useChartColors";
@@ -37,6 +41,140 @@ function bucketMidpoint(label: string): number {
   return 0;
 }
 
+/** Glyph ink and legend fill per lifecycle state — the soul-lifecycle tokens, not the chart literals. */
+const STATE_INK: Record<string, string> = {
+  ALIVE: "text-[oklch(var(--color-status-alive))]",
+  JUDGING: "text-[oklch(var(--color-status-judging))]",
+  DISPOSED: "text-[oklch(var(--color-status-disposed))]",
+  REINCARNATING: "text-[oklch(var(--color-status-reincarnating))]",
+  SETTLED: "text-[oklch(var(--color-status-settled))]",
+  LOST: "text-[oklch(var(--color-status-lost))]",
+};
+const STATE_FILL: Record<string, string> = {
+  ALIVE: "bg-[oklch(var(--color-status-alive))]",
+  JUDGING: "bg-[oklch(var(--color-status-judging))]",
+  DISPOSED: "bg-[oklch(var(--color-status-disposed))]",
+  REINCARNATING: "bg-[oklch(var(--color-status-reincarnating))]",
+  SETTLED: "bg-[oklch(var(--color-status-settled))]",
+  LOST: "bg-[oklch(var(--color-status-lost))]",
+};
+
+/** Section label (规范 v1): 11 px mono, block line beneath. */
+function SectionLabel({ children, className = "", columns = "" }: { children: React.ReactNode; className?: string; columns?: string }) {
+  return (
+    <h2
+      className={`border-b border-[oklch(var(--color-block))] pb-1 pt-4 font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] ${columns} ${className}`}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/** One 待办 cell: a count and where to go about it. */
+function TodoCell({
+  label,
+  count,
+  isLoading,
+  isError,
+  href,
+  linkText,
+}: {
+  label: string;
+  count: number | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  href: string;
+  linkText: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <div data-todo="" className="py-3 pr-4 md:border-r md:last:border-r-0 border-[oklch(var(--color-line))] max-md:border-b max-md:last:border-b-0">
+      <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{label}</div>
+      <div className="flex items-baseline justify-between gap-3">
+        {isLoading ? (
+          <Skeleton className="h-8 w-10" />
+        ) : isError || count === undefined ? (
+          <span role="alert" className="text-sm text-[oklch(var(--color-danger))]">
+            <span aria-hidden="true">! </span>
+            {t("dashboard.todo.load_error")}
+          </span>
+        ) : (
+          <>
+            <span
+              data-todo-count=""
+              className={`font-mono text-xl ${count === 0 ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}
+            >
+              {count}
+            </span>
+            {count > 0 ? (
+              <Link href={href} className="text-sm underline text-[oklch(var(--color-accent-ink))]">
+                {linkText}
+              </Link>
+            ) : (
+              <span className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("dashboard.todo.none")}</span>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 待我审批 / 审判队列 (规范 v1 §3.4). Each count comes from the endpoint the
+ * page it links to already reads, so the two can never disagree:
+ * `/dispatch/records/proposed/` is the approval inbox (`target_tenant=<caller>`,
+ * see dispatchApi.proposed), and `/judgment/next/`'s `total` is the queue's own
+ * count. A cell only exists for someone who may open where it points.
+ *
+ * 死亡同步异常 is not here: `/death-sync/registrations/` has no status filter,
+ * so the only count available is of one page — the truncation this repo has
+ * already paid for once. It needs a server-side count first.
+ */
+function DashboardTodo() {
+  const { t } = useI18n();
+  const { hasPermission } = usePermissions();
+  const canDispatch = hasPermission("dispatch.read");
+  const canJudge = hasPermission("judgment.read");
+  const dispatchQ = useQuery({
+    queryKey: ["dashboard", "todo", "dispatch-proposed"],
+    queryFn: async () => (await dispatchApi.proposed({ page: "1" })).data.count,
+    enabled: canDispatch,
+    staleTime: 60_000,
+  });
+  const queueQ = useQuery({
+    queryKey: ["dashboard", "todo", "judgment-queue"],
+    queryFn: async () => (await judgmentApi.next()).data.total,
+    enabled: canJudge,
+    staleTime: 60_000,
+  });
+  if (!canDispatch && !canJudge) return null;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 border-y border-[oklch(var(--color-block))]">
+      {canDispatch && (
+        <TodoCell
+          label={t("dashboard.todo.approve_dispatch")}
+          count={dispatchQ.data}
+          isLoading={dispatchQ.isLoading}
+          isError={dispatchQ.isError}
+          href="/dispatch"
+          linkText={t("dashboard.todo.go_approve")}
+        />
+      )}
+      {canJudge && (
+        <TodoCell
+          label={t("dashboard.todo.judgment_queue")}
+          count={queueQ.data}
+          isLoading={queueQ.isLoading}
+          isError={queueQ.isError}
+          href="/judgment/queue"
+          linkText={t("dashboard.todo.enter")}
+        />
+      )}
+    </div>
+  );
+}
+
 function DashboardContent() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
@@ -45,7 +183,7 @@ function DashboardContent() {
   // theme has to pick the table. `REALM_COLORS` used to be imported here and
   // never read — the realm histogram is single-series and fills with
   // CHART_SERIES.realm — so it is not destructured.
-  const { STATE_COLORS, CHART_SERIES } = useChartColors();
+  const { CHART_SERIES } = useChartColors();
   const searchParams = useSearchParams();
   const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 
@@ -186,33 +324,30 @@ function DashboardContent() {
     return resolved.label || t("common.value.unrecorded");
   };
 
-  const stateData = stats?.state_distribution?.map((s) => ({
-    name: stateLabel(s.state, s.label),
-    value: s.count,
-    color: STATE_COLORS[s.state] || CHART_SERIES.neutral,
-  })) ?? [];
+  /**
+   * The lifecycle row and its 图例账 (规范 v1 §3.4). The five lifecycle states
+   * in their fixed order, then any other state the payload carries (LOST, or
+   * one this build does not know) so nothing it counted is dropped.
+   */
+  const LIFECYCLE = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"];
+  const lifecycleStates = [
+    ...LIFECYCLE,
+    ...(stats?.state_distribution ?? []).map((s) => s.state).filter((st) => !LIFECYCLE.includes(st)),
+  ];
+  const stateCount = (state: string) =>
+    stats?.state_distribution?.find((s) => s.state === state)?.count ?? 0;
 
-  // One colour per tenant, from the same map as the swatches on the cards
-  // below. This chart used to take LazyBarChart's own `"#f59e0b"` default, so
-  // four cosmologies were drawn as one amber series directly above four cards
-  // that each carried their own mark — the chart said "one category, four
-  // sizes" and the cards said "four categories". The swatch was never the
-  // redundant half: it is the legend, and this is the thing it keys.
-  //
-  // `CHART_SERIES.neutral` for a tenant this deployment has no mark for, the
-  // same refusal `CIVILIZATION_COLORS` makes by not having an entry — a grey
-  // bar says "unmapped", and borrowing a neighbour's hue would say something
-  // false about which cosmology it is.
-  const tenantData = stats?.tenants?.map((tenant) => ({
-    name: getDisplayNameForTenant(tenant.tenant_code),
-    total: tenant.total_souls,
-    color: CHART_SERIES.balance,
-    ...tenant.state_breakdown,
-  })) ?? [];
+  /** 各文明: all four civilizations, from the tenants that carry them. */
+  const civCount = (civ: string) =>
+    (stats?.tenants ?? [])
+      .filter((tn) => getCivilizationFromTenantCode(tn.tenant_code) === civ)
+      .reduce((sum, tn) => sum + tn.total_souls, 0);
+  const civTotal = CIVILIZATION_OPTIONS.reduce((sum, civ) => sum + civCount(civ), 0);
+  const civMax = Math.max(1, ...CIVILIZATION_OPTIONS.map(civCount));
 
   /**
-   * Sorted descending, unlike `tenantData` above, and the difference is the
-   * point.
+   * Sorted descending, unlike the civilization rows above, and the difference
+   * is the point.
    *
    * Realms have no canonical order, so the server's order is arbitrary and a
    * reader comparing magnitudes has to hunt. Tenants do: there are exactly
@@ -249,167 +384,123 @@ function DashboardContent() {
       <div className="space-y-6">
         {activeTab === "overview" ? (
           <>
-            {/* Summary cards - each loads independently */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* `?? 0` on the three state cards below, and NOT here.
-                  A state missing from `state_distribution` means zero souls are
-                  in it — a real count. `total_souls` missing means the API did
-                  not send it, which is not a number at all; StatCard renders
-                  that as an em dash rather than a confident 0. The two used to
-                  be the same expression. */}
-              <StatCard label={t("dashboard.total_souls")} value={stats?.total_souls} isLoading={loading} />
-              <StatCard
-                label={t("dashboard.alive")}
-                value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? 0}
-                isLoading={loading}
-                color="text-[oklch(var(--color-status-success))]"
-              />
-              <StatCard
-                label={t("dashboard.under_judgment")}
-                value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? 0}
-                isLoading={loading}
-                color="text-[oklch(var(--color-accent-ink))]"
-              />
-              <StatCard
-                label={t("dashboard.disposed")}
-                value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? 0}
-                isLoading={loading}
-                color="text-[oklch(var(--color-status-lost))]"
-              />
+            {/* 待办(规范 v1 §3.4):数字 + 去处。只给有权限看的那几格。 */}
+            <DashboardTodo />
+
+            {/* The lifecycle states, glyph + word (never colour alone). */}
+            <div className="grid grid-cols-2 md:grid-cols-5 border-b border-[oklch(var(--color-line))]">
+              {lifecycleStates.map((state) => (
+                <StatCard
+                  key={state}
+                  label={
+                    <>
+                      <span className={`font-mono ${STATE_INK[state] ?? ""}`}>{soulStateGlyph(state)}</span>{" "}
+                      <span title={state}>{stateLabel(state)}</span>
+                    </>
+                  }
+                  // A state missing from `state_distribution` means zero souls are
+                  // in it — a real count, so `?? 0` here is honest.
+                  value={stateCount(state)}
+                  isLoading={loading}
+                />
+              ))}
             </div>
 
-            {/* Charts row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* State distribution pie chart */}
-              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.state_distribution")}</h2>
+            {error && (
+              <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
+                <span aria-hidden="true">! </span>
+                {error}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-6">
+              <section>
+                {/* 各文明 — ledger rows, all four civilizations. A civilization
+                    with no souls is a row saying so, with a way in, not an
+                    empty card (规范 v1: 没有灵魂的文明不画空卡片). */}
+                <SectionLabel columns="grid grid-cols-[1.3fr_56px_1.4fr]">
+                  <span>{t("dashboard.souls_by_civilization")}</span>
+                  <span className="text-right">{t("dashboard.chart_souls")}</span>
+                  <span className="pl-4">{t("dashboard.civ_share")}</span>
+                </SectionLabel>
+                {CIVILIZATION_OPTIONS.map((civ) => {
+                  const n = civCount(civ);
+                  return (
+                    <div
+                      key={civ}
+                      data-civ-row={civ}
+                      className="grid min-h-9 grid-cols-[1.3fr_56px_1.4fr] items-center border-b border-[oklch(var(--color-rule))] text-sm"
+                    >
+                      <span className="flex items-baseline gap-1.5 text-[oklch(var(--color-ink))]">
+                        <span aria-hidden="true" className="font-mono text-[oklch(var(--color-ink-subtle))]">{CIVILIZATION_MARK[civ]}</span>
+                        <DomainEnum namespace="souls.civilizations" value={civ} />
+                      </span>
+                      <span className={`text-right font-mono ${n ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"}`}>
+                        {loading ? <Skeleton as="span" className="inline-block h-4 w-6" /> : n}
+                      </span>
+                      <span className="flex items-center gap-2 pl-4">
+                        {loading ? null : n > 0 ? (
+                          <>
+                            <span
+                              aria-hidden="true"
+                              className="block h-2 min-w-1 bg-[oklch(var(--color-ink))]"
+                              style={{ width: `${(n / civMax) * 60}%` }}
+                            />
+                            <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{sharePercent(n, civTotal)}</span>
+                          </>
+                        ) : (
+                          <Link href="/souls" className="text-xs text-[oklch(var(--color-ink-subtle))] underline">
+                            {t("dashboard.civ_empty")}
+                          </Link>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* 生命周期 — the 图例账 that replaces the pie chart. */}
+                <SectionLabel className="mt-6">
+                  {t("dashboard.state_distribution")}
+                  {stats ? ` · ${stats.total_souls}` : ""}
+                </SectionLabel>
                 {loading ? (
-                  <div className="h-[240px] flex items-center justify-center">
-                    <Skeleton className="h-[200px] w-[200px] " />
-                  </div>
-                ) : error ? (
-                  <div className="h-[240px] flex items-center justify-center text-[oklch(var(--color-status-error))]">{error}</div>
+                  <Skeleton className="mt-3 h-24 w-full" />
                 ) : (
-                  <LazyDashboardPieChart data={stateData} fallbackFill={CHART_SERIES.neutral} />
+                  <LegendLedger
+                    rows={lifecycleStates.map((state) => ({
+                      key: state,
+                      label: (
+                        <>
+                          <span aria-hidden="true" className="font-mono">{soulStateGlyph(state)}</span>{" "}
+                          <span title={state}>{stateLabel(state)}</span>
+                        </>
+                      ),
+                      count: stateCount(state),
+                      swatchClass: STATE_FILL[state] ?? "bg-[oklch(var(--color-ink-subtle))]",
+                    }))}
+                  />
                 )}
-              </div>
+              </section>
 
-              {/* tenant comparison bar chart */}
-              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_civilization")}</h2>
+              <section>
+                <SectionLabel columns="flex justify-between">
+                  <span>{t("dashboard.balance_distribution")}</span>
+                  {stats ? <span>n = {stats.total_souls}</span> : null}
+                </SectionLabel>
                 {loading ? (
-                  <div className="h-[240px] flex items-center justify-center">
-                    <Skeleton className="h-full w-full" />
-                  </div>
+                  <Skeleton className="mt-3 h-36 w-full" />
                 ) : (
-                  <LazyBarChart data={tenantData} dataKey="total" fill={CHART_SERIES.neutral} name={t("dashboard.total_souls")} />
+                  <BalanceHistogram
+                    bars={(stats?.karma_distribution ?? []).map((k) => {
+                      const mid = bucketMidpoint(k.label);
+                      return { label: k.label, count: k.count, tone: mid < 0 ? "negative" : mid > 0 ? "positive" : "zero" };
+                    })}
+                  />
                 )}
-              </div>
-            </div>
-
-            {/* Per-tenant breakdown */}
-            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
-              {/* `md:grid-cols-3` alongside a hardcoded three cards was
-                  self-consistent and wrong together; with four civilizations
-                  the fourth card needs somewhere to go. */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                {/* Driven by the data, not by a fixed count. This read
-                    `[0, 1, 2]`, so the fourth civilization never appeared:
-                    measured 2026-08-29 with four tenants seeded, the page
-                    showed 中国地府 / 欧洲炼狱 / 埃及杜阿特 and no 希腊冥府 --
-                    while the bar chart directly above drew four bars and four
-                    swatches. Two views on one screen answering "how many
-                    civilizations are there" differently.
-
-                    The loading branch keeps a fixed length on purpose: with no
-                    data yet there is nothing to take a count from, and three
-                    skeletons are a guess at the layout rather than a claim
-                    about the world. (The other `[0, 1, 2]` in this file, in
-                    the recent-activity skeleton, is that same kind and stays.) */}
-                {(loading
-                  ? [0, 1, 2]
-                  : (stats?.tenants ?? []).map((_, i) => i)
-                ).map((i) => (
-                  <div key={i} className="bg-[oklch(var(--color-surface-2))] p-4 border border-[oklch(var(--color-hairline))]">
-                    {loading ? (
-                      <div className="space-y-3">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-8 w-16" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </div>
-                    ) : stats?.tenants[i] ? (
-                      <>
-                        <div className="flex items-center gap-2 mb-3">
-                          {/* The same neutral the bars above fall back to, and
-                              that is the point. This swatch is the chart's
-                              legend; when it said `#6b7280` and the bar said
-                              CHART_SERIES.neutral, an unmapped tenant was drawn
-                              in two different greys — the legend disagreeing
-                              with its own chart in the smaller way, one
-                              viewport after the larger one was fixed. The
-                              literal was also fixed across both themes, where
-                              every other neutral in the app moves. */}
-                          <div
-                            className="w-3 h-3 "
-                            style={{
-                              backgroundColor:
-                                CHART_SERIES.balance,
-                            }}
-                          />
-                          <span className="font-medium text-[oklch(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
-                        </div>
-                        <div className="text-md tabular-nums text-[oklch(var(--color-accent-ink))] mb-3">{groupDigits(stats.tenants[i].total_souls)}</div>
-                        <div className="space-y-1">
-                          {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
-                            <div key={state} className="flex justify-between text-xs">
-                              <span title={state} className="text-[oklch(var(--color-ink-muted))]">{stateLabel(state)}</span>
-                              <span style={{ color: STATE_COLORS[state] || CHART_SERIES.neutral }}>{count as number}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Balance distribution and Souls by Realm */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Balance distribution */}
-              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.balance_distribution")}</h2>
-                {loading ? (
-                  <div className="h-[180px] flex items-center justify-center">
-                    <Skeleton className="h-full w-full" />
-                  </div>
-                ) : (
-                  <LazyBarChart data={stats?.karma_distribution ?? []} dataKey="count" nameKey="label" fill={CHART_SERIES.balance} height={180} name={t("dashboard.chart_souls")} />
-                )}
-              </div>
-
-              {/* Souls by Realm */}
-              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_realm")}</h2>
-                {loading ? (
-                  <div className="h-[180px] flex items-center justify-center">
-                    <Skeleton className="h-full w-full" />
-                  </div>
-                ) : realmChartData.length > 0 ? (
-                  <LazyBarChart data={realmChartData} dataKey="count" fill={CHART_SERIES.realm} height={180} name={t("dashboard.chart_souls")} />
-                ) : (
-                  <div className="h-[180px] flex items-center justify-center text-[oklch(var(--color-ink-muted))] text-sm">
-                    {t("dashboard.no_realm_data")}
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Recent Activity - grouped by action type */}
-            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.recent_activity")}</h2>
+            <SectionLabel className="mt-6">{t("dashboard.recent_activity")}</SectionLabel>
+            <div className="mt-2">
               {loading ? (
                 <div className="space-y-3">
                   {[0, 1, 2].map((i) => (
@@ -471,10 +562,28 @@ function DashboardContent() {
                     </div>
                   );
                 })()
-              ) : (
+              ) : error ? null : (
+                // Not on error: "no recent activity" would be the failed request
+                // speaking as if it had succeeded (the alert above says why).
                 <EmptyState title={t("dashboard.no_activity")} />
               )}
             </div>
+              </section>
+            </div>
+
+            {/* Souls by Realm — a bar chart, not a pie; it stays. */}
+            <section>
+              <SectionLabel>{t("dashboard.souls_by_realm")}</SectionLabel>
+              {loading ? (
+                <Skeleton className="mt-3 h-[180px] w-full" />
+              ) : realmChartData.length > 0 ? (
+                <div className="mt-3">
+                  <LazyBarChart data={realmChartData} dataKey="count" fill={CHART_SERIES.realm} height={180} name={t("dashboard.chart_souls")} />
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("dashboard.no_realm_data")}</p>
+              )}
+            </section>
           </>
         ) : (
           <RequireAdmin fallback={<PermissionDenied />}>

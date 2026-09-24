@@ -304,6 +304,13 @@
     "date_problem_marker": {
       "error": "Date error — see soul detail",
       "warning": "Date warning — see soul detail"
+    },
+    "preview": {
+      "open": "Preview",
+      "open_aria": "Preview {{name}} in a side panel",
+      "hint": "J / K next · previous · Esc",
+      "open_full": "Open the full record →",
+      "load_error": "Could not load the details."
     }
   },
   "common": {
@@ -684,7 +691,17 @@
     "no_activity": "No recent activity",
     "no_realm_data": "No realm data available",
     "error_load": "Failed to load statistics",
-    "error_export": "Failed to export statistics"
+    "error_export": "Failed to export statistics",
+    "todo": {
+      "approve_dispatch": "Awaiting my approval · dispatch",
+      "go_approve": "Review →",
+      "judgment_queue": "Judgment queue",
+      "enter": "Enter →",
+      "none": "Nothing waiting",
+      "load_error": "Could not load the count"
+    },
+    "civ_share": "Share",
+    "civ_empty": "No souls yet · register one"
   },
   "ledger": {
     "title": "Deed Statistics",
@@ -1175,7 +1192,25 @@
     },
     "confirm_approve": "Approve this cross-tenant dispatch?",
     "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log.",
-    "proposer_account_removed": "the proposing account has been deleted, so no name is available"
+    "proposer_account_removed": "the proposing account has been deleted, so no name is available",
+    "propose_subtitle": "Send a soul to reside in another civilization for judgment: the target approves, then the target executes.",
+    "soul_from_detail": "Carried from the detail page; cannot be changed",
+    "soul_from_detail_error": "Could not load the soul carried from the detail page. Choose it again here.",
+    "source_label": "Source",
+    "discard": "Discard…",
+    "discard_title": "Discard this dispatch?",
+    "discard_message": "What you have entered will not be kept — dispatches have no drafts.",
+    "discard_keep": "Keep editing",
+    "discard_confirm": "Discard",
+    "flow": {
+      "title": "Approval flow · cross-civilization dispatch",
+      "step_propose": "Source · {{tenant}} submits",
+      "step_approve": "Target · {{tenant}} approves",
+      "step_execute": "Target · executes",
+      "target_unchosen": "not chosen",
+      "pending_submit": "To submit",
+      "not_yet": "Not yet"
+    }
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
@@ -1367,7 +1402,8 @@
   },
   "filter": {
     "all": "All",
-    "clear_all": "Clear All"
+    "clear_all": "Clear All",
+    "clear_one": "Clear the {{name}} filter"
   },
   "death_sync": {
     "title": "Death Sync",

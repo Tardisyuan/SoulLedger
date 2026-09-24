@@ -22,11 +22,16 @@ import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
 
 jest.mock("@soulledger/core/api", () => ({
   dispatchApi: { propose: jest.fn() },
-  soulsApi: { list: jest.fn() },
+  soulsApi: { list: jest.fn(), get: jest.fn() },
   ledgerApi: { statsOverview: jest.fn() },
 }));
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }) }));
+const mockBack = jest.fn();
+let mockSearch = new URLSearchParams();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), back: mockBack }),
+  useSearchParams: () => mockSearch,
+}));
 
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, tenant: { code: "CN_DIYU" } } }),
@@ -97,16 +102,14 @@ function renderPage() {
  * would let a broken debounce pass.
  */
 async function fillValid() {
-  await screen.findByRole("option", { name: /GR_HADES/ });
+  await screen.findByRole("radio", { name: /冥界/ });
 
   const soulInput = screen.getByLabelText(/dispatch\.target_soul/);
   fireEvent.click(soulInput);
   fireEvent.change(soulInput, { target: { value: "孟" } });
   fireEvent.click(await screen.findByRole("option", { name: /孟婆/ }));
 
-  fireEvent.change(screen.getByLabelText(/dispatch\.target_tenant/), {
-    target: { value: "GR_HADES" },
-  });
+  fireEvent.click(screen.getByRole("radio", { name: /冥界/ }));
   fireEvent.change(screen.getByLabelText(/dispatch\.reason/), {
     target: { value: "跨境审判" },
   });
@@ -114,6 +117,7 @@ async function fillValid() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSearch = new URLSearchParams();
   mockedPropose.mockResolvedValue({ data: {} });
 });
 
@@ -222,10 +226,79 @@ describe("proposing a dispatch", () => {
         </QueryClientProvider>
       );
 
-      const tenantField = await screen.findByLabelText(/dispatch\.target_tenant/);
-      await waitFor(() => expect(tenantField).toHaveAttribute("aria-invalid", "true"));
-      expect(screen.getAllByText("dispatch.tenants_error").length).toBeGreaterThan(0);
-      expect(screen.queryByText("dispatch.select_tenant")).not.toBeInTheDocument();
+      // A radio group now, not a select: the group points at its own alert,
+      // and there is no row at all that could read as "nothing to choose".
+      const tenantGroup = await screen.findByRole("group", { name: /dispatch\.target_tenant/ });
+      await waitFor(() => expect(tenantGroup).toHaveAttribute("aria-describedby", "target_tenant_code-error"));
+      expect(screen.getByRole("alert")).toHaveTextContent("dispatch.tenants_error");
+      expect(screen.queryAllByRole("radio")).toHaveLength(0);
     });
+  });
+});
+
+/** 规范 v1「发起移交」, restyled onto what the dispatch API actually has. */
+describe("the dispatch form, 规范 v1", () => {
+  it("lists every civilization with its numbering sample; the source row is disabled and says so", async () => {
+    renderPage();
+    const source = await screen.findByRole("radio", { name: /地府/ });
+    expect(source).toBeDisabled();
+    expect(source.closest("label")).toHaveTextContent("dispatch.source_label");
+    const target = screen.getByRole("radio", { name: /冥界/ });
+    expect(target).toBeEnabled();
+    // GREEK's sample, verbatim — and never on the source row.
+    expect(target.closest("label")).toHaveTextContent("523a");
+    expect(source.closest("label")).not.toHaveTextContent("救濟門");
+  });
+
+  it("the approval-flow panel follows the real state machine: submit, target approves, target executes", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    const flow = screen.getByRole("complementary", { name: "dispatch.flow.title" });
+    expect(flow.querySelectorAll("li")).toHaveLength(3);
+    // No draft step, and no 「存草稿」 button: the API has no draft state.
+    expect(screen.queryByText(/草稿|draft/i)).not.toBeInTheDocument();
+  });
+
+  it("a soul carried from the detail page is shown read-only and is what gets proposed", async () => {
+    mockSearch = new URLSearchParams("soul=38fb6bc2-9e41-4c07-b0a3-5d1e7f2a8c94");
+    (soulsApi.get as jest.Mock).mockResolvedValue({
+      data: { id: "38fb6bc2-9e41-4c07-b0a3-5d1e7f2a8c94", name: "沈青梧" },
+    });
+    renderPage();
+    expect(await screen.findByText("沈青梧")).toBeInTheDocument();
+    expect(screen.getByText("dispatch.soul_from_detail")).toBeInTheDocument();
+    // Read-only means there is no search box to change it with.
+    expect(screen.queryByLabelText(/dispatch\.target_soul/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: /冥界/ }));
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "跨境审判" } });
+    fireEvent.click(screen.getByText("dispatch.submit_proposal"));
+    await waitFor(() =>
+      expect(mockedPropose).toHaveBeenCalledWith(
+        expect.objectContaining({ soul: "38fb6bc2-9e41-4c07-b0a3-5d1e7f2a8c94", target_tenant: 2 })
+      )
+    );
+  });
+
+  it("a carried soul that fails to load falls back to the search field with an error", async () => {
+    mockSearch = new URLSearchParams("soul=gone");
+    (soulsApi.get as jest.Mock).mockRejectedValue(new Error("404"));
+    renderPage();
+    await waitFor(() => expect(screen.getByText("dispatch.soul_from_detail_error")).toBeInTheDocument());
+    expect(screen.getByLabelText(/dispatch\.target_soul/)).toBeInTheDocument();
+  });
+
+  it("放弃… asks first once something is filled in, and leaves at once when nothing is", async () => {
+    renderPage();
+    await screen.findByRole("radio", { name: /冥界/ });
+    fireEvent.click(screen.getByText("dispatch.discard"));
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("dispatch.discard_title")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "写了一半" } });
+    fireEvent.click(screen.getByText("dispatch.discard"));
+    expect(await screen.findByText("dispatch.discard_title")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("dispatch.discard_keep"));
+    expect(mockBack).toHaveBeenCalledTimes(1);
   });
 });
