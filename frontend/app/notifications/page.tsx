@@ -144,7 +144,7 @@ export default function NotificationsPage() {
             {unreadCount > 0 && (
               <Badge
                 tone="accent"
-                shape="pill"
+               
                 className="absolute -top-1 -right-1 justify-center min-w-[18px]"
               >
                 {unreadCount > 99 ? "99+" : unreadCount}
@@ -193,7 +193,7 @@ export default function NotificationsPage() {
           >
             {t("notifications.unread")}
             {unreadCount > 0 && (
-              <Badge tone="accent" shape="pill">
+              <Badge tone="accent">
                 {unreadCount}
               </Badge>
             )}
@@ -319,7 +319,7 @@ export default function NotificationsPage() {
 
               {/* Unread Indicator */}
               {!notification.is_read && (
-                <span aria-hidden="true" className="w-2 h-2 bg-[oklch(var(--color-accent))] rounded-full shrink-0 mt-2" />
+                <span aria-hidden="true" className="w-2 h-2 bg-[oklch(var(--color-accent))] shrink-0 mt-2" />
               )}
             </div>
           </div>

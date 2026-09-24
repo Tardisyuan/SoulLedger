@@ -159,9 +159,6 @@ describe("shape", () => {
     expect(classes.filter((c) => c.startsWith("rounded"))).toEqual([]);
   });
 
-  it("becomes a pill only when asked", () => {
-    expect(classesOf(<Badge shape="pill">TAG</Badge>)).toContain("rounded-full");
-  });
 });
 
 describe("geometry and content", () => {

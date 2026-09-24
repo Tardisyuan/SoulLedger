@@ -49,8 +49,8 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
           <span
             className={
               terminalVariant === "filled"
-                ? `w-3.5 h-3.5 rounded-full mt-1.5 ring-2 ring-[oklch(var(--color-status-settled)/0.35)] ${dotClassName}`
-                : `w-2.5 h-2.5 rounded-full mt-2 ${dotClassName}`
+                ? `w-3.5 h-3.5 mt-1.5 ring-2 ring-[oklch(var(--color-status-settled)/0.35)] ${dotClassName}`
+                : `w-2.5 h-2.5 mt-2 ${dotClassName}`
             }
             aria-hidden="true"
           />

@@ -123,7 +123,7 @@ function LedgerPageContent() {
                   <span className="flex items-center gap-2 min-w-0">
                     <span
                       aria-hidden="true"
-                      className={`w-3 h-3 rounded-full shrink-0 ${STATE_DOT[item.state] ?? "bg-[oklch(var(--color-status-error))]"}`}
+                      className={`w-3 h-3 shrink-0 ${STATE_DOT[item.state] ?? "bg-[oklch(var(--color-status-error))]"}`}
                     />
                     <span title={item.state} className="text-sm text-[oklch(var(--color-ink))] truncate">
                       {stateLabel(item.state, item.label)}
@@ -237,7 +237,7 @@ function LedgerPageContent() {
   );
 }
 
-/** 状态点。identity 物,所以是这一页仅有的 `rounded-full`。 */
+/** 状态点。identity 物,所以是这一页仅有的 ``。 */
 const STATE_DOT: Record<string, string> = {
   ALIVE: "bg-[oklch(var(--color-status-alive))]",
   JUDGING: "bg-[oklch(var(--color-status-judging))]",

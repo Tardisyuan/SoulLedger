@@ -114,7 +114,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="px-2.5 py-1 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-hairline-strong))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-2.5 py-1 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>
@@ -160,7 +160,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                 // is a fact about the current tree, not an invariant; if the
                 // menu ever has to outrank the sidebar by rule rather than by
                 // accident, it needs its own step, not a bigger literal.
-                className="z-sidebar min-w-[168px] border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-4))] shadow-[0_16px_40px_-10px_oklch(0_0_0/0.6)] py-1"
+                className="z-sidebar min-w-[168px] border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))] shadow-overlay py-1"
               >
                 {items.map((item, index) => (
                   <button

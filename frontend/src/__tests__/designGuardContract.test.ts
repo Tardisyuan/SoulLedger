@@ -134,6 +134,10 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     ["design-system/type-scale", "旧档字号(八档时代的名字)", '<div className="text-03" />'],
     ["design-system/spacing-rhythm", "节奏外间距", '<div className="p-5" />'],
     ["design-system/dead-radius", "归零的死圆角", '<div className="rounded-lg" />'],
+    ["design-system/dead-radius", "头像以外的圆角(规范 v1:圆角只给头像)", '<div className="rounded-full" />'],
+    ["design-system/dead-radius", "焦点环圆角(规范 v1:焦点环方角)", '<div className="rounded-focus" />'],
+    ["design-system/no-page-shadow", "页面内阴影(规范 v1 §1.7)", '<div className="shadow-lg" />'],
+    ["design-system/no-page-shadow", "页面内任意值阴影", '<div className="shadow-[0_4px_8px_black]" />'],
     ["design-system/no-raw-palette", "裸调色板", '<div className="bg-red-500" />'],
     // 具名色阶之外的第二种形状。这条规则原本只认 `bg-amber-500`,任意值里的
     // 三元组它一次也没匹配上 —— 而 app/organizations/page.tsx 那 8 处正是这种
@@ -166,8 +170,8 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   // 到那时最省事的做法就是把整条规则删掉。带斜杠的不透明度写法要一并钉住:
   // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
-    'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs rounded-full rounded-focus bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
-    'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-civ-mark-cn)/0.4)] shadow-[0_0_0_1px_oklch(var(--color-hairline))]" />);\n';
+    'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
+    'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-line)/0.4)] shadow-overlay shadow-none shadow-[inset_3px_0_0_oklch(var(--color-ink))]" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
 
@@ -441,8 +445,8 @@ describe("DESIGN.md cannot prescribe against the code", () => {
   it("prescribes no rounded corner, because every shape radius is 0", () => {
     // Recovered from globals.css rather than asserted: if the app ever adopts a
     // real radius, this test stops applying and says so by going red.
-    // SHAPE radii only. `--radius-focus` (2px) and `--radius-full` (9999px) are
-    // deliberate exceptions — a focus ring and a pill — and sweeping them in is
+    // SHAPE radii only. `--radius-full` (9999px, avatars) is the one
+    // deliberate exception (the focus ring went square in 规范 v1) — sweeping it in is
     // what made the first version of this test inert: `allZero` was false, the
     // rule returned early, and a mutation that put `border-radius: 12px` back
     // into DESIGN.md passed. The premise "every radius token is 0" was simply

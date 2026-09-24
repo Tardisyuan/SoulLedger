@@ -368,7 +368,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <div
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto ${
+        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-hairline))] z-drawer shadow-overlay overflow-y-auto ${
           open ? "animate-drawer-in" : "animate-drawer-out"
         }`}
       >

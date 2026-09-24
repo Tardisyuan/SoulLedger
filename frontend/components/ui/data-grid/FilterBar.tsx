@@ -87,7 +87,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           'flex items-center gap-2 h-9 px-3 border text-sm transition-colors',
           active
             ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
-            : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline-strong))] text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))]'
+            : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))]'
         )}
       >
         <span>{activeOption ? activeOption.label : config.label}</span>
@@ -98,7 +98,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           ref={listRef}
           role="listbox"
           aria-label={config.label}
-          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-4))] shadow-[0_16px_40px_-10px_oklch(0_0_0/0.6)] py-1"
+          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))] shadow-overlay py-1"
         >
           {config.options.map((option, index) => (
             <button

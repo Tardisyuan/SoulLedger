@@ -55,10 +55,7 @@ export function MenuRowCells({
       <td className="px-4 py-3">
         <div className="flex flex-wrap gap-1">
           {menu.roles.map((role) => (
-            /* `pill`, and this is the one place on the page that
-               earns it: a role IS an identity token, which is the
-               documented meaning of a round badge here. */
-            <Badge key={role} tone="accent" shape="pill">
+            <Badge key={role} tone="accent">
               {t(`users.roles.${role}`)}
             </Badge>
           ))}

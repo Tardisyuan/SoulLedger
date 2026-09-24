@@ -47,7 +47,7 @@ export function ConnectionStatus() {
     <div className="flex items-center gap-2">
       <span
         aria-hidden="true"
-        className={`w-2 h-2 rounded-full ${pulse ? "animate-pulse" : ""}`}
+        className={`w-2 h-2 ${pulse ? "animate-pulse" : ""}`}
         style={{ backgroundColor: `oklch(var(${token}))` }}
       />
       {/* `role="status"`: the link dropping is a change the operator did not
