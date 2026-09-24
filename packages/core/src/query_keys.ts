@@ -156,6 +156,7 @@ export const socialModerationKeys = {
     ["social-moderation", kind, params] as const,
   words: (params: Record<string, string | number | undefined>) => ["social-moderation", "words", params] as const,
   mutes: (params: Record<string, string | number | undefined>) => ["social-moderation", "mutes", params] as const,
+  handled: (params: Record<string, string | number | undefined>) => ["social-moderation", "handled", params] as const,
 };
 
 /** The hall inbox (officer side of soul chat). One root; a reply invalidates all of it. */

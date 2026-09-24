@@ -8381,6 +8381,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModerationError'
           description: ''
+  /api/v1/social-moderation/handled/:
+    get:
+      operationId: v1_social_moderation_handled_list
+      description: |-
+        「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+
+        * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
+          (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
+        * 删除:软删除且删除人不是作者本人 —— 作者删自己的东西不是审核处理。读 `deleted_*`。
+          删除的行不在这里恢复:帖子与评论不在回收站的登记表里,本分支不另开恢复路径。
+
+        两个模型各自过 `scope_to_tenant`,再 UNION 成一个查询 —— 分页与计数在数据库里做。
+      parameters:
+      - in: query
+        name: handling
+        schema:
+          type: string
+          enum:
+          - DELETED
+          - HIDDEN
+        description: 只看隐藏或只看删除
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - COMMENT
+          - POST
+        description: 只看帖子或只看评论
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHandledContentList'
+          description: ''
   /api/v1/social-moderation/mutes/:
     get:
       operationId: v1_social_moderation_mutes_list
@@ -8462,7 +8520,7 @@ paths:
   /api/v1/social-moderation/mutes/{id}/lift/:
     post:
       operationId: v1_social_moderation_mutes_lift_create
-      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      description: 解除。通知走既有的事件总线:`SOCIAL_UNMUTED` 定向发给被禁言的账号(WebSocket)。
       parameters:
       - in: path
         name: id
@@ -8892,7 +8950,9 @@ paths:
   /api/v1/social-moderation/sensitive-words/:
     get:
       operationId: v1_social_moderation_sensitive_words_list
-      description: 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+      description: |-
+        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
       parameters:
       - name: ordering
         required: false
@@ -8925,7 +8985,9 @@ paths:
           description: ''
     post:
       operationId: v1_social_moderation_sensitive_words_create
-      description: 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+      description: |-
+        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
       tags:
       - v1
       requestBody:
@@ -8970,7 +9032,9 @@ paths:
   /api/v1/social-moderation/sensitive-words/{id}/:
     delete:
       operationId: v1_social_moderation_sensitive_words_destroy
-      description: 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+      description: |-
+        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
       parameters:
       - in: path
         name: id
@@ -8986,6 +9050,59 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/social-moderation/sensitive-words/batch-delete/:
+    post:
+      operationId: v1_social_moderation_sensitive_words_batch_delete_create
+      description: |-
+        同单条删除一样的码名与租户范围;全有或全无,一次最多 200 条。任何一个 id 不在本文明
+        词表里 → 404,`missing` 列出它们,一条都不删。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchDelete'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchDelete'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchDelete'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWordBatchDeleteResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
   /api/v1/social/comments/:
     get:
       operationId: v1_social_comments_list
@@ -14923,6 +15040,54 @@ components:
       - kind
       - poena
       - poena_missing
+    HandledContent:
+      type: object
+      description: |-
+        「已处理」的一行,帖子与评论同一形状(见 moderation_views.HandledContentViewSet)。
+
+        * `handling`:HIDDEN 可经 `POST {posts|comments}/{id}/restore/` 恢复可见;DELETED 走回收站的
+          规则(帖子与评论目前不在回收站里,所以没有恢复入口)。
+        * `handled_by` 为空:系统处理(命中 HIDE 动作的敏感词,`reason` 是 `sensitive_word:<词>`),
+          或处理人的账号已不存在。
+        * `post`:评论所在的帖子;帖子行是它自己。
+      properties:
+        type:
+          $ref: '#/components/schemas/SocialHandledTypeEnum'
+        id:
+          type: string
+          format: uuid
+        post:
+          type: string
+          format: uuid
+        author:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+        excerpt:
+          type: string
+        handling:
+          $ref: '#/components/schemas/SocialHandlingEnum'
+        reason:
+          type: string
+        handled_by:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          nullable: true
+          readOnly: true
+        handled_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - author
+      - excerpt
+      - handled_at
+      - handled_by
+      - handling
+      - id
+      - post
+      - reason
+      - type
     InboxMessage:
       type: object
       description: 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。
@@ -17313,6 +17478,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Follow'
+    PaginatedHandledContentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HandledContent'
     PaginatedInitialCredentialList:
       type: object
       required:
@@ -20891,6 +21079,9 @@ components:
       - role
     SensitiveWord:
       type: object
+      description: |-
+        `category` 空串 = 未分类(0007 之前加的词);中文名在 i18n 包 `social_moderation.word_category`。
+        `hits_30d` 只在列表里有值(`moderation.with_recent_hits` 注解),新建返回 0。
       properties:
         id:
           type: string
@@ -20899,6 +21090,18 @@ components:
         word:
           type: string
           maxLength: 50
+        category:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/SocialSensitiveWordCategoryEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        action:
+          allOf:
+          - $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
+          default: REVIEW
+        hits_30d:
+          type: integer
+          readOnly: true
         created_by:
           allOf:
           - $ref: '#/components/schemas/ModerationAuthor'
@@ -20911,8 +21114,28 @@ components:
       required:
       - created_at
       - created_by
+      - hits_30d
       - id
       - word
+    SensitiveWordBatchDelete:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 200
+          minItems: 1
+      required:
+      - ids
+    SensitiveWordBatchDeleteResult:
+      type: object
+      properties:
+        deleted:
+          type: integer
+      required:
+      - deleted
     SentenceNode:
       type: object
       properties:
@@ -21287,6 +21510,22 @@ components:
       description: |-
         * `error` - error
         * `warning` - warning
+    SocialHandledTypeEnum:
+      enum:
+      - POST
+      - COMMENT
+      type: string
+      description: |-
+        * `POST` - Post
+        * `COMMENT` - Comment
+    SocialHandlingEnum:
+      enum:
+      - HIDDEN
+      - DELETED
+      type: string
+      description: |-
+        * `HIDDEN` - Hidden
+        * `DELETED` - Deleted
     SocialModerationStatusEnum:
       enum:
       - PUBLISHED
@@ -21299,6 +21538,9 @@ components:
         * `HIDDEN` - Hidden
     SocialMute:
       type: object
+      description: |-
+        `created_at` 是开始,`until` 是结束(没有永久禁言:天数 1–365,`until` 永不为空)。
+        `created_by` 是执行人,`lifted_by` 是解除人;两者都可能为空(账号被删)。
       properties:
         id:
           type: string
@@ -21319,9 +21561,19 @@ components:
           type: string
           format: date-time
           readOnly: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+          nullable: true
         lifted_at:
           type: string
           format: date-time
+          readOnly: true
+          nullable: true
+        lifted_by:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
           readOnly: true
           nullable: true
         is_active:
@@ -21329,9 +21581,11 @@ components:
           readOnly: true
       required:
       - created_at
+      - created_by
       - id
       - is_active
       - lifted_at
+      - lifted_by
       - reason
       - until
       - user
@@ -21381,6 +21635,30 @@ components:
         * `POST` - Post
         * `COMMENT` - Comment
         * `USER` - User
+    SocialSensitiveWordActionEnum:
+      enum:
+      - REVIEW
+      - HIDE
+      - MASK
+      type: string
+      description: |-
+        * `REVIEW` - Send to review
+        * `HIDE` - Hide
+        * `MASK` - Mask with ***
+    SocialSensitiveWordCategoryEnum:
+      enum:
+      - PRIVACY
+      - ABUSE
+      - INDUCEMENT
+      - CONFIDENTIAL
+      - OFFICIAL_DEFAMATION
+      type: string
+      description: |-
+        * `PRIVACY` - Privacy
+        * `ABUSE` - Abuse
+        * `INDUCEMENT` - Boundary-crossing inducement
+        * `CONFIDENTIAL` - Confidential
+        * `OFFICIAL_DEFAMATION` - Defaming officials
     Soul:
       type: object
       description: |-
