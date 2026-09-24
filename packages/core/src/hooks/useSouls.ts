@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { soulsApi, type SoulInput } from "../api/index";
+import { soulsApi, type SoulBatchRecycleRequest, type SoulInput } from "../api/index";
 import { notify } from "../platform/index";
-import { soulKeys } from "../query_keys";
+import { recycleBinKeys, soulKeys } from "../query_keys";
 
 // ── Souls ───────────────────────────────────────────────────────────
 
@@ -133,6 +133,30 @@ export function useDeleteSoul() {
       // nothing at all, so the safety net existed and was undiscoverable.
       // The wording names what the backend did, the way the menus delete
       // confirmation already does ("移至回收站", never "删除").
+      notify("souls.detail.delete_to_recycle_bin", "success");
+    },
+    onError: () => {
+      notify("souls.detail.error_delete", "error");
+    },
+  });
+}
+
+/**
+ * POST /souls/batch-recycle/ — several souls to the recycle bin, all or none.
+ *
+ * On success the soul queries (list, and the details of souls now gone) and
+ * the recycle bin are invalidated. On error NOTHING was recycled, so nothing
+ * is invalidated; `soulBatchRecycleErrorOf(error)` gives the ids the backend
+ * refused (404 `not_found` / 409 `not_deletable`) for the caller to show.
+ * The toasts are useDeleteSoul's keys: same action, same words.
+ */
+export function useBatchRecycleSouls() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SoulBatchRecycleRequest) => soulsApi.batchRecycle(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+      qc.invalidateQueries({ queryKey: recycleBinKeys.all });
       notify("souls.detail.delete_to_recycle_bin", "success");
     },
     onError: () => {
