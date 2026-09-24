@@ -705,6 +705,8 @@
       "judgment_queue": "Judgment queue",
       "enter": "Enter →",
       "none": "Nothing waiting",
+      "death_sync_anomaly": "Death sync anomalies",
+      "go_view": "View →",
       "load_error": "Could not load the count"
     },
     "civ_share": "Share",
@@ -1448,6 +1450,7 @@
     "subtitle": "External death registrations and sync status",
     "registrations": "Registrations",
     "no_registrations": "No death registrations yet",
+    "anomaly_count": "{{count}} failed",
     "requested": "Requested",
     "duration": "Duration",
     "reference": "Reference",

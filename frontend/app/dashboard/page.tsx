@@ -8,7 +8,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { ledgerApi, LedgerStatsOverview } from "@soulledger/core/api";
 import Link from "next/link";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
-import { dispatchApi, judgmentApi } from "@soulledger/core/api";
+import { deathSyncApi, dispatchApi, judgmentApi } from "@soulledger/core/api";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { LegendLedger, sharePercent } from "@/src/components/dashboard/LegendLedger";
 import { BalanceHistogram } from "@/src/components/dashboard/BalanceHistogram";
@@ -127,15 +127,17 @@ function TodoCell({
  * see dispatchApi.proposed), and `/judgment/next/`'s `total` is the queue's own
  * count. A cell only exists for someone who may open where it points.
  *
- * 死亡同步异常 is not here: `/death-sync/registrations/` has no status filter,
- * so the only count available is of one page — the truncation this repo has
- * already paid for once. It needs a server-side count first.
+ * 死亡同步异常 counts through `/death-sync/registrations/summary/`, which also
+ * names the status it counted, so the link lands on exactly those rows. The
+ * page's endpoints are ADMIN-only (`IsAdminPermission`, no death_sync codename),
+ * so the cell is gated on the role, not on a permission.
  */
 function DashboardTodo() {
   const { t } = useI18n();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const canDispatch = hasPermission("dispatch.read");
   const canJudge = hasPermission("judgment.read");
+  const canDeathSync = isAdmin;
   const dispatchQ = useQuery({
     queryKey: ["dashboard", "todo", "dispatch-proposed"],
     queryFn: async () => (await dispatchApi.proposed({ page: "1" })).data.count,
@@ -148,9 +150,16 @@ function DashboardTodo() {
     enabled: canJudge,
     staleTime: 60_000,
   });
-  if (!canDispatch && !canJudge) return null;
+  const deathSyncQ = useQuery({
+    queryKey: ["dashboard", "todo", "death-sync"],
+    queryFn: async () => (await deathSyncApi.summary()).data,
+    enabled: canDeathSync,
+    staleTime: 60_000,
+  });
+  const cells = [canDispatch, canJudge, canDeathSync].filter(Boolean).length;
+  if (cells === 0) return null;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 border-y border-[oklch(var(--color-block))]">
+    <div className={`grid grid-cols-1 ${cells === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} border-y border-[oklch(var(--color-block))]`}>
       {canDispatch && (
         <TodoCell
           label={t("dashboard.todo.approve_dispatch")}
@@ -169,6 +178,16 @@ function DashboardTodo() {
           isError={queueQ.isError}
           href="/judgment/queue"
           linkText={t("dashboard.todo.enter")}
+        />
+      )}
+      {canDeathSync && (
+        <TodoCell
+          label={t("dashboard.todo.death_sync_anomaly")}
+          count={deathSyncQ.data?.anomaly_count}
+          isLoading={deathSyncQ.isLoading}
+          isError={deathSyncQ.isError}
+          href={`/death-sync?status=${encodeURIComponent(deathSyncQ.data?.anomaly_status ?? "")}`}
+          linkText={t("dashboard.todo.go_view")}
         />
       )}
     </div>

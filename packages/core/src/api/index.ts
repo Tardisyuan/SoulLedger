@@ -111,5 +111,8 @@ export {
   type SoulContactUpdate,
 } from "./soul-accounts";
 
+// Death sync (browser read side)
+export { deathSyncApi, type DeathRegistration, type DeathRegistrationStatus, type DeathRegistrationSummary } from "./death-sync";
+
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";
