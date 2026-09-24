@@ -104,7 +104,7 @@ export default function RecycleBinPage() {
             { key: "label", header: t("recycle_bin.col_item") },
             { key: "dependents", header: t("recycle_bin.col_dependents") },
             { key: "deleted", header: t("recycle_bin.col_deleted") },
-            { key: "action", header: t("recycle_bin.col_action"), align: "right" },
+            { key: "action", header: t("recycle_bin.col_action"), align: "right", srOnlyHeader: true },
           ]}
           data={entries}
           /* Constant: this table has no filters, no sort and no pagination, so
@@ -145,14 +145,14 @@ export default function RecycleBinPage() {
                     })
                   : <DomainNumber value={entry.dependent_count} />}
               </td>
-              <td className="px-4 py-3 text-xs text-[oklch(var(--color-ink-subtle))]">
+              <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
                 <DomainText value={entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : null} />
                 {entry.deleted_by && (
                   <div>{t("recycle_bin.deleted_by", { user: entry.deleted_by })}</div>
                 )}
               </td>
               <td className="px-4 py-3 text-right">
-                <div className="flex justify-end gap-3">
+                <div className="flex justify-end gap-1">
                   <RequirePermission permissions="recycle_bin.restore">
                     <Button
                       variant="ghost"

@@ -4,12 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@soulledger/core/api";
-import { ListSkeleton } from "@/components/ui/skeleton";
+import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
-import { EmptyState } from "@/src/components/ui/EmptyState";
-import { QueryError } from "@/src/components/ui/PageError";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -30,7 +27,6 @@ function TenantsPageContent() {
   const tenants = data?.results ?? [];
   const count = data?.count ?? 0;
   const totalPages = data ? Math.ceil(count / PAGE_SIZE) : 0;
-  const showPagination = !isLoading && tenants.length > 0;
 
   return (
     <PageShell
@@ -42,96 +38,44 @@ function TenantsPageContent() {
         </>
       }
       subtitle={t("tenants.subtitle") || "Tenant management"}
-      isLoading={isLoading}
-      skeleton={<ListSkeleton count={5} />}
-      // A failed request used to fall straight through to the empty state,
-      // so "the server is down" and "there are no tenants" rendered the same
-      // words. Measured 2026-08-29: identical page text, character for
-      // character, between a 500 and an empty list.
-      isEmpty={isError || tenants.length === 0}
-      empty={
-        isError ? (
-          <QueryError onRetry={() => refetch()} />
-        ) : (
-          <EmptyState
-            title={t("tenants.list")}
-            reason={t("tenants.no_tenants")}
-          />
-        )
-      }
-      pagination={
-        showPagination
-          ? {
-              // The two halves are supplied separately rather than handing the
-              // slot a whole `<Pagination>`: that component is one atomic row
-              // (`src/components/ui/Pagination.tsx:19` — `flex items-center
-              // justify-between mt-4 px-2`) and this slot is already that row.
-              // See the report; the short version is that nesting them either
-              // collapses the inner `justify-between` inside the slot's
-              // `shrink-0` controls cell, or drags `mt-4` in and drops the
-              // buttons 8px below the count text it is supposed to sit level
-              // with. Pagination.tsx is off-limits this wave, so the page gives
-              // the slot what the slot asks for.
-              count: (
-                <p className="text-sm text-[oklch(var(--color-ink-muted))]">
-                  {t("pagination.info", {
-                    page: String(page),
-                    total: String(totalPages),
-                    count: String(count),
-                  })}
-                </p>
-              ),
-              controls: (
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    ← {t("common.prev")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage(p => p + 1)}
-                    disabled={page >= totalPages}
-                  >
-                    {t("common.next")} →
-                  </Button>
-                </div>
-              ),
-            }
-          : undefined
-      }
     >
-      <div className="space-y-3">
-        {tenants.map((tenant: Tenant) => {
-          return (
-            <div
-              key={tenant.id}
-              className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center justify-between gap-4"
-            >
-              <div className="min-w-0">
-                <p title={tenant.display_name} className="text-sm font-medium text-[oklch(var(--color-ink))] truncate">{tenant.display_name}</p>
-                <p title={tenant.code} className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] mt-1 truncate">
-                  {t("tenants.code") || "Code"}: {tenant.code}
-                </p>
-              </div>
+      {/* 账页(规范 v1 §2):卡片列换成表格 —— 名称、编号(等宽)、状态徽章。
+          加载 / 失败 / 空三种状态交给 DataTable:失败时是「! 加载失败」加重试,
+          空时是一句话,两者字面不同(2026-08-29 量过:此前 500 与空列表逐字相同)。
+          分页也由它渲染,不再往壳的 `pagination` 槽里手拼上一页 / 下一页。
+          没有租户详情路由,所以不是整行链接。 */}
+      <DataTable<Tenant>
+        caption={t("tenants.list")}
+        columns={[
+          { key: "display_name", header: t("menus.name") },
+          { key: "code", header: t("tenants.code") || "Code" },
+          { key: "status", header: t("menus.status") },
+        ]}
+        data={tenants}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        keyExtractor={(tenant) => String(tenant.id)}
+        renderRow={(tenant) => (
+          <>
+            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">{tenant.display_name}</td>
+            <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{tenant.code}</td>
+            <td className="px-4 py-3">
               {/* `is_active` is in the same response and was going unread: every
                   tenant rendered a hardcoded green "Active", so a disabled
-                  tenant looked enabled. The literal was not translated either,
-                  which put a bare English word in the 简体中文 and Kemet
-                  interfaces. */}
-              <Badge tone={tenant.is_active ? "success" : "neutral"}>
+                  tenant looked enabled. */}
+              <Badge tone={tenant.is_active ? "success" : "neutral"} glyph={tenant.is_active ? "✓" : "○"}>
                 {tenant.is_active ? t("tenants.active") : t("tenants.inactive")}
               </Badge>
-            </div>
-          );
-        })}
-      </div>
+            </td>
+          </>
+        )}
+        emptyMessage={t("tenants.no_tenants")}
+        page={page}
+        totalPages={totalPages}
+        totalCount={count}
+        onPageChange={setPage}
+      />
     </PageShell>
   );
 }
