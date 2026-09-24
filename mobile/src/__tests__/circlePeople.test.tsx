@@ -228,7 +228,7 @@ describe("changing my circle name", () => {
     fireEvent.changeText(screen.getByTestId("name-input"), " 砚舟 ");
     fireEvent.press(screen.getByTestId("name-save"));
     await waitFor(() => expect(profileReads(calls)).toBe(2));
-    await waitFor(() => expect(screen.queryByTestId("rename")).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("rename")).not.toBeOnTheScreen());
     expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ display_name: "砚舟" }]);
     expect(profileReads(calls)).toBe(2);
   });

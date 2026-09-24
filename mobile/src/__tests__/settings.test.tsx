@@ -344,7 +344,7 @@ describe("notification settings", () => {
     fireEvent.press(await screen.findByTestId("primer-yes"));
     await screen.findByTestId("settings");
     expect(system.requests).toBe(1);
-    await waitFor(() => expect(screen.queryByTestId("enable-push")).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("enable-push")).not.toBeOnTheScreen());
   });
 
   it("with push available, the primer is offered once after sign-in — not again", async () => {

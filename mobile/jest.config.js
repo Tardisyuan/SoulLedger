@@ -12,6 +12,8 @@ module.exports = {
   testMatch: ["**/*.test.ts", "**/*.test.tsx"],
   // AfterEnv, not setupFiles: the act guard at the bottom needs afterEach.
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  // Above the 5 s findBy/waitFor budget set in jest.setup.js, so a miss fails on its own message.
+  testTimeout: 15_000,
   // One React for the whole run — the one this workspace resolves — so a
   // hoisted package can never pick up a different copy; see metro.config.js.
   moduleNameMapper: {
