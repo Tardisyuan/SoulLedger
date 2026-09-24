@@ -82,7 +82,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
 
   return (
     <li
-      className={`p-4 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-hairline))] last:border-b-0 ${JOB_ROW_GRID}${job.enabled ? "" : " opacity-75"}`}
+      className={`p-4 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${JOB_ROW_GRID}${job.enabled ? "" : " opacity-75"}`}
       data-job-id={job.id}
     >
       <div className="min-w-0 space-y-1">

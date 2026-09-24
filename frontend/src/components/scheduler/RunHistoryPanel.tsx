@@ -5,6 +5,7 @@ import { PAGE_SIZE, type ScheduledJob, type TaskRunStatus, type TaskRunTrigger }
 import { useTaskRuns } from "@soulledger/core/hooks/useScheduler";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { Pagination } from "@/src/components/ui/Pagination";
@@ -117,16 +118,9 @@ export function RunHistoryPanel({ jobs, jobName, showTenant, realtimeConnected }
     <div className="space-y-4" data-testid="run-history">
       <div role="group" aria-label={t("scheduler.runs.status_filter")} className="flex flex-wrap gap-2">
         {RUN_STATUSES.map((s) => (
-          <Button
-            key={s}
-            type="button"
-            size="sm"
-            variant={statuses.includes(s) ? "primary" : "secondary"}
-            aria-pressed={statuses.includes(s)}
-            onClick={() => toggleStatus(s)}
-          >
+          <FilterChipToggle key={s} pressed={statuses.includes(s)} onPressedChange={() => toggleStatus(s)}>
             {t(`scheduler.status.${s}`)}
-          </Button>
+          </FilterChipToggle>
         ))}
       </div>
 
@@ -190,7 +184,7 @@ export function RunHistoryPanel({ jobs, jobName, showTenant, realtimeConnected }
         <EmptyState title={filtered ? t("scheduler.history.empty") : t("scheduler.runs.empty")} />
       ) : (
         <>
-          <ul className="divide-y divide-[oklch(var(--color-hairline))]" data-testid="history-runs">
+          <ul className="divide-y divide-[oklch(var(--color-rule))]" data-testid="history-runs">
             {results.map((run) => (
               <TaskRunItem
                 key={run.id}
