@@ -16,7 +16,7 @@ from apps.actors.mythology.actors_egyptian import (
     ASSESSOR_REALM_CODE,
     ASSESSOR_SOURCE_EDITION,
 )
-from apps.actors.mythology.realms import REALM_PARENTS
+from apps.actors.mythology.realms import REALM_PARENTS, REALM_TOPOLOGY
 from apps.actors.mythology.statutes_egyptian import (
     NEGATIVE_CONFESSION_FIELD,
     NEGATIVE_CONFESSION_SOURCE,
@@ -26,9 +26,18 @@ from apps.realms.models import Realm
 from apps.souls.models import CIVILIZATION_TENANT
 from apps.tenants.models import Tenant
 
+#: The route-topology columns (REALM_TOPOLOGY in realms.py). Compared like the
+#: rest, and additionally *filled in* without `--update` where the database
+#: holds NULL — see `_upsert`'s `fill_if_null`.
+#: `capacity` is a topology column too and is deliberately not here: see NOT_SEEDED.
+REALM_TOPOLOGY_FIELDS = (
+    "order", "kind", "level", "sublevel", "region",
+    "hour", "gate", "is_judgment_hall", "fork",
+)
 REALM_FIELDS = (
     "name_local", "name_zh", "name_en", "name_egy", "realm_type", "tier",
     "description", "memory_reset_mechanism", "is_eternal", "cycle_limit",
+    *REALM_TOPOLOGY_FIELDS,
 )
 ACTOR_FIELDS = (
     "name_zh", "name_en", "name_egy", "role", "realm",
@@ -79,7 +88,7 @@ STATUTE_FIELDS = (
 #: while `icon_url` stays — reported as `unchanged`.
 #:
 #: The fix for `is_active` was to bring it *into* the comparison set (it has
-#: real consumers — see the comment in `ACTOR_FIELDS`). These three are the
+#: real consumers — see the comment in `ACTOR_FIELDS`). These four are the
 #: opposite call, written down rather than left as an omission that looks the
 #: same either way:
 #:
@@ -87,6 +96,10 @@ STATUTE_FIELDS = (
 #:   an icon; a deployment that sets one is not drifting from the corpus.
 #: * `Actor.is_deleted` / soft-delete columns — retirement is
 #:   `actors/0010`'s job and `seed_mythology` must not undo it.
+#: * `Realm.capacity` — **operational**, like `icon_url`. No source gives a
+#:   court or a circle a head count; a deployment that sets one is running its
+#:   own office, and a seeder that compared it would reset that to NULL on
+#:   every `--update`.
 #: * `Realm.is_judgment_required` — **migration-managed**. `realms/0013` sets
 #:   it to False for specific realms and `realms/0014`'s docstring says it is
 #:   "deliberately not set here"; folding it into the seed table would make
@@ -97,7 +110,7 @@ STATUTE_FIELDS = (
 #: later cannot land in neither.
 NOT_SEEDED = {
     "Actor": {"icon_url"},
-    "Realm": {"is_judgment_required"},
+    "Realm": {"is_judgment_required", "capacity"},
 }
 
 #: Columns every model here carries for reasons that have nothing to do with
@@ -182,12 +195,15 @@ class MythologySeeder:
                 "memory_reset_mechanism": memory_reset,
                 "is_eternal": is_eternal,
                 "cycle_limit": cycle_limit,
+                **dict.fromkeys(REALM_TOPOLOGY_FIELDS),
+                **REALM_TOPOLOGY.get(realm_code, {}),
             }
             self._upsert(
                 model=Realm,
                 lookup={"realm_code": realm_code},
                 values=values,
                 compare_fields=("civilization", *REALM_FIELDS),
+                fill_if_null=REALM_TOPOLOGY_FIELDS,
                 tenant=tenant,
                 identity=f"Realm {realm_code}",
                 do_update=do_update,
@@ -544,12 +560,19 @@ class MythologySeeder:
     # Shared upsert
     # ------------------------------------------------------------------
     def _upsert(self, *, model, lookup, values, compare_fields, tenant, identity,
-                do_update, stats):
+                do_update, stats, fill_if_null=()):
         """Create-or-reconcile one row, keyed on `lookup`.
 
         `all_objects` rather than `objects`, so a soft-deleted row is *seen*
         (and deliberately left alone) instead of being invisible and then
         colliding with the unique constraint on insert.
+
+        `fill_if_null` names columns that are written without `--update` when
+        the database holds NULL and the seed has a value — the rule a NULL
+        tenant and a NULL `parent_realm` already follow: a column that was
+        added empty (realms/0019's topology) is not somebody's decision being
+        overwritten. A column that holds a *different* value still needs
+        `--update`.
         """
         existing = list(model.all_objects.filter(**lookup))
         alive = [obj for obj in existing if not obj.is_deleted]
@@ -586,19 +609,26 @@ class MythologySeeder:
         # that in is not an edit to the mythology, it is the row finally becoming
         # visible to the tenant that owns it, so it happens regardless of
         # --update.
-        tenant_only = changed == ["tenant"]
+        fillable = [
+            field for field in changed
+            if field in fill_if_null and getattr(obj, field, None) is None
+        ]
+        structural_only = all(field == "tenant" or field in fillable for field in changed)
 
         if not changed:
             stats.unchanged += 1
             return
 
-        if do_update or tenant_only:
-            what = "tenant" if tenant_only else ", ".join(changed)
+        if do_update or structural_only:
+            what = ", ".join(changed)
             self.stdout.write(f"  ~ {identity}: {what}")
             stats.updated += 1
             if do_update:
                 for field, value in values.items():
                     setattr(obj, field, value)
+            else:
+                for field in fillable:
+                    setattr(obj, field, values[field])
             obj.tenant = tenant
             obj.save()
             return

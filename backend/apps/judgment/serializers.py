@@ -9,6 +9,7 @@ from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.judgment.models import Judgment, JudgmentCitation, Statute, open_judgments
 from apps.ledger.serializers import LedgerSummarySerializer
+from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
 from apps.souls.models import SoulState
@@ -111,12 +112,19 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     citations = JudgmentCitationSerializer(many=True, read_only=True)
 
     validate_judge = tenant_scoped("judge")
+    # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
+    # (apps/core/tenant_fields.py):与 judge 相同,租户在 `validate_realm_id` 里查。
+    # 与 `court` 互不推导:两者都可以写,谁也不覆盖谁。
+    realm_id = serializers.PrimaryKeyRelatedField(
+        source="realm", queryset=Realm.objects.all(), allow_null=True, required=False,
+    )
+    validate_realm_id = tenant_scoped("realm")
 
     class Meta:
         model = Judgment
         fields = [
             "id", "soul", "soul_name", "civilization", "judge", "judge_name",
-            "court", "evidence_json", "confession", "verdict", "notes",
+            "court", "realm_id", "evidence_json", "confession", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at",
             "kind", "amends_plan_id",

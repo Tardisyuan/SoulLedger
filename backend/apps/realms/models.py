@@ -3,6 +3,7 @@ Realm reference data — cross-civilization afterlife realms.
 """
 import uuid
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.models import AuditUserFields
@@ -45,6 +46,34 @@ class RealmType(models.TextChoices):
     PURGATORY = "PURGATORY", "Purgatory / Intermediate"
     BLISS = "BLISS", "Heaven / Bliss"
     NEUTRAL = "NEUTRAL", "Neutral / Between"
+
+
+class RealmKind(models.TextChoices):
+    """中国(地府「一线」)一站的种类。其余三个文明不用,留空(null)。"""
+    HALL = "HALL", "殿"
+    GATE = "GATE", "门"
+    LAYER = "LAYER", "层"
+    PATH = "PATH", "道"
+
+
+class CommediaRegion(models.TextChoices):
+    """欧洲(《神曲》「漏斗」)一站属于哪一部:地狱篇 / 炼狱篇 / 天堂篇。"""
+    INFERNO = "INFERNO", "地狱"
+    PURGATORIO = "PURGATORIO", "炼狱"
+    PARADISO = "PARADISO", "天堂"
+
+
+class GreekFork(models.TextChoices):
+    """希腊(冥府「三岔」)一站在审判岔路的哪一支。
+
+    左 / 右出自柏拉图《理想国》X 614c-d:正义者向右、向上,不义者向左、向下 ——
+    这是 left/right 的出处,不是设计稿的约定。MIDDLE 按设计稿的契约保留,但**没有
+    任何种子行取它**:中间那条(常说的 Asphodel)是现代教科书的三分法,见
+    apps/actors/mythology/realms.py GREEK_REALMS 的说明。
+    """
+    LEFT = "LEFT", "左(塔尔塔罗斯)"
+    MIDDLE = "MIDDLE", "中"
+    RIGHT = "RIGHT", "右(至福岛)"
 
 
 class Realm(AuditUserFields, models.Model):
@@ -103,6 +132,59 @@ class Realm(AuditUserFields, models.Model):
     )
     cycle_limit = models.IntegerField(null=True, blank=True)
 
+    # ------------------------------------------------------------------
+    # 行程拓扑(官员端「行程拓扑」图所需;契约见 cloud-reports/realm-path-fields.md)。
+    #
+    # 全部可空:一个文明用不到的列就是 null,而 null 的意思是「不适用或没有出处」,
+    # 不是 0。已有的列不重复:契约里的 id / parent_id / code / is_eternal 就是
+    # `id` / `parent_realm` / `realm_code` / `is_eternal`。
+    #
+    # `order` 不是 `tier`。`tier` 是「同一 realm_type 内的轻重 / 福报名次」(Meta 的
+    # ordering 就是按 civilization, realm_type, tier 排),所以 DY_01_HEAVEN、
+    # DY_00_PURGATORY 与第一殿都是 tier 1;`order` 是一条路线上的先后,只给路线上
+    # 真的有位置的行。对十殿两者恰好相等,对别的行不相等。
+    # ------------------------------------------------------------------
+    order = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="Position along the civilization's route (Chinese: court number 1-10)",
+    )
+    kind = models.CharField(
+        max_length=10, null=True, blank=True, choices=RealmKind.choices,
+        help_text="Chinese only: 殿 / 门 / 层 / 道",
+    )
+    capacity = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="How many souls the realm holds at once; null = not recorded",
+    )
+    level = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(9)],
+        help_text="European only: circle (Inferno) or terrace (Purgatorio) number",
+    )
+    sublevel = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="European only: ring (7th circle) or bolgia (8th circle) number",
+    )
+    region = models.CharField(
+        max_length=12, null=True, blank=True, choices=CommediaRegion.choices,
+        help_text="European only: which cantica the realm belongs to",
+    )
+    hour = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)],
+        help_text="Egyptian only: hour of the night, 1-12",
+    )
+    gate = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="Egyptian only: gate number",
+    )
+    is_judgment_hall = models.BooleanField(
+        null=True, blank=True,
+        help_text="Egyptian only: the hall where the heart is weighed; null elsewhere",
+    )
+    fork = models.CharField(
+        max_length=6, null=True, blank=True, choices=GreekFork.choices,
+        help_text="Greek only: which road out of the judgment place",
+    )
+
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.CASCADE,
@@ -138,3 +220,61 @@ class Realm(AuditUserFields, models.Model):
             name_en=self.name_en,
             name_egy=self.name_egy,
         )
+
+
+class SoulPathEntry(models.Model):
+    """灵魂行程的一站:进入某个界域的时刻,和离开的时刻(还在就是 null)。
+
+    行只由 `apps.realms.path.SoulPathService` 写,在各流程自己的事务里。**不回填**:
+    本表出现之前的移动没有可信的进入时间,编一个就是伪造行程。
+
+    `tenant` 是这一站发生在哪个租户(界域所在的租户),不是灵魂的原属 —— 暂居在外时
+    的那几站属于暂居地。读路径用 `scope_to_tenant`,与处置同一规则(含暂居只读例外)。
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    soul = models.ForeignKey(
+        "souls.Soul", on_delete=models.CASCADE, related_name="path_entries",
+    )
+    # SET_NULL 与 Disposition.destination_realm 同一取法:界域是软删的,硬删极少;
+    # 硬删了,这一站仍然发生过。
+    realm = models.ForeignKey(
+        Realm, null=True, on_delete=models.SET_NULL, related_name="path_entries",
+    )
+    sequence = models.PositiveIntegerField(help_text="1-based position in the soul's path")
+    entered_at = models.DateTimeField()
+    left_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="soul_path_entries",
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["soul", "sequence"]
+        verbose_name = "Soul path entry"
+        verbose_name_plural = "Soul path entries"
+        indexes = [
+            models.Index(fields=["tenant", "soul"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["soul", "sequence"], name="soulpath_unique_sequence"),
+            # 一个灵魂同一时刻只在一处。
+            models.UniqueConstraint(
+                fields=["soul"], condition=models.Q(left_at__isnull=True),
+                name="soulpath_one_open_entry_per_soul",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(left_at__isnull=True) | models.Q(left_at__gte=models.F("entered_at")),
+                name="soulpath_left_not_before_entered",
+            ),
+        ]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        realm = self.realm.realm_code if self.realm_id else "?"
+        return f"{self.soul_id} #{self.sequence} {realm}"

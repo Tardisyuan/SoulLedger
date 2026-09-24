@@ -160,6 +160,9 @@ class DispositionService:
                 notes=f"Auto-created from {civilization} judgment {judgment.id}",
                 tenant=soul.tenant,
             )
+            # 行程拓扑:判决把灵魂送进目的地(没有目的地 = 离开了法庭、去向未知)。
+            from apps.realms.path import SoulPathService
+            SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
 
         from apps.events.services import log_disposition_created
         log_disposition_created(disposition)
@@ -756,7 +759,21 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
+            DispositionService._leave_served_realm(disposition, soul)
         return True
+
+    @staticmethod
+    def _leave_served_realm(disposition, soul):
+        """行程拓扑:刑满(执行)即离开服刑的界域;永久刑期不离开。
+
+        只关「就是这个界域」的那一站 —— 灵魂此刻若已不在那里(例如又被调走),
+        什么都不写。三条执行分支都调它,与 `is_executed` 同一事务。
+        """
+        from apps.realms.path import SoulPathService
+
+        if disposition.is_eternal or disposition.destination_realm_id is None:
+            return
+        SoulPathService.leave(soul, realm=disposition.destination_realm)
 
     @staticmethod
     def _execute_plan_node(disposition: Disposition, soul) -> bool:
@@ -783,6 +800,7 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
+            DispositionService._leave_served_realm(disposition, locked)
             SentencePlanService.on_disposition_executed(locked, disposition)
             SentencePlanService.advance(locked)
         return True
@@ -825,6 +843,7 @@ class DispositionService:
             disposition.is_executed = True
             disposition.executed_at = timezone.now()
             disposition.save()
+            DispositionService._leave_served_realm(disposition, locked)
             node = SentencePlanService.on_disposition_executed(locked, disposition)
             if node is not None:
                 if node.status == "WAITING":

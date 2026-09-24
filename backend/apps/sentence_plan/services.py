@@ -333,6 +333,9 @@ class SentencePlanService:
             memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
             notes=f"受刑计划 {plan.pk} 节点 {node.order}",
         )
+        # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
+        from apps.realms.path import SoulPathService
+        SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
         node.status = SentenceNodeStatus.ACTIVE
         node.disposition_id = disposition.pk
         node.activated_at = timezone.now()
@@ -541,6 +544,9 @@ class SentencePlanService:
             memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
             notes=f"受刑计划 {plan.pk} 节点 {node.order}",
         )
+        # 行程拓扑:这一站的处置建好,灵魂就在这一站的界域里(同一事务)。
+        from apps.realms.path import SoulPathService
+        SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
         node.status = SentenceNodeStatus.ACTIVE
         node.disposition_id = disposition.pk
         node.activated_at = timezone.now()
