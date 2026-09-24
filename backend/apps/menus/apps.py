@@ -12,4 +12,7 @@ class MenusConfig(AppConfig):
         from apps.core.recycle_bin import register_bin_type
 
         from .models import Menu
-        register_bin_type("menu", Menu, "reference", lambda menu: menu.name)
+        register_bin_type(
+            "menu", Menu, "reference", lambda menu: menu.name,
+            location=lambda menu: {"kind": "parent", "value": menu.parent.name} if menu.parent_id else None,
+        )

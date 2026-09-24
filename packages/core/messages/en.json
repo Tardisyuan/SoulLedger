@@ -450,6 +450,7 @@
       "soul": "Soul",
       "menu": "Menu"
     },
+    "col_location": "Original location",
     "col_deleted_by": "Deleted by"
   },
   "permissions": {

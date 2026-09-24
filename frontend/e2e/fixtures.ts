@@ -386,6 +386,7 @@ export const RECYCLE_BIN_ENTRY = {
   kind: "domain" as const,
   id: "33333333-3333-4333-8333-333333333333",
   label: "误删的渡魂人",
+  location: { kind: "civilization" as const, value: "CHINESE" },
   deleted_at: "2026-08-11T09:30:00Z",
   deleted_by: "test_admin",
   delete_reason: "录入重复",
