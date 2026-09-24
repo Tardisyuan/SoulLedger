@@ -1,13 +1,14 @@
 """
 REST serializers for Judgment app.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
-from apps.judgment.models import Judgment, JudgmentCitation, Statute, open_judgments
+from apps.judgment.models import EvidenceAdmission, Judgment, JudgmentCitation, Statute, Verdict, open_judgments
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -128,10 +129,15 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "citations",
             "is_final", "created_at", "concluded_at",
             "kind", "amends_plan_id",
+            "draft_verdict", "draft_saved_at", "draft_version",
         ]
+        # 草稿三列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
         # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
         # 不由 POST 的 body 定 —— 灵魂有进行中的计划即 AMENDMENT;REOPEN 只由批准请求时开。
-        read_only_fields = ["civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id"]
+        read_only_fields = [
+            "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id",
+            "draft_verdict", "draft_saved_at", "draft_version",
+        ]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
     # (the ApprovalNodeSerializer shape) because DRF strips read-only fields
@@ -174,6 +180,82 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         if "soul" in attrs:
             attrs["civilization"] = attrs["soul"].civilization
         return attrs
+
+
+class EvidenceAdmissionSerializer(serializers.ModelSerializer):
+    """One ruling on one ledger record in this case. A record with no ruling
+    is admitted; only rulings that were made are listed."""
+
+    class Meta:
+        model = EvidenceAdmission
+        fields = ["id", "record", "admitted", "reason", "created_at", "update_time"]
+
+
+class EvidenceRulingWriteSerializer(serializers.Serializer):
+    """Input for `PUT /judgment/{id}/evidence/{record_id}/`. Shape only; the
+    reason-required rule and which records are evidence here are
+    `EvidenceAdmissionService.rule`'s."""
+    admitted = serializers.BooleanField()
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class AdmittedBalanceSerializer(serializers.Serializer):
+    """`LedgerService.get_admitted_balance`. `balance` and `not_admitted_net`
+    are null unless `reading_kind` is BALANCE (and the judgment is from the
+    current life); `reason_code` says which."""
+    reading_kind = serializers.CharField(allow_null=True)
+    balance = serializers.IntegerField(allow_null=True)
+    not_admitted_count = serializers.IntegerField()
+    not_admitted_net = serializers.FloatField(allow_null=True)
+    reason_code = serializers.CharField(allow_null=True)
+
+
+class EvidenceRulingResultSerializer(serializers.Serializer):
+    """What a ruling returns: the row, and the balance it changed."""
+    admission = EvidenceAdmissionSerializer()
+    admitted_balance = AdmittedBalanceSerializer()
+
+
+class JudgmentDetailSerializer(JudgmentSerializer):
+    """`GET /judgment/{id}/` — the list shape plus the evidence rulings and the
+    admitted balance. Detail only: the balance walks the soul's ledger, which
+    the list must not do once per row."""
+    evidence_admissions = EvidenceAdmissionSerializer(many=True, read_only=True)
+    admitted_balance = serializers.SerializerMethodField()
+
+    class Meta(JudgmentSerializer.Meta):
+        fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance"]
+
+    @extend_schema_field(AdmittedBalanceSerializer)
+    def get_admitted_balance(self, obj):
+        from apps.judgment.services import EvidenceAdmissionService
+
+        return EvidenceAdmissionService.admitted_balance(obj)
+
+
+class JudgmentDraftWriteSerializer(serializers.Serializer):
+    """Input for `PATCH /judgment/{id}/draft/`. `version` is the
+    `draft_version` the caller last saw; either content field may be omitted."""
+    version = serializers.IntegerField(min_value=0)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    draft_verdict = serializers.ChoiceField(choices=Verdict.choices, required=False, allow_null=True)
+
+
+class JudgmentDraftSerializer(serializers.ModelSerializer):
+    """The draft as stored: what a save returns, and what a 409 hands back."""
+
+    class Meta:
+        model = Judgment
+        fields = ["notes", "draft_verdict", "draft_version", "draft_saved_at"]
+        read_only_fields = fields
+
+
+class JudgmentDraftConflictSerializer(serializers.Serializer):
+    """409 body of `draft/`. `code` is `draft_conflict` (someone saved first;
+    `current` is what they saved) or `concluded` (`current` is null)."""
+    error = serializers.CharField()
+    code = serializers.ChoiceField(choices=["draft_conflict", "concluded"])
+    current = JudgmentDraftSerializer(allow_null=True)
 
 
 class JudgmentCitationWriteSerializer(serializers.Serializer):

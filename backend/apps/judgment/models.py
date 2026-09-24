@@ -129,6 +129,19 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     kind = models.CharField(max_length=10, choices=JudgmentKind.choices, default=JudgmentKind.ORIGINAL)
     amends_plan_id = models.UUIDField(null=True, blank=True, db_index=True)
 
+    # 判词草稿。判词本身就是 `notes`:结案前它就是草稿(详情页的文本框从它起步,
+    # `notesTouched` 守着它),结案时 `conclude/` 用请求里的 notes 覆盖它。所以这里
+    # 只补草稿缺的三样:选中但未落的裁决、上次自动保存的时间、并发前提。
+    # `verdict` 不能兼作草稿 —— 它非空就是「已结案」(见 `open_judgments`)。
+    #
+    # `draft_version` 而不是 AuditUserFields 的 `version`:后者每次 save 都加一,
+    # 与草稿无关的写(归档、改 court)也会让正在写判词的审判官吃一个假 409。
+    # 这一列只在草稿内容(notes / draft_verdict)变了时加一,见
+    # `JudgmentDraftService.save`。
+    draft_verdict = models.CharField(max_length=20, choices=Verdict.choices, null=True, blank=True)
+    draft_saved_at = models.DateTimeField(null=True, blank=True)
+    draft_version = models.PositiveIntegerField(default=0)
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Judgment"
@@ -673,3 +686,66 @@ class JudgmentCitation(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.judgment_id} cites {self.statute.code}"
+
+
+class EvidenceAdmission(AuditUserFields, models.Model):
+    """Whether one ledger record is admitted as evidence in one judgment.
+
+    Per judgment, not a flag on `SoulRecord`: the same deed can be admitted in
+    one case and not in another — an amendment case, a reopened retrial, or a
+    second court reading the same life — and a column on the record would make
+    the second court's ruling overwrite the first's. It is the same shape as
+    `JudgmentCitation`, one row per (judgment, thing) carrying why.
+
+    NO ROW MEANS ADMITTED. The ledger is the evidence by default; a row is
+    written when an officer rules on a record, and it keeps `admitted=True`
+    when a ruling is reversed, so who reversed it and when stays on the row
+    (AuditUserFields). `reason` is required when not admitting — enforced in
+    `EvidenceAdmissionService` and again by the check constraint below.
+
+    `record` is RESTRICT, not CASCADE: a hard delete of a record a court has
+    ruled on is refused, while deleting the soul (which cascades to both the
+    record and the judgment) still goes through.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="evidence_admissions")
+    record = models.ForeignKey(
+        "souls.SoulRecord", on_delete=models.RESTRICT, related_name="admissions",
+    )
+    admitted = models.BooleanField(default=True)
+    reason = models.TextField(blank=True, help_text="Why the record is not admitted. Required when admitted is false.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="evidence_admissions",
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Evidence admission"
+        verbose_name_plural = "Evidence admissions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["judgment", "record"],
+                # Scoped to live rows, as `unique_citation_judgment_statute` is.
+                condition=models.Q(is_deleted=False),
+                name="unique_admission_judgment_record",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(admitted=True) | ~models.Q(reason=""),
+                name="admission_refusal_has_reason",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["judgment", "admitted"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        return f"{self.judgment_id} {'admits' if self.admitted else 'excludes'} {self.record_id}"

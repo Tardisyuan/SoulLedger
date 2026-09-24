@@ -550,6 +550,14 @@ REASON_TENANT_NOT_MAPPED = "TENANT_NOT_MAPPED"
 
 UNAVAILABLE_REASON_CODES = (REASON_TENANT_NOT_MAPPED,)
 
+#: Why a judgment's admitted balance (`LedgerService.get_admitted_balance`) is
+#: null. Not members of UNAVAILABLE_REASON_CODES: those say a *reading* is
+#: missing, these say a reading exists and a balance is not what it reads —
+#: the same "not applicable" the queue card shows for a non-BALANCE ledger —
+#: or that the judgment is from a life whose carry-over is no longer stored.
+REASON_BALANCE_NOT_APPLICABLE = "BALANCE_NOT_APPLICABLE"
+REASON_NOT_CURRENT_LIFE = "NOT_CURRENT_LIFE"
+
 
 def get_civilization_reading(civilization: str, merit: int, demerit: int,
                              merit_count: int, demerit_count: int,

@@ -552,6 +552,85 @@ class LedgerService:
         return non_fungible["unoffset_demerit"]
 
     @classmethod
+    def get_admitted_balance(cls, soul: Soul, cycle: int, not_admitted_ids) -> dict:
+        """The balance a judgment's admitted evidence adds up to, or an explicit null.
+
+        SAME ARITHMETIC AS `get_ledger_summary`, record for record: the same
+        decay anchor and rate, the same unrounded accumulation rounded once, the
+        same inherited carry-over as the base, and the balance itself read off
+        `get_civilization_reading` rather than recomputed here. The only
+        difference is that records in `not_admitted_ids` are left out of the
+        sums. With nothing excluded, `balance` equals the summary's
+        `reading["balance"]`; `apps/judgment` tests pin that.
+
+        A NUMBER ONLY WHERE A BALANCE IS THE READING. For every cosmology whose
+        reading is not `BALANCE` — the Egyptian threshold, the European
+        culpa/poena pair, the Greek two roads, an unmapped tenant — `balance`
+        and `not_admitted_net` are None and `reason_code` says why. Netting the
+        excluded items would be exactly the subtraction those readings refuse.
+        `reading_kind` is carried so a client can apply the same switch
+        `JudgmentQueueContext` applies to the ledger's own balance.
+
+        ONLY THE LIFE THE SOUL IS LIVING. The carry-over (`inherited_*`) is
+        stored for the current life only, so a judgment from an earlier cycle
+        cannot be re-summed on the same base; it gets None with
+        `NOT_CURRENT_LIFE` rather than a figure on the wrong base.
+
+        `not_admitted_count` is a fact about admission, not a reading, so it is
+        reported for every cosmology.
+        """
+        from apps.ledger.readings import REASON_BALANCE_NOT_APPLICABLE, REASON_NOT_CURRENT_LIFE
+
+        excluded = {str(pk) for pk in not_admitted_ids}
+        records = soul.records.filter(cycle=cycle, record_type__in=("MERIT", "DEMERIT"))
+        not_admitted_count = sum(1 for pk in records.values_list("id", flat=True) if str(pk) in excluded)
+        result = {
+            "reading_kind": None,
+            "balance": None,
+            "not_admitted_count": not_admitted_count,
+            "not_admitted_net": None,
+            "reason_code": None,
+        }
+        if cycle != soul.life_index:
+            result["reason_code"] = REASON_NOT_CURRENT_LIFE
+            return result
+
+        anchor = cls._get_decay_anchor(soul)
+        rate = cls._decay_rate_for(soul)
+        merit = soul.inherited_merit
+        demerit = soul.inherited_demerit
+        merit_count = 0
+        demerit_count = 0
+        not_admitted_net = 0.0
+        for r in records:
+            years = cls._get_record_age_years(
+                r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
+            )
+            effective_weight = cls._decay_weight(r.weight, years, rate)
+            signed = effective_weight if r.record_type == "MERIT" else -effective_weight
+            if str(r.id) in excluded:
+                not_admitted_net += signed
+                continue
+            if r.record_type == "MERIT":
+                merit += effective_weight
+                merit_count += 1
+            else:
+                demerit += effective_weight
+                demerit_count += 1
+
+        reading = get_civilization_reading(
+            soul.civilization, round(merit), round(demerit),
+            merit_count=merit_count, demerit_count=demerit_count,
+        )
+        result["reading_kind"] = reading["kind"]
+        if reading["kind"] != "BALANCE":
+            result["reason_code"] = reading.get("reason_code", REASON_BALANCE_NOT_APPLICABLE)
+            return result
+        result["balance"] = reading["balance"]
+        result["not_admitted_net"] = round(not_admitted_net, 2)
+        return result
+
+    @classmethod
     def _invalidate_cache(cls, soul: Soul):
         """Invalidate ledger cache for a soul (tenant-namespaced)."""
         tenant_code = soul.tenant.code if soul.tenant else "global"

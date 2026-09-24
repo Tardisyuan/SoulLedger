@@ -4,7 +4,14 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useJudgments, useCreateJudgment, useConcludeJudgment } from "@soulledger/core/hooks/useJudgments";
+import {
+  useJudgments,
+  useCreateJudgment,
+  useConcludeJudgment,
+  useRuleEvidence,
+  useSaveJudgmentDraft,
+} from "@soulledger/core/hooks/useJudgments";
+import { judgmentKeys } from "@soulledger/core/query_keys";
 import { judgmentApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
@@ -22,6 +29,10 @@ jest.mock("@soulledger/core/api", () => ({
     list: jest.fn().mockResolvedValue({ data: { results: [], count: 0 } }),
     create: jest.fn().mockResolvedValue({ data: {} }),
     conclude: jest.fn().mockResolvedValue({ data: {} }),
+    ruleEvidence: jest.fn().mockResolvedValue({ data: { admission: {}, admitted_balance: {} } }),
+    saveDraft: jest.fn().mockResolvedValue({
+      data: { notes: "saved", draft_verdict: "FAILED", draft_version: 4, draft_saved_at: "2026-09-24T00:00:00Z" },
+    }),
   },
 }));
 
@@ -212,5 +223,62 @@ describe("useConcludeJudgment behavior", () => {
       expect.any(String),
       "error"
     );
+  });
+});
+
+describe("useRuleEvidence behavior", () => {
+  it("PUTs the ruling for that record and refetches only this judgment's detail", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useRuleEvidence("judgment-1"), { wrapper });
+    await act(async () => {
+      result.current.mutate({ recordId: "rec-1", data: { admitted: false, reason: "证人翻供" } });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(judgmentApi.ruleEvidence).toHaveBeenCalledWith("judgment-1", "rec-1", { admitted: false, reason: "证人翻供" });
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: judgmentKeys.detail("judgment-1") });
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+});
+
+describe("useSaveJudgmentDraft behavior", () => {
+  it("writes the saved draft into the cached detail instead of refetching", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData(judgmentKeys.detail("judgment-1"), {
+      id: "judgment-1", notes: "old", draft_version: 3, court: "第一殿",
+    });
+    const { result } = renderHook(() => useSaveJudgmentDraft("judgment-1"), { wrapper });
+    await act(async () => {
+      result.current.mutate({ version: 3, notes: "saved" });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(judgmentApi.saveDraft).toHaveBeenCalledWith("judgment-1", { version: 3, notes: "saved" });
+    expect(queryClient.getQueryData(judgmentKeys.detail("judgment-1"))).toEqual({
+      id: "judgment-1", court: "第一殿",
+      notes: "saved", draft_verdict: "FAILED", draft_version: 4, draft_saved_at: "2026-09-24T00:00:00Z",
+    });
+    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it("does not invent a cache entry when the detail was never loaded", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useSaveJudgmentDraft("judgment-2"), { wrapper });
+    await act(async () => {
+      result.current.mutate({ version: 0, notes: "x" });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(judgmentKeys.detail("judgment-2"))).toBeUndefined();
+  });
+
+  it("surfaces a 409 to the caller without toasting", async () => {
+    (judgmentApi.saveDraft as jest.Mock).mockRejectedValueOnce({ response: { status: 409, data: { code: "draft_conflict" } } });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useSaveJudgmentDraft("judgment-1"), { wrapper });
+    await act(async () => {
+      result.current.mutate({ version: 0, notes: "x" });
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual({ response: { status: 409, data: { code: "draft_conflict" } } });
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });
