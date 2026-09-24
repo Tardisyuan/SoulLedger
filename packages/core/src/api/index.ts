@@ -74,7 +74,7 @@ export { organizationsApi, type Organization } from "./organizations";
 export { notificationsApi, type Notification } from "./notifications";
 
 // Dispatch
-export { dispatchApi, crossTenantJudgmentsApi, type DispatchRecord, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
+export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
 
 // Social
 export { socialApi, type Post, type Comment, type Reaction, type Follow, type UserProfile } from "./social";

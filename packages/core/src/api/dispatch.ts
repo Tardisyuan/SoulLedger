@@ -100,6 +100,20 @@ export interface CrossTenantJudgmentParticipant {
   sentence_submitted_at: string | null;
 }
 
+/**
+ * `DispatchRecordSerializer.validate_reason`: a proposal's reason, trimmed,
+ * must be at least this many characters (`DISPATCH_REASON_MIN_CHARS` in
+ * backend/apps/dispatch/serializers.py).
+ */
+export const DISPATCH_REASON_MIN_CHARS = 20;
+
+/**
+ * The length the server counts: Python `len` of the trimmed str, i.e. code
+ * points. `String.length` counts UTF-16 units and would call a 19-character
+ * reason with one astral character 20.
+ */
+export const dispatchReasonLength = (reason: string) => [...reason.trim()].length;
+
 export const dispatchApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
   get: (id: string) => api.get<DispatchRecord>(`/dispatch/records/${id}/`),

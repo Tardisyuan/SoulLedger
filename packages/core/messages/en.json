@@ -1168,6 +1168,7 @@
     "select_tenant": "Select tenant...",
     "reason": "Reason",
     "reason_placeholder": "Reason for dispatch...",
+    "reason_too_short": "At least {{min}} characters, {{count}} so far",
     "submitting": "Submitting...",
     "submit_proposal": "Submit Proposal",
     "soul_prefix": "Soul #",

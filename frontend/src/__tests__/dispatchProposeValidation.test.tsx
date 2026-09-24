@@ -20,11 +20,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ProposeDispatchPage from "@/app/dispatch/propose/page";
 import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
 
-jest.mock("@soulledger/core/api", () => ({
+jest.mock("@soulledger/core/api", () => {
+  // The real rule, not a copy of it: a stub that re-implemented the count
+  // could agree with a broken one.
+  const { DISPATCH_REASON_MIN_CHARS, dispatchReasonLength } = jest.requireActual("@soulledger/core/api");
+  return {
+  DISPATCH_REASON_MIN_CHARS,
+  dispatchReasonLength,
   dispatchApi: { propose: jest.fn() },
   soulsApi: { list: jest.fn(), get: jest.fn() },
   ledgerApi: { statsOverview: jest.fn() },
-}));
+  };
+});
 
 const mockBack = jest.fn();
 let mockSearch = new URLSearchParams();
@@ -38,7 +45,11 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "en", hydrated: true }),
+  useI18n: () => ({
+    t: (key: string, p?: Record<string, string>) => (p ? `${key}:${p.min ?? ""}/${p.count ?? ""}` : key),
+    locale: "en",
+    hydrated: true,
+  }),
 }));
 
 const mockShowToast = jest.fn();
@@ -111,9 +122,12 @@ async function fillValid() {
 
   fireEvent.click(screen.getByRole("radio", { name: /冥界/ }));
   fireEvent.change(screen.getByLabelText(/dispatch\.reason/), {
-    target: { value: "跨境审判" },
+    target: { value: LONG_REASON },
   });
 }
+
+/** At least DISPATCH_REASON_MIN_CHARS (20) characters, as the server requires. */
+const LONG_REASON = "跨境审判：此魂须移送冥界，由彼方判官依其律法重审";
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -172,13 +186,41 @@ describe("proposing a dispatch", () => {
     fireEvent.click(screen.getByText("dispatch.submit_proposal"));
     await waitFor(() => expect(screen.getAllByRole("alert").length).toBeGreaterThan(0));
 
+    // Deliberately a full-length reason (was "x"): since the 20-character
+    // minimum, a one-character reason is invalid in its own right.
     fireEvent.change(screen.getByLabelText(/dispatch\.reason/), {
-      target: { value: "x" },
+      target: { value: LONG_REASON },
     });
 
     await waitFor(() =>
       expect(screen.getByLabelText(/dispatch\.reason/)).not.toHaveAttribute("aria-invalid", "true")
     );
+  });
+
+  it("says, while typing, how short the reason is — counted in characters, trimmed", async () => {
+    renderPage();
+    const reason = await screen.findByLabelText(/dispatch\.reason/);
+    // Empty is not nagged about before anything was written.
+    expect(screen.queryByText(/dispatch\.reason_too_short/)).not.toBeInTheDocument();
+
+    // 19 characters (one astral, which String.length would count as two),
+    // padded with spaces the server trims away.
+    fireEvent.change(reason, { target: { value: "  𠀀" + "一".repeat(18) + "  " } });
+    expect(await screen.findByText("dispatch.reason_too_short:20/19")).toBeInTheDocument();
+    expect(reason).toHaveAttribute("aria-invalid", "true");
+
+    fireEvent.change(reason, { target: { value: "一".repeat(20) } });
+    await waitFor(() => expect(screen.queryByText(/dispatch\.reason_too_short/)).not.toBeInTheDocument());
+    expect(reason).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("does not send a reason under 20 characters", async () => {
+    renderPage();
+    await fillValid();
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "跨境审判" } });
+    fireEvent.click(screen.getByText("dispatch.submit_proposal"));
+    expect(await screen.findByText("dispatch.reason_too_short:20/4")).toBeInTheDocument();
+    expect(mockedPropose).not.toHaveBeenCalled();
   });
 
   /**
@@ -271,7 +313,7 @@ describe("the dispatch form, 规范 v1", () => {
     expect(screen.queryByLabelText(/dispatch\.target_soul/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: /冥界/ }));
-    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "跨境审判" } });
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: LONG_REASON } });
     fireEvent.click(screen.getByText("dispatch.submit_proposal"));
     await waitFor(() =>
       expect(mockedPropose).toHaveBeenCalledWith(

@@ -82,7 +82,7 @@ def test_a_tenant_cannot_propose_another_tenants_soul_to_itself(realms):
         "source_tenant": realms["eu"].pk,
         "target_tenant": realms["cn"].pk,
         "soul": str(eu_soul.id),
-        "reason": "come here",
+        "reason": "come here, the soul is wanted in this hall",
     }, format="json")
 
     assert resp.status_code == 403, resp.data
@@ -101,7 +101,7 @@ def test_nor_propose_it_to_a_third_tenant(realms):
         "source_tenant": realms["eu"].pk,
         "target_tenant": eg.pk,
         "soul": str(eu_soul.id),
-        "reason": "go there",
+        "reason": "go there, the soul is wanted in that hall",
     }, format="json")
 
     assert resp.status_code == 403, resp.data
@@ -117,7 +117,7 @@ def test_the_souls_own_tenant_still_proposes_and_the_transfer_still_completes(re
         "source_tenant": realms["cn"].pk,
         "target_tenant": realms["eu"].pk,
         "soul": str(cn_soul.id),
-        "reason": "exchange",
+        "reason": "exchange between the two halls, as agreed",
     }, format="json")
     assert resp.status_code == 201, resp.data
     record_id = resp.data["id"]
@@ -135,7 +135,7 @@ def test_admin_keeps_the_global_exemption(realms):
         "source_tenant": realms["eu"].pk,
         "target_tenant": realms["cn"].pk,
         "soul": str(eu_soul.id),
-        "reason": "admin moves it",
+        "reason": "admin moves it under the global exemption",
     }, format="json")
     assert resp.status_code == 201, resp.data
 
