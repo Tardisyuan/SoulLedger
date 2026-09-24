@@ -1,20 +1,17 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pagination } from "@/src/components/ui/Pagination";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import Link from "next/link";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
-import { ListSkeleton } from "@/components/ui/skeleton";
+import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { EmptyState } from "@/src/components/ui/EmptyState";
-import { QueryError } from "@/src/components/ui/PageError";
-import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
+import { type BadgeTone } from "@/src/components/ui/Badge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
 /**
  * Case state → badge tone.
@@ -66,26 +63,6 @@ export default function CrossJudgmentsPage() {
   return (
     <PageShell
       variant="full"
-      pagination={{
-        count: (
-          <p className="text-sm text-[oklch(var(--color-ink-muted))]">
-            {t("pagination.info", {
-              page: String(page),
-              total: String(Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))),
-              count: String(pageData?.count ?? 0),
-            })}
-          </p>
-        ),
-        controls: (
-          <Pagination
-            page={page}
-            totalPages={Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))}
-            count={pageData?.count ?? 0}
-            onPageChange={setPage}
-            showInfo={false}
-          />
-        ),
-      }}
       title={
         <>
           {t("crossJudgments.title")}
@@ -94,53 +71,47 @@ export default function CrossJudgmentsPage() {
       }
       subtitle={t("crossJudgments.subtitle")}
     >
-      <PageSection
-        title={t("crossJudgments.list_title")}
-      >
-        {/* A failed request used to fall through to the empty state, so
-            "the server is down" and "there is nothing here" read the same. */}
-        {isError ? (
-          <QueryError onRetry={() => refetch()} />
-        ) : isLoading ? (
-          <ListSkeleton count={3} />
-        ) : judgments.length === 0 ? (
-          <EmptyState title={t("crossJudgments.no_judgments")} />
-        ) : (
-          /* `placeholderData` above keeps this page's cards on screen while the
-             next page loads, which also means `isLoading` never goes true again
-             and the `ListSkeleton` branch never runs after the first load. Page
-             two therefore arrived with nothing at all happening in between. */
-          <div
-            aria-busy={isPlaceholderData || undefined}
-            className={`space-y-4 transition-opacity duration-settle ${
-              isPlaceholderData ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
-            }`}
-          >
-            {judgments.map((j: CrossTenantJudgmentListItem) => (
-              <Link
-                key={j.id}
-                href={`/cross-judgments/${j.id}`}
-                className="block bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent))]/50 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-[oklch(var(--color-ink))]">{j.title}</h3>
-                    <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
-                      {t("crossJudgments.initiated_by")}: {j.initiating_tenant_code}
-                    </p>
-                  </div>
-                  {/* <DomainEnum> renders exactly one span, so it becomes the
-                      badge itself and the raw member still reaches `title`. */}
-                  <DomainEnum
-                    namespace="crossJudgments.states"
-                    value={j.status}
-                    className={badgeVariants({ tone: STATUS_TONES[j.status] ?? "neutral" })}
-                  />
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <PageSection title={t("crossJudgments.list_title")}>
+        {/* 账页表格(规范 v1 §2):整行点进 /cross-judgments/[id]。失败与空仍分开 ——
+            DataTable 的失败行是「! 加载失败」+ 重试,不会落到「暂无」。
+            `placeholderData` 让翻页时 `isLoading` 不再为真,所以翻页中的那一段交给
+            `isRefreshing`(变淡 + aria-busy),不是什么都不发生。 */}
+        <DataTable<CrossTenantJudgmentListItem>
+          linkedRows
+          caption={t("crossJudgments.list_title")}
+          columns={[
+            { key: "title", header: t("crossJudgments.case_title") },
+            { key: "initiated_by", header: t("crossJudgments.initiated_by") },
+            { key: "status", header: t("crossJudgments.status_label") },
+          ]}
+          data={judgments}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          isRefreshing={isPlaceholderData}
+          skeletonRows={3}
+          emptyMessage={t("crossJudgments.no_judgments")}
+          keyExtractor={(j) => String(j.id)}
+          renderRow={(j) => (
+            <>
+              <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))]">
+                <Link href={`/cross-judgments/${j.id}`} className={ROW_LINK}>
+                  {j.title}
+                </Link>
+              </td>
+              <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+                {j.initiating_tenant_code}
+              </td>
+              <td className="px-3 py-2">
+                <StatusBadge namespace="crossJudgments.states" value={j.status} tone={STATUS_TONES[j.status] ?? "neutral"} />
+              </td>
+            </>
+          )}
+          page={page}
+          totalPages={Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))}
+          totalCount={pageData?.count ?? 0}
+          onPageChange={setPage}
+        />
       </PageSection>
     </PageShell>
   );

@@ -1240,7 +1240,9 @@
     "conclusion_types": {
       "PASS": "Menkh",
       "FAIL": "Khesef"
-    }
+    },
+    "case_title": "Ren",
+    "status_label": "Set Medu"
   },
   "users": {
     "title": "Iri Netjeru",
@@ -1420,7 +1422,9 @@
       "FAILED": "Nen Iri",
       "DUPLICATE": "Sen Medu",
       "PARTIAL": "Herep Seth"
-    }
+    },
+    "source_system": "Tepy Kehat",
+    "status_label": "Set Medu"
   },
   "soul_accounts": {
     "refresh": "Wehem Maa",
@@ -1678,7 +1682,8 @@
       "PRIVATE": "Wa-Ek"
     },
     "visibility_label": "Set Medu Maa",
-    "follow_error": "Nen Shemsu Seth"
+    "follow_error": "Nen Shemsu Seth",
+    "reactions": "Sehed"
   },
   "tenants": {
     "active": "Em Iri",

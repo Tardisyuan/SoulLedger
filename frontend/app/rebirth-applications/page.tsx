@@ -18,9 +18,13 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { RebirthApplicationDetail } from "@/src/components/soul-accounts/RebirthApplicationDetail";
-import { REBIRTH_FILTERS, lifeNumber, rebirthBadgeClass } from "@/src/components/soul-accounts/soulAccountsView";
+import { REBIRTH_FILTERS, lifeNumber, rebirthTone } from "@/src/components/soul-accounts/soulAccountsView";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 
-const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_auto] md:items-center md:gap-4";
+// 操作列定宽,不是 `auto`:表头那一格是空的,`auto` 在表头里解成 0、在数据行里解成
+// 按钮宽,两边的 fr 列于是按不同的余量分配,表头与数据错开(2026-09-25 截图里实测)。
+const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_5rem] md:items-center md:gap-4";
 
 function RebirthApplicationsContent() {
   const { t, formatDateTime } = useI18n();
@@ -52,7 +56,7 @@ function RebirthApplicationsContent() {
     />
   );
 
-  const label = "md:hidden text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
+  const label = "md:hidden font-mono text-2xs text-[oklch(var(--color-ink-subtle))]";
 
   return (
     <PageShell
@@ -74,19 +78,17 @@ function RebirthApplicationsContent() {
       filters={
         <div role="group" aria-label={t("soul_accounts.rebirth.filters.label")} className="flex flex-wrap gap-2">
           {REBIRTH_FILTERS.map((value) => (
-            <Button
+            /* 筛选签(规范 v1 §2),单选,aria-pressed 照旧;「全部」是其中一枚。 */
+            <FilterChipToggle
               key={value || "all"}
-              type="button"
-              size="sm"
-              variant={status === value ? "primary" : "secondary"}
-              aria-pressed={status === value}
-              onClick={() => {
+              pressed={status === value}
+              onPressedChange={() => {
                 setStatus(value);
                 setPage(1);
               }}
             >
               {value ? t(`soul_accounts.rebirth_status.${value}`) : t("soul_accounts.rebirth.filters.all")}
-            </Button>
+            </FilterChipToggle>
           ))}
         </div>
       }
@@ -104,10 +106,11 @@ function RebirthApplicationsContent() {
           : undefined
       }
     >
-      <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]">
+      {/* 账页(规范 v1 §2):不装框;表头 11 px 等宽,下接区块边界线,行与行之间是行线。 */}
+      <div>
         <div
           aria-hidden="true"
-          className={`hidden px-4 py-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-hairline))] ${ROW_GRID}`}
+          className={`hidden px-3 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${ROW_GRID}`}
         >
           <span>{t("soul_accounts.fields.soul")}</span>
           <span>{t("soul_accounts.fields.cycle")}</span>
@@ -121,10 +124,10 @@ function RebirthApplicationsContent() {
             <li
               key={a.id}
               data-application-id={a.id}
-              className={`p-4 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-hairline))] last:border-b-0 ${ROW_GRID}`}
+              className={`px-3 py-3 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${ROW_GRID}`}
             >
               <div className="min-w-0 space-y-1">
-                <Link href={`/souls/${a.soul}`} className="text-sm font-medium underline text-[oklch(var(--color-accent-ink))] break-words">
+                <Link href={`/souls/${a.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline break-words">
                   {a.soul_name}
                 </Link>
                 <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all">{a.soul_code}</p>
@@ -139,14 +142,14 @@ function RebirthApplicationsContent() {
               </div>
               <div className="min-w-0 space-y-1">
                 <p className={label}>{t("soul_accounts.fields.status")}</p>
-                <DomainEnum namespace="soul_accounts.rebirth_status" value={a.status} className={rebirthBadgeClass(a.status)} />
+                <StatusBadge namespace="soul_accounts.rebirth_status" value={a.status} tone={rebirthTone(a.status)} />
               </div>
               <div className="min-w-0">
                 <p className={label}>{t("soul_accounts.rebirth.fields.created_at")}</p>
                 <p className="font-mono text-xs">{formatDateTime(a.created_at)}</p>
               </div>
               <div className="flex md:justify-end">
-                <Button type="button" size="sm" variant="secondary" onClick={() => setSelected(a)}>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(a)}>
                   {t("soul_accounts.rebirth.view")}
                 </Button>
               </div>

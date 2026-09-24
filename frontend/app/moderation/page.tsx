@@ -29,7 +29,8 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
-import { Badge } from "@/src/components/ui/Badge";
+import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -49,6 +50,13 @@ import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
 type Tab = "reports" | "content" | "words" | "mutes";
 const TABS: Tab[] = ["reports", "content", "words", "mutes"];
 const MUTE_DAYS = [1, 3, 7, 30];
+/** 审核状态 → tone;字形由 `StatusBadge` 配(规范 v1 §1.2,不只靠颜色)。未列出的一律 neutral。 */
+const MODERATION_TONES: Record<string, BadgeTone> = {
+  PUBLISHED: "success",
+  PENDING: "warning",
+  HIDDEN: "error",
+  DELETED: "ink",
+};
 const ROW = "p-4 space-y-2 border-b border-[oklch(var(--color-hairline))] last:border-b-0";
 const MUTED_TEXT = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
@@ -113,8 +121,8 @@ function ReportsTab() {
             <li key={r.id} data-report-id={r.id} className={ROW}>
               <div className="flex flex-wrap items-center gap-2">
                 <DomainEnum namespace="social_moderation.target_type" value={r.target_type} />
-                <Badge tone="warning">{t("social_moderation.report_count", { n: String(r.report_count) })}</Badge>
-                {r.content_status && <DomainEnum namespace="social_moderation.moderation_status" value={r.content_status} />}
+                <Badge tone="warning" glyph="!">{t("social_moderation.report_count", { n: String(r.report_count) })}</Badge>
+                {r.content_status && <StatusBadge namespace="social_moderation.moderation_status" value={r.content_status} tone={MODERATION_TONES[r.content_status] ?? "neutral"} />}
                 <span className={MUTED_TEXT}>{formatDateTime(r.last_reported_at)}</span>
               </div>
               <p className="text-sm text-[oklch(var(--color-ink))] break-words">
@@ -208,7 +216,7 @@ function ContentTab() {
           return (
             <li key={row.id} data-content-id={row.id} className={ROW}>
               <div className="flex flex-wrap items-center gap-2">
-                <DomainEnum namespace="social_moderation.moderation_status" value={row.moderation_status} />
+                <StatusBadge namespace="social_moderation.moderation_status" value={row.moderation_status} tone={MODERATION_TONES[row.moderation_status] ?? "neutral"} />
                 <span className="text-sm font-medium">{row.author?.display_name}</span>
                 <span className={MUTED_TEXT}>{formatDateTime(row.create_time)}</span>
               </div>
@@ -364,7 +372,7 @@ function MutesTab() {
               {t("social_moderation.actions.lift")}
             </Button>
           ) : (
-            <Badge tone="neutral">{t(m.lifted_at ? "social_moderation.mute_lifted" : "social_moderation.mute_expired")}</Badge>
+            <Badge tone="neutral" glyph="○">{t(m.lifted_at ? "social_moderation.mute_lifted" : "social_moderation.mute_expired")}</Badge>
           )}
         </li>
       ))}

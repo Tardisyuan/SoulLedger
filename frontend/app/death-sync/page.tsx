@@ -1,19 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { api, PAGE_SIZE } from "@soulledger/core/api";
-import { ListSkeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/src/components/ui/Pagination";
+import { DataTable } from "@/components/ui/data-table";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
+import { IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { EmptyState } from "@/src/components/ui/EmptyState";
-import { QueryError } from "@/src/components/ui/PageError";
-import { badgeVariants } from "@/src/components/ui/Badge";
+import { type BadgeTone } from "@/src/components/ui/Badge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 
 interface DeathRegistration {
   id: string;
@@ -26,35 +23,22 @@ interface DeathRegistration {
   error_message: string;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))]",
-  ACCEPTED: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))]",
-  PROCESSED: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]",
-  FAILED: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]",
-  DUPLICATE: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
-  PARTIAL: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))]",
-};
-
 /**
- * Badge geometry from `Badge`, fill from the table above.
+ * Sync status → badge tone. 规范 v1:徽章无底色,颜色之外配一枚字形(`StatusBadge`)。
  *
- * `tone: null` skips the variant and its default, so the six token pairs above
- * are the only colours in the list — see the same helper on the actors page.
- * `border-transparent` because those pairs name no border colour and `Badge`'s
- * base carries `border` (a width, not a colour): without it the badge would
- * inherit whatever `borderColor.DEFAULT` resolves to and grow a hairline these
- * rows never had.
- *
- * The table itself stays a `--color-status-*` map on purpose. It is one of the
- * four registered in `src/__tests__/statusTokenLayering.test.ts`, whose entry
- * reads "recorded rather than fixed because the argument for moving it is
- * weak, not absent" — moving it to a tone here would be answering a palette
- * question this pass was not asked, and deleting the register entry along
- * with it.
+ * 这张表此前是 `--color-status-*` 反馈令牌的直写表,登记在
+ * `src/__tests__/statusTokenLayering.test.ts` 里「记下而未修」—— 理由是「移走的论据
+ * 弱,但不是没有」。改成 tone 就是那条登记等的修法:tone 表本来就是反馈层,
+ * PENDING / PROCESSED / FAILED 说的正是一次同步操作的结果。登记条目随之删除。
  */
-function statusBadgeClass(status: string): string {
-  return cn(badgeVariants({ tone: null }), "border-transparent", STATUS_COLORS[status] || "");
-}
+const STATUS_TONES: Record<string, BadgeTone> = {
+  PENDING: "warning",
+  ACCEPTED: "info",
+  PROCESSED: "success",
+  FAILED: "error",
+  DUPLICATE: "neutral",
+  PARTIAL: "warning",
+};
 
 export default function DeathSyncPage() {
   const { t, formatDateTime } = useI18n();
@@ -84,66 +68,64 @@ export default function DeathSyncPage() {
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
     >
       <PageSection title={t("death_sync.registrations") || "Registrations"}>
-        {/* A failed request used to fall through to the empty state, so
-            "the server is down" and "there is nothing here" read the same. */}
-        {isError ? (
-          <QueryError onRetry={() => refetch()} />
-        ) : isLoading ? (
-          <ListSkeleton count={5} />
-        ) : registrations.length === 0 ? (
-          <EmptyState title={t("death_sync.no_registrations") || "No death registrations found."} />
-        ) : (
-          <div className="space-y-3">
-            {registrations.map((reg: DeathRegistration) => (
-              <div key={reg.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{reg.source_system}</p>
-                    <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
-                      {/* IdentifierChip, not dead text. This one is a genuine
-                          exception to clauses 1-2 and is registered as such in
-                          IDENTIFIER_POLICY_EXCEPTIONS — an external system's
-                          reference IS the content of a sync row. Clause 3 is
-                          not waivable though, and this line was violating it:
-                          a reference you cannot paste back into the source
-                          system is a decoration, not a trace. */}
-                      {t("death_sync.reference") || "Ref"}:{" "}
-                      <IdentifierChip
-                        id={reg.source_reference_id || reg.idempotency_key}
-                        variant="inline"
-                      />
-                    </p>
-                  </div>
-                  <DomainEnum
-                    namespace="death_sync.status"
-                    value={reg.status}
-                    className={statusBadgeClass(reg.status)}
+        {/* 账页表格(规范 v1 §2)。没有详情路由,所以不是整行链接。
+            失败与空仍分开:DataTable 的失败行是「! 加载失败」+ 重试。 */}
+        <DataTable<DeathRegistration>
+          caption={t("death_sync.registrations")}
+          columns={[
+            { key: "source", header: t("death_sync.source_system") },
+            { key: "requested", header: t("death_sync.requested") },
+            { key: "duration", header: t("death_sync.duration"), align: "right" },
+            { key: "status", header: t("death_sync.status_label") },
+          ]}
+          data={registrations}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          emptyMessage={t("death_sync.no_registrations") || "No death registrations found."}
+          keyExtractor={(reg) => String(reg.id)}
+          renderRow={(reg) => (
+            <>
+              <td className="px-3 py-2">
+                <p className="font-medium text-[oklch(var(--color-ink))]">{reg.source_system}</p>
+                <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                  {/* IdentifierChip, not dead text. This one is a genuine
+                      exception to clauses 1-2 and is registered as such in
+                      IDENTIFIER_POLICY_EXCEPTIONS — an external system's
+                      reference IS the content of a sync row. Clause 3 is
+                      not waivable though: a reference you cannot paste back
+                      into the source system is a decoration, not a trace. */}
+                  {t("death_sync.reference") || "Ref"}:{" "}
+                  <IdentifierChip
+                    id={reg.source_reference_id || reg.idempotency_key}
+                    variant="inline"
                   />
-                </div>
-                <div className="mt-2 flex gap-4 text-xs text-[oklch(var(--color-ink-muted))]">
-                  <span>{t("death_sync.requested") || "Requested"}: {formatDateTime(reg.request_timestamp)}</span>
-                  {/* `!= null`,不是真值判断。`processing_duration_ms` 是
-                      `number | null`,值为 0 时 `0 && …` 求值为 `0`,而 React
-                      **会把裸 0 渲染出来** —— 元信息行里凭空多一个 0。 */}
-                  {reg.processing_duration_ms != null && (
-                    <span>{t("death_sync.duration") || "Duration"}: {reg.processing_duration_ms}ms</span>
-                  )}
-                </div>
+                </p>
                 {reg.error_message && (
-                  <p className="mt-2 text-sm text-[oklch(var(--color-status-error))]">{reg.error_message}</p>
+                  <p className="text-xs text-[oklch(var(--color-danger))]">
+                    <span aria-hidden="true">! </span>
+                    {reg.error_message}
+                  </p>
                 )}
-              </div>
-            ))}
-          </div>
-        )}
-        {!isError && !isLoading && registrations.length > 0 && (
-          <Pagination
-            page={page}
-            totalPages={Math.max(1, Math.ceil((data?.count ?? 0) / PAGE_SIZE))}
-            count={data?.count ?? 0}
-            onPageChange={setPage}
-          />
-        )}
+              </td>
+              <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+                {formatDateTime(reg.request_timestamp)}
+              </td>
+              <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
+                {/* `!= null`,不是真值判断:`processing_duration_ms` 是 `number | null`,
+                    0 ms 是一个值,照常显示;只有 null 才是「未记录」。 */}
+                {reg.processing_duration_ms != null ? `${reg.processing_duration_ms}ms` : <MissingValue kind="unrecorded" />}
+              </td>
+              <td className="px-3 py-2">
+                <StatusBadge namespace="death_sync.status" value={reg.status} tone={STATUS_TONES[reg.status] ?? "neutral"} />
+              </td>
+            </>
+          )}
+          page={page}
+          totalPages={Math.max(1, Math.ceil((data?.count ?? 0) / PAGE_SIZE))}
+          totalCount={data?.count ?? 0}
+          onPageChange={setPage}
+        />
       </PageSection>
     </PageShell>
   );
