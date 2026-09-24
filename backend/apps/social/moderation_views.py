@@ -16,9 +16,11 @@ router 注册的 viewset 逐条断言)。这里额外一条:官员只审**灵魂
 `RESIDENCE_READABLE`:朋友圈按「当前所在文明」算,暂居的灵魂在暂居地发帖、
 由暂居地的官员审 —— 原属租户的官员看不到,也不该看到。
 """
-from django.db.models import Count, Q
+from django.db import models
+from django.db.models import Case, Count, F, Q, Value, When
+from django.db.models.functions import Substr
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -34,10 +36,13 @@ from apps.social.models import (
     Report,
     ReportResolution,
     ReportStatus,
+    ReportTargetType,
     SensitiveWord,
     SocialMute,
 )
 from apps.social.moderation_serializers import (
+    EXCERPT,
+    HandledContentSerializer,
     ModeratedCommentSerializer,
     ModeratedPostSerializer,
     ModerationActionSerializer,
@@ -45,6 +50,8 @@ from apps.social.moderation_serializers import (
     MuteCreateSerializer,
     ReportSerializer,
     ResolveReportSerializer,
+    SensitiveWordBatchDeleteResultSerializer,
+    SensitiveWordBatchDeleteSerializer,
     SensitiveWordSerializer,
     SocialMuteSerializer,
 )
@@ -196,28 +203,51 @@ class ModeratedCommentViewSet(ModeratedContentViewSet):
 class SensitiveWordViewSet(
     ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin
 ):
-    """本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。"""
+    """本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+    列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。"""
 
     queryset = SensitiveWord.objects.select_related("created_by")
     serializer_class = SensitiveWordSerializer
+    extra_permissions = {"batch_delete": [MODERATE]}
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # 聚合查询不带 Meta.ordering(Django 3.1 起),显式按词排,否则分页顺序不定。
+        return mod.with_recent_hits(qs).order_by("word") if self.action == "list" else qs
 
     @extend_schema(request=SensitiveWordSerializer, responses={201: SensitiveWordSerializer, **ERRORS})
     def create(self, request, *args, **kwargs):
         body = SensitiveWordSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         row = mod.add_sensitive_word(
-            self.tenant, body.validated_data["word"], actor=request.user, request=request
+            self.tenant, body.validated_data["word"], actor=request.user, request=request,
+            category=body.validated_data["category"], action=body.validated_data["action"],
         )
         return Response(SensitiveWordSerializer(row).data, status=201)
 
     def perform_destroy(self, instance):
         mod.remove_sensitive_word(instance, actor=self.request.user, request=self.request)
 
+    @extend_schema(
+        request=SensitiveWordBatchDeleteSerializer,
+        responses={200: SensitiveWordBatchDeleteResultSerializer, 404: ModerationErrorSerializer, **ERRORS},
+    )
+    @action(detail=False, methods=["post"], url_path="batch-delete")
+    def batch_delete(self, request):
+        """同单条删除一样的码名与租户范围;全有或全无,一次最多 200 条。任何一个 id 不在本文明
+        词表里 → 404,`missing` 列出它们,一条都不删。"""
+        body = SensitiveWordBatchDeleteSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        deleted = mod.remove_sensitive_words(
+            self.get_queryset(), body.validated_data["ids"], actor=request.user, request=request
+        )
+        return Response({"deleted": deleted})
+
 
 class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
     """禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。"""
 
-    queryset = SocialMute.objects.select_related("user")
+    queryset = SocialMute.objects.select_related("user", "created_by", "lifted_by")
     serializer_class = SocialMuteSerializer
     extra_permissions = {"lift": [MODERATE]}
 
@@ -243,5 +273,79 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
     @extend_schema(request=None, responses={200: SocialMuteSerializer, **ERRORS})
     @action(detail=True, methods=["post"])
     def lift(self, request, pk=None):
+        """解除。通知走既有的事件总线:`SOCIAL_UNMUTED` 定向发给被禁言的账号(WebSocket)。"""
         row = mod.lift_mute(self.get_object(), actor=request.user, request=request)
         return Response(SocialMuteSerializer(row).data)
+
+
+class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
+    """「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+
+    * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
+      (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
+    * 删除:软删除且删除人不是作者本人 —— 作者删自己的东西不是审核处理。读 `deleted_*`。
+      删除的行不在这里恢复:帖子与评论不在回收站的登记表里,本分支不另开恢复路径。
+
+    两个模型各自过 `scope_to_tenant`,再 UNION 成一个查询 —— 分页与计数在数据库里做。
+    """
+
+    queryset = Post.all_objects.all()
+    serializer_class = HandledContentSerializer
+    #: 过滤参数 → 允许的取值。
+    TYPES = {ReportTargetType.POST: Post, ReportTargetType.COMMENT: Comment}
+    HANDLINGS = ("HIDDEN", "DELETED")
+
+    def _part(self, base, model, kind, handling):
+        qs = base.filter(author__role="SOUL")
+        hidden = Q(is_deleted=False, moderation_status=ModerationStatus.HIDDEN)
+        deleted = Q(is_deleted=True, deleted_by__isnull=False) & ~Q(deleted_by=F("author"))
+        qs = qs.filter({"HIDDEN": hidden, "DELETED": deleted}.get(handling, hidden | deleted))
+
+        def pick(if_deleted, if_hidden, field):
+            return Case(When(is_deleted=True, then=F(if_deleted)), default=F(if_hidden), output_field=field)
+
+        return qs.annotate(
+            row_type=Value(kind, output_field=models.CharField()),
+            row_id=F("id"),
+            post_ref=F("id") if model is Post else F("post_id"),
+            author_ref=F("author_id"),
+            author_name=F("author__display_name"),
+            excerpt=Substr("content", 1, EXCERPT),
+            handling=Case(
+                When(is_deleted=True, then=Value("DELETED")), default=Value("HIDDEN"),
+                output_field=models.CharField(),
+            ),
+            handled_reason=pick("delete_reason", "moderation_reason", models.CharField()),
+            handled_by_ref=pick("deleted_by_id", "moderated_by_id", models.IntegerField()),
+            handled_by_name=pick("deleted_by__display_name", "moderated_by__display_name", models.CharField()),
+            handled_at=pick("deleted_at", "moderated_at", models.DateTimeField()),
+        ).order_by().values(*self.COLUMNS)  # 各部分不能带 Meta.ordering:UNION 的子查询不许 ORDER BY
+
+    COLUMNS = (
+        "row_type", "row_id", "post_ref", "author_ref", "author_name", "excerpt",
+        "handling", "handled_reason", "handled_by_ref", "handled_by_name", "handled_at",
+    )
+
+    def get_queryset(self):
+        params = self.request.query_params
+        kind, handling = params.get("type"), params.get("handling")
+        # `all_objects`:删除的行也要。每个模型各自过一次租户隔离。
+        parts = [
+            self._part(scope_to_tenant(model.all_objects.all(), self.request), model, k, handling)
+            for k, model in self.TYPES.items()
+            if kind in (None, "", k)
+        ]
+        if not parts or (handling not in (None, "") and handling not in self.HANDLINGS):
+            return self._part(Post.all_objects.none(), Post, ReportTargetType.POST, None)
+        qs = parts[0].union(*parts[1:], all=True) if len(parts) > 1 else parts[0]
+        return qs.order_by(F("handled_at").desc(nulls_last=True), "-row_id")
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("type", str, enum=[k.value for k in TYPES], description="只看帖子或只看评论"),
+            OpenApiParameter("handling", str, enum=list(HANDLINGS), description="只看隐藏或只看删除"),
+        ],
+        responses={200: HandledContentSerializer(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)

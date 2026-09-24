@@ -7,10 +7,12 @@
 (同一条帖子被两个官员同时「恢复」与「删除」只有一个生效,另一个看到新状态后得 409)。
 锁的语义只在 PostgreSQL 上成立 —— SQLite 没有行锁,见报告「需真 PG 验证」一节。
 """
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
-from django.db.models import F
+from django.db.models import F, Q, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.social.models import (
@@ -22,6 +24,8 @@ from apps.social.models import (
     ReportStatus,
     ReportTargetType,
     SensitiveWord,
+    SensitiveWordAction,
+    SensitiveWordDailyHit,
     SocialMute,
 )
 from apps.social.soul_circle import (
@@ -38,6 +42,13 @@ from apps.social.soul_circle import (
 REPORTS_PER_DAY = 10
 REPORT_WINDOW = timedelta(hours=24)
 MAX_MUTE_DAYS = 365
+#: 敏感词「近 N 天命中」的 N。
+HIT_WINDOW_DAYS = 30
+#: 批量删除敏感词一次最多几条。
+BATCH_DELETE_MAX = 200
+MASK = "***"
+#: 敏感词自动处置写进 `moderation_reason` 的前缀;后面跟命中的词。
+AUTO_REASON_PREFIX = "sensitive_word:"
 
 
 def audit(action, tenant, resource_id, description, *, actor=None, request=None, changes=None):
@@ -65,7 +76,8 @@ def normalize_word(word):
 
 
 def hits_sensitive_word(tenant, *texts):
-    """命中的第一个敏感词,没有命中为 None。小写子串匹配。
+    """命中的第一个敏感词,没有命中为 None。小写子串匹配。不看动作、不计命中 ——
+    改显示名(soul_circle.rename)用它:名字命中任何词都直接拒。
 
     ponytail: 每次写入把本文明词表整张读出来做子串扫描;词表上千条再换 Aho-Corasick 或缓存。
     """
@@ -78,17 +90,138 @@ def hits_sensitive_word(tenant, *texts):
     return None
 
 
-def add_sensitive_word(tenant, word, *, actor, request=None):
+#: 多个词同时命中时取最重的动作。MASK 最轻:替换后内容照常发布。
+_ACTION_WEIGHT = {SensitiveWordAction.MASK: 0, SensitiveWordAction.REVIEW: 1, SensitiveWordAction.HIDE: 2}
+_STATUS_FOR_ACTION = {
+    SensitiveWordAction.MASK: ModerationStatus.PUBLISHED,
+    SensitiveWordAction.REVIEW: ModerationStatus.PENDING,
+    SensitiveWordAction.HIDE: ModerationStatus.HIDDEN,
+}
+
+
+@dataclass
+class Screening:
+    """一条帖子 / 评论过一遍本文明词表的结果。`content` 是要写进数据库的文本(MASK 已替换)。"""
+
+    content: str
+    status: str = ModerationStatus.PUBLISHED
+    #: 决定 `status` 的那个词(最重动作里按词表顺序第一个);没有命中或只有 MASK 时为空。
+    decisive_word: str = ""
+    hit_ids: list = field(default_factory=list)
+
+    @property
+    def moderation_fields(self):
+        """写入时要一并落库的审核字段。只有 HIDE 算「已处理」—— 进已处理列表,由系统处理。"""
+        if self.status != ModerationStatus.HIDDEN:
+            return {}
+        return {"moderated_at": timezone.now(), "moderation_reason": AUTO_REASON_PREFIX + self.decisive_word}
+
+
+def mask_words(text, words):
+    """把 `text` 里所有 `words`(小写)的出现替换成 ***,与检测同一种小写子串匹配。
+
+    在小写副本上找位置、在原文上替换:重叠或相邻的命中合并成一个 ***。
+    `str.lower()` 对极少数字符会改变长度(如 "İ"),那时位置对不上原文 —— 退回把
+    整段转小写后再替换,宁可丢大小写也不漏掉一个该遮的词。
+    """
+    lowered = text.lower()
+    if len(lowered) != len(text):
+        text = lowered
+    spans = []
+    for word in words:
+        start = lowered.find(word)
+        while word and start != -1:
+            spans.append((start, start + len(word)))
+            start = lowered.find(word, start + 1)
+    if not spans:
+        return text
+    spans.sort()
+    merged = [list(spans[0])]
+    for start, end in spans[1:]:
+        if start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    out, cursor = [], 0
+    for start, end in merged:
+        out.append(text[cursor:start])
+        out.append(MASK)
+        cursor = end
+    out.append(text[cursor:])
+    return "".join(out)
+
+
+def screen_content(tenant, content):
+    """帖子与评论写入前的唯一一道词表检查。只读,不计命中 —— 计数见 `record_hits`,
+    由调用方在写入的同一事务里调,写入失败则不计。
+
+    * REVIEW → PENDING,进待审队列(`/social-moderation/posts|comments/`,默认视图),与 0007 之前一致;
+    * HIDE → HIDDEN,直接进「已处理」,作者本人仍看得见(带状态);
+    * MASK → 命中的片段在写入时换成 ***,内容照常发布。
+    检测一律在原文上做:先遮掉的 MASK 词不会让另一个重叠的 REVIEW / HIDE 词漏检。
+    """
+    if not content or tenant is None:
+        return Screening(content=content)
+    haystack = content.lower()
+    hits = [
+        (pk, word, action)
+        for pk, word, action in SensitiveWord.objects.filter(tenant=tenant).values_list("id", "word", "action")
+        if word and word in haystack
+    ]
+    if not hits:
+        return Screening(content=content)
+    worst = max((action for _, _, action in hits), key=lambda a: _ACTION_WEIGHT[a])
+    masked = [word for _, word, action in hits if action == SensitiveWordAction.MASK]
+    decisive = "" if worst == SensitiveWordAction.MASK else next(w for _, w, a in hits if a == worst)
+    return Screening(
+        content=mask_words(content, masked) if masked else content,
+        status=_STATUS_FOR_ACTION[worst],
+        decisive_word=decisive,
+        hit_ids=[pk for pk, _, _ in hits],
+    )
+
+
+def record_hits(word_ids):
+    """给每个命中的词在今天(UTC 日期)的桶里 +1。一条内容命中同一个词只算一次。
+
+    先 UPDATE;今天还没有桶才 INSERT。两个请求同时给同一个词开今天的桶时,输的那个
+    撞唯一约束 —— 在保存点里撞,回滚的只是这一条 INSERT(PostgreSQL 上一条失败语句会
+    中止整个事务,见 CLAUDE.md),然后再 UPDATE 一次。
+    """
+    today = timezone.now().date()
+    for word_id in dict.fromkeys(word_ids):
+        bucket = SensitiveWordDailyHit.objects.filter(word_id=word_id, day=today)
+        if bucket.update(count=F("count") + 1):
+            continue
+        try:
+            with transaction.atomic():
+                SensitiveWordDailyHit.objects.create(word_id=word_id, day=today, count=1)
+        except IntegrityError:
+            bucket.update(count=F("count") + 1)
+
+
+def with_recent_hits(queryset):
+    """给 SensitiveWord 查询集注上 `hits_30d`:每个词最多读 30 个桶。"""
+    since = timezone.now().date() - timedelta(days=HIT_WINDOW_DAYS - 1)
+    return queryset.annotate(
+        hits_30d=Coalesce(Sum("daily_hits__count", filter=Q(daily_hits__day__gte=since)), 0)
+    )
+
+
+def add_sensitive_word(tenant, word, *, actor, request=None, category="", action=SensitiveWordAction.REVIEW):
     word = normalize_word(word)
     if not word:
         raise SocialError("敏感词不能为空。", "invalid_word", 400)
     with transaction.atomic():
         try:
             with transaction.atomic():
-                row = SensitiveWord.objects.create(tenant=tenant, word=word, created_by=actor)
+                row = SensitiveWord.objects.create(
+                    tenant=tenant, word=word, created_by=actor, category=category, action=action,
+                )
         except IntegrityError:
             raise SocialError("该敏感词已存在。", "duplicate_word", 409) from None
-        audit("CREATE", tenant, row.pk, f"添加敏感词「{word}」", actor=actor, request=request)
+        audit("CREATE", tenant, row.pk, f"添加敏感词「{word}」", actor=actor, request=request,
+              changes={"category": category, "action": action})
     return row
 
 
@@ -96,6 +229,26 @@ def remove_sensitive_word(row, *, actor, request=None):
     with transaction.atomic():
         audit("DELETE", row.tenant, row.pk, f"删除敏感词「{row.word}」", actor=actor, request=request)
         row.delete()
+
+
+def remove_sensitive_words(queryset, ids, *, actor, request=None):
+    """批量删除。`queryset` 必须已按租户收窄(视图传 `get_queryset()`)。
+
+    全有或全无:任何一个 id 不在这个查询集里(别的文明的、已删的、不存在的)就一条都不删,
+    答 404 并列出找不到的 id —— 删了一半的词表比没删更难收拾。返回删掉的条数。
+    """
+    ids = list(dict.fromkeys(ids))
+    if not 1 <= len(ids) <= BATCH_DELETE_MAX:
+        raise SocialError(f"一次删除 1–{BATCH_DELETE_MAX} 条。", "invalid_batch", 400)
+    with transaction.atomic():
+        rows = list(queryset.select_for_update(of=("self",)).filter(pk__in=ids))
+        found = {row.pk for row in rows}
+        missing = [str(pk) for pk in ids if pk not in found]
+        if missing:
+            raise SocialError("部分敏感词不存在。", "not_found", 404, missing=missing)
+        for row in rows:
+            remove_sensitive_word(row, actor=actor, request=request)
+    return len(rows)
 
 
 # ── 举报(灵魂侧)──────────────────────────────────────────────────────────
@@ -204,7 +357,8 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
             if before not in allowed:
                 raise SocialError(f"当前状态 {before} 不能执行 {action}。", "invalid_transition", 409)
             # `.update()` 而不是 `save()`:通用审计信号会再写一条字段 diff,而下面这条已经说清楚了。
-            model.objects.filter(pk=row.pk).update(moderation_status=after)
+            decided = {"moderated_by": actor, "moderated_at": timezone.now(), "moderation_reason": reason[:500]}
+            model.objects.filter(pk=row.pk).update(moderation_status=after, **decided)
         audit(
             "DELETE" if action == "DELETE" else "UPDATE", row.tenant, row.pk,
             f"{kind} {action}" + (f":{reason}" if reason else ""),
@@ -216,6 +370,8 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
                  {"target_type": kind, "target_id": str(row.pk), "action": action})
     if action != "DELETE":
         row.moderation_status = after
+        for name, value in decided.items():
+            setattr(row, name, value)
     return row
 
 

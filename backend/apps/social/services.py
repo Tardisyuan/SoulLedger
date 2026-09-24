@@ -65,13 +65,15 @@ class CommentService:
 
     @staticmethod
     @transaction.atomic
-    def create_comment(author, post, content, parent=None, tenant=None, moderation_status=None):
+    def create_comment(author, post, content, parent=None, tenant=None, moderation_status=None, **moderation):
         """
         Create a comment and increment the post's comment count.
 
         `moderation_status` is for the soul circle (apps/social/soul_circle.py),
         where a comment hitting the sensitive-word list starts PENDING. Omitted,
         the model default (PUBLISHED) applies, as it always did.
+        `moderation` carries `moderated_at` / `moderation_reason` when a HIDE
+        word hid the comment at write time (moderation.Screening).
         """
         extra = {"moderation_status": moderation_status} if moderation_status else {}
         comment = Comment.objects.create(
@@ -81,6 +83,7 @@ class CommentService:
             parent=parent,
             tenant=tenant or post.tenant,
             **extra,
+            **moderation,
         )
         PostService.increment_comment_count(post.pk, tenant=post.tenant)
         return comment

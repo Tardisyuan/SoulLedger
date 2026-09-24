@@ -57,6 +57,14 @@ class Post(AuditUserFields, models.Model):
         default=ModerationStatus.PUBLISHED,
         db_index=True,
     )
+    # 最近一次**审核决定**(隐藏 / 通过 / 恢复)的出处 ——「已处理」列表读它。命中 HIDE 动作
+    # 的敏感词在写入时自动隐藏:`moderated_by` 为空、理由是 `sensitive_word:<词>`。
+    # 删除不写这里:软删除自己有 deleted_by / deleted_at / delete_reason。
+    moderated_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderation_reason = models.CharField(max_length=500, blank=True, default="")
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
     tenant = models.ForeignKey(
@@ -118,6 +126,12 @@ class Comment(AuditUserFields, models.Model):
         default=ModerationStatus.PUBLISHED,
         db_index=True,
     )
+    # 同 Post.moderated_*。
+    moderated_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderation_reason = models.CharField(max_length=500, blank=True, default="")
     tenant = models.ForeignKey(
         "tenants.Tenant",
         on_delete=models.CASCADE,
@@ -435,11 +449,34 @@ class ReportEntry(models.Model):
         ]
 
 
+class SensitiveWordCategory(models.TextChoices):
+    """分类只是给官员看的标签,不影响匹配。中文名在 i18n 包里(`social_moderation.word_category`),
+    不进数据库。空串 = 未分类(0007 之前加的词)。"""
+    PRIVACY = "PRIVACY", "Privacy"
+    ABUSE = "ABUSE", "Abuse"
+    INDUCEMENT = "INDUCEMENT", "Boundary-crossing inducement"
+    CONFIDENTIAL = "CONFIDENTIAL", "Confidential"
+    OFFICIAL_DEFAMATION = "OFFICIAL_DEFAMATION", "Defaming officials"
+
+
+class SensitiveWordAction(models.TextChoices):
+    """命中后对帖子 / 评论做什么(apps/social/moderation.py::screen_content)。
+
+    一条内容命中多个词时取最重的:HIDE > REVIEW > MASK;MASK 的词无论如何都在写入时替换成 ***。
+    """
+    REVIEW = "REVIEW", "Send to review"
+    HIDE = "HIDE", "Hide"
+    MASK = "MASK", "Mask with ***"
+
+
 class SensitiveWord(models.Model):
-    """本文明的敏感词。按小写存、按小写子串匹配(apps/social/moderation.py::hits_sensitive_word)。"""
+    """本文明的敏感词。按小写存、按小写子串匹配(apps/social/moderation.py::screen_content)。"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_sensitive_words")
     word = models.CharField(max_length=50)
+    category = models.CharField(max_length=24, choices=SensitiveWordCategory.choices, blank=True, default="")
+    # 默认 REVIEW:0007 之前的词一直是「命中进待审」,迁移后行为不变。
+    action = models.CharField(max_length=10, choices=SensitiveWordAction.choices, default=SensitiveWordAction.REVIEW)
     created_by = models.ForeignKey(
         "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -449,6 +486,25 @@ class SensitiveWord(models.Model):
         ordering = ["word"]
         constraints = [
             models.UniqueConstraint(fields=["tenant", "word"], name="social_sensitive_word_unique_per_tenant"),
+        ]
+
+
+class SensitiveWordDailyHit(models.Model):
+    """一个词在一天(UTC 日期)里被命中的次数。「近 30 天命中」= 这个词最近 30 行的和。
+
+    为什么按天分桶而不是一次命中一行:读是审核后台每次打开词表都要做的,按天分桶让
+    每个词最多读 30 行(唯一约束 (word, day) 即索引),与命中量无关;写是命中那一刻
+    对一行 `count = count + 1`。不在 SensitiveWord 上放一个计数列:滚动窗口要能「过期」,
+    单个计数列做不到。删词时一并级联删掉。
+    """
+    id = models.BigAutoField(primary_key=True)
+    word = models.ForeignKey(SensitiveWord, on_delete=models.CASCADE, related_name="daily_hits")
+    day = models.DateField()
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["word", "day"], name="social_sensitive_word_hit_one_row_per_day"),
         ]
 
 

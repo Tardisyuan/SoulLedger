@@ -231,21 +231,32 @@ def publish_event(event_type, tenant, user_ids, payload):
     ))
 
 
-def _initial_status(tenant, *texts):
-    from apps.social.moderation import hits_sensitive_word
+def _screen(tenant, content):
+    """敏感词的三种动作(送审 / 隐藏 / 替换)都在 `moderation.screen_content` 里定;这里只负责
+    把结果写进同一次 INSERT,并在同一事务里计命中。"""
+    from apps.social.moderation import screen_content
 
-    return ModerationStatus.PENDING if hits_sensitive_word(tenant, *texts) else ModerationStatus.PUBLISHED
+    return screen_content(tenant, content)
 
 
 def create_post(author, content, visibility):
     tenant = ensure_can_write(author)
+    screening = _screen(tenant, content)
     with transaction.atomic():
         post = Post.objects.create(
-            author=author, content=content, visibility=visibility, tenant=tenant,
-            moderation_status=_initial_status(tenant, content),
+            author=author, content=screening.content, visibility=visibility, tenant=tenant,
+            moderation_status=screening.status, **screening.moderation_fields,
         )
         PostService.increment_post_count(author.pk)
+        _record_hits(screening)
     return post
+
+
+def _record_hits(screening):
+    from apps.social.moderation import record_hits
+
+    if screening.hit_ids:
+        record_hits(screening.hit_ids)
 
 
 def delete_own_post(user, post_id):
@@ -277,12 +288,14 @@ def create_comment(author, post_id, content, parent_id=None):
         ).first()
         if parent is None:
             raise SocialError("回复的评论不存在。", "parent_not_found", 400)
-    status = _initial_status(tenant, content)
+    screening = _screen(tenant, content)
     with transaction.atomic():
         comment = CommentService.create_comment(
-            author=author, post=post, content=content, parent=parent, tenant=tenant, moderation_status=status,
+            author=author, post=post, content=screening.content, parent=parent, tenant=tenant,
+            moderation_status=screening.status, **screening.moderation_fields,
         )
-        if status == ModerationStatus.PUBLISHED:
+        _record_hits(screening)
+        if screening.status == ModerationStatus.PUBLISHED:
             recipients = {post.author_id, parent.author_id if parent else None} - {author.pk}
             publish_event("SOCIAL_COMMENTED", tenant, sorted(r for r in recipients if r),
                      {"post_id": str(post.pk), "comment_id": str(comment.pk), "actor_user_id": author.pk})
