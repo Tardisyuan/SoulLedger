@@ -90,6 +90,7 @@ export type IconName =
   | "info"
   | "lock"
   | "back"
+  | "arrow"
   | "chevron"
   | "chevronDown"
   | "person"
@@ -108,6 +109,8 @@ const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   info: { box: 16, body: [<Circle key="a" cx={8} cy={8} r={6.5} />, <Path key="b" d="M8 4.5v4.5M8 11.2h.01" />] },
   lock: { box: 16, body: [<Rect key="a" x={3} y={7} width={10} height={7} />, <Path key="b" d="M5.5 7V5a2.5 2.5 0 015 0v2" />] },
   back: { box: 18, body: <Path d="M11 3L5 9l6 6" /> },
+  // Android's back (chat handoff 1e): an arrow, where iOS has the chevron above.
+  arrow: { box: 18, body: <Path d="M15 9H3M8 4L3 9l5 5" /> },
   chevron: { box: 16, body: <Path d="M5.5 2.5l6 5.5-6 5.5" /> },
   chevronDown: { box: 14, body: <Path d="M3 5.5L7 9.5l4-4" /> },
   person: {

@@ -266,7 +266,8 @@ function BackButton({ onBack }: { onBack: () => void }) {
   const { t: tr } = useI18n();
   return (
     <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
-      <Icon name="back" size={17} color={t.inkMuted} strokeWidth={1.4} />
+      {/* 1e: Android's back is an arrow, iOS's the chevron. */}
+      <Icon name={Platform.OS === "android" ? "arrow" : "back"} size={Platform.OS === "android" ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
     </Pressable>
   );
 }

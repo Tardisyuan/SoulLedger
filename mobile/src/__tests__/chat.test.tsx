@@ -7,7 +7,7 @@
  * REAL `ChatProvider` against a Synapse double that answers the way Synapse
  * v1.161 does (the same behaviours packages/core's matrix.test.ts pins; the
  * real server is `backend/tests/test_chat_synapse_integration.py`):
- * `PUT .../send/{txnId}` is idempotent per (token, txnId), and
+ * `PUT .../send/{txnId}` is idempotent per (device, txnId) — MSC3970 — and
  * `unsigned.transaction_id` is echoed only to the sender.
  */
 import type { SoulConversation } from "@soulledger/core/api/soul-chat";
@@ -24,6 +24,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, readOutbox, useChat, type Chat } from "../chat";
 import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
+import { AppHeader } from "../chrome";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
@@ -415,6 +416,49 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall_sealed")).toBeTruthy();
     expect(screen.getByTestId("go-current-hall")).toBeTruthy();
     composerGone();
+  });
+});
+
+describe("the title bar per platform (handoff 1e): Android sets the title left and goes back with an arrow", () => {
+  const ARROW = "M15 9H3M8 4L3 9l5 5";
+  const CHEVRON = "M11 3L5 9l6 6";
+  const drawn = () => new Set(screen.UNSAFE_root.findAll((n: Node) => typeof n.props.d === "string").map((n: Node) => n.props.d as string));
+  const titleStyle = () => StyleSheet.flatten(screen.getByRole("header").props.style);
+  /** The first thing drawn in the bar, left to right (a host node). */
+  const firstInBar = () => {
+    let n = screen.getByTestId("header-bar").children[0] as unknown as { type: unknown; children: unknown[] };
+    while (typeof n.type !== "string") n = n.children[0] as typeof n;
+    return n;
+  };
+
+  it("iOS, unchanged: the 书信 title centred; back is the chevron", () => {
+    wrap(chatState(), <AppHeader title="书信" />);
+    expect(titleStyle()).toMatchObject({ textAlign: "center" });
+    // The back key's place is held open on the left, so the title is centred on the bar.
+    expect(firstInBar()).not.toBe(screen.getByRole("header"));
+    screen.unmount();
+    wrap(chatState(), <AppHeader title="找人" onBack={jest.fn()} />);
+    expect(drawn().has(CHEVRON)).toBe(true);
+    expect(drawn().has(ARROW)).toBe(false);
+  });
+
+  it("Android: the 书信 title at the left edge, no empty back slot before it", () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    wrap(chatState(), <AppHeader title="书信" />);
+    expect(titleStyle()).toMatchObject({ textAlign: "left", paddingLeft: 10 });
+    // The title is the bar's first child: nothing is held open where iOS keeps the back key's place.
+    expect(firstInBar()).toBe(screen.getByRole("header"));
+  });
+
+  it("Android: back is an arrow — in the shared bar and in the conversation's own", () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    wrap(chatState(), <AppHeader title="找人" onBack={jest.fn()} />);
+    expect(drawn().has(ARROW)).toBe(true);
+    expect(drawn().has(CHEVRON)).toBe(false);
+    screen.unmount();
+    openConversation(conv());
+    expect(drawn().has(ARROW)).toBe(true);
+    expect(drawn().has(CHEVRON)).toBe(false);
   });
 });
 
