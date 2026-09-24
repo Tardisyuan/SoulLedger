@@ -18,104 +18,94 @@
  * `clientWidth`,但是在动画**进行中**采样,不是在两端。两端都是静止态,
  * 静止态本来就不会溢出 —— 会溢出的是中间。
  *
- * 采样用 rAF 连采而不是 `waitForTimeout` 打一枪:240ms 的动画里最宽的那一帧
- * 落在哪里取决于缓动曲线,`ease-exit` 是 `cubic-bezier(0.7, 0, 0.84, 0)`,
+ * 在动画自己的时间轴上均匀取 13 个点,而不是 `waitForTimeout` 打一枪:240ms 的动画里
+ * 最宽的那一刻落在哪里取决于缓动曲线,`ease-exit` 是 `cubic-bezier(0.7, 0, 0.84, 0)`,
  * 前半程几乎不动、后半程猛冲,一枪打在中点会正好错过。
  */
 
 import { expect, test, setupAuthenticatedPage } from "./fixtures";
 
 /**
- * 在这次动画跑完之前,每帧记一次文档宽度与视口宽度,返回最宽的一帧。
- *
- * 抄的是 `workflow-auto-layout-motion.spec.ts` 的 `startSampling` 形状:先在页面里
- * 装好采样器,再触发动作,最后把结果取回来。反过来做(先触发再装)会漏掉最前面
- * 那几帧,而 `ease-enter` 的位移几乎全在前半程。
- *
- * **不是固定帧数**,这一点和那份文件同一天(2026-09-18)一起改。原先写死 40 帧,
- * 注释按「40 帧 ≈ 660ms at 60fps」推断它盖得住 240ms 的动画 —— 两个前提都不成立:
- * headless firefox 的 rAF 明显快于 60fps(那份 spec 里实测 90 帧只要 821–1315ms),
- * 而窗口是在**点击之前**开的,点击本身的往返在负载下要 97–873ms。窗口因此可能在
- * 动画开始前就关掉,而这条用例断的是「不发生」—— 采不到动画中途的帧,它照样绿,
- * 什么都没验证。
- *
- * 现在由页面自己的完成信号收尾,两条曲线各一个,而且**两个信号不一样**,这是
- * 实测逼出来的(2026-09-18,chromium 与 firefox 同样):
- *
- *   - 入场:`drawer-in` 的 `animationend` 会发,实测在按下后约 270ms 到,
- *     窗口里因此有 19–34 帧;
- *   - 退场:**`drawer-out` 的 `animationend` 从来不发**。`SettingsDrawer` 在
- *     `MOUNT_LINGER_MS`(= `--transition-duration-settle` = 240ms)后把抽屉从
- *     DOM 里卸掉,实测卸载发生在按下 Escape 后 254/256ms,元素先没了,事件就
- *     再也不会派发。所以退场等的是「抽屉那个元素不在了」—— 它走完并离场,
- *     这同样是动画结束,只是由卸载来报信。
- *
- * 退场**不能**用 `[role="dialog"]` 消失来判:`useDrawerA11y` 在 `open` 变 false
- * 的那一次提交里就把 role 拿掉了(实测按下 Escape 后约 8ms,动画还没开始),
- * 用它做信号会在 2 帧后就收工 —— 正是这份文件要防的那种「窗口关得太早、
- * 什么都没采到还是绿的」。
- *
- * 两个信号都不来时 10 秒超时,失败信息指向「动画没跑完」,而不是变成一次静默
- * 的绿。
+ * 在这次动画的时间轴上逐点测文档宽度与视口宽度,返回最宽的一点。
+ * 以前是 rAF 按帧连采(2026-09-18 起由 animationend / 卸载收尾);为什么改成
+ * 拨动动画时间,见函数体开头。
  */
 async function widestFrameDuring(
   page: import("@playwright/test").Page,
   act: () => Promise<void>,
   animation: "drawer-in" | "drawer-out"
 ) {
-  await page.evaluate(() => {
+  // SEEK, DON'T WAIT FOR FRAMES (2026-09-25). The rAF sampler this replaced
+  // failed 12 of 15 with `--repeat-each=15` at load 4.7, 8 of them with ZERO
+  // samples. Cause: in one rendering update the browser dispatches
+  // `animationend` BEFORE it runs rAF callbacks, so when parallel workers
+  // leave a page one rendering update for the whole 240ms, the first frame
+  // after the click both ends the animation and is the only sample. The
+  // assertion then measured nothing, and the ≥3 floor below turned that into
+  // a red that had nothing to do with overflow.
+  //
+  // Now a MutationObserver catches the class change in the same task React
+  // commits it — before any timer, including SettingsDrawer's 240ms unmount
+  // (MOUNT_LINGER_MS) — pauses the CSS animation and seeks it through 13
+  // evenly spaced points of its own duration, reading the document width at
+  // each (reading scrollWidth forces the layout for that currentTime). Then
+  // it rewinds and plays, so the page carries on as the user sees it.
+  // Deterministic, and it covers the fast half of `ease-exit` that a
+  // mid-point snapshot would miss (see the header).
+  await page.evaluate((name) => {
     const w = window as unknown as {
       __widths: { scroll: number; client: number }[];
-      __widthsStop: boolean;
-      __anims: string[];
+      __seeked: boolean;
     };
     w.__widths = [];
-    w.__widthsStop = false;
-    w.__anims = [];
-    document.addEventListener(
-      "animationend",
-      (e) => w.__anims.push((e as AnimationEvent).animationName),
-      true
-    );
-    const tick = () => {
-      if (w.__widthsStop) return;
-      w.__widths.push({
-        scroll: document.documentElement.scrollWidth,
-        client: document.documentElement.clientWidth,
-      });
-      requestAnimationFrame(tick);
+    w.__seeked = false;
+    const seek = () => {
+      const el = document.querySelector(`.animate-${name}`);
+      const anim = el
+        ?.getAnimations()
+        .find((a) => (a as CSSAnimation).animationName === name);
+      if (!anim) return false;
+      anim.pause();
+      const total = Number(anim.effect?.getComputedTiming().duration ?? 0);
+      for (let i = 0; i <= 12; i++) {
+        anim.currentTime = (total * i) / 12;
+        w.__widths.push({
+          scroll: document.documentElement.scrollWidth,
+          client: document.documentElement.clientWidth,
+        });
+      }
+      anim.currentTime = 0;
+      anim.play();
+      return true;
     };
-    requestAnimationFrame(tick);
-  });
+    const observer = new MutationObserver(() => {
+      if (seek()) {
+        w.__seeked = true;
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }, animation);
 
   await act();
 
-  await page.waitForFunction(
-    (name) => {
-      const w = window as unknown as { __anims: string[] };
-      if (w.__anims.includes(name)) return true;
-      // 退场:元素先被卸载,`animationend` 因此不会到(见上)。两个类名都要问,
-      // 采样开始时抽屉还开着(`animate-drawer-in`),只问退场那个会立刻为真。
-      return (
-        name === "drawer-out" &&
-        document.querySelector(".animate-drawer-in, .animate-drawer-out") === null
-      );
-    },
-    animation,
-    { timeout: 10_000 }
-  );
-
-  const samples = await page.evaluate(() => {
-    const w = window as unknown as {
-      __widths: { scroll: number; client: number }[];
-      __widthsStop: boolean;
-    };
-    w.__widthsStop = true;
-    return w.__widths;
+  // The seek never happening (class never applied, animation renamed) fails
+  // here with a timeout that names the animation, not as a silent green.
+  await page.waitForFunction(() => (window as unknown as { __seeked: boolean }).__seeked, null, {
+    timeout: 10_000,
   });
-  // 帧数本身要断言,否则一个没跑起来的采样器会以「零个超宽帧」的面目通过。
-  // 240ms 的动画里至少该有几帧;门槛写小,它挡的是「零帧」不是「帧率不够」。
-  expect(samples.length, "采样器没跑起来,下面的最宽帧无从谈起").toBeGreaterThanOrEqual(3);
+
+  const samples = await page.evaluate(
+    () => (window as unknown as { __widths: { scroll: number; client: number }[] }).__widths
+  );
+  // Still asserted: a sampler that collected nothing must not pass as
+  // "zero overflowing frames". 13 are taken; 3 is the floor it guards.
+  expect(samples.length, `${animation}: 采样器没跑起来,下面的最宽帧无从谈起`).toBeGreaterThanOrEqual(3);
   return samples.reduce((worst, s) => (s.scroll - s.client > worst.scroll - worst.client ? s : worst));
 }
 
