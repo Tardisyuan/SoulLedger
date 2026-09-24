@@ -40,12 +40,9 @@ import { cn } from "@/lib/utils";
  * tint of the error token drops light-mode badge text to 4.37:1, under the
  * 4.5:1 AA floor; 10% keeps it over. Do not raise it.
  *
- * WHY `pill` IS A VARIANT AND NOT THE DEFAULT. `borderRadius` is 0 everywhere
- * now except `rounded-full`, and a survey of the 66 finds exactly **3** genuine
- * pills. Square is the house shape; `pill` exists because a rounded badge does
- * carry a real meaning here — it reads as an identity token (a person, a
- * civilization, a tag) rather than a state — and three call sites were using it
- * for that. Reaching for `pill` because it looks softer is the misuse.
+ * NO PILL SHAPE. There was a rounded `pill` variant for "identity" badges;
+ * 规范 v1 (第 4 节表态 2) gives round corners to avatars only, so every badge is
+ * square. `shape` stays as a one-member variant so call sites keep compiling.
  */
 
 /**
@@ -97,7 +94,6 @@ const badge = cva(
         // `border-radius: 0` and read as a decision that had been made when it
         // had not. Square is the absence of a corner instruction.
         square: "",
-        pill: "rounded-full",
       },
     },
     defaultVariants: { tone: "neutral", shape: "square" },

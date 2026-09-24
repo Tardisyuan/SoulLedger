@@ -144,10 +144,7 @@ export function TemplatePreview({
           {/* 06 是区块标题那一档。 */}
           <h3 className="text-md text-[oklch(var(--color-ink))]">{model.name}</h3>
           <div className="flex gap-2 mt-1">
-            {/* A civilization is an identity, which is the documented
-                meaning of `pill` here; the case type is a classification
-                and stays square. */}
-            <Badge tone="accent" shape="pill">
+            <Badge tone="accent">
               <DomainEnum namespace="workflow.civilizations" value={model.civilization} />
             </Badge>
             <Badge>
@@ -167,9 +164,9 @@ export function TemplatePreview({
         <div className="space-y-2 max-h-80 overflow-y-auto">
           {model.nodes.map((node, idx) => (
             <div key={idx} className="flex items-center gap-3 p-2 bg-[oklch(var(--color-surface-2))]">
-              {/* `rounded-full` survives the corner purge: a round mark is an
+              {/* `` survives the corner purge: a round mark is an
                   identity token, which an ordinal step number is. */}
-              <span className="w-6 h-6 rounded-full bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))] flex items-center justify-center text-xs font-medium shrink-0">
+              <span className="w-6 h-6 bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))] flex items-center justify-center text-xs font-medium shrink-0">
                 {idx + 1}
               </span>
               <span className="text-sm text-[oklch(var(--color-ink))]">{node.name}</span>

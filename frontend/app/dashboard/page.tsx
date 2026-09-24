@@ -285,7 +285,7 @@ function DashboardContent() {
                 <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.state_distribution")}</h2>
                 {loading ? (
                   <div className="h-[240px] flex items-center justify-center">
-                    <Skeleton className="h-[200px] w-[200px] rounded-full" />
+                    <Skeleton className="h-[200px] w-[200px] " />
                   </div>
                 ) : error ? (
                   <div className="h-[240px] flex items-center justify-center text-[oklch(var(--color-status-error))]">{error}</div>
@@ -352,7 +352,7 @@ function DashboardContent() {
                               literal was also fixed across both themes, where
                               every other neutral in the app moves. */}
                           <div
-                            className="w-3 h-3 rounded-full"
+                            className="w-3 h-3 "
                             style={{
                               backgroundColor:
                                 CHART_SERIES.balance,

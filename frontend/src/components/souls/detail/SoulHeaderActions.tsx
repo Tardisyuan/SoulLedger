@@ -105,7 +105,7 @@ export function SoulHeaderActions({
               <div
                 ref={menuRef}
                 role="menu"
-                className="absolute right-0 mt-1 w-40 z-20 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] shadow-lg py-1"
+                className="absolute right-0 mt-1 w-40 z-20 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] shadow-overlay py-1"
               >
                 <button
                   ref={(el) => { itemRefs.current[0] = el; }}

@@ -373,9 +373,9 @@ export function SoulKarmaLedgerCard({
                   <span>{t("souls.detail.merit")} {meritScore}</span>
                   <span>→ {inheritance.inherited_merit}</span>
                 </div>
-                <div className="h-2 rounded-full bg-[oklch(var(--color-karma-merit)/0.18)] overflow-hidden">
+                <div className="h-2 bg-[oklch(var(--color-karma-merit)/0.18)] overflow-hidden">
                   <span
-                    className="block h-full rounded-full bg-[oklch(var(--color-karma-merit))]"
+                    className="block h-full bg-[oklch(var(--color-karma-merit))]"
                     style={{ width: `${ratePct(inheritance.inheritance_merit_rate)}%` }}
                   />
                 </div>
@@ -385,9 +385,9 @@ export function SoulKarmaLedgerCard({
                   <span>{t("souls.detail.demerit")} {demeritScore}</span>
                   <span>→ {inheritance.inherited_demerit}</span>
                 </div>
-                <div className="h-2 rounded-full bg-[oklch(var(--color-karma-demerit)/0.18)] overflow-hidden">
+                <div className="h-2 bg-[oklch(var(--color-karma-demerit)/0.18)] overflow-hidden">
                   <span
-                    className="block h-full rounded-full bg-[oklch(var(--color-karma-demerit))]"
+                    className="block h-full bg-[oklch(var(--color-karma-demerit))]"
                     style={{ width: `${ratePct(inheritance.inheritance_demerit_rate)}%` }}
                   />
                 </div>

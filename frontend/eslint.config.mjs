@@ -116,6 +116,19 @@ const RHYTHM_EXEMPT = {};
 // borderRadius 现在整张表都是 0,只有 `full`(身份物)与 `focus`(2px 焦点环)
 // 有值。所以下面这些类名是**死类名**:它们不产生视觉差异,但会让读代码的人
 // 以为那里有圆角。
+// 规范 v1 第 4 节表态 2:圆角只给头像。rounded-full 只允许出现在这几个文件:两处头像、
+// 两处转圈(一个圆形的旋转指示不是「角」)。加一个文件是一个决定,要写理由。
+const ROUND_ALLOW = new Set([
+  "app/social/follows/page.tsx",
+  "src/components/social/ProfileCard.tsx",
+  "src/components/ui/Spinner.tsx",
+  "app/admin/stats/page.tsx",
+]);
+
+// 规范 v1 §1.7:页面内零阴影,层级靠线。允许的只有:浮层那一档 shadow-overlay、shadow-none,
+// 以及用 inset 画的线(「当前」3 px 墨线、错误下划线、按下内阴影)——它们是线,不是高度。
+const PAGE_SHADOW = /^shadow(?:-(?!overlay$|none$)[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
+
 const DEAD_RADIUS =
   /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|br|bl|ss|se|es|ee))?(?:-(?:none|sm|md|lg|xl|[23]xl))?$/;
 
@@ -307,10 +320,20 @@ const designSystem = {
       }
     }),
 
-    "dead-radius": makeGuard("radius", (raw, report) => {
+    "dead-radius": makeGuard("radius", (raw, report, file) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
-        if (DEAD_RADIUS.test(bare)) {
-          report(chunk, at, `\`${bare}\` 是死类名:borderRadius 表里 none/sm/md/lg/xl/2xl/3xl 与 DEFAULT 全部是 0,它不产生任何圆角,只让读代码的人以为这里是圆的。删掉它;确实要圆角就用 rounded-full(身份物)或 rounded-focus(焦点环)`);
+        if (DEAD_RADIUS.test(bare) || bare === "rounded-focus") {
+          report(chunk, at, `\`${bare}\` 是死类名:borderRadius 表里 none/sm/md/lg/xl/2xl/3xl 与 DEFAULT 全部是 0(焦点环也是方角),它不产生任何圆角,只让读代码的人以为这里是圆的。删掉它`);
+        } else if (/^rounded(?:-[a-z]+)?-full$/.test(bare) && !ROUND_ALLOW.has(file)) {
+          report(chunk, at, `\`${bare}\`:圆角只给头像(规范 v1 第 4 节表态 2)。状态点、进度条、徽章都用方角;真是头像就把文件加进 eslint.config.mjs 的 ROUND_ALLOW 并写理由`);
+        }
+      }
+    }),
+
+    "no-page-shadow": makeGuard("shadow", (raw, report) => {
+      for (const { bare, chunk, at } of classTokens(raw)) {
+        if (PAGE_SHADOW.test(bare)) {
+          report(chunk, at, `\`${bare}\`:页面内零阴影(规范 v1 §1.7),层级靠线。浮层(弹层、抽屉、菜单)用 shadow-overlay;要画线就用 border 或 inset 的 shadow-[inset_…]`);
         }
       }
     }),
@@ -638,6 +661,7 @@ const eslintConfig = [
       "design-system/type-scale": "error",
       "design-system/spacing-rhythm": "error",
       "design-system/dead-radius": "error",
+      "design-system/no-page-shadow": "error",
       "design-system/no-raw-palette": "error",
       "design-system/no-hex-colour": "error",
       "design-system/no-styles-in-csstext": "error",

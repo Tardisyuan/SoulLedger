@@ -26,10 +26,7 @@ import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
  * TABLE"), and its fills are measured — 10%, because columns.tsx recorded that
  * 16% drops light-mode badge text to 4.37:1.
  *
- * `pill`, deliberately: Badge's docstring reserves the rounded shape for
- * identity rather than state, and visibility is a property of the post's
- * audience — closer to a tag than to a status. It was already `rounded-full`
- * here.
+ * Square like every badge (规范 v1: round corners are for avatars only).
  */
 const VISIBILITY_TONES: Record<string, BadgeTone> = {
   PUBLIC: "success",
@@ -64,7 +61,7 @@ export function PostCard({ post }: { post: Post }) {
         >
           {post.author_name || post.author_username}
         </Link>
-        <Badge tone={VISIBILITY_TONES[post.visibility] ?? "neutral"} shape="pill">
+        <Badge tone={VISIBILITY_TONES[post.visibility] ?? "neutral"}>
           <DomainEnum namespace="social.visibility" value={post.visibility} />
         </Badge>
         <span className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))] ml-auto">

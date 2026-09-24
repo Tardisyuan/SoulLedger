@@ -208,7 +208,6 @@
   --radius-xl: 0;
   --radius-2xl: 0;
   --radius-3xl: 0;
-  --radius-focus: 2px;
   --radius-full: 9999px;
 
   --border-width-3: 3px;
@@ -682,7 +681,8 @@ html.theme-switching *::after {
 :focus-visible {
   outline: 2px solid oklch(var(--color-focus)) !important;
   outline-offset: 2px;
-  border-radius: 2px;
+  /* 方角(规范 v1 第 4 节表态 2):环与控件同形,不再「方里套圆」。 */
+  border-radius: 0;
 }
 
 /* Inputs carry their own accent border on focus; a ring plus a border reads
@@ -787,8 +787,7 @@ select:focus-visible {
                                 a private copy of the font stack, so a toast
                                 would keep the old stack after --font-sans moved
 
-   The icon's `border-radius:50%` stays, and stays as `radius-full`'s carve-out
-   says: an 18px icon indicator is a dot, not a text-bearing pill.
+   The icon is square since 规范 v1 (round corners are for avatars only).
 
    `--toast-accent` is set per element by the builder as a TOKEN NAME, not a
    colour — `el.style.setProperty("--toast-accent", "var(--color-status-error)")`
@@ -842,8 +841,8 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* The dot carve-out — an 18px icon indicator, not a pill. */
-  border-radius: 9999px;
+  /* Square (规范 v1: round corners are for avatars only). */
+  border-radius: 0;
   /* 10%, not 20%: the same badge-fill AA floor as the className-based badges
      (a 16% tint of --bad measured 4.37:1, below AA). */
   background: oklch(var(--toast-accent) / 0.1);

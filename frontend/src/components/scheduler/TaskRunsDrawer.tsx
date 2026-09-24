@@ -51,7 +51,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
       <div
         ref={drawerRef}
         {...drawerProps}
-        className="fixed right-0 top-0 h-full w-full max-w-xl bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto animate-drawer-in"
+        className="fixed right-0 top-0 h-full w-full max-w-xl bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-hairline))] z-drawer shadow-overlay overflow-y-auto animate-drawer-in"
       >
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-start justify-between gap-3">
