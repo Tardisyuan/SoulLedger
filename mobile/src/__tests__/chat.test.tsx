@@ -32,7 +32,7 @@ import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
-import { PROFILE, stubApi } from "./stubApi";
+import { PROFILE, heldReply, pressTab, stubApi, type Reply } from "./stubApi";
 
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => {
@@ -835,7 +835,7 @@ describe("the fourth tab", () => {
       "/me/": { status: 200, data: PROFILE },
       "/me/life/": { status: 200, data: { cycle: 1, records: [], judgments: [], dispositions: [], rebirth_applications: [], reincarnation: null } },
       "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "not_eligible", cooldown_until: null, results: [] } },
-      ...(chatRoutes as Record<string, { status: number; data?: unknown }>),
+      ...(chatRoutes as Record<string, Reply | Promise<Reply>>),
     });
     render(
       <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
@@ -859,17 +859,30 @@ describe("the fourth tab", () => {
     const tabs = screen.getAllByRole("tab").map((tab) => tab.props.accessibilityLabel);
     expect(tabs).toEqual(["本世", "转生", "书信", "朋友圈"]);
     expect(screen.queryByTestId("tab-PastLives")).toBeNull();
-    fireEvent.press(screen.getByTestId("tab-Applications"));
+    // pressTab, not a bare press: the switch ends in a timer chain (see settleTabs), and a test that
+    // stops at findByText left its last update to land after the test — the act() warning, 3 of 20 runs under load.
+    await pressTab("tab-Applications");
     expect(await screen.findByText("转生申请")).toBeTruthy();
   });
 
   it("chat not configured here: no 书信 tab at all, and the session is asked for once, not every 5 s", async () => {
     jest.restoreAllMocks();
+    // The server's answer is held and given inside act(), not waited for. Waited for, it failed two ways under
+    // load (2026-09-24, 12 busy processes on 4 cores). (1) `waitFor(() => expect(…).toBeNull())` pretty-prints
+    // the element it received while the tab is still there, a ReactTestInstance whose `_fiber` reaches the whole
+    // app. That took ~490 ms a check, the render queued behind each failed check, and 5 of 20 runs spent the
+    // 5 s budget formatting. (2) With a cheap check, waitFor passed on the commit that drops the tab, and the
+    // navigator's own follow-up (BaseNavigationContainer, PreventRemoveProvider) landed after it, outside act:
+    // 1 of 20. act() flushes the answer and everything after it before it returns.
+    const conversations = heldReply();
     const calls = await signedIn({
-      "/me/chat/conversations/": { status: 503, data: { code: "chat_not_configured" } },
+      "/me/chat/conversations/": conversations.reply,
       "/me/chat/session/": { status: 503, data: { code: "chat_not_configured" } },
     });
-    await waitFor(() => expect(screen.queryByTestId("tab-Letters")).toBeNull(), { timeout: 5000 });
+    // Before the server has answered, the tab is there: its absence below is the answer's doing.
+    expect(screen.getByTestId("tab-Letters")).toBeOnTheScreen();
+    await act(async () => conversations.answer({ status: 503, data: { code: "chat_not_configured" } }));
+    expect(screen.queryByTestId("tab-Letters")).not.toBeOnTheScreen();
     expect(screen.getByTestId("tab-Applications")).toBeTruthy();
     // Longer than one RETRY_MS (5 s): the retry loop used to ask again here, forever.
     await act(() => new Promise((resolve) => setTimeout(resolve, 6_000)));

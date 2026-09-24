@@ -5,7 +5,7 @@
  */
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -15,7 +15,7 @@ import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
-import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
+import { PROFILE, application, heldReply, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -107,42 +107,61 @@ describe("login", () => {
 });
 
 describe("a stored session", () => {
+  /**
+   * The refusal that ends the session is held until the refresh is on the wire, then given inside act().
+   * Waiting for the login screen instead failed two ways under load (2026-09-24, 12 busy processes on
+   * 4 cores). The first was a findBy past its budget with login-submit already in the tree it printed.
+   * The second was findBy passing on the commit that swaps the stacks, with the navigator's follow-up
+   * (BaseNavigationContainer, PreventRemoveProvider) landing after it, outside act. act() flushes the
+   * answer and all that follows before it returns.
+   */
+  async function refuseRefresh(calls: { url: string }[], refresh: ReturnType<typeof heldReply>) {
+    await waitFor(() => expect(calls.some((c) => c.url === "/soul-auth/refresh/")).toBe(true));
+    await act(async () => refresh.answer({ status: 401, data: { code: "token_not_valid" } }));
+  }
+
   it("401 whose refresh the server refuses → back to the login stack, tokens gone", async () => {
     secure.set(REFRESH_TOKEN_KEY, "stale");
-    stubApi({
+    const refresh = heldReply();
+    const calls = stubApi({
       "/me/": { status: 401, data: { code: "token_not_valid" } },
-      "/soul-auth/refresh/": { status: 401, data: { code: "token_not_valid" } },
+      "/soul-auth/refresh/": refresh.reply,
     });
     renderApp();
-    await screen.findByTestId("login-submit");
+    await refuseRefresh(calls, refresh);
+    expect(screen.getByTestId("login-submit")).toBeOnTheScreen();
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
   });
 
   it("a 401 on a LATER request (not the boot /me/) also returns to login — that path is onUnauthorized alone", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
-    stubApi({
+    const refresh = heldReply();
+    const calls = stubApi({
       "/me/": { status: 200, data: PROFILE },
       "/me/life/": { status: 401, data: { code: "token_not_valid" } },
-      "/soul-auth/refresh/": { status: 401, data: { code: "token_not_valid" } },
+      "/soul-auth/refresh/": refresh.reply,
     });
     renderApp();
-    await screen.findByTestId("login-submit");
-    expect(screen.queryByTestId("profile-card")).toBeNull();
+    await refuseRefresh(calls, refresh);
+    expect(screen.getByTestId("login-submit")).toBeOnTheScreen();
+    expect(screen.queryByTestId("profile-card")).not.toBeOnTheScreen();
   });
 
   it("a session that expires on its own (401) takes the unsent letters off the device too", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     const letter = { txnId: "t1", conversationId: "c1", roomId: "!r", body: "枯树那边风大", ts: 1, state: "queued" };
     persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: PROFILE.soul_code, device: "DEV1", items: [letter] }));
-    stubApi({
+    const refresh = heldReply();
+    const calls = stubApi({
       "/me/": { status: 200, data: PROFILE },
       "/me/life/": { status: 401, data: { code: "token_not_valid" } },
-      "/soul-auth/refresh/": { status: 401, data: { code: "token_not_valid" } },
+      "/soul-auth/refresh/": refresh.reply,
       "/me/chat/conversations/": "offline",
       "/me/chat/session/": "offline",
     });
     renderApp();
-    await screen.findByTestId("login-submit");
+    await refuseRefresh(calls, refresh);
+    expect(screen.getByTestId("login-submit")).toBeOnTheScreen();
     expect(persistentStore.get(OUTBOX_KEY)).toBeNull();
     expect(await AsyncStorage.getItem(OUTBOX_KEY)).toBeNull();
   });
@@ -170,9 +189,14 @@ describe("a stored session", () => {
 
   it("skins the app by the soul's civilization", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
-    stubApi({ "/me/": { status: 200, data: { ...PROFILE, civilization: "EGYPTIAN" } }, "/me/life/": { status: 200, data: life(1) } });
+    // /me/ is answered inside act(): profile-card is on the signed-in tree's FIRST commit, so a findBy for
+    // it passed while that tree's mount effects were still queued, and they landed after the test (act()
+    // warnings from RootNavigator, MyLifeScreen, PastLivesSection, ChatProvider: 1 of 20 loaded full runs).
+    const me = heldReply();
+    stubApi({ "/me/": me.reply, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
-    const card = await screen.findByTestId("profile-card");
+    await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "EGYPTIAN" } }));
+    const card = screen.getByTestId("profile-card");
     const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
     expect(style).toMatchObject({ backgroundColor: themeFor("EGYPTIAN", "light").s0 }); // jest reports a light colour scheme
     expect(themeFor("EGYPTIAN", "light").s0).not.toBe(themeFor(null, "light").s0);

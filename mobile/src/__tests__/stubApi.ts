@@ -13,8 +13,22 @@ import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 
  * BottomTabView.tsx:190). A test that ends right after a switch leaves that update
  * to land after it — the act() warning jest.setup.js fails on, and a flaky one:
  * whether the timer beats RNTL's cleanup is a race (2026-09-19: one run in four).
+ *
+ * That 32 ms timer is the second link of a chain: it is armed only when the tab
+ * animation ends, and under jest the animation's end is itself a 16 ms timer
+ * (@react-native/jest-preset NativeModules.js, `startAnimatingNode`). One 100 ms
+ * wait did not cover it under load: with the event loop blocked past 100 ms, the
+ * 16 ms and 100 ms timers come due in the same pass, the 16 ms one arms the 32 ms
+ * one, and the 100 ms one ends the wait first. So wait once per link, with the
+ * link's own delay: Node keeps timers of one duration in one list and fires that
+ * list in insertion order, so a timer armed after the link, with the same delay,
+ * fires after it however late the loop runs. (Different delays give no such order.)
  */
-export const settleTabs = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 100)));
+const tick = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+export async function settleTabs() {
+  await tick(16); // after the animation's end, which arms…
+  await tick(32); // …and after `animating: false`
+}
 
 /** Press a bottom tab and let the switch finish (see settleTabs). */
 export async function pressTab(testID: string) {
@@ -24,14 +38,25 @@ export async function pressTab(testID: string) {
 
 export type Reply = { status: number; data?: unknown } | "offline";
 
-export function stubApi(routes: Record<string, Reply | Reply[]>) {
+/**
+ * A reply the test hands over when it chooses — inside act(), so that every update
+ * that follows it (and the navigator's own bookkeeping after those) is flushed
+ * before act returns, rather than raced by a waitFor.
+ */
+export function heldReply() {
+  let answer!: (reply: Reply) => void;
+  const reply = new Promise<Reply>((resolve) => (answer = resolve));
+  return { reply, answer };
+}
+
+export function stubApi(routes: Record<string, Reply | Reply[] | Promise<Reply>>) {
   const calls: { method: string; url: string; body: unknown; params?: Record<string, unknown> }[] = [];
   soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
     const url = config.url ?? "";
     const method = (config.method ?? "get").toUpperCase();
     calls.push({ method, url, body: config.data ? JSON.parse(config.data as string) : undefined, params: config.params });
     const route = routes[`${method} ${url}`] ?? routes[url];
-    const reply = Array.isArray(route) ? (route.length > 1 ? route.shift() : route[0]) : route;
+    const reply = route instanceof Promise ? await route : Array.isArray(route) ? (route.length > 1 ? route.shift() : route[0]) : route;
     if (!reply) throw new Error(`unscripted request: ${method} ${url}`);
     if (reply === "offline") throw new AxiosError("Network Error", "ERR_NETWORK", config);
     const response = { status: reply.status, data: reply.data, headers: {}, config, statusText: "" } as AxiosResponse;
