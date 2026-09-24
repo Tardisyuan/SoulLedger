@@ -1,4 +1,10 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+
+/** 规范 v1 §1.7:骨架屏不闪烁,400 ms 后才出现。快于这个的加载,用户什么都不该看见。 */
+export const SKELETON_DELAY_MS = 400
 
 interface SkeletonProps {
   className?: string
@@ -8,6 +14,15 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
+  // `invisible`, not "render nothing": the block holds its final-layout space
+  // from the first frame, so neither the 400 ms reveal nor the load finishing
+  // moves anything (spec: 加载完成不跳版). The element stays in the DOM
+  // throughout, so e2e waits on `data-slot="skeleton"` still see it.
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const id = setTimeout(() => setShown(true), SKELETON_DELAY_MS)
+    return () => clearTimeout(id)
+  }, [])
   // `as` exists because a <div> is not legal everywhere a placeholder is
   // wanted. PageShell's subtitle slot renders a <p>, and putting the default
   // <div> in it made React report "In HTML, <div> cannot be a descendant of
@@ -40,6 +55,7 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
          * pinned ink-on-surface combinations because the hairline family is in
          * neither ramp. */
         'animate-pulse bg-[oklch(var(--color-hairline))]',
+        !shown && 'invisible',
         className
       )}
     />
