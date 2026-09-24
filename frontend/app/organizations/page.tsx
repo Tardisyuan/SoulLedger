@@ -5,12 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { CardSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown, ClipboardList, Landmark, Scale } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -117,49 +116,60 @@ function OrganizationsPageContent() {
     setCollapsed(prev => ({ ...prev, [civ]: !prev[civ] }));
   };
 
-  const renderOrg = (org: Organization, depth: number = 0) => (
-    <div
-      key={org.id}
-      className="flex items-center gap-3 py-2 px-3 hover:bg-[oklch(var(--color-surface-2))] transition-colors"
-      style={{ paddingLeft: `${depth * 20 + 12}px` }}
-    >
-      {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
-          purpose — those are identity marks carrying measured font-coverage
-          reasoning. These three are chrome: OS-rendered glyphs beside a
-          controlled three-family type system, drawn differently on every
-          platform. */}
-      <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))] shrink-0">
-        {depth === 0 ? (
-          <Landmark className="w-5 h-5" />
-        ) : depth === 1 ? (
-          <Scale className="w-5 h-5" />
-        ) : (
-          <ClipboardList className="w-5 h-5" />
-        )}
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h3 title={org.name} className="text-sm font-medium text-[oklch(var(--color-ink))] truncate">{org.name}</h3>
-          <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
-            {org.level === 0 ? t("organization.root") : `L${org.level}`}
-          </Badge>
-        </div>
-        <p title={org.code} className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] truncate">{org.code}</p>
-      </div>
-    </div>
-  );
-
-  const renderTree = (orgs: Organization[], parentId: number | null, depth: number): React.ReactNode => {
+  /** Depth-first, siblings in `sort` order: the tree as table rows. */
+  const flattenTree = (orgs: Organization[]): { org: Organization; depth: number }[] => {
     const tree = buildTree(orgs);
-    const parentKey = String(parentId ?? "root");
-    const children = tree[parentKey] || [];
-    return children.map(org => (
-      <div key={org.id}>
-        {renderOrg(org, depth)}
-        {renderTree(orgs, org.id, depth + 1)}
-      </div>
-    ));
+    const out: { org: Organization; depth: number }[] = [];
+    const walk = (parentId: number | null, depth: number) => {
+      for (const org of tree[String(parentId ?? "root")] || []) {
+        out.push({ org, depth });
+        walk(org.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    return out;
   };
+
+  /* 账页(规范 v1 §2):树不再装在卡片框里,而是一张表 —— 表头 11 px 等宽,
+     下接区块边界,行与行之间是行线。层级靠名称列的缩进和图标说,不靠框。
+     机构没有详情路由,所以不是整行链接。 */
+  const renderTable = (orgs: Organization[]) => (
+    <table className="w-full text-sm">
+      <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+        <tr className="border-b border-[oklch(var(--color-block))]">
+          <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
+          <th scope="col" className="px-3 py-2 text-left font-normal">{t("tenants.code")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {flattenTree(orgs).map(({ org, depth }) => (
+          <tr key={org.id} className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors">
+            <td className="py-2 pr-3" style={{ paddingLeft: `${depth * 20 + 12}px` }}>
+              <div className="flex items-center gap-2">
+                {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
+                    purpose — those are identity marks carrying measured font-coverage
+                    reasoning. These three are chrome. */}
+                <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))] shrink-0">
+                  {depth === 0 ? (
+                    <Landmark className="w-4 h-4" />
+                  ) : depth === 1 ? (
+                    <Scale className="w-4 h-4" />
+                  ) : (
+                    <ClipboardList className="w-4 h-4" />
+                  )}
+                </span>
+                <span className="font-medium text-[oklch(var(--color-ink))]">{org.name}</span>
+                <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
+                  {org.level === 0 ? t("organization.root") : `L${org.level}`}
+                </Badge>
+              </div>
+            </td>
+            <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{org.code}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <PageShell
@@ -172,13 +182,7 @@ function OrganizationsPageContent() {
       }
       subtitle={t("organization.subtitle")}
       isLoading={isLoading}
-      skeleton={
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </div>
-      }
+      skeleton={<ListSkeleton count={6} />}
     >
       {/* Worse than its siblings: no empty state either, so a failed request
           rendered a heading and literally nothing else -- `Object.entries({})`
@@ -204,28 +208,23 @@ function OrganizationsPageContent() {
 
           return (
             <div key={category}>
-              {/* Category Header */}
-              <Button
+              {/* Category Header — a flat toggle over the block line, not a boxed button. */}
+              <button
                 type="button"
-                variant="secondary"
-                size="lg"
                 onClick={() => toggleCollapse(category)}
-                className="w-full justify-start mb-4 text-left"
+                aria-expanded={!isCollapsed}
+                className="w-full flex items-center gap-3 mb-2 py-3 border-t border-[oklch(var(--color-block))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
               >
                 <span aria-hidden="true" className="text-md">{info.icon}</span>
                 <span className="flex-1 min-w-0">
                   <span title={info.name} className="block text-md text-[oklch(var(--color-ink))] truncate">{info.name}</span>
-                  <span className="block text-sm text-[oklch(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
+                  <span className="block font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
                 </span>
                 <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-              </Button>
+              </button>
 
               {/* Organization Tree */}
-              {!isCollapsed && (
-                <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] overflow-hidden">
-                  {renderTree(orgs, null, 0)}
-                </div>
-              )}
+              {!isCollapsed && <div className="overflow-x-auto">{renderTable(orgs)}</div>}
             </div>
           );
         })}
