@@ -58,6 +58,10 @@ export interface TaskRun extends TaskRunSummary {
   task_name: string;
   celery_task_id: string;
   tenant: number | null;
+  /** Code and display name of `tenant` (added 2026-09-24); null for a global
+   *  run. The panel used to map the pk to a code through the job list. */
+  tenant_code: string | null;
+  tenant_display_name: string | null;
   worker_hostname: string;
   error: string;
   result: string;

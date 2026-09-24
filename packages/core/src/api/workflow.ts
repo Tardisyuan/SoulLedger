@@ -72,6 +72,14 @@ export interface ApprovalNode {
    * scope here; the type is now correct and the defect is no longer disguised.
    */
   approver?: number | null;
+  /**
+   * Added 2026-09-24, the backend fix the two render sites above were waiting
+   * for. `approver.username` (the recoverable identifier) and
+   * `approver.display_name` (may be `""` — the column is blank-able). Both null
+   * while the node is undecided or the account is gone.
+   */
+  approver_username?: string | null;
+  approver_display_name?: string | null;
   status: string;
   verdict?: string | null;
   decided_at: string | null;

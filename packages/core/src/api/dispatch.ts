@@ -53,8 +53,12 @@ export interface DispatchRecord {
 export interface CrossTenantJudgmentListItem {
   id: string;
   title: string;
+  /** The initiating tenant's pk — an id, not something to show. */
   initiating_tenant: number;
   initiating_tenant_code: string;
+  /** `Tenant.display_name`, beside the code (added 2026-09-24): the detail page
+   *  printed the pk under 「发起方」 for want of it. */
+  initiating_tenant_display_name: string;
   status: string;
   concluded_at: string | null;
   conclusion_type: string | null;
@@ -77,8 +81,11 @@ export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
 export interface CrossTenantJudgmentParticipant {
   id: string;
   judgment: string;
+  /** The seat tenant's pk — an id, not something to show. */
   participant_tenant: number;
   participant_tenant_code: string;
+  /** `Tenant.display_name` of the seat's tenant (added 2026-09-24). */
+  participant_tenant_display_name: string;
   participant_actor: string | null;
   participant_actor_name: string | null;
   role: string;

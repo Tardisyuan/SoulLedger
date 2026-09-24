@@ -256,13 +256,15 @@ describe("灵魂详情的受刑计划面板", () => {
 // ── 联审各站 ──────────────────────────────────────────────────────────────
 
 const seat = (id: string, tenant: string, order: number | null, over: Record<string, unknown> = {}) => ({
-  id, judgment: "cj1", participant_tenant: 0, participant_tenant_code: tenant, participant_actor: null,
+  id, judgment: "cj1", participant_tenant: 0, participant_tenant_code: tenant,
+  participant_tenant_display_name: `${tenant} name`, participant_actor: null,
   participant_actor_name: null, role: order === null ? "ADVISOR" : "CO_JUDGE", joined_at: "2026-09-01T00:00:00Z",
   node_order: order, sentence_realm_code: "", sentence_years: null, sentence_is_eternal: false,
   sentence_memory_reset: "", sentence_notes: "", sentence_submitted_at: null, ...over,
 });
 const bench = (over: Partial<CrossTenantJudgment> = {}): CrossTenantJudgment => ({
   id: "cj1", title: "联审", description: "", initiating_tenant: 1, initiating_tenant_code: "CN_DIYU",
+  initiating_tenant_display_name: "CN_DIYU name",
   status: "PROPOSED", concluded_at: null, conclusion_type: null, judgment: "j1", create_time: "", update_time: "",
   participants: [seat("eg", "EG_DUAT", 2), seat("eu", "EU_HEAVEN_HELL", 3), seat("gr", "GR_HADES", null)],
   ...over,
