@@ -33,7 +33,7 @@
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 21、小词 18 个,
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 24、小词 18 个,
  *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
  */
 import { writeFileSync } from "node:fs";
@@ -209,7 +209,7 @@ const ROOTS = [
 /** 审核域(social_moderation)。Imen 隐藏 / Fekh 删除·解除;Menkh 审核通过 / Hesy 批准转生;Gerh 禁言 / Djeseru 敏感词。 */
 const ROOTS_MOD = [
   "Sedjem", "Wesheb", "Djeseru", "Gerh", "Imen", "Fekh", "Per", "Aat", "Redi",
-  "Mehy", "Kher", "Hemet", "Betau", "Shemsu", "Neb-Medu", "Khet", "Menkh", "Ankh-Wehem",
+  "Mehy", "Kher", "Hemet", "Betau", "Shemsu", "Neb-Medu", "Khet", "Menkh", "Ankh Wehem",
 ];
 /** 笔误 · 一词多写 · 英文残留。Wesir(神名)与 Wser(强)是两个词,不可互改;Maakheru 不是 Mekher 的异写。 */
 const ROOTS_FIX = [
@@ -240,13 +240,14 @@ const ROOTS_FINAL = [
  */
 const ROOTS_LATE = ["Hab-Ba", "Kheper", "Khetem", "Menmen"];
 /**
- * 灵魂端 App 新增词根(一之八,21 个):书信 6、受刑 6、朋友圈 9。并表时与已定词根冲突的 8 处已按定稿改写
+ * 灵魂端 App 新增词根(一之八,24 个):书信 6、受刑 6、朋友圈 9,补登 3(Sau 保存、Nehem 移入、Khesbedj 墨蓝)。并表时与已定词根冲突的 8 处已按定稿改写
  * (关注 Mehy → Nehes、念 Ib-Aa → Sekha、表态 Ib-Djed → Sehed、互关复用 Senb、可见范围 Aat Maa 不新造……)。
  */
 const ROOTS_APP = [
   "Shemes", "Hen", "Sedja", "Weshed", "Senb", "Ates",
   "Shepet", "Sekhet-Shepet", "Ahau", "Nedj", "Wetep-Neb", "Khemen-Shepet",
   "Sehed", "Hai", "Sekha", "Dua", "Iakeb", "Khabes", "Nehes", "Nehesu", "Wen-Neb",
+  "Sau", "Nehem", "Khesbedj",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
@@ -323,6 +324,8 @@ describe("egy 词表规则", () => {
       /\bRemetch\b/, /\bSepr\b/, /\bSep-U\b/, /\bAmMit\b/, /\bDjesef\b/, /\bHemst\b/, /\bMaakher\b/,
       /\bMekheru\b/, /\bIaru\b/, /\bSemen\b/, /\bWenu\b/, /\bMetu\b/, /\bWehem Ankh\b/,
       /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/, /\bPert Abuf\b/,
+      // 一之八:恢复写作两词 Ankh Wehem,连字符形废止。
+      /\bAnkh-Wehem\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
   });
