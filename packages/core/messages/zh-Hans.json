@@ -304,6 +304,13 @@
     "date_problem_marker": {
       "error": "日期错误 — 详见灵魂详情",
       "warning": "日期警告 — 详见灵魂详情"
+    },
+    "preview": {
+      "open": "预览",
+      "open_aria": "在侧栏预览 {{name}}",
+      "hint": "J / K 上下条 · Esc",
+      "open_full": "打开完整卷宗 →",
+      "load_error": "详情加载失败。"
     }
   },
   "common": {
@@ -684,7 +691,17 @@
     "no_activity": "暂无最近活动",
     "no_realm_data": "暂无地域数据",
     "error_load": "加载统计数据失败",
-    "error_export": "导出统计数据失败"
+    "error_export": "导出统计数据失败",
+    "todo": {
+      "approve_dispatch": "待我审批 · 调度",
+      "go_approve": "去审批 →",
+      "judgment_queue": "审判队列",
+      "enter": "进入 →",
+      "none": "无待办",
+      "load_error": "计数加载失败"
+    },
+    "civ_share": "占比",
+    "civ_empty": "尚未入册 · 去登记"
   },
   "ledger": {
     "title": "功德统计",
@@ -1175,7 +1192,25 @@
     },
     "confirm_approve": "确认批准这次跨租户调度?",
     "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。",
-    "proposer_account_removed": "提议人账号已删除,姓名无从取得"
+    "proposer_account_removed": "提议人账号已删除,姓名无从取得",
+    "propose_subtitle": "把灵魂调往另一文明暂居审理：目标文明批准后，由目标文明执行。",
+    "soul_from_detail": "从详情页带入，不可改",
+    "soul_from_detail_error": "带入的灵魂加载失败，请在这里重新选择。",
+    "source_label": "来源",
+    "discard": "放弃…",
+    "discard_title": "放弃这份调度？",
+    "discard_message": "已填写的内容不会保存——调度没有草稿。",
+    "discard_keep": "继续填写",
+    "discard_confirm": "放弃",
+    "flow": {
+      "title": "审批流 · 跨文明调度",
+      "step_propose": "来源文明 · {{tenant}} 提交",
+      "step_approve": "目标文明 · {{tenant}} 批准",
+      "step_execute": "目标文明 · 执行",
+      "target_unchosen": "未选",
+      "pending_submit": "待提交",
+      "not_yet": "未至"
+    }
   },
   "crossJudgments": {
     "title": "跨文明审判",
@@ -1367,7 +1402,8 @@
   },
   "filter": {
     "all": "全部",
-    "clear_all": "清除全部"
+    "clear_all": "清除全部",
+    "clear_one": "清除「{{name}}」筛选"
   },
   "death_sync": {
     "title": "死亡同步",

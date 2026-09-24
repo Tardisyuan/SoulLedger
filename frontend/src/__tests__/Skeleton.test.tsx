@@ -1,8 +1,46 @@
 /**
  * Tests for Skeleton components
  */
-import { render } from "@testing-library/react";
-import { Skeleton, TableSkeleton, CardSkeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { act, render } from "@testing-library/react";
+import { Skeleton, TableSkeleton, CardSkeleton, ListSkeleton, SKELETON_DELAY_MS } from "@/components/ui/skeleton";
+
+describe("Skeleton 400 ms delay (规范 v1 §1.7:骨架屏不闪烁)", () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it("is laid out but invisible until 400 ms, then appears", () => {
+    const { container } = render(<Skeleton className="h-4" />);
+    const el = container.firstChild as HTMLElement;
+    // Present from the first frame: the space is reserved, nothing jumps.
+    expect(el.getAttribute("data-slot")).toBe("skeleton");
+    expect(el.className).toContain("invisible");
+
+    act(() => { jest.advanceTimersByTime(399); });
+    expect(el.className).toContain("invisible");
+
+    act(() => { jest.advanceTimersByTime(1); });
+    expect(el.className).not.toContain("invisible");
+    expect(el.className).toContain("animate-pulse");
+  });
+
+  it("exports the spec's number", () => {
+    expect(SKELETON_DELAY_MS).toBe(400);
+  });
+
+  it("a load that finishes before 400 ms never shows the skeleton", () => {
+    const { container, unmount } = render(<Skeleton />);
+    const el = container.firstChild as HTMLElement;
+    act(() => { jest.advanceTimersByTime(200); });
+    expect(el.className).toContain("invisible");
+    unmount();
+    // The pending timer is cleared: advancing past 400 ms must not warn about
+    // a state update on an unmounted component.
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+    act(() => { jest.advanceTimersByTime(1000); });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
 
 describe("Skeleton components", () => {
   // FT-12 (2026-09-13): all seven cases here used to be `container.firstChild

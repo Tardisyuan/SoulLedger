@@ -13,7 +13,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "@/app/dashboard/page";
-import { ledgerApi } from "@soulledger/core/api";
+import { dispatchApi, judgmentApi, ledgerApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
 
 const mockReplace = jest.fn();
@@ -26,6 +26,8 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn(), exportStats: jest.fn() },
+  dispatchApi: { proposed: jest.fn() },
+  judgmentApi: { next: jest.fn() },
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
@@ -51,15 +53,14 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyDashboardPieChart: ({ data }: { data: { name: string }[] }) => (
-    <div data-testid="pie">{data.map((d) => d.name).join("|")}</div>
-  ),
   LazyBarChart: ({ data, dataKey }: { data: unknown[]; dataKey: string }) => (
     <div data-testid={`bar-${dataKey}`}>{data.length}</div>
   ),
 }));
 
 const mockedStats = ledgerApi.statsOverview as jest.Mock;
+const mockedProposed = dispatchApi.proposed as jest.Mock;
+const mockedNext = judgmentApi.next as jest.Mock;
 const mockedExport = ledgerApi.exportStats as jest.Mock;
 
 const baseStats = {
@@ -93,6 +94,12 @@ const baseStats = {
   ],
 };
 
+/** Waits until `selector` exists — a waitFor callback has to THROW to keep waiting. */
+async function found(container: HTMLElement, selector: string): Promise<HTMLElement> {
+  await waitFor(() => expect(container.querySelector(selector)).not.toBeNull());
+  return container.querySelector(selector) as HTMLElement;
+}
+
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const Wrapper = ({ children }: { children: ReactNode }) => (
@@ -107,27 +114,24 @@ beforeEach(() => {
   mockUser = { role: "ADMIN" };
   mockT.mockImplementation((key: string) => key);
   mockedStats.mockResolvedValue({ data: baseStats });
+  mockedProposed.mockResolvedValue({ data: { count: 1, results: [] } });
+  mockedNext.mockResolvedValue({ data: { total: 0 } });
 });
 
 // ── Overview tab ─────────────────────────────────────────────────────
 
 describe("DashboardPage overview", () => {
-  it("renders the stat cards from the payload", async () => {
+  it("renders the lifecycle row from the payload, in lifecycle order", async () => {
     renderPage();
 
-    await screen.findByTestId("pie");
-    // Selected by `data-kpi`, not by class name. This used to filter on
-    // `text-2xl font-bold`, which pinned the test to one rung of the old type
-    // scale: when Stage 11 moved KPI values to `text-xl` (56px) the filter
-    // matched none of the four cards, silently fell through to two unrelated
-    // numbers elsewhere on the page, and reported a data bug that did not
-    // exist. A test for "the payload reaches the cards" must not fail because
-    // the cards changed size.
-    const cardValues = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-kpi]"),
-    ).map((el) => el.textContent);
-    // The four summary cards come first: total / alive / judging / disposed.
-    expect(cardValues.slice(0, 4)).toEqual(["4", "2", "1", "1"]);
+    // Selected by `data-kpi`, not by class name (a KPI test must not fail
+    // because the cards changed size). ALIVE / JUDGING / DISPOSED /
+    // REINCARNATING / SETTLED — the last two absent from the payload, so 0.
+    await waitFor(() =>
+      expect(Array.from(document.querySelectorAll<HTMLElement>("[data-kpi]")).map((el) => el.textContent)).toEqual([
+        "2", "1", "1", "0", "0",
+      ])
+    );
   });
 
   it("falls back to zero for a state the payload omits", async () => {
@@ -138,51 +142,105 @@ describe("DashboardPage overview", () => {
     await waitFor(() => expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(3));
   });
 
-  it("翻译缺失时,图例里不会出现裸枚举成员", async () => {
-    // 这条曾经叫「shows the API label in the pie legend」,断的是
-    // `toHaveTextContent("Alive|Judging|Disposed")` —— 而 API 送的是
-    // `ALIVE|JUDGING|DISPOSED`。**夹具、注释、测试三者互相印证了一件假的事。**
-    // 现在断的是:无论 `label` 里是什么,裸成员都不会进图例。
-    mockT.mockImplementation((key: string) => key);
+  describe("图例账 — no pie chart, every number in a row", () => {
+    it("draws no pie and puts each state's count and share in its own ledger row", async () => {
+      const { container } = renderPage();
+      const ledger = await found(container, "[data-legend-ledger]");
+      expect(screen.queryByTestId("pie")).not.toBeInTheDocument();
+      // 2 of 4 alive: the row carries both numbers, beside the swatch, not on it.
+      const alive = ledger.querySelector('[data-legend-row="ALIVE"]') as HTMLElement;
+      expect(alive).toHaveTextContent("2");
+      expect(alive).toHaveTextContent("50%");
+      const judging = ledger.querySelector('[data-legend-row="JUDGING"]') as HTMLElement;
+      expect(judging).toHaveTextContent("25%");
+      // A zero state is still a row (0, 0%), never a vanished legend entry.
+      expect(ledger.querySelector('[data-legend-row="SETTLED"]')).toHaveTextContent("0%");
+    });
 
-    renderPage();
+    it("翻译缺失时,图例账里不会出现裸枚举成员", async () => {
+      mockT.mockImplementation((key: string) => key);
+      const { container } = renderPage();
+      const ledger = await found(container, "[data-legend-ledger]");
+      expect(ledger).not.toHaveTextContent("ALIVE");
+      expect(ledger).not.toHaveTextContent("JUDGING");
+    });
 
-    const legend = await screen.findByTestId("pie");
-    expect(legend).not.toHaveTextContent("ALIVE");
-    expect(legend).not.toHaveTextContent("JUDGING");
-    expect(legend).not.toHaveTextContent("DISPOSED");
+    it("**断存在。** 有翻译时用翻译", async () => {
+      mockT.mockImplementation((key: string) => (key === "souls.states.ALIVE" ? "存活" : key));
+      const { container } = renderPage();
+      await waitFor(() =>
+        expect(container.querySelector('[data-legend-row="ALIVE"]')).toHaveTextContent("存活")
+      );
+    });
   });
 
-  it("**断存在。** 有翻译时用翻译", async () => {
-    mockT.mockImplementation((key: string) => (key === "souls.states.ALIVE" ? "存活" : key));
-
-    renderPage();
-
-    expect(await screen.findByTestId("pie")).toHaveTextContent("存活");
-  });
-
-  it("renders the error text instead of the pie chart when the query fails", async () => {
+  it("renders the error text, and no empty-state copy, when the query fails", async () => {
     mockedStats.mockRejectedValue(new Error("500"));
 
     renderPage();
 
     expect(await screen.findByText("dashboard.error_load")).toBeInTheDocument();
-    expect(screen.queryByTestId("pie")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard.no_activity")).not.toBeInTheDocument();
   });
 
-  it("falls back to the tenant code when the tenant has no display name", async () => {
-    renderPage();
-
-    expect(await screen.findByText("地府")).toBeInTheDocument();
-    expect(screen.getByText("EG_DUAT")).toBeInTheDocument();
+  it("lists all four civilizations; one with no souls says so and links to register", async () => {
+    const { container } = renderPage();
+    await waitFor(() => expect(container.querySelector('[data-civ-row="CHINESE"]')).toHaveTextContent("3"));
+    expect(container.querySelector('[data-civ-row="CHINESE"]')).toHaveTextContent("75%");
+    expect(container.querySelector('[data-civ-row="EGYPTIAN"]')).toHaveTextContent("25%");
+    const greek = container.querySelector('[data-civ-row="GREEK"]') as HTMLElement;
+    expect(greek).toHaveTextContent("0");
+    expect(greek.querySelector("a")).toHaveAttribute("href", "/souls");
+    // Four rows, not "as many as tenants happened to come back".
+    expect(container.querySelectorAll("[data-civ-row]")).toHaveLength(4);
   });
 
-  it("leaves the third civilization slot empty when only two tenants exist", async () => {
-    renderPage();
+  it("colours histogram bars by the sign of their bucket, with the count above each", async () => {
+    const { container } = renderPage();
+    await found(container, "[data-histogram-bar]");
+    // Looked up by attribute value in JS: jsdom's selector engine mis-reads a
+    // `>` inside a quoted attribute value.
+    const bar = (label: string) =>
+      Array.from(container.querySelectorAll<HTMLElement>("[data-histogram-bar]")).find(
+        (el) => el.getAttribute("data-histogram-bar") === label
+      ) as HTMLElement;
+    expect(bar("< -50")).toHaveTextContent("2");
+    expect(bar("< -50").querySelector("[aria-hidden]")?.className).toContain("--color-danger");
+    expect(bar("> 50").querySelector("[aria-hidden]")?.className).toContain("--color-success");
+    expect(bar("-5 to 5").querySelector("[aria-hidden]")?.className).toContain("--color-ink-subtle");
+  });
 
-    await screen.findByText("地府");
-    // Two tenant totals render; the third card body stays empty.
-    expect(screen.getByText("3")).toBeInTheDocument();
+  describe("待办 row", () => {
+    it("shows the approval inbox count with its link, and a zero queue as 「无待办」 without one", async () => {
+      renderPage();
+      const link = await screen.findByRole("link", { name: "dashboard.todo.go_approve" });
+      expect(link).toHaveAttribute("href", "/dispatch");
+      // The count comes from the inbox endpoint, not the both-directions list.
+      expect(mockedProposed).toHaveBeenCalled();
+      expect(await screen.findByText("dashboard.todo.none")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "dashboard.todo.enter" })).not.toBeInTheDocument();
+    });
+
+    it("links into the queue when something is waiting", async () => {
+      mockedNext.mockResolvedValue({ data: { total: 2 } });
+      renderPage();
+      expect(await screen.findByRole("link", { name: "dashboard.todo.enter" })).toHaveAttribute("href", "/judgment/queue");
+    });
+
+    it("a failed count is an error, not a zero", async () => {
+      mockedProposed.mockRejectedValue(new Error("500"));
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.load_error")).toBeInTheDocument();
+    });
+
+    it("is not shown, and asks nothing, for someone who may open neither page", async () => {
+      mockUser = { role: "VIEWER", permissions: [] };
+      renderPage();
+      await screen.findByText("made a soul");
+      expect(screen.queryByText("dashboard.todo.approve_dispatch")).not.toBeInTheDocument();
+      expect(mockedProposed).not.toHaveBeenCalled();
+      expect(mockedNext).not.toHaveBeenCalled();
+    });
   });
 
   it("shows a placeholder instead of a realm chart when there are no realms", async () => {
@@ -395,9 +453,10 @@ describe("DashboardPage tab navigation", () => {
   it("treats an unrecognised tab value as overview", async () => {
     mockSearch = new URLSearchParams("tab=nonsense");
 
-    renderPage();
+    const { container } = renderPage();
 
-    expect(await screen.findByTestId("pie")).toBeInTheDocument();
+    // The overview's own marker — the 图例账 that replaced the pie.
+    expect(await found(container, "[data-legend-ledger]")).toBeInTheDocument();
   });
 });
 
