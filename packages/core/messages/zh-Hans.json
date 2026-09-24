@@ -97,6 +97,7 @@
       "JUDGMENT_INITIATED": "审判开始",
       "JUDGMENT_CONCLUDED": "审判结束",
       "DISPOSITION_CREATED": "处置生成",
+      "DISPOSITION_EXPIRED": "处置期满",
       "REINCARNATION_TRIGGERED": "轮回触发",
       "KARMA_RECALCULATED": "业力重算",
       "WORKFLOW_CREATED": "工作流创建",
@@ -1720,6 +1721,7 @@
     "jobs": {
       "ledger_recalculate_tenant": "重算功过格",
       "judgment_auto_conclude_stale_for_tenant": "自动结案久悬审判",
+      "disposition_expire_due_for_tenant": "处置期满检查",
       "death_sync_cleanup_old_requests_for_tenant": "清理过期死亡登记请求",
       "authentication_flush_expired_tokens": "清理过期令牌",
       "events_retry_pending_webhooks": "重试待投递的 Webhook",

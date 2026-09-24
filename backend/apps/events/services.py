@@ -58,6 +58,15 @@ class EventService:
         }, actor)
 
     @staticmethod
+    def log_disposition_expired(disposition, actor: str = "system") -> None:
+        EventService.log(disposition.soul, "DISPOSITION_EXPIRED", {
+            "disposition_id": str(disposition.id),
+            "realm": disposition.destination_realm.realm_code if disposition.destination_realm else None,
+            "sentence_years": disposition.sentence_years,
+            "expired_at": disposition.expired_at.isoformat() if disposition.expired_at else None,
+        }, actor)
+
+    @staticmethod
     def log_judgment_concluded(judgment, actor: str = "system") -> None:
         court_code = None
         if hasattr(judgment, "court") and judgment.court:
@@ -224,3 +233,4 @@ class EventService:
 # Alias for backward compatibility
 log_soul_state_change = EventService.log_soul_state_change
 log_disposition_created = EventService.log_disposition_created
+log_disposition_expired = EventService.log_disposition_expired

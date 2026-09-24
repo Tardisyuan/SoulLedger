@@ -8,9 +8,12 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
-from apps.disposition.models import Disposition
-from apps.souls.dates import ERROR, check_term_start
+from apps.disposition.expiry import term_end
+from apps.disposition.models import Disposition, DispositionSection
+from apps.judgment.models import Verdict
+from apps.souls.dates import ERROR, check_term_start, to_representation
 from apps.souls.fields import HistoricalDateField
+from apps.souls.models import SoulState
 
 
 class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
@@ -28,6 +31,45 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # birth_date is — a term that began in 399 BCE is the case the three
     # columns exist for. See apps.souls.fields.HistoricalDateField.
     term_start = HistoricalDateField(prefix="term_start")
+    # 刑期走完的那一天 —— 与每日期满检查同一个算法(apps/disposition/expiry.py),
+    # 页面的刑期条读它,不自己拿 term_start + sentence_years 再算一遍。
+    # null:永久刑,或没记刑期 / 起算日。
+    term_end = serializers.SerializerMethodField()
+    # 产生这份处置的判决。`judgment` 为空(外地节点的处置,或审判被硬删)时为 null。
+    verdict = serializers.ChoiceField(
+        choices=Verdict.choices, source="judgment.verdict", read_only=True, allow_null=True
+    )
+    # 灵魂**现在**的状态,不是处置当时的。「期满」段用 `soul_reborn` 藏起已经转世的灵魂;
+    # `soul_state` 给页面显示用。
+    soul_state = serializers.ChoiceField(
+        choices=SoulState.choices, source="soul.current_state", read_only=True
+    )
+    soul_reborn = serializers.SerializerMethodField()
+    section = serializers.ChoiceField(
+        choices=DispositionSection.choices, read_only=True,
+    )
+
+    @extend_schema_field(HistoricalDateField(prefix="term_end"))
+    def get_term_end(self, obj):
+        if obj.is_eternal:
+            return None
+        end = term_end(
+            (obj.term_start_year, obj.term_start_month, obj.term_start_day),
+            obj.sentence_years,
+        )
+        return to_representation(*end) if end else None
+
+    @extend_schema_field(serializers.BooleanField(
+        help_text="The soul has been reborn since the life this disposition belongs to.",
+    ))
+    def get_soul_reborn(self, obj) -> bool:
+        # 这份处置所属的那一世之后有没有 `cycle_count` 更大的转生记录。列表的 queryset
+        # 用一个子查询把它注进来(`soul_reborn_flag`,见 views.py);单条响应
+        # (execute / archive)没有注解,才退回一次查询。
+        flag = getattr(obj, "soul_reborn_flag", None)
+        if flag is not None:
+            return bool(flag)
+        return obj.soul.reincarnations.filter(cycle_count__gt=obj.cycle).exists()
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_realm_name(self, obj) -> str | None:
@@ -46,6 +88,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "realm_code", "realm_name", "memory_reset", "is_eternal",
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at", "sentence_node_id",
+            "expired_at", "term_end", "section", "verdict", "soul_state", "soul_reborn",
         ]
         # This serializer had no `read_only_fields` at all. Measured
         # 2026-08-29, a MODERATOR could `PATCH {"is_executed": true,
@@ -61,7 +104,11 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         # tests/test_perm_write_snapshot_outside_matrix.py. Disposition's copy
         # was never written down. A shape that has been diagnosed once is worth
         # grepping for.
-        read_only_fields = ["id", "is_executed", "executed_at", "created_at", "sentence_node_id"]
+        read_only_fields = [
+            "id", "is_executed", "executed_at", "created_at", "sentence_node_id",
+            # 只由期满检查写(apps/disposition/expiry.py),理由同上面的 is_executed。
+            "expired_at",
+        ]
 
     def validate_soul(self, value):
         """A disposition may only be recorded against a soul in this tenant.

@@ -31,6 +31,22 @@ class MemoryResetMechanism(models.TextChoices):
     NONE = "NONE", "No Reset"
 
 
+class DispositionSection(models.TextChoices):
+    """`/disposition` 页面的三段。由 `is_executed` 与 `expired_at` 推出,不另存。"""
+    PENDING = "pending", "待执行"
+    EXECUTING = "executing", "执行中"
+    EXPIRED = "expired", "期满"
+
+
+#: 每一段的过滤条件。三段互斥且覆盖全部行(`disposition_expired_only_if_executed`
+#: 保证「期满」一定已执行),列表的 `?section=` 与分段计数读的是同一份。
+SECTION_FILTERS = {
+    DispositionSection.PENDING: models.Q(is_executed=False),
+    DispositionSection.EXECUTING: models.Q(is_executed=True, expired_at__isnull=True),
+    DispositionSection.EXPIRED: models.Q(expired_at__isnull=False),
+}
+
+
 class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     """
     The destination and sentence given to a soul after judgment.
@@ -121,6 +137,16 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     )
     is_executed = models.BooleanField(default=False)
     executed_at = models.DateTimeField(null=True, blank=True)
+    # 期满:刑期已经走完的那一刻被系统记下的时间。null = 还没期满(或永远不会)。
+    #
+    # 一个时间戳而不是一列状态,因为这个模型本来就没有状态列:它的「状态机」是
+    # `is_executed` / `executed_at` 这一对,期满是在它后面接的第三步,用同一个写法。
+    # 三段(待执行 / 执行中 / 期满)由这两列推出来,见 `SECTION_FILTERS`。
+    #
+    # 只由 `apps.disposition.expiry` 写 —— 那里说了「期满」怎么算、为什么永久刑、
+    # 没记刑期、没记起算日的处置永远不写它。不写回 null:期满不可撤销,
+    # 刑期被改长是另一件事(见 cloud-reports/disposition-expiry-precedents.md 的开放问题)。
+    expired_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -164,6 +190,11 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
                 | models.Q(sentence_years__gte=0),
                 name="disposition_sentence_years_not_negative",
             ),
+            # 没执行过的处置没有在服的刑,也就谈不上期满。
+            models.CheckConstraint(
+                condition=models.Q(expired_at__isnull=True) | models.Q(is_executed=True),
+                name="disposition_expired_only_if_executed",
+            ),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
@@ -179,6 +210,15 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     def __str__(self):
         realm = self.destination_realm.realm_code if self.destination_realm else "UNKNOWN"
         return f"{self.soul.name} → {realm}"
+
+    @property
+    def section(self) -> str:
+        """这一行落在页面的哪一段 —— 与 `SECTION_FILTERS` 同一个判定。"""
+        if self.expired_at is not None:
+            return DispositionSection.EXPIRED
+        if self.is_executed:
+            return DispositionSection.EXECUTING
+        return DispositionSection.PENDING
 
     @property
     def can_delete(self) -> bool:

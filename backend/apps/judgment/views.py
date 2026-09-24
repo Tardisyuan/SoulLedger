@@ -17,10 +17,14 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment.models import Judgment, Statute
+from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
+from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
+from apps.judgment.precedents import precedents_for
 from apps.judgment.serializers import (
     JudgmentCitationSerializer,
     JudgmentCitationWriteSerializer,
     JudgmentConcludeSerializer,
+    JudgmentPrecedentSerializer,
     JudgmentQueueCursorSerializer,
     JudgmentSerializer,
     StatuteSerializer,
@@ -101,6 +105,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # demand judgment.execute in order to *read* the grounds, which is the
         # opposite of the split next_pending exists to preserve.
         'citations': ['judgment.read'],
+        # 「据 · 先例」是读:给判官看的参考,不改任何东西。
+        'precedents': ['judgment.read'],
         'cite_statute': ['judgment.execute'],
         'uncite': ['judgment.execute'],
     }
@@ -357,6 +363,42 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             realms.order_by("tier", "realm_code"), many=True, context=context
         ).data
         return Response(payload)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "limit", OpenApiTypes.INT, OpenApiParameter.QUERY,
+                description=f"How many precedents (default {DEFAULT_PRECEDENTS}, at most {MAX_PRECEDENTS}).",
+            ),
+        ],
+        responses=JudgmentPrecedentSerializer(many=True),
+    )
+    @action(
+        detail=True, methods=["get"], url_path="precedents",
+        # A bare ranked list: no page envelope, and the list's filters
+        # (verdict, civilization, ...) do not apply — the ranking picks.
+        pagination_class=None, filter_backends=[],
+    )
+    def precedents(self, request, pk=None):
+        """Concluded judgments like this one — the judgment desk's 「据 · 先例」.
+
+        `GET /api/v1/judgment/{id}/precedents/?limit=5`
+
+        Same tenant and civilization as this judgment, ranked by same court,
+        then closest balance, then shared cited statutes. The ranking and what
+        is excluded are written down in apps/judgment/precedents.py. A bare
+        array, not a page: it is a short ranked list, not a collection to walk.
+        """
+        judgment = self.get_object()
+        try:
+            limit = int(request.query_params.get("limit", DEFAULT_PRECEDENTS))
+        except (TypeError, ValueError):
+            return Response({"limit": ["Must be an integer."]}, status=status.HTTP_400_BAD_REQUEST)
+        limit = max(1, min(limit, MAX_PRECEDENTS))
+        rows = precedents_for(judgment, limit=limit)
+        return Response(
+            JudgmentPrecedentSerializer(rows, many=True, context=self.get_serializer_context()).data
+        )
 
     # ------------------------------------------------------------------
     # Cited grounds

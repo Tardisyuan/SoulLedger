@@ -72,6 +72,7 @@ export const EVENT_LABELS: Record<string, string> = {
   JUDGMENT_INITIATED: "Judgment initiated",
   JUDGMENT_CONCLUDED: "Judgment concluded",
   DISPOSITION_CREATED: "Disposition created",
+  DISPOSITION_EXPIRED: "Disposition expired",
   REINCARNATION_TRIGGERED: "Reincarnation triggered",
   KARMA_RECALCULATED: "Balance recalculated",
 
