@@ -1211,7 +1211,12 @@
       "cite_error": "引用未能保存",
       "deferred_note": "已暂缓：{{reason}}",
       "previous": "上一件",
-      "next": "下一件"
+      "next": "下一件",
+      "concluded_on": "已结案 · {{date}}",
+      "balance_at_conclusion": "结案时余额",
+      "balance_now": "现值",
+      "balance_single": "余额",
+      "recorded_after": "其后登记 {{n}} 条"
     },
     "claim": {
       "groups": {

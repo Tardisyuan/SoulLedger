@@ -265,3 +265,58 @@ export function StatuteSearch({
     </div>
   );
 }
+
+/** `+347` / `−12` / `0`: a balance as the ledger writes it, sign first. */
+function signed(n: number): string {
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n)}`;
+}
+
+/**
+ * 乙 · 功过 on a concluded case (第三类 F 组 2.3): the balance the verdict rested on,
+ * frozen at conclusion (`admitted_balance.balance` is the snapshot there), on top
+ * and closed by a double rule; today's figure (`current_balance`) under it, and how
+ * many records were entered since. When the two agree there is one line, 「余额」,
+ * and no 「现值」 at all.
+ */
+export function ConcludedBalance({
+  snapshot,
+  current,
+  recordedAfter,
+}: {
+  snapshot: number;
+  current: number | null | undefined;
+  recordedAfter: number;
+}) {
+  const { t } = useI18n();
+  if (current == null || current === snapshot) {
+    return (
+      <p data-testid="concluded-balance" className="flex items-baseline justify-between py-2 text-sm">
+        <span className="text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.balance_single")}</span>
+        <span className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(snapshot)}</span>
+      </p>
+    );
+  }
+  const drift = current - snapshot;
+  return (
+    <dl data-testid="concluded-balance" className="py-2 text-sm">
+      <div className="flex items-baseline justify-between border-b-3 border-double border-[oklch(var(--color-ink))] pb-1">
+        <dt className="text-[oklch(var(--color-ink))]">{t("judgment.desk.balance_at_conclusion")}</dt>
+        <dd className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(snapshot)}</dd>
+      </div>
+      <div className="flex items-baseline justify-between pt-1 text-[oklch(var(--color-ink-muted))]">
+        <dt>{t("judgment.desk.balance_now")}</dt>
+        <dd className="font-mono tabular-nums">{signed(current)}</dd>
+      </div>
+      <div className="flex items-baseline justify-between text-xs text-[oklch(var(--color-ink-subtle))]">
+        <dt>{t("judgment.desk.recorded_after", { n: String(recordedAfter) })}</dt>
+        <dd
+          className={`font-mono tabular-nums ${
+            drift > 0 ? "text-[oklch(var(--color-success))]" : "text-[oklch(var(--color-danger))]"
+          }`}
+        >
+          {signed(drift)}
+        </dd>
+      </div>
+    </dl>
+  );
+}
