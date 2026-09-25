@@ -710,6 +710,20 @@ const SUBJECTS: Subject[] = [
         isVisible={() => true}
         onToggle={() => {}}
         categoryTally={() => "1/2"}
+        /* Every non-plain cell state once — an unsaved grant, a failed cell
+           and a conflict — so their accessible descriptions are audited too. */
+        info={{
+          granted: (role, id) => role === "ADMIN" && id === 1,
+          pending: (key) => key === "JUDGE:1" || key === "JUDGE:2" || key === "ADMIN:2",
+          failure: (key) =>
+            key === "JUDGE:1"
+              ? { role: "JUDGE", permissionId: 1, status: "refused", code: "admin_only_permission", detail: null }
+              : null,
+          conflict: (key) => key === "JUDGE:2",
+          failureReason: () => "admin_only_permission",
+        }}
+        mobileRole="JUDGE"
+        onMobileRoleChange={() => {}}
       />
     ),
   },

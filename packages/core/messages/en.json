@@ -327,6 +327,20 @@
       "hint": "J / K next · previous · Esc",
       "open_full": "Open the full record →",
       "load_error": "Could not load the details."
+    },
+    "batch": {
+      "region": "Batch actions",
+      "selected": "{{n}} selected",
+      "select_row": "Select {{name}}",
+      "select_all": "Select all on this page",
+      "clear": "Clear selection",
+      "confirm_title": "Move {{n}} souls to the recycle bin?",
+      "refused_title": "Nothing was moved: {{n}} refused",
+      "refused_list": "Refused souls",
+      "refused_reason": {
+        "not_found": "No longer exists, or is outside your scope.",
+        "not_deletable": "Has a concluded judgment: it cannot be deleted, only archived."
+      }
     }
   },
   "common": {
@@ -538,7 +552,74 @@
       "conflict_reload_button": "Reload this role",
       "conflict_reloading": "Reloading...",
       "partial_save_title": "The save stopped partway. These roles were already written to the server:",
-      "partial_save_hint": "Re-saving everything will send these again with a version they no longer have, which the server refuses as a conflict. Reload before retrying."
+      "partial_save_hint": "Re-saving everything will send these again with a version they no longer have, which the server refuses as a conflict. Reload before retrying.",
+      "showing": "Permissions · showing {{shown}} / {{total}}",
+      "no_differences": "No differences: every role has the same values under this filter.",
+      "role_picker": "Role",
+      "pending_cells": "{{n}} unsaved",
+      "discard": "Discard",
+      "unsaved_region": "Unsaved changes",
+      "saved_all": "Saved {{n}}",
+      "partial_title": "Partly saved · {{saved}} saved, {{failed}} failed",
+      "locate": "Locate",
+      "conflict_title": "Conflicts {{n}}",
+      "conflict_line": "After {{causes}}, step {{step}} ({{step_name}}) of workflow “{{template}}” would have no approver.",
+      "state": {
+        "grant": "Unsaved · grant",
+        "revoke": "Unsaved · revoke",
+        "failed": "Not saved",
+        "conflict": "Unsaved · causes a conflict"
+      },
+      "legend": {
+        "on": "Granted",
+        "off": "Not granted",
+        "unsaved": "Unsaved",
+        "failed": "Not saved",
+        "conflict": "Causes a conflict"
+      },
+      "refused": {
+        "admin_only_permission": "Conflicts with the rule that recycle-bin restore and hard delete are ADMIN-only; sent back.",
+        "version_conflict": "Someone else changed this role; it was reloaded — look again.",
+        "role_not_found": "The role no longer exists.",
+        "permission_not_found": "The permission no longer exists.",
+        "database_error": "A database error: this cell was not written."
+      }
+    },
+    "segments": {
+      "label": "Permission sections",
+      "matrix": "Matrix",
+      "roles": "Roles",
+      "definitions": "Permissions"
+    },
+    "roles": {
+      "kind": "Type",
+      "builtin": "Built-in",
+      "custom": "Custom",
+      "members": "Members",
+      "permissions": "Permissions",
+      "updated": "Updated",
+      "foot": "Built-in roles cannot be deleted · click a row to edit · delete is in the drawer's ⋯",
+      "drawer_title": "Edit role · {{name}}",
+      "code_immutable": "Fixed after creation: workflows refer to the code",
+      "edit_in_matrix": "Edit in the matrix",
+      "references": "Referenced by",
+      "workflow_count": "{{n}} workflows",
+      "more": "More actions",
+      "copy": "Copy as a new role",
+      "copied": "Copied as {{name}}",
+      "recycle": "Move to recycle bin…",
+      "recycle_action": "Move to recycle bin",
+      "recycle_title": "Move {{name}} to the recycle bin?",
+      "recycle_body": "{{members}} members hold this role; {{workflows}} workflows refer to it. The server refuses while either is true.",
+      "builtin_locked": "Built-in roles cannot be deleted",
+      "saved": "Saved",
+      "inactive": "Inactive",
+      "referencing": "Workflows referring to this role",
+      "refused": {
+        "builtin_role": "Refused: built-in roles cannot be deleted.",
+        "role_in_use": "Refused: {{n}} members still hold this role. Reassign them first.",
+        "role_referenced_by_workflow_templates": "Refused: {{n}} workflows still refer to it. Change them first."
+      }
     }
   },
   "workflow": {
@@ -2624,7 +2705,8 @@
       "reports": "Reports",
       "content": "Pending content",
       "words": "Word list",
-      "mutes": "Mutes"
+      "mutes": "Mutes",
+      "handled": "Handled"
     },
     "target_type": {
       "POST": "Post",
@@ -2707,7 +2789,10 @@
       "content": "Nothing pending",
       "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
       "words": "No words yet",
-      "mutes": "No mutes"
+      "mutes": "No mutes",
+      "review": "Nothing to review",
+      "review_reason": "New posts are screened first; only reported ones and rule hits come here.",
+      "handled": "Nothing handled yet"
     },
     "word_category": {
       "NONE": "Uncategorized",
@@ -2725,6 +2810,51 @@
     "handling": {
       "HIDDEN": "Hidden",
       "DELETED": "Deleted"
+    },
+    "scope_label": "Civilization",
+    "scope_all": "All civilizations",
+    "review": {
+      "list_label": "Review queue",
+      "detail_label": "Review detail",
+      "report_n": "Reports {{n}}",
+      "rule_hit": "Rule hit · word list",
+      "from": "from {{name}}",
+      "reaction_comment": "Comments",
+      "reason_label": "Reason (required to hide)",
+      "reason_required": "Hiding needs a reason",
+      "approve": "Let through",
+      "shortcuts": "J / K move · A let through · H hide",
+      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through."
+    },
+    "words": {
+      "add_row": "Add a word",
+      "col_word": "Word / rule",
+      "col_category": "Category",
+      "col_action": "On hit",
+      "col_hits": "Hits, 30 days",
+      "col_by": "Added by",
+      "col_at": "Added",
+      "select_row": "Select {{word}}",
+      "batch_region": "Word list batch actions",
+      "delete_selected": "Delete selected",
+      "confirm_title": "Delete {{n}} words?"
+    },
+    "mutes": {
+      "col_soul": "Soul",
+      "col_term": "Term",
+      "col_range": "From → until",
+      "col_by": "By",
+      "term_label": "Mute remaining for {{name}}",
+      "confirm_title": "Lift the mute on {{name}}?",
+      "confirm_body": "Takes effect at once and the soul is notified. It cannot be undone, but the soul can be muted again."
+    },
+    "handled": {
+      "col_type": "Type",
+      "col_handling": "Handling",
+      "col_by": "Handled by",
+      "read_only": "Read-only: the handling is in effect.",
+      "restore": "Make visible again",
+      "in_recycle_bin": "In the recycle bin"
     }
   },
   "soul_inbox": {

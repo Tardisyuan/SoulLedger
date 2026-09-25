@@ -83,7 +83,7 @@ describe("the tab recipe is written once", () => {
   });
 });
 
-describe("the six strips read it from there", () => {
+describe("the five strips read it from there", () => {
   /**
    * Pinned by name rather than counted. Adding one importer and dropping
    * another nets to zero under a count, and "a page stopped using the shared
@@ -93,8 +93,8 @@ describe("the six strips read it from there", () => {
     "app/dashboard/page.tsx",
     // app/judgment/page.tsx 于 2026-09-25 离开:审判队列的「待审 / 已结案」改成规范 v1 的
     // 分段切换 Segmented(墨底为当前),不再是下划线页签条。
-    // 2026-09-18:朋友圈审核的四个分区(举报 / 待审 / 敏感词 / 禁言),第七条读它的条带。
-    "app/moderation/page.tsx",
+    // app/moderation/page.tsx 于 2026-09-25 离开:朋友圈审核四区(举报 / 敏感词 / 禁言 / 已处理)
+    // 改成 E 组页头的分段切换(墨底为当前),与审判队列同一种写法。
     "app/notifications/page.tsx",
     // 2026-09-20:定时任务的「任务 / 运行历史」两个页签,第八条。
     "app/scheduler/page.tsx",

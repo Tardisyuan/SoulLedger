@@ -134,3 +134,30 @@ export function findCountParadox(
   }
   return best;
 }
+
+/** One unsaved cell, in the shape POST /perm/role-permissions/changes/ takes. */
+export interface CellChange {
+  role: string;
+  permission_id: number;
+  action: "grant" | "revoke";
+}
+
+/**
+ * Every cell where `checked` differs from `baseline`, role by role in
+ * `roleNames` order and ascending permission id inside a role — a stable
+ * order, so the same edits always make the same request (the impact check is
+ * keyed on it).
+ */
+export function matrixChanges(baseline: GrantMap, checked: GrantMap, roleNames: string[]): CellChange[] {
+  const out: CellChange[] = [];
+  for (const role of roleNames) {
+    const before = baseline[role] ?? new Set<number>();
+    const after = checked[role] ?? new Set<number>();
+    const ids = new Set([...before, ...after]);
+    for (const id of [...ids].sort((a, b) => a - b)) {
+      if (after.has(id) && !before.has(id)) out.push({ role, permission_id: id, action: "grant" });
+      else if (before.has(id) && !after.has(id)) out.push({ role, permission_id: id, action: "revoke" });
+    }
+  }
+  return out;
+}

@@ -1,168 +1,193 @@
 "use client";
 
+import { useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
+import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { GrantMap } from "./matrixDiff";
+import type { CellFailure } from "./useMatrixCells";
 
-// ─────────────────────────────────────────────────────────────────────────
-// Cell — shape, not weight: a filled check glyph vs a literally empty cell.
-// No dot, no dash, no dim icon for "not granted" — that reads as "40 dim
-// dots" across a wide matrix instead of a sparse, readable set.
-// ─────────────────────────────────────────────────────────────────────────
+/**
+ * 权限格 PermCell(E-11a):
+ *
+ *   ■ 有 — 墨色实心方块        □ 无 — 空框
+ *   ＋ / − 未保存 — 2 px 强调色焦点环 + 字形
+ *   ! 保存失败 — 危险色,原因在描述里(aria-describedby)与 title 上
+ *   ◇ 引起冲突 — 警示色,这次改动会让某条审批流的某一步无人可批
+ *
+ * State is never colour alone: every non-plain state carries a glyph, and the
+ * same word goes to the accessible description.
+ */
+export type CellState = "on" | "off" | "grant" | "revoke" | "failed" | "conflict";
 
-function MatrixCell({
+export function cellState({
   granted,
-  disabled,
-  label,
-  onToggle,
+  pending,
+  failure,
+  conflict,
 }: {
   granted: boolean;
-  disabled: boolean;
-  label: string;
-  onToggle: () => void;
-}) {
+  pending: boolean;
+  failure: boolean;
+  conflict: boolean;
+}): CellState {
+  if (failure) return "failed";
+  if (conflict) return "conflict";
+  if (pending) return granted ? "grant" : "revoke";
+  return granted ? "on" : "off";
+}
+
+const GLYPH: Record<CellState, string> = { on: "", off: "", grant: "＋", revoke: "−", failed: "!", conflict: "◇" };
+
+const CELL_CLASS: Record<CellState, string> = {
+  on: "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]",
+  off: "border border-[oklch(var(--color-line))]",
+  grant:
+    "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
+  revoke:
+    "border border-[oklch(var(--color-line))] text-[oklch(var(--color-accent-ink))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
+  failed: "border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
+  conflict:
+    "border border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] text-[oklch(var(--color-warning))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
+};
+
+/** The drawn square, also used by the legend. */
+export function PermGlyph({ state, className }: { state: CellState; className?: string }) {
   return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={granted}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onToggle}
-      // 这里原先是 `focus:outline-hidden focus-visible:ring-2
-      // focus-visible:ring-[oklch(var(--color-accent))]` —— 全仓唯一一处把焦点环
-      // 指向 --color-accent 的地方,而那正是 globals.css 用 40 行(:96-134)
-      // 论证**不能**做的事:--color-accent 被 SettingsDrawer 的 useAccentColor
-      // 以**内联样式**写在 document.documentElement 上,取值是用户在抽屉里随手
-      // 挑的六位十六进制。内联样式压过样式表里的一切,所以一个挑了浅琥珀的用户
-      // 会静默删掉自己**唯一**的键盘焦点指示器,而且无从察觉。第二条独立理由是
-      // 它本身就不合格:--color-accent(迁移前写作 hsl(38 92% 50%),现在是
-      // oklch(0.770351 0.164635 70.6613),同一个颜色)在浅色模式白底上是
-      // 2.14:1,连非文字
-      // UI 的 3:1 底线都够不到。
-      //
-      // 两条 `outline-hidden` 也一起删了 —— 它们是全局规则要越过的那 69 处之一。
-      // 删掉之后接管的是 globals.css:459 那条
-      // `:focus-visible { outline-solid: 2px solid oklch(var(--color-focus)) !important }`,
-      // --color-focus 是字面量三元组(深 258 95% 76% / 浅 258 85% 48%),抽屉
-      // 够不着它。本组件不写 outline-none,就是它参与全局焦点环的全部要求
-      // (Button.tsx 的「FOCUS: deliberately not here」一节说的是同一件事)。
-      className={`flex items-center justify-center w-full h-8 transition-colors ${
-        disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-[oklch(var(--color-surface-3))]"
-      }`}
+    <span
+      aria-hidden="true"
+      data-cell-state={state}
+      className={cn(
+        "inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center font-mono text-2xs leading-none",
+        CELL_CLASS[state],
+        className
+      )}
     >
-      {granted ? (
-        <svg viewBox="0 0 20 20" className="w-4 h-4 text-[oklch(var(--color-accent-ink))]" fill="currentColor" aria-hidden="true">
-          <path
-            fillRule="evenodd"
-            d="M16.704 5.29a1 1 0 01.006 1.415l-7.4 7.5a1 1 0 01-1.42.005l-3.6-3.6a1 1 0 111.414-1.414l2.897 2.897 6.69-6.782a1 1 0 011.413-.021z"
-            clipRule="evenodd"
-          />
-        </svg>
-      ) : null}
-    </button>
+      {GLYPH[state]}
+    </span>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// One category's sticky sub-header row + its permission rows. Split out so
-// the render loop below stays readable.
-// ─────────────────────────────────────────────────────────────────────────
+export interface MatrixCellInfo {
+  granted: (role: string, permId: number) => boolean;
+  pending: (key: string) => boolean;
+  failure: (key: string) => CellFailure | null;
+  conflict: (key: string) => boolean;
+  /** Words for a failure's reason, from its code. */
+  failureReason: (f: CellFailure) => string;
+}
 
-function FragmentCategory({
-  category,
-  perms,
-  visiblePerms,
-  roleNames,
-  checked,
-  isSaving,
+function useCellDescription(info: MatrixCellInfo, role: string, permId: number) {
+  const { t } = useI18n();
+  const key = matrixCellKey(role, permId);
+  const failure = info.failure(key);
+  const state = cellState({
+    granted: info.granted(role, permId),
+    pending: info.pending(key),
+    failure: failure !== null,
+    conflict: info.conflict(key),
+  });
+  const words =
+    state === "failed" && failure
+      ? `${t("permissions.matrix.state.failed")}: ${info.failureReason(failure)}`
+      : state === "on" || state === "off"
+        ? ""
+        : t(`permissions.matrix.state.${state}`);
+  return { key, state, words };
+}
+
+function MatrixCell({
+  role,
+  perm,
+  info,
+  disabled,
   onToggle,
-  categoryTally,
+  variant,
 }: {
-  category: string;
-  perms: Permission[];
-  visiblePerms: Permission[];
-  roleNames: string[];
-  checked: GrantMap | null;
-  isSaving: boolean;
-  onToggle: (role: string, permId: number) => void;
-  categoryTally: (perms: Permission[], role: string) => string;
+  role: string;
+  perm: Permission;
+  info: MatrixCellInfo;
+  disabled: boolean;
+  onToggle: () => void;
+  variant: "grid" | "switch";
 }) {
+  const descId = useId();
+  const { key, state, words } = useCellDescription(info, role, perm.id);
+  const granted = info.granted(role, perm.id);
   return (
     <>
-      {/* `top-[44px]` 对着表头那一行的 h-11。z 值与表头同在一个层叠上下文里
-          比较(sticky 挂在单元格上,不挂在 <tr> 上),所以角单元格 z-30 稳定地
-          压在同行其它分类格 z-20 之上,而整行仍在表头 z-30/z-40 之下。 */}
-      <tr>
-        <td className="sticky top-[44px] left-0 z-30 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-3 py-1 text-xs uppercase text-[oklch(var(--color-ink-muted))] font-semibold">
-          {category}
-        </td>
-        {roleNames.map((role) => (
-          <td key={role} className="sticky top-[44px] z-20 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-2 py-1 text-xs text-center text-[oklch(var(--color-ink-subtle))] font-mono">
-            {categoryTally(perms, role)}
-          </td>
-        ))}
-      </tr>
-      {visiblePerms.map((perm) => (
-        /* 行悬停从 `surface-2/40` 换成不透明的 surface-2。冻结的那一列必须有
-           不透明底色(否则横向滚过去的单元格会从它底下透出来),而一个不透明的
-           格子拿不到 <tr> 的半透明底 —— 两边不同色就等于把「这一行」画成两段。
-           所以整行改用同一个不透明值,冻结格靠 group-hover 跟上。 */
-        <tr key={perm.id} className="group hover:bg-[oklch(var(--color-surface-2))]">
-          <td className="sticky left-0 z-10 bg-[oklch(var(--color-canvas))] group-hover:bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-rule))] px-3 py-1 transition-colors">
-            <div className="font-mono text-xs text-[oklch(var(--color-ink))]">{perm.codename}</div>
-            <div className="text-xs text-[oklch(var(--color-ink-subtle))]">{perm.name}</div>
-          </td>
-          {roleNames.map((role) => (
-            <td key={role} className="border-b border-[oklch(var(--color-rule))] px-1 py-1 text-center">
-              <MatrixCell
-                granted={checked?.[role]?.has(perm.id) ?? false}
-                disabled={isSaving}
-                label={`${role} — ${perm.codename}`}
-                onToggle={() => onToggle(role, perm.id)}
-              />
-            </td>
-          ))}
-        </tr>
-      ))}
+      <button
+        type="button"
+        role={variant === "grid" ? "checkbox" : "switch"}
+        aria-checked={granted}
+        aria-label={variant === "grid" ? `${role} — ${perm.codename}` : `${perm.name} ${perm.codename}`}
+        aria-describedby={words ? descId : undefined}
+        title={words || undefined}
+        data-cell={key}
+        disabled={disabled}
+        onClick={onToggle}
+        className={cn(
+          "flex items-center justify-center",
+          variant === "grid" ? "h-8 w-full" : "h-11 w-11",
+          disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-[oklch(var(--color-surface-3))]"
+        )}
+      >
+        <PermGlyph state={state} className={variant === "switch" ? "h-5.5 w-5.5" : undefined} />
+      </button>
+      {words && (
+        <span id={descId} className="sr-only">
+          {words}
+        </span>
+      )}
     </>
   );
 }
 
+function roleLabel(roleMeta: Record<string, Role>, role: string) {
+  return roleMeta[role]?.display_name || role;
+}
+
 /**
- * 冻结首列的权限矩阵。三样东西必须一起走,拆散就坏:sticky 挂在**单元格**
- * 上(不是 <tr>)、表格用 `border-separate border-spacing-0`(不是
- * border-collapse)、首列 `left-0` 冻结。理由写在下面 return 里那段注释。
+ * 角色 × 权限矩阵。桌面是表格(冻结首列,理由见下方注释);393 px 下改成
+ * 「先选角色,再逐行开关」—— 五列方格在手机上既点不准也看不全。两种版式都在
+ * DOM 里、按断点显隐,各自是完整的一份控件:网格里是 checkbox(名字是
+ * 「角色 — 代码」),手机上是 switch(名字是权限名),两者不重名。
  */
 export function PermissionMatrixTable({
   matrixReady,
   roleNames,
   roleMeta,
   categories,
-  allPerms,
   checked,
   isSaving,
   isVisible,
   onToggle,
   categoryTally,
+  info,
+  mobileRole,
+  onMobileRoleChange,
 }: {
   matrixReady: boolean;
   roleNames: string[];
   roleMeta: Record<string, Role>;
   categories: { category: string; perms: Permission[] }[];
-  allPerms: Permission[];
+  allPerms?: Permission[];
   checked: GrantMap | null;
   isSaving: boolean;
   isVisible: (perm: Permission) => boolean;
   onToggle: (role: string, permId: number) => void;
   categoryTally: (perms: Permission[], role: string) => string;
+  info: MatrixCellInfo;
+  mobileRole: string;
+  onMobileRoleChange: (role: string) => void;
 }) {
   const { t } = useI18n();
 
   if (!matrixReady) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" aria-busy="true">
         {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="h-8 w-full" />
         ))}
@@ -174,67 +199,202 @@ export function PermissionMatrixTable({
     return <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>;
   }
 
+  const shown = categories
+    .map(({ category, perms }) => ({ category, perms, visible: perms.filter(isVisible) }))
+    .filter((c) => c.visible.length > 0);
+  const visibleCount = shown.reduce((n, c) => n + c.visible.length, 0);
+  const totalCount = categories.reduce((n, c) => n + c.perms.length, 0);
+  const role = roleNames.includes(mobileRole) ? mobileRole : roleNames[0];
+
   return (
-    /* 窄屏上真正坏掉的东西,和它不是什么。
+    <>
+      <p className="mb-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" aria-live="polite">
+        {t("permissions.matrix.showing", { shown: String(visibleCount), total: String(totalCount) })}
+      </p>
 
-       **原先那句 `overflow-y-auto` 已经能横向滚。** CSS Overflow 3
-       规定:overflow-x/y 之一不是 visible 而另一个是 visible 时,
-       visible 计算成 auto。所以 `overflow-y: auto` 会把 overflow-x
-       一并算成 auto。实测(Playwright + Chromium,把这张表的结构
-       照搬成静态页):`overflow-y:auto` 与 `overflow-x:auto;
-       overflow-y:auto` 两个容器的 computed overflow-x 都是 "auto",
-       scrollWidth 都是 1128 / clientWidth 400,把 scrollLeft 设成
-       999 之后两边都停在 728。右边的角色一直够得到。
+      {visibleCount === 0 && (
+        <p className="py-6 text-sm text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.no_differences")}</p>
+      )}
 
-       坏的是**够到之后不知道自己在看哪一行**:第一列跟着一起滚走,
-       于是滚到第 8 个角色时,那一列勾选框对应的是哪条 codename 没有
-       任何东西还在说。所以修法不是加一个已经生效的 `overflow-x-auto`,
-       是把第一列冻住。
+      {/* ── ≥ md: the grid ──
+          冻结首列:sticky 挂在**单元格**上(不是 <tr>),表格用
+          `border-separate border-spacing-0`(不是 border-collapse)。挂在 <tr>
+          上时表头行、分类行、正文行是三个互不比较 z-index 的层叠上下文,冻结列
+          的角单元格压不住表头;collapse 下边框归表格,sticky 单元格滚动时边框
+          留在原地。滚到第 8 个角色时,第一列必须还在说这一行是哪条权限。 */}
+      {visibleCount > 0 && (
+        <div className="hidden max-h-[65vh] overflow-auto md:block">
+          <table className="w-full border-separate border-spacing-0 text-sm">
+            <thead>
+              <tr className="h-11">
+                <th className="sticky top-0 left-0 z-40 min-w-[240px] border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-3 text-left font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
+                  {t("permissions.matrix.codename_col")}
+                </th>
+                {roleNames.map((r) => (
+                  <th
+                    key={r}
+                    className="sticky top-0 z-30 min-w-[96px] border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-2 text-center font-medium text-[oklch(var(--color-ink))]"
+                  >
+                    <div>{roleLabel(roleMeta, r)}</div>
+                    <div className="font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">{r}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map(({ category, perms, visible }) => (
+                <MatrixGroup
+                  key={category}
+                  category={category}
+                  perms={perms}
+                  visible={visible}
+                  roleNames={roleNames}
+                  isSaving={isSaving}
+                  onToggle={onToggle}
+                  categoryTally={categoryTally}
+                  info={info}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-       sticky 从 `<tr>` 挪到了单元格:sticky 元素各自开一个层叠上下文,
-       挂在 <tr> 上时表头行、分类行、正文行是三个互不比较 z-index 的
-       上下文,冻结列的角单元格无法可靠地压在表头之上。挂在单元格上时
-       它们是同一个上下文里的兄弟,z-40 / z-30 / z-20 / z-10 直接可比。
-       表格也从 border-collapse 换成 border-separate + border-spacing-0:
-       collapse 下边框归表格而不归单元格,sticky 单元格滚动时边框会
-       留在原地。 */
-    <div className="overflow-auto max-h-[65vh]">
-      <table className="w-full border-separate border-spacing-0 text-sm">
-        <thead>
-          <tr className="h-11">
-            <th className="sticky top-0 left-0 z-40 bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-block))] text-left px-3 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))] min-w-[200px]">
-              {t("permissions.matrix.codename_col")}
-            </th>
-            {roleNames.map((role) => (
-              <th key={role} className="sticky top-0 z-30 bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-block))] px-2 font-medium text-[oklch(var(--color-ink))] min-w-[110px] text-center">
-                <div>{roleMeta[role]?.display_name || role}</div>
-                <div className="text-xs font-normal text-[oklch(var(--color-ink-subtle))] font-mono">
-                  {categoryTally(allPerms, role)}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {categories.map(({ category, perms }) => {
-            const visiblePerms = perms.filter(isVisible);
-            if (visiblePerms.length === 0) return null;
-            return (
-              <FragmentCategory
-                key={category}
-                category={category}
-                perms={perms}
-                visiblePerms={visiblePerms}
-                roleNames={roleNames}
-                checked={checked}
-                isSaving={isSaving}
-                onToggle={onToggle}
-                categoryTally={categoryTally}
+      {/* ── < md: pick a role, then toggle rows ── */}
+      {visibleCount > 0 && (
+        <div className="md:hidden">
+          <label className="flex items-center gap-2 border-b border-[oklch(var(--color-block))] pb-2 text-sm">
+            <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("permissions.matrix.role_picker")}</span>
+            <select
+              aria-label={t("permissions.matrix.role_picker")}
+              value={role}
+              onChange={(e) => onMobileRoleChange(e.target.value)}
+              className="min-h-11 flex-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 text-sm"
+            >
+              {roleNames.map((r) => (
+                <option key={r} value={r}>
+                  {r} · {roleLabel(roleMeta, r)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {shown.map(({ category, perms, visible }) => (
+            <section key={category} aria-label={category}>
+              <h3 className="flex justify-between border-b border-[oklch(var(--color-block))] pt-4 pb-1 font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+                <span>{category}</span>
+                <span>{categoryTally(perms, role)}</span>
+              </h3>
+              <ul>
+                {visible.map((perm) => (
+                  <li key={perm.id} className="flex min-h-12 items-center justify-between gap-3 border-b border-[oklch(var(--color-rule))]">
+                    <span className="min-w-0">
+                      <span className="block text-sm text-[oklch(var(--color-ink))]">{perm.name}</span>
+                      <span className="block font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{perm.codename}</span>
+                    </span>
+                    <MatrixCell
+                      role={role}
+                      perm={perm}
+                      info={info}
+                      disabled={isSaving}
+                      onToggle={() => onToggle(role, perm.id)}
+                      variant="switch"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function MatrixGroup({
+  category,
+  perms,
+  visible,
+  roleNames,
+  isSaving,
+  onToggle,
+  categoryTally,
+  info,
+}: {
+  category: string;
+  perms: Permission[];
+  visible: Permission[];
+  roleNames: string[];
+  isSaving: boolean;
+  onToggle: (role: string, permId: number) => void;
+  categoryTally: (perms: Permission[], role: string) => string;
+  info: MatrixCellInfo;
+}) {
+  return (
+    <>
+      {/* 组头与区块标题同一样式(E-11a):等宽 11 px、字距、下接区块边界。
+          `top-[44px]` 对着表头那一行的 h-11。 */}
+      <tr>
+        <th
+          scope="colgroup"
+          className="sticky top-[44px] left-0 z-30 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-3 pt-3 pb-1 text-left font-mono text-2xs font-normal uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]"
+        >
+          {category}
+        </th>
+        {roleNames.map((role) => (
+          <td
+            key={role}
+            className="sticky top-[44px] z-20 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-2 pt-3 pb-1 text-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))]"
+          >
+            {categoryTally(perms, role)}
+          </td>
+        ))}
+      </tr>
+      {visible.map((perm) => (
+        <tr key={perm.id} className="group hover:bg-[oklch(var(--color-surface-2))]">
+          <th
+            scope="row"
+            className="sticky left-0 z-10 border-b border-[oklch(var(--color-rule))] bg-[oklch(var(--color-canvas))] px-3 py-1 text-left font-normal transition-colors group-hover:bg-[oklch(var(--color-surface-2))]"
+          >
+            <div className="text-sm text-[oklch(var(--color-ink))]">{perm.name}</div>
+            <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{perm.codename}</div>
+          </th>
+          {roleNames.map((role) => (
+            <td key={role} className="border-b border-[oklch(var(--color-rule))] px-1 py-1 text-center">
+              <MatrixCell
+                role={role}
+                perm={perm}
+                info={info}
+                disabled={isSaving}
+                onToggle={() => onToggle(role, perm.id)}
+                variant="grid"
               />
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/** ■ 有 □ 无 ＋ − 未保存 ! 保存失败 ◇ 引起冲突 */
+export function PermLegend() {
+  const { t } = useI18n();
+  const items: [CellState, string][] = [
+    ["on", "permissions.matrix.legend.on"],
+    ["off", "permissions.matrix.legend.off"],
+    ["grant", "permissions.matrix.legend.unsaved"],
+    ["failed", "permissions.matrix.legend.failed"],
+    ["conflict", "permissions.matrix.legend.conflict"],
+  ];
+  return (
+    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
+      {items.map(([state, key]) => (
+        <li key={state} className="flex items-center gap-1.5">
+          <PermGlyph state={state} />
+          {state === "grant" && <PermGlyph state="revoke" />}
+          {t(key)}
+        </li>
+      ))}
+    </ul>
   );
 }
