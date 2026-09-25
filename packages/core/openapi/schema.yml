@@ -718,13 +718,13 @@ paths:
       description: |-
         POST /api/v1/auth/password-help/
         「忘记密码」 on a console whose accounts an administrator opens: the
-        administrators of the account's tenant get an in-app notification and an
-        audit row is written. No code, no link, no mail — the administrator resets
-        the password through user management as they would anyway.
+        administrators and realm leads (殿主) of the account's tenant get an in-app
+        notification and an audit row is written. No code, no link, no mail — the
+        recipient resets the password through user management as they would anyway.
 
         NO USER ENUMERATION, BY CONSTRUCTION. This view never reads the user
-        table. Both limits are counted before anything else and refuse
-        identically; then the username is handed to
+        table. The per-IP limit is counted before anything else and refuses
+        every username identically; then the username is handed to
         `tasks.notify_password_help`, which does the lookup in the worker, and
         the same body goes back. Known and unknown usernames take the same path
         through this function, statement for statement.
