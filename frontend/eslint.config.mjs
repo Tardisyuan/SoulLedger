@@ -123,6 +123,9 @@ const ROUND_ALLOW = new Set([
   "src/components/social/ProfileCard.tsx",
   "src/components/ui/Spinner.tsx",
   "app/admin/stats/page.tsx",
+  // 审判队列的认领标:一位官员的头像(首字),规范 v1 第三类 A·02 画成圆形,属头像例外。
+  // 单独成文件,好让例外只覆盖这一个元素,而不是整张队列表。
+  "src/components/judgment/ClaimAvatar.tsx",
 ]);
 
 // 规范 v1 §1.7:页面内零阴影,层级靠线。允许的只有:浮层那一档 shadow-overlay、shadow-none,

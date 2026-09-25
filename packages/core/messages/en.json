@@ -933,7 +933,97 @@
       "cite": "Cite",
       "cited": "Cited",
       "uncite": "Withdraw {{code}}",
-      "cite_error": "The citation did not save"
+      "cite_error": "The citation did not save",
+      "deferred_note": "Deferred: {{reason}}"
+    },
+    "claim": {
+      "groups": {
+        "mine": "Mine",
+        "unclaimed": "Unclaimed",
+        "others": "Claimed by others",
+        "deferred": "Deferred"
+      },
+      "hints": {
+        "unclaimed": "Longest waiting first",
+        "others": "Read-only; can be reassigned"
+      },
+      "search": "Search name or ID",
+      "court_all": "Court · all",
+      "select": "Select",
+      "select_row": "Select {{name}}",
+      "selected": "{{n}} selected",
+      "claim": "Claim",
+      "reassign": "Reassign…",
+      "defer": "Defer",
+      "clear_selection": "Clear selection",
+      "batch_limit": "At most {{n}} at a time; do the rest in another batch",
+      "balance": "Balance",
+      "claimant": "Claimant",
+      "group_empty": "None in this group",
+      "key_move": "move",
+      "key_open": "open the desk",
+      "claimed_by": "Claimed by {{name}}",
+      "claimed_by_me": "Claimed by you",
+      "reason": "Reason",
+      "reason_required": "A reason is required",
+      "defer_title": "Defer {{n}} judgment(s)",
+      "defer_reason_hint": "Required, up to 500 characters; kept with the case for whoever works it",
+      "reassign_title": "Reassign {{n}} judgment(s)",
+      "reassign_to": "Reassign to",
+      "reassign_hint": "Active officers in this tenant only; the server checks case permission again",
+      "pick_officer": "— Choose an officer —",
+      "officer_required": "Choose an officer",
+      "officers_unavailable": "Could not read the officer list (needs user-management permission)",
+      "reassign_confirm": "Reassign",
+      "done_claim": "Claimed {{n}}",
+      "done_reassign": "Reassigned {{n}}",
+      "done_defer": "Deferred {{n}}",
+      "refused": {
+        "already_claimed": "Already claimed by another officer",
+        "not_claimed": "Nobody has claimed this",
+        "not_claimant": "Claimed by another officer; acting for them needs reassign permission",
+        "not_pending": "Already concluded; it can no longer change",
+        "already_deferred": "Already deferred",
+        "not_deferred": "Not deferred",
+        "invalid_assignee": "That officer is not in this tenant or cannot work judgments",
+        "not_found": "Some judgments no longer exist",
+        "permission_denied": "Permission denied",
+        "generic": "The action did not go through"
+      }
+    },
+    "admission": {
+      "title": "Evidence · admission",
+      "toggle_hint": "toggle admission",
+      "toggle_row": "Admit {{item}}",
+      "balance_label": "Balance after admission",
+      "not_admitted_net": "({{n}} not admitted, {{net}})",
+      "not_admitted_count": "({{n}} not admitted)",
+      "reason_title": "Do not admit {{item}}",
+      "reason_hint": "Required; kept with the case file",
+      "confirm_not_admit": "Do not admit",
+      "rule_error": "The ruling was not saved",
+      "not_current_life": "This judgment is from an earlier life; its evidence is not listed here",
+      "empty": "No merit or demerit records in this life",
+      "reason_shown": "Reason: {{reason}}"
+    },
+    "draft": {
+      "saved_at": "Autosaved {{time}}",
+      "saving": "Saving…",
+      "save_failed": "Autosave failed; it retries on your next change",
+      "conflict_title": "Another version was saved elsewhere ({{time}})",
+      "conflict_body": "Your changes are not saved and will not overwrite anything on their own. Theirs is below — choose one:",
+      "server_version": "Their version",
+      "use_server": "Use theirs",
+      "keep_mine": "Keep mine (overwrite theirs)",
+      "concluded": "This case is concluded; the draft is no longer saved",
+      "empty_text": "(empty)"
+    },
+    "precedents": {
+      "title": "Grounds · precedents",
+      "empty": "No comparable concluded judgments yet",
+      "same_court": "same court",
+      "shared": "{{n}} shared citations",
+      "error": "Precedents could not be read"
     }
   },
   "audit": {

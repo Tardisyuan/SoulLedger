@@ -933,7 +933,97 @@
       "cite": "Djed",
       "cited": "Djed Seth",
       "uncite": "Khemu Djed {{code}}",
-      "cite_error": "Nen Djed"
+      "cite_error": "Nen Djed",
+      "deferred_note": "Sedjer: {{reason}}"
+    },
+    "claim": {
+      "groups": {
+        "mine": "Shesep Ek",
+        "unclaimed": "Nen Shesep",
+        "others": "Shesep Ky",
+        "deferred": "Sedjer"
+      },
+      "hints": {
+        "unclaimed": "Em Smen Tepy",
+        "others": "Maa Wa · Hab Ky"
+      },
+      "search": "Shesep Her Ren",
+      "court_all": "Hemsu Seth · Wetu",
+      "select": "Setep",
+      "select_row": "Setep {{name}}",
+      "selected": "{{n}} Setep",
+      "claim": "Shesep",
+      "reassign": "Hab Ky…",
+      "defer": "Sedjer",
+      "clear_selection": "Khet Setep",
+      "batch_limit": "{{n}} Wa · Khet Em Wu",
+      "balance": "Unemu Tepy",
+      "claimant": "Shesep",
+      "group_empty": "Nen Rekhyu",
+      "key_move": "Her · Khet",
+      "key_open": "Wen Wedja",
+      "claimed_by": "Shesep {{name}}",
+      "claimed_by_me": "Shesep Ek",
+      "reason": "Khet",
+      "reason_required": "Sesh Khet Em Tepy",
+      "defer_title": "Sedjer {{n}} Sheemtet Seth",
+      "defer_reason_hint": "Em Tepy · Sesh Em Sep",
+      "reassign_title": "Hab Ky {{n}} Sheemtet Seth",
+      "reassign_to": "Hab Er",
+      "reassign_hint": "Sab Em Per Pen Wa",
+      "pick_officer": "— Setep Sab —",
+      "officer_required": "Setep Sab Em Tepy",
+      "officers_unavailable": "Nen Maa Sab Wu",
+      "reassign_confirm": "Hab Ky",
+      "done_claim": "{{n}} Shesep Seth",
+      "done_reassign": "{{n}} Hab Ky Seth",
+      "done_defer": "{{n}} Sedjer",
+      "refused": {
+        "already_claimed": "Shesep Ky Seth",
+        "not_claimed": "Nen Shesep",
+        "not_claimant": "Shesep Ky · Nen Was",
+        "not_pending": "Khetem Seth",
+        "already_deferred": "Sedjer Seth",
+        "not_deferred": "Nen Sedjer",
+        "invalid_assignee": "Nen Sab Em Per Pen",
+        "not_found": "Nen Rekhyu Sheemtet Seth",
+        "permission_denied": "Nen Was",
+        "generic": "Nen Iri"
+      }
+    },
+    "admission": {
+      "title": "Medu Maat · Shesep Maat",
+      "toggle_hint": "Setep Shesep Maat",
+      "toggle_row": "Shesep Maat {{item}}",
+      "balance_label": "Unemu Tepy",
+      "not_admitted_net": "({{n}} Nen Shesep Maat, {{net}})",
+      "not_admitted_count": "({{n}} Nen Shesep Maat)",
+      "reason_title": "Nen Shesep Maat {{item}}",
+      "reason_hint": "Em Tepy · Sesh Em Sep",
+      "confirm_not_admit": "Nen Shesep Maat",
+      "rule_error": "Nen Sau",
+      "not_current_life": "Nen Ankh Pen",
+      "empty": "Nen Rekhyu Nefer Hena Isfet",
+      "reason_shown": "Khet: {{reason}}"
+    },
+    "draft": {
+      "saved_at": "Sau Seth {{time}}",
+      "saving": "Em Sau…",
+      "save_failed": "Nen Sau",
+      "conflict_title": "Ky Sau Seth ({{time}})",
+      "conflict_body": "Nen Sau Ek. Setep:",
+      "server_version": "Ky",
+      "use_server": "Shesep Ky",
+      "keep_mine": "Sau Ek",
+      "concluded": "Khetem Seth · Nen Sau",
+      "empty_text": "Nen Rekhyu"
+    },
+    "precedents": {
+      "title": "Sep Tepy",
+      "empty": "Nen Rekhyu Sep Tepy",
+      "same_court": "Hemsu Seth Wa",
+      "shared": "{{n}} Djed",
+      "error": "Nen Maa Sep Tepy"
     }
   },
   "audit": {

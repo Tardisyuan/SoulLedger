@@ -1,14 +1,16 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
+import type { DispositionListParams, DispositionSection } from "@soulledger/core/api/disposition";
+import { dispositionKeys } from "@soulledger/core/query_keys";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/src/components/ui/Pagination";
-import { DomainText } from "@/src/components/ui/DomainValue";
+import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -17,20 +19,32 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { formatHistoricalDate } from "@/lib/utils";
-import { sectionOf, termState, type TermState } from "@/src/lib/dispositionTerm";
+import { termState, type TermState } from "@/src/lib/dispositionTerm";
+import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
 
 /**
  * 处置(规范 v1 第三类 A·07):一页三段 —— 待执行 → 执行中 → 期满,就是处置本身的时间顺序。
  *
- * 规则 15 的例外只在这里和回收站:待执行段的「执行」、期满段的「安排轮回」是行尾按钮,
- * 因为这两段的工作就是那一个动作。执行中段没有动作,只有期限条。
+ * 三段各是一次 `?section=` 查询,各自分页,段标上的数是那次查询的 `count` —— 服务端的总数,
+ * 不是本页的行数。期满由服务端的期满检查写下 `expired_at`,前端不再从 `term_start + 年限`
+ * 推算;「期满」一段带 `soul_reborn=false`,已经转世的灵魂不再排着等「安排轮回」。
  *
- * 分段是在**当前这一页**的行上做的:列表接口只有 `is_executed` 过滤,没有「期满」,
- * 所以三段的计数是本页的行数,总数在底下的分页条上。「期满」由 `term_start + sentence_years`
- * 算出(见 `src/lib/dispositionTerm.ts`);已轮回的灵魂在这里不被排除 —— 处置行不带
- * 灵魂状态,「安排轮回」因此是去灵魂页的链接,由那一页按真实状态决定能不能做。
- * 稿子里的「判决」列与「下次自动期满检查」没有画:处置不带裁决,到期检查没有在跑。
+ * 规则 15 的例外只在这里和回收站:待执行段的「执行」、期满段的「安排轮回」是行尾按钮,
+ * 因为这两段的工作就是那一个动作。执行中段没有动作,只有期限条;永恒处置画虚线框。
+ *
+ * 执行中段「按期满近 → 远」只在本页内排:列表的 `ordering` 只收 `created_at` / `executed_at`,
+ * 服务端不能按 `term_end` 排。稿子里的「下次自动期满检查 · 今日 24:00」没有画:期满任务
+ * (`disposition.expire_due`)没有排进任何调度,下次何时跑没有可读的来源。
  */
+
+const SECTIONS: readonly DispositionSection[] = ["pending", "executing", "expired"];
+const SECTION_TITLE: Record<DispositionSection, string> = {
+  pending: "disposition.section_pending",
+  executing: "disposition.section_running",
+  expired: "disposition.section_expired",
+};
+const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", executing: "乙", expired: "丙" };
+
 export default function DispositionPage() {
   const { t, formatDate } = useI18n();
   const { user } = useTenant();
@@ -38,31 +52,32 @@ export default function DispositionPage() {
   const queryClient = useQueryClient();
   const [showExecuteModal, setShowExecuteModal] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
-  // Page in the key and on the wire. `list()` was called with no `page` and
-  // nothing offered another one, so everything past the server's twentieth
-  // disposition was invisible and unreachable, and nothing said so (FL-09).
-  // `app/dispatch/page.tsx` is the sibling this copies; the execute mutation
-  // below invalidates `["dispositions"]`, which prefix-matches every page.
-  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState<Record<DispositionSection, number>>({ pending: 1, executing: 1, expired: 1 });
 
-  const { data: dispositionsResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: ["dispositions", page],
-    queryFn: () => dispositionApi.list({ page: String(page) }).then(r => r.data),
+  // One query per section, each paged on its own. `dispositionKeys.list` sits under
+  // `["dispositions"]`, which the execute mutation below invalidates.
+  const sectionQuery = (params: DispositionListParams) => ({
+    queryKey: dispositionKeys.list(params),
+    queryFn: () => dispositionApi.list(params).then((r) => r.data),
     enabled: !!user,
-    placeholderData: (previous) => previous,
+    placeholderData: <P,>(previous: P) => previous,
   });
+  const pendingQ = useQuery(sectionQuery({ section: "pending", page: String(pages.pending) }));
+  const executingQ = useQuery(sectionQuery({ section: "executing", page: String(pages.executing) }));
+  // 已经转世的灵魂不再排在「期满」里等安排轮回。
+  const expiredQ = useQuery(sectionQuery({ section: "expired", soul_reborn: "false", page: String(pages.expired) }));
+  const queries: Record<DispositionSection, typeof pendingQ> = { pending: pendingQ, executing: executingQ, expired: expiredQ };
 
-  // /disposition/ is a paginated ModelViewSet list, so `results` is always
-  // present (an empty array included) and the old `|| dispositionsResponse`
-  // fallback could never be reached.
-  const dispositions = dispositionsResponse?.results ?? [];
-  const pending = dispositions.filter((d) => sectionOf(d, now) === "pending");
-  const running = dispositions
-    .filter((d) => sectionOf(d, now) === "running")
+  const isLoading = SECTIONS.some((s) => queries[s].isLoading);
+  const isError = SECTIONS.some((s) => queries[s].isError);
+  const total = SECTIONS.reduce((n, s) => n + (queries[s].data?.count ?? 0), 0);
+
+  const pending = pendingQ.data?.results ?? [];
+  const running = (executingQ.data?.results ?? [])
     .map((d) => ({ d, term: termState(d, now) }))
-    // 按期满近 → 远;不计时的(永恒、缺期限、缺起算)排在最后。
+    // 按期满近 → 远;不计时的(永恒、缺期限、缺起算)排在最后。只在本页内。
     .sort((a, b) => daysLeftOf(a.term) - daysLeftOf(b.term));
-  const expired = dispositions.filter((d) => sectionOf(d, now) === "expired");
+  const expired = expiredQ.data?.results ?? [];
 
   const executeMutation = useMutation({
     mutationFn: (id: string) => dispositionApi.execute(id),
@@ -84,6 +99,24 @@ export default function DispositionPage() {
       <DomainText value={d.realm_name || d.destination_realm} />
     </span>
   );
+  const pager = (section: DispositionSection) => {
+    const count = queries[section].data?.count ?? 0;
+    if (count <= PAGE_SIZE) return null;
+    return (
+      <Pagination
+        page={pages[section]}
+        totalPages={Math.ceil(count / PAGE_SIZE)}
+        count={count}
+        onPageChange={(p) => setPages((prev) => ({ ...prev, [section]: p }))}
+      />
+    );
+  };
+  const sectionProps = (section: DispositionSection) => ({
+    mark: SECTION_MARK[section],
+    title: t(SECTION_TITLE[section]),
+    count: queries[section].data?.count ?? 0,
+    testId: `disposition-section-${section}`,
+  });
 
   return (
     <PageShell
@@ -97,26 +130,23 @@ export default function DispositionPage() {
       subtitle={t("disposition.subtitle")}
       isLoading={isLoading}
       skeleton={<ListSkeleton count={5} />}
-      // `isError ||`, not `dispositions.length === 0` alone. A failed request
-      // yields `results ?? []`, which is empty, so "the server is down" and
-      // "no dispositions have been filed" rendered the same words.
-      isEmpty={isError || dispositions.length === 0}
+      // `isError ||`: a failed request yields no rows, and "the server is down"
+      // and "no dispositions have been filed" must not read the same.
+      isEmpty={isError || total === 0}
       empty={
         isError ? (
-          <QueryError onRetry={() => refetch()} />
+          <QueryError onRetry={() => SECTIONS.forEach((s) => queries[s].refetch())} />
         ) : (
-          <EmptyState
-            title={t("disposition.list")}
-            reason={t("disposition.no_dispositions")}
-          />
+          <EmptyState title={t("disposition.list")} reason={t("disposition.no_dispositions")} />
         )
       }
     >
-      {/* ── 甲 · 待执行:行尾「执行」(规则 15 例外) ─────────────────────── */}
-      <Section mark="甲" title={t("disposition.section_pending")} count={pending.length}>
+      {/* ── 甲 · 待执行:判决列 + 行尾「执行」(规则 15 例外) ───────────── */}
+      <Section {...sectionProps("pending")}>
         {pending.map((d) => (
-          <Row key={d.id} testId="disposition-pending-row" cols="md:grid-cols-[1.3fr_1.3fr_8rem_6rem_7rem]">
+          <Row key={d.id} testId="disposition-pending-row" cols="md:grid-cols-[1.3fr_7rem_1.3fr_8rem_6rem_7rem]">
             {soulLink(d)}
+            <VerdictBadge verdict={d.verdict} />
             {realm(d)}
             <span className="text-[oklch(var(--color-ink-muted))]">{termLabel(termState(d, now), t)}</span>
             <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">{formatDate(d.created_at)}</span>
@@ -133,10 +163,11 @@ export default function DispositionPage() {
             </span>
           </Row>
         ))}
+        {pager("pending")}
       </Section>
 
       {/* ── 乙 · 执行中:期限条,没有动作 ─────────────────────────────────── */}
-      <Section mark="乙" title={t("disposition.section_running")} count={running.length}>
+      <Section {...sectionProps("executing")}>
         {running.map(({ d, term }) => (
           <Row key={d.id} testId="disposition-running-row" cols="md:grid-cols-[1.3fr_1.1fr_2fr_8rem]">
             {soulLink(d)}
@@ -147,18 +178,19 @@ export default function DispositionPage() {
             </span>
           </Row>
         ))}
+        {pager("executing")}
       </Section>
 
-      {/* ── 丙 · 期满:行尾「安排轮回」(规则 15 例外) ───────────────────── */}
-      <Section mark="丙" title={t("disposition.section_expired")} count={expired.length}>
+      {/* ── 丙 · 期满(已转世的不在此列):行尾「安排轮回」(规则 15 例外) ── */}
+      <Section {...sectionProps("expired")}>
         {expired.map((d) => {
-          const term = termState(d, now);
+          const end = formatHistoricalDate(d.term_end ?? null) ?? (d.expired_at ? formatDate(d.expired_at) : null);
           return (
             <Row key={d.id} testId="disposition-expired-row" cols="md:grid-cols-[1.3fr_1.3fr_1fr_8rem]">
               {soulLink(d)}
               {realm(d)}
               <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-warning))]">
-                {term.kind === "served" && t("disposition.expired_on", { date: formatHistoricalDate(term.end) ?? "" })}
+                {end ? t("disposition.expired_on", { date: end }) : <MissingValue kind="unrecorded" />}
               </span>
               <span className="flex justify-end">
                 <Link href={`/souls/${d.soul}`} className={buttonVariants({ variant: "primary", size: "sm" })}>
@@ -168,14 +200,8 @@ export default function DispositionPage() {
             </Row>
           );
         })}
+        {pager("expired")}
       </Section>
-
-      <Pagination
-        page={page}
-        totalPages={Math.max(1, Math.ceil((dispositionsResponse?.count ?? 0) / PAGE_SIZE))}
-        count={dispositionsResponse?.count ?? 0}
-        onPageChange={setPage}
-      />
 
       {/* Executing a disposition is what sends a soul to its realm; it is not a
           dialog to leave dismissible by a stray Tab into the page behind it —
@@ -211,9 +237,25 @@ function termLabel(term: TermState, t: T): string {
     case "no_start":
       return t("sentence_plan.years", { years: String(term.years) });
     case "running":
-    case "served":
       return t("sentence_plan.years", { years: String(term.end.year - term.start.year) });
   }
+}
+
+/** 判决徽章:字形 + 名,颜色之外必有字形(规范 v1 §1.2)。没有本地审判的处置写「未记录」。 */
+function VerdictBadge({ verdict }: { verdict: Disposition["verdict"] }) {
+  if (!verdict) {
+    return (
+      <span className="text-xs">
+        <MissingValue kind="unrecorded" />
+      </span>
+    );
+  }
+  return (
+    <span className={`justify-self-start border border-current px-1.5 font-mono text-2xs whitespace-nowrap ${verdictInk(verdict)}`}>
+      <span aria-hidden="true">{verdictGlyph(verdict)} </span>
+      <DomainEnum namespace="judgment.verdicts" value={verdict} />
+    </span>
+  );
 }
 
 /**
@@ -261,14 +303,26 @@ function TermBar({ term }: { term: TermState }) {
   );
 }
 
-/** 分段标「甲 · 待执行 4」,空段写一行而不是塌掉。 */
-function Section({ mark, title, count, children }: { mark: string; title: string; count: number; children: ReactNode }) {
+/** 分段标「甲 · 待执行 4」,数是服务端的总数;空段写一行而不是塌掉。 */
+function Section({
+  mark,
+  title,
+  count,
+  testId,
+  children,
+}: {
+  mark: string;
+  title: string;
+  count: number;
+  testId: string;
+  children: ReactNode;
+}) {
   const { t } = useI18n();
   return (
-    <section className="mb-6">
+    <section className="mb-6" data-testid={testId}>
       <h2 className="pt-4 pb-1 border-b border-[oklch(var(--color-block))] font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
         <span aria-hidden="true">{mark} · </span>
-        {title} <span className="tabular-nums">{count}</span>
+        {title} <span className="tabular-nums" data-testid="section-count">{count}</span>
       </h2>
       {count === 0 ? (
         <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("disposition.section_empty")}</p>
