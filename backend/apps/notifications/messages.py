@@ -22,6 +22,7 @@ MESSAGES = {
         "cross_sentence_submitted": {"title": "联审节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "password_help_requested": {"title": "忘记密码求助", "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请到用户管理为其重置。"},
         "password_help_requested_moderator": {"title": "忘记密码求助", "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请联系管理员为其重置。"},
+        "soul_inbox_assigned": {"title": "来信交给你办", "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"},
         "dispatch_return_blocked": {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
@@ -40,6 +41,7 @@ MESSAGES = {
         "cross_sentence_submitted": {"title": "Joint sentence submitted", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
         "password_help_requested": {"title": "Password help requested", "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."},
         "password_help_requested_moderator": {"title": "Password help requested", "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, ask an administrator to reset it."},
+        "soul_inbox_assigned": {"title": "A letter handed to you", "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."},
         "dispatch_return_blocked": {
             "title": "Residence return blocked",
             "body": (
@@ -61,6 +63,7 @@ MESSAGES = {
         "cross_sentence_submitted": {"title": "Sekhet Sesh Seth", "body": "{{tenant}}: Sekhet {{order}} En {{soul}} Sesh Seth."},
         "password_help_requested": {"title": "Dbh · Nen Rekh Sekhem", "body": "Aq «{{username}}» Dbh Wehem Sekhem Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},
         "password_help_requested_moderator": {"title": "Dbh · Nen Rekh Sekhem", "body": "Aq «{{username}}» Dbh Wehem Sekhem Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."},
+        "soul_inbox_assigned": {"title": "Sesh Hab Er Ek", "body": "{{soul}}: Sesh Hab Ky Er Ek ({{by}})."},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
@@ -82,6 +85,7 @@ KIND_BY_TYPE = {
     "SENTENCE_REQUEST_DECIDED": "sentence_request_decided",
     "SENTENCE_PLAN_CANCELLED": "sentence_plan_cancelled",
     "PASSWORD_HELP_REQUESTED": "password_help_requested",
+    "SOUL_INBOX_ASSIGNED": "soul_inbox_assigned",
 }
 
 

@@ -17,6 +17,7 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
   soulInboxApi: {
     list: jest.fn(), folders: jest.fn(), messages: jest.fn(), reply: jest.fn(), markRead: jest.fn(),
     archive: jest.fn(), unarchive: jest.fn(), draft: jest.fn(), saveDraft: jest.fn(), clearDraft: jest.fn(),
+    assign: jest.fn(), unassign: jest.fn(), assignable: jest.fn(),
   },
   inboxTemplatesApi: { list: jest.fn(), create: jest.fn(), update: jest.fn(), remove: jest.fn() },
 }));
@@ -59,12 +60,14 @@ const conversation = (over: Record<string, unknown> = {}) => ({
   unread: false,
   has_draft: false,
   archived: false,
+  assignee: null,
+  assigned_at: null,
   created_at: "2026-09-18T00:00:00Z",
   closed_at: null,
   ...over,
 });
 const COUNTS = {
-  all: 1, awaiting_reply: 0, replied: 1, drafts: 0, archived: 0, unread: 0, open: 1, closed: 0,
+  all: 1, awaiting_reply: 0, replied: 1, drafts: 0, archived: 0, assigned_to_me: 0, unread: 0, open: 1, closed: 0,
   halls: [{ tenant: 1, hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, count: 1 }],
 };
 const noDraft = { data: { last_read_at: null, archived_at: null, draft: "", draft_saved_at: null } };
@@ -387,4 +390,81 @@ it("without judgment.read, `/` is only a character: no search, no hint", async (
   expect(within(thread).queryByRole("listbox")).toBeNull();
   expect(within(thread).queryByText(tZh("soul_inbox.cite_hint"))).toBeNull();
   expect(judgmentMock.statutes).not.toHaveBeenCalled();
+});
+
+describe("标给同僚", () => {
+  const OFFICERS = [
+    { user_id: 2, display_name: "我自己" },
+    { user_id: 7, display_name: "钟馗" },
+  ];
+
+  it("hands the thread to the picked colleague and shows the assignee in the header", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.assignable.mockResolvedValue({ data: OFFICERS });
+    apiMock.assign.mockResolvedValue({ data: conversation({ assignee: { user_id: 7, display_name: "钟馗" } }) });
+    renderPage();
+    const thread = await openThread();
+    expect(within(thread).queryByTestId("thread-assignee")).toBeNull();
+    fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.assign.action") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("soul_inbox.assign.title") });
+    await waitFor(() => expect(apiMock.assignable).toHaveBeenCalledWith("c1"));
+    const select = await within(dialog).findByRole("combobox", { name: tZh("soul_inbox.assign.to") });
+    await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(2));
+    fireEvent.change(select, { target: { value: "7" } });
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: { user_id: 7, display_name: "钟馗" } })]));
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("soul_inbox.assign.confirm") }));
+    await waitFor(() => expect(apiMock.assign).toHaveBeenCalledWith("c1", 7));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.assign.done", { name: "钟馗" }), "success")
+    );
+    expect(await within(thread).findByTestId("thread-assignee")).toHaveTextContent(
+      tZh("soul_inbox.assign.assignee", { name: "钟馗" })
+    );
+  });
+
+  it("an invalid assignee is told in words, not as a raw code", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.assignable.mockResolvedValue({ data: OFFICERS });
+    apiMock.assign.mockRejectedValue(http(400, { detail: "x", code: "invalid_assignee" }));
+    renderPage();
+    const thread = await openThread();
+    fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.assign.action") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("soul_inbox.assign.title") });
+    await within(dialog).findByRole("combobox", { name: tZh("soul_inbox.assign.to") });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("soul_inbox.assign.confirm") }));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.errors.invalid_assignee"), "error")
+    );
+  });
+
+  it("take back clears the assignee", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: { user_id: 7, display_name: "钟馗" } })]));
+    apiMock.unassign.mockResolvedValue({ data: conversation() });
+    renderPage();
+    const thread = await openThread();
+    fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.assign.unassign") }));
+    await waitFor(() => expect(apiMock.unassign).toHaveBeenCalledWith("c1"));
+  });
+
+  it("read-only officers see the assignee but cannot hand it on", async () => {
+    asRole("soul_inbox.read");
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: { user_id: 7, display_name: "钟馗" } })]));
+    renderPage();
+    const thread = await openThread();
+    expect(within(thread).getByTestId("thread-assignee")).toBeInTheDocument();
+    expect(within(thread).queryByRole("button", { name: tZh("soul_inbox.assign.action") })).toBeNull();
+    expect(within(thread).queryByRole("button", { name: tZh("soul_inbox.assign.unassign") })).toBeNull();
+  });
+
+  it("「交给我的」 is a folder with the server's count, and asks the server for its rows", async () => {
+    asRole("soul_inbox.read");
+    apiMock.folders.mockResolvedValue({ data: { ...COUNTS, assigned_to_me: 3 } });
+    renderPage();
+    const nav = await screen.findByRole("navigation", { name: tZh("soul_inbox.folders") });
+    const folder = await within(nav).findByRole("button", { name: new RegExp(tZh("soul_inbox.folder.assigned_to_me")) });
+    await waitFor(() => expect(folder).toHaveTextContent("3"));
+    fireEvent.click(folder);
+    await waitFor(() => expect(apiMock.list).toHaveBeenLastCalledWith({ page: 1, folder: "assigned_to_me" }));
+  });
 });
