@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -20,17 +20,19 @@ import {
   findNonSubsetPair,
   type GrantMap,
 } from "@/src/components/permissions/matrixDiff";
-import { ConflictBanner } from "@/src/components/permissions/ConflictBanner";
-import { PartialSaveBanner } from "@/src/components/permissions/PartialSaveBanner";
 import { MatrixLegend } from "@/src/components/permissions/MatrixLegend";
-import { MatrixToolbar } from "@/src/components/permissions/MatrixToolbar";
-import { PermissionMatrixTable } from "@/src/components/permissions/PermissionMatrixTable";
+import { PermissionMatrixTable, PermLegend, type MatrixCellInfo } from "@/src/components/permissions/PermissionMatrixTable";
 import { MatrixSaveConfirmModal } from "@/src/components/permissions/MatrixSaveConfirmModal";
-import { RolesGrid } from "@/src/components/permissions/RolesGrid";
+import { ImpactConflictBanner, PartialFailBanner, UnsavedBar } from "@/src/components/permissions/MatrixBanners";
+import { RolesSection } from "@/src/components/permissions/RolesSection";
 import { DeleteConfirmModal } from "@/src/components/permissions/DeleteConfirmModal";
 import { buildPermissionColumns } from "@/src/components/permissions/permissionColumns";
 import { usePermissionCrud } from "@/src/components/permissions/usePermissionCrud";
-import { useMatrixSave } from "@/src/components/permissions/useMatrixSave";
+import { useMatrixCells, type CellFailure } from "@/src/components/permissions/useMatrixCells";
+import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
+import { fieldControl } from "@/src/components/ui/Field";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { cn } from "@/lib/utils";
 
 // The pure diff/tier helpers moved to src/components/permissions/matrixDiff.ts
 // when this file was split for the 500-line limit. They stay re-exported from
@@ -56,12 +58,13 @@ export default function PermissionsPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingPerm, setDeletingPerm] = useState<Permission | null>(null);
 
-  // ── Role CRUD state ──
+  // ── Role CRUD state — edit, copy and recycle live in the role drawer now ──
   const [isRoleCreateOpen, setIsRoleCreateOpen] = useState(false);
-  const [isRoleEditOpen, setIsRoleEditOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [isRoleDeleteOpen, setIsRoleDeleteOpen] = useState(false);
-  const [deletingRole, setDeletingRole] = useState<Role | null>(null);
+
+  // ── Page segment (E-11: 矩阵 / 角色; the permission definitions keep a third) ──
+  const [segment, setSegment] = useState<"matrix" | "roles" | "definitions">("matrix");
+  // 393 px: which role's column the row toggles edit.
+  const [mobileRole, setMobileRole] = useState("");
 
   // ── Matrix state ──
   const [filterText, setFilterText] = useState("");
@@ -230,41 +233,46 @@ export default function PermissionsPage() {
     return `${granted}/${total}`;
   }
 
-  const {
-    isSaving,
-    conflict,
-    savedBeforeFailure,
-    dismissPartialSave,
-    confirmOpen,
-    pendingDiffs,
-    typedRoleNames,
-    liveDiffs,
-    canConfirmSave,
-    handleSaveClick,
-    resolveConflict,
-    setTypedRoleName,
-    closeConfirm,
-    cancelConfirm,
-    confirmSave,
-  } = useMatrixSave({ checked, setChecked, baseline, roleNames, permsById, roleMeta });
+  const cells = useMatrixCells({ checked, setChecked, baseline, roleNames, permsById, roleMeta });
+  const isSaving = cells.isSaving;
 
-  const conflictRoleQuery = conflict ? rolePermQueries[roleNames.indexOf(conflict.role)] : undefined;
+  /** Why a cell was not written, in words (the `code` from matrix.py). */
+  const failureReason = useCallback(
+    (f: CellFailure) =>
+      f.code ? t(`permissions.matrix.refused.${f.code}`) : (f.detail ?? t("permissions.matrix.save_error")),
+    [t]
+  );
+
+  const cellInfo: MatrixCellInfo = {
+    granted: (role, permId) => checked?.[role]?.has(permId) ?? false,
+    pending: (key) => cells.pendingKeys.has(key),
+    failure: cells.failureAt,
+    conflict: (key) => cells.conflictCells.has(key),
+    failureReason,
+  };
+
+  /** 定位: bring the failed cell on screen and put focus on it (on 393 px, via its role). */
+  function locate(f: CellFailure) {
+    setSegment("matrix");
+    setMobileRole(f.role);
+    requestAnimationFrame(() => {
+      const key = matrixCellKey(f.role, f.permissionId);
+      const target = [...document.querySelectorAll<HTMLElement>(`[data-cell="${key}"]`)].find(
+        (el) => el.offsetParent !== null
+      );
+      target?.scrollIntoView({ block: "center", inline: "center" });
+      target?.focus();
+    });
+  }
 
   // ── Permission / Role CRUD mutations (unchanged behavior) ──
-  const {
-    createMutation,
-    editMutation,
-    deleteMutation,
-    roleCreateMutation,
-    roleEditMutation,
-    roleDeleteMutation,
-  } = usePermissionCrud({
+  const { createMutation, editMutation, deleteMutation, roleCreateMutation } = usePermissionCrud({
     onCreated: () => setIsCreateOpen(false),
     onEdited: () => { setIsEditOpen(false); setEditingPerm(null); },
     onDeleted: () => { setIsDeleteOpen(false); setDeletingPerm(null); },
     onRoleCreated: () => setIsRoleCreateOpen(false),
-    onRoleEdited: () => { setIsRoleEditOpen(false); setEditingRole(null); },
-    onRoleDeleted: () => { setIsRoleDeleteOpen(false); setDeletingRole(null); },
+    onRoleEdited: () => {},
+    onRoleDeleted: () => {},
   });
 
   // ── Peer-not-ladder legend, computed from the live baseline ──
@@ -278,12 +286,14 @@ export default function PermissionsPage() {
     onDelete: (perm) => { setDeletingPerm(perm); setIsDeleteOpen(true); },
   });
 
+  const segments = [
+    { value: "matrix" as const, label: t("permissions.segments.matrix") },
+    { value: "roles" as const, label: t("permissions.segments.roles"), count: rolesQuery.data?.length },
+    { value: "definitions" as const, label: t("permissions.segments.definitions") },
+  ];
+
   return (
-    // `full`,不是 `page` —— 这一页的主体是角色 × 权限矩阵,**列数随角色数
-    // 增长**。迁移前它被 `max-w-6xl`(1152px)夹着:今天 5 个角色还算宽裕,
-    // 第 8 个角色进来时列宽就开始被压。1200px 的 `page` 只是把同一个天花板
-    // 抬高 48px,并没有换掉那个天花板。副标题仍然收在 `max-w-prose` 里
-    // (PageShell 自己给的),所以「不设列宽」不会让那一句铺满 1800px。
+    // `full`,不是 `page` —— 矩阵的列数随角色数增长,不设列宽上限。
     <PageShell
       variant="full"
       title={
@@ -292,110 +302,141 @@ export default function PermissionsPage() {
           <MenuGloss path="/permissions" />
         </>
       }
-      // 原先这一句是 `hidden sm:block` —— 在手机上整句消失。它解释的是这一页
-      // 在做什么,而手机正是最需要那句解释的地方。
       subtitle={t("permissions.subtitle")}
+      actions={
+        segment === "roles" ? (
+          <RequirePermission permissions="system.settings">
+            <Button type="button" variant="primary" onClick={() => setIsRoleCreateOpen(true)}>
+              + {t("permissions.create_role")}
+            </Button>
+          </RequirePermission>
+        ) : segment === "definitions" && !permsQuery.isLoading ? (
+          <RequirePermission permissions="system.settings">
+            <Button type="button" variant="primary" onClick={() => setIsCreateOpen(true)}>
+              + {t("permissions.create")}
+            </Button>
+          </RequirePermission>
+        ) : undefined
+      }
+      tabs={
+        <div role="group" aria-label={t("permissions.segments.label")} className="flex w-fit flex-wrap border border-[oklch(var(--color-block))]">
+          {segments.map((s) => {
+            const on = segment === s.value;
+            return (
+              <button
+                key={s.value}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setSegment(s.value)}
+                className={cn(
+                  "flex min-h-8 items-center gap-1.5 px-3 text-sm max-sm:min-h-11",
+                  on
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
+                    : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                )}
+              >
+                {s.label}
+                {s.count !== undefined && <span aria-hidden="true" className="font-mono text-2xs opacity-80">{s.count}</span>}
+              </button>
+            );
+          })}
+        </div>
+      }
     >
       <RequireAdmin fallback={<PermissionDenied />}>
-        <div className="space-y-6">
-          {/* ── 已落库但没说出来的那几个 ──
-              放在冲突横幅**之前**:先说已经发生了什么,再说什么没成。
-              两者可以同时在场 —— 第 k 个撞 409 时,前 k-1 个正是已落库的。 */}
-          {savedBeforeFailure.length > 0 && (
-            <PartialSaveBanner saved={savedBeforeFailure} onDismiss={dismissPartialSave} />
-          )}
-
-          {/* ── Conflict banner ── */}
-          {conflict && (
-            <ConflictBanner
-              conflict={conflict}
-              roleMeta={roleMeta}
-              isReloading={conflictRoleQuery?.isFetching}
-              onReload={resolveConflict}
-            />
-          )}
-
-          {/* ── Matrix ── */}
-          <PageSection
-            title={t("permissions.matrix.title")}
-            error={permsQuery.isError || rolesQuery.isError || rolePermsError ? t("permissions.matrix.load_error") : undefined}
-          >
-            <MatrixLegend
-              nonSubsetPair={nonSubsetPair}
-              countParadox={countParadox}
-              roleMeta={roleMeta}
-              permsById={permsById}
-            />
-
-            <MatrixToolbar
-              filterText={filterText}
-              onFilterTextChange={setFilterText}
-              onlyDifferences={onlyDifferences}
-              onOnlyDifferencesChange={setOnlyDifferences}
-              pendingCount={liveDiffs.length}
-              onSave={handleSaveClick}
-              saveDisabled={liveDiffs.length === 0 || isSaving || !matrixReady}
-              isSaving={isSaving}
-            />
-
-            <PermissionMatrixTable
-              matrixReady={matrixReady}
-              roleNames={roleNames}
-              roleMeta={roleMeta}
-              categories={categories}
-              allPerms={permsQuery.data ?? []}
-              checked={checked}
-              isSaving={isSaving}
-              isVisible={(p) => matchesFilter(p) && (!onlyDifferences || rowHasDifference(p))}
-              onToggle={toggleCell}
-              categoryTally={categoryTally}
-            />
-          </PageSection>
-
-          {/* ── All Permissions CRUD ── */}
-          <PageSection
-            title={t("permissions.all_permissions")}
-            actions={
-              !permsQuery.isLoading ? (
-                <RequirePermission permissions="system.settings">
-                  <Button type="button" variant="primary" onClick={() => setIsCreateOpen(true)}>
-                    + {t("permissions.create")}
-                  </Button>
-                </RequirePermission>
-              ) : undefined
-            }
-          >
-            <DataGrid<Permission>
-              caption={t("permissions.all_permissions")}
-              columns={permissionColumns}
-              data={permsQuery.data ?? []}
-              isLoading={permsQuery.isLoading}
-              isError={permsQuery.isError}
-              keyExtractor={(perm) => String(perm.id)}
-            />
-          </PageSection>
-
-          {/* ── Roles CRUD ── */}
-          <RequirePermission permissions="system.settings">
-            <PageSection
-              title={t("permissions.roles_title")}
-              actions={
-                !rolesQuery.isLoading ? (
-                  <Button type="button" variant="primary" onClick={() => setIsRoleCreateOpen(true)}>
-                    + {t("permissions.create_role")}
-                  </Button>
-                ) : undefined
-              }
-            >
-              <RolesGrid
-                roles={rolesQuery.data ?? []}
-                isLoading={rolesQuery.isLoading}
-                onEdit={(role) => { setEditingRole(role); setIsRoleEditOpen(true); }}
-                onDelete={(role) => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
+        {segment === "matrix" && (
+          <div className="space-y-4">
+            {cells.lastSave && (
+              <PartialFailBanner
+                saved={cells.lastSave.saved}
+                failures={cells.failures}
+                roleMeta={roleMeta}
+                permsById={permsById}
+                reason={failureReason}
+                onLocate={locate}
+                onDismiss={cells.dismissLastSave}
               />
+            )}
+            <ImpactConflictBanner conflicts={cells.conflicts} roleMeta={roleMeta} permsById={permsById} />
+
+            <PageSection
+              title={t("permissions.matrix.title")}
+              error={permsQuery.isError || rolesQuery.isError || rolePermsError ? t("permissions.matrix.load_error") : undefined}
+            >
+              <MatrixLegend
+                nonSubsetPair={nonSubsetPair}
+                countParadox={countParadox}
+                roleMeta={roleMeta}
+                permsById={permsById}
+              />
+
+              <div className="mb-3 flex flex-wrap items-center gap-3">
+                <input
+                  type="text"
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  placeholder={t("permissions.matrix.filter_placeholder")}
+                  aria-label={t("permissions.matrix.filter_placeholder")}
+                  className={cn(fieldControl({ size: "md" }), "min-w-[200px] flex-1")}
+                />
+                <FilterChipToggle pressed={onlyDifferences} onPressedChange={setOnlyDifferences}>
+                  {t("permissions.matrix.only_differences")}
+                </FilterChipToggle>
+              </div>
+
+              <PermissionMatrixTable
+                matrixReady={matrixReady}
+                roleNames={roleNames}
+                roleMeta={roleMeta}
+                categories={categories}
+                checked={checked}
+                isSaving={isSaving}
+                isVisible={(p) => matchesFilter(p) && (!onlyDifferences || rowHasDifference(p))}
+                onToggle={toggleCell}
+                categoryTally={categoryTally}
+                info={cellInfo}
+                mobileRole={mobileRole}
+                onMobileRoleChange={setMobileRole}
+              />
+              <PermLegend />
             </PageSection>
+
+            <UnsavedBar
+              count={cells.changes.length}
+              grants={cells.grants}
+              revokes={cells.revokes}
+              isSaving={isSaving}
+              onDiscard={cells.discard}
+              onSave={cells.handleSave}
+            />
+          </div>
+        )}
+
+        {segment === "roles" && (
+          <RequirePermission permissions="system.settings" fallback={<PermissionDenied />}>
+            <RolesSection
+              roles={rolesQuery.data ?? []}
+              isLoading={rolesQuery.isLoading}
+              isError={rolesQuery.isError}
+              onRetry={() => rolesQuery.refetch()}
+              onOpenMatrix={(role) => {
+                setMobileRole(role);
+                setSegment("matrix");
+              }}
+            />
           </RequirePermission>
-        </div>
+        )}
+
+        {segment === "definitions" && (
+          <DataGrid<Permission>
+            caption={t("permissions.all_permissions")}
+            columns={permissionColumns}
+            data={permsQuery.data ?? []}
+            isLoading={permsQuery.isLoading}
+            isError={permsQuery.isError}
+            keyExtractor={(perm) => String(perm.id)}
+          />
+        )}
 
         {/* ── Create/Edit Permission Modals ── */}
         <PermissionFormModal
@@ -417,8 +458,6 @@ export default function PermissionsPage() {
           initialData={editingPerm ?? undefined}
           existingCategories={categories.map((c) => c.category)}
         />
-
-        {/* ── Delete Permission Modal ── */}
         <DeleteConfirmModal
           isOpen={isDeleteOpen}
           onClose={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
@@ -428,7 +467,6 @@ export default function PermissionsPage() {
           onConfirm={() => deletingPerm && deleteMutation.mutate(deletingPerm.id)}
         />
 
-        {/* ── Role Modals ── */}
         <RoleFormModal
           isOpen={isRoleCreateOpen}
           onClose={() => setIsRoleCreateOpen(false)}
@@ -437,36 +475,19 @@ export default function PermissionsPage() {
           error={roleCreateMutation.isError ? t("permissions.role_create_error") : null}
           title={t("permissions.create_role")}
         />
-        <RoleFormModal
-          isOpen={isRoleEditOpen}
-          onClose={() => { setIsRoleEditOpen(false); setEditingRole(null); }}
-          onSubmit={(data) => editingRole && roleEditMutation.mutate({ id: editingRole.id, data })}
-          isPending={roleEditMutation.isPending}
-          error={roleEditMutation.isError ? t("permissions.role_edit_error") : null}
-          title={t("permissions.edit_role")}
-          initialData={editingRole ?? undefined}
-        />
-        <DeleteConfirmModal
-          isOpen={isRoleDeleteOpen}
-          onClose={() => { setIsRoleDeleteOpen(false); setDeletingRole(null); }}
-          title={t("permissions.confirm_delete_role")}
-          message={t("permissions.confirm_delete_role_message")}
-          isPending={roleDeleteMutation.isPending}
-          onConfirm={() => deletingRole && roleDeleteMutation.mutate(deletingRole.id)}
-        />
 
-        {/* ── Three-tier save confirmation (tier 2 and tier 3 diffs) ── */}
+        {/* ── Tier 2 / tier 3 save confirmation ── */}
         <MatrixSaveConfirmModal
-          isOpen={confirmOpen}
-          diffs={pendingDiffs}
+          isOpen={cells.confirmOpen}
+          diffs={cells.pendingDiffs}
           roleMeta={roleMeta}
-          typedRoleNames={typedRoleNames}
-          onTypedRoleNameChange={setTypedRoleName}
+          typedRoleNames={cells.typedRoleNames}
+          onTypedRoleNameChange={cells.setTypedRoleName}
           isSaving={isSaving}
-          canConfirmSave={canConfirmSave}
-          onClose={closeConfirm}
-          onCancel={cancelConfirm}
-          onConfirm={confirmSave}
+          canConfirmSave={cells.canConfirmSave}
+          onClose={cells.closeConfirm}
+          onCancel={cells.closeConfirm}
+          onConfirm={cells.confirmSave}
         />
       </RequireAdmin>
     </PageShell>

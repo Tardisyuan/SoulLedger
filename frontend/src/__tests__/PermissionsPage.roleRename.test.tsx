@@ -6,7 +6,7 @@
  * so that a save landing on one role never clobbers in-progress edits on
  * another. Rename a custom role and the role list comes back with the new
  * name: `baseline` is rebuilt under the new key, `checked` still holds the old
- * one, and `checked[newName]` is `undefined`. `useMatrixSave` reads that as an
+ * one, and `checked[newName]` is `undefined`. the save pipeline (then `useMatrixSave`, now `useMatrixCells`) read that as an
  * empty set, so the live diff for the renamed role is "remove all N grants" —
  * tier 3, with the confirmation modal asking the operator to type the role's
  * name. Type it, and the role really is stripped (FL-05). The rename cascade
@@ -34,7 +34,9 @@ jest.mock("@soulledger/core/api", () => ({
     list: jest.fn(),
     roles: { list: jest.fn() },
     rolePermissions: jest.fn(),
-    assign: jest.fn(),
+    applyChanges: jest.fn(),
+    // The page asks what a pending edit would break (debounced); nothing, here.
+    impact: jest.fn().mockResolvedValue({ data: { required_codenames: [], conflicts: [] } }),
   },
 }));
 
@@ -144,7 +146,7 @@ beforeEach(() => {
 describe("a renamed role keeps its grants in the matrix", () => {
   it("shows no pending change after the rename — not 'remove all 3'", async () => {
     renderPage();
-    await screen.findByText("permissions.matrix.no_changes");
+    await screen.findByText(/^permissions\.matrix\.showing/);
     await waitFor(() => expect(cell("CLERK", "menu.read")).toHaveAttribute("aria-checked", "true"));
 
     await renameClerkToScribe();
@@ -154,9 +156,10 @@ describe("a renamed role keeps its grants in the matrix", () => {
     expect(cell("SCRIBE", "menu.read")).toHaveAttribute("aria-checked", "true");
     // Absence: no diff was invented. The exact wrong text is named so the
     // failure reads as the defect and not as a missing key.
-    expect(screen.queryByText("permissions.matrix.pending_count:1")).toBeNull();
-    expect(screen.getByText("permissions.matrix.no_changes")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "permissions.matrix.save_button" })).toBeDisabled();
+    // With nothing pending there is no unsaved bar at all — no count, no save.
+    expect(screen.queryByText(/^permissions\.matrix\.pending_cells/)).toBeNull();
+    expect(screen.queryByRole("region", { name: "permissions.matrix.unsaved_region" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "permissions.matrix.save_button" })).toBeNull();
     // And the old column is gone rather than lingering beside the new one.
     expect(screen.queryByRole("checkbox", { name: "CLERK — menu.read" })).toBeNull();
   });
@@ -167,16 +170,16 @@ describe("a renamed role keeps its grants in the matrix", () => {
     // CLERK. One toggle on JUDGE before the rename, and exactly one pending
     // change after it — JUDGE's, not a second one for the renamed role.
     renderPage();
-    await screen.findByText("permissions.matrix.no_changes");
+    await screen.findByText(/^permissions\.matrix\.showing/);
     await waitFor(() => expect(cell("JUDGE", "menu.read")).toHaveAttribute("aria-checked", "false"));
 
     fireEvent.click(cell("JUDGE", "menu.read"));
-    expect(screen.getByText("permissions.matrix.pending_count:1")).toBeInTheDocument();
+    expect(screen.getByText("permissions.matrix.pending_cells:1")).toBeInTheDocument();
 
     await renameClerkToScribe();
 
     expect(cell("JUDGE", "menu.read")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("permissions.matrix.pending_count:1")).toBeInTheDocument();
-    expect(screen.queryByText("permissions.matrix.pending_count:2")).toBeNull();
+    expect(screen.getByText("permissions.matrix.pending_cells:1")).toBeInTheDocument();
+    expect(screen.queryByText("permissions.matrix.pending_cells:2")).toBeNull();
   });
 });

@@ -62,7 +62,6 @@ export function MatrixSaveConfirmModal({
       }
     >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-        <p className="text-sm text-[oklch(var(--color-status-warning))]">{t("permissions.matrix.confirm_replace_notice")}</p>
         {diffs.map((diff) => (
           <div key={diff.role} className="border border-[oklch(var(--color-hairline))] p-3 space-y-2">
             <div className="flex items-center justify-between">

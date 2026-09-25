@@ -77,6 +77,11 @@ class TestProfile:
     def test_the_victims_reset_still_issues_a_code_after_the_attempt(
         self, as_attacker, victim, api_client
     ):
+        # Email self-reset is for soul accounts only
+        # (test_password_self_reset_is_for_souls_only.py), so the victim whose
+        # reset this protects is a soul.
+        victim.role = "SOUL"
+        victim.save(update_fields=["role"])
         as_attacker.patch("/api/v1/auth/profile/", {"email": VICTIM}, format="json")
         ip = "192.0.2.150"
         keys = [f"pwd_reset:{VICTIM}", f"pwd_reset_rate:{VICTIM}",

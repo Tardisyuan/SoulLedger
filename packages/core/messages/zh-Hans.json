@@ -327,6 +327,20 @@
       "hint": "J / K 上下条 · Esc",
       "open_full": "打开完整卷宗 →",
       "load_error": "详情加载失败。"
+    },
+    "batch": {
+      "region": "批量操作",
+      "selected": "已选 {{n}}",
+      "select_row": "选择「{{name}}」",
+      "select_all": "选择本页全部",
+      "clear": "取消选择",
+      "confirm_title": "将 {{n}} 个灵魂移入回收站？",
+      "refused_title": "一个都没有移入：{{n}} 个被拒绝",
+      "refused_list": "被拒绝的灵魂",
+      "refused_reason": {
+        "not_found": "已不存在，或不在你的范围内。",
+        "not_deletable": "已有结案审判，不能删除，只能归档。"
+      }
     }
   },
   "common": {
@@ -538,7 +552,74 @@
       "conflict_reload_button": "重新加载此角色",
       "conflict_reloading": "加载中...",
       "partial_save_title": "这次保存在中途停下了。下面这些角色已经写进服务器：",
-      "partial_save_hint": "整体重试会把它们按旧版本号再发一次，服务器会当成冲突拒绝。重试前请先重新加载。"
+      "partial_save_hint": "整体重试会把它们按旧版本号再发一次，服务器会当成冲突拒绝。重试前请先重新加载。",
+      "showing": "权限 · 显示 {{shown}} / {{total}}",
+      "no_differences": "没有差异：当前筛选下各角色取值完全一致。",
+      "role_picker": "角色",
+      "pending_cells": "未保存 {{n}} 项",
+      "discard": "放弃",
+      "unsaved_region": "未保存的改动",
+      "saved_all": "已保存 {{n}} 项",
+      "partial_title": "部分保存失败 · 已存 {{saved}} 项，失败 {{failed}} 项",
+      "locate": "定位",
+      "conflict_title": "冲突提示 {{n}}",
+      "conflict_line": "{{causes}} 改动后，审批流「{{template}}」的第 {{step}} 步（{{step_name}}）将无人可批。",
+      "state": {
+        "grant": "未保存 · 新增",
+        "revoke": "未保存 · 取消",
+        "failed": "保存失败",
+        "conflict": "未保存 · 引起冲突"
+      },
+      "legend": {
+        "on": "有",
+        "off": "无",
+        "unsaved": "未保存",
+        "failed": "保存失败",
+        "conflict": "引起冲突"
+      },
+      "refused": {
+        "admin_only_permission": "与规则「回收站的恢复与彻底删除仅限 ADMIN」冲突，已退回。",
+        "version_conflict": "此角色已被别人改过，已重新加载，请再看一遍。",
+        "role_not_found": "角色已不存在。",
+        "permission_not_found": "权限项已不存在。",
+        "database_error": "数据库出错，这一格没有写入。"
+      }
+    },
+    "segments": {
+      "label": "权限分区",
+      "matrix": "矩阵",
+      "roles": "角色",
+      "definitions": "权限项"
+    },
+    "roles": {
+      "kind": "类型",
+      "builtin": "内置",
+      "custom": "自定义",
+      "members": "成员",
+      "permissions": "权限",
+      "updated": "更新于",
+      "foot": "内置角色不可删除 · 整行可点 → 编辑抽屉 · 删除在抽屉的 ⋯ 里",
+      "drawer_title": "编辑角色 · {{name}}",
+      "code_immutable": "创建后不可改；审批流按代码引用",
+      "edit_in_matrix": "在矩阵里编辑",
+      "references": "被引用",
+      "workflow_count": "审批流 {{n}} 条",
+      "more": "更多操作",
+      "copy": "复制为新角色",
+      "copied": "已复制为「{{name}}」",
+      "recycle": "移入回收站…",
+      "recycle_action": "移入回收站",
+      "recycle_title": "将「{{name}}」移入回收站？",
+      "recycle_body": "{{members}} 名成员持有此角色；它被 {{workflows}} 条审批流引用。有成员或被引用时，服务器会拒绝。",
+      "builtin_locked": "内置角色不可删除",
+      "saved": "已保存",
+      "inactive": "未启用",
+      "referencing": "引用此角色的审批流",
+      "refused": {
+        "builtin_role": "删除被拒绝：内置角色不可删除。",
+        "role_in_use": "删除被拒绝：仍有 {{n}} 名成员持有此角色。先给他们换角色。",
+        "role_referenced_by_workflow_templates": "删除被拒绝：仍被 {{n}} 条审批流引用。先改这些审批流。"
+      }
     }
   },
   "workflow": {
@@ -2732,10 +2813,11 @@
     "refresh": "刷新",
     "tabs": {
       "label": "审核分区",
-      "reports": "举报队列",
+      "reports": "举报",
       "content": "待审内容",
       "words": "敏感词",
-      "mutes": "禁言"
+      "mutes": "禁言",
+      "handled": "已处理"
     },
     "target_type": {
       "POST": "帖子",
@@ -2818,7 +2900,10 @@
       "content": "没有待审的内容",
       "content_reason": "只有命中敏感词的内容会进待审;被举报的内容在举报队列里",
       "words": "还没有敏感词",
-      "mutes": "没有禁言记录"
+      "mutes": "没有禁言记录",
+      "review": "没有待审内容",
+      "review_reason": "新帖先经自动筛查，被举报或命中规则的才进这里。",
+      "handled": "没有处理过的内容"
     },
     "word_category": {
       "NONE": "未分类",
@@ -2836,6 +2921,51 @@
     "handling": {
       "HIDDEN": "已隐藏",
       "DELETED": "已删除"
+    },
+    "scope_label": "文明范围",
+    "scope_all": "全部文明",
+    "review": {
+      "list_label": "待审列表",
+      "detail_label": "审阅详情",
+      "report_n": "举报 {{n}}",
+      "rule_hit": "规则命中 · 敏感词",
+      "from": "来自 {{name}}",
+      "reaction_comment": "评",
+      "reason_label": "处理理由（隐藏必填）",
+      "reason_required": "隐藏必须写理由",
+      "approve": "放行",
+      "shortcuts": "J / K 上下 · A 放行 · H 隐藏",
+      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。"
+    },
+    "words": {
+      "add_row": "新增敏感词",
+      "col_word": "词 / 规则",
+      "col_category": "类别",
+      "col_action": "命中后",
+      "col_hits": "30 天命中",
+      "col_by": "添加人",
+      "col_at": "添加于",
+      "select_row": "选择「{{word}}」",
+      "batch_region": "敏感词批量操作",
+      "delete_selected": "删除所选",
+      "confirm_title": "删除 {{n}} 个敏感词？"
+    },
+    "mutes": {
+      "col_soul": "灵魂",
+      "col_term": "期限",
+      "col_range": "起 → 止",
+      "col_by": "执行人",
+      "term_label": "{{name}} 禁言剩余",
+      "confirm_title": "解除「{{name}}」的禁言？",
+      "confirm_body": "即时生效，灵魂端会收到通知。这一步不能撤销，但可以重新禁言。"
+    },
+    "handled": {
+      "col_type": "类型",
+      "col_handling": "处理",
+      "col_by": "处理人",
+      "read_only": "只读：处理已生效。",
+      "restore": "恢复可见",
+      "in_recycle_bin": "在回收站"
     }
   },
   "soul_inbox": {
