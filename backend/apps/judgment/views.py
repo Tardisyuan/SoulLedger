@@ -689,9 +689,14 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         `GET /api/v1/judgment/{id}/precedents/?limit=5`
 
         Same tenant and civilization as this judgment, ranked by same court,
-        then closest balance, then shared cited statutes. The ranking and what
-        is excluded are written down in apps/judgment/precedents.py. A bare
-        array, not a page: it is a short ranked list, not a collection to walk.
+        then closest balance **bucketed by 10** (`floor(balance / 10)`, so two
+        precedents 2 and 8 away tie), then shared cited statutes — which is
+        what breaks a tie inside a bucket — then newest conclusion. `balance`
+        is the one frozen at conclusion (`concluded_balance`), or the soul's
+        current balance for a case concluded before that column. The ranking
+        and what is excluded are written down in apps/judgment/precedents.py.
+        A bare array, not a page: it is a short ranked list, not a collection
+        to walk.
         """
         judgment = self.get_object()
         try:
