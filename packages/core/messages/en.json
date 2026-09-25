@@ -645,7 +645,7 @@
       "relayouting": "Re-arranging…",
       "delete_selected": "Delete Selected",
       "saving": "Saving...",
-      "save_template": "Save Template",
+      "save_template": "Save draft",
       "hint": "Double-click node to edit · Drag to connect nodes",
       "edit_node": "Edit Node",
       "node_name": "Node Name",
@@ -656,7 +656,7 @@
       "approver_role": "Approver Role",
       "approver_placeholder": "— select an approver role —",
       "new_node": "New Node",
-      "saved": "Template saved",
+      "saved": "Draft saved",
       "save_failed": "Save failed",
       "title": "Editor",
       "relayout_done": "Re-arranged {{n}} nodes",
@@ -675,7 +675,20 @@
       "issue": {
         "name_empty": "{{node}} has no name",
         "self_route": "{{node}}'s “{{branch}}” route points back to itself; the flow never takes it",
-        "duplicate_route": "{{node}} has {{count}} “{{branch}}” routes; only the last one is saved"
+        "duplicate_route": "{{node}} has {{count}} “{{branch}}” routes; only the last one is saved",
+        "reject_not_earlier": "{{node}}: “return to” must name an earlier node",
+        "reject_and_fail_route": "{{node}} has both a return and a refuse route; the refuse route never runs",
+        "timeout_incomplete": "{{node}}: a timeout needs both hours and an action",
+        "timeout_role_missing": "{{node}} escalates on timeout but names no role",
+        "countersign_no_signers": "{{node}} is a countersign with no signers",
+        "threshold_out_of_range": "{{node}}: approvals needed is outside 1…number of signers",
+        "end_has_exit": "{{node}} is an end node and cannot have exits",
+        "condition_empty": "{{node}} has a condition that can never hold",
+        "condition_invalid": "{{node}} has an incomplete condition",
+        "condition_overlap": "{{node}} has two conditions that can both hold",
+        "unreachable": "{{node}} cannot be reached from the start",
+        "no_exit": "{{node}} has no way out to an end node",
+        "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node"
       },
       "palette": "Node library · drag in",
       "inspector": "Properties",
@@ -684,12 +697,98 @@
       "exit": {
         "pass_default": "Next in order: {{node}}",
         "pass_end": "Flow completes",
-        "fail_default": "Rejected; the flow ends"
+        "fail_default": "Rejected; the flow ends",
+        "reject_to": "Return to {{node}}"
       },
       "preview": "Linear preview",
       "preview_empty": "No nodes yet.",
       "narrow_title": "The canvas is editable at ≥ 1024 px only",
-      "narrow_body": "Read-only on narrow screens: linear preview, checks and node properties."
+      "narrow_body": "Read-only on narrow screens: linear preview, checks and node properties.",
+      "publish": "Publish",
+      "publishing": "Publishing…",
+      "published": "Published v{{n}}",
+      "publish_rejected": "Publish refused: {{n}} checks failing",
+      "publish_failed": "Publish failed",
+      "version": {
+        "draft": "Draft v{{n}}",
+        "published": "Published v{{n}}",
+        "unpublished": "Not published",
+        "history": "Version history",
+        "status": {
+          "DRAFT": "Draft",
+          "PUBLISHED": "Published",
+          "SUPERSEDED": "Superseded"
+        }
+      },
+      "kind_label": "Node kind",
+      "kind": {
+        "APPROVAL": "Approval",
+        "COUNTERSIGN": "Countersign",
+        "NOTIFY": "Notify",
+        "END": "End"
+      },
+      "signers": "Signers",
+      "signer_label": "Signer {{n}}",
+      "signer_add": "Add signer",
+      "signer_remove": "Remove",
+      "threshold": "Approvals needed",
+      "threshold_hint": "Blank = every signer must approve. The node is refused as soon as the number can no longer be reached.",
+      "signers_summary": "{{who}} · {{k}} of {{n}} to pass",
+      "timeout": {
+        "label": "Timeout",
+        "hours": "Timeout (hours)",
+        "action_label": "When it times out",
+        "none": "No timeout",
+        "action": {
+          "ESCALATE": "Escalate to a role",
+          "AUTO_REJECT": "Refuse automatically",
+          "NOTIFY": "Remind"
+        },
+        "role": "Escalate to role",
+        "hint": "Timeouts fire only when the process_workflow_timeouts command runs; nothing schedules it.",
+        "summary": "After {{hours}} h · {{action}}"
+      },
+      "reject_to": "On refusal, return to",
+      "reject_to_none": "— none: the flow ends —",
+      "template_level": "The template",
+      "condition": {
+        "title": "Exits · conditions",
+        "default": "default",
+        "empty": "(empty condition)",
+        "make": "Make conditional",
+        "clear": "Remove condition",
+        "add_clause": "Add clause",
+        "remove_clause": "Remove clause",
+        "fact_label": "Fact",
+        "op_label": "Comparison",
+        "value_label": "Value",
+        "yes": "Yes",
+        "no": "No",
+        "fact": {
+          "balance": "Balance",
+          "civilization": "Civilization",
+          "verdict": "Verdict"
+        },
+        "op": {
+          "lt": "less than",
+          "lte": "at most",
+          "gt": "greater than",
+          "gte": "at least",
+          "eq": "equals",
+          "in": "is one of",
+          "not_in": "is none of"
+        }
+      },
+      "preview_approver": {
+        "title": "Approver preview",
+        "save_first": "Save the draft to preview this node",
+        "loading": "Resolving…",
+        "failed": "Preview failed",
+        "role": "Holders of role {{role}}",
+        "nobody": "Nobody (SYSTEM) — only escalation moves it",
+        "no_accounts": "No account can decide it yet",
+        "accounts": "{{n}} accounts: {{names}}"
+      }
     },
     "templates": "Workflow Templates",
     "select_template": "Select a template to edit",
@@ -807,7 +906,8 @@
       "EXCEPTION": "Exception",
       "COMPLETED": "Completed",
       "SKIPPED": "Skipped",
-      "ESCALATED": "Escalated"
+      "ESCALATED": "Escalated",
+      "TRAVERSED": "Passed through"
     },
     "no_custom_templates": "You have not saved any templates of your own yet."
   },

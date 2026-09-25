@@ -6524,6 +6524,57 @@ export interface paths {
         patch: operations["v1_workflow_templates_partial_update"];
         trace?: never;
     };
+    "/api/v1/workflow/templates/{id}/approver-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description WorkflowTemplate CRUD. */
+        get: operations["v1_workflow_templates_approver_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/templates/{id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description WorkflowTemplate CRUD. */
+        post: operations["v1_workflow_templates_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/templates/{id}/versions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description WorkflowTemplate CRUD. */
+        get: operations["v1_workflow_templates_versions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/": {
         parameters: {
             query?: never;
@@ -6844,6 +6895,24 @@ export interface components {
             readonly decided_at: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            /**
+             * Format: uuid
+             * @description 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+             */
+            readonly reject_to: string | null;
+            readonly decision_history: unknown;
+            readonly timeout_hours: number | null;
+            readonly timeout_action: components["schemas"]["ApprovalNodeTimeoutActionEnum"];
+            readonly timeout_role: string;
+            /** Format: date-time */
+            readonly activated_at: string | null;
+            /** Format: date-time */
+            readonly timed_out_at: string | null;
+            readonly kind: components["schemas"]["ApprovalNodeKindEnum"];
+            readonly signers_json: unknown;
+            readonly threshold: number | null;
+            readonly signatures_json: unknown;
+            readonly branches_json: unknown;
         };
         /**
          * @description * `ACTOR` - 角色
@@ -6852,6 +6921,14 @@ export interface components {
          * @enum {string}
          */
         ApprovalNodeApproverTypeEnum: "ACTOR" | "ROLE" | "SYSTEM";
+        /**
+         * @description * `APPROVAL` - 审批
+         *     * `COUNTERSIGN` - 会签
+         *     * `NOTIFY` - 通知
+         *     * `END` - 结束
+         * @enum {string}
+         */
+        ApprovalNodeKindEnum: "APPROVAL" | "COUNTERSIGN" | "NOTIFY" | "END";
         /**
          * @description * `TRIAL` - 审判
          *     * `EVALUATION` - 评估
@@ -6867,9 +6944,17 @@ export interface components {
          *     * `REJECTED` - 已拒绝
          *     * `SKIPPED` - 已跳过
          *     * `ESCALATED` - 已升级
+         *     * `TRAVERSED` - 已经过
          * @enum {string}
          */
-        ApprovalNodeStatusEnum: "PENDING" | "APPROVED" | "REJECTED" | "SKIPPED" | "ESCALATED";
+        ApprovalNodeStatusEnum: "PENDING" | "APPROVED" | "REJECTED" | "SKIPPED" | "ESCALATED" | "TRAVERSED";
+        /**
+         * @description * `ESCALATE` - 转交上级
+         *     * `AUTO_REJECT` - 自动驳回
+         *     * `NOTIFY` - 提醒
+         * @enum {string}
+         */
+        ApprovalNodeTimeoutActionEnum: "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
         /**
          * @description Serializer for ApprovalWorkflow.
          *
@@ -6925,6 +7010,9 @@ export interface components {
             readonly updated_at: string;
             /** Format: date-time */
             readonly completed_at: string | null;
+            readonly template_version_number: number | null;
+            readonly return_count: number;
+            readonly end_reason: string;
             readonly tenant: number | null;
         };
         /** @description Lightweight serializer for listing workflows. */
@@ -6958,6 +7046,27 @@ export interface components {
          * @enum {string}
          */
         ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED";
+        ApproverPreview: {
+            approver_type: string;
+            actor: components["schemas"]["ApproverPreviewActor"] | null;
+            role: string | null;
+            users: components["schemas"]["ApproverPreviewUser"][];
+            user_count: number;
+            node: string;
+            civilization: string;
+            tenant: string;
+            kind: string;
+            signers: components["schemas"]["SignerPreview"][];
+        };
+        ApproverPreviewActor: {
+            name: string;
+            name_zh: string;
+            role: string;
+        };
+        ApproverPreviewUser: {
+            display_name: string;
+            role: string;
+        };
         /**
          * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
          *     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
@@ -7193,6 +7302,16 @@ export interface components {
             content: string;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        /**
+         * @description `{fact, op, value}` — see `apps/workflow/conditions.py`. Shape only here;
+         *     whether the fact/op/value combine is checked at publish, so a half-edited
+         *     condition can still be saved as a draft.
+         */
+        ConditionClause: {
+            fact: string;
+            op: string;
+            value: unknown;
         };
         Conversation: {
             /** Format: uuid */
@@ -10018,6 +10137,24 @@ export interface components {
             readonly decided_at?: string | null;
             /** Format: date-time */
             readonly created_at?: string;
+            /**
+             * Format: uuid
+             * @description 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+             */
+            readonly reject_to?: string | null;
+            readonly decision_history?: unknown;
+            readonly timeout_hours?: number | null;
+            readonly timeout_action?: components["schemas"]["ApprovalNodeTimeoutActionEnum"];
+            readonly timeout_role?: string;
+            /** Format: date-time */
+            readonly activated_at?: string | null;
+            /** Format: date-time */
+            readonly timed_out_at?: string | null;
+            readonly kind?: components["schemas"]["ApprovalNodeKindEnum"];
+            readonly signers_json?: unknown;
+            readonly threshold?: number | null;
+            readonly signatures_json?: unknown;
+            readonly branches_json?: unknown;
         };
         /**
          * @description Serializer for ApprovalWorkflow.
@@ -10074,6 +10211,9 @@ export interface components {
             readonly updated_at?: string;
             /** Format: date-time */
             readonly completed_at?: string | null;
+            readonly template_version_number?: number | null;
+            readonly return_count?: number;
+            readonly end_reason?: string;
             readonly tenant?: number | null;
         };
         PatchedComment: {
@@ -10724,6 +10864,8 @@ export interface components {
             priority?: number;
             is_active?: boolean;
             nodes?: components["schemas"]["WorkflowTemplateNode"][];
+            readonly published_version?: number | null;
+            readonly draft_version?: number | null;
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -11742,6 +11884,14 @@ export interface components {
          * @enum {string}
          */
         SeverityEnum: "error" | "warning";
+        SignerPreview: {
+            approver_type: string;
+            actor: components["schemas"]["ApproverPreviewActor"] | null;
+            role: string | null;
+            users: components["schemas"]["ApproverPreviewUser"][];
+            user_count: number;
+            label: string;
+        };
         /**
          * @description * `POST` - Post
          *     * `COMMENT` - Comment
@@ -12389,6 +12539,24 @@ export interface components {
             readonly finished_at: string | null;
             readonly duration_ms: number | null;
         };
+        TemplateBranch: {
+            /** @default  */
+            id: string;
+            when: components["schemas"]["ConditionClause"][];
+            target: string;
+        };
+        /**
+         * @description One 会签 signer, spelled like a one-person node: a label (a person's
+         *     name, probed like a node label), or a ROLE with a role.
+         */
+        TemplateSigner: {
+            /** @default  */
+            label: string;
+            /** @default ROLE */
+            approver_type: string;
+            /** @default  */
+            approver_role: string;
+        };
         Tenant: {
             readonly id: number;
             readonly code: string;
@@ -12799,6 +12967,8 @@ export interface components {
             priority?: number;
             is_active?: boolean;
             nodes?: components["schemas"]["WorkflowTemplateNode"][];
+            readonly published_version: number | null;
+            readonly draft_version: number | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -12827,6 +12997,7 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
             readonly node_count: number;
+            readonly published_version: number | null;
         };
         /**
          * @description Serializer for a single template node.
@@ -12863,6 +13034,15 @@ export interface components {
             position?: {
                 [key: string]: number;
             } | null;
+            reject_to?: string | null;
+            timeout_hours?: number | null;
+            timeout_action?: (components["schemas"]["WorkflowTemplateNodeTimeoutActionEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            timeout_role?: string | null;
+            /** @default APPROVAL */
+            kind: components["schemas"]["WorkflowTemplateNodeKindEnum"];
+            signers?: components["schemas"]["TemplateSigner"][];
+            threshold?: number | null;
+            branches?: components["schemas"]["TemplateBranch"][];
         };
         /**
          * @description * `ACTOR` - ACTOR
@@ -12872,6 +13052,14 @@ export interface components {
          */
         WorkflowTemplateNodeApproverTypeEnum: "ACTOR" | "ROLE" | "SYSTEM";
         /**
+         * @description * `APPROVAL` - APPROVAL
+         *     * `COUNTERSIGN` - COUNTERSIGN
+         *     * `NOTIFY` - NOTIFY
+         *     * `END` - END
+         * @enum {string}
+         */
+        WorkflowTemplateNodeKindEnum: "APPROVAL" | "COUNTERSIGN" | "NOTIFY" | "END";
+        /**
          * @description * `TRIAL` - TRIAL
          *     * `EVALUATION` - EVALUATION
          *     * `APPEAL` - APPEAL
@@ -12880,6 +13068,39 @@ export interface components {
          * @enum {string}
          */
         WorkflowTemplateNodeNodeTypeEnum: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
+        /**
+         * @description * `ESCALATE` - ESCALATE
+         *     * `AUTO_REJECT` - AUTO_REJECT
+         *     * `NOTIFY` - NOTIFY
+         * @enum {string}
+         */
+        WorkflowTemplateNodeTimeoutActionEnum: "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
+        /**
+         * @description One row of a template's version history. Read-only: versions are written
+         *     by `versioning.py` alone, through save and publish.
+         */
+        WorkflowTemplateVersion: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly number: number;
+            readonly status: components["schemas"]["WorkflowTemplateVersionStatusEnum"];
+            readonly nodes: components["schemas"]["WorkflowTemplateNode"][];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            /** Format: date-time */
+            readonly published_at: string | null;
+            readonly saved_by_name: string | null;
+            readonly published_by_name: string | null;
+        };
+        /**
+         * @description * `DRAFT` - 草稿
+         *     * `PUBLISHED` - 已发布
+         *     * `SUPERSEDED` - 已替换
+         * @enum {string}
+         */
+        WorkflowTemplateVersionStatusEnum: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
     };
     responses: never;
     parameters: never;
@@ -24185,6 +24406,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowTemplate"];
+                };
+            };
+        };
+    };
+    v1_workflow_templates_approver_preview_retrieve: {
+        parameters: {
+            query: {
+                civilization?: string;
+                /** @description 模板内节点 id */
+                node: string;
+                /** @description 租户代码,仅 ADMIN */
+                tenant?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Workflow Template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproverPreview"];
+                };
+            };
+        };
+    };
+    v1_workflow_templates_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Workflow Template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTemplate"];
+                };
+            };
+        };
+    };
+    v1_workflow_templates_versions_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Workflow Template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTemplateVersion"][];
                 };
             };
         };

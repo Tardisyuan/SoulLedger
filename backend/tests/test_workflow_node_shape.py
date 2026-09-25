@@ -187,6 +187,11 @@ def test_a_template_saved_through_the_api_builds_a_workflow(seeded):
         format="json",
     )
     assert response.status_code == 201, response.data
+    # Saving writes a draft (template versions, 0018); the engine reads only
+    # the published graph, so the save is published before it is built from.
+    assert client.post(
+        f"/api/v1/workflow/templates/{response.data['id']}/publish/"
+    ).status_code == 200
     stored = WorkflowTemplate.all_objects.get(pk=response.data["id"])
     assert [node["node_name"] for node in stored.nodes_json] == [
         "秦广王 · 分流", "阎罗王 · 四审", "转轮王 · 终审"

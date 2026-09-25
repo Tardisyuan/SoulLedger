@@ -156,6 +156,18 @@ CARRIED_NODE_KEYS = (
     "on_pass",
     "on_fail",
     "position",
+    # 驳回到 and 超时 (workflow/0020). Same reason as the routing keys above:
+    # absent from this tuple, they would survive the serializer and vanish at
+    # the next normalization.
+    "reject_to",
+    "timeout_hours",
+    "timeout_action",
+    "timeout_role",
+    # 会签 / 通知 / 结束 / 条件 (workflow/0021).
+    "kind",
+    "signers",
+    "threshold",
+    "branches",
 )
 
 

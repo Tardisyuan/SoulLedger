@@ -12,7 +12,7 @@ import {
   type NodeTypes,
 } from "@xyflow/react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
+import { KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
 
 /**
  * A workflow node on the canvas — design C · 03 「画布节点 FlowNode」.
@@ -68,6 +68,9 @@ function EditableNodeComponent({
   const { t } = useI18n();
   const role = data.role ?? "step";
   const issues = data.issueCount ?? 0;
+  // 会签 / 通知 / 结束 show their own glyph; an approval step shows its derived role.
+  const kind = data.kind === "COUNTERSIGN" || data.kind === "NOTIFY" || data.kind === "END" ? data.kind : "APPROVAL";
+  const glyph = kind === "APPROVAL" ? ROLE_GLYPH[role] : KIND_GLYPH[kind];
 
   return (
     <div
@@ -85,10 +88,10 @@ function EditableNodeComponent({
       <Handle type="target" position={Position.Top} className={PORT} />
       <div className="flex justify-between gap-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
         <span>
-          <span aria-hidden="true" title={t(`workflow.editor.role.${role}`)}>
-            {ROLE_GLYPH[role]}
+          <span aria-hidden="true" title={kind === "APPROVAL" ? t(`workflow.editor.role.${role}`) : t(`workflow.editor.kind.${kind}`)}>
+            {glyph}
           </span>{" "}
-          {data.nodeType}
+          {kind === "APPROVAL" ? data.nodeType : t(`workflow.editor.kind.${kind}`)}
         </span>
         {issues > 0 ? (
           <span className="font-semibold text-[oklch(var(--color-danger))]" title={t("workflow.editor.issues", { n: String(issues) })}>
@@ -114,22 +117,28 @@ function EditableNodeComponent({
           Square ports, as drawn; the FAIL port is dashed because every edge
           leaving it is drawn dashed — the pair is told apart by line, not by
           colour, and by the title on hover. */}
-      <Handle
-        id="pass"
-        type="source"
-        position={Position.Bottom}
-        style={{ left: "30%" }}
-        className={PORT}
-        title={t("workflow.editor.branch.pass")}
-      />
-      <Handle
-        id="fail"
-        type="source"
-        position={Position.Bottom}
-        style={{ left: "70%" }}
-        className={`${PORT} border-dashed!`}
-        title={t("workflow.editor.branch.fail")}
-      />
+      {/* 结束 has no way out, and 通知 cannot fail — nobody decides it — so
+          neither offers a port the engine would never follow. */}
+      {kind !== "END" && (
+        <Handle
+          id="pass"
+          type="source"
+          position={Position.Bottom}
+          style={{ left: kind === "NOTIFY" ? "50%" : "30%" }}
+          className={PORT}
+          title={t("workflow.editor.branch.pass")}
+        />
+      )}
+      {kind !== "END" && kind !== "NOTIFY" && (
+        <Handle
+          id="fail"
+          type="source"
+          position={Position.Bottom}
+          style={{ left: "70%" }}
+          className={`${PORT} border-dashed!`}
+          title={t("workflow.editor.branch.fail")}
+        />
+      )}
     </div>
   );
 }
@@ -153,7 +162,7 @@ export const nodeTypes: NodeTypes = {
  * also has a FAIL edge (`data.labelled`, computed in the editor). A plain
  * chain carries no words.
  */
-type RouteData = { branch?: Branch; labelled?: boolean };
+type RouteData = { branch?: Branch; labelled?: boolean; conditionText?: string; isDefault?: boolean };
 
 function RouteEdgeComponent({
   id,
@@ -189,7 +198,13 @@ function RouteEdgeComponent({
             className="absolute font-mono text-2xs text-[oklch(var(--color-ink-muted))] pointer-events-none"
             style={{ transform: `translate(0, -50%) translate(${targetX + 6}px, ${y}px)` }}
           >
-            {t(fail ? "workflow.editor.branch.fail" : "workflow.editor.branch.pass")}
+            {fail
+              ? t("workflow.editor.branch.fail")
+              : route.conditionText
+                ? `${t("workflow.editor.condition.yes")} · ${route.conditionText}`
+                : route.isDefault
+                  ? `${t("workflow.editor.condition.no")} · ${t("workflow.editor.condition.default")}`
+                  : t("workflow.editor.branch.pass")}
           </span>
         </EdgeLabelRenderer>
       )}

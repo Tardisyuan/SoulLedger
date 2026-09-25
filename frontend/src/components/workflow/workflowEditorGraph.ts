@@ -1,5 +1,11 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
+import type {
+  TemplateBranch,
+  TemplateSigner,
+  WorkflowNodeKind,
+  WorkflowTimeoutAction,
+} from "@soulledger/core/api";
 
 export interface TemplateNode {
   id?: string;
@@ -32,6 +38,34 @@ export interface TemplateNode {
    * the operator had arranged.
    */
   position?: { x: number; y: number } | null;
+  /**
+   * 驳回到, 超时, 会签 / 通知 / 结束 and condition branches — the 0020/0021
+   * fields. Carried on the canvas node's `data` (`rejectTo`, `timeoutHours`,
+   * `kind`, `signers`, …) except `branches`, which are PASS edges carrying
+   * `data.when`: a condition is drawn on the edge it guards, and
+   * `getTemplateNodes` reads it back from there.
+   */
+  reject_to?: string | null;
+  timeout_hours?: number | null;
+  timeout_action?: WorkflowTimeoutAction | "" | null;
+  timeout_role?: string | null;
+  kind?: WorkflowNodeKind;
+  signers?: TemplateSigner[];
+  threshold?: number | null;
+  branches?: TemplateBranch[];
+}
+
+/** The canvas `data` for the 0020/0021 fields of a stored node. */
+export function extendedData(n: Partial<TemplateNode>): Record<string, unknown> {
+  return {
+    kind: n.kind ?? "APPROVAL",
+    signers: n.signers ?? [],
+    threshold: n.threshold ?? null,
+    timeoutHours: n.timeout_hours ?? null,
+    timeoutAction: n.timeout_action ?? "",
+    timeoutRole: n.timeout_role ?? "",
+    rejectTo: n.reject_to ?? null,
+  };
 }
 
 /**
@@ -44,7 +78,7 @@ export interface TemplateNode {
  * would be a silent contradiction if they disagreed.
  */
 function edgesFor(rows: TemplateNode[]): Edge[] {
-  const declared = rows.some((n) => n.on_pass || n.on_fail);
+  const declared = rows.some((n) => n.on_pass || n.on_fail || (n.branches ?? []).length > 0);
   if (!declared) return chain(rows);
 
   const known = new Set(rows.map((n, idx) => String(n.id ?? `node-${idx}`)));
@@ -74,6 +108,20 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
         ...edgeArrow(),
       } as Edge);
     }
+    // Condition branches: PASS edges that carry their clauses. `branchId` is
+    // kept so a round trip writes the same branch id back.
+    (n.branches ?? []).forEach((b, bIdx) => {
+      if (!b.target || !known.has(String(b.target))) return;
+      const branchId = b.id || `b${bIdx + 1}`;
+      out.push({
+        id: `e${source}-branch-${branchId}-${b.target}`,
+        source,
+        sourceHandle: "pass",
+        target: String(b.target),
+        data: { when: b.when ?? [], branchId },
+        ...edgeArrow(),
+      } as Edge);
+    });
   });
   return out;
 }
@@ -312,6 +360,7 @@ export function savedTemplateToFlow(rows: TemplateNode[]): { nodes: Node[]; edge
         courtCode: n.court_code || "",
         approverRole: n.approver_role || "",
         approverType: n.approver_type,
+        ...extendedData(n),
       },
   }));
   const edges = edgesFor(rows);

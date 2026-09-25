@@ -82,6 +82,10 @@ export const workflowKeys = {
     all: ["workflow-templates"] as const,
     list: (params?: Record<string, string>) => [...workflowKeys.templates.all, "list", params] as const,
     detail: (id: string) => [...workflowKeys.templates.all, "detail", id] as const,
+    /** Under `detail(id)`, so a save's `invalidateQueries(all)` refreshes the history too. */
+    versions: (id: string) => [...workflowKeys.templates.detail(id), "versions"] as const,
+    approverPreview: (id: string, node: string, civilization: string) =>
+      [...workflowKeys.templates.detail(id), "approver-preview", node, civilization] as const,
   },
 };
 

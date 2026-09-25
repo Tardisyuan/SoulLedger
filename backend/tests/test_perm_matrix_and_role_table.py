@@ -214,6 +214,9 @@ def cross_civ_template(world):
         ],
     }, format="json")
     assert response.status_code == 201, response.content
+    # Saving writes a draft (0018); publish so `nodes_json` holds the graph.
+    published = world["client"].post(f"{TEMPLATES}{response.data['id']}/publish/")
+    assert published.status_code == 200, published.content
     return WorkflowTemplate.objects.get(pk=response.data["id"])
 
 

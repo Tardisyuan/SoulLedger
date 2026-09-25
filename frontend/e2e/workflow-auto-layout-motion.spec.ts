@@ -221,7 +221,7 @@ async function domPositions(page: Page): Promise<Record<string, { x: number; y: 
 
 /** `layoutNodes`'s own output, via the save payload. */
 async function savedPositions(page: Page, api: ApiMock) {
-  await page.getByRole("button", { name: "保存模板", exact: true }).click();
+  await page.getByRole("button", { name: "存草稿", exact: true }).click();
   await expect.poll(() => api.countOf("POST", "/workflow/templates/")).toBeGreaterThan(0);
   const body = api.lastCall("POST", "/workflow/templates/")!.body;
   return Object.fromEntries(
@@ -238,7 +238,7 @@ let api: ApiMock;
  * A DESKTOP VIEWPORT ON EVERY PROJECT, mobile-chrome included — and that is
  * the design, not a way round it. Design C · 03 makes the canvas editable at
  * ≥ 1024 px only; below that `WorkflowEditor` renders the read-only view (no
- * canvas, no 自动布局, no 保存模板), so on Pixel 5's own 393 px there is
+ * canvas, no 自动布局, no 存草稿 or 发布), so on Pixel 5's own 393 px there is
  * nothing here left to press. What this file proves — Flip travel, the
  * viewport fit, the reduced-motion path — is canvas behaviour, and every
  * engine still runs it; the 393 px behaviour has its own test in
