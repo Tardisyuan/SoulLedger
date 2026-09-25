@@ -983,6 +983,13 @@ def set_new_password(request):
     # Set new password
     user.set_password(new_password)
     user.save(update_fields=["password"])
+    # 「其他设备上的登录已全部退出」: every refresh token this account holds is
+    # blacklisted, as when a soul sets its own password after an officer's
+    # reset. An access token already issued lives out its lifetime
+    # (`ACCESS_TOKEN_LIFETIME`, 30 minutes by default) and cannot be renewed.
+    from apps.soul_accounts.services import _revoke_refresh_tokens
+
+    _revoke_refresh_tokens(user)
 
     # Invalidate the code
     cache.delete(f"pwd_reset:{email}")
