@@ -115,7 +115,25 @@ egy 无法直接表达、用现有词形拼出的：
 
 ## 门禁（均在最终树上跑，读退出码）
 
-（后端全量 pytest 仍在运行，数字待补。）
+| 门禁 | 命令 | 退出码 | 结果 |
+|---|---|---|---|
+| mobile tsc | `cd mobile && npx tsc --noEmit` | 0 | — |
+| mobile eslint | `npx eslint . --max-warnings 0` | 0 | 0 warning |
+| mobile jest | `npx jest` | 0 | 15 suites / **255 passed**（基线 235，+20） |
+| core typecheck | `npm run --workspace packages/core typecheck` | 0 | — |
+| core lint | `npm run --workspace packages/core lint` | 0 | — |
+| core test | `npm run --workspace packages/core test` | 0 | 13 files / **135 passed**（基线 122，+13） |
+| frontend tsc | `cd frontend && npx tsc --noEmit` | 0 | — |
+| frontend lint | `npm run lint` | 0 | — |
+| frontend 覆盖率 | `npm run test:coverage` | 0 | 182 suites / **2974 passed**，阈值守住 |
+| egy 词表 | `npx jest egyLexiconRules` | 0 | 21 passed |
+| backend 全量 | SQLite 内存库 + 一次性 Redis，`pytest --tb=short -q` | 0 | **4812 passed / 25 skipped**，35 分 36 秒，覆盖率 93.94%（基线 4809：新增 5 条、删掉 2 条） |
+| backend 复跑 | 42 个读语言包 / 前端文件的测试（全量跑起来之后才改的语言包） | 0 | 422 passed / 3 skipped |
+| ruff | `.venv/bin/ruff check .` | 0 | All checks passed |
+| makemigrations | `makemigrations --check --dry-run` | 0 | No changes detected（没有迁移） |
+| schema | 全量里的 `test_committed_schema_matches_the_backend.py` + core 的 `generatedSchemaIsCurrent` | 0 | 均通过（重生成后） |
+
+真 PostgreSQL 没有跑（云端连不到 115）；这次没有改事务、约束或列宽。
 
 ## 开放问题
 
