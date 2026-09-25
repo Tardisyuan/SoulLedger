@@ -302,6 +302,32 @@ def test_options_are_filtered_by_verdict(cn_judge, cn_realms, cn_tenant, eu_tena
     assert str(passed.data["default_realm_id"]) == str(cn_realms["heaven"].pk)
 
 
+def test_not_applicable_is_the_rest_of_the_tenants_realms_and_conclude_refuses_them(
+    cn_judge, cn_realms, cn_tenant, eu_tenant
+):
+    """The picker lists what the verdict cannot reach, disabled with the reason
+    (第三类 F 组 2.5). Options and not_applicable are disjoint and together are
+    every realm of this tenant and civilization — never another tenant's."""
+    _realm("DY_COURT_03_SONGDI", eu_tenant)
+    case = _case(cn_tenant)
+    failed = _options(cn_judge, case, "FAILED").data
+    allowed = {o["realm_code"] for o in failed["options"]}
+    rest = {o["realm_code"] for o in failed["not_applicable"]}
+    assert allowed.isdisjoint(rest)
+    assert "DY_01_HEAVEN" in rest
+    assert "DY_COURT_03_SONGDI" not in rest  # another tenant's
+    everything = set(Realm.all_objects.filter(
+        tenant=cn_tenant, civilization=case.soul.civilization, is_deleted=False,
+    ).values_list("realm_code", flat=True))
+    assert allowed | rest == everything
+    heaven = next(o for o in failed["not_applicable"] if o["realm_code"] == "DY_01_HEAVEN")
+    refused = cn_judge.post(
+        f"/api/v1/judgment/{case.id}/conclude/",
+        {"verdict": "FAILED", "notes": "", "destination_realm_id": heaven["id"]}, format="json",
+    )
+    assert refused.data["code"] == "realm_not_allowed", refused.data
+
+
 def test_options_need_a_real_verdict(cn_judge, cn_realms, cn_tenant):
     response = _options(cn_judge, _case(cn_tenant), "MAYBE")
     assert (response.status_code, response.data["code"]) == (400, "invalid_verdict")
@@ -316,6 +342,7 @@ def test_an_amendment_has_no_options(cn_judge, cn_realms, cn_tenant):
     Judgment.all_objects.filter(pk=case.pk).update(kind=JudgmentKind.AMENDMENT)
     response = _options(cn_judge, case, "FAILED")
     assert (response.data["options"], response.data["default_realm_id"]) == ([], None)
+    assert response.data["not_applicable"] == []
 
 
 # ── 上一件 ─────────────────────────────────────────────────────────────────

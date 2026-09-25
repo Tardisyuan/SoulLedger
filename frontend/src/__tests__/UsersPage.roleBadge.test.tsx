@@ -45,6 +45,11 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => mockTenant,
 }));
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 jest.mock("@/src/components/layout/MenuGloss", () => ({
   MenuGloss: () => null,
 }));

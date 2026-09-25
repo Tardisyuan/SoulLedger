@@ -4623,7 +4623,9 @@ paths:
     patch:
       operationId: v1_judgment_draft_partial_update
       description: |-
-        Autosave the verdict text (`notes`) and the chosen verdict.
+        Autosave the verdict text (`notes`), the chosen verdict, and the
+        「戊 · 发落」 choice (`draft_destination_realm_id` / `draft_term_years` /
+        `draft_eternal`; cleared when the case is concluded).
 
         `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
         "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
@@ -4660,6 +4662,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentDraft'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
         '409':
           content:
@@ -4847,6 +4856,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/{id}/request-reassign/:
+    post:
+      operationId: v1_judgment_request_reassign_create
+      description: |-
+        「请管理员改派」:改派名单空了(本殿没有别人能接),请案子所在租户的 ADMIN 来改派。
+
+        `judgment.execute` 与 `get_object()` 的租户范围:能办这件案子的人才能为它求助。
+        同一人对同一件案子 10 分钟一次,多了 429 `rate_limited` 带 `retry_after`。
+        通知走 `claims.request_reassign`(既有的官员通知路径)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentReassignRequestResult'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentRateLimited'
           description: ''
   /api/v1/judgment/{id}/undefer/:
     post:
@@ -15229,6 +15272,9 @@ components:
         reason_code:
           type: string
           nullable: true
+        current_balance:
+          type: integer
+          nullable: true
       required:
       - balance
       - not_admitted_count
@@ -15767,7 +15813,7 @@ components:
     AssignableOfficer:
       type: object
       description: |-
-        `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+        `GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
         没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
       properties:
         id:
@@ -15782,9 +15828,13 @@ components:
         role:
           type: string
           readOnly: true
+        in_hand:
+          type: integer
+          readOnly: true
       required:
       - display_name
       - id
+      - in_hand
       - role
       - username
     AuditActionCount:
@@ -18183,6 +18233,18 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         claimed_by:
           type: integer
           readOnly: true
@@ -18242,7 +18304,10 @@ components:
       - deferred_at
       - deferred_by
       - deferred_by_name
+      - draft_destination_realm_id
+      - draft_eternal
       - draft_saved_at
+      - draft_term_years
       - draft_verdict
       - draft_version
       - evidence_count
@@ -18494,6 +18559,9 @@ components:
         `default_realm_id` is where automatic routing would send the soul (null when
         that realm is not among the options, e.g. an unmapped tenant);
         `default_term_years` is null because an automatic conclusion records no term.
+        `not_applicable` is the rest of the tenant's realms for this civilization —
+        ones this verdict cannot reach, listed so the picker can show them disabled
+        with the reason; `conclude` refuses them (`realm_not_allowed`).
       properties:
         verdict:
           type: string
@@ -18508,9 +18576,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JudgmentDestinationOption'
+        not_applicable:
+          type: array
+          items:
+            $ref: '#/components/schemas/JudgmentDestinationOption'
       required:
       - default_realm_id
       - default_term_years
+      - not_applicable
       - options
       - verdict
     JudgmentDetail:
@@ -18600,6 +18673,18 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         claimed_by:
           type: integer
           readOnly: true
@@ -18669,7 +18754,10 @@ components:
       - deferred_at
       - deferred_by
       - deferred_by_name
+      - draft_destination_realm_id
+      - draft_eternal
       - draft_saved_at
+      - draft_term_years
       - draft_verdict
       - draft_version
       - evidence_admissions
@@ -18696,6 +18784,18 @@ components:
           oneOf:
           - $ref: '#/components/schemas/VerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         draft_version:
           type: integer
           readOnly: true
@@ -18705,7 +18805,10 @@ components:
           readOnly: true
           nullable: true
       required:
+      - draft_destination_realm_id
+      - draft_eternal
       - draft_saved_at
+      - draft_term_years
       - draft_verdict
       - draft_version
       - notes
@@ -18894,6 +18997,21 @@ components:
       - skipped
       - soul
       - total
+    JudgmentRateLimited:
+      type: object
+      description: 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema
+        only。
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+      - retry_after
     JudgmentReassign:
       type: object
       description: '`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。'
@@ -18903,6 +19021,15 @@ components:
           minimum: 1
       required:
       - to
+    JudgmentReassignRequestResult:
+      type: object
+      description: '`POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。'
+      properties:
+        notified:
+          type: integer
+          readOnly: true
+      required:
+      - notified
     KarmaBucket:
       type: object
       description: |-
@@ -20619,6 +20746,7 @@ components:
       - SENTENCE_PLAN_CANCELLED
       - PASSWORD_HELP_REQUESTED
       - SOUL_INBOX_ASSIGNED
+      - JUDGMENT_REASSIGN_REQUESTED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -20646,6 +20774,7 @@ components:
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
         * `PASSWORD_HELP_REQUESTED` - Password Help Requested
         * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
+        * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
     NullEnum:
       enum:
       - null
@@ -21969,6 +22098,8 @@ components:
           $ref: '#/components/schemas/PasswordResetRefusalCodeEnum'
         retry_after:
           type: integer
+        attempts_left:
+          type: integer
       required:
       - code
       - error
@@ -22805,6 +22936,18 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         claimed_by:
           type: integer
           readOnly: true
@@ -22867,6 +23010,16 @@ components:
           oneOf:
           - $ref: '#/components/schemas/VerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          nullable: true
+        draft_term_years:
+          type: integer
+          minimum: 1
+          nullable: true
+        draft_eternal:
+          type: boolean
     PatchedMenuButtonCreateUpdate:
       type: object
       properties:
@@ -23321,6 +23474,9 @@ components:
       description: |-
         分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
         请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+
+        `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+        上下文;别的通知与旧行为 null。殿名按请求语言取。
       properties:
         id:
           type: integer
@@ -23353,6 +23509,11 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
+        request_context:
+          allOf:
+          - $ref: '#/components/schemas/RequestContext'
+          nullable: true
           readOnly: true
     PatchedUserPreferences:
       type: object
@@ -24812,6 +24973,26 @@ components:
       - detail
       - reason
       - reporter
+    RequestContext:
+      type: object
+      description: |-
+        「第五殿 · 殿司 · 近 24 小时第 1 次」:一条求助通知里请求者账号的殿、角色,
+        与这次请求在该账号近 24 小时求助里的序号。
+      properties:
+        hall:
+          type: string
+          nullable: true
+        role:
+          type: string
+        count_24h:
+          type: integer
+        username:
+          type: string
+      required:
+      - count_24h
+      - hall
+      - role
+      - username
     ResetPassword:
       type: object
       description: Serializer for requesting password reset.
@@ -27686,6 +27867,9 @@ components:
       description: |-
         分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
         请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+
+        `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+        上下文;别的通知与旧行为 null。殿名按请求语言取。
       properties:
         id:
           type: integer
@@ -27719,6 +27903,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        request_context:
+          allOf:
+          - $ref: '#/components/schemas/RequestContext'
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
@@ -27726,6 +27915,7 @@ components:
       - notification_type
       - related_id
       - related_resource
+      - request_context
       - title
       - user
     UserNotificationList:
@@ -27758,10 +27948,16 @@ components:
           type: string
           format: date-time
           readOnly: true
+        request_context:
+          allOf:
+          - $ref: '#/components/schemas/RequestContext'
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
       - message
+      - request_context
       - title
     UserOrganizationRef:
       type: object

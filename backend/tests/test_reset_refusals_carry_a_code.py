@@ -57,7 +57,15 @@ class TestSetNewPasswordCodes:
 
     def test_a_wrong_code_is_reset_code_wrong(self, api_client, soul):
         cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
-        _refusal(_set(api_client, code="000000"), 400, "reset_code_wrong")
+        body = _refusal(_set(api_client, code="000000"), 400, "reset_code_wrong")
+        assert body["attempts_left"] == MAX_RESET_CODE_ATTEMPTS - 1
+
+    def test_attempts_left_counts_down_to_the_refusal(self, api_client, soul):
+        cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
+        left = [_set(api_client, code="000000").data["attempts_left"] for _ in range(MAX_RESET_CODE_ATTEMPTS)]
+        assert left == list(range(MAX_RESET_CODE_ATTEMPTS - 1, -1, -1))
+        # attempts_left 0 meant it: even the right code is now refused.
+        _refusal(_set(api_client), 429, "reset_code_attempts_exceeded")
 
     def test_too_many_wrong_codes_is_attempts_exceeded_with_nothing_to_wait_for(self, api_client, soul):
         cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
@@ -99,6 +107,26 @@ class TestSetNewPasswordCodes:
         body = _refusal(res, 429, "rate_limited")
         assert 1 <= body["retry_after"] <= 60, body
         assert res["Retry-After"] == str(body["retry_after"])
+
+
+@pytest.mark.django_db
+def test_a_completed_reset_signs_every_other_device_out(api_client, soul):
+    """The App's success notice says 「其他设备上的登录已全部退出」: every refresh
+    token the account held is blacklisted, so no device can renew its session."""
+    from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    from apps.soul_accounts.authentication import SoulRefreshToken
+
+    held = [str(RefreshToken.for_user(soul)) for _ in range(2)]
+    app_session = SoulRefreshToken.for_user(soul)  # what the soul App holds
+    cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
+    assert _set(api_client).status_code == 200
+    for token in held:
+        res = api_client.post("/api/v1/auth/refresh/", {"refresh": token}, format="json")
+        assert res.status_code == 401, res.data
+    assert OutstandingToken.objects.get(jti=app_session["jti"]).blacklistedtoken is not None
+    assert not OutstandingToken.objects.filter(user=soul, blacklistedtoken__isnull=True).exists()
 
 
 @pytest.mark.django_db

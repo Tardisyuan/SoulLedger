@@ -28,7 +28,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
-import { CitationChips, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
+import { CitationChips, ConcludedBalance, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -48,6 +48,7 @@ import {
   JudgmentPlacement,
   PLACEMENT_REFUSALS,
   placementFor,
+  placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
@@ -86,7 +87,7 @@ import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hook
  * the focused row; not admitting asks for a reason) and the server's admitted
  * balance; 丁 autosaves (`useDraftAutosave`) and stops on a 409 with the
  * server's version on screen rather than overwriting it; 据 carries 先例; the
- * QueueBar takes D to defer.
+ * QueueBar takes S to defer (the queue's own key, 第三类 F 组).
  *
  * 戊 · 发落 (original judgments): destination and term, from
  * `judgmentApi.destinations` filtered by the chosen verdict — nothing chosen
@@ -270,6 +271,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const notesTouched = useRef(false);
   /** Same rule for the chosen verdict: the saved draft's choice seeds it until the operator picks one. */
   const verdictTouched = useRef(false);
+  /** And for 戊 · 发落: the saved draft's destination / term seed it until the operator changes them. */
+  const placementTouched = useRef(false);
 
   useEffect(() => {
     if (judgment) {
@@ -279,6 +282,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       } else if (!verdictTouched.current && judgment.draft_verdict) {
         setSelectedVerdict(judgment.draft_verdict);
       }
+      const savedPlacement = placementFromDraft(judgment);
+      if (!placementTouched.current && savedPlacement) setPlacement(savedPlacement);
     }
   }, [judgment]);
 
@@ -325,6 +330,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     judgmentId: id,
     notes,
     verdict: selectedVerdict,
+    placement,
     enabled: !!judgment && !judgment.is_final && canExecute,
   });
   const chooseVerdict = (member: string) => {
@@ -540,7 +546,31 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
               收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}
           <div className="mt-6">
-            <JudgmentSectionHead mark="乙" title={t("souls.detail.ledger.karma")} />
+            <JudgmentSectionHead
+              mark="乙"
+              title={t("souls.detail.ledger.karma")}
+              meta={
+                isFinal && judgment.concluded_at
+                  ? t("judgment.desk.concluded_on", { date: judgment.concluded_at.slice(5, 10) })
+                  : undefined
+              }
+            />
+            {/* 结案了:判决依据的是结案时的值,所以它在上、用双线收住;现值在下(第三类 F 组 2.3)。 */}
+            {isFinal && judgment.admitted_balance?.balance != null && (
+              <ConcludedBalance
+                snapshot={judgment.admitted_balance.balance}
+                current={judgment.admitted_balance.current_balance}
+                recordedAfter={
+                  judgment.concluded_at
+                    ? (ledgerData?.records ?? []).filter(
+                        (r) =>
+                          (r.type === "MERIT" || r.type === "DEMERIT") &&
+                          r.recorded_at > (judgment.concluded_at as string)
+                      ).length
+                    : 0
+                }
+              />
+            )}
             {ledgerData?.reading ? (
               <div className="pt-2">
                 <SoulReadingPanel
@@ -780,6 +810,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     if (!theirs) return;
                     setNotes(theirs.notes);
                     setSelectedVerdict(theirs.draft_verdict ?? "");
+                    setPlacement(placementFromDraft(theirs) ?? EMPTY_PLACEMENT);
                   }}
                   onKeepMine={draft.keepMine}
                 />
@@ -801,9 +832,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               value={placement}
               onChange={(next) => {
                 concludeMutation.reset(); // 改了发落,上一次的拒绝就不再是这一份的
+                placementTouched.current = true;
                 setPlacement(next);
+                draft.markEdited();
               }}
               refusal={placementRefusal}
+              savedAt={draft.status === "idle" && !draft.conflict ? judgment.draft_saved_at : null}
             />
           )}
           {!isFinal && isAmendment && myTenant && (
@@ -845,9 +879,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   loading={concludeMutation.isPending}
                   disabled={!selectedVerdict}
                 >
+                  {/* 第三类 F 组 2.8:勾上审批流后,这个不可撤回的按钮写明它会多做什么。 */}
                   {concludeMutation.isPending
                     ? t("judgment.detail.concluding")
-                    : t("judgment.detail.conclude")}
+                    : createWorkflow
+                      ? t("judgment.detail.conclude_with_workflow")
+                      : t("judgment.detail.conclude")}
                   <Kbd>⌘⏎</Kbd>
                 </Button>
               </RequirePermission>

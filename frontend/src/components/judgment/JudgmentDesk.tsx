@@ -34,9 +34,9 @@ export function Kbd({ children }: { children: ReactNode }) {
  * 队列进度条 QueueBar:3 px 墨线。数据来自 `GET /judgment/next/?at=<id>` —— 服务端把 `at`
  * 当偏好而不是筛选,所以只有回来的那一件就是本案时,`position` 才是本案的位置;否则不画。
  *
- * D 暂缓(理由必填),只在进度条画出来时接 —— 暂缓的案子不在 `next/` 里,进度条随之消失,
+ * S 暂缓(理由必填;与队列控制台同一个键,Design 第三类 F 组答复),只在进度条画出来时接 —— 暂缓的案子不在 `next/` 里,进度条随之消失,
  * 不会对同一件按两次。K 上一件 / J 下一件在页头(`/judgment/previous/?at=` 与 `/judgment/next/?after=`,
- * 见审判台页面);S 跳过没有画:跳过只活在队列控制台的会话里。
+ * 见审判台页面)。
  */
 export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string; canDefer?: boolean }) {
   const { t } = useI18n();
@@ -48,7 +48,7 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
     queryFn: () => judgmentApi.next({ at: judgmentId }).then((r) => r.data),
   });
   const shown = !!data && data.judgment?.id === judgmentId && data.position !== null;
-  useHotkeys({ d: () => setAsking(true) }, shown && canDefer && !asking);
+  useHotkeys({ s: () => setAsking(true) }, shown && canDefer && !asking);
   if (!shown || !data || data.position === null) return null;
   const total = Math.max(data.total, 1);
   const label = t("judgment.queue.progress", { position: String(data.position), total: String(data.total) });
@@ -77,7 +77,7 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
           onClick={() => setAsking(true)}
           className="inline-flex items-center gap-1.5 hover:text-[oklch(var(--color-ink))] max-sm:min-h-11"
         >
-          <Kbd>D</Kbd>
+          <Kbd>S</Kbd>
           {t("judgment.claim.defer")}
         </button>
       )}
@@ -263,5 +263,60 @@ export function StatuteSearch({
         })}
       </ul>
     </div>
+  );
+}
+
+/** `+347` / `−12` / `0`: a balance as the ledger writes it, sign first. */
+function signed(n: number): string {
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n)}`;
+}
+
+/**
+ * 乙 · 功过 on a concluded case (第三类 F 组 2.3): the balance the verdict rested on,
+ * frozen at conclusion (`admitted_balance.balance` is the snapshot there), on top
+ * and closed by a double rule; today's figure (`current_balance`) under it, and how
+ * many records were entered since. When the two agree there is one line, 「余额」,
+ * and no 「现值」 at all.
+ */
+export function ConcludedBalance({
+  snapshot,
+  current,
+  recordedAfter,
+}: {
+  snapshot: number;
+  current: number | null | undefined;
+  recordedAfter: number;
+}) {
+  const { t } = useI18n();
+  if (current == null || current === snapshot) {
+    return (
+      <p data-testid="concluded-balance" className="flex items-baseline justify-between py-2 text-sm">
+        <span className="text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.balance_single")}</span>
+        <span className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(snapshot)}</span>
+      </p>
+    );
+  }
+  const drift = current - snapshot;
+  return (
+    <dl data-testid="concluded-balance" className="py-2 text-sm">
+      <div className="flex items-baseline justify-between border-b-3 border-double border-[oklch(var(--color-ink))] pb-1">
+        <dt className="text-[oklch(var(--color-ink))]">{t("judgment.desk.balance_at_conclusion")}</dt>
+        <dd className="font-mono text-md font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(snapshot)}</dd>
+      </div>
+      <div className="flex items-baseline justify-between pt-1 text-[oklch(var(--color-ink-muted))]">
+        <dt>{t("judgment.desk.balance_now")}</dt>
+        <dd className="font-mono tabular-nums">{signed(current)}</dd>
+      </div>
+      <div className="flex items-baseline justify-between text-xs text-[oklch(var(--color-ink-subtle))]">
+        <dt>{t("judgment.desk.recorded_after", { n: String(recordedAfter) })}</dt>
+        <dd
+          className={`font-mono tabular-nums ${
+            drift > 0 ? "text-[oklch(var(--color-success))]" : "text-[oklch(var(--color-danger))]"
+          }`}
+        >
+          {signed(drift)}
+        </dd>
+      </div>
+    </dl>
   );
 }

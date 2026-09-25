@@ -455,15 +455,16 @@ describe("WelcomePage first-run checklist", () => {
     expect(mockedPrefs).not.toHaveBeenCalled();
   });
 
-  it("lists only keys the app actually binds", async () => {
+  it("lists exactly the queue's six shortcuts, all bound: no U, W and R present", async () => {
     renderPage();
     const keys = await waitFor(() => {
       const found = Array.from(document.querySelectorAll("dt")).map((dt) => dt.textContent);
       expect(found.length).toBeGreaterThan(0);
       return found;
     });
-    expect(keys).toEqual(["1–4", "S", "N", "Esc", "? / H"]);
-    // The design's ⌘K / Q / ⌘⏎ / ⌘Z have no handler anywhere in the app.
-    for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z"]) expect(keys).not.toContain(invented);
+    // Design's six (F group reply, 2026-09-26): W and R present, U gone with the undo window.
+    expect(keys).toEqual(["1–4", "S", "W", "R", "N", "?"]);
+    // The design's ⌘K / Q / ⌘⏎ / ⌘Z have no handler anywhere in the app; U was withdrawn.
+    for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z", "U"]) expect(keys).not.toContain(invented);
   });
 });

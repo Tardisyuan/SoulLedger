@@ -186,6 +186,12 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if search:
             qs = qs.filter(username__icontains=search) | qs.filter(email__icontains=search)
 
+        # One account by its exact username: the password-help notification's
+        # 「去用户页」 lands on `/users?username=<u>` (第三类 F 组 2.6).
+        username = params.get('username', '').strip()
+        if username:
+            qs = qs.filter(username=username)
+
         # Filter by role
         role = params.get('role', '').strip()
         if role:
@@ -727,11 +733,11 @@ def change_password(request):
     return Response({"detail": "密码修改成功"})
 
 
-def _reset_refusal(error, code, http_status, retry_after=None):
+def _reset_refusal(error, code, http_status, retry_after=None, **extra):
     """A refusal of the email-reset endpoints: `{error, code}`, plus
     `retry_after` when throttled. Clients branch on `code`; see
     `PasswordResetRefusalSerializer` for the full set."""
-    body = {"error": error, "code": code}
+    body = {"error": error, "code": code, **extra}
     headers = None
     if retry_after is not None:
         body["retry_after"] = retry_after
@@ -941,7 +947,12 @@ def set_new_password(request):
         # code it guards, or a guesser could simply wait for the counter to
         # expire while the code is still valid.
         cache.set(attempts_key, tries + 1, timeout=300)
-        return _reset_refusal("验证码错误", "reset_code_wrong", status.HTTP_400_BAD_REQUEST)
+        # How many more checks this code will take: the App says 「还可以再试 N 次」.
+        # Zero means the next submission, right or wrong, is `reset_code_attempts_exceeded`.
+        return _reset_refusal(
+            "验证码错误", "reset_code_wrong", status.HTTP_400_BAD_REQUEST,
+            attempts_left=MAX_RESET_CODE_ATTEMPTS - (tries + 1),
+        )
 
     # Correct code: the counter has no further job, and leaving it would let a
     # previous run's failures shorten the next legitimate reset.
@@ -978,6 +989,13 @@ def set_new_password(request):
     # Set new password
     user.set_password(new_password)
     user.save(update_fields=["password"])
+    # 「其他设备上的登录已全部退出」: every refresh token this account holds is
+    # blacklisted, as when a soul sets its own password after an officer's
+    # reset. An access token already issued lives out its lifetime
+    # (`ACCESS_TOKEN_LIFETIME`, 30 minutes by default) and cannot be renewed.
+    from apps.soul_accounts.services import _revoke_refresh_tokens
+
+    _revoke_refresh_tokens(user)
 
     # Invalidate the code
     cache.delete(f"pwd_reset:{email}")

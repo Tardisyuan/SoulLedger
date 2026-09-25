@@ -44,7 +44,8 @@
     "forgot_sent": "Your hall's administrator has been notified",
     "forgot_failed": "Could not send. Try again later",
     "rate_limited": "Too many requests. Try again later",
-    "back_to_login": "Back to sign in"
+    "back_to_login": "Back to sign in",
+    "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password. No reset link is sent."
   },
   "home": {
     "console": "Console",
@@ -585,7 +586,9 @@
         "off": "Not granted",
         "unsaved": "Unsaved",
         "failed": "Not saved",
-        "conflict": "Causes a conflict"
+        "conflict": "Causes a conflict",
+        "lock": "always · ADMIN",
+        "deny": "forbidden · realm lead"
       },
       "refused": {
         "admin_only_permission": "Conflicts with the rule that recycle-bin restore and hard delete are ADMIN-only; sent back.",
@@ -598,7 +601,12 @@
         "role_forbidden_permission": "Conflicts with the rule that MODERATOR may not hold workflow approve, workflow advance or user management; sent back."
       },
       "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
-      "conflict_acknowledge": "I understand this leaves {{n}} workflows ({{m}} of them in flight) with no approver"
+      "conflict_acknowledge": "Confirm the conflict: these changes affect {{n}} workflows, {{m}} of them in flight.",
+      "lock_word": "always",
+      "lock_hint": "The ADMIN role always holds every permission; it cannot be unticked.",
+      "deny_word": "forbidden",
+      "deny_hint": "A realm lead cannot be granted 「{{perm}}」.",
+      "conflict_view": "View"
     },
     "segments": {
       "label": "Permission sections",
@@ -1058,10 +1066,9 @@
       "render_verdict": "Render verdict",
       "notes": "Verdict notes",
       "notes_placeholder": "Add a note…",
-      "create_workflow": "Also open an approval workflow",
+      "create_workflow": "Also open an approval workflow when ruling",
       "defer": "Defer",
       "commit_error": "The verdict did not land; the case is back in the queue",
-      "claimed_by_other": "{{name}} has claimed this case; only they, a realm lead or an administrator can conclude it. The verdict was not sent; the case is deferred for this sitting",
       "restore_deferred": "Bring deferred cases back",
       "stat_decided": "{{n}} ruled",
       "stat_deferred": "{{n}} deferred",
@@ -1099,8 +1106,13 @@
       "key_workflow": "Toggle “also open an approval workflow”",
       "key_restore": "Bring every deferred case back",
       "key_help": "Show / hide this map",
-      "key_leave": "Leave the queue (blurs a text field first)",
-      "key_notes": "Focus the notes field"
+      "key_notes": "Focus the notes field",
+      "claimed_title": "Case claimed by {{name}}",
+      "claimed_body": "Only the claimant, a realm lead or an administrator can conclude it. Your verdict was not submitted; this sitting has put the case aside.",
+      "claimed_next": "Open the next case",
+      "claimed_back": "Back to the queue",
+      "session_deferred": "{{n}} set aside this sitting",
+      "restore_all": "Put all back in the queue"
     },
     "detail": {
       "loading": "Loading judgment...",
@@ -1124,7 +1136,8 @@
       "conclude": "Conclude",
       "notes_placeholder": "Enter notes...",
       "create_workflow": "Start approval workflow",
-      "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type."
+      "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
+      "conclude_with_workflow": "Rule and open workflow"
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
@@ -1198,7 +1211,12 @@
       "cite_error": "The citation did not save",
       "deferred_note": "Deferred: {{reason}}",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "concluded_on": "Concluded · {{date}}",
+      "balance_at_conclusion": "Balance at conclusion",
+      "balance_now": "Now",
+      "balance_single": "Balance",
+      "recorded_after": "{{n}} recorded since"
     },
     "claim": {
       "groups": {
@@ -1234,8 +1252,6 @@
       "defer_reason_hint": "Required, up to 500 characters; kept with the case for whoever works it",
       "reassign_title": "Reassign {{n}} judgment(s)",
       "reassign_to": "Reassign to",
-      "reassign_hint": "Active officers in this tenant only; the server checks case permission again",
-      "pick_officer": "— Choose an officer —",
       "officer_required": "Choose an officer",
       "officers_unavailable": "Could not read the officer list (needs reassign permission)",
       "reassign_confirm": "Reassign",
@@ -1257,7 +1273,18 @@
       "civilization_all": "Civilization · all",
       "sort": "Sort",
       "sort_oldest": "Sort · longest waiting",
-      "sort_newest": "Sort · newest first"
+      "sort_newest": "Sort · newest first",
+      "reassign_search": "Search judges",
+      "reassign_count": "{{n}} can take it",
+      "in_hand": "In hand",
+      "in_hand_n": "{{n}}",
+      "reassign_you": "you",
+      "reassign_empty_title": "Empty · nobody to reassign to",
+      "reassign_empty_body": "Apart from you, no active officer who may rule can take these cases.",
+      "request_admin": "Ask an administrator to reassign",
+      "request_admin_sent": "An administrator has been asked",
+      "request_admin_limited": "Already asked. You can ask again in {{minutes}} min",
+      "request_admin_failed": "Not sent. Try again"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -1311,7 +1338,10 @@
         "term_conflict": "Not executed: choose a term or eternal, not both",
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
         "destination_not_applicable": "Not executed: this case has no placement"
-      }
+      },
+      "draft": "Draft · not submitted",
+      "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
+      "not_applicable": "not for {{verdict}}"
     }
   },
   "audit": {
@@ -1388,7 +1418,11 @@
     "loading": "Loading...",
     "view_all": "View All",
     "mark_read_error": "Failed to mark as read",
-    "mark_all_error": "Failed to mark all as read"
+    "mark_all_error": "Failed to mark all as read",
+    "help_count_24h": "request {{n}} in the last 24 hours",
+    "help_open_users": "Open users",
+    "help_ignore": "Not them · ignore",
+    "open_case": "Open the case"
   },
   "realms": {
     "title": "Realms",
@@ -2473,28 +2507,52 @@
     },
     "forgot_password": {
       "link": "Forgot password",
-      "title": "Recover your password",
-      "email_intro": "Enter the contact email bound to your soul account. We will send a 6-digit code to it.",
-      "email": "Contact email",
+      "email_intro": "Enter the email bound to your soul account and we will send a 6-digit code to it.",
+      "email": "Email",
       "email_invalid": "Enter a valid email address",
       "send": "Send code",
       "sending": "Sending…",
       "sent_neutral": "If this email is bound to a soul account, a code has been sent",
-      "no_email": "A soul with no bound email cannot receive a code. Ask your hall to reset your password.",
       "code": "Code",
-      "code_hint": "6 digits",
       "code_format": "The code is 6 digits",
-      "expires_in": "The code expires in {{time}}",
-      "expired": "The code has expired. Send a new one",
-      "resend": "Resend code",
-      "resend_in": "You can resend in {{time}}",
-      "code_wrong": "The code is wrong",
-      "code_expired": "The code has expired. Send a new one",
-      "too_many_tries": "Too many wrong codes, so this one is void. Send a new one",
+      "resend": "Resend",
       "ask_hall": "This email cannot reset a password. Ask your hall to reset your password",
       "submit": "Reset password",
-      "success": "Password reset. Sign in with your new password",
-      "change_email": "Use another email"
+      "step1_kicker": "Reset password · step 1 of 2",
+      "step1_title": "Enter your bound email",
+      "no_email_link": "No email bound?",
+      "step2_kicker": "Reset password · step 2 of 2",
+      "step2_title": "Set a new password",
+      "sent_to": "Sent to {{email}}. Valid for 5 minutes; if it has not arrived, check your spam folder.",
+      "expires_left": "expires in {{time}}",
+      "strength": "Strength · {{level}}. At least 8 characters, not all digits.",
+      "strength_weak": "weak",
+      "strength_fair": "fair",
+      "strength_strong": "strong",
+      "resend_wait": "Resend (available in {{n}} s)",
+      "no_email_kicker": "Reset password",
+      "no_email_title": "Ask your hall to reset it",
+      "no_email_body": "A soul with no bound email cannot reset its own password in the app.",
+      "no_email_step_1": "Write to your hall with your name and soul code.",
+      "no_email_step_2": "Once the hall has confirmed who you are, it resets the password and gives you a temporary one.",
+      "no_email_note": "Signed out, you cannot write letters in the app: ask a soul of your hall to pass it on, or explain in person at the hall's registry.",
+      "back_to_login": "Back to sign-in",
+      "err_expired_title": "The code has expired",
+      "err_expired_body": "Five minutes have passed. Send a new one; the new password you typed is kept.",
+      "err_wrong_title": "Wrong code",
+      "err_wrong_left": "{{n}} tries left.",
+      "err_exhausted_title": "No tries left",
+      "err_exhausted_body": "This code is void. Send a new one.",
+      "err_weak_title": "Password too weak",
+      "err_weak_body": "At least 8 characters, not all digits, and not a common one.",
+      "err_rate_title": "Too many requests",
+      "err_rate_body": "Try again in {{n}} s. The button comes back when the countdown ends.",
+      "err_rate_later": "Try again later.",
+      "err_offline_title": "No connection",
+      "err_offline_body": "What you typed is kept. Tap again once you are back online.",
+      "err_mismatch_title": "The two passwords differ",
+      "success_title": "Password reset",
+      "success_body": "Sign in with your new password. Every other device has been signed out."
     },
     "tabs": {
       "life": "This life",
@@ -3053,12 +3111,12 @@
   },
   "official_notify": {
     "password_help_requested": {
-      "title": "Password help requested",
-      "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."
+      "title": "Password reset help",
+      "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, reset it under User Management."
     },
     "password_help_requested_moderator": {
-      "title": "Password help requested",
-      "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, ask an administrator to reset it."
+      "title": "Password reset help",
+      "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, ask an administrator to reset it."
     },
     "dispatch_return_blocked": {
       "title": "Residence return blocked",
@@ -3107,6 +3165,10 @@
     "soul_inbox_assigned": {
       "title": "A letter handed to you",
       "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."
+    },
+    "judgment_reassign_requested": {
+      "title": "Reassignment requested",
+      "body": "{{by}} asks for the case of {{soul}} to be reassigned"
     }
   },
   "social_moderation": {
@@ -3248,7 +3310,8 @@
       "media_n": "{{n}} images",
       "media_label": "Images",
       "media_caption": "Image {{i}} · {{w}}×{{h}}",
-      "media_load_failed": "Could not load the image"
+      "media_load_failed": "Could not load the image",
+      "held_for_words": "Held for review by the word “{{word}}” and others ({{n}} in all)"
     },
     "words": {
       "add_row": "Add a word",

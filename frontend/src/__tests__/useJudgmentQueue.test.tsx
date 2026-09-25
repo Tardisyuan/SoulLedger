@@ -192,20 +192,19 @@ describe("useJudgmentQueue", () => {
     expect(result.current.progress.decided).toBe(0);
   });
 
-  it("409 claimed_by_other names the claimant and defers the case for the sitting", async () => {
+  it("409 claimed_by_other hands the claimant to the screen and defers the case for the sitting", async () => {
     mockConclude.mockRejectedValueOnce(CLAIMED_BY_OTHER);
     const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_A.id));
+    expect(result.current.claimRefusal).toBeNull();
 
     await act(async () => {
       await result.current.submitVerdict({ verdict: "PASSED" });
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      { key: "judgment.queue.claimed_by_other", params: { name: "崔判官" } },
-      "error"
-    );
-    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.commit_error", "error");
+    // A standing warning the console draws (第三类 F 组 2.2), not a toast.
+    expect(result.current.claimRefusal).toEqual({ id: JUDGMENT_A.id, name: "崔判官" });
+    expect(mockShowToast).not.toHaveBeenCalled();
     await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_B.id));
     expect(result.current.deferredCount).toBe(1);
     expect(result.current.progress.decided).toBe(0);
@@ -221,10 +220,10 @@ describe("useJudgmentQueue", () => {
       await result.current.submitVerdict({ verdict: "PASSED" });
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      { key: "judgment.queue.claimed_by_other", params: { name: "" } },
-      "error"
-    );
+    expect(result.current.claimRefusal?.name).toBe("");
+
+    act(() => result.current.dismissClaimRefusal());
+    expect(result.current.claimRefusal).toBeNull();
   });
 
   it("a rejection that carries nothing at all is the generic refusal, not a crash", async () => {

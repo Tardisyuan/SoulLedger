@@ -321,14 +321,19 @@ export function EmblemDivider() {
 
 // ── inputs ─────────────────────────────────────────────────────────────
 
-/** The focus ring: 2px accent, offset 2, radius 2 — drawn outside the field so nothing shifts. */
+/**
+ * The focus ring: 2px INK, offset 2 — drawn outside the field so nothing shifts.
+ * Ink, not accent (第三类 F 组): in the App the accent is the seal red, the same
+ * value as the error colour, and a focused field must not read as a refused one.
+ */
 function FocusRing({ focused, children }: { focused: boolean; children: ReactNode }) {
   const t = useTheme();
-  return <View style={[styles.ring, { borderColor: focused ? t.accent : "transparent" }]}>{children}</View>;
+  return <View style={[styles.ring, { borderColor: focused ? t.ink : "transparent" }]}>{children}</View>;
 }
 
 export function Input({
   label,
+  labelAside,
   hint,
   error,
   invalid,
@@ -341,6 +346,8 @@ export function Input({
   ...rest
 }: TextInputProps & {
   label: string;
+  /** Beside the label, at its right: a link (「忘记密码」) or a live value (a countdown). */
+  labelAside?: ReactNode;
   hint?: string;
   /** Shown under the field, in the error ink; also turns the border red. */
   error?: string | null;
@@ -370,9 +377,12 @@ export function Input({
   ) : null;
   return (
     <View style={styles.field}>
-      <Txt variant="label" tone="muted">
-        {label}
-      </Txt>
+      <View style={styles.labelRow}>
+        <Txt variant="label" tone="muted" style={styles.shrink}>
+          {label}
+        </Txt>
+        {labelAside}
+      </View>
       <FocusRing focused={focused}>
         <View style={[styles.inputBox, { backgroundColor: t.s1, borderColor: bad ? t.negStrong : t.hair }]}>
           <TextInput
@@ -827,6 +837,7 @@ export const styles = StyleSheet.create({
   empty: { alignItems: "center", gap: 9, paddingVertical: 18 },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
+  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
   ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.focus },
   inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48 },
   input: { flex: 1, minHeight: 46, paddingHorizontal: 13, fontSize: 15 },

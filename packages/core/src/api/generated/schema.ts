@@ -1995,7 +1995,9 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * @description Autosave the verdict text (`notes`) and the chosen verdict.
+         * @description Autosave the verdict text (`notes`), the chosen verdict, and the
+         *     「戊 · 发落」 choice (`draft_destination_realm_id` / `draft_term_years` /
+         *     `draft_eternal`; cleared when the case is concluded).
          *
          *     `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
          *     "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
@@ -2092,6 +2094,29 @@ export interface paths {
         put?: never;
         /** @description 释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。 */
         post: operations["v1_judgment_release_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/request-reassign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 「请管理员改派」:改派名单空了(本殿没有别人能接),请案子所在租户的 ADMIN 来改派。
+         *
+         *     `judgment.execute` 与 `get_object()` 的租户范围:能办这件案子的人才能为它求助。
+         *     同一人对同一件案子 10 分钟一次,多了 429 `rate_limited` 带 `retry_after`。
+         *     通知走 `claims.request_reassign`(既有的官员通知路径)。
+         */
+        post: operations["v1_judgment_request_reassign_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6896,6 +6921,7 @@ export interface components {
             /** Format: double */
             not_admitted_net: number | null;
             reason_code: string | null;
+            current_balance?: number | null;
         };
         /**
          * @description The two configured ceilings on the key. Zero when there is no key on
@@ -7168,7 +7194,7 @@ export interface components {
             role: string;
         };
         /**
-         * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+         * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
          *     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
          */
         AssignableOfficer: {
@@ -7176,6 +7202,7 @@ export interface components {
             readonly display_name: string;
             readonly username: string;
             readonly role: string;
+            readonly in_hand: number;
         };
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
@@ -8296,6 +8323,10 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at: string | null;
             readonly draft_version: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
             readonly claimed_by: number | null;
             readonly claimed_by_name: string | null;
             /** Format: date-time */
@@ -8447,6 +8478,9 @@ export interface components {
          *     `default_realm_id` is where automatic routing would send the soul (null when
          *     that realm is not among the options, e.g. an unmapped tenant);
          *     `default_term_years` is null because an automatic conclusion records no term.
+         *     `not_applicable` is the rest of the tenant's realms for this civilization —
+         *     ones this verdict cannot reach, listed so the picker can show them disabled
+         *     with the reason; `conclude` refuses them (`realm_not_allowed`).
          */
         JudgmentDestinations: {
             verdict: string;
@@ -8454,6 +8488,7 @@ export interface components {
             default_realm_id: string | null;
             default_term_years: number | null;
             options: components["schemas"]["JudgmentDestinationOption"][];
+            not_applicable: components["schemas"]["JudgmentDestinationOption"][];
         };
         /**
          * @description `GET /judgment/{id}/` — the list shape plus the evidence rulings and the
@@ -8491,6 +8526,10 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at: string | null;
             readonly draft_version: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
             readonly claimed_by: number | null;
             readonly claimed_by_name: string | null;
             /** Format: date-time */
@@ -8521,6 +8560,10 @@ export interface components {
         JudgmentDraft: {
             readonly notes: string;
             readonly draft_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
             readonly draft_version: number;
             /** Format: date-time */
             readonly draft_saved_at: string | null;
@@ -8616,9 +8659,19 @@ export interface components {
             prior_cycles: components["schemas"]["Reincarnation"][];
             realm_options: components["schemas"]["RealmLocalized"][];
         };
+        /** @description 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。 */
+        JudgmentRateLimited: {
+            error: string;
+            code: string;
+            retry_after: number;
+        };
         /** @description `POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。 */
         JudgmentReassign: {
             to: number;
+        };
+        /** @description `POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。 */
+        JudgmentReassignRequestResult: {
+            readonly notified: number;
         };
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
@@ -9379,9 +9432,10 @@ export interface components {
          *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
          *     * `PASSWORD_HELP_REQUESTED` - Password Help Requested
          *     * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
+         *     * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerInbox: {
@@ -10149,6 +10203,7 @@ export interface components {
             error: string;
             code: components["schemas"]["PasswordResetRefusalCodeEnum"];
             retry_after?: number;
+            attempts_left?: number;
         };
         /**
          * @description * `rate_limited` - throttled; `retry_after` says for how long
@@ -10596,6 +10651,10 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at?: string | null;
             readonly draft_version?: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id?: string | null;
+            readonly draft_term_years?: number | null;
+            readonly draft_eternal?: boolean;
             readonly claimed_by?: number | null;
             readonly claimed_by_name?: string | null;
             /** Format: date-time */
@@ -10628,6 +10687,10 @@ export interface components {
             version?: number;
             notes?: string;
             draft_verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: uuid */
+            draft_destination_realm_id?: string | null;
+            draft_term_years?: number | null;
+            draft_eternal?: boolean;
         };
         PatchedMenuButtonCreateUpdate: {
             readonly id?: number;
@@ -10865,6 +10928,9 @@ export interface components {
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
          *     请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+         *
+         *     `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+         *     上下文;别的通知与旧行为 null。殿名按请求语言取。
          */
         PatchedUserNotification: {
             readonly id?: number;
@@ -10879,6 +10945,7 @@ export interface components {
             readonly related_id?: string | null;
             /** Format: date-time */
             readonly created_at?: string;
+            readonly request_context?: components["schemas"]["RequestContext"] | null;
         };
         /**
          * @description `User.preferences`, as the API reads and writes it.
@@ -11606,6 +11673,16 @@ export interface components {
             detail: string;
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description 「第五殿 · 殿司 · 近 24 小时第 1 次」:一条求助通知里请求者账号的殿、角色,
+         *     与这次请求在该账号近 24 小时求助里的序号。
+         */
+        RequestContext: {
+            hall: string | null;
+            role: string;
+            count_24h: number;
+            username: string;
         };
         /** @description Serializer for requesting password reset. */
         ResetPassword: {
@@ -12865,6 +12942,9 @@ export interface components {
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
          *     请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+         *
+         *     `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+         *     上下文;别的通知与旧行为 null。殿名按请求语言取。
          */
         UserNotification: {
             readonly id: number;
@@ -12879,6 +12959,7 @@ export interface components {
             readonly related_id: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            readonly request_context: components["schemas"]["RequestContext"] | null;
         };
         /** @description Lightweight serializer for listing notifications. */
         UserNotificationList: {
@@ -12893,6 +12974,7 @@ export interface components {
             related_id?: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            readonly request_context: components["schemas"]["RequestContext"] | null;
         };
         /**
          * @description The three keys `UserManagementSerializer.get_organization` returns.
@@ -16613,6 +16695,16 @@ export interface operations {
                     "application/json": components["schemas"]["JudgmentDraft"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -16764,6 +16856,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_request_reassign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentReassignRequestResult"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentRateLimited"];
                 };
             };
         };

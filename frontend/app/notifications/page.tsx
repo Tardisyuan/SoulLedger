@@ -13,7 +13,10 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
+import { Button, buttonVariants } from "@/src/components/ui/Button";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import Link from "next/link";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
@@ -59,6 +62,9 @@ export default function NotificationsPage() {
   const { t, formatDateTime, formatDate: formatDay } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  // User management is ADMIN only (`user.manage`); a realm lead's notice says to ask one instead.
+  const canManageUsers = hasPermission("user.manage");
   const [filter, setFilter] = useState<FilterType>("all");
 
   const { data: notifications = [], isLoading, isError, refetch } = useQuery({
@@ -339,8 +345,52 @@ export default function NotificationsPage() {
                   {notification.message}
                 </p>
 
+                {/* 重设密码求助(第三类 F 组 2.6):等宽一行「殿 · 角色 · 近 24 小时第 N 次」,
+                    然后「去用户页」(只给能管用户的人)与「不是本人 · 忽略」(= 标为已读)。 */}
+                {notification.request_context && (
+                  <>
+                    <p data-testid="request-context" className="mt-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      {notification.request_context.hall ? `${notification.request_context.hall} · ` : ""}
+                      <DomainEnum namespace="users.roles" value={notification.request_context.role} />
+                      {" · "}
+                      {t("notifications.help_count_24h", { n: String(notification.request_context.count_24h) })}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {canManageUsers && (
+                        <Link
+                          href={`/users?username=${encodeURIComponent(notification.request_context.username)}`}
+                          className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        >
+                          {t("notifications.help_open_users")}
+                        </Link>
+                      )}
+                      {!notification.is_read && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          loading={markReadMutation.isPending && markReadMutation.variables === String(notification.id)}
+                          onClick={() => handleMarkRead(notification.id)}
+                        >
+                          {t("notifications.help_ignore")}
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* 「请管理员改派」(第三类 F 组 2.7):通知挂着案子,直接去那件案子改派。 */}
+                {notification.notification_type === "JUDGMENT_REASSIGN_REQUESTED" && notification.related_id && (
+                  <Link
+                    href={`/judgment/${notification.related_id}`}
+                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-2 mr-2")}
+                  >
+                    {t("notifications.open_case")}
+                  </Link>
+                )}
+
                 {/* Actions */}
-                {!notification.is_read && (
+                {!notification.is_read && !notification.request_context && (
                   <Button
                     type="button"
                     variant="ghost"

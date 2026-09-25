@@ -20,7 +20,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.disposition.destination import DestinationRefusedError, destination_options
+from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
@@ -49,6 +49,8 @@ from apps.judgment.serializers import (
     JudgmentPrecedentSerializer,
     JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
+    JudgmentRateLimitedSerializer,
+    JudgmentReassignRequestResultSerializer,
     JudgmentReassignSerializer,
     JudgmentSerializer,
     QueueGroup,
@@ -217,6 +219,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'reassign': ['judgment.assign'],
         # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
         'assignable_officers': ['judgment.assign'],
+        # 「请管理员改派」:名单空了时请 ADMIN 来改派。能办这件案子的人就能为它求助。
+        'request_reassign': ['judgment.execute'],
         # 批量:与单件同一码名。`operation=reassign` 在动作体里再要 `judgment.assign` ——
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
@@ -689,9 +693,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 status=status.HTTP_400_BAD_REQUEST,
             )
         options = []
+        not_applicable = []
         default_realm_id = None
         if judgment.kind == JudgmentKind.ORIGINAL:
             options = list(destination_options(judgment, verdict))
+            not_applicable = list(inapplicable_destinations(judgment, verdict))
             default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
             if default is not None and any(r.pk == default.pk for r in options):
                 default_realm_id = default.pk
@@ -701,6 +707,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             "default_term_years": None,
             "options": JudgmentDestinationOptionSerializer(
                 options, many=True, context=self.get_serializer_context()).data,
+            "not_applicable": JudgmentDestinationOptionSerializer(
+                not_applicable, many=True, context=self.get_serializer_context()).data,
         })
 
     @extend_schema(
@@ -869,8 +877,52 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             return Response([])
         # 调用者自己的租户范围再收一道:非 ADMIN 只可能看见自己租户的人。
         users = scope_to_tenant(User.objects.all(), request)
-        officers = claims.assignable_officers(users, tenant_ids.pop())
+        tenant_id = tenant_ids.pop()
+        officers = claims.assignable_officers(users, tenant_id)
+        # 「在手」:每人手上认领着、还没结案的件数,与队列同一个 PENDING。一条聚合,不逐人查。
+        in_hand = dict(
+            Judgment.objects.filter(PENDING, tenant_id=tenant_id, claimed_by__in=officers)
+            .order_by()
+            .values_list("claimed_by")
+            .annotate(n=Count("pk"))
+        )
+        for officer in officers:
+            officer.in_hand = in_hand.get(officer.pk, 0)
         return Response(AssignableOfficerSerializer(officers, many=True).data)
+
+    @extend_schema(
+        request=None,
+        responses={200: JudgmentReassignRequestResultSerializer, 429: JudgmentRateLimitedSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="request-reassign")
+    def request_reassign(self, request, pk=None):
+        """「请管理员改派」:改派名单空了(本殿没有别人能接),请案子所在租户的 ADMIN 来改派。
+
+        `judgment.execute` 与 `get_object()` 的租户范围:能办这件案子的人才能为它求助。
+        同一人对同一件案子 10 分钟一次,多了 429 `rate_limited` 带 `retry_after`。
+        通知走 `claims.request_reassign`(既有的官员通知路径)。
+        """
+        import math
+        import time
+
+        from django.core.cache import cache
+
+        judgment = self.get_object()
+        key = f"judgment_reassign_request:{judgment.pk}:{request.user.pk}"
+        until = time.time() + claims.REASSIGN_REQUEST_WINDOW_SECONDS
+        # `add` is atomic: two clicks at once cannot both pass. The value is when the
+        # window ends, because the cache API cannot read a key's remaining TTL.
+        if not cache.add(key, until, timeout=claims.REASSIGN_REQUEST_WINDOW_SECONDS):
+            held = cache.get(key)
+            retry_after = max(1, math.ceil(held - time.time())) if held else claims.REASSIGN_REQUEST_WINDOW_SECONDS
+            return Response(
+                {"error": "Already asked for this case; try again later.", "code": "rate_limited",
+                 "retry_after": retry_after},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(retry_after)},
+            )
+        notified = claims.request_reassign(judgment, request.user)
+        return Response({"notified": len(notified)})
 
     @staticmethod
     def _assignee(user_id):
@@ -1147,11 +1199,13 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
 
     @extend_schema(
         request=JudgmentDraftWriteSerializer,
-        responses={200: JudgmentDraftSerializer, 409: JudgmentDraftConflictSerializer},
+        responses={200: JudgmentDraftSerializer, 400: OpenApiTypes.OBJECT, 409: JudgmentDraftConflictSerializer},
     )
     @action(detail=True, methods=["patch"], url_path="draft")
     def save_draft(self, request, pk=None):
-        """Autosave the verdict text (`notes`) and the chosen verdict.
+        """Autosave the verdict text (`notes`), the chosen verdict, and the
+        「戊 · 发落」 choice (`draft_destination_realm_id` / `draft_term_years` /
+        `draft_eternal`; cleared when the case is concluded).
 
         `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
         "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
@@ -1165,6 +1219,16 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
         version = data.pop("version")
+        realm_id = data.get("draft_destination_realm_id")
+        # 草稿的界域也只能是结案时会收的那一类:本案租户、本文明、未软删。别的租户的界域与
+        # 不存在的同一个回答(与 `resolve_placement` 的 realm_not_found 一样,不透露它存在)。
+        if realm_id is not None and not Realm.objects.filter(
+            pk=realm_id, tenant_id=judgment.tenant_id, civilization=judgment.soul.civilization,
+        ).exists():
+            return Response(
+                {"draft_destination_realm_id": ["No such realm in this judgment's tenant."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         set_current_user(request.user)
         set_current_request(request)
         try:

@@ -44,6 +44,8 @@ class NotificationType(models.TextChoices):
     PASSWORD_HELP_REQUESTED = "PASSWORD_HELP_REQUESTED", "Password Help Requested"
     # 殿司收件箱「标给同僚」→ 被标给的那位官员(apps/chat/inbox.py::assign)。
     SOUL_INBOX_ASSIGNED = "SOUL_INBOX_ASSIGNED", "Soul Inbox Assigned"
+    # 改派名单空时「请管理员改派」→ 案子所在租户的 ADMIN(apps/judgment/claims.py::request_reassign)。
+    JUDGMENT_REASSIGN_REQUESTED = "JUDGMENT_REASSIGN_REQUESTED", "Judgment Reassign Requested"
 
 
 class UserNotification(AuditUserFields, models.Model):

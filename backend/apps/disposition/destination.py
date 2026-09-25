@@ -57,21 +57,28 @@ def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.ST
     return frozenset(route(s) for s in _SEVERITY_SWEEP) - {""}
 
 
-def destination_options(judgment, verdict):
-    """这件案子、这个候选裁决下可选的目的地:本案租户、本文明、裁决路由得到的门。
-
-    `occupancy` = 此刻在那里的灵魂数(行程上未离开的一站)。
-    """
-    soul = judgment.soul
-    codes = allowed_realm_codes(soul.civilization, verdict, judgment.judgment_method)
+def _tenant_realms(judgment):
+    """本案租户、本文明的全部界域,带 `occupancy`(此刻在那里的灵魂数:行程上未离开的一站)。"""
     return (
         Realm.all_objects.filter(
-            tenant_id=judgment.tenant_id, civilization=soul.civilization,
-            is_deleted=False, realm_code__in=codes,
+            tenant_id=judgment.tenant_id, civilization=judgment.soul.civilization, is_deleted=False,
         )
         .annotate(occupancy=Count("path_entries", filter=Q(path_entries__left_at__isnull=True)))
         .order_by("order", "tier", "realm_code")
     )
+
+
+def destination_options(judgment, verdict):
+    """这件案子、这个候选裁决下可选的目的地:本案租户、本文明、裁决路由得到的门。"""
+    codes = allowed_realm_codes(judgment.soul.civilization, verdict, judgment.judgment_method)
+    return _tenant_realms(judgment).filter(realm_code__in=codes)
+
+
+def inapplicable_destinations(judgment, verdict):
+    """同一租户、同一文明里这个裁决去不了的界域 —— 选单照样列出、禁用并写明「不适用」
+    (第三类 F 组 2.5),与 `destination_options` 合起来正是本案租户、本文明的全部界域。"""
+    codes = allowed_realm_codes(judgment.soul.civilization, verdict, judgment.judgment_method)
+    return _tenant_realms(judgment).exclude(realm_code__in=codes)
 
 
 def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eternal=None):
