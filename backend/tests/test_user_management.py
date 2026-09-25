@@ -572,11 +572,16 @@ class TestPasswordReset:
         }, format="json")
         assert response.status_code == 400
 
-    def test_set_new_password_success(self, api_client, admin_user):
-        """Full flow: request code then set new password successfully."""
-        admin_user.email = "admin4@example.com"
-        admin_user.save(update_fields=["email"])
+    def test_set_new_password_success(self, api_client, django_user_model, cn_tenant):
+        """Full flow: request code then set new password successfully.
+
+        A SOUL account: email self-reset is for souls only; an officer's
+        address is refused (test_password_self_reset_is_for_souls_only.py).
+        """
         test_email = "admin4@example.com"
+        soul = django_user_model.objects.create_user(
+            username="reset_soul", email=test_email, password="OldPass!123", role="SOUL", tenant=cn_tenant,
+        )
 
         # Step 1: Request reset code
         resp1 = api_client.post("/api/v1/auth/reset-password/", {
@@ -602,8 +607,8 @@ class TestPasswordReset:
         assert "detail" in resp2.data
 
         # Verify new password works
-        admin_user.refresh_from_db()
-        assert admin_user.check_password("NewSecurePass123!")
+        soul.refresh_from_db()
+        assert soul.check_password("NewSecurePass123!")
 
     def test_set_new_password_short(self, api_client, admin_user):
         """POST /api/v1/auth/set-new-password/ with short password returns 400."""
