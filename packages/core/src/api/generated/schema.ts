@@ -6144,6 +6144,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 批量条「导出」:所选灵魂的 CSV,一行一个。
+         *
+         *     范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
+         *     所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+         */
+        get: operations["v1_souls_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/": {
         parameters: {
             query?: never;
@@ -23441,6 +23463,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulBatchRecycleError"];
+                };
+            };
+        };
+    };
+    v1_souls_export_retrieve: {
+        parameters: {
+            query: {
+                /** @description 逗号分隔的灵魂 id(UUID),至多 100 个 */
+                ids: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

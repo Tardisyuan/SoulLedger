@@ -340,7 +340,11 @@
       "refused_reason": {
         "not_found": "Nen Gem, Er Nen Em Taui Pen.",
         "not_deletable": "Wedja Khetem Seth: Nen Nehem Er Per Wehem; Khetem Wa."
-      }
+      },
+      "transfer": "Hab-Ba…",
+      "transfer_one_only": "Hab-Ba: Ba Wa Pu. Setep Seth {{n}}.",
+      "export": "Bek Seth",
+      "export_failed": "Nen Wehem Medew"
     }
   },
   "common": {

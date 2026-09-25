@@ -1,15 +1,21 @@
 """
 REST views for Soul app.
 """
+import csv
+import uuid
+
 from django.db import transaction
+from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
+from apps.core.csv_safe import csv_safe
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -27,6 +33,7 @@ from apps.souls.filters import SoulFilter
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.souls.serializers import (
+    SOUL_BATCH_RECYCLE_MAX,
     SoulBatchRecycleErrorSerializer,
     SoulBatchRecycleResultSerializer,
     SoulBatchRecycleSerializer,
@@ -68,6 +75,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'archive': ['soul.delete'],
         # The batch form of destroy — the same codename, not a new one.
         'batch_recycle': ['soul.delete'],
+        # 批量条的「导出」:读了什么就导出什么,与列表同一个码名。
+        'export': ['soul.read'],
         'correct_settlement': ['soul.correct_settlement'],
     }
     # `reincarnations` because life_index counts them, and the date checks on
@@ -263,6 +272,53 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         return Response(
             SoulBatchRecycleResultSerializer({"recycled": len(results), "results": results}).data
         )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "ids", OpenApiTypes.STR, required=True,
+                description="逗号分隔的灵魂 id(UUID),至多 100 个",
+            ),
+        ],
+        responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None, filter_backends=[])
+    def export(self, request):
+        """批量条「导出」:所选灵魂的 CSV,一行一个。
+
+        范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
+        所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+        """
+        raw = [part.strip() for part in request.query_params.get("ids", "").split(",") if part.strip()]
+        try:
+            ids = list(dict.fromkeys(uuid.UUID(part) for part in raw))
+        except ValueError:
+            ids = None
+        # 与 batch-recycle 同一上限:批量条一次至多勾选一页。
+        if not ids or len(ids) > SOUL_BATCH_RECYCLE_MAX:
+            raise ValidationError({"ids": [f"1-{SOUL_BATCH_RECYCLE_MAX} comma-separated soul UUIDs."]})
+        from apps.ledger.views import _format_death_date
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=souls_export.csv"
+        writer = csv.writer(response)
+        writer.writerow([
+            "Soul ID", "Name", "Civilization", "State", "Merit Score", "Demerit Score",
+            "Karmic Balance", "Death Date", "Created At",
+        ])
+        for soul in self.get_queryset().filter(pk__in=ids, is_deleted=False).order_by("name", "pk"):
+            writer.writerow([
+                str(soul.id),
+                csv_safe(soul.name),
+                csv_safe(soul.civilization),
+                csv_safe(soul.current_state),
+                soul.merit_score,
+                soul.demerit_score,
+                soul.karmic_balance,
+                csv_safe(_format_death_date(soul)),
+                soul.create_time.isoformat(),
+            ])
+        return response
 
     @staticmethod
     def _batch_not_found(ids):
