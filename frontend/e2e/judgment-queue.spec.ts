@@ -55,14 +55,20 @@ test.describe("Critical path: the judgment triage queue", () => {
     // The cursor answers from a live worklist: whatever is not skipped.
     // (RecordedCall.query is a flat map, so a repeated `skip` keeps only the
     // last value — enough here, since the console never holds more than one.)
+    // A concluded case leaves the pending worklist, as it does on the server.
+    // The console used to hold a verdict for an 8s undo window and skip the
+    // case locally meanwhile, so this mock never had to know; now the verdict
+    // is sent at once and the next cursor read must not see that case again.
+    const concluded = new Set<string>();
     api.on("GET", "/judgment/next/", (call) => {
       const skipped = call.query.skip ?? "";
-      const queue = [FIRST, SECOND].filter((j) => !skipped.includes(j.id));
+      const queue = [FIRST, SECOND].filter((j) => !skipped.includes(j.id) && !concluded.has(j.id));
       return { body: cursor(queue[0] ?? null, queue.length) };
     });
-    api.on("POST", "/judgment/:id/conclude/", (call) => ({
-      body: { ...FIRST, verdict: call.body?.verdict, is_final: true },
-    }));
+    api.on("POST", "/judgment/:id/conclude/", (call) => {
+      concluded.add(FIRST.id);
+      return { body: { ...FIRST, verdict: call.body?.verdict, is_final: true } };
+    });
 
     // ── Enter the queue from the judgment list ──
     await page.goto("/judgment");
