@@ -35,7 +35,8 @@ import {
   NewApplicationScreen,
   type AppStackParams,
 } from "./screens/applications";
-import { ChangePasswordScreen, LoginScreen } from "./screens/auth";
+import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/auth";
+import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen } from "./screens/life";
@@ -44,7 +45,7 @@ import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, Sou
 import { ConversationScreen } from "./screens/conversation";
 import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
 
-type RootParams = AppStackParams & { Login: undefined; ChangePassword: undefined };
+type RootParams = AppStackParams & { Login: LoginParams; ForgotPassword: undefined; ChangePassword: undefined };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tabs = createBottomTabNavigator();
 
@@ -110,6 +111,11 @@ const TAB_TITLES: Record<string, string> = {
   Letters: "soul_app.chat.title",
   Circle: "soul_app.circle.tab",
 };
+
+/** Success goes back to sign-in carrying a notice — never into a session. */
+function ForgotPassword({ navigation }: NativeStackScreenProps<RootParams, "ForgotPassword">) {
+  return <ForgotPasswordScreen onDone={() => navigation.popTo("Login", { passwordReset: true })} />;
+}
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
   return <ApplicationDetailScreen id={route.params.id} landed={route.params.landed} />;
@@ -239,7 +245,18 @@ export function RootNavigator() {
     default: {
       let screens;
       if (state.status === "signedOut") {
-        screens = <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />;
+        screens = (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPassword}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.forgot_password.title")} onBack={navigation.goBack} />,
+              })}
+            />
+          </>
+        );
       } else if (state.status === "mustChangePassword") {
         screens = (
           <Stack.Screen

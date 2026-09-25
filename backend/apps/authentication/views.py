@@ -924,13 +924,6 @@ def set_new_password(request):
     return Response({"detail": "密码重置成功"})
 
 
-#: Help requests accepted for one username per window, counted before any
-#: lookup (see `password_help_request`). Paired with `PasswordHelpThrottle`
-#: (5 per hour per IP): this bounds how often one account's administrators can
-#: be paged, the throttle bounds how many usernames one client can try.
-MAX_PASSWORD_HELP_PER_USERNAME = 3
-PASSWORD_HELP_WINDOW_SECONDS = 3600
-
 #: The one body `password_help_request` ever answers 200 with. A module
 #: constant so the tests compare against the thing itself.
 PASSWORD_HELP_ACCEPTED = {"detail": "请求已受理"}
@@ -982,19 +975,17 @@ def password_help_request(request):
     """
     POST /api/v1/auth/password-help/
     「忘记密码」 on a console whose accounts an administrator opens: the
-    administrators of the account's tenant get an in-app notification and an
-    audit row is written. No code, no link, no mail — the administrator resets
-    the password through user management as they would anyway.
+    administrators and realm leads (殿主) of the account's tenant get an in-app
+    notification and an audit row is written. No code, no link, no mail — the
+    recipient resets the password through user management as they would anyway.
 
     NO USER ENUMERATION, BY CONSTRUCTION. This view never reads the user
-    table. Both limits are counted before anything else and refuse
-    identically; then the username is handed to
+    table. The per-IP limit is counted before anything else and refuses
+    every username identically; then the username is handed to
     `tasks.notify_password_help`, which does the lookup in the worker, and
     the same body goes back. Known and unknown usernames take the same path
     through this function, statement for statement.
     """
-    from django.core.cache import cache
-
     from apps.core.client_ip import get_client_ip
 
     from .tasks import notify_password_help
@@ -1010,13 +1001,13 @@ def password_help_request(request):
     serializer.is_valid(raise_exception=True)
     username = serializer.validated_data["username"]
 
-    # Normalised so a case variant is not a fresh bucket. The task's lookup
-    # stays exact, as login's is.
-    rate_key = f"pwd_help_rate:{username.lower()}"
-    attempts = cache.get(rate_key, 0)
-    if attempts >= MAX_PASSWORD_HELP_PER_USERNAME:
-        return too_frequent
-    cache.set(rate_key, attempts + 1, timeout=PASSWORD_HELP_WINDOW_SECONDS)
+    # NO PER-USERNAME LIMIT (removed 2026-09-25, product owner's decision).
+    # There was one — 3 per hour per username, counted here — and it was a
+    # denial of service aimed at somebody else: anyone could send three
+    # requests naming a colleague and that colleague's own 「忘记密码」 then
+    # answered 429 for an hour. The per-IP throttle above bounds how many
+    # usernames one client can try, which is what an enumerator needs; a
+    # username counter bounded only the account's real owner.
 
     args = (username, get_client_ip(request), request.META.get("HTTP_USER_AGENT", "")[:500])
     try:

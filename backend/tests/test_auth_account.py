@@ -18,7 +18,7 @@ from rest_framework_simplejwt.utils import datetime_from_epoch
 from apps.audit.models import AuditLog
 from apps.authentication import tasks
 from apps.authentication.tokens import REMEMBER_CLAIM, RefreshToken
-from apps.authentication.views import MAX_PASSWORD_HELP_PER_USERNAME, PASSWORD_HELP_ACCEPTED
+from apps.authentication.views import PASSWORD_HELP_ACCEPTED
 from apps.notifications.models import NotificationType, UserNotification
 from apps.tenants.models import Tenant
 
@@ -259,18 +259,27 @@ class TestPasswordHelpNeverSaysWhetherAnAccountExists:
         assert [call.args[0] for call in delay.call_args_list] == ["cn_judge", "nobody_here"]
         assert [len(call.args) for call in delay.call_args_list] == [3, 3]
 
-    def test_per_username_limit_refuses_known_and_unknown_alike(self, api_client, cast, eager):
-        for username in ("cn_judge", "nobody_here"):
-            answers = [_ask(api_client, username, ip=f"10.2.{i}.{len(username)}") for i in range(MAX_PASSWORD_HELP_PER_USERNAME + 1)]
-            assert [r.status_code for r in answers] == [200] * MAX_PASSWORD_HELP_PER_USERNAME + [429]
-        known = _ask(api_client, "cn_judge", ip="10.3.0.1")
-        unknown = _ask(api_client, "nobody_here", ip="10.3.0.2")
-        assert (known.status_code, known.content) == (unknown.status_code, unknown.content)
+    def test_there_is_no_per_username_limit(self, api_client, cast, eager):
+        """One username from many clients: every request is accepted and every
+        one reaches the worker. The old 3-per-hour username counter let anyone
+        lock a colleague out of their own help request."""
+        answers = [_ask(api_client, "cn_judge", ip=f"10.2.0.{i}") for i in range(12)]
+        assert [r.status_code for r in answers] == [200] * 12
+        assert {r.content for r in answers} == {_ask(api_client, "nobody_here", ip="10.2.1.1").content}
+        assert eager.call_count == 13
+        # Case variants are the same account to the worker (the lookup is exact,
+        # so only the exact spelling notifies), and none of them is refused.
+        assert [_ask(api_client, n, ip=f"10.2.2.{i}").status_code for i, n in enumerate(["CN_JUDGE", "Cn_Judge"])] == [200, 200]
 
-    def test_the_username_limit_is_case_insensitive(self, api_client, cast, eager):
-        for i, name in enumerate(["cn_judge", "CN_JUDGE", "Cn_Judge"]):
-            assert _ask(api_client, name, ip=f"10.4.0.{i}").status_code == 200
-        assert _ask(api_client, "cN_jUdGe", ip="10.4.0.9").status_code == 429
+    def test_per_ip_limit_refuses_known_and_unknown_alike(self, api_client, cast, eager):
+        for i in range(5):
+            assert _ask(api_client, f"user_{i}", ip="10.3.0.1").status_code == 200
+        known = _ask(api_client, "cn_judge", ip="10.3.0.1")
+        unknown = _ask(api_client, "nobody_here", ip="10.3.0.1")
+        assert known.status_code == 429
+        assert (known.status_code, known.content) == (unknown.status_code, unknown.content)
+        # Refused before the worker: the sixth request named nobody to anyone.
+        assert [call.args[0] for call in eager.call_args_list] == [f"user_{i}" for i in range(5)]
 
     def test_per_ip_throttle(self, api_client, cast, eager):
         codes = [_ask(api_client, f"user_{i}", ip="10.5.0.1").status_code for i in range(6)]
@@ -281,7 +290,7 @@ class TestPasswordHelpNeverSaysWhetherAnAccountExists:
     def test_a_down_broker_still_delivers(self, api_client, cast):
         with patch.object(tasks.notify_password_help, "delay", side_effect=ConnectionError("broker down")):
             assert _ask(api_client, "cn_judge").data == PASSWORD_HELP_ACCEPTED
-        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2"}
+        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2", "cn_mod"}
 
     def test_blank_username_is_a_400_without_counting(self, api_client, cast, eager):
         assert _ask(api_client, "  ").status_code == 400
@@ -289,11 +298,36 @@ class TestPasswordHelpNeverSaysWhetherAnAccountExists:
 
 @pytest.mark.django_db
 class TestPasswordHelpReachesTheRightAdministrators:
-    def test_the_active_admins_of_the_users_own_tenant_and_nobody_else(self, api_client, cast, eager):
+    def test_the_active_admins_and_moderators_of_the_users_own_tenant_and_nobody_else(
+        self, api_client, django_user_model, cast, eager
+    ):
+        _user(django_user_model, "cn_mod_off", role="MODERATOR", tenant=cast["judge"].tenant, is_active=False)
+        _user(django_user_model, "eu_mod", role="MODERATOR", tenant=cast["eu_admin"].tenant)
         _ask(api_client, "cn_judge")
-        # Not the EU admin (tenant isolation), not the global admin (the tenant
-        # has its own), not the inactive admin, not the MODERATOR.
-        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2"}
+        # The tenant's admins AND its realm lead (殿主). Not the EU admin or the
+        # EU realm lead (tenant isolation), not the global admin (the tenant has
+        # its own), not the inactive admin or the inactive realm lead.
+        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2", "cn_mod"}
+
+    def test_the_moderator_gets_the_same_notification_as_the_admins(self, api_client, cast, eager):
+        _ask(api_client, "cn_judge")
+        mod = UserNotification.objects.get(user=cast["cn_moderator"])
+        admin = UserNotification.objects.get(user=cast["cn_admin"])
+        fields = ("title", "message", "notification_type", "related_resource", "related_id", "params")
+        assert [getattr(mod, f) for f in fields] == [getattr(admin, f) for f in fields]
+
+    def test_a_tenant_with_only_a_moderator_notifies_the_moderator_not_the_global_admins(
+        self, api_client, django_user_model, cast
+    ):
+        hades = _tenant("GR_HADES")
+        _user(django_user_model, "gr_mod", role="MODERATOR", tenant=hades)
+        asker = _user(django_user_model, "gr_judge", tenant=hades)
+        tasks.notify_password_help.run("gr_judge")
+        assert _recipients(asker) == {"gr_mod"}
+
+    def test_a_moderator_asking_is_not_their_own_recipient(self, api_client, cast):
+        tasks.notify_password_help.run("cn_mod")
+        assert _recipients(cast["cn_moderator"]) == {"cn_admin", "cn_admin_2"}
 
     def test_the_notification_names_the_account_and_renders_per_locale(self, api_client, cast, eager):
         _ask(api_client, "cn_judge")
@@ -312,7 +346,9 @@ class TestPasswordHelpReachesTheRightAdministrators:
         assert row.tenant.code == "CN_DIYU"
         assert row.user is None
         assert row.ip_address == "10.9.9.9"
-        assert sorted(row.changes["notified_admin_ids"]) == sorted([cast["cn_admin"].pk, cast["cn_admin_2"].pk])
+        assert sorted(row.changes["notified_admin_ids"]) == sorted(
+            [cast["cn_admin"].pk, cast["cn_admin_2"].pk, cast["cn_moderator"].pk]
+        )
 
     @pytest.mark.parametrize("username", ["nobody_here", "cn_gone", "soul_x"])
     def test_unknown_inactive_and_soul_accounts_notify_nobody_and_audit_nothing(self, api_client, cast, eager, username):
@@ -332,7 +368,7 @@ class TestPasswordHelpReachesTheRightAdministrators:
 
     def test_an_admin_asking_is_not_their_own_recipient(self, api_client, cast):
         tasks.notify_password_help.run("cn_admin")
-        assert _recipients(cast["cn_admin"]) == {"cn_admin_2"}
+        assert _recipients(cast["cn_admin"]) == {"cn_admin_2", "cn_mod"}
 
     def test_a_global_admin_asking_reaches_the_other_global_admins(self, django_user_model, cast):
         _user(django_user_model, "root_2", role="ADMIN", tenant=None)
