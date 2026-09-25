@@ -27,13 +27,14 @@ export interface Realm {
   level?: number | null;
   sublevel?: number | null;
   region?: "INFERNO" | "PURGATORIO" | "PARADISO" | null;
-  // 杜阿特「十二时之河」。种子里 hour / gate 在每一行都是 null —— 那是出处,不是遗漏
-  // (见 backend/apps/actors/mythology/realms.py REALM_TOPOLOGY)。
+  // 杜阿特。hour / gate 在种子的每一行都是 null —— 六站出自《亡灵书》,不是《阿姆杜阿特》,
+  // 没有站→时的对照(见 backend/apps/actors/mythology/realms.py REALM_TOPOLOGY)。
+  // 杜阿特的「称心二岔」用的是上面的 `order` 与下面的 `fork`(PASS / FAIL)。
   hour?: number | null;
   gate?: number | null;
   is_judgment_hall?: boolean | null;
-  // 冥府「三岔」:出审判处的哪一条路。
-  fork?: "LEFT" | "RIGHT" | null;
+  // 出审判处的哪一条路:冥府「三岔」LEFT / RIGHT(柏拉图的左右),杜阿特「称心二岔」PASS / FAIL。
+  fork?: "LEFT" | "RIGHT" | "PASS" | "FAIL" | null;
 }
 
 /** One row of `GET /realms/occupancy/` — 在押. A realm absent from the list holds 0. */

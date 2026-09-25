@@ -27,7 +27,7 @@ Splitting this file is a rewrite of its commentary, not a move of its data. If
 it is done, do it as its own change with the cross-references rewritten one by
 one — not as a line-count exercise.
 """
-from apps.realms.models import CommediaRegion, GreekFork, RealmKind, RealmType
+from apps.realms.models import CommediaRegion, RealmFork, RealmKind, RealmType
 
 # --------------------------------------------------------------------------
 # Realms
@@ -707,10 +707,19 @@ REALM_PARENTS = {
 # TWO SERIES, NOT ONE RUN OF TWENTY-EIGHT. The seven ꜥrrwt and the twenty-one
 # sbḫt are different words for different gates in different chapters, and the
 # only thing that would make them one numbered sequence is somebody needing a
-# tidy list. They are two rows, and they carry the same `tier` — the chapter
-# titles put both at the entrance to Osiris's domain in the field of reeds, and
-# no witness obtained here gives an order *between* the two texts. Equal tier is
-# that statement; 3 and 4 would have been an invented sequence.
+# tidy list. They are two rows, never one numbered run.
+#
+# WHERE THEY SIT ON THE ROUTE IS A DRAWING DECISION, NOT A SOURCE CLAIM. Since
+# 2026-09-26 (Design's B-group canvas, confirmed by the product owner; realms/
+# 0022) the Duat is drawn as 「称心二岔」: DUAT_ENTRY -> the seven ꜥrrwt -> the
+# Hall (the weighing, BD 125), then the pass road -> the twenty-one sbḫt ->
+# Aaru, or the fail road -> the second death. The chapter titles obtained here
+# place both series at the domain of Osiris in the field of reeds and give no
+# order between them, nor relative to BD 125. This table used to read those
+# titles as "both after the weighing" (equal tier 3, the Hall at 2); that was an
+# inference from the same titles, and so is the placement now. Neither has a
+# witness — the tiers below (entry 1, ꜥrrwt 2, Hall 3, sbḫt 4) record the
+# canvas's order, and a source that orders the series would overrule both.
 #
 # WHY THERE ARE TWO ROWS AND NOT TWENTY-EIGHT — the part most likely to be
 # "fixed" by someone reading this as incomplete. **Not one gate of either series
@@ -744,10 +753,8 @@ EGYPTIAN_REALMS = [
      "that passage then meets are seeded separately as EG_SEVEN_ARRWT and "
      "EG_TWENTYONE_SEBKHET, which carry their chapters and their edition.",
      "SPELL", False, None),
-    ("EG_HALL_TWO_TRUTHS", "真理殿堂", "两真之殿", "Hall of Two Truths", "Weret Maaty", RealmType.PURGATORY, 2,
-     "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_SEVEN_ARRWT", "七道通路", "七道通路", "The Seven Approaches to the House of Osiris",
-     "Arrwt 7", RealmType.PURGATORY, 3,
+     "Arrwt 7", RealmType.PURGATORY, 2,
      "Book of the Dead 144 and 147, two variants of one text: 'knowing the names of the "
      "keepers of the seven approaches' — the ꜥrrwt-gates of the house of Osiris in the "
      "field of reeds. Seven gates, three keepers apiece (iry-ꜥꜣ doorkeeper, sꜣw watcher, "
@@ -759,8 +766,10 @@ EGYPTIAN_REALMS = [
      "individual keeper is seeded, because no transcription of their names has been "
      "obtained and the order of the series has no second witness.",
      "SPELL", False, None),
+    ("EG_HALL_TWO_TRUTHS", "真理殿堂", "两真之殿", "Hall of Two Truths", "Weret Maaty", RealmType.PURGATORY, 3,
+     "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_TWENTYONE_SEBKHET", "二十一道门户", "二十一道门户",
-     "The Twenty-One Portals of the Field of Reeds", "Sebkhet 21", RealmType.PURGATORY, 3,
+     "The Twenty-One Portals of the Field of Reeds", "Sebkhet 21", RealmType.PURGATORY, 4,
      "Book of the Dead 145 and 146, two variants of one text: 'start of the gateways of the "
      "Field of Reeds of the domain of Osiris' — the sbḫt-portals, twenty-one of them, one "
      "demon to each. A different series from the seven ꜥrrwt, in a different pair of "
@@ -791,14 +800,12 @@ EGYPTIAN_REALMS = [
     #
     # The attested gates now exist: EG_SEVEN_ARRWT and EG_TWENTYONE_SEBKHET,
     # above. One thing they are not is a drop-in for this row's slot. Amtyat was
-    # a "border realm before the final judgment" and the chapter titles put both
-    # gate corpora at the *entrance to the house of Osiris in the field of
-    # reeds*, i.e. after the weighing and not before it, which is why they carry
-    # tier 3 and the Hall keeps tier 2. §3.4 of the verification set floated the
-    # seven ꜥrrwt as a pre-judgment waypoint; that was a suggestion about the
-    # state machine's shape, and the sources are what decided against it.
-    # If a waypoint before the Hall is ever genuinely needed, it needs a source
-    # — inventing one is what produced this row.
+    # a "border realm before the final judgment" invented from a book title;
+    # the seven ꜥrrwt are BD 144/147's own gates. They do now stand before the
+    # Hall on the route (tier 2, the Hall 3), but that is the 称心二岔 canvas's
+    # order (see "WHERE THEY SIT ON THE ROUTE" above EGYPTIAN_REALMS), the same
+    # shape §3.4 of the verification set once floated — not a source that
+    # places them there. If a source ever orders them, it decides.
     #
     # EG_ANNIHILATION IS AN OUTCOME, NOT AN ADDRESS.
     #
@@ -879,15 +886,27 @@ EGYPTIAN_REALMS = [
 # has a region and no level. `sublevel` (the seventh circle's rings, the
 # eighth's bolgie) is set on nothing: no ring or bolgia is seeded as a realm.
 #
-# EGYPTIAN. `is_judgment_hall` is True on the Hall of Two Truths and False on
-# the other Egyptian rows — a real answer for this civilization, where the
-# other three leave it NULL. **`hour` and `gate` are set on nothing, and that
-# is the lore, not an omission.** The twelve hours are the Amduat's and the
-# twelve gates the Book of Gates', both about Ra's night journey and neither
-# about the dead person (see "THE GATES OF THE DUAT ARE THE DEAD PERSON'S" above
-# EGYPTIAN_REALMS). The dead person's gates are BD 144-147, seeded as two sets
-# precisely because no single gate's name or order has been obtained; a gate
-# number on EG_SEVEN_ARRWT would be the position nothing here can support.
+# EGYPTIAN — 「称心二岔」, the weighing-of-the-heart fork (2026-09-26, realms/
+# 0022). One trunk by `order`: DUAT_ENTRY 1 -> SEVEN_ARRWT 2 -> HALL_TWO_TRUTHS
+# 3, the weighing (BD 125). Out of the weighing two roads by `fork`: PASS ->
+# TWENTYONE_SEBKHET 4 -> AARU 5, and FAIL -> ANNIHILATION 4, which is the
+# second death and not a place — the frontend draws it as a dashed terminal.
+# `order` on a road counts on from the trunk, so both roads start at 4.
+# The station order is the canvas's; see "WHERE THEY SIT ON THE ROUTE" above
+# EGYPTIAN_REALMS for what the sources do and do not say about it.
+# PASS / FAIL, not Plato's LEFT / RIGHT: see RealmFork in apps/realms/models.py.
+#
+# This replaced 「十二时之河」, which wanted an Amduat hour on each row. **`hour`
+# and `gate` stay NULL on every row, and that is the lore, not an omission.**
+# The six rows come from the Book of the Dead, not the Amduat; there is no
+# accepted mapping from a BD station to a night hour, and inventing one would
+# be the splice described in "THE GATES OF THE DUAT ARE THE DEAD PERSON'S"
+# above EGYPTIAN_REALMS. A gate number on EG_SEVEN_ARRWT would likewise be a
+# position nothing here can support.
+#
+# `is_judgment_hall` is True on the Hall of Two Truths and False on the other
+# Egyptian rows — a real answer for this civilization, where the other three
+# leave it NULL.
 #
 # GREEK. `fork` places each road out of the meadow. LEFT / RIGHT are Plato's own
 # words and not a drawing convention: Republic X 614c-d has the judges send
@@ -915,6 +934,14 @@ _TERRACES = (
     "EU_PURGATORY_T4_SLOTH", "EU_PURGATORY_T5_AVARICE", "EU_PURGATORY_T6_GLUTTONY",
     "EU_PURGATORY_T7_LUST",
 )
+_DUAT_ROUTE = {
+    "EG_DUAT_ENTRY": {"order": 1},
+    "EG_SEVEN_ARRWT": {"order": 2},
+    "EG_HALL_TWO_TRUTHS": {"order": 3},
+    "EG_TWENTYONE_SEBKHET": {"order": 4, "fork": RealmFork.PASS},
+    "EG_AARU": {"order": 5, "fork": RealmFork.PASS},
+    "EG_ANNIHILATION": {"order": 4, "fork": RealmFork.FAIL},
+}
 
 REALM_TOPOLOGY = {
     **{code: {"order": n, "kind": RealmKind.HALL} for code, n in _COURT_ORDER.items()},
@@ -931,9 +958,9 @@ REALM_TOPOLOGY = {
     "EU_EARTHLY_PARADISE": {"region": CommediaRegion.PURGATORIO, "level": 8},
     "EU_HEAVEN": {"region": CommediaRegion.PARADISO},
     **{
-        row[0]: {"is_judgment_hall": row[0] == "EG_HALL_TWO_TRUTHS"}
+        row[0]: {"is_judgment_hall": row[0] == "EG_HALL_TWO_TRUTHS", **_DUAT_ROUTE[row[0]]}
         for row in EGYPTIAN_REALMS
     },
-    "GR_TARTARUS": {"fork": GreekFork.LEFT},
-    "GR_ISLES_OF_THE_BLESSED": {"fork": GreekFork.RIGHT},
+    "GR_TARTARUS": {"fork": RealmFork.LEFT},
+    "GR_ISLES_OF_THE_BLESSED": {"fork": RealmFork.RIGHT},
 }

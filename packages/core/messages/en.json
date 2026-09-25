@@ -1503,7 +1503,7 @@
       "schematic": "Schematic",
       "shape_line": "Line",
       "shape_funnel": "Funnel",
-      "shape_river": "River of twelve hours",
+      "shape_weighing": "The weighing fork",
       "shape_fork": "Three roads",
       "state_travelled": "travelled",
       "state_current": "now",
@@ -1515,7 +1515,9 @@
       },
       "fork": {
         "LEFT": "Left · Tartarus",
-        "RIGHT": "Right · the Isles of the Blessed"
+        "RIGHT": "Right · the Isles of the Blessed",
+        "PASS": "Pass · the heart is true",
+        "FAIL": "Fail · the second death"
       },
       "off_shape": "{{n}} realms have no place on this shape — see the table",
       "no_stops": "No stops recorded yet",

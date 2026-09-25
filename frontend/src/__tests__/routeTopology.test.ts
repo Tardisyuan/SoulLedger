@@ -1,7 +1,7 @@
 /**
  * src/lib/routeTopology.ts —— 四种形状、「示意」退化,以及规则 16(只有有记录的站
  * 画成已行)。夹具的拓扑列照 backend/apps/actors/mythology/realms.py
- * REALM_TOPOLOGY 取值:杜阿特的 hour 在每一行都是 null。
+ * REALM_TOPOLOGY 取值:杜阿特是「称心二岔」(order + fork PASS / FAIL),hour 每一行都是 null。
  */
 import type { Realm, SoulPathEntry } from "@soulledger/core/api";
 import { buildTopology, segmentWalked, stationStates } from "@/src/lib/routeTopology";
@@ -43,11 +43,18 @@ const EUROPE = [
   realm("EUROPEAN", "EU_HEAVEN", { region: "PARADISO" }),
   realm("EUROPEAN", "EU_LIMBO_UNPLACED"),
 ];
+// Deliberately not in route order: the layout must sort by `order`, not trust the list.
 const EGYPT = [
-  realm("EGYPTIAN", "EG_DUAT_ENTRY", { is_judgment_hall: false }),
-  realm("EGYPTIAN", "EG_HALL_TWO_TRUTHS", { is_judgment_hall: true }),
-  realm("EGYPTIAN", "EG_AARU", { is_judgment_hall: false }),
+  realm("EGYPTIAN", "EG_AARU", { is_judgment_hall: false, order: 5, fork: "PASS" }),
+  realm("EGYPTIAN", "EG_HALL_TWO_TRUTHS", { is_judgment_hall: true, order: 3 }),
+  realm("EGYPTIAN", "EG_ANNIHILATION", { is_judgment_hall: false, order: 4, fork: "FAIL" }),
+  realm("EGYPTIAN", "EG_SEVEN_ARRWT", { is_judgment_hall: false, order: 2 }),
+  realm("EGYPTIAN", "EG_TWENTYONE_SEBKHET", { is_judgment_hall: false, order: 4, fork: "PASS" }),
+  realm("EGYPTIAN", "EG_DUAT_ENTRY", { is_judgment_hall: false, order: 1 }),
 ];
+/** The Duat with shape fields stripped — what a database without realms/0022 serves. */
+const bare = (rows: Realm[], fields: readonly ("order" | "fork")[]) =>
+  rows.map((r) => ({ ...r, ...Object.fromEntries(fields.map((f) => [f, null])) }));
 const GREECE = [
   realm("GREEK", "GR_ACHERON"),
   realm("GREEK", "GR_TARTARUS", { fork: "LEFT" }),
@@ -108,11 +115,32 @@ describe("the four shapes", () => {
     expect(topo.offShape.map((r) => r.realm_code)).toEqual(["EU_LIMBO_UNPLACED"]);
   });
 
-  it("河: hours in order when the rows carry them", () => {
-    const withHours = EGYPT.map((r, i) => ({ ...r, hour: 3 - i }));
-    const topo = buildTopology("EGYPTIAN", withHours);
-    if (topo.kind !== "river") throw new Error(topo.kind);
-    expect(topo.stations.map((s) => s.code)).toEqual(["EG_AARU", "EG_HALL_TWO_TRUTHS", "EG_DUAT_ENTRY"]);
+  it("称心二岔: the trunk by order ends at the weighing; PASS then FAIL out of it; FAIL is the dashed terminal", () => {
+    const topo = buildTopology("EGYPTIAN", ALL);
+    if (topo.kind !== "weighing") throw new Error(topo.kind);
+    expect(topo.schematic).toBe(false);
+    expect(topo.trunk.map((s) => s.code)).toEqual(["EG_DUAT_ENTRY", "EG_SEVEN_ARRWT", "EG_HALL_TWO_TRUTHS"]);
+    expect(topo.trunk[topo.trunk.length - 1].realm?.is_judgment_hall).toBe(true);
+    expect(topo.roads.map((r) => [r.fork, r.terminal, r.stations.map((s) => s.code)])).toEqual([
+      ["PASS", false, ["EG_TWENTYONE_SEBKHET", "EG_AARU"]],
+      ["FAIL", true, ["EG_ANNIHILATION"]],
+    ]);
+    // 二十一道门户只在「过」那条路上;第二次死亡不在主干上。
+    expect(topo.trunk.map((s) => s.code)).not.toContain("EG_TWENTYONE_SEBKHET");
+    expect(topo.trunk.map((s) => s.code)).not.toContain("EG_ANNIHILATION");
+    expect(topo.offShape).toEqual([]);
+  });
+
+  it("称心二岔 on a route: states still come only from the path", () => {
+    const topo = buildTopology("EGYPTIAN", ALL, [
+      stop("EG_DUAT_ENTRY", 1),
+      stop("EG_HALL_TWO_TRUTHS", 2),
+      stop("EG_ANNIHILATION", 3, true),
+    ]);
+    if (topo.kind !== "weighing") throw new Error(topo.kind);
+    expect(topo.trunk.map((s) => s.state)).toEqual(["travelled", "pending", "travelled"]);
+    expect(topo.roads.map((r) => r.stations.map((s) => s.state))).toEqual([["pending", "pending"], ["current"]]);
+    expect(topo.branches).toEqual([]);
   });
 
   it("三岔: the unforked rows are the trunk, the forked ones the roads, LEFT before RIGHT", () => {
@@ -127,15 +155,20 @@ describe("the four shapes", () => {
 });
 
 describe("「示意」— shape fields missing fall back to the line and say so", () => {
-  it("draws the seeded Duat (hour null on every row) as a schematic line of all its realms", () => {
-    const topo = buildTopology("EGYPTIAN", ALL);
+  it.each([
+    ["fork", ["fork"]],
+    ["order", ["order"]],
+    ["order and fork", ["order", "fork"]],
+  ] as const)("draws the Duat without %s as a schematic line of all its realms", (_label, fields) => {
+    const topo = buildTopology("EGYPTIAN", bare(EGYPT, fields));
     expect(topo.kind).toBe("line");
     expect(topo.schematic).toBe(true);
     if (topo.kind === "line") expect(topo.stations.map((s) => s.code)).toEqual(EGYPT.map((r) => r.realm_code));
   });
 
   it("on a route, the schematic line is the path itself — recorded stops only", () => {
-    const topo = buildTopology("EGYPTIAN", ALL, [stop("EG_DUAT_ENTRY", 1), stop("EG_HALL_TWO_TRUTHS", 2, true)]);
+    const realms = bare(EGYPT, ["order", "fork"]);
+    const topo = buildTopology("EGYPTIAN", realms, [stop("EG_DUAT_ENTRY", 1), stop("EG_HALL_TWO_TRUTHS", 2, true)]);
     if (topo.kind !== "line") throw new Error(topo.kind);
     expect(topo.schematic).toBe(true);
     expect(topo.stations.map((s) => [s.code, s.state])).toEqual([
