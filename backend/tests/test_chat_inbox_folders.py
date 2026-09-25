@@ -7,6 +7,8 @@
 * **未读 / 归档 / 草稿**是每位官员自己的,A 的状态 B 看不见;
 * 文件夹是一个划分:待回复与已回复不相交,归档与其余都不相交,计数与列表同一个数。
 """
+from datetime import timedelta
+
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
@@ -123,6 +125,60 @@ def test_reconcile_inbox_command_backfills_existing_rows(cn_tenant, matrix):  # 
 
 
 # ── 每位官员自己的状态 ─────────────────────────────────────────────────────
+
+
+def _archived_by_two(cn_tenant, soul):
+    """甲写信;a、b 读过、回了、归档;c 没归档。返回 (cid, [a, b], c)。"""
+    cid = _write(soul)
+    a, b, c = (officer_client(_officer(cn_tenant, n)) for n in ("a", "b", "c"))
+    assert a.post(f"{INBOX}{cid}/reply/", {"body": "已收到"}, format="json").status_code == 201
+    for api in (a, b):
+        api.post(f"{INBOX}{cid}/read/")
+        assert api.post(f"{INBOX}{cid}/archive/").status_code == 200
+        assert cid in _ids(api, folder="archived")
+    return cid, [a, b], c
+
+
+def _back_in_awaiting_reply_for(apis, cid):
+    for api in apis:
+        row = _row(api, cid)
+        assert (row["archived"], row["unread"], row["last_from"]) == (False, True, "soul")
+        assert cid in _ids(api, folder="awaiting_reply") and cid not in _ids(api, folder="archived")
+    assert not InboxOfficerState.objects.filter(conversation_id=cid, archived_at__isnull=False).exists()
+
+
+def test_a_new_soul_letter_through_the_backend_unarchives_for_every_officer(cn_tenant, matrix):  # noqa: F811
+    """变异:`send_inbox_message` 里去掉 `unarchive_for_letter` → 仍在归档里,红。"""
+    _, soul = ready_soul(cn_tenant, name="甲")
+    cid, archivers, other = _archived_by_two(cn_tenant, soul)
+    soul.post(f"/api/v1/me/chat/conversations/{cid}/messages/", {"body": "还有一事"}, format="json")
+    _back_in_awaiting_reply_for([*archivers, other], cid)
+
+
+def test_a_new_soul_letter_seen_only_through_the_hook_unarchives_too(cn_tenant, matrix):  # noqa: F811
+    """直接写进 Matrix 的那一封只有回调看得见。变异:`reconcile_inbox` 里去掉 → 红。"""
+    account, soul = ready_soul(cn_tenant, name="甲")
+    cid, archivers, other = _archived_by_two(cn_tenant, soul)
+    deliver_hooks()                         # 归档之前那两封的回调:不拿回
+    assert all(cid in _ids(api, folder="archived") for api in archivers)
+    matrix.says(Conversation.objects.get(pk=cid).room_id, mxid(account), "我直接写的")
+    deliver_hooks()
+    _back_in_awaiting_reply_for([*archivers, other], cid)
+
+
+def test_a_late_hook_for_a_letter_older_than_the_archive_keeps_it_archived(cn_tenant, matrix):  # noqa: F811
+    """回调晚到:信是归档之前写的,官员归档时它已经在了。变异:去掉 `archived_at__lt` → 红。"""
+    _, soul = ready_soul(cn_tenant, name="甲")
+    cid = _write(soul)                      # 回调还没到
+    api = officer_client(_officer(cn_tenant, "a"))
+    api.post(f"{INBOX}{cid}/archive/")
+    # 归档确实在那封信之后(替身的 Matrix 时刻比 `now` 多几毫秒,这里把先后钉死)。
+    InboxOfficerState.objects.filter(conversation_id=cid).update(
+        archived_at=timezone.now() + timedelta(seconds=5))
+    Conversation.objects.filter(pk=cid).update(last_soul_message_at=None)
+    deliver_hooks()
+    assert Conversation.objects.get(pk=cid).last_soul_message_at is not None, "回调确实推进了时刻"
+    assert cid in _ids(api, folder="archived")
 
 
 def test_read_archive_and_draft_are_per_officer(cn_tenant, matrix):  # noqa: F811

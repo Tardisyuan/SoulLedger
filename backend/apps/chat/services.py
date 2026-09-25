@@ -41,6 +41,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.chat import inbox
 from apps.chat.grant import KEY as GRANT_KEY
 from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
@@ -579,6 +580,7 @@ def send_inbox_message(account, conversation, body, *, request=None):
     conversation.last_message_at = conversation.last_soul_message_at = now
     conversation.last_from = SOUL
     conversation.save(update_fields=["last_message_at", "last_soul_message_at", "last_from"])
+    inbox.unarchive_for_letter(conversation, now)
     audit("EXECUTE", conversation, f"致殿司:{conversation.tenant.display_name}",
           actor=account.user, request=request)
     return event_id
@@ -674,6 +676,7 @@ def reconcile_inbox(conversation, timeline, service_user):
         soul_at = datetime.fromtimestamp(soul_ts / 1000, tz=UTC)
         if conversation.last_soul_message_at is None or soul_at > conversation.last_soul_message_at:
             fields["last_soul_message_at"] = soul_at
+            inbox.unarchive_for_letter(conversation, soul_at)
     if fields:
         for name, value in fields.items():
             setattr(conversation, name, value)
