@@ -1118,7 +1118,7 @@
       "reassign_hint": "Active officers in this tenant only; the server checks case permission again",
       "pick_officer": "— Choose an officer —",
       "officer_required": "Choose an officer",
-      "officers_unavailable": "Could not read the officer list (needs user-management permission)",
+      "officers_unavailable": "Could not read the officer list (needs reassign permission)",
       "reassign_confirm": "Reassign",
       "done_claim": "Claimed {{n}}",
       "done_reassign": "Reassigned {{n}}",

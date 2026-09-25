@@ -370,6 +370,7 @@ export function JudgmentClaimQueue() {
       />
       <ReassignDialog
         isOpen={dialog === "reassign"}
+        ids={chosen.slice(0, BATCH_LIMIT)}
         count={Math.min(chosen.length, BATCH_LIMIT)}
         pending={batch.isPending}
         onCancel={() => setDialog(null)}

@@ -96,6 +96,8 @@ export type EvidenceRulingResult = Schemas["EvidenceRulingResult"];
 export type JudgmentDraft = Schemas["JudgmentDraft"];
 /** 409 body of `saveDraft`: `draft_conflict` carries what beat you in `current`. */
 export type JudgmentDraftConflict = Schemas["JudgmentDraftConflict"];
+/** One row of `GET /judgment/assignable-officers/`: id, display_name (may be blank — fall back to username), username, role. */
+export type AssignableOfficer = Schemas["AssignableOfficer"];
 
 export interface JudgmentDetail extends Judgment {
   evidence_admissions: EvidenceAdmission[];
@@ -507,6 +509,16 @@ export const judgmentApi = {
   release: (id: string) => api.post<Judgment>(`/judgment/${id}/release/`, {}),
   /** Needs `judgment.assign` (ADMIN, MODERATOR). `to` is a User pk in the case's tenant. */
   reassign: (id: string, to: number) => api.post<Judgment>(`/judgment/${id}/reassign/`, { to }),
+  /**
+   * Who these cases may be reassigned to — the same rule `reassign` enforces. Needs
+   * `judgment.assign`, not `user.manage`: this is the reassign picker's list.
+   * Repeated `judgment=` params (a batch), not axios's `judgment[]=`.
+   */
+  assignableOfficers: (ids: readonly string[]) => {
+    const search = new URLSearchParams();
+    for (const id of ids) search.append("judgment", id);
+    return api.get<AssignableOfficer[]>(`/judgment/assignable-officers/?${search.toString()}`);
+  },
   defer: (id: string, reason: string) => api.post<Judgment>(`/judgment/${id}/defer/`, { reason }),
   undefer: (id: string) => api.post<Judgment>(`/judgment/${id}/undefer/`, {}),
   batch: (payload: JudgmentBatchPayload) => api.post<JudgmentBatchResult>("/judgment/batch/", payload),

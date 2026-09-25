@@ -85,6 +85,20 @@ export function useJudgmentQueueCounts(params?: JudgmentQueueCountsParams) {
   });
 }
 
+/**
+ * The reassign picker's list (`GET /judgment/assignable-officers/`): officers these
+ * cases may be reassigned to, by the same rule `reassign` checks. Needs `judgment.assign`
+ * — which is what a MODERATOR has and `/users/` (`user.manage`) is not.
+ */
+export function useAssignableOfficers(ids: readonly string[], enabled = true) {
+  return useQuery({
+    queryKey: judgmentKeys.assignableOfficers(ids),
+    queryFn: async () => (await judgmentApi.assignableOfficers(ids)).data,
+    enabled: enabled && ids.length > 0,
+    staleTime: 60_000,
+  });
+}
+
 // ── Mutations ────────────────────────────────────────────────────────
 
 export function useCreateJudgment() {
