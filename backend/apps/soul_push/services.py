@@ -165,6 +165,8 @@ KIND_CATEGORY = {
     "sentence_amended": "judgment",
     "sentence_pardoned": "rebirth",
     "chat_message": "chat",
+    # 没有「朋友圈」偏好类别:警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送)。
+    "social_warned": None,
 }
 
 
@@ -203,12 +205,29 @@ def record_chat_message(account, conversation, event_id, sender_name):
                    params=lambda locale: {"name": sender_name(locale)})
 
 
+#: 朋友圈举报以 WARN 处理(apps/social/moderation.py::resolve_report)。**不经事件总线**:
+#: 总线上的 `SOCIAL_WARNED` 会发给租户 webhook,只带 id;理由只在这条推送里。
+SOCIAL_WARNED_EVENT = "SOCIAL_WARNED"
+
+
+def record_social_warning(user_id, report_id, reason):
+    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的、没有设备的:不记。"""
+    from apps.soul_accounts.models import SoulAccount
+
+    account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
+    if account is None:
+        return []
+    return _record(account, SOCIAL_WARNED_EVENT, None, "social_warned", f"warn:{report_id}"[:120],
+                   {"screen": "Life"}, params=lambda locale: {"reason": reason})
+
+
 def _record(account, event_type, category, kind, dedupe_key, data, params=None):
     preference = PushPreference.objects.filter(account=account).first()
-    if preference is not None and not getattr(preference, category):
+    if preference is not None and category and not getattr(preference, category):
         return []
     locale = preference.locale if preference else messages.DEFAULT_LOCALE
     title, body = messages.render(locale, kind, **(params(locale) if params else {}))
+    title, body = title[:120], body[:300]  # 列宽(PushDelivery);警告理由最长 500
     data = {**data, "kind": kind}
     created_ids = []
     for device in PushDevice.objects.filter(account=account, is_active=True):

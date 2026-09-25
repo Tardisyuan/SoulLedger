@@ -3043,6 +3043,10 @@
     "chat_message": {
       "title": "新书信",
       "body": "{{name}} 给你写了一封信,打开灵魂簿查看。"
+    },
+    "social_warned": {
+      "title": "帖子收到警告",
+      "body": "你的帖子收到警告：{{reason}}"
     }
   },
   "official_notify": {

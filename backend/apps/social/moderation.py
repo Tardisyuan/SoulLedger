@@ -498,8 +498,9 @@ def lift_mute(mute, *, actor, request=None):
 def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None):
     """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。
 
-    WARN:内容不动、举报记为 DISMISSED,理由必填 —— 理由就是警告本身,随 `SOCIAL_WARNED`
-    发给 `target_user`(帖子 / 评论的作者,或被举报的用户)。
+    WARN:内容不动、举报记为 DISMISSED,理由必填 —— 理由就是警告本身。`SOCIAL_WARNED` 只带 id
+    (租户 webhook 收得到事件,理由不该出租户);理由经灵魂推送告诉 `target_user`
+    (帖子 / 评论的作者,或被举报的用户),提交后才入队。
     """
     if resolution == ReportResolution.WARN and not note.strip():
         raise SocialError("警告作者须写理由。", "reason_required", 400)
@@ -522,11 +523,15 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)
             mute_user(row.target_user, row.tenant, mute_days, actor=actor, request=request, reason=note)
         elif resolution == ReportResolution.WARN:
-            # 理由进 payload 是有意的:没有理由的警告对作者没有意义。其余只放 id。
             publish_event("SOCIAL_WARNED", row.tenant, [row.target_user_id], {
                 "report_id": str(row.pk), "target_type": row.target_type,
-                "target_id": str(row.post_id or row.comment_id or row.target_user_id), "reason": note[:500],
+                "target_id": str(row.post_id or row.comment_id or row.target_user_id),
             })
+            from apps.soul_push import services as push
+
+            ids = push.record_social_warning(row.target_user_id, row.pk, note)
+            if ids:
+                transaction.on_commit(lambda: push.enqueue(ids))
         dismissed = resolution in (ReportResolution.DISMISS, ReportResolution.WARN)
         Report.objects.filter(pk=row.pk, status=ReportStatus.OPEN).update(
             status=ReportStatus.DISMISSED if dismissed else ReportStatus.RESOLVED,

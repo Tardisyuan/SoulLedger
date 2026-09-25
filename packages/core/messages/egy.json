@@ -3043,6 +3043,10 @@
     "chat_message": {
       "title": "Shemes Renpi",
       "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
+    },
+    "social_warned": {
+      "title": "Hab Er Medu",
+      "body": "Hab Er Medu Ek: {{reason}}"
     }
   },
   "official_notify": {
