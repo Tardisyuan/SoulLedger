@@ -273,6 +273,100 @@ def test_a_new_word_must_name_its_category_and_old_ones_stay_uncategorised(cn_te
     assert rows["旧词"] == ""
 
 
+# ── 改词 ─────────────────────────────────────────────────────────────────
+
+
+def test_editing_a_word_changes_only_what_is_given_and_audits_the_diff(cn_tenant, cn_moderator):
+    row = word(cn_tenant, "旧词", SensitiveWordAction.REVIEW, category="PRIVACY")
+    mod.record_hits([row.pk])
+    client = officer_client(cn_moderator)
+
+    res = client.patch(f"{MODERATION}/sensitive-words/{row.pk}/", {"category": "ABUSE", "action": "HIDE"}, format="json")
+    assert res.status_code == 200, res.content
+    assert (res.json()["word"], res.json()["category"], res.json()["action"], res.json()["hits_30d"]) == (
+        "旧词", "ABUSE", "HIDE", 1
+    )
+    logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(row.pk), action="UPDATE")
+    assert logged.changes == {"category": ["PRIVACY", "ABUSE"], "action": ["REVIEW", "HIDE"]}
+    assert logged.user_id == cn_moderator.pk
+
+    # 词本身:与新建同一套规范化;旧词的命中不再算在新词头上。
+    res = client.patch(f"{MODERATION}/sensitive-words/{row.pk}/", {"category": "ABUSE", "word": "  新词X "}, format="json")
+    assert res.status_code == 200, res.content
+    assert (res.json()["word"], res.json()["action"], res.json()["hits_30d"]) == ("新词x", "HIDE", 0)
+    assert not SensitiveWordDailyHit.objects.filter(word=row).exists()
+
+
+def test_editing_a_word_keeps_creates_rules(cn_tenant, cn_moderator):
+    row = word(cn_tenant, "某词", category="PRIVACY")
+    word(cn_tenant, "已有")
+    client = officer_client(cn_moderator)
+    url = f"{MODERATION}/sensitive-words/{row.pk}/"
+
+    for body in ({"action": "HIDE"}, {"category": "", "action": "HIDE"}, {"category": "隐私"}):
+        res = client.patch(url, body, format="json")
+        assert res.status_code == 400 and "category" in res.json(), (body, res.content)
+    blank = client.patch(url, {"category": "ABUSE", "word": "   "}, format="json")
+    assert blank.status_code == 400 and blank.json()["code"] == "invalid_word"
+    dup = client.patch(url, {"category": "ABUSE", "word": "已有"}, format="json")
+    assert dup.status_code == 409 and dup.json()["code"] == "duplicate_word"
+    assert client.put(url, {"category": "ABUSE"}, format="json").status_code == 405
+
+    row.refresh_from_db()
+    assert (row.word, row.category, row.action) == ("某词", "PRIVACY", "REVIEW")
+    # 被拒的那几次都没写审计:之后一次成功的修改是这一行唯一的审计记录。
+    assert client.patch(url, {"category": "ABUSE"}, format="json").status_code == 200
+    logged = AuditLog.objects.filter(resource="social_moderation", resource_id=str(row.pk))
+    assert [entry.changes for entry in logged] == [{"category": ["PRIVACY", "ABUSE"]}]
+
+
+def test_editing_a_word_is_tenant_scoped_and_needs_social_moderate(cn_tenant, eu_moderator, judge_user):
+    row = word(cn_tenant, "地府的词", category="PRIVACY")
+    url = f"{MODERATION}/sensitive-words/{row.pk}/"
+    assert officer_client(eu_moderator).patch(url, {"category": "ABUSE"}, format="json").status_code == 404
+    assert officer_client(judge_user).patch(url, {"category": "ABUSE"}, format="json").status_code == 403
+    row.refresh_from_db()
+    assert row.category == "PRIVACY"
+
+
+def test_batch_update_changes_every_action_and_audits_each(cn_tenant, cn_moderator):
+    rows = [word(cn_tenant, f"词{i}", category="PRIVACY") for i in range(3)]
+    keep = word(cn_tenant, "留下")
+
+    res = officer_client(cn_moderator).post(
+        f"{MODERATION}/sensitive-words/batch-update/", {"ids": [str(r.pk) for r in rows], "action": "MASK"}, format="json"
+    )
+
+    assert res.status_code == 200, res.content
+    assert res.json() == {"updated": 3}
+    assert set(SensitiveWord.objects.filter(action="MASK").values_list("pk", flat=True)) == {r.pk for r in rows}
+    keep.refresh_from_db()
+    assert keep.action == SensitiveWordAction.REVIEW
+    for row in rows:
+        logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(row.pk), action="UPDATE")
+        assert logged.changes == {"action": ["REVIEW", "MASK"]}
+
+
+def test_batch_update_is_all_or_nothing_across_civilizations(cn_tenant, eu_tenant, eu_moderator, judge_user):
+    mine = word(eu_tenant, "天堂的词")
+    theirs = word(cn_tenant, "地府的词")
+    url = f"{MODERATION}/sensitive-words/batch-update/"
+
+    res = officer_client(eu_moderator).post(url, {"ids": [str(mine.pk), str(theirs.pk)], "action": "HIDE"}, format="json")
+
+    assert res.status_code == 404, res.content
+    assert res.json()["missing"] == [str(theirs.pk)]
+    assert set(SensitiveWord.objects.values_list("action", flat=True)) == {"REVIEW"}, "改了一半"
+    client = officer_client(eu_moderator)
+    assert client.post(url, {"ids": [], "action": "HIDE"}, format="json").status_code == 400
+    assert client.post(url, {"ids": [str(mine.pk)]}, format="json").status_code == 400
+    assert officer_client(judge_user).post(url, {"ids": [str(theirs.pk)], "action": "HIDE"}, format="json").status_code == 403
+    # 被拒的那几次都没写审计:之后一次成功的批量是唯一的审计记录。
+    assert client.post(url, {"ids": [str(mine.pk)], "action": "HIDE"}, format="json").status_code == 200
+    logged = AuditLog.objects.filter(resource="social_moderation")
+    assert [(entry.resource_id, entry.changes) for entry in logged] == [(str(mine.pk), {"action": ["REVIEW", "HIDE"]})]
+
+
 # ── 批量删词 ─────────────────────────────────────────────────────────────
 
 

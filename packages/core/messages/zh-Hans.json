@@ -3110,7 +3110,11 @@
       "batch_region": "敏感词批量操作",
       "delete_selected": "删除所选",
       "confirm_title": "删除 {{n}} 个敏感词？",
-      "category_placeholder": "— 选择类别 —"
+      "category_placeholder": "— 选择类别 —",
+      "edit_title": "编辑敏感词",
+      "edit_hint": "改了词本身，30 天命中从零开始计。",
+      "change_action": "改动作…",
+      "change_action_title": "改 {{n}} 个敏感词的命中后动作"
     },
     "mutes": {
       "col_soul": "灵魂",

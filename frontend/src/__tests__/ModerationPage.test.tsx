@@ -24,6 +24,8 @@ jest.mock("@soulledger/core/api/social-moderation", () => ({
     addWord: jest.fn(),
     removeWord: jest.fn(),
     removeWords: jest.fn(),
+    updateWord: jest.fn(),
+    updateWords: jest.fn(),
     handled: jest.fn(),
     mutes: jest.fn(),
     liftMute: jest.fn(),
@@ -329,7 +331,8 @@ describe("敏感词 · E-08b", () => {
     const row = (await screen.findByText("还阳")).closest("tr") as HTMLElement;
     expect(within(row).getByText(tZh("social_moderation.word_action.REVIEW"))).toBeInTheDocument();
     expect(within(row).getByText(tZh("social_moderation.word_category.INDUCEMENT"))).toBeInTheDocument();
-    expect(within(row).queryByRole("button")).toBeNull();
+    // The row's one button is the word itself (it opens the editor) — no delete at the row end.
+    expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["还阳"]);
     // No batch bar before anything is selected.
     expect(screen.queryByRole("button", { name: tZh("social_moderation.words.delete_selected") })).toBeNull();
 
@@ -340,6 +343,55 @@ describe("敏感词 · E-08b", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
     await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(["w1"]));
     expect(apiMock.removeWord).not.toHaveBeenCalled();
+  });
+
+  it("clicking a row opens the edit drawer; an uncategorised word cannot be saved until it gets a category", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.updateWord.mockResolvedValue({ data: { ...words[1], category: "ABUSE" } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    fireEvent.click(await screen.findByRole("button", { name: "越狱" }));
+    const drawer = await screen.findByRole("dialog");
+    const form = within(drawer).getByRole("form", { name: tZh("social_moderation.words.edit_title") });
+    const save = within(form).getByRole("button", { name: tZh("common.save") });
+    expect(within(form).getByLabelText(tZh("social_moderation.words.col_action"))).toHaveValue("HIDE");
+    expect(save).toBeDisabled();
+    fireEvent.submit(form);
+    expect(apiMock.updateWord).not.toHaveBeenCalled();
+
+    fireEvent.change(within(form).getByLabelText(tZh("social_moderation.words.col_category")), { target: { value: "ABUSE" } });
+    fireEvent.change(within(form).getByLabelText(tZh("social_moderation.words.col_action")), { target: { value: "MASK" } });
+    fireEvent.change(within(form).getByLabelText(tZh("social_moderation.fields.word")), { target: { value: " 越狱术 " } });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(apiMock.updateWord).toHaveBeenCalledWith("w2", { word: "越狱术", category: "ABUSE", action: "MASK" })
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("改动作… changes the action of every selected word in one batch-update; a refusal is told in words", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.updateWords.mockRejectedValueOnce(http(404, { detail: "x", code: "not_found", missing: ["w2"] }));
+    apiMock.updateWords.mockResolvedValueOnce({ data: { updated: 2 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText("还阳");
+    fireEvent.click(screen.getByRole("checkbox", { name: tZh("souls.batch.select_all") }));
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.change_action") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.change_action_title", { n: "2" }) });
+    expect(apiMock.updateWords).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByLabelText(tZh("social_moderation.words.col_action")), { target: { value: "HIDE" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.errors.not_found"), "error"));
+    expect(apiMock.updateWords).toHaveBeenCalledWith(["w1", "w2"], "HIDE");
+    // Refused: the dialog stays, with the choice, for another try.
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(apiMock.updateWords).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(apiMock.removeWords).not.toHaveBeenCalled();
   });
 });
 

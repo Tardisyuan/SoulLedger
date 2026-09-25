@@ -131,10 +131,32 @@ class SensitiveWordSerializer(serializers.ModelSerializer):
 class SensitiveWordCreateSerializer(SensitiveWordSerializer):
     """Body of `POST sensitive-words/`: a new word must name its category
     (maintainer decision, 2026-09-25). Words added before that stay
-    uncategorised ("" in the list); there is no edit endpoint, so nothing ever
-    asks an existing word for one."""
+    uncategorised ("" in the list) until someone edits them: the edit body
+    (`SensitiveWordUpdateSerializer`) requires a category too."""
 
     category = serializers.ChoiceField(choices=SensitiveWordCategory.choices)
+
+
+class SensitiveWordUpdateSerializer(serializers.Serializer):
+    """Body of `PATCH sensitive-words/{id}/`. `category` is required on every edit
+    (same rule as create); `action` and `word` are optional and keep their value
+    when omitted. `word` gets create's checks: trimmed, lower-cased, not empty,
+    unique within the civilization (409 `duplicate_word`)."""
+
+    word = serializers.CharField(max_length=50, required=False, allow_blank=True, trim_whitespace=False)
+    category = serializers.ChoiceField(choices=SensitiveWordCategory.choices)
+    action = serializers.ChoiceField(choices=SensitiveWordAction.choices, required=False)
+
+
+class SensitiveWordBatchUpdateSerializer(serializers.Serializer):
+    """Body of `POST sensitive-words/batch-update/` — the batch bar's 「改动作…」."""
+
+    ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=200)
+    action = serializers.ChoiceField(choices=SensitiveWordAction.choices)
+
+
+class SensitiveWordBatchUpdateResultSerializer(serializers.Serializer):
+    updated = serializers.IntegerField()
 
 
 class SensitiveWordBatchDeleteSerializer(serializers.Serializer):

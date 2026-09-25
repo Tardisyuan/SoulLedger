@@ -4842,14 +4842,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
          *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
          */
         get: operations["v1_social_moderation_sensitive_words_list"];
         put?: never;
         /**
-         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
          *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
          */
         post: operations["v1_social_moderation_sensitive_words_create"];
         delete?: never;
@@ -4869,13 +4871,19 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
          *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
          */
         delete: operations["v1_social_moderation_sensitive_words_destroy"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
+         *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
+         */
+        patch: operations["v1_social_moderation_sensitive_words_partial_update"];
         trace?: never;
     };
     "/api/v1/social-moderation/sensitive-words/batch-delete/": {
@@ -4892,6 +4900,23 @@ export interface paths {
          *     词表里 → 404,`missing` 列出它们,一条都不删。
          */
         post: operations["v1_social_moderation_sensitive_words_batch_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/sensitive-words/batch-update/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批量改「命中后」动作。码名、租户范围、全有或全无、上限 200 —— 都与 batch-delete 相同。 */
+        post: operations["v1_social_moderation_sensitive_words_batch_update_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10348,6 +10373,17 @@ export interface components {
             timezone?: string;
         };
         /**
+         * @description Body of `PATCH sensitive-words/{id}/`. `category` is required on every edit
+         *     (same rule as create); `action` and `word` are optional and keep their value
+         *     when omitted. `word` gets create's checks: trimmed, lower-cased, not empty,
+         *     unique within the civilization (409 `duplicate_word`).
+         */
+        PatchedSensitiveWordUpdate: {
+            word?: string;
+            category?: components["schemas"]["SocialSensitiveWordCategoryEnum"];
+            action?: components["schemas"]["SocialSensitiveWordActionEnum"];
+        };
+        /**
          * @description Soul detail. Field access is enforced in two layers, deliberately.
          *
          *     The hardcoded VIEWER checks below are the floor. FieldPermissionMixin
@@ -11368,11 +11404,19 @@ export interface components {
         SensitiveWordBatchDeleteResult: {
             deleted: number;
         };
+        /** @description Body of `POST sensitive-words/batch-update/` — the batch bar's 「改动作…」. */
+        SensitiveWordBatchUpdate: {
+            ids: string[];
+            action: components["schemas"]["SocialSensitiveWordActionEnum"];
+        };
+        SensitiveWordBatchUpdateResult: {
+            updated: number;
+        };
         /**
          * @description Body of `POST sensitive-words/`: a new word must name its category
          *     (maintainer decision, 2026-09-25). Words added before that stay
-         *     uncategorised ("" in the list); there is no edit endpoint, so nothing ever
-         *     asks an existing word for one.
+         *     uncategorised ("" in the list) until someone edits them: the edit body
+         *     (`SensitiveWordUpdateSerializer`) requires a category too.
          */
         SensitiveWordCreate: {
             /** Format: uuid */
@@ -21170,6 +21214,58 @@ export interface operations {
             };
         };
     };
+    v1_social_moderation_sensitive_words_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this sensitive word. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSensitiveWordUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSensitiveWordUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedSensitiveWordUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWord"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
     v1_social_moderation_sensitive_words_batch_delete_create: {
         parameters: {
             query?: never;
@@ -21191,6 +21287,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SensitiveWordBatchDeleteResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_batch_update_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SensitiveWordBatchUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordBatchUpdate"];
+                "multipart/form-data": components["schemas"]["SensitiveWordBatchUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWordBatchUpdateResult"];
                 };
             };
             400: {

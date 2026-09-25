@@ -10,6 +10,8 @@ import {
   type ModerationFilters,
   type NewSensitiveWord,
   type ReportResolution,
+  type SensitiveWordAction,
+  type SensitiveWordEdit,
 } from "../api/social-moderation";
 import { socialModerationKeys } from "../query_keys";
 
@@ -95,6 +97,19 @@ export function useAddSensitiveWord() {
 
 export function useRemoveSensitiveWord() {
   return useModerationWrite(async (id: string) => (await socialModerationApi.removeWord(id)).status);
+}
+
+export function useUpdateSensitiveWord() {
+  return useModerationWrite(
+    async ({ id, edit }: { id: string; edit: SensitiveWordEdit }) => (await socialModerationApi.updateWord(id, edit)).data
+  );
+}
+
+export function useUpdateSensitiveWords() {
+  return useModerationWrite(
+    async ({ ids, action }: { ids: string[]; action: SensitiveWordAction }) =>
+      (await socialModerationApi.updateWords(ids, action)).data
+  );
 }
 
 export function useRemoveSensitiveWords() {

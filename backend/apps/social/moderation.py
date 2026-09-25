@@ -231,6 +231,49 @@ def add_sensitive_word(tenant, word, *, actor, request=None, category="", action
     return row
 
 
+def update_sensitive_word(row, *, actor, request=None, **fields):
+    """改一个词的 `category` / `action` / `word`(只改给了的)。`word` 与新建同一套校验:
+    去空白、转小写、不能为空、本文明内不能重复(409)。词本身改了,旧词的命中桶一并清掉 ——
+    它们数的是另一个字符串。审计写 `{字段: [旧, 新]}`,只记真的变了的。"""
+    if "word" in fields:
+        fields["word"] = normalize_word(fields["word"])
+        if not fields["word"]:
+            raise SocialError("敏感词不能为空。", "invalid_word", 400)
+    with transaction.atomic():
+        row = SensitiveWord.objects.select_for_update(of=("self",)).get(pk=row.pk)
+        changes = {k: [getattr(row, k), v] for k, v in fields.items() if getattr(row, k) != v}
+        if not changes:
+            return row
+        for name, (_, value) in changes.items():
+            setattr(row, name, value)
+        try:
+            with transaction.atomic():
+                row.save(update_fields=list(changes))
+        except IntegrityError:
+            raise SocialError("该敏感词已存在。", "duplicate_word", 409) from None
+        if "word" in changes:
+            row.daily_hits.all().delete()
+        audit("UPDATE", row.tenant, row.pk, f"修改敏感词「{row.word}」", actor=actor, request=request, changes=changes)
+    return row
+
+
+def update_sensitive_words(queryset, ids, *, actor, request=None, **fields):
+    """批量改(只改 `action` / `category`,不改词本身)。`queryset` 必须已按租户收窄。
+    全有或全无,规则与 `remove_sensitive_words` 相同:任何一个 id 不在查询集里 → 404 + `missing`。"""
+    ids = list(dict.fromkeys(ids))
+    if not 1 <= len(ids) <= BATCH_DELETE_MAX:
+        raise SocialError(f"一次修改 1–{BATCH_DELETE_MAX} 条。", "invalid_batch", 400)
+    with transaction.atomic():
+        rows = list(queryset.select_for_update(of=("self",)).filter(pk__in=ids))
+        found = {row.pk for row in rows}
+        missing = [str(pk) for pk in ids if pk not in found]
+        if missing:
+            raise SocialError("部分敏感词不存在。", "not_found", 404, missing=missing)
+        for row in rows:
+            update_sensitive_word(row, actor=actor, request=request, **fields)
+    return len(rows)
+
+
 def remove_sensitive_word(row, *, actor, request=None):
     with transaction.atomic():
         audit("DELETE", row.tenant, row.pk, f"删除敏感词「{row.word}」", actor=actor, request=request)
