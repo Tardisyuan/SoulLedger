@@ -10037,13 +10037,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SensitiveWord'
+              $ref: '#/components/schemas/SensitiveWordCreate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SensitiveWord'
+              $ref: '#/components/schemas/SensitiveWordCreate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SensitiveWord'
+              $ref: '#/components/schemas/SensitiveWordCreate'
         required: true
       security:
       - jwtAuth: []
@@ -23506,6 +23506,46 @@ components:
           type: integer
       required:
       - deleted
+    SensitiveWordCreate:
+      type: object
+      description: |-
+        Body of `POST sensitive-words/`: a new word must name its category
+        (maintainer decision, 2026-09-25). Words added before that stay
+        uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+        asks an existing word for one.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        word:
+          type: string
+          maxLength: 50
+        category:
+          $ref: '#/components/schemas/SocialSensitiveWordCategoryEnum'
+        action:
+          allOf:
+          - $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
+          default: REVIEW
+        hits_30d:
+          type: integer
+          readOnly: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - created_by
+      - hits_30d
+      - id
+      - word
     SentenceNode:
       type: object
       properties:

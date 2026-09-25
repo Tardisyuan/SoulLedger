@@ -227,11 +227,24 @@ def test_a_word_is_created_with_category_and_action(cn_tenant, cn_moderator):
     body = res.json()
     assert (body["category"], body["action"], body["hits_30d"]) == ("PRIVACY", "MASK", 0)
     assert body["created_by"]["user_id"] == cn_moderator.pk
-    # 不给就是未分类 + 送审(0007 之前的行为)。
-    plain = client.post(f"{MODERATION}/sensitive-words/", {"word": "另一词"}, format="json").json()
-    assert (plain["category"], plain["action"]) == ("", "REVIEW")
+    # 动作不给就是送审(0007 之前的行为)。
+    plain = client.post(f"{MODERATION}/sensitive-words/", {"word": "另一词", "category": "ABUSE"}, format="json").json()
+    assert (plain["category"], plain["action"]) == ("ABUSE", "REVIEW")
     bad = client.post(f"{MODERATION}/sensitive-words/", {"word": "三词", "category": "隐私"}, format="json")
     assert bad.status_code == 400, "分类存的是枚举成员,中文名在 i18n 包里"
+
+
+def test_a_new_word_must_name_its_category_and_old_ones_stay_uncategorised(cn_tenant, cn_moderator):
+    """2026-09-25 决定:新建必须带类别;之前加的词保持未分类,列表照常返回空串。"""
+    client = officer_client(cn_moderator)
+    for body in ({"word": "无类"}, {"word": "无类", "category": ""}):
+        res = client.post(f"{MODERATION}/sensitive-words/", body, format="json")
+        assert res.status_code == 400 and "category" in res.json(), (body, res.content)
+    assert not SensitiveWord.objects.filter(tenant=cn_tenant, word="无类").exists()
+
+    SensitiveWord.objects.create(tenant=cn_tenant, word="旧词")  # 0007 之前的词:未分类
+    rows = {r["word"]: r["category"] for r in client.get(f"{MODERATION}/sensitive-words/").json()["results"]}
+    assert rows["旧词"] == ""
 
 
 # ── 批量删词 ─────────────────────────────────────────────────────────────

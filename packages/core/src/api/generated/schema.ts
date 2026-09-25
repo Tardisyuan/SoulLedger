@@ -10987,6 +10987,24 @@ export interface components {
         SensitiveWordBatchDeleteResult: {
             deleted: number;
         };
+        /**
+         * @description Body of `POST sensitive-words/`: a new word must name its category
+         *     (maintainer decision, 2026-09-25). Words added before that stay
+         *     uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+         *     asks an existing word for one.
+         */
+        SensitiveWordCreate: {
+            /** Format: uuid */
+            readonly id: string;
+            word: string;
+            category: components["schemas"]["SocialSensitiveWordCategoryEnum"];
+            /** @default REVIEW */
+            action: components["schemas"]["SocialSensitiveWordActionEnum"];
+            readonly hits_30d: number;
+            readonly created_by: components["schemas"]["ModerationAuthor"] | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         SentenceNode: {
             /** Format: uuid */
             readonly id: string;
@@ -20318,9 +20336,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SensitiveWord"];
-                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWord"];
-                "multipart/form-data": components["schemas"]["SensitiveWord"];
+                "application/json": components["schemas"]["SensitiveWordCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordCreate"];
+                "multipart/form-data": components["schemas"]["SensitiveWordCreate"];
             };
         };
         responses: {
