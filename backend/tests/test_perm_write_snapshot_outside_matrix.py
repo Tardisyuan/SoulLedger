@@ -1704,6 +1704,8 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         # perm/0024 (2026-09-18, 殿司收件箱). Same reasoning as the scheduler pair.
         "soul_inbox.read",
         "soul_inbox.reply",
+        # perm/0026 (2026-09-26, 界域容量). Same reasoning as the scheduler pair.
+        "realms.manage",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",

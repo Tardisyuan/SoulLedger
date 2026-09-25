@@ -1536,9 +1536,17 @@
       "eternal_no": "否",
       "full": "已满",
       "capacity_unrecorded": "容量未记录",
-      "read_only": "只读 · 界域接口没有写入路由,本页不提供编辑",
+      "read_only": "只读 · 只有持 realms.manage 的人能改容量;其余各列来自神话语料,不经接口改",
       "empty_civ": "此文明尚未配置界域",
-      "occupancy_failed": "在押人数加载失败"
+      "occupancy_failed": "在押人数加载失败",
+      "edit_scope": "只有容量可改;其余各列来自神话语料,不经接口改。容量降到在押人数以下时谁都不挪,之后发落到这里会被拒。",
+      "edit_capacity": "改容量",
+      "edit_capacity_of": "改 {{name}} 的容量",
+      "capacity_label": "容量",
+      "full_warning": "已满:在押 {{held}}。谁都不挪,之后发落到这里会被拒。",
+      "saved": "{{code}} 容量已保存",
+      "saved_full": "{{code}} 容量已保存 · 已满({{held}} / {{cap}}):谁都不挪,之后发落到这里会被拒。",
+      "save_failed": "容量保存失败"
     },
     "kind": {
       "HALL": "殿",

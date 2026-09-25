@@ -1536,9 +1536,17 @@
       "eternal_no": "Nen",
       "full": "Nen Aq",
       "capacity_unrecorded": "Nen Sesh Hesb Aq",
-      "read_only": "Maa Wa · Ta Nen Khemen Dy",
+      "read_only": "Maa Wa · Hesb Aq Nen Khemen Dy",
       "empty_civ": "Nen Ta Em Taui Pen Djer",
-      "occupancy_failed": "Nen Ini Em Shepet"
+      "occupancy_failed": "Nen Ini Em Shepet",
+      "edit_scope": "Hesb Aq Khemen Wa · Ta Nen Khemen Dy",
+      "edit_capacity": "Khemen",
+      "edit_capacity_of": "Khemen Hesb Aq {{name}}",
+      "capacity_label": "Hesb Aq",
+      "full_warning": "Nen Aq · Em Shepet {{held}}",
+      "saved": "{{code}} · Hesb Aq Sau",
+      "saved_full": "{{code}} · Hesb Aq Sau · Nen Aq {{held}} / {{cap}}",
+      "save_failed": "Nen Sau Hesb Aq"
     },
     "kind": {
       "HALL": "Wesekhet",

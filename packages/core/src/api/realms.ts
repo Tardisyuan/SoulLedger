@@ -50,4 +50,19 @@ export const realmsApi = {
   get: (code: string) => api.get<Realm>(`/realms/${code}/`),
   // Bare array: the action sets `pagination_class=None`.
   occupancy: () => api.get<RealmOccupancy[]>("/realms/occupancy/"),
+  /**
+   * The one write on a realm: `capacity` (non-negative int or null), needs
+   * `realms.manage`. Any other field is a 400 server-side. Lowering it below
+   * `held` is allowed — nobody moves; new placements get 409 `realm_full`.
+   */
+  setCapacity: (id: string, capacity: number | null) =>
+    api.patch<RealmCapacityResult>(`/realms/${id}/`, { capacity }),
 };
+
+/** `PATCH /realms/{id}/` response: the realm, plus what the new capacity means now. */
+export interface RealmCapacityResult extends Realm {
+  /** Souls in the realm now — the count placement compares against. */
+  held: number;
+  /** `held >= capacity`: new placements are refused with `realm_full`. */
+  is_full: boolean;
+}

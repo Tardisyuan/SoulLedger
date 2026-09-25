@@ -1536,9 +1536,17 @@
       "eternal_no": "No",
       "full": "full",
       "capacity_unrecorded": "Capacity not recorded",
-      "read_only": "Read-only · the realm API has no write route, so nothing here is editable",
+      "read_only": "Read-only · only holders of realms.manage can change capacity; every other column comes from the mythology corpus",
       "empty_civ": "No realms are configured for this civilization",
-      "occupancy_failed": "Occupancy failed to load"
+      "occupancy_failed": "Occupancy failed to load",
+      "edit_scope": "Only capacity can be changed; every other column comes from the mythology corpus. Lowering it below the souls held moves nobody — new placements here are refused.",
+      "edit_capacity": "Edit",
+      "edit_capacity_of": "Edit capacity of {{name}}",
+      "capacity_label": "Capacity",
+      "full_warning": "Full: {{held}} held. Nobody is moved; new placements here will be refused.",
+      "saved": "{{code}}: capacity saved",
+      "saved_full": "{{code}}: capacity saved · full ({{held}} / {{cap}}): nobody is moved; new placements here will be refused.",
+      "save_failed": "Could not save the capacity"
     },
     "kind": {
       "HALL": "Court",
