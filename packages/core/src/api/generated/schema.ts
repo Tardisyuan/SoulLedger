@@ -1567,6 +1567,12 @@ export interface paths {
          *     `statute_ids` files the grounds with the verdict, in one transaction —
          *     an unciteable article aborts the whole conclusion rather than leaving a
          *     concluded judgment whose stated basis never landed.
+         *
+         *     `destination_realm_id` / `term_years` / `eternal` (审判台「戊 · 发落」)
+         *     are optional; none given = the automatic routing, unchanged. Refusals
+         *     carry a `code`: realm_not_found, realm_not_allowed, realm_full (409),
+         *     term_conflict, eternal_not_allowed, destination_not_applicable. There is
+         *     no undo window: the conclusion is written when this call returns.
          */
         post: operations["v1_judgment_conclude_create"];
         delete?: never;
@@ -1586,6 +1592,31 @@ export interface paths {
         put?: never;
         /** @description 暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。 */
         post: operations["v1_judgment_defer_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/destinations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 「戊 · 发落」's picker: where this case may be sent under `?candidate_verdict=`.
+         *
+         *     The options are the realms of this judgment's tenant and civilization
+         *     that the automatic routing can reach for that verdict — the same set
+         *     `conclude` accepts as `destination_realm_id` (see
+         *     apps/disposition/destination.py). Not an original judgment (amendment,
+         *     reopen) → no options, since those conclude without a disposition.
+         */
+        get: operations["v1_judgment_destinations_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1793,6 +1824,37 @@ export interface paths {
          *     would drive the client's error boundary instead.
          */
         get: operations["v1_judgment_next_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/previous/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The pending case just before `?at=<id>` in queue order — 「上一件」.
+         *
+         *     Same queue as `next/`: the same tenant/DataScope scoping, FIFO on
+         *     `created_at` (ties by `id`), deferred cases left out unless
+         *     `include_deferred`, `?skip=` honoured. `at` itself is looked up in the
+         *     caller's scope in any state, so 「上一件」 still works from a case that
+         *     has just been concluded. `at` missing, malformed, or not visible to the
+         *     caller has no "before", and answers the empty cursor (`judgment: null`)
+         *     rather than 404 — the same renderable "nothing there" `next/` gives.
+         *
+         *     Not symmetric in one respect, deliberately: `next/?at=X` answers X
+         *     itself (enter the queue on X), `previous/?at=X` answers the case before
+         *     X. Moving forward from X is `next/?skip=X`.
+         */
+        get: operations["v1_judgment_previous_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7454,6 +7516,29 @@ export interface components {
             id?: string;
             missing?: string[];
         };
+        JudgmentConclude: {
+            verdict: components["schemas"]["JudgmentConcludeVerdictEnum"];
+            /** @default  */
+            notes: string;
+            /** @default false */
+            create_workflow: boolean;
+            statute_ids?: string[];
+            plan_changes?: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            destination_realm_id?: string | null;
+            term_years?: number | null;
+            eternal?: boolean | null;
+        };
+        /**
+         * @description * `PASSED` - PASSED
+         *     * `FAILED` - FAILED
+         *     * `PURGATORY` - PURGATORY
+         *     * `RETRY` - RETRY
+         * @enum {string}
+         */
+        JudgmentConcludeVerdictEnum: "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
         /**
          * @description `POST /judgment/{id}/defer/` 的输入。理由必填。
          *
@@ -7462,6 +7547,40 @@ export interface components {
          */
         JudgmentDefer: {
             reason: string;
+        };
+        /** @description One realm the 「戊 · 发落」 picker may offer for a candidate verdict. */
+        JudgmentDestinationOption: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly name: string;
+            readonly realm_code: string;
+            /**
+             * @description Chinese only: 殿 / 门 / 层 / 道
+             *
+             *     * `HALL` - 殿
+             *     * `GATE` - 门
+             *     * `LAYER` - 层
+             *     * `PATH` - 道
+             */
+            readonly kind: (components["schemas"]["RealmKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description How many souls the realm holds at once; null = not recorded */
+            readonly capacity: number | null;
+            readonly occupancy: number;
+            readonly is_eternal: boolean;
+        };
+        /**
+         * @description `GET /judgment/{id}/destinations/?candidate_verdict=` — schema-only envelope.
+         *
+         *     `default_realm_id` is where automatic routing would send the soul (null when
+         *     that realm is not among the options, e.g. an unmapped tenant);
+         *     `default_term_years` is null because an automatic conclusion records no term.
+         */
+        JudgmentDestinations: {
+            verdict: string;
+            /** Format: uuid */
+            default_realm_id: string | null;
+            default_term_years: number | null;
+            options: components["schemas"]["JudgmentDestinationOption"][];
         };
         /**
          * @description `GET /judgment/{id}/` — the list shape plus the evidence rulings and the
@@ -14584,9 +14703,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Judgment"];
-                "application/x-www-form-urlencoded": components["schemas"]["Judgment"];
-                "multipart/form-data": components["schemas"]["Judgment"];
+                "application/json": components["schemas"]["JudgmentConclude"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentConclude"];
+                "multipart/form-data": components["schemas"]["JudgmentConclude"];
             };
         };
         responses: {
@@ -14640,6 +14759,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_destinations_retrieve: {
+        parameters: {
+            query: {
+                /** @description The candidate verdict; only realms it can route to are listed. */
+                candidate_verdict: "FAILED" | "PASSED" | "PURGATORY" | "RETRY";
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentDestinations"];
                 };
             };
         };
@@ -14923,6 +15067,30 @@ export interface operations {
     v1_judgment_next_retrieve: {
         parameters: {
             query?: {
+                /** @description Also hand out deferred (暂缓) cases. Off by default. */
+                include_deferred?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentQueueCursor"];
+                };
+            };
+        };
+    };
+    v1_judgment_previous_retrieve: {
+        parameters: {
+            query?: {
+                /** @description The case the caller is on; the answer is the pending case just before it. */
+                at?: string;
                 /** @description Also hand out deferred (暂缓) cases. Off by default. */
                 include_deferred?: boolean;
             };

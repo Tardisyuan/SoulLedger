@@ -198,10 +198,11 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         return f"Judgment of {self.soul.name}: {v}"
 
     def conclude(self, verdict: str, notes: str = "", create_workflow: bool = False,
-                 statute_ids=None, plan_changes=None) -> bool:
+                 statute_ids=None, plan_changes=None, **placement) -> bool:
         from apps.judgment.services import JudgmentConclusionService
         return JudgmentConclusionService.conclude_judgment(
             self, verdict, notes, create_workflow, statute_ids=statute_ids, plan_changes=plan_changes,
+            **placement,
         )
 
     @property

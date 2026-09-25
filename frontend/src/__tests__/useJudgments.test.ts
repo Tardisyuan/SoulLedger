@@ -10,6 +10,8 @@ import {
   useConcludeJudgment,
   useRuleEvidence,
   useSaveJudgmentDraft,
+  useJudgmentDestinations,
+  useJudgmentPrevious,
 } from "@soulledger/core/hooks/useJudgments";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { judgmentApi } from "@soulledger/core/api";
@@ -33,6 +35,10 @@ jest.mock("@soulledger/core/api", () => ({
     saveDraft: jest.fn().mockResolvedValue({
       data: { notes: "saved", draft_verdict: "FAILED", draft_version: 4, draft_saved_at: "2026-09-24T00:00:00Z" },
     }),
+    destinations: jest.fn().mockResolvedValue({
+      data: { verdict: "FAILED", default_realm_id: null, default_term_years: null, options: [] },
+    }),
+    previous: jest.fn().mockResolvedValue({ data: { judgment: null } }),
   },
 }));
 
@@ -121,6 +127,31 @@ describe("useJudgments behavior", () => {
     const { result } = renderHook(() => useJudgments({ status: "PENDING" }), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(judgmentApi.list).toHaveBeenCalledWith({ status: "PENDING" });
+  });
+});
+
+describe("useJudgmentDestinations / useJudgmentPrevious (「戊 · 发落」, 「上一件」)", () => {
+  it("does not ask for destinations until a verdict is chosen", () => {
+    const { wrapper } = createWrapper();
+    renderHook(() => useJudgmentDestinations("j1", null), { wrapper });
+    expect(judgmentApi.destinations).not.toHaveBeenCalled();
+  });
+
+  it("asks for the destinations of that verdict", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useJudgmentDestinations("j1", "FAILED"), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(judgmentApi.destinations).toHaveBeenCalledWith("j1", "FAILED");
+    expect(result.current.data?.options).toEqual([]);
+  });
+
+  it("walks back from `at` with the skips, and only once there is an `at`", async () => {
+    const { wrapper } = createWrapper();
+    renderHook(() => useJudgmentPrevious(undefined), { wrapper });
+    expect(judgmentApi.previous).not.toHaveBeenCalled();
+    const { result } = renderHook(() => useJudgmentPrevious("c", ["b"]), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(judgmentApi.previous).toHaveBeenCalledWith({ at: "c", skip: ["b"] });
   });
 });
 

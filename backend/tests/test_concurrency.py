@@ -836,6 +836,112 @@ class TestJudgmentClaimConcurrency:
         assert Judgment.all_objects.get(pk=case.pk).claimed_by_id == winner.pk
 
 
+def _one_seat_two_cases(tenant_code="CN_DIYU"):
+    """A CHINESE tenant, a capacity-1 hell court, and two pending cases for it."""
+    from apps.judgment.models import Judgment
+    from apps.realms.models import Realm
+
+    tenant, _ = Tenant.objects.get_or_create(code=tenant_code, defaults={"display_name": tenant_code})
+    realm = Realm.objects.create(
+        realm_code="DY_COURT_05_YANLUO", civilization="CHINESE", name_local="第五殿",
+        realm_type="HELL", capacity=1, tenant=tenant,
+    )
+    cases = []
+    for name in ("seat_a", "seat_b"):
+        soul = Soul.objects.create(name=name, tenant=tenant, current_state=SoulState.JUDGING)
+        cases.append(Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=tenant))
+    return tenant, realm, cases
+
+
+@pytest.mark.django_db(transaction=True)
+class TestConcludeDestinationCapacityHoldsTheRealmLock:
+    """「戊 · 发落」: the capacity check and the seat it grants are one locked step."""
+
+    def test_the_capacity_check_runs_inside_the_conclude_transaction(self, db):
+        """Serial, so it runs on every engine. With `transaction=True` nothing
+        outside the service is atomic, so `in_atomic_block` inside
+        `resolve_placement` answers "is the realm's `select_for_update` held
+        until the path entry is written"."""
+        from unittest.mock import patch
+
+        from django.db import transaction
+
+        from apps.disposition import destination
+
+        tenant, realm, (case, _) = _one_seat_two_cases()
+        client = _admin_client(tenant, "seat_serial")
+        real = destination.resolve_placement
+        seen = []
+
+        def spy(*args, **kwargs):
+            seen.append(transaction.get_connection().in_atomic_block)
+            return real(*args, **kwargs)
+
+        with patch.object(destination, "resolve_placement", spy):
+            response = client.post(
+                f"/api/v1/judgment/{case.id}/conclude/",
+                {"verdict": "FAILED", "destination_realm_id": str(realm.pk)}, format="json",
+            )
+        assert response.status_code == 200, response.data
+        assert seen == [True], f"resolve_placement ran with in_atomic_block={seen}"
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_two_officers_filling_the_last_seat_at_once_exactly_one_wins(self, db):
+        """Two real connections, two cases, one seat left.
+
+        A locks the realm and lingers after the check; B must wait on that lock,
+        then count A's seat and be refused 409 `realm_full`. Without the lock
+        both count zero and both land — a capacity-1 realm holding two.
+        """
+        import time
+        from unittest.mock import patch
+
+        from django.db import connections
+
+        from apps.disposition import destination
+        from apps.realms.models import SoulPathEntry
+
+        tenant, realm, cases = _one_seat_two_cases()
+        by_label = dict(zip(("a", "b"), cases, strict=True))
+        clients = {n: _admin_client(tenant, f"seat_{n}") for n in ("a", "b")}
+        real = destination.resolve_placement
+        a_inside = threading.Event()
+        results, codes = {}, {}
+
+        def lingering(*args, **kwargs):
+            placement = real(*args, **kwargs)
+            if threading.current_thread().name == "a":
+                a_inside.set()
+                time.sleep(1.0)
+            return placement
+
+        def post(label):
+            try:
+                if label == "b":
+                    assert a_inside.wait(timeout=10), "A never passed the capacity check"
+                response = clients[label].post(
+                    f"/api/v1/judgment/{by_label[label].id}/conclude/",
+                    {"verdict": "FAILED", "destination_realm_id": str(realm.pk)}, format="json",
+                )
+                results[label] = response.status_code
+                codes[label] = response.data.get("code")
+            except Exception as exc:  # surfaced in the assertions below
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        with patch.object(destination, "resolve_placement", lingering):
+            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=30)
+
+        assert results == {"a": 200, "b": 409}, results
+        assert codes.get("b") == "realm_full", codes
+        assert SoulPathEntry.all_objects.filter(realm=realm, left_at__isnull=True).count() == 1
+
+
 # ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
@@ -1084,6 +1190,12 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_the_claim_check_runs_inside_the_row_locked_transaction 与
         # tests/test_judgment_claim.py 的 409 测试每个引擎都跑。
         here + "TestJudgmentClaimConcurrency::test_two_officers_claiming_one_case_at_once_exactly_one_wins",
+        # 2026-09-25 审判台「戊 · 发落」:结案选门时锁住那扇门的行再数人头;第二个结案人
+        # 必须等,拿到锁后数到第一个占的位子并得到 409 realm_full。SQLite 没有行锁可等。
+        # 串行版本 test_the_capacity_check_runs_inside_the_conclude_transaction 与
+        # tests/test_conclude_destination.py 的 realm_full 测试每个引擎都跑。
+        here + "TestConcludeDestinationCapacityHoldsTheRealmLock::"
+        "test_two_officers_filling_the_last_seat_at_once_exactly_one_wins",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

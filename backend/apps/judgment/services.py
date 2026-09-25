@@ -157,6 +157,9 @@ class JudgmentConclusionService:
         create_workflow: bool = False,
         statute_ids=None,
         plan_changes=None,
+        destination_realm_id=None,
+        term_years=None,
+        eternal=None,
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -184,6 +187,18 @@ class JudgmentConclusionService:
             # its PASS nodes are copied into the plan below. Raises before
             # anything is written.
             cross = SentencePlanService.check_cross_judgment(judgment)
+
+            # Step -½: the officer's own destination / term (审判台「戊 · 发落」).
+            # Validated — and the chosen realm row locked for its capacity —
+            # before anything is written. None of the three given = the
+            # automatic routing, untouched.
+            placement = {}
+            if destination_realm_id is not None or term_years is not None or eternal is not None:
+                from apps.disposition.destination import resolve_placement
+                placement = resolve_placement(
+                    judgment, verdict, realm_id=destination_realm_id,
+                    term_years=term_years, eternal=eternal,
+                )
 
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:
@@ -223,7 +238,7 @@ class JudgmentConclusionService:
 
             # Step 2: Create disposition (cross-context: judgment → disposition)
             from apps.disposition.services import DispositionService
-            disposition = DispositionService.create_from_judgment(judgment)
+            disposition = DispositionService.create_from_judgment(judgment, **placement)
 
             # Step 2b: the sentence plan this conclusion opens — one home node,
             # carrying the disposition just made (docs/ARCHITECTURE-sentence-plan.md).
