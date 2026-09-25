@@ -300,6 +300,33 @@ def role_template_references(templates=None):
     return refs
 
 
+TEMPLATE_ROLE_MISSING = "template_role_missing"
+
+
+def template_restore_refusal(cascade_id):
+    """A registered recycle-bin restore check (apps/perm/apps.py): refuse to
+    bring back a workflow template whose steps name a role that no longer
+    exists (maintainer decision, 2026-09-25). Deleting a role is refused while
+    a live template names it; a template already in the bin is not live, so
+    the role can go first — and restoring the template then would resurrect a
+    step that nobody can ever be assigned."""
+    from apps.workflow.models import WorkflowTemplate
+
+    templates = list(WorkflowTemplate.all_objects.filter(delete_cascade_id=cascade_id, is_deleted=True))
+    if not templates:
+        return None
+    named = set(role_template_references(templates))
+    missing = sorted(named - set(Role.objects.filter(name__in=named).values_list("name", flat=True)))
+    if not missing:
+        return None
+    return {
+        "error": f"This workflow template names role(s) that no longer exist: {', '.join(missing)}. "
+                 f"Restore or recreate the role(s) first.",
+        "code": TEMPLATE_ROLE_MISSING,
+        "missing_roles": missing,
+    }
+
+
 def _approver_roles(step, template):
     """The roles whose holders could decide a node built from this step today.
 

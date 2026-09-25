@@ -477,7 +477,8 @@
       "dispatch_draft": "移交草稿"
     },
     "col_location": "原位置",
-    "col_deleted_by": "删除人"
+    "col_deleted_by": "删除人",
+    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。"
   },
   "permissions": {
     "title": "权限管理",

@@ -477,7 +477,8 @@
       "dispatch_draft": "Sesh Tepy Hab-Ba"
     },
     "col_location": "T3 Khet",
-    "col_deleted_by": "Wehem Iri"
+    "col_deleted_by": "Wehem Iri",
+    "restore_missing_roles": "Nen Ankh Wehem: Nen Gem Netjer ({{roles}})."
   },
   "permissions": {
     "title": "Iri Was",

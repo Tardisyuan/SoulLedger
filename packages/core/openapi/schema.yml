@@ -7913,9 +7913,10 @@ paths:
         复制为新角色：新 code、同一组授权（仅 ADMIN）
 
         Copies the source's RolePermission rows — permission, `conditions` and
-        `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-        FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-        copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+        `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+        2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+        the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+        short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
       parameters:
       - in: path
         name: id
@@ -8287,7 +8288,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/RecycleBinRestoreRefusal'
           description: ''
         '403':
           content:
@@ -22794,6 +22795,29 @@ components:
         * `civilization` - civilization
         * `organization` - organization
         * `parent` - parent
+    RecycleBinRestoreRefusal:
+      type: object
+      description: |-
+        400 body of restore. `code` / `missing_roles` come with a refusal from a
+        registered restore check (`template_role_missing`: a workflow template in
+        the cascade names roles that no longer exist); the other 400s carry
+        `error` alone.
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/RecycleBinRestoreRefusalCodeEnum'
+        missing_roles:
+          type: array
+          items:
+            type: string
+      required:
+      - error
+    RecycleBinRestoreRefusalCodeEnum:
+      enum:
+      - template_role_missing
+      type: string
+      description: '* `template_role_missing` - template_role_missing'
     RecycleBinRestoreRequest:
       type: object
       description: |-

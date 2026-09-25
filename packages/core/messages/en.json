@@ -477,7 +477,8 @@
       "dispatch_draft": "Dispatch draft"
     },
     "col_location": "Original location",
-    "col_deleted_by": "Deleted by"
+    "col_deleted_by": "Deleted by",
+    "restore_missing_roles": "Cannot restore: this workflow template names roles that no longer exist ({{roles}}). Restore or recreate them first."
   },
   "permissions": {
     "title": "Permission Management",
