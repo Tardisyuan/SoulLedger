@@ -51,6 +51,5 @@ it("maps AppState background/active to suspend/resume", () => {
   listeners.forEach((l) => l("active"));
   expect(suspended).toHaveBeenCalledWith("transient");
   expect(resumed).toHaveBeenCalledTimes(1);
-  expect(mobilePlatform.deliverOnExit({ url: "", headers: {}, body: "" })).toBe(false);
   spy.mockRestore();
 });

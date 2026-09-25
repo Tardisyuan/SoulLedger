@@ -462,7 +462,7 @@ describe("WelcomePage first-run checklist", () => {
       expect(found.length).toBeGreaterThan(0);
       return found;
     });
-    expect(keys).toEqual(["1–4", "S", "U", "N", "Esc", "? / H"]);
+    expect(keys).toEqual(["1–4", "S", "N", "Esc", "? / H"]);
     // The design's ⌘K / Q / ⌘⏎ / ⌘Z have no handler anywhere in the app.
     for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z"]) expect(keys).not.toContain(invented);
   });

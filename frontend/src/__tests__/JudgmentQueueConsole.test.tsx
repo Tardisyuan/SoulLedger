@@ -5,6 +5,10 @@
  * The keyboard map is the interface here, not a convenience layer over it
  * (§4.2 asks for it explicitly), so it is tested as such — including the guard
  * that typing "1" in the notes field must never file a verdict.
+ *
+ * A verdict is POSTed the moment its key is pressed: the eight-second undo
+ * window, the U key and the undo strip were removed on 2026-09-25
+ * (「落判即提交,不可撤回」, as on the desk).
  */
 import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -83,6 +87,14 @@ jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { next: jest.fn(), conclude: jest.fn().mockResolvedValue({ data: {} }) },
 }));
 
+// The hook raises its toasts through the core `notify` port; point it here so
+// the claimed-by-other refusal can be asserted by key and params rather than by
+// whatever the web adapter renders into document.body.
+jest.mock("@soulledger/core/platform", () => ({
+  ...jest.requireActual("@soulledger/core/platform"),
+  notify: (...args: unknown[]) => mockShowToast(...args),
+}));
+
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
@@ -141,15 +153,22 @@ afterEach(() => {
   document.getElementById("toast-container")?.remove();
 });
 
+// A concluded case is no longer pending, so the server stops handing it out.
+const concluded = new Set<string>();
+
 beforeEach(() => {
   jest.clearAllMocks();
+  concluded.clear();
   currentUser = mockUser;
   mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
     const skipped = params?.skip ?? [];
-    const queue = [JUDGMENT, NEXT_JUDGMENT].filter((j) => !skipped.includes(j.id));
+    const queue = [JUDGMENT, NEXT_JUDGMENT].filter((j) => !skipped.includes(j.id) && !concluded.has(j.id));
     return cursor(queue[0] ?? null, queue.length);
   });
-  mockConclude.mockResolvedValue({ data: {} });
+  mockConclude.mockImplementation(async (id: string) => {
+    concluded.add(id);
+    return { data: {} };
+  });
 });
 
 describe("JudgmentQueueConsole", () => {
@@ -174,7 +193,7 @@ describe("JudgmentQueueConsole", () => {
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
   });
 
-  it("renders a verdict on a digit key and advances to the next case", async () => {
+  it("renders a verdict on a digit key: POSTs it at once and advances to the next case", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
 
@@ -182,10 +201,17 @@ describe("JudgmentQueueConsole", () => {
       fireEvent.keyDown(window, { key: "1" });
     });
 
+    // Sent on the keystroke — no timer has run, and none needs to.
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, {
+      verdict: "PASSED",
+      notes: "",
+      create_workflow: false,
+    });
     await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
-    // Held, not sent — see useJudgmentQueue's header note.
-    expect(mockConclude).not.toHaveBeenCalled();
-    expect(screen.getByRole("status")).toHaveTextContent("judgment.queue.pending_verdict");
+    // Absence: nothing on screen offers to take it back.
+    expect(screen.queryByText("judgment.queue.undo")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("自动重复不算第二次按键 —— 长按 `w` 不会把复选框来回翻", async () => {
@@ -208,21 +234,49 @@ describe("JudgmentQueueConsole", () => {
     expect(checkbox.checked).toBe(true);
   });
 
-  it("offers undo while the verdict is held, and undo brings the case back", async () => {
+  it("U is no longer a key: it neither takes a verdict back nor sends another", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
 
     await act(async () => {
       fireEvent.keyDown(window, { key: "2" });
     });
-    await waitFor(() => expect(screen.getByText("judgment.queue.undo")).toBeInTheDocument());
-
+    await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
     await act(async () => {
       fireEvent.keyDown(window, { key: "u" });
     });
 
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("第二位待判者")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it("a case claimed by another officer: says who, sets it aside for the sitting", async () => {
+    mockConclude.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: { error: "claimed", code: "claimed_by_other", claimed_by: 7, claimed_by_name: "崔判官" },
+      },
+    });
+    renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
-    expect(mockConclude).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "1" });
+    });
+
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(
+        { key: "judgment.queue.claimed_by_other", params: { name: "崔判官" } },
+        "error"
+      )
+    );
+    // Not the generic "did not land" sentence.
+    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.commit_error", "error");
+    // Deferred for the sitting, not handed straight back to hit the same 409.
+    await waitFor(() => expect(screen.getByText("judgment.queue.stat_deferred:1")).toBeInTheDocument());
+    expect(screen.getByText("第二位待判者")).toBeInTheDocument();
+    expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument();
   });
 
   it("defers on S without sending anything", async () => {
@@ -247,9 +301,9 @@ describe("JudgmentQueueConsole", () => {
       fireEvent.keyDown(notes, { key: "1" });
     });
 
-    // Still the same case, nothing held: a "1" in a note is a note.
+    // Still the same case, nothing sent: a "1" in a note is a note.
     expect(screen.getByText("第一位待判者")).toBeInTheDocument();
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(mockConclude).not.toHaveBeenCalled();
   });
 
   it("sends the note and the workflow flag along with the verdict", async () => {
@@ -266,18 +320,11 @@ describe("JudgmentQueueConsole", () => {
       fireEvent.keyDown(window, { key: "4" });
     });
 
-    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
-    // Flush by leaving the queue, which is also the "Esc leaves" path.
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "Escape" });
-    });
-
     expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, {
       verdict: "RETRY",
       notes: "证据不足",
       create_workflow: true,
     });
-    expect(mockPush).toHaveBeenCalledWith("/judgment");
   });
 
   it("shows the keyboard map on ?", async () => {
@@ -308,21 +355,15 @@ describe("JudgmentQueueConsole", () => {
 });
 
 /**
- * The decision bar, and the two layout facts it exists to fix.
+ * The decision bar.
  *
  * The verdict controls used to be the last block under a two-column grid of
  * panels, so a long confession or a long ledger pushed them below the fold —
- * on the screen whose entire job is deciding. And the pending-undo strip
- * rendered ABOVE those panels, so **every verdict shifted the whole case
- * down**: an operator reading the next case could not see the undo countdown
- * for the previous one, which is the only moment that countdown exists for.
+ * on the screen whose entire job is deciding.
  *
- * Both are layout, which jsdom does not compute — it has no viewport and no
+ * That is layout, which jsdom does not compute — it has no viewport and no
  * scrolling. So these assert the STRUCTURE that produces the behaviour: the
- * controls live inside a sticky container, and the undo slot is present at a
- * fixed height whether or not a verdict is pending. A screenshot test would
- * assert the outcome; this asserts the mechanism, and says so rather than
- * pretending otherwise.
+ * controls live inside a sticky container.
  */
 describe("the decision bar", () => {
   const stickyBar = (container: HTMLElement) =>
@@ -352,96 +393,22 @@ describe("the decision bar", () => {
     expect(container.querySelector("#queue-notes")).not.toBeNull();
   });
 
-  it("reserves the undo slot before anything is pending", async () => {
-    const { container } = renderConsole();
+  it("the last case of a sitting: the verdict is sent and the console says the queue is clear", async () => {
+    mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
+      const skipped = params?.skip ?? [];
+      const queue = [JUDGMENT].filter((j) => !skipped.includes(j.id) && !concluded.has(j.id));
+      return cursor(queue[0] ?? null, queue.length);
+    });
+    renderConsole();
     await screen.findByText("第一位待判者");
 
-    const bar = stickyBar(container);
-    const slot = bar!.querySelector(".h-10");
-    // Present and empty. Mounting it on the first verdict is what used to push
-    // the case down; a reserved slot cannot.
-    expect(slot).not.toBeNull();
-    expect(slot!.textContent).toBe("");
-    expect(slot!.className).toContain("h-10");
-  });
-
-  it("fills that same slot when a verdict is pending, without adding one", async () => {
-    const { container } = renderConsole();
-    await screen.findByText("第一位待判者");
-
-    fireEvent.keyDown(window, { key: "1" });
-
-    await waitFor(() =>
-      expect(stickyBar(container)!.querySelector(".h-10")!.textContent).not.toBe("")
-    );
-    // Still exactly one slot — the strip moved into the reserved space rather
-    // than inserting a new row.
-    expect(stickyBar(container)!.querySelectorAll(".h-10")).toHaveLength(1);
-    expect(screen.getByRole("status").textContent).toContain("第一位待判者");
-  });
-
-  /**
-   * 本次坐堂的最后一案。
-   *
-   * 撤销条曾经和「有没有下一张卡片」死死绑在一起,于是它恰恰在唯一还能用到它
-   * 的时刻消失。`U` 依然能按 —— 键盘监听是无条件的 —— 但屏幕上没有任何东西
-   * 说它能按。
-   */
-  describe("最后一案:撤销条要活过卡片", () => {
-    beforeEach(() => {
-      // 队列里只有一条。裁完它,下一次 next 就返回 null。
-      mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
-        const skipped = params?.skip ?? [];
-        const queue = [JUDGMENT].filter((j) => !skipped.includes(j.id));
-        return cursor(queue[0] ?? null, queue.length);
-      });
-    });
-
-    it("裁完最后一案,倒计时和撤销按钮仍在屏幕上", async () => {
-      const { container } = renderConsole();
-      await screen.findByText("第一位待判者");
-
+    await act(async () => {
       fireEvent.keyDown(window, { key: "1" });
-
-      // 卡片没了 —— 裁决按钮行跟着走,因为已经没有东西可裁。
-      await waitFor(() =>
-        expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument()
-      );
-      expect(screen.queryByText("judgment.queue.defer")).not.toBeInTheDocument();
-
-      // 但撤销条还在,而且还在那条 sticky 里。
-      expect(stickyBar(container)).not.toBeNull();
-      expect(screen.getByText("judgment.queue.undo")).toBeInTheDocument();
-      expect(screen.getByRole("status").textContent).toContain("第一位待判者");
     });
 
-    it("裁决还扣着时不说「队列已清空」—— 它离没清空只差一次撤销", async () => {
-      renderConsole();
-      await screen.findByText("第一位待判者");
-
-      fireEvent.keyDown(window, { key: "1" });
-      await waitFor(() =>
-        expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument()
-      );
-
-      // 缺席断言。`queue.isExhausted` 的 `pending === null` 那一项正是这条,
-      // 而它在被接上之前是零消费者。
-      expect(screen.queryByText("judgment.queue.exhausted_title")).not.toBeInTheDocument();
-    });
-
-    it("撤销之后案子回来,撤销条让位给裁决按钮", async () => {
-      renderConsole();
-      await screen.findByText("第一位待判者");
-
-      fireEvent.keyDown(window, { key: "1" });
-      await screen.findByText("judgment.queue.undo");
-      fireEvent.keyDown(window, { key: "u" });
-
-      await screen.findByText("第一位待判者");
-      expect(screen.queryByText("judgment.queue.undo")).not.toBeInTheDocument();
-      expect(screen.getByText("judgment.queue.defer")).toBeInTheDocument();
-      expect(mockConclude).not.toHaveBeenCalled();
-    });
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    await screen.findByText("judgment.queue.exhausted_title");
+    expect(screen.queryByText("judgment.queue.defer")).not.toBeInTheDocument();
   });
 
   /**
@@ -483,7 +450,6 @@ describe("the decision bar", () => {
 
       await act(async () => {
         fireEvent.keyDown(window, { key: "1" });
-        fireEvent.keyDown(window, { key: "u" });
         fireEvent.keyDown(window, { key: "w" });
       });
 
@@ -530,7 +496,7 @@ describe("控制台不抢别人已经处理过的按键", () => {
       window.removeEventListener("keydown", upstream, { capture: true });
     }
 
-    // 还在队列里。缺陷版本会 flush 掉扣住的裁决并跳走。
+    // 还在队列里。缺陷版本会跳走。
     expect(screen.getByText("第一位待判者")).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalled();
   });
@@ -563,41 +529,6 @@ describe("控制台不抢别人已经处理过的按键", () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith("/judgment");
-  });
-});
-
-describe("倒计时不抢读屏的话筒", () => {
-  it("秒数是 aria-hidden,而裁决那句不是", async () => {
-    renderConsole();
-    await screen.findByText("第一位待判者");
-
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
-
-    const status = await screen.findByRole("status");
-    const countdown = status.querySelector("[aria-hidden='true']");
-    // 秒数每 250ms 变一次,而它在 role="status" 里面 —— 不 aria-hidden 的话
-    // 这个 live region 一秒重播好几次,盖过它上面那句真正要紧的裁决播报。
-    expect(countdown).not.toBeNull();
-    expect(countdown!.textContent).toContain("judgment.queue.undo_countdown");
-    // 而秒数仍然在屏幕上 —— 这条同时钉住「别把它删了」。
-    expect(status.textContent).toContain("judgment.queue.pending_verdict");
-  });
-
-  it("撤销条外面没有第二个 live region", async () => {
-    const { container } = renderConsole();
-    await screen.findByText("第一位待判者");
-
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
-
-    // `role="status"` 本身就是 live region;外面再套一个 `aria-live` 等于
-    // 两个区域在播报同一个节点。
-    const status = await screen.findByRole("status");
-    expect(status.closest("[aria-live]")).toBeNull();
-    expect(container.querySelectorAll("[aria-live='polite']").length).toBeLessThanOrEqual(1);
   });
 });
 
@@ -649,35 +580,24 @@ describe("审批流复选框不跨案子", () => {
   });
 
   it("那一次裁决本身仍然带着勾选 —— 清的是下一个,不是这一个", async () => {
-    // 这个文件默认用真定时器(全文只有这一处碰过定时器),所以这条自己装假的
-    // 来把八秒的撤销窗口走完。第一版直接写了 `advanceTimersByTime` 而没装,
-    // 那是一句空转 —— 它红了才发现,而不是绿着骗过去。
-    jest.useFakeTimers();
-    try {
-      renderConsole();
-      await screen.findByText("第一位待判者");
+    renderConsole();
+    await screen.findByText("第一位待判者");
 
-      // 两个 act,不是一个。浏览器里两次 keydown 是两个任务,React 会在它们
-      // 之间重渲染,于是 `rule` 的闭包看得到刚勾上的值。塞进同一个 act 里就
-      // 没有那次重渲染,`rule` 拿到的是旧的 false —— 那样测到的是 React 的
-      // 批处理,不是这段代码。
-      await act(async () => {
-        fireEvent.keyDown(window, { key: "w" });
-      });
-      await act(async () => {
-        fireEvent.keyDown(window, { key: "1" });
-      });
-      await act(async () => {
-        jest.advanceTimersByTime(9000);
-      });
+    // 两个 act,不是一个。浏览器里两次 keydown 是两个任务,React 会在它们
+    // 之间重渲染,于是 `rule` 的闭包看得到刚勾上的值。塞进同一个 act 里就
+    // 没有那次重渲染,`rule` 拿到的是旧的 false —— 那样测到的是 React 的
+    // 批处理,不是这段代码。
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "w" });
+    });
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "1" });
+    });
 
-      // 缺席断言的反面:重置不许把当前这次裁决的意图也一起吃掉。
-      expect(mockConclude).toHaveBeenCalledWith(
-        JUDGMENT.id,
-        expect.objectContaining({ create_workflow: true })
-      );
-    } finally {
-      jest.useRealTimers();
-    }
+    // 缺席断言的反面:重置不许把当前这次裁决的意图也一起吃掉。
+    expect(mockConclude).toHaveBeenCalledWith(
+      JUDGMENT.id,
+      expect.objectContaining({ create_workflow: true })
+    );
   });
 });
