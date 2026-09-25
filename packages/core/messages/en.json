@@ -1148,7 +1148,11 @@
         "not_found": "Some judgments no longer exist",
         "permission_denied": "Permission denied",
         "generic": "The action did not go through"
-      }
+      },
+      "civilization_all": "Civilization · all",
+      "sort": "Sort",
+      "sort_oldest": "Sort · longest waiting",
+      "sort_newest": "Sort · newest first"
     },
     "admission": {
       "title": "Evidence · admission",

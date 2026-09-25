@@ -1148,7 +1148,11 @@
         "not_found": "Wedja Nen Gem",
         "permission_denied": "Nen Was",
         "generic": "Nen Iri"
-      }
+      },
+      "civilization_all": "Aset Ahamet · Neb",
+      "sort": "Tep Seth",
+      "sort_oldest": "Tep Seth · Qed: Ahet Tepy",
+      "sort_newest": "Tep Seth · Smen Pehwy"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",

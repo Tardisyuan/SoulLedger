@@ -280,6 +280,42 @@ describe("审判队列", () => {
     await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ court: "第九殿" }));
   });
 
+  it("文明:ADMIN 列全部四个文明,其余角色只列自己租户的;选中后进列表与计数", async () => {
+    mockUser = { ...mockUser, role: "ADMIN", tenant: null };
+    const { unmount } = renderPage();
+    await screen.findByText("Marguerite Vey");
+    const adminSelect = screen.getByRole("combobox", { name: tZh("judgment.civilization") });
+    expect(within(adminSelect).getAllByRole("option").map((o) => (o as HTMLOptionElement).value)).toEqual([
+      "", "CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK",
+    ]);
+    unmount();
+
+    mockUser = { ...mockUser, role: "JUDGE", tenant: { code: "EG_DUAT" } };
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const select = screen.getByRole("combobox", { name: tZh("judgment.civilization") });
+    const values = within(select).getAllByRole("option").map((o) => (o as HTMLOptionElement).value);
+    expect(values).toEqual(["", "EGYPTIAN"]);
+    expect(values).not.toContain("CHINESE");
+    fireEvent.change(select, { target: { value: "EGYPTIAN" } });
+    await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ civilization: "EGYPTIAN" }));
+    expect(judgmentApi.list).toHaveBeenCalledWith({ civilization: "EGYPTIAN", group: "mine", page: "1", ordering: "created_at" });
+  });
+
+  it("排序:默认等待最久(ordering=created_at),可切成最近入队;计数不带排序", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    expect(screen.getByText(tZh("judgment.claim.hints.unclaimed"))).toBeInTheDocument();
+    const select = screen.getByRole("combobox", { name: tZh("judgment.claim.sort") });
+    fireEvent.change(select, { target: { value: "-created_at" } });
+    await waitFor(() =>
+      expect(judgmentApi.list).toHaveBeenCalledWith({ group: "unclaimed", page: "1", ordering: "-created_at" })
+    );
+    expect(judgmentApi.queueCounts).not.toHaveBeenCalledWith(expect.objectContaining({ ordering: expect.anything() }));
+    // 「等待最久在上」不再为真,就不再说。
+    expect(screen.queryByText(tZh("judgment.claim.hints.unclaimed"))).toBeNull();
+  });
+
   it("没有 judgment.execute 的人看不到勾选列,也没有「认领」", async () => {
     mockUser = { ...mockUser, permissions: ["judgment.read"] };
     renderPage();
