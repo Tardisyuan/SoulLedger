@@ -14259,19 +14259,38 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeKindEnum'
+          readOnly: true
+        signers_json:
+          readOnly: true
+        threshold:
+          type: integer
+          readOnly: true
+          nullable: true
+        signatures_json:
+          readOnly: true
+        branches_json:
+          readOnly: true
       required:
       - activated_at
       - approver
       - approver_display_name
       - approver_username
+      - branches_json
       - created_at
       - decided_at
       - decision_history
       - id
+      - kind
       - node_name
       - node_order
       - reject_to
+      - signatures_json
+      - signers_json
       - status
+      - threshold
       - timed_out_at
       - timeout_action
       - timeout_hours
@@ -14288,6 +14307,18 @@ components:
         * `ACTOR` - 角色
         * `ROLE` - 职能角色
         * `SYSTEM` - 系统自动
+    ApprovalNodeKindEnum:
+      enum:
+      - APPROVAL
+      - COUNTERSIGN
+      - NOTIFY
+      - END
+      type: string
+      description: |-
+        * `APPROVAL` - 审批
+        * `COUNTERSIGN` - 会签
+        * `NOTIFY` - 通知
+        * `END` - 结束
     ApprovalNodeNodeTypeEnum:
       enum:
       - TRIAL
@@ -14309,6 +14340,7 @@ components:
       - REJECTED
       - SKIPPED
       - ESCALATED
+      - TRAVERSED
       type: string
       description: |-
         * `PENDING` - 待审批
@@ -14316,6 +14348,7 @@ components:
         * `REJECTED` - 已拒绝
         * `SKIPPED` - 已跳过
         * `ESCALATED` - 已升级
+        * `TRAVERSED` - 已经过
     ApprovalNodeTimeoutActionEnum:
       enum:
       - ESCALATE
@@ -14539,12 +14572,20 @@ components:
           type: string
         tenant:
           type: string
+        kind:
+          type: string
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignerPreview'
       required:
       - actor
       - approver_type
       - civilization
+      - kind
       - node
       - role
+      - signers
       - tenant
       - user_count
       - users
@@ -15073,6 +15114,24 @@ components:
       - create_time
       - id
       - post
+    ConditionClause:
+      type: object
+      description: |-
+        `{fact, op, value}` — see `apps/workflow/conditions.py`. Shape only here;
+        whether the fact/op/value combine is checked at publish, so a half-edited
+        condition can still be saved as a draft.
+      properties:
+        fact:
+          type: string
+          maxLength: 20
+        op:
+          type: string
+          maxLength: 10
+        value: {}
+      required:
+      - fact
+      - op
+      - value
     Conversation:
       type: object
       properties:
@@ -20643,6 +20702,20 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeKindEnum'
+          readOnly: true
+        signers_json:
+          readOnly: true
+        threshold:
+          type: integer
+          readOnly: true
+          nullable: true
+        signatures_json:
+          readOnly: true
+        branches_json:
+          readOnly: true
     PatchedApprovalWorkflow:
       type: object
       description: |-
@@ -24067,6 +24140,33 @@ components:
       description: |-
         * `error` - error
         * `warning` - warning
+    SignerPreview:
+      type: object
+      properties:
+        approver_type:
+          type: string
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/ApproverPreviewActor'
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApproverPreviewUser'
+        user_count:
+          type: integer
+        label:
+          type: string
+      required:
+      - actor
+      - approver_type
+      - label
+      - role
+      - user_count
+      - users
     SocialHandledTypeEnum:
       enum:
       - POST
@@ -25530,6 +25630,39 @@ components:
       - started_at
       - status
       - trigger
+    TemplateBranch:
+      type: object
+      properties:
+        id:
+          type: string
+          default: ''
+        when:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConditionClause'
+        target:
+          type: string
+      required:
+      - target
+      - when
+    TemplateSigner:
+      type: object
+      description: |-
+        One 会签 signer, spelled like a one-person node: a label (a person's
+        name, probed like a node label), or a ROLE with a role.
+      properties:
+        label:
+          type: string
+          default: ''
+          maxLength: 255
+        approver_type:
+          type: string
+          default: ROLE
+          maxLength: 10
+        approver_role:
+          type: string
+          default: ''
+          maxLength: 20
     Tenant:
       type: object
       properties:
@@ -26453,6 +26586,22 @@ components:
           type: string
           nullable: true
           maxLength: 20
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/WorkflowTemplateNodeKindEnum'
+          default: APPROVAL
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateSigner'
+        threshold:
+          type: integer
+          minimum: 1
+          nullable: true
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateBranch'
       required:
       - node_name
     WorkflowTemplateNodeApproverTypeEnum:
@@ -26465,6 +26614,18 @@ components:
         * `ACTOR` - ACTOR
         * `ROLE` - ROLE
         * `SYSTEM` - SYSTEM
+    WorkflowTemplateNodeKindEnum:
+      enum:
+      - APPROVAL
+      - COUNTERSIGN
+      - NOTIFY
+      - END
+      type: string
+      description: |-
+        * `APPROVAL` - APPROVAL
+        * `COUNTERSIGN` - COUNTERSIGN
+        * `NOTIFY` - NOTIFY
+        * `END` - END
     WorkflowTemplateNodeNodeTypeEnum:
       enum:
       - TRIAL
