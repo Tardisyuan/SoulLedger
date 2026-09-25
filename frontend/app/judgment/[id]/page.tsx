@@ -14,6 +14,12 @@ import {
   JudgmentSectionHead,
 } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { JudgmentEvidenceColumn } from "@/src/components/judgment/JudgmentEvidenceColumn";
+import { JudgmentEvidenceAdmission } from "@/src/components/judgment/JudgmentEvidenceAdmission";
+import {
+  DraftConflictBanner,
+  DraftStatusLine,
+  useDraftAutosave,
+} from "@/src/components/judgment/JudgmentDraftAutosave";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -22,7 +28,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { reincarnationApi, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
-import { CitationChips, Kbd, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
+import { CitationChips, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -67,12 +73,18 @@ import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJud
  * VerdictBar: 1–4 choose, ⌘⏎ concludes (`src/lib/hotkeys.ts`). The other
  * three stay fully legible: a verdict is compared against the ones not given.
  *
- * What the design draws and the backend cannot carry is left out rather than
- * faked: evidence accept/reject (no field), auto-save of the draft, the
- * 5-second undo (that lives in the queue console, whose verdicts are held
- * client-side before sending; `conclude/` here is immediate), destination and
- * term (`ConcludeJudgmentPayload` has neither — the realm is routed from the
- * verdict), and precedents (no endpoint).
+ * Wired to the backend since the claim / evidence / draft round: 丙 is the
+ * current life's merit and demerit records with an admission toggle (Space on
+ * the focused row; not admitting asks for a reason) and the server's admitted
+ * balance; 丁 autosaves (`useDraftAutosave`) and stops on a 409 with the
+ * server's version on screen rather than overwriting it; 据 carries 先例; the
+ * QueueBar takes D to defer.
+ *
+ * Still left out rather than faked: the 5-second undo (the user decided
+ * against it — `conclude/` stays immediate), destination and term
+ * (`ConcludeJudgmentPayload` has neither — the realm is routed from the
+ * verdict), and J / K previous / next (`next/` hands out the next pending case,
+ * not a case by position).
  *
  * ── WHAT THE DESIGN ASKED FOR AND THE PAYLOAD CANNOT PROVIDE ──────────────
  * Written down rather than invented — a judgment printing a number nobody
@@ -244,12 +256,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
    * holds both halves.
    */
   const notesTouched = useRef(false);
+  /** Same rule for the chosen verdict: the saved draft's choice seeds it until the operator picks one. */
+  const verdictTouched = useRef(false);
 
   useEffect(() => {
     if (judgment) {
       if (!notesTouched.current) setNotes(judgment.notes || "");
       if (judgment.verdict) {
         setSelectedVerdict(judgment.verdict);
+      } else if (!verdictTouched.current && judgment.draft_verdict) {
+        setSelectedVerdict(judgment.draft_verdict);
       }
     }
   }, [judgment]);
@@ -290,6 +306,19 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   const canExecute = hasPermission("judgment.execute");
 
+  /* 丁 · 判词自动保存。只在动过之后存;409 停下并把对方的版本交给冲突条(见 useDraftAutosave)。 */
+  const draft = useDraftAutosave({
+    judgmentId: id,
+    notes,
+    verdict: selectedVerdict,
+    enabled: !!judgment && !judgment.is_final && canExecute,
+  });
+  const chooseVerdict = (member: string) => {
+    verdictTouched.current = true;
+    setSelectedVerdict(member);
+    draft.markEdited();
+  };
+
   /* 卷 · 乙 功过 与 前世:与灵魂账页同一对端点、同一对键(`soulKeys` 之下),所以两页共享缓存,
      别处推来的 `soulKeys.all` 失效也够得到这里。 */
   const soulId = judgment?.soul ?? "";
@@ -325,7 +354,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const deskOpen = !!judgment && !judgment.is_final;
   useHotkeys(
     {
-      ...Object.fromEntries(VERDICTS.map((member, i) => [String(i + 1), () => setSelectedVerdict(member)])),
+      ...Object.fromEntries(VERDICTS.map((member, i) => [String(i + 1), () => chooseVerdict(member)])),
       "mod+Enter": () => {
         if (canExecute && selectedVerdict && !concludeMutation.isPending) handleConclude();
       },
@@ -421,7 +450,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   return (
     <>
-    {!isFinal && <QueueBar judgmentId={judgment.id} />}
+    {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute} />}
     <PageShell
       density="document"
       variant="full"
@@ -526,7 +555,25 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           aria-label={t("judgment.detail.render_verdict")}
           className={`${COLUMN} ${isFinal ? "lg:pr-0" : "lg:border-r"}`}
         >
-          <JudgmentEvidenceColumn evidence={judgment.evidence_json} />
+          {judgment.deferred_at && !isFinal && (
+            <p data-testid="deferred-note" className="mb-4 border-l-3 border-[oklch(var(--color-warning))] pl-3 text-sm text-[oklch(var(--color-ink-muted))]">
+              {t("judgment.desk.deferred_note", { reason: judgment.defer_reason ?? "" })}
+            </p>
+          )}
+          <JudgmentEvidenceAdmission
+            judgmentId={judgment.id}
+            records={ledgerData?.records}
+            admissions={judgment.evidence_admissions ?? []}
+            balance={judgment.admitted_balance}
+            canRule={!isFinal && canExecute}
+          />
+          {/* `evidence_json` is the case's own free-form record, separate from the ledger
+              evidence above; shown only when the case carries any. */}
+          {Object.keys(judgment.evidence_json ?? {}).length > 0 && (
+            <div className="mt-6">
+              <JudgmentEvidenceColumn evidence={judgment.evidence_json} mark="" />
+            </div>
+          )}
 
           {/* ── 落印带 · one element, one box, two states. See SEAL_BAND. ────── */}
           <div
@@ -630,7 +677,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                         name="verdict"
                         value={member}
                         checked={isChosen}
-                        onChange={(event) => setSelectedVerdict(event.target.value)}
+                        onChange={(event) => chooseVerdict(event.target.value)}
                         className="sr-only"
                       />
                       {clause}
@@ -670,11 +717,26 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 onChange={(event) => {
                   notesTouched.current = true;
                   setNotes(event.target.value);
+                  draft.markEdited();
                 }}
                 rows={4}
                 placeholder={t("judgment.detail.notes_placeholder")}
                 className="block w-full mt-3 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-quote text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
               />
+              {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
+              {!draft.conflict && <DraftStatusLine status={draft.status} savedAt={judgment.draft_saved_at} />}
+              {draft.conflict && (
+                <DraftConflictBanner
+                  current={draft.conflict}
+                  onUseServer={() => {
+                    const theirs = draft.acceptTheirs();
+                    if (!theirs) return;
+                    setNotes(theirs.notes);
+                    setSelectedVerdict(theirs.draft_verdict ?? "");
+                  }}
+                  onKeepMine={draft.keepMine}
+                />
+              )}
             </>
           )}
           {!isFinal && (
@@ -744,6 +806,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               cited={citedIds}
               onCite={canEditGrounds ? (statuteId) => citeMutation.mutate(statuteId) : undefined}
             />
+            <PrecedentsPanel judgmentId={judgment.id} />
           </section>
         )}
       </div>

@@ -4,6 +4,10 @@
  *
  * 真页面、真 QueryClient,只桩 HTTP 层。每条行为都断了反面:打字时按 2 不改裁决、
  * 没有 judgment.execute 时 ⌘⏎ 不落判、案子不在队列头时不画进度条。
+ *
+ * 后端接上之后的四条:丙 证据采信(空格切换焦点行,不采信要理由,采信后余额读服务端)、
+ * 丁 判词自动保存(去抖、带版本号;409 停下并摆出对方的版本,绝不静默覆盖)、据 · 先例、
+ * 进度条上的 D 暂缓(理由必填)。
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -35,6 +39,10 @@ jest.mock("@soulledger/core/api", () => ({
     statutes: jest.fn(),
     cite: jest.fn(),
     uncite: jest.fn(),
+    ruleEvidence: jest.fn(),
+    saveDraft: jest.fn(),
+    precedents: jest.fn(),
+    defer: jest.fn(),
   },
   soulsApi: { get: jest.fn(), karma: jest.fn() },
   reincarnationApi: { list: jest.fn() },
@@ -100,6 +108,10 @@ beforeEach(() => {
   judgmentApi.statutes.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [statute("st-7", "口業 · 七")] } });
   judgmentApi.cite.mockResolvedValue({ data: {} });
   judgmentApi.uncite.mockResolvedValue({ data: {} });
+  judgmentApi.ruleEvidence.mockResolvedValue({ data: {} });
+  judgmentApi.saveDraft.mockResolvedValue({ data: {} });
+  judgmentApi.precedents.mockResolvedValue({ data: [] });
+  judgmentApi.defer.mockResolvedValue({ data: {} });
   soulsApi.get.mockResolvedValue({ data: { id: "s-1", name: "沈青梧", tenant_code: "CN_DIYU" } });
   soulsApi.karma.mockResolvedValue({
     data: {
@@ -222,5 +234,262 @@ describe("卷栏与队列进度条", () => {
     await waitFor(() => expect(judgmentApi.next).toHaveBeenCalled());
     await act(async () => {});
     expect(screen.queryByTestId("queue-bar")).toBeNull();
+  });
+});
+
+// ── 丙 · 证据采信 ─────────────────────────────────────────────────────────
+
+const record = (id: string, type: string, description: string, weight: number) => ({
+  id, type, category: "CHARITY", description, original_weight: weight, effective_weight: weight, years_elapsed: 0,
+  decay_factor: 1, civilization: "CHINESE", recorded_at: "2026-06-02T00:00:00Z", event_date: null, is_milestone: false,
+});
+const RECORDS = [
+  record("r1", "MERIT", "救溺 · 胥江", 120),
+  record("r2", "MERIT", "布施米粮(疑重复登记)", 40),
+  record("r3", "DEMERIT", "詈骂邻人", 25),
+  record("r4", "MILESTONE", "立户", 0),
+];
+const withEvidence = (over: Record<string, unknown> = {}) =>
+  judgment({
+    evidence_admissions: [{ id: "ea-1", record: "r2", admitted: false, reason: "与上条同日同事", created_at: "", update_time: "" }],
+    admitted_balance: { reading_kind: "BALANCE", balance: 307, not_admitted_count: 1, not_admitted_net: 40, reason_code: null },
+    ...over,
+  });
+const evidenceRow = (text: string) =>
+  screen.getAllByTestId("evidence-row").find((r) => r.textContent?.includes(text)) as HTMLElement;
+
+describe("丙 · 证据采信", () => {
+  beforeEach(() => {
+    judgmentApi.get.mockResolvedValue({ data: withEvidence() });
+    soulsApi.karma.mockResolvedValue({
+      data: {
+        soul_id: "s-1", soul_name: "沈青梧", merit_score: 1284, demerit_score: 937, karmic_balance: 347,
+        record_count: 4, records: RECORDS, reading: { kind: "BALANCE", civilization: "CHINESE", merit: 1284, demerit: 937, balance: 347 },
+      },
+    });
+  });
+
+  it("只列功与过两类;采信计数、不采信的理由、采信后余额都读服务端", async () => {
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    expect(screen.getAllByTestId("evidence-row")).toHaveLength(3);
+    expect(screen.queryByText("立户")).toBeNull();
+    const section = screen.getByTestId("evidence-admission");
+    expect(within(section).getByText("2 / 3")).toBeInTheDocument();
+    expect(evidenceRow("布施米粮")).toHaveAttribute("data-admitted", "false");
+    expect(within(evidenceRow("布施米粮")).getByText(tZh("judgment.admission.reason_shown", { reason: "与上条同日同事" }))).toBeInTheDocument();
+    const balance = screen.getByTestId("admitted-balance");
+    expect(balance).toHaveTextContent(tZh("judgment.admission.balance_label") + tZh("judgment.admission.not_admitted_net", { n: "1", net: "+40" }));
+    expect(within(balance).getByText("+307")).toBeInTheDocument();
+  });
+
+  it("采信 → 不采信要理由,空理由不发;不采信 → 采信直接发", async () => {
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    fireEvent.click(within(evidenceRow("救溺")).getByRole("checkbox"));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.admission.confirm_not_admit") }));
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(judgmentApi.ruleEvidence).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "无旁证" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.admission.confirm_not_admit") }));
+    await waitFor(() => expect(judgmentApi.ruleEvidence).toHaveBeenCalledWith(ID, "r1", { admitted: false, reason: "无旁证" }));
+
+    fireEvent.click(within(evidenceRow("布施米粮")).getByRole("checkbox"));
+    await waitFor(() => expect(judgmentApi.ruleEvidence).toHaveBeenCalledWith(ID, "r2", { admitted: true }));
+  });
+
+  it("空格切换的是获焦的那一行:焦点目标是行里的原生按钮,行本身不挂键盘监听;打字时的空格不裁定", async () => {
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    for (const row of screen.getAllByTestId("evidence-row")) {
+      const toggle = within(row).getByRole("checkbox");
+      // 一个 <button>:空格是它的原生激活,所以不需要、也不许再有一层监听去切第二次。
+      expect(toggle.tagName).toBe("BUTTON");
+      expect(toggle).toHaveAttribute("aria-checked", row.getAttribute("data-admitted"));
+      expect(row).not.toHaveAttribute("tabindex");
+    }
+    fireEvent.keyDown(notesBox(), { key: " " });
+    fireEvent.keyDown(evidenceRow("救溺"), { key: " " });
+    await act(async () => {});
+    expect(judgmentApi.ruleEvidence).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("案子不在这一世:不列证据,说为什么;已结案:没有开关", async () => {
+    judgmentApi.get.mockResolvedValue({
+      data: withEvidence({ admitted_balance: { reading_kind: null, balance: null, not_admitted_count: 0, not_admitted_net: null, reason_code: "NOT_CURRENT_LIFE" } }),
+    });
+    const a = renderPage();
+    expect(await screen.findByText(tZh("judgment.admission.not_current_life"))).toBeInTheDocument();
+    expect(screen.queryAllByTestId("evidence-row")).toHaveLength(0);
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: withEvidence({ is_final: true, verdict: "PURGATORY" }) });
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    expect(within(screen.getByTestId("evidence-admission")).queryAllByRole("checkbox")).toHaveLength(0);
+  });
+});
+
+// ── 丁 · 判词自动保存 ─────────────────────────────────────────────────────
+
+const WAIT = { timeout: 4000 };
+
+describe("丁 · 判词自动保存", () => {
+  beforeEach(() => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ notes: "", draft_version: 4, draft_saved_at: null, draft_verdict: null }) });
+  });
+
+  it("不动不存;动过之后停手才存,带版本号与所选裁决,并显示服务端的保存时间", async () => {
+    judgmentApi.saveDraft.mockResolvedValue({
+      data: { notes: "功过相抵", draft_verdict: "PURGATORY", draft_version: 5, draft_saved_at: "2026-09-25T10:15:00Z" },
+    });
+    renderPage();
+    await screen.findAllByRole("radio");
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document.body, { key: "3" });
+    fireEvent.change(notesBox(), { target: { value: "功过相抵" } });
+    expect(judgmentApi.saveDraft).not.toHaveBeenCalled(); // 去抖:不是每个字一次
+    await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1), WAIT);
+    expect(judgmentApi.saveDraft).toHaveBeenCalledWith(ID, { version: 4, notes: "功过相抵", draft_verdict: "PURGATORY" });
+    expect(await screen.findByText(tZh("judgment.draft.saved_at", { time: "2026-09-25T10:15:00Z" }))).toBeInTheDocument();
+
+    // 下一次以服务端回来的版本为底。
+    fireEvent.change(notesBox(), { target: { value: "功过相抵,暂入救济门" } });
+    await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(2), WAIT);
+    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 5, notes: "功过相抵,暂入救济门", draft_verdict: "PURGATORY" });
+  }, 15000);
+
+  const CONFLICT = {
+    response: {
+      status: 409,
+      data: {
+        error: "draft conflict", code: "draft_conflict",
+        current: { notes: "他人的判词", draft_verdict: "PASSED", draft_version: 9, draft_saved_at: "2026-09-25T10:20:00Z" },
+      },
+    },
+  };
+
+  it("409:停下、摆出对方的版本;不覆盖我正在写的字,之后的改动也不再自动存", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ notes: "", draft_version: 4, draft_saved_at: "2026-09-25T10:00:00Z", draft_verdict: null }) });
+    judgmentApi.saveDraft.mockRejectedValue(CONFLICT);
+    renderPage();
+    await screen.findAllByRole("radio");
+    expect(await screen.findByTestId("draft-status")).toBeInTheDocument();
+    fireEvent.change(notesBox(), { target: { value: "我的判词" } });
+    const banner = await screen.findByTestId("draft-conflict", {}, WAIT);
+    expect(within(banner).getByText("他人的判词")).toBeInTheDocument();
+    expect(notesBox().value).toBe("我的判词");
+    // 冲突时不显示「已自动保存」:那个时间属于对方的版本,不属于框里这段字。
+    expect(screen.queryByTestId("draft-status")).toBeNull();
+
+    fireEvent.change(notesBox(), { target: { value: "我的判词,续写" } });
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
+  }, 15000);
+
+  it("409 之后「保留我的」是一次看见对方之后的显式覆盖:以对方的版本号再存", async () => {
+    judgmentApi.saveDraft.mockRejectedValueOnce(CONFLICT).mockResolvedValue({
+      data: { notes: "我的判词", draft_verdict: null, draft_version: 10, draft_saved_at: "2026-09-25T10:21:00Z" },
+    });
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.change(notesBox(), { target: { value: "我的判词" } });
+    const banner = await screen.findByTestId("draft-conflict", {}, WAIT);
+    fireEvent.click(within(banner).getByRole("button", { name: tZh("judgment.draft.keep_mine") }));
+    await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(2), WAIT);
+    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 9, notes: "我的判词", draft_verdict: null });
+    await waitFor(() => expect(screen.queryByTestId("draft-conflict")).toBeNull());
+  }, 15000);
+
+  it("409 之后「改用对方的」:判词与裁决换成对方的,不再存", async () => {
+    judgmentApi.saveDraft.mockRejectedValue(CONFLICT);
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.change(notesBox(), { target: { value: "我的判词" } });
+    const banner = await screen.findByTestId("draft-conflict", {}, WAIT);
+    fireEvent.click(within(banner).getByRole("button", { name: tZh("judgment.draft.use_server") }));
+    expect(notesBox().value).toBe("他人的判词");
+    expect(radio("PASSED").checked).toBe(true);
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
+  }, 15000);
+
+  it("存过的裁决草稿在打开时选中;已结案不存", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ draft_verdict: "RETRY", draft_version: 2 }) });
+    const a = renderPage();
+    await waitFor(() => expect(radio("RETRY").checked).toBe(true));
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment({ is_final: true, verdict: "PASSED", notes: "定" }) });
+    renderPage();
+    await screen.findByText(tZh("judgment.detail.final"));
+    fireEvent.keyDown(document.body, { key: "2" });
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
+  }, 15000);
+});
+
+// ── 据 · 先例 与 D 暂缓 ────────────────────────────────────────────────────
+
+describe("据 · 先例", () => {
+  it("照服务端的顺序列出:名字链到那件审判,裁决带字形,同殿标出", async () => {
+    judgmentApi.precedents.mockResolvedValue({
+      data: [
+        { id: "p-1", soul: "s-9", name: "周慕云", verdict: "PURGATORY", court: "第五殿", concluded_at: null, balance: 298, realm_code: "JIUJI_17", realm_name: "救濟門 · 十七", same_court: true, shared_statutes: 2 },
+        { id: "p-2", soul: "s-8", name: "陆晚晴", verdict: "PASSED", court: "第一殿", concluded_at: null, balance: 410, realm_code: null, realm_name: null, same_court: false, shared_statutes: 0 },
+      ],
+    });
+    renderPage();
+    const panel = await screen.findByTestId("precedents");
+    const first = await within(panel).findByRole("link", { name: "周慕云" });
+    expect(first).toHaveAttribute("href", "/judgment/p-1");
+    const items = within(panel).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("◇");
+    expect(items[0]).toHaveTextContent(tZh("judgment.precedents.same_court"));
+    expect(items[1]).toHaveTextContent("✓");
+    expect(items[1]).not.toHaveTextContent(tZh("judgment.precedents.same_court"));
+  });
+
+  it("没有先例时说没有,不画空框", async () => {
+    renderPage();
+    expect(await screen.findByText(tZh("judgment.precedents.empty"))).toBeInTheDocument();
+  });
+});
+
+describe("进度条上的 D 暂缓", () => {
+  it("D 开理由框,理由必填,写了才发;在判词框里按 D 是写字", async () => {
+    renderPage();
+    await screen.findByTestId("queue-bar");
+    fireEvent.keyDown(notesBox(), { key: "d" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.keyDown(document.body, { key: "d" });
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.defer") }));
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(judgmentApi.defer).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "待补证" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.defer") }));
+    await waitFor(() => expect(judgmentApi.defer).toHaveBeenCalledWith(ID, "待补证"));
+  });
+
+  it("没有 judgment.execute:进度条上没有暂缓,D 也不接", async () => {
+    mockUser = { ...mockUser, permissions: ["judgment.read"] };
+    renderPage();
+    const bar = await screen.findByTestId("queue-bar");
+    expect(within(bar).queryByRole("button", { name: /暂缓/ })).toBeNull();
+    fireEvent.keyDown(document.body, { key: "d" });
+    await act(async () => {});
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("已暂缓的案子在判栏顶上写出理由", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ deferred_at: "2026-09-20T00:00:00Z", defer_reason: "待补证" }) });
+    renderPage();
+    expect(await screen.findByTestId("deferred-note")).toHaveTextContent(tZh("judgment.desk.deferred_note", { reason: "待补证" }));
   });
 });
