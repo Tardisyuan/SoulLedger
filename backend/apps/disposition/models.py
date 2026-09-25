@@ -123,11 +123,12 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     # these dates are routinely BCE. `term_start` on the serializer is a
     # HistoricalDateField over these three columns, not a real field.
     #
-    # NULL MEANS NOT RECORDED, the same convention `sentence_years` above uses
-    # and for the same reason: no invented value. Every row written before this
-    # column existed is null (see disposition/0011) and stays null until someone
-    # records an actual start, because there is nothing in those rows to derive
-    # one from.
+    # NULL MEANS NOT RECORDED, the same convention `sentence_years` above uses.
+    #
+    # 2026-09-25 产品负责人决定:执行即开始服刑。所以 `DispositionService._mark_executed`
+    # 在执行时把**空的**起算日记成执行那天(已记的史实起算日不覆盖),而执行过却仍为空的
+    # 存量行,期满计算从执行日起算(`apps.disposition.expiry.effective_term_start`)——
+    # 不回填数据。上面「两列、两件事」仍然成立:判官记了起算日,两者就各是各的。
     term_start_year = models.IntegerField(null=True, blank=True)
     term_start_month = models.SmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]

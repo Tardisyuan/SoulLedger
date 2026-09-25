@@ -111,6 +111,7 @@ class TestExpireForTenant:
         tomorrow = _disposition(tenant, "not yet", start=(2000, 6, 16))
         eternal = _disposition(tenant, "eternal", eternal=True)
         no_years = _disposition(tenant, "no term", years=None)
+        # 没记起算日、执行于 2026 年:从执行日起算,2036 年才满,BOUNDARY(2010)时未满。
         no_start = _disposition(tenant, "no start", start=None)
         pending = _disposition(tenant, "not executed", executed=False)
 
@@ -122,6 +123,27 @@ class TestExpireForTenant:
         for row in (tomorrow, eternal, no_years, no_start, pending):
             row.refresh_from_db()
             assert row.expired_at is None, row.soul.name
+
+    def test_no_start_date_counts_from_the_execution_date(self, tenant):
+        """2026-09-25 决定(翻转了原来的「没有起算日永不期满」):已执行而没记起算日的
+        存量行,从执行那天起算。执行于 2000-06-15、刑期 10 年 → 2010-06-15 期满。"""
+        executed = timezone.make_aware(datetime.datetime(2000, 6, 15, 12, 0))
+        no_start = _disposition(tenant, "no start", start=None)
+        Disposition.objects.filter(pk=no_start.pk).update(executed_at=executed)
+
+        assert expire_for_tenant(tenant, today=D(2010, 6, 14))["expired"] == 0
+        no_start.refresh_from_db()
+        assert no_start.expired_at is None
+        assert expire_for_tenant(tenant, today=BOUNDARY)["expired"] == 1
+        no_start.refresh_from_db()
+        assert no_start.expired_at is not None
+
+    def test_a_recorded_start_wins_over_the_execution_date(self, tenant):
+        """起算日记了就用它,不看执行日:执行于 2000 年而起算日是 2005 年的,2010 年未满。"""
+        row = _disposition(tenant, "recorded", start=(2005, 6, 15))
+        Disposition.objects.filter(pk=row.pk).update(
+            executed_at=timezone.make_aware(datetime.datetime(2000, 6, 15, 12, 0)))
+        assert expire_for_tenant(tenant, today=BOUNDARY)["expired"] == 0
 
     def test_eternal_never_expires_however_long_it_has_run(self, tenant):
         eternal = _disposition(tenant, "eternal", start=(-3000, 1, 1), years=1, eternal=True)
