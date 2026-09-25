@@ -160,6 +160,7 @@ class JudgmentConclusionService:
         destination_realm_id=None,
         term_years=None,
         eternal=None,
+        by=None,
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -183,6 +184,13 @@ class JudgmentConclusionService:
         from apps.sentence_plan.services import SentencePlanService
 
         with transaction.atomic():
+            # Step -2: the row lock, and who may conclude a claimed case. Only
+            # when a caller is named — the API always names one; in-process
+            # callers (seeders, test helpers) act as the system, not as an officer.
+            if by is not None:
+                from apps.judgment.claims import lock_for_conclude
+                lock_for_conclude(judgment.pk, by)
+
             # Step -1 (Q17): an attached cross-tenant judgment must have ended —
             # its PASS nodes are copied into the plan below. Raises before
             # anything is written.
