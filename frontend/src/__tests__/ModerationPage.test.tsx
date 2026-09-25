@@ -257,12 +257,27 @@ describe("举报 · the C-08 review layout", () => {
     expect(apiMock.item).toHaveBeenCalledWith("posts", "p1");
     expect(within(detail()).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
     expect(within(detail()).queryByText("ABUSE")).toBeNull();
-    // Text reactions, not emoji: 「评 N · 念 N」 with the counts the API gives. 念 is LOVE,
-    // not the total (LIKE 5 would make it 17); no 「转」 — the circle has no reposts.
+    // Text reactions, not emoji, in the soul app's words: 评 plus each of the five kinds with its
+    // own count (念 is LOVE, not the total 17); a kind at 0 is not drawn; no 「转」 — no reposts.
     const counts = detail().querySelector("[data-reaction-counts]") as HTMLElement;
-    expect(counts).toHaveTextContent(/^评 2·念 12$/);
+    expect(counts).toHaveTextContent(/^评 2·喜 5·念 12$/);
     expect(counts).not.toHaveTextContent("17");
-    expect(counts).not.toHaveTextContent("转");
+    for (const absent of ["转", "敬", "悲", "长明灯", " 0"]) expect(counts).not.toHaveTextContent(absent);
+  });
+
+  it("the detail draws every reaction kind that has a count, and none of those at 0 — 评 included", async () => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({
+      data: post({
+        id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 0,
+        reaction_counts: { LIKE: 1, LOVE: 2, RESPECT: 3, SYMPATHY: 4, ETERNAL_LIGHT: 5 },
+      }),
+    });
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+    const counts = detail().querySelector("[data-reaction-counts]") as HTMLElement;
+    expect(counts).toHaveTextContent(/^喜 1·念 2·敬 3·悲 4·长明灯 5$/);
+    expect(counts).not.toHaveTextContent("评");
   });
 
   it("H without a reason says so and sends nothing; with one it hides through the report", async () => {

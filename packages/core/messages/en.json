@@ -3243,7 +3243,6 @@
       "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
       "held_for_word": "Held for review by the word “{{word}}”",
       "warn": "Warn the author",
-      "reaction_love": "Love",
       "media_n": "{{n}} images",
       "media_label": "Images",
       "media_caption": "Image {{i}} · {{w}}×{{h}}",
