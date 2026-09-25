@@ -856,8 +856,7 @@
       "failed": "Nen Menkh",
       "confirmed": "Sesen Seth",
       "rejected": "Khesef",
-      "skipped": "Iri Tepy",
-      "notified": "Hab Seth"
+      "skipped": "Iri Tepy"
     },
     "case_types": {
       "HEART_WEIGHING": "Unemu Ib",
