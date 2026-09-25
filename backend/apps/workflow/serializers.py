@@ -582,3 +582,33 @@ class WorkflowStatsSerializer(serializers.Serializer):
     completed_nodes = serializers.IntegerField()
     pending_nodes = serializers.IntegerField()
     progress_percent = serializers.FloatField()
+
+
+# ── Approver preview (doc-only shapes; `apps/workflow/preview.py` builds the dict) ──
+
+
+class ApproverPreviewUserSerializer(serializers.Serializer):
+    display_name = serializers.CharField()
+    role = serializers.CharField()
+
+
+class ApproverPreviewActorSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    name_zh = serializers.CharField(allow_blank=True)
+    role = serializers.CharField()
+
+
+class ApproverAssignmentSerializer(serializers.Serializer):
+    # CharField, not a ChoiceField: a third copy of the ACTOR/ROLE/SYSTEM set
+    # makes drf-spectacular invent a hashed enum name (test_schema_has_no_warnings).
+    approver_type = serializers.CharField()
+    actor = ApproverPreviewActorSerializer(allow_null=True)
+    role = serializers.CharField(allow_null=True)
+    users = ApproverPreviewUserSerializer(many=True)
+    user_count = serializers.IntegerField()
+
+
+class ApproverPreviewSerializer(ApproverAssignmentSerializer):
+    node = serializers.CharField()
+    civilization = serializers.CharField()
+    tenant = serializers.CharField()

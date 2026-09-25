@@ -13408,6 +13408,44 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/workflow/templates/{id}/approver-preview/:
+    get:
+      operationId: v1_workflow_templates_approver_preview_retrieve
+      description: WorkflowTemplate CRUD.
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Workflow Template.
+        required: true
+      - in: query
+        name: node
+        schema:
+          type: string
+        description: 模板内节点 id
+        required: true
+      - in: query
+        name: tenant
+        schema:
+          type: string
+        description: 租户代码,仅 ADMIN
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproverPreview'
+          description: ''
   /api/v1/workflow/templates/{id}/publish/:
     post:
       operationId: v1_workflow_templates_publish_create
@@ -14423,6 +14461,62 @@ components:
         * `APPEAL` - 申诉中
         * `EXCEPTION` - 异常处理
         * `COMPLETED` - 流程完成
+    ApproverPreview:
+      type: object
+      properties:
+        approver_type:
+          type: string
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/ApproverPreviewActor'
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApproverPreviewUser'
+        user_count:
+          type: integer
+        node:
+          type: string
+        civilization:
+          type: string
+        tenant:
+          type: string
+      required:
+      - actor
+      - approver_type
+      - civilization
+      - node
+      - role
+      - tenant
+      - user_count
+      - users
+    ApproverPreviewActor:
+      type: object
+      properties:
+        name:
+          type: string
+        name_zh:
+          type: string
+        role:
+          type: string
+      required:
+      - name
+      - name_zh
+      - role
+    ApproverPreviewUser:
+      type: object
+      properties:
+        display_name:
+          type: string
+        role:
+          type: string
+      required:
+      - display_name
+      - role
     AuditActionCount:
       type: object
       description: One row of `stats.action_distribution` — a `values("action").annotate(count=…)`.
