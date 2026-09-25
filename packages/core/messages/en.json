@@ -1503,7 +1503,7 @@
       "schematic": "Schematic",
       "shape_line": "Line",
       "shape_funnel": "Funnel",
-      "shape_weighing": "The weighing fork",
+      "shape_fork_two": "The weighing fork",
       "shape_fork": "Three roads",
       "state_travelled": "travelled",
       "state_current": "now",

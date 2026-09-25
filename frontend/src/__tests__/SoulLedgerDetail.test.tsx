@@ -192,7 +192,7 @@ describe("SoulLedgerProgress", () => {
     );
     const route = await screen.findByTestId("soul-route");
     await within(route).findAllByRole("listitem");
-    const topo = route.querySelector('[data-route-topology="weighing"]')!;
+    const topo = route.querySelector('[data-route-topology="fork_two"]')!;
     expect(topo.getAttribute("data-schematic")).toBe("false");
     const states = (sel: string) =>
       Array.from(topo.querySelectorAll(`${sel} li`), (li) => [li.querySelector("[title]")?.getAttribute("title"), li.getAttribute("data-station-state")]);

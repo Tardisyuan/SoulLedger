@@ -25,13 +25,13 @@ import type { Realm, SoulPathEntry } from "@soulledger/core/api";
  * 系统不知道它经过了,画成实线就是替它编了一段行程。
  */
 
-export type ShapeKind = "line" | "funnel" | "weighing" | "fork";
+export type ShapeKind = "line" | "funnel" | "fork_two" | "fork";
 export type StationState = "travelled" | "current" | "pending";
 
 export const CIVILIZATION_SHAPE: Record<string, ShapeKind> = {
   CHINESE: "line",
   EUROPEAN: "funnel",
-  EGYPTIAN: "weighing",
+  EGYPTIAN: "fork_two",
   GREEK: "fork",
 };
 
@@ -59,7 +59,7 @@ export type Topology =
   | (Common & { kind: "line"; schematic: boolean; stations: Station[] })
   | (Common & { kind: "funnel"; schematic: false; regions: { region: FunnelRegion; stations: Station[] }[] })
   | (Common & {
-      kind: "weighing";
+      kind: "fork_two";
       schematic: false;
       /** By `order`; the last one is the weighing. */
       trunk: Station[];
@@ -173,7 +173,7 @@ function placeShape(
         topology: { kind: "funnel", schematic: false, regions },
       };
     }
-    case "weighing": {
+    case "fork_two": {
       const byOrder = (rows: Realm[]) => rows.filter((r) => isSet(r.order)).sort((a, b) => a.order! - b.order!);
       const trunk = byOrder(own.filter((r) => !isSet(r.fork)));
       const roads = WEIGHING_ROADS.map((fork) => ({
@@ -185,7 +185,7 @@ function placeShape(
       if (!trunk.length || !roads.length) return null;
       return {
         ids: [...trunk.map((r) => r.id), ...roads.flatMap((road) => road.stations.map((s) => s.id))],
-        topology: { kind: "weighing", schematic: false, trunk: trunk.map(station), roads },
+        topology: { kind: "fork_two", schematic: false, trunk: trunk.map(station), roads },
       };
     }
     case "fork": {

@@ -117,7 +117,7 @@ describe("the four shapes", () => {
 
   it("称心二岔: the trunk by order ends at the weighing; PASS then FAIL out of it; FAIL is the dashed terminal", () => {
     const topo = buildTopology("EGYPTIAN", ALL);
-    if (topo.kind !== "weighing") throw new Error(topo.kind);
+    if (topo.kind !== "fork_two") throw new Error(topo.kind);
     expect(topo.schematic).toBe(false);
     expect(topo.trunk.map((s) => s.code)).toEqual(["EG_DUAT_ENTRY", "EG_SEVEN_ARRWT", "EG_HALL_TWO_TRUTHS"]);
     expect(topo.trunk[topo.trunk.length - 1].realm?.is_judgment_hall).toBe(true);
@@ -137,7 +137,7 @@ describe("the four shapes", () => {
       stop("EG_HALL_TWO_TRUTHS", 2),
       stop("EG_ANNIHILATION", 3, true),
     ]);
-    if (topo.kind !== "weighing") throw new Error(topo.kind);
+    if (topo.kind !== "fork_two") throw new Error(topo.kind);
     expect(topo.trunk.map((s) => s.state)).toEqual(["travelled", "pending", "travelled"]);
     expect(topo.roads.map((r) => r.stations.map((s) => s.state))).toEqual([["pending", "pending"], ["current"]]);
     expect(topo.branches).toEqual([]);
