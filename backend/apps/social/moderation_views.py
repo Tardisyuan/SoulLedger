@@ -382,7 +382,7 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
         parameters=[OpenApiParameter("q", str, description="灵魂显示名包含;空 = 前 20 个")],
         responses={200: ModerationAuthorSerializer(many=True)},
     )
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], pagination_class=None)
     def souls(self, request):
         """「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
         (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。"""
@@ -397,7 +397,7 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
         return Response(ModerationAuthorSerializer(qs[: self.PICKER_LIMIT], many=True).data)
 
     @extend_schema(responses={200: ModerationAuthorSerializer(many=True)})
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], pagination_class=None)
     def executors(self, request):
         """执行人过滤的选项:本文明禁言记录里出现过的执行人。"""
         from apps.authentication.models import User
