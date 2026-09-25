@@ -114,7 +114,20 @@ New tests:
   - The old selection handler.
 
 ## Gates (final tree)
-GATES_PLACEHOLDER
+All run on the committed tree at `494d888`, and each result is the command's exit code.
+
+| gate | command | result |
+|---|---|---|
+| tsc | `cd frontend && npx tsc --noEmit` | exit 0 |
+| lint | `cd frontend && npm run lint` (`--max-warnings 0`) | exit 0 |
+| jest + coverage | `cd frontend && npm run test:coverage` | exit 0 · 182 suites / **2989 passed** · all files 79.43 / 71.2 / 69.76 / 80.41 |
+| build | `cd frontend && npm run build` | exit 0 |
+| E2E chromium | `npx playwright test --project=chromium` | exit 0 · **143 passed**, 0 flaky (includes `workflow-auto-layout-motion.spec.ts`) |
+| E2E mobile-chrome | `npx playwright test --project=mobile-chrome` | exit 0 · **143 passed**, 0 flaky |
+| E2E firefox | — | **not run**: no firefox binary in this container |
+| core typecheck | `npm run --workspace packages/core typecheck` | exit 0 |
+| core lint | `npm run --workspace packages/core lint` | exit 0 |
+| core test | `npm run --workspace packages/core test` | exit 0 · 13 files / **122 passed** |
 
 Environment notes:
 - Node v22.22.2. Installed with `npx -y npm@11 ci` and `npm rebuild …`, then `git checkout -- package-lock.json`.
