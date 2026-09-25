@@ -6,10 +6,13 @@
  * - 地址是服务器签给当前灵魂的短时路径(约一小时),经 `mediaUrl` 接到 API 的主机上;
  *   过期或帖子被隐藏后取不到,格子里写「图片加载失败」,不留一个空白。
  * - 上传(`ComposeMediaTray`):一张一个请求,各自的进度与失败;失败的可重试或移除。
+ *   传之前先在本机压缩(`compressForUpload`:长边 2048、JPEG 0.85)。expo-image-manipulator 是
+ *   原生模块:加它之后 dev client 要重新构建(`npx expo run:ios` / `run:android`),旧的 dev client 里没有它。
  *   发出按钮在还有图在传、或有图没传上去时不可用 —— 见 ComposePostScreen。
  */
 import { mediaGridColumns, mediaUrl, SOUL_POST_MEDIA_MAX, type PostMedia } from "@soulledger/core/api/soul-social";
 import type { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -132,11 +135,39 @@ function ViewerPages({ media, start, onClose }: { media: PostMedia[]; start: num
 /** 图库里选出的一张:上传用它的 uri,名字与类型只是给 multipart 的,服务器不信它们。 */
 export type PickedImage = { uri: string; name: string; type: string };
 
-/** 一张图的 multipart 请求体。字段名 `file`(backend `MeSocialMediaView`)。 */
-export function uploadBody(image: PickedImage): FormData {
+/** 上传前把长边缩到这么多像素以内(2026-09-26 产品定)。服务器的限制不变,这只是让多数图远在它之内。 */
+export const UPLOAD_LONG_EDGE = 2048;
+export const UPLOAD_JPEG_QUALITY = 0.85;
+
+/**
+ * 上传前压缩:长边超过 2048 就等比缩到 2048,然后**一律**重新编码成 JPEG(质量 0.85)。
+ * 不留 PNG(产品给的两个选项里取「只出 JPEG」):带透明的 PNG 透明处会被铺底,朋友圈是照片为主,
+ * 为少数贴图去判透明不值得。
+ * 尺寸取解码后的图(不信图库报的宽高:那可能是旋转之前的)。
+ * 压缩失败(格式解不开之类)就传原图 —— 服务器照旧校验,能不能收由它说。
+ */
+export async function compressForUpload(image: PickedImage): Promise<PickedImage> {
+  try {
+    const decoded = await ImageManipulator.manipulate(image.uri).renderAsync();
+    const long = Math.max(decoded.width, decoded.height);
+    const fitted =
+      long > UPLOAD_LONG_EDGE
+        ? await ImageManipulator.manipulate(decoded)
+            .resize(decoded.width >= decoded.height ? { width: UPLOAD_LONG_EDGE } : { height: UPLOAD_LONG_EDGE })
+            .renderAsync()
+        : decoded;
+    const saved = await fitted.saveAsync({ format: SaveFormat.JPEG, compress: UPLOAD_JPEG_QUALITY });
+    return { uri: saved.uri, name: image.name.replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" };
+  } catch {
+    return image;
+  }
+}
+
+/** 一张图的 multipart 请求体(先压缩)。字段名 `file`(backend `MeSocialMediaView`)。 */
+export async function uploadBody(image: PickedImage): Promise<FormData> {
   const body = new FormData();
   // React Native 的 FormData 收 `{ uri, name, type }` 这种文件描述;DOM 的类型不认它。
-  body.append("file", image as unknown as Blob);
+  body.append("file", (await compressForUpload(image)) as unknown as Blob);
   return body;
 }
 

@@ -123,3 +123,25 @@ it("defaults to nine per post", () => {
   expect(taken).toBe(9);
   expect(api.uploadMedia).toHaveBeenCalledTimes(9);
 });
+
+it("an async body (the App compresses first) shows as uploading until it is ready; if it throws, the item fails", async () => {
+  let finish!: (_body: FormData) => void;
+  let fail!: (_error: unknown) => void;
+  const pending = [
+    new Promise<FormData>((resolve) => (finish = resolve)),
+    new Promise<FormData>((_resolve, reject) => (fail = reject)),
+  ];
+  const { result } = renderHook(() => useSoulMediaUploads<number>((i) => pending[i]));
+  act(() => void result.current.add([0, 1]));
+  expect(result.current.items.map((i) => i.status)).toEqual(["uploading", "uploading"]);
+  expect(api.uploadMedia).not.toHaveBeenCalled();
+  expect(result.current.ready).toBe(false);
+
+  await act(async () => finish(toBody("a")));
+  expect(api.uploadMedia).toHaveBeenCalledTimes(1);
+  await act(async () => fail(new Error("cannot decode")));
+  expect(api.uploadMedia).toHaveBeenCalledTimes(1);
+  expect(result.current.items[1].status).toBe("failed");
+  await act(async () => held[0].resolve(media("A")));
+  expect(result.current.items.map((i) => i.status)).toEqual(["done", "failed"]);
+});
