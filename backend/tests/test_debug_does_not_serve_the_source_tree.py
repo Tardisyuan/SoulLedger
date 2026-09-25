@@ -96,7 +96,8 @@ django.setup()
 from django.test import Client
 c = Client()
 out = {}
-for p in ["/media/avatars/2026/09/ok.png", "/media/manage.py", "/media/.env",
+for p in ["/media/avatars/2026/09/ok.png", "/media/private/post_media/2026/09/p.png",
+          "/media/PRIVATE/post_media/2026/09/p.png", "/media/manage.py", "/media/.env",
           "/media/../manage.py", "/media/%2e%2e/manage.py", "/media/..%2fmanage.py",
           "/media/%2e%2e/.env", "/manage.py", "/.env", "/health/"]:
     r = c.get(p)
@@ -122,6 +123,10 @@ def test_media_serves_media_root_and_nothing_outside_it(tmp_path):
     (media / "avatars" / "2026" / "09" / "ok.png").write_bytes(b"PNG-BYTES-FROM-MEDIA")
     (tmp_path / ".env").write_text("SECRET=leaked")
     (tmp_path / "manage.py").write_text("LEAKED-MANAGE")
+    # 朋友圈帖子图片(2026-09-25):在 MEDIA_ROOT 之内,却不经 /media/ 出去 ——
+    # 只经签名、重查可见性的 /api/v1/social-media/<id>/。文件真的在那里,所以 404 是路由在拒。
+    (media / "private" / "post_media" / "2026" / "09").mkdir(parents=True)
+    (media / "private" / "post_media" / "2026" / "09" / "p.png").write_bytes(b"LEAKED-PRIVATE-POST-IMAGE")
 
     env = _child_env()
     env["MEDIA_ROOT"] = str(media)

@@ -4,7 +4,8 @@ URL configuration for SoulLedger project.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.http import Http404
+from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
@@ -13,6 +14,7 @@ from apps.chat import urls as chat_urls
 from apps.core.health import HealthCheck, HealthCheckDetailed
 from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.social import soul_urls as social_urls
+from apps.social.media_views import PostMediaFileView
 from apps.soul_accounts import urls as soul_account_urls
 
 # User management router (registered at api/v1/users/ via path)
@@ -24,6 +26,10 @@ user_router.register(r'', UserViewSet, basename='user')
 # rather than through an app-local urls.py. See apps/core/recycle_bin_views.py.
 recycle_bin_router = DefaultRouter()
 recycle_bin_router.register(r'', RecycleBinViewSet, basename='recycle-bin')
+
+def _private_media_is_not_served(request):
+    raise Http404
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -67,6 +73,8 @@ urlpatterns = [
     # 官员审核后台是另一段前缀、另一套码名(social.moderate),两者不共用路由。
     path("api/v1/me/social/", include(social_urls.me_social_urlpatterns)),
     path("api/v1/social-moderation/", include(social_urls.moderation_urlpatterns)),
+    # 朋友圈帖子图片的文件出口:签名地址、每次重查可见性(apps/social/media_views.py)。
+    path("api/v1/social-media/<uuid:media_id>/", PostMediaFileView.as_view(), name="social-media-file"),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
@@ -86,6 +94,11 @@ urlpatterns = [
 # and asserts both halves: the source tree is 404, and /media/ reaches
 # MEDIA_ROOT and nothing beside it (django.views.static.serve joins with
 # safe_join, so `..` cannot climb out).
+#
+# `media/private/` is refused first: 朋友圈 post images live there and are only
+# served through the signed, access-checked /api/v1/social-media/ view. nginx
+# refuses the same prefix in production (nginx.conf).
 if settings.DEBUG:
+    urlpatterns += [re_path(r"^media/private/", _private_media_is_not_served)]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

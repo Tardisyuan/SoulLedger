@@ -2843,6 +2843,29 @@
         "post_title": "删除这条帖子？",
         "comment_title": "删除这条评论？",
         "body": "删除后他人不再看得到，也不能恢复。"
+      },
+      "media": {
+        "add": "添加图片",
+        "count": "图片 {{n}} / {{max}}",
+        "uploading": "上传中 {{percent}}%",
+        "failed": "上传失败",
+        "retry": "重试",
+        "remove": "移除",
+        "waiting": "图片传完后才能发出",
+        "failed_hint": "有图片没传上去：重试或移除",
+        "limit": "每条最多 {{max}} 张",
+        "image": "图片 {{i}}",
+        "viewer": "图片 {{i}} / {{n}}",
+        "close": "关闭",
+        "load_failed": "图片加载失败",
+        "permission": "需要相册权限才能选图",
+        "expired": "有图片已失效，请重新添加",
+        "errors": {
+          "not_an_image": "只能上传 PNG、JPEG 或 WebP 图片",
+          "too_large": "每张不超过 5 MB",
+          "too_many_pixels": "图片尺寸太大",
+          "too_many_pending": "未发出的图片太多，先发帖或移除一些"
+        }
       }
     }
   },
@@ -3082,7 +3105,11 @@
       "reason_required": "隐藏必须写理由",
       "approve": "放行",
       "shortcuts": "J / K 上下 · A 放行 · H 隐藏",
-      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。"
+      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
+      "media_n": "图 {{n}}",
+      "media_label": "配图",
+      "media_caption": "图 {{i}} · {{w}}×{{h}}",
+      "media_load_failed": "图片加载失败"
     },
     "words": {
       "add_row": "新增敏感词",

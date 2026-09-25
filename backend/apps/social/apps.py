@@ -17,3 +17,6 @@ class SocialConfig(AppConfig):
 
         register_bin_type("social_post", Post, "reference", lambda p: p.content[:50], DELETED_BY_OFFICER)
         register_bin_type("social_comment", Comment, "reference", lambda c: c.content[:50], DELETED_BY_OFFICER)
+
+        # PostMedia 的 post_delete 接收器:行真被删时文件跟着删(apps/social/media.py)。
+        from . import media  # noqa: F401

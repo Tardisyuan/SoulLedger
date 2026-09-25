@@ -17,7 +17,7 @@ router 注册的 viewset 逐条断言)。这里额外一条:官员只审**灵魂
 由暂居地的官员审 —— 原属租户的官员看不到,也不该看到。
 """
 from django.db import models
-from django.db.models import Case, Count, F, Q, Value, When
+from django.db.models import Case, Count, F, Prefetch, Q, Value, When
 from django.db.models.functions import Substr
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -34,6 +34,7 @@ from apps.social.models import (
     Comment,
     ModerationStatus,
     Post,
+    PostMedia,
     Report,
     ReportResolution,
     ReportStatus,
@@ -104,7 +105,9 @@ class ModerationViewSet(CodenameViewSetMixin, viewsets.GenericViewSet):
 class ReportViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """举报队列。默认只看 OPEN —— 后台一打开要的是待办,不是全部历史。"""
 
-    queryset = Report.objects.select_related("target_user", "post", "comment").prefetch_related("entries__reporter")
+    queryset = Report.objects.select_related("target_user", "post", "comment").prefetch_related(
+        "entries__reporter", Prefetch("post__media", queryset=PostMedia.all_objects.all(), to_attr="all_media_rows"),
+    )
     serializer_class = ReportSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["status", "target_type"]
@@ -184,7 +187,9 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
 
 
 class ModeratedPostViewSet(ModeratedContentViewSet):
-    queryset = Post.objects.all()
+    queryset = Post.objects.prefetch_related(
+        Prefetch("media", queryset=PostMedia.all_objects.all(), to_attr="all_media_rows"),
+    )
     serializer_class = ModeratedPostSerializer
 
     @extend_schema(responses={200: ModeratedPostSerializer(many=True)})

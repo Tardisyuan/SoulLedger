@@ -350,7 +350,7 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
             raise SocialError("内容已被删除。", "already_deleted", 409)
         before = row.moderation_status
         if action == "DELETE":
-            row.soft_delete(user=actor, reason=reason[:500] or "moderation")
+            _soft_delete_with_media(row, actor, reason[:500] or "moderation")
             after = "DELETED"
         else:
             allowed, after = CONTENT_TRANSITIONS[action]
@@ -373,6 +373,18 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
         for name, value in decided.items():
             setattr(row, name, value)
     return row
+
+
+def _soft_delete_with_media(row, actor, reason):
+    """官员删帖:帖子与它的图片同一个 `delete_cascade_id`,于是回收站把它们算作一条
+    (「含 N 项关联」),恢复时一起回来,彻底删除时级联真删(文件随 post_delete 走)。
+    评论没有图片,照旧单独软删除。"""
+    if isinstance(row, Post):
+        from apps.core.recycle_bin import cascade_soft_delete
+
+        cascade_soft_delete(row, row.media.filter(is_deleted=False), user=actor, reason=reason)
+    else:
+        row.soft_delete(user=actor, reason=reason)
 
 
 def _close_reports(kind, row, resolution, *, actor, note=""):

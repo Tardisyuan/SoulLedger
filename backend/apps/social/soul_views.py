@@ -12,8 +12,10 @@ from django.db.models import Exists, OuterRef, Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
+from apps.social import media as post_media
 from apps.social import moderation as mod
 from apps.social import soul_circle as circle
 from apps.social.models import Follow, Post, ReportTargetType
@@ -24,6 +26,7 @@ from apps.social.soul_serializers import (
     SoulDisplayNameRequestSerializer,
     SoulFollowStateSerializer,
     SoulPostCreateSerializer,
+    SoulPostMediaUploadSerializer,
     SoulPostSerializer,
     SoulProfileSerializer,
     SoulReactionRequestSerializer,
@@ -66,6 +69,7 @@ PaginatedSoulComments = _page(SoulCommentSerializer, "PaginatedSoulComments")
 PaginatedSoulCards = _page(SoulRelationCardSerializer, "PaginatedSoulCards")
 
 ERRORS = {403: SoulSocialErrorSerializer, 404: SoulSocialErrorSerializer, 409: SoulSocialErrorSerializer}
+BAD_REQUEST = {400: SoulSocialErrorSerializer}
 
 
 def _error(exc: circle.SocialError):
@@ -141,7 +145,7 @@ class MeSocialFeedView(SoulSocialView):
             qs = qs.filter(Q(author=request.user) | Q(author_id__in=followed.values("following_id")))
         return self.paginate(circle.annotate_posts_for(request.user, qs).order_by("-create_time"), SoulPostSerializer)
 
-    @extend_schema(request=SoulPostCreateSerializer, responses={201: SoulPostSerializer, **ERRORS})
+    @extend_schema(request=SoulPostCreateSerializer, responses={201: SoulPostSerializer, **BAD_REQUEST, **ERRORS})
     def post(self, request):
         body = SoulPostCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -151,6 +155,49 @@ class MeSocialFeedView(SoulSocialView):
     def _one(self, post):
         row = circle.annotate_posts_for(self.request.user, Post.objects.filter(pk=post.pk)).first()
         return SoulPostSerializer(row, context={"viewer": self.request.user}).data
+
+
+class MeSocialMediaView(SoulSocialView):
+    """先传后发的第一步:一张图一个请求(App 逐张显示进度、失败的单独重试)。
+
+    校验与头像同一个函数(`images.reencode`):按魔数认 PNG / JPEG / WebP,5 MB 上限,
+    解码后重编码、去掉 EXIF(含 GPS)。拒绝时 400,`code` 是 not_an_image / too_large /
+    too_many_pixels;未发出的图超过上限时 409 `too_many_pending`。
+    """
+
+    parser_classes = [MultiPartParser]
+
+    # 请求体手写而不是取自一个 FileField 序列化器:spectacular 在没开 COMPONENT_SPLIT_REQUEST
+    # 时把请求里的 FileField 画成 `format: uri`(头像接口同一个理由,apps/social/views.py)。
+    @extend_schema(
+        operation_id="v1_me_social_media_upload",
+        request={"multipart/form-data": {
+            "type": "object",
+            "properties": {"file": {"type": "string", "format": "binary"}},
+            "required": ["file"],
+        }},
+        responses={201: SoulPostMediaUploadSerializer, **BAD_REQUEST, **ERRORS},
+    )
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if upload is None:
+            raise circle.SocialError("缺少图片文件。", "file_required", 400)
+        media = post_media.upload(request.user, upload)
+        row = post_media.describe([media], request.user)[0]
+        return Response(
+            SoulPostMediaUploadSerializer(
+                {**row, "byte_size": media.byte_size, "content_type": media.content_type}
+            ).data,
+            status=201,
+        )
+
+
+class MeSocialMediaItemView(SoulSocialView):
+    @extend_schema(operation_id="v1_me_social_media_delete", responses={204: None, **ERRORS})
+    def delete(self, request, media_id):
+        """移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删,不走这里。"""
+        post_media.delete_pending(request.user, media_id)
+        return Response(status=204)
 
 
 class MeSocialPostView(SoulSocialView):
