@@ -12,6 +12,7 @@ import {
   useBatchRecycleSouls,
 } from "@soulledger/core/hooks/useSouls";
 import { soulsApi } from "@soulledger/core/api";
+import { AxiosError, AxiosHeaders } from "axios";
 
 const mockShowToast = jest.fn();
 
@@ -316,5 +317,66 @@ describe("useBatchRecycleSouls behavior", () => {
     expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
     expect(mockShowToast).toHaveBeenCalledWith("souls.detail.error_delete", "error");
     expect(mockShowToast).not.toHaveBeenCalledWith("souls.detail.delete_to_recycle_bin", "success");
+  });
+
+  // The caller (SoulBatchBar) lists the refused souls in its dialog; a generic
+  // 「删除失败」 toast on top of that is the defect this pins.
+  it.each([
+    [404, "not_found"],
+    [409, "not_deletable"],
+  ])("a %s %s refusal the dialog shows raises no generic toast", async (status, code) => {
+    const refusal = new AxiosError("refused", String(status), undefined, undefined, {
+      status,
+      statusText: "",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { detail: "x", code, ids: ["soul-2"] },
+    });
+    (soulsApi.batchRecycle as jest.Mock).mockRejectedValueOnce(refusal);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useBatchRecycleSouls(), { wrapper });
+    await act(async () => {
+      result.current.mutate(body);
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it("an axios error without the refusal shape (a 500) still toasts: nothing else would say it failed", async () => {
+    const crash = new AxiosError("boom", "500", undefined, undefined, {
+      status: 500,
+      statusText: "",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { detail: "Server Error" },
+    });
+    (soulsApi.batchRecycle as jest.Mock).mockRejectedValueOnce(crash);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useBatchRecycleSouls(), { wrapper });
+    await act(async () => {
+      result.current.mutate(body);
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.error_delete", "error");
+  });
+});
+
+describe("the shared 「删除失败」 key still reaches single deletes", () => {
+  it("useDeleteSoul toasts souls.detail.error_delete even for a 409 refusal body", async () => {
+    const refusal = new AxiosError("refused", "409", undefined, undefined, {
+      status: 409,
+      statusText: "",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { detail: "x", code: "not_deletable", ids: ["soul-1"] },
+    });
+    (soulsApi.delete as jest.Mock).mockRejectedValueOnce(refusal);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDeleteSoul(), { wrapper });
+    await act(async () => {
+      result.current.mutate("soul-1");
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.error_delete", "error");
   });
 });
