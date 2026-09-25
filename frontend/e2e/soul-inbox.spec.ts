@@ -45,4 +45,28 @@ test.describe("Hall inbox", () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
+
+  test("an unread letter is marked read on open; a template fills the reply; blur saves the draft", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    await page.goto("/soul-inbox");
+
+    const row = page.locator(`button[data-conversation-id="${INBOX_CONVERSATIONS[0].id}"]`);
+    await expect(row).toHaveAttribute("data-unread", "true");
+    // 计数:≥ 1024 在文件夹栏,< 1024 在列表头的下拉(mobile-chrome 是 393)。
+    const rail = page.getByRole("navigation", { name: "文件夹" });
+    if (await rail.isVisible()) {
+      await expect(rail.getByRole("button", { name: /^待回复/ })).toContainText("1");
+    } else {
+      await expect(page.getByRole("combobox", { name: "文件夹" }).locator("option", { hasText: /^待回复/ })).toHaveText("待回复 1");
+    }
+    await row.click();
+    await expect.poll(() => api.lastCall("POST", "/chat/inbox/:id/read/")).toBeTruthy();
+
+    const thread = page.getByRole("region", { name: "与 写信的灵魂 的来往" });
+    await thread.getByRole("combobox", { name: "插入模板" }).selectOption({ label: "收悉" });
+    const box = thread.getByLabel("以殿司名义回复");
+    await expect(box).toHaveValue("写信的灵魂:第五殿已收悉。");
+    await box.blur();
+    await expect.poll(() => api.lastCall("PUT", "/chat/inbox/:id/draft/")?.body).toEqual({ body: "写信的灵魂:第五殿已收悉。" });
+  });
 });
