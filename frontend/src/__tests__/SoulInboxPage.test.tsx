@@ -17,6 +17,14 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
 const { soulInboxApi: apiMock } = jest.requireMock("@soulledger/core/api/soul-inbox") as {
   soulInboxApi: Record<string, jest.Mock>;
 };
+// 回复框的 `/` 律条检索走 judgmentApi.statutes;其余照旧用真模块。
+jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
+  judgmentApi: { statutes: jest.fn() },
+}));
+const { judgmentApi: judgmentMock } = jest.requireMock("@soulledger/core/api") as {
+  judgmentApi: Record<string, jest.Mock>;
+};
 
 let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
@@ -135,4 +143,92 @@ it("an empty inbox says so and asks for no thread", async () => {
   renderPage();
   expect(await screen.findByText(tZh("soul_inbox.empty"))).toBeInTheDocument();
   expect(apiMock.messages).not.toHaveBeenCalled();
+});
+
+// ── 设计稿 C · 09:三栏、文件夹、待回复、收起、`/` 援引 ──
+
+it("folders are what the API can answer: closed ones filter to the reborn, with true counts", async () => {
+  asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue(
+    page([conversation(), conversation({ id: "c2", soul_name: "李四", closed_at: "2026-09-18T02:00:00Z" })])
+  );
+  renderPage();
+  const folders = await screen.findByRole("navigation", { name: tZh("soul_inbox.folders") });
+  const closed = within(folders).getByRole("button", { name: new RegExp(tZh("soul_inbox.folder.closed")) });
+  expect(closed).toHaveTextContent("1");
+  fireEvent.click(closed);
+  const list = screen.getByRole("list", { name: tZh("soul_inbox.list_label") });
+  expect(within(list).getByRole("button", { name: /李四/ })).toBeInTheDocument();
+  // Absence: the open one is filtered out, not merely re-ordered.
+  expect(within(list).queryByRole("button", { name: /张三/ })).toBeNull();
+});
+
+it("derived counts are withheld when the first page is not the whole inbox", async () => {
+  asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue({ data: { count: 45, next: "p2", previous: null, results: [conversation()] } });
+  renderPage();
+  const folders = await screen.findByRole("navigation", { name: tZh("soul_inbox.folders") });
+  expect(within(folders).getByRole("button", { name: new RegExp(tZh("soul_inbox.folder.all")) })).toHaveTextContent("45");
+  expect(within(folders).getByRole("button", { name: new RegExp(tZh("soul_inbox.folder.open")) })).toHaveTextContent(
+    new RegExp(`^${tZh("soul_inbox.folder.open")}$`)
+  );
+});
+
+it("a thread whose last letter is the soul's says it awaits a reply; one the hall answered last does not", async () => {
+  asRole("soul_inbox.read");
+  apiMock.messages.mockResolvedValue({ data: [...MESSAGES].reverse() });
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  expect(within(thread).getByText(/^待回复 · \d+ 天$/)).toBeInTheDocument();
+});
+
+it("the hall's reply being last leaves no awaiting badge", async () => {
+  asRole("soul_inbox.read");
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  expect(within(thread).queryByText(/^待回复 · /)).toBeNull();
+});
+
+it("letters before the previous one are folded behind a count", async () => {
+  asRole("soul_inbox.read");
+  apiMock.messages.mockResolvedValue({
+    data: [
+      { event_id: "$3", from_officer: false, sender_name: "张三", officer_title: "", body: "第三封", timestamp: 3000 },
+      ...MESSAGES,
+    ],
+  });
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("第三封");
+  expect(within(thread).getAllByRole("listitem").map((li) => li.getAttribute("data-event-id"))).toEqual(["$2", "$3"]);
+  fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.earlier", { n: "1" }) }));
+  expect(within(thread).getAllByRole("listitem").map((li) => li.getAttribute("data-event-id"))).toEqual(["$1", "$2", "$3"]);
+});
+
+it("`/` in the reply searches statutes and Enter writes the citation into the text", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply", "judgment.read");
+  judgmentMock.statutes.mockResolvedValue({
+    data: { results: [{ id: "st1", code: "GGX-17", display_title: "救濟門 · 十七", display_text: "" }] },
+  });
+  renderPage();
+  const thread = await openThread();
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label")) as HTMLTextAreaElement;
+  fireEvent.change(box, { target: { value: "依 /救濟" } });
+  await within(thread).findByRole("option", { name: /GGX-17/ });
+  expect(judgmentMock.statutes).toHaveBeenCalledWith({ search: "救濟" });
+  fireEvent.keyDown(box, { key: "Enter" });
+  expect(box.value).toBe("依 〔GGX-17 · 救濟門 · 十七〕");
+  expect(apiMock.reply).not.toHaveBeenCalled();
+});
+
+it("without judgment.read, `/` is only a character: no search, no hint", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  renderPage();
+  const thread = await openThread();
+  fireEvent.change(within(thread).getByLabelText(tZh("soul_inbox.reply_label")), { target: { value: "/救濟" } });
+  expect(within(thread).queryByRole("listbox")).toBeNull();
+  expect(within(thread).queryByText(tZh("soul_inbox.cite_hint"))).toBeNull();
+  expect(judgmentMock.statutes).not.toHaveBeenCalled();
 });
