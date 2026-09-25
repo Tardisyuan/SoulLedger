@@ -449,6 +449,45 @@ def test_the_picker_default_and_conclude_agree_on_the_admitted_route(judge_clien
     assert judgment.disposition.destination_realm_id == mildest.pk
 
 
+@pytest.mark.django_db
+class TestConcludedBalanceSnapshot:
+    def test_conclude_freezes_the_admitted_balance(self, judge_client, cn_case):
+        judgment, _, demerit = cn_case
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        response = judge_client.post(
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "PASSED", "notes": "判"}, format="json",
+        )
+        assert response.status_code == 200, response.data
+        judgment.refresh_from_db()
+        assert judgment.concluded_balance == 30  # 30 merit, the 20 demerit not admitted
+
+    def test_every_civilization_gets_the_net_even_without_a_balance_reading(self):
+        soul = _soul(_tenant("EU_HEAVEN_HELL"))
+        _record(soul, "MERIT", 30)
+        demerit = _record(soul, "DEMERIT", 20)
+        judgment = _judgment(soul)
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        judgment.conclude(Verdict.PASSED, "判")
+        judgment.refresh_from_db()
+        assert judgment.concluded_balance == 30
+        # The desk still shows no balance where the reading is not one.
+        assert EvidenceAdmissionService.admitted_balance(judgment)["balance"] is None
+
+    def test_the_desk_shows_the_snapshot_after_the_ledger_moves(self, judge_client, cn_case):
+        judgment, _, _ = cn_case
+        judge_client.post(
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "PASSED", "notes": "判"}, format="json",
+        )
+        _record(judgment.soul, "MERIT", 50, "结案之后的善行")
+        LedgerService._invalidate_cache(judgment.soul)
+        detail = judge_client.get(f"/api/v1/judgment/{judgment.id}/")
+        assert detail.data["admitted_balance"]["balance"] == 10
+        # A null snapshot (a case concluded before the column) is the live figure.
+        Judgment.all_objects.filter(pk=judgment.pk).update(concluded_balance=None)
+        judgment.refresh_from_db()
+        assert EvidenceAdmissionService.admitted_balance(judgment)["balance"] == 60
+
+
 # ---------------------------------------------------------------------------
 # 6. The draft
 # ---------------------------------------------------------------------------
