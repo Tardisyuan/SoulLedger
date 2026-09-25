@@ -23,6 +23,7 @@ from apps.workflow.serializers import (
     WorkflowStatsSerializer,
     WorkflowTemplateListSerializer,
     WorkflowTemplateSerializer,
+    WorkflowTemplateVersionSerializer,
 )
 from apps.workflow.services import WorkflowService
 
@@ -44,6 +45,10 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     # directions are pinned in apps/perm/test_matrix_snapshot.py.
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "workflow"
+    extra_permissions = {
+        "publish": ["workflow.update"],
+        "versions": ["workflow.read"],
+    }
     queryset = WorkflowTemplate.objects.select_related("tenant").all()
     serializer_class = WorkflowTemplateSerializer
     filterset_class = None  # Templates are small, no filtering needed
@@ -59,13 +64,54 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # filter — deleted templates kept appearing in the list. Exclude them
         # explicitly rather than going back to `objects`, which would
         # reintroduce the contextvar problem this override exists to solve.
-        qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related("tenant")
+        qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related(
+            "tenant", "published_version"
+        )
         return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), WorkflowTemplate)
 
     def get_serializer_class(self):
         if self.action == "list":
             return WorkflowTemplateListSerializer
+        if self.action == "versions":
+            return WorkflowTemplateVersionSerializer
         return WorkflowTemplateSerializer
+
+    # Template versions (0018). A save (POST/PATCH with `nodes`) writes a draft;
+    # this makes the draft the version new workflows are built from. It is
+    # `workflow.update` because it is an edit of the template — the same people
+    # who may change a template may put the change into service — and a 400
+    # with the validation issues when the draft is not publishable, so the
+    # editor can show them against the nodes they name.
+    @extend_schema(request=None, responses=WorkflowTemplateSerializer)
+    @action(detail=True, methods=["post"])
+    def publish(self, request, pk=None):
+        from apps.workflow import versioning
+
+        template = self.get_object()
+        try:
+            versioning.publish(template, user=request.user)
+        except versioning.NothingToPublishError:
+            return Response(
+                {"error": "no_draft", "detail": "该模板没有待发布的草稿。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except versioning.PublishRejectedError as rejected:
+            return Response(
+                {"error": "invalid_draft", "issues": rejected.issues},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        template.refresh_from_db()
+        return Response(WorkflowTemplateSerializer(template, context={"request": request}).data)
+
+    # Read-only history, newest first. Every version the template ever had —
+    # superseded ones included, because in-flight workflows may still be
+    # running on them.
+    @extend_schema(responses=WorkflowTemplateVersionSerializer(many=True))
+    @action(detail=True, methods=["get"])
+    def versions(self, request, pk=None):
+        template = self.get_object()
+        rows = template.versions.select_related("saved_by", "published_by").order_by("-number")
+        return Response(WorkflowTemplateVersionSerializer(rows, many=True).data)
 
 
 def _nodes_with_approver():
@@ -94,7 +140,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'create_from_judgment': ['workflow.create'],
     }
     queryset = ApprovalWorkflow.objects.select_related(
-        "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm"
+        "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm", "template_version"
     ).prefetch_related(_nodes_with_approver()).all()
     filterset_class = WorkflowFilter
     search_fields = WorkflowFilter.search_fields
@@ -105,7 +151,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """Fresh queryset to avoid stale TenantManager contextvar filters.
         Applies tenant filtering for non-ADMIN users."""
         qs = ApprovalWorkflow._base_manager.select_related(
-            "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm"
+            "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm", "template_version"
         ).prefetch_related(_nodes_with_approver()).all()
         return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), ApprovalWorkflow)
 

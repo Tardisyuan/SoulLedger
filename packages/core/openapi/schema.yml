@@ -13408,6 +13408,66 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/workflow/templates/{id}/publish/:
+    post:
+      operationId: v1_workflow_templates_publish_create
+      description: WorkflowTemplate CRUD.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Workflow Template.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowTemplate'
+          description: ''
+  /api/v1/workflow/templates/{id}/versions/:
+    get:
+      operationId: v1_workflow_templates_versions_list
+      description: WorkflowTemplate CRUD.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Workflow Template.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowTemplateVersion'
+          description: ''
   /api/v1/workflows/:
     get:
       operationId: v1_workflows_list
@@ -14279,6 +14339,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        template_version_number:
+          type: integer
+          readOnly: true
+          nullable: true
         tenant:
           type: integer
           readOnly: true
@@ -14294,6 +14358,7 @@ components:
       - soul
       - soul_name
       - status
+      - template_version_number
       - tenant
       - updated_at
       - workflow_name
@@ -20498,6 +20563,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        template_version_number:
+          type: integer
+          readOnly: true
+          nullable: true
         tenant:
           type: integer
           readOnly: true
@@ -21687,6 +21756,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkflowTemplateNode'
+        published_version:
+          type: integer
+          nullable: true
+          readOnly: true
+        draft_version:
+          type: integer
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -26045,6 +26122,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkflowTemplateNode'
+        published_version:
+          type: integer
+          nullable: true
+          readOnly: true
+        draft_version:
+          type: integer
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -26059,8 +26144,10 @@ components:
           nullable: true
       required:
       - created_at
+      - draft_version
       - id
       - name
+      - published_version
       - tenant
       - updated_at
     WorkflowTemplateList:
@@ -26100,11 +26187,16 @@ components:
         node_count:
           type: integer
           readOnly: true
+        published_version:
+          type: integer
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
       - name
       - node_count
+      - published_version
     WorkflowTemplateNode:
       type: object
       description: |-
@@ -26186,6 +26278,69 @@ components:
         * `APPEAL` - APPEAL
         * `FINAL` - FINAL
         * `EXECUTION` - EXECUTION
+    WorkflowTemplateVersion:
+      type: object
+      description: |-
+        One row of a template's version history. Read-only: versions are written
+        by `versioning.py` alone, through save and publish.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/WorkflowTemplateVersionStatusEnum'
+          readOnly: true
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowTemplateNode'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        saved_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        published_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - nodes
+      - number
+      - published_at
+      - published_by_name
+      - saved_by_name
+      - status
+      - updated_at
+    WorkflowTemplateVersionStatusEnum:
+      enum:
+      - DRAFT
+      - PUBLISHED
+      - SUPERSEDED
+      type: string
+      description: |-
+        * `DRAFT` - 草稿
+        * `PUBLISHED` - 已发布
+        * `SUPERSEDED` - 已替换
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

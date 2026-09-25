@@ -140,6 +140,25 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         blank=True,
     )
 
+    # The template version this workflow was built from. Null when it was built
+    # from `WORKFLOW_TEMPLATES`, the generic fallback, or a template row that has
+    # no version (written before versioning, or straight through the ORM).
+    #
+    # PINNING IS STRUCTURAL, THIS IS THE RECORD OF IT. `_create_nodes` copies
+    # every node — with its routing, timeout and countersign settings — into
+    # `ApprovalNode` rows at creation, and nothing in the engine reads the
+    # template again afterwards. So publishing v2 cannot change a v1 workflow's
+    # path; this column says which version that path came from.
+    # `test_workflow_template_versions.py::test_in_flight_workflow_finishes_on_its_own_version`
+    # holds it.
+    template_version = models.ForeignKey(
+        "WorkflowTemplateVersion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="workflows",
+    )
+
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -474,9 +493,29 @@ class WorkflowTemplate(AuditUserFields, models.Model):
 
     # Template nodes stored as JSON
     # Each node: { id, node_name, node_type, court_code, approver_role, approver_type, node_order }
+    #
+    # THIS IS THE PUBLISHED GRAPH, AND ONLY THAT. Since versioning
+    # (`WorkflowTemplateVersion`, below) a save from the editor writes a DRAFT
+    # version and leaves this column alone; only `versioning.publish()` writes
+    # it, in the same transaction that flips `published_version`. The engine
+    # (`WorkflowService._resolve_template`) keeps reading this column, so a
+    # draft can never reach a workflow — the property "saving writes a draft"
+    # is enforced by who writes here, not by a filter somebody could forget.
+    # `test_workflow_template_versions.py` asserts the two stay equal.
     nodes_json = models.JSONField(
         default=list,
-        help_text="JSON array of template nodes"
+        help_text="JSON array of template nodes (the published version's)"
+    )
+
+    # The version `nodes_json` is a copy of. Null for a template that has never
+    # been published — a new template saved from the editor is a draft only,
+    # and its `nodes_json` stays `[]`, which `_resolve_template` already skips.
+    published_version = models.ForeignKey(
+        "WorkflowTemplateVersion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
     )
 
     # Source tracking
@@ -500,6 +539,86 @@ class WorkflowTemplate(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.civilization} - {self.case_type})"
+
+
+class TemplateVersionStatus(models.TextChoices):
+    DRAFT = "DRAFT", "草稿"
+    PUBLISHED = "PUBLISHED", "已发布"
+    # A version that was published and has since been replaced. Kept, not
+    # deleted: in-flight workflows still point at it (`template_version`), and
+    # the history view is the only place an operator can see what they ran on.
+    SUPERSEDED = "SUPERSEDED", "已替换"
+
+
+class WorkflowTemplateVersion(models.Model):
+    """One numbered snapshot of a template's node graph.
+
+    Lifecycle, enforced by `apps/workflow/versioning.py` (the only writer):
+
+        save   -> the template's DRAFT is created (number = max + 1) or overwritten
+        publish-> DRAFT becomes PUBLISHED, the old PUBLISHED becomes SUPERSEDED,
+                  and the template's `nodes_json` / `published_version` follow
+
+    At most one DRAFT and one PUBLISHED per template — two partial unique
+    constraints, so the rule holds even against a writer that is not
+    `versioning.py`. A PUBLISHED or SUPERSEDED row is never edited again:
+    "editing the published version" is a save, and a save when there is no
+    draft makes a new one.
+
+    No tenant column: a version belongs to its template, and every read goes
+    through a template the caller could already see.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    template = models.ForeignKey(
+        WorkflowTemplate,
+        on_delete=models.CASCADE,
+        related_name="versions",
+    )
+    number = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=12,
+        choices=TemplateVersionStatus.choices,
+        default=TemplateVersionStatus.DRAFT,
+    )
+    nodes_json = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    saved_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["template", "-number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["template", "number"], name="uniq_wf_tmpl_version_number"
+            ),
+            models.UniqueConstraint(
+                fields=["template"],
+                condition=models.Q(status="DRAFT"),
+                name="uniq_wf_tmpl_one_draft",
+            ),
+            models.UniqueConstraint(
+                fields=["template"],
+                condition=models.Q(status="PUBLISHED"),
+                name="uniq_wf_tmpl_one_published",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.template_id} v{self.number} ({self.status})"
 
 
 class ApprovalNode(AuditUserFields, models.Model):
