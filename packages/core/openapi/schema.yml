@@ -16263,12 +16263,10 @@ components:
     GreekForkEnum:
       enum:
       - LEFT
-      - MIDDLE
       - RIGHT
       type: string
       description: |-
         * `LEFT` - 左(塔尔塔罗斯)
-        * `MIDDLE` - 中
         * `RIGHT` - 右(至福岛)
     GuiltAndPenaltyReading:
       type: object
@@ -22312,7 +22310,6 @@ components:
             Greek only: which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
-            * `MIDDLE` - 中
             * `RIGHT` - 右(至福岛)
           oneOf:
           - $ref: '#/components/schemas/GreekForkEnum'
@@ -22432,7 +22429,6 @@ components:
             Greek only: which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
-            * `MIDDLE` - 中
             * `RIGHT` - 右(至福岛)
           oneOf:
           - $ref: '#/components/schemas/GreekForkEnum'

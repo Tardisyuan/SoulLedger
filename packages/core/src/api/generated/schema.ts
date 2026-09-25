@@ -7419,11 +7419,10 @@ export interface components {
         };
         /**
          * @description * `LEFT` - 左(塔尔塔罗斯)
-         *     * `MIDDLE` - 中
          *     * `RIGHT` - 右(至福岛)
          * @enum {string}
          */
-        GreekForkEnum: "LEFT" | "MIDDLE" | "RIGHT";
+        GreekForkEnum: "LEFT" | "RIGHT";
         /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
@@ -10439,7 +10438,6 @@ export interface components {
              * @description Greek only: which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
-             *     * `MIDDLE` - 中
              *     * `RIGHT` - 右(至福岛)
              */
             fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -10501,7 +10499,6 @@ export interface components {
              * @description Greek only: which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
-             *     * `MIDDLE` - 中
              *     * `RIGHT` - 右(至福岛)
              */
             fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;

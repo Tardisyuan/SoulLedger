@@ -1398,7 +1398,6 @@
       },
       "fork": {
         "LEFT": "Left · Tartarus",
-        "MIDDLE": "Middle",
         "RIGHT": "Right · the Isles of the Blessed"
       },
       "off_shape": "{{n}} realms have no place on this shape — see the table",
