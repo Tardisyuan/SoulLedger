@@ -3285,7 +3285,8 @@
       "media_n": "图 {{n}}",
       "media_label": "配图",
       "media_caption": "图 {{i}} · {{w}}×{{h}}",
-      "media_load_failed": "图片加载失败"
+      "media_load_failed": "图片加载失败",
+      "held_for_words": "因敏感词「{{word}}」等 {{n}} 个待审"
     },
     "words": {
       "add_row": "新增敏感词",

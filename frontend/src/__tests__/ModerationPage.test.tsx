@@ -242,6 +242,35 @@ describe("举报 · the C-08 review layout", () => {
     expect(await within(detail()).findByText(held)).toBeInTheDocument();
   });
 
+  it("several words in the text: the first is named with 「等 N 个」, its category and action beside it, every hit marked", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.words.mockResolvedValue(
+      page([
+        { id: "w1", word: "还阳", category: "INDUCEMENT", action: "REVIEW", hits_30d: 3 },
+        { id: "w2", word: "回魂", category: "ABUSE", action: "HIDE", hits_30d: 1 },
+        { id: "w3", word: "不在文中", category: "", action: "MASK", hits_30d: 0 },
+      ])
+    );
+    apiMock.content.mockImplementation(async (kind: string) =>
+      page(kind === "posts" ? [post({ content: "他说还阳，又说回魂，还阳。", moderation_reason: "sensitive_word:还阳" })] : [])
+    );
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    const held = tZh("social_moderation.review.held_for_words", { word: "还阳", n: "2" });
+    expect(held).toBe("因敏感词「还阳」等 2 个待审");
+    expect(await within(list).findByText(held)).toBeInTheDocument();
+    fireEvent.click(within(list).getByText("他说还阳，又说回魂，还阳。"));
+    const region = detail();
+    expect(await within(region).findByText(held)).toBeInTheDocument();
+    const meta = region.querySelector("[data-word-meta]") as HTMLElement;
+    expect(meta.textContent).toBe(
+      `${tZh("social_moderation.words.col_category")} ${tZh("social_moderation.word_category.INDUCEMENT")} · ${tZh("social_moderation.words.col_action")} ${tZh("social_moderation.word_action.REVIEW")}`
+    );
+    const marks = Array.from(region.querySelectorAll("mark[data-word-hit]")).map((m) => m.textContent);
+    expect(marks).toEqual(["还阳", "回魂", "还阳"]);
+  });
+
   it("lists reports and rule hits together; the detail shows the full text in serif and translated reasons", async () => {
     asRole("social.moderate");
     apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));

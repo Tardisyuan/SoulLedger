@@ -3285,7 +3285,8 @@
       "media_n": "Tut {{n}}",
       "media_label": "Tut",
       "media_caption": "Tut {{i}} · {{w}}×{{h}}",
-      "media_load_failed": "Nen Ini Tut"
+      "media_load_failed": "Nen Ini Tut",
+      "held_for_words": "Medu Djeseru «{{word}}» Hena Ky ({{n}}): Nen Menkh Djer"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",
