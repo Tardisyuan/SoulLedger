@@ -54,6 +54,7 @@ function post(over: Record<string, unknown> = {}) {
     reaction_count: 0,
     reaction_counts: ZERO,
     my_reaction: null,
+    media: [],
     is_mine: false,
     create_time: "2026-09-17T08:12:00Z",
     ...over,

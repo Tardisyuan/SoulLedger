@@ -4,6 +4,7 @@ import {
   domainEnum,
   setupAuthenticatedPage,
   HANDLED_CONTENT,
+  MODERATED_POST_MEDIA,
   MODERATED_POSTS,
   MODERATION_REPORTS,
   SENSITIVE_WORDS,
@@ -43,6 +44,34 @@ test.describe("Circle moderation", () => {
       resolution: "HIDE",
       note: "辱骂他人",
     });
+  });
+
+  test("举报: a post's images — 「图 N」 on the row, square tiles with captions in the detail (C-08)", async ({ page }) => {
+    await setupAuthenticatedPage(page);
+    // The signed image URLs are API paths, so the JSON mock would answer them; serve real pixels instead.
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64"
+    );
+    await page.route("**/api/v1/social-media/**", (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: png })
+    );
+    await page.goto("/moderation");
+
+    const item = page.locator(`li[data-review-key="report:${MODERATION_REPORTS[0].id}"]`);
+    await expect(item.locator("[data-media-count]")).toHaveText("图 2");
+    await item.getByRole("button").click();
+
+    const grid = page.getByRole("region", { name: "审阅详情" }).getByRole("list", { name: "配图" });
+    const tiles = grid.getByRole("listitem");
+    await expect(tiles).toHaveCount(MODERATED_POST_MEDIA.length);
+    await expect(tiles.nth(1)).toContainText("图 2 · 1080×720");
+    // Loaded, not the failure caption, and square.
+    const img = tiles.nth(0).getByRole("img");
+    await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+    await expect(grid.getByText("图片加载失败")).toHaveCount(0);
+    const box = await tiles.nth(0).boundingBox();
+    expect(box && Math.abs(box.width - box.height)).toBeLessThan(1.5);
   });
 
   test("举报: a rule hit sits in the same queue; A lets it through", async ({ page }) => {

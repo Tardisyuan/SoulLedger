@@ -77,7 +77,8 @@ def test_every_me_social_route_is_a_soul_api_view():
     walk(get_resolver(), "")
     # 路由数写死:少了一条(改名、挪走)这条断言会红,而「没扫到」本身是这个仓库
     # 记了六次的失败形状 —— 它的输出与全绿一模一样。
-    assert len(found) == 13, f"/me/social/ 路由数不是 13:{[p for p, _ in found]}"
+    # 15:2026-09-25 加了帖子图片的上传与移除(media/、media/<id>/)。
+    assert len(found) == 15, f"/me/social/ 路由数不是 15:{[p for p, _ in found]}"
     wrong = [path for path, v in found if v is None or not issubclass(v, SoulAPIView)]
     assert wrong == [], f"这些 /me/social/ 视图不是 SoulAPIView,那道认证分界在它们身上不存在:{wrong}"
 

@@ -818,6 +818,7 @@ export const MODERATION_REPORTS = [
     report_count: 3,
     content_excerpt: "这是一条被举报的帖子",
     content_status: "PUBLISHED",
+    media_count: 2,
     entries: [
       { reporter: { user_id: 42, display_name: "举报者甲" }, reason: "ABUSE", detail: "辱骂", created_at: "2026-09-18T01:00:00Z" },
     ],
@@ -840,7 +841,15 @@ export const MODERATED_POSTS = [
     create_time: "2026-09-18T03:00:00Z",
     visibility: "PUBLIC",
     comment_count: 0,
+    media: [] as { id: string; url: string; width: number; height: number }[],
+    media_count: 0,
   },
+];
+
+/** The reported post's two images, as ModeratedPostSerializer's `media` gives them (signed, site-rooted). */
+export const MODERATED_POST_MEDIA = [
+  { id: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a101", url: "/api/v1/social-media/a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a101/?t=sig1", width: 1080, height: 1080 },
+  { id: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a102", url: "/api/v1/social-media/a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a102/?t=sig2", width: 1080, height: 720 },
 ];
 
 /** GET `/social-moderation/sensitive-words/` — SensitiveWordSerializer, with `hits_30d`. */
@@ -1597,13 +1606,17 @@ export class ApiMock {
       body: { ...MODERATION_REPORTS[0], status: call.body.resolution === "DISMISS" ? "DISMISSED" : "RESOLVED", resolution: call.body.resolution },
     }));
     this.on("GET", "/social-moderation/posts/", paginated(MODERATED_POSTS));
+    // Post images (signed file URLs). This mock only answers JSON, so by default a
+    // tile shows its load-failed caption; moderation.spec.ts routes real PNG bytes
+    // over this where it looks at the pictures themselves.
+    this.on("GET", "/social-media/:id/", {});
     this.on("GET", "/social-moderation/comments/", paginated([]));
     this.on("POST", "/social-moderation/posts/:id/approve/", { ...MODERATED_POSTS[0], moderation_status: "PUBLISHED" });
     // One post in full — the review detail (any status; retrieve is not filtered).
     this.on("GET", "/social-moderation/posts/:id/", (call) => {
       const id = call.path.split("/")[3];
       if (id === MODERATION_REPORTS[0].post) {
-        return { body: { ...MODERATED_POSTS[0], id, content: `${MODERATION_REPORTS[0].content_excerpt}。全文比摘录长：米铺老板住在隔壁那一层。`, moderation_status: "PUBLISHED", open_report_count: 1, comment_count: 3 } };
+        return { body: { ...MODERATED_POSTS[0], id, content: `${MODERATION_REPORTS[0].content_excerpt}。全文比摘录长：米铺老板住在隔壁那一层。`, moderation_status: "PUBLISHED", open_report_count: 1, comment_count: 3, media: MODERATED_POST_MEDIA, media_count: 2 } };
       }
       const hidden = HANDLED_CONTENT.find((h) => h.id === id && h.handling === "HIDDEN");
       if (hidden) return { body: { ...MODERATED_POSTS[0], id, content: `${hidden.excerpt}全文。`, moderation_status: "HIDDEN" } };

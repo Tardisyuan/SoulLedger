@@ -14,11 +14,17 @@ import { Platform, type NativeSyntheticEvent, type TextInput, type TextInputEndE
  * Android reports composing text the same way, but the handoff asked for iOS.
  *
  * Spread `onEndEditing` onto the field; call `press` from the send control.
+ * `allowEmpty`: an empty draft still sends (a circle post with images and no text).
  */
-export function useCommittedSend(input: RefObject<TextInput | null>, draft: string, onSend: (text: string) => void) {
+export function useCommittedSend(
+  input: RefObject<TextInput | null>,
+  draft: string,
+  onSend: (text: string) => void,
+  allowEmpty = false
+) {
   const committing = useRef(false);
   const press = () => {
-    if (!draft.trim()) return;
+    if (!draft.trim() && !allowEmpty) return;
     if (Platform.OS !== "ios" || !input.current?.isFocused()) return onSend(draft);
     committing.current = true;
     input.current.blur();

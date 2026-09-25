@@ -3,8 +3,10 @@
 不出现、且由测试断言不出现的:灵魂编号(登录名)、联系方式、审判 / 功过 / 处置细节、
 `username`(内含灵魂编号)、租户、官员侧的计数列。
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.social import media as post_media
 from apps.social.models import ModerationStatus, ReactionType, ReportReason, ReportTargetType, Visibility
 
 CONTENT_MAX = 2000
@@ -52,6 +54,29 @@ class SoulReactionCountsSerializer(serializers.Serializer):
     ETERNAL_LIGHT = serializers.IntegerField(source="reactions_eternal_light")
 
 
+class PostMediaSerializer(serializers.Serializer):
+    """帖子的一张图。`url` 是发给**当前查看者**的签名地址(站点根相对,约一小时有效),
+    取文件时服务端按签名里的查看者重查一次可见性(apps/social/media.py)。"""
+    id = serializers.UUIDField()
+    url = serializers.CharField(help_text="签名取图地址,站点根相对路径;过期后重新拉列表。")
+    width = serializers.IntegerField()
+    height = serializers.IntegerField()
+
+
+class SoulPostMediaUploadSerializer(PostMediaSerializer):
+    """`POST /me/social/media/` 的回应:还没挂到帖子上的一张图。发帖时把 `id` 放进 `media`。"""
+    byte_size = serializers.IntegerField()
+    content_type = serializers.CharField()
+
+
+def live_media(post):
+    """`annotate_posts_for` 预取的 `live_media`,没有预取时现查。按 position 排好。"""
+    rows = getattr(post, "live_media", None)
+    if rows is None:
+        rows = list(post.media.filter(is_deleted=False).order_by("position"))
+    return rows
+
+
 class SoulPostSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     author = SoulCardSerializer()
@@ -65,11 +90,16 @@ class SoulPostSerializer(serializers.Serializer):
     reaction_count = serializers.IntegerField(source="visible_reaction_count")
     reaction_counts = SoulReactionCountsSerializer(source="*")
     my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True)
+    media = serializers.SerializerMethodField(help_text="按显示顺序,最多 9 张。")
     is_mine = serializers.SerializerMethodField()
     create_time = serializers.DateTimeField()
 
     def get_is_mine(self, post) -> bool:
         return post.author_id == self.context["viewer"].pk
+
+    @extend_schema_field(PostMediaSerializer(many=True))
+    def get_media(self, post):
+        return post_media.describe(live_media(post), self.context["viewer"])
 
 
 class SoulCommentSerializer(serializers.Serializer):
@@ -87,8 +117,15 @@ class SoulCommentSerializer(serializers.Serializer):
 
 
 class SoulPostCreateSerializer(serializers.Serializer):
-    content = serializers.CharField(max_length=CONTENT_MAX, trim_whitespace=True)
+    """文字可以为空,但文字与图片至少有一样(`soul_circle.create_post` 判,code `empty_post`)。"""
+    content = serializers.CharField(
+        max_length=CONTENT_MAX, trim_whitespace=True, required=False, allow_blank=True, default="",
+    )
     visibility = serializers.ChoiceField(choices=Visibility.choices, default=Visibility.TENANT)
+    media = serializers.ListField(
+        child=serializers.UUIDField(), required=False, default=list, max_length=post_media.MAX_PER_POST,
+        help_text="先经 POST /me/social/media/ 上传的图片 id,按显示顺序。",
+    )
 
 
 class SoulCommentCreateSerializer(serializers.Serializer):

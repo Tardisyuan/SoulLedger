@@ -5558,7 +5558,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/SoulPostCreate'
-        required: true
       security:
       - soulJwtAuth: []
       responses:
@@ -5567,6 +5566,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulPost'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
           description: ''
         '403':
           content:
@@ -5638,6 +5643,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedSoulCards'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/media/:
+    post:
+      operationId: v1_me_social_media_upload
+      description: |-
+        先传后发的第一步:一张图一个请求(App 逐张显示进度、失败的单独重试)。
+
+        校验与头像同一个函数(`images.reencode`):按魔数认 PNG / JPEG / WebP,5 MB 上限,
+        解码后重编码、去掉 EXIF(含 GPS)。拒绝时 400,`code` 是 not_an_image / too_large /
+        too_many_pixels;未发出的图超过上限时 409 `too_many_pending`。
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulPostMediaUpload'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/media/{media_id}/:
+    delete:
+      operationId: v1_me_social_media_delete
+      description: 移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删,不走这里。
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
         '403':
           content:
             application/json:
@@ -9156,6 +9252,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/SentencePlan'
           description: ''
+  /api/v1/social-media/{media_id}/:
+    get:
+      operationId: v1_social_media_file
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: t
+        schema:
+          type: string
+        description: 序列化器给出的签名。
+        required: true
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: 图片文件(PNG / JPEG / WebP)。
+        '404':
+          description: 签名无效或过期,或查看者此刻看不见这张图。
   /api/v1/social-moderation/comments/:
     get:
       operationId: v1_social_moderation_comments_list
@@ -18790,12 +18911,23 @@ components:
           type: string
         comment_count:
           type: integer
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+          readOnly: true
+          description: 按显示顺序;`url` 是发给当前官员的签名地址。
+        media_count:
+          type: integer
+          readOnly: true
       required:
       - author
       - comment_count
       - content
       - create_time
       - id
+      - media
+      - media_count
       - moderation_status
       - open_report_count
       - visibility
@@ -21957,6 +22089,27 @@ components:
       - content
       - create_time
       - id
+    PostMedia:
+      type: object
+      description: |-
+        帖子的一张图。`url` 是发给**当前查看者**的签名地址(站点根相对,约一小时有效),
+        取文件时服务端按签名里的查看者重查一次可见性(apps/social/media.py)。
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          description: 签名取图地址,站点根相对路径;过期后重新拉列表。
+        width:
+          type: integer
+        height:
+          type: integer
+      required:
+      - height
+      - id
+      - url
+      - width
     ProvisionRequest:
       type: object
       properties:
@@ -22877,6 +23030,10 @@ components:
         content_status:
           type: string
           readOnly: true
+        media_count:
+          type: integer
+          readOnly: true
+          description: 被举报帖子的图片张数;评论与用户为 0。
         entries:
           type: array
           items:
@@ -22910,6 +23067,7 @@ components:
       - entries
       - id
       - last_reported_at
+      - media_count
       - post
       - report_count
       - resolution
@@ -24610,6 +24768,12 @@ components:
           oneOf:
           - $ref: '#/components/schemas/ReactionTypeEnum'
           - $ref: '#/components/schemas/NullEnum'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+          readOnly: true
+          description: 按显示顺序,最多 9 张。
         is_mine:
           type: boolean
           readOnly: true
@@ -24623,6 +24787,7 @@ components:
       - create_time
       - id
       - is_mine
+      - media
       - moderation_status
       - my_reaction
       - reaction_count
@@ -24630,16 +24795,48 @@ components:
       - visibility
     SoulPostCreate:
       type: object
+      description: 文字可以为空,但文字与图片至少有一样(`soul_circle.create_post` 判,code `empty_post`)。
       properties:
         content:
           type: string
+          default: ''
           maxLength: 2000
         visibility:
           allOf:
           - $ref: '#/components/schemas/VisibilityEnum'
           default: TENANT
+        media:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: 先经 POST /me/social/media/ 上传的图片 id,按显示顺序。
+          maxItems: 9
+    SoulPostMediaUpload:
+      type: object
+      description: '`POST /me/social/media/` 的回应:还没挂到帖子上的一张图。发帖时把 `id` 放进 `media`。'
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          description: 签名取图地址,站点根相对路径;过期后重新拉列表。
+        width:
+          type: integer
+        height:
+          type: integer
+        byte_size:
+          type: integer
+        content_type:
+          type: string
       required:
-      - content
+      - byte_size
+      - content_type
+      - height
+      - id
+      - url
+      - width
     SoulProfile:
       type: object
       description: 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。

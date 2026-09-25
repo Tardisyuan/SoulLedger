@@ -2843,6 +2843,29 @@
         "post_title": "Delete this post?",
         "comment_title": "Delete this comment?",
         "body": "Once deleted, others can no longer see it, and it cannot be brought back."
+      },
+      "media": {
+        "add": "Add images",
+        "count": "Images {{n}} / {{max}}",
+        "uploading": "Uploading {{percent}}%",
+        "failed": "Upload failed",
+        "retry": "Retry",
+        "remove": "Remove",
+        "waiting": "The post can go once the images finish uploading",
+        "failed_hint": "Some images did not upload: retry or remove them",
+        "limit": "Up to {{max}} images per post",
+        "image": "Image {{i}}",
+        "viewer": "Image {{i}} of {{n}}",
+        "close": "Close",
+        "load_failed": "Could not load the image",
+        "permission": "Photo access is needed to pick images",
+        "expired": "An image has expired; add it again",
+        "errors": {
+          "not_an_image": "Only PNG, JPEG or WebP images",
+          "too_large": "Each image must be 5 MB or less",
+          "too_many_pixels": "The image dimensions are too large",
+          "too_many_pending": "Too many unposted images: post or remove some first"
+        }
       }
     }
   },
@@ -3082,7 +3105,11 @@
       "reason_required": "Hiding needs a reason",
       "approve": "Let through",
       "shortcuts": "J / K move · A let through · H hide",
-      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through."
+      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
+      "media_n": "{{n}} images",
+      "media_label": "Images",
+      "media_caption": "Image {{i}} · {{w}}×{{h}}",
+      "media_load_failed": "Could not load the image"
     },
     "words": {
       "add_row": "Add a word",

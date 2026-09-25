@@ -99,6 +99,7 @@ export type IconName =
   | "cycle"
   | "letter"
   | "plus"
+  | "close"
   | "search"
   | "send"
   | "clock"
@@ -131,6 +132,7 @@ const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   // The chat handoff (1b / 1e): a folded letter for the tab, and the "new", "search", "send" (paper kite) and clock glyphs.
   letter: { box: 16, body: [<Rect key="a" x={2} y={3.5} width={12} height={9} />, <Path key="b" d="M2 4l6 4.5L14 4" />] },
   plus: { box: 18, body: <Path d="M9 3v12M3 9h12" /> },
+  close: { box: 16, body: <Path d="M3.5 3.5l9 9M12.5 3.5l-9 9" /> },
   search: { box: 18, body: [<Circle key="a" cx={8} cy={8} r={5.5} />, <Path key="b" d="M12 12l4 4" />] },
   send: { box: 20, body: <Path d="M3 17L17 10 3 3v5.5L11 10l-8 1.5z" /> },
   clock: { box: 12, body: [<Circle key="a" cx={6} cy={6} r={4.6} />, <Path key="b" d="M6 3.4V6l1.8 1.3" />] },
