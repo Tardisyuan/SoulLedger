@@ -6088,6 +6088,23 @@ export interface paths {
         patch: operations["v1_workflow_templates_partial_update"];
         trace?: never;
     };
+    "/api/v1/workflow/templates/{id}/approver-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description WorkflowTemplate CRUD. */
+        get: operations["v1_workflow_templates_approver_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflow/templates/{id}/publish/": {
         parameters: {
             query?: never;
@@ -6557,6 +6574,25 @@ export interface components {
          * @enum {string}
          */
         ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED";
+        ApproverPreview: {
+            approver_type: string;
+            actor: components["schemas"]["ApproverPreviewActor"] | null;
+            role: string | null;
+            users: components["schemas"]["ApproverPreviewUser"][];
+            user_count: number;
+            node: string;
+            civilization: string;
+            tenant: string;
+        };
+        ApproverPreviewActor: {
+            name: string;
+            name_zh: string;
+            role: string;
+        };
+        ApproverPreviewUser: {
+            display_name: string;
+            role: string;
+        };
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -22844,6 +22880,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowTemplate"];
+                };
+            };
+        };
+    };
+    v1_workflow_templates_approver_preview_retrieve: {
+        parameters: {
+            query: {
+                civilization?: string;
+                /** @description 模板内节点 id */
+                node: string;
+                /** @description 租户代码,仅 ADMIN */
+                tenant?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Workflow Template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproverPreview"];
                 };
             };
         };

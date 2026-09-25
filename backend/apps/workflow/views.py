@@ -3,7 +3,7 @@ REST views for workflow app.
 """
 from django.db import transaction
 from django.db.models import Prefetch
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +19,7 @@ from apps.workflow.serializers import (
     ApprovalNodeSerializer,
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
+    ApproverPreviewSerializer,
     WorkflowNodeActionSerializer,
     WorkflowStatsSerializer,
     WorkflowTemplateListSerializer,
@@ -48,6 +49,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     extra_permissions = {
         "publish": ["workflow.update"],
         "versions": ["workflow.read"],
+        "approver_preview": ["workflow.read"],
     }
     queryset = WorkflowTemplate.objects.select_related("tenant").all()
     serializer_class = WorkflowTemplateSerializer
@@ -102,6 +104,60 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             )
         template.refresh_from_db()
         return Response(WorkflowTemplateSerializer(template, context={"request": request}).data)
+
+    # Who a node's approver resolves to, for a target civilization and tenant.
+    # Read-only: `preview.preview_node` calls `_resolve_approver` — the resolver
+    # `_create_nodes` uses — and describes its answer with names and roles only.
+    #
+    # `tenant` (a tenant code) is honoured for ADMIN only, the one role that
+    # sees across tenants; everybody else previews in their own tenant, and a
+    # foreign code is a 403 rather than a silent substitution. With no
+    # `tenant`, ADMIN gets the tenant that hosts the requested civilization
+    # (`CIVILIZATION_TENANT`), since "按目标文明解析" is the question asked.
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("node", str, required=True, description="模板内节点 id"),
+            OpenApiParameter("civilization", str, required=False),
+            OpenApiParameter("tenant", str, required=False, description="租户代码,仅 ADMIN"),
+        ],
+        responses=ApproverPreviewSerializer,
+    )
+    @action(detail=True, methods=["get"], url_path="approver-preview")
+    def approver_preview(self, request, pk=None):
+        from apps.core.tenant import is_tenant_exempt
+        from apps.souls.models import CIVILIZATION_TENANT, Civilization
+        from apps.tenants.models import Tenant
+        from apps.workflow import preview, versioning
+
+        template = self.get_object()
+        node_id = request.query_params.get("node", "")
+        node = next(
+            (n for n in versioning.working_nodes(template)
+             if isinstance(n, dict) and str(n.get("id", "")) == node_id),
+            None,
+        ) if node_id else None
+        if node is None:
+            return Response({"error": "node_not_found"}, status=status.HTTP_404_NOT_FOUND)
+
+        civilization = request.query_params.get("civilization") or template.civilization
+        if civilization not in Civilization.values:
+            return Response({"error": "invalid_civilization"}, status=status.HTTP_400_BAD_REQUEST)
+
+        own = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        code = request.query_params.get("tenant")
+        if is_tenant_exempt(request.user):
+            code = code or CIVILIZATION_TENANT.get(civilization)
+            tenant = Tenant.objects.filter(code=code).first() if code else own
+        elif code and (own is None or code != own.code):
+            return Response({"error": "tenant_forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            tenant = own
+        if tenant is None:
+            return Response({"error": "tenant_not_found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        body = preview.preview_node(node, civilization, tenant)
+        body.update({"node": node_id, "civilization": civilization, "tenant": tenant.code})
+        return Response(body)
 
     # Read-only history, newest first. Every version the template ever had —
     # superseded ones included, because in-flight workflows may still be
