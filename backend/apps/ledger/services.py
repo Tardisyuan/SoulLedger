@@ -373,34 +373,13 @@ class LedgerService:
             # somebody made.
             fungibility_class = class_for_category(r.category)
             if r.record_type in ("MERIT", "DEMERIT"):
-                pool = class_totals.setdefault(
-                    fungibility_class,
-                    {
-                        "merit": 0.0, "demerit": 0.0,
-                        # 零積不抵整發 needs to know which part of each total was
-                        # earned or incurred 一次 — at one stroke — and which was
-                        # reached over several occasions. A pool that carries
-                        # only two sums cannot say, which is why the rule could
-                        # not be applied before these buckets existed: by the
-                        # time `offset_within_classes` sees a class the records
-                        # are gone. See `granularity_of` below for what puts a
-                        # record in which bucket, and why "unknown" is a bucket
-                        # rather than a default.
-                        "merit_by_grain": {"lump": 0.0, "scattered": 0.0, "unknown": 0.0},
-                        "demerit_by_grain": {"lump": 0.0, "scattered": 0.0, "unknown": 0.0},
-                    },
-                )
-                grain = granularity_of(r)
+                cls._add_to_pool(class_totals, r, effective_weight)
                 if r.record_type == "MERIT":
                     merit += effective_weight
                     merit_count += 1
-                    pool["merit"] += effective_weight
-                    pool["merit_by_grain"][grain] += effective_weight
                 else:
                     demerit += effective_weight
                     demerit_count += 1
-                    pool["demerit"] += effective_weight
-                    pool["demerit_by_grain"][grain] += effective_weight
 
             record_summaries.append({
                 "id": str(r.id),
@@ -467,6 +446,30 @@ class LedgerService:
 
         cache.set(cache_key, result, LEDGER_CACHE_TTL)
         return result
+
+    @staticmethod
+    def _add_to_pool(class_totals: dict, record, effective_weight: float) -> None:
+        """Add one MERIT/DEMERIT record's decayed weight to its fungibility pool."""
+        pool = class_totals.setdefault(
+            class_for_category(record.category),
+            {
+                "merit": 0.0, "demerit": 0.0,
+                # 零積不抵整發 needs to know which part of each total was
+                # earned or incurred 一次 — at one stroke — and which was
+                # reached over several occasions. A pool that carries
+                # only two sums cannot say, which is why the rule could
+                # not be applied before these buckets existed: by the
+                # time `offset_within_classes` sees a class the records
+                # are gone. See `granularity_of` for what puts a
+                # record in which bucket, and why "unknown" is a bucket
+                # rather than a default.
+                "merit_by_grain": {"lump": 0.0, "scattered": 0.0, "unknown": 0.0},
+                "demerit_by_grain": {"lump": 0.0, "scattered": 0.0, "unknown": 0.0},
+            },
+        )
+        side = "merit" if record.record_type == "MERIT" else "demerit"
+        pool[side] += effective_weight
+        pool[f"{side}_by_grain"][granularity_of(record)] += effective_weight
 
     @classmethod
     def _term_start_for(cls, soul: Soul):
@@ -582,12 +585,11 @@ class LedgerService:
         from apps.ledger.readings import REASON_BALANCE_NOT_APPLICABLE, REASON_NOT_CURRENT_LIFE
 
         excluded = {str(pk) for pk in not_admitted_ids}
-        records = soul.records.filter(cycle=cycle, record_type__in=("MERIT", "DEMERIT"))
-        not_admitted_count = sum(1 for pk in records.values_list("id", flat=True) if str(pk) in excluded)
+        sums = cls._admitted_sums(soul, cycle, excluded)
         result = {
             "reading_kind": None,
             "balance": None,
-            "not_admitted_count": not_admitted_count,
+            "not_admitted_count": sums["not_admitted_count"],
             "not_admitted_net": None,
             "reason_code": None,
         }
@@ -595,40 +597,81 @@ class LedgerService:
             result["reason_code"] = REASON_NOT_CURRENT_LIFE
             return result
 
-        anchor = cls._get_decay_anchor(soul)
-        rate = cls._decay_rate_for(soul)
-        merit = soul.inherited_merit
-        demerit = soul.inherited_demerit
-        merit_count = 0
-        demerit_count = 0
-        not_admitted_net = 0.0
-        for r in records:
-            years = cls._get_record_age_years(
-                r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
-            )
-            effective_weight = cls._decay_weight(r.weight, years, rate)
-            signed = effective_weight if r.record_type == "MERIT" else -effective_weight
-            if str(r.id) in excluded:
-                not_admitted_net += signed
-                continue
-            if r.record_type == "MERIT":
-                merit += effective_weight
-                merit_count += 1
-            else:
-                demerit += effective_weight
-                demerit_count += 1
-
         reading = get_civilization_reading(
-            soul.civilization, round(merit), round(demerit),
-            merit_count=merit_count, demerit_count=demerit_count,
+            soul.civilization, round(sums["merit"]), round(sums["demerit"]),
+            merit_count=sums["merit_count"], demerit_count=sums["demerit_count"],
         )
         result["reading_kind"] = reading["kind"]
         if reading["kind"] != "BALANCE":
             result["reason_code"] = reading.get("reason_code", REASON_BALANCE_NOT_APPLICABLE)
             return result
         result["balance"] = reading["balance"]
-        result["not_admitted_net"] = round(not_admitted_net, 2)
+        result["not_admitted_net"] = round(sums["not_admitted_net"], 2)
         return result
+
+    @classmethod
+    def _admitted_sums(cls, soul: Soul, cycle: int, excluded: set) -> dict:
+        """One life's MERIT/DEMERIT records summed the way `get_ledger_summary`
+        sums them (same decay, same unrounded accumulation, same inherited base,
+        same fungibility pools), leaving out the record ids in `excluded`."""
+        records = soul.records.filter(cycle=cycle, record_type__in=("MERIT", "DEMERIT"))
+        anchor = cls._get_decay_anchor(soul)
+        rate = cls._decay_rate_for(soul)
+        sums = {
+            "merit": soul.inherited_merit, "demerit": soul.inherited_demerit,
+            "merit_count": 0, "demerit_count": 0, "class_totals": {},
+            "not_admitted_count": 0, "not_admitted_net": 0.0,
+        }
+        for r in records:
+            years = cls._get_record_age_years(
+                r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
+            )
+            effective_weight = cls._decay_weight(r.weight, years, rate)
+            side = "merit" if r.record_type == "MERIT" else "demerit"
+            if str(r.id) in excluded:
+                sums["not_admitted_count"] += 1
+                sums["not_admitted_net"] += effective_weight if side == "merit" else -effective_weight
+                continue
+            sums[side] += effective_weight
+            sums[f"{side}_count"] += 1
+            cls._add_to_pool(sums["class_totals"], r, effective_weight)
+        return sums
+
+    @classmethod
+    def get_admitted_routing_inputs(cls, soul: Soul, cycle: int, not_admitted_ids) -> dict | None:
+        """What disposition routing reads, with a judgment's non-admitted evidence left out.
+
+        2026-09-25 产品负责人决定:结案的自动路由读**采信后**的账,不读全账。Returns
+        None when there is nothing to leave out — no ruling excludes a record of the
+        life being judged, or the judgment is from an earlier life (the same
+        NOT_CURRENT_LIFE limit `get_admitted_balance` has) — and the router then
+        reads exactly what it always read (`karmic_balance`, `demerit_score`,
+        `get_unoffset_demerit`). Otherwise the figures it reads, recomputed from
+        the admitted records by `_admitted_sums`:
+
+        * `karma` — admitted merit − demerit (Chinese fallback, Egyptian threshold);
+        * `demerit` — admitted demerit total (European culpa);
+        * `unoffset_demerit` — the 不可折 figure over the admitted pools, or None
+          exactly where `get_unoffset_demerit` would give None;
+        * `excluded` — the record ids left out (European cited circles).
+        """
+        excluded = {str(pk) for pk in not_admitted_ids}
+        if not excluded or cycle != soul.life_index:
+            return None
+        sums = cls._admitted_sums(soul, cycle, excluded)
+        if sums["not_admitted_count"] == 0:
+            return None
+        merit, demerit = round(sums["merit"]), round(sums["demerit"])
+        unoffset = None
+        if soul.civilization in NON_FUNGIBLE_CIVILIZATIONS and sums["class_totals"]:
+            non_fungible = get_civilization_reading(
+                soul.civilization, merit, demerit,
+                merit_count=sums["merit_count"], demerit_count=sums["demerit_count"],
+                class_totals=sums["class_totals"],
+            ).get("non_fungible")
+            if non_fungible and non_fungible["by_class"]:
+                unoffset = non_fungible["unoffset_demerit"]
+        return {"karma": merit - demerit, "demerit": demerit, "unoffset_demerit": unoffset, "excluded": excluded}
 
     @classmethod
     def _invalidate_cache(cls, soul: Soul):
