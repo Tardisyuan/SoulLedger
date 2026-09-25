@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soulsApi, type SoulBatchRecycleRequest, type SoulInput } from "../api/index";
+import { soulBatchRecycleErrorOf } from "../api/souls";
 import { notify } from "../platform/index";
 import { recycleBinKeys, soulKeys } from "../query_keys";
 
@@ -149,6 +150,12 @@ export function useDeleteSoul() {
  * is invalidated; `soulBatchRecycleErrorOf(error)` gives the ids the backend
  * refused (404 `not_found` / 409 `not_deletable`) for the caller to show.
  * The toasts are useDeleteSoul's keys: same action, same words.
+ *
+ * A refusal the caller can show gets NO toast here: SoulBatchBar keeps its
+ * dialog open with the refused names and the reason, and a generic 「删除失败」
+ * on top of that said less than the dialog and competed with it. Anything
+ * else (network, 500, a body without ids) still toasts — nothing else would
+ * say it failed. useDeleteSoul shares the key and is untouched.
  */
 export function useBatchRecycleSouls() {
   const qc = useQueryClient();
@@ -159,7 +166,8 @@ export function useBatchRecycleSouls() {
       qc.invalidateQueries({ queryKey: recycleBinKeys.all });
       notify("souls.detail.delete_to_recycle_bin", "success");
     },
-    onError: () => {
+    onError: (error) => {
+      if (soulBatchRecycleErrorOf(error)) return;
       notify("souls.detail.error_delete", "error");
     },
   });
