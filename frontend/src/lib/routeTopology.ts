@@ -10,13 +10,14 @@ import type { Realm, SoulPathEntry } from "@soulledger/core/api";
  *
  *   CHINESE  一线          `order`(殿号 1–10)
  *   EUROPEAN 漏斗          `region` + `level`(圈 / 台阶)
- *   EGYPTIAN 十二时之河    `hour`(1–12),`is_judgment_hall` 加粗
+ *   EGYPTIAN 称心二岔      `order` 排主干(称心 `is_judgment_hall` 加粗),出称心按 `fork`
+ *                          分两条:PASS 向上,FAIL 向下、以虚线终点收尾(第二次死亡不是地方)
  *   GREEK    三岔          `fork`(LEFT / RIGHT),其余为主干
  *
- * **形状字段缺失就画「一条线 · 示意」,不猜。** 杜阿特的 `hour` 在种子里每一行都是
- * null —— 十二时是《冥世之书》里拉的夜行,不是亡者的路(backend/apps/actors/
- * mythology/realms.py REALM_TOPOLOGY)—— 所以今天杜阿特画的就是示意线,这是
- * 数据的真话,不是一个待修的缺陷。
+ * **形状字段缺失就画「一条线 · 示意」,不猜。** 杜阿特曾是「十二时之河」,要每站一个
+ * 《阿姆杜阿特》的时辰;种子的六站出自《亡灵书》,没有公认的站→时对照,`hour` 每行都是
+ * null,于是那张图永远是示意线。2026-09-26 改成称心二岔,只用 `order` 与 `fork`
+ * (backend/apps/actors/mythology/realms.py REALM_TOPOLOGY)。
  *
  * **规则 16:只有有记录的站画成已行。** 站的状态只从 path 来:`left_at` 有值 =
  * 已行,`left_at` 为空 = 现在,其余一律待行 —— 包括序号在「现在」之前、但 path
@@ -24,13 +25,13 @@ import type { Realm, SoulPathEntry } from "@soulledger/core/api";
  * 系统不知道它经过了,画成实线就是替它编了一段行程。
  */
 
-export type ShapeKind = "line" | "funnel" | "river" | "fork";
+export type ShapeKind = "line" | "funnel" | "weighing" | "fork";
 export type StationState = "travelled" | "current" | "pending";
 
 export const CIVILIZATION_SHAPE: Record<string, ShapeKind> = {
   CHINESE: "line",
   EUROPEAN: "funnel",
-  EGYPTIAN: "river",
+  EGYPTIAN: "weighing",
   GREEK: "fork",
 };
 
@@ -44,6 +45,8 @@ export interface Station {
 
 export type FunnelRegion = "INFERNO" | "PURGATORIO" | "PARADISO";
 export type Fork = "LEFT" | "RIGHT";
+/** 称心的两个结果。不是柏拉图的左右 —— 见 backend/apps/realms/models.py RealmFork。 */
+export type WeighingRoad = "PASS" | "FAIL";
 
 interface Common {
   /** Path stations that have no place on this shape — drawn as ↳ branches. */
@@ -55,7 +58,14 @@ interface Common {
 export type Topology =
   | (Common & { kind: "line"; schematic: boolean; stations: Station[] })
   | (Common & { kind: "funnel"; schematic: false; regions: { region: FunnelRegion; stations: Station[] }[] })
-  | (Common & { kind: "river"; schematic: false; stations: Station[] })
+  | (Common & {
+      kind: "weighing";
+      schematic: false;
+      /** By `order`; the last one is the weighing. */
+      trunk: Station[];
+      /** PASS first (drawn up), FAIL second (drawn down). `terminal`: the road ends in no place — drawn dashed. */
+      roads: { fork: WeighingRoad; terminal: boolean; stations: Station[] }[];
+    })
   | (Common & { kind: "fork"; schematic: false; trunk: Station[]; roads: { fork: Fork; stations: Station[] }[] });
 
 /** Rule 16: a station's state comes from the path and nowhere else. */
@@ -71,6 +81,7 @@ export function stationStates(path: readonly SoulPathEntry[] | null | undefined)
 
 const REGION_ORDER: FunnelRegion[] = ["INFERNO", "PURGATORIO", "PARADISO"];
 const FORK_ORDER: Fork[] = ["LEFT", "RIGHT"];
+const WEIGHING_ROADS: WeighingRoad[] = ["PASS", "FAIL"];
 
 const isSet = <T>(v: T | null | undefined): v is T => v !== null && v !== undefined;
 
@@ -162,10 +173,20 @@ function placeShape(
         topology: { kind: "funnel", schematic: false, regions },
       };
     }
-    case "river": {
-      const hours = own.filter((r) => isSet(r.hour)).sort((a, b) => a.hour! - b.hour!);
-      if (!hours.length) return null;
-      return { ids: hours.map((r) => r.id), topology: { kind: "river", schematic: false, stations: hours.map(station) } };
+    case "weighing": {
+      const byOrder = (rows: Realm[]) => rows.filter((r) => isSet(r.order)).sort((a, b) => a.order! - b.order!);
+      const trunk = byOrder(own.filter((r) => !isSet(r.fork)));
+      const roads = WEIGHING_ROADS.map((fork) => ({
+        fork,
+        terminal: fork === "FAIL",
+        stations: byOrder(own.filter((r) => r.fork === fork)).map(station),
+      })).filter((road) => road.stations.length > 0);
+      // No trunk (order missing) or no road out of the weighing (fork missing): not this shape.
+      if (!trunk.length || !roads.length) return null;
+      return {
+        ids: [...trunk.map((r) => r.id), ...roads.flatMap((road) => road.stations.map((s) => s.id))],
+        topology: { kind: "weighing", schematic: false, trunk: trunk.map(station), roads },
+      };
     }
     case "fork": {
       const forked = own.filter((r) => isSet(r.fork));

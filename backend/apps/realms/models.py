@@ -63,16 +63,23 @@ class CommediaRegion(models.TextChoices):
     PARADISO = "PARADISO", "天堂"
 
 
-class GreekFork(models.TextChoices):
-    """希腊(冥府「三岔」)一站在审判岔路的哪一支。
+class RealmFork(models.TextChoices):
+    """岔路一站在审判之后的哪一支。两个文明用它,各用各的两个值,互不借用。
 
-    左 / 右出自柏拉图《理想国》X 614c-d:正义者向右、向上,不义者向左、向下 ——
-    这是 left/right 的出处,不是设计稿的约定。设计稿的契约里曾有第三个值 MIDDLE,
-    从没有任何种子行取它,2026-09-25 决定删掉(迁移 0020):中间那条(常说的 Asphodel)
-    是现代教科书的三分法,见 apps/actors/mythology/realms.py GREEK_REALMS 的说明。
+    希腊(冥府「三岔」):左 / 右出自柏拉图《理想国》X 614c-d:正义者向右、向上,
+    不义者向左、向下 —— 这是 left/right 的出处,不是设计稿的约定。设计稿的契约里曾有
+    第三个值 MIDDLE,从没有任何种子行取它,2026-09-25 决定删掉(迁移 0020):中间那条
+    (常说的 Asphodel)是现代教科书的三分法,见 apps/actors/mythology/realms.py
+    GREEK_REALMS 的说明。
+
+    埃及(杜阿特「称心二岔」,2026-09-26 起,迁移 0022):过 / 不过,即称心的两个结果
+    (《亡灵书》125)。**不复用 LEFT / RIGHT**:那两个词是柏拉图的原话,写在杜阿特的
+    行上就是替《亡灵书》说了一句它没说的「向左」。类原名 GreekFork,两个文明共用后改名。
     """
     LEFT = "LEFT", "左(塔尔塔罗斯)"
     RIGHT = "RIGHT", "右(至福岛)"
+    PASS = "PASS", "过(称心通过)"
+    FAIL = "FAIL", "不过(第二次死亡)"
 
 
 class Realm(AuditUserFields, models.Model):
@@ -180,8 +187,8 @@ class Realm(AuditUserFields, models.Model):
         help_text="Egyptian only: the hall where the heart is weighed; null elsewhere",
     )
     fork = models.CharField(
-        max_length=6, null=True, blank=True, choices=GreekFork.choices,
-        help_text="Greek only: which road out of the judgment place",
+        max_length=6, null=True, blank=True, choices=RealmFork.choices,
+        help_text="Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place",
     )
 
     tenant = models.ForeignKey(

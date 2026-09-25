@@ -1503,7 +1503,7 @@
       "schematic": "Tut",
       "shape_line": "Wat Wa",
       "shape_funnel": "Hesep Neb",
-      "shape_river": "Itru Unut 12",
+      "shape_weighing": "Wedja Ib Wat 2",
       "shape_fork": "Wat 3",
       "state_travelled": "Shem Seth",
       "state_current": "Emu",
@@ -1515,7 +1515,9 @@
       },
       "fork": {
         "LEFT": "Tartaros",
-        "RIGHT": "Ta Nefer"
+        "RIGHT": "Ta Nefer",
+        "PASS": "Ib Maa",
+        "FAIL": "Mut Sen"
       },
       "off_shape": "Ta {{n}}: Nen Em Tut; Maa Sesh",
       "no_stops": "Nen Wat Djer",
@@ -1525,7 +1527,7 @@
       "col_name": "Ren",
       "col_code": "Ren Ta",
       "col_kind": "Iru",
-      "col_held": "Em Shepet / Hesb Aq",
+      "col_held": "Em Sekhet / Hesb Aq",
       "col_eternal": "Djet",
       "eternal_yes": "Iu",
       "eternal_no": "Nen",

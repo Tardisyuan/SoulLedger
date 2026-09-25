@@ -155,6 +155,55 @@ describe("SoulLedgerProgress", () => {
     expect(container.querySelectorAll("[aria-current=step]").length).toBeGreaterThan(0);
     expect(coreApi.soulsApi.path).toHaveBeenCalledWith("s1");
   });
+
+  it("draws an Egyptian soul's route on 称心二岔: the fail road is the dashed terminal and states come from the path", async () => {
+    const eg = (id: string, order: number, extra: Record<string, unknown> = {}) => ({
+      id, realm_code: id, name: id, civilization: "EGYPTIAN", realm_type: "PURGATORY", tier: order,
+      is_eternal: false, order, is_judgment_hall: false, fork: null, ...extra,
+    });
+    coreApi.realmsApi.list.mockResolvedValue({
+      data: {
+        results: [
+          eg("EG_DUAT_ENTRY", 1),
+          eg("EG_SEVEN_ARRWT", 2),
+          eg("EG_HALL_TWO_TRUTHS", 3, { is_judgment_hall: true }),
+          eg("EG_TWENTYONE_SEBKHET", 4, { fork: "PASS" }),
+          eg("EG_AARU", 5, { fork: "PASS" }),
+          eg("EG_ANNIHILATION", 4, { fork: "FAIL" }),
+        ],
+        count: 6,
+      },
+    });
+    coreApi.soulsApi.path.mockResolvedValue({
+      data: [
+        { id: "p1", sequence: 1, realm_id: "EG_DUAT_ENTRY", realm_code: "EG_DUAT_ENTRY", entered_at: "2026-06-08T00:00:00Z", left_at: "2026-06-09T00:00:00Z" },
+        { id: "p2", sequence: 2, realm_id: "EG_HALL_TWO_TRUTHS", realm_code: "EG_HALL_TWO_TRUTHS", entered_at: "2026-06-09T00:00:00Z", left_at: null },
+      ],
+    });
+    wrap(
+      <SoulLedgerProgress
+        soul={{ ...SOUL, civilization: "EGYPTIAN" } as Soul}
+        judgments={[]}
+        dispositions={[]}
+        reincarnations={[] as Reincarnation[]}
+        birthDisplay={null}
+        deathDisplay={null}
+      />
+    );
+    const route = await screen.findByTestId("soul-route");
+    await within(route).findAllByRole("listitem");
+    const topo = route.querySelector('[data-route-topology="weighing"]')!;
+    expect(topo.getAttribute("data-schematic")).toBe("false");
+    const states = (sel: string) =>
+      Array.from(topo.querySelectorAll(`${sel} li`), (li) => [li.querySelector("[title]")?.getAttribute("title"), li.getAttribute("data-station-state")]);
+    // 七道通路没有记录:待行,不因为「现在」在称心就算走过(规则 16)。
+    expect(Array.from(topo.querySelectorAll(":scope ol")[0].querySelectorAll(":scope > li"), (li) => li.getAttribute("data-station-state")))
+      .toEqual(["travelled", "pending", "current"]);
+    expect(states('[data-fork="PASS"]').map(([, st]) => st)).toEqual(["pending", "pending"]);
+    expect(states('[data-fork="FAIL"]').map(([, st]) => st)).toEqual(["pending"]);
+    expect(topo.querySelector('[data-fork="FAIL"]')?.getAttribute("data-terminal")).toBe("dashed");
+    expect(topo.querySelector('[data-fork="PASS"]')?.getAttribute("data-terminal")).toBeNull();
+  });
 });
 
 describe("SoulLedgerSections — 丙 · 审判", () => {

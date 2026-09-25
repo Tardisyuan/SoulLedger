@@ -14,6 +14,7 @@ import { segmentWalked, type Station, type StationState, type Topology } from "@
  *   ┅ 待行   1 px 虚线
  *   ▪ 现在   强调色方块
  *   □ 站     空心方块;map 模式里有在押的站填墨
+ *   ⬚ 终点   虚线方块 + 虚线路:杜阿特「不过」那条路的尽头(第二次死亡不是地方)
  *
  * 每个站是一个 `<li data-station-state>`,状态另有 sr-only 文字 —— 线型与方块
  * 只是看的,不单靠形状说「这一站走过没有」。
@@ -57,8 +58,8 @@ export function RouteTopology({
   const tip = (s: Station) => [realmStationLabel(t, s), s.code].filter(Boolean).join(" · ") || undefined;
   const held = (s: Station) => occupancy?.get(s.id) ?? 0;
 
-  const mark = (s: Station, emphasis = false) => (
-    <StationMark state={s.state} filled={mode === "map" && held(s) > 0} emphasis={emphasis} />
+  const mark = (s: Station, emphasis = false, terminal = false) => (
+    <StationMark state={s.state} filled={mode === "map" && held(s) > 0} emphasis={emphasis} terminal={terminal} />
   );
   const stateText = (s: Station) => (
     <span className="sr-only">{t(`realms.topology.state_${s.state}`)}</span>
@@ -96,9 +97,13 @@ export function RouteTopology({
     </ol>
   );
 
-  const horizontal = (stations: Station[], bold?: (s: Station) => boolean) => (
+  /** `lead`: the station this run branches off (draws the segment into the first one).
+   *  `terminal`: a road into no place — every segment dashed, the mark a dashed square. */
+  const horizontal = (stations: Station[], bold?: (s: Station) => boolean, lead: Station | null = null, terminal = false) => (
     <ol className="flex min-w-max">
-      {stations.map((s, i) => (
+      {stations.map((s, i) => {
+        const into = i === 0 ? (lead ? lead.state !== "pending" && s.state !== "pending" : null) : segmentWalked(stations, i);
+        return (
         <li
           key={s.id}
           data-station-state={s.state}
@@ -106,8 +111,8 @@ export function RouteTopology({
           className="min-w-16 flex-1 pr-1"
         >
           <span aria-hidden="true" className="flex items-center h-3">
-            <span className={`flex-1 h-0 ${i === 0 ? "" : segmentWalked(stations, i) ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
-            {mark(s, bold?.(s))}
+            <span className={`flex-1 h-0 ${into === null ? "" : into && !terminal ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
+            {mark(s, bold?.(s), terminal)}
             <span className={`flex-1 h-0 ${i === stations.length - 1 ? "" : segmentWalked(stations, i + 1) ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
           </span>
           <span
@@ -119,7 +124,8 @@ export function RouteTopology({
           {stateText(s)}
           {mode === "map" && <span className="block text-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{held(s)}</span>}
         </li>
-      ))}
+        );
+      })}
     </ol>
   );
 
@@ -128,13 +134,26 @@ export function RouteTopology({
     case "line":
       body = compact ? <div className="relative overflow-x-auto max-w-full">{horizontal(topology.stations)}</div> : vertical(topology.stations);
       break;
-    case "river":
+    case "weighing": {
+      // Horizontal trunk to the weighing, then the two roads out of it: PASS up, FAIL down.
+      const hall = topology.trunk[topology.trunk.length - 1];
       body = (
         <div className="relative overflow-x-auto max-w-full">
-          {horizontal(topology.stations, (s) => s.realm?.is_judgment_hall === true)}
+          <div className="flex items-center min-w-max">
+            {horizontal(topology.trunk, (s) => s.realm?.is_judgment_hall === true)}
+            <div className="flex flex-col gap-3">
+              {topology.roads.map((road) => (
+                <div key={road.fork} data-fork={road.fork} data-terminal={road.terminal ? "dashed" : undefined}>
+                  <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pl-1">{t(`realms.topology.fork.${road.fork}`)}</div>
+                  {horizontal(road.stations, undefined, hall, road.terminal)}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       );
       break;
+    }
     case "funnel":
       body = (
         <div className="space-y-2">
@@ -247,15 +266,17 @@ function textTone(state: StationState): string {
   return "text-[oklch(var(--color-ink-muted))]";
 }
 
-function StationMark({ state, filled, emphasis }: { state: StationState; filled: boolean; emphasis?: boolean }) {
+function StationMark({ state, filled, emphasis, terminal }: { state: StationState; filled: boolean; emphasis?: boolean; terminal?: boolean }) {
   const ring = emphasis ? "border-2" : "border";
-  const cls =
+  const cls = terminal
+    ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-accent))]" : "bg-[oklch(var(--color-canvas))]"}`
+    :
     state === "current"
       ? "size-2.5 bg-[oklch(var(--color-accent))]"
       : state === "travelled" || filled
         ? `size-2 bg-[oklch(var(--color-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-ink))]" : ""}`
         : `size-2 bg-[oklch(var(--color-canvas))] ${ring} border-[oklch(var(--color-ink-subtle))]`;
-  return <span aria-hidden="true" data-mark={state} className={`shrink-0 ${cls}`} />;
+  return <span aria-hidden="true" data-mark={state} data-terminal={terminal ? "dashed" : undefined} className={`shrink-0 ${cls}`} />;
 }
 
 const ROMAN: [number, string][] = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];

@@ -18,7 +18,7 @@ from django.core.management import call_command
 
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, Verdict
-from apps.realms.models import CommediaRegion, GreekFork, Realm, RealmKind, SoulPathEntry
+from apps.realms.models import CommediaRegion, Realm, RealmFork, RealmKind, SoulPathEntry
 from apps.realms.path import SoulPathService
 from apps.souls.models import Soul, SoulState
 from tests import sentence_plan_support as plan
@@ -106,13 +106,73 @@ def test_egypt_has_one_judgment_hall_and_no_hour_or_gate(seeded):
 @pytest.mark.django_db
 def test_greek_roads_fork_left_and_right_off_the_meadow_and_nothing_takes_the_middle(seeded):
     meadow = _realm("EU_PLATO_MEADOW")
-    assert (_realm("GR_TARTARUS").fork, _realm("GR_TARTARUS").parent_realm_id) == (GreekFork.LEFT, meadow.pk)
+    assert (_realm("GR_TARTARUS").fork, _realm("GR_TARTARUS").parent_realm_id) == (RealmFork.LEFT, meadow.pk)
     isles = _realm("GR_ISLES_OF_THE_BLESSED")
-    assert (isles.fork, isles.parent_realm_id) == (GreekFork.RIGHT, meadow.pk)
+    assert (isles.fork, isles.parent_realm_id) == (RealmFork.RIGHT, meadow.pk)
     assert (meadow.fork, meadow.parent_realm_id) == (None, None)
     assert not Realm.all_objects.filter(fork="MIDDLE").exists()
-    assert GreekFork.values == ["LEFT", "RIGHT"]  # MIDDLE removed 2026-09-25
-    assert set(Realm.objects.exclude(civilization="GREEK").values_list("fork", flat=True)) == {None}
+    assert RealmFork.values == ["LEFT", "RIGHT", "PASS", "FAIL"]  # MIDDLE removed 2026-09-25; PASS/FAIL are Egypt's
+    assert set(Realm.objects.filter(civilization="GREEK").values_list("fork", flat=True)) == {"LEFT", "RIGHT", None}
+    assert set(Realm.objects.exclude(civilization__in=["GREEK", "EGYPTIAN"]).values_list("fork", flat=True)) == {None}
+
+
+# 称心二岔(2026-09-26,realms/0022):主干按 order,出称心两条路按 fork。
+DUAT_ROUTE = {
+    "EG_DUAT_ENTRY": (1, None),
+    "EG_SEVEN_ARRWT": (2, None),
+    "EG_HALL_TWO_TRUTHS": (3, None),
+    "EG_TWENTYONE_SEBKHET": (4, "PASS"),
+    "EG_AARU": (5, "PASS"),
+    "EG_ANNIHILATION": (4, "FAIL"),
+}
+
+
+@pytest.mark.django_db
+def test_the_duat_is_the_weighing_fork(seeded):
+    eg = {r.realm_code: r for r in Realm.objects.filter(civilization="EGYPTIAN")}
+    assert {code: (r.order, r.fork) for code, r in eg.items()} == DUAT_ROUTE
+    # 称心是主干的最后一站;七道通路在它之前,二十一道门户只在「过」那条路上。
+    trunk = sorted((r.order, code) for code, r in eg.items() if r.fork is None)
+    assert trunk[-1][1] == "EG_HALL_TWO_TRUTHS" and eg["EG_HALL_TWO_TRUTHS"].is_judgment_hall is True
+    assert eg["EG_SEVEN_ARRWT"].tier < eg["EG_HALL_TWO_TRUTHS"].tier < eg["EG_TWENTYONE_SEBKHET"].tier
+    # 杜阿特不用柏拉图的左右,希腊不用称心的过 / 不过。
+    assert not Realm.objects.filter(civilization="EGYPTIAN", fork__in=["LEFT", "RIGHT"]).exists()
+    assert not Realm.objects.exclude(civilization="EGYPTIAN").filter(fork__in=["PASS", "FAIL"]).exists()
+
+
+_duat_mig = import_module("apps.realms.migrations.0022_duat_weighing_fork")
+
+
+@pytest.mark.django_db
+def test_the_weighing_fork_migration_moves_only_rows_still_holding_the_old_values(seeded):
+    """Back -> forward on the seeded rows; a hand-edited column is left alone."""
+    from django.apps import apps as registry
+
+    def snap():
+        return {r.realm_code: (r.tier, r.order, r.fork) for r in Realm.all_objects.filter(civilization="EGYPTIAN")}
+
+    new = snap()
+    _duat_mig.backwards(registry, None)
+    old = snap()
+    assert (old["EG_HALL_TWO_TRUTHS"], old["EG_SEVEN_ARRWT"]) == ((2, None, None), (3, None, None))
+    assert {v[1:] for v in old.values()} == {(None, None)}
+    _duat_mig.forwards(registry, None)
+    assert snap() == new
+
+    # 有人手改过的列:迁移不碰它。
+    _duat_mig.backwards(registry, None)
+    Realm.all_objects.filter(realm_code="EG_HALL_TWO_TRUTHS").update(tier=7)
+    _duat_mig.forwards(registry, None)
+    assert snap()["EG_HALL_TWO_TRUTHS"] == (7, 3, None)
+
+
+@pytest.mark.django_db
+def test_the_weighing_fork_migration_refuses_to_reverse_over_a_stray_pass_or_fail(seeded):
+    from django.apps import apps as registry
+
+    Realm.all_objects.filter(realm_code="GR_TARTARUS").update(fork="FAIL")
+    with pytest.raises(RuntimeError, match="GR_TARTARUS"):
+        _duat_mig.backwards(registry, None)
 
 
 @pytest.mark.django_db
@@ -131,13 +191,14 @@ def test_the_migration_that_drops_middle_refuses_a_row_still_holding_it(seeded):
 def test_topology_columns_stay_on_their_own_civilization(seeded):
     """每个文明的列只在那个文明上有值。"""
     per_civ = {
-        "order": "CHINESE", "kind": "CHINESE", "level": "EUROPEAN", "region": "EUROPEAN",
-        "fork": "GREEK", "is_judgment_hall": "EGYPTIAN",
+        "order": ("CHINESE", "EGYPTIAN"), "kind": ("CHINESE",), "level": ("EUROPEAN",),
+        "region": ("EUROPEAN",), "fork": ("GREEK", "EGYPTIAN"), "is_judgment_hall": ("EGYPTIAN",),
     }
-    for column, civ in per_civ.items():
-        stray = Realm.objects.exclude(civilization=civ).exclude(**{f"{column}__isnull": True})
+    for column, civs in per_civ.items():
+        stray = Realm.objects.exclude(civilization__in=civs).exclude(**{f"{column}__isnull": True})
         assert list(stray.values_list("realm_code", flat=True)) == [], column
-        assert Realm.objects.filter(civilization=civ, **{f"{column}__isnull": False}).exists(), column
+        for civ in civs:
+            assert Realm.objects.filter(civilization=civ, **{f"{column}__isnull": False}).exists(), (column, civ)
     assert set(Realm.objects.values_list("capacity", flat=True)) == {None}
 
 
@@ -555,5 +616,6 @@ def test_the_committed_schema_describes_the_new_shapes():
     assert "realm_id" in schemas["Disposition"]["properties"]
     for name in ("Realm", "RealmList"):
         assert {"order", "kind", "level", "region", "hour", "fork"} <= set(schemas[name]["properties"]), name
-    assert schemas["GreekForkEnum"]["enum"] == ["LEFT", "RIGHT"]
+    assert schemas["RealmForkEnum"]["enum"] == ["LEFT", "RIGHT", "PASS", "FAIL"]
+    assert "GreekForkEnum" not in schemas
     assert schemas["RealmKindEnum"]["enum"] == ["HALL", "GATE", "LAYER", "PATH"]
