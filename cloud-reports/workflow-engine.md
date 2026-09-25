@@ -157,7 +157,7 @@ Could not be expressed, or only approximately:
 |------|---------|------|--------|
 | backend pytest (SQLite), full, `93cf706` | `.venv/bin/python -m pytest --tb=short -q` | 1 | 5097 passed / **3 failed** / 26 skipped; coverage 94.05% |
 | backend, after the fix `27e6c67` | workflow + verdict-bundle + schema tests | 0 | 293 passed |
-| backend pytest (SQLite), full, `27e6c67` | same | running | (PR body updated when it finishes) |
+| backend pytest (SQLite), full, `27e6c67` | same | 0 | **5100 passed / 0 failed / 26 skipped**; coverage 94.05% (includes the schema gates: 0 warnings / 0 errors) |
 | ruff | `.venv/bin/ruff check .` | 0 | clean |
 | makemigrations | `manage.py makemigrations --check --dry-run` | 0 | no changes |
 | schema gate | `test_schema_has_no_warnings`, `test_committed_schema_matches_the_backend`, `test_declared_response_shapes_match_the_views` (in the full run); schema.yml regenerated and byte-identical to a fresh `spectacular` | — | 0 warnings / 0 errors |
