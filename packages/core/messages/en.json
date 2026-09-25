@@ -2905,6 +2905,10 @@
       "title": "Password help requested",
       "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."
     },
+    "password_help_requested_moderator": {
+      "title": "Password help requested",
+      "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, ask an administrator to reset it."
+    },
     "dispatch_return_blocked": {
       "title": "Residence return blocked",
       "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."

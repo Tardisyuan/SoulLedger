@@ -21,6 +21,7 @@ MESSAGES = {
         "sentence_plan_completed": {"title": "受刑计划完成", "body": "灵魂「{{soul}}」的受刑计划已全部完成。"},
         "cross_sentence_submitted": {"title": "联审节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "password_help_requested": {"title": "忘记密码求助", "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请到用户管理为其重置。"},
+        "password_help_requested_moderator": {"title": "忘记密码求助", "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请联系管理员为其重置。"},
         "dispatch_return_blocked": {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
@@ -38,6 +39,7 @@ MESSAGES = {
         "sentence_plan_completed": {"title": "Sentence plan completed", "body": "Soul {{soul}} has served every stop of its sentence plan."},
         "cross_sentence_submitted": {"title": "Joint sentence submitted", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
         "password_help_requested": {"title": "Password help requested", "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."},
+        "password_help_requested_moderator": {"title": "Password help requested", "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, ask an administrator to reset it."},
         "dispatch_return_blocked": {
             "title": "Residence return blocked",
             "body": (
@@ -58,6 +60,7 @@ MESSAGES = {
         "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Sekhet Neb Wetep Seth."},
         "cross_sentence_submitted": {"title": "Sekhet Sesh Seth", "body": "{{tenant}}: Sekhet {{order}} En {{soul}} Sesh Seth."},
         "password_help_requested": {"title": "Nen Rekh Sekhem", "body": "{{username}}: Nen Rekh Sekhem. Wehem Sekhem Em Iri Netjeru."},
+        "password_help_requested_moderator": {"title": "Nen Rekh Sekhem", "body": "{{username}}: Nen Rekh Sekhem. Medu Netjer Em Tepy Er Wehem Sekhem."},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
@@ -80,6 +83,26 @@ KIND_BY_TYPE = {
     "SENTENCE_PLAN_CANCELLED": "sentence_plan_cancelled",
     "PASSWORD_HELP_REQUESTED": "password_help_requested",
 }
+
+
+#: Per-recipient variants of a type's kind. A sender picks one by writing its
+#: name into the row's `params["kind"]`; `kind_for` honours it only if it is
+#: listed here under the type's own kind, so a row cannot name any other text.
+#:
+#: `password_help_requested_moderator`: a realm lead (殿主) is told about a
+#: colleague's 「忘记密码」 but cannot open user management (ADMIN only), so
+#: their text says to ask an administrator instead (2026-09-25 decision).
+VARIANTS = {
+    "password_help_requested": {"password_help_requested_moderator"},
+}
+
+
+def kind_for(notification_type, params):
+    """The text a stored notification renders with: its type's kind, or the
+    variant its `params` name when that variant belongs to that kind."""
+    kind = KIND_BY_TYPE.get(notification_type)
+    variant = (params or {}).get("kind")
+    return variant if variant in VARIANTS.get(kind, ()) else kind
 
 
 def render(locale, kind, params):

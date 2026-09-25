@@ -2905,6 +2905,10 @@
       "title": "忘记密码求助",
       "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请到用户管理为其重置。"
     },
+    "password_help_requested_moderator": {
+      "title": "忘记密码求助",
+      "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请联系管理员为其重置。"
+    },
     "dispatch_return_blocked": {
       "title": "暂居回归被拦下",
       "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"

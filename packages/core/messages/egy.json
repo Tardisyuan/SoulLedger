@@ -2905,6 +2905,10 @@
       "title": "Nen Rekh Sekhem",
       "body": "{{username}}: Nen Rekh Sekhem. Wehem Sekhem Em Iri Netjeru."
     },
+    "password_help_requested_moderator": {
+      "title": "Nen Rekh Sekhem",
+      "body": "{{username}}: Nen Rekh Sekhem. Medu Netjer Em Tepy Er Wehem Sekhem."
+    },
     "dispatch_return_blocked": {
       "title": "Ankh Er Taui Khesef",
       "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."

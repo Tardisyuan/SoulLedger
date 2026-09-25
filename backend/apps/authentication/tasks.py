@@ -73,9 +73,14 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     if not recipients:
         recipients = list(active.filter(role="ADMIN", tenant__isnull=True).order_by("pk"))
 
-    params = {"username": user.username}
-    title, message = render(DEFAULT_LOCALE, "password_help_requested", params)
     for admin in recipients:
+        # A MODERATOR cannot open user management (ADMIN only), so theirs says
+        # to ask an administrator. Written into `params` so the read-time
+        # re-render (`kind_for`) picks the same text in every language.
+        params = {"username": user.username}
+        if admin.role != "ADMIN":
+            params["kind"] = "password_help_requested_moderator"
+        title, message = render(DEFAULT_LOCALE, params.get("kind", "password_help_requested"), params)
         notify_user(
             admin,
             title=title,
