@@ -585,7 +585,9 @@
         "off": "无",
         "unsaved": "未保存",
         "failed": "保存失败",
-        "conflict": "引起冲突"
+        "conflict": "引起冲突",
+        "lock": "始终 · ADMIN",
+        "deny": "禁授 · 殿主"
       },
       "refused": {
         "admin_only_permission": "与规则「回收站的恢复与彻底删除仅限 ADMIN」冲突，已退回。",
@@ -598,7 +600,12 @@
         "role_forbidden_permission": "与规则「殿主不得持有审批工作流、推进工作流与用户管理权限」冲突，已退回。"
       },
       "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
-      "conflict_acknowledge": "我知道这会让 {{n}} 条审批流（含进行中 {{m}} 条）无人可批"
+      "conflict_acknowledge": "确认冲突：这次改动影响 {{n}} 条审批流，含进行中 {{m}} 条。",
+      "lock_word": "始终",
+      "lock_hint": "管理员角色始终拥有全部权限，不能取消勾选。",
+      "deny_word": "禁授",
+      "deny_hint": "殿主不能被授予「{{perm}}」。",
+      "conflict_view": "查看"
     },
     "segments": {
       "label": "权限分区",

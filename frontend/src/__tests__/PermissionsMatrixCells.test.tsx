@@ -122,11 +122,11 @@ describe("PermCell states", () => {
     expect(stateOf(cell("JUDGE", "soul.read"))).toBe("revoke");
     expect(glyphOf(cell("YIN_CLERK", "soul.update"))).toBe("＋");
     expect(glyphOf(cell("JUDGE", "soul.read"))).toBe("−");
-    expect(glyphOf(cell("ADMIN", "soul.read"))).toBe("");
+    expect(glyphOf(cell("YIN_CLERK", "soul.read"))).toBe("");
     expect(cell("YIN_CLERK", "soul.update")).toHaveAccessibleDescription("permissions.matrix.state.grant");
     expect(cell("JUDGE", "soul.read")).toHaveAccessibleDescription("permissions.matrix.state.revoke");
     // A plain cell carries no description.
-    expect(cell("ADMIN", "soul.read")).not.toHaveAccessibleDescription();
+    expect(cell("YIN_CLERK", "soul.read")).not.toHaveAccessibleDescription();
 
     const bar = unsavedBar() as HTMLElement;
     expect(within(bar).getByText("permissions.matrix.pending_cells:2")).toBeInTheDocument();
@@ -198,20 +198,51 @@ describe("saving", () => {
     raf.mockRestore();
   });
 
-  it("an ADMIN revoke comes back refused (admin_always_all): the cell stays pending, marked ! with the rule", async () => {
-    api.applyChanges.mockResolvedValue({
-      data: { saved: 0, unchanged: 0, refused: 1, failed: 0, versions: { ADMIN: 4 },
-        results: [{ index: 0, role: "ADMIN", permission_id: 1, codename: "soul.read", action: "revoke", status: "refused", code: "admin_always_all", detail: "x" }] },
-    });
+  it("the ADMIN column is locked: 始终 in every cell, ticked, never toggled, the reason on hover and focus", async () => {
+    GRANTS = { ADMIN: [1], JUDGE: [1, 2], YIN_CLERK: [1] }; // a missing row changes nothing: ADMIN holds it anyway
     renderPage();
     await ready();
-    fireEvent.click(cell("ADMIN", "soul.read"));
-    save();
-    const banner = await screen.findByRole("alert");
-    expect(within(banner).getByText("permissions.matrix.refused.admin_always_all")).toBeInTheDocument();
-    const refused = cell("ADMIN", "soul.read");
-    expect(glyphOf(refused)).toBe("!");
-    expect(refused).toHaveAccessibleDescription(/permissions\.matrix\.refused\.admin_always_all/);
+    for (const codename of ["soul.read", "soul.update", "recycle_bin.hard_delete"]) {
+      const locked = cell("ADMIN", codename);
+      expect(stateOf(locked)).toBe("lock");
+      expect(glyphOf(locked)).toBe("permissions.matrix.lock_word");
+      expect(locked).toHaveAttribute("aria-checked", "true");
+      expect(locked).toHaveAttribute("aria-disabled", "true");
+      // Focusable (not `disabled`), so the explanation is reachable from the keyboard too.
+      expect(locked).not.toBeDisabled();
+      expect(locked).toHaveAccessibleDescription(/permissions\.matrix\.lock_word · ADMIN.*permissions\.matrix\.lock_hint/);
+      expect(locked.getAttribute("title")).toMatch(/permissions\.matrix\.lock_hint/);
+      fireEvent.click(locked);
+    }
+    expect(unsavedBar()).toBeNull();
+    expect(api.impact).not.toHaveBeenCalled();
+    // The legend names it with the same word.
+    expect(screen.getByText("permissions.matrix.legend.lock")).toBeInTheDocument();
+  });
+
+  it("a grant the server forbids is 「! 禁授」 from the start, untickable, distinct from a refused 「!」", async () => {
+    const MOD = role({ id: 4, name: "MODERATOR", display_name: "殿主", is_builtin: true, version: 3 });
+    const USER_MANAGE = { id: 4, codename: "user.manage", name: "用户管理", category: "system" } as Permission;
+    api.list.mockResolvedValue({ data: [...PERMS, USER_MANAGE] });
+    api.roles.list.mockResolvedValue({ data: [ADMIN, JUDGE, CLERK, MOD] });
+    GRANTS = { ADMIN: [1, 2, 3, 4], JUDGE: [1, 2], YIN_CLERK: [1], MODERATOR: [1] };
+    const all = [...PERMS, USER_MANAGE];
+    api.rolePermissions.mockImplementation(async (name: string) => ({
+      data: { role: name, permissions: [], details: (GRANTS[name] ?? []).map((id) => all[id - 1]) },
+    }));
+    renderPage();
+    await ready();
+    const denied = cell("MODERATOR", "user.manage");
+    expect(stateOf(denied)).toBe("deny");
+    expect(glyphOf(denied)).toBe("! permissions.matrix.deny_word");
+    expect(denied).toHaveAttribute("aria-checked", "false");
+    expect(denied).toHaveAccessibleDescription(/permissions\.matrix\.deny_hint:用户管理 role_forbidden_permission/);
+    fireEvent.click(denied);
+    expect(unsavedBar()).toBeNull();
+    // Absence: the same codename is an ordinary cell for another role, and MODERATOR's other rows are ordinary too.
+    expect(stateOf(cell("JUDGE", "user.manage"))).toBe("off");
+    expect(stateOf(cell("MODERATOR", "soul.read"))).toBe("on");
+    expect(screen.getByText("permissions.matrix.legend.deny")).toBeInTheDocument();
   });
 });
 
@@ -267,7 +298,11 @@ describe("impact", () => {
     const banner = await screen.findByRole("status");
     expect(within(banner).getByText(/conflict_workflow_line:.*在途甲,3,终审/)).toBeInTheDocument();
     // Two distinct flows: one template + one live workflow (two nodes of it).
-    const ack = within(banner).getByRole("checkbox", { name: "permissions.matrix.conflict_acknowledge:2,1" });
+    // The tick sits in the unsaved bar, not in the banner (第三类 F 组), with 「查看」 pointing back up.
+    expect(within(banner).queryByRole("checkbox")).toBeNull();
+    const bar = unsavedBar() as HTMLElement;
+    const ack = within(bar).getByRole("checkbox", { name: "permissions.matrix.conflict_acknowledge:2,1" });
+    expect(within(bar).getByRole("link", { name: "permissions.matrix.conflict_view" })).toHaveAttribute("href", `#${banner.id}`);
     const saveButton = within(unsavedBar() as HTMLElement).getByRole("button", { name: "permissions.matrix.save_button" });
     expect(saveButton).toBeDisabled();
     fireEvent.keyDown(document, { key: "s", metaKey: true });
@@ -292,10 +327,12 @@ describe("impact", () => {
     await ready();
     fireEvent.click(cell("JUDGE", "soul.update"));
     await flushImpact();
-    fireEvent.click(within(await screen.findByRole("status")).getByRole("checkbox"));
+    await screen.findByRole("status");
+    fireEvent.click(within(unsavedBar() as HTMLElement).getByRole("checkbox"));
     fireEvent.click(cell("YIN_CLERK", "soul.update"));
     await flushImpact();
-    expect(within(await screen.findByRole("status")).getByRole("checkbox")).not.toBeChecked();
+    await screen.findByRole("status");
+    expect(within(unsavedBar() as HTMLElement).getByRole("checkbox")).not.toBeChecked();
     expect(within(unsavedBar() as HTMLElement).getByRole("button", { name: "permissions.matrix.save_button" })).toBeDisabled();
   });
 });

@@ -70,22 +70,26 @@ export function PartialFailBanner({
  * 冲突横幅(E-11a ◇):impact 接口说这组改动会让哪条审批流模板的哪一步、哪条进行中
  * 审批流的哪个待审节点无人可批,写明是谁的哪一格引起的。
  *
- * 保存要先勾「我知道这会让 N 条审批流(含进行中 M 条)无人可批」(2026-09-25 决定):
- * N 数的是不同的模板加不同的进行中审批流,M 是后者。服务端同样拒收未确认的冲突撤销
- * (`conflict_unacknowledged`),这里的勾选只是让确认发生在保存之前。
+ * 保存要先勾的那一格「确认冲突」在底部的未保存条里(第三类 F 组画布),条上的「查看」跳回这里。
  */
+export const CONFLICT_BANNER_ID = "matrix-conflicts";
+
+/**
+ * 「确认冲突」要数的两个数:N 是不同的模板加不同的进行中审批流,M 是后者(2026-09-25 决定)。
+ */
+export function conflictCounts(conflicts: MatrixConflict[], workflowConflicts: MatrixWorkflowConflict[]) {
+  const live = new Set(workflowConflicts.map((w) => w.workflow_id)).size;
+  return { flows: new Set(conflicts.map((c) => c.template_id)).size + live, live };
+}
+
 export function ImpactConflictBanner({
   conflicts,
   workflowConflicts,
-  acknowledged,
-  onAcknowledge,
   roleMeta,
   permsById,
 }: {
   conflicts: MatrixConflict[];
   workflowConflicts: MatrixWorkflowConflict[];
-  acknowledged: boolean;
-  onAcknowledge: (on: boolean) => void;
   roleMeta: Record<string, Role>;
   permsById: Record<number, Permission>;
 }) {
@@ -93,10 +97,8 @@ export function ImpactConflictBanner({
   if (conflicts.length + workflowConflicts.length === 0) return null;
   const causes = (c: MatrixConflict | MatrixWorkflowConflict) =>
     c.caused_by.map((x) => `${roleName(roleMeta, x.role)}「${permsById[x.permission_id]?.name ?? x.codename}」`).join("、");
-  const live = new Set(workflowConflicts.map((w) => w.workflow_id)).size;
-  const flows = new Set(conflicts.map((c) => c.template_id)).size + live;
   return (
-    <div role="status" className="border-l-2 border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm">
+    <div id={CONFLICT_BANNER_ID} tabIndex={-1} role="status" className="border-l-2 border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm">
       <p className="font-medium text-[oklch(var(--color-warning))]">
         <span aria-hidden="true">◇ </span>
         {t("permissions.matrix.conflict_title", { n: String(conflicts.length + workflowConflicts.length) })}
@@ -123,15 +125,6 @@ export function ImpactConflictBanner({
           </li>
         ))}
       </ul>
-      <label className="mt-3 flex min-h-8 items-center gap-2 text-[oklch(var(--color-ink))] max-sm:min-h-11">
-        <input
-          type="checkbox"
-          checked={acknowledged}
-          onChange={(e) => onAcknowledge(e.target.checked)}
-          className="h-4 w-4 accent-[oklch(var(--color-warning))]"
-        />
-        {t("permissions.matrix.conflict_acknowledge", { n: String(flows), m: String(live) })}
-      </label>
     </div>
   );
 }
@@ -139,6 +132,10 @@ export function ImpactConflictBanner({
 /**
  * 未保存条 UnsavedBar:底部常驻,「未保存 N 项 ＋a · −b」,放弃 / 保存 ⌘S。
  * ⌘S(Ctrl+S)在页面任何位置都保存,并拦下浏览器自己的「存网页」。
+ *
+ * 有冲突时条上多一格必勾框(警示色,第三类 F 组):「确认冲突:这次改动影响 N 条审批流,
+ * 含进行中 M 条。查看」。不勾,「保存」保持禁用。服务端同样拒收未确认的冲突撤销
+ * (`conflict_unacknowledged`),这里的勾选只是让确认发生在保存之前。
  */
 export function UnsavedBar({
   count,
@@ -146,6 +143,7 @@ export function UnsavedBar({
   revokes,
   isSaving,
   saveDisabled = false,
+  conflict,
   onDiscard,
   onSave,
 }: {
@@ -153,8 +151,10 @@ export function UnsavedBar({
   grants: number;
   revokes: number;
   isSaving: boolean;
-  /** A conflict not yet acknowledged in the banner above (⌘S is ignored too — `onSave` checks). */
+  /** A conflict not yet acknowledged below (⌘S is ignored too — `onSave` checks). */
   saveDisabled?: boolean;
+  /** Present while the changes cause a conflict: the counts, and the tick. */
+  conflict?: { flows: number; live: number; acknowledged: boolean; onAcknowledge: (on: boolean) => void };
   onDiscard: () => void;
   onSave: () => void;
 }) {
@@ -185,6 +185,31 @@ export function UnsavedBar({
       <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
         ＋{grants} · −{revokes}
       </span>
+      {conflict && (
+        <span className="flex basis-full items-center gap-2 text-sm text-[oklch(var(--color-warning))] md:basis-auto">
+          <label className="flex min-h-8 items-center gap-2 max-sm:min-h-11">
+            <input
+              type="checkbox"
+              checked={conflict.acknowledged}
+              onChange={(e) => conflict.onAcknowledge(e.target.checked)}
+              className="h-4 w-4 accent-[oklch(var(--color-warning))]"
+            />
+            {t("permissions.matrix.conflict_acknowledge", { n: String(conflict.flows), m: String(conflict.live) })}
+          </label>
+          <a
+            href={`#${CONFLICT_BANNER_ID}`}
+            onClick={(e) => {
+              e.preventDefault();
+              const banner = document.getElementById(CONFLICT_BANNER_ID);
+              banner?.scrollIntoView?.({ block: "center" });
+              banner?.focus();
+            }}
+            className="underline"
+          >
+            {t("permissions.matrix.conflict_view")}
+          </a>
+        </span>
+      )}
       <span className="flex-1" />
       <Button type="button" variant="ghost" size="sm" onClick={onDiscard} disabled={isSaving}>
         {t("permissions.matrix.discard")}
