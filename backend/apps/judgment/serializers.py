@@ -128,6 +128,8 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         source="realm", queryset=Realm.objects.all(), allow_null=True, required=False,
     )
     validate_realm_id = tenant_scoped("realm")
+    # 「戊 · 发落」草稿的界域;只读,只经 `draft/` 写。
+    draft_destination_realm_id = serializers.UUIDField(read_only=True, allow_null=True)
 
     class Meta:
         model = Judgment
@@ -138,16 +140,18 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "is_final", "created_at", "concluded_at",
             "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
+            "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_by_name", "claimed_at",
             "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
             "karmic_balance", "evidence_count",
         ]
-        # 草稿三列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
+        # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
         # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
         # 不由 POST 的 body 定 —— 灵魂有进行中的计划即 AMENDMENT;REOPEN 只由批准请求时开。
         read_only_fields = [
             "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
+            "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
         ]
 
@@ -273,6 +277,9 @@ class AdmittedBalanceSerializer(serializers.Serializer):
     not_admitted_count = serializers.IntegerField()
     not_admitted_net = serializers.FloatField(allow_null=True)
     reason_code = serializers.CharField(allow_null=True)
+    #: A concluded case whose `balance` is the conclusion snapshot: today's
+    #: admitted figure for the same reading. Null otherwise.
+    current_balance = serializers.IntegerField(allow_null=True, required=False)
 
 
 class EvidenceRulingResultSerializer(serializers.Serializer):
@@ -304,14 +311,23 @@ class JudgmentDraftWriteSerializer(serializers.Serializer):
     version = serializers.IntegerField(min_value=0)
     notes = serializers.CharField(required=False, allow_blank=True)
     draft_verdict = serializers.ChoiceField(choices=Verdict.choices, required=False, allow_null=True)
+    # 「戊 · 发落」的草稿。界域须是本案租户、本文明、未软删的(视图查);容量与裁决可去留给结案。
+    draft_destination_realm_id = serializers.UUIDField(required=False, allow_null=True)
+    draft_term_years = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=MAX_TERM_YEARS)
+    draft_eternal = serializers.BooleanField(required=False)
 
 
 class JudgmentDraftSerializer(serializers.ModelSerializer):
     """The draft as stored: what a save returns, and what a 409 hands back."""
 
+    draft_destination_realm_id = serializers.UUIDField(read_only=True, allow_null=True)
+
     class Meta:
         model = Judgment
-        fields = ["notes", "draft_verdict", "draft_version", "draft_saved_at"]
+        fields = [
+            "notes", "draft_verdict", "draft_destination_realm_id", "draft_term_years", "draft_eternal",
+            "draft_version", "draft_saved_at",
+        ]
         read_only_fields = fields
 
 
@@ -388,11 +404,15 @@ class JudgmentDestinationsSerializer(serializers.Serializer):
     `default_realm_id` is where automatic routing would send the soul (null when
     that realm is not among the options, e.g. an unmapped tenant);
     `default_term_years` is null because an automatic conclusion records no term.
+    `not_applicable` is the rest of the tenant's realms for this civilization —
+    ones this verdict cannot reach, listed so the picker can show them disabled
+    with the reason; `conclude` refuses them (`realm_not_allowed`).
     """
     verdict = serializers.CharField()
     default_realm_id = serializers.UUIDField(allow_null=True)
     default_term_years = serializers.IntegerField(allow_null=True)
     options = JudgmentDestinationOptionSerializer(many=True)
+    not_applicable = JudgmentDestinationOptionSerializer(many=True)
 
 
 class JudgmentQueueCursorSerializer(serializers.Serializer):
@@ -503,13 +523,29 @@ class JudgmentReassignSerializer(serializers.Serializer):
 
 
 class AssignableOfficerSerializer(serializers.Serializer):
-    """`GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+    """`GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。"""
 
     id = serializers.IntegerField(read_only=True)
     display_name = serializers.CharField(read_only=True)
     username = serializers.CharField(read_only=True)
     role = serializers.CharField(read_only=True)
+    #: 这位官员手上认领着、尚未结案的案子件数(本租户)。
+    in_hand = serializers.IntegerField(read_only=True)
+
+
+class JudgmentReassignRequestResultSerializer(serializers.Serializer):
+    """`POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。"""
+
+    notified = serializers.IntegerField(read_only=True)
+
+
+class JudgmentRateLimitedSerializer(serializers.Serializer):
+    """429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。"""
+
+    error = serializers.CharField()
+    code = serializers.CharField()
+    retry_after = serializers.IntegerField()
 
 
 class JudgmentBatchSerializer(serializers.Serializer):

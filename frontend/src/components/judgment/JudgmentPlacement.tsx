@@ -9,8 +9,13 @@ import { SelectField, TextField } from "@/src/components/ui/Field";
 
 /**
  * 戊 · 发落(原审判):目的地与刑期。都不选 = 自动分派,与以前一样 —— 所以空的发落不往结案
- * 请求里写任何字段。目的地只列 `GET /judgment/{id}/destinations/?candidate_verdict=` 给的门
- * (按所选裁决过滤);其余校验(容量、永恒)在结案事务里,拒绝以 `code` 回来,显示在这一节。
+ * 请求里写任何字段。目的地是 `GET /judgment/{id}/destinations/?candidate_verdict=` 给的界域,
+ * 一张平铺的名单(第三类 F 组 2.5,地府就是各殿的殿名):可选的在前;已满的照样列出但禁用、
+ * 写「已满」;这个裁决去不了的(`not_applicable`)列在后面、禁用、写「不适用于 <裁决>」。
+ * 其余校验(容量、永恒)在结案事务里,拒绝以 `code` 回来,显示在这一节。
+ *
+ * 选择随判词草稿自动保存(同一个 `draft/`、同一个版本号与 409),重开页面时还原,标题行右侧
+ * 写「已自动保存 HH:MM」;结案时服务端清空。
  */
 export interface Placement {
   /** 选这份发落时的裁决。裁决一换,这份发落就不再作数(见 `placementFor`)。 */
@@ -45,12 +50,39 @@ export function placementFor(
   };
 }
 
+/** 这份发落作为草稿存下的三个字段(`PATCH /judgment/{id}/draft/`)。不是为 `verdict` 选的就存空 —— 与结案同一条。 */
+export function placementDraftFields(p: Placement, verdict: string) {
+  const mine = !!verdict && p.verdict === verdict;
+  return {
+    draft_destination_realm_id: mine && p.realmId ? p.realmId : null,
+    draft_term_years: mine && !p.eternal && p.term ? Number(p.term) : null,
+    draft_eternal: mine && p.eternal,
+  };
+}
+
+/** 存下的草稿还原成一份发落;它是为草稿里的裁决选的。什么都没存就是 null。 */
+export function placementFromDraft(d: {
+  draft_verdict?: string | null;
+  draft_destination_realm_id?: string | null;
+  draft_term_years?: number | null;
+  draft_eternal?: boolean;
+}): Placement | null {
+  if (!d.draft_destination_realm_id && !d.draft_term_years && !d.draft_eternal) return null;
+  return {
+    verdict: d.draft_verdict ?? "",
+    realmId: d.draft_destination_realm_id ?? "",
+    term: d.draft_term_years ? String(d.draft_term_years) : "",
+    eternal: !!d.draft_eternal,
+  };
+}
+
 export function JudgmentPlacement({
   judgmentId,
   verdict,
   value,
   onChange,
   refusal,
+  savedAt,
 }: {
   judgmentId: string;
   verdict: string;
@@ -58,8 +90,10 @@ export function JudgmentPlacement({
   onChange: (next: Placement) => void;
   /** The conclude refusal code, when it is one of PLACEMENT_REFUSALS. */
   refusal?: string | null;
+  /** The draft's `draft_saved_at`: 「已自动保存 HH:MM」 at the right of the header while there is a draft. */
+  savedAt?: string | null;
 }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { data, isLoading, isError } = useJudgmentDestinations(judgmentId, (verdict || null) as JudgmentVerdict | null);
   const eternalId = useId();
   const current = value.verdict === verdict ? value : { ...EMPTY_PLACEMENT, verdict };
@@ -69,6 +103,7 @@ export function JudgmentPlacement({
   const defaultRealm = options.find((o) => o.id === data?.default_realm_id);
   const chosen = options.find((o) => o.id === current.realmId) ?? (current.realmId ? undefined : defaultRealm);
   const canBeEternal = !!chosen?.is_eternal;
+  const verdictName = verdict ? t(`judgment.verdicts.${verdict.toLowerCase()}`) : "";
 
   let body;
   if (!verdict) {
@@ -84,6 +119,7 @@ export function JudgmentPlacement({
       <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_10rem]">
         <SelectField
           label={t("judgment.placement.destination")}
+          description={t("judgment.placement.filtered_by", { verdict: verdictName })}
           value={current.realmId}
           onChange={(e) => set({ realmId: e.target.value, eternal: false })}
           options={[
@@ -93,14 +129,22 @@ export function JudgmentPlacement({
                 ? t("judgment.placement.auto", { name: defaultRealm.name })
                 : t("judgment.placement.auto_plain"),
             },
+            // 已满的照样列出但禁用,并写明原因(第三类 F 组 2.5);服务端结案时同样拒收 realm_full。
             ...options.map((o) => {
               const full = o.capacity !== null && o.occupancy >= o.capacity;
               const load = o.capacity === null ? `${o.occupancy}` : `${o.occupancy} / ${o.capacity}`;
               return {
                 value: o.id,
                 label: `${o.name} · ${load}${full ? ` · ${t("judgment.placement.full")}` : ""}`,
+                disabled: full && o.id !== current.realmId,
               };
             }),
+            // 这个裁决去不了的界域:同样列出、禁用、写明「不适用于 <裁决>」。结案时服务端拒收 realm_not_allowed。
+            ...(data?.not_applicable ?? []).map((o) => ({
+              value: o.id,
+              label: `${o.name} · ${t("judgment.placement.not_applicable", { verdict: verdictName })}`,
+              disabled: true,
+            })),
           ]}
         />
         <TextField
@@ -127,9 +171,28 @@ export function JudgmentPlacement({
     );
   }
 
+  // 草稿:选了目的地或刑期、还没落判。随判词草稿一起自动保存(`useDraftAutosave`),结案时清空。
+  const drafted = !!verdict && (current.realmId !== "" || current.term !== "" || current.eternal);
   return (
     <section className="mt-6" data-testid="placement">
-      <JudgmentSectionHead mark="戊" title={t("judgment.placement.title")} />
+      <JudgmentSectionHead
+        mark="戊"
+        title={t("judgment.placement.title")}
+        meta={
+          drafted ? (
+            <>
+              <span data-testid="placement-draft" className="border border-dashed border-[oklch(var(--color-ink-subtle))] px-1.5 font-mono text-2xs">
+                {t("judgment.placement.draft")}
+              </span>
+              {savedAt && (
+                <span data-testid="placement-saved" className="ml-3">
+                  {t("judgment.draft.saved_at", { time: formatDateTime(savedAt, { hour: "2-digit", minute: "2-digit" }) })}
+                </span>
+              )}
+            </>
+          ) : undefined
+        }
+      />
       {body}
       {refusal && (
         <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-danger))]">

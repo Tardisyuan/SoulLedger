@@ -1,7 +1,7 @@
 /**
  * The app follows the system's light / dark setting (app.json
  * `userInterfaceStyle: "automatic"`; `useColorScheme` in the navigator),
- * on every screen including the neutral sign-in.
+ * on every screen including the parchment sign-in.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { render, screen } from "@testing-library/react-native";
@@ -13,7 +13,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
-import { civ } from "../theme";
+import { civ, parchment } from "../theme";
 
 const appJson = require("../../app.json") as { expo: { userInterfaceStyle?: string } };
 
@@ -58,19 +58,20 @@ it("app.json asks the OS to follow the system setting", () => {
   expect(appJson.expo.userInterfaceStyle).toBe("automatic");
 });
 
-it.each([
-  ["dark", civ.neutral.dark.s1],
-  ["light", civ.neutral.light.s1],
-] as const)("system %s → the neutral %s input surface", async (scheme, ground) => {
+it.each(["dark", "light"] as const)("system %s → the parchment of that scheme, primary button in ink", async (scheme) => {
   mockScheme = scheme;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(ground);
+  expect(loginGround()).toBe(parchment[scheme].bg);
+  expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
+    backgroundColor: parchment[scheme].ink,
+  });
+  expect(loginGround()).not.toBe(civ.neutral[scheme].s1);
 });
 
 it("no system preference reported → dark (the design's primary scheme)", async () => {
   mockScheme = null;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(civ.neutral.dark.s1);
+  expect(loginGround()).toBe(parchment.dark.bg);
 });

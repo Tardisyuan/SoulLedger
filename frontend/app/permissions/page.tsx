@@ -23,7 +23,7 @@ import {
 import { MatrixLegend } from "@/src/components/permissions/MatrixLegend";
 import { PermissionMatrixTable, PermLegend, type MatrixCellInfo } from "@/src/components/permissions/PermissionMatrixTable";
 import { MatrixSaveConfirmModal } from "@/src/components/permissions/MatrixSaveConfirmModal";
-import { ImpactConflictBanner, PartialFailBanner, UnsavedBar } from "@/src/components/permissions/MatrixBanners";
+import { ImpactConflictBanner, PartialFailBanner, UnsavedBar, conflictCounts } from "@/src/components/permissions/MatrixBanners";
 import { RolesSection } from "@/src/components/permissions/RolesSection";
 import { DeleteConfirmModal } from "@/src/components/permissions/DeleteConfirmModal";
 import { buildPermissionColumns } from "@/src/components/permissions/permissionColumns";
@@ -360,8 +360,6 @@ export default function PermissionsPage() {
             <ImpactConflictBanner
               conflicts={cells.conflicts}
               workflowConflicts={cells.workflowConflicts}
-              acknowledged={cells.acknowledged}
-              onAcknowledge={cells.setAcknowledged}
               roleMeta={roleMeta}
               permsById={permsById}
             />
@@ -414,6 +412,15 @@ export default function PermissionsPage() {
               revokes={cells.revokes}
               isSaving={isSaving}
               saveDisabled={cells.saveBlocked}
+              conflict={
+                cells.conflicts.length + cells.workflowConflicts.length > 0
+                  ? {
+                      ...conflictCounts(cells.conflicts, cells.workflowConflicts),
+                      acknowledged: cells.acknowledged,
+                      onAcknowledge: cells.setAcknowledged,
+                    }
+                  : undefined
+              }
               onDiscard={cells.discard}
               onSave={cells.handleSave}
             />

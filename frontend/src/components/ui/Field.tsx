@@ -281,6 +281,8 @@ export function TextField({
 export interface SelectOption {
   value: string;
   label: string;
+  /** Listed but not choosable — with its reason in `label`, so it says why. */
+  disabled?: boolean;
 }
 
 export type SelectFieldProps = FieldShellOwnProps &
@@ -310,7 +312,7 @@ export function SelectField({
       {(control) => (
         <select {...control} {...select} className={fieldControl({ size, invalid: Boolean(error) })}>
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </option>
           ))}

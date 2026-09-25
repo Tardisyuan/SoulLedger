@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
+import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES } from "@soulledger/core/api/perm";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,11 +17,21 @@ import type { CellFailure } from "./useMatrixCells";
  *   ＋ / − 未保存 — 2 px 强调色焦点环 + 字形
  *   ! 保存失败 — 危险色,原因在描述里(aria-describedby)与 title 上
  *   ◇ 引起冲突 — 警示色,这次改动会让某条审批流的某一步无人可批
+ *   始终 — ADMIN 整列(第三类 F 组):降低不透明度的墨块,等宽字「始终」。服务端对 ADMIN
+ *          在读授权之前就答「有」(`admin_always_all`),所以这里点不动,悬停 / 聚焦说明原因
+ *   ! 禁授 — 服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`),一开始就摆明;
+ *          与「!」保存失败(勾了之后被退回)区分:禁授是规则,拒绝是事后结果
  *
  * State is never colour alone: every non-plain state carries a glyph, and the
  * same word goes to the accessible description.
  */
-export type CellState = "on" | "off" | "grant" | "revoke" | "failed" | "conflict";
+export type CellState = "on" | "off" | "grant" | "revoke" | "failed" | "conflict" | "lock" | "deny";
+
+/** A cell the server decides by rule, whatever is ticked: 「始终」 for ADMIN, 「! 禁授」 for a forbidden grant. */
+export function ruleState(role: string, codename: string): "lock" | "deny" | null {
+  if (role === ADMIN_ROLE_NAME) return "lock";
+  return ROLE_FORBIDDEN_CODENAMES[role]?.includes(codename) ? "deny" : null;
+}
 
 export function cellState({
   granted,
@@ -39,7 +50,7 @@ export function cellState({
   return granted ? "on" : "off";
 }
 
-const GLYPH: Record<CellState, string> = { on: "", off: "", grant: "＋", revoke: "−", failed: "!", conflict: "◇" };
+const GLYPH: Record<Exclude<CellState, "lock" | "deny">, string> = { on: "", off: "", grant: "＋", revoke: "−", failed: "!", conflict: "◇" };
 
 const CELL_CLASS: Record<CellState, string> = {
   on: "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]",
@@ -51,21 +62,26 @@ const CELL_CLASS: Record<CellState, string> = {
   failed: "border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
   conflict:
     "border border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] text-[oklch(var(--color-warning))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
+  lock: "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] opacity-72",
+  deny: "border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
 };
 
 /** The drawn square, also used by the legend. */
 export function PermGlyph({ state, className }: { state: CellState; className?: string }) {
+  const { t } = useI18n();
+  const word = state === "lock" ? t("permissions.matrix.lock_word") : state === "deny" ? `! ${t("permissions.matrix.deny_word")}` : null;
   return (
     <span
       aria-hidden="true"
       data-cell-state={state}
       className={cn(
-        "inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center font-mono text-2xs leading-none",
+        "inline-flex shrink-0 items-center justify-center font-mono text-2xs leading-none",
+        word ? "min-h-5.5 min-w-5.5 px-1 whitespace-nowrap" : "h-4.5 w-4.5",
         CELL_CLASS[state],
         className
       )}
     >
-      {GLYPH[state]}
+      {word ?? GLYPH[state as keyof typeof GLYPH]}
     </span>
   );
 }
@@ -79,18 +95,25 @@ export interface MatrixCellInfo {
   failureReason: (f: CellFailure) => string;
 }
 
-function useCellDescription(info: MatrixCellInfo, role: string, permId: number) {
+function useCellDescription(info: MatrixCellInfo, role: string, perm: Permission) {
   const { t } = useI18n();
-  const key = matrixCellKey(role, permId);
+  const key = matrixCellKey(role, perm.id);
   const failure = info.failure(key);
-  const state = cellState({
-    granted: info.granted(role, permId),
-    pending: info.pending(key),
-    failure: failure !== null,
-    conflict: info.conflict(key),
-  });
+  const rule = ruleState(role, perm.codename);
+  const state =
+    rule ??
+    cellState({
+      granted: info.granted(role, perm.id),
+      pending: info.pending(key),
+      failure: failure !== null,
+      conflict: info.conflict(key),
+    });
   const words =
-    state === "failed" && failure
+    state === "lock"
+      ? `${t("permissions.matrix.lock_word")} · ${ADMIN_ROLE_NAME}　${t("permissions.matrix.lock_hint")}`
+      : state === "deny"
+        ? `! ${t("permissions.matrix.deny_word")}　${t("permissions.matrix.deny_hint", { perm: perm.name || perm.codename })} role_forbidden_permission`
+        : state === "failed" && failure
       ? `${t("permissions.matrix.state.failed")}: ${info.failureReason(failure)}`
       : state === "on" || state === "off"
         ? ""
@@ -114,8 +137,10 @@ function MatrixCell({
   variant: "grid" | "switch";
 }) {
   const descId = useId();
-  const { key, state, words } = useCellDescription(info, role, perm.id);
-  const granted = info.granted(role, perm.id);
+  const { key, state, words } = useCellDescription(info, role, perm);
+  // 「始终」 and 「! 禁授」 are rules, not choices: the cell says what the server enforces and does not toggle.
+  const ruled = state === "lock" || state === "deny";
+  const granted = state === "lock" ? true : state === "deny" ? false : info.granted(role, perm.id);
   return (
     <>
       <button
@@ -126,12 +151,18 @@ function MatrixCell({
         aria-describedby={words ? descId : undefined}
         title={words || undefined}
         data-cell={key}
-        disabled={disabled}
-        onClick={onToggle}
+        disabled={disabled && !ruled}
+        aria-disabled={ruled || undefined}
+        data-rule={ruled ? state : undefined}
+        onClick={ruled ? undefined : onToggle}
         className={cn(
           "flex items-center justify-center",
-          variant === "grid" ? "h-8 w-full" : "h-11 w-11",
-          disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-[oklch(var(--color-surface-3))]"
+          variant === "grid" ? "h-8 w-full" : "min-h-11 min-w-11",
+          ruled
+            ? "cursor-help"
+            : disabled
+              ? "cursor-not-allowed opacity-70"
+              : "cursor-pointer hover:bg-[oklch(var(--color-surface-3))]"
         )}
       >
         <PermGlyph state={state} className={variant === "switch" ? "h-5.5 w-5.5" : undefined} />
@@ -376,7 +407,7 @@ function MatrixGroup({
   );
 }
 
-/** ■ 有 □ 无 ＋ − 未保存 ! 保存失败 ◇ 引起冲突 */
+/** ■ 有 □ 无 ＋ − 未保存 ! 保存失败 ◇ 引起冲突 始终 ! 禁授 */
 export function PermLegend() {
   const { t } = useI18n();
   const items: [CellState, string][] = [
@@ -385,6 +416,8 @@ export function PermLegend() {
     ["grant", "permissions.matrix.legend.unsaved"],
     ["failed", "permissions.matrix.legend.failed"],
     ["conflict", "permissions.matrix.legend.conflict"],
+    ["lock", "permissions.matrix.legend.lock"],
+    ["deny", "permissions.matrix.legend.deny"],
   ];
   return (
     <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">

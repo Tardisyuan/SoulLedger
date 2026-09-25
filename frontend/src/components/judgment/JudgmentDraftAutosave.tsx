@@ -10,9 +10,11 @@ import { Button } from "@/src/components/ui/Button";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
+import { placementDraftFields, type Placement } from "@/src/components/judgment/JudgmentPlacement";
 
 /**
- * 丁 · 判词的自动保存(`PATCH /judgment/{id}/draft/`)。
+ * 丁 · 判词的自动保存(`PATCH /judgment/{id}/draft/`),连同 戊 · 发落 的选择(目的地、刑期、永恒):
+ * 同一个请求、同一个版本号,所以发落的冲突与判词的冲突是同一个 409、同一个冲突条。
  *
  * 只在操作员动过判词或裁决之后才存(`markEdited`),停手 `AUTOSAVE_DEBOUNCE_MS` 后发一次。
  * 每次带上最后见到的 `draft_version` —— 从查询缓存里读,不从渲染时的闭包里读:上一次保存
@@ -34,11 +36,14 @@ export function useDraftAutosave({
   judgmentId,
   notes,
   verdict,
+  placement,
   enabled,
 }: {
   judgmentId: string;
   notes: string;
   verdict: string;
+  /** 戊 · 发落 的选择;不是为 `verdict` 选的存空(`placementDraftFields`)。 */
+  placement: Placement;
   /** 未结案且持 judgment.execute。 */
   enabled: boolean;
 }) {
@@ -58,7 +63,12 @@ export function useDraftAutosave({
       attempted.current = editSeq;
       setStatus("saving");
       save.mutate(
-        { version: cached?.draft_version ?? 0, notes, draft_verdict: (verdict || null) as Verdict | null },
+        {
+          version: cached?.draft_version ?? 0,
+          notes,
+          draft_verdict: (verdict || null) as Verdict | null,
+          ...placementDraftFields(placement, verdict),
+        },
         {
           onSuccess: () => setStatus("idle"),
           onError: (err) => {
@@ -80,7 +90,7 @@ export function useDraftAutosave({
     return () => clearTimeout(timer);
     // `save` is a fresh object each render; `saving` is the part of it that matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, conflict, saving, status, editSeq, notes, verdict, judgmentId, queryClient]);
+  }, [enabled, conflict, saving, status, editSeq, notes, verdict, placement, judgmentId, queryClient]);
 
   /**
    * 把服务端那一版写进缓存,下一次保存就以它的版本号为底。`whole=false` 只取版本号:

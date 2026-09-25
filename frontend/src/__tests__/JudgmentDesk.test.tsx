@@ -7,7 +7,7 @@
  *
  * 后端接上之后的四条:丙 证据采信(空格切换焦点行,不采信要理由,采信后余额读服务端)、
  * 丁 判词自动保存(去抖、带版本号;409 停下并摆出对方的版本,绝不静默覆盖)、据 · 先例、
- * 进度条上的 D 暂缓(理由必填)。
+ * 进度条上的 S 暂缓(理由必填)。
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -100,9 +100,11 @@ const realm = (id: string, name: string, occupancy: number, capacity: number | n
 });
 const DESTINATIONS = [
   realm("r-5", "第五殿", 3, 10),
-  realm("r-9", "第九殿", 10, 10),
+  realm("r-7", "第七殿", 10, 10),
+  realm("r-9", "第九殿", 10, 12),
   realm("r-a", "阿鼻", 1, null, true),
 ];
+const NOT_APPLICABLE = [realm("r-h", "天堂", 0, null)];
 
 const radio = (value: string) =>
   screen.getAllByRole("radio").find((r) => (r as HTMLInputElement).value === value) as HTMLInputElement;
@@ -129,7 +131,9 @@ beforeEach(() => {
   judgmentApi.precedents.mockResolvedValue({ data: [] });
   judgmentApi.defer.mockResolvedValue({ data: {} });
   judgmentApi.destinations.mockImplementation((_id: string, verdict: string) =>
-    Promise.resolve({ data: { verdict, default_realm_id: "r-5", default_term_years: null, options: DESTINATIONS } })
+    Promise.resolve({
+      data: { verdict, default_realm_id: "r-5", default_term_years: null, options: DESTINATIONS, not_applicable: NOT_APPLICABLE },
+    })
   );
   judgmentApi.previous.mockResolvedValue({
     data: { total: 12, remaining: 12, skipped: 0, position: null, judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
@@ -176,6 +180,18 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
       ID,
       { verdict: "PURGATORY", notes: "功过相抵,暂入救济门", create_workflow: false },
     ]);
+  });
+
+  it("勾上审批流,落判按钮就写成「落判并发起」;取消勾选再改回", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    const button = () => screen.getByRole("button", { name: new RegExp(tZh("judgment.detail.conclude")) });
+    expect(button()).not.toHaveTextContent(tZh("judgment.detail.conclude_with_workflow"));
+    const box = screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) });
+    fireEvent.click(box);
+    expect(screen.getByRole("button", { name: new RegExp(tZh("judgment.detail.conclude_with_workflow")) })).toBeInTheDocument();
+    fireEvent.click(box);
+    expect(button()).not.toHaveTextContent(tZh("judgment.detail.conclude_with_workflow"));
   });
 
   it("⌘⏎ 与落判按钮同一道门:未选裁决、或没有 judgment.execute,都不落判", async () => {
@@ -354,9 +370,58 @@ describe("丙 · 证据采信", () => {
   });
 });
 
+describe("乙 · 功过:结案时的余额快照", () => {
+  beforeEach(() => {
+    soulsApi.karma.mockResolvedValue({
+      data: {
+        soul_id: "s-1", soul_name: "沈青梧", merit_score: 1284, demerit_score: 937, karmic_balance: 347,
+        record_count: 4, records: RECORDS, reading: { kind: "BALANCE", civilization: "CHINESE", merit: 1284, demerit: 937, balance: 347 },
+      },
+    });
+  });
+  const concluded = (current: number | null) =>
+    withEvidence({
+      is_final: true, verdict: "PURGATORY", concluded_at: "2026-06-01T08:00:00Z",
+      admitted_balance: { reading_kind: "BALANCE", balance: 307, current_balance: current, not_admitted_count: 1, not_admitted_net: 40, reason_code: null },
+    });
+
+  it("快照在上、双线收住;现值在下;其后登记的功过条数与差额(里程碑不算)", async () => {
+    judgmentApi.get.mockResolvedValue({ data: concluded(352) });
+    renderPage();
+    const box = await screen.findByTestId("concluded-balance");
+    const rows = within(box).getAllByRole("term").map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
+    expect(rows).toEqual([
+      [tZh("judgment.desk.balance_at_conclusion"), "+307"],
+      [tZh("judgment.desk.balance_now"), "+352"],
+      [tZh("judgment.desk.recorded_after", { n: "3" }), "+45"],
+    ]);
+    expect(within(box).getAllByRole("term")[0].parentElement?.className).toMatch(/border-double/);
+    expect(screen.getByText(tZh("judgment.desk.concluded_on", { date: "06-01" }))).toBeInTheDocument();
+  });
+
+  it("两值相同只写一行「余额」,不出现「现值」", async () => {
+    judgmentApi.get.mockResolvedValue({ data: concluded(307) });
+    renderPage();
+    const box = await screen.findByTestId("concluded-balance");
+    expect(box).toHaveTextContent(`${tZh("judgment.desk.balance_single")}+307`);
+    expect(screen.queryByText(tZh("judgment.desk.balance_now"))).toBeNull();
+    expect(screen.queryByText(tZh("judgment.desk.balance_at_conclusion"))).toBeNull();
+  });
+
+  it("未结案不画快照", async () => {
+    judgmentApi.get.mockResolvedValue({ data: withEvidence() });
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    expect(screen.queryByTestId("concluded-balance")).toBeNull();
+  });
+});
+
 // ── 丁 · 判词自动保存 ─────────────────────────────────────────────────────
 
 const WAIT = { timeout: 4000 };
+
+/** 没选发落时,草稿里的发落三字段。 */
+const NO_PLACEMENT = { draft_destination_realm_id: null, draft_term_years: null, draft_eternal: false };
 
 describe("丁 · 判词自动保存", () => {
   beforeEach(() => {
@@ -376,13 +441,13 @@ describe("丁 · 判词自动保存", () => {
     fireEvent.change(notesBox(), { target: { value: "功过相抵" } });
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled(); // 去抖:不是每个字一次
     await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1), WAIT);
-    expect(judgmentApi.saveDraft).toHaveBeenCalledWith(ID, { version: 4, notes: "功过相抵", draft_verdict: "PURGATORY" });
+    expect(judgmentApi.saveDraft).toHaveBeenCalledWith(ID, { version: 4, notes: "功过相抵", draft_verdict: "PURGATORY", ...NO_PLACEMENT });
     expect(await screen.findByText(tZh("judgment.draft.saved_at", { time: "2026-09-25T10:15:00Z" }))).toBeInTheDocument();
 
     // 下一次以服务端回来的版本为底。
     fireEvent.change(notesBox(), { target: { value: "功过相抵,暂入救济门" } });
     await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(2), WAIT);
-    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 5, notes: "功过相抵,暂入救济门", draft_verdict: "PURGATORY" });
+    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 5, notes: "功过相抵,暂入救济门", draft_verdict: "PURGATORY", ...NO_PLACEMENT });
   }, 15000);
 
   const CONFLICT = {
@@ -423,7 +488,7 @@ describe("丁 · 判词自动保存", () => {
     const banner = await screen.findByTestId("draft-conflict", {}, WAIT);
     fireEvent.click(within(banner).getByRole("button", { name: tZh("judgment.draft.keep_mine") }));
     await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(2), WAIT);
-    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 9, notes: "我的判词", draft_verdict: null });
+    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 9, notes: "我的判词", draft_verdict: null, ...NO_PLACEMENT });
     await waitFor(() => expect(screen.queryByTestId("draft-conflict")).toBeNull());
   }, 15000);
 
@@ -482,14 +547,17 @@ describe("据 · 先例", () => {
   });
 });
 
-describe("进度条上的 D 暂缓", () => {
-  it("D 开理由框,理由必填,写了才发;在判词框里按 D 是写字", async () => {
+describe("进度条上的 S 暂缓", () => {
+  it("S 开理由框,理由必填,写了才发;在判词框里按 S 是写字;D 不再接", async () => {
     renderPage();
     await screen.findByTestId("queue-bar");
-    fireEvent.keyDown(notesBox(), { key: "d" });
+    fireEvent.keyDown(notesBox(), { key: "s" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.keyDown(document.body, { key: "d" });
+    await act(async () => {});
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    fireEvent.keyDown(document.body, { key: "d" });
+    fireEvent.keyDown(document.body, { key: "s" });
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.defer") }));
     expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
@@ -499,12 +567,12 @@ describe("进度条上的 D 暂缓", () => {
     await waitFor(() => expect(judgmentApi.defer).toHaveBeenCalledWith(ID, "待补证"));
   });
 
-  it("没有 judgment.execute:进度条上没有暂缓,D 也不接", async () => {
+  it("没有 judgment.execute:进度条上没有暂缓,S 也不接", async () => {
     mockUser = { ...mockUser, permissions: ["judgment.read"] };
     renderPage();
     const bar = await screen.findByTestId("queue-bar");
     expect(within(bar).queryByRole("button", { name: /暂缓/ })).toBeNull();
-    fireEvent.keyDown(document.body, { key: "d" });
+    fireEvent.keyDown(document.body, { key: "s" });
     await act(async () => {});
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -529,13 +597,28 @@ describe("戊 · 发落", () => {
     fireEvent.keyDown(document.body, { key: "2" });
     await screen.findByLabelText(tZh("judgment.placement.destination"));
     expect(judgmentApi.destinations).toHaveBeenCalledWith(ID, "FAILED");
-    const labels = Array.from(destinationBox().options).map((o) => o.textContent);
-    expect(labels).toEqual([
-      tZh("judgment.placement.auto", { name: "第五殿" }),
-      "第五殿 · 3 / 10",
-      `第九殿 · 10 / 10 · ${tZh("judgment.placement.full")}`,
-      "阿鼻 · 1",
+    // 一张平铺的名单:已满的与不适用的照样列出、禁用、写明原因(第三类 F 组 2.5)。
+    const rows = Array.from(destinationBox().options).map((o) => [o.textContent, o.disabled]);
+    expect(rows).toEqual([
+      [tZh("judgment.placement.auto", { name: "第五殿" }), false],
+      ["第五殿 · 3 / 10", false],
+      [`第七殿 · 10 / 10 · ${tZh("judgment.placement.full")}`, true],
+      ["第九殿 · 10 / 12", false],
+      ["阿鼻 · 1", false],
+      [`天堂 · ${tZh("judgment.placement.not_applicable", { verdict: tZh("judgment.verdicts.failed") })}`, true],
     ]);
+    expect(screen.getByText(tZh("judgment.placement.filtered_by", { verdict: tZh("judgment.verdicts.failed") }))).toBeInTheDocument();
+  });
+
+  it("选了发落、还没落判,标题行挂「草稿 · 未提交」;什么都没选就不挂", async () => {
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    expect(screen.queryByTestId("placement-draft")).toBeNull();
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    expect(screen.getByTestId("placement-draft")).toHaveTextContent(tZh("judgment.placement.draft"));
+    fireEvent.change(destinationBox(), { target: { value: "" } });
+    expect(screen.queryByTestId("placement-draft")).toBeNull();
   });
 
   it("选了目的地与刑期就随结案发出;什么都不选,请求里没有这三个字段", async () => {
@@ -599,6 +682,72 @@ describe("戊 · 发落", () => {
     expect(mockShowToast).not.toHaveBeenCalled();
     await waitFor(() => expect(judgmentApi.destinations.mock.calls.length).toBeGreaterThan(calls));
   });
+
+  it("发落随判词草稿自动保存:同一个请求、同一个版本号;标题行写「已自动保存 HH:MM」", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ notes: "", draft_version: 4, draft_saved_at: null, draft_verdict: null }) });
+    judgmentApi.saveDraft.mockResolvedValue({
+      data: {
+        notes: "", draft_verdict: "FAILED", draft_destination_realm_id: "r-9", draft_term_years: 12, draft_eternal: false,
+        draft_version: 5, draft_saved_at: "2026-09-25T14:02:00Z",
+      },
+    });
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    fireEvent.change(termBox(), { target: { value: "12" } });
+    await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalled(), WAIT);
+    expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, {
+      version: 4, notes: "", draft_verdict: "FAILED", draft_destination_realm_id: "r-9", draft_term_years: 12, draft_eternal: false,
+    });
+    expect(await within(screen.getByTestId("placement")).findByTestId("placement-saved")).toHaveTextContent(
+      tZh("judgment.draft.saved_at", { time: "2026-09-25T14:02:00Z" })
+    );
+  }, 15000);
+
+  it("重开页面时还原存下的发落,挂「草稿」与保存时间", async () => {
+    judgmentApi.get.mockResolvedValue({
+      data: judgment({
+        draft_verdict: "FAILED", draft_destination_realm_id: "r-9", draft_term_years: 12, draft_eternal: false,
+        draft_version: 3, draft_saved_at: "2026-09-25T14:02:00Z",
+      }),
+    });
+    renderPage();
+    await waitFor(() => expect(destinationBox().value).toBe("r-9"));
+    expect(termBox().value).toBe("12");
+    expect(screen.getByTestId("placement-draft")).toBeInTheDocument();
+    expect(screen.getByTestId("placement-saved")).toHaveTextContent(tZh("judgment.draft.saved_at", { time: "2026-09-25T14:02:00Z" }));
+    // 还原不是编辑:不存。
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
+  }, 15000);
+
+  it("发落的 409 与判词一样:停下、冲突条;「改用对方的」连发落一起换成对方的", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ notes: "", draft_version: 4, draft_verdict: null }) });
+    judgmentApi.saveDraft.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          error: "draft conflict", code: "draft_conflict",
+          current: {
+            notes: "他人的判词", draft_verdict: "FAILED", draft_destination_realm_id: "r-7", draft_term_years: 30,
+            draft_eternal: false, draft_version: 9, draft_saved_at: "2026-09-25T10:20:00Z",
+          },
+        },
+      },
+    });
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    const banner = await screen.findByTestId("draft-conflict", {}, WAIT);
+    expect(screen.queryByTestId("placement-saved")).toBeNull();
+    fireEvent.click(within(banner).getByRole("button", { name: tZh("judgment.draft.use_server") }));
+    await waitFor(() => expect(termBox().value).toBe("30"));
+    expect(destinationBox().value).toBe("r-7");
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
+  }, 15000);
 
   it("加减项审判与没有 judgment.execute 的人都没有这一节", async () => {
     judgmentApi.get.mockResolvedValue({ data: judgment({ kind: "AMENDMENT", amends_plan_id: null }) });

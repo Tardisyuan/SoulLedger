@@ -288,6 +288,19 @@ class TestUserManagementAPI:
         results = response.data.get("results", response.data)
         assert any("admin" in u["email"].lower() for u in results)
 
+    def test_filter_users_by_exact_username(self):
+        """GET /api/v1/users/?username=cuijue: that account only — not cuijue2, not by email."""
+        User.objects.create_user(username="cuijue", password="pass123", role="JUDGE", tenant=self.cn_tenant)
+        User.objects.create_user(username="cuijue2", password="pass123", role="JUDGE", tenant=self.cn_tenant)
+        User.objects.create_user(username="other", password="pass123", role="JUDGE", tenant=self.cn_tenant, email="cuijue")
+
+        results = self.client.get("/api/v1/users/?username=cuijue").data
+        results = results.get("results", results)
+        assert [u["username"] for u in results] == ["cuijue"]
+
+        missing = self.client.get("/api/v1/users/?username=nobody").data
+        assert missing.get("results", missing) == []
+
     def test_order_users_by_username(self):
         """GET /api/v1/users/?ordering=username returns users sorted by username."""
         User.objects.create_user(username="zebra", password="pass123", role="VIEWER", tenant=self.cn_tenant)

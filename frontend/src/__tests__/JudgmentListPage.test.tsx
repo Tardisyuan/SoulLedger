@@ -16,7 +16,7 @@ import JudgmentListPage from "@/app/judgment/page";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn() },
+  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn(), requestReassign: jest.fn() },
   usersApi: { list: jest.fn() },
   PAGE_SIZE: 20,
 }));
@@ -72,8 +72,8 @@ beforeEach(() => {
   // 名单已由服务端按案子的租户、按改派同一条规则筛好;页面照单全列。
   judgmentApi.assignableOfficers.mockResolvedValue({
     data: [
-      { id: 7, display_name: "秦广王", username: "qinguang", role: "JUDGE" },
-      { id: 9, display_name: "", username: "songdi", role: "MODERATOR" },
+      { id: 7, display_name: "秦广王", username: "qinguang", role: "JUDGE", in_hand: 2 },
+      { id: 9, display_name: "", username: "songdi", role: "MODERATOR", in_hand: 0 },
     ],
   });
 });
@@ -220,15 +220,22 @@ describe("审判队列", () => {
     fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
     fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
     const dialog = await screen.findByRole("dialog");
-    const select = await within(dialog).findByRole("combobox");
-    await waitFor(() => expect(within(select).getByRole("option", { name: "秦广王" })).toBeInTheDocument());
+    const group = await within(dialog).findByRole("radiogroup");
+    await waitFor(() => expect(within(group).getByRole("radio", { name: /秦广王/ })).toBeInTheDocument());
     // 没有 display_name 的人退回 username。
-    expect(within(select).getByRole("option", { name: "songdi" })).toBeInTheDocument();
-    expect(within(select).queryByRole("option", { name: "qinguang" })).toBeNull();
+    expect(within(group).getByRole("radio", { name: /songdi/ })).toBeInTheDocument();
+    expect(within(group).queryByRole("radio", { name: /qinguang/ })).toBeNull();
     expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["a"]);
     expect(usersApi.list).not.toHaveBeenCalled();
+    // 在手件数读 in_hand;表头是可改派的人数。
+    expect(within(dialog).getByText(tZh("judgment.claim.reassign_count", { n: "2" }))).toBeInTheDocument();
+    const qin = dialog.querySelector('[data-officer="7"]') as HTMLElement;
+    expect(qin).toHaveTextContent(tZh("judgment.claim.in_hand_n", { n: "2" }));
+    // 搜索只留匹配的人。
+    fireEvent.change(within(dialog).getByRole("searchbox", { name: tZh("judgment.claim.reassign_search") }), { target: { value: "秦" } });
+    expect(within(group).queryByRole("radio", { name: /songdi/ })).toBeNull();
 
-    fireEvent.change(select, { target: { value: "7" } });
+    fireEvent.click(within(group).getByRole("radio", { name: /秦广王/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
     await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["a"], to: 7 }));
   });
@@ -242,7 +249,76 @@ describe("审判队列", () => {
     fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(tZh("judgment.claim.officers_unavailable"));
-    expect(within(dialog).queryByRole("combobox")).toBeNull();
+    expect(within(dialog).queryByRole("radiogroup")).toBeNull();
+  });
+
+  it("自己也列出但置灰、写「你」、件数「—」、不可选", async () => {
+    mockUser = { ...mockUser, id: 9, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    renderPage();
+    await screen.findByText("沈青梧");
+    fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+    fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
+    const dialog = await screen.findByRole("dialog");
+    const me = await within(dialog).findByRole("radio", { name: /songdi/ });
+    expect(me).toBeDisabled();
+    const row = dialog.querySelector('[data-officer="9"]') as HTMLElement;
+    expect(row).toHaveTextContent(tZh("judgment.claim.reassign_you"));
+    expect(row).toHaveTextContent("—");
+    expect(within(dialog).getByText(tZh("judgment.claim.reassign_count", { n: "1" }))).toBeInTheDocument();
+  });
+
+  it("除自己之外没有人:虚线框的空状态,改派按钮不可按", async () => {
+    mockUser = { ...mockUser, id: 9, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    judgmentApi.assignableOfficers.mockResolvedValue({ data: [{ id: 9, display_name: "", username: "songdi", role: "MODERATOR", in_hand: 0 }] });
+    renderPage();
+    await screen.findByText("沈青梧");
+    fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+    fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByTestId("reassign-empty")).toHaveTextContent(tZh("judgment.claim.reassign_empty_title"));
+    expect(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") })).toBeDisabled();
+  });
+
+  describe("空状态的「请管理员改派」", () => {
+    async function openEmpty() {
+      mockUser = { ...mockUser, id: 9, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      judgmentApi.assignableOfficers.mockResolvedValue({ data: [{ id: 9, display_name: "", username: "songdi", role: "MODERATOR", in_hand: 0 }] });
+      renderPage();
+      await screen.findByText("沈青梧");
+      fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+      fireEvent.click(within(rowOf("陆晚晴")).getByRole("checkbox"));
+      fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
+      const dialog = await screen.findByRole("dialog");
+      const empty = await within(dialog).findByTestId("reassign-empty");
+      fireEvent.click(within(empty).getByRole("button", { name: tZh("judgment.claim.request_admin") }));
+      return empty;
+    }
+    const refused = (status: number, retry_after?: number) =>
+      Promise.reject({ response: { status, data: retry_after === undefined ? {} : { retry_after } } });
+
+    it("每件案子请一次,发出后说「已请」,按钮收起", async () => {
+      judgmentApi.requestReassign.mockResolvedValue({ data: { notified: 1 } });
+      const empty = await openEmpty();
+      expect(await within(empty).findByRole("status")).toHaveTextContent(tZh("judgment.claim.request_admin_sent"));
+      expect(judgmentApi.requestReassign.mock.calls.map(([id]) => id).sort()).toEqual(["a", "c"]);
+      expect(within(empty).queryByRole("button", { name: tZh("judgment.claim.request_admin") })).toBeNull();
+    });
+
+    it("全部被限流:说还要等几分钟(取最长的那件),不说「已请」", async () => {
+      judgmentApi.requestReassign.mockImplementation((id: string) => refused(429, id === "a" ? 30 : 250));
+      const empty = await openEmpty();
+      expect(await within(empty).findByRole("status")).toHaveTextContent(
+        tZh("judgment.claim.request_admin_limited", { minutes: "5" })
+      );
+      expect(within(empty).queryByText(tZh("judgment.claim.request_admin_sent"))).toBeNull();
+    });
+
+    it("有一件不是限流的失败:报错,按钮留着可重试", async () => {
+      judgmentApi.requestReassign.mockImplementation((id: string) => (id === "a" ? refused(500) : Promise.resolve({ data: { notified: 1 } })));
+      const empty = await openEmpty();
+      expect(await within(empty).findByRole("alert")).toHaveTextContent(tZh("judgment.claim.request_admin_failed"));
+      expect(within(empty).getByRole("button", { name: tZh("judgment.claim.request_admin") })).toBeInTheDocument();
+    });
   });
 
   it("搜索(去抖后)与殿筛选同时进列表与计数的请求", async () => {

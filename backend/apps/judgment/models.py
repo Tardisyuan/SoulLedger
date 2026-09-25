@@ -147,6 +147,14 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     draft_verdict = models.CharField(max_length=20, choices=Verdict.choices, null=True, blank=True)
     draft_saved_at = models.DateTimeField(null=True, blank=True)
     draft_version = models.PositiveIntegerField(default=0)
+    # 「戊 · 发落」的草稿:选了但还没随结案发出的目的地与刑期。与判词同一个 `draft/`、
+    # 同一个 `draft_version` 前提;结案时清空(发落已写进结案本身)。只是草稿,不校验
+    # 容量与裁决可去 —— 那些在结案事务里(apps/disposition/destination.py::resolve_placement)。
+    draft_destination_realm = models.ForeignKey(
+        "realms.Realm", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+    )
+    draft_term_years = models.PositiveIntegerField(null=True, blank=True)
+    draft_eternal = models.BooleanField(default=False)
     # 认领与暂缓(审判队列按「谁在办」分组)。**不是 `judge`**:`judge` 是神话里的审判者
     # (一个 Actor),这两列是办这件案子的官员(一个 User)。
     #

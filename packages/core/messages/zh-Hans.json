@@ -44,7 +44,8 @@
     "forgot_sent": "已通知本殿管理员",
     "forgot_failed": "未能发送，请稍后再试",
     "rate_limited": "请求过于频繁，请稍后再试",
-    "back_to_login": "返回登录"
+    "back_to_login": "返回登录",
+    "forgot_sent_body": "如果这个账号存在，管理员会核对身份后联系你重设密码。系统不会发重置链接。"
   },
   "home": {
     "console": "控制台",
@@ -585,7 +586,9 @@
         "off": "无",
         "unsaved": "未保存",
         "failed": "保存失败",
-        "conflict": "引起冲突"
+        "conflict": "引起冲突",
+        "lock": "始终 · ADMIN",
+        "deny": "禁授 · 殿主"
       },
       "refused": {
         "admin_only_permission": "与规则「回收站的恢复与彻底删除仅限 ADMIN」冲突，已退回。",
@@ -598,7 +601,12 @@
         "role_forbidden_permission": "与规则「殿主不得持有审批工作流、推进工作流与用户管理权限」冲突，已退回。"
       },
       "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
-      "conflict_acknowledge": "我知道这会让 {{n}} 条审批流（含进行中 {{m}} 条）无人可批"
+      "conflict_acknowledge": "确认冲突：这次改动影响 {{n}} 条审批流，含进行中 {{m}} 条。",
+      "lock_word": "始终",
+      "lock_hint": "管理员角色始终拥有全部权限，不能取消勾选。",
+      "deny_word": "禁授",
+      "deny_hint": "殿主不能被授予「{{perm}}」。",
+      "conflict_view": "查看"
     },
     "segments": {
       "label": "权限分区",
@@ -1058,10 +1066,9 @@
       "render_verdict": "宣判",
       "notes": "裁决备注",
       "notes_placeholder": "输入备注…",
-      "create_workflow": "同时发起审批流程",
+      "create_workflow": "落判时一并发起审批流",
       "defer": "延后",
       "commit_error": "裁决提交失败，该条已放回队列",
-      "claimed_by_other": "该案已由「{{name}}」认领，只有认领人、殿主或管理员能结案；裁决未提交，本次会话内已延后该条",
       "restore_deferred": "恢复延后的条目",
       "stat_decided": "已裁决 {{n}}",
       "stat_deferred": "已延后 {{n}}",
@@ -1099,8 +1106,13 @@
       "key_workflow": "切换「同时发起审批流程」",
       "key_restore": "恢复所有已延后的条目",
       "key_help": "显示 / 隐藏键盘映射",
-      "key_leave": "退出队列（在输入框内则先失焦）",
-      "key_notes": "聚焦备注"
+      "key_notes": "聚焦备注",
+      "claimed_title": "该案已由「{{name}}」认领",
+      "claimed_body": "只有认领人、殿主或管理员能结案。你的裁决没有提交；本次会话已把这件延后。",
+      "claimed_next": "打开下一件",
+      "claimed_back": "回到队列",
+      "session_deferred": "本次暂缓 {{n}} 件",
+      "restore_all": "全部放回队列"
     },
     "detail": {
       "loading": "加载审判中...",
@@ -1124,7 +1136,8 @@
       "conclude": "结案",
       "notes_placeholder": "输入备注...",
       "create_workflow": "发起审批流程",
-      "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。"
+      "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
+      "conclude_with_workflow": "落判并发起"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -1198,7 +1211,12 @@
       "cite_error": "引用未能保存",
       "deferred_note": "已暂缓：{{reason}}",
       "previous": "上一件",
-      "next": "下一件"
+      "next": "下一件",
+      "concluded_on": "已结案 · {{date}}",
+      "balance_at_conclusion": "结案时余额",
+      "balance_now": "现值",
+      "balance_single": "余额",
+      "recorded_after": "其后登记 {{n}} 条"
     },
     "claim": {
       "groups": {
@@ -1234,8 +1252,6 @@
       "defer_reason_hint": "必填，至多 500 字；随案子留存，办案人会看到",
       "reassign_title": "改派 {{n}} 件审判",
       "reassign_to": "改派给",
-      "reassign_hint": "只列本租户的在职官员；办案权限由服务端再核一次",
-      "pick_officer": "— 选择官员 —",
       "officer_required": "请选择一位官员",
       "officers_unavailable": "读不到官员名单（需要改派权限）",
       "reassign_confirm": "改派",
@@ -1257,7 +1273,18 @@
       "civilization_all": "文明 · 全部",
       "sort": "排序",
       "sort_oldest": "排序 · 等待最久",
-      "sort_newest": "排序 · 最近入队"
+      "sort_newest": "排序 · 最近入队",
+      "reassign_search": "搜索判官",
+      "reassign_count": "可改派 {{n}}",
+      "in_hand": "在手",
+      "in_hand_n": "{{n}} 件",
+      "reassign_you": "你",
+      "reassign_empty_title": "空 · 没有可改派的人",
+      "reassign_empty_body": "除你之外，没有能接手这些案子、持「落判」权限的在职官员。",
+      "request_admin": "请管理员改派",
+      "request_admin_sent": "已请管理员改派",
+      "request_admin_limited": "已经请过，{{minutes}} 分钟后可再请",
+      "request_admin_failed": "没有发出，请重试"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -1311,7 +1338,10 @@
         "term_conflict": "执行失败：刑期与永恒只能选一个",
         "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
         "destination_not_applicable": "执行失败：此案不设发落"
-      }
+      },
+      "draft": "草稿 · 未提交",
+      "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
+      "not_applicable": "不适用于{{verdict}}"
     }
   },
   "audit": {
@@ -1388,7 +1418,11 @@
     "loading": "加载中...",
     "view_all": "查看全部",
     "mark_read_error": "标记已读失败",
-    "mark_all_error": "全部标记已读失败"
+    "mark_all_error": "全部标记已读失败",
+    "help_count_24h": "近 24 小时第 {{n}} 次",
+    "help_open_users": "去用户页",
+    "help_ignore": "不是本人 · 忽略",
+    "open_case": "打开案件"
   },
   "realms": {
     "title": "地域",
@@ -2473,28 +2507,52 @@
     },
     "forgot_password": {
       "link": "忘记密码",
-      "title": "找回密码",
-      "email_intro": "输入灵魂账号上绑定的联系邮箱，我们会向它发送 6 位验证码。",
-      "email": "联系邮箱",
+      "email_intro": "填写灵魂账号绑定的邮箱，我们把 6 位验证码发过去。",
+      "email": "邮箱",
       "email_invalid": "请填写有效的邮箱",
       "send": "发送验证码",
       "sending": "发送中…",
       "sent_neutral": "如果这个邮箱绑定了灵魂账号，验证码已发出",
-      "no_email": "没有绑定邮箱的灵魂收不到验证码，请向所属殿司申请重置密码。",
       "code": "验证码",
-      "code_hint": "6 位数字",
       "code_format": "验证码是 6 位数字",
-      "expires_in": "验证码 {{time}} 后失效",
-      "expired": "验证码已失效，请重新发送",
-      "resend": "重新发送验证码",
-      "resend_in": "{{time}} 后可重新发送",
-      "code_wrong": "验证码不正确",
-      "code_expired": "验证码已失效，请重新发送",
-      "too_many_tries": "验证码错误次数过多，已作废，请重新发送",
+      "resend": "重新发送",
       "ask_hall": "这个邮箱无法重设密码，请向所属殿司申请重置密码",
       "submit": "重设密码",
-      "success": "密码已重设，请用新密码登录",
-      "change_email": "换一个邮箱"
+      "step1_kicker": "重设密码 · 第 1 步 / 共 2 步",
+      "step1_title": "填写绑定的邮箱",
+      "no_email_link": "没有绑定邮箱？",
+      "step2_kicker": "重设密码 · 第 2 步 / 共 2 步",
+      "step2_title": "设一个新密码",
+      "sent_to": "发往 {{email}}。5 分钟内有效；没收到请看垃圾邮件。",
+      "expires_left": "{{time}} 后过期",
+      "strength": "强度 · {{level}}。至少 8 位，不能全是数字。",
+      "strength_weak": "弱",
+      "strength_fair": "尚可",
+      "strength_strong": "强",
+      "resend_wait": "重新发送（{{n}} 秒后可用）",
+      "no_email_kicker": "重设密码",
+      "no_email_title": "找殿司重设",
+      "no_email_body": "没有绑定邮箱的灵魂，无法在 App 里自己重设密码。",
+      "no_email_step_1": "写信给所在殿的殿司，说明你的姓名和灵魂编号。",
+      "no_email_step_2": "殿司核对身份后为你重设，并告诉你临时密码。",
+      "no_email_note": "登录不上就没法在 App 里写信：请托同殿的灵魂转达，或在殿前的登记处当面说明。",
+      "back_to_login": "回到登录",
+      "err_expired_title": "验证码已过期",
+      "err_expired_body": "5 分钟已过。重新发一个即可，已填的新密码会保留。",
+      "err_wrong_title": "验证码不对",
+      "err_wrong_left": "还可以再试 {{n}} 次。",
+      "err_exhausted_title": "尝试次数已用完",
+      "err_exhausted_body": "这个验证码已作废。请重新发送。",
+      "err_weak_title": "密码太弱",
+      "err_weak_body": "至少 8 位，不能全是数字，也不能太常见。",
+      "err_rate_title": "请求太频繁",
+      "err_rate_body": "请 {{n}} 秒后再试。倒计时结束后按钮自动恢复。",
+      "err_rate_later": "请稍后再试。",
+      "err_offline_title": "没有连接",
+      "err_offline_body": "已填的内容不会丢。恢复连接后再点一次。",
+      "err_mismatch_title": "两次输入的密码不一样",
+      "success_title": "密码已重设",
+      "success_body": "请用新密码登录。其他设备上的登录已全部退出。"
     },
     "tabs": {
       "life": "本世",
@@ -3053,12 +3111,12 @@
   },
   "official_notify": {
     "password_help_requested": {
-      "title": "忘记密码求助",
-      "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请到用户管理为其重置。"
+      "title": "重设密码求助",
+      "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请到用户管理为其重置。"
     },
     "password_help_requested_moderator": {
-      "title": "忘记密码求助",
-      "body": "账号「{{username}}」在登录页申请重置密码。核实身份后，请联系管理员为其重置。"
+      "title": "重设密码求助",
+      "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"
     },
     "dispatch_return_blocked": {
       "title": "暂居回归被拦下",
@@ -3107,6 +3165,10 @@
     "soul_inbox_assigned": {
       "title": "来信交给你办",
       "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"
+    },
+    "judgment_reassign_requested": {
+      "title": "请求改派",
+      "body": "{{by}} 请求改派案件 {{soul}}"
     }
   },
   "social_moderation": {
@@ -3248,7 +3310,8 @@
       "media_n": "图 {{n}}",
       "media_label": "配图",
       "media_caption": "图 {{i}} · {{w}}×{{h}}",
-      "media_load_failed": "图片加载失败"
+      "media_load_failed": "图片加载失败",
+      "held_for_words": "因敏感词「{{word}}」等 {{n}} 个待审"
     },
     "words": {
       "add_row": "新增敏感词",

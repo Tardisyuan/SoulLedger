@@ -116,6 +116,17 @@ type Schemas = components["schemas"];
  * mix; `versions` is each named role's version after the call.
  */
 export type MatrixChange = Schemas["MatrixChange"];
+
+/** The role whose every cell is 「始终」: `check_permission` answers yes before reading a grant, so the matrix cannot untick it. */
+export const ADMIN_ROLE_NAME = "ADMIN";
+/**
+ * Codenames a role may never be granted — a copy of `ROLE_FORBIDDEN_CODENAMES`
+ * in backend/apps/perm/checker.py, pinned to it by `roleForbiddenCodenamesMatchBackend.test.ts`.
+ * The matrix draws these 「! 禁授」 from the start, before anyone tries.
+ */
+export const ROLE_FORBIDDEN_CODENAMES: Readonly<Record<string, readonly string[]>> = {
+  MODERATOR: ["user.manage", "workflow.advance", "workflow.approve"],
+};
 export type MatrixChangeResult = Schemas["MatrixChangeResult"];
 export type MatrixChangesResult = Schemas["MatrixChangesResult"];
 /**

@@ -14,7 +14,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
-import { themeFor } from "../theme";
+import { civ, parchment, themeFor } from "../theme";
 import { PROFILE, application, heldReply, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -204,6 +204,18 @@ describe("a stored session", () => {
     expect(screen.getByText("羽侧")).toBeTruthy();
     expect(screen.queryByText("功")).toBeNull();
     expect(screen.getByText(String(PROFILE.merit_score))).toBeTruthy();
+  });
+
+  it("signed in with no known civilization: the old neutral ground, not the pre-login parchment", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const me = heldReply();
+    stubApi({ "/me/": me.reply, "/me/life/": { status: 200, data: life(1) } });
+    renderApp();
+    await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "ATLANTEAN" } }));
+    const card = screen.getByTestId("profile-card");
+    const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
+    expect(style).toMatchObject({ backgroundColor: civ.neutral.light.s0 });
+    expect(style).not.toMatchObject({ backgroundColor: parchment.light.bg });
   });
 
   it("returning to the life tab reloads it — an application submitted elsewhere shows up", async () => {

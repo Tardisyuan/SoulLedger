@@ -27,7 +27,7 @@ import { AppHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
 import { useSession } from "./session";
-import { themeFor } from "./theme";
+import { preLoginTheme, themeFor } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
 import {
   ApplicationDetailScreen,
@@ -114,7 +114,9 @@ const TAB_TITLES: Record<string, string> = {
 
 /** Success goes back to sign-in carrying a notice — never into a session. */
 function ForgotPassword({ navigation }: NativeStackScreenProps<RootParams, "ForgotPassword">) {
-  return <ForgotPasswordScreen onDone={() => navigation.popTo("Login", { passwordReset: true })} />;
+  return (
+    <ForgotPasswordScreen onDone={() => navigation.popTo("Login", { passwordReset: true })} onCancel={() => navigation.popTo("Login")} />
+  );
 }
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
@@ -217,7 +219,7 @@ export function RootNavigator() {
   const { state, retryBoot, signOut } = useSession();
   const [ready, setReady] = useState(0);
   const scheme = useColorScheme() === "light" ? "light" : "dark";
-  const theme = themeFor(state.status === "signedIn" ? state.profile.civilization : null, scheme);
+  const theme = state.status === "signedIn" ? themeFor(state.profile.civilization, scheme) : preLoginTheme(scheme);
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
   const navTheme: NavTheme = {
     ...base,
@@ -252,7 +254,7 @@ export function RootNavigator() {
               name="ForgotPassword"
               component={ForgotPassword}
               options={({ navigation }) => ({
-                header: () => <AppHeader title={t("soul_app.forgot_password.title")} onBack={navigation.goBack} />,
+                header: () => <AppHeader title={t("soul_app.app_name")} onBack={navigation.goBack} />,
               })}
             />
           </>
