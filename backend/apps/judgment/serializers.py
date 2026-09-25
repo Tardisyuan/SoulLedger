@@ -8,6 +8,7 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
+from apps.disposition.destination import MAX_TERM_YEARS
 from apps.judgment.claims import BATCH_LIMIT
 from apps.judgment.models import EvidenceAdmission, Judgment, JudgmentCitation, Statute, Verdict, open_judgments
 from apps.ledger.serializers import LedgerSummarySerializer
@@ -357,6 +358,41 @@ class JudgmentConcludeSerializer(serializers.Serializer):
     # {"add": [{"realm_code", "sentence_years", "reason"}], "remove": ["<node id>"]}。
     # 内容由 `apps/sentence_plan/requests.py::normalize_changes` 校验;其他 kind 带它答 400。
     plan_changes = serializers.DictField(required=False, allow_empty=True)
+    # 审判台「戊 · 发落」:判官亲自选的目的地与刑期。三个都不给 = 自动分派,与以前一样。
+    # 其余校验(本案租户、裁决可去、容量、永恒)在结案事务里做,见
+    # apps/disposition/destination.py::resolve_placement。
+    destination_realm_id = serializers.UUIDField(required=False, allow_null=True)
+    term_years = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1, max_value=MAX_TERM_YEARS,
+    )
+    eternal = serializers.BooleanField(required=False, allow_null=True)
+
+
+class JudgmentDestinationOptionSerializer(serializers.ModelSerializer):
+    """One realm the 「戊 · 发落」 picker may offer for a candidate verdict."""
+    name = serializers.SerializerMethodField()
+    occupancy = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Realm
+        fields = ["id", "name", "realm_code", "kind", "capacity", "occupancy", "is_eternal"]
+        read_only_fields = fields
+
+    def get_name(self, obj) -> str:
+        return obj.get_localized_name(locale_from_context(self.context))
+
+
+class JudgmentDestinationsSerializer(serializers.Serializer):
+    """`GET /judgment/{id}/destinations/?candidate_verdict=` — schema-only envelope.
+
+    `default_realm_id` is where automatic routing would send the soul (null when
+    that realm is not among the options, e.g. an unmapped tenant);
+    `default_term_years` is null because an automatic conclusion records no term.
+    """
+    verdict = serializers.CharField()
+    default_realm_id = serializers.UUIDField(allow_null=True)
+    default_term_years = serializers.IntegerField(allow_null=True)
+    options = JudgmentDestinationOptionSerializer(many=True)
 
 
 class JudgmentQueueCursorSerializer(serializers.Serializer):

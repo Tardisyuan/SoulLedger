@@ -291,7 +291,24 @@ export interface ConcludeJudgmentPayload {
    * Any other kind answers 400 `invalid_changes`.
    */
   plan_changes?: SentenceRequestChanges;
+  /**
+   * 审判台「戊 · 发落」. All three optional; none given = automatic routing,
+   * unchanged. Pick from `judgmentApi.destinations`. Refusals come back with a
+   * `code`: realm_not_found / realm_not_allowed / term_conflict /
+   * eternal_not_allowed / destination_not_applicable (400), realm_full (409,
+   * 「执行失败：目的地已满」). Written immediately — there is no undo window.
+   */
+  destination_realm_id?: string | null;
+  /** Positive whole years. Not together with `eternal: true`. */
+  term_years?: number | null;
+  /** Only where the destination `is_eternal`. */
+  eternal?: boolean | null;
 }
+
+/** `GET /judgment/{id}/destinations/?candidate_verdict=` — the 「戊 · 发落」 picker. */
+export type JudgmentDestinations = components["schemas"]["JudgmentDestinations"];
+export type JudgmentDestinationOption = components["schemas"]["JudgmentDestinationOption"];
+export type JudgmentVerdict = components["schemas"]["JudgmentConcludeVerdictEnum"];
 
 /**
  * `GET /judgment/next/` — the triage queue's cursor (BRIEF §4.2).
@@ -405,6 +422,13 @@ export interface QueueRealm {
   is_eternal: boolean;
 }
 
+/** `GET /judgment/previous/` — the case just before `at`, same queue as `next/`. */
+export interface JudgmentPreviousParams {
+  at: string;
+  skip?: string[];
+  includeDeferred?: boolean;
+}
+
 export interface JudgmentQueueParams {
   /** Session-local skip list. Repeated, so the server never holds this state. */
   skip?: string[];
@@ -462,6 +486,19 @@ export const judgmentApi = {
     const qs = search.toString();
     return api.get<JudgmentQueueCursor>(`/judgment/next/${qs ? `?${qs}` : ""}`);
   },
+  /** 「上一件」: `judgment` is null when nothing pending sits before `at`. */
+  previous: (params: JudgmentPreviousParams) => {
+    const search = new URLSearchParams();
+    search.set("at", params.at);
+    for (const id of params.skip ?? []) search.append("skip", id);
+    if (params.includeDeferred) search.set("include_deferred", "true");
+    return api.get<JudgmentQueueCursor>(`/judgment/previous/?${search.toString()}`);
+  },
+  /** Where this case may be sent under `verdict` (filtered by the routing rules). */
+  destinations: (id: string, verdict: JudgmentVerdict) =>
+    api.get<JudgmentDestinations>(`/judgment/${id}/destinations/`, {
+      params: { candidate_verdict: verdict },
+    }),
   claim: (id: string) => api.post<Judgment>(`/judgment/${id}/claim/`, {}),
   release: (id: string) => api.post<Judgment>(`/judgment/${id}/release/`, {}),
   /** Needs `judgment.assign` (ADMIN, MODERATOR). `to` is a User pk in the case's tenant. */

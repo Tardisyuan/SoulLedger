@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi } from "../api/index";
-import type { EvidenceRulingPayload, JudgmentDetail, JudgmentDraftPayload } from "../api/judgment";
+import type { EvidenceRulingPayload, JudgmentDetail, JudgmentDraftPayload, JudgmentVerdict } from "../api/judgment";
 import type { JudgmentBatchPayload, JudgmentQueueCountsParams } from "../api/index";
 import { notify } from "../platform/index";
 import { judgmentKeys } from "../query_keys";
@@ -42,6 +42,31 @@ export function useJudgmentPrecedents(id: string, limit?: number) {
     },
     enabled: !!id,
     staleTime: 60_000,
+  });
+}
+
+/** 「戊 · 发落」's options for one candidate verdict — see `judgmentApi.destinations`. */
+export function useJudgmentDestinations(id: string, verdict: JudgmentVerdict | null | undefined) {
+  return useQuery({
+    queryKey: judgmentKeys.destinations(id, verdict ?? ""),
+    queryFn: async () => {
+      const res = await judgmentApi.destinations(id, verdict as JudgmentVerdict);
+      return res.data;
+    },
+    enabled: !!id && !!verdict,
+    staleTime: 10_000,
+  });
+}
+
+/** 「上一件」: the pending case just before `at` (`judgment` is null when there is none). */
+export function useJudgmentPrevious(at: string | null | undefined, skip: string[] = []) {
+  return useQuery({
+    queryKey: judgmentKeys.previous(at ?? "", skip),
+    queryFn: async () => {
+      const res = await judgmentApi.previous({ at: at as string, skip });
+      return res.data;
+    },
+    enabled: !!at,
   });
 }
 
