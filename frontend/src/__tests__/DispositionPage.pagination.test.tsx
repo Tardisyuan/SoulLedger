@@ -103,7 +103,7 @@ describe("disposition list pagination", () => {
 
     await screen.findByText("Soul 101");
     expect(mockList).toHaveBeenCalledWith({ section: "pending", page: "1" });
-    expect(mockList).toHaveBeenCalledWith({ section: "executing", page: "1" });
+    expect(mockList).toHaveBeenCalledWith({ section: "executing", ordering: "term_end", page: "1" });
     expect(mockList).toHaveBeenCalledWith({ section: "expired", soul_reborn: "false", page: "1" });
     // page, total, count — the order `Pagination` hands `t`.
     expect(screen.getByText("pagination.info:1,3,45")).toBeInTheDocument();

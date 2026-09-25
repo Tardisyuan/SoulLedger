@@ -130,6 +130,12 @@ export interface JudgmentQueueCounts {
   total: number;
 }
 
+/** `GET /judgment/courts/`: one court (殿) in the caller's scope and its pending cases. */
+export interface JudgmentCourt {
+  court: string;
+  pending: number;
+}
+
 /** Filters `queue-counts/` honours — the list's, minus `group`. */
 export interface JudgmentQueueCountsParams {
   court?: string;
@@ -440,6 +446,8 @@ export interface JudgmentQueueParams {
   skip?: string[];
   /** Enter the queue on a named case (deep link from a soul's lifecycle spine). */
   at?: string;
+  /** 「下一件」: the pending case just after this one, in the order `previous` walks back. Overrides `at`. */
+  after?: string;
   /** Hand out deferred (暂缓) cases too. They are left out by default. */
   includeDeferred?: boolean;
 }
@@ -488,6 +496,7 @@ export const judgmentApi = {
     const search = new URLSearchParams();
     for (const id of params?.skip ?? []) search.append("skip", id);
     if (params?.at) search.set("at", params.at);
+    if (params?.after) search.set("after", params.after);
     if (params?.includeDeferred) search.set("include_deferred", "true");
     const qs = search.toString();
     return api.get<JudgmentQueueCursor>(`/judgment/next/${qs ? `?${qs}` : ""}`);
@@ -524,4 +533,6 @@ export const judgmentApi = {
   batch: (payload: JudgmentBatchPayload) => api.post<JudgmentBatchResult>("/judgment/batch/", payload),
   queueCounts: (params?: JudgmentQueueCountsParams) =>
     api.get<JudgmentQueueCounts>("/judgment/queue-counts/", { params }),
+  /** Every court in the caller's scope (unfiltered, unpaginated) — the court filter's options. */
+  courts: () => api.get<JudgmentCourt[]>("/judgment/courts/"),
 };

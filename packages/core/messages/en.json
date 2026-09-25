@@ -1089,7 +1089,8 @@
       "uncite": "Withdraw {{code}}",
       "cite_error": "The citation did not save",
       "deferred_note": "Deferred: {{reason}}",
-      "previous": "Previous"
+      "previous": "Previous",
+      "next": "Next"
     },
     "claim": {
       "groups": {

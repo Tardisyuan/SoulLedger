@@ -1089,7 +1089,8 @@
       "uncite": "撤回引用 {{code}}",
       "cite_error": "引用未能保存",
       "deferred_note": "已暂缓：{{reason}}",
-      "previous": "上一件"
+      "previous": "上一件",
+      "next": "下一件"
     },
     "claim": {
       "groups": {
