@@ -11341,6 +11341,7 @@ export interface components {
             readonly id: number;
             name: string;
             display_name: string;
+            description?: string;
             /**
              * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
              *
@@ -11363,6 +11364,7 @@ export interface components {
         RoleCreateUpdate: {
             name: string;
             display_name: string;
+            description?: string;
             /**
              * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
              *

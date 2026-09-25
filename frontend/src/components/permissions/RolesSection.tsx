@@ -11,7 +11,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { Modal } from "@/src/components/ui/Modal";
-import { TextField } from "@/src/components/ui/Field";
+import { TextAreaField, TextField } from "@/src/components/ui/Field";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 
 /**
@@ -159,6 +159,8 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
   const del = useDeleteRole();
 
   const [displayName, setDisplayName] = useState(role.display_name);
+  const [description, setDescription] = useState(role.description ?? "");
+  const changed = displayName.trim() !== role.display_name || description.trim() !== (role.description ?? "");
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [copying, setCopying] = useState(false);
@@ -171,7 +173,11 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
     if (!displayName.trim()) return;
     setSaving(true);
     try {
-      await permApi.roles.update(role.id, { name: role.name, display_name: displayName.trim() });
+      await permApi.roles.update(role.id, {
+        name: role.name,
+        display_name: displayName.trim(),
+        description: description.trim(),
+      });
       await queryClient.invalidateQueries({ queryKey: permKeys.roles });
       showToast(t("permissions.roles.saved"), "success");
     } catch {
@@ -227,6 +233,12 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
         </div>
         <p className="mt-1 text-xs text-[oklch(var(--color-ink-subtle))]">{t("permissions.roles.code_immutable")}</p>
       </div>
+      <TextAreaField
+        label={t("permissions.roles.description")}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={3}
+      />
 
       <dl>
         <Stat label={t("permissions.roles.members")}>{role.member_count}</Stat>
@@ -317,7 +329,7 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
           variant="primary"
           size="sm"
           loading={saving}
-          disabled={!displayName.trim() || displayName.trim() === role.display_name}
+          disabled={!displayName.trim() || !changed}
           onClick={save}
         >
           {t("common.save")}

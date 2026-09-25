@@ -634,7 +634,8 @@
         "builtin_role": "删除被拒绝：内置角色不可删除。",
         "role_in_use": "删除被拒绝：仍有 {{n}} 名成员持有此角色。先给他们换角色。",
         "role_referenced_by_workflow_templates": "删除被拒绝：仍被 {{n}} 条审批流引用。先改这些审批流。"
-      }
+      },
+      "description": "说明"
     }
   },
   "workflow": {

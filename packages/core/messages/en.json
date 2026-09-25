@@ -634,7 +634,8 @@
         "builtin_role": "Refused: built-in roles cannot be deleted.",
         "role_in_use": "Refused: {{n}} members still hold this role. Reassign them first.",
         "role_referenced_by_workflow_templates": "Refused: {{n}} workflows still refer to it. Change them first."
-      }
+      },
+      "description": "Description"
     }
   },
   "workflow": {
