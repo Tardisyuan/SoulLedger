@@ -62,6 +62,22 @@ def test_a_sensitive_name_is_refused_not_saved_as_pending(cn_tenant, eu_tenant):
     assert _rename(eu_client, "我是违禁词呀").status_code == 200
 
 
+def test_a_display_name_hit_is_refused_but_not_counted(cn_tenant):
+    """2026-09-25 决定(维持现状):显示名命中只拒绝,不计入词的「近 30 天命中」——
+    那个数是给内容命中看的。对照:同一个词在帖子里命中是计数的。"""
+    from apps.social.models import SensitiveWordDailyHit
+
+    word = SensitiveWord.objects.create(tenant=cn_tenant, word="违禁词")
+    _, client = soul(cn_tenant, "原名")
+    for _ in range(3):
+        assert _rename(client, "我是违禁词呀").json()["code"] == "display_name_sensitive"
+    assert not SensitiveWordDailyHit.objects.filter(word=word).exists()
+
+    res = client.post(f"{SOCIAL}/feed/", {"content": "帖子里的违禁词", "visibility": "PUBLIC"}, format="json")
+    assert res.status_code == 201, res.content
+    assert SensitiveWordDailyHit.objects.get(word=word).count == 1
+
+
 def test_a_name_another_current_soul_in_this_civilization_holds_is_refused(cn_tenant, eu_tenant):
     soul(cn_tenant, "Alice")
     me, client = soul(cn_tenant, "原名")

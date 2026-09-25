@@ -11,7 +11,7 @@ class PermConfig(AppConfig):
         # soft-deleted row nothing listed and nothing could restore (BP-06).
         # Its grants are binned under the same cascade id (see
         # apps/perm/views.py::update_delete_role), so restore brings them back.
-        from apps.core.recycle_bin import register_bin_type
+        from apps.core.recycle_bin import register_bin_type, register_restore_check
 
         from .models import Role
 
@@ -25,3 +25,7 @@ class PermConfig(AppConfig):
             return None
 
         register_bin_type("role", Role, "reference", lambda role: role.name, location=location)
+
+        from .matrix import template_restore_refusal
+
+        register_restore_check(template_restore_refusal)

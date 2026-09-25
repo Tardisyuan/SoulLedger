@@ -11,7 +11,7 @@ import type { Realm, SoulPathEntry } from "@soulledger/core/api";
  *   CHINESE  一线          `order`(殿号 1–10)
  *   EUROPEAN 漏斗          `region` + `level`(圈 / 台阶)
  *   EGYPTIAN 十二时之河    `hour`(1–12),`is_judgment_hall` 加粗
- *   GREEK    三岔          `fork`(LEFT / MIDDLE / RIGHT),其余为主干
+ *   GREEK    三岔          `fork`(LEFT / RIGHT),其余为主干
  *
  * **形状字段缺失就画「一条线 · 示意」,不猜。** 杜阿特的 `hour` 在种子里每一行都是
  * null —— 十二时是《冥世之书》里拉的夜行,不是亡者的路(backend/apps/actors/
@@ -43,7 +43,7 @@ export interface Station {
 }
 
 export type FunnelRegion = "INFERNO" | "PURGATORIO" | "PARADISO";
-export type Fork = "LEFT" | "MIDDLE" | "RIGHT";
+export type Fork = "LEFT" | "RIGHT";
 
 interface Common {
   /** Path stations that have no place on this shape — drawn as ↳ branches. */
@@ -70,7 +70,7 @@ export function stationStates(path: readonly SoulPathEntry[] | null | undefined)
 }
 
 const REGION_ORDER: FunnelRegion[] = ["INFERNO", "PURGATORIO", "PARADISO"];
-const FORK_ORDER: Fork[] = ["LEFT", "MIDDLE", "RIGHT"];
+const FORK_ORDER: Fork[] = ["LEFT", "RIGHT"];
 
 const isSet = <T>(v: T | null | undefined): v is T => v !== null && v !== undefined;
 

@@ -1207,7 +1207,7 @@ def test_moderator_denied_workflow_approve_now_stays_denied_through_patch_nodes(
         {"verdict": "PASSED", "notes": "denied route"},
         format="json",
     )
-    assert denied.status_code == 403, "MODERATOR is supposed to lack workflow.approve"
+    assert denied.status_code == 403, "MODERATOR may never hold workflow.approve (ROLE_FORBIDDEN_CODENAMES)"
     assert ApprovalNode.objects.get(pk=first.pk).status == NodeStatus.PENDING
 
     blocked = moderator.patch(
@@ -1253,7 +1253,7 @@ def test_moderator_denied_workflow_advance_now_stays_denied_through_patch_workfl
     moderator = role_clients["MODERATOR"]
 
     denied = moderator.post(f"/api/v1/workflows/{workflow.id}/advance/", {}, format="json")
-    assert denied.status_code == 403, "MODERATOR is supposed to lack workflow.advance"
+    assert denied.status_code == 403, "MODERATOR may never hold workflow.advance (ROLE_FORBIDDEN_CODENAMES)"
     assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == first.pk
 
     blocked = moderator.patch(
@@ -1368,3 +1368,33 @@ def test_snapshot_covers_the_whole_section_3_matrix():
     # DOES seed, are driven the other way — 20 cases with the rows removed.
     assert len(WORKFLOW_PROBES) == 4
     assert len(WORKFLOW_PROBES) * len(ROLES) == 20
+
+
+@pytest.mark.django_db
+def test_moderators_three_forbidden_codenames_stay_denied_with_the_rows_in_the_table(
+    role_clients, snapshot_tenant
+):
+    """MODERATOR lacking workflow.approve / workflow.advance / user.manage was a
+    default in ROLE_PERMISSIONS; since 2026-09-25 it is a server rule
+    (apps/perm/checker.py::ROLE_FORBIDDEN_CODENAMES). The rows below are what
+    a hand edit or an old import could leave behind — every expectation in this
+    file for MODERATOR on these three must hold with them present."""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, Role, RolePermission
+
+    moderator_role, _ = Role.objects.get_or_create(name="MODERATOR", defaults={"display_name": "殿主"})
+    for codename in ("workflow.approve", "workflow.advance", "user.manage"):
+        permission, _ = Permission.objects.get_or_create(
+            codename=codename, defaults={"name": codename, "category": codename.split(".")[0]}
+        )
+        RolePermission.objects.get_or_create(role=moderator_role, permission=permission)
+    invalidate_all_permissions()
+
+    workflow, _first, _second = _workflow_with_two_nodes(snapshot_tenant, _soul(snapshot_tenant, "forbidden-rows"))
+    moderator = role_clients["MODERATOR"]
+    assert moderator.post(
+        f"/api/v1/workflows/{workflow.id}/approve_node/", {"verdict": "PASSED", "notes": ""}, format="json"
+    ).status_code == 403
+    assert moderator.post(f"/api/v1/workflows/{workflow.id}/advance/", {}, format="json").status_code == 403
+    assert moderator.get("/api/v1/users/").status_code == 403
+    invalidate_all_permissions()

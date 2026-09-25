@@ -502,6 +502,16 @@ class JudgmentReassignSerializer(serializers.Serializer):
     to = serializers.IntegerField(min_value=1)
 
 
+class AssignableOfficerSerializer(serializers.Serializer):
+    """`GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+    没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。"""
+
+    id = serializers.IntegerField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)
+
+
 class JudgmentBatchSerializer(serializers.Serializer):
     """`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。"""
 
@@ -544,6 +554,17 @@ class JudgmentClaimRefusalSerializer(serializers.Serializer):
     claimed_by_name = serializers.CharField(required=False)
     id = serializers.UUIDField(required=False)
     missing = serializers.ListField(child=serializers.UUIDField(), required=False)
+
+
+class JudgmentCourtSerializer(serializers.Serializer):
+    """`GET /judgment/courts/` 的一行:调用者租户里出现过的一个殿,和它眼下有几件未结案。
+
+    殿是自由文本列,没有字典表;这份名单就是队列殿筛选的选项来源。`pending` 与
+    `queue-counts/` 的 `total` 同一个谓词(未结案,含暂缓)。
+    """
+
+    court = serializers.CharField()
+    pending = serializers.IntegerField()
 
 
 class JudgmentQueueCountsSerializer(serializers.Serializer):

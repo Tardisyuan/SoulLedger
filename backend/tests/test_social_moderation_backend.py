@@ -66,6 +66,31 @@ def test_review_sends_the_post_to_the_pending_queue_unchanged(cn_tenant, cn_mode
     assert str(row.pk) in {r["id"] for r in queue}
 
 
+def test_a_review_hit_records_which_word_sent_it_to_review(cn_tenant, cn_moderator):
+    """2026-09-25 决定:送审也记原因,写法与 HIDE 同一个前缀 `sensitive_word:<词>`。"""
+    word(cn_tenant, "违禁词", SensitiveWordAction.REVIEW)
+    word(cn_tenant, "脏话", SensitiveWordAction.MASK)
+    author, client = soul(cn_tenant, "作者")
+
+    row = publish(client, "脏话和违禁词")
+    assert (row.moderation_status, row.moderation_reason) == (ModerationStatus.PENDING, "sensitive_word:违禁词")
+    assert row.moderated_at is None
+    queue = officer_client(cn_moderator).get(f"{MODERATION}/posts/").json()["results"]
+    assert {r["id"]: r["moderation_reason"] for r in queue}[str(row.pk)] == "sensitive_word:违禁词"
+    # Not in 「已处理」: a reason is not a decision.
+    handled = officer_client(cn_moderator).get(f"{MODERATION}/handled/").json()["results"]
+    assert str(row.pk) not in {r["id"] for r in handled}
+
+    target = post(author, "干净的帖子", Visibility.PUBLIC)
+    res = client.post(f"{SOCIAL}/posts/{target.pk}/comments/", {"content": "违禁词在此"}, format="json")
+    comment = Comment.objects.get(pk=res.json()["id"])
+    assert (comment.moderation_status, comment.moderation_reason) == (ModerationStatus.PENDING, "sensitive_word:违禁词")
+
+    # MASK alone publishes with no reason: nothing is waiting on anyone.
+    masked = publish(client, "只有脏话")
+    assert (masked.moderation_status, masked.moderation_reason) == (ModerationStatus.PUBLISHED, "")
+
+
 def test_hide_hides_the_post_at_write_time_and_lists_it_as_handled_by_the_system(cn_tenant, cn_moderator):
     word(cn_tenant, "隐藏词", SensitiveWordAction.HIDE)
     _, client = soul(cn_tenant, "作者")
@@ -227,11 +252,24 @@ def test_a_word_is_created_with_category_and_action(cn_tenant, cn_moderator):
     body = res.json()
     assert (body["category"], body["action"], body["hits_30d"]) == ("PRIVACY", "MASK", 0)
     assert body["created_by"]["user_id"] == cn_moderator.pk
-    # 不给就是未分类 + 送审(0007 之前的行为)。
-    plain = client.post(f"{MODERATION}/sensitive-words/", {"word": "另一词"}, format="json").json()
-    assert (plain["category"], plain["action"]) == ("", "REVIEW")
+    # 动作不给就是送审(0007 之前的行为)。
+    plain = client.post(f"{MODERATION}/sensitive-words/", {"word": "另一词", "category": "ABUSE"}, format="json").json()
+    assert (plain["category"], plain["action"]) == ("ABUSE", "REVIEW")
     bad = client.post(f"{MODERATION}/sensitive-words/", {"word": "三词", "category": "隐私"}, format="json")
     assert bad.status_code == 400, "分类存的是枚举成员,中文名在 i18n 包里"
+
+
+def test_a_new_word_must_name_its_category_and_old_ones_stay_uncategorised(cn_tenant, cn_moderator):
+    """2026-09-25 决定:新建必须带类别;之前加的词保持未分类,列表照常返回空串。"""
+    client = officer_client(cn_moderator)
+    for body in ({"word": "无类"}, {"word": "无类", "category": ""}):
+        res = client.post(f"{MODERATION}/sensitive-words/", body, format="json")
+        assert res.status_code == 400 and "category" in res.json(), (body, res.content)
+    assert not SensitiveWord.objects.filter(tenant=cn_tenant, word="无类").exists()
+
+    SensitiveWord.objects.create(tenant=cn_tenant, word="旧词")  # 0007 之前的词:未分类
+    rows = {r["word"]: r["category"] for r in client.get(f"{MODERATION}/sensitive-words/").json()["results"]}
+    assert rows["旧词"] == ""
 
 
 # ── 批量删词 ─────────────────────────────────────────────────────────────

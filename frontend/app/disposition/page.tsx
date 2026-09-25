@@ -32,8 +32,9 @@ import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
  * 规则 15 的例外只在这里和回收站:待执行段的「执行」、期满段的「安排轮回」是行尾按钮,
  * 因为这两段的工作就是那一个动作。执行中段没有动作,只有期限条;永恒处置画虚线框。
  *
- * 执行中段「按期满近 → 远」只在本页内排:列表的 `ordering` 只收 `created_at` / `executed_at`,
- * 服务端不能按 `term_end` 排。稿子里的「下次自动期满检查 · 今日 24:00」没有画:期满任务
+ * 执行中段「按期满近 → 远」由服务端排(`ordering=term_end`,跨页也对):期满日在 SQL 里按
+ * 序列化器 `term_end` 同一条规则算,永久与没有期满日的排最后。稿子里的「下次自动期满检查 ·
+ * 今日 24:00」没有画:期满任务
  * (`disposition.expire_due`)没有排进任何调度,下次何时跑没有可读的来源。
  */
 
@@ -63,7 +64,8 @@ export default function DispositionPage() {
     placeholderData: <P,>(previous: P) => previous,
   });
   const pendingQ = useQuery(sectionQuery({ section: "pending", page: String(pages.pending) }));
-  const executingQ = useQuery(sectionQuery({ section: "executing", page: String(pages.executing) }));
+  // 期满近 → 远,服务端排:本页之外的行也在对的位置上。
+  const executingQ = useQuery(sectionQuery({ section: "executing", ordering: "term_end", page: String(pages.executing) }));
   // 已经转世的灵魂不再排在「期满」里等安排轮回。
   const expiredQ = useQuery(sectionQuery({ section: "expired", soul_reborn: "false", page: String(pages.expired) }));
   const queries: Record<DispositionSection, typeof pendingQ> = { pending: pendingQ, executing: executingQ, expired: expiredQ };
@@ -73,10 +75,7 @@ export default function DispositionPage() {
   const total = SECTIONS.reduce((n, s) => n + (queries[s].data?.count ?? 0), 0);
 
   const pending = pendingQ.data?.results ?? [];
-  const running = (executingQ.data?.results ?? [])
-    .map((d) => ({ d, term: termState(d, now) }))
-    // 按期满近 → 远;不计时的(永恒、缺期限、缺起算)排在最后。只在本页内。
-    .sort((a, b) => daysLeftOf(a.term) - daysLeftOf(b.term));
+  const running = (executingQ.data?.results ?? []).map((d) => ({ d, term: termState(d, now) }));
   const expired = expiredQ.data?.results ?? [];
 
   const executeMutation = useMutation({
@@ -222,10 +221,6 @@ export default function DispositionPage() {
 }
 
 type T = (key: string, params?: Record<string, string>) => string;
-
-function daysLeftOf(term: TermState): number {
-  return term.kind === "running" ? term.daysLeft : Number.POSITIVE_INFINITY;
-}
 
 /** 期限一格的字:「刑期 3 年」「永恒 · 不计时」「期限未记录」。 */
 function termLabel(term: TermState, t: T): string {

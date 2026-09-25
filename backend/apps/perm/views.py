@@ -13,10 +13,26 @@ from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
-from apps.perm.matrix import ADMIN_ONLY_PERMISSION, admin_only_violations
+from apps.perm.matrix import (
+    ADMIN_ALWAYS_ALL,
+    ADMIN_ONLY_PERMISSION,
+    ROLE_FORBIDDEN_PERMISSION,
+    admin_always_all_violations,
+    admin_only_violations,
+    role_forbidden_violations,
+)
 from apps.perm.services import get_role_permission_codenames
 
-from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
+from .models import (
+    DEFAULT_PERMISSIONS,
+    DEFAULT_ROLES,
+    ROLE_PERMISSIONS,
+    FieldPermission,
+    Permission,
+    Role,
+    RolePermission,
+    RowLevelDataScope,
+)
 from .serializers import (
     InitRolePermissionsResultSerializer,
     InitRolesResultSerializer,
@@ -285,13 +301,32 @@ def assign_role_permissions(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        refused = admin_only_violations(
-            role.name, Permission.objects.filter(id__in=permission_ids).values_list("codename", flat=True)
-        )
+        requested = list(Permission.objects.filter(id__in=permission_ids).values_list("codename", flat=True))
+        refused = admin_only_violations(role.name, requested)
         if refused:
             return Response(
                 {"error": f"{', '.join(sorted(refused))} can only be granted to ADMIN",
                  "code": ADMIN_ONLY_PERMISSION},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        forbidden = role_forbidden_violations(role.name, requested)
+        if forbidden:
+            return Response(
+                {"error": f"{role.name} may not hold {', '.join(sorted(forbidden))}",
+                 "code": ROLE_FORBIDDEN_PERMISSION},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # The whole-set replace is a revoke of every row it leaves out; ADMIN
+        # refuses those exactly as the matrix save does (apps/perm/matrix.py).
+        kept = admin_always_all_violations(
+            role.name,
+            set(RolePermission.objects.filter(role=role).values_list("permission__codename", flat=True))
+            - set(requested),
+        )
+        if kept:
+            return Response(
+                {"error": f"ADMIN always holds every permission; cannot remove {', '.join(sorted(kept))}",
+                 "code": ADMIN_ALWAYS_ALL},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -550,9 +585,10 @@ def copy_role(request, pk):
     复制为新角色：新 code、同一组授权（仅 ADMIN）
 
     Copies the source's RolePermission rows — permission, `conditions` and
-    `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-    FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-    copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+    `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+    2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+    the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+    short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
     """
     try:
         source = Role.objects.get(pk=pk)
@@ -584,6 +620,25 @@ def copy_role(request, pk):
             )
             for g in grants
         ])
+        # Plain rows with no signal receivers of their own; copied field for
+        # field (every column but the key and the role).
+        field_rules = [
+            FieldPermission(
+                role=role, model_name=f.model_name, field_name=f.field_name, visible=f.visible,
+                read_only=f.read_only, editable=f.editable, is_active=f.is_active,
+            )
+            for f in FieldPermission.objects.filter(role=source)
+        ]
+        FieldPermission.objects.bulk_create(field_rules)
+        row_scopes = [
+            RowLevelDataScope(
+                role=role, civilization=s.civilization, model_name=s.model_name,
+                filter_conditions=s.filter_conditions, scope_type=s.scope_type,
+                priority=s.priority, is_active=s.is_active,
+            )
+            for s in RowLevelDataScope.objects.filter(role=source)
+        ]
+        RowLevelDataScope.objects.bulk_create(row_scopes)
         from apps.audit.models import AuditAction, AuditLog
 
         AuditLog.objects.create(
@@ -595,6 +650,8 @@ def copy_role(request, pk):
             changes={
                 "copied_from": source.name,
                 "permissions": {"old": [], "new": sorted(g.permission.codename for g in grants)},
+                "field_permissions": len(field_rules),
+                "row_level_scopes": len(row_scopes),
             },
             description=f"Role {name} created as a copy of {source.name}"[:500],
             ip_address=get_client_ip(request),
@@ -631,6 +688,7 @@ def apply_matrix_changes(request):
     results, versions = apply_changes(
         serializer.validated_data["changes"],
         serializer.validated_data.get("expected_versions"),
+        serializer.validated_data["acknowledge_conflicts"],
     )
 
     def count(status_):
@@ -655,7 +713,7 @@ def apply_matrix_changes(request):
 def matrix_impact(request):
     """
     POST /api/v1/perm/role-permissions/impact/
-    保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+    保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
 
     Same body as `changes/`; `expected_versions` is accepted and ignored.
     """
@@ -666,7 +724,7 @@ def matrix_impact(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return Response({
         "required_codenames": approve_codenames(),
-        "conflicts": impact_of_changes(serializer.validated_data["changes"]),
+        **impact_of_changes(serializer.validated_data["changes"]),
     })
 
 
