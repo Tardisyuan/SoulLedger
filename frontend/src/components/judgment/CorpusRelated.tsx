@@ -62,7 +62,7 @@ export function CorpusRelated({
               onClick={() => onChoose(s.id)}
               className="w-full grid grid-cols-[5.5rem_1fr] gap-2 py-1 text-left border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))]"
             >
-              <span className="font-mono text-2xs truncate">{statuteSigil(s) ?? s.code}</span>
+              <span className="font-mono text-2xs truncate" title={statuteSigil(s) ?? s.code}>{statuteSigil(s) ?? s.code}</span>
               <span className="text-xs truncate" title={s.display_title}>{s.display_title}</span>
             </button>
           </li>
