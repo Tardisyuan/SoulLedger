@@ -8907,6 +8907,7 @@ export interface components {
             create_time: string;
             visibility: string;
             comment_count: number;
+            readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
         };
         ModerationAction: {
             /** @default  */

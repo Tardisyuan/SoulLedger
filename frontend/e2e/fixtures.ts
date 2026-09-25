@@ -841,6 +841,7 @@ export const MODERATED_POSTS = [
     create_time: "2026-09-18T03:00:00Z",
     visibility: "PUBLIC",
     comment_count: 0,
+    reaction_counts: { LIKE: 1, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
   },
 ];
 

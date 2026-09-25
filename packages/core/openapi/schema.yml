@@ -19546,6 +19546,10 @@ components:
           type: string
         comment_count:
           type: integer
+        reaction_counts:
+          allOf:
+          - $ref: '#/components/schemas/SoulReactionCounts'
+          readOnly: true
       required:
       - author
       - comment_count
@@ -19555,6 +19559,7 @@ components:
       - moderation_reason
       - moderation_status
       - open_report_count
+      - reaction_counts
       - visibility
     ModerationAction:
       type: object

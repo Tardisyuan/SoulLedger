@@ -73,6 +73,7 @@ const post = (over: Record<string, unknown> = {}) => ({
   create_time: "2026-09-18T01:30:00Z",
   visibility: "PUBLIC",
   comment_count: 4,
+  reaction_counts: { LIKE: 5, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
   ...over,
 });
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
@@ -152,8 +153,12 @@ describe("举报 · the C-08 review layout", () => {
     expect(apiMock.item).toHaveBeenCalledWith("posts", "p1");
     expect(within(detail()).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
     expect(within(detail()).queryByText("ABUSE")).toBeNull();
-    // Text reactions, not emoji: 「评」 and the count the API gives.
-    expect(within(detail()).getByText(tZh("social_moderation.review.reaction_comment"), { exact: false })).toBeInTheDocument();
+    // Text reactions, not emoji: 「评 N · 念 N」 with the counts the API gives. 念 is LOVE,
+    // not the total (LIKE 5 would make it 17); no 「转」 — the circle has no reposts.
+    const counts = detail().querySelector("[data-reaction-counts]") as HTMLElement;
+    expect(counts).toHaveTextContent(/^评 2·念 12$/);
+    expect(counts).not.toHaveTextContent("17");
+    expect(counts).not.toHaveTextContent("转");
   });
 
   it("H without a reason says so and sends nothing; with one it hides through the report", async () => {

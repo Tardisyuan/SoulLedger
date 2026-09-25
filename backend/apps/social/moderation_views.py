@@ -152,7 +152,8 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
         row = mod.moderate_content(
             self.get_object(), verb, actor=request.user, request=request, reason=body.validated_data.get("reason", "")
         )
-        return Response(self.get_serializer(row).data)
+        # 重读一遍:锁住的那一行没有列表的注解(举报数、表态数)。
+        return Response(self.get_serializer(self.get_queryset().get(pk=row.pk)).data)
 
     @extend_schema(request=ModerationActionSerializer, responses={200: None, **ERRORS})
     @action(detail=True, methods=["post"])
@@ -187,6 +188,11 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
 class ModeratedPostViewSet(ModeratedContentViewSet):
     queryset = Post.objects.all()
     serializer_class = ModeratedPostSerializer
+
+    def get_queryset(self):
+        from apps.social.soul_circle import reaction_kind_counts
+
+        return super().get_queryset().annotate(**reaction_kind_counts())
 
     @extend_schema(responses={200: ModeratedPostSerializer(many=True)})
     def list(self, request, *args, **kwargs):
