@@ -501,6 +501,8 @@ export const judgmentApi = {
    */
   statutes: (params?: Record<string, string>) =>
     api.get<PaginatedResponse<Statute>>("/judgment/statutes/", { params }),
+  /** One article — the desk's 「插入审判台」 confirm names it before citing. */
+  statute: (id: string) => api.get<Statute>(`/judgment/statutes/${id}/`),
   citations: (id: string) => api.get<JudgmentCitation[]>(`/judgment/${id}/citations/`),
   /** 「据 · 先例」:同租户、同文明的已结案审判,按同殿 → 余额最近 → 共同援引排序。 */
   precedents: (id: string, limit?: number) =>

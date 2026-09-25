@@ -369,7 +369,20 @@ it("letters before the previous one are folded behind a count", async () => {
 it("`/` in the reply searches statutes and Enter writes the citation into the text", async () => {
   asRole("soul_inbox.read", "soul_inbox.reply", "judgment.read");
   judgmentMock.statutes.mockResolvedValue({
-    data: { results: [{ id: "st1", code: "GGX-17", display_title: "救濟門 · 十七", display_text: "" }] },
+    data: {
+      results: [
+        {
+          id: "st1",
+          code: "GGX-17",
+          civilization: "CHINESE",
+          corpus: "GONGGUOGE",
+          ordinal: 17,
+          payload_json: { gate: "救濟門", gate_ordinal: 17 },
+          display_title: "救濟門 · 十七",
+          display_text: "",
+        },
+      ],
+    },
   });
   renderPage();
   const thread = await openThread();
@@ -378,7 +391,9 @@ it("`/` in the reply searches statutes and Enter writes the citation into the te
   await within(thread).findByRole("option", { name: /GGX-17/ });
   expect(judgmentMock.statutes).toHaveBeenCalledWith({ search: "救濟" });
   fireEvent.keyDown(box, { key: "Enter" });
-  expect(box.value).toBe("依 〔GGX-17 · 救濟門 · 十七〕");
+  // The canonical 〔文献 · 条号〕 bracket — the corpus page's — not 〔code · title〕.
+  expect(box.value).toBe(`依 〔${tZh("judgment.statute_corpus.GONGGUOGE")} · 救濟門 · 十七〕`);
+  expect(box.value).not.toContain("GGX-17");
   expect(apiMock.reply).not.toHaveBeenCalled();
 });
 

@@ -1191,7 +1191,10 @@
       "no_match": "Nen Gem Hep: «{{q}}»",
       "clear_search": "Fekh Hehy",
       "cited_by_error": "Nen Ini Wedja",
-      "cited_by_open": "Nen Khetem"
+      "cited_by_open": "Nen Khetem",
+      "insert_desk": "Djed Er Wedja",
+      "insert_none": "Nen Wedja Nen Khetem",
+      "insert_pick": "Setep Wedja Nen Khetem"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
@@ -1204,7 +1207,10 @@
       "cite_error": "Nen Djed",
       "deferred_note": "Sedjer Seth: {{reason}}",
       "previous": "Sep Tepy",
-      "next": "Sep Em Khet"
+      "next": "Sep Em Khet",
+      "cite_from_corpus_title": "Djed Medu",
+      "cite_from_corpus_confirm": "Djed {{cite}} Er Wedja {{soul}}",
+      "cite_from_corpus_closed": "Wedja Khetem Seth · Nen Djed"
     },
     "claim": {
       "groups": {

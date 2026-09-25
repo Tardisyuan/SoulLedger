@@ -1191,7 +1191,10 @@
       "no_match": "No article matches “{{q}}”",
       "clear_search": "Clear search",
       "cited_by_error": "Could not load the citing judgments",
-      "cited_by_open": "Open"
+      "cited_by_open": "Open",
+      "insert_desk": "Insert into the desk",
+      "insert_none": "You hold no open case",
+      "insert_pick": "Pick one of your open cases"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",
@@ -1204,7 +1207,10 @@
       "cite_error": "The citation did not save",
       "deferred_note": "Deferred: {{reason}}",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "cite_from_corpus_title": "Cite an article",
+      "cite_from_corpus_confirm": "Cite {{cite}} in the judgment of {{soul}}?",
+      "cite_from_corpus_closed": "This case is concluded; no article can be cited now."
     },
     "claim": {
       "groups": {

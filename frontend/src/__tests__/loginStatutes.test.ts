@@ -29,6 +29,12 @@ describe("LOGIN_STATUTES", () => {
     expect(source).toContain(statute.text);
   });
 
+  it.each(LOGIN_STATUTES.map((s) => [s.code, s]))("%s names the rulebook its code belongs to", (_code, statute) => {
+    // The 文献 half of 〔文献 · 条号〕: CN-GGG-* is the 功過格, GR-GRG-* the Gorgias.
+    expect(statute.corpus).toBe(statute.code.startsWith("CN-GGG-") ? "GONGGUOGE" : "GORGIAS");
+    expect(statute.code.startsWith("CN-GGG-") || statute.code.startsWith("GR-GRG-")).toBe(true);
+  });
+
   it.each(LOGIN_STATUTES.map((s) => [s.code, s]))("%s cites a sigil its civilization can format", (_code, statute) => {
     expect(formatSigil(statute.civilization, statute.ref)).toBeTruthy();
   });

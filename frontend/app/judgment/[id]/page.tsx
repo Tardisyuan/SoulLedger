@@ -28,7 +28,14 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
-import { CitationChips, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
+import {
+  CitationChips,
+  CiteFromCorpus,
+  Kbd,
+  PrecedentsPanel,
+  QueueBar,
+  StatuteSearch,
+} from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -480,6 +487,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   return (
     <>
     {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute} />}
+    {/* 语料页「插入审判台」带着 ?cite= 进来:确认后引用;并记下这是最后打开的未结案。 */}
+    <CiteFromCorpus judgment={judgment} canCite={canEditGrounds} onCite={(statuteId) => citeMutation.mutate(statuteId)} />
     <PageShell
       density="document"
       variant="full"
