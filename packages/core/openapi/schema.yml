@@ -13558,6 +13558,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulBatchRecycleError'
           description: ''
+  /api/v1/souls/export/:
+    get:
+      operationId: v1_souls_export_retrieve
+      description: |-
+        批量条「导出」:所选灵魂的 CSV,一行一个。
+
+        范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
+        所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+      parameters:
+      - in: query
+        name: ids
+        schema:
+          type: string
+        description: 逗号分隔的灵魂 id(UUID),至多 100 个
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/tenants/:
     get:
       operationId: v1_tenants_list

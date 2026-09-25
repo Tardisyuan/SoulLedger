@@ -1,15 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useBatchRecycleSouls } from "@soulledger/core/hooks/useSouls";
-import { soulBatchRecycleErrorOf, type SoulBatchRecycleError, type SoulListItem } from "@soulledger/core/api";
+import { soulBatchRecycleErrorOf, soulsApi, type SoulBatchRecycleError, type SoulListItem } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import { saveBlob } from "@/src/lib/saveBlob";
 import { Button } from "@/src/components/ui/Button";
 import { Modal } from "@/src/components/ui/Modal";
 import type { DataTableSelection } from "@/components/ui/data-table";
 
 /**
- * 规范 v1 §3.1「有接口」:/souls 的批量条 —— 已选 N · 移入回收站 · 取消选择。
+ * 规范 v1 §3.1「有接口」:/souls 的批量条 —— 已选 N · 移交… · 导出 · 移入回收站 · 取消选择。
+ *
+ * 「移交…」打开既有的发起移交表单(`/dispatch/propose?soul=`),它一次只带**一个**灵魂:
+ * 选了一个就带过去;选了几个,就在条上说明「一次只能移交一个」并停下,不替操作员挑。
+ * 「导出」是所选灵魂的 CSV(`GET /souls/export/`),与列表同一个范围与码名。
  *
  * THE SELECTION BELONGS TO ONE QUERY. It is stored next to the key of the
  * query it was made on (`queryKey`: page, filters, sort), read back as empty
@@ -68,12 +75,30 @@ function dialogIsOpen() {
   return document.querySelector('[role="dialog"], [role="alertdialog"]') !== null;
 }
 
-export function SoulBatchBar({ selection }: { selection: SoulSelection }) {
+export function SoulBatchBar({
+  selection,
+  canRecycle,
+  canDispatch,
+}: {
+  selection: SoulSelection;
+  canRecycle: boolean;
+  canDispatch: boolean;
+}) {
   const { t } = useI18n();
+  const { showToast } = useToast();
+  const router = useRouter();
   const recycle = useBatchRecycleSouls();
   const [confirming, setConfirming] = useState(false);
   const [refusal, setRefusal] = useState<SoulBatchRecycleError | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [transferNote, setTransferNote] = useState(false);
   const count = selection.names.size;
+  // 选择变了,那句「一次只能移交一个」就不再说的是眼前这批。
+  const [noteFor, setNoteFor] = useState(count);
+  if (noteFor !== count) {
+    setNoteFor(count);
+    setTransferNote(false);
+  }
 
   // 「取消选择 · Esc」. Not while typing, and not while a dialog owns Esc.
   useEffect(() => {
@@ -94,6 +119,28 @@ export function SoulBatchBar({ selection }: { selection: SoulSelection }) {
     if (recycle.isPending) return;
     setConfirming(false);
     setRefusal(null);
+  };
+
+  const transfer = () => {
+    if (count !== 1) {
+      setTransferNote(true);
+      return;
+    }
+    const [id] = selection.names.keys();
+    router.push(`/dispatch/propose?soul=${encodeURIComponent(id)}`);
+  };
+
+  const exportCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const response = await soulsApi.export([...selection.names.keys()]);
+      saveBlob(response.data, "souls_export.csv");
+    } catch {
+      showToast(t("souls.batch.export_failed"), "error");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const submit = () => {
@@ -122,10 +169,25 @@ export function SoulBatchBar({ selection }: { selection: SoulSelection }) {
         <span className="font-mono text-xs text-[oklch(var(--color-ink))]" aria-live="polite">
           {t("souls.batch.selected", { n: String(count) })}
         </span>
+        {transferNote && (
+          <span role="status" className="text-xs text-[oklch(var(--color-warning))]">
+            {t("souls.batch.transfer_one_only", { n: String(count) })}
+          </span>
+        )}
         <span className="flex-1" />
-        <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
-          {t("souls.detail.confirm_delete_action")}
+        {canDispatch && (
+          <Button type="button" variant="secondary" size="sm" onClick={transfer} disabled={count === 0}>
+            {t("souls.batch.transfer")}
+          </Button>
+        )}
+        <Button type="button" variant="secondary" size="sm" onClick={exportCsv} loading={exporting} disabled={count === 0}>
+          {t("souls.batch.export")}
         </Button>
+        {canRecycle && (
+          <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
+            {t("souls.detail.confirm_delete_action")}
+          </Button>
+        )}
         <Button type="button" variant="ghost" size="sm" onClick={selection.clear}>
           {t("souls.batch.clear")}
           <span aria-hidden="true" className="ml-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">· Esc</span>

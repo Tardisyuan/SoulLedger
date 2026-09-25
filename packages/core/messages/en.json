@@ -340,7 +340,11 @@
       "refused_reason": {
         "not_found": "No longer exists, or is outside your scope.",
         "not_deletable": "Has a concluded judgment: it cannot be deleted, only archived."
-      }
+      },
+      "transfer": "Transfer…",
+      "transfer_one_only": "A transfer carries one soul at a time; {{n}} are selected. Tick just one, or start them one by one.",
+      "export": "Export",
+      "export_failed": "Export failed"
     }
   },
   "common": {

@@ -103,6 +103,8 @@ export default function SoulsPage() {
   // operator can no longer see is not one they should be able to act on.
   const { hasPermission } = usePermissions();
   const canRecycle = hasPermission("soul.delete");
+  // 「移交…」打开发起移交表单,那一页要 `dispatch.manage`。
+  const canDispatch = hasPermission("dispatch.manage");
   const selection = useSoulSelection(JSON.stringify(params), souls);
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
@@ -398,10 +400,10 @@ export default function SoulsPage() {
         totalPages={totalPages}
         totalCount={data?.count}
         onPageChange={setPage}
-        selection={canRecycle ? selection.tableSelection : undefined}
+        selection={selection.tableSelection}
       />
 
-      {canRecycle && <SoulBatchBar selection={selection} />}
+      <SoulBatchBar selection={selection} canRecycle={canRecycle} canDispatch={canDispatch} />
 
       <SoulPreviewDrawer
         soul={previewSoul}

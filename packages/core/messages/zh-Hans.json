@@ -340,7 +340,11 @@
       "refused_reason": {
         "not_found": "已不存在，或不在你的范围内。",
         "not_deletable": "已有结案审判，不能删除，只能归档。"
-      }
+      },
+      "transfer": "移交…",
+      "transfer_one_only": "发起移交一次只带一个灵魂，已选 {{n}} 个。请只勾选一个，或逐个发起。",
+      "export": "导出",
+      "export_failed": "导出失败"
     }
   },
   "common": {
