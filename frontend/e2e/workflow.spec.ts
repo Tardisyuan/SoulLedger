@@ -199,7 +199,7 @@ test.describe("Workflow editor toolbar", () => {
     await priority.selectOption("2");
     await expect(priority).toHaveValue("2");
 
-    await page.getByRole("button", { name: "保存模板", exact: true }).click();
+    await page.getByRole("button", { name: "存草稿", exact: true }).click();
 
     await expect.poll(() => api.countOf("POST", "/workflow/templates/")).toBe(1);
     const body = api.lastCall("POST", "/workflow/templates/")!.body;
@@ -454,7 +454,8 @@ test.describe("Workflow editor below 1024 px", () => {
     const preview = page.getByRole("region", { name: "模板预览 · 线性" });
     await expect(preview.getByRole("button")).toHaveCount(4);
     await expect(page.locator(".react-flow__node")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "保存模板", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "存草稿", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "发布", exact: true })).toHaveCount(0);
     await expect(page.getByLabel("模板名称", { exact: true })).toHaveCount(0);
 
     await preview.getByRole("button", { name: /酆都大帝 · 终审/ }).click();

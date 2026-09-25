@@ -3,13 +3,18 @@
 import { useRef, useState, type ReactNode } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import { MissingValue } from "@/src/components/ui/DomainValue";
+import type { TemplateSigner, WorkflowNodeKind } from "@soulledger/core/api";
 import {
+  KIND_GLYPH,
   ROLE_GLYPH,
   branchOf,
+  kindOf,
+  whenOf,
   type Branch,
   type FlowIssue,
   type NodeRole,
 } from "@/src/components/workflow/workflowValidation";
+import { whenText } from "@/src/components/workflow/workflowConditions";
 
 /**
  * The three panes around the canvas in design C · 03: 节点库 (left), 属性 +
@@ -27,18 +32,26 @@ type TFunc = (key: string, params?: Record<string, string>) => string;
 const SECTION_HEAD =
   "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]";
 
-/** The five `NodeType` members — the whole palette this model has. */
-export const PALETTE_TYPES = ["TRIAL", "EVALUATION", "APPEAL", "FINAL", "EXECUTION"] as const;
+/**
+ * The node KINDS — design C · 03's palette (□ 审批 · ⧉ 会签 · ✉ 通知 · ■ 结束).
+ *
+ * It used to be the five `NodeType` members, because a stage was the only
+ * thing a node could differ in. Kind is now what changes the engine's
+ * behaviour, so it is what the palette places; the stage (`NodeType`) is set in
+ * the node form. The canvas's other two entries are not kinds here and are not
+ * listed: ▷ 开始 is whichever node is first, and ◇ 条件 is a condition on an
+ * edge (see the inspector's 出口 · 条件) — both are derived, as the card's
+ * glyph already shows.
+ */
+export const PALETTE_TYPES = ["APPROVAL", "COUNTERSIGN", "NOTIFY", "END"] as const;
 export type PaletteType = (typeof PALETTE_TYPES)[number];
 
 /** The MIME type a palette drag carries, so a drop of anything else is ignored. */
 export const PALETTE_DRAG_TYPE = "application/x-soulledger-node-type";
 
 /**
- * 「节点库 Palette」. Click (or Enter) appends a node of that type exactly like
- * 「添加节点」; dragging one onto the canvas drops it where it lands. Every entry
- * carries □: whatever it becomes in the flow, a new node is an approval step
- * until an edge says otherwise.
+ * 「节点库 Palette」. Click (or Enter) appends a node of that kind exactly like
+ * 「添加节点」; dragging one onto the canvas drops it where it lands.
  */
 /**
  * ONE tab stop, arrow keys inside (roving tabindex). Five buttons in the tab
@@ -93,10 +106,9 @@ export function WorkflowPalette({
               className="w-full h-9 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
             >
               <span aria-hidden="true" className="w-4 text-center font-mono">
-                {ROLE_GLYPH.step}
+                {KIND_GLYPH[type]}
               </span>
-              <span className="flex-1">{t(`workflow.node_type.${type.toLowerCase()}`)}</span>
-              <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{type}</span>
+              <span className="flex-1">{t(`workflow.editor.kind.${type}`)}</span>
             </button>
           </li>
         ))}
@@ -114,6 +126,7 @@ function nodeName(node: Node | undefined, t: TFunc): string {
 /** "N3「楚江王 · 初审」" — how a node is named in the issue list and exits. */
 function nodeRef(nodes: readonly Node[], id: string, t: TFunc): string {
   const idx = nodes.findIndex((n) => n.id === id);
+  if (idx < 0) return t("workflow.editor.template_level");
   return `N${idx + 1}「${nodeName(nodes[idx], t)}」`;
 }
 
@@ -132,7 +145,16 @@ export function issueText(issue: FlowIssue, nodes: readonly Node[], t: TFunc): s
  */
 function exitText(branch: Branch, node: Node, nodes: readonly Node[], edges: readonly Edge[], t: TFunc): string {
   const routed = edges.filter((e) => e.source === node.id && branchOf(e) === branch);
-  if (routed.length > 0) return routed.map((e) => `→ ${nodeRef(nodes, e.target, t)}`).join(" · ");
+  const rejectTo = typeof node.data.rejectTo === "string" ? node.data.rejectTo : "";
+  if (branch === "fail" && rejectTo) return t("workflow.editor.exit.reject_to", { node: nodeRef(nodes, rejectTo, t) });
+  if (routed.length > 0)
+    return routed
+      .map((e) => {
+        const when = whenOf(e);
+        return `→ ${nodeRef(nodes, e.target, t)}${when?.length ? ` (${whenText(when, t)})` : ""}`;
+      })
+      .join(" · ");
+  if (kindOf(node) === "END") return t("workflow.editor.exit.pass_end");
   if (branch === "fail") return t("workflow.editor.exit.fail_default");
   const idx = nodes.findIndex((n) => n.id === node.id);
   return idx < nodes.length - 1
@@ -157,6 +179,8 @@ export function WorkflowInspector({
   onSelect,
   onEdit,
   validationId,
+  nodeExtras,
+  footer,
 }: {
   t: TFunc;
   nodes: readonly Node[];
@@ -168,6 +192,10 @@ export function WorkflowInspector({
   /** Absent in the read-only view. */
   onEdit?: (id: string) => void;
   validationId: string;
+  /** Sections about the selected node that talk to the API (approver preview, exit conditions). */
+  nodeExtras?: (node: Node) => ReactNode;
+  /** Template-level sections under the issue list (version history). */
+  footer?: ReactNode;
 }) {
   const idx = nodes.findIndex((n) => n.id === selectedId);
   const node = idx >= 0 ? nodes[idx] : undefined;
@@ -208,8 +236,14 @@ export function WorkflowInspector({
                 node.data.approverType ? t(`workflow.approver_types.${String(node.data.approverType)}`) : ""
               )}
               {field(t("workflow.editor.approver_role"), String(node.data.approverRole ?? ""), true)}
+              {field(t("workflow.editor.kind_label"), `${KIND_GLYPH[kindOf(node)]} ${t(`workflow.editor.kind.${kindOf(node)}`)}`)}
+              {kindOf(node) === "COUNTERSIGN" &&
+                field(t("workflow.editor.signers"), signersText(node, t))}
+              {field(t("workflow.editor.timeout.label"), timeoutText(node, t))}
               {field(t("workflow.editor.branch.pass"), exitText("pass", node, nodes, edges, t))}
-              {field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
+              {kindOf(node) !== "END" &&
+                kindOf(node) !== "NOTIFY" &&
+                field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
             </dl>
             {onEdit && (
               <button
@@ -227,6 +261,8 @@ export function WorkflowInspector({
         )}
       </section>
 
+      {node && nodeExtras?.(node)}
+
       <section id={validationId} tabIndex={-1} aria-label={t("workflow.editor.issues", { n: String(issues.length) })}>
         <div className={SECTION_HEAD}>{t("workflow.editor.issues", { n: String(issues.length) })}</div>
         {issues.length === 0 ? (
@@ -234,10 +270,10 @@ export function WorkflowInspector({
         ) : (
           <ul>
             {issues.map((issue) => (
-              <li key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}`} className="border-b border-[oklch(var(--color-rule))]">
+              <li key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}`} className="border-b border-[oklch(var(--color-rule))]">
                 <button
                   type="button"
-                  onClick={() => onSelect(issue.nodeId)}
+                  onClick={() => issue.nodeId && onSelect(issue.nodeId)}
                   className="w-full py-1.5 text-left text-sm text-[oklch(var(--color-danger))] hover:underline"
                 >
                   <span aria-hidden="true">! </span>
@@ -248,8 +284,34 @@ export function WorkflowInspector({
           </ul>
         )}
       </section>
+      {footer}
     </aside>
   );
+}
+
+function signersText(node: Node, t: TFunc): string {
+  const signers = (Array.isArray(node.data.signers) ? node.data.signers : []) as TemplateSigner[];
+  if (signers.length === 0) return "";
+  const who = signers.map((s) => s.label || s.approver_role || "?").join("、");
+  const threshold = typeof node.data.threshold === "number" ? node.data.threshold : signers.length;
+  return t("workflow.editor.signers_summary", { who, k: String(threshold), n: String(signers.length) });
+}
+
+function timeoutText(node: Node, t: TFunc): string {
+  const hours = typeof node.data.timeoutHours === "number" ? node.data.timeoutHours : 0;
+  const action = typeof node.data.timeoutAction === "string" ? node.data.timeoutAction : "";
+  if (!hours || !action) return "";
+  const role = typeof node.data.timeoutRole === "string" ? node.data.timeoutRole : "";
+  return t("workflow.editor.timeout.summary", {
+    hours: String(hours),
+    action: t(`workflow.editor.timeout.action.${action}`) + (action === "ESCALATE" && role ? ` · ${role}` : ""),
+  });
+}
+
+/** The glyph a card and a chip show: 会签 / 通知 / 结束 by kind, otherwise the derived role. */
+export function glyphFor(node: Node, role: NodeRole): string {
+  const kind: WorkflowNodeKind = kindOf(node);
+  return kind === "APPROVAL" ? ROLE_GLYPH[role] : KIND_GLYPH[kind];
 }
 
 /**
@@ -299,7 +361,7 @@ export function WorkflowLinearPreview({
                   } ${role === "branch" ? "font-mono text-xs" : ""} aria-pressed:bg-[oklch(var(--color-surface-2))] aria-pressed:shadow-[inset_3px_0_0_oklch(var(--color-ink))]`}
                 >
                   <span aria-hidden="true" className="font-mono">
-                    {ROLE_GLYPH[role]}{" "}
+                    {glyphFor(n, role)}{" "}
                   </span>
                   {bad && <span aria-hidden="true">! </span>}
                   {nodeName(n, t)}

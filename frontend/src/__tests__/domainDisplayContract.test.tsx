@@ -74,6 +74,10 @@ const ENUM_FIELDS = [
   "region",
   "fork",
   "approver_type",
+  // Added 2026-09-25 by the meta-test: `ApprovalNode.timeout_action`
+  // (ESCALATE / AUTO_REJECT / NOTIFY), drawn through
+  // workflow.editor.timeout.action.*.
+  "timeout_action",
   "reaction_type",
   "visibility",
   // Added 2026-09-03 by the meta-test below, working exactly as intended.
