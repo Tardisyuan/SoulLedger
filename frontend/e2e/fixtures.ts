@@ -140,11 +140,24 @@ export const ROLE_GRANTS: Record<string, number[]> = {
   GUARDIAN: [1, 5, 7],
 };
 
+// RoleSerializer's counts and flags (backend/apps/perm/serializers.py). GUARDIAN
+// is the one custom role here, referenced by one workflow template, so the
+// roles drawer has a refusal to show (`ROLE_REFERENCES` below).
 export const ROLES = [
-  { id: 1, name: "ADMIN", display_name: "管理员", scope: "GLOBAL", organization: null, organization_name: null, user_count: 2, version: 7, update_time: "2026-08-01T00:00:00Z" },
-  { id: 2, name: "JUDGE", display_name: "判官", scope: "TENANT", organization: null, organization_name: null, user_count: 5, version: 3, update_time: "2026-08-01T00:00:00Z" },
-  { id: 3, name: "GUARDIAN", display_name: "守卫", scope: "TENANT", organization: null, organization_name: null, user_count: 4, version: 2, update_time: "2026-08-01T00:00:00Z" },
+  { id: 1, name: "ADMIN", display_name: "管理员", scope: "GLOBAL", organization: null, organization_name: null, user_count: 2, member_count: 2, permission_count: 8, workflow_template_count: 0, is_builtin: true, version: 7, update_time: "2026-08-01T00:00:00Z" },
+  { id: 2, name: "JUDGE", display_name: "判官", scope: "TENANT", organization: null, organization_name: null, user_count: 5, member_count: 5, permission_count: 3, workflow_template_count: 1, is_builtin: true, version: 3, update_time: "2026-08-01T00:00:00Z" },
+  { id: 3, name: "GUARDIAN", display_name: "守卫", scope: "TENANT", organization: null, organization_name: null, user_count: 4, member_count: 0, permission_count: 3, workflow_template_count: 1, is_builtin: false, version: 2, update_time: "2026-08-01T00:00:00Z" },
 ];
+
+/** `role_template_references()` — which template steps name a role as approver. */
+export const ROLE_REFERENCES: Record<string, { template_id: string; template_name: string; tenant_id: number; civilization: string; is_active: boolean; steps: { step_order: number; step_name: string }[] }[]> = {
+  GUARDIAN: [
+    { template_id: "7a7a7a7a-7a7a-4a7a-8a7a-7a7a7a7a7a01", template_name: "跨文明调度 · 两级", tenant_id: 1, civilization: "CHINESE", is_active: true, steps: [{ step_order: 2, step_name: "守卫签收" }] },
+  ],
+};
+
+/** Codenames matrix.py refuses to grant to any role but ADMIN (`admin_only_permission`). */
+export const ADMIN_ONLY_CODENAMES = ["recycle_bin.restore", "recycle_bin.hard_delete"];
 
 export const SOULS = [
   {
@@ -688,9 +701,16 @@ export const MODERATED_POSTS = [
   },
 ];
 
-/** GET `/social-moderation/sensitive-words/`. */
+/** GET `/social-moderation/sensitive-words/` — SensitiveWordSerializer, with `hits_30d`. */
 export const SENSITIVE_WORDS = [
-  { id: "efefefef-efef-4fef-8fef-efefefefef01", word: "违禁词", created_by: { user_id: 1, display_name: "测试管理员" }, created_at: "2026-09-18T00:00:00Z" },
+  { id: "efefefef-efef-4fef-8fef-efefefefef01", word: "违禁词", category: "ABUSE", action: "HIDE", hits_30d: 31, created_by: { user_id: 1, display_name: "测试管理员" }, created_at: "2026-09-18T00:00:00Z" },
+  { id: "efefefef-efef-4fef-8fef-efefefefef03", word: "还阳", category: "INDUCEMENT", action: "REVIEW", hits_30d: 6, created_by: { user_id: 1, display_name: "测试管理员" }, created_at: "2026-09-17T00:00:00Z" },
+];
+
+/** GET `/social-moderation/handled/` — HandledContentSerializer; one hidden post, one deleted comment. */
+export const HANDLED_CONTENT = [
+  { type: "POST", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", author: MODERATION_AUTHOR, excerpt: "判词不公，阎王只听殿司一面之词……", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "测试管理员" }, handled_at: "2026-09-18T05:00:00Z" },
+  { type: "COMMENT", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd04", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd01", author: MODERATION_AUTHOR, excerpt: "你们等着，我还阳之后……", handling: "DELETED", reason: "越界诱导", handled_by: null as { user_id: number; display_name: string } | null, handled_at: "2026-09-18T04:00:00Z" },
 ];
 
 /** GET `/social-moderation/mutes/`. */
@@ -950,6 +970,11 @@ export class ApiMock {
     ROLES.map((r) => [r.name, r.version])
   );
 
+  /** Live grants, so a per-cell save is visible to the refetch that follows it. */
+  readonly roleGrants: Record<string, number[]> = Object.fromEntries(
+    Object.entries(ROLE_GRANTS).map(([role, ids]) => [role, [...ids]])
+  );
+
   /** The signed-in user's avatar URL, so a successful upload is visible on
    *  the next GET of the same profile — same live-state shape as
    *  `roleVersions` above. */
@@ -1086,6 +1111,14 @@ export class ApiMock {
     // /records/ is a BARE array — the @action returns serializer.data
     // directly — so the paginated fallback would break it.
     this.on("GET", "/souls/:id/", SOUL_DETAIL);
+    // All or nothing (backend/apps/souls/views.py batch_recycle): 200 with one
+    // cascade id per soul. A spec that needs a 404 / 409 registers its own.
+    this.on("POST", "/souls/batch-recycle/", (call) => ({
+      body: {
+        recycled: (call.body?.ids ?? []).length,
+        results: (call.body?.ids ?? []).map((id: string, i: number) => ({ id, cascade_id: `c0c0c0c0-c0c0-4c0c-8c0c-c0c0c0c0c0${String(i).padStart(2, "0")}` })),
+      },
+    }));
     this.on("GET", "/souls/:id/karma/", SOUL_LEDGER);
     this.on("GET", "/souls/:id/records/", []);
 
@@ -1155,7 +1188,7 @@ export class ApiMock {
     );
     this.on("GET", "/perm/roles/:name/permissions/", (call) => {
       const role = call.path.split("/")[3];
-      const ids = ROLE_GRANTS[role] ?? [];
+      const ids = this.roleGrants[role] ?? [];
       const details = PERMISSIONS.filter((p) => ids.includes(p.id));
       return { body: { role, permissions: details.map((p) => p.codename), details } };
     });
@@ -1177,6 +1210,63 @@ export class ApiMock {
           version: this.roleVersions[role],
         },
       };
+    });
+
+    // Per-cell save (backend/apps/perm/matrix.py apply_matrix_changes): one
+    // result per change in request order, 200 whatever the mix. Refuses a stale
+    // expected_version per role and an admin-only codename to a non-ADMIN role.
+    this.on("POST", "/perm/role-permissions/changes/", (call) => {
+      const changes: { role: string; permission_id: number; action: "grant" | "revoke" }[] = call.body?.changes ?? [];
+      const expected: Record<string, number> = call.body?.expected_versions ?? {};
+      const counts = { saved: 0, unchanged: 0, refused: 0, failed: 0 };
+      const bumped = new Set<string>();
+      const results = changes.map((c, index) => {
+        const perm = PERMISSIONS.find((p) => p.id === c.permission_id);
+        const base = { index, role: c.role, permission_id: c.permission_id, codename: perm?.codename ?? null, action: c.action, detail: null };
+        const refuse = (code: string) => {
+          counts.refused += 1;
+          return { ...base, status: "refused", code, detail: code };
+        };
+        if (!(c.role in this.roleVersions)) return refuse("role_not_found");
+        if (!perm) return refuse("permission_not_found");
+        if (c.role in expected && expected[c.role] !== this.roleVersions[c.role]) return refuse("version_conflict");
+        if (c.action === "grant" && c.role !== "ADMIN" && ADMIN_ONLY_CODENAMES.includes(perm.codename)) return refuse("admin_only_permission");
+        const ids = this.roleGrants[c.role] ?? (this.roleGrants[c.role] = []);
+        const has = ids.includes(c.permission_id);
+        if ((c.action === "grant") === has) {
+          counts.unchanged += 1;
+          return { ...base, status: "unchanged", code: null };
+        }
+        if (c.action === "grant") ids.push(c.permission_id);
+        else ids.splice(ids.indexOf(c.permission_id), 1);
+        bumped.add(c.role);
+        counts.saved += 1;
+        return { ...base, status: "saved", code: null };
+      });
+      for (const role of bumped) this.roleVersions[role] += 1;
+      const versions = Object.fromEntries([...new Set(changes.map((c) => c.role))].filter((r) => r in this.roleVersions).map((r) => [r, this.roleVersions[r]]));
+      return { body: { ...counts, results, versions } };
+    });
+    // Read-only "what breaks" check. No template loses its approvers by default;
+    // a spec that needs a conflict registers its own handler.
+    this.on("POST", "/perm/role-permissions/impact/", { required_codenames: [], conflicts: [] });
+    this.on("PUT", "/perm/roles/:id/", (call) => {
+      const role = ROLES.find((r) => r.id === Number(call.path.split("/")[3]));
+      return role ? { body: { ...role, ...call.body, version: this.roleVersions[role.name] } } : { status: 404, body: { error: "Role not found" } };
+    });
+    this.on("POST", "/perm/roles/:id/copy/", (call) => ({
+      status: 201,
+      body: { ...ROLES[2], id: 99, is_builtin: false, member_count: 0, workflow_template_count: 0, ...call.body },
+    }));
+    // The three refusals in their order (views.py role_detail DELETE).
+    this.on("DELETE", "/perm/roles/:id/", (call) => {
+      const role = ROLES.find((r) => r.id === Number(call.path.split("/")[3]));
+      if (!role) return { status: 404, body: { error: "Role not found" } };
+      if (role.is_builtin) return { status: 400, body: { error: "builtin", code: "builtin_role" } };
+      if (role.member_count) return { status: 400, body: { error: "in use", code: "role_in_use", user_count: role.member_count } };
+      const templates = ROLE_REFERENCES[role.name] ?? [];
+      if (templates.length) return { status: 400, body: { error: "referenced", code: "role_referenced_by_workflow_templates", templates } };
+      return { status: 204, body: null };
     });
 
     // ── Workflow ──
@@ -1367,7 +1457,22 @@ export class ApiMock {
     this.on("GET", "/social-moderation/posts/", paginated(MODERATED_POSTS));
     this.on("GET", "/social-moderation/comments/", paginated([]));
     this.on("POST", "/social-moderation/posts/:id/approve/", { ...MODERATED_POSTS[0], moderation_status: "PUBLISHED" });
+    // One post in full — the review detail (any status; retrieve is not filtered).
+    this.on("GET", "/social-moderation/posts/:id/", (call) => {
+      const id = call.path.split("/")[3];
+      if (id === MODERATION_REPORTS[0].post) {
+        return { body: { ...MODERATED_POSTS[0], id, content: `${MODERATION_REPORTS[0].content_excerpt}。全文比摘录长：米铺老板住在隔壁那一层。`, moderation_status: "PUBLISHED", open_report_count: 1, comment_count: 3 } };
+      }
+      const hidden = HANDLED_CONTENT.find((h) => h.id === id && h.handling === "HIDDEN");
+      if (hidden) return { body: { ...MODERATED_POSTS[0], id, content: `${hidden.excerpt}全文。`, moderation_status: "HIDDEN" } };
+      const pending = MODERATED_POSTS.find((p) => p.id === id);
+      return pending ? { body: pending } : { status: 404, body: { detail: "Not found." } };
+    });
+    this.on("POST", "/social-moderation/posts/:id/hide/", { ...MODERATED_POSTS[0], moderation_status: "HIDDEN" });
+    this.on("POST", "/social-moderation/posts/:id/restore/", { ...MODERATED_POSTS[0], moderation_status: "PUBLISHED" });
+    this.on("GET", "/social-moderation/handled/", paginated(HANDLED_CONTENT));
     this.on("GET", "/social-moderation/sensitive-words/", paginated(SENSITIVE_WORDS));
+    this.on("POST", "/social-moderation/sensitive-words/batch-delete/", (call) => ({ body: { deleted: (call.body?.ids ?? []).length } }));
     this.on("POST", "/social-moderation/sensitive-words/", (call) => ({
       status: 201,
       body: { ...SENSITIVE_WORDS[0], id: "efefefef-efef-4fef-8fef-efefefefef02", word: String(call.body.word).trim().toLowerCase() },

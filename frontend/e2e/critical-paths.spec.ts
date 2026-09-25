@@ -1,4 +1,4 @@
-import { test, expect, domainEnum, mockApi, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLE_GRANTS, ROLES, SOULS, TEST_USER, type ApiMock } from "./fixtures";
+import { test, expect, domainEnum, mockApi, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLES, SOULS, TEST_USER, type ApiMock } from "./fixtures";
 
 /**
  * Three end-to-end journeys through the app's highest-stakes screens.
@@ -297,8 +297,9 @@ test.describe("Critical path: permission matrix save", () => {
   let api: ApiMock;
 
   const JUDGE_VERSION = ROLES.find((r) => r.name === "JUDGE")!.version;
-  /** MatrixCell's accessible name is `${role} — ${codename}` (page.tsx:999). */
+  /** The grid cell's accessible name is `${role} — ${codename}` (PermissionMatrixTable). */
   const cell = (role: string, codename: string) => `${role} — ${codename}`;
+  const unsaved = (page: import("@playwright/test").Page) => page.getByRole("region", { name: "未保存的改动" });
 
   test.beforeEach(async ({ page }) => {
     api = await setupAuthenticatedPage(page);
@@ -306,24 +307,24 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(page.getByRole("heading", { name: "权限矩阵" })).toBeVisible();
   });
 
-  test("renders the matrix from live role grants", async ({ page }) => {
+  test("renders the matrix from live role grants", async ({ page, isMobile }) => {
+    test.skip(isMobile, "393 px shows the role-first list; covered below");
     // Checked/unchecked state must come from the API, not from a default.
     await expect(page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") })).toBeChecked();
     await expect(page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") })).not.toBeChecked();
     await expect(page.getByRole("checkbox", { name: cell("ADMIN", "system.settings") })).toBeChecked();
-
-    await expect(page.getByText("没有未保存的改动")).toBeVisible();
-    await expect(page.getByRole("button", { name: "保存改动" })).toBeDisabled();
+    // Nothing pending: no unsaved bar, so no save button to press.
+    await expect(unsaved(page)).toHaveCount(0);
   });
 
-  test("a removal requires confirmation and sends the loaded version", async ({ page }) => {
+  test("a removal requires confirmation and sends only that cell with the loaded version", async ({ page, isMobile }) => {
+    test.skip(isMobile, "393 px shows the role-first list; covered below");
     // Removing one of JUDGE's three grants ⇒ tier 2 (removal, not to zero).
     await page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") }).click();
 
-    await expect(page.getByText("1 个角色有未保存的改动")).toBeVisible();
-    const save = page.getByRole("button", { name: "保存改动" });
-    await expect(save).toBeEnabled();
-    await save.click();
+    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("＋0 · −1");
+    await unsaved(page).getByRole("button", { name: "保存改动" }).click();
 
     // ── Confirmation names the blast radius ──
     const confirm = page.getByRole("dialog");
@@ -332,83 +333,111 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(confirm).toContainText("dispatch.approve");
     await expect(confirm).toContainText("5 名用户当前使用此角色");
     await expect(confirm).toContainText("3 → 2");
+    // The per-cell endpoint does not replace wholesale; that warning is gone.
+    await expect(confirm).not.toContainText("整体替换");
 
     await page.getByRole("button", { name: "确认保存" }).click();
 
-    // ── The request carries the whole replacement set plus the lock ──
-    await expect.poll(() => api.countOf("POST", "/perm/role-permissions/assign/")).toBe(1);
-    const assign = api.lastCall("POST", "/perm/role-permissions/assign/");
-    expect(assign?.body.role).toBe("JUDGE");
-    expect(assign?.body.expected_version).toBe(JUDGE_VERSION);
-    // assign_role_permissions replaces the entire grant set, so the payload
-    // must be the full remaining list — not a delta.
-    expect([...assign?.body.permission_ids].sort((a: number, b: number) => a - b)).toEqual(
-      ROLE_GRANTS.JUDGE.filter((id) => id !== 3)
-    );
+    // ── One change, the loaded version as the lock ──
+    await expect.poll(() => api.countOf("POST", "/perm/role-permissions/changes/")).toBe(1);
+    const body = api.lastCall("POST", "/perm/role-permissions/changes/")?.body;
+    expect(body.changes).toEqual([{ role: "JUDGE", permission_id: 3, action: "revoke" }]);
+    expect(body.expected_versions).toEqual({ JUDGE: JUDGE_VERSION });
+    expect(api.countOf("POST", "/perm/role-permissions/assign/")).toBe(0);
 
     await expect(confirm).toBeHidden();
-    await expect(page.getByText("没有未保存的改动")).toBeVisible();
+    await expect(unsaved(page)).toHaveCount(0);
     await expect(page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") })).not.toBeChecked();
   });
 
-  test("clearing every grant demands the role name be typed out", async ({ page }) => {
+  test("clearing every grant demands the role name be typed out", async ({ page, isMobile }) => {
+    test.skip(isMobile, "393 px shows the role-first list; covered below");
     // GUARDIAN holds exactly three grants; unchecking all three ⇒ tier 3.
     for (const codename of ["soul.read", "menu.read", "recycle_bin.read"]) {
       await page.getByRole("checkbox", { name: cell("GUARDIAN", codename) }).click();
     }
-    await page.getByRole("button", { name: "保存改动" }).click();
+    await unsaved(page).getByRole("button", { name: "保存改动" }).click();
 
     const confirm = page.getByRole("dialog");
     await expect(confirm).toContainText("此操作将清空 GUARDIAN 持有的全部权限。");
-    // menu.read was among the removals, so the navigation warning is due.
     await expect(confirm).toContainText("被移除的权限中包含 menu.read");
 
-    // The gate: submit stays disabled until the exact role name is typed.
     const submit = page.getByRole("button", { name: "确认保存" });
     await expect(submit).toBeDisabled();
-
     const typed = page.getByLabel("输入角色名称 GUARDIAN 以确认：");
     await typed.fill("guardian"); // wrong case
     await expect(submit).toBeDisabled();
-    expect(api.countOf("POST", "/perm/role-permissions/assign/")).toBe(0);
+    expect(api.countOf("POST", "/perm/role-permissions/changes/")).toBe(0);
 
     await typed.fill("GUARDIAN");
-    await expect(submit).toBeEnabled();
     await submit.click();
-
-    await expect.poll(() => api.countOf("POST", "/perm/role-permissions/assign/")).toBe(1);
-    expect(api.lastCall("POST", "/perm/role-permissions/assign/")?.body.permission_ids).toEqual([]);
+    await expect.poll(() => api.countOf("POST", "/perm/role-permissions/changes/")).toBe(1);
+    expect(api.lastCall("POST", "/perm/role-permissions/changes/")?.body.changes).toHaveLength(3);
   });
 
-  test("a 409 from a concurrent save shows the conflict banner and does not apply the edit", async ({ page }) => {
-    // Another admin got there first: the role is now at version 99.
-    api.on("POST", "/perm/role-permissions/assign/", (call) => ({
-      status: 409,
+  test("a partial save: the refused cell stays pending with !, the banner counts both, 定位 focuses it", async ({ page, isMobile }) => {
+    test.skip(isMobile, "393 px shows the role-first list; covered below");
+    // recycle_bin.restore to JUDGE is ADMIN-only → refused; menu.read to … JUDGE already has it.
+    await page.getByRole("checkbox", { name: cell("JUDGE", "recycle_bin.restore") }).click();
+    await page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") }).click();
+    await unsaved(page).getByRole("button", { name: "保存改动" }).click();
+
+    const banner = page.getByRole("alert").filter({ hasText: "部分保存失败" });
+    await expect(banner).toContainText("已存 1 项，失败 1 项");
+    await expect(banner).toContainText("回收站的恢复与彻底删除仅限 ADMIN");
+    const refused = page.getByRole("checkbox", { name: cell("JUDGE", "recycle_bin.restore") });
+    await expect(refused).toHaveText("!");
+    await expect(page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") })).toHaveText("");
+    await expect(unsaved(page)).toContainText("未保存 1 项");
+
+    await banner.getByRole("button", { name: "定位" }).click();
+    await expect(refused).toBeFocused();
+  });
+
+  test("the impact check names the step that would lose its approver", async ({ page, isMobile }) => {
+    test.skip(isMobile, "393 px shows the role-first list; covered below");
+    api.on("POST", "/perm/role-permissions/impact/", (call) => ({
       body: {
-        detail: "版本冲突",
-        expected_version: call.body.expected_version,
-        current_version: 99,
+        required_codenames: ["dispatch.approve"],
+        conflicts: (call.body?.changes ?? []).some((c: { role: string; permission_id: number; action: string }) => c.role === "JUDGE" && c.permission_id === 3 && c.action === "revoke")
+          ? [{ template_id: "t1", template_name: "跨文明调度 · 两级", tenant_id: 1, civilization: "CHINESE", is_active: true, step_order: 2,
+               step_name: "判官复核", approver_roles: ["JUDGE"], caused_by: [{ index: 0, role: "JUDGE", permission_id: 3, codename: "dispatch.approve" }] }]
+          : [],
       },
     }));
+    const target = page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") });
+    await target.click();
+    const conflict = page.getByRole("status").filter({ hasText: "冲突提示" });
+    await expect(conflict).toContainText("审批流「跨文明调度 · 两级」的第 2 步（判官复核）将无人可批");
+    await expect(target).toHaveText("◇");
+  });
 
-    await page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") }).click();
-    await page.getByRole("button", { name: "保存改动" }).click();
-    await page.getByRole("button", { name: "确认保存" }).click();
+  test("at 393 px: pick a role, then toggle its rows", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "the role-first list is the phone layout");
+    await page.getByLabel("角色", { exact: true }).selectOption("GUARDIAN");
+    const toggle = page.getByRole("switch", { name: "批准调度 dispatch.approve" });
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await unsaved(page).getByRole("button", { name: "保存改动" }).click();
+    await expect.poll(() => api.lastCall("POST", "/perm/role-permissions/changes/")?.body.changes).toEqual([
+      { role: "GUARDIAN", permission_id: 3, action: "grant" },
+    ]);
+  });
 
-    // The banner must quote both versions — "someone changed it" without the
-    // numbers gives the admin nothing to reason about.
-    const banner = page.getByRole("alert").filter({ hasText: "判官" });
-    await expect(banner).toContainText(`版本 ${JUDGE_VERSION} → 99`);
-    await expect(page.getByRole("button", { name: "重新加载此角色" })).toBeVisible();
-
-    // The edit is still pending locally and was NOT silently accepted.
-    await expect(page.getByText("1 个角色有未保存的改动")).toBeVisible();
-    await expect(page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") })).not.toBeChecked();
-
-    // Reloading the role discards the local edit and restores the server state.
-    await page.getByRole("button", { name: "重新加载此角色" }).click();
-    await expect(page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") })).toBeChecked();
-    await expect(page.getByText("没有未保存的改动")).toBeVisible();
-    await expect(banner).toHaveCount(0);
+  test("roles: a row opens the drawer; a referenced role's delete lists the workflow", async ({ page }) => {
+    await page.getByRole("button", { name: /^角色/ }).first().click();
+    await page.locator("tr", { hasText: "GUARDIAN" }).getByRole("button").click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toContainText("创建后不可改；审批流按代码引用");
+    await expect(drawer.getByRole("textbox", { name: "显示名称 *" })).toHaveValue("守卫");
+    await drawer.getByRole("button", { name: "更多操作" }).click();
+    await drawer.getByRole("button", { name: /移入回收站…/ }).click();
+    const confirm = page.getByRole("dialog", { name: /将「守卫」移入回收站/ });
+    await confirm.getByRole("button", { name: "移入回收站", exact: true }).click();
+    await expect(confirm.getByRole("alert")).toContainText("仍被 1 条审批流引用");
+    await expect(confirm.getByRole("alert")).toContainText("跨文明调度 · 两级");
+    await expect(confirm.getByRole("alert")).toContainText("#2 守卫签收");
   });
 });

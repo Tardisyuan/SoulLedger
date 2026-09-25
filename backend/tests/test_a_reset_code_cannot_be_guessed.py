@@ -53,7 +53,7 @@ def user_with_code(django_user_model, cn_tenant):
     cache.clear()
     user = django_user_model.objects.create_user(
         username="guessable", email=EMAIL, password="OldPass!123",
-        role="VIEWER", tenant=cn_tenant,
+        role="SOUL", tenant=cn_tenant,
     )
     cache.set(f"pwd_reset:{EMAIL}", "424242", timeout=300)
     return user
@@ -147,12 +147,12 @@ class TestDuplicateEmailDoesNotCrashTheReset:
     ):
         django_user_model.objects.create_user(
             username="dup_a", email="dup@example.com", password="OldPass!123",
-            role="VIEWER", tenant=cn_tenant,
+            role="SOUL", tenant=cn_tenant,
         )
         with pytest.raises(IntegrityError), transaction.atomic():
             django_user_model.objects.create_user(
                 username="dup_b", email="dup@example.com", password="OldPass!123",
-                role="VIEWER", tenant=cn_tenant,
+                role="SOUL", tenant=cn_tenant,
             )
 
     def test_the_reset_still_works_for_the_one_account_that_holds_the_address(
@@ -162,7 +162,7 @@ class TestDuplicateEmailDoesNotCrashTheReset:
         cache.clear()
         django_user_model.objects.create_user(
             username="dup_c", email="dup2@example.com", password="OldPass!123",
-            role="VIEWER", tenant=cn_tenant,
+            role="SOUL", tenant=cn_tenant,
         )
         requested = api_client.post(REQUEST_URL, {"email": "dup2@example.com"}, format="json")
         assert requested.status_code == 200, requested.data
@@ -180,7 +180,7 @@ class TestDuplicateEmailDoesNotCrashTheReset:
     ):
         django_user_model.objects.create_user(
             username="taken", email="taken@example.com", password="OldPass!123",
-            role="VIEWER", tenant=cn_tenant,
+            role="SOUL", tenant=cn_tenant,
         )
         res = api_client.post(
             "/api/v1/auth/register/",

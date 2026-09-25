@@ -29,6 +29,8 @@ jest.mock("@soulledger/core/hooks/useSouls", () => ({
   useSouls: () => ({ data: { results: souls, count: souls.length }, isLoading: false, isError: false, isPlaceholderData: false, refetch: jest.fn() }),
   useSoul: (id: string) => ({ ...(id ? detail(id) : { isLoading: false, isError: false }), refetch: mockRefetch }),
   useCreateSoul: () => ({ mutateAsync: jest.fn() }),
+  // The batch bar (SoulBatchBar) is on this page too; ADMIN holds soul.delete.
+  useBatchRecycleSouls: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 jest.mock("@soulledger/core/api", () => ({

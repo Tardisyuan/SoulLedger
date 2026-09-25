@@ -1,12 +1,13 @@
 /**
- * app/moderation/page.tsx — the officer side of the soul circle.
+ * app/moderation/page.tsx — the officer side of the soul circle, four segments
+ * (举报 / 敏感词 / 禁言 / 已处理, C 组 08 + E 组 08b / 08c / 08d).
  *
  * `RequirePermission` / `usePermissions` run for real against a stubbed
  * `useTenant` (SchedulerPage.test.tsx says why). Copy is the real zh-Hans
  * bundle, so a key the page asks for that the bundle lacks shows up as a miss.
  * The API module is the only thing stubbed.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ModerationPage from "@/app/moderation/page";
@@ -17,10 +18,13 @@ jest.mock("@soulledger/core/api/social-moderation", () => ({
     reports: jest.fn(),
     resolveReport: jest.fn(),
     content: jest.fn(),
+    item: jest.fn(),
     act: jest.fn(),
     words: jest.fn(),
     addWord: jest.fn(),
     removeWord: jest.fn(),
+    removeWords: jest.fn(),
+    handled: jest.fn(),
     mutes: jest.fn(),
     liftMute: jest.fn(),
   },
@@ -29,7 +33,7 @@ const { socialModerationApi: apiMock } = jest.requireMock("@soulledger/core/api/
   socialModerationApi: Record<string, jest.Mock>;
 };
 
-let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
+let mockUser: Record<string, unknown> | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 const mockI18n = { t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true };
@@ -50,14 +54,25 @@ const report = (over: Record<string, unknown> = {}) => ({
   target_user: author,
   status: "OPEN",
   report_count: 3,
-  content_excerpt: "被举报的帖子",
+  content_excerpt: "被举报的帖子摘录",
   content_status: "PUBLISHED",
-  entries: [{ reporter: { user_id: 8, display_name: "举报人" }, reason: "ABUSE", detail: "骂人", created_at: "t" }],
-  created_at: "t",
-  last_reported_at: "t",
+  entries: [{ reporter: { user_id: 8, display_name: "举报人" }, reason: "ABUSE", detail: "骂人", created_at: "2026-09-18T02:00:00Z" }],
+  created_at: "2026-09-18T01:00:00Z",
+  last_reported_at: "2026-09-18T02:00:00Z",
   resolution: "",
   resolution_note: "",
   resolved_at: null,
+  ...over,
+});
+const post = (over: Record<string, unknown> = {}) => ({
+  id: "p9",
+  author: { user_id: 9, display_name: "赵六" },
+  content: "命中敏感词的帖子全文",
+  moderation_status: "PENDING",
+  open_report_count: 0,
+  create_time: "2026-09-18T01:30:00Z",
+  visibility: "PUBLIC",
+  comment_count: 4,
   ...over,
 });
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
@@ -69,16 +84,21 @@ function renderPage() {
   return render(<ModerationPage />, { wrapper: Wrapper });
 }
 
-const asRole = (...permissions: string[]) => (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions });
-const tab = (key: string) => screen.getByRole("button", { name: tZh(`social_moderation.tabs.${key}`) });
+const asRole = (...permissions: string[]) =>
+  (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions, tenant: { code: "CN_DIYU", display_name: "中国地府" } });
+const segment = (key: string) => screen.getByRole("button", { name: tZh(`social_moderation.tabs.${key}`) });
+const detail = () => screen.getByRole("region", { name: tZh("social_moderation.review.detail_label") });
 
 beforeEach(() => {
   jest.clearAllMocks();
   apiMock.reports.mockResolvedValue(page([report()]));
   apiMock.content.mockResolvedValue(page([]));
+  apiMock.item.mockResolvedValue({ data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 2 }) });
   apiMock.words.mockResolvedValue(page([]));
   apiMock.mutes.mockResolvedValue(page([]));
+  apiMock.handled.mockResolvedValue(page([]));
   apiMock.resolveReport.mockResolvedValue({ data: report({ status: "RESOLVED" }) });
+  apiMock.act.mockResolvedValue({ status: 200 });
 });
 
 it("refuses the page without social.moderate and asks the API nothing", () => {
@@ -88,102 +108,226 @@ it("refuses the page without social.moderate and asks the API nothing", () => {
   expect(apiMock.reports).not.toHaveBeenCalled();
 });
 
-it("shows a report with its count, reasons and translated enums — not the raw members", async () => {
-  asRole("social.moderate");
-  renderPage();
-  const row = (await screen.findByText(/被举报的帖子/)).closest("li[data-report-id]") as HTMLElement;
-  expect(within(row).getByText(tZh("social_moderation.report_count", { n: "3" }))).toBeInTheDocument();
-  expect(within(row).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
-  expect(within(row).getByText(tZh("social_moderation.target_type.POST"))).toBeInTheDocument();
-  expect(within(row).queryByText("ABUSE")).toBeNull();
-  expect(within(row).queryByText("POST")).toBeNull();
+describe("page header", () => {
+  it("names the civilization scope and offers the four segments", async () => {
+    asRole("social.moderate");
+    renderPage();
+    expect(screen.getByText("中国地府")).toBeInTheDocument();
+    for (const key of ["reports", "words", "mutes", "handled"]) expect(segment(key)).toBeInTheDocument();
+    // The old 「待审内容」 tab is gone: rule hits are in the 举报 queue now.
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.tabs.content") })).toBeNull();
+    expect(segment("reports")).toHaveAttribute("aria-pressed", "true");
+  });
 });
 
-it("mutes with the chosen number of days", async () => {
-  asRole("social.moderate");
-  renderPage();
-  const row = (await screen.findByText(/被举报的帖子/)).closest("li[data-report-id]") as HTMLElement;
-  fireEvent.change(screen.getByLabelText(tZh("social_moderation.mute_days")), { target: { value: "30" } });
-  fireEvent.click(within(row).getByRole("button", { name: new RegExp(tZh("social_moderation.actions.mute")) }));
-  await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "MUTE", undefined, 30));
-  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.done"), "success"));
+describe("举报 · the C-08 review layout", () => {
+  it("lists reports and rule hits together; the detail shows the full text in serif and translated reasons", async () => {
+    asRole("social.moderate");
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    expect(within(list).getByText("被举报的帖子摘录")).toBeInTheDocument();
+    expect(within(list).getByText("命中敏感词的帖子全文")).toBeInTheDocument();
+    expect(within(list).getByText(tZh("social_moderation.review.rule_hit"))).toBeInTheDocument();
+
+    // The first (newest) item is the report; its full text comes from the item endpoint.
+    const body = await within(detail()).findByText("被举报的帖子全文，比摘录长");
+    expect(body.className).toContain("font-serif");
+    expect(apiMock.item).toHaveBeenCalledWith("posts", "p1");
+    expect(within(detail()).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
+    expect(within(detail()).queryByText("ABUSE")).toBeNull();
+    // Text reactions, not emoji: 「评」 and the count the API gives.
+    expect(within(detail()).getByText(tZh("social_moderation.review.reaction_comment"), { exact: false })).toBeInTheDocument();
+  });
+
+  it("H without a reason says so and sends nothing; with one it hides through the report", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+
+    fireEvent.keyDown(document.body, { key: "h" });
+    expect(await screen.findByText(tZh("social_moderation.review.reason_required"))).toBeInTheDocument();
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "辱骂他人" } });
+    fireEvent.keyDown(document.body, { key: "h" });
+    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "HIDE", "辱骂他人", undefined));
+  });
+
+  it("letters typed into the reason box are text, not verdicts", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+    const box = screen.getByLabelText(tZh("social_moderation.review.reason_label"));
+    fireEvent.keyDown(box, { key: "a" });
+    fireEvent.keyDown(box, { key: "h" });
+    // A mutation reaches the API a tick later; let it, or the absence proves nothing.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+    expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
+  it("A on a reported post that the word list also held back dismisses the report AND approves the post", async () => {
+    asRole("social.moderate");
+    apiMock.content.mockImplementation(async (kind: string) =>
+      page(kind === "posts" ? [post({ id: "p1", content: "同一条帖子", open_report_count: 1 })] : [])
+    );
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    // One row, not two.
+    expect(within(list).getAllByRole("button")).toHaveLength(1);
+    fireEvent.keyDown(document.body, { key: "a" });
+    await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "p1", "approve", undefined));
+    expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DISMISS", undefined, undefined);
+  });
+
+  it("a report against a user offers no hide or delete — there is no content to act on", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([report({ target_type: "USER", post: null, content_excerpt: "", content_status: "" })]));
+    renderPage();
+    await screen.findByText(tZh("social_moderation.review.user_target_note"));
+    expect(screen.queryByRole("button", { name: new RegExp(`^${tZh("social_moderation.actions.hide")}`) })).toBeNull();
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.actions.delete") })).toBeNull();
+    expect(screen.getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) })).toBeInTheDocument();
+    expect(apiMock.item).not.toHaveBeenCalled();
+  });
+
+  it("delete goes through a confirmation, and only then reaches the API", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.delete") }));
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.delete") }));
+    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DELETE", undefined, undefined));
+  });
+
+  it("a refusal says what the server's code means, not a generic failure", async () => {
+    asRole("social.moderate");
+    apiMock.resolveReport.mockRejectedValue(http(409, { detail: "x", code: "already_resolved" }));
+    renderPage();
+    await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) }));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.errors.already_resolved"), "error")
+    );
+  });
 });
 
-it("a report against a user offers no hide or delete — there is no content to act on", async () => {
-  asRole("social.moderate");
-  apiMock.reports.mockResolvedValue(page([report({ target_type: "USER", post: null, content_excerpt: "", content_status: "" })]));
-  renderPage();
-  await screen.findByText(tZh("social_moderation.target_type.USER"));
-  expect(screen.queryByRole("button", { name: tZh("social_moderation.actions.hide") })).toBeNull();
-  expect(screen.queryByRole("button", { name: tZh("social_moderation.actions.delete") })).toBeNull();
-  expect(screen.getByRole("button", { name: tZh("social_moderation.actions.dismiss") })).toBeInTheDocument();
+describe("敏感词 · E-08b", () => {
+  const words = [
+    { id: "w1", word: "还阳", category: "INDUCEMENT", action: "REVIEW", hits_30d: 6, created_by: { user_id: 1, display_name: "崔珏" }, created_at: "t" },
+    { id: "w2", word: "越狱", category: "", action: "HIDE", hits_30d: 3, created_by: null, created_at: "t" },
+  ];
+
+  it("adds from the inline row with category and action; Enter submits", async () => {
+    asRole("social.moderate");
+    apiMock.addWord.mockResolvedValue({ data: words[0] });
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText(tZh("social_moderation.empty.words"));
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.words.col_category")), { target: { value: "PRIVACY" } });
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.words.col_action")), { target: { value: "MASK" } });
+    const input = screen.getByLabelText(tZh("social_moderation.fields.word"));
+    fireEvent.change(input, { target: { value: "门牌号" } });
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(apiMock.addWord).toHaveBeenCalledWith({ word: "门牌号", category: "PRIVACY", action: "MASK" }));
+  });
+
+  it("rows carry no delete button; deleting is select → batch bar → confirm → batch-delete", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.removeWords.mockResolvedValue({ data: { deleted: 1 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    const row = (await screen.findByText("还阳")).closest("tr") as HTMLElement;
+    expect(within(row).getByText(tZh("social_moderation.word_action.REVIEW"))).toBeInTheDocument();
+    expect(within(row).getByText(tZh("social_moderation.word_category.INDUCEMENT"))).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).toBeNull();
+    // No batch bar before anything is selected.
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.words.delete_selected") })).toBeNull();
+
+    fireEvent.click(within(row).getByRole("checkbox", { name: tZh("social_moderation.words.select_row", { word: "还阳" }) }));
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
+    expect(apiMock.removeWords).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
+    await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(["w1"]));
+    expect(apiMock.removeWord).not.toHaveBeenCalled();
+  });
 });
 
-it("delete goes through a confirmation, and only then reaches the API", async () => {
-  asRole("social.moderate");
-  renderPage();
-  await screen.findByText(/被举报的帖子/);
-  fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.delete") }));
-  expect(apiMock.resolveReport).not.toHaveBeenCalled();
-  const dialog = await screen.findByRole("alertdialog");
-  fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.delete") }));
-  await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DELETE", undefined, undefined));
+describe("禁言 · E-08c", () => {
+  it("draws the remaining term as a meter; lifting asks first; a lifted row has no button", async () => {
+    asRole("social.moderate");
+    const now = Date.now();
+    const iso = (ms: number) => new Date(now + ms).toISOString();
+    const day = 86_400_000;
+    apiMock.mutes.mockResolvedValue(
+      page([
+        { id: "m1", user: author, until: iso(5 * day), reason: "刷屏", created_at: iso(-5 * day), created_by: null, lifted_at: null, lifted_by: null, is_active: true },
+        { id: "m2", user: { user_id: 9, display_name: "赵六" }, until: iso(-day), reason: "", created_at: iso(-3 * day), created_by: null, lifted_at: iso(-2 * day), lifted_by: null, is_active: false },
+      ])
+    );
+    apiMock.liftMute.mockResolvedValue({ data: {} });
+    renderPage();
+    fireEvent.click(segment("mutes"));
+    const meter = await screen.findByRole("meter", { name: tZh("social_moderation.mutes.term_label", { name: "王五" }) });
+    const pct = Number(meter.getAttribute("aria-valuenow"));
+    expect(pct).toBeGreaterThanOrEqual(49);
+    expect(pct).toBeLessThanOrEqual(51);
+
+    const lifted = screen.getByText("赵六").closest("tr") as HTMLElement;
+    expect(within(lifted).getByText(tZh("social_moderation.mute_lifted"))).toBeInTheDocument();
+    expect(within(lifted).queryByRole("button")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.lift") }));
+    expect(apiMock.liftMute).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(tZh("social_moderation.mutes.confirm_body"))).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.lift") }));
+    await waitFor(() => expect(apiMock.liftMute).toHaveBeenCalledWith("m1"));
+  });
 });
 
-it("a refusal says what the server's code means, not a generic failure", async () => {
-  asRole("social.moderate");
-  apiMock.resolveReport.mockRejectedValue(http(409, { detail: "x", code: "already_resolved" }));
-  renderPage();
-  await screen.findByText(/被举报的帖子/);
-  fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.dismiss") }));
-  await waitFor(() =>
-    expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.errors.already_resolved"), "error")
-  );
-});
+describe("已处理 · E-08d", () => {
+  const handled = [
+    { type: "POST", id: "h1", post: "h1", author, excerpt: "被隐藏的帖子", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "崔珏" }, handled_at: "t" },
+    { type: "COMMENT", id: "h2", post: "p0", author, excerpt: "被删除的评论", handling: "DELETED", reason: "", handled_by: null, handled_at: "t" },
+  ];
 
-it("pending content: approve on a PENDING post; the HIDDEN filter asks for HIDDEN", async () => {
-  asRole("social.moderate");
-  apiMock.content.mockResolvedValue(
-    page([{ id: "p9", author, content: "命中敏感词", moderation_status: "PENDING", open_report_count: 0, create_time: "t", visibility: "PUBLIC", comment_count: 0 }])
-  );
-  apiMock.act.mockResolvedValue({ status: 200 });
-  renderPage();
-  fireEvent.click(tab("content"));
-  await screen.findByText("命中敏感词");
-  expect(apiMock.content).toHaveBeenLastCalledWith("posts", { moderation_status: "PENDING" });
-  expect(screen.queryByRole("button", { name: tZh("social_moderation.actions.restore") })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.approve") }));
-  await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "p9", "approve", undefined));
+  it("a HIDDEN row opens read-only with 恢复可见; restoring calls the restore action", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    apiMock.item.mockResolvedValue({ data: post({ id: "h1", content: "被隐藏的帖子全文", moderation_status: "HIDDEN" }) });
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const row = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    // No row-end button: the row's one control is the opener on the author.
+    expect(within(row).getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(within(row).getByRole("button", { name: "王五" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(await within(drawer).findByText("被隐藏的帖子全文")).toBeInTheDocument();
+    expect(within(drawer).queryByText(tZh("social_moderation.handled.in_recycle_bin"))).toBeNull();
+    fireEvent.click(within(drawer).getByRole("button", { name: tZh("social_moderation.handled.restore") }));
+    await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "h1", "restore", undefined));
+  });
 
-  fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.status_filter.HIDDEN") }));
-  await waitFor(() => expect(apiMock.content).toHaveBeenLastCalledWith("posts", { moderation_status: "HIDDEN" }));
-});
-
-it("word list: adds the typed word", async () => {
-  asRole("social.moderate");
-  apiMock.addWord.mockResolvedValue({ data: { id: "w1", word: "违禁词", created_by: null, created_at: "t" } });
-  renderPage();
-  fireEvent.click(tab("words"));
-  await screen.findByText(tZh("social_moderation.empty.words"));
-  fireEvent.change(screen.getByLabelText(tZh("social_moderation.fields.word")), { target: { value: "违禁词" } });
-  fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.add_word") }));
-  await waitFor(() => expect(apiMock.addWord).toHaveBeenCalledWith("违禁词"));
-});
-
-it("mutes: an active mute can be lifted; a lifted one says so and cannot", async () => {
-  asRole("social.moderate");
-  apiMock.mutes.mockResolvedValue(
-    page([
-      { id: "m1", user: author, until: "u", reason: "", created_at: "t", lifted_at: null, is_active: true },
-      { id: "m2", user: { user_id: 9, display_name: "赵六" }, until: "u", reason: "", created_at: "t", lifted_at: "t", is_active: false },
-    ])
-  );
-  apiMock.liftMute.mockResolvedValue({ data: {} });
-  renderPage();
-  fireEvent.click(tab("mutes"));
-  const lifted = (await screen.findByText("赵六")).closest("li") as HTMLElement;
-  expect(within(lifted).getByText(tZh("social_moderation.mute_lifted"))).toBeInTheDocument();
-  expect(within(lifted).queryByRole("button")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.lift") }));
-  await waitFor(() => expect(apiMock.liftMute).toHaveBeenCalledWith("m1"));
+  it("a DELETED row says 在回收站 and links there — no second restore path", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const row = (await screen.findByText("被删除的评论")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "王五" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText(tZh("social_moderation.handled.in_recycle_bin"))).toBeInTheDocument();
+    expect(within(drawer).getByRole("link", { name: new RegExp(tZh("recycle_bin.manage_from_bin")) })).toHaveAttribute("href", "/recycle-bin");
+    expect(within(drawer).queryByRole("button", { name: tZh("social_moderation.handled.restore") })).toBeNull();
+    // A deleted item is not fetched in full: the endpoint 404s for it.
+    expect(apiMock.item).not.toHaveBeenCalled();
+  });
 });

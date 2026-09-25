@@ -21,7 +21,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-from apps.authentication.models import is_assignable_role
+from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
@@ -720,6 +720,11 @@ def change_password(request):
     return Response({"detail": "密码修改成功"})
 
 
+#: The only role that may reset its own password by email (2026-09 product
+#: decision). Officers are admin-provisioned: see `password_help_request`.
+SELF_RESET_ROLE = UserRole.SOUL
+
+
 @extend_schema(
     request=ResetPasswordSerializer,
     responses={
@@ -787,7 +792,13 @@ def reset_password_request(request):
     # Zero and many are both answered with the same success sentence as one: this
     # endpoint deliberately does not disclose whether an address is registered,
     # and "your address is ambiguous" would disclose it.
-    if User.objects.filter(email=email).count() == 1:
+    #
+    # SOUL ACCOUNTS ONLY. Email self-reset is the souls' path; officers are
+    # provisioned by an administrator and use `/auth/password-help/`, which
+    # pages that administrator instead. An officer's address is therefore
+    # treated exactly like an unregistered one — same statements, same body —
+    # so this endpoint does not become an "is this an officer?" oracle either.
+    if User.objects.filter(email=email, role=SELF_RESET_ROLE).count() == 1:
         # Generate secure 6-digit code, stored in the cache with a 5-minute TTL
         code = f"{secrets.randbelow(900000) + 100000:06d}"
         cache.set(f"pwd_reset:{email}", code, timeout=300)
@@ -881,8 +892,13 @@ def set_new_password(request):
     # is the only safe answer — with two accounts on one address there is no way
     # to know whose password this code was meant to change, and picking `.first()`
     # would hand one user's account to whoever else registered the address.
+    #
+    # Restricted to soul accounts like `reset_password_request`: a code that
+    # somehow exists for an officer's address (one issued before this rule,
+    # or planted by anything else that writes the key) must not change an
+    # officer's password.
     try:
-        user = User.objects.get(email=email)
+        user = User.objects.get(email=email, role=SELF_RESET_ROLE)
     except User.DoesNotExist:
         return Response({"error": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
     except User.MultipleObjectsReturned:

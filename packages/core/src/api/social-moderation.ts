@@ -62,6 +62,13 @@ export const socialModerationApi = {
       `/social-moderation/${kind}/`,
       { params }
     ),
+  /**
+   * One post or comment in full — any moderation status, since the default
+   * PENDING filter is list-only. 404 once it is deleted (the handled list's
+   * `excerpt` is all that remains on this side).
+   */
+  item: <K extends ContentKind>(kind: K, id: string) =>
+    api.get<K extends "posts" ? ModeratedPost : ModeratedComment>(`/social-moderation/${kind}/${id}/`),
   /** 409 `invalid_transition` when the row's current status does not allow it. */
   act: (kind: ContentKind, id: string, action: ContentAction, reason = "") =>
     api.post(`/social-moderation/${kind}/${id}/${action}/`, { reason }),

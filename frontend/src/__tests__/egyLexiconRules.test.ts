@@ -183,6 +183,8 @@ const TECHNICAL: Record<string, string[]> = {
   "menus.gates_footnote": ["menu.manage"],
   // 键盘上的键名:抽屉页头的快捷键提示。
   "souls.preview.hint": ["J", "K", "Esc"],
+  // 审阅详情的快捷键提示(C 组 08)。
+  "social_moderation.review.shortcuts": ["J", "K", "A", "H"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
