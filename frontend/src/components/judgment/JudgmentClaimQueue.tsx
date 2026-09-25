@@ -11,6 +11,7 @@ import {
   type JudgmentQueueGroup,
 } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
+import { CIVILIZATION_OPTIONS, TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import {
   useBatchJudgments,
   useClaimJudgment,
@@ -35,8 +36,9 @@ import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 /**
  * 审判队列的「待审」一面(规范 v1 第三类 A·02):按「谁在处理」分四组 —— 我认领 / 待认领 /
  * 他人认领 / 暂缓。组是服务端的 `?group=`,组头的数是 `queue-counts/`,两者用同一组
- * `court` / `search`,所以数与行出自同一个筛选。每组各自分页、各按等待最久在上
- * (`ordering=created_at`,队列本身就按它先进先出)。
+ * `court` / `civilization` / `search`,所以数与行出自同一个筛选。每组各自分页;排序默认等待最久在上
+ * (`ordering=created_at`,队列本身就按它先进先出),可切成最近入队(`-created_at`)。
+ * 文明下拉:ADMIN 列全部文明,其余角色只列自己租户的文明。
  *
  * 键盘:J / K 在行间移焦点(焦点落在行里那条链接上,所以 ⏎ 就是链接自己的 ⏎,不另接),
  * X 勾选、C 认领焦点所在的行。打字时一概不接(`src/lib/hotkeys.ts`)。
@@ -46,6 +48,9 @@ import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
  */
 
 const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
+/** 排序:列表接口的 `ordering`(`JudgmentViewSet.ordering_fields`)。默认等待最久在上 —— 队列先进先出。 */
+const ORDERINGS = ["created_at", "-created_at"] as const;
+type QueueOrdering = (typeof ORDERINGS)[number];
 const BATCH_LIMIT = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 const DAY_MS = 86_400_000;
@@ -56,13 +61,15 @@ export function JudgmentClaimQueue() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const canExecute = hasPermission("judgment.execute");
   const canAssign = hasPermission("judgment.assign");
 
   const [term, setTerm] = useState("");
   const [search, setSearch] = useState("");
   const [court, setCourt] = useState("");
+  const [civilization, setCivilization] = useState("");
+  const [ordering, setOrdering] = useState<QueueOrdering>("created_at");
   const [pages, setPages] = useState<Record<JudgmentQueueGroup, number>>({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | null>(null);
@@ -81,11 +88,17 @@ export function JudgmentClaimQueue() {
   const filters: Record<string, string> = {};
   if (search) filters.search = search;
   if (court) filters.court = court;
+  if (civilization) filters.civilization = civilization;
+  /* 文明的选项:ADMIN 看得到全部文明;其余角色只列自己租户的那一个(后端按租户收窄,
+     列别的文明只会给出一个永远为空的选项)。 */
+  const ownCivilization = user?.tenant?.code ? TENANT_CODE_TO_CIVILIZATION[user.tenant.code] : undefined;
+  const civilizationOptions: readonly string[] = isAdmin ? CIVILIZATION_OPTIONS : ownCivilization ? [ownCivilization] : [];
+  const resetPages = () => setPages({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
 
   const counts = useJudgmentQueueCounts(filters);
   const groupQueries = useQueries({
     queries: GROUPS.map((group) => {
-      const params = { ...filters, group, page: String(pages[group]), ordering: "created_at" };
+      const params = { ...filters, group, page: String(pages[group]), ordering };
       return {
         queryKey: judgmentKeys.list(params),
         queryFn: async () => (await judgmentApi.list(params)).data,
@@ -193,6 +206,41 @@ export function JudgmentClaimQueue() {
             ))}
           </select>
         </label>
+        <label>
+          <span className="sr-only">{t("judgment.civilization")}</span>
+          <select
+            value={civilization}
+            onChange={(e) => {
+              setCivilization(e.target.value);
+              resetPages();
+            }}
+            className="h-8 max-sm:h-11 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))]"
+          >
+            <option value="">{t("judgment.claim.civilization_all")}</option>
+            {civilizationOptions.map((c) => (
+              <option key={c} value={c}>
+                {t(`souls.civilizations.${c}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="sr-only">{t("judgment.claim.sort")}</span>
+          <select
+            value={ordering}
+            onChange={(e) => {
+              setOrdering(e.target.value as QueueOrdering);
+              resetPages();
+            }}
+            className="h-8 max-sm:h-11 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))]"
+          >
+            {ORDERINGS.map((o) => (
+              <option key={o} value={o}>
+                {t(`judgment.claim.sort_${o === "created_at" ? "oldest" : "newest"}`)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* ── 批量条:只在有勾选时出现。认领 / 改派… / 暂缓,不做批量裁决。 ── */}
@@ -252,7 +300,8 @@ export function JudgmentClaimQueue() {
                     {" · "}
                     {count ?? "…"}
                   </span>
-                  {(group === "unclaimed" || group === "others") && (
+                  {/* 「等待最久在上」只在它为真时说:换成「最近入队」就不说了。 */}
+                  {((group === "unclaimed" && ordering === "created_at") || group === "others") && (
                     <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t(`judgment.claim.hints.${group}`)}</span>
                   )}
                 </th>

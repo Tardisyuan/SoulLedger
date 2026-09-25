@@ -1148,7 +1148,11 @@
         "not_found": "有审判已不存在",
         "permission_denied": "没有权限",
         "generic": "操作未能完成"
-      }
+      },
+      "civilization_all": "文明 · 全部",
+      "sort": "排序",
+      "sort_oldest": "排序 · 等待最久",
+      "sort_newest": "排序 · 最近入队"
     },
     "admission": {
       "title": "证据 · 采信",
