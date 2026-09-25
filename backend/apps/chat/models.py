@@ -92,6 +92,14 @@ class Conversation(models.Model):
     last_request_at = models.DateTimeField(null=True, blank=True)
     responded_at = models.DateTimeField(null=True, blank=True)
     last_message_at = models.DateTimeField(null=True, blank=True)
+    #: 殿司收件箱:最后一封是谁写的(`soul` / `hall`),以及灵魂最后一封的时刻。**三处写**,
+    #: 不是一处:灵魂经后端发(`send_inbox_message`)、官员回复(`officer_reply`)、Synapse 模块的
+    #: 新消息回调(`record_inbox_event`,覆盖灵魂绕过后端直接在 Matrix 里写的那一条)。回调与官员
+    #: 打开线程(`officer_messages`)都按 Synapse 时间线的**最新一封**重写 `last_from`,不按回调到达的
+    #: 先后 —— 见 `services.record_inbox_event`。私聊不写(为空)。
+    last_from = models.CharField(max_length=4, blank=True, default="",
+                                 choices=[("soul", "灵魂"), ("hall", "殿司")])
+    last_soul_message_at = models.DateTimeField(null=True, blank=True)
     #: 一方转世停用账号时关闭(`services.deactivate_for_account`)。关闭的会话仍列给**那一世**
     #: 留下的一方(只读,App 标「会话止于此」),官员侧仍可读、不可回;新一世再开同一对灵魂的私聊是
     #: **新房间** —— 前世的聊天不跟着人走。
@@ -149,3 +157,54 @@ class Conversation(models.Model):
         if self.account_b_id == account_id:
             return self.account_a
         return None
+
+
+class InboxOfficerState(models.Model):
+    """一位官员对一个殿司收件箱会话的**私人**状态:读到哪、归没归档、草稿。
+
+    按 (会话, 官员) 一行,别的官员看不见 —— 同一殿司两位官员各有各的未读、归档与草稿。
+    租户不另存:经 `conversation__tenant` 一跳(`scope_to_tenant(field="conversation__tenant")`)。
+
+    **草稿只在这里,不进 Synapse、不进审计。** 它是官员还没说出口的话;发出去之后
+    (`reply`)这一行的草稿清空。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="officer_states")
+    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="inbox_states")
+    last_read_at = models.DateTimeField(null=True, blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    #: 上限与回复正文同一个(`OfficerReplySerializer`):草稿就是没发出的回复。
+    draft = models.TextField(blank=True, default="")
+    draft_saved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["conversation", "user"], name="chat_one_inbox_state_per_officer"),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} @ {self.conversation_id}"
+
+
+class InboxReplyTemplate(models.Model):
+    """殿司的回复模板。租户级:同一殿司的官员共用。
+
+    占位符只有 `{{soul_name}}` 与 `{{hall_name}}`,在**客户端**发送前替换 —— 模板本身不经过
+    Synapse,替换后的正文才是回复。别的 `{{…}}` 在保存时拒绝(`InboxReplyTemplateSerializer`)。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="inbox_reply_templates")
+    title = models.CharField(max_length=80)
+    body = models.TextField()
+    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["title", "created_at"]
+
+    def __str__(self):
+        return self.title

@@ -1,12 +1,13 @@
 """聊天接口的形状。**没有一个序列化器带消息正文出库** —— 正文在 Synapse,
 `InboxMessageSerializer` 是一次转发,不是一张表的投影。
 """
+import re
 from datetime import datetime, timedelta
 
 from django.conf import settings
 from rest_framework import serializers
 
-from apps.chat.models import Conversation, ConversationKind
+from apps.chat.models import Conversation, ConversationKind, InboxReplyTemplate
 
 
 class ChatSessionSerializer(serializers.Serializer):
@@ -139,11 +140,53 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
     hall_names = serializers.DictField(source="tenant.hall_names", child=serializers.CharField(), read_only=True,
                                        help_text="殿司展示名,按语言:{zh-Hans, en, egy}。")
 
+    last_from = serializers.ChoiceField(
+        choices=[("soul", "soul"), ("hall", "hall")], allow_blank=True, read_only=True,
+        help_text="最后一封是谁写的:`soul` / `hall`;还没有信为空串。")
+    unread = serializers.BooleanField(read_only=True, help_text="**调用者**还没读过灵魂最新的来信。")
+    has_draft = serializers.BooleanField(read_only=True, help_text="**调用者**在这个会话里有草稿。")
+    archived = serializers.BooleanField(read_only=True, help_text="**调用者**归档了它。")
+
     class Meta:
         model = Conversation
         fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name", "hall_names",
-                  "last_message_at", "created_at", "closed_at"]
+                  "last_message_at", "last_soul_message_at", "last_from", "unread", "has_draft", "archived",
+                  "created_at", "closed_at"]
         read_only_fields = fields
+
+
+class InboxHallCountSerializer(serializers.Serializer):
+    tenant = serializers.IntegerField()
+    hall_names = serializers.DictField(child=serializers.CharField())
+    count = serializers.IntegerField()
+
+
+class InboxFoldersSerializer(serializers.Serializer):
+    """`GET /chat/inbox/folders/`:每个文件夹的总数(与列表的 `folder=` 同一个过滤,见 `apps/chat/inbox.py`)。"""
+
+    all = serializers.IntegerField()
+    awaiting_reply = serializers.IntegerField()
+    replied = serializers.IntegerField()
+    drafts = serializers.IntegerField()
+    archived = serializers.IntegerField()
+    unread = serializers.IntegerField(help_text="未归档里调用者的未读数。")
+    open = serializers.IntegerField(help_text="未归档里往来中的。")
+    closed = serializers.IntegerField(help_text="未归档里已关闭的。")
+    halls = InboxHallCountSerializer(many=True, help_text="未归档,按殿。")
+
+
+class InboxStateSerializer(serializers.Serializer):
+    """调用者对一个会话的私人状态。`draft` 只回给写它的那位官员。"""
+
+    last_read_at = serializers.DateTimeField(allow_null=True)
+    archived_at = serializers.DateTimeField(allow_null=True)
+    draft = serializers.CharField(allow_blank=True)
+    draft_saved_at = serializers.DateTimeField(allow_null=True)
+
+
+class InboxDraftSerializer(serializers.Serializer):
+    # 不 trim:草稿要原样还给官员,包括他刚打的那个换行。
+    body = serializers.CharField(max_length=4000, allow_blank=True, trim_whitespace=False)
 
 
 class OfficerReplySerializer(serializers.Serializer):
@@ -160,3 +203,32 @@ class ChatErrorSerializer(serializers.Serializer):
     detail = serializers.CharField()
     code = serializers.CharField()
     retry_at = serializers.DateTimeField(required=False, help_text="429 时:何时可以再试。")
+
+
+#: 模板里允许的占位符。客户端发送前替换(`packages/core/src/soulInboxTemplates.ts`),服务端只校验。
+TEMPLATE_PLACEHOLDERS = ("soul_name", "hall_name")
+_PLACEHOLDER = re.compile(r"\{\{\s*([^{}]*?)\s*\}\}")
+
+
+class InboxReplyTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InboxReplyTemplate
+        fields = ["id", "title", "body", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {"body": {"max_length": 4000, "help_text": "占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。"}}
+
+    def validate_title(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("标题不能为空。")
+        return value
+
+    def validate_body(self, value):
+        unknown = sorted({name for name in _PLACEHOLDER.findall(value) if name not in TEMPLATE_PLACEHOLDERS})
+        if unknown:
+            raise serializers.ValidationError(
+                f"不认识的占位符:{', '.join('{{' + n + '}}' for n in unknown)}。"
+                f"只能用 {{{{soul_name}}}} 与 {{{{hall_name}}}}。")
+        if not value.strip():
+            raise serializers.ValidationError("正文不能为空。")
+        return value

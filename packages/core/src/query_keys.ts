@@ -197,7 +197,11 @@ export const socialModerationKeys = {
 export const soulInboxKeys = {
   all: ["soul-inbox"] as const,
   list: (params: Record<string, string | number | undefined>) => ["soul-inbox", "list", params] as const,
+  lists: () => ["soul-inbox", "list"] as const,
+  folders: () => ["soul-inbox", "folders"] as const,
   messages: (id: string) => ["soul-inbox", "messages", id] as const,
+  draft: (id: string) => ["soul-inbox", "draft", id] as const,
+  templates: () => ["soul-inbox", "templates"] as const,
 };
 
 /**

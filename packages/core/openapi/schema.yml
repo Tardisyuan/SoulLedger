@@ -1054,7 +1054,35 @@ paths:
         租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
         暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
         永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+        未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+        `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+        全站默认(`PageNumberPagination`,每页 20)。
       parameters:
+      - in: query
+        name: folder
+        schema:
+          enum:
+          - all
+          - awaiting_reply
+          - replied
+          - drafts
+          - archived
+          type: string
+          default: all
+          minLength: 1
+        description: |-
+          * `all` - all
+          * `awaiting_reply` - awaiting_reply
+          * `replied` - replied
+          * `drafts` - drafts
+          * `archived` - archived
+      - in: query
+        name: hall
+        schema:
+          type: integer
+          minimum: 1
+        description: 收件殿司(租户 id)。
       - name: ordering
         required: false
         in: query
@@ -1078,6 +1106,19 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: query
+        name: status
+        schema:
+          enum:
+          - open
+          - closed
+          type: string
+          minLength: 1
+        description: |-
+          `open` 往来中 / `closed` 已关闭(灵魂已转世)。
+
+          * `open` - open
+          * `closed` - closed
       tags:
       - v1
       security:
@@ -1089,6 +1130,212 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedOfficerInboxList'
           description: ''
+  /api/v1/chat/inbox-templates/:
+    get:
+      operationId: v1_chat_inbox_templates_list
+      description: |-
+        `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+        **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+        没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+        常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+        不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InboxReplyTemplate'
+          description: ''
+    post:
+      operationId: v1_chat_inbox_templates_create
+      description: |-
+        `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+        **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+        没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+        常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+        不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboxReplyTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InboxReplyTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InboxReplyTemplate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxReplyTemplate'
+          description: ''
+  /api/v1/chat/inbox-templates/{id}/:
+    get:
+      operationId: v1_chat_inbox_templates_retrieve
+      description: |-
+        `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+        **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+        没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+        常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+        不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this inbox reply template.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxReplyTemplate'
+          description: ''
+    put:
+      operationId: v1_chat_inbox_templates_update
+      description: |-
+        `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+        **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+        没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+        常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+        不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this inbox reply template.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboxReplyTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InboxReplyTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InboxReplyTemplate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxReplyTemplate'
+          description: ''
+    patch:
+      operationId: v1_chat_inbox_templates_partial_update
+      description: |-
+        `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+        **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+        没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+        常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+        不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this inbox reply template.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedInboxReplyTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedInboxReplyTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedInboxReplyTemplate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxReplyTemplate'
+          description: ''
+    delete:
+      operationId: v1_chat_inbox_templates_destroy
+      description: |-
+        `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+        **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+        没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+        常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+        不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this inbox reply template.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/chat/inbox/{id}/:
     get:
       operationId: v1_chat_inbox_retrieve
@@ -1098,6 +1345,10 @@ paths:
         租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
         暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
         永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+        未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+        `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+        全站默认(`PageNumberPagination`,每页 20)。
       parameters:
       - in: path
         name: id
@@ -1117,6 +1368,120 @@ paths:
               schema:
                 $ref: '#/components/schemas/OfficerInbox'
           description: ''
+  /api/v1/chat/inbox/{id}/archive/:
+    post:
+      operationId: v1_chat_inbox_archive_create
+      description: 只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信不会自动取消归档。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxState'
+          description: ''
+  /api/v1/chat/inbox/{id}/draft/:
+    get:
+      operationId: v1_chat_inbox_draft_retrieve
+      description: |-
+        我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+        关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxState'
+          description: ''
+    put:
+      operationId: v1_chat_inbox_draft_update
+      description: |-
+        我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+        关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboxDraft'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InboxDraft'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InboxDraft'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxState'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+    delete:
+      operationId: v1_chat_inbox_draft_destroy
+      description: |-
+        我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+        关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxState'
+          description: ''
   /api/v1/chat/inbox/{id}/messages/:
     get:
       operationId: v1_chat_inbox_messages_list
@@ -1126,6 +1491,10 @@ paths:
         租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
         暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
         永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+        未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+        `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+        全站默认(`PageNumberPagination`,每页 20)。
       parameters:
       - in: path
         name: id
@@ -1170,6 +1539,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatError'
           description: ''
+  /api/v1/chat/inbox/{id}/read/:
+    post:
+      operationId: v1_chat_inbox_read_create
+      description: 我读到此刻。关闭的会话也可以(只读,不是不可读)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxState'
+          description: ''
   /api/v1/chat/inbox/{id}/reply/:
     post:
       operationId: v1_chat_inbox_reply_create
@@ -1179,6 +1571,10 @@ paths:
         租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
         暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
         永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+        未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+        `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+        全站默认(`PageNumberPagination`,每页 20)。
       parameters:
       - in: path
         name: id
@@ -1221,6 +1617,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/chat/inbox/{id}/unarchive/:
+    post:
+      operationId: v1_chat_inbox_unarchive_create
+      description: |-
+        `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+
+        租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+        暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+        永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+        未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+        `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+        全站默认(`PageNumberPagination`,每页 20)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this conversation.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxState'
+          description: ''
+  /api/v1/chat/inbox/folders/:
+    get:
+      operationId: v1_chat_inbox_folders_retrieve
+      description: |-
+        `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+
+        租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+        暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+        永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+        未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+        `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+        全站默认(`PageNumberPagination`,每页 20)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxFolders'
           description: ''
   /api/v1/death-sync/api-keys/:
     get:
@@ -16464,6 +16916,67 @@ components:
       - post
       - reason
       - type
+    InboxDraft:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 4000
+      required:
+      - body
+    InboxFolders:
+      type: object
+      description: '`GET /chat/inbox/folders/`:每个文件夹的总数(与列表的 `folder=` 同一个过滤,见 `apps/chat/inbox.py`)。'
+      properties:
+        all:
+          type: integer
+        awaiting_reply:
+          type: integer
+        replied:
+          type: integer
+        drafts:
+          type: integer
+        archived:
+          type: integer
+        unread:
+          type: integer
+          description: 未归档里调用者的未读数。
+        open:
+          type: integer
+          description: 未归档里往来中的。
+        closed:
+          type: integer
+          description: 未归档里已关闭的。
+        halls:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboxHallCount'
+          description: 未归档,按殿。
+      required:
+      - all
+      - archived
+      - awaiting_reply
+      - closed
+      - drafts
+      - halls
+      - open
+      - replied
+      - unread
+    InboxHallCount:
+      type: object
+      properties:
+        tenant:
+          type: integer
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+        count:
+          type: integer
+      required:
+      - count
+      - hall_names
+      - tenant
     InboxMessage:
       type: object
       description: 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。
@@ -16488,6 +17001,57 @@ components:
       - officer_title
       - sender_name
       - timestamp
+    InboxReplyTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 80
+        body:
+          type: string
+          description: 占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。
+          maxLength: 4000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - created_at
+      - id
+      - title
+      - updated_at
+    InboxState:
+      type: object
+      description: 调用者对一个会话的私人状态。`draft` 只回给写它的那位官员。
+      properties:
+        last_read_at:
+          type: string
+          format: date-time
+          nullable: true
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        draft:
+          type: string
+        draft_saved_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - archived_at
+      - draft
+      - draft_saved_at
+      - last_read_at
     InitRolePermissionsResult:
       type: object
       description: |-
@@ -17467,6 +18031,14 @@ components:
       description: |-
         * `reference` - reference
         * `domain` - domain
+    LastFromEnum:
+      enum:
+      - soul
+      - hall
+      type: string
+      description: |-
+        * `soul` - soul
+        * `hall` - hall
     LedgerEffective:
       type: object
       description: |-
@@ -19199,6 +19771,33 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        last_soul_message_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_from:
+          readOnly: true
+          description: |-
+            最后一封是谁写的:`soul` / `hall`;还没有信为空串。
+
+            * `soul` - soul
+            * `hall` - hall
+          oneOf:
+          - $ref: '#/components/schemas/LastFromEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        unread:
+          type: boolean
+          readOnly: true
+          description: '**调用者**还没读过灵魂最新的来信。'
+        has_draft:
+          type: boolean
+          readOnly: true
+          description: '**调用者**在这个会话里有草稿。'
+        archived:
+          type: boolean
+          readOnly: true
+          description: '**调用者**归档了它。'
         created_at:
           type: string
           format: date-time
@@ -19209,16 +19808,21 @@ components:
           readOnly: true
           nullable: true
       required:
+      - archived
       - closed_at
       - created_at
       - hall_names
+      - has_draft
       - id
+      - last_from
       - last_message_at
+      - last_soul_message_at
       - soul
       - soul_code
       - soul_name
       - tenant
       - tenant_name
+      - unread
     OfficerRebirthApplication:
       type: object
       description: |-
@@ -21104,6 +21708,28 @@ components:
           type: string
           readOnly: true
           title: ' raw key'
+    PatchedInboxReplyTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 80
+        body:
+          type: string
+          description: 占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。
+          maxLength: 4000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedJudgment:
       type: object
       description: |-

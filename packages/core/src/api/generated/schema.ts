@@ -536,6 +536,10 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         get: operations["v1_chat_inbox_list"];
         put?: never;
@@ -544,6 +548,92 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        get: operations["v1_chat_inbox_templates_list"];
+        put?: never;
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        post: operations["v1_chat_inbox_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        get: operations["v1_chat_inbox_templates_retrieve"];
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        put: operations["v1_chat_inbox_templates_update"];
+        post?: never;
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        delete: operations["v1_chat_inbox_templates_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        patch: operations["v1_chat_inbox_templates_partial_update"];
         trace?: never;
     };
     "/api/v1/chat/inbox/{id}/": {
@@ -559,11 +649,60 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         get: operations["v1_chat_inbox_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信不会自动取消归档。 */
+        post: operations["v1_chat_inbox_archive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+         *     关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+         */
+        get: operations["v1_chat_inbox_draft_retrieve"];
+        /**
+         * @description 我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+         *     关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+         */
+        put: operations["v1_chat_inbox_draft_update"];
+        post?: never;
+        /**
+         * @description 我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+         *     关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+         */
+        delete: operations["v1_chat_inbox_draft_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -582,10 +721,31 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         get: operations["v1_chat_inbox_messages_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 我读到此刻。关闭的会话也可以(只读,不是不可读)。 */
+        post: operations["v1_chat_inbox_read_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -607,8 +767,66 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         post: operations["v1_chat_inbox_reply_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/unarchive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
+         */
+        post: operations["v1_chat_inbox_unarchive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/folders/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
+         */
+        get: operations["v1_chat_inbox_folders_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7540,6 +7758,32 @@ export interface components {
             /** Format: date-time */
             handled_at: string | null;
         };
+        InboxDraft: {
+            body: string;
+        };
+        /** @description `GET /chat/inbox/folders/`:每个文件夹的总数(与列表的 `folder=` 同一个过滤,见 `apps/chat/inbox.py`)。 */
+        InboxFolders: {
+            all: number;
+            awaiting_reply: number;
+            replied: number;
+            drafts: number;
+            archived: number;
+            /** @description 未归档里调用者的未读数。 */
+            unread: number;
+            /** @description 未归档里往来中的。 */
+            open: number;
+            /** @description 未归档里已关闭的。 */
+            closed: number;
+            /** @description 未归档,按殿。 */
+            halls: components["schemas"]["InboxHallCount"][];
+        };
+        InboxHallCount: {
+            tenant: number;
+            hall_names: {
+                [key: string]: string;
+            };
+            count: number;
+        };
         /** @description 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。 */
         InboxMessage: {
             event_id: string;
@@ -7549,6 +7793,27 @@ export interface components {
             officer_title: string;
             body: string;
             timestamp: number;
+        };
+        InboxReplyTemplate: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            /** @description 占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。 */
+            body: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /** @description 调用者对一个会话的私人状态。`draft` 只回给写它的那位官员。 */
+        InboxState: {
+            /** Format: date-time */
+            last_read_at: string | null;
+            /** Format: date-time */
+            archived_at: string | null;
+            draft: string;
+            /** Format: date-time */
+            draft_saved_at: string | null;
         };
         /**
          * @description 200 body of `init_role_permissions`.
@@ -7994,6 +8259,12 @@ export interface components {
          * @enum {string}
          */
         KindEnum: "reference" | "domain";
+        /**
+         * @description * `soul` - soul
+         *     * `hall` - hall
+         * @enum {string}
+         */
+        LastFromEnum: "soul" | "hall";
         /**
          * @description 200 body of `LedgerEffectiveView`. Same three numbers as the summary's
          *     merit/demerit/balance, under names that say they are decay-applied.
@@ -8747,6 +9018,21 @@ export interface components {
             };
             /** Format: date-time */
             readonly last_message_at: string | null;
+            /** Format: date-time */
+            readonly last_soul_message_at: string | null;
+            /**
+             * @description 最后一封是谁写的:`soul` / `hall`;还没有信为空串。
+             *
+             *     * `soul` - soul
+             *     * `hall` - hall
+             */
+            readonly last_from: components["schemas"]["LastFromEnum"] | components["schemas"]["BlankEnum"];
+            /** @description **调用者**还没读过灵魂最新的来信。 */
+            readonly unread: boolean;
+            /** @description **调用者**在这个会话里有草稿。 */
+            readonly has_draft: boolean;
+            /** @description **调用者**归档了它。 */
+            readonly archived: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -9846,6 +10132,17 @@ export interface components {
             readonly usage_count?: number;
             /** raw key */
             readonly _raw_key?: string;
+        };
+        PatchedInboxReplyTemplate: {
+            /** Format: uuid */
+            readonly id?: string;
+            title?: string;
+            /** @description 占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。 */
+            body?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
         };
         /**
          * @description A proceeding. Soul and judge are the requester's own (BD-01).
@@ -13156,6 +13453,16 @@ export interface operations {
     v1_chat_inbox_list: {
         parameters: {
             query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `awaiting_reply` - awaiting_reply
+                 *     * `replied` - replied
+                 *     * `drafts` - drafts
+                 *     * `archived` - archived
+                 */
+                folder?: "all" | "awaiting_reply" | "replied" | "drafts" | "archived";
+                /** @description 收件殿司(租户 id)。 */
+                hall?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -13163,6 +13470,13 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul_a?: string;
+                /**
+                 * @description `open` 往来中 / `closed` 已关闭(灵魂已转世)。
+                 *
+                 *     * `open` - open
+                 *     * `closed` - closed
+                 */
+                status?: "open" | "closed";
             };
             header?: never;
             path?: never;
@@ -13176,6 +13490,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedOfficerInboxList"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"][];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxReplyTemplate"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxReplyTemplate"];
+                "multipart/form-data": components["schemas"]["InboxReplyTemplate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxReplyTemplate"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxReplyTemplate"];
+                "multipart/form-data": components["schemas"]["InboxReplyTemplate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_chat_inbox_templates_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedInboxReplyTemplate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedInboxReplyTemplate"];
+                "multipart/form-data": components["schemas"]["PatchedInboxReplyTemplate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
                 };
             };
         };
@@ -13198,6 +13660,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfficerInbox"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_draft_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_draft_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxDraft"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxDraft"];
+                "multipart/form-data": components["schemas"]["InboxDraft"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_draft_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
                 };
             };
         };
@@ -13234,6 +13798,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
                 };
             };
         };
@@ -13278,6 +13864,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_unarchive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_folders_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxFolders"];
                 };
             };
         };
