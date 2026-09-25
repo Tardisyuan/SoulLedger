@@ -985,7 +985,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/PasswordResetRefusal'
           description: ''
   /api/v1/auth/set-new-password/:
     post:
@@ -993,6 +993,10 @@ paths:
       description: |-
         POST /api/v1/auth/set-new-password/
         Set new password via email + verification code from Redis.
+
+        Every refusal carries a stable `code` (`PASSWORD_RESET_REFUSAL_CODES`);
+        the `error` sentence is for people and may change. A field-validation 400
+        is DRF's `{field: [...]}` shape instead.
       tags:
       - v1
       requestBody:
@@ -1021,13 +1025,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/PasswordResetRefusal'
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/PasswordResetRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetRefusal'
           description: ''
   /api/v1/chat/inbox/:
     get:
@@ -20224,6 +20240,42 @@ components:
           maxLength: 150
       required:
       - username
+    PasswordResetRefusal:
+      type: object
+      description: |-
+        Doc-only: every refusal of the two email-reset endpoints.
+
+        `error` is for people and may be reworded; `code` is the contract.
+        `retry_after` (seconds, also the `Retry-After` header) is present exactly
+        when `code` is `rate_limited`.
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/PasswordResetRefusalCodeEnum'
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+    PasswordResetRefusalCodeEnum:
+      enum:
+      - rate_limited
+      - reset_code_expired
+      - reset_code_wrong
+      - reset_code_attempts_exceeded
+      - weak_password
+      - no_soul_account
+      - ambiguous_email
+      type: string
+      description: |-
+        * `rate_limited` - throttled; `retry_after` says for how long
+        * `reset_code_expired` - no live code for this address
+        * `reset_code_wrong` - the code does not match
+        * `reset_code_attempts_exceeded` - too many wrong codes; the code was deleted
+        * `weak_password` - the password validators refused the new password
+        * `no_soul_account` - no soul account has this address
+        * `ambiguous_email` - several accounts share this address
     PasswordResetResult:
       type: object
       description: |-

@@ -39,7 +39,13 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "../platform/index";
-import type { PasswordResetAccepted, PasswordResetRefusal, PasswordResetRequest, SetNewPasswordRequest } from "./auth";
+import type {
+  PasswordResetAccepted,
+  PasswordResetRefusal,
+  PasswordResetRefusalCode,
+  PasswordResetRequest,
+  SetNewPasswordRequest,
+} from "./auth";
 import type { components } from "./generated/schema";
 
 type Schemas = components["schemas"];
@@ -302,43 +308,54 @@ export function soulCodeMessage(code: string): SoulErrorMessage {
 }
 
 /**
- * The two refusals of `POST /auth/set-new-password/` that only their sentence
- * tells apart (backend/apps/authentication/views.py `set_new_password`): both
- * are 400 `{error}` with no `code`, and so is a password the validators refuse.
- * Matched exactly, so a reworded sentence falls to the weak-password branch
- * visibly instead of being guessed at; `soul.test.ts` reads the view and fails
- * when either sentence is no longer there.
+ * Copy for each `code` a refused reset request carries (backend
+ * `PASSWORD_RESET_REFUSAL_CODES`). Typed on the generated enum, so a code the
+ * backend adds fails to compile here until it is given copy.
  */
-export const RESET_CODE_EXPIRED_ERROR = "验证码已过期,请重新获取";
-export const RESET_CODE_WRONG_ERROR = "验证码错误";
+const PASSWORD_RESET_REFUSAL_KEY: Record<PasswordResetRefusalCode, string> = {
+  rate_limited: "soul_app.errors.rate_limited",
+  reset_code_expired: "soul_app.forgot_password.code_expired",
+  reset_code_wrong: "soul_app.forgot_password.code_wrong",
+  // Five wrong codes: the backend deleted the code, only a new one helps.
+  reset_code_attempts_exceeded: "soul_app.forgot_password.too_many_tries",
+  weak_password: "soul_app.errors.weak_password",
+  // No soul account, or several on one address: only a hall can help.
+  no_soul_account: "soul_app.forgot_password.ask_hall",
+  ambiguous_email: "soul_app.forgot_password.ask_hall",
+};
 
 /**
- * Classify a failed `setNewPassword` into `soul_app.*` copy.
+ * Classify a failed `setNewPassword` into `soul_app.*` copy — by the body's
+ * `code`, never by its `error` sentence.
  *
- *   no response                  → `errors.network`
- *   429 (five wrong codes: the   → `forgot_password.too_many_tries` — the code
- *        backend deleted the code)  is gone, only a new one helps
- *   400 {error} expired / wrong  → `forgot_password.code_expired` / `code_wrong`
- *   400 {error} anything else    → `errors.weak_password` (the view answers
- *                                  `validate_password`'s refusal as `{error}`)
- *   400 {new_password: [...]}    → `errors.weak_password`
- *   400 {code: [...]}            → `forgot_password.code_wrong`
- *   404 / 409                    → `forgot_password.ask_hall`: no account, or
- *                                  several on one address; only a hall can help
+ *   no response                → `errors.network`
+ *   a known `code`             → `PASSWORD_RESET_REFUSAL_KEY`
+ *   400 {new_password: [...]}  → `errors.weak_password`       DRF field errors:
+ *   400 {code: [...]}          → `forgot_password.code_wrong`  `code` is a list
+ *   any other 400              → `errors.validation`
+ *   anything else              → `soulErrorMessage`: an unmapped code or status
+ *                                is carried, not swallowed
  */
 export function passwordResetErrorMessage(error: unknown): SoulErrorMessage {
   if (!axios.isAxiosError(error)) return soulErrorMessage(error);
   const response = error.response;
   if (!response) return { key: "soul_app.errors.network" };
-  const body = (response.data ?? {}) as Partial<PasswordResetRefusal> & Record<string, unknown>;
-  if (response.status === 429) return { key: "soul_app.forgot_password.too_many_tries" };
-  if (response.status === 404 || response.status === 409) return { key: "soul_app.forgot_password.ask_hall" };
-  if (response.status === 400) {
-    if (body.error === RESET_CODE_EXPIRED_ERROR) return { key: "soul_app.forgot_password.code_expired" };
-    if (body.error === RESET_CODE_WRONG_ERROR) return { key: "soul_app.forgot_password.code_wrong" };
-    if (typeof body.error === "string" || "new_password" in body) return { key: "soul_app.errors.weak_password" };
+  const code = soulErrorCode(error);
+  if (code !== null && Object.prototype.hasOwnProperty.call(PASSWORD_RESET_REFUSAL_KEY, code)) {
+    return { key: PASSWORD_RESET_REFUSAL_KEY[code as PasswordResetRefusalCode] };
+  }
+  if (response.status === 400 && code === null) {
+    const body = (response.data ?? {}) as Record<string, unknown>;
+    if ("new_password" in body) return { key: "soul_app.errors.weak_password" };
     if ("code" in body) return { key: "soul_app.forgot_password.code_wrong" };
     return { key: "soul_app.errors.validation" };
   }
-  return { key: "soul_app.errors.unknown", params: { code: String(response.status) } };
+  return soulErrorMessage(error);
+}
+
+/** Seconds a throttled reset request was told to wait (`retry_after`), or `null`. */
+export function passwordResetRetryAfter(error: unknown): number | null {
+  if (!axios.isAxiosError(error)) return null;
+  const wait = (error.response?.data as Partial<PasswordResetRefusal> | undefined)?.retry_after;
+  return typeof wait === "number" && wait > 0 ? wait : null;
 }

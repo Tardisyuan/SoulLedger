@@ -43,6 +43,7 @@ def known_user(django_user_model, cn_tenant):
 def _post(api_client, keys, email, ip, xff=None):
     keys.extend([
         f"pwd_reset_rate:{email}", f"pwd_reset_rate:{email.strip().lower()}",
+        f"pwd_reset_rate_until:{email.strip().lower()}",
         f"pwd_reset:{email}", f"throttle_password_reset_{ip}", f"throttle_anon_{ip}",
     ])
     extra = {"REMOTE_ADDR": ip}
@@ -116,7 +117,10 @@ class TestOneClientCannotWalkTheAddressBook:
             _post(api_client, keys, f"same{i}@example.com", ip)
         by_ip = _post(api_client, keys, "same-final@example.com", ip)
         assert by_ip.status_code == 429
-        assert set(by_ip.data) == {"error"}, by_ip.data
+        # Same shape as the address refusal: the one `code` for both, and a
+        # `retry_after` either way — nothing says which limit it was.
+        assert set(by_ip.data) == {"error", "code", "retry_after"}, by_ip.data
+        assert by_ip.data["code"] == "rate_limited"
 
 
 @pytest.mark.django_db

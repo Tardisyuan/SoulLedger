@@ -12,13 +12,11 @@ import {
   resetPlatform,
   type KeyValueStore,
 } from "../../platform/index";
-import ts from "typescript";
 import {
-  RESET_CODE_EXPIRED_ERROR,
-  RESET_CODE_WRONG_ERROR,
   clearSoulTokens,
   onSoulPasswordChangeRequired,
   passwordResetErrorMessage,
+  passwordResetRetryAfter,
   soulApi,
   soulErrorMessage,
   soulHttp,
@@ -232,34 +230,49 @@ describe("password reset (「忘记密码」)", () => {
   });
 
   it.each<[string, unknown, string]>([
-    ["expired", httpError(400, { error: RESET_CODE_EXPIRED_ERROR }), "soul_app.forgot_password.code_expired"],
-    ["wrong", httpError(400, { error: RESET_CODE_WRONG_ERROR }), "soul_app.forgot_password.code_wrong"],
-    ["validator refusal", httpError(400, { error: "['This password is too common.']" }), "soul_app.errors.weak_password"],
+    ["expired", httpError(400, { error: "x", code: "reset_code_expired" }), "soul_app.forgot_password.code_expired"],
+    ["wrong", httpError(400, { error: "x", code: "reset_code_wrong" }), "soul_app.forgot_password.code_wrong"],
+    ["validator refusal", httpError(400, { error: "x", code: "weak_password" }), "soul_app.errors.weak_password"],
     ["new_password field", httpError(400, { new_password: ["too short"] }), "soul_app.errors.weak_password"],
+    // DRF's field error on `code` is a LIST — not a refusal code.
     ["code field", httpError(400, { code: ["验证码必须是6位数字"] }), "soul_app.forgot_password.code_wrong"],
     ["email field", httpError(400, { email: ["bad"] }), "soul_app.errors.validation"],
-    ["too many tries", httpError(429, { error: "验证码错误次数过多,请重新获取" }), "soul_app.forgot_password.too_many_tries"],
-    ["no account", httpError(404, { error: "用户不存在" }), "soul_app.forgot_password.ask_hall"],
-    ["two accounts", httpError(409, { error: "x" }), "soul_app.forgot_password.ask_hall"],
+    ["too many tries", httpError(429, { error: "x", code: "reset_code_attempts_exceeded" }), "soul_app.forgot_password.too_many_tries"],
+    ["throttled", httpError(429, { error: "x", code: "rate_limited", retry_after: 30 }), "soul_app.errors.rate_limited"],
+    ["no soul account", httpError(404, { error: "x", code: "no_soul_account" }), "soul_app.forgot_password.ask_hall"],
+    ["two accounts", httpError(409, { error: "x", code: "ambiguous_email" }), "soul_app.forgot_password.ask_hall"],
     ["offline", new AxiosError("Network Error", "ERR_NETWORK"), "soul_app.errors.network"],
-  ])("classifies %s", (_, error, key) => {
+  ])("classifies %s by its code", (_, error, key) => {
     expect(passwordResetErrorMessage(error).key).toBe(key);
   });
 
-  it("does not swallow an unexpected status", () => {
-    expect(passwordResetErrorMessage(httpError(500))).toEqual({ key: "soul_app.errors.unknown", params: { code: "500" } });
+  it("never reads the sentence: the same sentence under different codes classifies differently", () => {
+    // The sentence the App used to match, now carried beside a different code.
+    const sentence = "验证码错误";
+    expect(passwordResetErrorMessage(httpError(400, { error: sentence, code: "reset_code_expired" })).key).toBe(
+      "soul_app.forgot_password.code_expired"
+    );
+    expect(passwordResetErrorMessage(httpError(400, { error: sentence, code: "weak_password" })).key).toBe(
+      "soul_app.errors.weak_password"
+    );
+    // And a bare `{error}` with no code is not guessed at from its words.
+    expect(passwordResetErrorMessage(httpError(400, { error: sentence })).key).toBe("soul_app.errors.validation");
   });
 
-  it("the two sentences it matches are still the ones set_new_password sends", () => {
-    // The backend answers both with `{error}` and no `code`, so the sentence IS
-    // the contract. Reword either there and this goes red, instead of the app
-    // quietly calling a wrong code a weak password.
-    const configPath = ts.findConfigFile(ts.sys.getCurrentDirectory(), (f) => ts.sys.fileExists(f), "tsconfig.json");
-    const views = configPath && ts.sys.readFile(configPath.replace(/tsconfig\.json$/, "../../backend/apps/authentication/views.py"));
-    if (!views) throw new Error("cannot read backend/apps/authentication/views.py");
-    const view = views.slice(views.indexOf("def set_new_password"), views.indexOf("def ", views.indexOf("def set_new_password") + 4));
-    expect(view).toContain(`{"error": "${RESET_CODE_EXPIRED_ERROR}"}`);
-    expect(view).toContain(`{"error": "${RESET_CODE_WRONG_ERROR}"}`);
+  it("does not swallow an unexpected status or an unmapped code", () => {
+    expect(passwordResetErrorMessage(httpError(500))).toEqual({ key: "soul_app.errors.unknown", params: { code: "500" } });
+    expect(passwordResetErrorMessage(httpError(400, { error: "x", code: "brand_new" }))).toEqual({
+      key: "soul_app.errors.unknown",
+      params: { code: "brand_new" },
+    });
+  });
+
+  it("reads retry_after only when it is a positive number", () => {
+    expect(passwordResetRetryAfter(httpError(429, { error: "x", code: "rate_limited", retry_after: 42 }))).toBe(42);
+    expect(passwordResetRetryAfter(httpError(429, { error: "x", code: "reset_code_attempts_exceeded" }))).toBeNull();
+    expect(passwordResetRetryAfter(httpError(429, { retry_after: "42" }))).toBeNull();
+    expect(passwordResetRetryAfter(new AxiosError("Network Error", "ERR_NETWORK"))).toBeNull();
+    expect(passwordResetRetryAfter(new Error("x"))).toBeNull();
   });
 });
 
