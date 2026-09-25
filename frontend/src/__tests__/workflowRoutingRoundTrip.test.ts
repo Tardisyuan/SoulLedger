@@ -23,6 +23,7 @@
  * back.
  */
 import { savedTemplateToFlow, type TemplateNode } from "@/src/components/workflow/workflowEditorGraph";
+import { nodeRoles, validateFlow } from "@/src/components/workflow/workflowValidation";
 
 const base = (over: Partial<TemplateNode> & { id: string; node_order: number }): TemplateNode => ({
   node_name: `节点 ${over.node_order}`,
@@ -97,5 +98,53 @@ describe("stored positions are honoured", () => {
     // that 160px pitch exactly; only the column moved, from 250 to the
     // layout's own left edge. See `workflowEditorLayout.test.ts`.
     expect(nodes[1].position).toEqual({ x: 0, y: 160 });
+  });
+});
+
+describe("a loaded FAIL route stays a FAIL route", () => {
+  // THE DEFECT. `edgesFor` built loaded edges without `sourceHandle`, and
+  // `getTemplateNodes` reads the outcome from nothing else — so the next save
+  // of an untouched routed template wrote both edges as PASS (last one wins:
+  // `on_pass → b`) and `on_fail: null`. Also what the canvas dashes and labels.
+  it("carries the outcome on the edge, where the save reads it back", () => {
+    const { edges } = savedTemplateToFlow([
+      base({ id: "a", node_order: 1, on_pass: "c", on_fail: "b" }),
+      base({ id: "b", node_order: 2 }),
+      base({ id: "c", node_order: 3 }),
+    ]);
+    expect(edges.map((e) => `${e.source}-${e.sourceHandle}->${e.target}`)).toEqual(["a-pass->c", "a-fail->b"]);
+  });
+});
+
+describe("design C · 03: roles and checks, derived from order and edges", () => {
+  const flow = (rows: TemplateNode[]) => savedTemplateToFlow(rows);
+
+  it("entry, branch, step and end follow the engine: node_order 1 enters, a FAIL route branches, the last unrouted node ends", () => {
+    const { nodes, edges } = flow([
+      base({ id: "a", node_order: 1, on_pass: "b" }),
+      base({ id: "b", node_order: 2, on_pass: "c", on_fail: "d" }),
+      base({ id: "c", node_order: 3, on_pass: "d" }),
+      base({ id: "d", node_order: 4 }),
+    ]);
+    expect(Object.fromEntries(nodeRoles(nodes, edges))).toEqual({ a: "entry", b: "branch", c: "step", d: "end" });
+  });
+
+  it("a clean flow has no issues — absence, so a validator that always complains goes red", () => {
+    const { nodes, edges } = flow([base({ id: "a", node_order: 1 }), base({ id: "b", node_order: 2 })]);
+    expect(validateFlow(nodes, edges)).toEqual([]);
+  });
+
+  it("flags a nameless node, a route into itself, and two routes from one outcome", () => {
+    const { nodes } = flow([base({ id: "a", node_order: 1, node_name: " " }), base({ id: "b", node_order: 2 })]);
+    const edges = [
+      { id: "1", source: "b", target: "b", sourceHandle: "fail" },
+      { id: "2", source: "a", target: "b", sourceHandle: "pass" },
+      { id: "3", source: "a", target: "b" },
+    ];
+    expect(validateFlow(nodes, edges)).toEqual([
+      { nodeId: "a", code: "name_empty" },
+      { nodeId: "a", code: "duplicate_route", branch: "pass", count: 2 },
+      { nodeId: "b", code: "self_route" },
+    ]);
   });
 });

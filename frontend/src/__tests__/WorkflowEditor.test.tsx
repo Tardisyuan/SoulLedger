@@ -1,7 +1,7 @@
 /**
  * Tests for WorkflowEditor component
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock all heavy dependencies before import
@@ -735,5 +735,100 @@ describe("WorkflowEditor: template load failure", () => {
 
     await waitFor(() => expect(screen.getByText("Save Template")).toBeDisabled());
     expect(workflowApi.templates.update).not.toHaveBeenCalled();
+  });
+});
+
+// ── design C · 03: validation, inspector, linear preview, read-only view ──
+describe("WorkflowEditor · validation gates the save", () => {
+  const withNodes = (nodes_json: Record<string, unknown>[]) =>
+    renderWithProviders(
+      <WorkflowEditor
+        initialTemplateData={{ name: "t", civilization: "CHINESE", case_type: "ROUTINE", priority: 0, nodes_json }}
+      />
+    );
+
+  it("a node with no name disables saving, says why, and nothing is sent", () => {
+    const { workflowApi } = require("@soulledger/core/api");
+    const before = workflowApi.templates.create.mock.calls.length;
+    withNodes([
+      { id: "A", node_name: "秦广王 · 分流", node_type: "TRIAL", court_code: "第一殿", node_order: 1 },
+      { id: "B", node_name: "", node_type: "TRIAL", court_code: "", node_order: 2 },
+    ]);
+
+    expect(screen.getByText("Save Template").closest("button")).toBeDisabled();
+    // The count button in the toolbar and the list entry in the inspector.
+    expect(screen.getAllByText("workflow.editor.issues").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("workflow.editor.issue.name_empty")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Save Template"));
+    expect(workflowApi.templates.create.mock.calls.length).toBe(before);
+  });
+
+  it("with every node named there is no issue button and saving is enabled", () => {
+    withNodes([{ id: "A", node_name: "秦广王 · 分流", node_type: "TRIAL", court_code: "第一殿", node_order: 1 }]);
+    expect(screen.getByText("Save Template").closest("button")).not.toBeDisabled();
+    expect(screen.queryByText("workflow.editor.issue.name_empty")).not.toBeInTheDocument();
+    expect(screen.getByText("workflow.editor.issues_none")).toBeInTheDocument();
+  });
+
+  it("the linear preview lists the nodes in order and selecting one fills the inspector", () => {
+    withNodes([
+      { id: "A", node_name: "秦广王 · 分流", node_type: "TRIAL", court_code: "第一殿", node_order: 1 },
+      { id: "B", node_name: "楚江王 · 初审", node_type: "EVALUATION", court_code: "第二殿", node_order: 2 },
+    ]);
+    const preview = screen.getByRole("region", { name: "workflow.editor.preview" });
+    const chips = within(preview).getAllByRole("button");
+    expect(chips.map((b) => b.textContent)).toEqual(["▷ 秦广王 · 分流", "■ 楚江王 · 初审"]);
+    expect(screen.getByText("workflow.editor.inspector_empty")).toBeInTheDocument();
+
+    fireEvent.click(chips[0]);
+    expect(chips[0]).toHaveAttribute("aria-pressed", "true");
+    const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
+    expect(within(inspector).getByText("秦广王 · 分流")).toBeInTheDocument();
+    expect(within(inspector).getByText("第一殿")).toBeInTheDocument();
+    // The preset chain routes PASS to the next card; FAIL has no edge, so it is
+    // the engine's own default — the flow ends rejected — spelled out.
+    expect(within(inspector).getByText("→ N2「楚江王 · 初审」")).toBeInTheDocument();
+    expect(within(inspector).getByText("workflow.editor.exit.fail_default")).toBeInTheDocument();
+  });
+});
+
+describe("WorkflowEditor · below 1024 px", () => {
+  const original = window.matchMedia;
+  beforeEach(() => {
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    })) as unknown as typeof window.matchMedia;
+  });
+  afterEach(() => {
+    if (original) window.matchMedia = original;
+    else delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it("is read-only: the notice, the preview and the properties, and no canvas, inputs or save", () => {
+    renderWithProviders(
+      <WorkflowEditor
+        initialTemplateData={{
+          name: "十殿",
+          civilization: "CHINESE",
+          case_type: "ROUTINE",
+          priority: 0,
+          nodes_json: [{ id: "A", node_name: "秦广王 · 分流", node_type: "TRIAL", court_code: "第一殿", node_order: 1 }],
+        }}
+      />
+    );
+    expect(screen.getByRole("note")).toHaveTextContent("workflow.editor.narrow_title");
+    expect(screen.getByRole("heading", { name: "十殿" })).toBeInTheDocument();
+    expect(screen.queryByTestId("react-flow")).not.toBeInTheDocument();
+    expect(screen.queryByText("Save Template")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Template name...")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /秦广王 · 分流/ }));
+    const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
+    expect(within(inspector).getByText("第一殿")).toBeInTheDocument();
+    // Reading, not editing: the inspector's edit button is not offered here.
+    expect(within(inspector).queryByText("Edit Node")).not.toBeInTheDocument();
   });
 });

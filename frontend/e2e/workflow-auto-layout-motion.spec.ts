@@ -234,6 +234,18 @@ async function savedPositions(page: Page, api: ApiMock) {
 
 let api: ApiMock;
 
+/**
+ * A DESKTOP VIEWPORT ON EVERY PROJECT, mobile-chrome included — and that is
+ * the design, not a way round it. Design C · 03 makes the canvas editable at
+ * ≥ 1024 px only; below that `WorkflowEditor` renders the read-only view (no
+ * canvas, no 自动布局, no 保存模板), so on Pixel 5's own 393 px there is
+ * nothing here left to press. What this file proves — Flip travel, the
+ * viewport fit, the reduced-motion path — is canvas behaviour, and every
+ * engine still runs it; the 393 px behaviour has its own test in
+ * `workflow.spec.ts` ("Workflow editor below 1024 px").
+ */
+test.use({ viewport: { width: 1280, height: 720 } });
+
 test.beforeEach(async ({ page }) => {
   api = await setupAuthenticatedPage(page);
   api.on("POST", "/workflow/templates/", (call) => ({

@@ -648,7 +648,37 @@
       "saved": "模板已保存",
       "save_failed": "保存失败",
       "title": "流程编辑器",
-      "relayout_done": "已重新排布 {{n}} 个节点"
+      "relayout_done": "已重新排布 {{n}} 个节点",
+      "role": {
+        "entry": "起点",
+        "step": "审批",
+        "branch": "分支",
+        "end": "终点"
+      },
+      "branch": {
+        "pass": "通过",
+        "fail": "否决"
+      },
+      "issues": "校验 · {{n}}",
+      "issues_none": "校验通过",
+      "issue": {
+        "name_empty": "{{node}} 没有名称",
+        "self_route": "{{node}} 的「{{branch}}」连回了自己,流程不会走这条",
+        "duplicate_route": "{{node}} 的「{{branch}}」连了 {{count}} 条,保存时只留最后一条"
+      },
+      "palette": "节点库 · 拖入",
+      "inspector": "属性",
+      "inspector_empty": "在画布或线性预览里选一个节点。",
+      "unnamed": "(未命名)",
+      "exit": {
+        "pass_default": "按顺序进入 {{node}}",
+        "pass_end": "流程完成",
+        "fail_default": "驳回,流程结束"
+      },
+      "preview": "模板预览 · 线性",
+      "preview_empty": "还没有节点。",
+      "narrow_title": "画布只在 ≥ 1024 px 可编辑",
+      "narrow_body": "窄屏下只读:显示线性预览、校验结果和节点属性。"
     },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
@@ -3078,7 +3108,25 @@
       "not_inbox": "这不是殿司收件箱",
       "chat_not_configured": "聊天服务未启用",
       "chat_unavailable": "聊天服务暂时不可用"
-    }
+    },
+    "folders": "文件夹",
+    "folder": {
+      "all": "全部来信",
+      "open": "往来中",
+      "closed": "已关闭"
+    },
+    "by_hall": "按殿",
+    "folder_empty": "这个文件夹里没有来信",
+    "newest_first": "最近在上",
+    "from_soul": "来自 {{name}}",
+    "officer_reply": "殿司回复",
+    "previous": "前一封",
+    "earlier": "更早的 {{n}} 封",
+    "awaiting": "待回复 · {{n}} 天",
+    "cite_hint": "/ 引用律条",
+    "cite_label": "律条",
+    "cite_results": "{{n}} 条律条,↑↓ 选择,回车插入",
+    "cite_empty": "没有匹配的律条"
   },
   "sentence_plan": {
     "panel_title": "受刑计划",
