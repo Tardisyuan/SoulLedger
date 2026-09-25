@@ -13,7 +13,7 @@
     awaiting_reply  未归档 · 未关闭 · 最后一封是灵魂写的          最早在上(先来先回)
     replied         未归档 · 最后一封是殿司写的
     drafts          未归档 · 我有草稿
-    archived        我归档了的
+    archived        我归档了的(灵魂之后再来一封信,就回到未归档:`unarchive_for_letter`)
     assigned_to_me  未归档 · 同僚标给我的(`Conversation.assignee` 是我)
 
 `awaiting_reply` 与 `replied` 不相交;两者之外的未归档会话只有两种 —— 还没有一封信的,
@@ -119,6 +119,16 @@ def set_archived(conversation, user, archived):
     state.archived_at = timezone.now() if archived else None
     state.save(update_fields=["archived_at"])
     return state
+
+
+def unarchive_for_letter(conversation, written_at):
+    """灵魂的一封新信把会话从**每一位**在它之前归档了的官员的归档里拿回来(2026-09-26 产品定)。
+
+    只比「归档时刻 < 信的时刻」:晚到的回调带来的是归档之前写的信,官员归档时它已经在了,不拿回。
+    未读与「待回复」不必另写 —— 它们由 `last_soul_message_at` / `last_from` 算出来,调用方已经写了。"""
+    return InboxOfficerState.objects.filter(
+        conversation=conversation, archived_at__isnull=False, archived_at__lt=written_at
+    ).update(archived_at=None)
 
 
 def save_draft(conversation, user, text):
