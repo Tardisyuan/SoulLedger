@@ -261,6 +261,48 @@ export interface LedgerRecalculation {
   karmic_balance: number;
 }
 
+/** One category's weight inside the month (LedgerJournalCategorySerializer). */
+export interface LedgerJournalCategory {
+  category: string;
+  merit: number;
+  demerit: number;
+}
+
+/** One MERIT / DEMERIT record of the month. `day` is the UTC date the month
+ *  was cut on — group by it, never by the browser's local date. */
+export interface LedgerJournalRow {
+  id: string;
+  soul_id: string;
+  soul_name: string;
+  record_type: "MERIT" | "DEMERIT";
+  category: string;
+  description: string;
+  weight: number;
+  statute_clause: string;
+  recorded_at: string;
+  day: string;
+}
+
+/**
+ * 200 body of GET /ledger/journal/ — 功过总账 (backend/apps/ledger/journal.py).
+ * The four pillars are raw record weight, not the decayed `karmic_balance`:
+ * `opening + received - disbursed === closing`.
+ */
+export interface LedgerJournal {
+  month: string;
+  opening: number;
+  received: number;
+  disbursed: number;
+  closing: number;
+  soul_count: number;
+  record_count: number;
+  categories: LedgerJournalCategory[];
+  page: number;
+  page_size: number;
+  count: number;
+  results: LedgerJournalRow[];
+}
+
 export const ledgerApi = {
   // soulId is a UUID: both routes are `<uuid:soul_id>` in
   // backend/apps/ledger/urls.py. These took `number`, which cannot address
@@ -269,6 +311,8 @@ export const ledgerApi = {
   recalculate: (soulId: string) => api.post<LedgerRecalculation>(`/ledger/calculate/${soulId}/`),
   // Note the ordering: inheritance/ comes before the soul id in the URLconf.
   inheritance: (soulId: string) => api.get<LedgerInheritance>(`/ledger/inheritance/${soulId}/`),
+  journal: (params: { month: string; page?: number; civilization?: string; category?: string }) =>
+    api.get<LedgerJournal>("/ledger/journal/", { params }),
   statsOverview: () => api.get<LedgerStatsOverview>("/ledger/stats/overview/"),
   exportStats: (params?: Record<string, string>) => api.get<Blob>("/ledger/stats/export/", { params, responseType: "blob" }),
 };
