@@ -24,7 +24,7 @@ def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
     kinds = set(services.KIND_CATEGORY)
     assert {"rebirth_approved", "rebirth_rejected", "rebirth_appeal_rejected", "judgment_result",
             "disposition_executed", "residence_approved", "residence_started", "residence_returned",
-            "sentence_waiting", "sentence_completed", "sentence_amended", "sentence_pardoned", "chat_message"} == kinds
+            "sentence_waiting", "sentence_completed", "sentence_amended", "sentence_pardoned", "chat_message", "social_warned"} == kinds
     for locale, pack in MESSAGES.items():
         assert set(pack) == kinds, locale
         assert all(entry["title"] and entry["body"] for entry in pack.values())
