@@ -59,6 +59,8 @@ export const judgmentKeys = {
    * that root.
    */
   precedents: (id: string, limit?: number) => [...judgmentKeys.all, "precedents", id, limit ?? null] as const,
+  /** 「下一件」 after `after`. Under `all` so a conclusion's invalidate reaches it. */
+  after: (after: string, skip: string[] = []) => [...judgmentKeys.all, "after", { after, skip }] as const,
   /** 「上一件」 from `at`. Under `all` so a conclusion's invalidate reaches it. */
   previous: (at: string, skip: string[] = []) => [...judgmentKeys.all, "previous", { at, skip }] as const,
   /** 「戊 · 发落」 options. Under `all`: a conclusion elsewhere changes occupancy. */
