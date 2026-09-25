@@ -74,6 +74,27 @@ def term_has_ended(term_start, sentence_years, today: datetime.date) -> bool:
     return (today.year, today.month, today.day) >= (end_year, end_month, end_day)
 
 
+def reopen_if_term_extended(disposition, today: datetime.date | None = None) -> bool:
+    """期满之后刑期或起算日被改、新的期满日还没到:清掉 `expired_at`。返回是否清了。
+
+    只在算得出一个期满日、且它在 `today` 之后时清 —— 改成永久刑、或把刑期删掉,
+    都不是「刑期延长到某一天」,期满记录留着。改了但仍已走完(改短、或延长了却仍在过去)
+    也留着。不 `save()`:调用方(`DispositionSerializer.update`)写。
+    """
+    if disposition.expired_at is None or disposition.is_eternal:
+        return False
+    start = effective_term_start(
+        (disposition.term_start_year, disposition.term_start_month, disposition.term_start_day),
+        disposition.executed_at,
+    )
+    if term_end(start, disposition.sentence_years) is None:
+        return False
+    if term_has_ended(start, disposition.sentence_years, today or timezone.localdate()):
+        return False
+    disposition.expired_at = None
+    return True
+
+
 def candidates(tenant_id, today: datetime.date):
     """这个租户里**可能**今天期满的处置(SQL 粗筛;精确判定在 `term_has_ended`)。
 

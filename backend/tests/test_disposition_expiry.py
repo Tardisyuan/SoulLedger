@@ -266,3 +266,62 @@ class TestManagementCommand:
     def test_unknown_tenant_is_an_error(self, tenant):
         with pytest.raises(CommandError):
             call_command("expire_dispositions", "--tenant", "NOPE")
+
+
+# ---------------------------------------------------------------------------
+# A term extended after expiry (产品负责人 2026-09-25)
+# ---------------------------------------------------------------------------
+
+def _patch(row, **data):
+    from apps.disposition.serializers import DispositionSerializer
+
+    serializer = DispositionSerializer(instance=row, data=data, partial=True)
+    assert serializer.is_valid(), serializer.errors
+    serializer.save()
+    row.refresh_from_db()
+    return row
+
+
+@pytest.mark.django_db
+class TestTermExtendedAfterExpiry:
+    @pytest.fixture
+    def expired(self, tenant):
+        row = _disposition(tenant, "served")  # 2000-06-15 + 10 → 2010-06-15
+        expire_for_tenant(tenant, today=BOUNDARY)
+        row.refresh_from_db()
+        assert row.expired_at is not None
+        return row
+
+    def test_a_term_lengthened_past_today_clears_the_expiry(self, expired):
+        years = timezone.localdate().year - 2000 + 5
+        assert _patch(expired, sentence_years=years).expired_at is None
+
+    def test_a_start_moved_so_the_end_is_in_the_future_clears_it(self, expired):
+        today = timezone.localdate()
+        start = {"year": today.year - 5, "month": today.month, "day": today.day}
+        assert _patch(expired, term_start=start).expired_at is None
+
+    def test_a_term_changed_but_still_in_the_past_keeps_it(self, expired):
+        stamp = expired.expired_at
+        assert _patch(expired, sentence_years=12).expired_at == stamp  # ends 2012
+        assert _patch(expired, sentence_years=5).expired_at == stamp
+
+    def test_a_term_made_eternal_or_unrecorded_keeps_it(self, expired):
+        stamp = expired.expired_at
+        assert _patch(expired, sentence_years=None).expired_at == stamp
+        assert _patch(expired, is_eternal=True).expired_at == stamp
+
+    def test_an_edit_that_touches_no_term_column_keeps_it(self, expired):
+        stamp = expired.expired_at
+        assert _patch(expired, notes="looked at this").expired_at == stamp
+
+    def test_the_api_clears_it_too(self, api_client, admin_user, expired):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        token = RefreshToken.for_user(admin_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+        years = timezone.localdate().year - 2000 + 5
+        response = api_client.patch(f"/api/v1/disposition/{expired.pk}/", {"sentence_years": years}, format="json")
+        assert response.status_code == 200, response.data
+        assert response.data["expired_at"] is None
+        assert response.data["section"] == "executing"
