@@ -393,6 +393,8 @@ class TestPasswordHelpReachesTheRightAdministrators:
         first = rows[0]["request_context"]
         assert first["role"] == "JUDGE"
         assert first["hall"] == cast["judge"].tenant.hall_names["zh-Hans"]
+        # 「去用户页」 opens /users?username=<this>.
+        assert first["username"] == "cn_judge"
 
     def test_the_24h_count_forgets_requests_older_than_a_day(self, cast):
         from datetime import timedelta

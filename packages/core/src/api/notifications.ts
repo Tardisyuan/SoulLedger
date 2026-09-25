@@ -16,9 +16,10 @@ export interface Notification {
   /**
    * A password-help request (`PASSWORD_HELP_REQUESTED`): the requesting account's
    * hall (in the reader's language), role code, and this request's place among
-   * that account's requests in the last 24 hours. Null on every other notification.
+   * that account's requests in the last 24 hours, and its username (「去用户页」 opens
+   * `/users?username=…`). Null on every other notification.
    */
-  request_context?: { hall: string | null; role: string; count_24h: number } | null;
+  request_context?: { hall: string | null; role: string; count_24h: number; username: string } | null;
 }
 
 export const notificationsApi = {

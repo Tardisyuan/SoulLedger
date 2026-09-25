@@ -186,6 +186,12 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if search:
             qs = qs.filter(username__icontains=search) | qs.filter(email__icontains=search)
 
+        # One account by its exact username: the password-help notification's
+        # 「去用户页」 lands on `/users?username=<u>` (第三类 F 组 2.6).
+        username = params.get('username', '').strip()
+        if username:
+            qs = qs.filter(username=username)
+
         # Filter by role
         role = params.get('role', '').strip()
         if role:

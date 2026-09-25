@@ -77,7 +77,7 @@ describe("a password-help notification", () => {
       notification_type: "PASSWORD_HELP_REQUESTED",
       title: "重设密码求助",
       message: "有人在登录页以账号「cuijue」请求重设密码。",
-      request_context: { hall: "第五殿", role: "JUDGE", count_24h: 2 },
+      request_context: { hall: "第五殿", role: "JUDGE", count_24h: 2, username: "cui jue" },
     });
 
   it("carries the hall · role · 24h line, 去用户页 for an administrator, and 不是本人 · 忽略 marks it read", async () => {
@@ -87,7 +87,7 @@ describe("a password-help notification", () => {
     const line = await screen.findByTestId("request-context");
     // The role goes through DomainEnum (this t() stub knows no labels, so it reads as unrecognised here).
     expect(line.textContent).toMatch(/^第五殿 · .+ · notifications\.help_count_24h:2$/);
-    expect(screen.getByRole("link", { name: "notifications.help_open_users" })).toHaveAttribute("href", "/users");
+    expect(screen.getByRole("link", { name: "notifications.help_open_users" })).toHaveAttribute("href", "/users?username=cui%20jue");
     // The generic mark-read button is replaced, not doubled.
     expect(screen.queryByRole("button", { name: "notifications.mark_read" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "notifications.help_ignore" }));

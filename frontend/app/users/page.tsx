@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, permApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
@@ -20,8 +21,25 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 
+/** The row `?username=` located. */
+const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
+
 export default function UsersPage() {
+  // useSearchParams needs a Suspense boundary under the App Router build (as app/death-sync/page.tsx).
+  return (
+    <Suspense fallback={null}>
+      <UsersRoute />
+    </Suspense>
+  );
+}
+
+function UsersRoute() {
   const { t } = useI18n();
+  const router = useRouter();
+  // `?username=<u>`: the password-help notification's 「去用户页」 (第三类 F 组 2.6) lands on
+  // exactly that account — an exact-match filter on the server, and the row highlighted.
+  // No such account → the normal empty result.
+  const located = useSearchParams().get("username") ?? "";
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
@@ -34,9 +52,15 @@ export default function UsersPage() {
 
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: userKeys.list({ page, search, role: roleFilter, ordering }),
+    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located }),
     queryFn: async () => {
-      const res = await usersApi.list({ page, search, role: roleFilter || undefined, ordering: ordering || undefined });
+      const res = await usersApi.list({
+        page,
+        search,
+        role: roleFilter || undefined,
+        ordering: ordering || undefined,
+        username: located || undefined,
+      });
       return res.data;
     },
   });
@@ -173,13 +197,20 @@ export default function UsersPage() {
         keyExtractor={(user) => String(user.id)}
         renderRow={(user) => (
           <>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink))] font-medium">
+            <td
+              data-located={user.username === located ? "" : undefined}
+              className={cn(
+                "px-4 py-3 text-[oklch(var(--color-ink))] font-medium",
+                user.username === located && "shadow-[inset_3px_0_0_oklch(var(--color-accent))]",
+                user.username === located && LOCATED_BG
+              )}
+            >
               {user.username}
             </td>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
+            <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.email}
             </td>
-            <td className="px-4 py-3">
+            <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 规范 v1 §2「徽章 · 只有常态」:无底色,字与 1 px 边同色。角色是身份,
                   不是系统状态,所以不借反馈色 —— 一律中性,名字本身区分。 */}
               <Badge>
@@ -188,16 +219,16 @@ export default function UsersPage() {
                 )}
               </Badge>
             </td>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
+            <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.tenant?.display_name || user.tenant?.code || "-"}
             </td>
-            <td className="px-4 py-3">
+            <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 状态 = 颜色 + 字形(规范 v1 §1.2),不只靠颜色。 */}
               <Badge tone={user.is_active ? "success" : "neutral"} glyph={user.is_active ? "✓" : "○"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
               </Badge>
             </td>
-            <td className="px-4 py-3 text-right">
+            <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
               <div className="flex items-center justify-end gap-1">
                 <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" variant="ghost" onClick={() => setEditingUser(user)}>
@@ -232,11 +263,12 @@ export default function UsersPage() {
           setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
           setPage(1);
         }}
-        isFiltered={Boolean(search || roleFilter)}
+        isFiltered={Boolean(search || roleFilter || located)}
         onClearFilters={() => {
           setSearch("");
           setRoleFilter("");
           setPage(1);
+          if (located) router.replace("/users");
         }}
         emptyMessage={t("users.no_users")}
         page={page}

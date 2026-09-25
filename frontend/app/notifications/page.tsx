@@ -357,7 +357,10 @@ export default function NotificationsPage() {
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {canManageUsers && (
-                        <Link href="/users" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+                        <Link
+                          href={`/users?username=${encodeURIComponent(notification.request_context.username)}`}
+                          className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        >
                           {t("notifications.help_open_users")}
                         </Link>
                       )}
