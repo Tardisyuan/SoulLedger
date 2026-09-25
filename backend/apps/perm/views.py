@@ -21,7 +21,16 @@ from apps.perm.matrix import (
 )
 from apps.perm.services import get_role_permission_codenames
 
-from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
+from .models import (
+    DEFAULT_PERMISSIONS,
+    DEFAULT_ROLES,
+    ROLE_PERMISSIONS,
+    FieldPermission,
+    Permission,
+    Role,
+    RolePermission,
+    RowLevelDataScope,
+)
 from .serializers import (
     InitRolePermissionsResultSerializer,
     InitRolesResultSerializer,
@@ -561,9 +570,10 @@ def copy_role(request, pk):
     复制为新角色：新 code、同一组授权（仅 ADMIN）
 
     Copies the source's RolePermission rows — permission, `conditions` and
-    `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-    FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-    copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+    `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+    2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+    the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+    short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
     """
     try:
         source = Role.objects.get(pk=pk)
@@ -595,6 +605,25 @@ def copy_role(request, pk):
             )
             for g in grants
         ])
+        # Plain rows with no signal receivers of their own; copied field for
+        # field (every column but the key and the role).
+        field_rules = [
+            FieldPermission(
+                role=role, model_name=f.model_name, field_name=f.field_name, visible=f.visible,
+                read_only=f.read_only, editable=f.editable, is_active=f.is_active,
+            )
+            for f in FieldPermission.objects.filter(role=source)
+        ]
+        FieldPermission.objects.bulk_create(field_rules)
+        row_scopes = [
+            RowLevelDataScope(
+                role=role, civilization=s.civilization, model_name=s.model_name,
+                filter_conditions=s.filter_conditions, scope_type=s.scope_type,
+                priority=s.priority, is_active=s.is_active,
+            )
+            for s in RowLevelDataScope.objects.filter(role=source)
+        ]
+        RowLevelDataScope.objects.bulk_create(row_scopes)
         from apps.audit.models import AuditAction, AuditLog
 
         AuditLog.objects.create(
@@ -606,6 +635,8 @@ def copy_role(request, pk):
             changes={
                 "copied_from": source.name,
                 "permissions": {"old": [], "new": sorted(g.permission.codename for g in grants)},
+                "field_permissions": len(field_rules),
+                "row_level_scopes": len(row_scopes),
             },
             description=f"Role {name} created as a copy of {source.name}"[:500],
             ip_address=get_client_ip(request),
