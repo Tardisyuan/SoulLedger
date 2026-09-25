@@ -94,6 +94,15 @@ export const socialModerationApi = {
   /** All or nothing, 1–200 ids; 404 `not_found` with `missing` when any id is not in this civilization's list. */
   removeWords: (ids: string[]) =>
     api.post<{ deleted: number }>("/social-moderation/sensitive-words/batch-delete/", { ids }),
+  /**
+   * ADMIN only (403 `admin_only` for anyone else): copy every word of another
+   * civilization into the current one, keeping category and action. Words the
+   * current list already has are skipped. The reply is two counts, never words.
+   */
+  copyWords: (sourceTenant: string) =>
+    api.post<{ copied: number; skipped: number }>("/social-moderation/sensitive-words/copy-from/", {
+      source_tenant: sourceTenant,
+    }),
   /** Hidden and officer-deleted posts and comments, newest first. */
   handled: (params: HandledFilters) =>
     api.get<PaginatedResponse<HandledContent>>("/social-moderation/handled/", { params }),

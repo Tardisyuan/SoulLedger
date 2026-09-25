@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type {
   SensitiveWord,
   SensitiveWordAction,
@@ -8,12 +9,16 @@ import type {
 } from "@soulledger/core/api/social-moderation";
 import {
   useAddSensitiveWord,
+  useCopySensitiveWords,
   useRemoveSensitiveWords,
   useSensitiveWords,
   useUpdateSensitiveWord,
   useUpdateSensitiveWords,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { PAGE_SIZE } from "@soulledger/core/api";
+import { tenantsApi } from "@soulledger/core/api/tenants";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
@@ -39,6 +44,9 @@ type WordDraft = { id: string; word: string; category: SensitiveWordCategory | "
  *
  * 点整行打开编辑抽屉(PATCH:类别每次都必填,与新建同一条规则 —— 旧的未分类词要先选类别才能存);
  * 批量条的「改动作…」走 batch-update,与 batch-delete 一样全有或全无。
+ *
+ * 空词表不是死路(E-08b 空态):ADMIN 看得到「从其他文明复制」,别人看不到 —— 那是唯一一条
+ * 读别的文明词表的路径,服务端也只放 ADMIN。
  */
 export function SensitiveWordsSection() {
   const { t, formatDateTime } = useI18n();
@@ -65,6 +73,28 @@ export function SensitiveWordsSection() {
   const updateMany = useUpdateSensitiveWords();
   const [editing, setEditing] = useState<WordDraft | null>(null);
   const [batchAction, setBatchAction] = useState<SensitiveWordAction | null>(null);
+
+  const { isAdmin } = usePermissions();
+  const { tenantCode } = useTenant();
+  const copy = useCopySensitiveWords();
+  const [copying, setCopying] = useState(false);
+  const [source, setSource] = useState("");
+  const tenants = useQuery({
+    queryKey: ["tenants", 1],
+    queryFn: async () => (await tenantsApi.list()).data,
+    enabled: isAdmin && copying,
+  });
+  const sources = (tenants.data?.results ?? []).filter((c) => c.code !== tenantCode);
+  const copyFrom = () =>
+    source &&
+    copy.mutate(source, {
+      onSuccess: ({ copied, skipped }) => {
+        setCopying(false);
+        setSource("");
+        showToast(t("social_moderation.words.copy_done", { copied: String(copied), skipped: String(skipped) }), "success");
+      },
+      onError: fail,
+    });
 
   const saveEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,6 +229,13 @@ export function SensitiveWordsSection() {
         isError={list.isError && !list.data}
         onRetry={() => list.refetch()}
         emptyMessage={t("social_moderation.empty.words")}
+        emptyAction={
+          isAdmin ? (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setCopying(true)}>
+              {t("social_moderation.words.copy_from")}
+            </Button>
+          ) : undefined
+        }
         keyExtractor={(w) => w.id}
         selection={{
           selected,
@@ -288,6 +325,41 @@ export function SensitiveWordsSection() {
             {ACTIONS.map((a) => (
               <option key={a} value={a}>
                 {t(`social_moderation.word_action.${a}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </Modal>
+
+      <Modal
+        isOpen={copying}
+        onClose={() => setCopying(false)}
+        title={t("social_moderation.words.copy_from")}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setCopying(false)} disabled={copy.isPending}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="button" variant="primary" onClick={copyFrom} loading={copy.isPending} disabled={!source}>
+              {t("social_moderation.words.copy_confirm")}
+            </Button>
+          </div>
+        }
+      >
+        <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.words.copy_hint")}</p>
+        <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
+          {t("social_moderation.words.copy_source")}
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+          >
+            <option value="" disabled>
+              {t("social_moderation.words.copy_source_placeholder")}
+            </option>
+            {sources.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.display_name}
               </option>
             ))}
           </select>

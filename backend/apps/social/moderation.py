@@ -274,6 +274,31 @@ def update_sensitive_words(queryset, ids, *, actor, request=None, **fields):
     return len(rows)
 
 
+def copy_sensitive_words(source, target, *, actor, request=None):
+    """把 `source` 文明的整张词表复制进 `target`,类别与动作照搬,命中计数不带。
+    `target` 里已有的词(同一个小写形)跳过。返回 `(copied, skipped)`。
+
+    **只有 ADMIN 能调**(视图里判):这是唯一一条读另一个文明词表的路径,而回包只有两个数。
+    每复制一个词走一次 `add_sensitive_word` —— 同一条审计、同一个保存点:已有的词撞唯一约束,
+    回滚的只是那一个保存点,记为「跳过」(PostgreSQL 上失败语句会中止事务,所以必须在保存点里撞)。
+    """
+    if source.pk == target.pk:
+        raise SocialError("源文明与目标文明相同。", "same_tenant", 400)
+    copied = skipped = 0
+    with transaction.atomic():
+        for row in SensitiveWord.objects.filter(tenant=source).order_by("word"):
+            try:
+                add_sensitive_word(target, row.word, actor=actor, request=request,
+                                   category=row.category, action=row.action)
+            except SocialError as exc:
+                if exc.code != "duplicate_word":
+                    raise
+                skipped += 1
+                continue
+            copied += 1
+    return copied, skipped
+
+
 def remove_sensitive_word(row, *, actor, request=None):
     with transaction.atomic():
         audit("DELETE", row.tenant, row.pk, f"删除敏感词「{row.word}」", actor=actor, request=request)

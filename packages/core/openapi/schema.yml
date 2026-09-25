@@ -10799,6 +10799,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModerationError'
           description: ''
+  /api/v1/social-moderation/sensitive-words/copy-from/:
+    post:
+      operationId: v1_social_moderation_sensitive_words_copy_from_create
+      description: |-
+        从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
+        不该借它看见别处的词。回包只有计数,不含词本身。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordCopy'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordCopy'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordCopy'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWordCopyResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
   /api/v1/social/comments/:
     get:
       operationId: v1_social_comments_list
@@ -24417,6 +24471,28 @@ components:
           type: integer
       required:
       - updated
+    SensitiveWordCopy:
+      type: object
+      description: |-
+        Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
+        civilization by code. The target is the caller's current civilization.
+      properties:
+        source_tenant:
+          type: string
+          maxLength: 50
+      required:
+      - source_tenant
+    SensitiveWordCopyResult:
+      type: object
+      properties:
+        copied:
+          type: integer
+        skipped:
+          type: integer
+          description: 目标文明里已有的词,不覆盖。
+      required:
+      - copied
+      - skipped
     SensitiveWordCreate:
       type: object
       description: |-
