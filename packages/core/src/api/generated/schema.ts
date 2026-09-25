@@ -6459,6 +6459,19 @@ export interface components {
             readonly decided_at: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            /**
+             * Format: uuid
+             * @description 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+             */
+            readonly reject_to: string | null;
+            readonly decision_history: unknown;
+            readonly timeout_hours: number | null;
+            readonly timeout_action: components["schemas"]["ApprovalNodeTimeoutActionEnum"];
+            readonly timeout_role: string;
+            /** Format: date-time */
+            readonly activated_at: string | null;
+            /** Format: date-time */
+            readonly timed_out_at: string | null;
         };
         /**
          * @description * `ACTOR` - 角色
@@ -6485,6 +6498,13 @@ export interface components {
          * @enum {string}
          */
         ApprovalNodeStatusEnum: "PENDING" | "APPROVED" | "REJECTED" | "SKIPPED" | "ESCALATED";
+        /**
+         * @description * `ESCALATE` - 转交上级
+         *     * `AUTO_REJECT` - 自动驳回
+         *     * `NOTIFY` - 提醒
+         * @enum {string}
+         */
+        ApprovalNodeTimeoutActionEnum: "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
         /**
          * @description Serializer for ApprovalWorkflow.
          *
@@ -6541,6 +6561,8 @@ export interface components {
             /** Format: date-time */
             readonly completed_at: string | null;
             readonly template_version_number: number | null;
+            readonly return_count: number;
+            readonly end_reason: string;
             readonly tenant: number | null;
         };
         /** @description Lightweight serializer for listing workflows. */
@@ -9542,6 +9564,19 @@ export interface components {
             readonly decided_at?: string | null;
             /** Format: date-time */
             readonly created_at?: string;
+            /**
+             * Format: uuid
+             * @description 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+             */
+            readonly reject_to?: string | null;
+            readonly decision_history?: unknown;
+            readonly timeout_hours?: number | null;
+            readonly timeout_action?: components["schemas"]["ApprovalNodeTimeoutActionEnum"];
+            readonly timeout_role?: string;
+            /** Format: date-time */
+            readonly activated_at?: string | null;
+            /** Format: date-time */
+            readonly timed_out_at?: string | null;
         };
         /**
          * @description Serializer for ApprovalWorkflow.
@@ -9599,6 +9634,8 @@ export interface components {
             /** Format: date-time */
             readonly completed_at?: string | null;
             readonly template_version_number?: number | null;
+            readonly return_count?: number;
+            readonly end_reason?: string;
             readonly tenant?: number | null;
         };
         PatchedComment: {
@@ -12287,6 +12324,10 @@ export interface components {
             position?: {
                 [key: string]: number;
             } | null;
+            reject_to?: string | null;
+            timeout_hours?: number | null;
+            timeout_action?: (components["schemas"]["WorkflowTemplateNodeTimeoutActionEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            timeout_role?: string | null;
         };
         /**
          * @description * `ACTOR` - ACTOR
@@ -12304,6 +12345,13 @@ export interface components {
          * @enum {string}
          */
         WorkflowTemplateNodeNodeTypeEnum: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
+        /**
+         * @description * `ESCALATE` - ESCALATE
+         *     * `AUTO_REJECT` - AUTO_REJECT
+         *     * `NOTIFY` - NOTIFY
+         * @enum {string}
+         */
+        WorkflowTemplateNodeTimeoutActionEnum: "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
         /**
          * @description One row of a template's version history. Read-only: versions are written
          *     by `versioning.py` alone, through save and publish.

@@ -33,7 +33,7 @@ class PublishRejectedError(Exception):
     """The draft fails validation (`apps/workflow/validation.py`); nothing was written."""
 
     def __init__(self, issues: list[dict]):
-        super().__init__(f"{len(issues)} validation issue(s)")
+        super().__init__(f"{len(issues)} validation issue(s): {issues}")
         self.issues = issues
 
 

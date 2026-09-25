@@ -14230,16 +14230,52 @@ components:
           type: string
           format: date-time
           readOnly: true
+        reject_to:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+        decision_history:
+          readOnly: true
+        timeout_hours:
+          type: integer
+          readOnly: true
+          nullable: true
+        timeout_action:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeTimeoutActionEnum'
+          readOnly: true
+        timeout_role:
+          type: string
+          readOnly: true
+        activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        timed_out_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
       required:
+      - activated_at
       - approver
       - approver_display_name
       - approver_username
       - created_at
       - decided_at
+      - decision_history
       - id
       - node_name
       - node_order
+      - reject_to
       - status
+      - timed_out_at
+      - timeout_action
+      - timeout_hours
+      - timeout_role
       - verdict
       - workflow
     ApprovalNodeApproverTypeEnum:
@@ -14280,6 +14316,16 @@ components:
         * `REJECTED` - 已拒绝
         * `SKIPPED` - 已跳过
         * `ESCALATED` - 已升级
+    ApprovalNodeTimeoutActionEnum:
+      enum:
+      - ESCALATE
+      - AUTO_REJECT
+      - NOTIFY
+      type: string
+      description: |-
+        * `ESCALATE` - 转交上级
+        * `AUTO_REJECT` - 自动驳回
+        * `NOTIFY` - 提醒
     ApprovalWorkflow:
       type: object
       description: |-
@@ -14381,6 +14427,12 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        return_count:
+          type: integer
+          readOnly: true
+        end_reason:
+          type: string
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -14390,9 +14442,11 @@ components:
       - created_at
       - current_node
       - current_node_detail
+      - end_reason
       - id
       - judgment_verdict
       - nodes
+      - return_count
       - soul
       - soul_name
       - status
@@ -20560,6 +20614,35 @@ components:
           type: string
           format: date-time
           readOnly: true
+        reject_to:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+        decision_history:
+          readOnly: true
+        timeout_hours:
+          type: integer
+          readOnly: true
+          nullable: true
+        timeout_action:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeTimeoutActionEnum'
+          readOnly: true
+        timeout_role:
+          type: string
+          readOnly: true
+        activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        timed_out_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
     PatchedApprovalWorkflow:
       type: object
       description: |-
@@ -20661,6 +20744,12 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        return_count:
+          type: integer
+          readOnly: true
+        end_reason:
+          type: string
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -26346,6 +26435,24 @@ components:
             type: number
             format: double
           nullable: true
+        reject_to:
+          type: string
+          nullable: true
+        timeout_hours:
+          type: integer
+          maximum: 8760
+          minimum: 1
+          nullable: true
+        timeout_action:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WorkflowTemplateNodeTimeoutActionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        timeout_role:
+          type: string
+          nullable: true
+          maxLength: 20
       required:
       - node_name
     WorkflowTemplateNodeApproverTypeEnum:
@@ -26372,6 +26479,16 @@ components:
         * `APPEAL` - APPEAL
         * `FINAL` - FINAL
         * `EXECUTION` - EXECUTION
+    WorkflowTemplateNodeTimeoutActionEnum:
+      enum:
+      - ESCALATE
+      - AUTO_REJECT
+      - NOTIFY
+      type: string
+      description: |-
+        * `ESCALATE` - ESCALATE
+        * `AUTO_REJECT` - AUTO_REJECT
+        * `NOTIFY` - NOTIFY
     WorkflowTemplateVersion:
       type: object
       description: |-
