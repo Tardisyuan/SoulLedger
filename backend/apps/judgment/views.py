@@ -49,6 +49,8 @@ from apps.judgment.serializers import (
     JudgmentPrecedentSerializer,
     JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
+    JudgmentRateLimitedSerializer,
+    JudgmentReassignRequestResultSerializer,
     JudgmentReassignSerializer,
     JudgmentSerializer,
     QueueGroup,
@@ -217,6 +219,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'reassign': ['judgment.assign'],
         # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
         'assignable_officers': ['judgment.assign'],
+        # 「请管理员改派」:名单空了时请 ADMIN 来改派。能办这件案子的人就能为它求助。
+        'request_reassign': ['judgment.execute'],
         # 批量:与单件同一码名。`operation=reassign` 在动作体里再要 `judgment.assign` ——
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
@@ -885,6 +889,40 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         for officer in officers:
             officer.in_hand = in_hand.get(officer.pk, 0)
         return Response(AssignableOfficerSerializer(officers, many=True).data)
+
+    @extend_schema(
+        request=None,
+        responses={200: JudgmentReassignRequestResultSerializer, 429: JudgmentRateLimitedSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="request-reassign")
+    def request_reassign(self, request, pk=None):
+        """「请管理员改派」:改派名单空了(本殿没有别人能接),请案子所在租户的 ADMIN 来改派。
+
+        `judgment.execute` 与 `get_object()` 的租户范围:能办这件案子的人才能为它求助。
+        同一人对同一件案子 10 分钟一次,多了 429 `rate_limited` 带 `retry_after`。
+        通知走 `claims.request_reassign`(既有的官员通知路径)。
+        """
+        import math
+        import time
+
+        from django.core.cache import cache
+
+        judgment = self.get_object()
+        key = f"judgment_reassign_request:{judgment.pk}:{request.user.pk}"
+        until = time.time() + claims.REASSIGN_REQUEST_WINDOW_SECONDS
+        # `add` is atomic: two clicks at once cannot both pass. The value is when the
+        # window ends, because the cache API cannot read a key's remaining TTL.
+        if not cache.add(key, until, timeout=claims.REASSIGN_REQUEST_WINDOW_SECONDS):
+            held = cache.get(key)
+            retry_after = max(1, math.ceil(held - time.time())) if held else claims.REASSIGN_REQUEST_WINDOW_SECONDS
+            return Response(
+                {"error": "Already asked for this case; try again later.", "code": "rate_limited",
+                 "retry_after": retry_after},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(retry_after)},
+            )
+        notified = claims.request_reassign(judgment, request.user)
+        return Response({"notified": len(notified)})
 
     @staticmethod
     def _assignee(user_id):

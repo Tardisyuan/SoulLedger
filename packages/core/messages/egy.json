@@ -1280,7 +1280,11 @@
       "in_hand_n": "{{n}}",
       "reassign_you": "Ek",
       "reassign_empty_title": "Nen Wenen · Nen Sab Ky",
-      "reassign_empty_body": "Nen Sab Ky Em Per-Hemsu Pen."
+      "reassign_empty_body": "Nen Sab Ky Em Per-Hemsu Pen.",
+      "request_admin": "Dbh Sab Hery Er Hab Ky",
+      "request_admin_sent": "Dbh Sab Hery Seth",
+      "request_admin_limited": "Dbh Seth. Wehem Iri Er Khet {{minutes}} At",
+      "request_admin_failed": "Nen Hab. Wehem Iri"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -1417,7 +1421,8 @@
     "mark_all_error": "Nen Pedjet Wetu Maakheru Seth",
     "help_count_24h": "Sep {{n}} Em Unut 24",
     "help_open_users": "Wen Remetj",
-    "help_ignore": "Nen Ek · Imen"
+    "help_ignore": "Nen Ek · Imen",
+    "open_case": "Wen Wedja"
   },
   "realms": {
     "title": "Ta",
@@ -3154,6 +3159,10 @@
     "soul_inbox_assigned": {
       "title": "Sesh Hab Er Ek",
       "body": "{{soul}}: Sesh Hab Ky Er Ek ({{by}})."
+    },
+    "judgment_reassign_requested": {
+      "title": "Dbh Hab Ky",
+      "body": "{{by}}: Dbh Hab Ky Wedja En {{soul}}"
     }
   },
   "social_moderation": {

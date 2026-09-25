@@ -521,6 +521,20 @@ class AssignableOfficerSerializer(serializers.Serializer):
     in_hand = serializers.IntegerField(read_only=True)
 
 
+class JudgmentReassignRequestResultSerializer(serializers.Serializer):
+    """`POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。"""
+
+    notified = serializers.IntegerField(read_only=True)
+
+
+class JudgmentRateLimitedSerializer(serializers.Serializer):
+    """429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。"""
+
+    error = serializers.CharField()
+    code = serializers.CharField()
+    retry_after = serializers.IntegerField()
+
+
 class JudgmentBatchSerializer(serializers.Serializer):
     """`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。"""
 

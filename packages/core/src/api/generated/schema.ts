@@ -2098,6 +2098,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/request-reassign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 「请管理员改派」:改派名单空了(本殿没有别人能接),请案子所在租户的 ADMIN 来改派。
+         *
+         *     `judgment.execute` 与 `get_object()` 的租户范围:能办这件案子的人才能为它求助。
+         *     同一人对同一件案子 10 分钟一次,多了 429 `rate_limited` 带 `retry_after`。
+         *     通知走 `claims.request_reassign`(既有的官员通知路径)。
+         */
+        post: operations["v1_judgment_request_reassign_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/undefer/": {
         parameters: {
             query?: never;
@@ -8628,9 +8651,19 @@ export interface components {
             prior_cycles: components["schemas"]["Reincarnation"][];
             realm_options: components["schemas"]["RealmLocalized"][];
         };
+        /** @description 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。 */
+        JudgmentRateLimited: {
+            error: string;
+            code: string;
+            retry_after: number;
+        };
         /** @description `POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。 */
         JudgmentReassign: {
             to: number;
+        };
+        /** @description `POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。 */
+        JudgmentReassignRequestResult: {
+            readonly notified: number;
         };
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
@@ -9391,9 +9424,10 @@ export interface components {
          *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
          *     * `PASSWORD_HELP_REQUESTED` - Password Help Requested
          *     * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
+         *     * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerInbox: {
@@ -16783,6 +16817,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_request_reassign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentReassignRequestResult"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentRateLimited"];
                 };
             };
         };

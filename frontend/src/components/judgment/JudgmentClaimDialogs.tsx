@@ -5,7 +5,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
-import type { AssignableOfficer, JudgmentClaimRefusal } from "@soulledger/core/api";
+import { judgmentApi, type AssignableOfficer, type JudgmentClaimRefusal } from "@soulledger/core/api";
 import { useAssignableOfficers } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Modal } from "@/src/components/ui/Modal";
@@ -135,6 +135,61 @@ export function DeferDialog({
   );
 }
 
+type RequestState = { kind: "idle" | "sent" | "failed" } | { kind: "limited"; minutes: number };
+
+/**
+ * 「请管理员改派」:每件案子发一次 `POST /judgment/{id}/request-reassign/`,服务端通知
+ * 案子所在租户的 ADMIN。同一人同一件 10 分钟一次:全部被 429 挡下时说还要等几分钟
+ * (取各件 `retry_after` 的最大值);有一件真的发出去就算已请。
+ */
+function RequestAdminButton({ ids }: { ids: readonly string[] }) {
+  const { t } = useI18n();
+  const [state, setState] = useState<RequestState>({ kind: "idle" });
+  const [pending, setPending] = useState(false);
+
+  const send = async () => {
+    setPending(true);
+    const results = await Promise.allSettled(ids.map((id) => judgmentApi.requestReassign(id)));
+    setPending(false);
+    const refusals = results.flatMap((r) => (r.status === "rejected" ? [r.reason as ApiError] : []));
+    const limited = refusals.filter((e) => e?.response?.status === 429);
+    if (limited.length < refusals.length) setState({ kind: "failed" });
+    else if (refusals.length < results.length) setState({ kind: "sent" });
+    else {
+      const wait = Math.max(...limited.map((e) => e.response?.data?.retry_after ?? 600));
+      setState({ kind: "limited", minutes: Math.max(1, Math.ceil(wait / 60)) });
+    }
+  };
+
+  if (state.kind === "sent") {
+    return (
+      <p role="status" className="mt-2 text-[oklch(var(--color-ink))]">
+        {t("judgment.claim.request_admin_sent")}
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3">
+      <Button type="button" variant="secondary" size="sm" loading={pending} onClick={send}>
+        {t("judgment.claim.request_admin")}
+      </Button>
+      {state.kind === "limited" && (
+        <p role="status" className="mt-2 text-[oklch(var(--color-ink-muted))]">
+          {t("judgment.claim.request_admin_limited", { minutes: String(state.minutes) })}
+        </p>
+      )}
+      {state.kind === "failed" && (
+        <p role="alert" className="mt-2 text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true">! </span>
+          {t("judgment.claim.request_admin_failed")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type ApiError = { response?: { status?: number; data?: { retry_after?: number } } };
+
 /**
  * 改派:选一位能接下这些案子的官员。
  *
@@ -146,7 +201,7 @@ export function DeferDialog({
  *
  * 第三类 F 组 2.7:搜索判官 + 名单(方形首字块、姓名、角色、右侧等宽「在手」件数,读
  * `in_hand`)。自己也列出但置灰、写「· 你」、件数「—」,不可选。除自己之外没有人时是
- * 虚线框的空状态。画布上的「请管理员改派」按钮没有做:没有「请管理员改派」这个请求可发。
+ * 虚线框的空状态,带边框按钮「请管理员改派」(`RequestAdminButton`)。
  */
 export function ReassignDialog({
   isOpen,
@@ -215,6 +270,7 @@ export function ReassignDialog({
         <div data-testid="reassign-empty" className="border border-dashed border-[oklch(var(--color-line))] px-4 py-3 text-sm">
           <p className="font-semibold text-[oklch(var(--color-ink))]">{t("judgment.claim.reassign_empty_title")}</p>
           <p className="mt-1 text-[oklch(var(--color-ink-muted))]">{t("judgment.claim.reassign_empty_body")}</p>
+          <RequestAdminButton ids={ids} />
         </div>
       ) : (
         <div className="space-y-2">
