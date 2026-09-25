@@ -340,3 +340,55 @@ class LedgerOverviewStatsSerializer(serializers.Serializer):
     karma_distribution_total = serializers.IntegerField()
     recent_activity = RecentActivitySerializer(many=True)
     souls_by_realm = SoulsByRealmSerializer(many=True)
+
+
+class LedgerJournalCategorySerializer(serializers.Serializer):
+    """One category's merit and demerit weight inside the month."""
+
+    category = serializers.CharField()
+    merit = serializers.IntegerField()
+    demerit = serializers.IntegerField()
+
+
+class LedgerJournalRowSerializer(serializers.Serializer):
+    """One MERIT / DEMERIT record in the month. `day` is the UTC date the
+    month boundary was cut on — group by it, not by the browser's date."""
+
+    id = serializers.UUIDField()
+    soul_id = serializers.UUIDField()
+    soul_name = serializers.CharField()
+    record_type = serializers.CharField()
+    category = serializers.CharField()
+    description = serializers.CharField()
+    weight = serializers.IntegerField()
+    statute_clause = serializers.CharField(allow_blank=True)
+    recorded_at = serializers.DateTimeField()
+    day = serializers.DateField()
+
+
+class LedgerJournalSerializer(serializers.Serializer):
+    """200 body of `LedgerJournalView` — see apps/ledger/journal.py.
+
+    `opening + received - disbursed == closing`, all in raw record weight.
+    """
+
+    month = serializers.CharField()
+    opening = serializers.IntegerField()
+    received = serializers.IntegerField()
+    disbursed = serializers.IntegerField()
+    closing = serializers.IntegerField()
+    soul_count = serializers.IntegerField()
+    record_count = serializers.IntegerField()
+    categories = LedgerJournalCategorySerializer(many=True)
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    count = serializers.IntegerField()
+    results = LedgerJournalRowSerializer(many=True)
+
+
+class LedgerJournalErrorSerializer(serializers.Serializer):
+    """400 body of `LedgerJournalView`: which parameter, and why."""
+
+    error = serializers.CharField()
+    field = serializers.CharField()
+    message = serializers.CharField()
