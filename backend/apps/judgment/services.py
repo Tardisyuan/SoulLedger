@@ -217,6 +217,10 @@ class JudgmentConclusionService:
             judgment.notes = notes
             judgment.is_final = True
             judgment.concluded_at = timezone.now()
+            # 「戊 · 发落」的草稿随结案作废:发落已经写进结案本身。
+            judgment.draft_destination_realm = None
+            judgment.draft_term_years = None
+            judgment.draft_eternal = False
             # The admitted balance, frozen with the verdict — the rulings are
             # frozen from here on too (`_assert_open`).
             judgment.concluded_balance = EvidenceAdmissionService.admitted_net(judgment)
@@ -393,7 +397,8 @@ class EvidenceAdmissionService:
 
 
 class JudgmentDraftService:
-    """Autosave of the verdict text (`notes`) and the chosen verdict.
+    """Autosave of the verdict text (`notes`), the chosen verdict, and the
+    「戊 · 发落」 choice (destination realm, term, eternal).
 
     OPTIMISTIC CONCURRENCY ON `draft_version`. The write is one conditional
     UPDATE — `WHERE draft_version = <expected> AND verdict IS NULL AND NOT
@@ -407,7 +412,7 @@ class JudgmentDraftService:
     conflict with itself, and it overwrites nothing.
     """
 
-    FIELDS = ("notes", "draft_verdict")
+    FIELDS = ("notes", "draft_verdict", "draft_destination_realm_id", "draft_term_years", "draft_eternal")
 
     @classmethod
     def save(cls, judgment, expected_version: int, changes: dict):

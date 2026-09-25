@@ -1199,11 +1199,13 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
 
     @extend_schema(
         request=JudgmentDraftWriteSerializer,
-        responses={200: JudgmentDraftSerializer, 409: JudgmentDraftConflictSerializer},
+        responses={200: JudgmentDraftSerializer, 400: OpenApiTypes.OBJECT, 409: JudgmentDraftConflictSerializer},
     )
     @action(detail=True, methods=["patch"], url_path="draft")
     def save_draft(self, request, pk=None):
-        """Autosave the verdict text (`notes`) and the chosen verdict.
+        """Autosave the verdict text (`notes`), the chosen verdict, and the
+        「戊 · 发落」 choice (`draft_destination_realm_id` / `draft_term_years` /
+        `draft_eternal`; cleared when the case is concluded).
 
         `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
         "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
@@ -1217,6 +1219,16 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
         version = data.pop("version")
+        realm_id = data.get("draft_destination_realm_id")
+        # 草稿的界域也只能是结案时会收的那一类:本案租户、本文明、未软删。别的租户的界域与
+        # 不存在的同一个回答(与 `resolve_placement` 的 realm_not_found 一样,不透露它存在)。
+        if realm_id is not None and not Realm.objects.filter(
+            pk=realm_id, tenant_id=judgment.tenant_id, civilization=judgment.soul.civilization,
+        ).exists():
+            return Response(
+                {"draft_destination_realm_id": ["No such realm in this judgment's tenant."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         set_current_user(request.user)
         set_current_request(request)
         try:

@@ -4623,7 +4623,9 @@ paths:
     patch:
       operationId: v1_judgment_draft_partial_update
       description: |-
-        Autosave the verdict text (`notes`) and the chosen verdict.
+        Autosave the verdict text (`notes`), the chosen verdict, and the
+        「戊 · 发落」 choice (`draft_destination_realm_id` / `draft_term_years` /
+        `draft_eternal`; cleared when the case is concluded).
 
         `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
         "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
@@ -4660,6 +4662,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentDraft'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
         '409':
           content:
@@ -18232,6 +18241,18 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         claimed_by:
           type: integer
           readOnly: true
@@ -18291,7 +18312,10 @@ components:
       - deferred_at
       - deferred_by
       - deferred_by_name
+      - draft_destination_realm_id
+      - draft_eternal
       - draft_saved_at
+      - draft_term_years
       - draft_verdict
       - draft_version
       - evidence_count
@@ -18657,6 +18681,18 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         claimed_by:
           type: integer
           readOnly: true
@@ -18726,7 +18762,10 @@ components:
       - deferred_at
       - deferred_by
       - deferred_by_name
+      - draft_destination_realm_id
+      - draft_eternal
       - draft_saved_at
+      - draft_term_years
       - draft_verdict
       - draft_version
       - evidence_admissions
@@ -18753,6 +18792,18 @@ components:
           oneOf:
           - $ref: '#/components/schemas/VerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         draft_version:
           type: integer
           readOnly: true
@@ -18762,7 +18813,10 @@ components:
           readOnly: true
           nullable: true
       required:
+      - draft_destination_realm_id
+      - draft_eternal
       - draft_saved_at
+      - draft_term_years
       - draft_verdict
       - draft_version
       - notes
@@ -22890,6 +22944,18 @@ components:
         draft_version:
           type: integer
           readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
         claimed_by:
           type: integer
           readOnly: true
@@ -22952,6 +23018,16 @@ components:
           oneOf:
           - $ref: '#/components/schemas/VerdictEnum'
           - $ref: '#/components/schemas/NullEnum'
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          nullable: true
+        draft_term_years:
+          type: integer
+          minimum: 1
+          nullable: true
+        draft_eternal:
+          type: boolean
     PatchedMenuButtonCreateUpdate:
       type: object
       properties:

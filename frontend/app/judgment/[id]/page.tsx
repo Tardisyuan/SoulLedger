@@ -48,6 +48,7 @@ import {
   JudgmentPlacement,
   PLACEMENT_REFUSALS,
   placementFor,
+  placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
@@ -270,6 +271,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const notesTouched = useRef(false);
   /** Same rule for the chosen verdict: the saved draft's choice seeds it until the operator picks one. */
   const verdictTouched = useRef(false);
+  /** And for 戊 · 发落: the saved draft's destination / term seed it until the operator changes them. */
+  const placementTouched = useRef(false);
 
   useEffect(() => {
     if (judgment) {
@@ -279,6 +282,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       } else if (!verdictTouched.current && judgment.draft_verdict) {
         setSelectedVerdict(judgment.draft_verdict);
       }
+      const savedPlacement = placementFromDraft(judgment);
+      if (!placementTouched.current && savedPlacement) setPlacement(savedPlacement);
     }
   }, [judgment]);
 
@@ -325,6 +330,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     judgmentId: id,
     notes,
     verdict: selectedVerdict,
+    placement,
     enabled: !!judgment && !judgment.is_final && canExecute,
   });
   const chooseVerdict = (member: string) => {
@@ -804,6 +810,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     if (!theirs) return;
                     setNotes(theirs.notes);
                     setSelectedVerdict(theirs.draft_verdict ?? "");
+                    setPlacement(placementFromDraft(theirs) ?? EMPTY_PLACEMENT);
                   }}
                   onKeepMine={draft.keepMine}
                 />
@@ -825,9 +832,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               value={placement}
               onChange={(next) => {
                 concludeMutation.reset(); // 改了发落,上一次的拒绝就不再是这一份的
+                placementTouched.current = true;
                 setPlacement(next);
+                draft.markEdited();
               }}
               refusal={placementRefusal}
+              savedAt={draft.status === "idle" && !draft.conflict ? judgment.draft_saved_at : null}
             />
           )}
           {!isFinal && isAmendment && myTenant && (

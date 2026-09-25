@@ -1995,7 +1995,9 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * @description Autosave the verdict text (`notes`) and the chosen verdict.
+         * @description Autosave the verdict text (`notes`), the chosen verdict, and the
+         *     「戊 · 发落」 choice (`draft_destination_realm_id` / `draft_term_years` /
+         *     `draft_eternal`; cleared when the case is concluded).
          *
          *     `PATCH /api/v1/judgment/{id}/draft/` `{"version": 3, "notes": "...",
          *     "draft_verdict": "FAILED"}` — `version` is the `draft_version` the
@@ -8327,6 +8329,10 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at: string | null;
             readonly draft_version: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
             readonly claimed_by: number | null;
             readonly claimed_by_name: string | null;
             /** Format: date-time */
@@ -8526,6 +8532,10 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at: string | null;
             readonly draft_version: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
             readonly claimed_by: number | null;
             readonly claimed_by_name: string | null;
             /** Format: date-time */
@@ -8556,6 +8566,10 @@ export interface components {
         JudgmentDraft: {
             readonly notes: string;
             readonly draft_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
             readonly draft_version: number;
             /** Format: date-time */
             readonly draft_saved_at: string | null;
@@ -10643,6 +10657,10 @@ export interface components {
             /** Format: date-time */
             readonly draft_saved_at?: string | null;
             readonly draft_version?: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id?: string | null;
+            readonly draft_term_years?: number | null;
+            readonly draft_eternal?: boolean;
             readonly claimed_by?: number | null;
             readonly claimed_by_name?: string | null;
             /** Format: date-time */
@@ -10675,6 +10693,10 @@ export interface components {
             version?: number;
             notes?: string;
             draft_verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: uuid */
+            draft_destination_realm_id?: string | null;
+            draft_term_years?: number | null;
+            draft_eternal?: boolean;
         };
         PatchedMenuButtonCreateUpdate: {
             readonly id?: number;
@@ -16665,6 +16687,16 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentDraft"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             409: {
