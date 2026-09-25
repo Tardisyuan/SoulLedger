@@ -1118,7 +1118,7 @@
       "reassign_hint": "只列本租户的在职官员；办案权限由服务端再核一次",
       "pick_officer": "— 选择官员 —",
       "officer_required": "请选择一位官员",
-      "officers_unavailable": "读不到官员名单（需要用户管理权限）",
+      "officers_unavailable": "读不到官员名单（需要改派权限）",
       "reassign_confirm": "改派",
       "done_claim": "已认领 {{n}} 件",
       "done_reassign": "已改派 {{n}} 件",
