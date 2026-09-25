@@ -76,6 +76,31 @@ def test_a_revoke_on_an_admin_cell_is_refused_and_nothing_is_written(world):
     assert Role.objects.get(name="ADMIN").version == version  # no write, no version bump
 
 
+def test_the_whole_set_assign_refuses_removing_any_admin_row(world):
+    admin_role = Role.objects.get(name="ADMIN")
+    p = world["perms"]
+    for c in ("soul.read", "soul.update"):
+        RolePermission.objects.get_or_create(role=admin_role, permission=p[c])
+    version = Role.objects.get(name="ADMIN").version
+
+    res = world["client"].post(ASSIGN, {"role": "ADMIN", "permission_ids": [p["soul.read"].pk]}, format="json")
+    assert res.status_code == 400, res.content
+    assert res.json()["code"] == "admin_always_all" and "soul.update" in res.json()["error"]
+    assert _held("ADMIN", "soul.read") and _held("ADMIN", "soul.update")
+    assert Role.objects.get(name="ADMIN").version == version
+
+    # A superset still saves, and another role's shrink is not ADMIN's rule.
+    held = set(RolePermission.objects.filter(role=admin_role).values_list("permission_id", flat=True))
+    everything = sorted(held | {p[c].pk for c in CODENAMES})
+    ok = world["client"].post(ASSIGN, {"role": "ADMIN", "permission_ids": everything}, format="json")
+    assert ok.status_code == 200, ok.content
+    assert all(_held("ADMIN", c) for c in CODENAMES)
+    RolePermission.objects.get_or_create(role=Role.objects.get(name="JUDGE"), permission=p["soul.update"])
+    shrink = world["client"].post(ASSIGN, {"role": "JUDGE", "permission_ids": []}, format="json")
+    assert shrink.status_code == 200, shrink.content
+    assert not _held("JUDGE", "soul.update")
+
+
 def test_a_grant_to_admin_is_still_accepted(world):
     body = _post(world, [{"role": "ADMIN", "permission_id": world["perms"]["soul.update"].pk, "action": "grant"}])
     assert [r["status"] for r in body["results"]] == ["saved"]

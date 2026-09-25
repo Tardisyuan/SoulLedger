@@ -14,8 +14,10 @@ from apps.core.permissions import IsAdminPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
 from apps.perm.matrix import (
+    ADMIN_ALWAYS_ALL,
     ADMIN_ONLY_PERMISSION,
     ROLE_FORBIDDEN_PERMISSION,
+    admin_always_all_violations,
     admin_only_violations,
     role_forbidden_violations,
 )
@@ -312,6 +314,19 @@ def assign_role_permissions(request):
             return Response(
                 {"error": f"{role.name} may not hold {', '.join(sorted(forbidden))}",
                  "code": ROLE_FORBIDDEN_PERMISSION},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # The whole-set replace is a revoke of every row it leaves out; ADMIN
+        # refuses those exactly as the matrix save does (apps/perm/matrix.py).
+        kept = admin_always_all_violations(
+            role.name,
+            set(RolePermission.objects.filter(role=role).values_list("permission__codename", flat=True))
+            - set(requested),
+        )
+        if kept:
+            return Response(
+                {"error": f"ADMIN always holds every permission; cannot remove {', '.join(sorted(kept))}",
+                 "code": ADMIN_ALWAYS_ALL},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

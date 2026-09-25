@@ -96,6 +96,12 @@ def admin_only_violations(role_name, codenames):
     return set() if role_name == ADMIN_ROLE_NAME else ADMIN_ONLY_CODENAMES & set(codenames)
 
 
+def admin_always_all_violations(role_name, removed_codenames):
+    """The codenames in `removed_codenames` that may not be taken from
+    `role_name`: all of them for ADMIN (``admin_always_all``), none otherwise."""
+    return set(removed_codenames) if role_name == ADMIN_ROLE_NAME else set()
+
+
 def role_forbidden_violations(role_name, codenames):
     """The codenames in `codenames` that `role_name` may never be granted."""
     return ROLE_FORBIDDEN_CODENAMES.get(role_name, frozenset()) & set(codenames)
@@ -186,7 +192,7 @@ def apply_changes(changes, expected_versions=None, acknowledge_conflicts=False):
                                f"Permission ID {change['permission_id']} not found")
                         continue
                     want = change["action"] == GRANT
-                    if not want and role_name == ADMIN_ROLE_NAME:
+                    if not want and admin_always_all_violations(role_name, [permission.codename]):
                         result(i, REFUSED, ADMIN_ALWAYS_ALL,
                                "ADMIN always holds every permission", permission.codename)
                         continue
