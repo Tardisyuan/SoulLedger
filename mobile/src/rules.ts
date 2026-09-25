@@ -215,6 +215,37 @@ export function formatStamp(iso: string | null | undefined): string | null {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// ── password reset (「忘记密码」) ──────────────────────────────────────
+
+/** The code's life: `reset_password_request` caches it with `timeout=300`. */
+export const RESET_CODE_TTL_SECONDS = 300;
+/**
+ * When a resend is offered. `PasswordResetThrottle` allows 3 requests per 5
+ * minutes per IP (`"password_reset": "3/5minute"`), so 300 / 3 is the pace one
+ * device can keep up without ever meeting that throttle. It is not a promise:
+ * the backend also counts 3 per address and restarts that window on every send,
+ * so a fourth send inside five minutes of the last is still a 429.
+ */
+export const RESEND_AFTER_SECONDS = 100;
+
+/** Six digits, as `SetNewPasswordSerializer.validate_code` requires. */
+export const RESET_CODE = /^\d{6}$/;
+
+/**
+ * Enough of an address to be worth sending: something@something.something, no
+ * spaces. The server's `EmailField` is the real judge; this only keeps a typo
+ * from spending one of the three sends.
+ */
+export function isPlausibleEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/** Seconds left as `m:ss` — the countdown's mono value. Never negative. */
+export function formatCountdown(seconds: number): string {
+  const s = Math.max(0, Math.ceil(seconds));
+  return `${Math.floor(s / 60)}:${pad(s % 60)}`;
+}
+
 // ── application flow ───────────────────────────────────────────────────
 
 export type StepState = "done" | "now" | "todo";

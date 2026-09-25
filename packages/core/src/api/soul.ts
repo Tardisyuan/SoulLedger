@@ -39,6 +39,7 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "../platform/index";
+import type { PasswordResetAccepted, PasswordResetRefusal, PasswordResetRequest, SetNewPasswordRequest } from "./auth";
 import type { components } from "./generated/schema";
 
 type Schemas = components["schemas"];
@@ -169,6 +170,22 @@ export const soulApi = {
   /** 200 is a NEW token pair; the old refresh token is dead the moment this returns. */
   changePassword: (old_password: string, new_password: string) =>
     soulHttp.post<SoulTokenPair>("/me/password/", { old_password, new_password }).then((r) => r.data),
+  /**
+   * 「忘记密码」, step 1: mail a six-digit code (valid 5 minutes) to the contact
+   * email on the soul's account. `/auth/*`, not `/soul-auth/*` — the email-code
+   * reset is the backend's one reset flow — but it rides `soulHttp` because this
+   * is the soul app's transport: the officer client's 401 path would end an
+   * officer session this host never holds. Called signed out, so no token goes.
+   * 200 whether or not the address has an account; the screen must not branch
+   * on anything but the status.
+   */
+  requestPasswordReset: (email: string) =>
+    soulHttp
+      .post<PasswordResetAccepted>("/auth/reset-password/", { email } satisfies PasswordResetRequest)
+      .then((r) => r.data),
+  /** Step 2. Does NOT sign in: 200 is `{detail}` only, no tokens. */
+  setNewPassword: (body: SetNewPasswordRequest) =>
+    soulHttp.post<PasswordResetAccepted>("/auth/set-new-password/", body).then((r) => r.data),
   me: () => soulHttp.get<MeProfile>("/me/").then((r) => r.data),
   life: () => soulHttp.get<MeLife>("/me/life/").then((r) => r.data),
   pastLives: () => soulHttp.get<MeLife[]>("/me/past-lives/").then((r) => r.data),
@@ -282,4 +299,46 @@ export function soulCodeMessage(code: string): SoulErrorMessage {
   return (SOUL_ERROR_CODES as readonly string[]).includes(code)
     ? { key: `soul_app.errors.${code}` }
     : { key: "soul_app.errors.unknown", params: { code } };
+}
+
+/**
+ * The two refusals of `POST /auth/set-new-password/` that only their sentence
+ * tells apart (backend/apps/authentication/views.py `set_new_password`): both
+ * are 400 `{error}` with no `code`, and so is a password the validators refuse.
+ * Matched exactly, so a reworded sentence falls to the weak-password branch
+ * visibly instead of being guessed at; `soul.test.ts` reads the view and fails
+ * when either sentence is no longer there.
+ */
+export const RESET_CODE_EXPIRED_ERROR = "验证码已过期,请重新获取";
+export const RESET_CODE_WRONG_ERROR = "验证码错误";
+
+/**
+ * Classify a failed `setNewPassword` into `soul_app.*` copy.
+ *
+ *   no response                  → `errors.network`
+ *   429 (five wrong codes: the   → `forgot_password.too_many_tries` — the code
+ *        backend deleted the code)  is gone, only a new one helps
+ *   400 {error} expired / wrong  → `forgot_password.code_expired` / `code_wrong`
+ *   400 {error} anything else    → `errors.weak_password` (the view answers
+ *                                  `validate_password`'s refusal as `{error}`)
+ *   400 {new_password: [...]}    → `errors.weak_password`
+ *   400 {code: [...]}            → `forgot_password.code_wrong`
+ *   404 / 409                    → `forgot_password.ask_hall`: no account, or
+ *                                  several on one address; only a hall can help
+ */
+export function passwordResetErrorMessage(error: unknown): SoulErrorMessage {
+  if (!axios.isAxiosError(error)) return soulErrorMessage(error);
+  const response = error.response;
+  if (!response) return { key: "soul_app.errors.network" };
+  const body = (response.data ?? {}) as Partial<PasswordResetRefusal> & Record<string, unknown>;
+  if (response.status === 429) return { key: "soul_app.forgot_password.too_many_tries" };
+  if (response.status === 404 || response.status === 409) return { key: "soul_app.forgot_password.ask_hall" };
+  if (response.status === 400) {
+    if (body.error === RESET_CODE_EXPIRED_ERROR) return { key: "soul_app.forgot_password.code_expired" };
+    if (body.error === RESET_CODE_WRONG_ERROR) return { key: "soul_app.forgot_password.code_wrong" };
+    if (typeof body.error === "string" || "new_password" in body) return { key: "soul_app.errors.weak_password" };
+    if ("code" in body) return { key: "soul_app.forgot_password.code_wrong" };
+    return { key: "soul_app.errors.validation" };
+  }
+  return { key: "soul_app.errors.unknown", params: { code: String(response.status) } };
 }
