@@ -635,7 +635,7 @@
       "relayouting": "正在重排…",
       "delete_selected": "删除选中",
       "saving": "保存中...",
-      "save_template": "保存模板",
+      "save_template": "存草稿",
       "hint": "双击节点编辑 · 拖拽连接节点",
       "edit_node": "编辑节点",
       "node_name": "节点名称",
@@ -646,7 +646,7 @@
       "approver_role": "审批角色",
       "approver_placeholder": "— 选择审批角色 —",
       "new_node": "新节点",
-      "saved": "模板已保存",
+      "saved": "草稿已保存",
       "save_failed": "保存失败",
       "title": "流程编辑器",
       "relayout_done": "已重新排布 {{n}} 个节点",
@@ -665,7 +665,20 @@
       "issue": {
         "name_empty": "{{node}} 没有名称",
         "self_route": "{{node}} 的「{{branch}}」连回了自己,流程不会走这条",
-        "duplicate_route": "{{node}} 的「{{branch}}」连了 {{count}} 条,保存时只留最后一条"
+        "duplicate_route": "{{node}} 的「{{branch}}」连了 {{count}} 条,保存时只留最后一条",
+        "reject_not_earlier": "{{node}} 的驳回到必须指向更早的节点",
+        "reject_and_fail_route": "{{node}} 同时设了驳回到和否决连线,否决连线不会生效",
+        "timeout_incomplete": "{{node}} 的超时要同时填时长和动作",
+        "timeout_role_missing": "{{node}} 超时转交上级,但没有选角色",
+        "countersign_no_signers": "{{node}} 是会签,但没有会签人",
+        "threshold_out_of_range": "{{node}} 的通过人数不在 1 到会签人数之间",
+        "end_has_exit": "{{node}} 是结束节点,不应再有出口",
+        "condition_empty": "{{node}} 有一条条件永远不成立",
+        "condition_invalid": "{{node}} 有一条条件不完整",
+        "condition_overlap": "{{node}} 有两条条件会同时成立",
+        "unreachable": "{{node}} 从起点走不到",
+        "no_exit": "{{node}} 没有出口,走不到结束",
+        "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点"
       },
       "palette": "节点库 · 拖入",
       "inspector": "属性",
@@ -674,12 +687,98 @@
       "exit": {
         "pass_default": "按顺序进入 {{node}}",
         "pass_end": "流程完成",
-        "fail_default": "驳回,流程结束"
+        "fail_default": "驳回,流程结束",
+        "reject_to": "驳回到 {{node}}"
       },
       "preview": "模板预览 · 线性",
       "preview_empty": "还没有节点。",
       "narrow_title": "画布只在 ≥ 1024 px 可编辑",
-      "narrow_body": "窄屏下只读:显示线性预览、校验结果和节点属性。"
+      "narrow_body": "窄屏下只读:显示线性预览、校验结果和节点属性。",
+      "publish": "发布",
+      "publishing": "发布中…",
+      "published": "已发布 v{{n}}",
+      "publish_rejected": "发布被拒:{{n}} 项校验未过",
+      "publish_failed": "发布失败",
+      "version": {
+        "draft": "草稿 v{{n}}",
+        "published": "已发布 v{{n}}",
+        "unpublished": "未发布",
+        "history": "版本历史",
+        "status": {
+          "DRAFT": "草稿",
+          "PUBLISHED": "已发布",
+          "SUPERSEDED": "已替换"
+        }
+      },
+      "kind_label": "节点类别",
+      "kind": {
+        "APPROVAL": "审批",
+        "COUNTERSIGN": "会签",
+        "NOTIFY": "通知",
+        "END": "结束"
+      },
+      "signers": "会签人",
+      "signer_label": "会签人 {{n}}",
+      "signer_add": "添加会签人",
+      "signer_remove": "移除",
+      "threshold": "通过所需人数",
+      "threshold_hint": "留空 = 每位会签人都须同意;人数已不可能达到时立即驳回。",
+      "signers_summary": "{{who}} · {{k}}/{{n}} 同意即通过",
+      "timeout": {
+        "label": "超时",
+        "hours": "超时(小时)",
+        "action_label": "超时后",
+        "none": "不设超时",
+        "action": {
+          "ESCALATE": "转交上级",
+          "AUTO_REJECT": "自动驳回",
+          "NOTIFY": "提醒"
+        },
+        "role": "转交给角色",
+        "hint": "超时只在运行 process_workflow_timeouts 命令时触发;系统没有定时调度它。",
+        "summary": "{{hours}} 小时后 · {{action}}"
+      },
+      "reject_to": "驳回到",
+      "reject_to_none": "— 不退回,流程结束 —",
+      "template_level": "整个模板",
+      "condition": {
+        "title": "出口 · 条件",
+        "default": "默认",
+        "empty": "(条件为空)",
+        "make": "设为条件分支",
+        "clear": "去掉条件",
+        "add_clause": "加一条",
+        "remove_clause": "删除这一条",
+        "fact_label": "事实",
+        "op_label": "比较",
+        "value_label": "值",
+        "yes": "是",
+        "no": "否",
+        "fact": {
+          "balance": "余额",
+          "civilization": "文明",
+          "verdict": "判决"
+        },
+        "op": {
+          "lt": "小于",
+          "lte": "不大于",
+          "gt": "大于",
+          "gte": "不小于",
+          "eq": "等于",
+          "in": "属于",
+          "not_in": "不属于"
+        }
+      },
+      "preview_approver": {
+        "title": "审批人预览",
+        "save_first": "存草稿后才能预览这个节点",
+        "loading": "解析中…",
+        "failed": "预览失败",
+        "role": "角色 {{role}} 的持有人",
+        "nobody": "无人(SYSTEM)—— 只能越级推进",
+        "no_accounts": "当前没有账号能审批它",
+        "accounts": "{{n}} 个账号:{{names}}"
+      }
     },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
@@ -747,7 +846,8 @@
       "failed": "失败",
       "confirmed": "确认",
       "rejected": "拒绝",
-      "skipped": "跳过"
+      "skipped": "跳过",
+      "notified": "已通知"
     },
     "node_type": {
       "trial": "审判",
@@ -797,7 +897,8 @@
       "EXCEPTION": "异常处理",
       "COMPLETED": "流程完成",
       "SKIPPED": "已跳过",
-      "ESCALATED": "已升级"
+      "ESCALATED": "已升级",
+      "TRAVERSED": "已经过"
     },
     "no_custom_templates": "你还没有保存过自己的模板。"
   },

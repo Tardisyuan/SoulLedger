@@ -84,7 +84,7 @@ export { realmsApi, type Realm, type RealmOccupancy } from "./realms";
 export { actorsApi, type Actor } from "./actors";
 
 // Workflow
-export { workflowApi, requiresReasonForSoul, REBIRTH_APPLICATION_CASE_TYPE, REJECTION_REASON_FOR_SOUL_MAX, type ApprovalWorkflow, type ApprovalWorkflowListItem, type ApprovalNode, type WorkflowTemplate, type WorkflowTemplateListItem, type WorkflowTemplateNode } from "./workflow";
+export { workflowApi, requiresReasonForSoul, REBIRTH_APPLICATION_CASE_TYPE, REJECTION_REASON_FOR_SOUL_MAX, type ApprovalWorkflow, type ApprovalWorkflowListItem, type ApprovalNode, type WorkflowTemplate, type WorkflowTemplateListItem, type WorkflowTemplateNode, type WorkflowTemplateVersion, type ApproverPreview, type ApproverAssignment, type TemplateValidationIssue, type TemplateBranch, type TemplateSigner, type ConditionClause, type ConditionFact, type ConditionOp, type WorkflowNodeKind, type WorkflowTimeoutAction } from "./workflow";
 
 // Disposition
 export {
