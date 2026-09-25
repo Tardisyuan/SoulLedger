@@ -4424,6 +4424,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+  /api/v1/judgment/courts/:
+    get:
+      operationId: v1_judgment_courts_list
+      description: |-
+        队列殿筛选的选项:调用者范围内出现过的每一个殿(非空),各带未结案件数。
+
+        此前选项取自当前已加载的几页行,翻不到的殿就选不到。范围是 `self.get_queryset()`
+        —— DataScopeViewSetMixin 经 `scope_to_tenant` 收到调用者的租户,与列表同一条。
+        已结案件的殿也列出(`pending` 为 0):殿是场所,不因眼下没有案子而消失。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JudgmentCourt'
+          description: ''
   /api/v1/judgment/next/:
     get:
       operationId: v1_judgment_next_retrieve
@@ -4468,6 +4490,13 @@ paths:
         would drive the client's error boundary instead.
       parameters:
       - in: query
+        name: after
+        schema:
+          type: string
+          format: uuid
+        description: The case the caller is on; the answer is the pending case just
+          after it (「下一件」). Overrides `at`.
+      - in: query
         name: include_deferred
         schema:
           type: boolean
@@ -4500,7 +4529,7 @@ paths:
 
         Not symmetric in one respect, deliberately: `next/?at=X` answers X
         itself (enter the queue on X), `previous/?at=X` answers the case before
-        X. Moving forward from X is `next/?skip=X`.
+        X. Moving forward from X is `next/?after=X`.
       parameters:
       - in: query
         name: at
@@ -16925,6 +16954,21 @@ components:
         * `FAILED` - FAILED
         * `PURGATORY` - PURGATORY
         * `RETRY` - RETRY
+    JudgmentCourt:
+      type: object
+      description: |-
+        `GET /judgment/courts/` 的一行:调用者租户里出现过的一个殿,和它眼下有几件未结案。
+
+        殿是自由文本列,没有字典表;这份名单就是队列殿筛选的选项来源。`pending` 与
+        `queue-counts/` 的 `total` 同一个谓词(未结案,含暂缓)。
+      properties:
+        court:
+          type: string
+        pending:
+          type: integer
+      required:
+      - court
+      - pending
     JudgmentDefer:
       type: object
       description: |-

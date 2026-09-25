@@ -38,6 +38,7 @@ from apps.judgment.serializers import (
     JudgmentCitationWriteSerializer,
     JudgmentClaimRefusalSerializer,
     JudgmentConcludeSerializer,
+    JudgmentCourtSerializer,
     JudgmentDeferSerializer,
     JudgmentDestinationOptionSerializer,
     JudgmentDestinationsSerializer,
@@ -220,6 +221,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
         'queue_counts': ['judgment.read'],
+        # 殿筛选的选项:与队列同一个读。
+        'courts': ['judgment.read'],
     }
     queryset = (
         Judgment.objects
@@ -435,6 +438,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         responses=JudgmentQueueCursorSerializer,
         parameters=[
             OpenApiParameter(
+                "after", OpenApiTypes.UUID, OpenApiParameter.QUERY,
+                description="The case the caller is on; the answer is the pending case just after it (「下一件」). "
+                "Overrides `at`.",
+            ),
+            OpenApiParameter(
                 "include_deferred",
                 OpenApiTypes.BOOL,
                 OpenApiParameter.QUERY,
@@ -513,6 +521,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # here") is still satisfiable and the alternative is a dead end on a
         # link that was valid when the page rendered.
         cursor = remaining_qs.select_related("soul", "soul__tenant")
+        if "after" in request.query_params:
+            return self._after_response(payload, remaining_qs, cursor, total, remaining)
         at = request.query_params.get("at")
         judgment = None
         if at:
@@ -528,6 +538,28 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 payload["position"] = total - remaining + ahead + 1
         if judgment is None:
             judgment = cursor.first()
+        return self._cursor_response(payload, judgment)
+
+    def _after_response(self, payload, remaining_qs, cursor, total, remaining):
+        """`next/?after=<id>` — 「下一件」 from the desk: the pending case just after `after`
+        in the same order `previous/` walks backwards. `?skip=X` alone cannot answer this:
+        it hands out the head of the queue, which is only X's successor when X is the head.
+
+        `after` is looked up in the caller's scope in any state (so 「下一件」 still works
+        from a case just concluded), the same as `previous/?at=`; missing, malformed or
+        not visible answers the empty cursor rather than 404.
+        """
+        payload["position"] = None
+        try:
+            anchor = self.get_queryset().filter(id=uuid.UUID(self.request.query_params.get("after", ""))).first()
+        except (ValueError, AttributeError, TypeError):
+            anchor = None
+        judgment = None
+        if anchor is not None:
+            judgment = cursor.exclude(self._before(anchor)).exclude(id=anchor.id).first()
+        if judgment is not None:
+            ahead = remaining_qs.filter(self._before(judgment)).count()
+            payload["position"] = total - remaining + ahead + 1
         return self._cursor_response(payload, judgment)
 
     def _cursor_response(self, payload, judgment):
@@ -587,7 +619,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
 
         Not symmetric in one respect, deliberately: `next/?at=X` answers X
         itself (enter the queue on X), `previous/?at=X` answers the case before
-        X. Moving forward from X is `next/?skip=X`.
+        X. Moving forward from X is `next/?after=X`.
         """
         queue = self._pending_queue()
         total = queue.count()
@@ -933,6 +965,27 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             },
         )
         return Response(counts)
+
+    @extend_schema(responses=JudgmentCourtSerializer(many=True))
+    # 不分页、不挂列表的过滤器:这是筛选条的选项,不随当前筛选收窄 —— 否则选了一个殿,
+    # 下拉里就只剩那一个。
+    @action(detail=False, methods=["get"], url_path="courts", pagination_class=None, filter_backends=[])
+    def courts(self, request):
+        """队列殿筛选的选项:调用者范围内出现过的每一个殿(非空),各带未结案件数。
+
+        此前选项取自当前已加载的几页行,翻不到的殿就选不到。范围是 `self.get_queryset()`
+        —— DataScopeViewSetMixin 经 `scope_to_tenant` 收到调用者的租户,与列表同一条。
+        已结案件的殿也列出(`pending` 为 0):殿是场所,不因眼下没有案子而消失。
+        """
+        rows = (
+            self.get_queryset()
+            .exclude(court="")
+            .order_by()
+            .values("court")
+            .annotate(pending=Count("pk", filter=PENDING))
+            .order_by("court")
+        )
+        return Response(JudgmentCourtSerializer(rows, many=True).data)
 
     # ------------------------------------------------------------------
     # Cited grounds
