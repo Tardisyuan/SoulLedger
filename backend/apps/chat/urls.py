@@ -14,6 +14,7 @@ me_urlpatterns = [
 
 officer_router = DefaultRouter()
 officer_router.register(r"inbox", views.OfficerInboxViewSet, basename="soul-inbox")
+officer_router.register(r"inbox-templates", views.InboxReplyTemplateViewSet, basename="soul-inbox-template")
 
 #: 官员侧,挂在 `/api/v1/chat/`。
 officer_urlpatterns = [

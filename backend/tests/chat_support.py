@@ -30,6 +30,7 @@ from pathlib import Path
 
 import pytest
 from django.conf import settings
+from django.utils import timezone
 
 from apps.chat.grant import KEY as GRANT_KEY
 from apps.chat.grant import verify
@@ -118,7 +119,10 @@ class FakeMatrix:
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
                    "officer_title": (extra or {}).get("io.soulledger.officer_title", ""),
                    "grant": (extra or {}).get(GRANT_KEY),
-                   "timestamp": 1000 + len(FakeMatrix.sent)}
+                   # 真 Synapse 的 origin_server_ts:墙钟毫秒。收件箱按它推「灵魂最后一封的时刻」
+                   # (`services.reconcile_inbox`),与我们自己的 `timezone.now()` 比较 —— 1970 年的
+                   # 假时刻会让那条比较永远不成立。
+                   "timestamp": int(timezone.now().timestamp() * 1000) + len(FakeMatrix.sent)}
         room["messages"].append(message)
         FakeMatrix.sent.append((room_id, message))
         FakeMatrix.hooks.append(FakeEvent(room_id, event_id, sender, "m.room.message",
