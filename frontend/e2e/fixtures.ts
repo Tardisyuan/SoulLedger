@@ -836,6 +836,7 @@ export const MODERATED_POSTS = [
     author: MODERATION_AUTHOR,
     content: "命中敏感词的帖子",
     moderation_status: "PENDING",
+    moderation_reason: "sensitive_word:还阳",
     open_report_count: 0,
     create_time: "2026-09-18T03:00:00Z",
     visibility: "PUBLIC",

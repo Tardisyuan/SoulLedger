@@ -18800,6 +18800,8 @@ components:
           type: string
         moderation_status:
           $ref: '#/components/schemas/SocialModerationStatusEnum'
+        moderation_reason:
+          type: string
         open_report_count:
           type: integer
           readOnly: true
@@ -18814,6 +18816,7 @@ components:
       - content
       - create_time
       - id
+      - moderation_reason
       - moderation_status
       - open_report_count
       - post
@@ -18830,6 +18833,8 @@ components:
           type: string
         moderation_status:
           $ref: '#/components/schemas/SocialModerationStatusEnum'
+        moderation_reason:
+          type: string
         open_report_count:
           type: integer
           readOnly: true
@@ -18846,6 +18851,7 @@ components:
       - content
       - create_time
       - id
+      - moderation_reason
       - moderation_status
       - open_report_count
       - visibility

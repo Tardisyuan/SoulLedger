@@ -121,6 +121,22 @@ describe("page header", () => {
 });
 
 describe("举报 · the C-08 review layout", () => {
+  it("a word-list hold says which word: 因敏感词「…」待审, in the list and in the detail", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) =>
+      page(kind === "posts" ? [post({ moderation_reason: "sensitive_word:还阳" })] : [])
+    );
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    const held = tZh("social_moderation.review.held_for_word", { word: "还阳" });
+    expect(held).toBe("因敏感词「还阳」待审");
+    expect(await within(list).findByText(held)).toBeInTheDocument();
+    expect(within(list).queryByText(tZh("social_moderation.review.rule_hit"))).toBeNull();
+    fireEvent.click(within(list).getByText("命中敏感词的帖子全文"));
+    expect(await within(detail()).findByText(held)).toBeInTheDocument();
+  });
+
   it("lists reports and rule hits together; the detail shows the full text in serif and translated reasons", async () => {
     asRole("social.moderate");
     apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));

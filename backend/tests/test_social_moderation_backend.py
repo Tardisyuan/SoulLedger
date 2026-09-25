@@ -66,6 +66,31 @@ def test_review_sends_the_post_to_the_pending_queue_unchanged(cn_tenant, cn_mode
     assert str(row.pk) in {r["id"] for r in queue}
 
 
+def test_a_review_hit_records_which_word_sent_it_to_review(cn_tenant, cn_moderator):
+    """2026-09-25 决定:送审也记原因,写法与 HIDE 同一个前缀 `sensitive_word:<词>`。"""
+    word(cn_tenant, "违禁词", SensitiveWordAction.REVIEW)
+    word(cn_tenant, "脏话", SensitiveWordAction.MASK)
+    author, client = soul(cn_tenant, "作者")
+
+    row = publish(client, "脏话和违禁词")
+    assert (row.moderation_status, row.moderation_reason) == (ModerationStatus.PENDING, "sensitive_word:违禁词")
+    assert row.moderated_at is None
+    queue = officer_client(cn_moderator).get(f"{MODERATION}/posts/").json()["results"]
+    assert {r["id"]: r["moderation_reason"] for r in queue}[str(row.pk)] == "sensitive_word:违禁词"
+    # Not in 「已处理」: a reason is not a decision.
+    handled = officer_client(cn_moderator).get(f"{MODERATION}/handled/").json()["results"]
+    assert str(row.pk) not in {r["id"] for r in handled}
+
+    target = post(author, "干净的帖子", Visibility.PUBLIC)
+    res = client.post(f"{SOCIAL}/posts/{target.pk}/comments/", {"content": "违禁词在此"}, format="json")
+    comment = Comment.objects.get(pk=res.json()["id"])
+    assert (comment.moderation_status, comment.moderation_reason) == (ModerationStatus.PENDING, "sensitive_word:违禁词")
+
+    # MASK alone publishes with no reason: nothing is waiting on anyone.
+    masked = publish(client, "只有脏话")
+    assert (masked.moderation_status, masked.moderation_reason) == (ModerationStatus.PUBLISHED, "")
+
+
 def test_hide_hides_the_post_at_write_time_and_lists_it_as_handled_by_the_system(cn_tenant, cn_moderator):
     word(cn_tenant, "隐藏词", SensitiveWordAction.HIDE)
     _, client = soul(cn_tenant, "作者")
