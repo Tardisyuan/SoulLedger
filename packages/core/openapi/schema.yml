@@ -4046,6 +4046,11 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: statute
+        schema:
+          type: string
+          format: uuid
+      - in: query
         name: verdict
         schema:
           type: string
@@ -4330,6 +4335,11 @@ paths:
           type: string
       - in: query
         name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: statute
         schema:
           type: string
           format: uuid

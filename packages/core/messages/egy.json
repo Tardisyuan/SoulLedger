@@ -1185,12 +1185,13 @@
       "copied": "Senn Seth",
       "cited_by": "Djed Seth",
       "cited_by_count": "Wedja {{n}}",
-      "cited_by_gap": "Nen Hehy Wedja Em Hep; Sep Wa Dy, Nen Sesh.",
       "versions": "Hemet-Sesh",
       "versions_gap": "Nen Hemet-Sesh Hep; Khemen Em Sesh Tepy Wa.",
       "select_prompt": "Setep Hep Em Sesh Hep.",
       "no_match": "Nen Gem Hep: «{{q}}»",
-      "clear_search": "Fekh Hehy"
+      "clear_search": "Fekh Hehy",
+      "cited_by_error": "Nen Ini Wedja",
+      "cited_by_open": "Nen Khetem"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",

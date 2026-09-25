@@ -1184,13 +1184,14 @@
       "copy_cite": "复制引用",
       "copied": "已复制",
       "cited_by": "被引用",
-      "cited_by_count": "{{n}} 件判决",
-      "cited_by_gap": "接口不能按律条查判决,所以这里只有件数,没有清单。",
+      "cited_by_count": "被引用 {{n}} 件",
       "versions": "版本",
       "versions_gap": "律条没有版本记录:更正在种子数据里就地改写。",
       "select_prompt": "从目录选一条律条。",
       "no_match": "没有匹配「{{q}}」的律条",
-      "clear_search": "清除检索"
+      "clear_search": "清除检索",
+      "cited_by_error": "被引用清单加载失败",
+      "cited_by_open": "未结"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",

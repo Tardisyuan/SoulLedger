@@ -1093,8 +1093,8 @@ class TestCitationCount:
             "citation_count included another tenant's citation. A reverse "
             "aggregate resolves against the relation, not the related model's "
             "manager, so scoping the statute queryset does not scope this — "
-            "apps/core/tenant.py::tenant_aggregate_filter has to be passed to "
-            "Count(filter=...)."
+            "the Count's filter (apps/judgment/views.py::visible_judgments) "
+            "has to narrow it to the caller's judgment list."
         )
 
     def test_an_uncited_article_reads_zero_not_absent(
