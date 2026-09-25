@@ -364,7 +364,11 @@ describe("prefers-reduced-motion", () => {
 
   function setReducedMotion(reduce: boolean) {
     window.matchMedia = jest.fn().mockImplementation((query: string) => ({
-      matches: reduce && query === "(prefers-reduced-motion: reduce)",
+      // A desktop browser: the editor also asks `(min-width: 1024px)` (the
+      // canvas is editable only there, `useWideViewport`), and a stub that
+      // answers every query but the motion one with `false` would be a
+      // 393 px phone — the read-only view, with no canvas to lay out.
+      matches: query === "(min-width: 1024px)" || (reduce && query === "(prefers-reduced-motion: reduce)"),
       media: query,
       onchange: null,
       addListener: jest.fn(),

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,23 +20,10 @@ import { SidebarGroup, groupOfPath } from "@/src/components/layout/SidebarMenuIt
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+// ≥ 1024 px shows the 200 px sidebar; below it (and in compact mode) the 56 px number rail.
+import { useWideViewport } from "@/src/hooks/useWideViewport";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
-
-/** ≥ 1024 px shows the 200 px sidebar; below it (and in compact mode) the 56 px number rail. */
-function useWideViewport(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      if (typeof window.matchMedia !== "function") return () => {};
-      const mq = window.matchMedia("(min-width: 1024px)");
-      mq.addEventListener("change", onChange);
-      return () => mq.removeEventListener("change", onChange);
-    },
-    // No matchMedia (jsdom): treat as wide — the rail is the narrow-screen fallback.
-    () => (typeof window.matchMedia === "function" ? window.matchMedia("(min-width: 1024px)").matches : true),
-    () => true
-  );
-}
 
 /**
  * The shell, 规范 v1 §3「同一个壳」: 200 px sidebar + 40 px masthead

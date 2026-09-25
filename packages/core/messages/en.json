@@ -567,7 +567,37 @@
       "saved": "Template saved",
       "save_failed": "Save failed",
       "title": "Editor",
-      "relayout_done": "Re-arranged {{n}} nodes"
+      "relayout_done": "Re-arranged {{n}} nodes",
+      "role": {
+        "entry": "Entry",
+        "step": "Step",
+        "branch": "Branch",
+        "end": "End"
+      },
+      "branch": {
+        "pass": "Pass",
+        "fail": "Refuse"
+      },
+      "issues": "Checks · {{n}}",
+      "issues_none": "All checks pass",
+      "issue": {
+        "name_empty": "{{node}} has no name",
+        "self_route": "{{node}}'s “{{branch}}” route points back to itself; the flow never takes it",
+        "duplicate_route": "{{node}} has {{count}} “{{branch}}” routes; only the last one is saved"
+      },
+      "palette": "Node library · drag in",
+      "inspector": "Properties",
+      "inspector_empty": "Pick a node on the canvas or in the linear preview.",
+      "unnamed": "(unnamed)",
+      "exit": {
+        "pass_default": "Next in order: {{node}}",
+        "pass_end": "Flow completes",
+        "fail_default": "Rejected; the flow ends"
+      },
+      "preview": "Linear preview",
+      "preview_empty": "No nodes yet.",
+      "narrow_title": "The canvas is editable at ≥ 1024 px only",
+      "narrow_body": "Read-only on narrow screens: linear preview, checks and node properties."
     },
     "templates": "Workflow Templates",
     "select_template": "Select a template to edit",
@@ -2750,7 +2780,25 @@
       "not_inbox": "This is not a hall inbox",
       "chat_not_configured": "Chat is not enabled",
       "chat_unavailable": "Chat is temporarily unavailable"
-    }
+    },
+    "folders": "Folders",
+    "folder": {
+      "all": "All letters",
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "by_hall": "By hall",
+    "folder_empty": "No letters in this folder",
+    "newest_first": "Newest first",
+    "from_soul": "From {{name}}",
+    "officer_reply": "Hall reply",
+    "previous": "previous",
+    "earlier": "{{n}} earlier letters",
+    "awaiting": "Awaiting reply · {{n}} d",
+    "cite_hint": "/ cite a statute",
+    "cite_label": "Statutes",
+    "cite_results": "{{n}} statutes; ↑↓ to choose, Enter to insert",
+    "cite_empty": "No matching statute"
   },
   "sentence_plan": {
     "panel_title": "Sentence plan",

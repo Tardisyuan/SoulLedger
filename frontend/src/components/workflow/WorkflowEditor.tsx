@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect, useId, useMemo, useRef } from "react";
+import { useCallback, useState, useEffect, useId, useMemo, useRef, type CSSProperties, type DragEvent } from "react";
 import { flushSync } from "react-dom";
 /**
  * WHAT gsap COSTS HERE, MEASURED, SO THE TRADE CAN BE RE-JUDGED LATER.
@@ -39,7 +39,6 @@ import {
   NodeChange,
   EdgeChange,
   BackgroundVariant,
-  Panel,
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -57,7 +56,17 @@ import { useI18n } from "@/src/contexts/I18nContext";
 // not resolve, so the literal hex values here are a ruled exception — and
 // eslint.config.mjs's HEX_ALLOW grants it by PATH PREFIX. A file of this
 // editor's moved anywhere else goes red on its first arrow colour.
-import { nodeTypes } from "@/src/components/workflow/EditableNode";
+import { edgeTypes, nodeTypes } from "@/src/components/workflow/EditableNode";
+import {
+  PALETTE_DRAG_TYPE,
+  PALETTE_TYPES,
+  WorkflowInspector,
+  WorkflowLinearPreview,
+  WorkflowPalette,
+  type PaletteType,
+} from "@/src/components/workflow/WorkflowEditorPanels";
+import { branchOf, nodeRoles, validateFlow } from "@/src/components/workflow/workflowValidation";
+import { useWideViewport } from "@/src/hooks/useWideViewport";
 import {
   NodeEditModal,
   type NodeDataUpdates,
@@ -179,7 +188,7 @@ const EDIT_NODE_KEY = "e";
 /**
  * `aria-keyshortcuts` announces `E` on every node, which is the half of
  * discoverability that reaches a screen reader. The visible half is the `<kbd>`
- * in the hint Panel below.
+ * in the hint under the palette.
  *
  * Passed through `domAttributes` — xyflow spreads it onto the wrapper AFTER its
  * own attributes (index.mjs 2240). That ordering is why this object carries
@@ -256,6 +265,15 @@ export default function WorkflowEditor({
   // WorkflowEditor instances mounted at once.
   const formId = useId();
   const templatePriorityId = `${formId}-template-priority`;
+  const validationId = `${formId}-validation`;
+  /**
+   * Design C · 03: the canvas is editable at ≥ 1024 px only. Below that the
+   * editor renders the read-only view — notice, linear preview, validation and
+   * properties — and mounts neither xyflow nor the save control. jsdom has no
+   * `matchMedia` and reads as wide, which is the view every jest suite here
+   * was written against.
+   */
+  const wide = useWideViewport();
 
   // State
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -537,17 +555,22 @@ export default function WorkflowEditor({
   });
 
   // Add a new node
-  const addNode = useCallback(() => {
+  //
+  // `nodeType` and `position` come from the palette: a click appends a node of
+  // that type where 「添加节点」 would put it, a drop puts it where it landed.
+  // The toolbar button passes neither and gets TRIAL at the append position,
+  // exactly as before.
+  const addNode = useCallback((nodeType: PaletteType = "TRIAL", position?: { x: number; y: number }) => {
     stopLayoutTravel();
     const newId = `node-${Date.now()}`;
     const newNode: Node = {
       id: newId,
       type: "editableNode",
-      position: appendPosition(nodes),
+      position: position ?? appendPosition(nodes),
       data: {
         id: newId,
         label: `${t("workflow.editor.new_node")} ${nodes.length + 1}`,
-        nodeType: "TRIAL",
+        nodeType,
         courtCode: "",
         approverRole: "",
         approverType: "ROLE",
@@ -909,7 +932,9 @@ export default function WorkflowEditor({
     if (!pane) return;
     pane.addEventListener("keydown", onCanvasKeyDown);
     return () => pane.removeEventListener("keydown", onCanvasKeyDown);
-  }, [onCanvasKeyDown]);
+    // `wide`: the canvas element only exists in the wide view, so crossing
+    // the breakpoint has to re-bind.
+  }, [onCanvasKeyDown, wide]);
 
   /**
    * The nodes as xyflow renders them: ours, plus the two a11y fields the
@@ -927,14 +952,72 @@ export default function WorkflowEditor({
   // generic FROM THIS PROP, so the literal shape of this array (`ariaLabel:
   // string`, not `string | undefined`) would otherwise re-type the whole
   // instance and `flowRef`'s `ReactFlowInstance` would no longer accept it.
+  const roles = useMemo(() => nodeRoles(nodes, edges), [nodes, edges]);
+  const issues = useMemo(() => validateFlow(nodes, edges), [nodes, edges]);
+  const issueNodes = useMemo(() => new Set(issues.map((i) => i.nodeId)), [issues]);
+
+  // The card's display-only fields ride in `data` here and nowhere else, for
+  // the same reason as the a11y fields: `getTemplateNodes` reads `nodes`, not
+  // this array, so nothing below reaches the save payload.
   const a11yNodes = useMemo<Node[]>(
     () =>
-      nodes.map((n) => ({
+      nodes.map((n, idx) => ({
         ...n,
         ariaLabel: nodeAriaLabel(n),
         domAttributes: NODE_DOM_ATTRIBUTES,
+        data: {
+          ...n.data,
+          role: roles.get(n.id),
+          ordinal: idx + 1,
+          issueCount: issues.filter((i) => i.nodeId === n.id).length,
+        },
       })),
-    [nodes]
+    [nodes, roles, issues]
+  );
+
+  /**
+   * Edges as drawn: which outcome each carries, and whether it is labelled.
+   * A branch is labelled on both arms — every FAIL edge, and the PASS edges of
+   * a node that also has one; a plain chain carries no words. Derived rather
+   * than stored for the same reason as `a11yNodes`.
+   */
+  const displayEdges = useMemo<Edge[]>(() => {
+    const branching = new Set(edges.filter((e) => branchOf(e) === "fail").map((e) => e.source));
+    return edges.map((e) => ({
+      ...e,
+      data: { ...e.data, branch: branchOf(e), labelled: branching.has(e.source) },
+    }));
+  }, [edges]);
+
+  /**
+   * Select a node from outside the canvas — the linear preview and the issue
+   * list. Writes xyflow's own `selected` flag too, so the card shows the focus
+   * ring the canvas would have given it.
+   */
+  const selectNode = useCallback(
+    (nodeId: string) => {
+      stopLayoutTravel();
+      setSelectedNodeId(nodeId);
+      setNodes((nds) => nds.map((n) => (!!n.selected === (n.id === nodeId) ? n : { ...n, selected: n.id === nodeId })));
+    },
+    [setNodes, stopLayoutTravel]
+  );
+
+  /** A palette item dropped on the canvas becomes a node where it landed. */
+  const onCanvasDragOver = useCallback((event: DragEvent) => {
+    if (!event.dataTransfer.types.includes(PALETTE_DRAG_TYPE)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
+  const onCanvasDrop = useCallback(
+    (event: DragEvent) => {
+      const type = event.dataTransfer.getData(PALETTE_DRAG_TYPE);
+      if (!(PALETTE_TYPES as readonly string[]).includes(type)) return;
+      event.preventDefault();
+      const at = flowRef.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      addNode(type as PaletteType, at ? { x: Math.round(at.x), y: Math.round(at.y) } : undefined);
+    },
+    [addNode]
   );
 
   // Update node data
@@ -973,16 +1056,18 @@ export default function WorkflowEditor({
   const onNodesChangeHandler = useCallback(
     (changes: NodeChange<Node>[]) => {
       onNodesChange(changes);
-      // Track selection
-      const selectionChange = changes.find(
-        (c) => c.type === "select"
+      // Track selection — from ALL the select changes in the batch. Clicking a
+      // card while another is selected arrives as [old: false, new: true], and
+      // this used to read only the first one, so it cleared the selection the
+      // click had just made: the card wore the focus ring while 删除选中 stayed
+      // disabled and the inspector stayed empty.
+      const selects = changes.filter(
+        (c): c is Extract<NodeChange<Node>, { type: "select" }> => c.type === "select"
       );
-      if (selectionChange && "selected" in selectionChange) {
-        const node = nodes.find((n) => n.id === (selectionChange as { id: string }).id);
-        if (node) {
-          setSelectedNodeId((selectionChange as { selected: boolean }).selected ? node.id : null);
-        }
-      }
+      if (selects.length === 0) return;
+      const picked = selects.find((c) => c.selected && nodes.some((n) => n.id === c.id));
+      if (picked) setSelectedNodeId(picked.id);
+      else setSelectedNodeId((current) => (selects.some((c) => c.id === current) ? null : current));
     },
     [onNodesChange, nodes]
   );
@@ -1038,8 +1123,57 @@ export default function WorkflowEditor({
     );
   }
 
+  const inspector = (
+    <WorkflowInspector
+      t={t}
+      nodes={nodes}
+      edges={edges}
+      roles={roles}
+      issues={issues}
+      selectedId={selectedNodeId}
+      onSelect={selectNode}
+      onEdit={wide ? handleNodeEdit : undefined}
+      validationId={validationId}
+    />
+  );
+  const preview = (
+    <WorkflowLinearPreview
+      t={t}
+      nodes={nodes}
+      roles={roles}
+      issueNodes={issueNodes}
+      selectedId={selectedNodeId}
+      onSelect={selectNode}
+    />
+  );
+
+  // The read-only view (design C · 03 at 393): no canvas, no palette, no
+  // inputs and — deliberately — no save. A template opened here can be read,
+  // not changed; the notice says why and where it can be.
+  if (!wide) {
+    return (
+      <div className="flex flex-col border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))]">
+        <div role="note" className="px-4 py-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))]">
+          <p className="text-sm font-semibold text-[oklch(var(--color-warning))]">{t("workflow.editor.narrow_title")}</p>
+          <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.narrow_body")}</p>
+        </div>
+        <div className="px-4 py-3 border-b border-[oklch(var(--color-block))]">
+          <h2 className="text-md text-[oklch(var(--color-ink))] break-words">
+            {templateName || t("workflow.editor.template_name_placeholder")}
+          </h2>
+          <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+            {t(`workflow.civilizations.${templateCiv}`)} · {t(`workflow.case_types.${templateCaseType}`)} ·{" "}
+            {priorityOptions.find((o) => o.value === templatePriority)?.label}
+          </p>
+        </div>
+        {preview}
+        {inspector}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full bg-[oklch(var(--color-surface-2))]">
+    <div className="flex flex-col h-full border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))]">
       {/* Toolbar
        *
        * ─────────────────────────────────────────────────────────────────
@@ -1063,7 +1197,7 @@ export default function WorkflowEditor({
        * 真的超出,`overflow-x-auto` 真的滚,每个控件都保持可用的尺寸。
        *
        * 一个 token 的改动,和一段反过来的推理。 */}
-      <div className="flex items-center gap-3 p-3 border-b border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] overflow-x-auto">
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] overflow-x-auto">
         {/* Template info inputs */}
         <div className="flex-1 flex items-center gap-3">
           <input
@@ -1072,13 +1206,13 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
             aria-label={t("workflow.editor.template_name_placeholder")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -1094,7 +1228,7 @@ export default function WorkflowEditor({
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
@@ -1111,7 +1245,7 @@ export default function WorkflowEditor({
             value={templatePriority}
             onChange={(e) => setTemplatePriority(Number(e.target.value))}
             aria-label={t("workflow.detail.priority")}
-            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
           >
             {priorityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -1124,8 +1258,9 @@ export default function WorkflowEditor({
         {/* Action buttons */}
         <div className="flex items-center gap-2">
           <button
-            onClick={addNode}
-            className="px-3 py-1.5 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
+            type="button"
+            onClick={() => addNode()}
+            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>
@@ -1139,7 +1274,7 @@ export default function WorkflowEditor({
                raising the baseline. 32px is the same height `px-3 py-1.5` on
                text-sm produces, border included — border-box — so the row still
                lines up. */
-            className="px-3 h-8 inline-flex items-center bg-[oklch(var(--color-surface-3))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] text-sm font-medium border border-[oklch(var(--color-hairline))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 h-8 inline-flex items-center text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
           >
             {t("workflow.editor.auto_layout")}
           </button>
@@ -1172,9 +1307,10 @@ export default function WorkflowEditor({
             {layoutDone}
           </span>
           <button
+            type="button"
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
-            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 h-8 inline-flex items-center text-[oklch(var(--color-danger))] text-sm font-medium border border-[oklch(var(--color-danger))] transition-colors disabled:border-[oklch(var(--color-line))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
           >
             {t("workflow.editor.delete_selected")}
           </button>
@@ -1182,10 +1318,32 @@ export default function WorkflowEditor({
               the GET resolving, the form holds its own empty defaults, and
               saving there would PUT those over the template still in flight.
               The error case never reaches this button — it returns above. */}
+          {/* 「! 校验 · N」, design C · 03: shown only while something fails, and
+              it is the reason the save beside it is disabled. Pressing it
+              selects the first offending node and moves focus to the list. */}
+          {issues.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                selectNode(issues[0].nodeId);
+                document.getElementById(validationId)?.focus();
+              }}
+              className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-danger))] text-[oklch(var(--color-danger))] text-sm font-medium"
+            >
+              <span aria-hidden="true">!&nbsp;</span>
+              {t("workflow.editor.issues", { n: String(issues.length) })}
+            </button>
+          )}
+          {/* Disabled while validation fails: every rule in
+              `workflowValidation.ts` is one the backend or the engine acts on
+              (a 400, an edge that is never taken, an edge dropped on save), so
+              saving past it would store something other than what is drawn. */}
           <button
+            type="button"
             onClick={handleSave}
-            disabled={saveMutation.isPending || (!!templateId && isTemplateLoading)}
-            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
+            disabled={saveMutation.isPending || (!!templateId && isTemplateLoading) || issues.length > 0}
+            aria-describedby={issues.length > 0 ? validationId : undefined}
+            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors disabled:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
           >
             {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
           </button>
@@ -1214,19 +1372,40 @@ export default function WorkflowEditor({
        * A descendant variant rather than a rule in `globals.css`: the selector
        * is xyflow's internal class and this is the only file that may know it.
        */}
+      <div className="flex-1 min-h-0 grid grid-cols-[160px_minmax(0,1fr)_260px] xl:grid-cols-[170px_minmax(0,1fr)_300px]">
+      <WorkflowPalette t={t} onAdd={(type) => addNode(type)}>
+        {/* The keyboard half of the hint, and the only place `E` is visible.
+            It reuses `workflow.editor.edit_node` — the modal's own title —
+            rather than introducing a fourth string in three bundles, one of
+            which (egy) is transliterated and would have to be authored, not
+            translated.
+
+            UNDER THE PALETTE, NOT FLOATING ON THE CANVAS. It was an xyflow
+            <Panel> over the pane's top-left corner, where `fitView` also
+            puts the first card: at 1280 px the panel sat on top of it and
+            took its clicks (`e2e/workflow.spec.ts`, "Workflow editor
+            selection", timed out on exactly that). */}
+        <span>{t("workflow.editor.hint")}</span>
+        {" · "}
+        <kbd className="font-mono text-xs px-1 bg-[oklch(var(--color-surface-3))]">E</kbd>{" "}
+        {t("workflow.editor.edit_node")}
+      </WorkflowPalette>
       <div
         ref={canvasRef}
-        className={`flex-1 min-h-0 [&_.react-flow__edge]:transition-opacity [&_.react-flow__edge]:duration-state ${
+        onDragOver={onCanvasDragOver}
+        onDrop={onCanvasDrop}
+        className={`min-h-0 min-w-0 [&_.react-flow__edge]:transition-opacity [&_.react-flow__edge]:duration-state ${
           relayouting ? "[&_.react-flow__edge]:opacity-25" : ""
         }`}
       >
         <ReactFlow
           nodes={a11yNodes}
-          edges={edges}
+          edges={displayEdges}
           onNodesChange={onNodesChangeHandler}
           onEdgesChange={onEdgesStateChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodeDoubleClick={(_, node) => handleNodeEdit(node.id)}
           onInit={(instance) => {
             flowRef.current = instance;
@@ -1264,27 +1443,31 @@ export default function WorkflowEditor({
              before branches existed it was all that was needed. `autoLayout`
              owns every fit after this one. */
           fitView
-          className="bg-[oklch(var(--color-surface-2))]"
+          /* ── colorMode="dark" IS NOT A THEME CHOICE ─────────────────────
+           *
+           * xyflow puts its colorMode on the root as a CLASS, default `light`,
+           * and `app/globals.css` scopes the paper palette to `.light` — any
+           * `.light`, not only <html>. So the default re-scoped every token
+           * inside the canvas to the light theme: in the dark app the cards
+           * were paper-coloured and the block-colour edges were ink on a dark
+           * pane, next to invisible. `dark` matches no token block, so the
+           * canvas inherits whichever theme <html> carries. xyflow's own
+           * `.dark` defaults are overridden below where they would show. */
+          colorMode="dark"
+          style={{ "--xy-background-color": "oklch(var(--color-canvas))" } as CSSProperties}
+          className="bg-[oklch(var(--color-canvas))]"
           defaultEdgeOptions={{
             ...edgeArrow(),
           }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls className="bg-[oklch(var(--color-surface-1))]! border-[oklch(var(--color-hairline))]! !" />
-          <Panel position="top-left" className="bg-[oklch(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[oklch(var(--color-hairline))] text-xs text-[oklch(var(--color-ink-muted))]">
-            {/* The keyboard half of the hint, and the only place `E` is
-                visible. It reuses `workflow.editor.edit_node` — the modal's own
-                title — rather than introducing a fourth string in three
-                bundles, one of which (egy) is transliterated and would have to
-                be authored, not translated. The `<kbd>` classes are the ones
-                `JudgmentQueueConsole.tsx` already uses for its key hints. */}
-            <span>{t("workflow.editor.hint")}</span>
-            {" · "}
-            <kbd className="font-mono text-xs px-1 bg-[oklch(var(--color-surface-3))]">E</kbd>{" "}
-            {t("workflow.editor.edit_node")}
-          </Panel>
+          {/* 16 px dot grid in the line colour, as drawn. */}
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="oklch(var(--color-line))" />
+          <Controls className="bg-[oklch(var(--color-canvas))]! border border-[oklch(var(--color-block))]! [&_button]:bg-[oklch(var(--color-canvas))]! [&_button]:border-[oklch(var(--color-line))]! [&_button]:fill-[oklch(var(--color-ink))]!" />
         </ReactFlow>
       </div>
+      {inspector}
+      </div>
+      {preview}
 
       {/* Node edit modal */}
       <NodeEditModal
