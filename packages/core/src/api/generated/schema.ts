@@ -11592,9 +11592,10 @@ export interface components {
          *     * `DELETE` - Delete content
          *     * `MUTE` - Mute author
          *     * `DISMISS` - Dismiss
+         *     * `WARN` - Warn author
          * @enum {string}
          */
-        SocialReportResolutionEnum: "HIDE" | "DELETE" | "MUTE" | "DISMISS";
+        SocialReportResolutionEnum: "HIDE" | "DELETE" | "MUTE" | "DISMISS" | "WARN";
         /**
          * @description * `OPEN` - Open
          *     * `RESOLVED` - Resolved

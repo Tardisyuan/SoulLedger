@@ -3050,7 +3050,8 @@
       "invalid_word": "The word cannot be empty",
       "invalid_resolution": "A report against a user cannot hide or delete content; mute instead",
       "already_lifted": "That mute was already lifted",
-      "not_found": "Not found, or not in this civilization"
+      "not_found": "Not found, or not in this civilization",
+      "reason_required": "Write a reason first"
     },
     "empty": {
       "reports": "No open reports",
@@ -3088,12 +3089,13 @@
       "rule_hit": "Rule hit · word list",
       "from": "from {{name}}",
       "reaction_comment": "Comments",
-      "reason_label": "Reason (required to hide)",
-      "reason_required": "Hiding needs a reason",
+      "reason_label": "Reason (required to hide or warn)",
+      "reason_required": "Hiding or warning needs a reason",
       "approve": "Let through",
-      "shortcuts": "J / K move · A let through · H hide",
+      "shortcuts": "J / K move · A let through · H hide · W warn",
       "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
-      "held_for_word": "Held for review by the word “{{word}}”"
+      "held_for_word": "Held for review by the word “{{word}}”",
+      "warn": "Warn the author"
     },
     "words": {
       "add_row": "Add a word",

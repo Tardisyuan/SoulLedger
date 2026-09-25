@@ -34,10 +34,10 @@ test.describe("Circle moderation", () => {
 
     // H with an empty reason: refused on the page, nothing sent.
     await page.locator("body").press("h");
-    await expect(detail.getByRole("alert")).toContainText("隐藏必须写理由");
+    await expect(detail.getByRole("alert")).toContainText("隐藏与警告必须写理由");
     expect(api.countOf("POST", "/social-moderation/reports/:id/resolve/")).toBe(0);
 
-    await detail.getByLabel("处理理由（隐藏必填）").fill("辱骂他人");
+    await detail.getByLabel("处理理由（隐藏与警告必填）").fill("辱骂他人");
     await detail.getByRole("button", { name: /^隐藏/ }).click();
     await expect.poll(() => api.lastCall("POST", "/social-moderation/reports/:id/resolve/")?.body).toEqual({
       resolution: "HIDE",
