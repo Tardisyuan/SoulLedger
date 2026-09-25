@@ -1211,7 +1211,12 @@
       "cite_error": "Nen Djed",
       "deferred_note": "Sedjer Seth: {{reason}}",
       "previous": "Sep Tepy",
-      "next": "Sep Em Khet"
+      "next": "Sep Em Khet",
+      "concluded_on": "Khetem Seth · {{date}}",
+      "balance_at_conclusion": "Sepy Em Khetem",
+      "balance_now": "Sepy Emu",
+      "balance_single": "Sepy",
+      "recorded_after": "{{n}} Sesh Em Khet"
     },
     "claim": {
       "groups": {

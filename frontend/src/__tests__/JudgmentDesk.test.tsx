@@ -366,6 +366,52 @@ describe("丙 · 证据采信", () => {
   });
 });
 
+describe("乙 · 功过:结案时的余额快照", () => {
+  beforeEach(() => {
+    soulsApi.karma.mockResolvedValue({
+      data: {
+        soul_id: "s-1", soul_name: "沈青梧", merit_score: 1284, demerit_score: 937, karmic_balance: 347,
+        record_count: 4, records: RECORDS, reading: { kind: "BALANCE", civilization: "CHINESE", merit: 1284, demerit: 937, balance: 347 },
+      },
+    });
+  });
+  const concluded = (current: number | null) =>
+    withEvidence({
+      is_final: true, verdict: "PURGATORY", concluded_at: "2026-06-01T08:00:00Z",
+      admitted_balance: { reading_kind: "BALANCE", balance: 307, current_balance: current, not_admitted_count: 1, not_admitted_net: 40, reason_code: null },
+    });
+
+  it("快照在上、双线收住;现值在下;其后登记的功过条数与差额(里程碑不算)", async () => {
+    judgmentApi.get.mockResolvedValue({ data: concluded(352) });
+    renderPage();
+    const box = await screen.findByTestId("concluded-balance");
+    const rows = within(box).getAllByRole("term").map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
+    expect(rows).toEqual([
+      [tZh("judgment.desk.balance_at_conclusion"), "+307"],
+      [tZh("judgment.desk.balance_now"), "+352"],
+      [tZh("judgment.desk.recorded_after", { n: "3" }), "+45"],
+    ]);
+    expect(within(box).getAllByRole("term")[0].parentElement?.className).toMatch(/border-double/);
+    expect(screen.getByText(tZh("judgment.desk.concluded_on", { date: "06-01" }))).toBeInTheDocument();
+  });
+
+  it("两值相同只写一行「余额」,不出现「现值」", async () => {
+    judgmentApi.get.mockResolvedValue({ data: concluded(307) });
+    renderPage();
+    const box = await screen.findByTestId("concluded-balance");
+    expect(box).toHaveTextContent(`${tZh("judgment.desk.balance_single")}+307`);
+    expect(screen.queryByText(tZh("judgment.desk.balance_now"))).toBeNull();
+    expect(screen.queryByText(tZh("judgment.desk.balance_at_conclusion"))).toBeNull();
+  });
+
+  it("未结案不画快照", async () => {
+    judgmentApi.get.mockResolvedValue({ data: withEvidence() });
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    expect(screen.queryByTestId("concluded-balance")).toBeNull();
+  });
+});
+
 // ── 丁 · 判词自动保存 ─────────────────────────────────────────────────────
 
 const WAIT = { timeout: 4000 };

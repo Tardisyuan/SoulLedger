@@ -1211,7 +1211,12 @@
       "cite_error": "The citation did not save",
       "deferred_note": "Deferred: {{reason}}",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "concluded_on": "Concluded · {{date}}",
+      "balance_at_conclusion": "Balance at conclusion",
+      "balance_now": "Now",
+      "balance_single": "Balance",
+      "recorded_after": "{{n}} recorded since"
     },
     "claim": {
       "groups": {

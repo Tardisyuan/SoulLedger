@@ -28,7 +28,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
-import { CitationChips, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
+import { CitationChips, ConcludedBalance, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -86,7 +86,7 @@ import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hook
  * the focused row; not admitting asks for a reason) and the server's admitted
  * balance; 丁 autosaves (`useDraftAutosave`) and stops on a 409 with the
  * server's version on screen rather than overwriting it; 据 carries 先例; the
- * QueueBar takes D to defer.
+ * QueueBar takes S to defer (the queue's own key, 第三类 F 组).
  *
  * 戊 · 发落 (original judgments): destination and term, from
  * `judgmentApi.destinations` filtered by the chosen verdict — nothing chosen
@@ -540,7 +540,31 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
               收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}
           <div className="mt-6">
-            <JudgmentSectionHead mark="乙" title={t("souls.detail.ledger.karma")} />
+            <JudgmentSectionHead
+              mark="乙"
+              title={t("souls.detail.ledger.karma")}
+              meta={
+                isFinal && judgment.concluded_at
+                  ? t("judgment.desk.concluded_on", { date: judgment.concluded_at.slice(5, 10) })
+                  : undefined
+              }
+            />
+            {/* 结案了:判决依据的是结案时的值,所以它在上、用双线收住;现值在下(第三类 F 组 2.3)。 */}
+            {isFinal && judgment.admitted_balance?.balance != null && (
+              <ConcludedBalance
+                snapshot={judgment.admitted_balance.balance}
+                current={judgment.admitted_balance.current_balance}
+                recordedAfter={
+                  judgment.concluded_at
+                    ? (ledgerData?.records ?? []).filter(
+                        (r) =>
+                          (r.type === "MERIT" || r.type === "DEMERIT") &&
+                          r.recorded_at > (judgment.concluded_at as string)
+                      ).length
+                    : 0
+                }
+              />
+            )}
             {ledgerData?.reading ? (
               <div className="pt-2">
                 <SoulReadingPanel
