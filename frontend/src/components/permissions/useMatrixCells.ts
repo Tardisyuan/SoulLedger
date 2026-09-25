@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { MatrixChangesResult, MatrixConflict, Permission, Role, RolePermissions } from "@soulledger/core/api";
+import type {
+  MatrixChangesResult,
+  MatrixConflict,
+  MatrixWorkflowConflict,
+  Permission,
+  Role,
+  RolePermissions,
+} from "@soulledger/core/api";
 import { matrixCellKey, useApplyMatrixChanges, useMatrixImpact } from "@soulledger/core/hooks/usePermissionMatrix";
 import { permKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -37,6 +44,14 @@ export interface CellFailure {
  * approver. Its conflicts are keyed to the edits they were computed for, so a
  * stale answer is never drawn over newer edits.
  *
+ * A CONFLICT MUST BE ACKNOWLEDGED (2026-09-25). While the answer for the
+ * current edits names any conflict — a template step or a live workflow — 保存
+ * is disabled until the banner's checkbox is ticked; the tick is keyed to the
+ * edits too, so changing a cell asks again. The save then carries
+ * `acknowledge_conflicts`. The server decides for itself: without the flag it
+ * refuses the causing revokes `conflict_unacknowledged`, so a save sent before
+ * the debounced check answered still cannot slip one through.
+ *
  * The tier gate in front of the save (typed role name before clearing a
  * role) is the old pipeline's and stays: it guards what the operator meant,
  * not how the request is shaped.
@@ -67,7 +82,13 @@ export function useMatrixCells({
 
   const [failures, setFailures] = useState<Map<string, CellFailure>>(new Map());
   const [lastSave, setLastSave] = useState<{ saved: number; notSaved: number } | null>(null);
-  const [impactResult, setImpactResult] = useState<{ key: string; conflicts: MatrixConflict[] } | null>(null);
+  const [impactResult, setImpactResult] = useState<{
+    key: string;
+    conflicts: MatrixConflict[];
+    workflowConflicts: MatrixWorkflowConflict[];
+  } | null>(null);
+  /** The `changesKey` the operator ticked 「我知道…」 for. */
+  const [acknowledgedKey, setAcknowledgedKey] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDiffs, setPendingDiffs] = useState<RoleDiff[]>([]);
   const [typedRoleNames, setTypedRoleNames] = useState<Record<string, string>>({});
@@ -77,16 +98,25 @@ export function useMatrixCells({
     if (!changesKey) return;
     const pending = changes;
     const timer = setTimeout(() => {
-      impactMutate(pending, { onSuccess: (r) => setImpactResult({ key: changesKey, conflicts: r.conflicts }) });
+      impactMutate(pending, {
+        onSuccess: (r) =>
+          setImpactResult({ key: changesKey, conflicts: r.conflicts, workflowConflicts: r.workflow_conflicts }),
+      });
     }, 300);
     return () => clearTimeout(timer);
     // `changes` is rebuilt every render; `changesKey` is its identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [changesKey, impactMutate]);
 
-  const conflicts = changesKey && impactResult?.key === changesKey ? impactResult.conflicts : [];
+  const current = changesKey && impactResult?.key === changesKey ? impactResult : null;
+  const conflicts = current?.conflicts ?? [];
+  const workflowConflicts = current?.workflowConflicts ?? [];
+  const hasConflicts = conflicts.length + workflowConflicts.length > 0;
+  const acknowledged = hasConflicts && acknowledgedKey === changesKey;
   /** Pending cells a conflict names as its cause (◇). */
-  const conflictCells = new Set(conflicts.flatMap((c) => c.caused_by.map((x) => matrixCellKey(x.role, x.permission_id))));
+  const conflictCells = new Set(
+    [...conflicts, ...workflowConflicts].flatMap((c) => c.caused_by.map((x) => matrixCellKey(x.role, x.permission_id)))
+  );
 
   const pendingKeys = new Set(changes.map((c) => matrixCellKey(c.role, c.permission_id)));
   /** Failures still worth drawing: the cell is still pending. Toggled back, the `!` goes. */
@@ -139,7 +169,11 @@ export function useMatrixCells({
       if (v !== undefined) expectedVersions[c.role] = v;
     }
     try {
-      const result = await apply.mutateAsync({ changes, expectedVersions });
+      const result = await apply.mutateAsync({
+        changes,
+        expectedVersions,
+        ...(acknowledged ? { acknowledgeConflicts: true } : {}),
+      });
       patchCaches(result);
       const next = new Map<string, CellFailure>();
       for (const r of result.results) {
@@ -166,7 +200,7 @@ export function useMatrixCells({
   }
 
   function handleSave() {
-    if (changes.length === 0 || isSaving) return;
+    if (changes.length === 0 || isSaving || (hasConflicts && !acknowledged)) return;
     const maxTier = Math.max(...liveDiffs.map((d) => d.tier));
     if (maxTier <= 1) {
       void runSave();
@@ -193,6 +227,11 @@ export function useMatrixCells({
     revokes: changes.filter((c) => c.action === "revoke").length,
     pendingKeys,
     conflicts,
+    workflowConflicts,
+    acknowledged,
+    setAcknowledged: (on: boolean) => setAcknowledgedKey(on ? changesKey : null),
+    /** 保存 waits for the tick while the current edits have a conflict. */
+    saveBlocked: hasConflicts && !acknowledged,
     conflictCells,
     failures: liveFailures,
     failureAt: (key: string) => (pendingKeys.has(key) ? failures.get(key) ?? null : null),

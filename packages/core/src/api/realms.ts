@@ -33,7 +33,7 @@ export interface Realm {
   gate?: number | null;
   is_judgment_hall?: boolean | null;
   // 冥府「三岔」:出审判处的哪一条路。
-  fork?: "LEFT" | "MIDDLE" | "RIGHT" | null;
+  fork?: "LEFT" | "RIGHT" | null;
 }
 
 /** One row of `GET /realms/occupancy/` — 在押. A realm absent from the list holds 0. */

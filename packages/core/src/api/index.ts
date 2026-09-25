@@ -117,6 +117,7 @@ export {
   type MatrixChangesResult,
   type MatrixImpactResult,
   type MatrixConflict,
+  type MatrixWorkflowConflict,
   type RoleDeleteRefusal,
   type RoleCopyPayload,
 } from "./perm";

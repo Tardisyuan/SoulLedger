@@ -49,9 +49,10 @@ test.describe("Circle moderation", () => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/moderation");
     const hit = page.locator(`li[data-review-key="posts:${MODERATED_POSTS[0].id}"]`);
-    await expect(hit).toContainText("规则命中 · 敏感词");
+    await expect(hit).toContainText("因敏感词「还阳」待审");
     await hit.getByRole("button").click();
     await expect(page.getByRole("region", { name: "审阅详情" })).toContainText("命中敏感词的帖子");
+    await expect(page.getByRole("region", { name: "审阅详情" })).toContainText("因敏感词「还阳」待审");
     await page.locator("body").press("a");
     await expect.poll(() => api.countOf("POST", "/social-moderation/posts/:id/approve/")).toBe(1);
   });

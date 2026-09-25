@@ -121,6 +121,22 @@ describe("page header", () => {
 });
 
 describe("举报 · the C-08 review layout", () => {
+  it("a word-list hold says which word: 因敏感词「…」待审, in the list and in the detail", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) =>
+      page(kind === "posts" ? [post({ moderation_reason: "sensitive_word:还阳" })] : [])
+    );
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    const held = tZh("social_moderation.review.held_for_word", { word: "还阳" });
+    expect(held).toBe("因敏感词「还阳」待审");
+    expect(await within(list).findByText(held)).toBeInTheDocument();
+    expect(within(list).queryByText(tZh("social_moderation.review.rule_hit"))).toBeNull();
+    fireEvent.click(within(list).getByText("命中敏感词的帖子全文"));
+    expect(await within(detail()).findByText(held)).toBeInTheDocument();
+  });
+
   it("lists reports and rule hits together; the detail shows the full text in serif and translated reasons", async () => {
     asRole("social.moderate");
     apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
@@ -235,6 +251,30 @@ describe("敏感词 · E-08b", () => {
     fireEvent.change(input, { target: { value: "门牌号" } });
     fireEvent.submit(input.closest("form") as HTMLFormElement);
     await waitFor(() => expect(apiMock.addWord).toHaveBeenCalledWith({ word: "门牌号", category: "PRIVACY", action: "MASK" }));
+  });
+
+  it("requires a category: 添加 stays disabled and Enter sends nothing until one is chosen", async () => {
+    asRole("social.moderate");
+    apiMock.addWord.mockResolvedValue({ data: words[0] });
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText(tZh("social_moderation.empty.words"));
+    const select = screen.getByLabelText(tZh("social_moderation.words.col_category"));
+    expect(select).toBeRequired();
+    expect(select).toHaveValue("");
+    // No 「未分类」 choice for a new word — that label is for words that predate the rule.
+    expect(within(select).queryByRole("option", { name: tZh("social_moderation.word_category.NONE") })).toBeNull();
+    const input = screen.getByLabelText(tZh("social_moderation.fields.word"));
+    fireEvent.change(input, { target: { value: "门牌号" } });
+    const addButton = screen.getByRole("button", { name: new RegExp(tZh("social_moderation.actions.add_word")) });
+    expect(addButton).toBeDisabled();
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    expect(apiMock.addWord).not.toHaveBeenCalled();
+
+    fireEvent.change(select, { target: { value: "ABUSE" } });
+    expect(addButton).toBeEnabled();
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(apiMock.addWord).toHaveBeenCalledWith({ word: "门牌号", category: "ABUSE", action: "REVIEW" }));
   });
 
   it("rows carry no delete button; deleting is select → batch bar → confirm → batch-delete", async () => {

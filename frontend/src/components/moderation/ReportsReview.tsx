@@ -47,6 +47,13 @@ import { MODERATION_TONES, isTyping, useFailureToast } from "./shared";
 
 type PendingRow = ModeratedPost | ModeratedComment;
 
+/** `sensitive_word:<词>` → 词 (backend/apps/social/moderation.py::AUTO_REASON_PREFIX); anything else → null. */
+const SENSITIVE_WORD_PREFIX = "sensitive_word:";
+function heldForWord(row: PendingRow): string | null {
+  const reason = row.moderation_reason ?? "";
+  return reason.startsWith(SENSITIVE_WORD_PREFIX) ? reason.slice(SENSITIVE_WORD_PREFIX.length) : null;
+}
+
 interface ReviewItem {
   key: string;
   report: ModerationReport | null;
@@ -109,6 +116,11 @@ export function ReportsReview() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const fail = useFailureToast();
+  /** 「因敏感词「…」待审」 when the word list says which word; the generic label otherwise. */
+  const ruleHit = (row: PendingRow) => {
+    const word = heldForWord(row);
+    return word ? t("social_moderation.review.held_for_word", { word }) : t("social_moderation.review.rule_hit");
+  };
   const reports = useModerationReports({});
   const posts = useModeratedContent("posts", {});
   const comments = useModeratedContent("comments", {});
@@ -277,7 +289,7 @@ export function ReportsReview() {
                       {t("social_moderation.review.report_n", { n: String(reportCount) })}
                     </span>
                     {it.pending && (
-                      <span className="text-[oklch(var(--color-warning))]">{t("social_moderation.review.rule_hit")}</span>
+                      <span className="text-[oklch(var(--color-warning))]">{ruleHit(it.pending.row)}</span>
                     )}
                   </span>
                 </span>
@@ -351,7 +363,7 @@ export function ReportsReview() {
           )}
           {selected.pending && (
             <p className="mt-3 flex items-center gap-2 text-sm">
-              <Badge tone="warning" glyph="◇">{t("social_moderation.review.rule_hit")}</Badge>
+              <Badge tone="warning" glyph="◇">{ruleHit(selected.pending.row)}</Badge>
             </p>
           )}
 

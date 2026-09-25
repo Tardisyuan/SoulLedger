@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import type { MatrixConflict, Permission, Role } from "@soulledger/core/api";
+import type { MatrixConflict, MatrixWorkflowConflict, Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import type { CellFailure } from "./useMatrixCells";
@@ -67,40 +67,71 @@ export function PartialFailBanner({
 }
 
 /**
- * 冲突横幅(E-11a ◇):impact 接口说这组改动会让哪条审批流的哪一步无人可批。
- * 写明是谁的哪一格引起的;不拦保存 —— 那是操作员的决定,这里只让它是知情的决定。
+ * 冲突横幅(E-11a ◇):impact 接口说这组改动会让哪条审批流模板的哪一步、哪条进行中
+ * 审批流的哪个待审节点无人可批,写明是谁的哪一格引起的。
+ *
+ * 保存要先勾「我知道这会让 N 条审批流(含进行中 M 条)无人可批」(2026-09-25 决定):
+ * N 数的是不同的模板加不同的进行中审批流,M 是后者。服务端同样拒收未确认的冲突撤销
+ * (`conflict_unacknowledged`),这里的勾选只是让确认发生在保存之前。
  */
 export function ImpactConflictBanner({
   conflicts,
+  workflowConflicts,
+  acknowledged,
+  onAcknowledge,
   roleMeta,
   permsById,
 }: {
   conflicts: MatrixConflict[];
+  workflowConflicts: MatrixWorkflowConflict[];
+  acknowledged: boolean;
+  onAcknowledge: (on: boolean) => void;
   roleMeta: Record<string, Role>;
   permsById: Record<number, Permission>;
 }) {
   const { t } = useI18n();
-  if (conflicts.length === 0) return null;
+  if (conflicts.length + workflowConflicts.length === 0) return null;
+  const causes = (c: MatrixConflict | MatrixWorkflowConflict) =>
+    c.caused_by.map((x) => `${roleName(roleMeta, x.role)}「${permsById[x.permission_id]?.name ?? x.codename}」`).join("、");
+  const live = new Set(workflowConflicts.map((w) => w.workflow_id)).size;
+  const flows = new Set(conflicts.map((c) => c.template_id)).size + live;
   return (
     <div role="status" className="border-l-2 border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm">
       <p className="font-medium text-[oklch(var(--color-warning))]">
         <span aria-hidden="true">◇ </span>
-        {t("permissions.matrix.conflict_title", { n: String(conflicts.length) })}
+        {t("permissions.matrix.conflict_title", { n: String(conflicts.length + workflowConflicts.length) })}
       </p>
       <ul className="mt-2 space-y-1">
         {conflicts.map((c) => (
           <li key={`${c.template_id}:${c.step_order}`} className="text-[oklch(var(--color-ink))]">
             {t("permissions.matrix.conflict_line", {
-              causes: c.caused_by
-                .map((x) => `${roleName(roleMeta, x.role)}「${permsById[x.permission_id]?.name ?? x.codename}」`)
-                .join("、"),
+              causes: causes(c),
               template: c.template_name,
               step: String(c.step_order),
               step_name: c.step_name,
             })}
           </li>
         ))}
+        {workflowConflicts.map((w) => (
+          <li key={`${w.workflow_id}:${w.node_order}`} className="text-[oklch(var(--color-ink))]">
+            {t("permissions.matrix.conflict_workflow_line", {
+              causes: causes(w),
+              workflow: w.workflow_name,
+              step: String(w.node_order),
+              step_name: w.node_name,
+            })}
+          </li>
+        ))}
       </ul>
+      <label className="mt-3 flex min-h-8 items-center gap-2 text-[oklch(var(--color-ink))] max-sm:min-h-11">
+        <input
+          type="checkbox"
+          checked={acknowledged}
+          onChange={(e) => onAcknowledge(e.target.checked)}
+          className="h-4 w-4 accent-[oklch(var(--color-warning))]"
+        />
+        {t("permissions.matrix.conflict_acknowledge", { n: String(flows), m: String(live) })}
+      </label>
     </div>
   );
 }
@@ -114,6 +145,7 @@ export function UnsavedBar({
   grants,
   revokes,
   isSaving,
+  saveDisabled = false,
   onDiscard,
   onSave,
 }: {
@@ -121,6 +153,8 @@ export function UnsavedBar({
   grants: number;
   revokes: number;
   isSaving: boolean;
+  /** A conflict not yet acknowledged in the banner above (⌘S is ignored too — `onSave` checks). */
+  saveDisabled?: boolean;
   onDiscard: () => void;
   onSave: () => void;
 }) {
@@ -155,7 +189,15 @@ export function UnsavedBar({
       <Button type="button" variant="ghost" size="sm" onClick={onDiscard} disabled={isSaving}>
         {t("permissions.matrix.discard")}
       </Button>
-      <Button type="button" variant="primary" size="sm" onClick={onSave} loading={isSaving} aria-keyshortcuts="Meta+S Control+S">
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        onClick={onSave}
+        loading={isSaving}
+        disabled={saveDisabled}
+        aria-keyshortcuts="Meta+S Control+S"
+      >
         {t("permissions.matrix.save_button")}
         <kbd aria-hidden="true" className="ml-2 font-mono text-2xs opacity-70">⌘S</kbd>
       </Button>

@@ -7784,7 +7784,7 @@ paths:
       operationId: v1_perm_role_permissions_impact_create
       description: |-
         POST /api/v1/perm/role-permissions/impact/
-        保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+        保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
 
         Same body as `changes/`; `expected_versions` is accepted and ignored.
       tags:
@@ -7977,9 +7977,10 @@ paths:
         复制为新角色：新 code、同一组授权（仅 ADMIN）
 
         Copies the source's RolePermission rows — permission, `conditions` and
-        `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-        FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-        copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+        `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+        2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+        the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+        short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
       parameters:
       - in: path
         name: id
@@ -8351,7 +8352,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/RecycleBinRestoreRefusal'
           description: ''
         '403':
           content:
@@ -10100,13 +10101,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SensitiveWord'
+              $ref: '#/components/schemas/SensitiveWordCreate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SensitiveWord'
+              $ref: '#/components/schemas/SensitiveWordCreate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SensitiveWord'
+              $ref: '#/components/schemas/SensitiveWordCreate'
         required: true
       security:
       - jwtAuth: []
@@ -16349,12 +16350,10 @@ components:
     GreekForkEnum:
       enum:
       - LEFT
-      - MIDDLE
       - RIGHT
       type: string
       description: |-
         * `LEFT` - 左(塔尔塔罗斯)
-        * `MIDDLE` - 中
         * `RIGHT` - 右(至福岛)
     GuiltAndPenaltyReading:
       type: object
@@ -17960,6 +17959,9 @@ components:
       - version_conflict
       - database_error
       - admin_only_permission
+      - admin_always_all
+      - conflict_unacknowledged
+      - role_forbidden_permission
       type: string
       description: |-
         * `role_not_found` - role_not_found
@@ -17967,6 +17969,9 @@ components:
         * `version_conflict` - version_conflict
         * `database_error` - database_error
         * `admin_only_permission` - admin_only_permission
+        * `admin_always_all` - admin_always_all
+        * `conflict_unacknowledged` - conflict_unacknowledged
+        * `role_forbidden_permission` - role_forbidden_permission
     MatrixChangeResult:
       type: object
       properties:
@@ -18025,6 +18030,9 @@ components:
           type: object
           additionalProperties:
             type: integer
+        acknowledge_conflicts:
+          type: boolean
+          default: false
       required:
       - changes
     MatrixChangesResult:
@@ -18117,9 +18125,49 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MatrixConflict'
+        workflow_conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixWorkflowConflict'
       required:
       - conflicts
       - required_codenames
+      - workflow_conflicts
+    MatrixWorkflowConflict:
+      type: object
+      description: A live workflow's pending ROLE node that would lose every approver.
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        workflow_name:
+          type: string
+        tenant_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        node_order:
+          type: integer
+        node_name:
+          type: string
+        approver_roles:
+          type: array
+          items:
+            type: string
+        caused_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixConflictCause'
+      required:
+      - approver_roles
+      - caused_by
+      - node_name
+      - node_order
+      - status
+      - tenant_id
+      - workflow_id
+      - workflow_name
     MeAccount:
       type: object
       properties:
@@ -18837,6 +18885,8 @@ components:
           type: string
         moderation_status:
           $ref: '#/components/schemas/SocialModerationStatusEnum'
+        moderation_reason:
+          type: string
         open_report_count:
           type: integer
           readOnly: true
@@ -18851,6 +18901,7 @@ components:
       - content
       - create_time
       - id
+      - moderation_reason
       - moderation_status
       - open_report_count
       - post
@@ -18867,6 +18918,8 @@ components:
           type: string
         moderation_status:
           $ref: '#/components/schemas/SocialModerationStatusEnum'
+        moderation_reason:
+          type: string
         open_report_count:
           type: integer
           readOnly: true
@@ -18883,6 +18936,7 @@ components:
       - content
       - create_time
       - id
+      - moderation_reason
       - moderation_status
       - open_report_count
       - visibility
@@ -22343,7 +22397,6 @@ components:
             Greek only: which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
-            * `MIDDLE` - 中
             * `RIGHT` - 右(至福岛)
           oneOf:
           - $ref: '#/components/schemas/GreekForkEnum'
@@ -22463,7 +22516,6 @@ components:
             Greek only: which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
-            * `MIDDLE` - 中
             * `RIGHT` - 右(至福岛)
           oneOf:
           - $ref: '#/components/schemas/GreekForkEnum'
@@ -22832,6 +22884,29 @@ components:
         * `civilization` - civilization
         * `organization` - organization
         * `parent` - parent
+    RecycleBinRestoreRefusal:
+      type: object
+      description: |-
+        400 body of restore. `code` / `missing_roles` come with a refusal from a
+        registered restore check (`template_role_missing`: a workflow template in
+        the cascade names roles that no longer exist); the other 400s carry
+        `error` alone.
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/RecycleBinRestoreRefusalCodeEnum'
+        missing_roles:
+          type: array
+          items:
+            type: string
+      required:
+      - error
+    RecycleBinRestoreRefusalCodeEnum:
+      enum:
+      - template_role_missing
+      type: string
+      description: '* `template_role_missing` - template_role_missing'
     RecycleBinRestoreRequest:
       type: object
       description: |-
@@ -23520,6 +23595,46 @@ components:
           type: integer
       required:
       - deleted
+    SensitiveWordCreate:
+      type: object
+      description: |-
+        Body of `POST sensitive-words/`: a new word must name its category
+        (maintainer decision, 2026-09-25). Words added before that stay
+        uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+        asks an existing word for one.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        word:
+          type: string
+          maxLength: 50
+        category:
+          $ref: '#/components/schemas/SocialSensitiveWordCategoryEnum'
+        action:
+          allOf:
+          - $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
+          default: REVIEW
+        hits_30d:
+          type: integer
+          readOnly: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/ModerationAuthor'
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - created_by
+      - hits_30d
+      - id
+      - word
     SentenceNode:
       type: object
       properties:
