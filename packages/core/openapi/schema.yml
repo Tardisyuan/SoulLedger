@@ -3768,6 +3768,12 @@ paths:
         `statute_ids` files the grounds with the verdict, in one transaction —
         an unciteable article aborts the whole conclusion rather than leaving a
         concluded judgment whose stated basis never landed.
+
+        `destination_realm_id` / `term_years` / `eternal` (审判台「戊 · 发落」)
+        are optional; none given = the automatic routing, unchanged. Refusals
+        carry a `code`: realm_not_found, realm_not_allowed, realm_full (409),
+        term_conflict, eternal_not_allowed, destination_not_applicable. There is
+        no undo window: the conclusion is written when this call returns.
       parameters:
       - in: path
         name: id
@@ -3782,13 +3788,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Judgment'
+              $ref: '#/components/schemas/JudgmentConclude'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Judgment'
+              $ref: '#/components/schemas/JudgmentConclude'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Judgment'
+              $ref: '#/components/schemas/JudgmentConclude'
         required: true
       security:
       - jwtAuth: []
@@ -3845,6 +3851,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/{id}/destinations/:
+    get:
+      operationId: v1_judgment_destinations_retrieve
+      description: |-
+        「戊 · 发落」's picker: where this case may be sent under `?candidate_verdict=`.
+
+        The options are the realms of this judgment's tenant and civilization
+        that the automatic routing can reach for that verdict — the same set
+        `conclude` accepts as `destination_realm_id` (see
+        apps/disposition/destination.py). Not an original judgment (amendment,
+        reopen) → no options, since those conclude without a disposition.
+      parameters:
+      - in: query
+        name: candidate_verdict
+        schema:
+          type: string
+          enum:
+          - FAILED
+          - PASSED
+          - PURGATORY
+          - RETRY
+        description: The candidate verdict; only realms it can route to are listed.
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentDestinations'
           description: ''
   /api/v1/judgment/{id}/draft/:
     patch:
@@ -4205,6 +4252,47 @@ paths:
         (they say whether the queue was empty or merely skipped dry); a 404
         would drive the client's error boundary instead.
       parameters:
+      - in: query
+        name: include_deferred
+        schema:
+          type: boolean
+        description: Also hand out deferred (暂缓) cases. Off by default.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentQueueCursor'
+          description: ''
+  /api/v1/judgment/previous/:
+    get:
+      operationId: v1_judgment_previous_retrieve
+      description: |-
+        The pending case just before `?at=<id>` in queue order — 「上一件」.
+
+        Same queue as `next/`: the same tenant/DataScope scoping, FIFO on
+        `created_at` (ties by `id`), deferred cases left out unless
+        `include_deferred`, `?skip=` honoured. `at` itself is looked up in the
+        caller's scope in any state, so 「上一件」 still works from a case that
+        has just been concluded. `at` missing, malformed, or not visible to the
+        caller has no "before", and answers the empty cursor (`judgment: null`)
+        rather than 404 — the same renderable "nothing there" `next/` gives.
+
+        Not symmetric in one respect, deliberately: `next/?at=X` answers X
+        itself (enter the queue on X), `previous/?at=X` answers the case before
+        X. Moving forward from X is `next/?skip=X`.
+      parameters:
+      - in: query
+        name: at
+        schema:
+          type: string
+          format: uuid
+        description: The case the caller is on; the answer is the pending case just
+          before it.
       - in: query
         name: include_deferred
         schema:
@@ -16396,6 +16484,50 @@ components:
       required:
       - code
       - error
+    JudgmentConclude:
+      type: object
+      properties:
+        verdict:
+          $ref: '#/components/schemas/JudgmentConcludeVerdictEnum'
+        notes:
+          type: string
+          default: ''
+        create_workflow:
+          type: boolean
+          default: false
+        statute_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        plan_changes:
+          type: object
+          additionalProperties: {}
+        destination_realm_id:
+          type: string
+          format: uuid
+          nullable: true
+        term_years:
+          type: integer
+          minimum: 1
+          nullable: true
+        eternal:
+          type: boolean
+          nullable: true
+      required:
+      - verdict
+    JudgmentConcludeVerdictEnum:
+      enum:
+      - PASSED
+      - FAILED
+      - PURGATORY
+      - RETRY
+      type: string
+      description: |-
+        * `PASSED` - PASSED
+        * `FAILED` - FAILED
+        * `PURGATORY` - PURGATORY
+        * `RETRY` - RETRY
     JudgmentDefer:
       type: object
       description: |-
@@ -16409,6 +16541,79 @@ components:
           maxLength: 500
       required:
       - reason
+    JudgmentDestinationOption:
+      type: object
+      description: One realm the 「戊 · 发落」 picker may offer for a candidate verdict.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        realm_code:
+          type: string
+          readOnly: true
+        kind:
+          readOnly: true
+          nullable: true
+          description: |-
+            Chinese only: 殿 / 门 / 层 / 道
+
+            * `HALL` - 殿
+            * `GATE` - 门
+            * `LAYER` - 层
+            * `PATH` - 道
+          oneOf:
+          - $ref: '#/components/schemas/RealmKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        capacity:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: How many souls the realm holds at once; null = not recorded
+        occupancy:
+          type: integer
+          readOnly: true
+        is_eternal:
+          type: boolean
+          readOnly: true
+      required:
+      - capacity
+      - id
+      - is_eternal
+      - kind
+      - name
+      - occupancy
+      - realm_code
+    JudgmentDestinations:
+      type: object
+      description: |-
+        `GET /judgment/{id}/destinations/?candidate_verdict=` — schema-only envelope.
+
+        `default_realm_id` is where automatic routing would send the soul (null when
+        that realm is not among the options, e.g. an unmapped tenant);
+        `default_term_years` is null because an automatic conclusion records no term.
+      properties:
+        verdict:
+          type: string
+        default_realm_id:
+          type: string
+          format: uuid
+          nullable: true
+        default_term_years:
+          type: integer
+          nullable: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/JudgmentDestinationOption'
+      required:
+      - default_realm_id
+      - default_term_years
+      - options
+      - verdict
     JudgmentDetail:
       type: object
       description: |-

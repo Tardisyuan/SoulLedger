@@ -19,9 +19,11 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.disposition.destination import DestinationRefusedError, destination_options
+from apps.disposition.services import DispositionService
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
-from apps.judgment.models import Judgment, Statute
+from apps.judgment.models import Judgment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
 from apps.judgment.precedents import precedents_for
@@ -35,6 +37,8 @@ from apps.judgment.serializers import (
     JudgmentClaimRefusalSerializer,
     JudgmentConcludeSerializer,
     JudgmentDeferSerializer,
+    JudgmentDestinationOptionSerializer,
+    JudgmentDestinationsSerializer,
     JudgmentDetailSerializer,
     JudgmentDraftConflictSerializer,
     JudgmentDraftSerializer,
@@ -162,6 +166,10 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # which no role holds and no migration seeds, so the queue would have
         # 403'd for everyone including ADMIN.
         'next_pending': ['judgment.read'],
+        # 上一件:与 next_pending 同一个队列、同一个读。
+        'previous_pending': ['judgment.read'],
+        # 「戊 · 发落」的候选目的地:只读,给判官挑;真正落判仍要 conclude 的 judgment.execute。
+        'destinations': ['judgment.read'],
         'update': ['judgment.execute'],
         'partial_update': ['judgment.execute'],
         'destroy': ['judgment.execute'],
@@ -347,7 +355,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # `?include_deferred=true` 显式要回它们(去「暂缓」组里处理某一件时)。
         if self.request.query_params.get("include_deferred", "").lower() not in ("1", "true", "yes"):
             queue = queue.filter(deferred_at__isnull=True)
-        return queue.order_by("created_at")
+        # `id` breaks created_at ties so `next/` and `previous/` walk one total order.
+        return queue.order_by("created_at", "id")
 
     @staticmethod
     def _requested_skips(request):
@@ -473,9 +482,14 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 payload["position"] = total - remaining + ahead + 1
         if judgment is None:
             judgment = cursor.first()
+        return self._cursor_response(payload, judgment)
+
+    def _cursor_response(self, payload, judgment):
+        """Fill the cursor envelope with `judgment`'s decision surface (or leave it empty)."""
         if judgment is None:
             return Response(payload)
 
+        request = self.request
         soul = judgment.soul
         context = self.get_serializer_context()
         payload["judgment"] = JudgmentSerializer(judgment, context=context).data
@@ -496,6 +510,114 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             realms.order_by("tier", "realm_code"), many=True, context=context
         ).data
         return Response(payload)
+
+    @extend_schema(
+        responses=JudgmentQueueCursorSerializer,
+        parameters=[
+            OpenApiParameter(
+                "at", OpenApiTypes.UUID, OpenApiParameter.QUERY,
+                description="The case the caller is on; the answer is the pending case just before it.",
+            ),
+            OpenApiParameter(
+                "include_deferred",
+                OpenApiTypes.BOOL,
+                OpenApiParameter.QUERY,
+                description="Also hand out deferred (暂缓) cases. Off by default.",
+            ),
+        ],
+    )
+    @action(detail=False, methods=["get"], url_path="previous")
+    def previous_pending(self, request):
+        """The pending case just before `?at=<id>` in queue order — 「上一件」.
+
+        Same queue as `next/`: the same tenant/DataScope scoping, FIFO on
+        `created_at` (ties by `id`), deferred cases left out unless
+        `include_deferred`, `?skip=` honoured. `at` itself is looked up in the
+        caller's scope in any state, so 「上一件」 still works from a case that
+        has just been concluded. `at` missing, malformed, or not visible to the
+        caller has no "before", and answers the empty cursor (`judgment: null`)
+        rather than 404 — the same renderable "nothing there" `next/` gives.
+
+        Not symmetric in one respect, deliberately: `next/?at=X` answers X
+        itself (enter the queue on X), `previous/?at=X` answers the case before
+        X. Moving forward from X is `next/?skip=X`.
+        """
+        queue = self._pending_queue()
+        total = queue.count()
+        skips = self._requested_skips(request)
+        remaining_qs = queue.exclude(id__in=skips) if skips else queue
+        remaining = remaining_qs.count()
+        payload = {
+            "total": total,
+            "remaining": remaining,
+            "skipped": total - remaining,
+            "position": None,
+            "judgment": None,
+            "soul": None,
+            "ledger": None,
+            "prior_cycles": [],
+            "realm_options": [],
+        }
+        try:
+            anchor = self.get_queryset().filter(id=uuid.UUID(request.query_params.get("at", ""))).first()
+        except (ValueError, AttributeError, TypeError):
+            anchor = None
+        judgment = None
+        if anchor is not None:
+            judgment = (
+                remaining_qs.select_related("soul", "soul__tenant")
+                .filter(Q(created_at__lt=anchor.created_at) | Q(created_at=anchor.created_at, id__lt=anchor.id))
+                .order_by("-created_at", "-id")
+                .first()
+            )
+        if judgment is not None:
+            ahead = remaining_qs.filter(created_at__lt=judgment.created_at).count()
+            payload["position"] = total - remaining + ahead + 1
+        return self._cursor_response(payload, judgment)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "candidate_verdict", OpenApiTypes.STR, OpenApiParameter.QUERY, required=True,
+                enum=[v.value for v in Verdict],
+                description="The candidate verdict; only realms it can route to are listed.",
+            ),
+        ],
+        responses=JudgmentDestinationsSerializer,
+    )
+    @action(detail=True, methods=["get"], url_path="destinations")
+    def destinations(self, request, pk=None):
+        """「戊 · 发落」's picker: where this case may be sent under `?candidate_verdict=`.
+
+        The options are the realms of this judgment's tenant and civilization
+        that the automatic routing can reach for that verdict — the same set
+        `conclude` accepts as `destination_realm_id` (see
+        apps/disposition/destination.py). Not an original judgment (amendment,
+        reopen) → no options, since those conclude without a disposition.
+        """
+        judgment = self.get_object()
+        # Not `?verdict=`: that name is a JudgmentFilter field, and `get_object`
+        # runs the filters — a pending case filtered by verdict=FAILED is a 404.
+        verdict = request.query_params.get("candidate_verdict", "")
+        if verdict not in Verdict.values:
+            return Response(
+                {"error": f"candidate_verdict must be one of {', '.join(Verdict.values)}", "code": "invalid_verdict"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        options = []
+        default_realm_id = None
+        if judgment.kind == JudgmentKind.ORIGINAL:
+            options = list(destination_options(judgment, verdict))
+            default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method)
+            if default is not None and any(r.pk == default.pk for r in options):
+                default_realm_id = default.pk
+        return Response({
+            "verdict": verdict,
+            "default_realm_id": default_realm_id,
+            "default_term_years": None,
+            "options": JudgmentDestinationOptionSerializer(
+                options, many=True, context=self.get_serializer_context()).data,
+        })
 
     @extend_schema(
         parameters=[
@@ -895,6 +1017,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             clear_current_user()
         return Response(JudgmentDraftSerializer(saved).data)
 
+    @extend_schema(request=JudgmentConcludeSerializer, responses=JudgmentSerializer)
     @action(detail=True, methods=["post"])
     def conclude(self, request, pk=None):
         """
@@ -905,6 +1028,12 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         `statute_ids` files the grounds with the verdict, in one transaction —
         an unciteable article aborts the whole conclusion rather than leaving a
         concluded judgment whose stated basis never landed.
+
+        `destination_realm_id` / `term_years` / `eternal` (审判台「戊 · 发落」)
+        are optional; none given = the automatic routing, unchanged. Refusals
+        carry a `code`: realm_not_found, realm_not_allowed, realm_full (409),
+        term_conflict, eternal_not_allowed, destination_not_applicable. There is
+        no undo window: the conclusion is written when this call returns.
         """
         judgment = self.get_object()
         if judgment.is_final:
@@ -922,7 +1051,13 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             judgment.conclude(
                 verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids,
                 plan_changes=plan_changes,
+                destination_realm_id=serializer.validated_data.get("destination_realm_id"),
+                term_years=serializer.validated_data.get("term_years"),
+                eternal=serializer.validated_data.get("eternal"),
             )
+        except DestinationRefusedError as exc:
+            # 「戊 · 发落」选的门或刑期不成立。什么都没写(同一事务)。
+            return Response({"error": str(exc), "code": exc.code}, status=exc.status)
         except PlanChangeRefusedError as exc:
             # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
             return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
