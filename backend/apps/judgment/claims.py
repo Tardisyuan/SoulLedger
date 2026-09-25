@@ -78,6 +78,34 @@ def _assert_may_act_on(judgment: Judgment, user, may_override: bool) -> None:
         )
 
 
+#: 结案不受认领限制的角色:ADMIN,以及殿主(MODERATOR)—— 与默认持有 `judgment.assign`
+#: 的是同一批人。按角色名判,不按码名:这是用户拍板的「谁可以越过认领」,不随权限矩阵漂。
+CONCLUDE_OVERRIDE_ROLES = ("ADMIN", "MODERATOR")
+
+
+def lock_for_conclude(pk, user) -> Judgment:
+    """结案前锁住案子这一行,并确认调用者可以结它。**必须在结案事务里调用。**
+
+    别人认领的案子只有认领人本人能结;ADMIN 与殿主不受此限。无人认领的案子,持
+    `judgment.execute` 的人都能结(码名由视图查)。行锁一直持有到结案事务结束,所以
+    与「改派」并发时,要么改派先落、结案读到新认领人而被拒,要么结案先落、改派读到
+    已结案而得 `not_pending` —— 不会有「按旧认领人放行、按新认领人落判」。
+    """
+    judgment = _lock(pk)
+    if (
+        judgment.claimed_by_id not in (None, user.pk)
+        and getattr(user, "role", None) not in CONCLUDE_OVERRIDE_ROLES
+    ):
+        holder = judgment.claimed_by
+        raise ClaimRefusedError(
+            "This judgment is claimed by another officer; only they can conclude it.",
+            "claimed_by_other",
+            claimed_by=judgment.claimed_by_id,
+            claimed_by_name=holder.display_name or holder.username,
+        )
+    return judgment
+
+
 # ---------------------------------------------------------------------------
 # 单件动作的规则(锁已由调用方拿到)
 # ---------------------------------------------------------------------------

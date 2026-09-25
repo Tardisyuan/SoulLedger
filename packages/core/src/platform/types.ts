@@ -15,9 +15,7 @@
  *                same cookie, for the middleware reason above)
  *
  * That split is not incidental. The access token lives in `session`, the
- * refresh token in `secure`, and the locale and the judgment queue's held
- * verdict in `persistent` (see `PlatformAdapter.persistent` for why a verdict
- * is not in `secure`), and the whole of
+ * refresh token in `secure`, and the locale in `persistent`, and the whole of
  * the commentary in `../api/client.ts` is about what went wrong the one time
  * the access token was written to the persistent store. Naming the stores after
  * their lifetimes is what lets that rule be stated in this package at all;
@@ -104,6 +102,13 @@ export type SessionSuspendKind = "terminal" | "transient";
 /**
  * Run `handler` when the session is going away; returns an unsubscribe.
  *
+ * NO CONSUMER SINCE 2026-09-25. Everything below was written for the judgment
+ * queue's eight-second undo window, which the user removed (verdicts are now
+ * sent the moment they are given, like the desk). The port and its two host
+ * implementations stay — they are small, correct, and the terminal/transient
+ * distinction is the part a future caller would get wrong — but read the
+ * `useJudgmentQueue` references as history.
+ *
  * WHAT THIS IS ACTUALLY FOR, because "suspend" is vague on its own. The
  * judgment queue holds a verdict for the length of its undo window before
  * sending it. A verdict the operator gave and then walked away from is a
@@ -152,53 +157,6 @@ export type SessionSuspendKind = "terminal" | "transient";
 export type SessionSuspendSubscriber = (
   handler: (kind: SessionSuspendKind) => void
 ) => () => void;
-
-/**
- * One request, delivered on the way out — after the point where an ordinary
- * one is abandoned.
- *
- * WHY THIS EXISTS. `useJudgmentQueue`'s terminal flush called `judgmentApi
- * .conclude(...)`, which is axios, which is XHR. **A document that unloads
- * aborts its in-flight XHRs.** So a tab closed inside the undo window issued a
- * request that was cancelled by the very event that triggered it — and, because
- * the flush cleared the persisted record first, there was nothing left on disk
- * for the next session to recover either. The verdict was lost twice over, in
- * silence, and no test could see it: jsdom has no unload, and the mock resolved.
- *
- * NOT `sendBeacon`, AND THIS IS THE WHOLE REASON THE PORT HAS THIS SHAPE.
- * `navigator.sendBeacon` is the API this problem is usually named after, and it
- * cannot be used here: it sends no author-defined headers, and this API takes
- * its credential in `Authorization: Bearer` (`api/client.ts:103`). A beacon
- * would arrive unauthenticated and be refused — a delivery mechanism that
- * reliably fails is worse than none, because it looks like one that works.
- * `fetch(..., { keepalive: true })` carries headers and outlives the document,
- * so that is what the web adapter uses; the 64KB body limit it comes with is
- * not a constraint for a verdict.
- *
- * THE HOST GETS A FINISHED REQUEST, not a path and a payload. The URL, the
- * bearer token and the JSON body are assembled in this package, where the API
- * contract already lives, so a host cannot get the credential wrong and there
- * is no second place that knows how this app authenticates. The host supplies
- * only the platform's answer to "send this even though we are dying".
- *
- * THE RETURN VALUE IS `accepted`, NOT `delivered`, and the difference is the
- * point: nothing on this path can observe a response — the document is gone
- * before one arrives. `true` means the host handed it to the platform, and the
- * caller must treat that as *may have arrived*, never as *did*. That
- * uncertainty is why the record stays on disk with a stamp and why the next
- * session asks the server what actually happened, rather than assuming either
- * way.
- *
- * The default returns `false`: a host that has installed no adapter, and one
- * running under a server render, genuinely cannot deliver anything. Saying so
- * lets the caller keep the record instead of dropping it against a promise
- * nobody kept.
- */
-export type TerminalDelivery = (request: {
-  url: string;
-  headers: Record<string, string>;
-  body: string;
-}) => boolean;
 
 /**
  * Run `handler` when a suspended session comes back; returns an unsubscribe.
@@ -346,31 +304,10 @@ export interface PlatformAdapter {
   /** Cleared when the session ends. Holds the access token, and nothing else. */
   session: KeyValueStore;
   /**
-   * Survives a restart, holds nothing secret. Holds the locale and the
-   * judgment queue's held verdict. (It also held a tenant id whose only reader sent
-   * a header the backend never read; both deleted, FL-12.)
-   *
-   * WHY A HELD VERDICT IS HERE AND NOT IN `secure`, since it is plainly more
-   * sensitive than a locale — a verdict, a note and a soul's name. Three
-   * reasons, and the first is the one that decides it:
-   *
-   *  1. `secure`'s documented native shape is `expo-secure-store` / Keychain,
-   *     which is **async**, which is why SYNCHRONOUS above obliges a native
-   *     adapter to serve reads from an in-memory mirror and *write through in
-   *     the background*. A record whose entire purpose is to be on disk at the
-   *     instant the process is killed cannot live behind a background write.
-   *  2. Keychain items survive an app being uninstalled and reinstalled. A
-   *     verdict that outlives the install that made it is the replay hazard in
-   *     its worst form; `persistent` (AsyncStorage) goes with the app.
-   *  3. It is not a credential. Nothing can be authenticated with it, which is
-   *     the property `secure` was split out to protect. Widening `secure` to
-   *     "anything sensitive" would make the routing a judgement call again,
-   *     which is exactly what the split removed.
-   *
-   * Its confidentiality is bought with **lifetime** instead: it is written only
-   * while a verdict is held (eight seconds, in the ordinary case), and removed
-   * on commit, on undo, and on being read back — see the header of
-   * `../hooks/useJudgmentQueue.ts`.
+   * Survives a restart, holds nothing secret. Holds the locale. (It also held
+   * a tenant id whose only reader sent a header the backend never read; both
+   * deleted, FL-12. And, until 2026-09-25, the judgment queue's held verdict,
+   * removed with the undo window it belonged to.)
    */
   persistent: KeyValueStore;
   /**
@@ -394,9 +331,6 @@ export interface PlatformAdapter {
   onSessionResume: SessionResumeSubscriber;
   /** Show the operator a transient message. See `Notifier`. */
   notify: Notifier;
-  /** Deliver one request while the session is being torn down. See
-   *  `TerminalDelivery` — the default returns `false`, which is honest. */
-  deliverOnExit: TerminalDelivery;
   /**
    * Where the API lives, e.g. `https://api.example.com/api/v1`. No trailing slash.
    *

@@ -98,24 +98,6 @@
   --transition-duration-state: 160ms;
   --transition-duration-settle: 240ms;
 
-  /* The one motion in this app that is not a state change.
-   *
-   * The undo strip in the judgment queue appears after a verdict is landed and
-   * gives the operator a few seconds to take it back. It is the only moment in
-   * the product where something irreversible has just happened and the way out
-   * is on screen — and it was appearing with no transition at all, in a slot
-   * that is deliberately reserved at a fixed height so nothing else moves.
-   *
-   * That reserved slot is why this can be an animation rather than a layout
-   * shift: the space is already there, so the strip only has to become visible
-   * IN it. 4px of rise, which is under the threshold where a reader tracks the
-   * movement itself, plus the fade that actually does the work.
-   *
-   * Registered as a token rather than written inline so it has a name and one
-   * definition. The reduced-motion block below collapses it to 1ms like
-   * everything else. */
-  --animate-undo-strip: undo-strip var(--transition-duration-settle) var(--ease-enter) both;
-
   /* THE TABLE ROWS, and the one of the three that is not decoration.
    *
    * Eight WebSocket soul events reach this app as a bare `invalidateQueries`
@@ -525,17 +507,6 @@ html.theme-switching *::after {
   }
 }
 
-@keyframes undo-strip {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @layer base {
   body {
     @apply bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))];
@@ -880,8 +851,8 @@ select:focus-visible {
 }
 
 /* Leaving. `exit` is the curve for something getting out of the way, and the
-   6px lift matches the 4px the undo strip rises by — both are under the
-   threshold where a reader tracks the movement itself. */
+   6px lift is under the threshold where a reader tracks the movement
+   itself. */
 .toast-leaving {
   opacity: 0;
   transform: translateY(-6px);

@@ -533,13 +533,15 @@ class JudgmentBatchResultSerializer(serializers.Serializer):
 class JudgmentClaimRefusalSerializer(serializers.Serializer):
     """认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
 
-    `claimed_by` 只在 `already_claimed` / `not_claimant` 上有;`id` 只在批量里有,
+    `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
+    `claimed_by_name` 只在 `claimed_by_other`(结案被拒)上有;`id` 只在批量里有,
     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
     """
 
     error = serializers.CharField()
     code = serializers.CharField()
     claimed_by = serializers.IntegerField(required=False, allow_null=True)
+    claimed_by_name = serializers.CharField(required=False)
     id = serializers.UUIDField(required=False)
     missing = serializers.ListField(child=serializers.UUIDField(), required=False)
 

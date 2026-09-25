@@ -289,8 +289,9 @@ DEFAULT_PERMISSIONS = [
     # 改派审判(队列认领,2026-09-24):把一件案子交给另一位官员,或替别人释放 / 暂缓。
     # 分配别人的工作,比办案(judgment.execute)更严 —— 持有者 ADMIN、MODERATOR(殿主);
     # JUDGE 不持有,审判官之间不能互相派活。与 judgment.* 其余三条一样不由迁移播种
-    # (走 ROLE_PERMISSIONS 的字典路径);部署库若已为 judgment.* 建了 Permission 行,
-    # 要同时给 MODERATOR 建这一条的 RolePermission,否则数据库路径对它答「无」。
+    # (走 ROLE_PERMISSIONS 的字典路径)。没有 Permission 行时 checker 按字典作答,所以
+    # MODERATOR 照样持有;但权限矩阵里看不见它、不能单独收回。给已部署的库补行用
+    # `manage.py sync_permissions`(只补缺的码名,带默认授予,不碰已有码名的授予)。
     ("judgment.assign", "改派审判", "judgment"),
     # disposition 权限（read + execute 二元，没有 disposition.manage）
     ("disposition.read", "查看处置", "disposition"),

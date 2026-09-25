@@ -13,7 +13,7 @@ import { loadDefaultView, routeForView, saveDefaultView, type DefaultView } from
  * 首次进入四步清单(第三类 D 组 10b)。步骤行 StepRow:已完成 = 墨底 ✓,
  * 当前 = 左侧 3px 墨线,未到 = 序号。不做轮播,每一步都能跳过。
  *
- * 快捷键一步列的是**这个应用里真有的**六个键 —— 审判队列
+ * 快捷键一步列的是**这个应用里真有的**五个键(U 随撤回窗口删除,2026-09-25) —— 审判队列
  * (`JudgmentQueueConsole.tsx` 的 keydown)。设计稿上的 ⌘K / Q / ⌘⏎ / ⌘Z
  * 在代码里都不存在,印出来就是在教人按一个没反应的键。说明文字复用队列自己的
  * 键盘映射文案(`judgment.queue.key_*`),两处不会各说各的。
@@ -21,7 +21,6 @@ import { loadDefaultView, routeForView, saveDefaultView, type DefaultView } from
 const KEYS: { key: string; label: string }[] = [
   { key: "1–4", label: "judgment.queue.key_verdicts" },
   { key: "S", label: "judgment.queue.key_defer" },
-  { key: "U", label: "judgment.queue.key_undo" },
   { key: "N", label: "judgment.queue.key_notes" },
   { key: "Esc", label: "judgment.queue.key_leave" },
   { key: "? / H", label: "judgment.queue.key_help" },
