@@ -27,7 +27,7 @@ import { AppHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
 import { useSession } from "./session";
-import { themeFor } from "./theme";
+import { preLoginTheme, themeFor } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
 import {
   ApplicationDetailScreen,
@@ -219,7 +219,7 @@ export function RootNavigator() {
   const { state, retryBoot, signOut } = useSession();
   const [ready, setReady] = useState(0);
   const scheme = useColorScheme() === "light" ? "light" : "dark";
-  const theme = themeFor(state.status === "signedIn" ? state.profile.civilization : null, scheme);
+  const theme = state.status === "signedIn" ? themeFor(state.profile.civilization, scheme) : preLoginTheme(scheme);
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
   const navTheme: NavTheme = {
     ...base,

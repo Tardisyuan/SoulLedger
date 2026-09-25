@@ -110,6 +110,49 @@ export function themeFor(civilization: string | null | undefined, scheme: ColorS
 }
 
 /**
+ * The pre-sign-in palette (第三类 F 组 canvas, "App 调色板"): parchment, not a
+ * civilization's ground — before sign-in there is no soul to skin by. Copied
+ * verbatim; `preLoginTheme` maps it onto the Theme slots.
+ */
+export const parchment = {
+  light: { bg: "#f4efe4", bg2: "#ebe4d3", ink: "#1e1a14", ink2: "#5a5145", ink3: "#77705f", line: "#cfc6b4", line2: "#8f8672", acc: "#a8281e", merit: "#2f6b3a", demerit: "#a8281e", warnBg: "#efe0bf" },
+  dark: { bg: "#15130f", bg2: "#1f1c16", ink: "#ede5d3", ink2: "#b8ad98", ink3: "#8f8572", line: "#332e26", line2: "#6a6252", acc: "#d8503f", merit: "#7fc48a", demerit: "#e0685a", warnBg: "#2a2213" },
+} as const;
+
+/**
+ * Every screen before sign-in: booting, login, forgot-password, the forced
+ * password change. The canvas fills primary buttons with INK and keeps focus
+ * rings and radios ink — the App's accent is the seal red, the same value as
+ * the error colour — so here `accent` is ink, and red (`acc` / `demerit`)
+ * reaches only the error slots.
+ */
+export function preLoginTheme(scheme: ColorScheme): Theme {
+  const p = parchment[scheme];
+  return {
+    scheme,
+    civ: "neutral",
+    s0: p.bg,
+    s1: p.bg,
+    s2: p.bg2,
+    accent: p.ink,
+    mark: p.ink,
+    hair: p.line,
+    hair2: p.line2,
+    onAccent: p.bg,
+    ink: p.ink,
+    inkMuted: p.ink2,
+    inkSubtle: p.ink3,
+    pos: p.merit,
+    neg: p.demerit,
+    negStrong: p.acc,
+    negInk: p.demerit,
+    negBg: p.warnBg,
+    lamp: semantic[scheme].lamp,
+    lampBg: semantic[scheme].lampBg,
+  };
+}
+
+/**
  * A sealed (past-life) record: ink steps down one level and accent becomes
  * subtle. Everything else — grounds, hairlines — is the same theme.
  */

@@ -9,7 +9,19 @@
  * `theme.ts` must be its conversion within rounding. A mistyped hex, or one
  * copied into the wrong civilization, is red here.
  */
-import { civ, ink, oklchToHex, sealedTheme, semantic, themeFor, type CivKey, type ColorScheme, type Theme } from "../theme";
+import {
+  civ,
+  ink,
+  oklchToHex,
+  parchment,
+  preLoginTheme,
+  sealedTheme,
+  semantic,
+  themeFor,
+  type CivKey,
+  type ColorScheme,
+  type Theme,
+} from "../theme";
 
 /** [dark OKLCH, light OKLCH], exactly as the handoff's table prints them. */
 const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string] }[] = [
@@ -134,6 +146,58 @@ describe("themeFor", () => {
       const [d, li] = [civ[key].dark, civ[key].light];
       expect([key, l(d.s0) < l(d.s1) && l(d.s1) < l(d.s2)]).toEqual([key, true]);
       expect([key, l(li.s0) >= l(li.s1) && l(li.s1) > l(li.s2)]).toEqual([key, true]);
+    }
+  });
+});
+
+describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
+  /** The canvas's "App 调色板", as printed. */
+  const CANVAS = {
+    light: "bg #f4efe4 · bg2 #ebe4d3 · ink #1e1a14 · ink2 #5a5145 · ink3 #77705f · line #cfc6b4 · line2 #8f8672 · acc #a8281e · merit #2f6b3a · demerit #a8281e · warnBg #efe0bf",
+    dark: "bg #15130f · bg2 #1f1c16 · ink #ede5d3 · ink2 #b8ad98 · ink3 #8f8572 · line #332e26 · line2 #6a6252 · acc #d8503f · merit #7fc48a · demerit #e0685a · warnBg #2a2213",
+  };
+  const parse = (line: string) => Object.fromEntries(line.split(" · ").map((pair) => pair.split(" ")));
+
+  it.each(SCHEMES)("%s: the tokens are the canvas's, all eleven", (scheme) => {
+    expect(parchment[scheme]).toEqual(parse(CANVAS[scheme]));
+  });
+
+  it.each(SCHEMES)("%s: ink fills the primary button and draws focus; red is only in the error slots", (scheme) => {
+    const p = parchment[scheme];
+    const t = preLoginTheme(scheme);
+    expect([t.s0, t.accent, t.onAccent, t.mark]).toEqual([p.bg, p.ink, p.bg, p.ink]);
+    expect([t.ink, t.inkMuted, t.inkSubtle, t.hair, t.hair2, t.s2]).toEqual([p.ink, p.ink2, p.ink3, p.line, p.line2, p.bg2]);
+    const red = new Set<string>([p.acc, p.demerit]);
+    const redSlots = (Object.keys(t) as (keyof Theme)[]).filter((k) => red.has(t[k] as string)).sort();
+    expect(redSlots).toEqual(["neg", "negInk", "negStrong"]);
+  });
+
+  it.each(SCHEMES)("%s: contrast holds on parchment", (scheme) => {
+    const t = preLoginTheme(scheme);
+    const pairs: [keyof Theme, keyof Theme][] = [
+      ["ink", "s0"],
+      ["ink", "s2"],
+      ["inkMuted", "s0"],
+      ["inkSubtle", "s0"],
+      ["onAccent", "accent"],
+      ["neg", "s0"],
+      ["negInk", "negBg"],
+      ["pos", "s0"],
+    ];
+    const low = pairs
+      .map(([fg, bg]) => ({ fg, bg, ratio: Math.round(contrast(t[fg] as string, t[bg] as string) * 100) / 100 }))
+      .filter(({ ratio }) => ratio < 4.5);
+    // The canvas's light ink3 (#77705f) is 4.29:1 on bg — under AA for body text. Kept as
+    // printed (a product-owner palette) and pinned here, so it cannot silently get worse
+    // or spread to another pair; raised in the round's report.
+    expect(low).toEqual(scheme === "light" ? [{ fg: "inkSubtle", bg: "s0", ratio: 4.29 }] : []);
+  });
+
+  it("is not any civilization's ground — a signed-in soul never gets it", () => {
+    for (const scheme of SCHEMES) {
+      const grounds = KEYS.map((key) => civ[key][scheme].s0);
+      expect(grounds).not.toContain(preLoginTheme(scheme).s0);
+      expect(themeFor(null, scheme).s0).toBe(civ.neutral[scheme].s0);
     }
   });
 });
