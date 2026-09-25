@@ -10030,8 +10030,19 @@ paths:
   /api/v1/social-moderation/mutes/:
     get:
       operationId: v1_social_moderation_mutes_list
-      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      description: |-
+        禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+
+        列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+        `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+        `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+        `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
       parameters:
+      - in: query
+        name: created_by
+        schema:
+          type: integer
+        description: 执行人 user id
       - name: ordering
         required: false
         in: query
@@ -10044,12 +10055,35 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 灵魂显示名包含
       - name: search
         required: false
         in: query
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - EXPIRED
+          - LIFTED
+        description: ACTIVE 禁言中 / EXPIRED 已到期 / LIFTED 已解除
+      - in: query
+        name: term
+        schema:
+          type: string
+          enum:
+          - LONG
+          - MEDIUM
+          - SHORT
+        description: 时长:SHORT ≤ 7 天 / MEDIUM 8–30 天 / LONG > 30 天
       tags:
       - v1
       security:
@@ -10063,7 +10097,13 @@ paths:
           description: ''
     post:
       operationId: v1_social_moderation_mutes_create
-      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      description: |-
+        禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+
+        列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+        `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+        `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+        `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
       tags:
       - v1
       requestBody:
@@ -10145,6 +10185,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/mutes/executors/:
+    get:
+      operationId: v1_social_moderation_mutes_executors_list
+      description: 执行人过滤的选项:本文明禁言记录里出现过的执行人。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModerationAuthorList'
+          description: ''
+  /api/v1/social-moderation/mutes/souls/:
+    get:
+      operationId: v1_social_moderation_mutes_souls_list
+      description: |-
+        「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
+        (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 灵魂显示名包含;空 = 前 20 个
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModerationAuthorList'
           description: ''
   /api/v1/social-moderation/posts/:
     get:
@@ -20644,6 +20759,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ModeratedPost'
+    PaginatedModerationAuthorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModerationAuthor'
     PaginatedOfficerInboxList:
       type: object
       required:

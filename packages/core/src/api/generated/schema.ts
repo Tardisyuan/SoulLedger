@@ -4629,10 +4629,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        /**
+         * @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+         *
+         *     列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+         *     `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+         *     `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+         *     `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
+         */
         get: operations["v1_social_moderation_mutes_list"];
         put?: never;
-        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        /**
+         * @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+         *
+         *     列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+         *     `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+         *     `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+         *     `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
+         */
         post: operations["v1_social_moderation_mutes_create"];
         delete?: never;
         options?: never;
@@ -4651,6 +4665,43 @@ export interface paths {
         put?: never;
         /** @description 解除。通知走既有的事件总线:`SOCIAL_UNMUTED` 定向发给被禁言的账号(WebSocket)。 */
         post: operations["v1_social_moderation_mutes_lift_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/mutes/executors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 执行人过滤的选项:本文明禁言记录里出现过的执行人。 */
+        get: operations["v1_social_moderation_mutes_executors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/mutes/souls/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
+         *     (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。
+         */
+        get: operations["v1_social_moderation_mutes_souls_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9462,6 +9513,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ModeratedPost"][];
+        };
+        PaginatedModerationAuthorList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ModerationAuthor"][];
         };
         PaginatedOfficerInboxList: {
             /** @example 123 */
@@ -20671,12 +20737,20 @@ export interface operations {
     v1_social_moderation_mutes_list: {
         parameters: {
             query?: {
+                /** @description 执行人 user id */
+                created_by?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description 灵魂显示名包含 */
+                q?: string;
                 /** @description A search term. */
                 search?: string;
+                /** @description ACTIVE 禁言中 / EXPIRED 已到期 / LIFTED 已解除 */
+                status?: "ACTIVE" | "EXPIRED" | "LIFTED";
+                /** @description 时长:SHORT ≤ 7 天 / MEDIUM 8–30 天 / LONG > 30 天 */
+                term?: "LONG" | "MEDIUM" | "SHORT";
             };
             header?: never;
             path?: never;
@@ -20785,6 +20859,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_executors_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedModerationAuthorList"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_souls_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description 灵魂显示名包含;空 = 前 20 个 */
+                q?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedModerationAuthorList"];
                 };
             };
         };

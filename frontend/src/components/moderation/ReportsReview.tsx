@@ -26,7 +26,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { MODERATION_TONES, isTyping, useFailureToast } from "./shared";
+import { MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
 
 /**
  * 举报区 = C 组 08「朋友圈审阅」的版式:左列表、右详情。
@@ -67,8 +67,6 @@ interface ReviewItem {
   time: string;
   excerpt: string;
 }
-
-const MUTE_DAYS = [1, 3, 7, 30, 90, 365];
 
 function buildItems(reports: ModerationReport[], posts: PendingRow[], comments: PendingRow[]): ReviewItem[] {
   const pendingById = new Map<string, { kind: ContentKind; row: PendingRow }>();

@@ -29,6 +29,9 @@ jest.mock("@soulledger/core/api/social-moderation", () => ({
     copyWords: jest.fn(),
     handled: jest.fn(),
     mutes: jest.fn(),
+    muteSouls: jest.fn(),
+    muteExecutors: jest.fn(),
+    mute: jest.fn(),
     liftMute: jest.fn(),
   },
 }));
@@ -109,6 +112,8 @@ beforeEach(() => {
   apiMock.item.mockResolvedValue({ data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 2 }) });
   apiMock.words.mockResolvedValue(page([]));
   apiMock.mutes.mockResolvedValue(page([]));
+  apiMock.muteSouls.mockResolvedValue({ data: [] });
+  apiMock.muteExecutors.mockResolvedValue({ data: [] });
   apiMock.handled.mockResolvedValue(page([]));
   apiMock.resolveReport.mockResolvedValue({ data: report({ status: "RESOLVED" }) });
   apiMock.act.mockResolvedValue({ status: 200 });
@@ -470,6 +475,64 @@ describe("禁言 · E-08c", () => {
     expect(within(dialog).getByText(tZh("social_moderation.mutes.confirm_body"))).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.lift") }));
     await waitFor(() => expect(apiMock.liftMute).toHaveBeenCalledWith("m1"));
+  });
+});
+
+describe("禁言 · filters and 禁言…", () => {
+  it("status, term, executor and name each narrow the list through the API", async () => {
+    asRole("social.moderate");
+    apiMock.muteExecutors.mockResolvedValue({ data: [{ user_id: 31, display_name: "崔珏" }] });
+    renderPage();
+    fireEvent.click(segment("mutes"));
+    await screen.findByText(tZh("social_moderation.empty.mutes"));
+    expect(apiMock.mutes).toHaveBeenLastCalledWith({});
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.mutes.filter_status")), { target: { value: "ACTIVE" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE" }));
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.mutes.col_term")), { target: { value: "LONG" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG" }));
+    const executor = screen.getByLabelText(tZh("social_moderation.mutes.col_by"));
+    await within(executor).findByRole("option", { name: "崔珏" });
+    fireEvent.change(executor, { target: { value: "31" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG", created_by: 31 }));
+    fireEvent.change(screen.getAllByLabelText(tZh("social_moderation.mutes.search"))[0], { target: { value: " 素心 " } });
+    await waitFor(() =>
+      expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG", created_by: 31, q: "素心" })
+    );
+    // The filtered empty state offers to clear, and clearing asks for everything again.
+    fireEvent.click(await screen.findByRole("button", { name: tZh("filter.clear_all") }));
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({}));
+  });
+
+  it("禁言… picks a soul by name, 1–365 days with no permanent choice, and mutes through the API", async () => {
+    asRole("social.moderate");
+    apiMock.muteSouls.mockImplementation(async (q: string) => ({
+      data: q ? [{ user_id: 42, display_name: "王素心" }] : [{ user_id: 41, display_name: "韩守一" }, { user_id: 42, display_name: "王素心" }],
+    }));
+    apiMock.mute.mockResolvedValue({ data: {} });
+    renderPage();
+    fireEvent.click(segment("mutes"));
+    await screen.findByText(tZh("social_moderation.empty.mutes"));
+    expect(apiMock.muteSouls).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.mutes.new") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.mutes.new_title") });
+    await within(dialog).findByRole("radio", { name: "韩守一" });
+
+    const submit = within(dialog).getByRole("button", { name: tZh("social_moderation.actions.mute") });
+    expect(submit).toBeDisabled();
+    const days = within(dialog).getByLabelText(tZh("social_moderation.mute_days")) as HTMLSelectElement;
+    expect([...days.options].map((o) => Number(o.value))).toEqual([1, 3, 7, 30, 90, 365]);
+
+    fireEvent.change(within(dialog).getByLabelText(tZh("social_moderation.mutes.search")), { target: { value: "素心" } });
+    await waitFor(() => expect(apiMock.muteSouls).toHaveBeenLastCalledWith("素心"));
+    await waitFor(() => expect(within(dialog).queryByRole("radio", { name: "韩守一" })).toBeNull());
+    fireEvent.click(within(dialog).getByRole("radio", { name: "王素心" }));
+    fireEvent.change(days, { target: { value: "30" } });
+    fireEvent.change(within(dialog).getByLabelText(tZh("social_moderation.fields.reason")), { target: { value: "代转阳间家书" } });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    await waitFor(() => expect(apiMock.mute).toHaveBeenCalledWith(42, 30, "代转阳间家书"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
 

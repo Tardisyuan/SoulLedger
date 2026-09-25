@@ -3054,7 +3054,8 @@
       "reason_required": "Write a reason first",
       "admin_only": "Only an administrator can copy a word list across civilizations",
       "same_tenant": "The source is this civilization",
-      "no_tenant": "No current civilization"
+      "no_tenant": "No current civilization",
+      "invalid_days": "A mute lasts 1–365 days"
     },
     "empty": {
       "reports": "No open reports",
@@ -3132,7 +3133,24 @@
       "col_by": "By",
       "term_label": "Mute remaining for {{name}}",
       "confirm_title": "Lift the mute on {{name}}?",
-      "confirm_body": "Takes effect at once and the soul is notified. It cannot be undone, but the soul can be muted again."
+      "confirm_body": "Takes effect at once and the soul is notified. It cannot be undone, but the soul can be muted again.",
+      "new": "+ Mute…",
+      "new_title": "Mute a soul",
+      "search": "Search souls by name",
+      "pick_label": "Choose a soul",
+      "no_match": "No soul matches",
+      "term_hint": "1–365 days; there is no permanent mute.",
+      "filter_status": "Status",
+      "status": {
+        "ACTIVE": "Muted",
+        "EXPIRED": "Expired",
+        "LIFTED": "Lifted"
+      },
+      "term": {
+        "SHORT": "Up to 7 days",
+        "MEDIUM": "8–30 days",
+        "LONG": "Over 30 days"
+      }
     },
     "handled": {
       "col_type": "Type",

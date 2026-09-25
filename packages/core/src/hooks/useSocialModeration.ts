@@ -8,6 +8,7 @@ import {
   type HandledContent,
   type HandledFilters,
   type ModerationFilters,
+  type MuteFilters,
   type NewSensitiveWord,
   type ReportResolution,
   type SensitiveWordAction,
@@ -44,11 +45,28 @@ export function useSensitiveWords(page = 1) {
   });
 }
 
-export function useSocialMutes(page = 1) {
+export function useSocialMutes(filters: MuteFilters = {}) {
   return useQuery({
-    queryKey: socialModerationKeys.mutes({ page }),
-    queryFn: async () => (await socialModerationApi.mutes({ page })).data,
+    queryKey: socialModerationKeys.mutes({ ...filters }),
+    queryFn: async () => (await socialModerationApi.mutes(filters)).data,
     placeholderData: (previous) => previous,
+  });
+}
+
+/** `enabled` false: the picker is closed, ask nothing. */
+export function useMuteSouls(q: string, enabled = true) {
+  return useQuery({
+    queryKey: socialModerationKeys.muteSouls(q),
+    queryFn: async () => (await socialModerationApi.muteSouls(q)).data,
+    placeholderData: (previous) => previous,
+    enabled,
+  });
+}
+
+export function useMuteExecutors() {
+  return useQuery({
+    queryKey: socialModerationKeys.muteExecutors(),
+    queryFn: async () => (await socialModerationApi.muteExecutors()).data,
   });
 }
 
@@ -128,6 +146,13 @@ export function useRestoreVisible() {
   return useModerationWrite(
     async ({ row, reason }: { row: Pick<HandledContent, "type" | "id">; reason?: string }) =>
       (await socialModerationApi.act(row.type === "POST" ? "posts" : "comments", row.id, "restore", reason)).status
+  );
+}
+
+export function useMuteSoul() {
+  return useModerationWrite(
+    async ({ userId, days, reason }: { userId: number; days: number; reason?: string }) =>
+      (await socialModerationApi.mute(userId, days, reason)).data
   );
 }
 

@@ -1643,6 +1643,12 @@ export class ApiMock {
       body: { ...SENSITIVE_WORDS[0], id: "efefefef-efef-4fef-8fef-efefefefef02", word: String(call.body.word).trim().toLowerCase() },
     }));
     this.on("GET", "/social-moderation/mutes/", paginated(SOCIAL_MUTES));
+    this.on("GET", "/social-moderation/mutes/executors/", [MODERATION_AUTHOR]);
+    this.on("GET", "/social-moderation/mutes/souls/", [MODERATION_AUTHOR]);
+    this.on("POST", "/social-moderation/mutes/", (call) => ({ status: 201, body: { ...SOCIAL_MUTES[0], reason: call.body?.reason ?? "" } }));
+    this.on("PATCH", "/social-moderation/sensitive-words/:id/", (call) => ({ body: { ...SENSITIVE_WORDS[0], ...call.body } }));
+    this.on("POST", "/social-moderation/sensitive-words/batch-update/", (call) => ({ body: { updated: (call.body?.ids ?? []).length } }));
+    this.on("POST", "/social-moderation/sensitive-words/copy-from/", { copied: 0, skipped: 0 });
     this.on("POST", "/social-moderation/mutes/:id/lift/", { ...SOCIAL_MUTES[0], lifted_at: "2026-09-18T04:00:00Z", is_active: false });
 
     // ── Sentence plans (backend/apps/sentence_plan/views.py) ──

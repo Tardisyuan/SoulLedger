@@ -3054,7 +3054,8 @@
       "reason_required": "请写处理理由",
       "admin_only": "只有管理员可以跨文明复制词表",
       "same_tenant": "源文明就是当前文明",
-      "no_tenant": "没有当前文明"
+      "no_tenant": "没有当前文明",
+      "invalid_days": "禁言天数须在 1–365 之间"
     },
     "empty": {
       "reports": "没有待处理的举报",
@@ -3132,7 +3133,24 @@
       "col_by": "执行人",
       "term_label": "{{name}} 禁言剩余",
       "confirm_title": "解除「{{name}}」的禁言？",
-      "confirm_body": "即时生效，灵魂端会收到通知。这一步不能撤销，但可以重新禁言。"
+      "confirm_body": "即时生效，灵魂端会收到通知。这一步不能撤销，但可以重新禁言。",
+      "new": "+ 禁言…",
+      "new_title": "禁言灵魂",
+      "search": "搜索灵魂姓名",
+      "pick_label": "选择灵魂",
+      "no_match": "没有匹配的灵魂",
+      "term_hint": "1–365 天，没有永久禁言。",
+      "filter_status": "状态",
+      "status": {
+        "ACTIVE": "禁言中",
+        "EXPIRED": "已到期",
+        "LIFTED": "已解除"
+      },
+      "term": {
+        "SHORT": "7 天以内",
+        "MEDIUM": "8–30 天",
+        "LONG": "30 天以上"
+      }
     },
     "handled": {
       "col_type": "类型",

@@ -47,6 +47,7 @@ from apps.social.moderation_serializers import (
     ModeratedCommentSerializer,
     ModeratedPostSerializer,
     ModerationActionSerializer,
+    ModerationAuthorSerializer,
     ModerationErrorSerializer,
     MuteCreateSerializer,
     ReportSerializer,
@@ -308,14 +309,102 @@ class SensitiveWordViewSet(
 
 
 class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
-    """禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。"""
+    """禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+
+    列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+    `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+    `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+    `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
+    """
 
     queryset = SocialMute.objects.select_related("user", "created_by", "lifted_by")
     serializer_class = SocialMuteSerializer
-    extra_permissions = {"lift": [MODERATE]}
+    extra_permissions = {"lift": [MODERATE], "souls": [MODERATE], "executors": [MODERATE]}
+
+    STATUSES = ("ACTIVE", "EXPIRED", "LIFTED")
+    #: 时长档 → (下限天数, 上限天数),闭区间;None = 不设。
+    TERMS = {"SHORT": (None, 7), "MEDIUM": (8, 30), "LONG": (31, None)}
+    #: 选人框一次最多给几个。
+    PICKER_LIMIT = 20
 
     def get_queryset(self):
         return super().get_queryset().order_by("-created_at")
+
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+        if self.action != "list":
+            return qs
+        from datetime import timedelta
+
+        from django.db.models import DurationField, ExpressionWrapper
+        from django.utils import timezone
+
+        params = self.request.query_params
+        status, term = params.get("status") or "", params.get("term") or ""
+        executor, q = params.get("created_by") or "", (params.get("q") or "").strip()
+        if (status and status not in self.STATUSES) or (term and term not in self.TERMS) or (
+            executor and not executor.isdigit()
+        ):
+            return qs.none()
+        now = timezone.now()
+        if status == "ACTIVE":
+            qs = qs.filter(lifted_at__isnull=True, until__gt=now)
+        elif status == "EXPIRED":
+            qs = qs.filter(lifted_at__isnull=True, until__lte=now)
+        elif status == "LIFTED":
+            qs = qs.filter(lifted_at__isnull=False)
+        if term:
+            low, high = self.TERMS[term]
+            qs = qs.annotate(term_length=ExpressionWrapper(F("until") - F("created_at"), output_field=DurationField()))
+            if low is not None:
+                qs = qs.filter(term_length__gt=timedelta(days=low - 1))
+            if high is not None:
+                qs = qs.filter(term_length__lte=timedelta(days=high))
+        if executor:
+            qs = qs.filter(created_by_id=int(executor))
+        if q:
+            qs = qs.filter(user__display_name__icontains=q)
+        return qs
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("status", str, enum=list(STATUSES), description="ACTIVE 禁言中 / EXPIRED 已到期 / LIFTED 已解除"),
+            OpenApiParameter("term", str, enum=list(TERMS), description="时长:SHORT ≤ 7 天 / MEDIUM 8–30 天 / LONG > 30 天"),
+            OpenApiParameter("created_by", int, description="执行人 user id"),
+            OpenApiParameter("q", str, description="灵魂显示名包含"),
+        ],
+        responses={200: SocialMuteSerializer(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[OpenApiParameter("q", str, description="灵魂显示名包含;空 = 前 20 个")],
+        responses={200: ModerationAuthorSerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"])
+    def souls(self, request):
+        """「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
+        (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。"""
+        from apps.social.soul_circle import souls_in
+
+        if self.tenant is None:
+            return Response([])
+        qs = souls_in(self.tenant).order_by("display_name", "pk")
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            qs = qs.filter(display_name__icontains=q)
+        return Response(ModerationAuthorSerializer(qs[: self.PICKER_LIMIT], many=True).data)
+
+    @extend_schema(responses={200: ModerationAuthorSerializer(many=True)})
+    @action(detail=False, methods=["get"])
+    def executors(self, request):
+        """执行人过滤的选项:本文明禁言记录里出现过的执行人。"""
+        from apps.authentication.models import User
+
+        ids = self.get_queryset().exclude(created_by__isnull=True).values("created_by_id")
+        rows = User.objects.filter(pk__in=ids).order_by("display_name", "pk")
+        return Response(ModerationAuthorSerializer(rows, many=True).data)
 
     @extend_schema(request=MuteCreateSerializer, responses={201: SocialMuteSerializer, **ERRORS})
     def create(self, request, *args, **kwargs):
