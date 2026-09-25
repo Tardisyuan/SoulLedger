@@ -2828,6 +2828,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/social/media/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 先传后发的第一步:一张图一个请求(App 逐张显示进度、失败的单独重试)。
+         *
+         *     校验与头像同一个函数(`images.reencode`):按魔数认 PNG / JPEG / WebP,5 MB 上限,
+         *     解码后重编码、去掉 EXIF(含 GPS)。拒绝时 400,`code` 是 not_an_image / too_large /
+         *     too_many_pixels;未发出的图超过上限时 409 `too_many_pending`。
+         */
+        post: operations["v1_me_social_media_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/media/{media_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删,不走这里。 */
+        delete: operations["v1_me_social_media_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/social/posts/{post_id}/": {
         parameters: {
             query?: never;
@@ -4464,6 +4504,22 @@ export interface paths {
         put?: never;
         /** @description 提出方撤回(§4.2)。 */
         post: operations["v1_sentence_plans_requests_withdraw_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-media/{media_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_social_media_file"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9005,6 +9061,9 @@ export interface components {
             visibility: string;
             comment_count: number;
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
+            /** @description 按显示顺序;`url` 是发给当前官员的签名地址。 */
+            readonly media: components["schemas"]["PostMedia"][];
+            readonly media_count: number;
         };
         ModerationAction: {
             /** @default  */
@@ -10779,6 +10838,18 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
         };
+        /**
+         * @description 帖子的一张图。`url` 是发给**当前查看者**的签名地址(站点根相对,约一小时有效),
+         *     取文件时服务端按签名里的查看者重查一次可见性(apps/social/media.py)。
+         */
+        PostMedia: {
+            /** Format: uuid */
+            id: string;
+            /** @description 签名取图地址,站点根相对路径;过期后重新拉列表。 */
+            url: string;
+            width: number;
+            height: number;
+        };
         ProvisionRequest: {
             /** Format: uuid */
             soul_id: string;
@@ -11254,6 +11325,8 @@ export interface components {
             readonly report_count: number;
             readonly content_excerpt: string;
             readonly content_status: string;
+            /** @description 被举报帖子的图片张数;评论与用户为 0。 */
+            readonly media_count: number;
             readonly entries: components["schemas"]["ReportEntry"][];
             /** Format: date-time */
             readonly created_at: string;
@@ -12020,14 +12093,31 @@ export interface components {
             reaction_count: number;
             reaction_counts: components["schemas"]["SoulReactionCounts"];
             my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media: components["schemas"]["PostMedia"][];
             readonly is_mine: boolean;
             /** Format: date-time */
             create_time: string;
         };
+        /** @description 文字可以为空,但文字与图片至少有一样(`soul_circle.create_post` 判,code `empty_post`)。 */
         SoulPostCreate: {
+            /** @default  */
             content: string;
             /** @default TENANT */
             visibility: components["schemas"]["VisibilityEnum"];
+            /** @description 先经 POST /me/social/media/ 上传的图片 id,按显示顺序。 */
+            media?: string[];
+        };
+        /** @description `POST /me/social/media/` 的回应:还没挂到帖子上的一张图。发帖时把 `id` 放进 `media`。 */
+        SoulPostMediaUpload: {
+            /** Format: uuid */
+            id: string;
+            /** @description 签名取图地址,站点根相对路径;过期后重新拉列表。 */
+            url: string;
+            width: number;
+            height: number;
+            byte_size: number;
+            content_type: string;
         };
         /** @description 一个灵魂在朋友圈里的名片。`user_id` 是这一世账号的 id —— 关注、主页、聊天都用它。 */
         SoulProfile: {
@@ -17486,7 +17576,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["SoulPostCreate"];
                 "application/x-www-form-urlencoded": components["schemas"]["SoulPostCreate"];
@@ -17500,6 +17590,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulPost"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
                 };
             };
             403: {
@@ -17587,6 +17685,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginatedSoulCards"];
                 };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_media_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulPostMediaUpload"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_media_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             403: {
                 headers: {
@@ -20432,6 +20632,36 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SentencePlan"];
                 };
+            };
+        };
+    };
+    v1_social_media_file: {
+        parameters: {
+            query: {
+                /** @description 序列化器给出的签名。 */
+                t: string;
+            };
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 图片文件(PNG / JPEG / WebP)。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 签名无效或过期,或查看者此刻看不见这张图。 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

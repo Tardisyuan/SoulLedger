@@ -69,6 +69,7 @@ const report = (over: Record<string, unknown> = {}) => ({
   report_count: 3,
   content_excerpt: "被举报的帖子摘录",
   content_status: "PUBLISHED",
+  media_count: 0,
   entries: [{ reporter: { user_id: 8, display_name: "举报人" }, reason: "ABUSE", detail: "骂人", created_at: "2026-09-18T02:00:00Z" }],
   created_at: "2026-09-18T01:00:00Z",
   last_reported_at: "2026-09-18T02:00:00Z",
@@ -87,8 +88,12 @@ const post = (over: Record<string, unknown> = {}) => ({
   visibility: "PUBLIC",
   comment_count: 4,
   reaction_counts: { LIKE: 5, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
+  media: [],
+  media_count: 0,
   ...over,
 });
+const media = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({ id: `m${i + 1}`, url: `/api/v1/social-media/m${i + 1}/?t=s${i + 1}`, width: 1080, height: 720 }));
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
 
@@ -135,6 +140,87 @@ describe("page header", () => {
     // The old 「待审内容」 tab is gone: rule hits are in the 举报 queue now.
     expect(screen.queryByRole("button", { name: tZh("social_moderation.tabs.content") })).toBeNull();
     expect(segment("reports")).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("举报 · images (C-08 MediaTile)", () => {
+  const grid = () => within(detail()).queryByRole("list", { name: tZh("social_moderation.review.media_label") });
+
+  it("list rows carry 「图 N」 for posts only; the detail draws square tiles with mono captions, linked to the full image", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(
+      page([
+        report({ media_count: 2 }),
+        report({ id: "r2", target_type: "COMMENT", post: null, comment: "c1", content_excerpt: "评论摘录", last_reported_at: "2026-09-18T01:00:00Z" }),
+      ])
+    );
+    apiMock.item.mockResolvedValue({ data: post({ id: "p1", moderation_status: "PUBLISHED", media: media(2), media_count: 2 }) });
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    const [postRow, commentRow] = within(list).getAllByRole("listitem");
+    expect(within(postRow).getByText(tZh("social_moderation.review.media_n", { n: "2" }))).toBeInTheDocument();
+    // 评论没有图:不写「图 0」。
+    expect(commentRow.querySelector("[data-media-count]")).toBeNull();
+
+    const tiles = await waitFor(() => {
+      const g = grid();
+      expect(g).not.toBeNull();
+      return within(g!).getAllByRole("listitem");
+    });
+    expect(tiles).toHaveLength(2);
+    expect(grid()).toHaveAttribute("data-columns", "2");
+    const img = within(tiles[1]).getByRole("img");
+    expect(img).toHaveAttribute("alt", tZh("social_moderation.review.media_caption", { i: "2", w: "1080", h: "720" }));
+    expect(img.getAttribute("src")).toMatch(/\/api\/v1\/social-media\/m2\/\?t=s2$/);
+    expect(img.closest("a")).toHaveAttribute("target", "_blank");
+    expect(tiles[1].className).toContain("aspect-square");
+    expect(tiles[1].className).not.toMatch(/rounded/);
+    expect(within(tiles[0]).getByText("图 1 · 1080×720")).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, "1"],
+    [4, "2"],
+    [5, "3"],
+    [9, "3"],
+  ])("%i images → %s columns", async (n, cols) => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({ data: post({ id: "p1", moderation_status: "PUBLISHED", media: media(n), media_count: n }) });
+    renderPage();
+    await waitFor(() => expect(grid()).not.toBeNull());
+    expect(grid()).toHaveAttribute("data-columns", cols);
+    expect(within(grid()!).getAllByRole("listitem")).toHaveLength(n);
+  });
+
+  it("a text-only post has no grid", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await screen.findByText("被举报的帖子全文，比摘录长");
+    expect(grid()).toBeNull();
+  });
+
+  it("an image that will not load says so instead of a blank square", async () => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({ data: post({ id: "p1", moderation_status: "PUBLISHED", media: media(2), media_count: 2 }) });
+    renderPage();
+    await waitFor(() => expect(grid()).not.toBeNull());
+    const [first, second] = within(grid()!).getAllByRole("listitem");
+    fireEvent.error(within(first).getByRole("img"));
+    expect(within(first).getByText(tZh("social_moderation.review.media_load_failed"))).toBeInTheDocument();
+    expect(within(first).queryByRole("img")).toBeNull();
+    expect(within(second).getByRole("img")).toBeInTheDocument();
+  });
+
+  it("a rule-hit post carries its images from the queue row itself", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post({ media: media(3), media_count: 3 })] : []));
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    expect(within(list).getByText(tZh("social_moderation.review.media_n", { n: "3" }))).toBeInTheDocument();
+    await waitFor(() => expect(grid()).not.toBeNull());
+    expect(within(grid()!).getAllByRole("listitem")).toHaveLength(3);
+    expect(apiMock.item).not.toHaveBeenCalled();
   });
 });
 

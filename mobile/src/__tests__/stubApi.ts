@@ -49,14 +49,19 @@ export function heldReply() {
   return { reply, answer };
 }
 
-export function stubApi(routes: Record<string, Reply | Reply[] | Promise<Reply>>) {
+export function stubApi(routes: Record<string, Reply | Promise<Reply> | (Reply | Promise<Reply>)[]>) {
   const calls: { method: string; url: string; body: unknown; params?: Record<string, unknown> }[] = [];
   soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
     const url = config.url ?? "";
     const method = (config.method ?? "get").toUpperCase();
-    calls.push({ method, url, body: config.data ? JSON.parse(config.data as string) : undefined, params: config.params });
+    // A multipart upload's body is the FormData itself (not JSON); it is recorded as is.
+    const body = typeof config.data === "string" ? JSON.parse(config.data) : config.data;
+    calls.push({ method, url, body, params: config.params });
+    // An upload with a progress listener hears 30% before its reply, so the in-flight state is observable.
+    config.onUploadProgress?.({ loaded: 30, total: 100, bytes: 30, lengthComputable: true });
     const route = routes[`${method} ${url}`] ?? routes[url];
-    const reply = route instanceof Promise ? await route : Array.isArray(route) ? (route.length > 1 ? route.shift() : route[0]) : route;
+    // A held reply may also sit inside a sequence (one per call), so every pick is awaited.
+    const reply = await (Array.isArray(route) ? (route.length > 1 ? route.shift() : route[0]) : route);
     if (!reply) throw new Error(`unscripted request: ${method} ${url}`);
     if (reply === "offline") throw new AxiosError("Network Error", "ERR_NETWORK", config);
     const response = { status: reply.status, data: reply.data, headers: {}, config, statusText: "" } as AxiosResponse;

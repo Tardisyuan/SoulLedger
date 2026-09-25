@@ -23,6 +23,7 @@ import {
   type SoulReactionType,
   type SoulSocialStatus,
 } from "@soulledger/core/api/soul-social";
+import { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -52,6 +53,7 @@ import {
   useTheme,
 } from "../ui";
 import type { AppStackParams } from "./applications";
+import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
 import { Glyph, Tag } from "./letters";
 
 type Nav = NativeStackNavigationProp<AppStackParams>;
@@ -82,6 +84,13 @@ const REFUSALS: Record<string, string> = {
   eternal_light_locked: "soul_app.circle.react.lamp_locked",
   post_sealed: "soul_app.circle.profile.reborn_body",
   report_limit: "soul_app.circle.report.limit",
+  // 图片(apps/social/media.py)。media_not_found:传好的图过了清理时限、已被清掉。
+  not_an_image: "soul_app.circle.media.errors.not_an_image",
+  too_large: "soul_app.circle.media.errors.too_large",
+  too_many_pixels: "soul_app.circle.media.errors.too_many_pixels",
+  too_many_pending: "soul_app.circle.media.errors.too_many_pending",
+  too_many_media: "soul_app.circle.media.limit",
+  media_not_found: "soul_app.circle.media.expired",
 };
 
 export function useFailure() {
@@ -173,6 +182,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
   const reborn = !post.author.is_active;
   const pending = post.moderation_status === "PENDING";
   const hidden = post.moderation_status === "HIDDEN";
+  const [viewing, setViewing] = useState<number | null>(null);
   const body = (
     <>
       <View style={styles.cardHead}>
@@ -198,12 +208,16 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
           </View>
         </View>
       </View>
-      <Txt
-        numberOfLines={full ? undefined : 8}
-        style={[styles.body, { color: hidden ? t.inkSubtle : t.inkMuted, fontFamily: quoteFamily(post.content) }]}
-      >
-        {post.content}
-      </Txt>
+      {post.content ? (
+        <Txt
+          numberOfLines={full ? undefined : 8}
+          style={[styles.body, { color: hidden ? t.inkSubtle : t.inkMuted, fontFamily: quoteFamily(post.content) }]}
+        >
+          {post.content}
+        </Txt>
+      ) : null}
+      <MediaGrid testID={`media-${post.id}`} media={post.media} onOpen={setViewing} />
+      <MediaViewer media={post.media} index={viewing} onClose={() => setViewing(null)} />
       {pending ? (
         <View style={[styles.note, { borderColor: t.hair2 }]}>
           <Txt variant="caption" tone="subtle">
@@ -440,19 +454,53 @@ export function ComposePostScreen() {
   const [visibility, setVisibility] = useState<SoulPostVisibility>("TENANT");
   const [busy, setBusy] = useState(false);
   const input = useRef<TextInput>(null);
+  const toast = useToast();
+  const uploads = useSoulMediaUploads<PickedImage>(uploadBody);
+  // 一张失败的上传在它自己的格子里说,这里另报一次原因(大小、格式……)。
+  const reported = useRef(new Set<string>());
+  useEffect(() => {
+    for (const it of uploads.items) {
+      if (it.status === "failed" && !reported.current.has(it.key)) {
+        reported.current.add(it.key);
+        fail(it.error);
+      }
+      if (it.status !== "failed") reported.current.delete(it.key);
+    }
+  }, [uploads.items, fail]);
+  // 离开而没发出:传好的图删掉,不等清理命令。发出后 `clear()` 已把它们交给帖子。
+  // `posted` 而不是只靠 clear():发出后界面立刻退出,清空的状态可能还没渲染就卸载了。
+  const discard = useRef(uploads.discard);
+  const posted = useRef(false);
+  useEffect(() => {
+    discard.current = uploads.discard;
+  });
+  useEffect(
+    () => () => {
+      if (!posted.current) discard.current();
+    },
+    []
+  );
+
+  const addImages = async () => {
+    const picked = await pickImages(uploads.room);
+    if (picked === null) toast(tr("soul_app.circle.media.permission"), "failure");
+    else if (picked.length) uploads.add(picked);
+  };
 
   const submit = async (text: string) => {
-    if (busy || !text.trim()) return;
+    if (busy || !uploads.ready || (!text.trim() && !uploads.mediaIds.length)) return;
     setBusy(true);
     try {
-      const post = await soulSocialApi.createPost(text.trim(), visibility);
+      const post = await soulSocialApi.createPost(text.trim(), visibility, uploads.mediaIds);
+      posted.current = true;
+      uploads.clear();
       navigation.popTo("Tabs", { screen: "Circle", params: { pendingId: post.moderation_status === "PENDING" ? post.id : undefined } });
     } catch (e) {
       setBusy(false);
       fail(e);
     }
   };
-  const { press, onEndEditing } = useCommittedSend(input, draft, (text) => void submit(text));
+  const { press, onEndEditing } = useCommittedSend(input, draft, (text) => void submit(text), uploads.mediaIds.length > 0);
 
   return (
     <Screen edges={["left", "right", "bottom"]} testID="compose-post">
@@ -473,6 +521,7 @@ export function ComposePostScreen() {
         <View style={styles.counter}>
           <Mono>{`${draft.length} / ${POST_MAX}`}</Mono>
         </View>
+        <ComposeMediaTray uploads={uploads} onAdd={() => void addImages()} />
         <Txt variant="section" style={styles.formLabel}>
           {tr("soul_app.circle.compose.visibility")}
         </Txt>
@@ -512,7 +561,15 @@ export function ComposePostScreen() {
             title={tr("soul_app.circle.compose.submit")}
             onPress={press}
             busy={busy}
-            disabled={!draft.trim() || !status.data}
+            disabled={(!draft.trim() && !uploads.mediaIds.length) || !status.data || !uploads.ready}
+            reason={
+              uploads.failed
+                ? tr("soul_app.circle.media.failed_hint")
+                : uploads.uploading
+                  ? tr("soul_app.circle.media.waiting")
+                  : undefined
+            }
+            reasonTestID="post-submit-reason"
           />
         )}
       </View>

@@ -1,13 +1,11 @@
 """
 Serializers for the social domain.
 """
-import io
 import uuid
 
-from django.core.files.base import ContentFile
-from PIL import Image, ImageOps, UnidentifiedImageError
 from rest_framework import serializers
 
+from apps.social import images
 from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
 
 # ---------------------------------------------------------------------------
@@ -406,11 +404,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-AVATAR_MAX_BYTES = 5 * 1024 * 1024
-# Checked from the header, before any pixel is decoded: a 100 KB PNG can declare
-# 50,000 x 50,000 pixels and ask for gigabytes when loaded.
-AVATAR_MAX_PIXELS = 40_000_000
-AVATAR_FORMATS = {"PNG": "png", "JPEG": "jpg", "WEBP": "webp"}
+AVATAR_MAX_BYTES = images.MAX_BYTES
 AVATAR_EDGE = 512
 
 
@@ -418,39 +412,26 @@ class AvatarUploadSerializer(serializers.Serializer):
     """One image file, multipart field `avatar`.
 
     Nothing the client says about the file is believed: not the extension, not
-    the Content-Type, not the name. Pillow decodes it; anything it cannot
-    decode, or decodes to a format outside AVATAR_FORMATS (SVG is not an image
-    to Pillow, GIF is refused), is rejected. What is stored is a re-encode of
-    the decoded pixels — scaled to fit AVATAR_EDGE, orientation applied, with
-    no EXIF (GPS included), ICC profile or text chunks — under a random name.
+    the Content-Type, not the name. `apps/social/images.py::reencode` checks the
+    magic bytes, decodes with Pillow and re-encodes — scaled to fit AVATAR_EDGE,
+    orientation applied, with no EXIF (GPS included), ICC profile or text chunks.
+    The same function checks 朋友圈 post images (apps/social/media.py).
+    Stored under a random name.
     """
 
     avatar = serializers.FileField()
 
     def validate_avatar(self, upload):
-        if upload.size > AVATAR_MAX_BYTES:
-            raise serializers.ValidationError(
-                f"Avatar must be at most {AVATAR_MAX_BYTES // (1024 * 1024)} MB."
-            )
-        not_an_image = serializers.ValidationError("Upload a PNG, JPEG or WebP image.")
         try:
-            with Image.open(upload) as img:
-                fmt = img.format
-                if fmt not in AVATAR_FORMATS:
-                    raise not_an_image
-                if img.width * img.height > AVATAR_MAX_PIXELS:
-                    raise serializers.ValidationError("Image dimensions are too large.")
-                img.load()  # full decode: a truncated or corrupt body fails here
-                out = ImageOps.exif_transpose(img)
-                out.thumbnail((AVATAR_EDGE, AVATAR_EDGE))
-                if fmt == "JPEG" and out.mode not in ("RGB", "L"):
-                    out = out.convert("RGB")
-                out.info = {}  # drop exif / icc_profile / text before saving
-                buf = io.BytesIO()
-                out.save(buf, fmt)
-        except (UnidentifiedImageError, Image.DecompressionBombError, OSError, SyntaxError, ValueError):
-            raise not_an_image from None
-        return ContentFile(buf.getvalue(), name=f"{uuid.uuid4().hex}.{AVATAR_FORMATS[fmt]}")
+            image = images.reencode(upload, max_edge=AVATAR_EDGE, max_bytes=AVATAR_MAX_BYTES)
+        except images.ImageRejectedError as exc:
+            if exc.code == "too_large":
+                raise serializers.ValidationError(
+                    f"Avatar must be at most {AVATAR_MAX_BYTES // (1024 * 1024)} MB."
+                ) from None
+            raise serializers.ValidationError(str(exc)) from None
+        image.file.name = f"{uuid.uuid4().hex}.{image.extension}"
+        return image.file
 
 
 class FollowToggleResultSerializer(serializers.Serializer):

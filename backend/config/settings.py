@@ -269,6 +269,9 @@ REST_FRAMEWORK = {
         # 聊天按编号查人(apps/chat/views.py::MeChatLookupView),按灵魂账号计。编号空间
         # 31^10,穷举本来就不可行;这个数限制的是「拿一份收集来的编号表逐个验证」。
         "chat_lookup": "20/hour",
+        # 朋友圈帖子图片的文件出口(apps/social/media_views.py),按签名里的查看者计。
+        # 一屏动态流 20 条 × 9 张 = 180 张图;匿名的 60/minute 会把它掐断。
+        "post_media": "600/minute",
     },
 }
 

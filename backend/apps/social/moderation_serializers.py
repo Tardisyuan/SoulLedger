@@ -10,6 +10,7 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.social import media as post_media
 from apps.social.models import (
     ModerationStatus,
     Report,
@@ -21,9 +22,22 @@ from apps.social.models import (
     SensitiveWordCategory,
     SocialMute,
 )
-from apps.social.soul_serializers import SoulReactionCountsSerializer
+from apps.social.soul_serializers import PostMediaSerializer, SoulReactionCountsSerializer
 
 EXCERPT = 200
+
+
+def officer_media(post):
+    """官员看得见的这条帖子的图,按顺序:活着的帖子看未删除的图;被官员删除(在回收站里)的
+    帖子看与它同一次删除的图。视图预取的 `all_media_rows`(含软删除)优先,免得每行一查。"""
+    rows = getattr(post, "all_media_rows", None)
+    if rows is None:
+        rows = list(post.media.all())  # 默认 manager 是 all_objects:含软删除的
+    if post.is_deleted:
+        rows = [r for r in rows if r.is_deleted and r.delete_cascade_id == post.delete_cascade_id]
+    else:
+        rows = [r for r in rows if not r.is_deleted]
+    return sorted(rows, key=lambda r: (r.position, r.created_at))
 
 
 class ModerationAuthorSerializer(serializers.Serializer):
@@ -42,13 +56,14 @@ class ReportSerializer(serializers.ModelSerializer):
     target_user = ModerationAuthorSerializer(read_only=True)
     content_excerpt = serializers.SerializerMethodField()
     content_status = serializers.SerializerMethodField()
+    media_count = serializers.SerializerMethodField(help_text="被举报帖子的图片张数;评论与用户为 0。")
     entries = ReportEntrySerializer(many=True, read_only=True)
 
     class Meta:
         model = Report
         fields = [
             "id", "target_type", "post", "comment", "target_user", "status", "report_count",
-            "content_excerpt", "content_status", "entries",
+            "content_excerpt", "content_status", "media_count", "entries",
             "created_at", "last_reported_at", "resolution", "resolution_note", "resolved_at",
         ]
         read_only_fields = fields
@@ -59,6 +74,9 @@ class ReportSerializer(serializers.ModelSerializer):
     def get_content_excerpt(self, report) -> str:
         content = self._content(report)
         return "" if content is None else content.content[:EXCERPT]
+
+    def get_media_count(self, report) -> int:
+        return len(officer_media(report.post)) if report.target_type == "POST" and report.post else 0
 
     def get_content_status(self, report) -> str:
         content = self._content(report)
@@ -96,6 +114,15 @@ class ModeratedPostSerializer(ModeratedContentSerializer):
     comment_count = serializers.IntegerField()
     #: 五种表态各自的数(未删除的),与灵魂端同一份注解。没有转发:朋友圈没有转发模型。
     reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
+    media = serializers.SerializerMethodField(help_text="按显示顺序;`url` 是发给当前官员的签名地址。")
+    media_count = serializers.SerializerMethodField()
+
+    @extend_schema_field(PostMediaSerializer(many=True))
+    def get_media(self, post):
+        return post_media.describe(officer_media(post), self.context["request"].user)
+
+    def get_media_count(self, post) -> int:
+        return len(officer_media(post))
 
 
 class ModeratedCommentSerializer(ModeratedContentSerializer):
