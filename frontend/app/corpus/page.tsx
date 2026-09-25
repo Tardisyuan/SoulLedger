@@ -13,6 +13,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fieldControl } from "@/src/components/ui/Field";
 import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
+import { CorpusCitedBy } from "@/src/components/judgment/CorpusCitedBy";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,10 +33,12 @@ import { cn } from "@/lib/utils";
  * 一页讲出处的纸上编出处。
  *
  * ── 被引用 / 版本 ────────────────────────────────────────────────────────
- * `citation_count` 是有的(本租户引用次数,0 与 null 不同,见 core/api/judgment.ts);
- * 「哪些判决引用了它」没有接口 —— `JudgmentFilter` 不能按律条筛 —— 所以只给件数,
- * 并写明没有清单的原因。律条没有版本模型(更正走 `seed_mythology --update`
- * 就地改写),版本栏同样写明缺口,不造一个 v1。
+ * `citation_count` 是调用者**看得见的**判决里引用它的件数(0 与 null 不同,见
+ * core/api/judgment.ts);清单是 `GET /judgment/?statute=<id>`,新的在前、分页
+ * (`CorpusCitedBy`)。件数与清单算在同一个集合上 —— 调用者的判决列表,含行级
+ * DataScope —— 所以不会对不上。律条没有版本模型(更正走 `seed_mythology --update`
+ * 就地改写;已结案子的引用另有结案时快照,见 apps/judgment/snapshot.py),版本栏
+ * 写明缺口,不造一个 v1。
  *
  * ── 检索与编号直达 ──────────────────────────────────────────────────────
  * 输入框同时是检索与跳转:与某条的节号(`IX · XXVI`、`救濟門 · 六`、`§ 27 / 42`、
@@ -256,7 +259,9 @@ export default function CorpusPage() {
                 />
               )}
             </p>
-            <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.corpus.cited_by_gap")}</p>
+            {(selected.statute.citation_count ?? 0) > 0 && (
+              <CorpusCitedBy key={selected.statute.id} statuteId={selected.statute.id} />
+            )}
 
             <RailLabel className="pt-6">{t("judgment.corpus.versions")}</RailLabel>
             <p data-testid="corpus-versions" className="text-xs text-[oklch(var(--color-ink-subtle))] py-2">

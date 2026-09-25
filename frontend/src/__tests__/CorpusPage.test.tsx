@@ -7,7 +7,8 @@
  *      門內序號)—— 断言逐字,并断言裸 ordinal 不出现。
  *   2. 衬线只给原文与今译:阅读栏里恰好两段 `.font-serif`。
  *   3. 原文只在真按原语转录的功過格上有;别的五部写「未记录」,不拿译文冒充。
- *   4. citation_count 的 0 与 null 可区分;「被引用」清单与「版本」没有接口,写明缺口。
+ *   4. citation_count 的 0 与 null 可区分;「被引用」清单读 `?statute=`,新的在前、分页;
+ *      「版本」没有接口,写明缺口。
  *   5. 检索命中用 <mark>(底色 + 2 px 强调下线,不改字重);输入节号直达那一条。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -19,10 +20,19 @@ import { judgmentApi } from "@soulledger/core/api";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
-  judgmentApi: { statutes: jest.fn() },
+  judgmentApi: { statutes: jest.fn(), list: jest.fn() },
 }));
 
 const mockedStatutes = judgmentApi.statutes as jest.Mock;
+const mockedList = judgmentApi.list as jest.Mock;
+
+const citing = (id: string, verdict: string | null, day: string) => ({
+  id,
+  soul_name: `魂-${id}`,
+  verdict,
+  created_at: `2026-0${day}T00:00:00Z`,
+  concluded_at: verdict ? `2026-0${day}T12:00:00Z` : null,
+});
 
 type Fixture = Record<string, unknown> & { id: string; civilization: string; corpus: string; ordinal: number };
 function statute(o: Fixture) {
@@ -94,6 +104,7 @@ beforeEach(() => {
           : { count: 5, next: null, previous: "p1", results: FIXTURES.slice(3) },
     })
   );
+  mockedList.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
 });
 
 describe("loading the corpus", () => {
@@ -210,19 +221,49 @@ describe("the right rail", () => {
     renderPage();
     await screen.findByTestId("corpus-reading");
     await open("VII");
-    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent("0 件判决");
+    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent("被引用 0 件");
+    // Nothing to list, so nothing is asked for.
+    expect(mockedList).not.toHaveBeenCalledWith(expect.objectContaining({ statute: "eu-ds-7" }));
     await open("IX · XXVI");
     const miss = screen.getByTestId("corpus-cited-by");
     expect(miss.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
     expect(miss).not.toHaveTextContent("0");
   });
 
-  it("states the cited-by list and version gaps instead of inventing them", async () => {
+  it("states the version gap instead of inventing one — and no longer claims the cited-by list is missing", async () => {
     renderPage();
     await screen.findByTestId("corpus-reading");
     const rail = screen.getByTestId("corpus-rail");
-    expect(rail).toHaveTextContent("接口不能按律条查判决");
+    expect(rail).not.toHaveTextContent("接口不能按律条查判决");
     expect(within(rail).getByTestId("corpus-versions")).toHaveTextContent("律条没有版本记录");
     expect(rail).not.toHaveTextContent("v1");
+  });
+
+  it("lists the citing judgments newest first: soul, verdict glyph, date — and pages", async () => {
+    mockedList.mockImplementation((params: Record<string, string>) =>
+      Promise.resolve({
+        data:
+          params.page === "1"
+            ? { count: 21, next: "p2", previous: null, results: [citing("j2", "FAILED", "3-02"), citing("j1", null, "2-01")] }
+            : { count: 21, next: null, previous: "p1", results: [citing("j0", "PASSED", "1-01")] },
+      })
+    );
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent("被引用 3 件");
+    const list = await screen.findByTestId("corpus-cited-list");
+    expect(mockedList).toHaveBeenCalledWith({ statute: "cn-17", ordering: "-created_at", page: "1" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("魂-j2");
+    expect(rows[0]).toHaveTextContent("✕");
+    expect(rows[0]).toHaveTextContent("2026-03-02");
+    expect(within(rows[0]).getByRole("link")).toHaveAttribute("href", "/judgment/j2");
+    // An open case has no verdict glyph, and says it is open.
+    expect(rows[1]).toHaveTextContent("未结");
+    expect(rows[1]).not.toHaveTextContent("?");
+    expect(list).toHaveTextContent("1 / 2");
+    fireEvent.click(within(list).getByRole("button", { name: /下一页|next/i }));
+    await waitFor(() => expect(within(screen.getByTestId("corpus-cited-list")).getByText("魂-j0")).toBeInTheDocument());
+    expect(mockedList).toHaveBeenLastCalledWith({ statute: "cn-17", ordering: "-created_at", page: "2" });
   });
 });

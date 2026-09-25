@@ -1184,13 +1184,14 @@
       "copy_cite": "Copy citation",
       "copied": "Copied",
       "cited_by": "Cited by",
-      "cited_by_count": "{{n}} judgments",
-      "cited_by_gap": "The API cannot look judgments up by article, so only the count is shown, not the list.",
+      "cited_by_count": "Cited by {{n}} judgments",
       "versions": "Versions",
       "versions_gap": "Articles carry no version history: corrections are made in place in the seed data.",
       "select_prompt": "Choose an article from the contents.",
       "no_match": "No article matches “{{q}}”",
-      "clear_search": "Clear search"
+      "clear_search": "Clear search",
+      "cited_by_error": "Could not load the citing judgments",
+      "cited_by_open": "Open"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",

@@ -16276,6 +16276,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
                  *     * `FAILED` - Failed / Condemned
@@ -16478,6 +16479,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
                  *     * `FAILED` - Failed / Condemned
