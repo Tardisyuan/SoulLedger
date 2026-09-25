@@ -16158,6 +16158,38 @@ components:
       - login_type
       - token
       - user_id
+    CitationSnapshot:
+      type: object
+      description: Schema of `JudgmentCitationSerializer.snapshot` (read-only).
+      properties:
+        kind:
+          $ref: '#/components/schemas/CitationSnapshotKindEnum'
+        taken_at:
+          type: string
+          format: date-time
+        display_title:
+          type: string
+        display_text:
+          type: string
+        source:
+          type: string
+        current_differs:
+          type: boolean
+      required:
+      - current_differs
+      - display_text
+      - display_title
+      - kind
+      - source
+      - taken_at
+    CitationSnapshotKindEnum:
+      enum:
+      - CONCLUDED
+      - BACKFILLED
+      type: string
+      description: |-
+        * `CONCLUDED` - Concluded
+        * `BACKFILLED` - Backfilled
     CivilizationEnum:
       enum:
       - CHINESE
@@ -18325,9 +18357,15 @@ components:
           type: string
           format: date-time
           readOnly: true
+        snapshot:
+          allOf:
+          - $ref: '#/components/schemas/CitationSnapshot'
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
+      - snapshot
       - statute
     JudgmentCitationWrite:
       type: object

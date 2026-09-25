@@ -49,6 +49,7 @@ export {
   judgmentApi,
   type Judgment,
   type JudgmentCitation,
+  type CitationSnapshot,
   type JudgmentPrecedent,
   type Statute,
   type StatuteCorpus,

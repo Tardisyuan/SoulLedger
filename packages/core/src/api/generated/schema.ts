@@ -7344,6 +7344,22 @@ export interface components {
             token: string;
             expires_in: number;
         };
+        /** @description Schema of `JudgmentCitationSerializer.snapshot` (read-only). */
+        CitationSnapshot: {
+            kind: components["schemas"]["CitationSnapshotKindEnum"];
+            /** Format: date-time */
+            taken_at: string;
+            display_title: string;
+            display_text: string;
+            source: string;
+            current_differs: boolean;
+        };
+        /**
+         * @description * `CONCLUDED` - Concluded
+         *     * `BACKFILLED` - Backfilled
+         * @enum {string}
+         */
+        CitationSnapshotKindEnum: "CONCLUDED" | "BACKFILLED";
         /**
          * @description * `CHINESE` - Chinese Diyu
          *     * `EUROPEAN` - European Heaven/Hell
@@ -8354,6 +8370,7 @@ export interface components {
             note?: string;
             /** Format: date-time */
             readonly created_at: string;
+            readonly snapshot: components["schemas"]["CitationSnapshot"] | null;
         };
         /**
          * @description Input for `POST /judgment/{id}/citations/`.
