@@ -26,6 +26,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { REACTIONS } from "@/src/components/social/ReactionBar";
 import { MediaGrid } from "./MediaGrid";
 import { MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
 
@@ -354,20 +355,29 @@ export function ReportsReview() {
           {full && "media" in full && <MediaGrid media={full.media} />}
 
           {/*
-            反应用文字,不用表情(C-08):「评 N · 念 N」。念 = LOVE(灵魂端 `react.love` 同一个字)。
+            反应用文字,不用表情(C-08):「评 N · 喜 N · 念 N · …」,字与灵魂端表态按钮同一套
+            (`REACTIONS`, `soul_app.circle.react.*`);为 0 的不画(2026-09-26 产品定)。
             画布上的「转 N」不画:朋友圈没有转发模型,没有这个数可显示。
           */}
-          {full && "comment_count" in full && (
-            <div className="mt-3 flex gap-2 text-xs text-[oklch(var(--color-ink-muted))]" data-reaction-counts>
-              <span>
-                {t("social_moderation.review.reaction_comment")} <span className="font-mono">{full.comment_count}</span>
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>
-                {t("social_moderation.review.reaction_love")} <span className="font-mono">{full.reaction_counts.LOVE}</span>
-              </span>
-            </div>
-          )}
+          {full && "comment_count" in full && (() => {
+            const counts = [
+              { key: "comment", label: t("social_moderation.review.reaction_comment"), n: full.comment_count },
+              ...REACTIONS.map((r) => ({ key: r.type, label: t(r.key), n: full.reaction_counts[r.type] })),
+            ].filter((c) => c.n > 0);
+            if (!counts.length) return null;
+            return (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[oklch(var(--color-ink-muted))]" data-reaction-counts>
+                {counts.map((c, i) => (
+                  <span key={c.key} className="contents">
+                    {i > 0 && <span aria-hidden="true">·</span>}
+                    <span>
+                      {c.label} <span className="font-mono">{c.n}</span>
+                    </span>
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
 
           {selected.report && (
             <>

@@ -10,7 +10,11 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * so an officer and a soul read the same mark for the same reaction. The lamp
  * has no glyph there (it is drawn as an icon), so here it is the word alone.
  */
-const REACTIONS: { type: string; glyph: string; key: string }[] = [
+export const REACTIONS: {
+  type: "LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT";
+  glyph: string;
+  key: string;
+}[] = [
   { type: "LIKE", glyph: "◇", key: "soul_app.circle.react.like" },
   { type: "LOVE", glyph: "♡", key: "soul_app.circle.react.love" },
   { type: "RESPECT", glyph: "△", key: "soul_app.circle.react.respect" },

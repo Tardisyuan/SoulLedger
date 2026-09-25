@@ -196,7 +196,8 @@ export function MutesSection() {
   const fail = useFailureToast();
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<NonNullable<MuteFilters["status"]> | "">("");
+  // 默认只看禁言中(2026-09-26 产品定);状态筛选仍可切到「全部」。
+  const [status, setStatus] = useState<NonNullable<MuteFilters["status"]> | "">("ACTIVE");
   const [term, setTerm] = useState<NonNullable<MuteFilters["term"]> | "">("");
   const [executor, setExecutor] = useState("");
   const [muting, setMuting] = useState(false);

@@ -4,15 +4,40 @@
 凭据是地址里的签名(apps/social/media.py::signed_url),它只说明「这个地址是发给谁的」;
 **能不能拿到文件每一次都用那个人重算 `may_view`**。签名坏了、过期了、换了图片 id、
 那个人此刻看不见这条帖子 —— 全是同一个 404,不区分,不给探测口。
+
+发文件:`settings.POST_MEDIA_X_ACCEL` 打开时(生产,前面是 nginx)回空响应带
+`X-Accel-Redirect: /protected-media/<private/ 之下的相对路径>`,nginx 的 internal location
+(nginx.conf)把它映射到 `MEDIA_ROOT/private/` 发出去 —— daphne 不再占着连接流文件。
+关着时(DEBUG、没有 nginx 的 staging)照旧 `FileResponse`。两种都在检查之后,拒绝时都不带那个头。
 """
-from django.http import FileResponse, Http404
+import posixpath
+import re
+
+from django.conf import settings
+from django.http import FileResponse, Http404, HttpResponse
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 from apps.core.throttling import ClientIPRateThrottle
 from apps.social import media as post_media
-from apps.social.models import PostMedia
+from apps.social.models import PRIVATE_MEDIA_PREFIX, PostMedia
+
+#: nginx.conf 里那个 `internal` location 的前缀;它 alias 到 MEDIA_ROOT/private/。
+ACCEL_PREFIX = "/protected-media/"
+_SAFE_NAME = re.compile(r"[A-Za-z0-9_\-./]+")
+
+
+def accel_path(name):
+    """存储名(`private/post_media/…`)→ `X-Accel-Redirect` 的值。
+
+    存储名由 `_post_media_path` 生成(随机文件名),不含客户端输入,所以这里本不会遇到越界的名字;
+    但这是把路径交给 nginx 的最后一道,仍然断言:只收 `private/` 之下、字符安全、规范化后不变的名字,
+    其余一律 404(不回头、不猜)。"""
+    if (not _SAFE_NAME.fullmatch(name) or not name.startswith(PRIVATE_MEDIA_PREFIX)
+            or posixpath.normpath(name) != name or ".." in name.split("/")):
+        raise Http404
+    return ACCEL_PREFIX + name[len(PRIVATE_MEDIA_PREFIX):]
 
 
 class PostMediaThrottle(ClientIPRateThrottle):
@@ -48,7 +73,11 @@ class PostMediaFileView(APIView):
         viewer = User.objects.filter(pk=viewer_id).first() if media is not None else None
         if viewer is None or not post_media.may_view(viewer, media):
             raise Http404
-        response = FileResponse(media.file.open("rb"), content_type=media.content_type)
+        if settings.POST_MEDIA_X_ACCEL:
+            response = HttpResponse(content_type=media.content_type)
+            response["X-Accel-Redirect"] = accel_path(media.file.name)
+        else:
+            response = FileResponse(media.file.open("rb"), content_type=media.content_type)
         # 私有缓存,且不超过签名的有效期:帖子被隐藏后,共享缓存里不能还留着一份。
         response["Cache-Control"] = f"private, max-age={post_media.URL_TTL}"
         response["X-Content-Type-Options"] = "nosniff"
