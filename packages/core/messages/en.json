@@ -3051,7 +3051,10 @@
       "invalid_resolution": "A report against a user cannot hide or delete content; mute instead",
       "already_lifted": "That mute was already lifted",
       "not_found": "Not found, or not in this civilization",
-      "reason_required": "Write a reason first"
+      "reason_required": "Write a reason first",
+      "admin_only": "Only an administrator can copy a word list across civilizations",
+      "same_tenant": "The source is this civilization",
+      "no_tenant": "No current civilization"
     },
     "empty": {
       "reports": "No open reports",
@@ -3114,7 +3117,13 @@
       "edit_title": "Edit word",
       "edit_hint": "Changing the word itself restarts its 30-day hits from zero.",
       "change_action": "Change action…",
-      "change_action_title": "Change the action of {{n}} words"
+      "change_action_title": "Change the action of {{n}} words",
+      "copy_from": "Copy from another civilization",
+      "copy_hint": "Copies every word of another civilization into this one, with its category and action. Words already on this list are skipped, not overwritten.",
+      "copy_source": "Source civilization",
+      "copy_source_placeholder": "— choose a civilization —",
+      "copy_confirm": "Copy",
+      "copy_done": "Copied {{copied}}; skipped {{skipped}} already on the list"
     },
     "mutes": {
       "col_soul": "Soul",

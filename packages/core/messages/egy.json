@@ -3051,7 +3051,10 @@
       "invalid_resolution": "Sedjem Er Ba: Nen Imen, Nen Fekh. Iri Gerh.",
       "already_lifted": "Gerh Fekh Seth",
       "not_found": "Nen Gem, Er Nen Em Taui Pen",
-      "reason_required": "Khet Sesen"
+      "reason_required": "Khet Sesen",
+      "admin_only": "Sab Hery Wa: Sesh Em Taui Ky",
+      "same_tenant": "Taui Ky Nen: Taui Pen",
+      "no_tenant": "Nen Taui Pen"
     },
     "empty": {
       "reports": "Nen Sedjem Em Smen",
@@ -3114,7 +3117,13 @@
       "edit_title": "Khemen Medu Djeseru",
       "edit_hint": "Khemen Medu Djeseru: Gem · Hru 30 Wehem Tepy.",
       "change_action": "Khemen Em Gem…",
-      "change_action_title": "Khemen Em Gem · Medu Djeseru {{n}}"
+      "change_action_title": "Khemen Em Gem · Medu Djeseru {{n}}",
+      "copy_from": "Sesh Em Taui Ky",
+      "copy_hint": "Sesh Medu Djeseru Neb Em Taui Ky Er Taui Pen; Iru Hena Em Gem: Mi. Medu Wenen Djer: Iri Tepy.",
+      "copy_source": "Taui Ky",
+      "copy_source_placeholder": "— Setep Taui —",
+      "copy_confirm": "Sesh",
+      "copy_done": "Sesh {{copied}} · Iri Tepy {{skipped}}"
     },
     "mutes": {
       "col_soul": "Ba",

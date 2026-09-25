@@ -55,6 +55,8 @@ from apps.social.moderation_serializers import (
     SensitiveWordBatchDeleteSerializer,
     SensitiveWordBatchUpdateResultSerializer,
     SensitiveWordBatchUpdateSerializer,
+    SensitiveWordCopyResultSerializer,
+    SensitiveWordCopySerializer,
     SensitiveWordCreateSerializer,
     SensitiveWordSerializer,
     SensitiveWordUpdateSerializer,
@@ -220,7 +222,9 @@ class SensitiveWordViewSet(
 
     queryset = SensitiveWord.objects.select_related("created_by")
     serializer_class = SensitiveWordSerializer
-    extra_permissions = {"batch_delete": [MODERATE], "batch_update": [MODERATE], "partial_update": [MODERATE]}
+    extra_permissions = {
+        "batch_delete": [MODERATE], "batch_update": [MODERATE], "partial_update": [MODERATE], "copy_from": [MODERATE],
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -276,6 +280,31 @@ class SensitiveWordViewSet(
             self.get_queryset(), body.validated_data["ids"], actor=request.user, request=request
         )
         return Response({"deleted": deleted})
+
+
+    @extend_schema(
+        request=SensitiveWordCopySerializer,
+        responses={200: SensitiveWordCopyResultSerializer, 404: ModerationErrorSerializer, **ERRORS},
+    )
+    @action(detail=False, methods=["post"], url_path="copy-from")
+    def copy_from(self, request):
+        """从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
+        不该借它看见别处的词。回包只有计数,不含词本身。"""
+        from apps.core.tenant import is_tenant_exempt
+        from apps.tenants.models import Tenant
+
+        if not is_tenant_exempt(request.user):
+            raise SocialError("只有管理员可以跨文明复制词表。", "admin_only", 403)
+        body = SensitiveWordCopySerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        if self.tenant is None:
+            raise SocialError("没有当前文明。", "no_tenant", 400)
+        source = Tenant.objects.filter(code=body.validated_data["source_tenant"]).first()
+        if source is None:
+            raise SocialError("对象不存在。", "not_found", 404)
+        copied, skipped = mod.copy_sensitive_words(source, self.tenant, actor=request.user, request=request)
+        return Response({"copied": copied, "skipped": skipped})
 
 
 class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):

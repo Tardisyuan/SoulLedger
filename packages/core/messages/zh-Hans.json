@@ -3051,7 +3051,10 @@
       "invalid_resolution": "针对用户的举报不能隐藏或删除,请用禁言",
       "already_lifted": "禁言已解除",
       "not_found": "对象不存在或不在本文明",
-      "reason_required": "请写处理理由"
+      "reason_required": "请写处理理由",
+      "admin_only": "只有管理员可以跨文明复制词表",
+      "same_tenant": "源文明就是当前文明",
+      "no_tenant": "没有当前文明"
     },
     "empty": {
       "reports": "没有待处理的举报",
@@ -3114,7 +3117,13 @@
       "edit_title": "编辑敏感词",
       "edit_hint": "改了词本身，30 天命中从零开始计。",
       "change_action": "改动作…",
-      "change_action_title": "改 {{n}} 个敏感词的命中后动作"
+      "change_action_title": "改 {{n}} 个敏感词的命中后动作",
+      "copy_from": "从其他文明复制",
+      "copy_hint": "把另一个文明的整张词表复制到当前文明，类别与命中后动作照搬；这里已有的词跳过，不覆盖。",
+      "copy_source": "源文明",
+      "copy_source_placeholder": "— 选择文明 —",
+      "copy_confirm": "复制",
+      "copy_done": "已复制 {{copied}} 个，跳过 {{skipped}} 个已有的"
     },
     "mutes": {
       "col_soul": "灵魂",

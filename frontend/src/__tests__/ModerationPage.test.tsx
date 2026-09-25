@@ -26,6 +26,7 @@ jest.mock("@soulledger/core/api/social-moderation", () => ({
     removeWords: jest.fn(),
     updateWord: jest.fn(),
     updateWords: jest.fn(),
+    copyWords: jest.fn(),
     handled: jest.fn(),
     mutes: jest.fn(),
     liftMute: jest.fn(),
@@ -35,8 +36,15 @@ const { socialModerationApi: apiMock } = jest.requireMock("@soulledger/core/api/
   socialModerationApi: Record<string, jest.Mock>;
 };
 
+jest.mock("@soulledger/core/api/tenants", () => ({ tenantsApi: { list: jest.fn(), get: jest.fn() } }));
+const { tenantsApi: tenantsMock } = jest.requireMock("@soulledger/core/api/tenants") as {
+  tenantsApi: Record<string, jest.Mock>;
+};
+
 let mockUser: Record<string, unknown> | null = null;
-jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: mockUser, tenantCode: (mockUser?.tenant as { code?: string } | undefined)?.code ?? null }),
+}));
 
 const mockI18n = { t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true };
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -89,6 +97,8 @@ function renderPage() {
 
 const asRole = (...permissions: string[]) =>
   (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions, tenant: { code: "CN_DIYU", display_name: "中国地府" } });
+const asAdmin = () =>
+  (mockUser = { id: 1, username: "admin", role: "ADMIN", permissions: [], tenant: { code: "CN_DIYU", display_name: "中国地府" } });
 const segment = (key: string) => screen.getByRole("button", { name: tZh(`social_moderation.tabs.${key}`) });
 const detail = () => screen.getByRole("region", { name: tZh("social_moderation.review.detail_label") });
 
@@ -343,6 +353,41 @@ describe("敏感词 · E-08b", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
     await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(["w1"]));
     expect(apiMock.removeWord).not.toHaveBeenCalled();
+  });
+
+  it("an empty list offers 从其他文明复制 to ADMIN only", async () => {
+    asRole("social.moderate");
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText(tZh("social_moderation.empty.words"));
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.words.copy_from") })).toBeNull();
+    expect(tenantsMock.list).not.toHaveBeenCalled();
+  });
+
+  it("ADMIN copies another civilization's list: the current one is not offered as a source; the counts come back", async () => {
+    asAdmin();
+    tenantsMock.list.mockResolvedValue(
+      page([
+        { id: 1, code: "CN_DIYU", display_name: "中国地府" },
+        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" },
+      ])
+    );
+    apiMock.copyWords.mockResolvedValue({ data: { copied: 5, skipped: 1 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
+    const select = within(dialog).getByLabelText(tZh("social_moderation.words.copy_source"));
+    await within(select).findByRole("option", { name: "欧洲天堂地狱" });
+    expect(within(select).queryByRole("option", { name: "中国地府" })).toBeNull();
+    const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.words.copy_confirm") });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(select, { target: { value: "EU_HEAVEN_HELL" } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(apiMock.copyWords).toHaveBeenCalledWith("EU_HEAVEN_HELL"));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.words.copy_done", { copied: "5", skipped: "1" }), "success")
+    );
   });
 
   it("clicking a row opens the edit drawer; an uncategorised word cannot be saved until it gets a category", async () => {

@@ -4923,6 +4923,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/social-moderation/sensitive-words/copy-from/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+         *     这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
+         *     不该借它看见别处的词。回包只有计数,不含词本身。
+         */
+        post: operations["v1_social_moderation_sensitive_words_copy_from_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social/comments/": {
         parameters: {
             query?: never;
@@ -11411,6 +11432,18 @@ export interface components {
         };
         SensitiveWordBatchUpdateResult: {
             updated: number;
+        };
+        /**
+         * @description Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
+         *     civilization by code. The target is the caller's current civilization.
+         */
+        SensitiveWordCopy: {
+            source_tenant: string;
+        };
+        SensitiveWordCopyResult: {
+            copied: number;
+            /** @description 目标文明里已有的词,不覆盖。 */
+            skipped: number;
         };
         /**
          * @description Body of `POST sensitive-words/`: a new word must name its category
@@ -21344,6 +21377,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SensitiveWordBatchUpdateResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_copy_from_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SensitiveWordCopy"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordCopy"];
+                "multipart/form-data": components["schemas"]["SensitiveWordCopy"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWordCopyResult"];
                 };
             };
             400: {

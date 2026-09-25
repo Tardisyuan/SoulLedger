@@ -159,6 +159,18 @@ class SensitiveWordBatchUpdateResultSerializer(serializers.Serializer):
     updated = serializers.IntegerField()
 
 
+class SensitiveWordCopySerializer(serializers.Serializer):
+    """Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
+    civilization by code. The target is the caller's current civilization."""
+
+    source_tenant = serializers.CharField(max_length=50)
+
+
+class SensitiveWordCopyResultSerializer(serializers.Serializer):
+    copied = serializers.IntegerField()
+    skipped = serializers.IntegerField(help_text="目标文明里已有的词,不覆盖。")
+
+
 class SensitiveWordBatchDeleteSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=200)
 

@@ -112,6 +112,10 @@ export function useUpdateSensitiveWords() {
   );
 }
 
+export function useCopySensitiveWords() {
+  return useModerationWrite(async (sourceTenant: string) => (await socialModerationApi.copyWords(sourceTenant)).data);
+}
+
 export function useRemoveSensitiveWords() {
   return useModerationWrite(async (ids: string[]) => (await socialModerationApi.removeWords(ids)).data);
 }
