@@ -392,6 +392,84 @@ def test_a_concluded_case_keeps_its_claimant_and_can_no_longer_be_released(world
 
 
 # ---------------------------------------------------------------------------
+# Conclude: only the claimant, ADMIN or 殿主 may conclude a claimed case
+# ---------------------------------------------------------------------------
+
+
+def _conclude(client, case):
+    return client.post(f"{BASE}{case.pk}/conclude/", {"verdict": "PASSED"}, format="json")
+
+
+def _nothing_written(case):
+    from apps.disposition.models import Disposition
+
+    row = _fresh(case)
+    assert row.verdict is None
+    assert row.is_final is False
+    assert row.concluded_at is None
+    assert not Disposition.all_objects.filter(judgment=row).exists()
+    assert Soul.all_objects.get(pk=row.soul_id).current_state == SoulState.JUDGING
+
+
+@pytest.mark.django_db
+class TestConcludeRespectsTheClaim:
+    def test_the_claimant_concludes(self, world):
+        case = _case(world.cn)
+        _post(world.clients["a"], case, "claim")
+        response = _conclude(world.clients["a"], case)
+        assert response.status_code == 200, response.data
+        assert _fresh(case).is_final is True
+
+    def test_another_judge_is_refused_with_409_and_nothing_is_written(self, world):
+        case = _case(world.cn)
+        _post(world.clients["a"], case, "claim")
+        response = _conclude(world.clients["b"], case)
+        assert response.status_code == 409, response.data
+        assert response.data["code"] == "claimed_by_other"
+        assert response.data["claimed_by"] == world.users["a"].pk
+        assert response.data["claimed_by_name"] == "claim_judge_a"
+        _nothing_written(case)
+        assert _fresh(case).claimed_by_id == world.users["a"].pk
+
+    def test_the_refusal_names_the_display_name_when_there_is_one(self, world):
+        world.users["a"].display_name = "崔判官"
+        world.users["a"].save(update_fields=["display_name"])
+        case = _case(world.cn)
+        _post(world.clients["a"], case, "claim")
+        response = _conclude(world.clients["b"], case)
+        assert response.status_code == 409, response.data
+        assert response.data["claimed_by_name"] == "崔判官"
+
+    def test_admin_concludes_someone_elses_case(self, world):
+        admin = User.objects.create_user(username="claim_admin", password="x", role="ADMIN", tenant=world.cn)
+        case = _case(world.cn)
+        _post(world.clients["a"], case, "claim")
+        response = _conclude(_client(admin), case)
+        assert response.status_code == 200, response.data
+        assert _fresh(case).is_final is True
+
+    def test_moderator_concludes_someone_elses_case(self, world):
+        case = _case(world.cn)
+        _post(world.clients["a"], case, "claim")
+        response = _conclude(world.clients["mod"], case)
+        assert response.status_code == 200, response.data
+        assert _fresh(case).is_final is True
+
+    def test_an_unclaimed_case_is_concluded_by_any_judge(self, world):
+        case = _case(world.cn)
+        response = _conclude(world.clients["b"], case)
+        assert response.status_code == 200, response.data
+        assert _fresh(case).is_final is True
+
+    def test_another_tenants_moderator_gets_404_and_nothing_is_written(self, world):
+        case = _case(world.cn)
+        _post(world.clients["a"], case, "claim")
+        assert _conclude(world.clients["eu_mod"], case).status_code == 404
+        assert _conclude(world.clients["eu_judge"], case).status_code == 404
+        _nothing_written(case)
+
+
+# ---------------------------------------------------------------------------
 # Batch
 # ---------------------------------------------------------------------------
 

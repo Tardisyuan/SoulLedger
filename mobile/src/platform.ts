@@ -11,8 +11,6 @@
  *   onUnauthorized        whatever the session layer registered: reset to the login stack
  *   onSessionSuspend/Resume  AppState background ↔ active
  *   notify      ToastAndroid on Android, Alert on iOS
- *   deliverOnExit  always `false`: a native app gets no keepalive request at
- *               termination, and the port's contract is "say so, don't pretend".
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DEFAULT_LOCALE, isLocale } from "@soulledger/core/config/locale";
@@ -120,7 +118,6 @@ export const mobilePlatform: PlatformAdapter = {
     if (Platform.OS === "android") ToastAndroid.show(text, ToastAndroid.SHORT);
     else Alert.alert(text);
   },
-  deliverOnExit: () => false,
 };
 
 export function installMobilePlatform(): void {

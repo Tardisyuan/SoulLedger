@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
-import { useJudgmentQueue, UNDO_WINDOW_MS, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
+import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
 import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import {
@@ -22,6 +21,8 @@ import {
  *
  * One case on screen at a time, the whole decision surface with it, a verdict
  * is one keystroke, and giving one advances to the next without a navigation.
+ * The verdict is sent the moment it is given — no undo window (removed
+ * 2026-09-25: 「落判即提交,不可撤回」, as on the desk).
  * The list at /judgment still exists and is still the right tool for "find a
  * particular judgment"; this is the tool for "work through the pending ones",
  * which is what the operator does all day.
@@ -29,11 +30,11 @@ import {
  * Keyboard map — the queue is keyboard-first, so this is the interface, not a
  * shortcut layer over it:
  *
- *   1 / 2 / 3 / 4   render PASSED / FAILED / PURGATORY / RETRY and advance
+ *   1 / 2 / 3 / 4   render PASSED / FAILED / PURGATORY / RETRY, send it, advance
  *   S               defer this case for the rest of this sitting
- *   U               take back the verdict still inside its undo window
  *   W               toggle "also open an approval workflow"
  *   R               bring deferred cases back to the queue
+ *   N               focus the notes field
  *   ?               show / hide this map
  *   Esc             leave the queue
  *
@@ -56,18 +57,6 @@ function isTextEntry(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-/** Live seconds left in the undo window, recomputed on a 1s tick. */
-function useCountdown(dueAt: number | null): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (dueAt === null) return;
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, [dueAt]);
-  if (dueAt === null) return 0;
-  return Math.max(0, Math.ceil((dueAt - now) / 1000));
-}
-
 export function JudgmentQueueConsole({ at }: { at?: string }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -76,9 +65,8 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const [createWorkflow, setCreateWorkflow] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
 
-  const { cursor, progress, pending, submitVerdict, undo, defer, restoreDeferred } = queue;
+  const { cursor, progress, submitVerdict, defer, restoreDeferred } = queue;
   const judgment = cursor.judgment;
-  const secondsLeft = useCountdown(pending?.dueAt ?? null);
 
   // Notes belong to the case in front of the operator, never to the next one.
   //
@@ -100,16 +88,14 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const rule = useCallback(
     (verdict: VerdictCode) => {
       if (!judgment) return;
-      submitVerdict({ verdict, notes, createWorkflow });
+      void submitVerdict({ verdict, notes, createWorkflow });
     },
     [judgment, submitVerdict, notes, createWorkflow]
   );
 
   const leave = useCallback(() => {
-    // Anything held is sent on the way out — see useJudgmentQueue's header.
-    queue.flush();
     router.push("/judgment");
-  }, [queue, router]);
+  }, [router]);
 
   // `judgment.execute`, and the backend says so out loud. `views.py:82` maps
   // `conclude → judgment.execute` while `next_pending → judgment.read`, with
@@ -118,11 +104,8 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   // CANNOT USE". The screen half was built; the button half was not.
   //
   // What that cost: a `judgment.read`-only operator got four live verdict
-  // buttons. Pressing one advanced the card, started the countdown, and eight
-  // seconds later produced a 403 rendered as the generic `commit_error` —
-  // "the verdict did not land; the case is back in the queue" — about a case
-  // that had left the screen eight seconds earlier. There was no "you may
-  // look but not rule" state anywhere.
+  // buttons, each of which produced a 403 rendered as the generic
+  // `commit_error`. There was no "you may look but not rule" state anywhere.
   //
   // `RequirePermission` already does this shape on the detail page
   // (`app/judgment/[id]/page.tsx:494`), so this is that decision applied to
@@ -144,8 +127,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       //
       // What that cost, concretely:
       //   - narrow viewport, the AppLayout mobile drawer open over the
-      //     console: Escape closed the drawer AND ran `leave()` — flush the
-      //     held verdict, navigate away;
+      //     console: Escape closed the drawer AND ran `leave()`;
       //   - the keyboard map open (`?` / `h`): Escape left the queue instead
       //     of closing the map.
       //
@@ -159,8 +141,8 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       // `rule`, and `w` held down toggled the workflow checkbox to a value
       // nobody chose.
       //
-      // `useJudgmentQueue.submitVerdict` also refuses a second verdict for the
-      // case it is already holding, and that guard is the one that matters —
+      // `useJudgmentQueue.submitVerdict` also refuses a second verdict for a
+      // case whose request is in flight, and that guard is the one that matters —
       // it covers a genuine double press and a double-click too, which look
       // identical from here. This line is the cheaper half: it stops the burst
       // at the source rather than filtering it downstream, and it is the only
@@ -187,10 +169,9 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       }
       if (isTextEntry(event.target)) return;
 
-      // The four decision keys, undo, and the workflow toggle all end in a
-      // POST. Gated together rather than one at a time: `u` with no verdict to
-      // take back and `w` on a checkbox that is not on screen are the same
-      // kind of nothing. `s` (defer) and `?` stay live — deferring is
+      // The four decision keys, the workflow toggle and the notes key all
+      // feed a POST. Gated together: `w` on a checkbox that is not on screen
+      // is nothing. `s` (defer) and `?` stay live — deferring is
       // session-local and writes nothing, and help is help.
       const verdict = canRule ? VERDICTS.find((v) => v.key === event.key) : undefined;
       if (verdict) {
@@ -198,15 +179,11 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         rule(verdict.code);
         return;
       }
-      if (!canRule && ["u", "w", "n"].includes(event.key.toLowerCase())) return;
+      if (!canRule && ["w", "n"].includes(event.key.toLowerCase())) return;
       switch (event.key.toLowerCase()) {
         case "s":
           event.preventDefault();
           defer();
-          break;
-        case "u":
-          event.preventDefault();
-          undo();
           break;
         case "w":
           event.preventDefault();
@@ -239,7 +216,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [rule, defer, undo, restoreDeferred, leave, canRule, showKeys]);
+  }, [rule, defer, restoreDeferred, leave, canRule, showKeys]);
 
   // `progressText`, not `progressLabel`: "N of M" is a formatted count, not a
   // domain enum, and src/__tests__/domainDisplayContract.test.tsx reads any
@@ -331,19 +308,6 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         ) : queue.isLoading ? (
           <ConsoleNotice title={t("judgment.queue.loading")} body="" />
         ) : queue.isExhausted ? (
-          /* `queue.isExhausted`, not `!judgment || !soul || !ledger`.
-           *
-           * The hook has exported this since it was written —
-           * `query.isSuccess && cursor.judgment === null && pending === null` —
-           * and had ZERO consumers: the `pending === null` clause is exactly
-           * the guard this branch was missing, and it was sitting unused while
-           * the console re-derived a worse version of it two lines from here.
-           *
-           * The difference is the last case of a sitting: with a verdict still
-           * held, the queue is not clear, it is one undo away from not being
-           * clear. Saying "queue is clear" there — and, with the old
-           * expression, hiding the undo bar to say it — is a false statement
-           * made at the only moment the operator can still act on it. */
           <ConsoleNotice
             title={
               progress.deferred > 0
@@ -385,23 +349,9 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 widens its whole track rather than being contained. The
                 evidence column already sets it (`JudgmentEvidenceColumn.tsx`
                 :50,68) for exactly this; these two never did. */}
-            {/* THE HANDOVER IS NOW VISIBLE, because until this the model changed
-                hands and the view said nothing.
-                After a verdict the case id goes into `holding`, which is part
-                of the query key, so the console is immediately asking a
-                different question — while `placeholderData` keeps the case
-                that was just ruled on rendered until the answer arrives. Same
-                soul name, same confession, same ledger. The only thing on
-                screen saying a decision had been made was the undo strip, and
-                that lives in its own fixed slot at the bottom of the console,
-                nowhere near the dossier the operator is reading.
-                `isPlaceholderData` and not `isFetching`: see the hook's note
-                on the difference. Dimming, not hiding — the operator can still
-                read what they just decided, which is the point of the undo
-                window. Layout does not move, so nothing reflows under the eye.
-                Under `prefers-reduced-motion` globals.css collapses the
-                transition to 1ms and the opacity change still lands; the state
-                is conveyed either way, only the tween goes. */}
+            {/* The handover: the just-ruled case stays rendered (placeholderData)
+                until the next arrives, dimmed so it does not read as current.
+                `isPlaceholderData`, not `isFetching` — see the hook. */}
             <div
               aria-busy={queue.isPlaceholderData || undefined}
               className={`grid gap-4 lg:grid-cols-2 transition-opacity duration-settle ${
@@ -447,93 +397,18 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 {t("judgment.queue.create_workflow")}
                 <kbd className="font-mono text-xs px-1 bg-[oklch(var(--color-surface-3))]">W</kbd>
               </label>
-              {/* The one place the two correction paths are named side by
-                  side, so an operator learns the rule at the moment it
-                  applies rather than after they need it. */}
-              <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
-                {t("judgment.queue.undo_scope_note", { seconds: String(Math.round(UNDO_WINDOW_MS / 1000)) })}
-              </p>
             </section>
           </>
         )}
       </div>
 
-      {/**
-       * The decision bar. Sticky, and it holds the undo strip.
-       *
-       * TWO PROBLEMS, ONE MECHANISM. The verdict controls used to be the last
-       * block under a two-column grid of panels, so a long confession or a
-       * long ledger pushed them below the fold — on the screen whose entire
-       * job is deciding. And the pending-undo strip rendered ABOVE those
-       * panels, so **every verdict shifted the whole case down**: the operator
-       * reading the next case could not see the undo countdown for the
-       * previous one, which is the only moment that countdown exists for.
-       *
-       * The slot is rendered whether or not a verdict is pending, at a fixed
-       * height, so landing one does not move anything. Empty, it draws
-       * nothing.
-       *
-       * WHAT STAYED IN THE SCROLL. Notes and "create workflow" are optional
-       * per verdict and `N` reaches the notes field from anywhere, so keeping
-       * them here would have doubled the bar's height for something the
-       * operator asks for rather than always needs. The bar carries only what
-       * is irreversible.
-       */}
-      {/* THE BAR IS GATED ON `pending` TOO, AND THAT `||` IS THE WHOLE FIX.
-       *
-       * It used to be `judgment && soul && ledger` alone — i.e. the undo
-       * affordance was structurally coupled to there being a NEXT card. So on
-       * the last case of every sitting the operator ruled, `holding` grew, the
-       * refetch came back with `judgment: null`, and the console flipped to
-       * "queue is clear" — taking the countdown, the Undo button and the
-       * "PASSED recorded for 王氏" line with it, at the exact moment they meant
-       * something. Same on any fetch error inside the window. `U` still
-       * worked, because the key listener is unconditional, but nothing on
-       * screen said so.
-       *
-       * The verdict row below keeps the old condition: with no card there is
-       * nothing to rule on. Only the undo strip survives the card. */}
-      {(pending || (judgment && cursor.soul && cursor.ledger)) && (
+      {/* The decision bar. Sticky, so the verdict controls stay on screen however
+          long the confession or the ledger above them is. Notes and "create
+          workflow" stay in the scroll: they are optional, and `N` reaches the
+          notes field from anywhere. */}
+      {judgment && cursor.soul && cursor.ledger && (
         <div className="sticky bottom-0 border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
-            {/* No `aria-live` here. The strip inside already carries
-                `role="status"`, which IS a live region — nesting a second one
-                around it meant two regions announcing the same node. */}
-            <div className="h-10 flex items-center">
-              {pending ? (
-                <div role="status" className="flex flex-wrap items-center gap-3 animate-undo-strip">
-                  <span className="text-sm text-[oklch(var(--color-ink))]">
-                    {/* The verdict name is interpolated INTO another
-                        translation, so it has to be a string and cannot be
-                        <DomainEnum>. It still must not be a bare `t()`
-                        template: t() echoes its key back on a miss, so a
-                        verdict the bundle does not cover would read
-                        "judgment.verdicts.appealed recorded for 王氏". */}
-                    {t("judgment.queue.pending_verdict", {
-                      soul: pending.soulName,
-                      verdict: resolveEnumDisplay(t, "judgment.verdicts", pending.verdict).label ?? "",
-                    })}
-                  </span>
-                  {/* `aria-hidden`, and it is the whole of this fix.
-                      The seconds tick every 250ms INSIDE a `role="status"`,
-                      so the live region re-fired several times a second —
-                      "sends in 7s / 6s / 5s…" talking over whatever else was
-                      being read, including the verdict announcement two lines
-                      up that the operator actually needs. The number stays on
-                      screen; it is the re-announcement that was noise. */}
-                  <span
-                    aria-hidden="true"
-                    className="font-mono tabular-nums text-xs text-[oklch(var(--color-ink-muted))]"
-                  >
-                    {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
-                  </span>
-                  <Button type="button" variant="secondary" onClick={undo}>
-                    {t("judgment.queue.undo")}
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-
             {/* The verdict row stays hand-rolled, deliberately, while the four
                 plain buttons on this screen moved to `Button`. Each verdict
                 carries its own status token as an inline `color` and an
@@ -541,7 +416,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 system would mean either a variant per verdict or a pile of
                 className overrides fighting it. A shared primitive is for the
                 shapes that repeat — these do not. */}
-            {judgment && cursor.soul && cursor.ledger && !canRule && (
+            {!canRule && (
               /* Not a row of disabled buttons. A disabled control still says
                  "this is yours, just not now", and this is not a timing
                  problem — it is a standing fact about this operator. It also
@@ -552,7 +427,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 {t("judgment.queue.read_only")}
               </p>
             )}
-            {judgment && cursor.soul && cursor.ledger && canRule && (
+            {canRule && (
             <div className="flex flex-wrap gap-2">
               {VERDICTS.map((verdict) => (
                 <button
@@ -668,7 +543,6 @@ function KeyboardMap() {
   const rows: [string, string][] = [
     ["1 · 2 · 3 · 4", t("judgment.queue.key_verdicts")],
     ["S", t("judgment.queue.key_defer")],
-    ["U", t("judgment.queue.key_undo")],
     ["W", t("judgment.queue.key_workflow")],
     ["R", t("judgment.queue.key_restore")],
     ["N", t("judgment.queue.key_notes")],

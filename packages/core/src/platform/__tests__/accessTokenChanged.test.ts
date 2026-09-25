@@ -46,7 +46,6 @@ function memoryAdapter(): PlatformAdapter & { writes: string[] } {
     onSessionSuspend: () => () => {},
     onSessionResume: () => () => {},
     notify: () => {},
-    deliverOnExit: () => false,
   };
 }
 

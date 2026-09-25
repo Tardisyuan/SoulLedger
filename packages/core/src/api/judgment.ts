@@ -157,13 +157,16 @@ export interface JudgmentBatchResult {
  * bad assignee). Branch on `code`, not on `error`:
  * `already_claimed` · `not_claimed` · `not_claimant` · `not_pending` ·
  * `already_deferred` · `not_deferred` · `invalid_assignee` · `not_found` ·
- * `permission_denied`.
+ * `permission_denied` · `claimed_by_other` (409 from `conclude`: the case is
+ * claimed by another officer; only they, ADMIN or MODERATOR may conclude it).
  */
 export interface JudgmentClaimRefusal {
   error: string;
   code: string;
-  /** On `already_claimed` / `not_claimant`: who holds it. */
+  /** On `already_claimed` / `not_claimant` / `claimed_by_other`: who holds it. */
   claimed_by?: number | null;
+  /** On `claimed_by_other`: the holder's display name (or username), to show as-is. */
+  claimed_by_name?: string;
   /** On a batch: the case that rolled the whole batch back. */
   id?: string;
   /** On a batch 404: the ids outside the caller's scope. */
@@ -296,7 +299,8 @@ export interface ConcludeJudgmentPayload {
    * unchanged. Pick from `judgmentApi.destinations`. Refusals come back with a
    * `code`: realm_not_found / realm_not_allowed / term_conflict /
    * eternal_not_allowed / destination_not_applicable (400), realm_full (409,
-   * 「执行失败：目的地已满」). Written immediately — there is no undo window.
+   * 「执行失败：目的地已满」), claimed_by_other (409, a `JudgmentClaimRefusal`
+   * naming the claimant). Written immediately — there is no undo window.
    */
   destination_realm_id?: string | null;
   /** Positive whole years. Not together with `eternal: true`. */

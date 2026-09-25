@@ -3805,6 +3805,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Judgment'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
   /api/v1/judgment/{id}/defer/:
     post:
       operationId: v1_judgment_defer_create
@@ -16584,7 +16590,8 @@ components:
       description: |-
         认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
 
-        `claimed_by` 只在 `already_claimed` / `not_claimant` 上有;`id` 只在批量里有,
+        `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
+        `claimed_by_name` 只在 `claimed_by_other`(结案被拒)上有;`id` 只在批量里有,
         指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
       properties:
         error:
@@ -16594,6 +16601,8 @@ components:
         claimed_by:
           type: integer
           nullable: true
+        claimed_by_name:
+          type: string
         id:
           type: string
           format: uuid
