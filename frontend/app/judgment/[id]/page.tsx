@@ -26,7 +26,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { reincarnationApi, type Reincarnation } from "@soulledger/core/api";
+import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import { CitationChips, Kbd, PrecedentsPanel, QueueBar, StatuteSearch } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
@@ -43,6 +43,14 @@ import {
 } from "@/src/components/sentence-plan/PlanChangesEditor";
 import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
+import {
+  EMPTY_PLACEMENT,
+  JudgmentPlacement,
+  PLACEMENT_REFUSALS,
+  placementFor,
+  type Placement,
+} from "@/src/components/judgment/JudgmentPlacement";
+import { useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -80,11 +88,13 @@ import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJud
  * server's version on screen rather than overwriting it; 据 carries 先例; the
  * QueueBar takes D to defer.
  *
+ * 戊 · 发落 (original judgments): destination and term, from
+ * `judgmentApi.destinations` filtered by the chosen verdict — nothing chosen
+ * sends nothing, i.e. automatic routing. K opens 「上一件」 (`/judgment/previous/`).
+ *
  * Still left out rather than faked: the 5-second undo (the user decided
- * against it — `conclude/` stays immediate), destination and term
- * (`ConcludeJudgmentPayload` has neither — the realm is routed from the
- * verdict), and J / K previous / next (`next/` hands out the next pending case,
- * not a case by position).
+ * against it — `conclude/` stays immediate) and J 下一件 by position (`next/`
+ * hands out the next pending case, not the one after this).
  *
  * ── WHAT THE DESIGN ASKED FOR AND THE PAYLOAD CANNOT PROVIDE ──────────────
  * Written down rather than invented — a judgment printing a number nobody
@@ -176,6 +186,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [notes, setNotes] = useState("");
   const [createWorkflow, setCreateWorkflow] = useState(false);
   const [planDraft, setPlanDraft] = useState<ChangesDraft>(EMPTY_DRAFT);
+  const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
+  const previousLink = useRef<HTMLAnchorElement>(null);
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
   const createWorkflowId = useId();
@@ -203,13 +215,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   });
 
   const concludeMutation = useMutation({
-    mutationFn: (payload: {
-      verdict: string;
-      notes: string;
-      create_workflow: boolean;
-      plan_changes?: SentenceRequestChanges;
-    }) =>
-      judgmentApi.conclude(id, payload),
+    mutationFn: (payload: ConcludeJudgmentPayload) => judgmentApi.conclude(id, payload),
     /* THE PAGE STAYS. It used to `router.push("/judgment")` here.
      *
      * `SEAL_BAND` above is 120 lines of design for one moment — a fixed
@@ -235,6 +241,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       const e = err as { response?: { data?: { error?: string; code?: string } } };
       // An amendment's plan changes refused (same transaction, nothing written): say which rule, translated.
       const code = e?.response?.data?.code;
+      // 发落被拒:画在 戊 那一节(placementRefusal),并重取占用 —— realm_full 说明手上的数字旧了。
+      if (code && (PLACEMENT_REFUSALS as readonly string[]).includes(code)) {
+        queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
+        return;
+      }
       if (code && (REFUSAL_CODES as readonly string[]).includes(code)) {
         showToast(t(`sentence_plan.errors.${code}`), "error");
         return;
@@ -271,6 +282,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }, [judgment]);
 
   const isAmendment = judgment?.kind === "AMENDMENT" && !!judgment?.amends_plan_id;
+  const isOriginal = (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
   const myTenant = user?.tenant?.code ?? null;
   const soulHome = soulData?.home_tenant?.code ?? soulData?.tenant_code ?? null;
   /* 开联审(§2.1):原属的 ORIGINAL 审判,持 cross_judgment.create;按钮只在未结案的结案区里。服务端再判一次。 */
@@ -301,6 +313,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       notes,
       create_workflow: createWorkflow,
       ...(planChanges ? { plan_changes: planChanges } : {}),
+      ...(isOriginal ? placementFor(placement, selectedVerdict) : {}),
     });
   }
 
@@ -362,6 +375,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     deskOpen
   );
 
+  /* K 上一件:与 `next/` 同一队列;打字时不接(useHotkeys)。结案后也能回看上一件。 */
+  const { data: previous } = useJudgmentPrevious(id);
+  const previousId = previous?.judgment?.id ?? null;
+  useHotkeys({ k: () => previousLink.current?.click() }, !!previousId);
+
   /* A known route, so a link and not a router.back() button. */
   const backLink = (
     <Link
@@ -412,6 +430,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const citations = judgment.citations ?? [];
   const citedIds = new Set(citations.map((c) => c.statute.id));
   const canEditGrounds = !isFinal && canExecute;
+  const refusalCode = (concludeMutation.error as { response?: { data?: { code?: string } } } | null)?.response?.data
+    ?.code;
+  const placementRefusal =
+    refusalCode && (PLACEMENT_REFUSALS as readonly string[]).includes(refusalCode) ? refusalCode : null;
 
   /**
    * Hoisted out of the JSX on purpose, and not for tidiness.
@@ -460,6 +482,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
          recorded soul name reads as unrecorded, not as its primary key. */
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
+      actions={
+        previousId ? (
+          <Link
+            ref={previousLink}
+            href={`/judgment/${previousId}`}
+            className="inline-flex items-center gap-1.5 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+          >
+            <Kbd>K</Kbd>
+            {t("judgment.desk.previous")}
+          </Link>
+        ) : undefined
+      }
     >
       <div
         data-testid="judgment-desk"
@@ -746,8 +780,19 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             />
           )}
 
-          {/* ── 戊 · 发落:只有加减项审判有可发落的东西(计划改动);原审判的去向由裁决路由,
-                 结案接口不收目的地与期限,所以这里不画那两个控件。 ── */}
+          {/* ── 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。 ── */}
+          {!isFinal && isOriginal && canExecute && (
+            <JudgmentPlacement
+              judgmentId={judgment.id}
+              verdict={selectedVerdict}
+              value={placement}
+              onChange={(next) => {
+                concludeMutation.reset(); // 改了发落,上一次的拒绝就不再是这一份的
+                setPlacement(next);
+              }}
+              refusal={placementRefusal}
+            />
+          )}
           {!isFinal && isAmendment && myTenant && (
             <AmendmentPlanChanges
               planId={judgment.amends_plan_id as string}
