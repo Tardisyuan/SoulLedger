@@ -125,6 +125,17 @@ describe("LoginPage", () => {
     expect(LOGIN_STATUTES.map((s) => s.text)).toContain(quote);
   });
 
+  it("cites it in the canonical 〔文献 · 条号〕 bracket, not 〔条号 · code〕", () => {
+    render(<LoginPage />);
+    const quote = screen.getByTestId("login-statute").textContent;
+    const statute = LOGIN_STATUTES.find((s) => s.text === quote)!;
+    const cite = screen.getByTestId("login-statute-cite").textContent ?? "";
+    expect(cite).toMatch(/^〔.+ · .+〕$/);
+    expect(cite.startsWith("〔") && cite.includes(statute.corpus)).toBe(true);
+    // Absence: the internal code is no longer printed in the bracket.
+    expect(cite).not.toContain(statute.code);
+  });
+
   it("does not offer a civilization choice — the login request carries no tenant", async () => {
     mockedLogin.mockRejectedValue({ response: { data: {} } });
     render(<LoginPage />);

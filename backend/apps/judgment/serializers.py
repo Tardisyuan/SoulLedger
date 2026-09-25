@@ -9,8 +9,17 @@ from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.disposition.destination import MAX_TERM_YEARS
+from apps.judgment import snapshot
 from apps.judgment.claims import BATCH_LIMIT
-from apps.judgment.models import EvidenceAdmission, Judgment, JudgmentCitation, Statute, Verdict, open_judgments
+from apps.judgment.models import (
+    CitationSnapshotKind,
+    EvidenceAdmission,
+    Judgment,
+    JudgmentCitation,
+    Statute,
+    Verdict,
+    open_judgments,
+)
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -81,6 +90,16 @@ class StatuteSerializer(serializers.ModelSerializer):
         return obj.source_actor_id is not None
 
 
+class CitationSnapshotSerializer(serializers.Serializer):
+    """Schema of `JudgmentCitationSerializer.snapshot` (read-only)."""
+    kind = serializers.ChoiceField(choices=CitationSnapshotKind.choices)
+    taken_at = serializers.DateTimeField()
+    display_title = serializers.CharField()
+    display_text = serializers.CharField()
+    source = serializers.CharField()
+    current_differs = serializers.BooleanField()
+
+
 class JudgmentCitationSerializer(serializers.ModelSerializer):
     """A ground, with the article inlined.
 
@@ -89,10 +108,31 @@ class JudgmentCitationSerializer(serializers.ModelSerializer):
     list of UUIDs is not a reason.
     """
     statute = StatuteSerializer(read_only=True)
+    snapshot = serializers.SerializerMethodField()
 
     class Meta:
         model = JudgmentCitation
-        fields = ["id", "statute", "note", "created_at"]
+        fields = ["id", "statute", "note", "created_at", "snapshot"]
+
+    @extend_schema_field(CitationSnapshotSerializer(allow_null=True))
+    def get_snapshot(self, obj):
+        """What the article said when the verdict was given — or ``None``.
+
+        ``None`` for an open case (it reads the live ``statute``) and for a
+        citation that was never snapshotted. ``current_differs`` compares the
+        stored hash with today's rendering, so the desk can offer the
+        「现行文本已修订」 comparison without shipping both texts twice."""
+        if not obj.snapshot_at or not obj.judgment.is_final:
+            return None
+        key = snapshot.locale_key(_locale_from(self.context))
+        return {
+            "kind": obj.snapshot_kind,
+            "taken_at": obj.snapshot_at,
+            "display_title": (obj.snapshot_title or {}).get(key, ""),
+            "display_text": (obj.snapshot_text or {}).get(key, ""),
+            "source": obj.snapshot_source,
+            "current_differs": snapshot.content_hash(snapshot.render(obj.statute)) != obj.snapshot_hash,
+        }
 
 
 class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):

@@ -1151,7 +1151,12 @@
       "note": "Applied",
       "source": "Source",
       "derived": "Derived from",
-      "caveat": "Source note:"
+      "caveat": "Source note:",
+      "snapshot_concluded": "Text at conclusion",
+      "snapshot_backfilled": "Backfilled",
+      "revised": "Current text revised · View",
+      "compare_then": "At conclusion",
+      "compare_now": "Current"
     },
     "statute_corpus": {
       "HELL_LAW": "Hell Law",
@@ -1192,13 +1197,21 @@
       "copy_cite": "Copy citation",
       "copied": "Copied",
       "cited_by": "Cited by",
-      "cited_by_count": "{{n}} judgments",
-      "cited_by_gap": "The API cannot look judgments up by article, so only the count is shown, not the list.",
+      "cited_by_count": "Cited by {{n}} judgments",
       "versions": "Versions",
       "versions_gap": "Articles carry no version history: corrections are made in place in the seed data.",
       "select_prompt": "Choose an article from the contents.",
       "no_match": "No article matches “{{q}}”",
-      "clear_search": "Clear search"
+      "clear_search": "Clear search",
+      "cited_by_error": "Could not load the citing judgments",
+      "cited_by_open": "Open",
+      "insert_desk": "Insert into the desk",
+      "insert_none": "You hold no open case",
+      "insert_pick": "Pick one of your open cases",
+      "related": "Related articles",
+      "related_gate": "Same gate",
+      "related_circle": "Same circle",
+      "related_terrace": "Same terrace"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",
@@ -1216,7 +1229,10 @@
       "balance_at_conclusion": "Balance at conclusion",
       "balance_now": "Now",
       "balance_single": "Balance",
-      "recorded_after": "{{n}} recorded since"
+      "recorded_after": "{{n}} recorded since",
+      "cite_from_corpus_title": "Cite an article",
+      "cite_from_corpus_confirm": "Cite {{cite}} in the judgment of {{soul}}?",
+      "cite_from_corpus_closed": "This case is concluded; no article can be cited now."
     },
     "claim": {
       "groups": {
@@ -1567,9 +1583,17 @@
       "eternal_no": "No",
       "full": "full",
       "capacity_unrecorded": "Capacity not recorded",
-      "read_only": "Read-only · the realm API has no write route, so nothing here is editable",
+      "read_only": "Read-only · only holders of realms.manage can change capacity; every other column comes from the mythology corpus",
       "empty_civ": "No realms are configured for this civilization",
-      "occupancy_failed": "Occupancy failed to load"
+      "occupancy_failed": "Occupancy failed to load",
+      "edit_scope": "Only capacity can be changed; every other column comes from the mythology corpus. Lowering it below the souls held moves nobody — new placements here are refused.",
+      "edit_capacity": "Edit",
+      "edit_capacity_of": "Edit capacity of {{name}}",
+      "capacity_label": "Capacity",
+      "full_warning": "Full: {{held}} held. Nobody is moved; new placements here will be refused.",
+      "saved": "{{code}}: capacity saved",
+      "saved_full": "{{code}}: capacity saved · full ({{held}} / {{cap}}): nobody is moved; new placements here will be refused.",
+      "save_failed": "Could not save the capacity"
     },
     "kind": {
       "HALL": "Court",

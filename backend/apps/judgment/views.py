@@ -18,7 +18,7 @@ from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
-from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
@@ -109,6 +109,9 @@ class JudgmentFilter(filters.FilterSet):
     group = filters.ChoiceFilter(choices=QueueGroup.CHOICES, method="filter_group")
     # 殿。`court` 是自由文本列(「第一殿」),按原值精确匹配。
     court = filters.CharFilter(field_name="court", lookup_expr="exact")
+    # 引用了这条律条的判决(语料页「被引用」清单)。与 `StatuteViewSet` 的
+    # `citation_count` 同一口径:存活的引用行,落在调用者看得见的判决上。
+    statute = filters.UUIDFilter(method="filter_statute")
 
     class Meta:
         model = Judgment
@@ -116,6 +119,26 @@ class JudgmentFilter(filters.FilterSet):
 
     def filter_group(self, queryset, name, value):
         return queryset.filter(PENDING & group_q(value, self.request.user))
+
+    def filter_statute(self, queryset, name, value):
+        return queryset.filter(pk__in=citing_judgments(value))
+
+
+def citing_judgments(statute_id):
+    """Judgment ids with a live citation of this article — the list side of the
+    corpus's 「被引用 N 件」. `StatuteViewSet.get_queryset` counts the same rows."""
+    from apps.judgment.models import JudgmentCitation
+
+    return JudgmentCitation.all_objects.filter(statute_id=statute_id, is_deleted=False).values("judgment_id")
+
+
+def visible_judgments(request):
+    """The judgments this caller's judgment LIST would show — tenant scope,
+    residence reads and row-level DataScope, by running the list's own
+    `get_queryset` rather than restating it. `citation_count` counts inside
+    this set so the count and `?statute=` list cannot disagree."""
+    view = JudgmentViewSet(request=request, action="list", kwargs={}, format_kwarg=None)
+    return view.get_queryset().values("pk")
 
 
 class NotesOnOpenCaseError(APIException):
@@ -1356,8 +1379,16 @@ class StatuteViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSet
         reason that scoping the queryset does not cover: a reverse aggregate is
         resolved against the relation, not through the related model's manager,
         so a bare `Count("citations")` would report every tenant's citations on
-        a correctly-scoped row. `tenant_aggregate_filter` is that filter, kept
-        in the same module for the same reason the scoping is.
+        a correctly-scoped row.
+
+        The filter is **the caller's judgment list**, not only its tenant
+        (`visible_judgments`): the corpus rail shows 「被引用 N 件」 next to the
+        list `GET /judgment/?statute=<id>` returns, and a row-level DataScope
+        that hides some of this tenant's judgments must shrink the number too.
+        A tenant-only filter counted judgments the list would never show. It
+        subsumes the tenant filter this used to carry (`tenant_aggregate_filter`):
+        a judgment outside the caller's tenant is not in the list either.
+        Counted as distinct judgments, which is what the list returns.
 
         `distinct=True` because `filterset_fields`/`search_fields` can add a
         join before the aggregate runs, and a multiplied join silently inflates
@@ -1379,9 +1410,10 @@ class StatuteViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSet
             .get_queryset()
             .annotate(
                 citation_count=Count(
-                    "citations",
-                    filter=tenant_aggregate_filter(
-                        self.request, field="citations__tenant"
+                    "citations__judgment",
+                    filter=Q(
+                        citations__is_deleted=False,
+                        citations__judgment__in=visible_judgments(self.request),
                     ),
                     distinct=True,
                 )

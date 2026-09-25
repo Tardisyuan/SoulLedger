@@ -4065,8 +4065,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Read-only realm listing and detail.
+         * @description Realm listing and detail, plus one write: `PATCH /realms/{id}/` with `capacity`.
          *     Use '?localized=true' query param to get display_name resolved by Accept-Language.
+         *
+         *     Capacity is the only editable column. It is operational — how many souls a
+         *     realm holds at once — and not mythology: `seed_mythology` does not seed it
+         *     (apps/actors/mythology/seeding.py). Everything else on the row comes from
+         *     the corpus and stays read-only. `realms.manage` (ADMIN by default) gates it;
+         *     the row is found through `get_object`, i.e. tenant-scoped like every read;
+         *     `Realm` is an `AuditUserFields` model, so the write lands in AuditLog with
+         *     its before/after, and `AuditUserViewSetMixin` puts the user on that row.
          */
         get: operations["v1_realms_list"];
         put?: never;
@@ -4085,8 +4093,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Read-only realm listing and detail.
+         * @description Realm listing and detail, plus one write: `PATCH /realms/{id}/` with `capacity`.
          *     Use '?localized=true' query param to get display_name resolved by Accept-Language.
+         *
+         *     Capacity is the only editable column. It is operational — how many souls a
+         *     realm holds at once — and not mythology: `seed_mythology` does not seed it
+         *     (apps/actors/mythology/seeding.py). Everything else on the row comes from
+         *     the corpus and stays read-only. `realms.manage` (ADMIN by default) gates it;
+         *     the row is found through `get_object`, i.e. tenant-scoped like every read;
+         *     `Realm` is an `AuditUserFields` model, so the write lands in AuditLog with
+         *     its before/after, and `AuditUserViewSetMixin` puts the user on that row.
          */
         get: operations["v1_realms_retrieve"];
         put?: never;
@@ -4094,7 +4110,15 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * @description Change `capacity` — and nothing else (any other field is a 400).
+         *
+         *     Lowering it below the number of souls already there is allowed: nobody
+         *     is moved, and from now on the destination picker refuses this realm
+         *     with 409 `realm_full` (`disposition/destination.py`). `is_full` in the
+         *     response says whether that is now the case, counted the same way.
+         */
+        patch: operations["v1_realms_partial_update"];
         trace?: never;
     };
     "/api/v1/realms/occupancy/": {
@@ -7371,6 +7395,22 @@ export interface components {
             token: string;
             expires_in: number;
         };
+        /** @description Schema of `JudgmentCitationSerializer.snapshot` (read-only). */
+        CitationSnapshot: {
+            kind: components["schemas"]["CitationSnapshotKindEnum"];
+            /** Format: date-time */
+            taken_at: string;
+            display_title: string;
+            display_text: string;
+            source: string;
+            current_differs: boolean;
+        };
+        /**
+         * @description * `CONCLUDED` - Concluded
+         *     * `BACKFILLED` - Backfilled
+         * @enum {string}
+         */
+        CitationSnapshotKindEnum: "CONCLUDED" | "BACKFILLED";
         /**
          * @description * `CHINESE` - Chinese Diyu
          *     * `EUROPEAN` - European Heaven/Hell
@@ -8379,6 +8419,7 @@ export interface components {
             note?: string;
             /** Format: date-time */
             readonly created_at: string;
+            readonly snapshot: components["schemas"]["CitationSnapshot"] | null;
         };
         /**
          * @description Input for `POST /judgment/{id}/citations/`.
@@ -10773,6 +10814,15 @@ export interface components {
             /** Format: date-time */
             readonly update_time?: string;
         };
+        /**
+         * @description `PATCH /realms/{id}/` —— 只收 `capacity`(非负整数或 null)。
+         *
+         *     任何别的字段都是 400,而不是被 DRF 静默丢掉:界域的名字、层级、拓扑来自神话语料
+         *     (`seed_mythology`),一个以为自己改了 `name_zh` 却收到 200 的调用方,拿到的是一句谎话。
+         */
+        PatchedRealmCapacity: {
+            capacity?: number | null;
+        };
         PatchedReincarnation: {
             /** Format: uuid */
             readonly id?: string;
@@ -11322,6 +11372,77 @@ export interface components {
              *     * `FAIL` - 不过(第二次死亡)
              */
             fork?: (components["schemas"]["RealmForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+        };
+        /**
+         * @description The realm after a capacity change, plus what the new number means now.
+         *
+         *     `held` is the count placement compares against (`disposition.destination.realm_held`);
+         *     `is_full` = new placements get 409 `realm_full`. Nobody already there is moved.
+         */
+        RealmCapacityResult: {
+            /** Format: uuid */
+            readonly id: string;
+            realm_code: string;
+            civilization: components["schemas"]["CivilizationEnum"];
+            /** @description Native/local name */
+            name_local: string;
+            /** @description Simplified Chinese name */
+            name_zh?: string;
+            /** @description English name */
+            name_en?: string;
+            /** @description Egyptian name (transliteration or hieroglyphs) */
+            name_egy?: string;
+            realm_type: components["schemas"]["RealmTypeEnum"];
+            /** @description Severity or bliss tier */
+            tier?: number;
+            /** Format: uuid */
+            parent_realm?: string | null;
+            description?: string;
+            memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            is_eternal?: boolean;
+            cycle_limit?: number | null;
+            /** @description Position along the civilization's route (Chinese: court number 1-10) */
+            order?: number | null;
+            /**
+             * @description Chinese only: 殿 / 门 / 层 / 道
+             *
+             *     * `HALL` - 殿
+             *     * `GATE` - 门
+             *     * `LAYER` - 层
+             *     * `PATH` - 道
+             */
+            kind?: (components["schemas"]["RealmKindEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description How many souls the realm holds at once; null = not recorded */
+            capacity?: number | null;
+            /** @description European only: circle (Inferno) or terrace (Purgatorio) number */
+            level?: number | null;
+            /** @description European only: ring (7th circle) or bolgia (8th circle) number */
+            sublevel?: number | null;
+            /**
+             * @description European only: which cantica the realm belongs to
+             *
+             *     * `INFERNO` - 地狱
+             *     * `PURGATORIO` - 炼狱
+             *     * `PARADISO` - 天堂
+             */
+            region?: (components["schemas"]["CommediaRegionEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description Egyptian only: hour of the night, 1-12 */
+            hour?: number | null;
+            /** @description Egyptian only: gate number */
+            gate?: number | null;
+            /** @description Egyptian only: the hall where the heart is weighed; null elsewhere */
+            is_judgment_hall?: boolean | null;
+            /**
+             * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
+             *
+             *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `RIGHT` - 右(至福岛)
+             *     * `PASS` - 过(称心通过)
+             *     * `FAIL` - 不过(第二次死亡)
+             */
+            fork?: (components["schemas"]["RealmForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly held: number;
+            readonly is_full: boolean;
         };
         /**
          * @description * `LEFT` - 左(塔尔塔罗斯)
@@ -16245,6 +16366,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
                  *     * `FAILED` - Failed / Condemned
@@ -16447,6 +16569,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
                  *     * `FAILED` - Failed / Condemned
@@ -20503,6 +20626,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Realm"];
+                };
+            };
+        };
+    };
+    v1_realms_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Realm. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedRealmCapacity"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedRealmCapacity"];
+                "multipart/form-data": components["schemas"]["PatchedRealmCapacity"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealmCapacityResult"];
                 };
             };
         };

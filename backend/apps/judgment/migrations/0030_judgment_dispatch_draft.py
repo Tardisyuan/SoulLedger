@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("judgment", "0027_judgment_concluded_balance"),
+        ("judgment", "0029_backfill_citation_snapshots"),
         ("realms", "0021_egy_names_section_nine"),
     ]
 

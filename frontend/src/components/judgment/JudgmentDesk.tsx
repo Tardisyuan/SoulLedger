@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { judgmentApi, type JudgmentCitation, type Statute } from "@soulledger/core/api";
+import { judgmentApi, type Judgment, type JudgmentCitation, type Statute } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useDeferJudgment, useJudgmentPrecedents } from "@soulledger/core/hooks/useJudgments";
+import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
+import { citationOf, resolveCitation } from "@soulledger/core/config/statuteCitation";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { forgetOpenCase, rememberOpenCase } from "@/src/lib/lastOpenCase";
 import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
 import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
@@ -195,6 +201,10 @@ export function CitationChips({
 /**
  * 律条检索:`GET /judgment/statutes/?search=…&civilization=…`(StatuteViewSet 的
  * search_fields 是编号、中英标题与正文)。空查询不发请求 —— 172 条全列出来不是检索。
+ *
+ * 粘进来的规范引用〔文献 · 条号〕或裸节号(「救濟門 · 六」「IX · XXVI」)服务端搜不到 ——
+ * 节号是前端按文明拼出来的,不是一列。所以同一个输入先在本文明的全部律条里按语料页
+ * 同一个 `resolveCitation` 解一次,解出来就只给那一条。
  */
 export function StatuteSearch({
   civilization,
@@ -208,14 +218,24 @@ export function StatuteSearch({
   const { t } = useI18n();
   const [term, setTerm] = useState("");
   const query = term.trim();
+  const corpus = useAllStatutes({ enabled: query.length > 0 });
+  const resolved = query
+    ? resolveCitation(
+        (corpus.data ?? []).filter((s) => s.civilization === civilization),
+        query,
+        (c) => t(`judgment.statute_corpus.${c}`)
+      )
+    : undefined;
   const { data, isFetching, isError } = useQuery({
     queryKey: [...judgmentKeys.all, "statute-search", civilization, query],
     queryFn: () =>
       judgmentApi.statutes({ search: query, civilization }).then((r) => r.data.results ?? []),
-    enabled: query.length > 0,
+    // Wait for the local resolve to have had its chance (or to have failed), so a
+    // pasted sigil never also goes out as a text search.
+    enabled: query.length > 0 && !corpus.isPending && !resolved,
     staleTime: 60_000,
   });
-  const results: Statute[] = data ?? [];
+  const results: Statute[] = resolved ? [resolved] : (data ?? []);
 
   return (
     <div className="mt-2">
@@ -229,7 +249,7 @@ export function StatuteSearch({
           className="w-full h-8 max-sm:h-11 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
         />
       </label>
-      {query && !isFetching && (isError || results.length === 0) && (
+      {query && !resolved && !corpus.isPending && !isFetching && (isError || results.length === 0) && (
         <p className="py-2 text-xs text-[oklch(var(--color-ink-subtle))]">
           {isError ? t("common.error") : t("judgment.desk.statute_search_empty")}
         </p>
@@ -318,5 +338,77 @@ export function ConcludedBalance({
         </dd>
       </div>
     </dl>
+  );
+}
+
+/**
+ * 语料页「插入审判台」的落点:`/judgment/<id>?cite=<statute_id>`。
+ *
+ * 两件事:① 记住这个用户最后打开的未结案(`src/lib/lastOpenCase.ts`),语料页据此直达;
+ * 打开的是已结案、且正是记着的那件,就忘掉。② 带着 `?cite=` 进来、案子未结、有权引用:
+ * 先问「引用〔…〕到 <魂> 的审判？」,确认才引用 —— 从另一页带过来的动作,不替人按下。
+ * 案子已结就说一句不能再引用。处理过的 `cite` 从地址栏抹掉,刷新不会再问一次。
+ */
+export function CiteFromCorpus({
+  judgment,
+  canCite,
+  onCite,
+}: {
+  judgment: Pick<Judgment, "id" | "soul_name" | "is_final">;
+  canCite: boolean;
+  onCite: (statuteId: string) => void;
+}) {
+  const { t } = useI18n();
+  const { user } = useTenant();
+  const citeId = useSearchParams()?.get("cite") ?? null;
+  const [handled, setHandled] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    if (judgment.is_final) forgetOpenCase(user.id, judgment.id);
+    else rememberOpenCase(user.id, { id: judgment.id, soul_name: judgment.soul_name });
+  }, [user, judgment.id, judgment.soul_name, judgment.is_final]);
+
+  const asking = !!citeId && !handled && !judgment.is_final && canCite;
+  const { data: statute } = useQuery({
+    queryKey: [...judgmentKeys.all, "statute", citeId],
+    queryFn: () => judgmentApi.statute(citeId as string).then((r) => r.data),
+    enabled: asking,
+    staleTime: 60_000,
+  });
+
+  const done = () => {
+    setHandled(true);
+    try {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    } catch {
+      /* the prompt is already closed; a stale query string only re-asks on reload */
+    }
+  };
+
+  if (citeId && !handled && judgment.is_final) {
+    return (
+      <p role="status" data-testid="cite-from-corpus-closed" className="px-4 md:px-10 py-2 text-xs text-[oklch(var(--color-ink-subtle))]">
+        {t("judgment.desk.cite_from_corpus_closed")}
+      </p>
+    );
+  }
+  if (!asking || !statute) return null;
+  return (
+    <ConfirmDialog
+      isOpen
+      variant="info"
+      title={t("judgment.desk.cite_from_corpus_title")}
+      message={t("judgment.desk.cite_from_corpus_confirm", {
+        cite: citationOf(statute, (c) => t(`judgment.statute_corpus.${c}`)),
+        soul: judgment.soul_name,
+      })}
+      confirmText={t("judgment.desk.cite")}
+      onConfirm={() => {
+        onCite(statute.id);
+        done();
+      }}
+      onCancel={done}
+    />
   );
 }

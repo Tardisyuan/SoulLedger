@@ -21,6 +21,7 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { citationOf } from "@soulledger/core/config/statuteCitation";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -94,7 +95,8 @@ function paramsOf(key: FolderKey): InboxListParams {
 
 /**
  * 回复框 = 审判台的衬线输入框(QuoteInput,`app/judgment/[id]/page.tsx`),加一条:
- * 在行首或空白后打 `/` 开始检索律条,回车把「〔编号 · 标题〕」写进正文。
+ * 在行首或空白后打 `/` 开始检索律条,回车把规范引用「〔文献 · 条号〕」写进正文 ——
+ * 与语料页「复制引用」同一个括号(core/config/statuteCitation),审判台能把它解回来。
  *
  * 写进的是**文字**:回复正文是纯文本,存在 Synapse,灵魂看到的就是这几个字 —— 没有
  * 结构化的援引可存(那是审判的 `JudgmentCitation`,不是信)。检索走律条接口,要
@@ -159,7 +161,7 @@ function Composer({
 
   const insert = (s: Statute) => {
     if (slashAt === null) return;
-    const cite = `〔${s.code}${s.display_title ? ` · ${s.display_title}` : ""}〕`;
+    const cite = citationOf(s, (c) => t(`judgment.statute_corpus.${c}`));
     const next = value.slice(0, slashAt) + cite + value.slice(caret);
     const at = slashAt + cite.length;
     onChange(next);

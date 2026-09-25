@@ -42,7 +42,7 @@ jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { ge
 const { sentencePlansApi: planApi } = jest.requireMock("@soulledger/core/api/sentence-plans") as {
   sentencePlansApi: Record<string, jest.Mock>;
 };
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }), useSearchParams: () => null }));
 
 const mockI18n = {
   t: tZh,

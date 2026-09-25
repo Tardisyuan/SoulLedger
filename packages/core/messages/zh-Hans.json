@@ -1151,7 +1151,12 @@
       "note": "适用理由",
       "source": "出处",
       "derived": "派生自",
-      "caveat": "出处存疑："
+      "caveat": "出处存疑：",
+      "snapshot_concluded": "结案时文本",
+      "snapshot_backfilled": "补录",
+      "revised": "现行文本已修订 · 查看",
+      "compare_then": "结案时",
+      "compare_now": "现行"
     },
     "statute_corpus": {
       "HELL_LAW": "冥律",
@@ -1192,13 +1197,21 @@
       "copy_cite": "复制引用",
       "copied": "已复制",
       "cited_by": "被引用",
-      "cited_by_count": "{{n}} 件判决",
-      "cited_by_gap": "接口不能按律条查判决,所以这里只有件数,没有清单。",
+      "cited_by_count": "被引用 {{n}} 件",
       "versions": "版本",
       "versions_gap": "律条没有版本记录:更正在种子数据里就地改写。",
       "select_prompt": "从目录选一条律条。",
       "no_match": "没有匹配「{{q}}」的律条",
-      "clear_search": "清除检索"
+      "clear_search": "清除检索",
+      "cited_by_error": "被引用清单加载失败",
+      "cited_by_open": "未结",
+      "insert_desk": "插入审判台",
+      "insert_none": "你手上没有未结的案件",
+      "insert_pick": "选一件你认领的未结案",
+      "related": "相关条目",
+      "related_gate": "同门",
+      "related_circle": "同圈",
+      "related_terrace": "同台阶"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",
@@ -1216,7 +1229,10 @@
       "balance_at_conclusion": "结案时余额",
       "balance_now": "现值",
       "balance_single": "余额",
-      "recorded_after": "其后登记 {{n}} 条"
+      "recorded_after": "其后登记 {{n}} 条",
+      "cite_from_corpus_title": "引用律条",
+      "cite_from_corpus_confirm": "引用{{cite}}到 {{soul}} 的审判？",
+      "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。"
     },
     "claim": {
       "groups": {
@@ -1567,9 +1583,17 @@
       "eternal_no": "否",
       "full": "已满",
       "capacity_unrecorded": "容量未记录",
-      "read_only": "只读 · 界域接口没有写入路由,本页不提供编辑",
+      "read_only": "只读 · 只有持 realms.manage 的人能改容量;其余各列来自神话语料,不经接口改",
       "empty_civ": "此文明尚未配置界域",
-      "occupancy_failed": "在押人数加载失败"
+      "occupancy_failed": "在押人数加载失败",
+      "edit_scope": "只有容量可改;其余各列来自神话语料,不经接口改。容量降到在押人数以下时谁都不挪,之后发落到这里会被拒。",
+      "edit_capacity": "改容量",
+      "edit_capacity_of": "改 {{name}} 的容量",
+      "capacity_label": "容量",
+      "full_warning": "已满:在押 {{held}}。谁都不挪,之后发落到这里会被拒。",
+      "saved": "{{code}} 容量已保存",
+      "saved_full": "{{code}} 容量已保存 · 已满({{held}} / {{cap}}):谁都不挪,之后发落到这里会被拒。",
+      "save_failed": "容量保存失败"
     },
     "kind": {
       "HALL": "殿",

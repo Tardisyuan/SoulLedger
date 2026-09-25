@@ -85,8 +85,9 @@ export function groupStatutesByCorpus(statutes: Statute[]): CorpusGroup[] {
  * boundaries (see app/corpus/page.tsx); the caller re-sorts by `ordinal`
  * within a corpus, which is that document's own order.
  */
-export function useAllStatutes() {
+export function useAllStatutes({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
+    enabled,
     queryKey: judgmentKeys.statutes({ all: "true", ordering: "code" }),
     queryFn: async () => {
       const rows: Statute[] = [];

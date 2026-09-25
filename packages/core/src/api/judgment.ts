@@ -290,12 +290,31 @@ export interface Statute {
   citation_count?: number | null;
 }
 
+/**
+ * What a cited article said when the verdict was given
+ * (`apps/judgment/snapshot.py`). `CONCLUDED` was taken in the conclusion's own
+ * transaction; `BACKFILLED` was written by migration judgment/0029 for cases
+ * concluded before snapshots existed — that is the migration day's text, not
+ * the conclusion day's, and the desk says so.
+ */
+export interface CitationSnapshot {
+  kind: "CONCLUDED" | "BACKFILLED";
+  taken_at: string;
+  display_title: string;
+  display_text: string;
+  source: string;
+  /** Today's rendering of the article no longer matches the snapshot (hash compare). */
+  current_differs: boolean;
+}
+
 export interface JudgmentCitation {
   id: string;
   statute: Statute;
   /** How this article applies to this case. */
   note: string;
   created_at: string;
+  /** Null on an open case: it reads the live `statute`. Optional: older payloads lack it. */
+  snapshot?: CitationSnapshot | null;
 }
 
 export interface ConcludeJudgmentPayload {
@@ -490,6 +509,8 @@ export const judgmentApi = {
    */
   statutes: (params?: Record<string, string>) =>
     api.get<PaginatedResponse<Statute>>("/judgment/statutes/", { params }),
+  /** One article — the desk's 「插入审判台」 confirm names it before citing. */
+  statute: (id: string) => api.get<Statute>(`/judgment/statutes/${id}/`),
   citations: (id: string) => api.get<JudgmentCitation[]>(`/judgment/${id}/citations/`),
   /** 「据 · 先例」:同租户、同文明的已结案审判,按同殿 → 余额最近 → 共同援引排序。 */
   precedents: (id: string, limit?: number) =>

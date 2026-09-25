@@ -82,3 +82,37 @@ class RealmOccupancySerializer(serializers.Serializer):
     (`left_at` null) is in this realm — 在押."""
     realm_id = serializers.UUIDField()
     count = serializers.IntegerField()
+
+
+class RealmCapacitySerializer(serializers.ModelSerializer):
+    """`PATCH /realms/{id}/` —— 只收 `capacity`(非负整数或 null)。
+
+    任何别的字段都是 400,而不是被 DRF 静默丢掉:界域的名字、层级、拓扑来自神话语料
+    (`seed_mythology`),一个以为自己改了 `name_zh` 却收到 200 的调用方,拿到的是一句谎话。
+    """
+    capacity = serializers.IntegerField(min_value=0, allow_null=True)
+
+    class Meta:
+        model = Realm
+        fields = ["capacity"]
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            extra = sorted(set(data) - {"capacity"})
+            if extra:
+                raise serializers.ValidationError(
+                    {f: ["Only capacity can be changed on a realm."] for f in extra}
+                )
+        return super().to_internal_value(data)
+
+
+class RealmCapacityResultSerializer(RealmSerializer):
+    """The realm after a capacity change, plus what the new number means now.
+
+    `held` is the count placement compares against (`disposition.destination.realm_held`);
+    `is_full` = new placements get 409 `realm_full`. Nobody already there is moved."""
+    held = serializers.IntegerField(read_only=True)
+    is_full = serializers.BooleanField(read_only=True)
+
+    class Meta(RealmSerializer.Meta):
+        fields = [*RealmSerializer.Meta.fields, "held", "is_full"]
