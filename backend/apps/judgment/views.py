@@ -29,6 +29,7 @@ from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
 from apps.judgment.precedents import precedents_for
 from apps.judgment.serializers import (
+    AssignableOfficerSerializer,
     EvidenceRulingResultSerializer,
     EvidenceRulingWriteSerializer,
     JudgmentBatchResultSerializer,
@@ -213,6 +214,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN 与 MODERATOR
         # (殿主)持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
         'reassign': ['judgment.assign'],
+        # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
+        'assignable_officers': ['judgment.assign'],
         # 批量:与单件同一码名。`operation=reassign` 在动作体里再要 `judgment.assign` ——
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
@@ -779,6 +782,63 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         """撤销暂缓,案子回到它按认领人所属的组。"""
         override = self._may_override()
         return self._claim_response(lambda pk: claims.undefer(pk, request.user, may_override=override))
+
+    @extend_schema(
+        responses={
+            200: AssignableOfficerSerializer(many=True),
+            400: OpenApiTypes.OBJECT,
+            404: JudgmentClaimRefusalSerializer,
+        },
+        parameters=[
+            OpenApiParameter(
+                "judgment", OpenApiTypes.UUID, OpenApiParameter.QUERY, required=True, many=True,
+                description="The case(s) about to be reassigned. Repeat for a batch (at most 100).",
+            ),
+        ],
+    )
+    # 不分页、不挂列表的过滤器:这里答的是人,不是案子,`court` / `search` 这些对它没有意义。
+    @action(
+        detail=False, methods=["get"], url_path="assignable-officers",
+        pagination_class=None, filter_backends=[],
+    )
+    def assignable_officers(self, request):
+        """改派弹层的名单:能被改派到这些案子上的官员 —— 与 `reassign` 校验对象用的是同一个
+        `claims.is_assignable`,名单里的人改派必收,不在名单里的必拒。
+
+        租户取自案子,不取自调用者:ADMIN 没有租户,案子有。案子要在 `self.get_queryset()`
+        里 —— 与批量同一条范围,不在就整体 404 并列出 `missing`。一批跨了租户时没有人能
+        接下全部,答空名单(批量改派也会逐件拒)。
+
+        不分页、不搜索:一个租户的官员是几十人的量级,弹层要一次拿全;上了几百人再加 `search`。
+        """
+        from apps.authentication.models import User
+
+        raw = request.query_params.getlist("judgment")
+        ids = []
+        for value in raw:
+            try:
+                ids.append(uuid.UUID(value))
+            except ValueError:
+                return Response({"judgment": [f"Not a UUID: {value!r}."]}, status=status.HTTP_400_BAD_REQUEST)
+        if not ids or len(set(ids)) > claims.BATCH_LIMIT:
+            return Response(
+                {"judgment": [f"Give 1 to {claims.BATCH_LIMIT} judgment ids."]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        tenants = dict(self.get_queryset().filter(pk__in=ids).values_list("pk", "tenant_id"))
+        missing = [str(pk) for pk in ids if pk not in tenants]
+        if missing:
+            return Response(
+                {"error": "Some judgments were not found.", "code": "not_found", "missing": missing},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        tenant_ids = set(tenants.values())
+        if len(tenant_ids) != 1:
+            return Response([])
+        # 调用者自己的租户范围再收一道:非 ADMIN 只可能看见自己租户的人。
+        users = scope_to_tenant(User.objects.all(), request)
+        officers = claims.assignable_officers(users, tenant_ids.pop())
+        return Response(AssignableOfficerSerializer(officers, many=True).data)
 
     @staticmethod
     def _assignee(user_id):

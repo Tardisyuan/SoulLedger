@@ -66,6 +66,8 @@ export const judgmentKeys = {
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
   queueCounts: (params?: { court?: string; search?: string }) =>
     [...judgmentKeys.all, "queue-counts", params ?? null] as const,
+  /** Who the given cases may be reassigned to. Keyed by the ids: the tenant comes from the cases. */
+  assignableOfficers: (ids: readonly string[]) => [...judgmentKeys.all, "assignable-officers", [...ids]] as const,
 };
 
 export const workflowKeys = {

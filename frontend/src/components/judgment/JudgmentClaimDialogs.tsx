@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { usersApi, type JudgmentClaimRefusal, type User } from "@soulledger/core/api";
+import type { AssignableOfficer, JudgmentClaimRefusal } from "@soulledger/core/api";
+import { useAssignableOfficers } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useTenant } from "@/src/contexts/TenantContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField } from "@/src/components/ui/Field";
@@ -133,47 +132,35 @@ export function DeferDialog({
 }
 
 /**
- * 改派:选一位同租户的在职官员。
+ * 改派:选一位能接下这些案子的官员。
  *
- * 名单来自 `/users/`,那是用户管理接口 —— 持 `judgment.assign` 的殿主(MODERATOR)默认
- * 没有它,拿到的是 403,这里照实说「名单读不到」而不是给一个空下拉。后端没有「可改派的人」
- * 这一问的专门接口;真正的门在服务端 `assert_assignable`(同租户、在职、持 judgment.execute),
- * 选错了人会得到 `invalid_assignee`,由调用方译出来。
- *
- * 按租户过滤只在自己有租户时做:ADMIN 是全局角色、没有租户,名单里每人后面标租户名。
+ * 名单来自 `GET /judgment/assignable-officers/`,要的是 `judgment.assign` —— 与改派本身
+ * 同一个码名。此前读的是 `/users/`(要 ADMIN 的 `user.manage`),于是恰恰是改派的殿主
+ * (MODERATOR)一打开就 403。服务端按案子的租户、用与 `reassign` 同一条
+ * `claims.is_assignable` 筛好,这里不再自己按租户或在职过滤。那个端点也拒了(403 等)
+ * 时照实说「名单读不到」,不给一个空下拉。
  */
 export function ReassignDialog({
   isOpen,
+  ids,
   count,
   pending,
   onCancel,
   onConfirm,
 }: {
   isOpen: boolean;
+  /** The cases about to be reassigned: the server reads their tenant, so ADMIN needs no tenant of its own. */
+  ids: readonly string[];
   count: number;
   pending: boolean;
   onCancel: () => void;
   onConfirm: (to: number) => void;
 }) {
   const { t } = useI18n();
-  const { user } = useTenant();
   const [to, setTo] = useState("");
   const [touched, setTouched] = useState(false);
-  const myTenant = user?.tenant?.code ?? null;
-
-  const { data: officers, isError, isLoading } = useQuery({
-    queryKey: ["users", "officers", myTenant],
-    queryFn: async (): Promise<User[]> => (await usersApi.list({ is_active: "true" })).data.results ?? [],
-    enabled: isOpen,
-    staleTime: 60_000,
-  });
-  const choices = (officers ?? []).filter(
-    (u) => u.is_active !== false && (myTenant === null || u.tenant?.code === myTenant)
-  );
-  const nameOf = (u: User) =>
-    [[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username, myTenant === null ? u.tenant?.display_name : null]
-      .filter(Boolean)
-      .join(" · ");
+  const { data: officers, isError, isLoading } = useAssignableOfficers(ids, isOpen);
+  const nameOf = (u: AssignableOfficer) => u.display_name || u.username;
 
   const close = () => {
     setTo("");
@@ -218,7 +205,7 @@ export function ReassignDialog({
           onChange={(e) => setTo(e.target.value)}
           options={[
             { value: "", label: isLoading ? t("common.loading") : t("judgment.claim.pick_officer") },
-            ...choices.map((u) => ({ value: String(u.id), label: nameOf(u) })),
+            ...(officers ?? []).map((u) => ({ value: String(u.id), label: nameOf(u) })),
           ]}
         />
       )}
