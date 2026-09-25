@@ -151,7 +151,7 @@ def test_notify_sends_and_moves_on(cn_tenant, django_capture_on_commit_callbacks
         assert wf.complete_node(wf.current_node.id, "PASSED")
     wf.refresh_from_db()
     notify = wf.nodes.get(node_order=2)
-    assert notify.status == NodeStatus.TRAVERSED and notify.verdict == "NOTIFIED"
+    assert notify.status == NodeStatus.TRAVERSED and notify.verdict == ""
     assert notify.approver_id is None
     assert wf.current_node.node_order == 3
     assert told == ["nt_guard"]

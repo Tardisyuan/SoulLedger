@@ -856,8 +856,7 @@
       "failed": "失败",
       "confirmed": "确认",
       "rejected": "拒绝",
-      "skipped": "跳过",
-      "notified": "已通知"
+      "skipped": "跳过"
     },
     "node_type": {
       "trial": "审判",

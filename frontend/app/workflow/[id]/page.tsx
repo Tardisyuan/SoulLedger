@@ -46,7 +46,6 @@ const VERDICT_COLORS: Record<string, string> = {
   CONFIRMED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
   REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
   SKIPPED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
-  NOTIFIED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
 };
 
 /**
@@ -72,7 +71,6 @@ const VERDICT_GLYPH: Record<string, string> = {
   CONFIRMED: "✓",
   REJECTED: "✕",
   SKIPPED: "»",
-  NOTIFIED: "✉",
 };
 
 // NODE_TYPE_KEYS used to bridge TRIAL -> workflow.node_type.trial by hand,

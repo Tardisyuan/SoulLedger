@@ -856,8 +856,7 @@
       "failed": "Failed",
       "confirmed": "Confirmed",
       "rejected": "Rejected",
-      "skipped": "Skipped",
-      "notified": "Notified"
+      "skipped": "Skipped"
     },
     "node_type": {
       "trial": "Trial",

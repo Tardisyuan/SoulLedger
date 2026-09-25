@@ -481,7 +481,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         while node.kind in AUTOMATIC_KINDS:
             node.status = NodeStatus.TRAVERSED
             node.decided_at = now
-            node.verdict = "NOTIFIED" if node.kind == NodeKind.NOTIFY else ""
+            # No verdict: nobody decided. TRAVERSED is the whole record, and
+            # `workflow.verdicts` is the approval picker's vocabulary
+            # (tests/test_verdict_names_exist_in_every_bundle.py), so a
+            # "NOTIFIED" there would be an option no decision can choose.
+            node.verdict = ""
             node.save(update_fields=["status", "decided_at", "verdict"])
             if node.kind == NodeKind.END:
                 self._finish(ApprovalWorkflowStatus.COMPLETED, now)
