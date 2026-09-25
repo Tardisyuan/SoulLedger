@@ -36,7 +36,7 @@ def keys():
 def known_user(django_user_model, cn_tenant):
     return django_user_model.objects.create_user(
         username="known_reset", email=KNOWN, password="OldPass!123",
-        role="VIEWER", tenant=cn_tenant,
+        role="SOUL", tenant=cn_tenant,
     )
 
 
