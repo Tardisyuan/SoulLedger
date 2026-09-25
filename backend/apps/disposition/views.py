@@ -12,6 +12,7 @@ from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.disposition.expiry import term_end_sort_key
 from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSection
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
 from apps.disposition.services import DispositionService
@@ -102,13 +103,24 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         soul_reborn_flag=Exists(
             Reincarnation.objects.filter(soul=OuterRef("soul"), cycle_count__gt=OuterRef("cycle"))
         ),
+    ).alias(
+        # 期满日的排序键(`?ordering=term_end`):SQL 里算,分页之外的行也排得对。
+        # 永久 / 没有期满日的排最后。规则与序列化器的 `term_end` 同源,见 `expiry.term_end_sort_key`。
+        term_end=term_end_sort_key(),
     )
     serializer_class = DispositionSerializer
     filterset_class = DispositionFilter
     pagination_class = DispositionPagination
     # 暂居只读例外(apps/core/tenant.py)。
     residence_read_actions = ("list", "retrieve")
-    ordering_fields = ["created_at", "executed_at"]
+    ordering_fields = ["created_at", "executed_at", "term_end"]
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        # 同一天期满的平局:按建档先后、再按主键 —— 分页不因平局在两页之间跳行。
+        if "term_end" in self.request.query_params.get("ordering", ""):
+            queryset = queryset.order_by(*queryset.query.order_by, "created_at", "pk")
+        return queryset
 
     def get_queryset(self):
         """Archived dispositions are off the list unless asked for.

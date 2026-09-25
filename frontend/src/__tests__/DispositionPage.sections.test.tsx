@@ -87,12 +87,13 @@ describe("处置页按服务端分三段", () => {
     },
     executing: {
       count: 17,
+      // 服务端 `ordering=term_end` 的顺序:期满近 → 远,没有期满日的在后(彼此按建档先后)。
       results: [
-        row({ id: "far", term_end: { year: year + 30, month: 1, day: 1 }, sentence_years: 31 }),
-        row({ id: "eternal", is_eternal: true, sentence_years: null, term_end: null }),
         // 终点已过、期满检查还没跑:仍是执行中。
         row({ id: "overdue", term_start: { year: year - 5, month: 1, day: 1 }, term_end: { year: year - 2, month: 1, day: 1 } }),
+        row({ id: "far", term_end: { year: year + 30, month: 1, day: 1 }, sentence_years: 31 }),
         row({ id: "nostart", term_start: null, term_end: null }),
+        row({ id: "eternal", is_eternal: true, sentence_years: null, term_end: null }),
       ],
     },
     expired: {
@@ -127,7 +128,7 @@ describe("处置页按服务端分三段", () => {
     expect(calls).toEqual(
       expect.arrayContaining([
         { section: "pending", page: "1" },
-        { section: "executing", page: "1" },
+        { section: "executing", ordering: "term_end", page: "1" },
         { section: "expired", soul_reborn: "false", page: "1" },
       ])
     );
@@ -148,8 +149,8 @@ describe("处置页按服务端分三段", () => {
     renderPage();
     await screen.findByText("Soul p");
     expect(names("disposition-pending-row")).toEqual(["Soul p", "Soul q"]);
-    // 执行中按期满近 → 远(本页内),不计时的在后。
-    expect(names("disposition-running-row")).toEqual(["Soul overdue", "Soul far", "Soul eternal", "Soul nostart"]);
+    // 执行中照服务端的顺序画(`ordering=term_end`),前端不再重排。
+    expect(names("disposition-running-row")).toEqual(["Soul overdue", "Soul far", "Soul nostart", "Soul eternal"]);
     expect(names("disposition-expired-row")).toEqual(["Soul x"]);
     const [overdue] = screen.getAllByTestId("disposition-running-row");
     expect(within(overdue).getByRole("meter")).toHaveAttribute("aria-valuenow", "100");

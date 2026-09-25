@@ -1,4 +1,6 @@
 """处置列表:`?section=` 分段、`section_counts` 真实计数、带判决、带灵魂状态,无 N+1。"""
+import datetime
+
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -192,3 +194,82 @@ def test_list_query_count_does_not_grow_with_rows(judge, cn_tenant):
 
     assert many_rows > few_rows
     assert many_q == few_q, f"{few_rows} 行 {few_q} 条 SQL,{many_rows} 行 {many_q} 条"
+
+
+# ── ?ordering=term_end:执行中段按期满近 → 远 ─────────────────────────────────
+
+
+def _serving(tenant, name, *, start=(None, None, None), years=10, eternal=False, executed_at=None, order=0):
+    soul = Soul.objects.create(name=name, tenant=tenant, birth_year=1900, death_year=1950)
+    y, m, d = start
+    row = Disposition.objects.create(
+        soul=soul, tenant=tenant, is_executed=True,
+        executed_at=executed_at or timezone.make_aware(datetime.datetime(2020, 1, 1, 12)),
+        sentence_years=years, is_eternal=eternal,
+        term_start_year=y, term_start_month=m, term_start_day=d,
+    )
+    # 建档先后显式钉住:平局靠它断。
+    Disposition.all_objects.filter(pk=row.pk).update(created_at=BASE + datetime.timedelta(seconds=order))
+    return row
+
+
+BASE = timezone.make_aware(datetime.datetime(2026, 1, 1))
+
+
+@pytest.fixture
+def serving(cn_tenant, eu_tenant):
+    made = {
+        # 2010-06-15
+        "a": _serving(cn_tenant, "a", start=(2000, 6, 15), years=10, order=1),
+        # 起算日没记,从执行日(2001-03-01)起算:2006-03-01
+        "null_start": _serving(
+            cn_tenant, "null_start", years=5, order=2,
+            executed_at=timezone.make_aware(datetime.datetime(2001, 3, 1, 12)),
+        ),
+        # 只知道年份:按那一年最晚一天,2010-12-31,排在 a 之后
+        "year_only": _serving(cn_tenant, "year_only", start=(2003, None, None), years=7, order=3),
+        # 与 a 同一天期满,插入在 a 之后、建档时间却更早:平局按建档先后,排在 a 之前
+        "tie": _serving(cn_tenant, "tie", start=(2000, 6, 15), years=10, order=0),
+        # 公元前 5 年 6 月起算 10 年:跨公元交界多一年,公元 6 年 6 月期满 ——
+        # 不加那一年就是公元 5 年,会排到下面公元 6 年 1 月那一行之前
+        "bce": _serving(cn_tenant, "bce", start=(-5, 6, 1), years=10, order=5),
+        "ce": _serving(cn_tenant, "ce", start=(1, 1, 1), years=5, order=8),
+        # 永久与没记刑期:没有期满日,排最后,彼此按建档先后
+        "eternal": _serving(cn_tenant, "eternal", start=(1990, 1, 1), years=1, eternal=True, order=6),
+        "no_years": _serving(cn_tenant, "no_years", start=(1990, 1, 1), years=None, order=7),
+    }
+    # 别的租户、期满更早的一行:不在这里出现。
+    _serving(eu_tenant, "foreign", start=(1000, 1, 1), years=1, order=0)
+    return made
+
+
+@pytest.mark.django_db
+class TestOrderingByTermEnd:
+    EXPECTED = ["ce", "bce", "null_start", "tie", "a", "year_only", "eternal", "no_years"]
+
+    @staticmethod
+    def _names(body):
+        return [row["soul_name"] for row in body["results"]]
+
+    def test_soonest_first_eternal_and_no_end_last_ties_by_creation(self, judge, serving):
+        body = judge.get(URL, {"section": "executing", "ordering": "term_end"}).json()
+        assert self._names(body) == self.EXPECTED
+
+    def test_the_sql_key_agrees_with_the_serializer_term_end(self, judge, serving):
+        """SQL 的排序键与序列化器的 `term_end`(Python 的 effective_term_start + term_end)同源:
+        按服务端顺序读出的 `term_end` 不降,没有期满日的都在尾巴上。"""
+        rows = judge.get(URL, {"section": "executing", "ordering": "term_end"}).json()["results"]
+        ends = [r["term_end"] for r in rows]
+        dated = [e for e in ends if e is not None]
+        assert ends == dated + [None] * (len(ends) - len(dated))
+        key = [(e["year"], e["month"] or 12, e["day"] or 31) for e in dated]
+        assert key == sorted(key)
+        # 起算日为空的那一行,期满日确实是从执行日推的。
+        assert (ends[2]["year"], ends[2]["month"], ends[2]["day"]) == (2006, 3, 1)
+
+    def test_tenant_scoped(self, judge, serving):
+        assert "foreign" not in self._names(judge.get(URL, {"ordering": "term_end"}).json())
+
+    def test_other_orderings_are_untouched(self, judge, serving):
+        body = judge.get(URL, {"section": "executing", "ordering": "-created_at"}).json()
+        assert self._names(body) == ["ce", "no_years", "eternal", "bce", "year_only", "null_start", "a", "tie"]
