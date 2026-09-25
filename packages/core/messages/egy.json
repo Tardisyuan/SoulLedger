@@ -474,7 +474,11 @@
     "entity_types": {
       "soul": "Ka",
       "menu": "Menu",
-      "dispatch_draft": "Sesh Tepy Hab-Ba"
+      "dispatch_draft": "Sesh Tepy Hab-Ba",
+      "role": "Netjer",
+      "social_post": "Medu",
+      "social_comment": "Wesheb",
+      "workflow_template": "Pet-Sesh Wat"
     },
     "col_location": "Sekhet Tepy",
     "col_deleted_by": "Wehem Iri",
