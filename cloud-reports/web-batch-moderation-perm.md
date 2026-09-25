@@ -170,7 +170,7 @@ egy **只用既有词形**：`egyLexiconRules` 的封闭词汇测试在重新生
 | core typecheck | `npm run --workspace packages/core typecheck` | 0 | — |
 | core lint | `npm run --workspace packages/core lint` | 0 | — |
 | core test | `npm run --workspace packages/core test` | 0 | 13 个文件 / **122 passed**。同一条命令在 pytest 与 Playwright 同时占满 CPU 时红过一次：`nodeGlobals.test.ts` 编译整个 TS program，超过了 5 s 的默认超时。机器空下来之后重跑，全绿。用例本身没改，所以这是负载下的超时，不是这个分支带来的回归 |
-| 后端 pytest | `.venv/bin/python -m pytest --tb=short -q`（SQLite 内存库 + 一次性 Redis） | 运行中 | 见下方补记 |
+| 后端 pytest | `.venv/bin/python -m pytest --tb=short -q`（SQLite 内存库 + 一次性 Redis） | 0 | **4818 passed / 25 skipped**，覆盖率 93.95%。第一次全量跑出 1 条失败：`test_user_management.py::test_set_new_password_success` 拿 ADMIN 走邮箱重置，钉住的正是本分支要去掉的行为。已改成灵魂账号（`8bbe908`），然后全量重跑 |
 | ruff | `cd backend && .venv/bin/ruff check .` | 0 | All checks passed |
 | makemigrations | `manage.py makemigrations --check --dry-run` | 0 | No changes detected |
 
