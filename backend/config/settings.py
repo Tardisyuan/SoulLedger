@@ -531,7 +531,7 @@ SPECTACULAR_SETTINGS = {
         # 免得下一个同名字段把它们改名。
         "RealmKindEnum": "apps.realms.models.RealmKind.choices",
         "CommediaRegionEnum": "apps.realms.models.CommediaRegion.choices",
-        "GreekForkEnum": "apps.realms.models.GreekFork.choices",
+        "RealmForkEnum": "apps.realms.models.RealmFork.choices",
         # apps.scheduler: `status` and `scope` are both names other components
         # already use for different choice sets. Naming only the new set is not
         # enough — the collision check counts every set under the field name,

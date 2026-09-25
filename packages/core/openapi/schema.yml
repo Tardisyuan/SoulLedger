@@ -17706,14 +17706,6 @@ components:
       - offset
       - unoffset_demerit
       - unusable_merit
-    GreekForkEnum:
-      enum:
-      - LEFT
-      - RIGHT
-      type: string
-      description: |-
-        * `LEFT` - 左(塔尔塔罗斯)
-        * `RIGHT` - 右(至福岛)
     GuiltAndPenaltyReading:
       type: object
       description: |-
@@ -24094,12 +24086,14 @@ components:
         fork:
           nullable: true
           description: |-
-            Greek only: which road out of the judgment place
+            Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
             * `RIGHT` - 右(至福岛)
+            * `PASS` - 过(称心通过)
+            * `FAIL` - 不过(第二次死亡)
           oneOf:
-          - $ref: '#/components/schemas/GreekForkEnum'
+          - $ref: '#/components/schemas/RealmForkEnum'
           - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
       required:
@@ -24108,6 +24102,18 @@ components:
       - name_local
       - realm_code
       - realm_type
+    RealmForkEnum:
+      enum:
+      - LEFT
+      - RIGHT
+      - PASS
+      - FAIL
+      type: string
+      description: |-
+        * `LEFT` - 左(塔尔塔罗斯)
+        * `RIGHT` - 右(至福岛)
+        * `PASS` - 过(称心通过)
+        * `FAIL` - 不过(第二次死亡)
     RealmKindEnum:
       enum:
       - HALL
@@ -24213,12 +24219,14 @@ components:
         fork:
           nullable: true
           description: |-
-            Greek only: which road out of the judgment place
+            Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
             * `RIGHT` - 右(至福岛)
+            * `PASS` - 过(称心通过)
+            * `FAIL` - 不过(第二次死亡)
           oneOf:
-          - $ref: '#/components/schemas/GreekForkEnum'
+          - $ref: '#/components/schemas/RealmForkEnum'
           - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
       required:
