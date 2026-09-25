@@ -44,7 +44,8 @@
     "forgot_sent": "Your hall's administrator has been notified",
     "forgot_failed": "Could not send. Try again later",
     "rate_limited": "Too many requests. Try again later",
-    "back_to_login": "Back to sign in"
+    "back_to_login": "Back to sign in",
+    "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password. No reset link is sent."
   },
   "home": {
     "console": "Console",
@@ -1409,7 +1410,10 @@
     "loading": "Loading...",
     "view_all": "View All",
     "mark_read_error": "Failed to mark as read",
-    "mark_all_error": "Failed to mark all as read"
+    "mark_all_error": "Failed to mark all as read",
+    "help_count_24h": "request {{n}} in the last 24 hours",
+    "help_open_users": "Open users",
+    "help_ignore": "Not them · ignore"
   },
   "realms": {
     "title": "Realms",

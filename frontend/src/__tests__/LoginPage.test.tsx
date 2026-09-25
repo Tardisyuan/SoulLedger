@@ -197,7 +197,10 @@ describe("忘记密码", () => {
     expect(within(form).getByLabelText(/auth\.username/)).toHaveValue("yama");
     fireEvent.click(within(form).getByRole("button", { name: "auth.forgot_submit" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("auth.forgot_sent");
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("auth.forgot_sent");
+    // The one sentence for every username: whether the account exists is not said here either.
+    expect(status).toHaveTextContent("auth.forgot_sent_body");
     expect(mockedHelp).toHaveBeenCalledWith("yama");
     expect(mockedLogin).not.toHaveBeenCalled();
   });
