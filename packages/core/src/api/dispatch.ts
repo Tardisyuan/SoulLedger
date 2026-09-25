@@ -6,10 +6,14 @@ export interface DispatchRecord {
   id: string;
   source_tenant: number;
   source_tenant_code: string;
-  target_tenant: number;
-  target_tenant_code: string;
-  soul: string;
-  soul_name: string;
+  /** Null only on a DRAFT that has no target civilization yet. */
+  target_tenant: number | null;
+  target_tenant_code: string | null;
+  /** Null only on a DRAFT that has no soul yet — a proposal always has both. */
+  soul: string | null;
+  soul_name: string | null;
+  /** The realm of the target tenant the soul is put in on execution; null = not chosen. */
+  target_realm: string | null;
   /**
    * The proposing user's **integer primary key**, or null.
    *
@@ -33,8 +37,10 @@ export interface DispatchRecord {
   /** Null when the proposing account has been deleted — `allow_null=True` on
    *  `CharField(source="dispatched_by.username")`. */
   dispatched_by_name: string | null;
+  /** `DRAFT` is visible only to its creator (and ADMIN); see `dispatchApi.createDraft`. */
   status: string;
   reason: string;
+  /** On a DRAFT, when it was saved; set again when it is submitted. */
   proposed_at: string;
   decided_at: string | null;
   executed_at: string | null;
@@ -121,6 +127,21 @@ export const DISPATCH_REASON_MIN_CHARS = 20;
  */
 export const dispatchReasonLength = (reason: string) => [...reason.trim()].length;
 
+/**
+ * A draft body: every field optional and nullable. Nothing but the realm is
+ * checked until `submitDraft` — the realm must belong to the target tenant, and
+ * giving one without a target is a 400 keyed `target_realm`.
+ */
+export interface DispatchDraftInput {
+  soul?: string | null;
+  target_tenant?: number | null;
+  target_realm?: string | null;
+  reason?: string;
+}
+
+/** A row of `realm-options/`: a live realm of the target civilization's tenant. */
+export type DispatchRealmOption = components["schemas"]["RealmLocalized"];
+
 export const dispatchApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
   get: (id: string) => api.get<DispatchRecord>(`/dispatch/records/${id}/`),
@@ -133,7 +154,27 @@ export const dispatchApi = {
     // `number` and callers were doing parseInt() on a UUID, which sent NaN.
     soul: string;
     reason: string;
+    target_realm?: string | null;
   }) => api.post<DispatchRecord>("/dispatch/records/", data),
+  /** Save a new draft (status DRAFT): no approval flow, nobody notified. Source = the caller's tenant. */
+  createDraft: (data: DispatchDraftInput) => api.post<DispatchRecord>("/dispatch/records/drafts/", data),
+  /** Change the caller's own draft; only the fields given. 409 once it is no longer a draft. */
+  updateDraft: (id: string, data: DispatchDraftInput) =>
+    api.patch<DispatchRecord>(`/dispatch/records/${id}/draft/`, data),
+  /**
+   * DRAFT → PROPOSED. `data` (the form as it stands) is written first; then the
+   * whole must be a complete proposal — soul, target, a reason of at least
+   * `DISPATCH_REASON_MIN_CHARS` — or it is a field-keyed 400 and stays a draft.
+   */
+  submitDraft: (id: string, data: DispatchDraftInput) =>
+    api.post<DispatchRecord>(`/dispatch/records/${id}/submit/`, data),
+  /** Discard a draft: it moves to the recycle bin, where an ADMIN can restore it. */
+  discardDraft: (id: string) => api.delete(`/dispatch/records/${id}/`),
+  /** Realms of the target civilization a dispatch may name as its destination. */
+  realmOptions: (targetTenantCode: string) =>
+    api.get<DispatchRealmOption[]>("/dispatch/records/realm-options/", {
+      params: { target_tenant_code: targetTenantCode },
+    }),
   approve: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/approve/`),
   reject: (id: string, reason?: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/reject/`, { reason }),
   execute: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/execute/`),

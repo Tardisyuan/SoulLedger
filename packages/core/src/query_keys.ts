@@ -22,6 +22,17 @@ export const recycleBinKeys = {
   all: ["recycle-bin"] as const,
 };
 
+/**
+ * Dispatch records. `["dispatch", …]` is the literal the dispatch pages already
+ * key their lists and detail on (`app/dispatch/**`), so an invalidate of `all`
+ * reaches them unchanged.
+ */
+export const dispatchKeys = {
+  all: ["dispatch"] as const,
+  detail: (id: string) => [...dispatchKeys.all, "detail", id] as const,
+  realmOptions: (targetTenantCode: string) => [...dispatchKeys.all, "realm-options", targetTenantCode] as const,
+};
+
 export const judgmentKeys = {
   all: ["judgments"] as const,
   list: (params?: Record<string, string>) => [...judgmentKeys.all, "list", params] as const,

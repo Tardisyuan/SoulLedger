@@ -459,7 +459,8 @@
     "manage_from_bin": "Iri Em Per Wehem Seth",
     "entity_types": {
       "soul": "Ka",
-      "menu": "Menu"
+      "menu": "Menu",
+      "dispatch_draft": "Sesh Tepy Hab-Ba"
     },
     "col_location": "T3 Khet",
     "col_deleted_by": "Wehem Iri"
@@ -1217,6 +1218,7 @@
     "execute_error": "Nen Iri Seth",
     "propose_error": "Nen Sesen Hab-Ba Seth",
     "states": {
+      "DRAFT": "Sesh Tepy",
       "PROPOSED": "Em Set Medu",
       "APPROVED": "Sesen Seth",
       "REJECTED": "Khesef Seth",
@@ -1232,10 +1234,19 @@
     "soul_from_detail_error": "Nen Ini Aba. Setep Wehem.",
     "source_label": "Tepy",
     "discard": "Khet…",
-    "discard_title": "Khet Hab-Ba Pen?",
-    "discard_message": "Nen Sau Medu — Hab-Ba Nen Sesh Tepy.",
+    "discard_title": "Khet Sesh Tepy Pen?",
+    "discard_message": "Sesh Tepy Nehem Er Per Wehem; Ankh Wehem Em Smen Hemsu › Per Wehem. Medu Smen.",
     "discard_keep": "Wehem Sesh",
-    "discard_confirm": "Khet",
+    "discard_confirm": "Khet, Nehem Er Per Wehem",
+    "save_draft": "Sau Sesh Tepy",
+    "draft_saved": "Sesh Tepy Sau Seth",
+    "draft_save_error": "Nen Sau Sesh Tepy",
+    "draft_load_error": "Nen Ini Sesh Tepy. Wehem Iri.",
+    "discard_error": "Nen Khet",
+    "target_realm": "Ta Setep Seth",
+    "target_realm_placeholder": "Setep Ta...",
+    "target_realm_pick_tenant_first": "Setep Per Hemes Setep Seth Er Tepy",
+    "target_realm_error": "Nen Ini Ta. Wehem Iri.",
     "flow": {
       "title": "Wat Hesy · Hab-Ba",
       "step_propose": "Per Hemes Tepy · {{tenant}} Wetjes",
