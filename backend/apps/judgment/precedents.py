@@ -7,7 +7,10 @@
 排序,依次比较(前一项相同才看后一项):
 
 1. 同一殿(`court` 字符串相同且非空)在前;
-2. 业力余额与本案余额的差的绝对值,小的在前;
+2. 余额所在的档与本案余额所在的档之差的绝对值,小的在前。档 = 余额按 10 向下取整
+   (`floor(balance / 10)`,-5 在 -1 档,5 在 0 档)。先分档再比,是为了让下一项有用:
+   余额差 2 与差 8 不再是两个名次,同档的先例由共同援引的法条分先后
+   (产品负责人 2026-09-25);
 3. 与本案共同援引的法条数,多的在前;
 4. 结案时间,新的在前;最后按 id,让结果稳定。
 
@@ -15,11 +18,13 @@
 旧案退回灵魂**现在**的 merit − demerit。本案自己已结案且有快照时也用快照,否则用现在的。
 整个排序是一条 SQL:没有逐行打分,也没有 N+1。
 """
-from django.db.models import BooleanField, Case, Count, F, IntegerField, Q, Value, When
-from django.db.models.functions import Abs, Coalesce
+from django.db.models import BooleanField, Case, Count, F, FloatField, IntegerField, Q, Value, When
+from django.db.models.functions import Abs, Cast, Coalesce, Floor
 
 DEFAULT_LIMIT = 5
 MAX_LIMIT = 20
+#: 余额分档的宽度:差距在同一档里的先例,余额不分先后。
+BALANCE_BUCKET = 10
 
 
 def precedents_for(judgment, limit: int = DEFAULT_LIMIT):
@@ -56,7 +61,12 @@ def precedents_for(judgment, limit: int = DEFAULT_LIMIT):
         .annotate(
             same_court=same_court,
             balance=balance,
-            balance_distance=Abs(balance - target_balance),
+            # Floor on a float, not integer division: SQL `/` on integers truncates
+            # toward zero on both SQLite and PostgreSQL, which would put -5 and 5 in
+            # the same bucket. Python's `//` floors, and the two must agree.
+            balance_distance=Abs(
+                Floor(Cast(balance, FloatField()) / BALANCE_BUCKET) - target_balance // BALANCE_BUCKET
+            ),
             shared_statutes=shared,
         )
         .order_by("-same_court", "balance_distance", "-shared_statutes", F("concluded_at").desc(nulls_last=True), "pk")

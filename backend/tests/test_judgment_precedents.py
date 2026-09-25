@@ -88,6 +88,28 @@ class TestRanking:
         assert [row["name"] for row in body] == ["shares two", "shares one", "shares none"]
         assert [row["shared_statutes"] for row in body] == [2, 1, 0]
 
+    def test_balances_are_bucketed_by_ten_so_shared_statutes_break_the_tie(self, judge, cn_tenant):
+        """2 away and 8 away are the same bucket (0..9): the shared statute decides.
+        10 is the next bucket and loses to both, however many statutes it shares."""
+        a, b = _statute(cn_tenant, "B_A"), _statute(cn_tenant, "B_B")
+        target = _judgment(cn_tenant, "target", balance=0, verdict=None)
+        _cite(target, a, b)
+        _judgment(cn_tenant, "2 away, shares none", balance=2)
+        _cite(_judgment(cn_tenant, "8 away, shares one", balance=8), a)
+        _cite(_judgment(cn_tenant, "10 away, shares two", balance=10), a, b)
+        assert _names(judge.get(_url(target))) == [
+            "8 away, shares one", "2 away, shares none", "10 away, shares two",
+        ]
+
+    def test_buckets_floor_rather_than_truncate(self, judge, cn_tenant):
+        """-5 is in bucket -1, not 0: truncating division would tie it with +5."""
+        a = _statute(cn_tenant, "F_A")
+        target = _judgment(cn_tenant, "target", balance=3, verdict=None)
+        _cite(target, a)
+        _cite(_judgment(cn_tenant, "minus five, shares one", balance=-5), a)
+        _judgment(cn_tenant, "plus nine, shares none", balance=9)
+        assert _names(judge.get(_url(target))) == ["plus nine, shares none", "minus five, shares one"]
+
     def test_an_empty_court_is_not_a_court_match(self, judge, cn_tenant):
         target = _judgment(cn_tenant, "target", balance=0, court="", verdict=None)
         _judgment(cn_tenant, "blank court far", balance=90, court="")
