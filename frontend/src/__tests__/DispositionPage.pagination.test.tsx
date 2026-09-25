@@ -12,6 +12,9 @@
  * reaches the wire is a decoration), and the control is on screen with the
  * total (a page param nobody can change is the old behaviour with extra
  * characters).
+ *
+ * Since the page reads its three sections from `?section=`, each section
+ * pages on its own: moving 待执行 to page 2 must not move the other two.
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -78,6 +81,9 @@ function renderPage() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockList.mockImplementation(async (params?: Record<string, string>) => {
+    if (params?.section !== "pending") {
+      return { data: { count: 0, next: null, previous: null, results: [], section_counts: {} } };
+    }
     const page = Number(params?.page ?? "1");
     return {
       data: {
@@ -85,22 +91,25 @@ beforeEach(() => {
         next: page < 3 ? `http://x/api/v1/disposition/?page=${page + 1}` : null,
         previous: null,
         results: [row(page * 100 + 1), row(page * 100 + 2)],
+        section_counts: { pending: 45, executing: 0, expired: 0 },
       },
     };
   });
 });
 
 describe("disposition list pagination", () => {
-  it("asks the server for page 1 explicitly and shows 3 pages of 45", async () => {
+  it("asks the server for page 1 of each section explicitly and shows 3 pages of 45", async () => {
     renderPage();
 
     await screen.findByText("Soul 101");
-    expect(mockList).toHaveBeenCalledWith({ page: "1" });
+    expect(mockList).toHaveBeenCalledWith({ section: "pending", page: "1" });
+    expect(mockList).toHaveBeenCalledWith({ section: "executing", page: "1" });
+    expect(mockList).toHaveBeenCalledWith({ section: "expired", soul_reborn: "false", page: "1" });
     // page, total, count — the order `Pagination` hands `t`.
     expect(screen.getByText("pagination.info:1,3,45")).toBeInTheDocument();
   });
 
-  it("requests page 2 when the operator moves forward, and shows its rows", async () => {
+  it("requests page 2 of that section only when the operator moves forward, and shows its rows", async () => {
     renderPage();
     await screen.findByText("Soul 101");
 
@@ -108,9 +117,10 @@ describe("disposition list pagination", () => {
     // and the jump field carry `aria-label`s.
     fireEvent.click(screen.getByRole("button", { name: "common.next →" }));
 
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ page: "2" }));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ section: "pending", page: "2" }));
     expect(await screen.findByText("Soul 201")).toBeInTheDocument();
     expect(screen.queryByText("Soul 101")).toBeNull();
     expect(screen.getByText("pagination.info:2,3,45")).toBeInTheDocument();
+    expect(mockList).not.toHaveBeenCalledWith(expect.objectContaining({ section: "executing", page: "2" }));
   });
 });

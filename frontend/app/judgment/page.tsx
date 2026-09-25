@@ -16,20 +16,17 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue";
 
 /**
  * 审判队列(规范 v1 第三类 A·02)。
  *
- * 稿子按「谁在处理」分组 —— 我认领 / 待认领 / 他人认领 / 暂缓 —— 并给批量认领、改派、暂缓。
- * 这些都画不出来,因为后端没有「认领」:`Judgment.judge` 是神话里的判官(一个 Actor,
- * 阎罗王、米诺斯),不是正在处理这件案子的操作员;没有认领接口、没有批量接口、没有
- * 持久的「暂缓」(队列里的「延后」按设计只活在本次会话,`JudgmentViewSet._requested_skips`
- * 写明了为什么不落库)。按不存在的字段分组,就是在印一份没人记录过的名单。所以:
- * 不分组、不画勾选列与批量条、不画认领标,单件认领的 C 键也没有可接的动作。
+ * 「待审」一面按「谁在处理」分组 —— 我认领 / 待认领 / 他人认领 / 暂缓 —— 带勾选列与批量条
+ * (认领 / 改派 / 暂缓)、搜索与殿筛选、余额与证据两列;见 `JudgmentClaimQueue`。认领人
+ * (`claimed_by`)是正在办这件案子的操作员,不是 `judge` —— 后者是神话里的判官(阎罗王、米诺斯)。
  *
- * 画得出来的那部分照稿:28 px 紧凑行(只用在这一页)、待审 / 已结案 分段切换带两边的真实
- * 计数、「进入队列」主按钮与 Q 键、整行点进审判台。等待天数由 `created_at` 算出 ——
- * 队列本身就是按它先进先出的(`_pending_queue` 的 `order_by("created_at")`)。
+ * 「已结案」一面仍是一张平表:它回答「判过什么」,没有谁在办的问题。分段切换带两边的真实计数,
+ * 「进入队列」主按钮与 Q 键不变。
  */
 
 type Tab = "pending" | "concluded";
@@ -40,7 +37,6 @@ function JudgmentQueuePageContent() {
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
-  const [now] = useState(() => Date.now());
 
   const listQuery = (which: Tab, p: number) => ({
     queryKey: ["judgments", which, p, ordering],
@@ -68,7 +64,6 @@ function JudgmentQueuePageContent() {
   useHotkeys({ q: () => router.push("/judgment/queue") });
 
   const pending = tab === "pending";
-  const waitingDays = (j: Judgment) => Math.max(0, Math.floor((now - new Date(j.created_at).getTime()) / 86_400_000));
 
   return (
     <PageShell
@@ -110,6 +105,9 @@ function JudgmentQueuePageContent() {
         </div>
       }
     >
+      {pending ? (
+        <JudgmentClaimQueue />
+      ) : (
       <DataTable<Judgment>
         density="compact"
         linkedRows
@@ -118,10 +116,10 @@ function JudgmentQueuePageContent() {
           { key: "soul_name", header: t("judgment.soul_name") },
           { key: "civilization", header: t("judgment.civilization") },
           { key: "court", header: t("judgment.court") },
-          ...(pending ? [] : [{ key: "verdict", header: t("judgment.verdict") }]),
+          { key: "verdict", header: t("judgment.verdict") },
           {
             key: "created_at",
-            header: pending ? t("judgment.waiting") : t("judgment.created"),
+            header: t("judgment.created"),
             sortable: true,
             align: "right" as const,
           },
@@ -157,20 +155,16 @@ function JudgmentQueuePageContent() {
               <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-64 truncate" title={bench || undefined}>
                 {bench || <MissingValue kind="unrecorded" />}
               </td>
-              {!pending && (
-                <td className={`px-3 text-xs whitespace-nowrap ${verdictInk(judgment.verdict)}`}>
-                  {judgment.verdict && (
-                    <>
-                      <span aria-hidden="true">{verdictGlyph(judgment.verdict)} </span>
-                      <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
-                    </>
-                  )}
-                </td>
-              )}
+              <td className={`px-3 text-xs whitespace-nowrap ${verdictInk(judgment.verdict)}`}>
+                {judgment.verdict && (
+                  <>
+                    <span aria-hidden="true">{verdictGlyph(judgment.verdict)} </span>
+                    <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
+                  </>
+                )}
+              </td>
               <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
-                {pending
-                  ? t("judgment.waiting_days", { n: String(waitingDays(judgment)) })
-                  : formatDate(judgment.concluded_at ?? judgment.created_at)}
+                {formatDate(judgment.concluded_at ?? judgment.created_at)}
               </td>
             </>
           );
@@ -186,6 +180,7 @@ function JudgmentQueuePageContent() {
         totalCount={judgmentData?.count}
         onPageChange={setPage}
       />
+      )}
     </PageShell>
   );
 }

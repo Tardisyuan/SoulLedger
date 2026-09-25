@@ -121,3 +121,87 @@ test.describe("Critical path: the judgment triage queue", () => {
     expect(api.countOf("POST", "/judgment/:id/conclude/")).toBe(0);
   });
 });
+
+/**
+ * The /judgment claim queue and the desk's evidence admission, in a real
+ * browser. jsdom cannot press Space on a button — it has no activation
+ * behaviour — so the one claim the unit suite can only describe (the evidence
+ * toggle is a native button, so Space on the focused row is its own click and
+ * nothing else) is exercised here.
+ */
+test.describe("Claim queue and evidence admission", () => {
+  const MINE = { ...OPENED_JUDGMENT, court: "第五殿", claimed_by: 1, claimed_by_name: "阎罗", karmic_balance: 347, evidence_count: 12 };
+  const OPEN = {
+    ...OPENED_JUDGMENT,
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    soul_name: "第二位待判者",
+    court: "第一殿",
+    claimed_by: null,
+    claimed_by_name: null,
+    karmic_balance: 0,
+    evidence_count: 0,
+  };
+
+  test("groups carry the server's counts; J focuses a row and C claims it", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    api.on("GET", "/judgment/", (call) => {
+      const byGroup: Record<string, unknown[]> = { mine: [MINE], unclaimed: [OPEN], others: [], deferred: [] };
+      const results = call.query.group ? byGroup[call.query.group] ?? [] : [];
+      return { body: { count: results.length, next: null, previous: null, results } };
+    });
+    api.on("GET", "/judgment/queue-counts/", { mine: 1, unclaimed: 3, others: 0, deferred: 2, total: 6 });
+    api.on("POST", "/judgment/:id/claim/", { ...OPEN, claimed_by: 1 });
+
+    await page.goto("/judgment");
+    await expect(page.getByRole("link", { name: OPEN.soul_name })).toBeVisible();
+    await expect(page.getByTestId("group-count-unclaimed")).toContainText("3");
+    await expect(page.getByTestId("group-count-deferred")).toContainText("2");
+
+    await page.keyboard.press("j");
+    await page.keyboard.press("j");
+    await expect(page.getByRole("link", { name: OPEN.soul_name })).toBeFocused();
+    await page.keyboard.press("c");
+    await expect.poll(() => api.countOf("POST", "/judgment/:id/claim/")).toBe(1);
+    expect(api.lastCall("POST", "/judgment/:id/claim/")?.path).toContain(OPEN.id);
+  });
+
+  test("Space on the focused evidence toggle asks for a reason; a space typed in the verdict text does not", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    api.on("GET", "/judgment/:id/", {
+      ...OPENED_JUDGMENT,
+      citations: [],
+      evidence_json: {},
+      evidence_admissions: [],
+      admitted_balance: { reading_kind: "BALANCE", balance: 42, not_admitted_count: 0, not_admitted_net: 0, reason_code: null },
+    });
+    api.on("GET", "/souls/:id/karma/", {
+      ...SOUL_LEDGER,
+      record_count: 1,
+      records: [{
+        id: "11111111-1111-4111-8111-111111111111", type: "MERIT", category: "CHARITY", description: "救溺 · 胥江",
+        original_weight: 120, effective_weight: 120, years_elapsed: 0, decay_factor: 1, civilization: "CHINESE",
+        recorded_at: "2026-06-02T00:00:00Z", event_date: null, is_milestone: false,
+      }],
+    });
+    api.on("PUT", "/judgment/:id/evidence/:record/", (call) => ({
+      body: { admission: { record: "11111111-1111-4111-8111-111111111111", ...call.body }, admitted_balance: { reading_kind: "BALANCE", balance: -78, not_admitted_count: 1, not_admitted_net: 120, reason_code: null } },
+    }));
+
+    await page.goto(`/judgment/${OPENED_JUDGMENT.id}`);
+    const toggle = page.getByRole("checkbox", { name: "采信「救溺 · 胥江」" });
+    await expect(toggle).toBeVisible();
+
+    await page.getByLabel("备注", { exact: true }).fill("功过相抵 ");
+    await page.getByLabel("备注", { exact: true }).press("Space");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await toggle.focus();
+    await page.keyboard.press("Space");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("textbox").fill("无旁证");
+    await dialog.getByRole("button", { name: "不采信" }).click();
+    await expect.poll(() => api.countOf("PUT", "/judgment/:id/evidence/:record/")).toBe(1);
+    expect(api.lastCall("PUT", "/judgment/:id/evidence/:record/")?.body).toEqual({ admitted: false, reason: "无旁证" });
+  });
+});

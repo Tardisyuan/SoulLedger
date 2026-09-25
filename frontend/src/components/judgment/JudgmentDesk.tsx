@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { judgmentApi, type JudgmentCitation, type Statute } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
+import { useDeferJudgment, useJudgmentPrecedents } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
+import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { useHotkeys } from "@/src/lib/hotkeys";
+import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
 
 /**
  * 审判台(规范 v1 第三类 A·01)的几个原语:键帽、队列进度条、区块标、引用签、律条检索。
@@ -27,14 +33,23 @@ export function Kbd({ children }: { children: ReactNode }) {
 /**
  * 队列进度条 QueueBar:3 px 墨线。数据来自 `GET /judgment/next/?at=<id>` —— 服务端把 `at`
  * 当偏好而不是筛选,所以只有回来的那一件就是本案时,`position` 才是本案的位置;否则不画。
+ *
+ * D 暂缓(理由必填),只在进度条画出来时接 —— 暂缓的案子不在 `next/` 里,进度条随之消失,
+ * 不会对同一件按两次。稿子里的 K 上一件 / J 下一件 / S 跳过没有画:`next/` 只给「下一件待判」,
+ * 没有「按位置取上一件 / 下一件」的接口,跳过也只活在队列控制台的会话里(`/judgment/queue`)。
  */
-export function QueueBar({ judgmentId }: { judgmentId: string }) {
+export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string; canDefer?: boolean }) {
   const { t } = useI18n();
+  const { showToast } = useToast();
+  const defer = useDeferJudgment();
+  const [asking, setAsking] = useState(false);
   const { data } = useQuery({
     queryKey: judgmentKeys.queue([], judgmentId),
     queryFn: () => judgmentApi.next({ at: judgmentId }).then((r) => r.data),
   });
-  if (!data || data.judgment?.id !== judgmentId || data.position === null) return null;
+  const shown = !!data && data.judgment?.id === judgmentId && data.position !== null;
+  useHotkeys({ d: () => setAsking(true) }, shown && canDefer && !asking);
+  if (!shown || !data || data.position === null) return null;
   const total = Math.max(data.total, 1);
   const label = t("judgment.queue.progress", { position: String(data.position), total: String(data.total) });
   return (
@@ -56,13 +71,89 @@ export function QueueBar({ judgmentId }: { judgmentId: string }) {
           style={{ width: `${Math.min(100, (data.position / total) * 100)}%` }}
         />
       </span>
+      {canDefer && (
+        <button
+          type="button"
+          onClick={() => setAsking(true)}
+          className="inline-flex items-center gap-1.5 hover:text-[oklch(var(--color-ink))] max-sm:min-h-11"
+        >
+          <Kbd>D</Kbd>
+          {t("judgment.claim.defer")}
+        </button>
+      )}
       <Link
         href={`/judgment/queue?at=${encodeURIComponent(judgmentId)}`}
         className="underline hover:text-[oklch(var(--color-ink))]"
       >
         {t("judgment.queue.enter")}
       </Link>
+      <DeferDialog
+        isOpen={asking}
+        count={1}
+        pending={defer.isPending}
+        onCancel={() => setAsking(false)}
+        onConfirm={(reason) =>
+          defer.mutate(
+            { id: judgmentId, reason },
+            {
+              onSuccess: () => {
+                setAsking(false);
+                showToast(t("judgment.claim.done_defer", { n: "1" }), "success");
+              },
+              onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+            }
+          )
+        }
+      />
     </div>
+  );
+}
+
+/**
+ * 据 · 先例(`GET /judgment/{id}/precedents/`):同租户、同文明的已结案审判,服务端按
+ * 同殿 → 余额最近 → 共同援引排序,这里照序列出,不再排。余额对 VIEWER 是 null,写「不适用」
+ * 不对 —— 那是「没给」,所以 `unrecorded`。
+ */
+export function PrecedentsPanel({ judgmentId }: { judgmentId: string }) {
+  const { t } = useI18n();
+  const { data, isLoading, isError } = useJudgmentPrecedents(judgmentId);
+  const rows = data ?? [];
+  return (
+    <section className="mt-6" data-testid="precedents">
+      <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+        <h2 className="flex-1 text-2xs uppercase">{t("judgment.precedents.title")}</h2>
+        {data && <span className="tabular-nums">{rows.length}</span>}
+      </div>
+      {isError ? (
+        <p className="py-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.precedents.error")}</p>
+      ) : isLoading ? (
+        <p className="py-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</p>
+      ) : rows.length === 0 ? (
+        <p className="py-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.precedents.empty")}</p>
+      ) : (
+        <ul>
+          {rows.map((p) => (
+            <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 py-2 border-b border-[oklch(var(--color-rule))]">
+              <Link href={`/judgment/${p.id}`} title={p.name || undefined} className="min-w-0 truncate text-sm text-[oklch(var(--color-ink))] hover:underline">
+                <DomainText value={p.name} />
+              </Link>
+              <span className="text-right text-xs">
+                <DomainNumber value={p.balance} signed toned />
+              </span>
+              <span className="min-w-0 truncate font-mono text-xs text-[oklch(var(--color-ink-muted))]" title={p.realm_name || p.realm_code || undefined}>
+                <DomainText value={p.realm_name || p.realm_code} />
+                {p.same_court && ` · ${t("judgment.precedents.same_court")}`}
+                {p.shared_statutes > 0 && ` · ${t("judgment.precedents.shared", { n: String(p.shared_statutes) })}`}
+              </span>
+              <span className={`justify-self-end border border-current px-1.5 font-mono text-2xs whitespace-nowrap ${verdictInk(p.verdict)}`}>
+                <span aria-hidden="true">{verdictGlyph(p.verdict)} </span>
+                <DomainEnum namespace="judgment.verdicts" value={p.verdict} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
