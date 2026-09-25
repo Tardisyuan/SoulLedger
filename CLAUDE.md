@@ -80,6 +80,14 @@ npm 11 默认**不执行安装脚本**,装完补一次 `npm rebuild @parcel/watc
 **2026-09-18 补正:npm 11(实测 11.19.1)的 `npm ci` 也会删掉锁文件里的 `libc` 字段**(204 行)—— 上面「npm 10 删、npm 11 不删」的说法不成立;
 npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一律 `git checkout -- package-lock.json` 还原锁文件**,只有有意改依赖时才提交锁文件改动。
 
+**Android 模拟器(2026-09-24/25 实测):**
+- 连本机后端要放行 `10.0.2.2`:`ALLOWED_HOSTS=10.0.2.2,localhost runserver 0.0.0.0:8000`,不然首次登录 400 `DisallowedHost`。
+- 本 App 是 dev-client,不能用 Expo Go(`expo-notifications` 在 Expo Go 里被移除);`adb reverse tcp:8081 tcp:8081` 连 Metro。
+- **主机负载高时不要开模拟器。** 先看 `uptime`:1 分钟负载超过 10,或 jest / playwright / gradle / pytest 在跑,就先等。
+  2026-09-24 22:02 在 15 分钟负载约 36 时,六个系统应用和 SoulLedger 同时 ANR,读起来像 App 缺陷;
+  空闲时连续操作 25 分钟零 ANR。
+- 书信在本机没配 Matrix 时 `/me/chat/session/` 返回 503 `chat_not_configured`,这是设计如此;App 现在收到它只问一次。
+
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
 2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
 而 `CI=1` 启动时 Metro 根本不监视文件 —— App 跑的仍是旧 bundle,且不报任何错,于是「改动没生效」
@@ -238,6 +246,12 @@ cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
     真 PostgreSQL     3483 passed /  2 skipped / exit 0
 
 (2026-08-31 那次是 3435 / 3440。绝对值会随测试增长,**+5/−5 这个差值才是结论**。)
+
+**2026-09-25 复测(`638929e2`,云端十个任务合入后):** SQLite **4809 passed / 25 skipped**,
+真 PostgreSQL **4829 passed / 5 skipped**,差值 **+20/−20** —— 正好是
+`test_the_postgres_only_set_is_the_set_we_think_it_is` 名单的长度(20)。PG-only 集合随并发认领等功能增长,
+**差值应等于那份名单的长度**,不是固定的 5。同一天前端 jest 182 suites / 2974,mobile 235,core vitest 122,
+E2E 三个 project 各 140。
 
 多的 5 条正是那 4 条并发测试加 `test_two_judges_cannot_both_decide_one_node.py`;
 剩下的 2 个 skip 是 `Menu` / `MenuButton`,它们**确实没有 tenant 字段**。
