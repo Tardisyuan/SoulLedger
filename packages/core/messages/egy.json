@@ -634,7 +634,8 @@
         "builtin_role": "Khesef: Netjer Tepy Nen Fekh.",
         "role_in_use": "Khesef: Sab {{n}} Em Netjer Pen. Khemen Netjer Sab Er Tepy.",
         "role_referenced_by_workflow_templates": "Khesef: Wat Wedja {{n}} Djed. Khemen Wat Wedja Er Tepy."
-      }
+      },
+      "description": "Medu Seth"
     }
   },
   "workflow": {

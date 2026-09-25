@@ -361,4 +361,25 @@ describe("roles table (E-11b)", () => {
     expect(within(alert).getByText("#2 殿司签收")).toBeInTheDocument();
     expect(api.roles.delete).toHaveBeenCalledWith(3);
   });
+
+  it("「说明」is edited in the drawer and saved with the same PUT as the name", async () => {
+    api.roles.list.mockResolvedValue({ data: [ADMIN, JUDGE, { ...CLERK, description: "旧说明" }] });
+    api.roles.update.mockResolvedValue({ data: {} });
+    renderPage();
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "permissions.segments.roles" }));
+    const row = (await screen.findByText("YIN_CLERK")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "殿司" }));
+    const drawer = await screen.findByRole("dialog");
+    const field = within(drawer).getByRole("textbox", { name: "permissions.roles.description" });
+    expect(field).toHaveValue("旧说明");
+    const saveButton = within(drawer).getByRole("button", { name: "common.save" });
+    expect(saveButton).toBeDisabled();
+    fireEvent.change(field, { target: { value: "  各殿收发灵魂来信。 " } });
+    expect(saveButton).not.toBeDisabled();
+    fireEvent.click(saveButton);
+    await waitFor(() =>
+      expect(api.roles.update).toHaveBeenCalledWith(3, { name: "YIN_CLERK", display_name: "殿司", description: "各殿收发灵魂来信。" })
+    );
+  });
 });

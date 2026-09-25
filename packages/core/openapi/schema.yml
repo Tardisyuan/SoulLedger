@@ -24224,6 +24224,8 @@ components:
         display_name:
           type: string
           maxLength: 100
+        description:
+          type: string
         scope:
           allOf:
           - $ref: '#/components/schemas/ScopeEnum'
@@ -24282,6 +24284,8 @@ components:
         display_name:
           type: string
           maxLength: 100
+        description:
+          type: string
         scope:
           allOf:
           - $ref: '#/components/schemas/ScopeEnum'

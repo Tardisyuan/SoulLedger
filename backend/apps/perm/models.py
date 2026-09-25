@@ -111,6 +111,8 @@ class Role(AuditUserFields):
     # no path back. Same shape as RolePermission's constraint below.
     name = models.CharField(max_length=20)
     display_name = models.CharField(max_length=100)
+    #: 角色表抽屉里的「说明」(E-11b):这个角色是干什么的。自由文本,可空;只 ADMIN 能改(与其余角色编辑同一道门)。
+    description = models.TextField(blank=True, default="")
     # 父角色，用于层级继承
     parent = models.ForeignKey(
         'self',

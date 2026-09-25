@@ -74,7 +74,7 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = [
-            "id", "name", "display_name", "scope", "organization", "organization_name",
+            "id", "name", "display_name", "description", "scope", "organization", "organization_name",
             "user_count", "member_count", "permission_count", "workflow_template_count",
             "is_builtin", "version", "update_time",
         ]
@@ -119,7 +119,7 @@ class RoleSerializer(serializers.ModelSerializer):
 class RoleCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = ["name", "display_name", "scope", "organization"]
+        fields = ["name", "display_name", "description", "scope", "organization"]
 
     def validate_name(self, value):
         # Only allow uppercase letters and underscores
