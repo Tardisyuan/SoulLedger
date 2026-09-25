@@ -19,6 +19,8 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 const mockShowToast = jest.fn();
+let mockUser: { role: string; permissions: string[] } | null = null;
+jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
@@ -26,7 +28,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string) => key,
+    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
     formatDateTime: (v: string) => `dt(${v})`,
     formatDate: (v: string) => `d(${v})`,
     locale: "en",
@@ -60,9 +62,52 @@ function renderPage() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUser = null;
   mockedList.mockResolvedValue({ data: { results: [notification()] } });
   mockedMarkRead.mockResolvedValue({});
   mockedMarkAllRead.mockResolvedValue({});
+});
+
+// ── Password help (第三类 F 组 2.6) ──────────────────────────────────
+
+describe("a password-help notification", () => {
+  const help = () =>
+    notification({
+      id: 7,
+      notification_type: "PASSWORD_HELP_REQUESTED",
+      title: "重设密码求助",
+      message: "有人在登录页以账号「cuijue」请求重设密码。",
+      request_context: { hall: "第五殿", role: "JUDGE", count_24h: 2 },
+    });
+
+  it("carries the hall · role · 24h line, 去用户页 for an administrator, and 不是本人 · 忽略 marks it read", async () => {
+    mockUser = { role: "ADMIN", permissions: [] };
+    mockedList.mockResolvedValue({ data: { results: [help()] } });
+    renderPage();
+    const line = await screen.findByTestId("request-context");
+    // The role goes through DomainEnum (this t() stub knows no labels, so it reads as unrecognised here).
+    expect(line.textContent).toMatch(/^第五殿 · .+ · notifications\.help_count_24h:2$/);
+    expect(screen.getByRole("link", { name: "notifications.help_open_users" })).toHaveAttribute("href", "/users");
+    // The generic mark-read button is replaced, not doubled.
+    expect(screen.queryByRole("button", { name: "notifications.mark_read" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "notifications.help_ignore" }));
+    await waitFor(() => expect(mockedMarkRead).toHaveBeenCalledWith("7"));
+  });
+
+  it("a realm lead gets no 去用户页: user management is ADMIN only", async () => {
+    mockUser = { role: "MODERATOR", permissions: ["judgment.assign"] };
+    mockedList.mockResolvedValue({ data: { results: [help()] } });
+    renderPage();
+    await screen.findByTestId("request-context");
+    expect(screen.queryByRole("link", { name: "notifications.help_open_users" })).toBeNull();
+    expect(screen.getByRole("button", { name: "notifications.help_ignore" })).toBeInTheDocument();
+  });
+
+  it("other notifications carry no such line", async () => {
+    renderPage();
+    await screen.findByText("Verdict ready");
+    expect(screen.queryByTestId("request-context")).toBeNull();
+  });
 });
 
 // ── Listing ──────────────────────────────────────────────────────────

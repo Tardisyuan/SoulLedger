@@ -44,7 +44,8 @@
     "forgot_sent": "Hab Seth Er Sab Hery",
     "forgot_failed": "Nen Hab. Wehem Iri Er Khet",
     "rate_limited": "Aq Aashu. Wehem Iri Er Khet",
-    "back_to_login": "Wehem Er Aq"
+    "back_to_login": "Wehem Er Aq",
+    "forgot_sent_body": "Aq Wenen: Sab Hery Maa Ek, Wehem Sekhem Ek. Nen Hab Wat."
   },
   "home": {
     "console": "Wetep Khet",
@@ -1409,7 +1410,10 @@
     "loading": "Em Ini...",
     "view_all": "Pet Neteru Ankh",
     "mark_read_error": "Nen Pedjet Maakheru Seth",
-    "mark_all_error": "Nen Pedjet Wetu Maakheru Seth"
+    "mark_all_error": "Nen Pedjet Wetu Maakheru Seth",
+    "help_count_24h": "Sep {{n}} Em Unut 24",
+    "help_open_users": "Wen Remetj",
+    "help_ignore": "Nen Ek · Imen"
   },
   "realms": {
     "title": "Ta",

@@ -94,9 +94,11 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
     return (
       <div className="flex flex-col gap-4" data-testid="password-help-sent">
         <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
-        <p role="status" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-sm text-[oklch(var(--color-ink))]">
-          {t("auth.forgot_sent")}
-        </p>
+        {/* 第三类 F 组 2.6:对任何账号名都是同一句 —— 账号不存在时后端不发通知,这里也不说。 */}
+        <div role="status" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-sm text-[oklch(var(--color-ink))]">
+          <p className="font-semibold">{t("auth.forgot_sent")}</p>
+          <p className="mt-1 text-[oklch(var(--color-ink-muted))]">{t("auth.forgot_sent_body")}</p>
+        </div>
         <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
           {t("auth.back_to_login")}
         </Button>

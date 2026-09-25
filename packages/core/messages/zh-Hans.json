@@ -44,7 +44,8 @@
     "forgot_sent": "已通知本殿管理员",
     "forgot_failed": "未能发送，请稍后再试",
     "rate_limited": "请求过于频繁，请稍后再试",
-    "back_to_login": "返回登录"
+    "back_to_login": "返回登录",
+    "forgot_sent_body": "如果这个账号存在，管理员会核对身份后联系你重设密码。系统不会发重置链接。"
   },
   "home": {
     "console": "控制台",
@@ -1409,7 +1410,10 @@
     "loading": "加载中...",
     "view_all": "查看全部",
     "mark_read_error": "标记已读失败",
-    "mark_all_error": "全部标记已读失败"
+    "mark_all_error": "全部标记已读失败",
+    "help_count_24h": "近 24 小时第 {{n}} 次",
+    "help_open_users": "去用户页",
+    "help_ignore": "不是本人 · 忽略"
   },
   "realms": {
     "title": "地域",
