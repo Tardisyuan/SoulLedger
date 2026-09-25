@@ -21,6 +21,7 @@ from apps.authentication.tokens import REMEMBER_CLAIM, RefreshToken
 from apps.authentication.views import PASSWORD_HELP_ACCEPTED
 from apps.notifications.models import NotificationType, UserNotification
 from apps.tenants.models import Tenant
+from tests.soul_account_support import officer_client
 
 LOGIN = "/api/v1/auth/login/"
 REFRESH = "/api/v1/auth/refresh/"
@@ -309,12 +310,47 @@ class TestPasswordHelpReachesTheRightAdministrators:
         # its own), not the inactive admin or the inactive realm lead.
         assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2", "cn_mod"}
 
-    def test_the_moderator_gets_the_same_notification_as_the_admins(self, api_client, cast, eager):
+    def test_the_moderator_gets_the_same_notification_as_the_admins_but_its_own_text(self, api_client, cast, eager):
         _ask(api_client, "cn_judge")
         mod = UserNotification.objects.get(user=cast["cn_moderator"])
         admin = UserNotification.objects.get(user=cast["cn_admin"])
-        fields = ("title", "message", "notification_type", "related_resource", "related_id", "params")
+        fields = ("title", "notification_type", "related_resource", "related_id")
         assert [getattr(mod, f) for f in fields] == [getattr(admin, f) for f in fields]
+
+    @pytest.mark.parametrize("locale", ["zh-Hans", "en", "egy"])
+    def test_only_an_admin_is_sent_to_user_management_a_moderator_is_sent_to_an_admin(
+        self, api_client, cast, eager, locale
+    ):
+        """User management is ADMIN only (`UserViewSet`), so a 殿主 told to
+        reset the password there would be told to do what they cannot
+        (2026-09-25 decision). Both the stored zh-Hans text and the read-time
+        render in every locale; presence AND absence of each instruction."""
+        from apps.notifications.messages import MESSAGES
+
+        pack = MESSAGES[locale]
+        to_admin = pack["password_help_requested"]["body"].replace("{{username}}", "cn_judge")
+        to_moderator = pack["password_help_requested_moderator"]["body"].replace("{{username}}", "cn_judge")
+        assert to_admin != to_moderator
+        tasks.notify_password_help.run("cn_judge")
+        expected = {"cn_admin": to_admin, "cn_admin_2": to_admin, "cn_mod": to_moderator}
+        users = {"cn_admin": cast["cn_admin"], "cn_admin_2": cast["cn_admin_2"], "cn_mod": cast["cn_moderator"]}
+        for name, body in expected.items():
+            # A real token carrying the tenant: `force_authenticate` has none,
+            # and TenantPermission refuses a MODERATOR without it.
+            listed = officer_client(users[name]).get("/api/v1/notifications/", HTTP_ACCEPT_LANGUAGE=locale).data
+            rows = listed["results"] if isinstance(listed, dict) else listed
+            assert [r["message"] for r in rows] == [body], (locale, name)
+        if locale == "zh-Hans":
+            stored = {n.user.username: n.message for n in UserNotification.objects.select_related("user")}
+            assert stored == expected
+            assert "用户管理" not in stored["cn_mod"] and "联系管理员" in stored["cn_mod"]
+            assert "用户管理" in stored["cn_admin"] and "联系管理员" not in stored["cn_admin"]
+
+    def test_the_global_admin_fallback_gets_the_admin_text(self, django_user_model, cast):
+        _user(django_user_model, "gr_judge", tenant=_tenant("GR_HADES"))
+        tasks.notify_password_help.run("gr_judge")
+        note = UserNotification.objects.get(user=cast["global_admin"])
+        assert "kind" not in note.params and "用户管理" in note.message
 
     def test_a_tenant_with_only_a_moderator_notifies_the_moderator_not_the_global_admins(
         self, api_client, django_user_model, cast

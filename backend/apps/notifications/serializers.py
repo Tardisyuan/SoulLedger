@@ -14,7 +14,7 @@ class _LocalizedMixin:
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        kind = messages.KIND_BY_TYPE.get(instance.notification_type)
+        kind = messages.kind_for(instance.notification_type, instance.params)
         locale = locale_from_context(self.context)
         if kind and instance.params and locale in messages.MESSAGES:
             data["title"], data["message"] = messages.render(locale, kind, instance.params)
