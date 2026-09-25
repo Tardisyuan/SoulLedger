@@ -46,6 +46,10 @@ export const judgmentKeys = {
    * that root.
    */
   precedents: (id: string, limit?: number) => [...judgmentKeys.all, "precedents", id, limit ?? null] as const,
+  /** 「上一件」 from `at`. Under `all` so a conclusion's invalidate reaches it. */
+  previous: (at: string, skip: string[] = []) => [...judgmentKeys.all, "previous", { at, skip }] as const,
+  /** 「戊 · 发落」 options. Under `all`: a conclusion elsewhere changes occupancy. */
+  destinations: (id: string, verdict: string) => [...judgmentKeys.all, "destinations", id, verdict] as const,
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
   queueCounts: (params?: { court?: string; search?: string }) =>
     [...judgmentKeys.all, "queue-counts", params ?? null] as const,

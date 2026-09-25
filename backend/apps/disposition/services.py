@@ -116,11 +116,26 @@ class DispositionService:
     GR_ISLES = "GR_ISLES_OF_THE_BLESSED"
     GR_TARTARUS = "GR_TARTARUS"
 
+    _AUTO = object()
+
     @classmethod
-    def create_from_judgment(cls, judgment: Judgment) -> Disposition:
+    def route_realm(cls, soul: Soul, verdict: str, judgment_method: str = JudgmentMethod.STANDARD):
+        """The realm automatic routing sends this soul to for this verdict, or None."""
+        realm_code = cls._route_to_realm(soul, verdict, judgment_method)
+        return Realm.objects.filter(realm_code=realm_code).first()
+
+    @classmethod
+    def create_from_judgment(
+        cls, judgment: Judgment, *, realm=_AUTO, sentence_years=None, is_eternal=None,
+    ) -> Disposition:
         """
         Create a disposition based on judgment verdict and civilization.
         Routes to the correct realm using civilization-specific rules.
+
+        `realm` / `sentence_years` / `is_eternal` are the officer's own choice
+        at conclusion (审判台「戊 · 发落」), already validated by
+        `apps.disposition.destination.resolve_placement`. Left out, the
+        disposition is exactly the automatic one.
         """
         from django.db import transaction
 
@@ -128,15 +143,18 @@ class DispositionService:
         verdict = judgment.verdict
         civilization = soul.civilization
 
-        realm_code = cls._route_to_realm(soul, verdict, judgment.judgment_method)
-        realm = Realm.objects.filter(realm_code=realm_code).first()
+        if realm is cls._AUTO:
+            realm = cls.route_realm(soul, verdict, judgment.judgment_method)
+        if is_eternal is None:
+            is_eternal = realm.is_eternal if realm else False
 
         with transaction.atomic():
             disposition = Disposition.objects.create(
                 soul=soul,
                 judgment=judgment,
                 destination_realm=realm,
-                is_eternal=(realm.is_eternal if realm else False),
+                is_eternal=is_eternal,
+                sentence_years=sentence_years,
                 # THE REALM SAYS WHAT HAPPENS TO THE MEMORY, AND UNTIL NOW
                 # NOBODY ASKED IT. `is_eternal` was copied off the realm here
                 # and `memory_reset_mechanism` was not, so every auto-created
