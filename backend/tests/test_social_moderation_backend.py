@@ -16,6 +16,7 @@ from apps.social.models import (
     Comment,
     ModerationStatus,
     Post,
+    Report,
     SensitiveWord,
     SensitiveWordAction,
     SensitiveWordDailyHit,
@@ -477,3 +478,76 @@ def test_restore_visible_does_not_reach_deleted_content_or_other_civilizations(
     assert officer_client(eu_moderator).post(f"{MODERATION}/posts/{hidden.pk}/restore/", {}, format="json").status_code == 404
     hidden.refresh_from_db()
     assert hidden.moderation_status == ModerationStatus.HIDDEN
+
+
+# ── 警告作者(WARN)────────────────────────────────────────────────────────
+
+
+def _reported_post(tenant):
+    author, _ = soul(tenant, "作者")
+    row = post(author, "被举报的帖子", Visibility.PUBLIC)
+    _, reporter = soul(tenant, "举报人")
+    res = reporter.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(row.pk), "reason": "ABUSE"},
+                        format="json")
+    assert res.status_code == 201, res.content
+    return author, row, Report.objects.get(post=row)
+
+
+def test_warn_needs_a_reason_and_changes_nothing_without_one(cn_tenant, cn_moderator):
+    _, row, report = _reported_post(cn_tenant)
+    client = officer_client(cn_moderator)
+    for note in (None, "", "   "):
+        body = {"resolution": "WARN"} if note is None else {"resolution": "WARN", "note": note}
+        with mock.patch("apps.events.event_bus.event_bus.publish") as published:
+            res = client.post(f"{MODERATION}/reports/{report.pk}/resolve/", body, format="json")
+        assert res.status_code == 400, (note, res.content)
+        assert res.json()["code"] == "reason_required"
+        assert published.call_count == 0
+    report.refresh_from_db()
+    assert (report.status, report.resolution) == ("OPEN", "")
+    assert not AuditLog.objects.filter(resource="social_moderation", resource_id=str(report.pk)).exists()
+
+
+def test_warn_notifies_the_author_with_the_reason_keeps_the_post_and_dismisses_the_report(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks
+):
+    author, row, report = _reported_post(cn_tenant)
+    _, reader = soul(cn_tenant, "读者")
+
+    with (
+        mock.patch("apps.events.event_bus.event_bus.publish") as published,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        res = officer_client(cn_moderator).post(
+            f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "注意言辞"}, format="json"
+        )
+
+    assert res.status_code == 200, res.content
+    assert (res.json()["status"], res.json()["resolution"], res.json()["resolution_note"]) == (
+        "DISMISSED", "WARN", "注意言辞"
+    )
+    calls = [(c.kwargs["event_type"], c.kwargs["user_ids"], c.kwargs["payload"]) for c in published.call_args_list]
+    assert calls == [("SOCIAL_WARNED", [author.user_id], {
+        "report_id": str(report.pk), "target_type": "POST", "target_id": str(row.pk), "reason": "注意言辞",
+    })]
+    row.refresh_from_db()
+    assert (row.moderation_status, row.is_deleted) == (ModerationStatus.PUBLISHED, False)
+    assert str(row.pk) in feed_ids(reader), "警告不该让帖子消失"
+    logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(report.pk))
+    assert (logged.action, logged.user_id) == ("UPDATE", cn_moderator.pk)
+    assert logged.changes["resolution"] == "WARN" and logged.changes["note"] == "注意言辞"
+    # 已关闭:不能再处置一次。
+    again = officer_client(cn_moderator).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "再警告"}, format="json"
+    )
+    assert again.status_code == 409
+
+
+def test_warn_on_another_civilizations_report_is_a_404(cn_tenant, eu_moderator):
+    _, _, report = _reported_post(cn_tenant)
+    res = officer_client(eu_moderator).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "越界"}, format="json"
+    )
+    assert res.status_code == 404
+    report.refresh_from_db()
+    assert report.status == "OPEN"

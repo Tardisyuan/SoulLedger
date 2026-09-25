@@ -416,7 +416,13 @@ def lift_mute(mute, *, actor, request=None):
 
 
 def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None):
-    """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。"""
+    """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。
+
+    WARN:内容不动、举报记为 DISMISSED,理由必填 —— 理由就是警告本身,随 `SOCIAL_WARNED`
+    发给 `target_user`(帖子 / 评论的作者,或被举报的用户)。
+    """
+    if resolution == ReportResolution.WARN and not note.strip():
+        raise SocialError("警告作者须写理由。", "reason_required", 400)
     with transaction.atomic():
         row = Report.objects.select_for_update(of=("self",)).select_related("post", "comment", "target_user").get(
             pk=report.pk
@@ -435,12 +441,20 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             if mute_days is None:
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)
             mute_user(row.target_user, row.tenant, mute_days, actor=actor, request=request, reason=note)
+        elif resolution == ReportResolution.WARN:
+            # 理由进 payload 是有意的:没有理由的警告对作者没有意义。其余只放 id。
+            publish_event("SOCIAL_WARNED", row.tenant, [row.target_user_id], {
+                "report_id": str(row.pk), "target_type": row.target_type,
+                "target_id": str(row.post_id or row.comment_id or row.target_user_id), "reason": note[:500],
+            })
+        dismissed = resolution in (ReportResolution.DISMISS, ReportResolution.WARN)
         Report.objects.filter(pk=row.pk, status=ReportStatus.OPEN).update(
-            status=ReportStatus.DISMISSED if resolution == ReportResolution.DISMISS else ReportStatus.RESOLVED,
+            status=ReportStatus.DISMISSED if dismissed else ReportStatus.RESOLVED,
             resolution=resolution, resolved_by=actor, resolved_at=timezone.now(), resolution_note=note[:500],
         )
         audit("UPDATE", row.tenant, row.pk, f"处理举报 {row.target_type}:{resolution}",
-              actor=actor, request=request, changes={"resolution": resolution, "report_count": row.report_count})
+              actor=actor, request=request,
+              changes={"resolution": resolution, "report_count": row.report_count, "note": note[:500]})
         row.refresh_from_db()
     return row
 

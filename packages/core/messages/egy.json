@@ -3050,7 +3050,8 @@
       "invalid_word": "Nen Medu Djeseru Sesh",
       "invalid_resolution": "Sedjem Er Ba: Nen Imen, Nen Fekh. Iri Gerh.",
       "already_lifted": "Gerh Fekh Seth",
-      "not_found": "Nen Gem, Er Nen Em Taui Pen"
+      "not_found": "Nen Gem, Er Nen Em Taui Pen",
+      "reason_required": "Khet Sesen"
     },
     "empty": {
       "reports": "Nen Sedjem Em Smen",
@@ -3088,12 +3089,13 @@
       "rule_hit": "Gem · Medu Djeseru",
       "from": "Em {{name}}",
       "reaction_comment": "Wesheb",
-      "reason_label": "Khet (Imen: Sesen)",
-      "reason_required": "Imen: Khet Sesen",
+      "reason_label": "Khet (Imen, Hab: Sesen)",
+      "reason_required": "Imen, Hab: Khet Sesen",
       "approve": "Menkh",
-      "shortcuts": "J / K · A Menkh · H Imen",
+      "shortcuts": "J / K · A Menkh · H Imen · W Hab",
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
-      "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer"
+      "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer",
+      "warn": "Hab Khet Er Neb Medu"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",

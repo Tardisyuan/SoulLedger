@@ -170,6 +170,42 @@ describe("举报 · the C-08 review layout", () => {
     await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "HIDE", "辱骂他人", undefined));
   });
 
+  it("W without a reason says so and sends nothing; with one it warns through the report", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+
+    fireEvent.keyDown(document.body, { key: "w" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(tZh("social_moderation.review.reason_required"));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.warn")}`) }));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "注意言辞" } });
+    fireEvent.keyDown(document.body, { key: "w" });
+    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "WARN", "注意言辞", undefined));
+    expect(apiMock.resolveReport).toHaveBeenCalledTimes(1);
+    expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
+  it("a rule hit nobody reported has no 警告作者 — there is no report to resolve", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    expect(screen.queryByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.warn")}`) })).toBeNull();
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "x" } });
+    fireEvent.keyDown(document.body, { key: "w" });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+    expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
   it("letters typed into the reason box are text, not verdicts", async () => {
     asRole("social.moderate");
     renderPage();
@@ -177,6 +213,8 @@ describe("举报 · the C-08 review layout", () => {
     const box = screen.getByLabelText(tZh("social_moderation.review.reason_label"));
     fireEvent.keyDown(box, { key: "a" });
     fireEvent.keyDown(box, { key: "h" });
+    fireEvent.change(box, { target: { value: "w" } });
+    fireEvent.keyDown(box, { key: "w" });
     // A mutation reaches the API a tick later; let it, or the absence proves nothing.
     await act(async () => {
       await new Promise((r) => setTimeout(r, 20));

@@ -24778,12 +24778,14 @@ components:
       - DELETE
       - MUTE
       - DISMISS
+      - WARN
       type: string
       description: |-
         * `HIDE` - Hide content
         * `DELETE` - Delete content
         * `MUTE` - Mute author
         * `DISMISS` - Dismiss
+        * `WARN` - Warn author
     SocialReportStatusEnum:
       enum:
       - OPEN
