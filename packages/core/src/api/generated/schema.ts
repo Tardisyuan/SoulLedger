@@ -8082,12 +8082,6 @@ export interface components {
             unusable_merit: number;
         };
         /**
-         * @description * `LEFT` - 左(塔尔塔罗斯)
-         *     * `RIGHT` - 右(至福岛)
-         * @enum {string}
-         */
-        GreekForkEnum: "LEFT" | "RIGHT";
-        /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
          *     `poena` is null in every response this code can currently produce:
@@ -11253,13 +11247,23 @@ export interface components {
             /** @description Egyptian only: the hall where the heart is weighed; null elsewhere */
             is_judgment_hall?: boolean | null;
             /**
-             * @description Greek only: which road out of the judgment place
+             * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
              *     * `RIGHT` - 右(至福岛)
+             *     * `PASS` - 过(称心通过)
+             *     * `FAIL` - 不过(第二次死亡)
              */
-            fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            fork?: (components["schemas"]["RealmForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
         };
+        /**
+         * @description * `LEFT` - 左(塔尔塔罗斯)
+         *     * `RIGHT` - 右(至福岛)
+         *     * `PASS` - 过(称心通过)
+         *     * `FAIL` - 不过(第二次死亡)
+         * @enum {string}
+         */
+        RealmForkEnum: "LEFT" | "RIGHT" | "PASS" | "FAIL";
         /**
          * @description * `HALL` - 殿
          *     * `GATE` - 门
@@ -11314,12 +11318,14 @@ export interface components {
             /** @description Egyptian only: the hall where the heart is weighed; null elsewhere */
             is_judgment_hall?: boolean | null;
             /**
-             * @description Greek only: which road out of the judgment place
+             * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
              *     * `RIGHT` - 右(至福岛)
+             *     * `PASS` - 过(称心通过)
+             *     * `FAIL` - 不过(第二次死亡)
              */
-            fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            fork?: (components["schemas"]["RealmForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /**
          * @description Serializer that resolves the best-fit name based on Accept-Language header.

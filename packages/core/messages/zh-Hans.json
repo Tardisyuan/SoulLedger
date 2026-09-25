@@ -1503,7 +1503,7 @@
       "schematic": "示意",
       "shape_line": "一线",
       "shape_funnel": "漏斗",
-      "shape_river": "十二时之河",
+      "shape_fork_two": "称心二岔",
       "shape_fork": "三岔路",
       "state_travelled": "已行",
       "state_current": "现在",
@@ -1515,7 +1515,9 @@
       },
       "fork": {
         "LEFT": "左 · 塔尔塔罗斯",
-        "RIGHT": "右 · 至福岛"
+        "RIGHT": "右 · 至福岛",
+        "PASS": "过 · 称心通过",
+        "FAIL": "不过 · 第二次死亡"
       },
       "off_shape": "{{n}} 个界域在此图上没有位置,见树表",
       "no_stops": "还没有行程记录",

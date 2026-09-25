@@ -1,6 +1,6 @@
 /**
  * app/realms/page.tsx —— 文明切换、左侧拓扑(与详情行程条同一个组件)、右侧树表
- * (在押 / 容量 / 永恒;满额用警示色并写「已满」)、杜阿特退化为「示意」、只读。
+ * (在押 / 容量 / 永恒;满额用警示色并写「已满」)、杜阿特画成「称心二岔」、缺形状字段才退化为「示意」、只读。
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -28,8 +28,10 @@ const REALMS: Realm[] = [
   R("DY_00_PURGATORY", "CHINESE", { capacity: 2 }),
   R("SUB_GATE", "CHINESE", { parent_realm: "DY_COURT_05_YANLUO", capacity: 10, kind: "GATE" }),
   R("DY_01_HEAVEN", "CHINESE", { is_eternal: true, realm_type: "BLISS" }),
-  R("EG_DUAT_ENTRY", "EGYPTIAN", { is_judgment_hall: false }),
-  R("EG_HALL_TWO_TRUTHS", "EGYPTIAN", { is_judgment_hall: true }),
+  R("EG_DUAT_ENTRY", "EGYPTIAN", { is_judgment_hall: false, order: 1 }),
+  R("EG_HALL_TWO_TRUTHS", "EGYPTIAN", { is_judgment_hall: true, order: 3 }),
+  R("EG_AARU", "EGYPTIAN", { is_judgment_hall: false, order: 5, fork: "PASS" }),
+  R("EG_ANNIHILATION", "EGYPTIAN", { is_judgment_hall: false, order: 4, fork: "FAIL" }),
 ];
 
 const mockedList = realmsApi.list as jest.Mock;
@@ -85,7 +87,33 @@ it("marks a realm at capacity in the warning colour AND in words; one under capa
   expect(tree.querySelector('[data-realm-row="DY_01_HEAVEN"]')).toHaveTextContent("是");
 });
 
-it("falls back to the labelled schematic line for the Duat, whose rows carry no hour", async () => {
+it("draws the Duat as 称心二岔: trunk to the weighing, the pass road, and the fail road as a dashed terminal", async () => {
+  renderPage();
+  await screen.findByTestId("realm-topology");
+  fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
+  const topo = screen.getByTestId("realm-topology").querySelector("[data-route-topology]")! as HTMLElement;
+  expect(topo.getAttribute("data-route-topology")).toBe("fork_two");
+  expect(topo.getAttribute("data-schematic")).toBe("false");
+  expect(topo).toHaveTextContent("称心二岔");
+  expect(within(topo).queryByTestId("topology-schematic")).toBeNull();
+  const pass = topo.querySelector('[data-fork="PASS"]')!;
+  const fail = topo.querySelector('[data-fork="FAIL"]')!;
+  expect(pass).toHaveTextContent("过 · 称心通过");
+  expect(pass.getAttribute("data-terminal")).toBeNull();
+  expect(pass.querySelector('[data-terminal="dashed"]')).toBeNull();
+  expect(fail.getAttribute("data-terminal")).toBe("dashed");
+  expect(fail.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();
+  // 通向终点的那一段是虚线,不是 3px 墨线。
+  expect(fail.querySelector('[class*="border-t-[3px]"]')).toBeNull();
+  // 第二次死亡不是地方:不计在押(过那条路的站照常写 0)。
+  expect(pass.textContent).toMatch(/0/);
+  expect(fail.textContent).not.toMatch(/\d/);
+});
+
+it("falls back to the labelled schematic line for a Duat whose rows carry no order or fork", async () => {
+  mockedList.mockResolvedValue({
+    data: { results: REALMS.map((r) => (r.civilization === "EGYPTIAN" ? { ...r, order: null, fork: null } : r)), count: REALMS.length },
+  });
   renderPage();
   await screen.findByTestId("realm-topology");
   fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
