@@ -2974,6 +2974,10 @@
     "sentence_plan_cancelled": {
       "title": "受刑计划已撤销",
       "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"
+    },
+    "soul_inbox_assigned": {
+      "title": "来信交给你办",
+      "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"
     }
   },
   "social_moderation": {
@@ -3199,7 +3203,8 @@
       "closed": "对方已转世,会话已关闭",
       "not_inbox": "这不是殿司收件箱",
       "chat_not_configured": "聊天服务未启用",
-      "chat_unavailable": "聊天服务暂时不可用"
+      "chat_unavailable": "聊天服务暂时不可用",
+      "invalid_assignee": "这位官员不能经办本殿司的来信"
     },
     "folders": "文件夹",
     "folder": {
@@ -3209,7 +3214,8 @@
       "awaiting_reply": "待回复",
       "replied": "已回复",
       "drafts": "草稿",
-      "archived": "归档"
+      "archived": "归档",
+      "assigned_to_me": "交给我的"
     },
     "by_hall": "按殿",
     "folder_empty": "这个文件夹里没有来信",
@@ -3245,6 +3251,18 @@
       "saved": "模板已保存",
       "deleted": "模板已删除",
       "empty_manage": "这个殿司还没有模板。常用的回复存成模板,回复时一键插入。"
+    },
+    "assign": {
+      "action": "标给同僚…",
+      "title": "标给同僚",
+      "to": "交给",
+      "hint": "只列本殿司能回复来信的在职官员。信不换殿。",
+      "none": "本殿司没有可交的同僚",
+      "confirm": "标给",
+      "done": "已交给 {{name}}",
+      "assignee": "经办 · {{name}}",
+      "unassign": "收回",
+      "unassigned_done": "已收回"
     }
   },
   "sentence_plan": {

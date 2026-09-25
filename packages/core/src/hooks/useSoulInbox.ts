@@ -65,6 +65,25 @@ export function useInboxArchive() {
   });
 }
 
+/** 「标给同僚」 / 收回. The assignee shows on every officer's row, so lists and counts refresh. */
+export function useInboxAssign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, userId }: { id: string; userId: number | null }) =>
+      (await (userId === null ? soulInboxApi.unassign(id) : soulInboxApi.assign(id, userId))).data,
+    onSuccess: () => invalidateLists(qc),
+  });
+}
+
+/** Candidates for 「标给同僚」: only fetched while the picker is open. */
+export function useInboxAssignable(id: string | null) {
+  return useQuery({
+    queryKey: soulInboxKeys.assignable(id ?? ""),
+    queryFn: async () => (await soulInboxApi.assignable(id as string)).data,
+    enabled: Boolean(id),
+  });
+}
+
 /** The caller's own draft. `staleTime: Infinity`: after load the composer owns the text; the server copy only restores it. */
 export function useInboxDraft(id: string | null, enabled = true) {
   return useQuery({

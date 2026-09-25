@@ -2974,6 +2974,10 @@
     "sentence_plan_cancelled": {
       "title": "Sentence plan cancelled",
       "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."
+    },
+    "soul_inbox_assigned": {
+      "title": "A letter handed to you",
+      "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."
     }
   },
   "social_moderation": {
@@ -3199,7 +3203,8 @@
       "closed": "The soul has been reborn; this conversation is closed",
       "not_inbox": "This is not a hall inbox",
       "chat_not_configured": "Chat is not enabled",
-      "chat_unavailable": "Chat is temporarily unavailable"
+      "chat_unavailable": "Chat is temporarily unavailable",
+      "invalid_assignee": "That officer cannot take this hall's letters"
     },
     "folders": "Folders",
     "folder": {
@@ -3209,7 +3214,8 @@
       "awaiting_reply": "Awaiting reply",
       "replied": "Replied",
       "drafts": "Drafts",
-      "archived": "Archived"
+      "archived": "Archived",
+      "assigned_to_me": "Handed to me"
     },
     "by_hall": "By hall",
     "folder_empty": "No letters in this folder",
@@ -3245,6 +3251,18 @@
       "saved": "Template saved",
       "deleted": "Template deleted",
       "empty_manage": "This hall has no templates yet. Save a reply you write often, then insert it with one click."
+    },
+    "assign": {
+      "action": "Hand to a colleague…",
+      "title": "Hand to a colleague",
+      "to": "Hand to",
+      "hint": "Only serving officers of this hall who can reply are listed. The letter stays in this hall.",
+      "none": "No colleague in this hall can take it",
+      "confirm": "Hand over",
+      "done": "Handed to {{name}}",
+      "assignee": "With {{name}}",
+      "unassign": "Take back",
+      "unassigned_done": "Taken back"
     }
   },
   "sentence_plan": {

@@ -8,6 +8,7 @@ import { renderTemplate, type InboxConversation, type InboxFolder, type InboxLis
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import {
   useInboxArchive,
+  useInboxAssign,
   useInboxConversations,
   useInboxDraft,
   useInboxFolders,
@@ -30,6 +31,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { TemplateManager } from "./TemplateManager";
+import { AssignDialog } from "./AssignDialog";
 
 /*
  * 殿司收件箱:灵魂写给**当前所在**殿司的信(backend/apps/chat/views.py `OfficerInboxViewSet`)。
@@ -54,8 +56,9 @@ import { TemplateManager } from "./TemplateManager";
  *
  * 分页照全站默认:每页 20(`REST_FRAMEWORK.PAGE_SIZE`)。
  *
- * 「转交」(交给别的殿司或同僚)没有做:会话的殿司是收件人,灵魂回归原文明后也不变
- * (apps/chat/models.py),模型里没有「会话换殿」这件事。见 cloud-reports/soul-inbox-folders.md。
+ * 「标给同僚」:把一封信交给**本殿司**的另一位官员经办(`assign/`)。信不换殿 —— 会话的殿司是收件人,
+ * 灵魂回归原文明后也不变(apps/chat/models.py),2026-09-25 定为不做「换殿」。经办人是殿司共享的,
+ * 线程头上人人看得见;被标给的人收到官员通知,「交给我的」文件夹里有它。
  */
 
 const RULE = "border-[oklch(var(--color-rule))]";
@@ -352,8 +355,10 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const reply = useInboxReply();
   const markRead = useInboxMarkRead();
   const archive = useInboxArchive();
+  const unassign = useInboxAssign();
   const [showEarlier, setShowEarlier] = useState(false);
   const [managing, setManaging] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const canReply = hasPermission("soul_inbox.reply") && !conversation.closed_at;
   const draft = useDraft(conversation.id, canReply);
   const templates = useInboxTemplates(canReply);
@@ -435,10 +440,42 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
         <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{conversation.soul_code}</span>
         {conversation.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
         {waitingDays !== null && <Badge tone="warning">{t("soul_inbox.awaiting", { n: String(waitingDays) })}</Badge>}
-        <Button type="button" variant="ghost" size="sm" className="ml-auto" loading={archive.isPending} onClick={toggleArchive}>
-          {t(conversation.archived ? "soul_inbox.unarchive" : "soul_inbox.archive")}
-        </Button>
+        {conversation.assignee && (
+          <span data-testid="thread-assignee" className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">
+            {t("soul_inbox.assign.assignee", { name: conversation.assignee.display_name })}
+          </span>
+        )}
+        <span className="ml-auto flex flex-wrap items-center gap-1">
+          {canReply && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setAssigning(true)}>
+              {t("soul_inbox.assign.action")}
+            </Button>
+          )}
+          {canReply && conversation.assignee && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              loading={unassign.isPending}
+              onClick={() =>
+                unassign.mutate(
+                  { id: conversation.id, userId: null },
+                  {
+                    onSuccess: () => showToast(t("soul_inbox.assign.unassigned_done"), "success"),
+                    onError: () => showToast(t("soul_inbox.failed"), "error"),
+                  }
+                )
+              }
+            >
+              {t("soul_inbox.assign.unassign")}
+            </Button>
+          )}
+          <Button type="button" variant="ghost" size="sm" loading={archive.isPending} onClick={toggleArchive}>
+            {t(conversation.archived ? "soul_inbox.unarchive" : "soul_inbox.archive")}
+          </Button>
+        </span>
       </header>
+      <AssignDialog conversation={assigning ? conversation : null} onClose={() => setAssigning(false)} />
       {messages.isLoading ? (
         <div className="pt-4">
           <ListSkeleton count={2} />
@@ -560,6 +597,7 @@ function SoulInboxContent() {
   const folders: { key: FolderKey; label: string; count: number | null }[] = [
     { key: "all", label: t("soul_inbox.folder.all"), count: n?.all ?? null },
     { key: "awaiting_reply", label: t("soul_inbox.folder.awaiting_reply"), count: n?.awaiting_reply ?? null },
+    { key: "assigned_to_me", label: t("soul_inbox.folder.assigned_to_me"), count: n?.assigned_to_me ?? null },
     { key: "replied", label: t("soul_inbox.folder.replied"), count: n?.replied ?? null },
     { key: "drafts", label: t("soul_inbox.folder.drafts"), count: n?.drafts ?? null },
     { key: "archived", label: t("soul_inbox.folder.archived"), count: n?.archived ?? null },

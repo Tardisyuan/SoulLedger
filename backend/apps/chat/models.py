@@ -107,6 +107,14 @@ class Conversation(models.Model):
     #: 关闭之后,房间里还在的一方已在 Synapse 上降到 0 的时刻。为空 = 还欠一次降权:
     #: `sync_rooms` 连同未关闭的房间一起重算它,直到写成功(与发言权的其余同步同一条路)。
     silenced_at = models.DateTimeField(null=True, blank=True)
+    #: 殿司收件箱「标给同僚」:这封信眼下交给谁办。**殿司共享**,不是 `InboxOfficerState` 那种私人状态 ——
+    #: 同一殿司的每位官员看到同一个经办人。会话不换殿(2026-09-25 决定),所以经办人只能是**这个殿司**
+    #: (本行 `tenant`)里持有 `soul_inbox.reply` 的在职官员(`inbox.assign`)。私聊不写。
+    #: 同租户外键:收件殿司的官员,符合本文件顶部的分库约束。
+    assignee = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

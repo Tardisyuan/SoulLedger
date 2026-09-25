@@ -238,7 +238,7 @@ def batch(pks, operation: str, user, *, target=None, reason: str = "", may_overr
     return judgments
 
 
-def is_assignable(target, tenant_id) -> bool:
+def is_assignable(target, tenant_id, codename: str = "judgment.execute") -> bool:
     """改派的对象必须是这件案子所在租户里、能办案的在职官员。**这一条是唯一的规则**:
     改派时由 `assert_assignable` 执行,改派弹层的名单由 `assignable_officers` 按它筛。
     两处问的是同一个函数,名单里有谁,改派就收谁 ——
@@ -247,6 +247,9 @@ def is_assignable(target, tenant_id) -> bool:
     「能办案」= 持有 `judgment.execute`,问的是与视图同一个 `check_permission`,
     所以数据库里撤掉了某人的授权,他就不再能被改派到。灵魂账号(role=SOUL)在
     checker 里一律无权,自然被挡住。
+
+    `codename` 让同一条规则服务别的「交给同僚」:殿司收件箱的经办人问的是
+    `soul_inbox.reply`(`apps/chat/inbox.py::assign`)。默认值是审判,调用方不变。
     """
     from apps.perm.checker import check_permission
 
@@ -255,7 +258,7 @@ def is_assignable(target, tenant_id) -> bool:
         and target.is_active
         and not getattr(target, "is_deleted", False)
         and target.tenant_id == tenant_id
-        and check_permission(target, "judgment.execute")
+        and check_permission(target, codename)
     )
 
 
@@ -270,11 +273,11 @@ def assert_assignable(target, tenant_id) -> None:
     raise ClaimRefusedError("No such officer in this judgment's tenant.", "invalid_assignee", status=400)
 
 
-def assignable_officers(users, tenant_id) -> list:
+def assignable_officers(users, tenant_id, codename: str = "judgment.execute") -> list:
     """`users` 里能被改派到 `tenant_id` 的案子上的人。`users` 由视图先按租户收窄。
 
     先在库里去掉灵魂与停用的人只是省事 —— 决定权在 `is_assignable`,它对这两类本来
     就答否。`check_permission` 按角色缓存,逐人问不是逐人查库。
     """
     candidates = users.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL").order_by("username")
-    return [u for u in candidates if is_assignable(u, tenant_id)]
+    return [u for u in candidates if is_assignable(u, tenant_id, codename)]

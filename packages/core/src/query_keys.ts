@@ -205,6 +205,7 @@ export const soulInboxKeys = {
   folders: () => ["soul-inbox", "folders"] as const,
   messages: (id: string) => ["soul-inbox", "messages", id] as const,
   draft: (id: string) => ["soul-inbox", "draft", id] as const,
+  assignable: (id: string) => ["soul-inbox", "assignable", id] as const,
   templates: () => ["soul-inbox", "templates"] as const,
 };
 
