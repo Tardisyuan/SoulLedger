@@ -314,10 +314,10 @@ export function soulCodeMessage(code: string): SoulErrorMessage {
  */
 const PASSWORD_RESET_REFUSAL_KEY: Record<PasswordResetRefusalCode, string> = {
   rate_limited: "soul_app.errors.rate_limited",
-  reset_code_expired: "soul_app.forgot_password.code_expired",
-  reset_code_wrong: "soul_app.forgot_password.code_wrong",
+  reset_code_expired: "soul_app.forgot_password.err_expired_title",
+  reset_code_wrong: "soul_app.forgot_password.err_wrong_title",
   // Five wrong codes: the backend deleted the code, only a new one helps.
-  reset_code_attempts_exceeded: "soul_app.forgot_password.too_many_tries",
+  reset_code_attempts_exceeded: "soul_app.forgot_password.err_exhausted_title",
   weak_password: "soul_app.errors.weak_password",
   // No soul account, or several on one address: only a hall can help.
   no_soul_account: "soul_app.forgot_password.ask_hall",
@@ -331,7 +331,7 @@ const PASSWORD_RESET_REFUSAL_KEY: Record<PasswordResetRefusalCode, string> = {
  *   no response                → `errors.network`
  *   a known `code`             → `PASSWORD_RESET_REFUSAL_KEY`
  *   400 {new_password: [...]}  → `errors.weak_password`       DRF field errors:
- *   400 {code: [...]}          → `forgot_password.code_wrong`  `code` is a list
+ *   400 {code: [...]}          → `forgot_password.err_wrong_title`  `code` is a list
  *   any other 400              → `errors.validation`
  *   anything else              → `soulErrorMessage`: an unmapped code or status
  *                                is carried, not swallowed
@@ -347,10 +347,17 @@ export function passwordResetErrorMessage(error: unknown): SoulErrorMessage {
   if (response.status === 400 && code === null) {
     const body = (response.data ?? {}) as Record<string, unknown>;
     if ("new_password" in body) return { key: "soul_app.errors.weak_password" };
-    if ("code" in body) return { key: "soul_app.forgot_password.code_wrong" };
+    if ("code" in body) return { key: "soul_app.forgot_password.err_wrong_title" };
     return { key: "soul_app.errors.validation" };
   }
   return soulErrorMessage(error);
+}
+
+/** How many more checks a wrong code will take (`attempts_left` on `reset_code_wrong`), or `null`. */
+export function passwordResetAttemptsLeft(error: unknown): number | null {
+  if (!axios.isAxiosError(error)) return null;
+  const left = (error.response?.data as Partial<PasswordResetRefusal> | undefined)?.attempts_left;
+  return typeof left === "number" && left >= 0 ? left : null;
 }
 
 /** Seconds a throttled reset request was told to wait (`retry_after`), or `null`. */

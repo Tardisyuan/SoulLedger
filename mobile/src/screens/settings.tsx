@@ -78,8 +78,9 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.radio, { borderColor: selected ? theme.mark : theme.hair2 }]}>
-        {selected ? <View style={[styles.radioDot, { backgroundColor: theme.mark }]} /> : null}
+      {/* 单选(第三类 F 组):方框,选中时放墨色小方块 —— 墨色,不是强调色。 */}
+      <View style={[styles.radio, { borderColor: selected ? theme.ink : theme.hair2 }]}>
+        {selected ? <View style={[styles.radioDot, { backgroundColor: theme.ink }]} /> : null}
       </View>
       <View style={styles.fill}>
         <Txt variant="bodyLg">{selfName(l)}</Txt>
@@ -456,8 +457,8 @@ const styles = StyleSheet.create({
   group: { borderBottomWidth: 1 },
   row: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderLeftWidth: 2 },
   toggleStacked: { gap: 10, paddingVertical: 14, borderBottomWidth: 1 },
-  radio: { width: 16, height: 16, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  radioDot: { width: 8, height: 8, borderRadius: 999 },
+  radio: { width: 16, height: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  radioDot: { width: 8, height: 8 },
   current: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
   currentText: { fontSize: 10.5, letterSpacing: 0.4 },
   saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 10 },

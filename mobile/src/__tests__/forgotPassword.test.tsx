@@ -1,6 +1,11 @@
 /**
  * 「忘记密码」 end to end: the real navigator from the sign-in screen, core's real
- * soul client — only the network (and the clock, for the two countdowns) are doubles.
+ * soul client — only the network (and the clock, for the countdowns) are doubles.
+ *
+ * The canvas (第三类 F 组) places each of its seven errors: about one field →
+ * under that field; about the whole attempt → a banner at the top of the form.
+ * Every placement below is asserted both ways — where it is, and that it is not
+ * in the other place.
  */
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -11,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
+import { maskEmail, passwordStrength } from "../screens/forgotPassword";
 import { SessionProvider } from "../session";
 import { stubApi, type Reply } from "./stubApi";
 
@@ -26,7 +32,7 @@ const THROTTLED = (retry_after: number): Reply => ({ status: 429, data: refusal(
 
 function renderApp() {
   return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
+    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 393, height: 852 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
       <I18nProvider>
         <SessionProvider>
           <RootNavigator />
@@ -53,6 +59,7 @@ const text = (testID: string) => {
   const flat = (c: unknown): string => (Array.isArray(c) ? c.map(flat).join("") : typeof c === "string" ? c : "");
   return flat(node.props.children);
 };
+const disabled = (testID: string) => screen.getByTestId(testID).props.accessibilityState.disabled;
 
 async function openForgot() {
   renderApp();
@@ -87,11 +94,44 @@ async function submitCode() {
   });
 }
 
+describe("pure pieces", () => {
+  it("masks the address to its first character and its domain", () => {
+    expect(maskEmail("soul@example.com")).toBe("s***@example.com");
+    expect(maskEmail("not-an-address")).toBe("not-an-address");
+  });
+
+  it("scores four segments: length 8, letters and digits, length 12, a symbol", () => {
+    expect(passwordStrength("")).toBe(0);
+    expect(passwordStrength("abcdefgh")).toBe(1);
+    expect(passwordStrength("abcdefg1")).toBe(2);
+    expect(passwordStrength("abcdefghijk1")).toBe(3);
+    expect(passwordStrength("abcdefghij-1")).toBe(4);
+  });
+});
+
 describe("step 1: the email", () => {
-  it("the sign-in screen opens it; the no-email route to the hall is on screen before anything is sent", async () => {
+  it("the sign-in screen opens it from beside the password label", async () => {
     stubApi({});
     await openForgot();
-    expect(text("forgot-no-email")).toBe("没有绑定邮箱的灵魂收不到验证码，请向所属殿司申请重置密码。");
+    expect(screen.getByText("没有绑定邮箱？")).toBeTruthy();
+    expect(screen.getByText("重设密码 · 第 1 步 / 共 2 步")).toBeTruthy();
+    expect(screen.getByText("填写绑定的邮箱")).toBeTruthy();
+  });
+
+  it("「没有绑定邮箱？」 opens 找殿司重设, which goes back to sign-in", async () => {
+    stubApi({});
+    await openForgot();
+    fireEvent.press(screen.getByTestId("forgot-no-email"));
+    expect(await screen.findByTestId("forgot-no-email-page")).toBeTruthy();
+    expect(screen.getByText("找殿司重设")).toBeTruthy();
+    expect(screen.getByText("殿司核对身份后为你重设，并告诉你临时密码。")).toBeTruthy();
+    // The canvas's third step (bind an email under 「我 › 安全」) is a page the App does not have.
+    expect(screen.queryByText(/我 › 安全/)).toBeNull();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("forgot-back-to-login"));
+    });
+    expect(navigationRef.getRootState()?.routes.map((r) => r.name)).toEqual(["Login"]);
+    expect(screen.queryByTestId("login-reset-notice")).toBeNull();
   });
 
   // THE GUARD. Mutation-proved: see cloud-reports/soul-app-password-reset.md.
@@ -103,7 +143,8 @@ describe("step 1: the email", () => {
     ]) {
       const calls = await toCodeStep(reply);
       expect(calls.map((c) => [c.method, c.url, c.body])).toEqual([["POST", "/auth/reset-password/", { email: EMAIL }]]);
-      expect(text("forgot-sent")).toBe(NEUTRAL);
+      expect(text("forgot-sent-title")).toBe(NEUTRAL);
+      expect(screen.getByText("发往 s***@example.com。5 分钟内有效；没收到请看垃圾邮件。")).toBeTruthy();
       // Absence as well as presence: nothing beside it says what happened.
       expect(screen.queryByTestId("forgot-error")).toBeNull();
       // react-native-screens mints a random `screenId` per mount; everything else must match.
@@ -113,90 +154,119 @@ describe("step 1: the email", () => {
     expect(trees[1]).toBe(trees[0]);
   });
 
-  it("an address that is not one is refused on the device, without spending a send", async () => {
+  it("an address that is not one is refused under the field, without spending a send", async () => {
     const calls = stubApi({});
     await openForgot();
     await sendEmail("not-an-address");
-    expect(screen.getByText("请填写有效的邮箱")).toBeTruthy();
+    expect(screen.getByText("! 请填写有效的邮箱")).toBeTruthy();
     expect(calls).toEqual([]);
     expect(screen.queryByTestId("forgot-code")).toBeNull();
   });
 
-  it("429 says so and stays on step 1 — the limit is counted before any lookup, so it says nothing about the address", async () => {
-    stubApi({ [REQUEST]: THROTTLED(300) });
+  it("429 is a banner with the seconds; the button comes back when they run out", async () => {
+    stubApi({ [REQUEST]: THROTTLED(48) });
     await openForgot();
     await sendEmail();
-    expect(text("forgot-error")).toBe("尝试过于频繁,请稍后再试");
-    expect(screen.queryByTestId("forgot-sent")).toBeNull();
+    expect(text("forgot-error-title")).toBe("! 请求太频繁");
+    expect(text("forgot-error-body")).toBe("请 48 秒后再试。倒计时结束后按钮自动恢复。");
+    expect(disabled("forgot-send")).toBe(true);
     expect(screen.queryByTestId("forgot-code")).toBeNull();
+    act(() => jest.advanceTimersByTime(47_000));
+    expect(text("forgot-error-body")).toBe("请 1 秒后再试。倒计时结束后按钮自动恢复。");
+    expect(disabled("forgot-send")).toBe(true);
+    act(() => jest.advanceTimersByTime(1_000));
+    expect(disabled("forgot-send")).toBe(false);
   });
 
-  it("offline says so, with a retry, and stays on step 1", async () => {
+  it("offline is a banner with 重试, and what was typed stays", async () => {
     stubApi({ [REQUEST]: ["offline", { status: 200, data: { detail: "ok" } }] });
     await openForgot();
     await sendEmail();
-    expect(text("forgot-error")).toBe("无法连接服务器,请检查网络后重试");
+    expect(text("forgot-error-title")).toBe("! 没有连接");
+    expect(text("forgot-error-body")).toBe("已填的内容不会丢。恢复连接后再点一次。");
+    expect(screen.getByTestId("forgot-email").props.value).toBe(EMAIL);
     await act(async () => {
-      fireEvent.press(screen.getByText("重试"));
+      fireEvent.press(screen.getByTestId("forgot-retry"));
     });
     expect(await screen.findByTestId("forgot-code")).toBeTruthy();
   });
 });
 
 describe("step 2: the code and the new password", () => {
-  it("explains the no-email route again under the neutral sentence", async () => {
+  it("is headed step 2 of 2, with the countdown beside the code label", async () => {
     await toCodeStep();
-    expect(text("forgot-no-email")).toContain("所属殿司");
+    expect(screen.getByText("重设密码 · 第 2 步 / 共 2 步")).toBeTruthy();
+    expect(screen.getByText("设一个新密码")).toBeTruthy();
+    expect(text("forgot-expires-in")).toBe("5:00 后过期");
   });
 
   it.each([
-    ["12345", "new-password-1", "new-password-1", "验证码是 6 位数字"],
-    ["12a456", "new-password-1", "new-password-1", "验证码是 6 位数字"],
-    ["123456", "short", "short", "新密码至少 8 位"],
-    ["123456", "new-password-1", "new-password-2", "两次输入的新密码不一致"],
-  ])("code %p / %p / %p is refused on the device: %s", async (code, password, confirm, message) => {
+    ["12345", "new-password-1", "new-password-1", "code", "! 验证码是 6 位数字"],
+    ["123456", "short", "short", "new", "! 密码太弱"],
+    ["123456", "new-password-1", "new-password-2", "confirm", "! 两次输入的密码不一样"],
+  ])("code %p / %p / %p is refused on the device, under the %s field: %s", async (code, password, confirm, field, message) => {
     const calls = await toCodeStep();
     fillCode(code, password, confirm);
     await submitCode();
+    expect(screen.getByTestId(`forgot-${field}-error`)).toBeTruthy();
     expect(screen.getByText(message)).toBeTruthy();
+    expect(screen.queryByTestId("forgot-error")).toBeNull();
     expect(calls.filter((c) => c.url === "/auth/set-new-password/")).toEqual([]);
   });
 
-  it.each<[string, Reply, string]>([
-    ["a wrong code", { status: 400, data: refusal("reset_code_wrong") }, "验证码不正确"],
-    ["an expired code", { status: 400, data: refusal("reset_code_expired") }, "验证码已失效，请重新发送"],
+  // [what, reply, where: a field's testID or a banner's, title, body]
+  it.each<[string, Reply, string, string, string | null]>([
+    ["a wrong code, two tries left", { status: 400, data: refusal("reset_code_wrong", { attempts_left: 2 }) }, "forgot-code-error", "! 验证码不对", "还可以再试 2 次。"],
+    ["a wrong code with no count", { status: 400, data: refusal("reset_code_wrong") }, "forgot-code-error", "! 验证码不对", null],
+    ["a wrong code with none left", { status: 400, data: refusal("reset_code_wrong", { attempts_left: 0 }) }, "forgot-exhausted", "! 尝试次数已用完", "这个验证码已作废。请重新发送。"],
+    ["tries used up (429: the code is gone)", { status: 429, data: refusal("reset_code_attempts_exceeded") }, "forgot-exhausted", "! 尝试次数已用完", "这个验证码已作废。请重新发送。"],
+    ["an expired code", { status: 400, data: refusal("reset_code_expired") }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
     // The sentence the App used to match for 「验证码错误」, under another code: the code wins.
-    ["an expired code worded like a wrong one", { status: 400, data: { error: "验证码错误", code: "reset_code_expired" } }, "验证码已失效，请重新发送"],
-    ["a password the validators refuse", { status: 400, data: refusal("weak_password") }, "新密码强度不足,请换一个更长、更不常见的密码"],
-    ["five wrong codes (429: the code is gone)", { status: 429, data: refusal("reset_code_attempts_exceeded") }, "验证码错误次数过多，已作废，请重新发送"],
-    ["a throttled confirm (429)", THROTTLED(30), "尝试过于频繁,请稍后再试"],
-    ["no network", "offline", "无法连接服务器,请检查网络后重试"],
-    ["no soul account on the address (404)", { status: 404, data: refusal("no_soul_account") }, "这个邮箱无法重设密码，请向所属殿司申请重置密码"],
-    ["an address shared by two accounts (409)", { status: 409, data: refusal("ambiguous_email") }, "这个邮箱无法重设密码，请向所属殿司申请重置密码"],
-  ])("%s is said as such", async (_, reply, message) => {
+    ["an expired code worded like a wrong one", { status: 400, data: { error: "验证码错误", code: "reset_code_expired" } }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
+    ["a password the validators refuse", { status: 400, data: refusal("weak_password") }, "forgot-new-error", "! 密码太弱", "至少 8 位，不能全是数字，也不能太常见。"],
+    ["a throttled confirm (429)", THROTTLED(30), "forgot-error", "! 请求太频繁", "请 30 秒后再试。倒计时结束后按钮自动恢复。"],
+    ["no network", "offline", "forgot-error", "! 没有连接", "已填的内容不会丢。恢复连接后再点一次。"],
+    ["no soul account on the address (404)", { status: 404, data: refusal("no_soul_account") }, "forgot-error", "! 这个邮箱无法重设密码，请向所属殿司申请重置密码", null],
+    ["an address shared by two accounts (409)", { status: 409, data: refusal("ambiguous_email") }, "forgot-error", "! 这个邮箱无法重设密码，请向所属殿司申请重置密码", null],
+  ])("%s is said in its place", async (_, reply, where, title, body) => {
     await toCodeStep();
     stubApi({ [CONFIRM]: reply });
     fillCode("123456", "new-password-1");
     await submitCode();
-    expect(screen.getByText(message)).toBeTruthy();
-    // Still here, still signed out.
-    expect(screen.getByTestId("forgot-code")).toBeTruthy();
+    const node = screen.getByTestId(where);
+    expect(node).toBeTruthy();
+    expect(screen.getByText(title)).toBeTruthy();
+    if (body) expect(screen.getByText(body)).toBeTruthy();
+    // Absence: a field error is not also a banner, and a banner is not also under a field.
+    const banners = ["forgot-error", "forgot-expired", "forgot-exhausted"];
+    const fields = ["forgot-code-error", "forgot-new-error", "forgot-confirm-error"];
+    for (const other of [...banners, ...fields].filter((id) => id !== where)) expect(screen.queryByTestId(other)).toBeNull();
+    // Still here, still signed out, and nothing typed is lost.
+    expect(screen.getByTestId("forgot-new-password").props.value).toBe("new-password-1");
     expect(secure.get(REFRESH_TOKEN_KEY)).toBeUndefined();
+  });
+
+  it("a throttled confirm holds 重设密码 until the seconds run out", async () => {
+    await toCodeStep();
+    stubApi({ [CONFIRM]: THROTTLED(30) });
+    fillCode("123456", "new-password-1");
+    await submitCode();
+    expect(disabled("forgot-submit")).toBe(true);
+    act(() => jest.advanceTimersByTime(30_000));
+    expect(disabled("forgot-submit")).toBe(false);
   });
 
   it("counts down five minutes; the resend waits out the backend's pace, then works", async () => {
     await toCodeStep();
-    expect(screen.getByText("5:00")).toBeTruthy();
-    const resend = screen.getByTestId("forgot-resend");
-    expect(resend.props.accessibilityState.disabled).toBe(true);
-    expect(text("forgot-resend-in")).toBe("1:40 后可重新发送");
+    expect(disabled("forgot-resend")).toBe(true);
+    expect(text("forgot-resend-in")).toBe("重新发送（100 秒后可用）");
 
     act(() => jest.advanceTimersByTime(99_000));
-    expect(screen.getByText("3:21")).toBeTruthy();
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(true);
+    expect(text("forgot-expires-in")).toBe("3:21 后过期");
+    expect(disabled("forgot-resend")).toBe(true);
 
     act(() => jest.advanceTimersByTime(1_000));
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(false);
+    expect(disabled("forgot-resend")).toBe(false);
     expect(screen.queryByTestId("forgot-resend-in")).toBeNull();
 
     const calls = stubApi({ [REQUEST]: { status: 200, data: { detail: "ok" } } });
@@ -205,15 +275,23 @@ describe("step 2: the code and the new password", () => {
     });
     expect(calls.map((c) => c.body)).toEqual([{ email: EMAIL }]);
     // A fresh code: a fresh five minutes, and the resend waits again.
-    expect(screen.getByText("5:00")).toBeTruthy();
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(true);
+    expect(text("forgot-expires-in")).toBe("5:00 后过期");
+    expect(disabled("forgot-resend")).toBe(true);
   });
 
-  it("after five minutes the code is said to have expired", async () => {
+  it("after five minutes the expiry is a banner whose 重新发送 keeps the new password", async () => {
     await toCodeStep();
+    fireEvent.changeText(screen.getByTestId("forgot-new-password"), "new-password-1");
     act(() => jest.advanceTimersByTime(300_000));
-    expect(text("forgot-expired")).toBe("验证码已失效，请重新发送");
+    expect(text("forgot-expired-title")).toBe("! 验证码已过期");
     expect(screen.queryByTestId("forgot-expires-in")).toBeNull();
+    stubApi({ [REQUEST]: { status: 200, data: { detail: "ok" } } });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("forgot-banner-resend"));
+    });
+    expect(screen.queryByTestId("forgot-expired")).toBeNull();
+    expect(text("forgot-expires-in")).toBe("5:00 后过期");
+    expect(screen.getByTestId("forgot-new-password").props.value).toBe("new-password-1");
   });
 
   it("a resend the server rate-limits (429) says so, and waits out its retry_after", async () => {
@@ -223,27 +301,27 @@ describe("step 2: the code and the new password", () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId("forgot-resend"));
     });
-    expect(text("forgot-error")).toBe("尝试过于频繁,请稍后再试");
+    expect(text("forgot-error-title")).toBe("! 请求太频繁");
     // The server's word, not our 100-second pace, now holds the button.
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(true);
+    expect(disabled("forgot-resend")).toBe(true);
     act(() => jest.advanceTimersByTime(1_000));
-    expect(text("forgot-resend-in")).toBe("4:09 后可重新发送");
+    expect(text("forgot-resend-in")).toBe("重新发送（249 秒后可用）");
     act(() => jest.advanceTimersByTime(248_000));
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(true);
+    expect(disabled("forgot-resend")).toBe(true);
     act(() => jest.advanceTimersByTime(1_000));
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(false);
+    expect(disabled("forgot-resend")).toBe(false);
   });
 
-  it("a 429 without retry_after leaves the resend on its own pace", async () => {
+  it("a 429 without retry_after leaves the resend on its own pace and names no seconds", async () => {
     await toCodeStep();
     act(() => jest.advanceTimersByTime(100_000));
     stubApi({ [REQUEST]: { status: 429, data: refusal("rate_limited") } });
     await act(async () => {
       fireEvent.press(screen.getByTestId("forgot-resend"));
     });
-    expect(text("forgot-error")).toBe("尝试过于频繁,请稍后再试");
+    expect(text("forgot-error-body")).toBe("请稍后再试。");
     act(() => jest.advanceTimersByTime(1_000));
-    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(false);
+    expect(disabled("forgot-resend")).toBe(false);
   });
 });
 
@@ -257,7 +335,8 @@ describe("success", () => {
       ["POST", "/auth/set-new-password/", { email: EMAIL, code: "123456", new_password: "new-password-1" }],
     ]);
     expect(await screen.findByTestId("login-reset-notice")).toBeTruthy();
-    expect(text("login-reset-notice")).toBe("密码已重设，请用新密码登录");
+    expect(text("login-reset-title")).toBe("密码已重设");
+    expect(text("login-reset-body")).toBe("请用新密码登录。其他设备上的登录已全部退出。");
     expect(navigationRef.getRootState()?.routes.map((r) => r.name)).toEqual(["Login"]);
     // No session: no token anywhere, no /me/, and the sign-in form is what is shown.
     expect(secure.get(REFRESH_TOKEN_KEY)).toBeUndefined();

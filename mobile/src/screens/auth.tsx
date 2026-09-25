@@ -91,10 +91,19 @@ export function LoginScreen() {
           {t(busy ? "soul_app.login.verifying" : "soul_app.login.subtitle")}
         </Txt>
         {reset && !error ? (
-          <View style={styles.gapTop}>
-            <Notice tone="neutral" testID="login-reset-notice">
-              {t("soul_app.forgot_password.success")}
-            </Notice>
+          // 第三类 F 组 屏 3:1px 墨框,左侧 3px 功色;粗体一句,小字一句。
+          <View
+            testID="login-reset-notice"
+            accessibilityRole="text"
+            accessibilityLiveRegion="polite"
+            style={[styles.gapTop, styles.resetNotice, { borderColor: theme.ink, borderLeftColor: theme.pos }]}
+          >
+            <Txt testID="login-reset-title" style={styles.resetTitle}>
+              {t("soul_app.forgot_password.success_title")}
+            </Txt>
+            <Txt testID="login-reset-body" variant="caption" tone="muted">
+              {t("soul_app.forgot_password.success_body")}
+            </Txt>
           </View>
         ) : null}
         {error ? (
@@ -126,6 +135,19 @@ export function LoginScreen() {
           <Input
             testID="login-password"
             label={t("soul_app.login.password")}
+            labelAside={
+              <Pressable
+                testID="login-forgot"
+                accessibilityRole="link"
+                disabled={busy}
+                onPress={() => navigation.navigate("ForgotPassword")}
+                style={styles.forgot}
+              >
+                <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+                  {t("soul_app.forgot_password.link")}
+                </Txt>
+              </Pressable>
+            }
             value={password}
             onChangeText={setPassword}
             editable={!busy}
@@ -141,18 +163,6 @@ export function LoginScreen() {
           onPress={submit}
           busy={busy}
         />
-        <Pressable
-          testID="login-forgot"
-          accessibilityRole="link"
-          disabled={busy}
-          onPress={() => navigation.navigate("ForgotPassword")}
-          hitSlop={6}
-          style={styles.forgot}
-        >
-          <Txt variant="label" tone="accent" style={styles.noSpacing}>
-            {t("soul_app.forgot_password.link")}
-          </Txt>
-        </Pressable>
       </View>
       <View style={styles.fill} />
       <View style={[styles.footer, { borderTopColor: theme.hair }]}>
@@ -329,7 +339,10 @@ const styles = StyleSheet.create({
   fields: { marginTop: 20, gap: 16 },
   dimmed: { opacity: 0.6 },
   submit: { marginTop: 24 },
-  forgot: { alignSelf: "center", minHeight: 44, justifyContent: "center", paddingHorizontal: 10, marginTop: 10 },
+  forgot: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "flex-end" },
+  underline: { textDecorationLine: "underline" },
+  resetNotice: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 10, paddingHorizontal: 12 },
+  resetTitle: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
   footer: { borderTopWidth: 1, marginHorizontal: 28, marginTop: 28, paddingTop: 26, paddingBottom: 30 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
