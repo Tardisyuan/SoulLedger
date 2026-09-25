@@ -258,7 +258,7 @@ export function ReassignDialog({
                     {Array.from(nameOf(u))[0] ?? "?"}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-[oklch(var(--color-ink))]">{nameOf(u)}</span>
+                    <span title={nameOf(u)} className="block truncate text-sm text-[oklch(var(--color-ink))]">{nameOf(u)}</span>
                     <span className="block text-xs text-[oklch(var(--color-ink-subtle))]">
                       <DomainEnum namespace="users.roles" value={u.role} />
                       {self && ` · ${t("judgment.claim.reassign_you")}`}
