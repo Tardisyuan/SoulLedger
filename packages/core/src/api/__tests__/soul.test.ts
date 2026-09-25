@@ -15,6 +15,7 @@ import {
 import {
   clearSoulTokens,
   onSoulPasswordChangeRequired,
+  passwordResetAttemptsLeft,
   passwordResetErrorMessage,
   passwordResetRetryAfter,
   soulApi,
@@ -230,14 +231,14 @@ describe("password reset (「忘记密码」)", () => {
   });
 
   it.each<[string, unknown, string]>([
-    ["expired", httpError(400, { error: "x", code: "reset_code_expired" }), "soul_app.forgot_password.code_expired"],
-    ["wrong", httpError(400, { error: "x", code: "reset_code_wrong" }), "soul_app.forgot_password.code_wrong"],
+    ["expired", httpError(400, { error: "x", code: "reset_code_expired" }), "soul_app.forgot_password.err_expired_title"],
+    ["wrong", httpError(400, { error: "x", code: "reset_code_wrong" }), "soul_app.forgot_password.err_wrong_title"],
     ["validator refusal", httpError(400, { error: "x", code: "weak_password" }), "soul_app.errors.weak_password"],
     ["new_password field", httpError(400, { new_password: ["too short"] }), "soul_app.errors.weak_password"],
     // DRF's field error on `code` is a LIST — not a refusal code.
-    ["code field", httpError(400, { code: ["验证码必须是6位数字"] }), "soul_app.forgot_password.code_wrong"],
+    ["code field", httpError(400, { code: ["验证码必须是6位数字"] }), "soul_app.forgot_password.err_wrong_title"],
     ["email field", httpError(400, { email: ["bad"] }), "soul_app.errors.validation"],
-    ["too many tries", httpError(429, { error: "x", code: "reset_code_attempts_exceeded" }), "soul_app.forgot_password.too_many_tries"],
+    ["too many tries", httpError(429, { error: "x", code: "reset_code_attempts_exceeded" }), "soul_app.forgot_password.err_exhausted_title"],
     ["throttled", httpError(429, { error: "x", code: "rate_limited", retry_after: 30 }), "soul_app.errors.rate_limited"],
     ["no soul account", httpError(404, { error: "x", code: "no_soul_account" }), "soul_app.forgot_password.ask_hall"],
     ["two accounts", httpError(409, { error: "x", code: "ambiguous_email" }), "soul_app.forgot_password.ask_hall"],
@@ -250,7 +251,7 @@ describe("password reset (「忘记密码」)", () => {
     // The sentence the App used to match, now carried beside a different code.
     const sentence = "验证码错误";
     expect(passwordResetErrorMessage(httpError(400, { error: sentence, code: "reset_code_expired" })).key).toBe(
-      "soul_app.forgot_password.code_expired"
+      "soul_app.forgot_password.err_expired_title"
     );
     expect(passwordResetErrorMessage(httpError(400, { error: sentence, code: "weak_password" })).key).toBe(
       "soul_app.errors.weak_password"
@@ -273,6 +274,14 @@ describe("password reset (「忘记密码」)", () => {
     expect(passwordResetRetryAfter(httpError(429, { retry_after: "42" }))).toBeNull();
     expect(passwordResetRetryAfter(new AxiosError("Network Error", "ERR_NETWORK"))).toBeNull();
     expect(passwordResetRetryAfter(new Error("x"))).toBeNull();
+  });
+
+  it("reads attempts_left only when it is a non-negative number, zero included", () => {
+    expect(passwordResetAttemptsLeft(httpError(400, { error: "x", code: "reset_code_wrong", attempts_left: 2 }))).toBe(2);
+    expect(passwordResetAttemptsLeft(httpError(400, { error: "x", code: "reset_code_wrong", attempts_left: 0 }))).toBe(0);
+    expect(passwordResetAttemptsLeft(httpError(400, { error: "x", code: "reset_code_wrong" }))).toBeNull();
+    expect(passwordResetAttemptsLeft(httpError(400, { attempts_left: "2" }))).toBeNull();
+    expect(passwordResetAttemptsLeft(new AxiosError("Network Error", "ERR_NETWORK"))).toBeNull();
   });
 });
 

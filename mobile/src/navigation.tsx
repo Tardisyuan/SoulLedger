@@ -114,7 +114,9 @@ const TAB_TITLES: Record<string, string> = {
 
 /** Success goes back to sign-in carrying a notice — never into a session. */
 function ForgotPassword({ navigation }: NativeStackScreenProps<RootParams, "ForgotPassword">) {
-  return <ForgotPasswordScreen onDone={() => navigation.popTo("Login", { passwordReset: true })} />;
+  return (
+    <ForgotPasswordScreen onDone={() => navigation.popTo("Login", { passwordReset: true })} onCancel={() => navigation.popTo("Login")} />
+  );
 }
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
@@ -252,7 +254,7 @@ export function RootNavigator() {
               name="ForgotPassword"
               component={ForgotPassword}
               options={({ navigation }) => ({
-                header: () => <AppHeader title={t("soul_app.forgot_password.title")} onBack={navigation.goBack} />,
+                header: () => <AppHeader title={t("soul_app.app_name")} onBack={navigation.goBack} />,
               })}
             />
           </>

@@ -115,12 +115,19 @@ def test_a_completed_reset_signs_every_other_device_out(api_client, soul):
     token the account held is blacklisted, so no device can renew its session."""
     from rest_framework_simplejwt.tokens import RefreshToken
 
+    from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+    from apps.soul_accounts.authentication import SoulRefreshToken
+
     held = [str(RefreshToken.for_user(soul)) for _ in range(2)]
+    app_session = SoulRefreshToken.for_user(soul)  # what the soul App holds
     cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
     assert _set(api_client).status_code == 200
     for token in held:
         res = api_client.post("/api/v1/auth/refresh/", {"refresh": token}, format="json")
         assert res.status_code == 401, res.data
+    assert OutstandingToken.objects.get(jti=app_session["jti"]).blacklistedtoken is not None
+    assert not OutstandingToken.objects.filter(user=soul, blacklistedtoken__isnull=True).exists()
 
 
 @pytest.mark.django_db
