@@ -2853,6 +2853,29 @@
         "post_title": "Fekh Medu Pen?",
         "comment_title": "Fekh Wesheb Pen?",
         "body": "Ky Nen Maa; Nen Ankh Wehem."
+      },
+      "media": {
+        "add": "Ini Tut",
+        "count": "Tut {{n}} / {{max}}",
+        "uploading": "Em Hab {{percent}}%",
+        "failed": "Nen Hab",
+        "retry": "Wehem Iri",
+        "remove": "Fekh",
+        "waiting": "Hab Er Khet Tut Neb",
+        "failed_hint": "Tut Nen Hab: Wehem Iri Er Fekh",
+        "limit": "Tut Er Pehwy {{max}}",
+        "image": "Tut {{i}}",
+        "viewer": "Tut {{i}} / {{n}}",
+        "close": "Khetem",
+        "load_failed": "Nen Ini Tut",
+        "permission": "Was Tut: Sesen",
+        "expired": "Tut Nen Wenen: Wehem Ini Tut",
+        "errors": {
+          "not_an_image": "PNG, JPEG Er WebP Wa",
+          "too_large": "Tut Er Pehwy 5 MB",
+          "too_many_pixels": "Tut Wer",
+          "too_many_pending": "Tut Em Smen Er Pehwy: Hab Medu Er Fekh Tut"
+        }
       }
     }
   },
@@ -3100,7 +3123,11 @@
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
       "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer",
       "warn": "Hab Khet Er Neb Medu",
-      "reaction_love": "Sekha"
+      "reaction_love": "Sekha",
+      "media_n": "Tut {{n}}",
+      "media_label": "Tut",
+      "media_caption": "Tut {{i}} · {{w}}×{{h}}",
+      "media_load_failed": "Nen Ini Tut"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",

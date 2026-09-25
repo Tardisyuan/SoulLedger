@@ -26,6 +26,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { MediaGrid } from "./MediaGrid";
 import { MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
 
 /**
@@ -66,6 +67,8 @@ interface ReviewItem {
   author: string;
   time: string;
   excerpt: string;
+  /** Images on the post (C-08's 「图 N」); null for a comment or a user. */
+  mediaCount: number | null;
 }
 
 function buildItems(reports: ModerationReport[], posts: PendingRow[], comments: PendingRow[]): ReviewItem[] {
@@ -85,6 +88,7 @@ function buildItems(reports: ModerationReport[], posts: PendingRow[], comments: 
       author: r.target_user?.display_name ?? "",
       time: r.last_reported_at,
       excerpt: r.content_excerpt,
+      mediaCount: r.target_type === "POST" ? r.media_count : null,
     };
   });
   for (const [id, p] of pendingById) {
@@ -96,6 +100,7 @@ function buildItems(reports: ModerationReport[], posts: PendingRow[], comments: 
       author: p.row.author?.display_name ?? "",
       time: p.row.create_time,
       excerpt: p.row.content,
+      mediaCount: "media_count" in p.row ? p.row.media_count : null,
     });
   }
   return items.sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
@@ -299,6 +304,11 @@ export function ReportsReview() {
                   </span>
                   <span title={it.excerpt} className="mt-1 block truncate font-serif text-sm text-[oklch(var(--color-ink))]">{it.excerpt}</span>
                   <span className="mt-1 flex flex-wrap gap-3 font-mono text-2xs">
+                    {it.mediaCount !== null && (
+                      <span data-media-count className="text-[oklch(var(--color-ink-subtle))]">
+                        {t("social_moderation.review.media_n", { n: String(it.mediaCount) })}
+                      </span>
+                    )}
                     <span className={reportCount > 0 ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink-subtle))]"}>
                       {t("social_moderation.review.report_n", { n: String(reportCount) })}
                     </span>
@@ -341,6 +351,7 @@ export function ReportsReview() {
           ) : (
             <p className="mt-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.review.user_target_note")}</p>
           )}
+          {full && "media" in full && <MediaGrid media={full.media} />}
 
           {/*
             反应用文字,不用表情(C-08):「评 N · 念 N」。念 = LOVE(灵魂端 `react.love` 同一个字)。

@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import F, Q
 
 from apps.core.models import AuditUserFields
+from apps.core.soft_delete import SoftDeleteMixin
 
 
 class Visibility(models.TextChoices):
@@ -96,6 +97,59 @@ class Post(AuditUserFields, models.Model):
                 if tenant:
                     self.tenant = tenant
         super().save(*args, **kwargs)
+
+
+#: 帖子图片存在 MEDIA_ROOT 之下、这个前缀之内。**这个前缀不公开服务**:nginx 对
+#: `/media/private/` 答 404,DEBUG 下 config/urls.py 同样挡住 —— 图片只经
+#: `GET /api/v1/social-media/<id>/`(带签名、每次重查可见性)出去。见 apps/social/media.py。
+PRIVATE_MEDIA_PREFIX = "private/"
+
+
+def _post_media_path(instance, filename):
+    # 文件名由 media.py 随机生成;这里只加目录。客户端的文件名从不落盘。
+    from django.utils import timezone
+
+    return f"{PRIVATE_MEDIA_PREFIX}post_media/{timezone.now():%Y/%m}/{filename}"
+
+
+class PostMedia(SoftDeleteMixin, models.Model):
+    """帖子的一张图片(2026-09-25)。
+
+    **先传后发**:上传时 `post` 为空,只有上传者本人能看、能删;发帖时按顺序挂到帖子上
+    (`position` 0..8)。挂不上的(App 崩了、用户放弃)由 `manage.py cleanup_orphan_post_media`
+    清掉,行与文件一起。
+
+    **租户经帖子**(`post__tenant`),没有自己的 tenant 列;未挂帖子的图片只属于上传者。
+    **可见性也经帖子**:没有自己的审核状态 —— 帖子被隐藏,它的图片就对灵魂不可见
+    (`media.may_view`);帖子被官员删除,图片以同一个 `delete_cascade_id` 一起软删除,
+    随回收站的恢复一起回来。作者自己删帖,图片的行与文件真删。
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    post = models.ForeignKey(
+        Post, null=True, blank=True, on_delete=models.CASCADE, related_name="media",
+    )
+    uploader = models.ForeignKey(
+        "authentication.User", on_delete=models.CASCADE, related_name="social_media_uploads",
+    )
+    position = models.PositiveSmallIntegerField(default=0)
+    file = models.FileField(upload_to=_post_media_path, max_length=200)
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    byte_size = models.PositiveIntegerField()
+    content_type = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["position", "created_at"]
+        verbose_name = "Post media"
+        verbose_name_plural = "Post media"
+        indexes = [
+            models.Index(fields=["post", "position"]),
+            models.Index(fields=["uploader", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"PostMedia({self.pk}) #{self.position} on {self.post_id}"
 
 
 class Comment(AuditUserFields, models.Model):

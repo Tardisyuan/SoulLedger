@@ -25,7 +25,7 @@
 from dataclasses import dataclass
 
 from django.db import transaction
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
 from apps.social.models import (
@@ -33,6 +33,7 @@ from apps.social.models import (
     Follow,
     ModerationStatus,
     Post,
+    PostMedia,
     Reaction,
     ReactionType,
     SocialMute,
@@ -195,7 +196,10 @@ def annotate_posts_for(viewer, qs):
 
     ponytail: 每页一次聚合查询;帖子量上来后改为维护专用计数列。
     """
-    return qs.select_related("author").annotate(
+    return qs.select_related("author").prefetch_related(
+        # 图片随帖子一次取出(每页一条查询),`PostMedia.objects` 已排除软删除的。
+        Prefetch("media", queryset=PostMedia.objects.order_by("position"), to_attr="live_media"),
+    ).annotate(
         visible_comment_count=Count(
             "comments",
             filter=Q(comments__moderation_status=ModerationStatus.PUBLISHED, comments__is_deleted=False),
@@ -245,14 +249,21 @@ def _screen(tenant, content):
     return screen_content(tenant, content)
 
 
-def create_post(author, content, visibility):
+def create_post(author, content, visibility, media=()):
+    """`media`:先经 `POST /me/social/media/` 传好的图片 id,按显示顺序(apps/social/media.py)。
+    文字与图片至少有一样;图片挂不上,帖子也不建。"""
+    from apps.social import media as post_media
+
     tenant = ensure_can_write(author)
+    if not (content or "").strip() and not media:
+        raise SocialError("帖子要有文字或图片。", "empty_post", 400)
     screening = _screen(tenant, content)
     with transaction.atomic():
         post = Post.objects.create(
             author=author, content=screening.content, visibility=visibility, tenant=tenant,
             moderation_status=screening.status, **screening.moderation_fields,
         )
+        post_media.attach(post, author, media)
         PostService.increment_post_count(author.pk)
         _record_hits(screening)
     return post
@@ -272,7 +283,12 @@ def delete_own_post(user, post_id):
         raise _not_found()
     if post.author_id != user.pk:
         raise SocialError("只能删除自己的帖子。", "not_author", 403)
-    post.soft_delete(user=user, reason="author")
+    from apps.social import media as post_media
+
+    with transaction.atomic():
+        post.soft_delete(user=user, reason="author")
+        # 作者自己删:不进回收站、没有恢复路径,所以图片的行与文件真删。
+        post_media.purge_for_post(post)
 
 
 def _ensure_not_sealed(post):

@@ -7,7 +7,7 @@ import { type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configurePlatform, resetPlatform, type KeyValueStore } from "../../platform/index";
 import { soulHttp, storeSoulTokens } from "../soul";
-import { soulSocialApi } from "../soul-social";
+import { mediaUrl, soulSocialApi } from "../soul-social";
 
 function memoryStore(): KeyValueStore {
   const data = new Map<string, string>();
@@ -77,5 +77,45 @@ describe("soulSocialApi", () => {
   it("sends a numeric report target as a string — the serializer's field is a CharField", async () => {
     await soulSocialApi.report("USER", 42, "ABUSE");
     expect(calls[0].body).toEqual({ target_type: "USER", target_id: "42", reason: "ABUSE", detail: "" });
+  });
+
+  it("posts attached media ids in order, and sends no `media` key for a text-only post", async () => {
+    await soulSocialApi.createPost("配图", "PUBLIC", ["m2", "m1"]);
+    await soulSocialApi.createPost("只有字");
+    expect(calls[0].body).toEqual({ content: "配图", visibility: "PUBLIC", media: ["m2", "m1"] });
+    expect(calls[1].body).toEqual({ content: "只有字", visibility: "TENANT" });
+    expect(calls[1].body).not.toHaveProperty("media");
+  });
+
+  it("uploads multipart with the soul token and reports progress as a fraction", async () => {
+    const seen: { url?: string; type?: unknown; auth?: unknown; data?: unknown }[] = [];
+    soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      seen.push({ url: config.url, type: config.headers?.["Content-Type"], auth: config.headers?.Authorization, data: config.data });
+      config.onUploadProgress?.({ loaded: 50, total: 200, bytes: 50, lengthComputable: true });
+      return { status: 201, data: { id: "m1" }, headers: {}, config, statusText: "" } as AxiosResponse;
+    };
+    const body = { append: () => {} } as FormData;
+    const progress: number[] = [];
+    const media = await soulSocialApi.uploadMedia(body, (f) => progress.push(f));
+    expect(media).toEqual({ id: "m1" });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ url: "/me/social/media/", auth: "Bearer SOUL" });
+    expect(String(seen[0].type)).toMatch(/^multipart\/form-data/);
+    expect(progress).toEqual([0.25]);
+  });
+
+  it("removes an unposted upload by id", async () => {
+    await soulSocialApi.removeMedia("m9");
+    expect(calls.map((c) => [c.method, c.url])).toEqual([["delete", "/me/social/media/m9/"]]);
+  });
+});
+
+describe("mediaUrl", () => {
+  it("joins the server's site-rooted path to the API host's origin, not to the /api/v1 base", () => {
+    expect(mediaUrl("/api/v1/social-media/m1/?t=abc")).toBe("http://api.test/api/v1/social-media/m1/?t=abc");
+  });
+
+  it("leaves an absolute URL alone", () => {
+    expect(mediaUrl("https://cdn.test/x.png")).toBe("https://cdn.test/x.png");
   });
 });
