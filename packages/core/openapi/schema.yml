@@ -10036,6 +10036,18 @@ paths:
         两个模型各自过 `scope_to_tenant`,再 UNION 成一个查询 —— 分页与计数在数据库里做。
       parameters:
       - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: 处理日期起(含),YYYY-MM-DD
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: 处理日期止(含),YYYY-MM-DD
+      - in: query
         name: handling
         schema:
           type: string

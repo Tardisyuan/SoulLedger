@@ -13,6 +13,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ModerationPage from "@/app/moderation/page";
 import { tZh } from "./support/zhBundle";
 
+import { rangeStart } from "@/src/components/moderation/HandledSection";
 jest.mock("@soulledger/core/api/social-moderation", () => ({
   socialModerationApi: {
     reports: jest.fn(),
@@ -557,6 +558,26 @@ describe("已处理 · E-08d", () => {
     expect(within(drawer).queryByText(tZh("social_moderation.handled.in_recycle_bin"))).toBeNull();
     fireEvent.click(within(drawer).getByRole("button", { name: tZh("social_moderation.handled.restore") }));
     await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "h1", "restore", undefined));
+  });
+
+  it("时间范围:默认近 30 天(date_from 进请求),放宽到全部时不再带 date_from", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    await screen.findByText("被隐藏的帖子");
+    expect(apiMock.handled).toHaveBeenLastCalledWith({ date_from: rangeStart("30d") });
+    fireEvent.change(screen.getByRole("combobox", { name: tZh("social_moderation.handled.range") }), { target: { value: "90d" } });
+    await waitFor(() => expect(apiMock.handled).toHaveBeenLastCalledWith({ date_from: rangeStart("90d") }));
+    fireEvent.change(screen.getByRole("combobox", { name: tZh("social_moderation.handled.range") }), { target: { value: "" } });
+    await waitFor(() => expect(apiMock.handled).toHaveBeenLastCalledWith({}));
+  });
+
+  it("rangeStart counts today as the first of N days, in UTC", () => {
+    const now = Date.UTC(2026, 8, 25, 23, 30);
+    expect(rangeStart("30d", now)).toBe("2026-08-27");
+    expect(rangeStart("90d", now)).toBe("2026-06-28");
+    expect(rangeStart("all", now)).toBeUndefined();
   });
 
   it("a DELETED row says 在回收站 and links there — no second restore path", async () => {
