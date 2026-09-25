@@ -1,13 +1,23 @@
 """
 REST views for Realms app.
 """
+from django.db.models import Count
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.realms.filters import RealmFilter
-from apps.realms.models import Realm
-from apps.realms.serializers import RealmListSerializer, RealmLocalizedSerializer, RealmSerializer
+from apps.realms.models import Realm, SoulPathEntry
+from apps.realms.serializers import (
+    RealmListSerializer,
+    RealmLocalizedSerializer,
+    RealmOccupancySerializer,
+    RealmSerializer,
+)
 
 
 class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -24,6 +34,7 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     # in the DB under the plural name, so the view moves, not the data.
     # Read-only viewset: `realms.read` is the whole family, no write codename.
     permission_codename = "realms"
+    extra_permissions = {"occupancy": ["realms.read"]}
     # `select_related("parent_realm")` is inert with the current serializer and
     # is kept only against the day it is not.
     #
@@ -48,3 +59,22 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
+
+    @extend_schema(responses=RealmOccupancySerializer(many=True))
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def occupancy(self, request):
+        """在押:每个界域里此刻有多少灵魂(官员端界域页的树表)。
+
+        数的是**未离开**的行程站(`SoulPathEntry.left_at` 为空)—— 一个灵魂同时
+        只有一条(`soulpath_one_open_entry_per_soul` 约束),所以这是人数,不是人次。
+        按行程站自己的租户划界,与 `GET /souls/{id}/path/` 同一口径;没有一站的
+        界域不出现在结果里(前端读作 0,那是事实,不是缺值)。
+        """
+        entries = scope_to_tenant(
+            SoulPathEntry.objects.filter(
+                left_at__isnull=True, realm__isnull=False, soul__is_deleted=False,
+            ),
+            request,
+        )
+        rows = entries.values("realm_id").annotate(count=Count("id")).order_by("realm_id")
+        return Response(RealmOccupancySerializer(rows, many=True).data)

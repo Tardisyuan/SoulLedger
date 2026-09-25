@@ -522,7 +522,7 @@ export default function SoulDetailPage() {
               out of this ad hoc box into their own component.
               规范 v1:「乙 · 功过」区块,逐条账页(功过台账)跟在它自己的合计下面。 */}
           <section>
-          <LedgerHeading mark="乙" title={t("souls.detail.ledger.karma")} />
+          <LedgerHeading id="soul-karma" mark="乙" title={t("souls.detail.ledger.karma")} />
           {loading ? (
             <div className="pt-3 space-y-3">
               <div className="flex justify-between items-center">

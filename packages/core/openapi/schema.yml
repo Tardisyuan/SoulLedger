@@ -4622,6 +4622,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/RebirthNotApplicable'
           description: ''
+  /api/v1/ledger/journal/:
+    get:
+      operationId: v1_ledger_journal_retrieve
+      description: |-
+        GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=]
+
+        功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
+        只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
+        不给 `month` 时取当前月。
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+      - in: query
+        name: civilization
+        schema:
+          type: string
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM; defaults to the current month
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 1-based page of the month's rows (20 per page)
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerJournal'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerJournalError'
+          description: ''
   /api/v1/ledger/stats/export/:
     get:
       operationId: v1_ledger_stats_export_retrieve
@@ -7913,6 +7958,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Realm'
+          description: ''
+  /api/v1/realms/occupancy/:
+    get:
+      operationId: v1_realms_occupancy_list
+      description: |-
+        在押:每个界域里此刻有多少灵魂(官员端界域页的树表)。
+
+        数的是**未离开**的行程站(`SoulPathEntry.left_at` 为空)—— 一个灵魂同时
+        只有一条(`soulpath_one_open_entry_per_soul` 约束),所以这是人数,不是人次。
+        按行程站自己的租户划界,与 `GET /souls/{id}/path/` 同一口径;没有一站的
+        界域不出现在结果里(前端读作 0,那是事实,不是缺值)。
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+          enum:
+          - CHINESE
+          - EGYPTIAN
+          - EUROPEAN
+          - GREEK
+        description: |-
+          * `CHINESE` - Chinese Diyu
+          * `EUROPEAN` - European Heaven/Hell
+          * `EGYPTIAN` - Egyptian Duat
+          * `GREEK` - Greek Underworld
+      - in: query
+        name: is_eternal
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: realm_type
+        schema:
+          type: string
+          enum:
+          - BLISS
+          - HELL
+          - NEUTRAL
+          - PURGATORY
+        description: |-
+          * `HELL` - Hell / Punishment
+          * `PURGATORY` - Purgatory / Intermediate
+          * `BLISS` - Heaven / Bliss
+          * `NEUTRAL` - Neutral / Between
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: tier_max
+        schema:
+          type: integer
+      - in: query
+        name: tier_min
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RealmOccupancy'
           description: ''
   /api/v1/recycle-bin/:
     get:
@@ -17094,6 +17215,123 @@ components:
       - inherited_demerit
       - inherited_merit
       - soul_id
+    LedgerJournal:
+      type: object
+      description: |-
+        200 body of `LedgerJournalView` — see apps/ledger/journal.py.
+
+        `opening + received - disbursed == closing`, all in raw record weight.
+      properties:
+        month:
+          type: string
+        opening:
+          type: integer
+        received:
+          type: integer
+        disbursed:
+          type: integer
+        closing:
+          type: integer
+        soul_count:
+          type: integer
+        record_count:
+          type: integer
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerJournalCategory'
+        page:
+          type: integer
+        page_size:
+          type: integer
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerJournalRow'
+      required:
+      - categories
+      - closing
+      - count
+      - disbursed
+      - month
+      - opening
+      - page
+      - page_size
+      - received
+      - record_count
+      - results
+      - soul_count
+    LedgerJournalCategory:
+      type: object
+      description: One category's merit and demerit weight inside the month.
+      properties:
+        category:
+          type: string
+        merit:
+          type: integer
+        demerit:
+          type: integer
+      required:
+      - category
+      - demerit
+      - merit
+    LedgerJournalError:
+      type: object
+      description: '400 body of `LedgerJournalView`: which parameter, and why.'
+      properties:
+        error:
+          type: string
+        field:
+          type: string
+        message:
+          type: string
+      required:
+      - error
+      - field
+      - message
+    LedgerJournalRow:
+      type: object
+      description: |-
+        One MERIT / DEMERIT record in the month. `day` is the UTC date the
+        month boundary was cut on — group by it, not by the browser's date.
+      properties:
+        id:
+          type: string
+          format: uuid
+        soul_id:
+          type: string
+          format: uuid
+        soul_name:
+          type: string
+        record_type:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        weight:
+          type: integer
+        statute_clause:
+          type: string
+        recorded_at:
+          type: string
+          format: date-time
+        day:
+          type: string
+          format: date
+      required:
+      - category
+      - day
+      - description
+      - id
+      - record_type
+      - recorded_at
+      - soul_id
+      - soul_name
+      - statute_clause
+      - weight
     LedgerOverviewStats:
       type: object
       description: |-
@@ -21946,6 +22184,20 @@ components:
       - name_local
       - realm_code
       - realm_type
+    RealmOccupancy:
+      type: object
+      description: |-
+        One row of `GET /realms/occupancy/`: souls whose open path entry
+        (`left_at` null) is in this realm — 在押.
+      properties:
+        realm_id:
+          type: string
+          format: uuid
+        count:
+          type: integer
+      required:
+      - count
+      - realm_id
     RealmTypeEnum:
       enum:
       - HELL

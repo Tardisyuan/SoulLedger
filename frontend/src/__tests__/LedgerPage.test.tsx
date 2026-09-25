@@ -1,374 +1,211 @@
 /**
- * Tests for app/ledger/page.tsx — the ledger statistics screen.
+ * app/ledger/page.tsx —— 功过总账:四柱、按日分组的流水、日小计与本页合计、
+ * 图例账,以及加载 / 空 / 失败三屏。
  *
- * This page renders three independent sections that each have to survive a
- * failed or empty stats call on their own. The interesting failure is the
- * quiet one: a section that renders zeros instead of an error, or a realm /
- * activity block that shows an empty shell when the backend returned
- * nothing. Both the error path and the "section must not appear" path are
- * asserted below.
+ * 真 I18nProvider(zh-Hans),不用回显键的替身:断言落在操作员读到的字上,
+ * 一个缺失的键会作为原样的 key 出现在屏上并让断言红。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { LedgerJournal } from "@soulledger/core/api";
 import LedgerPage from "@/app/ledger/page";
 import { ledgerApi } from "@soulledger/core/api";
-import zhHans from "@soulledger/core/messages/zh-Hans.json";
-
-/**
- * The zh-Hans sentence behind a key — and a throw, not a fallback, when the
- * bundle has no such key.
- *
- * WHY THIS EXISTS. Two tests below used to assert
- * `findByText("ledger.no_state_distribution")` — the raw key — because `mockT`
- * echoes keys. That pinned the DEFECT: the key was in no bundle, so the screen
- * really did show `ledger.no_state_distribution`, and the test called that
- * correct (DF-01). An assertion on the raw key cannot tell a missing key from
- * an echoing mock. This helper can: it reads the shipped bundle, so the test
- * is red the day the key is absent again, and the assertion is on the words
- * an operator would read.
- */
-function zh(key: string): string {
-  const value = key
-    .split(".")
-    .reduce<unknown>((node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined), zhHans);
-  if (typeof value !== "string") throw new Error(`zh-Hans bundle has no "${key}" — the page would render the raw key`);
-  return value;
-}
+import { I18nProvider } from "@/src/contexts/I18nContext";
+import { currentMonth, groupByDay, shiftMonth, signed } from "@/src/lib/ledgerJournal";
 
 jest.mock("@soulledger/core/api", () => ({
-  ledgerApi: { statsOverview: jest.fn() },
+  ledgerApi: { journal: jest.fn() },
 }));
 
-// `permissions` 现在是必需的:页面外面包了
-// `<RequirePermission permissions="ledger.read">`。这个套件测的是账本数字怎么
-// 渲染,不是权限 —— 给足权限,让它继续测它自己的东西。门本身由
-// `backend/tests/test_page_gates_match_the_backend.py` 守。
 type MockUser = { id: number; role?: string; permissions?: string[] };
 let mockUser: MockUser | null = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
-const mockT = jest.fn((key: string) => key);
-
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => mockT(key),
-    formatDateTime: (value: string) => `dt(${value})`,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+const mockedJournal = ledgerApi.journal as jest.Mock;
 
-// The bar chart is a next/dynamic import; stub it so the assertions are
-// about the page's own branching, not recharts' internals.
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyBarChart: ({ data }: { data: unknown[] }) => (
-    <div data-testid="bar-chart">{data.length}</div>
-  ),
-}));
+const row = (id: string, day: string, type: "MERIT" | "DEMERIT", weight: number, soul = "沈青梧") => ({
+  id,
+  soul_id: `soul-${soul}`,
+  soul_name: soul,
+  record_type: type,
+  category: type === "MERIT" ? "CHARITY" : "DECEPTION",
+  description: `${id} 事目`,
+  weight,
+  statute_clause: type === "MERIT" ? "救濟門#7:賑濟窮民百錢" : "",
+  recorded_at: `${day}T09:12:00Z`,
+  day,
+});
 
-const mockedStats = ledgerApi.statsOverview as jest.Mock;
+const JOURNAL: LedgerJournal = {
+  month: "2026-06",
+  opening: 18420,
+  received: 3912,
+  disbursed: 2640,
+  closing: 19692,
+  soul_count: 33,
+  record_count: 214,
+  categories: [
+    { category: "CHARITY", merit: 1480, demerit: 0 },
+    { category: "DECEPTION", merit: 0, demerit: 980 },
+  ],
+  page: 1,
+  page_size: 20,
+  count: 214,
+  results: [
+    row("a", "2026-06-16", "MERIT", 40, "周慕云"),
+    row("b", "2026-06-16", "DEMERIT", 120, "Marguerite Vey"),
+    row("c", "2026-06-15", "DEMERIT", 25),
+  ],
+};
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <I18nProvider>{children}</I18nProvider>
+    </QueryClientProvider>
   );
   return render(<LedgerPage />, { wrapper: Wrapper });
 }
 
-const fullStats = {
-  total_souls: 128,
-  state_distribution: [
-    { state: "ALIVE", label: "Alive", count: 40 },
-    { state: "JUDGING", label: "Judging", count: 12 },
-    { state: "DISPOSED", label: "Disposed", count: 30 },
-    { state: "REINCARNATING", label: "Reincarnating", count: 5 },
-    { state: "SETTLED", label: "Settled", count: 8 },
-    { state: "UNKNOWN_STATE", label: "Mystery", count: 1 },
-  ],
-  karma_distribution: [
-    { name: "0-100", count: 3 },
-    { name: "100-200", count: 7 },
-  ],
-  souls_by_realm: [
-    { realm_code: "R1", realm_name: "Diyu", civilization: "CHINESE", count: 20 },
-    { realm_code: "R2", realm_name: "Duat", civilization: "EGYPTIAN", count: 11 },
-  ],
-  recent_activity: [
-    {
-      id: 1,
-      action: "CREATE",
-      description: "Soul added",
-      user: "admin",
-      resource: "Soul",
-      resource_id: "9",
-      timestamp: "2026-01-01T00:00:00Z",
-    },
-    {
-      id: 2,
-      action: "DELETE",
-      description: "",
-      user: "clerk",
-      resource: "Soul",
-      resource_id: "10",
-      timestamp: "2026-01-02T00:00:00Z",
-    },
-  ],
-};
-
 beforeEach(() => {
-  jest.clearAllMocks();
   mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
-  mockT.mockImplementation((key: string) => key);
-  mockedStats.mockResolvedValue({ data: fullStats });
+  mockedJournal.mockReset();
 });
 
-// ── Data path ────────────────────────────────────────────────────────
-
-describe("LedgerPage with data", () => {
-  it("renders the headline totals from the stats payload", async () => {
-    renderPage();
-
-    expect(await screen.findByText("128")).toBeInTheDocument();
-    // ALIVE and JUDGING counts feed the other two overview cards.
-    expect(screen.getAllByText("40").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("12").length).toBeGreaterThan(0);
+describe("pure helpers", () => {
+  it("formats signed figures with a real minus and a bare zero", () => {
+    expect([signed(3912), signed(-2640), signed(0)]).toEqual(["+3,912", "−2,640", "0"]);
   });
 
-  it("renders one row per state, including a state it has no colour for", async () => {
-    renderPage();
-
-    for (const label of ["Alive", "Judging", "Disposed", "Reincarnating", "Settled", "Mystery"]) {
-      expect(await screen.findByText(label)).toBeInTheDocument();
-    }
+  it("steps months across the year boundary in UTC", () => {
+    expect(shiftMonth("2026-01", -1)).toBe("2025-12");
+    expect(shiftMonth("2026-12", 1)).toBe("2027-01");
+    expect(currentMonth(new Date(Date.UTC(2026, 5, 30, 23, 59)))).toBe("2026-06");
   });
 
-  it("prefers the backend label when the i18n key has no translation", async () => {
-    renderPage();
-
-    expect(await screen.findByText("Alive")).toBeInTheDocument();
-    expect(screen.queryByText("souls.states.ALIVE")).not.toBeInTheDocument();
-  });
-
-  it("prefers the translation when one exists for the state key", async () => {
-    mockT.mockImplementation((key: string) => (key === "souls.states.ALIVE" ? "存活" : key));
-
-    renderPage();
-
-    expect(await screen.findByText("存活")).toBeInTheDocument();
-    expect(screen.queryByText("Alive")).not.toBeInTheDocument();
-  });
-
-  it("feeds the karma distribution into the bar chart", async () => {
-    renderPage();
-
-    expect(await screen.findByTestId("bar-chart")).toHaveTextContent("2");
-  });
-
-  it("renders the realm section with its civilization annotations", async () => {
-    renderPage();
-
-    expect(await screen.findByText("Diyu")).toBeInTheDocument();
-    // Raw enum in `title`, translated copy in the text node (BRIEF §4.6).
-    expect(screen.getByTitle("EGYPTIAN")).toBeInTheDocument();
-  });
-
-  it("renders recent activity, falling back to the action label when the description is blank", async () => {
-    renderPage();
-
-    expect(await screen.findByText("Soul added")).toBeInTheDocument();
-    // The DELETE row has an empty description, so it shows the action label
-    // in the body as well as in the badge — hence two matches. Since BRIEF
-    // §4.6 both go through <DomainEnum>, which carries the raw member in
-    // `title` and translated copy in the text node (`t` is mocked to echo its
-    // key here, so the visible copy is the convention's unrecognized string).
-    expect(screen.getAllByTitle("DELETE")).toHaveLength(2);
-    expect(screen.queryByText("DELETE")).not.toBeInTheDocument();
-  });
-
-  it("makes the audit row's record id copyable rather than dead text", async () => {
-    // This page is the one registered IDENTIFIER_POLICY_EXCEPTIONS entry: an
-    // audit line's content IS the record it touched, so the id stays in a list
-    // — but the clause it does NOT get to break is copyability, and it used to
-    // render as `#9` inside a plain span.
-    const writeText = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-
-    renderPage();
-
-    const idButton = await screen.findByTitle("9");
-    expect(idButton.tagName).toBe("BUTTON");
-    expect(idButton).toHaveTextContent("#9");
-
-    fireEvent.click(idButton);
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith("9"));
-  });
-
-  it("formats activity timestamps through the i18n formatter", async () => {
-    renderPage();
-
-    expect(await screen.findByText("dt(2026-01-01T00:00:00Z)")).toBeInTheDocument();
+  it("groups consecutive rows by the server's day, keeping arrival order", () => {
+    expect(groupByDay(JOURNAL.results).map((g) => [g.day, g.rows.length])).toEqual([
+      ["2026-06-16", 2],
+      ["2026-06-15", 1],
+    ]);
   });
 });
 
-// ── Empty / partial payloads ─────────────────────────────────────────
-
-describe("LedgerPage with a sparse payload", () => {
-  it("omits the realm section entirely when the list is empty", async () => {
-    mockedStats.mockResolvedValue({ data: { ...fullStats, souls_by_realm: [] } });
-
+describe("the four pillars", () => {
+  it("prints 旧管 + 新收 − 开除 = 实在, the double line only under 实在", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
-
-    await screen.findByText("128");
-    expect(screen.queryByText("ledger.souls_by_realm")).not.toBeInTheDocument();
+    const pillars = await screen.findByTestId("four-pillars");
+    const cells = Array.from(pillars.querySelectorAll("[data-pillar]"));
+    expect(cells.map((c) => c.getAttribute("data-pillar"))).toEqual(["opening", "received", "disbursed", "closing"]);
+    expect(cells.map((c) => c.querySelector("dd")?.textContent)).toEqual(["+18,420", "+3,912", "−2,640", "+19,692"]);
+    expect(cells[3].className).toContain("border-double");
+    expect(cells.slice(0, 3).some((c) => c.className.includes("border-double"))).toBe(false);
+    expect(screen.getByTestId("ledger-formula")).toHaveTextContent("旧管 + 新收 − 开除 = 实在 · 33 户 · 本期 214 条");
   });
 
-  it("omits the activity section entirely when the list is empty", async () => {
-    mockedStats.mockResolvedValue({ data: { ...fullStats, recent_activity: [] } });
-
+  it("asks for the current month first and the chosen month after stepping back", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
-
-    await screen.findByText("128");
-    expect(screen.queryByText("ledger.recent_activity")).not.toBeInTheDocument();
-  });
-
-  it("shows zero rather than blank when a count is missing from the payload", async () => {
-    mockedStats.mockResolvedValue({ data: { total_souls: 5, state_distribution: [] } });
-
-    renderPage();
-
-    await screen.findByText("5");
-    // active + judging overview figures both fall back to 0.
-    //
-    // Selected by `data-overview-figure` rather than by the figure's size
-    // class, which is what this line used to do (`text-3xl`). That coupling
-    // broke on the eight-step type migration for a reason worth keeping out of
-    // the next selector: `text-3xl` is not merely a different size, it is one
-    // of the classes `design-system/type-scale` now forbids, so the assertion
-    // was pinned to a class the design system had committed to deleting. Naming
-    // `text-lg` here would buy the same debt at the next scale change. The hook
-    // says "this element is an overview figure", which is the thing the
-    // assertion is actually about and is stable across restyling.
-    const overviewZeros = screen
-      .getAllByText("0")
-      .filter((el) => el.hasAttribute("data-overview-figure"));
-    expect(overviewZeros).toHaveLength(2);
-  });
-
-  it("caps the activity list at ten rows", async () => {
-    const many = Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      action: "UPDATE",
-      description: `activity-${i}`,
-      user: "u",
-      resource: "Soul",
-      resource_id: String(i),
-      timestamp: "2026-01-01T00:00:00Z",
-    }));
-    mockedStats.mockResolvedValue({ data: { ...fullStats, recent_activity: many } });
-
-    renderPage();
-
-    expect(await screen.findByText("activity-0")).toBeInTheDocument();
-    expect(screen.getByText("activity-9")).toBeInTheDocument();
-    expect(screen.queryByText("activity-10")).not.toBeInTheDocument();
+    await screen.findByTestId("four-pillars");
+    expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), page: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "上一月" }));
+    await waitFor(() =>
+      expect(mockedJournal).toHaveBeenLastCalledWith({ month: shiftMonth(currentMonth(), -1), page: 1 })
+    );
   });
 });
 
-// ── Failure and gating ───────────────────────────────────────────────
-
-describe("LedgerPage failure handling", () => {
-  it("shows an error message in each section instead of empty data", async () => {
-    mockedStats.mockRejectedValue(new Error("boom"));
-
+describe("the journal", () => {
+  it("groups by day with a single-line subtotal, and closes the page with a double-line total", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
-
-    await waitFor(() => expect(screen.getAllByText("common.error").length).toBeGreaterThan(0));
-    expect(screen.queryByTestId("bar-chart")).not.toBeInTheDocument();
+    const journal = await screen.findByTestId("ledger-journal");
+    const subtotals = within(journal).getAllByTestId("day-subtotal");
+    expect(subtotals.map((s) => s.textContent)).toEqual(["小计 +40 / −120", "小计 0 / −25"]);
+    const total = within(journal).getByTestId("page-total");
+    expect(total).toHaveTextContent("本页合计 · 3 条");
+    expect(total).toHaveTextContent("+40");
+    expect(total).toHaveTextContent("−145");
+    expect(total.className).toContain("border-double");
   });
 
-  it("still renders the page header when the stats call fails", async () => {
-    mockedStats.mockRejectedValue(new Error("boom"));
-
+  it("makes the whole row one link to that soul's 乙 · 功过", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
-
-    expect(await screen.findByText("ledger.title")).toBeInTheDocument();
+    const link = await screen.findByRole("link", { name: "周慕云" });
+    expect(link).toHaveAttribute("href", "/souls/soul-周慕云#soul-karma");
+    expect(link.className).toContain("after:inset-0");
+    // 一行只有一个链接 —— 不再有行尾「查看 →」。
+    const rowEl = link.closest("[data-journal-row]")!;
+    expect(within(rowEl as HTMLElement).getAllByRole("link")).toHaveLength(1);
   });
 
-  it("does not call the stats endpoint at all when there is no user", async () => {
-    /* 「没有用户就不发请求」这件事仍然成立,只是现在由页级的
-       `<RequirePermission permissions="ledger.read">` 完成 —— `usePermissions`
-       在没有 user 时对任何码名返回 false,门直接渲染 PermissionDenied。
-       所以断言从「页头还在」改成「页头不在、且没发请求」:页头还在才是旧行为,
-       那时页面渲染了自己、只是查询被 `enabled` 关掉了。 */
+  it("shows the basis when recorded and a typed miss (not blank) when not", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    const { container } = renderPage();
+    await screen.findByTestId("ledger-journal");
+    const rows = container.querySelectorAll("[data-journal-row]");
+    expect(rows[0]).toHaveTextContent("救濟門#7:賑濟窮民百錢");
+    expect(rows[1].querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+  });
+
+  it("feeds each category's merit and demerit into the legend ledger as separate rows", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    const { container } = renderPage();
+    await screen.findByTestId("ledger-journal");
+    const legend = container.querySelector("[data-legend-ledger]")!;
+    expect(Array.from(legend.querySelectorAll("[data-legend-row]"), (r) => r.getAttribute("data-legend-row"))).toEqual([
+      "CHARITY:M",
+      "DECEPTION:D",
+    ]);
+    expect(legend).toHaveTextContent("布施 · 收");
+    expect(legend).toHaveTextContent("1480");
+  });
+
+  it("offers the next page when there is one", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    renderPage();
+    await screen.findByTestId("ledger-journal");
+    expect(screen.getByText("1–20 / 214")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
+    await waitFor(() => expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), page: 2 }));
+  });
+});
+
+describe("加载中 / 空 / 失败 是三屏", () => {
+  it("gives a skeleton on first load, not an empty ledger", async () => {
+    mockedJournal.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    expect(await screen.findByTestId("ledger-skeleton")).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByTestId("four-pillars")).toBeNull();
+  });
+
+  it("says an empty month is empty, with the opening carried to the closing", async () => {
+    mockedJournal.mockResolvedValue({
+      data: { ...JOURNAL, received: 0, disbursed: 0, closing: 18420, record_count: 0, soul_count: 0, count: 0, results: [], categories: [] },
+    });
+    renderPage();
+    expect(await screen.findByText("本期没有流水")).toBeInTheDocument();
+    expect(screen.getByText("2026-06 尚无功过登记;旧管 = 实在 = +18,420。")).toBeInTheDocument();
+    expect(screen.queryByTestId("ledger-journal")).toBeNull();
+  });
+
+  it("says a failure is a failure, with a retry, and draws no pillars", async () => {
+    mockedJournal.mockRejectedValue(new Error("500"));
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("功过总账加载失败");
+    expect(screen.queryByTestId("four-pillars")).toBeNull();
+  });
+
+  it("does not call the endpoint when there is no user", () => {
     mockUser = null;
-
     renderPage();
-
-    await waitFor(() => expect(mockedStats).not.toHaveBeenCalled());
-    expect(screen.queryByText("ledger.title")).not.toBeInTheDocument();
-  });
-
-  /**
-   * 三态,不是两态。
-   *
-   * `state_distribution` 那一节原本只有 error 和「渲染列表」两条分支。首次加载
-   * 时 `ledgerStats` 是 undefined,`?.map` 什么都不产出,于是渲染出一个**空的
-   * `<ul>`** —— 和「账本里确实一个灵魂都没有」逐字节相同。行内的骨架屏只对
-   * 已经存在的行生效,所以它覆盖的是后台重取,永远不是首次加载。
-   */
-  describe("加载中 / 空 / 失败 是三屏,不是两屏", () => {
-    it("首次加载时给骨架,不给一个空列表", async () => {
-      // 永不 resolve:这就是「还在路上」。
-      mockedStats.mockReturnValue(new Promise(() => {}));
-
-      const { container } = renderPage();
-
-      await waitFor(() =>
-        expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0)
-      );
-      // 缺席断言,而且是这一整条的要害:空的 <ul> 正是缺陷的长相。
-      expect(container.querySelector("ul")).toBeNull();
-      expect(screen.queryByText(zh("ledger.no_state_distribution"))).not.toBeInTheDocument();
-    });
-
-    it("真的一条都没有时说出来,而不是留一片空白 —— 说的是译文,不是 key", async () => {
-      // 这两条此前断的是原始 key `ledger.no_state_distribution`,而那个 key 三份
-      // 语言包里都没有 —— 屏幕上真的就是那串 key,测试却把它钉成了预期(DF-01)。
-      // 这里让 `t` 走真实的 zh-Hans 包,断句子本身;`zh()` 在 key 缺席时直接抛。
-      mockT.mockImplementation((key: string) => {
-        try {
-          return zh(key);
-        } catch {
-          return key;
-        }
-      });
-      mockedStats.mockResolvedValue({
-        data: { ...fullStats, state_distribution: [] },
-      });
-
-      renderPage();
-
-      expect(await screen.findByText(zh("ledger.no_state_distribution"))).toBeInTheDocument();
-      expect(screen.queryByText("ledger.no_state_distribution")).not.toBeInTheDocument();
-    });
-
-    it("首次加载失败时,两个原本被 length>0 门住的分区也报错", async () => {
-      // 旧条件是「有行才渲染这一节」,所以节内的 `error ? <SectionError/>`
-      // 只能在**后台重取**失败时触发:首次失败 ledgerStats 是 undefined,
-      // 整节被跳过,那条错误分支根本够不着 —— 一条永远不会触发的检查。
-      mockedStats.mockRejectedValue(new Error("500"));
-
-      renderPage();
-
-      await waitFor(() =>
-        expect(screen.getAllByText("common.error").length).toBeGreaterThanOrEqual(4)
-      );
-      expect(screen.getByText("ledger.souls_by_realm")).toBeInTheDocument();
-      expect(screen.getByText("ledger.recent_activity")).toBeInTheDocument();
-    });
+    expect(mockedJournal).not.toHaveBeenCalled();
   });
 });

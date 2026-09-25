@@ -11,6 +11,8 @@ export const soulKeys = {
   list: (params?: Record<string, string | number | undefined>) => [...soulKeys.all, "list", params] as const,
   detail: (id: string) => [...soulKeys.all, "detail", id] as const,
   ledger: (id: string) => [...soulKeys.all, "ledger", id] as const,
+  /** 行程. Under `souls` so a state change that invalidates the soul refreshes its route. */
+  path: (id: string) => [...soulKeys.all, "path", id] as const,
 };
 
 /**

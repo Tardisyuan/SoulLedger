@@ -391,10 +391,12 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  * 2026-09-24 规范 v1 把 15px 并入 13px(七档里没有 15):上面的类名已随之换成新档名,
  * 两种约定从「13 medium 对 15 semibold」变成只剩字重之差;JudgmentGroundsPanel
  * 那一处因此正好落在列表行标题的角色上,条目已删。
+ *
+ * 2026-09-25 `/realms` 的卡片网格换成了树表(第三类 B),卡内那个 `<h3>` 随卡片
+ * 一起删了,条目已删。上面描述两种约定的段落照原样留作记录。
  */
 const H3_ROLE_EXEMPTIONS = new Map<string, string>([
   ["app/actors/page.tsx", "text-sm font-semibold"],
-  ["app/realms/page.tsx", "text-sm font-semibold"],
 ]);
 
 /**
@@ -689,7 +691,9 @@ describe("PageShell density", () => {
     // 「没有违例」在报告里长得一模一样,而 `<h2>` 那一轮就是这么漏掉 13 个的。
     expect(found.length).toBeGreaterThanOrEqual(15);
     expect(found.filter((h) => h.file.startsWith("src/")).length).toBeGreaterThanOrEqual(8);
-    expect(found.filter((h) => h.file.startsWith("app/")).length).toBeGreaterThanOrEqual(3);
+    // `app/` 的下限 2026-09-25 由 3 降到 2:/realms 的每界域一张卡片(卡内一个 <h3>)
+    // 换成了树表 —— 那个 <h3> 连同卡片一起没了,不是被改成了别的标签。
+    expect(found.filter((h) => h.file.startsWith("app/")).length).toBeGreaterThanOrEqual(2);
 
     // 三个角色**各自**都要真的在树上被看到。少了任何一档,这条守卫对那一档就是
     // 从未运行过的,而它照样绿 —— 和下面 density 那条的 `observed` 是同一个理由。

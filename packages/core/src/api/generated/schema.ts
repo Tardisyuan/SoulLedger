@@ -2049,6 +2049,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/journal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=]
+         *
+         *     功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
+         *     只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
+         *     不给 `month` 时取当前月。
+         */
+        get: operations["v1_ledger_journal_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger/stats/export/": {
         parameters: {
             query?: never;
@@ -3560,6 +3583,30 @@ export interface paths {
          *     Use '?localized=true' query param to get display_name resolved by Accept-Language.
          */
         get: operations["v1_realms_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/realms/occupancy/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 在押:每个界域里此刻有多少灵魂(官员端界域页的树表)。
+         *
+         *     数的是**未离开**的行程站(`SoulPathEntry.left_at` 为空)—— 一个灵魂同时
+         *     只有一条(`soulpath_one_open_entry_per_soul` 约束),所以这是人数,不是人次。
+         *     按行程站自己的租户划界,与 `GET /souls/{id}/path/` 同一口径;没有一站的
+         *     界域不出现在结果里(前端读作 0,那是事实,不是缺值)。
+         */
+        get: operations["v1_realms_occupancy_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7806,6 +7853,57 @@ export interface components {
             inheritance_demerit_rate: number;
         };
         /**
+         * @description 200 body of `LedgerJournalView` — see apps/ledger/journal.py.
+         *
+         *     `opening + received - disbursed == closing`, all in raw record weight.
+         */
+        LedgerJournal: {
+            month: string;
+            opening: number;
+            received: number;
+            disbursed: number;
+            closing: number;
+            soul_count: number;
+            record_count: number;
+            categories: components["schemas"]["LedgerJournalCategory"][];
+            page: number;
+            page_size: number;
+            count: number;
+            results: components["schemas"]["LedgerJournalRow"][];
+        };
+        /** @description One category's merit and demerit weight inside the month. */
+        LedgerJournalCategory: {
+            category: string;
+            merit: number;
+            demerit: number;
+        };
+        /** @description 400 body of `LedgerJournalView`: which parameter, and why. */
+        LedgerJournalError: {
+            error: string;
+            field: string;
+            message: string;
+        };
+        /**
+         * @description One MERIT / DEMERIT record in the month. `day` is the UTC date the
+         *     month boundary was cut on — group by it, not by the browser's date.
+         */
+        LedgerJournalRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            soul_id: string;
+            soul_name: string;
+            record_type: string;
+            category: string;
+            description: string;
+            weight: number;
+            statute_clause: string;
+            /** Format: date-time */
+            recorded_at: string;
+            /** Format: date */
+            day: string;
+        };
+        /**
          * @description 200 body of `LedgerOverviewStatsView`.
          *
          *     `karma_distribution_total` is emitted rather than assumed: it always
@@ -10270,6 +10368,15 @@ export interface components {
             tier?: number;
             is_eternal?: boolean;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+        };
+        /**
+         * @description One row of `GET /realms/occupancy/`: souls whose open path entry
+         *     (`left_at` null) is in this realm — 在押.
+         */
+        RealmOccupancy: {
+            /** Format: uuid */
+            realm_id: string;
+            count: number;
         };
         /**
          * @description * `HELL` - Hell / Punishment
@@ -15331,6 +15438,40 @@ export interface operations {
             };
         };
     };
+    v1_ledger_journal_retrieve: {
+        parameters: {
+            query?: {
+                category?: string;
+                civilization?: string;
+                /** @description YYYY-MM; defaults to the current month */
+                month?: string;
+                /** @description 1-based page of the month's rows (20 per page) */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerJournal"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerJournalError"];
+                };
+            };
+        };
+    };
     v1_ledger_stats_export_retrieve: {
         parameters: {
             query?: never;
@@ -18340,6 +18481,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Realm"];
+                };
+            };
+        };
+    };
+    v1_realms_occupancy_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `CHINESE` - Chinese Diyu
+                 *     * `EUROPEAN` - European Heaven/Hell
+                 *     * `EGYPTIAN` - Egyptian Duat
+                 *     * `GREEK` - Greek Underworld
+                 */
+                civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                is_eternal?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /**
+                 * @description * `HELL` - Hell / Punishment
+                 *     * `PURGATORY` - Purgatory / Intermediate
+                 *     * `BLISS` - Heaven / Bliss
+                 *     * `NEUTRAL` - Neutral / Between
+                 */
+                realm_type?: "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
+                /** @description A search term. */
+                search?: string;
+                tier_max?: number;
+                tier_min?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealmOccupancy"][];
                 };
             };
         };

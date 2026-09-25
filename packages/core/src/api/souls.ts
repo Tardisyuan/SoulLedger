@@ -208,6 +208,21 @@ export function soulBatchRecycleErrorOf(error: unknown): SoulBatchRecycleError |
     : null;
 }
 
+/**
+ * One stop of `GET /souls/{id}/path/` (SoulPathEntrySerializer). `left_at`
+ * null is where the soul is now — at most one per soul
+ * (`soulpath_one_open_entry_per_soul`). `realm_id` null: the realm row was
+ * deleted after the stop was written.
+ */
+export interface SoulPathEntry {
+  id: string;
+  sequence: number;
+  realm_id: string | null;
+  realm_code: string | null;
+  entered_at: string;
+  left_at: string | null;
+}
+
 export const soulsApi = {
   list: (params?: {
     page?: number;
@@ -238,6 +253,8 @@ export const soulsApi = {
   // Bare array — the action returns `Response(serializer.data)` directly
   // (backend/apps/souls/views.py:164), not a pagination envelope.
   records: (id: string) => api.get<SoulRecordEntry[]>(`/souls/${id}/records/`),
+  // 行程:oldest stop first, bare array (`pagination_class=None`).
+  path: (id: string) => api.get<SoulPathEntry[]>(`/souls/${id}/path/`),
   // Both require soul.update (backend/apps/souls/views.py extra_permissions)
   // and act on the authenticated user only — no body to send.
   acknowledgeDateWarning: (soulId: string, recordId: string) =>
