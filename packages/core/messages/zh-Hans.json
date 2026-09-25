@@ -1191,7 +1191,10 @@
       "no_match": "没有匹配「{{q}}」的律条",
       "clear_search": "清除检索",
       "cited_by_error": "被引用清单加载失败",
-      "cited_by_open": "未结"
+      "cited_by_open": "未结",
+      "insert_desk": "插入审判台",
+      "insert_none": "你手上没有未结的案件",
+      "insert_pick": "选一件你认领的未结案"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",
@@ -1204,7 +1207,10 @@
       "cite_error": "引用未能保存",
       "deferred_note": "已暂缓：{{reason}}",
       "previous": "上一件",
-      "next": "下一件"
+      "next": "下一件",
+      "cite_from_corpus_title": "引用律条",
+      "cite_from_corpus_confirm": "引用{{cite}}到 {{soul}} 的审判？",
+      "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。"
     },
     "claim": {
       "groups": {

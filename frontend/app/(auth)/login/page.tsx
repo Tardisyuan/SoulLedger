@@ -8,6 +8,7 @@ import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import { authApi, type PublicCivilization, type LoginFailedBody, type LoginLockedBody } from "@soulledger/core/api";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { formatSigil } from "@soulledger/core/config/civilizationSigil";
+import { formatCitation } from "@soulledger/core/config/statuteCitation";
 import { loginSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -290,8 +291,12 @@ export default function LoginPage() {
             >
               {statute.text}
             </blockquote>
-            <figcaption className="pl-[18px] font-mono text-xs text-[oklch(var(--color-ink-muted))]">
-              〔{formatSigil(statute.civilization, statute.ref)} · {statute.code}〕
+            {/* 〔文献 · 条号〕—— 与语料页「复制引用」同一个括号(core/config/statuteCitation)。 */}
+            <figcaption data-testid="login-statute-cite" className="pl-[18px] font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+              {formatCitation(
+                t(`judgment.statute_corpus.${statute.corpus}`),
+                formatSigil(statute.civilization, statute.ref) ?? statute.code
+              )}
             </figcaption>
           </figure>
           <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("auth.statute_fixed_note")}</p>

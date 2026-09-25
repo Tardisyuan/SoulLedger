@@ -4,8 +4,7 @@ import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import type { Statute, StatuteCorpus } from "@soulledger/core/api";
 import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
-import { isCivilizationOption } from "@soulledger/core/config/civilizations";
-import { formatSigil, type StatuteRef } from "@soulledger/core/config/civilizationSigil";
+import { citationOf, resolveCitation, statuteSigil } from "@soulledger/core/config/statuteCitation";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -14,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fieldControl } from "@/src/components/ui/Field";
 import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { CorpusCitedBy } from "@/src/components/judgment/CorpusCitedBy";
+import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertIntoDesk";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 
 /**
@@ -57,26 +58,6 @@ const CORPUS_ORDER: StatuteCorpus[] = [
   "REPUBLIC_ER",
 ];
 
-/** The parts of `payload_json` a sigil is built from, each checked for its own type. */
-function sigilRef(statute: Statute): StatuteRef {
-  const payload = statute.payload_json ?? {};
-  return {
-    ordinal: statute.ordinal,
-    division: typeof payload.gate === "string" ? payload.gate : undefined,
-    // `gate_ordinal`, not `ordinal`: see StatuteRef.gateOrdinal.
-    gateOrdinal: typeof payload.gate_ordinal === "number" ? payload.gate_ordinal : undefined,
-    circle: typeof payload.circle === "number" ? payload.circle : undefined,
-    stephanus: typeof payload.stephanus === "string" ? payload.stephanus : undefined,
-  };
-}
-
-/** An unknown civilization is a data condition: no sigil, not a crashed page. */
-function sigilOf(statute: Statute): string | null {
-  return isCivilizationOption(statute.civilization) ? formatSigil(statute.civilization, sigilRef(statute)) : null;
-}
-
-const squash = (s: string) => s.replace(/[\s·・]/g, "").toLowerCase();
-
 interface Article {
   statute: Statute;
   sigil: string | null;
@@ -112,6 +93,8 @@ export default function CorpusPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // 「插入审判台」cites — an act on a case, so it needs what citing needs.
+  const canCite = usePermissions().hasPermission("judgment.execute");
 
   const articles: Article[] = useMemo(() => {
     const rank = (c: string) => {
@@ -122,15 +105,18 @@ export default function CorpusPage() {
       .sort((a, b) => rank(a.corpus) - rank(b.corpus) || a.corpus.localeCompare(b.corpus) || a.ordinal - b.ordinal)
       .map((statute) => ({
         statute,
-        sigil: sigilOf(statute),
+        sigil: statuteSigil(statute),
         division: typeof statute.payload_json?.gate === "string" ? (statute.payload_json.gate as string) : null,
       }));
   }, [data]);
 
+  const corpusName = (c: string) => t(`judgment.statute_corpus.${c}`);
   const trimmed = query.trim();
-  const jump = trimmed
-    ? articles.find((a) => (a.sigil && squash(a.sigil) === squash(trimmed)) || squash(a.statute.code) === squash(trimmed))
-    : undefined;
+  // The shared resolver (core/config/statuteCitation): a bare sigil, a code, or a
+  // pasted 〔文献 · 条号〕 — the same bracket the rail copies — all land on the article.
+  // Contents order, so a bare sigil two rulebooks share lands where it always did.
+  const jumpTo = trimmed ? resolveCitation(articles.map((a) => a.statute), trimmed, corpusName) : undefined;
+  const jump = jumpTo ? articles.find((a) => a.statute.id === jumpTo.id) : undefined;
   const hits = useMemo(() => {
     if (!trimmed || jump) return articles;
     const q = trimmed.toLowerCase();
@@ -151,10 +137,7 @@ export default function CorpusPage() {
     if (jump) setQuery("");
   };
 
-  const corpusName = (c: string) => t(`judgment.statute_corpus.${c}`);
-  const citation = selected
-    ? `〔${corpusName(selected.statute.corpus)} · ${selected.sigil ?? selected.statute.code}〕`
-    : "";
+  const citation = selected ? citationOf(selected.statute, corpusName) : "";
 
   const searchBar = (
     <div className="flex flex-wrap items-center gap-3 w-full">
@@ -246,6 +229,11 @@ export default function CorpusPage() {
             >
               {copied ? t("judgment.corpus.copied") : t("judgment.corpus.copy_cite")}
             </Button>
+            {canCite && (
+              <div className="pt-2">
+                <CorpusInsertIntoDesk key={selected.statute.id} statuteId={selected.statute.id} />
+              </div>
+            )}
 
             <RailLabel className="pt-6">{t("judgment.corpus.cited_by")}</RailLabel>
             <p data-testid="corpus-cited-by" className="text-sm py-2">
