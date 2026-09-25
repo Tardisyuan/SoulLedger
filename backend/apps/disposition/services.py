@@ -119,9 +119,13 @@ class DispositionService:
     _AUTO = object()
 
     @classmethod
-    def route_realm(cls, soul: Soul, verdict: str, judgment_method: str = JudgmentMethod.STANDARD):
-        """The realm automatic routing sends this soul to for this verdict, or None."""
-        realm_code = cls._route_to_realm(soul, verdict, judgment_method)
+    def route_realm(cls, soul: Soul, verdict: str, judgment_method: str = JudgmentMethod.STANDARD,
+                    judgment: Judgment | None = None):
+        """The realm automatic routing sends this soul to for this verdict, or None.
+
+        With `judgment`, the ledger is read without that case's non-admitted
+        evidence (see `_route_to_realm`)."""
+        realm_code = cls._route_to_realm(soul, verdict, judgment_method, judgment=judgment)
         return Realm.objects.filter(realm_code=realm_code).first()
 
     @classmethod
@@ -144,7 +148,7 @@ class DispositionService:
         civilization = soul.civilization
 
         if realm is cls._AUTO:
-            realm = cls.route_realm(soul, verdict, judgment.judgment_method)
+            realm = cls.route_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
         if is_eternal is None:
             is_eternal = realm.is_eternal if realm else False
 
@@ -193,13 +197,30 @@ class DispositionService:
         soul: Soul,
         verdict: str,
         judgment_method: str = JudgmentMethod.STANDARD,
+        judgment: Judgment | None = None,
     ) -> str:
         """
         Route a soul to the correct realm based on civilization, verdict,
         karma balance, and judgment method.
+
+        ON THE ADMITTED LEDGER (产品负责人 2026-09-25). Given the `judgment`
+        being concluded, records that case ruled not admitted (采信) are left out
+        of every figure a router reads: the balance, the 不可折 demerit, European
+        culpa and the circles its deeds cite. The desk's 「采信后余额」 and the
+        destination picker's default are the same reading, so what the officer
+        sees is what the soul is routed on. Nothing excluded → the full ledger,
+        exactly as before (`LedgerService.get_admitted_routing_inputs` answers
+        None). The Greek router reads no ledger figure, so admission cannot move it.
         """
+        from apps.judgment.services import EvidenceAdmissionService
+
         civilization = soul.civilization
-        karma = soul.karmic_balance
+        admitted = None
+        if judgment is not None:
+            admitted = LedgerService.get_admitted_routing_inputs(
+                soul, judgment.cycle, EvidenceAdmissionService.not_admitted_ids(judgment)
+            )
+        karma = admitted["karma"] if admitted else soul.karmic_balance
 
         if civilization == Civilization.CHINESE:
             # 「功過有不可折者」 reaches the router here, and only here.
@@ -216,17 +237,20 @@ class DispositionService:
             # whole record set. A PASSED soul goes to heaven regardless and a
             # PURGATORY/RETRY soul waits regardless; neither should pay for a
             # ledger read to be told so.
-            unoffset_demerit = (
-                LedgerService.get_unoffset_demerit(soul)
-                if verdict == Verdict.FAILED
-                else None
-            )
+            if verdict != Verdict.FAILED:
+                unoffset_demerit = None
+            elif admitted:
+                unoffset_demerit = admitted["unoffset_demerit"]
+            else:
+                unoffset_demerit = LedgerService.get_unoffset_demerit(soul)
             return cls._route_chinese(soul, verdict, karma, unoffset_demerit)
         elif civilization == Civilization.EUROPEAN:
             # `karma` is deliberately not passed. European culpa is the demerit
             # total alone (apps/ledger/readings.py::_european_reading), so the
             # net balance is not merely unused here — handing it over is what
             # let a hundred alms buy a killing down to circle 1.
+            if admitted:
+                return cls._route_european(soul, verdict, admitted["demerit"], excluded=admitted["excluded"])
             return cls._route_european(soul, verdict, soul.demerit_score)
         elif civilization == Civilization.EGYPTIAN:
             return cls._route_egyptian(soul, verdict, judgment_method, karma)
@@ -341,7 +365,7 @@ class DispositionService:
         return cls.CHINESE_PURGATORY
 
     @classmethod
-    def _route_european(cls, soul: Soul, verdict: str, culpa: int) -> str:
+    def _route_european(cls, soul: Soul, verdict: str, culpa: int, excluded=()) -> str:
         """
         Route European soul based on verdict and culpa (Dante's Inferno circles).
 
@@ -453,7 +477,7 @@ class DispositionService:
             # instead would be the mapping the EU-INF corpus exists to avoid —
             # that vocabulary is Chinese, mapped onto 功過格 gates, with no
             # member for five of the nine circles.
-            deepest = cls._deepest_cited_circle(soul)
+            deepest = cls._deepest_cited_circle(soul, excluded)
             if deepest is not None:
                 return cls.EU_HELL_CIRCLES[deepest]
 
@@ -468,8 +492,11 @@ class DispositionService:
         return cls.EU_PURGATORY
 
     @classmethod
-    def _deepest_cited_circle(cls, soul: Soul) -> int | None:
+    def _deepest_cited_circle(cls, soul: Soul, excluded=()) -> int | None:
         """The lowest circle any of this soul's DEMERIT deeds cites, or None.
+
+        `excluded`: record ids the case being concluded did not admit — a deed
+        not admitted as evidence does not sort the soul either.
 
         Reads the circle off the cited Statute's payload rather than parsing it
         out of the code. `EU-INF-C8-B2` looks like it says 8, and it does — but
@@ -503,9 +530,8 @@ class DispositionService:
 
         codes = [
             code
-            for code in soul.current_life_records().filter(record_type="DEMERIT").values_list(
-                "inferno_article", flat=True
-            )
+            for code in soul.current_life_records().filter(record_type="DEMERIT")
+            .exclude(pk__in=list(excluded)).values_list("inferno_article", flat=True)
             if code
         ]
         if not codes:
@@ -713,7 +739,6 @@ class DispositionService:
         refusal cannot leave the flag behind.
         """
         from django.db import transaction
-        from django.utils import timezone
 
         from apps.souls.models import SoulState
 
@@ -774,22 +799,47 @@ class DispositionService:
                 # instead of recording an execution that did not happen.
                 return False
 
-            disposition.is_executed = True
-            disposition.executed_at = timezone.now()
-            disposition.save()
+            DispositionService._mark_executed(disposition)
             DispositionService._leave_served_realm(disposition, soul)
         return True
 
     @staticmethod
-    def _leave_served_realm(disposition, soul):
+    def _mark_executed(disposition):
+        """执行的那一笔写入,三条执行分支共用:`is_executed` / `executed_at`,以及起算日。
+
+        起算日没记的,记成执行那天(产品负责人 2026-09-25 决定:执行即开始服刑)。已经记了的
+        —— 判官录入的史实起算日,例如公元前 399 年 —— 不覆盖。自动生成的处置
+        (`create_from_judgment`)建出来时没有起算日,也是在这里、执行时记上。
+        """
+        from django.utils import timezone
+
+        now = timezone.now()
+        disposition.is_executed = True
+        disposition.executed_at = now
+        if disposition.term_start_year is None:
+            today = timezone.localdate(now)
+            disposition.term_start_year = today.year
+            disposition.term_start_month = today.month
+            disposition.term_start_day = today.day
+        disposition.save()
+
+    @staticmethod
+    def _leave_served_realm(disposition, soul, node=None):
         """行程拓扑:刑满(执行)即离开服刑的界域;永久刑期不离开。
 
         只关「就是这个界域」的那一站 —— 灵魂此刻若已不在那里(例如又被调走),
         什么都不写。三条执行分支都调它,与 `is_executed` 同一事务。
+
+        刑满暂留(受刑计划节点 WAITING)也不离开(产品负责人 2026-09-25):灵魂被未结案
+        审判留在那一站,人还在那里。放行时再关 —— 暂居地由 `end_residence` 关,原属地由
+        `SentencePlanService._step` 在 WAITING → COMPLETED 时调这里关。
         """
         from apps.realms.path import SoulPathService
+        from apps.sentence_plan.models import SentenceNodeStatus
 
         if disposition.is_eternal or disposition.destination_realm_id is None:
+            return
+        if node is not None and node.status == SentenceNodeStatus.WAITING:
             return
         SoulPathService.leave(soul, realm=disposition.destination_realm)
 
@@ -802,7 +852,6 @@ class DispositionService:
         拒绝(返回 False,什么都不写):灵魂不在 DISPOSED,或此刻不在原属地。
         """
         from django.db import transaction
-        from django.utils import timezone
 
         from apps.sentence_plan.services import SentencePlanService
         from apps.souls.models import Soul, SoulState
@@ -815,11 +864,9 @@ class DispositionService:
                 or locked.current_state != SoulState.DISPOSED
             ):
                 return False
-            disposition.is_executed = True
-            disposition.executed_at = timezone.now()
-            disposition.save()
-            DispositionService._leave_served_realm(disposition, locked)
-            SentencePlanService.on_disposition_executed(locked, disposition)
+            DispositionService._mark_executed(disposition)
+            node = SentencePlanService.on_disposition_executed(locked, disposition)
+            DispositionService._leave_served_realm(disposition, locked, node)
             SentencePlanService.advance(locked)
         return True
 
@@ -843,7 +890,6 @@ class DispositionService:
         (`resume_return_after_case_closed` 已删,设计稿 G4/G6),要原属手动 `return-home`。
         """
         from django.db import transaction
-        from django.utils import timezone
 
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
         from apps.judgment.models import open_judgments
@@ -858,11 +904,9 @@ class DispositionService:
                 or locked.current_state != SoulState.DISPOSED
             ):
                 return False
-            disposition.is_executed = True
-            disposition.executed_at = timezone.now()
-            disposition.save()
-            DispositionService._leave_served_realm(disposition, locked)
+            DispositionService._mark_executed(disposition)
             node = SentencePlanService.on_disposition_executed(locked, disposition)
+            DispositionService._leave_served_realm(disposition, locked, node)
             if node is not None:
                 if node.status == "WAITING":
                     open_ids = list(open_judgments(locked).values_list("pk", flat=True))

@@ -9,8 +9,9 @@ What is held here, and why each is a separate test:
 4. THE ADMITTED BALANCE IS THE LEDGER'S OWN ARITHMETIC minus the excluded
    records — equal to `get_ledger_summary`'s balance when nothing is excluded —
    and exists only where the reading is a BALANCE.
-5. CONCLUDE DOES NOT READ THE ADMITTED BALANCE. Routing stays on the full
-   ledger; an explicit decision, pinned so changing it has to be deliberate.
+5. CONCLUDE ROUTES ON THE ADMITTED LEDGER (decided 2026-09-25, reversing the
+   earlier "routing stays on the full ledger"), per civilization, and the
+   destination picker's default agrees with it.
 6. A STALE DRAFT VERSION IS A 409 carrying what beat it; a replay is a no-op.
 7. TENANT ISOLATION AND PERMISSIONS, tested with JUDGE users — ADMIN bypasses
    tenant scoping and would pass against an unscoped implementation.
@@ -347,27 +348,144 @@ class TestAdmittedBalance:
 
 
 # ---------------------------------------------------------------------------
-# 5. Conclude routes on the full ledger, not the admitted one
+# 5. Conclude routes on the ADMITTED ledger (产品负责人 2026-09-25)
 # ---------------------------------------------------------------------------
+
+MILDEST_COURT = DispositionService.CHINESE_HELL_TIERS[DispositionService.CHINESE_HELL_MIN_TIER]
+DEEPEST_COURT = DispositionService.CHINESE_HELL_TIERS[DispositionService.CHINESE_HELL_MAX_TIER]
+
+
+def _route(soul, verdict, judgment, method="STANDARD"):
+    soul.refresh_from_db()
+    LedgerService._invalidate_cache(soul)
+    return DispositionService._route_to_realm(soul, verdict, method, judgment=judgment)
 
 
 @pytest.mark.django_db
-def test_conclude_routing_ignores_admission(cn_tenant):
-    """DECIDED, and pinned: `DispositionService._route_to_realm` reads
-    `soul.karmic_balance` / `get_unoffset_demerit` / `demerit_score` — the full
-    ledger. Excluding the only demerit from evidence does not change where a
-    FAILED soul is sent. If that should change, it changes here on purpose."""
+class TestConcludeRoutesOnTheAdmittedLedger:
+    """Per civilization: one non-admitted item changes where the soul is sent —
+    except the Greek router, which reads no ledger figure at all."""
+
+    def test_chinese_a_non_admitted_killing_no_longer_sets_the_court(self, cn_tenant):
+        soul = _soul(cn_tenant)
+        demerit = _record(soul, "DEMERIT", 95, "杀人")
+        judgment = _judgment(soul)
+        assert _route(soul, Verdict.FAILED, judgment) == DEEPEST_COURT
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        assert _route(soul, Verdict.FAILED, judgment) == MILDEST_COURT
+        # Only this case's ruling counts: without the judgment the full ledger answers.
+        assert DispositionService._route_to_realm(soul, Verdict.FAILED) == DEEPEST_COURT
+
+    def test_european_a_non_admitted_deed_lowers_culpa(self):
+        soul = _soul(_tenant("EU_HEAVEN_HELL"))
+        _record(soul, "DEMERIT", 20)
+        heavy = _record(soul, "DEMERIT", 40)
+        judgment = _judgment(soul)
+        # culpa 60 → circle 60 // 15 + 1 = 5; without the 40, culpa 20 → circle 2.
+        assert _route(soul, Verdict.FAILED, judgment) == DispositionService.EU_HELL_CIRCLES[5]
+        EvidenceAdmissionService.rule(judgment, heavy.pk, admitted=False, reason="不采信")
+        assert _route(soul, Verdict.FAILED, judgment) == DispositionService.EU_HELL_CIRCLES[2]
+
+    def test_egyptian_a_non_admitted_merit_keeps_the_soul_in_the_duat(self):
+        soul = _soul(_tenant("EG_DUAT"))
+        merit = _record(soul, "MERIT", 60)
+        judgment = _judgment(soul)
+        # STANDARD, inconclusive verdict: karma ≥ 50 admits to Aaru.
+        assert _route(soul, Verdict.PURGATORY, judgment) == DispositionService.EG_AARU
+        EvidenceAdmissionService.rule(judgment, merit.pk, admitted=False, reason="伪证")
+        assert _route(soul, Verdict.PURGATORY, judgment) == DispositionService.EG_DUAT_ENTRY
+
+    def test_greek_routing_reads_no_ledger_figure_so_admission_cannot_move_it(self):
+        soul = _soul(_tenant("GR_HADES"))
+        demerit = _record(soul, "DEMERIT", 95)
+        judgment = _judgment(soul)
+        before = {v: _route(soul, v, judgment) for v in Verdict.values}
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        assert {v: _route(soul, v, judgment) for v in Verdict.values} == before
+
+    def test_a_ruling_that_admits_everything_is_the_full_ledger(self, cn_tenant):
+        soul = _soul(cn_tenant)
+        demerit = _record(soul, "DEMERIT", 95, "杀人")
+        judgment = _judgment(soul)
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=True)
+        assert LedgerService.get_admitted_routing_inputs(
+            soul, judgment.cycle, EvidenceAdmissionService.not_admitted_ids(judgment)) is None
+        assert _route(soul, Verdict.FAILED, judgment) == DEEPEST_COURT
+
+
+def _cn_realm(code, tenant):
+    from apps.realms.models import Realm
+
+    return Realm.objects.create(
+        realm_code=code, civilization="CHINESE", name_local=code, name_zh=code, realm_type="HELL", tenant=tenant,
+    )
+
+
+@pytest.mark.django_db
+def test_the_picker_default_and_conclude_agree_on_the_admitted_route(judge_client, cn_tenant):
+    """`/destinations/`' default is the realm `conclude` sends the soul to."""
+    mildest = _cn_realm(MILDEST_COURT, cn_tenant)
+    deepest = _cn_realm(DEEPEST_COURT, cn_tenant)
     soul = _soul(cn_tenant)
     demerit = _record(soul, "DEMERIT", 95, "杀人")
-    soul.refresh_from_db()
     judgment = _judgment(soul)
-    before = DispositionService._route_to_realm(soul, Verdict.FAILED)
+    url = f"/api/v1/judgment/{judgment.id}/destinations/"
+
+    response = judge_client.get(url, {"candidate_verdict": "FAILED"})
+    assert response.status_code == 200, response.data
+    assert response.data["default_realm_id"] == deepest.pk
+
     EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
-    assert EvidenceAdmissionService.admitted_balance(judgment)["balance"] == 0
     LedgerService._invalidate_cache(soul)
-    assert DispositionService._route_to_realm(soul, Verdict.FAILED) == before
-    # And the mildest court would be the answer if it did read the admitted figure.
-    assert before != DispositionService.CHINESE_HELL_TIERS[DispositionService.CHINESE_HELL_MIN_TIER]
+    response = judge_client.get(url, {"candidate_verdict": "FAILED"})
+    assert response.data["default_realm_id"] == mildest.pk
+
+    response = judge_client.post(
+        f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判"}, format="json",
+    )
+    assert response.status_code == 200, response.data
+    judgment.refresh_from_db()
+    assert judgment.disposition.destination_realm_id == mildest.pk
+
+
+@pytest.mark.django_db
+class TestConcludedBalanceSnapshot:
+    def test_conclude_freezes_the_admitted_balance(self, judge_client, cn_case):
+        judgment, _, demerit = cn_case
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        response = judge_client.post(
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "PASSED", "notes": "判"}, format="json",
+        )
+        assert response.status_code == 200, response.data
+        judgment.refresh_from_db()
+        assert judgment.concluded_balance == 30  # 30 merit, the 20 demerit not admitted
+
+    def test_every_civilization_gets_the_net_even_without_a_balance_reading(self):
+        soul = _soul(_tenant("EU_HEAVEN_HELL"))
+        _record(soul, "MERIT", 30)
+        demerit = _record(soul, "DEMERIT", 20)
+        judgment = _judgment(soul)
+        EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
+        judgment.conclude(Verdict.PASSED, "判")
+        judgment.refresh_from_db()
+        assert judgment.concluded_balance == 30
+        # The desk still shows no balance where the reading is not one.
+        assert EvidenceAdmissionService.admitted_balance(judgment)["balance"] is None
+
+    def test_the_desk_shows_the_snapshot_after_the_ledger_moves(self, judge_client, cn_case):
+        judgment, _, _ = cn_case
+        judge_client.post(
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "PASSED", "notes": "判"}, format="json",
+        )
+        _record(judgment.soul, "MERIT", 50, "结案之后的善行")
+        LedgerService._invalidate_cache(judgment.soul)
+        detail = judge_client.get(f"/api/v1/judgment/{judgment.id}/")
+        assert detail.data["admitted_balance"]["balance"] == 10
+        # A null snapshot (a case concluded before the column) is the live figure.
+        Judgment.all_objects.filter(pk=judgment.pk).update(concluded_balance=None)
+        judgment.refresh_from_db()
+        assert EvidenceAdmissionService.admitted_balance(judgment)["balance"] == 60
 
 
 # ---------------------------------------------------------------------------
@@ -427,14 +545,31 @@ class TestDraft:
         response = judge_client.patch(_draft_url(judgment), {"notes": "无版本"}, format="json")
         assert response.status_code == 400
 
-    def test_a_plain_patch_of_notes_moves_the_draft_version(self, judge_client, cn_case):
+    def test_a_plain_patch_of_notes_on_an_open_case_is_refused(self, judge_client, cn_case):
+        """产品负责人 2026-09-25:open case 的判词只走 draft/。什么都不写。"""
         judgment, _, _ = cn_case
-        response = judge_client.patch(f"/api/v1/judgment/{judgment.id}/", {"notes": "旁路"}, format="json")
+        for method in ("patch", "put"):
+            body = {"notes": "旁路"} if method == "patch" else {
+                "notes": "旁路", "soul": str(judgment.soul_id), "civilization": judgment.civilization,
+                "court": "第一殿",
+            }
+            response = getattr(judge_client, method)(f"/api/v1/judgment/{judgment.id}/", body, format="json")
+            assert response.status_code == 409, (method, response.data)
+            assert response.data["code"] == "use_draft_endpoint"
+        judgment.refresh_from_db()
+        assert judgment.notes == "" and judgment.draft_version == 0
+        # Other fields still go through the plain PATCH.
+        response = judge_client.patch(f"/api/v1/judgment/{judgment.id}/", {"court": "第二殿"}, format="json")
+        assert response.status_code == 200, response.data
+
+    def test_a_plain_patch_of_notes_on_a_concluded_case_is_unchanged(self, judge_client, cn_case):
+        judgment, _, _ = cn_case
+        judge_client.post(f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "PASSED", "notes": "判"},
+                          format="json")
+        response = judge_client.patch(f"/api/v1/judgment/{judgment.id}/", {"notes": "补记"}, format="json")
         assert response.status_code == 200, response.data
         judgment.refresh_from_db()
-        assert judgment.draft_version == 1
-        stale = judge_client.patch(_draft_url(judgment), {"version": 0, "notes": "覆盖"}, format="json")
-        assert stale.status_code == 409
+        assert judgment.notes == "补记" and judgment.draft_version == 1
 
     def test_draft_fields_are_not_writable_through_the_plain_patch(self, judge_client, cn_case):
         judgment, _, _ = cn_case
