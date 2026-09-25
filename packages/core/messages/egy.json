@@ -766,7 +766,31 @@
     "decayed_merit": "Maat Sebekhet",
     "decayed_demerit": "Isfet Sebekhet",
     "raw_balance_sr": "Wedja Tepy {{n}}",
-    "advisory_disclaimer": "Medu Ahet En Hemsu Wa · Maat Isfet Nen Em Unemu; Hemsu Seth Wedja"
+    "advisory_disclaimer": "Medu Ahet En Hemsu Wa · Maat Isfet Nen Em Unemu; Hemsu Seth Wedja",
+    "journal": {
+      "title": "Sesh Nefer Isfet",
+      "subtitle": "Tepy + Shesep − Hab = Hotep · Aha Tepy",
+      "month": "Abed",
+      "month_prev": "Em Tepy Abed",
+      "month_next": "Em Khet Abed",
+      "pillar_opening": "Tepy",
+      "pillar_received": "Shesep · Nefer",
+      "pillar_disbursed": "Hab · Isfet",
+      "pillar_closing": "Hotep",
+      "formula": "Tepy + Shesep − Hab = Hotep · {{souls}} Aba · {{records}} Medu",
+      "col_day": "Hru",
+      "col_soul": "Ba",
+      "col_entry": "Medu",
+      "col_basis": "Tep Medu",
+      "subtotal": "Wetu Hru",
+      "page_total": "Wetu {{n}} Medu",
+      "categories": "Sesh Kheperu",
+      "category": "Kheperu",
+      "empty_title": "Nen Medu",
+      "empty_reason": "Nen Medu {{month}}; Tepy = Hotep = {{opening}}.",
+      "load_failed": "Nen Ini Sesh",
+      "row_hint": "Ba · Nefer Isfet"
+    }
   },
   "judgment": {
     "title": "Sheemtet Seth",
@@ -923,7 +947,25 @@
       "listed_count": "{{n}} Em Seshet",
       "empty_reason": "Nen Medu Em Sesh Pen.",
       "citations_absent": "Nen Dema Em Wepet Ten.",
-      "sigil_absent": "Nen Tep Medu En Medu Pen."
+      "sigil_absent": "Nen Tep Medu En Medu Pen.",
+      "search_jump": "Gem Medu · Tep Medu",
+      "toc": "Sesh",
+      "original": "Medu Tepy",
+      "translation": "Medu Aru",
+      "original_absent": "Nen Medu Tepy",
+      "notes": "Sesh Hemsu",
+      "source": "Tep",
+      "cite": "Dema",
+      "copy_cite": "Sesh Dema",
+      "copied": "Iri",
+      "cited_by": "Dema",
+      "cited_by_count": "{{n}} Wedja",
+      "cited_by_gap": "Nen Wedja Em Sesh",
+      "versions": "Kheperu",
+      "versions_gap": "Nen Kheperu",
+      "select_prompt": "Setep Medu.",
+      "no_match": "Nen Medu {{q}}",
+      "clear_search": "Fekh Gem"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
@@ -1118,7 +1160,52 @@
       "EG_AARU": "Sekhet Aaru",
       "EG_ANNIHILATION": "Ammit - Mut Sen"
     },
-    "no_realms": "Nen Rekhyu Set"
+    "no_realms": "Nen Rekhyu Set",
+    "topology": {
+      "map_title": "Tut Ta",
+      "legend": "━ Shem ┅ Em Set ▪ Hru Pen □ Ta",
+      "schematic": "Tut",
+      "shape_line": "Wat Wa",
+      "shape_funnel": "Shen",
+      "shape_river": "Itru",
+      "shape_fork": "Wat Khemet",
+      "state_travelled": "Shem",
+      "state_current": "Hru Pen",
+      "state_pending": "Em Set",
+      "region": {
+        "INFERNO": "Ta Isfet",
+        "PURGATORIO": "Ta Hesmen",
+        "PARADISO": "Heaven"
+      },
+      "fork": {
+        "LEFT": "Tartaros",
+        "MIDDLE": "Hery",
+        "RIGHT": "IslesOfTheBlest"
+      },
+      "off_shape": "{{n}} Ta Nen Em Tut",
+      "no_stops": "Nen Wat",
+      "load_failed": "Nen Ini Wat"
+    },
+    "table": {
+      "col_name": "Ren",
+      "col_code": "Tep Medu",
+      "col_kind": "Kheperu",
+      "col_held": "Em Khet / Wetu",
+      "col_eternal": "Neheh",
+      "eternal_yes": "Neheh",
+      "eternal_no": "Nen Neheh",
+      "full": "Wetu Neb",
+      "capacity_unrecorded": "Nen Wetu",
+      "read_only": "Ta Nen Iri",
+      "empty_civ": "Nen Rekhyu Ta",
+      "occupancy_failed": "Nen Ini Em Khet"
+    },
+    "kind": {
+      "HALL": "Wesekhet",
+      "GATE": "Sebkhet",
+      "LAYER": "Ta",
+      "PATH": "Wat"
+    }
   },
   "organization": {
     "title": "Sab",

@@ -67,6 +67,12 @@ const ENUM_FIELDS = [
   // the field existed. The rule ran, could go red, and was looking at the wrong
   // subjects. The meta-test below now stops that from happening silently again.
   "conclusion_type",
+  // Added 2026-09-25 by the meta-test: `LedgerJournalRow.record_type` (MERIT /
+  // DEMERIT, drawn as 收 / 支 columns, never as text) and the realm topology
+  // columns `region` / `fork` (drawn through realms.topology.region.* / fork.*).
+  "record_type",
+  "region",
+  "fork",
   "approver_type",
   "reaction_type",
   "visibility",
@@ -133,8 +139,8 @@ const CONVENTION_MODULES = [
 const ENUM_STRING_CONTEXTS: Record<string, string> = {
   [path.join("app", "dashboard", "page.tsx")]:
     "Recharts `name` on a chart datum, plus list rows that fall back to the API's own label; both carry title={state} by hand.",
-  [path.join("app", "ledger", "page.tsx")]:
-    "Same server-label fallback as the dashboard; carries title={item.state} by hand.",
+  [path.join("src", "components", "realms", "RouteTopology.tsx")]:
+    "A realm's station label resolves across two namespaces (realms.names, then realms.codes) and falls back to the API's own name — <DomainEnum> reads one namespace. The string is both the truncated text and its title, and the realm code rides in that title for triage.",
   [path.join("app", "dispatch", "[id]", "page.tsx")]:
     "Falls back to STATUS_LABELS copy, which <DomainEnum> cannot express; carries title={dispatch.status} by hand.",
   [path.join("app", "dispatch", "propose", "page.tsx")]:

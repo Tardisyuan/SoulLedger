@@ -167,25 +167,6 @@ export interface IdentifierPolicyException {
  */
 export const IDENTIFIER_POLICY_EXCEPTIONS: readonly IdentifierPolicyException[] = [
   {
-    file: "app/ledger/page.tsx",
-    site: 'recent-activity rows: "<resource> #<resource_id>" in the metadata line',
-    reason:
-      "An audit line's whole job is to say which record was touched, so the id " +
-      "IS the content here — this is the one screen where it is not an " +
-      "implementation detail leaking through. The row carries no human name to " +
-      "show instead: the audit payload has a resource TYPE (Soul) and a primary " +
-      "key, and nothing else identifies the row's subject. Drop the id and the " +
-      "entry degrades to \"someone changed a soul\", which is untraceable and " +
-      "makes the log worthless for the audit it exists to serve. So clause 1 " +
-      "(detail pages only) and clause 2 (once per page) are waived: this is a " +
-      "list, ten rows deep. Clause 3 is not — the id renders as an " +
-      "<IdentifierChip>, because a key you cannot paste into a query is not a " +
-      "trace, it is a decoration. Clause 4 is not either: the resource type " +
-      "still reads next to it, and the id is not standing in for a name that " +
-      "exists somewhere unshown.",
-    registered: "2026-08-14",
-  },
-  {
     file: "app/death-sync/page.tsx",
     site: 'registration rows: "Ref: <source_reference_id ?? idempotency_key>"',
     reason:
