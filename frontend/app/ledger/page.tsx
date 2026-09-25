@@ -1,11 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ledgerApi, type LedgerJournal, type LedgerJournalRow } from "@soulledger/core/api";
+import { ledgerApi, type LedgerJournal, type LedgerJournalParams, type LedgerJournalRow } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import { cn } from "@/lib/utils";
+import { fieldControl } from "@/src/components/ui/Field";
+import { saveBlob } from "@/src/lib/saveBlob";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROW_LINK } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -55,14 +59,48 @@ function LedgerPageContent() {
   const [page, setPage] = useState(1);
   const [civilization, setCivilization] = useState("");
   const [category, setCategory] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const { showToast } = useToast();
 
-  const params = { month, page, ...(civilization && { civilization }), ...(category && { category }) };
+  // Same 300 ms debounce as /souls: one request per pause, not per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  /* 搜索与文明、类目是**同一组**筛选:四柱、类目账、流水与导出都读它,所以搜出一户,
+     四柱就只是这一户的账,仍然平。 */
+  const filters: LedgerJournalParams = {
+    month,
+    ...(civilization && { civilization }),
+    ...(category && { category }),
+    ...(search && { search }),
+  };
+  const params = { ...filters, page };
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["ledger", "journal", params],
     queryFn: () => ledgerApi.journal(params).then((r) => r.data),
     enabled: !!user,
     placeholderData: keepPreviousData,
   });
+
+  const exportCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const response = await ledgerApi.exportJournal(filters);
+      saveBlob(response.data, `ledger_journal_${month}.csv`);
+    } catch {
+      showToast(t("ledger.journal.export_failed"), "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const goMonth = (next: string) => {
     setMonth(next);
@@ -128,6 +166,17 @@ function LedgerPageContent() {
               setPage(1);
             }}
           />
+          <input
+            type="search"
+            placeholder={t("ledger.journal.search")}
+            aria-label={t("ledger.journal.search")}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className={cn(fieldControl({ size: "md" }), "w-44 min-w-[140px]")}
+          />
+          <Button type="button" variant="secondary" size="sm" className="ml-auto" loading={exporting} onClick={exportCsv}>
+            {t("ledger.journal.export")}
+          </Button>
         </>
       }
       pagination={

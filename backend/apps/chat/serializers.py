@@ -132,6 +132,20 @@ class InboxMessageSerializer(serializers.Serializer):
     timestamp = serializers.IntegerField()
 
 
+class InboxOfficerSerializer(serializers.Serializer):
+    """一位官员:经办人,或「标给同僚」弹层里的一个候选。"""
+
+    user_id = serializers.IntegerField(source="pk")
+    display_name = serializers.SerializerMethodField()
+
+    def get_display_name(self, user) -> str:
+        return user.display_name or user.username
+
+
+class InboxAssignSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(min_value=1)
+
+
 class OfficerInboxSerializer(serializers.ModelSerializer):
     soul = serializers.UUIDField(source="soul_a_id", read_only=True)
     soul_name = serializers.CharField(source="soul_a.name", read_only=True)
@@ -146,12 +160,14 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
     unread = serializers.BooleanField(read_only=True, help_text="**调用者**还没读过灵魂最新的来信。")
     has_draft = serializers.BooleanField(read_only=True, help_text="**调用者**在这个会话里有草稿。")
     archived = serializers.BooleanField(read_only=True, help_text="**调用者**归档了它。")
+    assignee = InboxOfficerSerializer(read_only=True, allow_null=True,
+                                      help_text="「标给同僚」的经办人,殿司共享;没有为 null。")
 
     class Meta:
         model = Conversation
         fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name", "hall_names",
                   "last_message_at", "last_soul_message_at", "last_from", "unread", "has_draft", "archived",
-                  "created_at", "closed_at"]
+                  "assignee", "assigned_at", "created_at", "closed_at"]
         read_only_fields = fields
 
 
@@ -169,6 +185,7 @@ class InboxFoldersSerializer(serializers.Serializer):
     replied = serializers.IntegerField()
     drafts = serializers.IntegerField()
     archived = serializers.IntegerField()
+    assigned_to_me = serializers.IntegerField(help_text="未归档里同僚标给调用者的。")
     unread = serializers.IntegerField(help_text="未归档里调用者的未读数。")
     open = serializers.IntegerField(help_text="未归档里往来中的。")
     closed = serializers.IntegerField(help_text="未归档里已关闭的。")

@@ -17,7 +17,7 @@ from apps.core.csv_safe import csv_safe
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.disposition.models import Disposition
-from apps.ledger.journal import JournalParamError, build_journal
+from apps.ledger.journal import JournalParamError, build_journal, journal_records
 from apps.ledger.serializers import (
     LedgerEffectiveSerializer,
     LedgerErrorSerializer,
@@ -209,7 +209,7 @@ class LedgerInheritanceView(APIView):
 
 class LedgerJournalView(APIView):
     """
-    GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=]
+    GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
 
     功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
     只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
@@ -228,6 +228,7 @@ class LedgerJournalView(APIView):
             OpenApiParameter("page", OpenApiTypes.INT, description="1-based page of the month's rows (20 per page)"),
             OpenApiParameter("civilization", OpenApiTypes.STR),
             OpenApiParameter("category", OpenApiTypes.STR),
+            OpenApiParameter("search", OpenApiTypes.STR, description="灵魂姓名(包含)或灵魂 id(整条 UUID)"),
         ],
         responses={200: LedgerJournalSerializer, 400: LedgerJournalErrorSerializer},
     )
@@ -245,13 +246,88 @@ class LedgerJournalView(APIView):
                 page=page,
                 civilization=params.get("civilization", ""),
                 category=params.get("category", ""),
+                search=params.get("search", ""),
             )
         except JournalParamError as exc:
-            return Response(
-                {"error": "INVALID_PARAMETER", "field": exc.field, "message": str(exc)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return _journal_param_error(exc)
         return Response(LedgerJournalSerializer(body).data)
+
+
+def _journal_param_error(exc: JournalParamError) -> Response:
+    return Response(
+        {"error": "INVALID_PARAMETER", "field": exc.field, "message": str(exc)},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+class LedgerJournalExportView(APIView):
+    """
+    GET /ledger/journal/export/?month=YYYY-MM[&civilization=][&category=][&search=]
+
+    功过总账「导出」:本月、同一组筛选下的**全部**流水(不分页),一行一条。
+    范围、码名与 `LedgerJournalView` 相同 —— 行取自同一个 `journal_records`,所以文件里的
+    收 / 支之和就是屏幕上的「新收」「开除」。自由文本格一律过 `csv_safe`。
+    """
+    permission_classes = [TenantPermission, CodenamePermission]
+
+    def get_required_permissions(self):
+        return ['ledger.read']
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("month", OpenApiTypes.STR, description="YYYY-MM; defaults to the current month"),
+            OpenApiParameter("civilization", OpenApiTypes.STR),
+            OpenApiParameter("category", OpenApiTypes.STR),
+            OpenApiParameter("search", OpenApiTypes.STR, description="灵魂姓名(包含)或灵魂 id(整条 UUID)"),
+        ],
+        responses={
+            (200, "text/csv"): OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description=(
+                    "CSV, one row per MERIT / DEMERIT record of the month: Recorded At, Day, "
+                    "Soul ID, Soul Name, Type, Category, Description, Statute, Merit, Demerit."
+                ),
+            ),
+            400: LedgerJournalErrorSerializer,
+        },
+    )
+    def get(self, request):
+        params = request.query_params
+        month = params.get("month") or timezone.localtime().strftime("%Y-%m")
+        try:
+            _before, period = journal_records(
+                request,
+                month=month,
+                civilization=params.get("civilization", ""),
+                category=params.get("category", ""),
+                search=params.get("search", ""),
+            )
+        except JournalParamError as exc:
+            return _journal_param_error(exc)
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f"attachment; filename=ledger_journal_{month}.csv"
+        writer = csv.writer(response)
+        writer.writerow([
+            "Recorded At", "Day", "Soul ID", "Soul Name", "Type", "Category",
+            "Description", "Statute", "Merit", "Demerit",
+        ])
+        rows = period.select_related("soul").order_by("-recorded_at", "-id")
+        for r in rows.iterator(chunk_size=1000):
+            merit = r.record_type == "MERIT"
+            writer.writerow([
+                r.recorded_at.isoformat(),
+                timezone.localtime(r.recorded_at).date().isoformat(),
+                str(r.soul_id),
+                csv_safe(r.soul.name),
+                csv_safe(r.record_type),
+                csv_safe(r.category),
+                csv_safe(r.description),
+                csv_safe(r.statute_clause),
+                r.weight if merit else "",
+                "" if merit else r.weight,
+            ])
+        return response
 
 
 class LedgerOverviewStatsView(APIView):

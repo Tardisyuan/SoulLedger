@@ -17,6 +17,18 @@ import { useFailureToast } from "./shared";
 
 const HANDLING_TONE = { HIDDEN: "warning", DELETED: "error" } as const;
 
+/** 时间范围(E-08d「近 30 天 ▾」):默认近 30 天,可放宽到 90 天或全部。 */
+const RANGES = ["30d", "90d", "all"] as const;
+type Range = (typeof RANGES)[number];
+const DAY_MS = 86_400_000;
+
+/** 「近 N 天」的起日(含今天,共 N 天),按 UTC 切 —— 与服务端 `TIME_ZONE` 同一把尺。 */
+export function rangeStart(range: Range, now = Date.now()): string | undefined {
+  if (range === "all") return undefined;
+  const days = range === "30d" ? 30 : 90;
+  return new Date(now - (days - 1) * DAY_MS).toISOString().slice(0, 10);
+}
+
 /**
  * 已处理(E-08d):被隐藏或被官员删除的帖子与评论。
  *
@@ -33,7 +45,14 @@ export function HandledSection() {
   const [page, setPage] = useState(1);
   const [type, setType] = useState<HandledContent["type"] | "">("");
   const [handling, setHandling] = useState<HandledContent["handling"] | "">("");
-  const filters: HandledFilters = { ...(page > 1 ? { page } : {}), ...(type ? { type } : {}), ...(handling ? { handling } : {}) };
+  const [range, setRange] = useState<Range>("30d");
+  const dateFrom = rangeStart(range);
+  const filters: HandledFilters = {
+    ...(page > 1 ? { page } : {}),
+    ...(type ? { type } : {}),
+    ...(handling ? { handling } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+  };
   const list = useHandledContent(filters);
   const rows = list.data?.results ?? [];
   const restore = useRestoreVisible();
@@ -87,6 +106,16 @@ export function HandledSection() {
             setPage(1);
           }}
         />
+        <FilterChipSelect
+          label={t("social_moderation.handled.range")}
+          value={range === "all" ? "" : range}
+          options={RANGES.map((r) => ({ value: r === "all" ? "" : r, label: t(`social_moderation.handled.range_${r}`) }))}
+          clearLabel={t("filter.clear_one", { name: t("social_moderation.handled.range") })}
+          onChange={(v) => {
+            setRange((v || "all") as Range);
+            setPage(1);
+          }}
+        />
       </div>
 
       <DataTable<HandledContent>
@@ -106,10 +135,12 @@ export function HandledSection() {
         isLoading={list.isLoading}
         isError={list.isError && !list.data}
         onRetry={() => list.refetch()}
-        isFiltered={Boolean(type || handling)}
+        isFiltered={Boolean(type || handling || range !== "all")}
         onClearFilters={() => {
+          // 空态的「清除筛选」也就是设计稿的「看更早」:时间放宽到全部。
           setType("");
           setHandling("");
+          setRange("all");
           setPage(1);
         }}
         emptyMessage={t("social_moderation.empty.handled")}

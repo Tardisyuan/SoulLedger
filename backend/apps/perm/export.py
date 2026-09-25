@@ -25,7 +25,7 @@ def export_permissions():
 
     # Export roles
     roles = list(
-        Role.objects.values('name', 'display_name', 'scope')
+        Role.objects.values('name', 'display_name', 'description', 'scope')
     )
 
     # Export role-permission assignments
@@ -110,6 +110,8 @@ def import_permissions(data, overwrite=False):
         _, created = Role.revive_or_create(
             role_data['name'],
             display_name=role_data['display_name'], scope=role_data.get('scope', 'ORG'),
+            # Files exported before the field existed carry no description: blank, not an error.
+            description=role_data.get('description', ''),
         )
         if created:
             stats['roles'] += 1
