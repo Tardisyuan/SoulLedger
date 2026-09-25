@@ -172,7 +172,7 @@
       "soul_info": "Medu Aba Hemsu",
       "birth": "Wepet Her Tepy",
       "death": "Wepet Ru",
-      "location_label": "Nut",
+      "location_label": "Sekhet",
       "merit": "Nefer",
       "demerit": "Isfet",
       "balance": "Unemu Tepy",
@@ -1554,7 +1554,7 @@
       "col_name": "Ren",
       "col_code": "Ren Ta",
       "col_kind": "Iru",
-      "col_held": "Em Shepet / Hesb Aq",
+      "col_held": "Em Sekhet / Hesb Aq",
       "col_eternal": "Djet",
       "eternal_yes": "Iu",
       "eternal_no": "Nen",
@@ -1562,7 +1562,7 @@
       "capacity_unrecorded": "Nen Sesh Hesb Aq",
       "read_only": "Maa Wa · Ta Nen Khemen Dy",
       "empty_civ": "Nen Ta Em Taui Pen Djer",
-      "occupancy_failed": "Nen Ini Em Shepet"
+      "occupancy_failed": "Nen Ini Em Sekhet"
     },
     "kind": {
       "HALL": "Wesekhet",
@@ -3469,7 +3469,7 @@
     "node_states": {
       "PENDING": "Nen Wepet",
       "DISPATCHING": "Em Hab",
-      "ACTIVE": "Em Wetep",
+      "ACTIVE": "Em Shepet",
       "WAITING": "Hemes Smen",
       "COMPLETED": "Wetep Seth",
       "ETERNAL": "Wetep Djet",
