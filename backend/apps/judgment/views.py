@@ -3,13 +3,14 @@ REST views for Judgment app.
 """
 import uuid
 
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django_filters import rest_framework as filters
 from django_filters.utils import translate_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
@@ -28,6 +29,7 @@ from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
 from apps.judgment.precedents import precedents_for
 from apps.judgment.serializers import (
+    AssignableOfficerSerializer,
     EvidenceRulingResultSerializer,
     EvidenceRulingWriteSerializer,
     JudgmentBatchResultSerializer,
@@ -36,6 +38,7 @@ from apps.judgment.serializers import (
     JudgmentCitationWriteSerializer,
     JudgmentClaimRefusalSerializer,
     JudgmentConcludeSerializer,
+    JudgmentCourtSerializer,
     JudgmentDeferSerializer,
     JudgmentDestinationOptionSerializer,
     JudgmentDestinationsSerializer,
@@ -111,6 +114,18 @@ class JudgmentFilter(filters.FilterSet):
 
     def filter_group(self, queryset, name, value):
         return queryset.filter(PENDING & group_q(value, self.request.user))
+
+
+class NotesOnOpenCaseError(APIException):
+    """`notes` on an open case goes through the draft endpoint (see `perform_update`)."""
+    status_code = status.HTTP_409_CONFLICT
+    default_code = "use_draft_endpoint"
+
+    def __init__(self):
+        super().__init__({
+            "error": "The verdict text of an open case is saved through PATCH /judgment/{id}/draft/.",
+            "code": "use_draft_endpoint",
+        })
 
 
 def _enter_judgment_realm(soul, judgment):
@@ -200,10 +215,14 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN 与 MODERATOR
         # (殿主)持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
         'reassign': ['judgment.assign'],
+        # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
+        'assignable_officers': ['judgment.assign'],
         # 批量:与单件同一码名。`operation=reassign` 在动作体里再要 `judgment.assign` ——
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
         'queue_counts': ['judgment.read'],
+        # 殿筛选的选项:与队列同一个读。
+        'courts': ['judgment.read'],
     }
     queryset = (
         Judgment.objects
@@ -291,11 +310,18 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     def perform_update(self, serializer):
         """Moving an open case to another court moves the soul there too (行程拓扑).
 
-        `notes` is also the verdict draft (see `Judgment.draft_version`). A write
-        to it through the plain PATCH/PUT moves the draft version too, so an
-        autosave that loaded the old text is refused instead of overwriting.
+        `notes` is also the verdict draft (see `Judgment.draft_version`). On an
+        OPEN case it is written only through `PATCH /judgment/{id}/draft/`
+        (产品负责人 2026-09-25): the plain PATCH/PUT carrying `notes` is a 409
+        `use_draft_endpoint` and writes nothing, because it has no version to
+        check and would overwrite an autosave. On a concluded case the plain
+        write is unchanged — it still moves the draft version.
         """
         from django.db import transaction
+
+        instance = serializer.instance
+        if "notes" in serializer.validated_data and instance.verdict is None and not instance.is_final:
+            raise NotesOnOpenCaseError()
 
         with transaction.atomic():
             realm_before = serializer.instance.realm_id
@@ -358,6 +384,25 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # `id` breaks created_at ties so `next/` and `previous/` walk one total order.
         return queue.order_by("created_at", "id")
 
+    def _cursor_order(self, queue):
+        """The one total order `next/` and `previous/` walk: the caller's own
+        claimed cases (group `mine`) first, then everything else in the existing
+        FIFO order (`created_at`, ties by `id`) — 产品负责人 2026-09-25."""
+        return queue.annotate(
+            not_mine_rank=Case(
+                When(claimed_by=self.request.user, then=Value(0)), default=Value(1), output_field=IntegerField(),
+            )
+        ).order_by("not_mine_rank", "created_at", "id")
+
+    def _before(self, judgment) -> Q:
+        """Rows strictly before `judgment` in `_cursor_order` (needs its annotation)."""
+        rank = 0 if judgment.claimed_by_id == self.request.user.pk else 1
+        return (
+            Q(not_mine_rank__lt=rank)
+            | Q(not_mine_rank=rank, created_at__lt=judgment.created_at)
+            | Q(not_mine_rank=rank, created_at=judgment.created_at, id__lt=judgment.id)
+        )
+
     @staticmethod
     def _requested_skips(request):
         """The client's session-local skip set, from `?skip=` (repeatable, and
@@ -393,6 +438,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         responses=JudgmentQueueCursorSerializer,
         parameters=[
             OpenApiParameter(
+                "after", OpenApiTypes.UUID, OpenApiParameter.QUERY,
+                description="The case the caller is on; the answer is the pending case just after it (「下一件」). "
+                "Overrides `at`.",
+            ),
+            OpenApiParameter(
                 "include_deferred",
                 OpenApiTypes.BOOL,
                 OpenApiParameter.QUERY,
@@ -425,6 +475,10 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         Every one of those is an existing serializer/service called as-is;
         nothing here re-implements a read that already exists elsewhere.
 
+        Order. The caller's own claimed cases (「我认领」) come first, oldest
+        first; then the rest of the queue in FIFO order. `previous/` walks the
+        same order backwards. Deferred cases stay out either way.
+
         Progress. `total` is how many cases are pending in scope right now,
         `remaining` how many of those the caller has not skipped, and
         `position` = total - remaining + 1, i.e. "the Nth of M". These are
@@ -441,7 +495,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         total = queue.count()
 
         skips = self._requested_skips(request)
-        remaining_qs = queue.exclude(id__in=skips) if skips else queue
+        remaining_qs = self._cursor_order(queue.exclude(id__in=skips) if skips else queue)
         remaining = remaining_qs.count()
 
         payload = {
@@ -467,6 +521,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # here") is still satisfiable and the alternative is a dead end on a
         # link that was valid when the page rendered.
         cursor = remaining_qs.select_related("soul", "soul__tenant")
+        if "after" in request.query_params:
+            return self._after_response(payload, remaining_qs, cursor, total, remaining)
         at = request.query_params.get("at")
         judgment = None
         if at:
@@ -478,10 +534,32 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 # Jumping the queue means `position` is no longer "the first
                 # one left"; report where this case actually sits so N-of-M
                 # stays true rather than convenient.
-                ahead = remaining_qs.filter(created_at__lt=judgment.created_at).count()
+                ahead = remaining_qs.filter(self._before(judgment)).count()
                 payload["position"] = total - remaining + ahead + 1
         if judgment is None:
             judgment = cursor.first()
+        return self._cursor_response(payload, judgment)
+
+    def _after_response(self, payload, remaining_qs, cursor, total, remaining):
+        """`next/?after=<id>` — 「下一件」 from the desk: the pending case just after `after`
+        in the same order `previous/` walks backwards. `?skip=X` alone cannot answer this:
+        it hands out the head of the queue, which is only X's successor when X is the head.
+
+        `after` is looked up in the caller's scope in any state (so 「下一件」 still works
+        from a case just concluded), the same as `previous/?at=`; missing, malformed or
+        not visible answers the empty cursor rather than 404.
+        """
+        payload["position"] = None
+        try:
+            anchor = self.get_queryset().filter(id=uuid.UUID(self.request.query_params.get("after", ""))).first()
+        except (ValueError, AttributeError, TypeError):
+            anchor = None
+        judgment = None
+        if anchor is not None:
+            judgment = cursor.exclude(self._before(anchor)).exclude(id=anchor.id).first()
+        if judgment is not None:
+            ahead = remaining_qs.filter(self._before(judgment)).count()
+            payload["position"] = total - remaining + ahead + 1
         return self._cursor_response(payload, judgment)
 
     def _cursor_response(self, payload, judgment):
@@ -530,8 +608,9 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     def previous_pending(self, request):
         """The pending case just before `?at=<id>` in queue order — 「上一件」.
 
-        Same queue as `next/`: the same tenant/DataScope scoping, FIFO on
-        `created_at` (ties by `id`), deferred cases left out unless
+        Same queue and order as `next/`: the same tenant/DataScope scoping, the
+        caller's claimed cases first, then FIFO on `created_at` (ties by `id`),
+        deferred cases left out unless
         `include_deferred`, `?skip=` honoured. `at` itself is looked up in the
         caller's scope in any state, so 「上一件」 still works from a case that
         has just been concluded. `at` missing, malformed, or not visible to the
@@ -540,12 +619,12 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
 
         Not symmetric in one respect, deliberately: `next/?at=X` answers X
         itself (enter the queue on X), `previous/?at=X` answers the case before
-        X. Moving forward from X is `next/?skip=X`.
+        X. Moving forward from X is `next/?after=X`.
         """
         queue = self._pending_queue()
         total = queue.count()
         skips = self._requested_skips(request)
-        remaining_qs = queue.exclude(id__in=skips) if skips else queue
+        remaining_qs = self._cursor_order(queue.exclude(id__in=skips) if skips else queue)
         remaining = remaining_qs.count()
         payload = {
             "total": total,
@@ -566,12 +645,12 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         if anchor is not None:
             judgment = (
                 remaining_qs.select_related("soul", "soul__tenant")
-                .filter(Q(created_at__lt=anchor.created_at) | Q(created_at=anchor.created_at, id__lt=anchor.id))
-                .order_by("-created_at", "-id")
+                .filter(self._before(anchor))
+                .order_by("-not_mine_rank", "-created_at", "-id")
                 .first()
             )
         if judgment is not None:
-            ahead = remaining_qs.filter(created_at__lt=judgment.created_at).count()
+            ahead = remaining_qs.filter(self._before(judgment)).count()
             payload["position"] = total - remaining + ahead + 1
         return self._cursor_response(payload, judgment)
 
@@ -594,6 +673,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         `conclude` accepts as `destination_realm_id` (see
         apps/disposition/destination.py). Not an original judgment (amendment,
         reopen) → no options, since those conclude without a disposition.
+
+        `default_realm_id` is where `conclude` sends the soul with no choice
+        made: the automatic routing on the ledger *without* this case's
+        non-admitted evidence (`DispositionService._route_to_realm`), so the
+        picker's default is the conclusion's.
         """
         judgment = self.get_object()
         # Not `?verdict=`: that name is a JudgmentFilter field, and `get_object`
@@ -608,7 +692,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         default_realm_id = None
         if judgment.kind == JudgmentKind.ORIGINAL:
             options = list(destination_options(judgment, verdict))
-            default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method)
+            default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
             if default is not None and any(r.pk == default.pk for r in options):
                 default_realm_id = default.pk
         return Response({
@@ -640,9 +724,14 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         `GET /api/v1/judgment/{id}/precedents/?limit=5`
 
         Same tenant and civilization as this judgment, ranked by same court,
-        then closest balance, then shared cited statutes. The ranking and what
-        is excluded are written down in apps/judgment/precedents.py. A bare
-        array, not a page: it is a short ranked list, not a collection to walk.
+        then closest balance **bucketed by 10** (`floor(balance / 10)`, so two
+        precedents 2 and 8 away tie), then shared cited statutes — which is
+        what breaks a tie inside a bucket — then newest conclusion. `balance`
+        is the one frozen at conclusion (`concluded_balance`), or the soul's
+        current balance for a case concluded before that column. The ranking
+        and what is excluded are written down in apps/judgment/precedents.py.
+        A bare array, not a page: it is a short ranked list, not a collection
+        to walk.
         """
         judgment = self.get_object()
         try:
@@ -725,6 +814,63 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         """撤销暂缓,案子回到它按认领人所属的组。"""
         override = self._may_override()
         return self._claim_response(lambda pk: claims.undefer(pk, request.user, may_override=override))
+
+    @extend_schema(
+        responses={
+            200: AssignableOfficerSerializer(many=True),
+            400: OpenApiTypes.OBJECT,
+            404: JudgmentClaimRefusalSerializer,
+        },
+        parameters=[
+            OpenApiParameter(
+                "judgment", OpenApiTypes.UUID, OpenApiParameter.QUERY, required=True, many=True,
+                description="The case(s) about to be reassigned. Repeat for a batch (at most 100).",
+            ),
+        ],
+    )
+    # 不分页、不挂列表的过滤器:这里答的是人,不是案子,`court` / `search` 这些对它没有意义。
+    @action(
+        detail=False, methods=["get"], url_path="assignable-officers",
+        pagination_class=None, filter_backends=[],
+    )
+    def assignable_officers(self, request):
+        """改派弹层的名单:能被改派到这些案子上的官员 —— 与 `reassign` 校验对象用的是同一个
+        `claims.is_assignable`,名单里的人改派必收,不在名单里的必拒。
+
+        租户取自案子,不取自调用者:ADMIN 没有租户,案子有。案子要在 `self.get_queryset()`
+        里 —— 与批量同一条范围,不在就整体 404 并列出 `missing`。一批跨了租户时没有人能
+        接下全部,答空名单(批量改派也会逐件拒)。
+
+        不分页、不搜索:一个租户的官员是几十人的量级,弹层要一次拿全;上了几百人再加 `search`。
+        """
+        from apps.authentication.models import User
+
+        raw = request.query_params.getlist("judgment")
+        ids = []
+        for value in raw:
+            try:
+                ids.append(uuid.UUID(value))
+            except ValueError:
+                return Response({"judgment": [f"Not a UUID: {value!r}."]}, status=status.HTTP_400_BAD_REQUEST)
+        if not ids or len(set(ids)) > claims.BATCH_LIMIT:
+            return Response(
+                {"judgment": [f"Give 1 to {claims.BATCH_LIMIT} judgment ids."]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        tenants = dict(self.get_queryset().filter(pk__in=ids).values_list("pk", "tenant_id"))
+        missing = [str(pk) for pk in ids if pk not in tenants]
+        if missing:
+            return Response(
+                {"error": "Some judgments were not found.", "code": "not_found", "missing": missing},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        tenant_ids = set(tenants.values())
+        if len(tenant_ids) != 1:
+            return Response([])
+        # 调用者自己的租户范围再收一道:非 ADMIN 只可能看见自己租户的人。
+        users = scope_to_tenant(User.objects.all(), request)
+        officers = claims.assignable_officers(users, tenant_ids.pop())
+        return Response(AssignableOfficerSerializer(officers, many=True).data)
 
     @staticmethod
     def _assignee(user_id):
@@ -819,6 +965,27 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             },
         )
         return Response(counts)
+
+    @extend_schema(responses=JudgmentCourtSerializer(many=True))
+    # 不分页、不挂列表的过滤器:这是筛选条的选项,不随当前筛选收窄 —— 否则选了一个殿,
+    # 下拉里就只剩那一个。
+    @action(detail=False, methods=["get"], url_path="courts", pagination_class=None, filter_backends=[])
+    def courts(self, request):
+        """队列殿筛选的选项:调用者范围内出现过的每一个殿(非空),各带未结案件数。
+
+        此前选项取自当前已加载的几页行,翻不到的殿就选不到。范围是 `self.get_queryset()`
+        —— DataScopeViewSetMixin 经 `scope_to_tenant` 收到调用者的租户,与列表同一条。
+        已结案件的殿也列出(`pending` 为 0):殿是场所,不因眼下没有案子而消失。
+        """
+        rows = (
+            self.get_queryset()
+            .exclude(court="")
+            .order_by()
+            .values("court")
+            .annotate(pending=Count("pk", filter=PENDING))
+            .order_by("court")
+        )
+        return Response(JudgmentCourtSerializer(rows, many=True).data)
 
     # ------------------------------------------------------------------
     # Cited grounds

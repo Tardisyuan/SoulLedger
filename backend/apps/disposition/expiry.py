@@ -7,10 +7,12 @@
 
 * `is_eternal` —— 永久刑。
 * `sentence_years` 为 null —— 没有记录刑期(模型注释:null 不是「永久」,也不是 0)。
-* `term_start_year` 为 null —— 没有记录起算日。刑期从哪天算起是一个事实,
-  不从 `executed_at` 或 `death_year` 推(`Disposition.term_start_year` 上那段注释
-  说了为什么),所以没有起算日就没有期满日。
 * 没执行过(`is_executed=False`)—— 没在服刑。
+
+起算日(`effective_term_start`):记了 `term_start_*` 就用它;**没记而已执行的,从执行那天
+(`executed_at` 的本地日期)算**(产品负责人 2026-09-25 决定)。执行时 `DispositionService`
+本来就会把空的起算日记成执行日,所以这条规则只接住那之前执行的存量行 —— 不回填数据,
+规则写在这里,期满检查与序列化器的 `term_end` 读同一个函数。
 
 边界:刑期在起算日的第 N 个周年日**当天**走完。起算日缺月或缺日时,取那一年 /
 那个月里**最晚**的可能 —— 宁可晚一天记期满,不提前放人。这与
@@ -21,11 +23,22 @@ import calendar
 import datetime
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import BigIntegerField, Case, F, Q, Value, When
+from django.db.models.functions import Cast, Coalesce, ExtractDay, ExtractMonth, ExtractYear
 from django.utils import timezone
 
 #: 粗筛读候选时 `.iterator()` 的分块大小。
 EXPIRY_CHUNK = 500
+
+
+def effective_term_start(term_start, executed_at):
+    """刑期从哪天算起,`(year, month, day)`;算不出来时 None。见模块 docstring。"""
+    if term_start is not None and term_start[0] is not None:
+        return term_start
+    if executed_at is None:
+        return None
+    day = timezone.localdate(executed_at)
+    return (day.year, day.month, day.day)
 
 
 def term_end(term_start, sentence_years):
@@ -61,11 +74,73 @@ def term_has_ended(term_start, sentence_years, today: datetime.date) -> bool:
     return (today.year, today.month, today.day) >= (end_year, end_month, end_day)
 
 
+#: `term_end_sort_key` 给「没有期满日」的行的值:永久刑、没记刑期、没有起算日。
+#: 比任何真实的期满日都大,所以升序时排最后、降序时排最前 —— 「永不期满」就是最远的那一天。
+NO_TERM_END = 2**62
+
+
+def term_end_sort_key():
+    """期满日的 SQL 排序键:`年 * 10000 + 月 * 100 + 日`,一个整数,升序即期满近 → 远。
+
+    与 `effective_term_start` + `term_end` 同一条规则,在 SQL 里再写一遍 —— 列表按它排序
+    分页,Python 一侧排不了分页之外的行。起算日:`term_start_year` 有值就用 `term_start_*`
+    三列,否则用 `executed_at` 的本地日期(`Extract*` 与 `timezone.localdate` 取的是同一个
+    当前时区)。缺月取 12、缺日取 31,与 `term_has_ended` 缺精度时取最晚一天同向
+    (31 不是那个月真实的最后一天,但作为排序键它不小于该月任何一天,顺序不变)。
+    跨公元交界多加一年,与 `term_end` 相同。负年份也保序:同年内月日单调,跨年差 10000。
+
+    算不出期满日(永久、`sentence_years` 为空、既无起算日也未执行)的行取 `NO_TERM_END`。
+    先转 bigint 再算:PostgreSQL 上 `integer * 10000` 会溢出(刑期可以是上万年)。
+    """
+    big = BigIntegerField()
+    has_start = Q(term_start_year__isnull=False)
+    start_year = Case(When(has_start, then=Cast("term_start_year", big)), default=Cast(ExtractYear("executed_at"), big))
+    start_month = Case(When(has_start, then=Cast("term_start_month", big)), default=Cast(ExtractMonth("executed_at"), big))
+    start_day = Case(When(has_start, then=Cast("term_start_day", big)), default=Cast(ExtractDay("executed_at"), big))
+    years = Cast("sentence_years", big)
+    # 公元前起算、期满在公元后(`year < 0 <= year + years`)多一年。`executed_at` 不会是公元前。
+    crosses_era = When(term_start_year__lt=0, term_start_year__gte=-F("sentence_years"), then=Value(1))
+    end_year = start_year + years + Case(crosses_era, default=Value(0), output_field=big)
+    key = end_year * 10000 + Coalesce(start_month, Value(12), output_field=big) * 100 + Coalesce(
+        start_day, Value(31), output_field=big
+    )
+    return Case(
+        When(is_eternal=True, then=Value(NO_TERM_END)),
+        When(sentence_years__isnull=True, then=Value(NO_TERM_END)),
+        When(term_start_year__isnull=True, executed_at__isnull=True, then=Value(NO_TERM_END)),
+        default=key,
+        output_field=big,
+    )
+
+
+def reopen_if_term_extended(disposition, today: datetime.date | None = None) -> bool:
+    """期满之后刑期或起算日被改、新的期满日还没到:清掉 `expired_at`。返回是否清了。
+
+    只在算得出一个期满日、且它在 `today` 之后时清 —— 改成永久刑、或把刑期删掉,
+    都不是「刑期延长到某一天」,期满记录留着。改了但仍已走完(改短、或延长了却仍在过去)
+    也留着。不 `save()`:调用方(`DispositionSerializer.update`)写。
+    """
+    if disposition.expired_at is None or disposition.is_eternal:
+        return False
+    start = effective_term_start(
+        (disposition.term_start_year, disposition.term_start_month, disposition.term_start_day),
+        disposition.executed_at,
+    )
+    if term_end(start, disposition.sentence_years) is None:
+        return False
+    if term_has_ended(start, disposition.sentence_years, today or timezone.localdate()):
+        return False
+    disposition.expired_at = None
+    return True
+
+
 def candidates(tenant_id, today: datetime.date):
     """这个租户里**可能**今天期满的处置(SQL 粗筛;精确判定在 `term_has_ended`)。
 
-    粗筛条件是「起算年 + 刑期 ≤ 今年 + 1」:那个 +1 容纳跨公元交界多出的一年,
-    所以它是精确集合的超集,不会漏;多选进来的由 Python 那一步排掉。
+    粗筛条件是「起算年 + 刑期 ≤ 今年 + 1」:那个 +1 容纳跨公元交界多出的一年
+    (以及 `executed_at` 的 UTC 年与本地年在元旦前后差的那一年),所以它是精确集合的
+    超集,不会漏;多选进来的由 Python 那一步排掉。起算年缺时取执行年,见
+    `effective_term_start`。
     """
     from apps.disposition.models import Disposition
 
@@ -76,9 +151,9 @@ def candidates(tenant_id, today: datetime.date):
             is_eternal=False,
             expired_at__isnull=True,
             sentence_years__isnull=False,
-            term_start_year__isnull=False,
         )
-        .alias(term_end_year=F("term_start_year") + F("sentence_years"))
+        .filter(Q(term_start_year__isnull=False) | Q(executed_at__isnull=False))
+        .alias(term_end_year=Coalesce(F("term_start_year"), ExtractYear("executed_at")) + F("sentence_years"))
         .filter(term_end_year__lte=today.year + 1)
         .order_by("pk")
     )
@@ -104,10 +179,10 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
 
     due = [
         pk
-        for pk, y, m, d, years in candidates(tenant.pk, today).values_list(
-            "pk", "term_start_year", "term_start_month", "term_start_day", "sentence_years"
+        for pk, y, m, d, executed_at, years in candidates(tenant.pk, today).values_list(
+            "pk", "term_start_year", "term_start_month", "term_start_day", "executed_at", "sentence_years"
         ).iterator(chunk_size=EXPIRY_CHUNK)
-        if term_has_ended((y, m, d), years, today)
+        if term_has_ended(effective_term_start((y, m, d), executed_at), years, today)
     ]
 
     expired = 0

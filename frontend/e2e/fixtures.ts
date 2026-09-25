@@ -837,6 +837,7 @@ export const MODERATED_POSTS = [
     author: MODERATION_AUTHOR,
     content: "命中敏感词的帖子",
     moderation_status: "PENDING",
+    moderation_reason: "sensitive_word:还阳",
     open_report_count: 0,
     create_time: "2026-09-18T03:00:00Z",
     visibility: "PUBLIC",
@@ -890,9 +891,28 @@ export const INBOX_CONVERSATIONS = [
     tenant_name: "中国地府",
     hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" },
     last_message_at: "2026-09-18T01:00:00Z",
+    last_soul_message_at: "2026-09-18T00:30:00Z",
+    last_from: "soul",
+    unread: true,
+    has_draft: false,
+    archived: false,
     created_at: "2026-09-18T00:00:00Z",
     closed_at: null as string | null,
   },
+];
+
+/** GET `/chat/inbox/folders/` — InboxFoldersSerializer. */
+export const INBOX_FOLDERS = {
+  all: 1, awaiting_reply: 1, replied: 0, drafts: 0, archived: 0, unread: 1, open: 1, closed: 0,
+  halls: [{ tenant: 1, hall_names: INBOX_CONVERSATIONS[0].hall_names, count: 1 }],
+};
+
+/** InboxStateSerializer — the caller's own read / archive / draft state. */
+export const INBOX_STATE = { last_read_at: null as string | null, archived_at: null as string | null, draft: "", draft_saved_at: null as string | null };
+
+/** GET `/chat/inbox-templates/` — InboxReplyTemplateSerializer, not paginated. */
+export const INBOX_TEMPLATES = [
+  { id: "abcdabcd-abcd-4bcd-8bcd-abcdabcdab09", title: "收悉", body: "{{soul_name}}:{{hall_name}}已收悉。", created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z" },
 ];
 
 /** GET `/chat/inbox/:id/messages/` — InboxMessageSerializer, newest first. */
@@ -1288,6 +1308,8 @@ export class ApiMock {
     // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
     this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
     this.on("GET", "/judgment/:id/precedents/", []);
+    // The queue's court (殿) filter options. After `:id/`: "courts" is not an id.
+    this.on("GET", "/judgment/courts/", []);
     // The desk's K 上一件 (nothing before) and 戊 · 发落 (no options = automatic routing).
     this.on("GET", "/judgment/previous/", {
       total: 0, remaining: 0, skipped: 0, position: null,
@@ -1400,7 +1422,7 @@ export class ApiMock {
     });
     // Read-only "what breaks" check. No template loses its approvers by default;
     // a spec that needs a conflict registers its own handler.
-    this.on("POST", "/perm/role-permissions/impact/", { required_codenames: [], conflicts: [] });
+    this.on("POST", "/perm/role-permissions/impact/", { required_codenames: [], conflicts: [], workflow_conflicts: [] });
     this.on("PUT", "/perm/roles/:id/", (call) => {
       const role = ROLES.find((r) => r.id === Number(call.path.split("/")[3]));
       return role ? { body: { ...role, ...call.body, version: this.roleVersions[role.name] } } : { status: 404, body: { error: "Role not found" } };
@@ -1648,6 +1670,16 @@ export class ApiMock {
     this.on("GET", "/chat/inbox/", paginated(INBOX_CONVERSATIONS));
     this.on("GET", "/chat/inbox/:id/messages/", INBOX_MESSAGES);
     this.on("POST", "/chat/inbox/:id/reply/", () => ({ status: 201, body: { event_id: "$sent" } }));
+    this.on("GET", "/chat/inbox/folders/", INBOX_FOLDERS);
+    this.on("POST", "/chat/inbox/:id/read/", { ...INBOX_STATE, last_read_at: "2026-09-18T02:00:00Z" });
+    this.on("POST", "/chat/inbox/:id/archive/", { ...INBOX_STATE, archived_at: "2026-09-18T02:00:00Z" });
+    this.on("POST", "/chat/inbox/:id/unarchive/", INBOX_STATE);
+    this.on("GET", "/chat/inbox/:id/draft/", INBOX_STATE);
+    this.on("PUT", "/chat/inbox/:id/draft/", (call) => ({
+      body: { ...INBOX_STATE, draft: call.body?.body ?? "", draft_saved_at: "2026-09-18T02:00:00Z" },
+    }));
+    this.on("DELETE", "/chat/inbox/:id/draft/", INBOX_STATE);
+    this.on("GET", "/chat/inbox-templates/", INBOX_TEMPLATES);
 
     return this;
   }

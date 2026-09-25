@@ -5,7 +5,7 @@
  *   的人出现 —— 这是后端强制的同一个码名;
  * - 删除于 / 删除人 各占一列,数据来自 API 已有字段。
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import RecycleBinPage from "@/app/recycle-bin/page";
 import { recycleBinApi, type RecycleBinEntry } from "@soulledger/core/api";
@@ -30,7 +30,8 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
+const mockShowToast = jest.fn();
+jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 
 const row = (over: Partial<RecycleBinEntry> = {}): RecycleBinEntry => ({
   entity_type: "MENU",
@@ -156,5 +157,18 @@ describe("RecycleBinPage columns", () => {
     expect(civ).toHaveTextContent("中国地府");
     expect(top.querySelector("[data-missing]")).not.toBeNull();
     expect(top).not.toHaveTextContent("null");
+  });
+
+  it("names the missing roles when a template's restore is refused (template_role_missing)", async () => {
+    mockUser = { role: "JUDGE", permissions: READ_RESTORE };
+    (recycleBinApi.restore as jest.Mock).mockRejectedValue({
+      response: { status: 400, data: { error: "x", code: "template_role_missing", missing_roles: ["AUDITOR", "SCRIBE"] } },
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "recycle_bin.restore" }));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith("recycle_bin.restore_missing_roles(AUDITOR、SCRIBE)", "error")
+    );
+    expect(mockShowToast).not.toHaveBeenCalledWith("recycle_bin.restore_error", "error");
   });
 });

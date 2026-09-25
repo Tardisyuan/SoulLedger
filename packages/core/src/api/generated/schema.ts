@@ -536,6 +536,10 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         get: operations["v1_chat_inbox_list"];
         put?: never;
@@ -544,6 +548,92 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        get: operations["v1_chat_inbox_templates_list"];
+        put?: never;
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        post: operations["v1_chat_inbox_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        get: operations["v1_chat_inbox_templates_retrieve"];
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        put: operations["v1_chat_inbox_templates_update"];
+        post?: never;
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        delete: operations["v1_chat_inbox_templates_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description `/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+         *
+         *     **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+         *     没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+         *     常用句最自然;要收紧时再加 `soul_inbox.template`。
+         *
+         *     不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+         */
+        patch: operations["v1_chat_inbox_templates_partial_update"];
         trace?: never;
     };
     "/api/v1/chat/inbox/{id}/": {
@@ -559,11 +649,60 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         get: operations["v1_chat_inbox_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信不会自动取消归档。 */
+        post: operations["v1_chat_inbox_archive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+         *     关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+         */
+        get: operations["v1_chat_inbox_draft_retrieve"];
+        /**
+         * @description 我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+         *     关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+         */
+        put: operations["v1_chat_inbox_draft_update"];
+        post?: never;
+        /**
+         * @description 我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+         *     关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。
+         */
+        delete: operations["v1_chat_inbox_draft_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -582,10 +721,31 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         get: operations["v1_chat_inbox_messages_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 我读到此刻。关闭的会话也可以(只读,不是不可读)。 */
+        post: operations["v1_chat_inbox_read_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -607,8 +767,66 @@ export interface paths {
          *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
          *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
          *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
          */
         post: operations["v1_chat_inbox_reply_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/unarchive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
+         */
+        post: operations["v1_chat_inbox_unarchive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/folders/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
+         *
+         *     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
+         *     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
+         *     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+         *
+         *     未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+         *     `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+         *     全站默认(`PageNumberPagination`,每页 20)。
+         */
+        get: operations["v1_chat_inbox_folders_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1693,6 +1911,11 @@ export interface paths {
          *     `conclude` accepts as `destination_realm_id` (see
          *     apps/disposition/destination.py). Not an original judgment (amendment,
          *     reopen) → no options, since those conclude without a disposition.
+         *
+         *     `default_realm_id` is where `conclude` sends the soul with no choice
+         *     made: the automatic routing on the ledger *without* this case's
+         *     non-admitted evidence (`DispositionService._route_to_realm`), so the
+         *     picker's default is the conclusion's.
          */
         get: operations["v1_judgment_destinations_retrieve"];
         put?: never;
@@ -1768,9 +1991,14 @@ export interface paths {
          *     `GET /api/v1/judgment/{id}/precedents/?limit=5`
          *
          *     Same tenant and civilization as this judgment, ranked by same court,
-         *     then closest balance, then shared cited statutes. The ranking and what
-         *     is excluded are written down in apps/judgment/precedents.py. A bare
-         *     array, not a page: it is a short ranked list, not a collection to walk.
+         *     then closest balance **bucketed by 10** (`floor(balance / 10)`, so two
+         *     precedents 2 and 8 away tie), then shared cited statutes — which is
+         *     what breaks a tie inside a bucket — then newest conclusion. `balance`
+         *     is the one frozen at conclusion (`concluded_balance`), or the soul's
+         *     current balance for a case concluded before that column. The ranking
+         *     and what is excluded are written down in apps/judgment/precedents.py.
+         *     A bare array, not a page: it is a short ranked list, not a collection
+         *     to walk.
          */
         get: operations["v1_judgment_precedents_list"];
         put?: never;
@@ -1832,6 +2060,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/assignable-officers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 改派弹层的名单:能被改派到这些案子上的官员 —— 与 `reassign` 校验对象用的是同一个
+         *     `claims.is_assignable`,名单里的人改派必收,不在名单里的必拒。
+         *
+         *     租户取自案子,不取自调用者:ADMIN 没有租户,案子有。案子要在 `self.get_queryset()`
+         *     里 —— 与批量同一条范围,不在就整体 404 并列出 `missing`。一批跨了租户时没有人能
+         *     接下全部,答空名单(批量改派也会逐件拒)。
+         *
+         *     不分页、不搜索:一个租户的官员是几十人的量级,弹层要一次拿全;上了几百人再加 `search`。
+         */
+        get: operations["v1_judgment_assignable_officers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/batch/": {
         parameters: {
             query?: never;
@@ -1854,6 +2108,29 @@ export interface paths {
          *     拒绝:任何一件被拒(已被别人认领、已结案…),整个事务回滚,响应带那件的 `id`。
          */
         post: operations["v1_judgment_batch_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/courts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 队列殿筛选的选项:调用者范围内出现过的每一个殿(非空),各带未结案件数。
+         *
+         *     此前选项取自当前已加载的几页行,翻不到的殿就选不到。范围是 `self.get_queryset()`
+         *     —— DataScopeViewSetMixin 经 `scope_to_tenant` 收到调用者的租户,与列表同一条。
+         *     已结案件的殿也列出(`pending` 为 0):殿是场所,不因眼下没有案子而消失。
+         */
+        get: operations["v1_judgment_courts_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1891,6 +2168,10 @@ export interface paths {
          *     Every one of those is an existing serializer/service called as-is;
          *     nothing here re-implements a read that already exists elsewhere.
          *
+         *     Order. The caller's own claimed cases (「我认领」) come first, oldest
+         *     first; then the rest of the queue in FIFO order. `previous/` walks the
+         *     same order backwards. Deferred cases stay out either way.
+         *
          *     Progress. `total` is how many cases are pending in scope right now,
          *     `remaining` how many of those the caller has not skipped, and
          *     `position` = total - remaining + 1, i.e. "the Nth of M". These are
@@ -1922,8 +2203,9 @@ export interface paths {
         /**
          * @description The pending case just before `?at=<id>` in queue order — 「上一件」.
          *
-         *     Same queue as `next/`: the same tenant/DataScope scoping, FIFO on
-         *     `created_at` (ties by `id`), deferred cases left out unless
+         *     Same queue and order as `next/`: the same tenant/DataScope scoping, the
+         *     caller's claimed cases first, then FIFO on `created_at` (ties by `id`),
+         *     deferred cases left out unless
          *     `include_deferred`, `?skip=` honoured. `at` itself is looked up in the
          *     caller's scope in any state, so 「上一件」 still works from a case that
          *     has just been concluded. `at` missing, malformed, or not visible to the
@@ -1932,7 +2214,7 @@ export interface paths {
          *
          *     Not symmetric in one respect, deliberately: `next/?at=X` answers X
          *     itself (enter the queue on X), `previous/?at=X` answers the case before
-         *     X. Moving forward from X is `next/?skip=X`.
+         *     X. Moving forward from X is `next/?after=X`.
          */
         get: operations["v1_judgment_previous_retrieve"];
         put?: never;
@@ -3502,7 +3784,7 @@ export interface paths {
         put?: never;
         /**
          * @description POST /api/v1/perm/role-permissions/impact/
-         *     保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+         *     保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
          *
          *     Same body as `changes/`; `expected_versions` is accepted and ignored.
          */
@@ -3620,9 +3902,10 @@ export interface paths {
          *     复制为新角色：新 code、同一组授权（仅 ADMIN）
          *
          *     Copies the source's RolePermission rows — permission, `conditions` and
-         *     `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-         *     FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-         *     copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+         *     `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+         *     2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+         *     the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+         *     short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
          */
         post: operations["v1_perm_roles_copy_create"];
         delete?: never;
@@ -6578,6 +6861,16 @@ export interface components {
          * @enum {string}
          */
         ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED";
+        /**
+         * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+         *     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
+         */
+        AssignableOfficer: {
+            readonly id: number;
+            readonly display_name: string;
+            readonly username: string;
+            readonly role: string;
+        };
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -7474,11 +7767,10 @@ export interface components {
         };
         /**
          * @description * `LEFT` - 左(塔尔塔罗斯)
-         *     * `MIDDLE` - 中
          *     * `RIGHT` - 右(至福岛)
          * @enum {string}
          */
-        GreekForkEnum: "LEFT" | "MIDDLE" | "RIGHT";
+        GreekForkEnum: "LEFT" | "RIGHT";
         /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
@@ -7522,6 +7814,32 @@ export interface components {
             /** Format: date-time */
             handled_at: string | null;
         };
+        InboxDraft: {
+            body: string;
+        };
+        /** @description `GET /chat/inbox/folders/`:每个文件夹的总数(与列表的 `folder=` 同一个过滤,见 `apps/chat/inbox.py`)。 */
+        InboxFolders: {
+            all: number;
+            awaiting_reply: number;
+            replied: number;
+            drafts: number;
+            archived: number;
+            /** @description 未归档里调用者的未读数。 */
+            unread: number;
+            /** @description 未归档里往来中的。 */
+            open: number;
+            /** @description 未归档里已关闭的。 */
+            closed: number;
+            /** @description 未归档,按殿。 */
+            halls: components["schemas"]["InboxHallCount"][];
+        };
+        InboxHallCount: {
+            tenant: number;
+            hall_names: {
+                [key: string]: string;
+            };
+            count: number;
+        };
         /** @description 官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。 */
         InboxMessage: {
             event_id: string;
@@ -7531,6 +7849,27 @@ export interface components {
             officer_title: string;
             body: string;
             timestamp: number;
+        };
+        InboxReplyTemplate: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            /** @description 占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。 */
+            body: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /** @description 调用者对一个会话的私人状态。`draft` 只回给写它的那位官员。 */
+        InboxState: {
+            /** Format: date-time */
+            last_read_at: string | null;
+            /** Format: date-time */
+            archived_at: string | null;
+            draft: string;
+            /** Format: date-time */
+            draft_saved_at: string | null;
         };
         /**
          * @description 200 body of `init_role_permissions`.
@@ -7743,6 +8082,16 @@ export interface components {
          * @enum {string}
          */
         JudgmentConcludeVerdictEnum: "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
+        /**
+         * @description `GET /judgment/courts/` 的一行:调用者租户里出现过的一个殿,和它眼下有几件未结案。
+         *
+         *     殿是自由文本列,没有字典表;这份名单就是队列殿筛选的选项来源。`pending` 与
+         *     `queue-counts/` 的 `total` 同一个谓词(未结案,含暂缓)。
+         */
+        JudgmentCourt: {
+            court: string;
+            pending: number;
+        };
         /**
          * @description `POST /judgment/{id}/defer/` 的输入。理由必填。
          *
@@ -7966,6 +8315,12 @@ export interface components {
          * @enum {string}
          */
         KindEnum: "reference" | "domain";
+        /**
+         * @description * `soul` - soul
+         *     * `hall` - hall
+         * @enum {string}
+         */
+        LastFromEnum: "soul" | "hall";
         /**
          * @description 200 body of `LedgerEffectiveView`. Same three numbers as the summary's
          *     merit/demerit/balance, under names that say they are decay-applied.
@@ -8235,9 +8590,12 @@ export interface components {
          *     * `version_conflict` - version_conflict
          *     * `database_error` - database_error
          *     * `admin_only_permission` - admin_only_permission
+         *     * `admin_always_all` - admin_always_all
+         *     * `conflict_unacknowledged` - conflict_unacknowledged
+         *     * `role_forbidden_permission` - role_forbidden_permission
          * @enum {string}
          */
-        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission";
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all" | "conflict_unacknowledged" | "role_forbidden_permission";
         MatrixChangeResult: {
             /** @description Position of the change in the request. */
             index: number;
@@ -8263,6 +8621,8 @@ export interface components {
             expected_versions?: {
                 [key: string]: number;
             };
+            /** @default false */
+            acknowledge_conflicts: boolean;
         };
         MatrixChangesResult: {
             saved: number;
@@ -8295,6 +8655,19 @@ export interface components {
         MatrixImpactResult: {
             required_codenames: string[];
             conflicts: components["schemas"]["MatrixConflict"][];
+            workflow_conflicts: components["schemas"]["MatrixWorkflowConflict"][];
+        };
+        /** @description A live workflow's pending ROLE node that would lose every approver. */
+        MatrixWorkflowConflict: {
+            /** Format: uuid */
+            workflow_id: string;
+            workflow_name: string;
+            tenant_id: number | null;
+            status: string;
+            node_order: number;
+            node_name: string;
+            approver_roles: string[];
+            caused_by: components["schemas"]["MatrixConflictCause"][];
         };
         MeAccount: {
             /** @description 这个账号属于第几世;0 是第一世。 */
@@ -8570,6 +8943,7 @@ export interface components {
             author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            moderation_reason: string;
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
@@ -8583,6 +8957,7 @@ export interface components {
             author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            moderation_reason: string;
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
@@ -8702,6 +9077,21 @@ export interface components {
             };
             /** Format: date-time */
             readonly last_message_at: string | null;
+            /** Format: date-time */
+            readonly last_soul_message_at: string | null;
+            /**
+             * @description 最后一封是谁写的:`soul` / `hall`;还没有信为空串。
+             *
+             *     * `soul` - soul
+             *     * `hall` - hall
+             */
+            readonly last_from: components["schemas"]["LastFromEnum"] | components["schemas"]["BlankEnum"];
+            /** @description **调用者**还没读过灵魂最新的来信。 */
+            readonly unread: boolean;
+            /** @description **调用者**在这个会话里有草稿。 */
+            readonly has_draft: boolean;
+            /** @description **调用者**归档了它。 */
+            readonly archived: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -9802,6 +10192,17 @@ export interface components {
             /** raw key */
             readonly _raw_key?: string;
         };
+        PatchedInboxReplyTemplate: {
+            /** Format: uuid */
+            readonly id?: string;
+            title?: string;
+            /** @description 占位符只有 `{{soul_name}}` 与 `{{hall_name}}`。 */
+            body?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
         /**
          * @description A proceeding. Soul and judge are the requester's own (BD-01).
          *
@@ -10489,7 +10890,6 @@ export interface components {
              * @description Greek only: which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
-             *     * `MIDDLE` - 中
              *     * `RIGHT` - 右(至福岛)
              */
             fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -10551,7 +10951,6 @@ export interface components {
              * @description Greek only: which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
-             *     * `MIDDLE` - 中
              *     * `RIGHT` - 右(至福岛)
              */
             fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -10748,6 +11147,22 @@ export interface components {
          * @enum {string}
          */
         RecycleBinLocationKindEnum: "civilization" | "organization" | "parent";
+        /**
+         * @description 400 body of restore. `code` / `missing_roles` come with a refusal from a
+         *     registered restore check (`template_role_missing`: a workflow template in
+         *     the cascade names roles that no longer exist); the other 400s carry
+         *     `error` alone.
+         */
+        RecycleBinRestoreRefusal: {
+            error: string;
+            code?: components["schemas"]["RecycleBinRestoreRefusalCodeEnum"];
+            missing_roles?: string[];
+        };
+        /**
+         * @description * `template_role_missing` - template_role_missing
+         * @enum {string}
+         */
+        RecycleBinRestoreRefusalCodeEnum: "template_role_missing";
         /**
          * @description Restore is keyed by cascade id, not by row: the whole set deleted
          *     together comes back together.
@@ -11024,6 +11439,24 @@ export interface components {
         };
         SensitiveWordBatchDeleteResult: {
             deleted: number;
+        };
+        /**
+         * @description Body of `POST sensitive-words/`: a new word must name its category
+         *     (maintainer decision, 2026-09-25). Words added before that stay
+         *     uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+         *     asks an existing word for one.
+         */
+        SensitiveWordCreate: {
+            /** Format: uuid */
+            readonly id: string;
+            word: string;
+            category: components["schemas"]["SocialSensitiveWordCategoryEnum"];
+            /** @default REVIEW */
+            action: components["schemas"]["SocialSensitiveWordActionEnum"];
+            readonly hits_30d: number;
+            readonly created_by: components["schemas"]["ModerationAuthor"] | null;
+            /** Format: date-time */
+            readonly created_at: string;
         };
         SentenceNode: {
             /** Format: uuid */
@@ -13110,6 +13543,16 @@ export interface operations {
     v1_chat_inbox_list: {
         parameters: {
             query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `awaiting_reply` - awaiting_reply
+                 *     * `replied` - replied
+                 *     * `drafts` - drafts
+                 *     * `archived` - archived
+                 */
+                folder?: "all" | "awaiting_reply" | "replied" | "drafts" | "archived";
+                /** @description 收件殿司(租户 id)。 */
+                hall?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -13117,6 +13560,13 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul_a?: string;
+                /**
+                 * @description `open` 往来中 / `closed` 已关闭(灵魂已转世)。
+                 *
+                 *     * `open` - open
+                 *     * `closed` - closed
+                 */
+                status?: "open" | "closed";
             };
             header?: never;
             path?: never;
@@ -13130,6 +13580,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedOfficerInboxList"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"][];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxReplyTemplate"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxReplyTemplate"];
+                "multipart/form-data": components["schemas"]["InboxReplyTemplate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxReplyTemplate"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxReplyTemplate"];
+                "multipart/form-data": components["schemas"]["InboxReplyTemplate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_chat_inbox_templates_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this inbox reply template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedInboxReplyTemplate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedInboxReplyTemplate"];
+                "multipart/form-data": components["schemas"]["PatchedInboxReplyTemplate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxReplyTemplate"];
                 };
             };
         };
@@ -13152,6 +13750,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfficerInbox"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_draft_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_draft_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxDraft"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxDraft"];
+                "multipart/form-data": components["schemas"]["InboxDraft"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_draft_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
                 };
             };
         };
@@ -13188,6 +13888,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
                 };
             };
         };
@@ -13232,6 +13954,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_unarchive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_folders_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxFolders"];
                 };
             };
         };
@@ -15474,6 +16237,46 @@ export interface operations {
             };
         };
     };
+    v1_judgment_assignable_officers_list: {
+        parameters: {
+            query: {
+                /** @description The case(s) about to be reassigned. Repeat for a batch (at most 100). */
+                judgment: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableOfficer"][];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
     v1_judgment_batch_create: {
         parameters: {
             query?: never;
@@ -15531,9 +16334,30 @@ export interface operations {
             };
         };
     };
+    v1_judgment_courts_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentCourt"][];
+                };
+            };
+        };
+    };
     v1_judgment_next_retrieve: {
         parameters: {
             query?: {
+                /** @description The case the caller is on; the answer is the pending case just after it (「下一件」). Overrides `at`. */
+                after?: string;
                 /** @description Also hand out deferred (暂缓) cases. Off by default. */
                 include_deferred?: boolean;
             };
@@ -19083,7 +19907,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["RecycleBinRestoreRefusal"];
                 };
             };
             403: {
@@ -20513,9 +21337,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SensitiveWord"];
-                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWord"];
-                "multipart/form-data": components["schemas"]["SensitiveWord"];
+                "application/json": components["schemas"]["SensitiveWordCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordCreate"];
+                "multipart/form-data": components["schemas"]["SensitiveWordCreate"];
             };
         };
         responses: {

@@ -59,6 +59,8 @@ export const judgmentKeys = {
    * that root.
    */
   precedents: (id: string, limit?: number) => [...judgmentKeys.all, "precedents", id, limit ?? null] as const,
+  /** 「下一件」 after `after`. Under `all` so a conclusion's invalidate reaches it. */
+  after: (after: string, skip: string[] = []) => [...judgmentKeys.all, "after", { after, skip }] as const,
   /** 「上一件」 from `at`. Under `all` so a conclusion's invalidate reaches it. */
   previous: (at: string, skip: string[] = []) => [...judgmentKeys.all, "previous", { at, skip }] as const,
   /** 「戊 · 发落」 options. Under `all`: a conclusion elsewhere changes occupancy. */
@@ -66,6 +68,10 @@ export const judgmentKeys = {
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
   queueCounts: (params?: { court?: string; search?: string }) =>
     [...judgmentKeys.all, "queue-counts", params ?? null] as const,
+  /** The court filter's options. Under `all`: a new case in a new court should show up. */
+  courts: () => [...judgmentKeys.all, "courts"] as const,
+  /** Who the given cases may be reassigned to. Keyed by the ids: the tenant comes from the cases. */
+  assignableOfficers: (ids: readonly string[]) => [...judgmentKeys.all, "assignable-officers", [...ids]] as const,
 };
 
 export const workflowKeys = {
@@ -191,7 +197,11 @@ export const socialModerationKeys = {
 export const soulInboxKeys = {
   all: ["soul-inbox"] as const,
   list: (params: Record<string, string | number | undefined>) => ["soul-inbox", "list", params] as const,
+  lists: () => ["soul-inbox", "list"] as const,
+  folders: () => ["soul-inbox", "folders"] as const,
   messages: (id: string) => ["soul-inbox", "messages", id] as const,
+  draft: (id: string) => ["soul-inbox", "draft", id] as const,
+  templates: () => ["soul-inbox", "templates"] as const,
 };
 
 /**

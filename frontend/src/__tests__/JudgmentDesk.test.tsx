@@ -113,9 +113,14 @@ beforeEach(() => {
   mockUser = { id: 2, username: "op", role: "JUDGE", permissions: ["judgment.read", "judgment.execute"], tenant: { code: "CN_DIYU" } };
   judgmentApi.get.mockResolvedValue({ data: judgment() });
   judgmentApi.conclude.mockResolvedValue({ data: judgment({ is_final: true, verdict: "PURGATORY" }) });
-  judgmentApi.next.mockResolvedValue({
-    data: { total: 12, remaining: 12, skipped: 0, position: 3, judgment: { id: ID }, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
-  });
+  // `at` (进度条) 答本案;`after` (J 下一件) 默认答「后面没有了」。
+  judgmentApi.next.mockImplementation((params?: { after?: string }) =>
+    Promise.resolve({
+      data: params?.after
+        ? { total: 12, remaining: 12, skipped: 0, position: null, judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [] }
+        : { total: 12, remaining: 12, skipped: 0, position: 3, judgment: { id: ID }, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
+    })
+  );
   judgmentApi.statutes.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [statute("st-7", "口業 · 七")] } });
   judgmentApi.cite.mockResolvedValue({ data: {} });
   judgmentApi.uncite.mockResolvedValue({ data: {} });
@@ -607,6 +612,41 @@ describe("戊 · 发落", () => {
     renderPage();
     await screen.findAllByRole("radio");
     expect(screen.queryByTestId("placement")).toBeNull();
+  });
+});
+
+describe("J 下一件", () => {
+  const withNext = () =>
+    judgmentApi.next.mockImplementation((params?: { after?: string }) =>
+      Promise.resolve({
+        data: {
+          total: 12, remaining: 12, skipped: 0, position: params?.after ? 4 : 3,
+          judgment: { id: params?.after ? "j-2" : ID }, soul: null, ledger: null, prior_cycles: [], realm_options: [],
+        },
+      })
+    );
+
+  it("有下一件时画链接,J 打开它;在判词框里按 J 是写字", async () => {
+    withNext();
+    renderPage();
+    const link = await screen.findByRole("link", { name: tZh("judgment.desk.next") });
+    expect(link).toHaveAttribute("href", "/judgment/j-2");
+    expect(judgmentApi.next).toHaveBeenCalledWith({ after: ID, skip: [] });
+    const click = jest.spyOn(link, "click").mockImplementation(() => {});
+    fireEvent.keyDown(notesBox(), { key: "j" });
+    expect(click).not.toHaveBeenCalled();
+    fireEvent.keyDown(document.body, { key: "j" });
+    expect(click).toHaveBeenCalledTimes(1);
+    // J 与 K 各开各的:按 J 不会点到上一件(此处也没有上一件的链接)。
+    expect(screen.queryByRole("link", { name: tZh("judgment.desk.previous") })).toBeNull();
+  });
+
+  it("后面没有了:没有链接,J 什么都不做", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() => expect(judgmentApi.next).toHaveBeenCalledWith({ after: ID, skip: [] }));
+    await act(async () => {});
+    expect(screen.queryByRole("link", { name: tZh("judgment.desk.next") })).toBeNull();
   });
 });
 

@@ -44,7 +44,17 @@ export default function RecycleBinPage() {
       queryClient.invalidateQueries({ queryKey: ["recycle-bin"] });
       showToast(t("recycle_bin.restore_success"), "success");
     },
-    onError: () => showToast(t("recycle_bin.restore_error"), "error"),
+    // `template_role_missing` (backend/apps/perm/matrix.py::template_restore_refusal):
+    // a workflow template naming roles that are gone. Say which, not just "failed".
+    onError: (err) => {
+      const body = (err as { response?: { data?: { code?: string; missing_roles?: string[] } } })?.response?.data;
+      showToast(
+        body?.code === "template_role_missing"
+          ? t("recycle_bin.restore_missing_roles", { roles: (body.missing_roles ?? []).join("、") })
+          : t("recycle_bin.restore_error"),
+        "error"
+      );
+    },
   });
 
   const hardDeleteMutation = useMutation({

@@ -64,8 +64,16 @@ export function summarizeMatrixSave(result: MatrixChangesResult): MatrixSaveSumm
 export function useApplyMatrixChanges() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { changes: MatrixChange[]; expectedVersions?: Record<string, number> }) =>
-      (await permApi.applyChanges(vars.changes, vars.expectedVersions)).data,
+    mutationFn: async (vars: {
+      changes: MatrixChange[];
+      expectedVersions?: Record<string, number>;
+      acknowledgeConflicts?: boolean;
+    }) =>
+      (
+        await (vars.acknowledgeConflicts
+          ? permApi.applyChanges(vars.changes, vars.expectedVersions, true)
+          : permApi.applyChanges(vars.changes, vars.expectedVersions))
+      ).data,
     onSuccess: (result) => {
       const { rolesChanged } = summarizeMatrixSave(result);
       if (rolesChanged.length === 0) return;

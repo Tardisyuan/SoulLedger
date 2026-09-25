@@ -88,6 +88,28 @@ class TestRanking:
         assert [row["name"] for row in body] == ["shares two", "shares one", "shares none"]
         assert [row["shared_statutes"] for row in body] == [2, 1, 0]
 
+    def test_balances_are_bucketed_by_ten_so_shared_statutes_break_the_tie(self, judge, cn_tenant):
+        """2 away and 8 away are the same bucket (0..9): the shared statute decides.
+        10 is the next bucket and loses to both, however many statutes it shares."""
+        a, b = _statute(cn_tenant, "B_A"), _statute(cn_tenant, "B_B")
+        target = _judgment(cn_tenant, "target", balance=0, verdict=None)
+        _cite(target, a, b)
+        _judgment(cn_tenant, "2 away, shares none", balance=2)
+        _cite(_judgment(cn_tenant, "8 away, shares one", balance=8), a)
+        _cite(_judgment(cn_tenant, "10 away, shares two", balance=10), a, b)
+        assert _names(judge.get(_url(target))) == [
+            "8 away, shares one", "2 away, shares none", "10 away, shares two",
+        ]
+
+    def test_buckets_floor_rather_than_truncate(self, judge, cn_tenant):
+        """-5 is in bucket -1, not 0: truncating division would tie it with +5."""
+        a = _statute(cn_tenant, "F_A")
+        target = _judgment(cn_tenant, "target", balance=3, verdict=None)
+        _cite(target, a)
+        _cite(_judgment(cn_tenant, "minus five, shares one", balance=-5), a)
+        _judgment(cn_tenant, "plus nine, shares none", balance=9)
+        assert _names(judge.get(_url(target))) == ["plus nine, shares none", "minus five, shares one"]
+
     def test_an_empty_court_is_not_a_court_match(self, judge, cn_tenant):
         target = _judgment(cn_tenant, "target", balance=0, court="", verdict=None)
         _judgment(cn_tenant, "blank court far", balance=90, court="")
@@ -104,6 +126,40 @@ class TestRanking:
         assert len(judge.get(_url(target, limit=2)).json()) == 2
         assert len(judge.get(_url(target, limit=500)).json()) == 8
         assert judge.get(_url(target, limit="x")).status_code == 400
+
+
+@pytest.mark.django_db
+class TestConcludedBalanceSnapshot:
+    """The balance a precedent is ranked on is the one frozen at its conclusion
+    (`Judgment.concluded_balance`); only a case concluded before the column
+    existed (null) falls back to the soul's balance today."""
+
+    def test_the_snapshot_not_todays_balance_ranks_and_is_shown(self, judge, cn_tenant):
+        target = _judgment(cn_tenant, "target", balance=0, verdict=None)
+        # Today both souls read 500; at conclusion one read 2 and one 300.
+        near = _judgment(cn_tenant, "near at conclusion", balance=500)
+        far = _judgment(cn_tenant, "far at conclusion", balance=500)
+        Judgment.all_objects.filter(pk=near.pk).update(concluded_balance=2)
+        Judgment.all_objects.filter(pk=far.pk).update(concluded_balance=300)
+        body = judge.get(_url(target)).json()
+        assert [row["name"] for row in body] == ["near at conclusion", "far at conclusion"]
+        assert [row["balance"] for row in body] == [2, 300]
+
+    def test_a_null_snapshot_falls_back_to_the_current_balance(self, judge, cn_tenant):
+        target = _judgment(cn_tenant, "target", balance=0, verdict=None)
+        old = _judgment(cn_tenant, "older case", balance=3)
+        snap = _judgment(cn_tenant, "snapshotted", balance=0)
+        Judgment.all_objects.filter(pk=snap.pk).update(concluded_balance=90)
+        body = judge.get(_url(target)).json()
+        assert old.concluded_balance is None
+        assert [(row["name"], row["balance"]) for row in body] == [("older case", 3), ("snapshotted", 90)]
+
+    def test_a_concluded_target_is_compared_on_its_own_snapshot(self, judge, cn_tenant):
+        target = _judgment(cn_tenant, "target", balance=0)
+        Judgment.all_objects.filter(pk=target.pk).update(concluded_balance=100)
+        _judgment(cn_tenant, "at zero", balance=0)
+        _judgment(cn_tenant, "at a hundred", balance=100)
+        assert _names(judge.get(_url(target))) == ["at a hundred", "at zero"]
 
 
 @pytest.mark.django_db

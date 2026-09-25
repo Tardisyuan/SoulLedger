@@ -305,3 +305,90 @@ class TestJudgmentQueueCursor:
         after = admin_client.get(URL)
         assert after.data["judgment"]["id"] == str(second.id)
         assert after.data["total"] == 1
+
+
+# ---------------------------------------------------------------------------
+# 「我认领」 first (产品负责人 2026-09-25)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestMineFirst:
+    """`next/` hands out the caller's claimed cases before the FIFO head;
+    `previous/` walks the same order back; deferred cases stay out."""
+
+    @pytest.fixture
+    def client(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        return api_client
+
+    @pytest.fixture
+    def cases(self, cn_tenant, admin_user, django_user_model):
+        import datetime
+
+        from django.utils import timezone
+
+        other = django_user_model.objects.create_user(username="other_judge", password="x", role="JUDGE",
+                                                      tenant=cn_tenant)
+        base = timezone.now() - datetime.timedelta(days=10)
+        made = {}
+        for day, name, claimed in (
+            (1, "oldest", None), (2, "theirs", other), (3, "mine_a", admin_user), (4, "mine_b", admin_user),
+            (5, "newest", None), (6, "mine_deferred", admin_user),
+        ):
+            soul = Soul.objects.create(name=name, current_state=SoulState.JUDGING, tenant=cn_tenant)
+            case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn_tenant)
+            Judgment.all_objects.filter(pk=case.pk).update(
+                created_at=base + datetime.timedelta(days=day), claimed_by=claimed,
+                deferred_at=timezone.now() if name == "mine_deferred" else None,
+            )
+            made[name] = case
+        return made
+
+    def _walk(self, client, cases):
+        names = {str(c.id): n for n, c in cases.items()}
+        seen, skips = [], []
+        while True:
+            data = client.get(URL, {"skip": ",".join(skips)} if skips else {}).data
+            if data["judgment"] is None:
+                return seen
+            seen.append((names[data["judgment"]["id"]], data["position"]))
+            skips.append(data["judgment"]["id"])
+
+    def test_next_takes_mine_first_then_the_fifo_order(self, client, cases):
+        assert self._walk(client, cases) == [
+            ("mine_a", 1), ("mine_b", 2), ("oldest", 3), ("theirs", 4), ("newest", 5),
+        ]
+
+    def test_at_reports_the_position_in_the_same_order(self, client, cases):
+        assert client.get(URL, {"at": str(cases["oldest"].id)}).data["position"] == 3
+
+    def test_previous_walks_the_same_order_back(self, client, cases):
+        names = {str(c.id): n for n, c in cases.items()}
+        back, at = [], cases["newest"]
+        while True:
+            data = client.get("/api/v1/judgment/previous/", {"at": str(at.id)}).data
+            if data["judgment"] is None:
+                break
+            back.append((names[data["judgment"]["id"]], data["position"]))
+            at = cases[back[-1][0]]
+        assert back == [("theirs", 4), ("oldest", 3), ("mine_b", 2), ("mine_a", 1)]
+
+    def test_after_walks_the_same_order_forward(self, client, cases):
+        names = {str(c.id): n for n, c in cases.items()}
+        forward, at = [], cases["mine_a"]
+        for _ in range(len(cases) + 1):  # bounded: a wrong `after` can cycle
+            data = client.get(URL, {"after": str(at.id)}).data
+            if data["judgment"] is None:
+                assert data["position"] is None
+                break
+            forward.append((names[data["judgment"]["id"]], data["position"]))
+            at = cases[forward[-1][0]]
+        # 暂缓的 mine_deferred 不在其中;从中段出发也不回到队首。
+        assert forward == [("mine_b", 2), ("oldest", 3), ("theirs", 4), ("newest", 5)]
+        # `skip` 照样生效;`after` 压过 `at`。
+        skipped = client.get(URL, {"after": str(cases["oldest"].id), "skip": str(cases["theirs"].id)}).data
+        assert names[skipped["judgment"]["id"]] == "newest"
+        both = client.get(URL, {"after": str(cases["oldest"].id), "at": str(cases["mine_a"].id)}).data
+        assert names[both["judgment"]["id"]] == "theirs"
+

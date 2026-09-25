@@ -474,10 +474,15 @@
     "entity_types": {
       "soul": "Soul",
       "menu": "Menu",
-      "dispatch_draft": "Dispatch draft"
+      "dispatch_draft": "Dispatch draft",
+      "role": "Role",
+      "social_post": "Post",
+      "social_comment": "Comment",
+      "workflow_template": "Workflow template"
     },
     "col_location": "Original location",
-    "col_deleted_by": "Deleted by"
+    "col_deleted_by": "Deleted by",
+    "restore_missing_roles": "Cannot restore: this workflow template names roles that no longer exist ({{roles}}). Restore or recreate them first."
   },
   "permissions": {
     "title": "Permission Management",
@@ -583,8 +588,13 @@
         "version_conflict": "Someone else changed this role; it was reloaded — look again.",
         "role_not_found": "The role no longer exists.",
         "permission_not_found": "The permission no longer exists.",
-        "database_error": "A database error: this cell was not written."
-      }
+        "database_error": "A database error: this cell was not written.",
+        "admin_always_all": "ADMIN always holds every permission",
+        "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save.",
+        "role_forbidden_permission": "Conflicts with the rule that MODERATOR may not hold workflow approve, workflow advance or user management; sent back."
+      },
+      "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
+      "conflict_acknowledge": "I understand this leaves {{n}} workflows ({{m}} of them in flight) with no approver"
     },
     "segments": {
       "label": "Permission sections",
@@ -1079,7 +1089,8 @@
       "uncite": "Withdraw {{code}}",
       "cite_error": "The citation did not save",
       "deferred_note": "Deferred: {{reason}}",
-      "previous": "Previous"
+      "previous": "Previous",
+      "next": "Next"
     },
     "claim": {
       "groups": {
@@ -1118,7 +1129,7 @@
       "reassign_hint": "Active officers in this tenant only; the server checks case permission again",
       "pick_officer": "— Choose an officer —",
       "officer_required": "Choose an officer",
-      "officers_unavailable": "Could not read the officer list (needs user-management permission)",
+      "officers_unavailable": "Could not read the officer list (needs reassign permission)",
       "reassign_confirm": "Reassign",
       "done_claim": "Claimed {{n}}",
       "done_reassign": "Reassigned {{n}}",
@@ -1392,7 +1403,6 @@
       },
       "fork": {
         "LEFT": "Left · Tartarus",
-        "MIDDLE": "Middle",
         "RIGHT": "Right · the Isles of the Blessed"
       },
       "off_shape": "{{n}} realms have no place on this shape — see the table",
@@ -3106,6 +3116,7 @@
       "approve": "Let through",
       "shortcuts": "J / K move · A let through · H hide",
       "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
+      "held_for_word": "Held for review by the word “{{word}}”",
       "media_n": "{{n}} images",
       "media_label": "Images",
       "media_caption": "Image {{i}} · {{w}}×{{h}}",
@@ -3122,7 +3133,8 @@
       "select_row": "Select {{word}}",
       "batch_region": "Word list batch actions",
       "delete_selected": "Delete selected",
-      "confirm_title": "Delete {{n}} words?"
+      "confirm_title": "Delete {{n}} words?",
+      "category_placeholder": "— choose a category —"
     },
     "mutes": {
       "col_soul": "Soul",
@@ -3170,7 +3182,11 @@
     "folder": {
       "all": "All letters",
       "open": "Open",
-      "closed": "Closed"
+      "closed": "Closed",
+      "awaiting_reply": "Awaiting reply",
+      "replied": "Replied",
+      "drafts": "Drafts",
+      "archived": "Archived"
     },
     "by_hall": "By hall",
     "folder_empty": "No letters in this folder",
@@ -3183,7 +3199,30 @@
     "cite_hint": "/ cite a statute",
     "cite_label": "Statutes",
     "cite_results": "{{n}} statutes; ↑↓ to choose, Enter to insert",
-    "cite_empty": "No matching statute"
+    "cite_empty": "No matching statute",
+    "oldest_first": "Oldest first",
+    "unread": "Unread",
+    "archive": "Archive",
+    "unarchive": "Move back to inbox",
+    "archived_done": "Archived",
+    "unarchived_done": "Moved back to the inbox",
+    "save_draft": "Save draft",
+    "draft_saving": "Saving draft…",
+    "draft_saved": "Draft saved · {{time}}",
+    "draft_failed": "Draft not saved; try again",
+    "template": {
+      "label": "Template",
+      "pick": "Insert template",
+      "none": "No templates yet",
+      "manage": "Manage templates",
+      "new": "New template",
+      "title": "Title",
+      "body": "Text",
+      "placeholders": "Filled in with the soul's and the hall's name before sending:",
+      "saved": "Template saved",
+      "deleted": "Template deleted",
+      "empty_manage": "This hall has no templates yet. Save a reply you write often, then insert it with one click."
+    }
   },
   "sentence_plan": {
     "panel_title": "Sentence plan",

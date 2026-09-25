@@ -110,8 +110,21 @@ def test_greek_roads_fork_left_and_right_off_the_meadow_and_nothing_takes_the_mi
     isles = _realm("GR_ISLES_OF_THE_BLESSED")
     assert (isles.fork, isles.parent_realm_id) == (GreekFork.RIGHT, meadow.pk)
     assert (meadow.fork, meadow.parent_realm_id) == (None, None)
-    assert not Realm.all_objects.filter(fork=GreekFork.MIDDLE).exists()
+    assert not Realm.all_objects.filter(fork="MIDDLE").exists()
+    assert GreekFork.values == ["LEFT", "RIGHT"]  # MIDDLE removed 2026-09-25
     assert set(Realm.objects.exclude(civilization="GREEK").values_list("fork", flat=True)) == {None}
+
+
+@pytest.mark.django_db
+def test_the_migration_that_drops_middle_refuses_a_row_still_holding_it(seeded):
+    """0020 only reads: on the seeded data it passes; a row holding MIDDLE stops it by name."""
+    from django.apps import apps as registry
+
+    check = import_module("apps.realms.migrations.0020_remove_greek_fork_middle").refuse_if_any_row_takes_middle
+    check(registry, None)  # the seed has none
+    Realm.objects.filter(realm_code="GR_TARTARUS").update(fork="MIDDLE")
+    with pytest.raises(RuntimeError, match="GR_TARTARUS"):
+        check(registry, None)
 
 
 @pytest.mark.django_db
@@ -315,7 +328,7 @@ def test_opening_a_case_in_a_court_puts_the_soul_there_and_moving_the_case_moves
     assert (second.realm_id, second.sequence, second.left_at) == (_court(2).pk, 3, None)
 
     # A PATCH that does not touch the realm is not a move.
-    assert judge.patch(f"/api/v1/judgment/{resp.data['id']}/", {"notes": "x"}, format="json").status_code == 200
+    assert judge.patch(f"/api/v1/judgment/{resp.data['id']}/", {"court": "第二殿"}, format="json").status_code == 200
     assert len(_path(soul)) == 3
 
 
@@ -542,5 +555,5 @@ def test_the_committed_schema_describes_the_new_shapes():
     assert "realm_id" in schemas["Disposition"]["properties"]
     for name in ("Realm", "RealmList"):
         assert {"order", "kind", "level", "region", "hour", "fork"} <= set(schemas[name]["properties"]), name
-    assert schemas["GreekForkEnum"]["enum"] == ["LEFT", "MIDDLE", "RIGHT"]
+    assert schemas["GreekForkEnum"]["enum"] == ["LEFT", "RIGHT"]
     assert schemas["RealmKindEnum"]["enum"] == ["HALL", "GATE", "LAYER", "PATH"]

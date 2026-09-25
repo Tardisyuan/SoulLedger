@@ -14,6 +14,7 @@ import { judgmentKeys } from "@soulledger/core/query_keys";
 import {
   useBatchJudgments,
   useClaimJudgment,
+  useJudgmentCourts,
   useJudgmentQueueCounts,
 } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -97,9 +98,12 @@ export function JudgmentClaimQueue() {
   const selectable = new Set(allRows.map((j) => j.id));
   const chosen = [...selected].filter((id) => selectable.has(id));
 
-  /* 殿的选项:当前各组行里出现过的殿,加上已选的那一个。后端没有「列出殿」的接口,
-     `court` 是自由文本、按原值精确匹配,所以选项只能从真实的行里来。 */
-  const courts = [...new Set([...allRows.map((j) => j.court).filter(Boolean), ...(court ? [court] : [])])].sort();
+  /* 殿的选项:`/judgment/courts/` —— 调用者范围内的全部殿,各带未结案件数,不随当前筛选收窄。
+     此前取自已加载的几页行,翻不到的殿就选不到。已选的那一个在名单到之前也留着。 */
+  const courtOptions = useJudgmentCourts().data ?? [];
+  const courts = courtOptions.some((c) => c.court === court) || !court
+    ? courtOptions
+    : [...courtOptions, { court, pending: undefined }];
 
   const claim = useClaimJudgment();
   const batch = useBatchJudgments();
@@ -183,8 +187,8 @@ export function JudgmentClaimQueue() {
           >
             <option value="">{t("judgment.claim.court_all")}</option>
             {courts.map((c) => (
-              <option key={c} value={c}>
-                {c}
+              <option key={c.court} value={c.court}>
+                {c.pending === undefined ? c.court : `${c.court} · ${c.pending}`}
               </option>
             ))}
           </select>
@@ -370,6 +374,7 @@ export function JudgmentClaimQueue() {
       />
       <ReassignDialog
         isOpen={dialog === "reassign"}
+        ids={chosen.slice(0, BATCH_LIMIT)}
         count={Math.min(chosen.length, BATCH_LIMIT)}
         pending={batch.isPending}
         onCancel={() => setDialog(null)}

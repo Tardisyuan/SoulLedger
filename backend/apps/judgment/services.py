@@ -217,6 +217,9 @@ class JudgmentConclusionService:
             judgment.notes = notes
             judgment.is_final = True
             judgment.concluded_at = timezone.now()
+            # The admitted balance, frozen with the verdict — the rulings are
+            # frozen from here on too (`_assert_open`).
+            judgment.concluded_balance = EvidenceAdmissionService.admitted_net(judgment)
             judgment.save()
 
             # An AMENDMENT (the stop's own case, situation 1) or a REOPEN (the
@@ -359,11 +362,29 @@ class EvidenceAdmissionService:
 
     @classmethod
     def admitted_balance(cls, judgment) -> dict:
+        """The desk's 「采信后余额」. A concluded case with a snapshot shows the
+        snapshot (`Judgment.concluded_balance`) where the reading is a balance,
+        not today's figure — the soul's ledger keeps moving after the verdict."""
         from apps.ledger.services import LedgerService
 
-        return LedgerService.get_admitted_balance(
+        result = LedgerService.get_admitted_balance(
             judgment.soul, judgment.cycle, cls.not_admitted_ids(judgment)
         )
+        if (
+            judgment.verdict is not None
+            and judgment.concluded_balance is not None
+            and result["reading_kind"] == "BALANCE"
+        ):
+            result["balance"] = judgment.concluded_balance
+        return result
+
+    @classmethod
+    def admitted_net(cls, judgment) -> int | None:
+        """Admitted merit − demerit for this case, for every cosmology; None
+        when the case is not from the soul's current life."""
+        from apps.ledger.services import LedgerService
+
+        return LedgerService.get_admitted_net(judgment.soul, judgment.cycle, cls.not_admitted_ids(judgment))
 
 
 class JudgmentDraftService:
