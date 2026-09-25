@@ -934,7 +934,8 @@
       "cited": "已引用",
       "uncite": "撤回引用 {{code}}",
       "cite_error": "引用未能保存",
-      "deferred_note": "已暂缓：{{reason}}"
+      "deferred_note": "已暂缓：{{reason}}",
+      "previous": "上一件"
     },
     "claim": {
       "groups": {
@@ -1024,6 +1025,26 @@
       "same_court": "同殿",
       "shared": "共同援引 {{n}}",
       "error": "先例读取失败"
+    },
+    "placement": {
+      "title": "发落",
+      "destination": "目的地",
+      "auto": "自动分派（{{name}}）",
+      "auto_plain": "自动分派",
+      "full": "已满",
+      "term": "刑期（年）",
+      "eternal": "永恒之刑",
+      "pick_verdict": "先选裁决，再选发落。",
+      "none": "此裁决没有可选的目的地，结案时自动分派。",
+      "load_error": "目的地未能取到；结案时自动分派。",
+      "errors": {
+        "realm_full": "执行失败：目的地已满",
+        "realm_not_allowed": "执行失败：此裁决不能去往该目的地",
+        "realm_not_found": "执行失败：目的地不存在",
+        "term_conflict": "执行失败：刑期与永恒只能选一个",
+        "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
+        "destination_not_applicable": "执行失败：此案不设发落"
+      }
     }
   },
   "audit": {

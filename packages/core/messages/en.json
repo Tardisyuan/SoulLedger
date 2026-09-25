@@ -934,7 +934,8 @@
       "cited": "Cited",
       "uncite": "Withdraw {{code}}",
       "cite_error": "The citation did not save",
-      "deferred_note": "Deferred: {{reason}}"
+      "deferred_note": "Deferred: {{reason}}",
+      "previous": "Previous"
     },
     "claim": {
       "groups": {
@@ -1024,6 +1025,26 @@
       "same_court": "same court",
       "shared": "{{n}} shared citations",
       "error": "Precedents could not be read"
+    },
+    "placement": {
+      "title": "Placement",
+      "destination": "Destination",
+      "auto": "Automatic routing ({{name}})",
+      "auto_plain": "Automatic routing",
+      "full": "full",
+      "term": "Term (years)",
+      "eternal": "Eternal sentence",
+      "pick_verdict": "Choose a verdict first, then the placement.",
+      "none": "No destination can be chosen for this verdict; concluding routes it automatically.",
+      "load_error": "The destinations could not be loaded; concluding routes it automatically.",
+      "errors": {
+        "realm_full": "Not executed: the destination is full",
+        "realm_not_allowed": "Not executed: this verdict cannot send a soul there",
+        "realm_not_found": "Not executed: no such destination",
+        "term_conflict": "Not executed: choose a term or eternal, not both",
+        "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
+        "destination_not_applicable": "Not executed: this case has no placement"
+      }
     }
   },
   "audit": {

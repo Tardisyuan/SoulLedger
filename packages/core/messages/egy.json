@@ -934,7 +934,8 @@
       "cited": "Djed Seth",
       "uncite": "Khemu Djed {{code}}",
       "cite_error": "Nen Djed",
-      "deferred_note": "Sedjer: {{reason}}"
+      "deferred_note": "Sedjer: {{reason}}",
+      "previous": "Sep Tepy"
     },
     "claim": {
       "groups": {
@@ -1024,6 +1025,26 @@
       "same_court": "Hemsu Seth Wa",
       "shared": "{{n}} Djed",
       "error": "Nen Maa Sep Tepy"
+    },
+    "placement": {
+      "title": "Wat En Ta",
+      "destination": "Ta",
+      "auto": "Sheemtet Iri Wat ({{name}})",
+      "auto_plain": "Sheemtet Iri Wat",
+      "full": "Nen Aq",
+      "term": "Renpet",
+      "eternal": "Djet",
+      "pick_verdict": "Setep Sheemtet Tepy.",
+      "none": "Nen Ta Em Wat Pen; Sheemtet Iri Wat.",
+      "load_error": "Nen Ini Ta; Sheemtet Iri Wat.",
+      "errors": {
+        "realm_full": "Nen Iri: Ta Nen Aq",
+        "realm_not_allowed": "Nen Iri: Sheemtet Pen Nen Wat Er Ta Pen",
+        "realm_not_found": "Nen Iri: Nen Ta Pen",
+        "term_conflict": "Nen Iri: Renpet Wa, Djet Wa",
+        "eternal_not_allowed": "Nen Iri: Nen Djet Em Ta Pen",
+        "destination_not_applicable": "Nen Iri: Nen Wat En Ta Em Sep Pen"
+      }
     }
   },
   "audit": {

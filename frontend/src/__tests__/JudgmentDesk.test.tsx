@@ -43,6 +43,8 @@ jest.mock("@soulledger/core/api", () => ({
     saveDraft: jest.fn(),
     precedents: jest.fn(),
     defer: jest.fn(),
+    destinations: jest.fn(),
+    previous: jest.fn(),
   },
   soulsApi: { get: jest.fn(), karma: jest.fn() },
   reincarnationApi: { list: jest.fn() },
@@ -93,6 +95,15 @@ function renderPage() {
   );
 }
 
+const realm = (id: string, name: string, occupancy: number, capacity: number | null, is_eternal = false) => ({
+  id, name, realm_code: id, kind: "HALL", capacity, occupancy, is_eternal,
+});
+const DESTINATIONS = [
+  realm("r-5", "第五殿", 3, 10),
+  realm("r-9", "第九殿", 10, 10),
+  realm("r-a", "阿鼻", 1, null, true),
+];
+
 const radio = (value: string) =>
   screen.getAllByRole("radio").find((r) => (r as HTMLInputElement).value === value) as HTMLInputElement;
 const notesBox = () => screen.getByLabelText(tZh("judgment.detail.notes")) as HTMLTextAreaElement;
@@ -112,6 +123,12 @@ beforeEach(() => {
   judgmentApi.saveDraft.mockResolvedValue({ data: {} });
   judgmentApi.precedents.mockResolvedValue({ data: [] });
   judgmentApi.defer.mockResolvedValue({ data: {} });
+  judgmentApi.destinations.mockImplementation((_id: string, verdict: string) =>
+    Promise.resolve({ data: { verdict, default_realm_id: "r-5", default_term_years: null, options: DESTINATIONS } })
+  );
+  judgmentApi.previous.mockResolvedValue({
+    data: { total: 12, remaining: 12, skipped: 0, position: null, judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
+  });
   soulsApi.get.mockResolvedValue({ data: { id: "s-1", name: "沈青梧", tenant_code: "CN_DIYU" } });
   soulsApi.karma.mockResolvedValue({
     data: {
@@ -491,5 +508,129 @@ describe("进度条上的 D 暂缓", () => {
     judgmentApi.get.mockResolvedValue({ data: judgment({ deferred_at: "2026-09-20T00:00:00Z", defer_reason: "待补证" }) });
     renderPage();
     expect(await screen.findByTestId("deferred-note")).toHaveTextContent(tZh("judgment.desk.deferred_note", { reason: "待补证" }));
+  });
+});
+
+describe("戊 · 发落", () => {
+  const destinationBox = () => screen.getByLabelText(tZh("judgment.placement.destination")) as HTMLSelectElement;
+  const termBox = () => screen.getByLabelText(tZh("judgment.placement.term")) as HTMLInputElement;
+  const conclude = () => fireEvent.click(screen.getByRole("button", { name: new RegExp(tZh("judgment.detail.conclude")) }));
+
+  it("先选裁决;目的地只取这个裁决的候选,标出占用与已满,默认项是自动分派", async () => {
+    renderPage();
+    expect(await screen.findByText(tZh("judgment.placement.pick_verdict"))).toBeInTheDocument();
+    expect(judgmentApi.destinations).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document.body, { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    expect(judgmentApi.destinations).toHaveBeenCalledWith(ID, "FAILED");
+    const labels = Array.from(destinationBox().options).map((o) => o.textContent);
+    expect(labels).toEqual([
+      tZh("judgment.placement.auto", { name: "第五殿" }),
+      "第五殿 · 3 / 10",
+      `第九殿 · 10 / 10 · ${tZh("judgment.placement.full")}`,
+      "阿鼻 · 1",
+    ]);
+  });
+
+  it("选了目的地与刑期就随结案发出;什么都不选,请求里没有这三个字段", async () => {
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    conclude();
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({ verdict: "FAILED", notes: "", create_workflow: false });
+
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    fireEvent.change(termBox(), { target: { value: "0x12" } }); // 非数字剥掉,前导零归掉
+    expect(termBox().value).toBe("12");
+    conclude();
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(2));
+    expect(judgmentApi.conclude.mock.calls[1][1]).toEqual({
+      verdict: "FAILED", notes: "", create_workflow: false, destination_realm_id: "r-9", term_years: 12,
+    });
+  });
+
+  it("换了裁决,为旧裁决选的发落就不再随请求发出", async () => {
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    fireEvent.keyDown(document.body, { key: "3" });
+    await waitFor(() => expect(judgmentApi.destinations).toHaveBeenCalledWith(ID, "PURGATORY"));
+    expect(((await screen.findByLabelText(tZh("judgment.placement.destination"))) as HTMLSelectElement).value).toBe("");
+    conclude();
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).not.toHaveProperty("destination_realm_id");
+  });
+
+  it("永恒只在能收永恒的目的地出现;勾上后不带刑期", async () => {
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    expect(screen.queryByLabelText(tZh("judgment.placement.eternal"))).toBeNull();
+
+    fireEvent.change(termBox(), { target: { value: "7" } });
+    fireEvent.change(destinationBox(), { target: { value: "r-a" } });
+    fireEvent.click(screen.getByLabelText(tZh("judgment.placement.eternal")));
+    expect(termBox()).toBeDisabled();
+    conclude();
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({
+      verdict: "FAILED", notes: "", create_workflow: false, destination_realm_id: "r-a", eternal: true,
+    });
+  });
+
+  it("realm_full:在这一节写「! 执行失败：目的地已满」,不弹通用 toast,并重取占用", async () => {
+    judgmentApi.conclude.mockRejectedValue({ response: { status: 409, data: { error: "R9 is full (10/10)", code: "realm_full" } } });
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    const calls = judgmentApi.destinations.mock.calls.length;
+    conclude();
+    const alert = await within(screen.getByTestId("placement")).findByRole("alert");
+    expect(alert).toHaveTextContent(`! ${tZh("judgment.placement.errors.realm_full")}`);
+    expect(mockShowToast).not.toHaveBeenCalled();
+    await waitFor(() => expect(judgmentApi.destinations.mock.calls.length).toBeGreaterThan(calls));
+  });
+
+  it("加减项审判与没有 judgment.execute 的人都没有这一节", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ kind: "AMENDMENT", amends_plan_id: null }) });
+    const a = renderPage();
+    await screen.findAllByRole("radio");
+    expect(screen.queryByTestId("placement")).toBeNull();
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment() });
+    mockUser = { ...mockUser, permissions: ["judgment.read"] };
+    renderPage();
+    await screen.findAllByRole("radio");
+    expect(screen.queryByTestId("placement")).toBeNull();
+  });
+});
+
+describe("K 上一件", () => {
+  it("有上一件时画链接,K 打开它;在判词框里按 K 是写字", async () => {
+    judgmentApi.previous.mockResolvedValue({
+      data: { total: 12, remaining: 12, skipped: 0, position: 2, judgment: { id: "j-0" }, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
+    });
+    renderPage();
+    const link = await screen.findByRole("link", { name: tZh("judgment.desk.previous") });
+    expect(link).toHaveAttribute("href", "/judgment/j-0");
+    expect(judgmentApi.previous).toHaveBeenCalledWith({ at: ID, skip: [] });
+    const click = jest.spyOn(link, "click").mockImplementation(() => {});
+    fireEvent.keyDown(notesBox(), { key: "k" });
+    expect(click).not.toHaveBeenCalled();
+    fireEvent.keyDown(document.body, { key: "k" });
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it("前面没有了:没有链接,K 什么都不做", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() => expect(judgmentApi.previous).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole("link", { name: tZh("judgment.desk.previous") })).toBeNull();
   });
 });
