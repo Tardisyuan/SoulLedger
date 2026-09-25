@@ -3503,7 +3503,7 @@ export interface paths {
         put?: never;
         /**
          * @description POST /api/v1/perm/role-permissions/impact/
-         *     保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+         *     保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
          *
          *     Same body as `changes/`; `expected_versions` is accepted and ignored.
          */
@@ -3621,9 +3621,10 @@ export interface paths {
          *     复制为新角色：新 code、同一组授权（仅 ADMIN）
          *
          *     Copies the source's RolePermission rows — permission, `conditions` and
-         *     `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-         *     FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-         *     copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+         *     `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+         *     2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+         *     the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+         *     short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
          */
         post: operations["v1_perm_roles_copy_create"];
         delete?: never;
@@ -7469,11 +7470,10 @@ export interface components {
         };
         /**
          * @description * `LEFT` - 左(塔尔塔罗斯)
-         *     * `MIDDLE` - 中
          *     * `RIGHT` - 右(至福岛)
          * @enum {string}
          */
-        GreekForkEnum: "LEFT" | "MIDDLE" | "RIGHT";
+        GreekForkEnum: "LEFT" | "RIGHT";
         /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
@@ -8230,9 +8230,12 @@ export interface components {
          *     * `version_conflict` - version_conflict
          *     * `database_error` - database_error
          *     * `admin_only_permission` - admin_only_permission
+         *     * `admin_always_all` - admin_always_all
+         *     * `conflict_unacknowledged` - conflict_unacknowledged
+         *     * `role_forbidden_permission` - role_forbidden_permission
          * @enum {string}
          */
-        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission";
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all" | "conflict_unacknowledged" | "role_forbidden_permission";
         MatrixChangeResult: {
             /** @description Position of the change in the request. */
             index: number;
@@ -8258,6 +8261,8 @@ export interface components {
             expected_versions?: {
                 [key: string]: number;
             };
+            /** @default false */
+            acknowledge_conflicts: boolean;
         };
         MatrixChangesResult: {
             saved: number;
@@ -8290,6 +8295,19 @@ export interface components {
         MatrixImpactResult: {
             required_codenames: string[];
             conflicts: components["schemas"]["MatrixConflict"][];
+            workflow_conflicts: components["schemas"]["MatrixWorkflowConflict"][];
+        };
+        /** @description A live workflow's pending ROLE node that would lose every approver. */
+        MatrixWorkflowConflict: {
+            /** Format: uuid */
+            workflow_id: string;
+            workflow_name: string;
+            tenant_id: number | null;
+            status: string;
+            node_order: number;
+            node_name: string;
+            approver_roles: string[];
+            caused_by: components["schemas"]["MatrixConflictCause"][];
         };
         MeAccount: {
             /** @description 这个账号属于第几世;0 是第一世。 */
@@ -8565,6 +8583,7 @@ export interface components {
             author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            moderation_reason: string;
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
@@ -8578,6 +8597,7 @@ export interface components {
             author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            moderation_reason: string;
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
@@ -10469,7 +10489,6 @@ export interface components {
              * @description Greek only: which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
-             *     * `MIDDLE` - 中
              *     * `RIGHT` - 右(至福岛)
              */
             fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -10531,7 +10550,6 @@ export interface components {
              * @description Greek only: which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
-             *     * `MIDDLE` - 中
              *     * `RIGHT` - 右(至福岛)
              */
             fork?: (components["schemas"]["GreekForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -10728,6 +10746,22 @@ export interface components {
          * @enum {string}
          */
         RecycleBinLocationKindEnum: "civilization" | "organization" | "parent";
+        /**
+         * @description 400 body of restore. `code` / `missing_roles` come with a refusal from a
+         *     registered restore check (`template_role_missing`: a workflow template in
+         *     the cascade names roles that no longer exist); the other 400s carry
+         *     `error` alone.
+         */
+        RecycleBinRestoreRefusal: {
+            error: string;
+            code?: components["schemas"]["RecycleBinRestoreRefusalCodeEnum"];
+            missing_roles?: string[];
+        };
+        /**
+         * @description * `template_role_missing` - template_role_missing
+         * @enum {string}
+         */
+        RecycleBinRestoreRefusalCodeEnum: "template_role_missing";
         /**
          * @description Restore is keyed by cascade id, not by row: the whole set deleted
          *     together comes back together.
@@ -11002,6 +11036,24 @@ export interface components {
         };
         SensitiveWordBatchDeleteResult: {
             deleted: number;
+        };
+        /**
+         * @description Body of `POST sensitive-words/`: a new word must name its category
+         *     (maintainer decision, 2026-09-25). Words added before that stay
+         *     uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+         *     asks an existing word for one.
+         */
+        SensitiveWordCreate: {
+            /** Format: uuid */
+            readonly id: string;
+            word: string;
+            category: components["schemas"]["SocialSensitiveWordCategoryEnum"];
+            /** @default REVIEW */
+            action: components["schemas"]["SocialSensitiveWordActionEnum"];
+            readonly hits_30d: number;
+            readonly created_by: components["schemas"]["ModerationAuthor"] | null;
+            /** Format: date-time */
+            readonly created_at: string;
         };
         SentenceNode: {
             /** Format: uuid */
@@ -18974,7 +19026,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["RecycleBinRestoreRefusal"];
                 };
             };
             403: {
@@ -20374,9 +20426,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SensitiveWord"];
-                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWord"];
-                "multipart/form-data": components["schemas"]["SensitiveWord"];
+                "application/json": components["schemas"]["SensitiveWordCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordCreate"];
+                "multipart/form-data": components["schemas"]["SensitiveWordCreate"];
             };
         };
         responses: {

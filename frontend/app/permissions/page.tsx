@@ -357,7 +357,14 @@ export default function PermissionsPage() {
                 onDismiss={cells.dismissLastSave}
               />
             )}
-            <ImpactConflictBanner conflicts={cells.conflicts} roleMeta={roleMeta} permsById={permsById} />
+            <ImpactConflictBanner
+              conflicts={cells.conflicts}
+              workflowConflicts={cells.workflowConflicts}
+              acknowledged={cells.acknowledged}
+              onAcknowledge={cells.setAcknowledged}
+              roleMeta={roleMeta}
+              permsById={permsById}
+            />
 
             <PageSection
               title={t("permissions.matrix.title")}
@@ -406,6 +413,7 @@ export default function PermissionsPage() {
               grants={cells.grants}
               revokes={cells.revokes}
               isSaving={isSaving}
+              saveDisabled={cells.saveBlocked}
               onDiscard={cells.discard}
               onSave={cells.handleSave}
             />

@@ -67,9 +67,32 @@ def _unfiltered_manager(model):
     return getattr(model, "all_objects", model._base_manager)
 
 
+class RestoreRefusedError(Exception):
+    """A registered restore check refused this cascade. `body` is the 400
+    response: `{"error", "code", ...}`."""
+
+    def __init__(self, body):
+        super().__init__(body["error"])
+        self.body = body
+
+
+#: Callables `(cascade_id) -> dict | None`, run before a cascade is restored;
+#: the first non-None answer refuses the whole restore (`RestoreRefusedError`).
+#: Registered from the owning app's `ready()` — core knows no domain model.
+_RESTORE_CHECKS = []
+
+
+def register_restore_check(check):
+    _RESTORE_CHECKS.append(check)
+
+
 def restore_cascade(cascade_id) -> int:
     """Restore every soft-deleted row, across every soft-deletable model,
     that shares this cascade id. Returns the number of rows restored.
+
+    Raises `RestoreRefusedError` — restoring nothing — when a registered restore
+    check objects (e.g. a workflow template naming a role that is gone,
+    apps/perm/matrix.py::template_restore_refusal).
 
     Reverses exactly the set soft_delete's cascade_id wrote — not more (rows
     from an unrelated delete are never touched), not less (every dependent
@@ -79,6 +102,10 @@ def restore_cascade(cascade_id) -> int:
     it: a row the bin does not list (a soul's own deleted post) is not in the
     bin, so it cannot come back through it either.
     """
+    for check in _RESTORE_CHECKS:
+        refusal = check(cascade_id)
+        if refusal:
+            raise RestoreRefusedError(refusal)
     restored = 0
     for model in _soft_deletable_models():
         manager = _unfiltered_manager(model)

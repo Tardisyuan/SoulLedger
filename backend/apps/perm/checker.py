@@ -14,6 +14,15 @@ from apps.perm.cache import get_permission_cache
 
 _permission_cache = get_permission_cache()
 
+#: {role name: codenames that role may never hold} — a server rule, not a
+#: default (maintainer decision, 2026-09-25). `check_permission` answers False
+#: for these whatever the grant table says, and the matrix, `assign` and import
+#: refuse to write them (`role_forbidden_permission`, apps/perm/matrix.py).
+#: MODERATOR (殿主): see the reasons above its entry in ROLE_PERMISSIONS.
+ROLE_FORBIDDEN_CODENAMES = {
+    "MODERATOR": frozenset({"workflow.approve", "workflow.advance", "user.manage"}),
+}
+
 
 def check_permission(user, codename):
     """
@@ -41,6 +50,8 @@ def check_permission(user, codename):
     # 灵魂不持有任何官员权限,也不能经权限矩阵被授予 —— 即使有人建了一行叫
     # SOUL 的 Role 并挂上 RolePermission。
     if role == 'SOUL':
+        return False
+    if codename in ROLE_FORBIDDEN_CODENAMES.get(role, ()):
         return False
 
     # Check cache first

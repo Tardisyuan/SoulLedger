@@ -892,8 +892,9 @@ EGYPTIAN_REALMS = [
 # GREEK. `fork` places each road out of the meadow. LEFT / RIGHT are Plato's own
 # words and not a drawing convention: Republic X 614c-d has the judges send
 # the just to the right and upward through the heaven, and the unjust to the
-# left and downward. MIDDLE is in the contract's vocabulary and on no row — the
-# middle road is Asphodel, which this table refuses (see GREEK_REALMS above).
+# left and downward. There is no middle road — that would be Asphodel, which
+# this table refuses (see GREEK_REALMS above); the contract's unused MIDDLE value
+# was removed on 2026-09-25 (apps/realms/migrations/0020).
 # The meadow and the crossing are not roads and carry no fork.
 # --------------------------------------------------------------------------
 _COURT_ORDER = {

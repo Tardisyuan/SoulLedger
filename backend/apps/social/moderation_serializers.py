@@ -79,6 +79,10 @@ class ModeratedContentSerializer(serializers.Serializer):
     author = ModerationAuthorSerializer()
     content = serializers.CharField()
     moderation_status = serializers.ChoiceField(choices=ModerationStatus.choices)
+    # Why it is in the queue, when the word list put it there: `sensitive_word:<词>`
+    # (moderation.AUTO_REASON_PREFIX). Empty for anything else; after an officer's
+    # decision it is that officer's reason.
+    moderation_reason = serializers.CharField()
     open_report_count = serializers.SerializerMethodField()
     create_time = serializers.DateTimeField()
 
@@ -119,6 +123,15 @@ class SensitiveWordSerializer(serializers.ModelSerializer):
 
     def get_hits_30d(self, row) -> int:
         return getattr(row, "hits_30d", 0) or 0
+
+
+class SensitiveWordCreateSerializer(SensitiveWordSerializer):
+    """Body of `POST sensitive-words/`: a new word must name its category
+    (maintainer decision, 2026-09-25). Words added before that stay
+    uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+    asks an existing word for one."""
+
+    category = serializers.ChoiceField(choices=SensitiveWordCategory.choices)
 
 
 class SensitiveWordBatchDeleteSerializer(serializers.Serializer):

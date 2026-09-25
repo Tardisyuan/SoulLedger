@@ -477,7 +477,8 @@
       "dispatch_draft": "Dispatch draft"
     },
     "col_location": "Original location",
-    "col_deleted_by": "Deleted by"
+    "col_deleted_by": "Deleted by",
+    "restore_missing_roles": "Cannot restore: this workflow template names roles that no longer exist ({{roles}}). Restore or recreate them first."
   },
   "permissions": {
     "title": "Permission Management",
@@ -583,8 +584,13 @@
         "version_conflict": "Someone else changed this role; it was reloaded — look again.",
         "role_not_found": "The role no longer exists.",
         "permission_not_found": "The permission no longer exists.",
-        "database_error": "A database error: this cell was not written."
-      }
+        "database_error": "A database error: this cell was not written.",
+        "admin_always_all": "ADMIN always holds every permission",
+        "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save.",
+        "role_forbidden_permission": "Conflicts with the rule that MODERATOR may not hold workflow approve, workflow advance or user management; sent back."
+      },
+      "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
+      "conflict_acknowledge": "I understand this leaves {{n}} workflows ({{m}} of them in flight) with no approver"
     },
     "segments": {
       "label": "Permission sections",
@@ -1392,7 +1398,6 @@
       },
       "fork": {
         "LEFT": "Left · Tartarus",
-        "MIDDLE": "Middle",
         "RIGHT": "Right · the Isles of the Blessed"
       },
       "off_shape": "{{n}} realms have no place on this shape — see the table",
@@ -3082,7 +3087,8 @@
       "reason_required": "Hiding needs a reason",
       "approve": "Let through",
       "shortcuts": "J / K move · A let through · H hide",
-      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through."
+      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
+      "held_for_word": "Held for review by the word “{{word}}”"
     },
     "words": {
       "add_row": "Add a word",
@@ -3095,7 +3101,8 @@
       "select_row": "Select {{word}}",
       "batch_region": "Word list batch actions",
       "delete_selected": "Delete selected",
-      "confirm_title": "Delete {{n}} words?"
+      "confirm_title": "Delete {{n}} words?",
+      "category_placeholder": "— choose a category —"
     },
     "mutes": {
       "col_soul": "Soul",

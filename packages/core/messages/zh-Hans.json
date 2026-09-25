@@ -477,7 +477,8 @@
       "dispatch_draft": "移交草稿"
     },
     "col_location": "原位置",
-    "col_deleted_by": "删除人"
+    "col_deleted_by": "删除人",
+    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。"
   },
   "permissions": {
     "title": "权限管理",
@@ -583,8 +584,13 @@
         "version_conflict": "此角色已被别人改过，已重新加载，请再看一遍。",
         "role_not_found": "角色已不存在。",
         "permission_not_found": "权限项已不存在。",
-        "database_error": "数据库出错，这一格没有写入。"
-      }
+        "database_error": "数据库出错，这一格没有写入。",
+        "admin_always_all": "管理员始终拥有全部权限",
+        "conflict_unacknowledged": "这项撤销会让审批流无人可批，未经确认，已退回。请在冲突提示里勾选确认后再保存。",
+        "role_forbidden_permission": "与规则「殿主不得持有审批工作流、推进工作流与用户管理权限」冲突，已退回。"
+      },
+      "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
+      "conflict_acknowledge": "我知道这会让 {{n}} 条审批流（含进行中 {{m}} 条）无人可批"
     },
     "segments": {
       "label": "权限分区",
@@ -1392,7 +1398,6 @@
       },
       "fork": {
         "LEFT": "左 · 塔尔塔罗斯",
-        "MIDDLE": "中",
         "RIGHT": "右 · 至福岛"
       },
       "off_shape": "{{n}} 个界域在此图上没有位置,见树表",
@@ -3082,7 +3087,8 @@
       "reason_required": "隐藏必须写理由",
       "approve": "放行",
       "shortcuts": "J / K 上下 · A 放行 · H 隐藏",
-      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。"
+      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
+      "held_for_word": "因敏感词「{{word}}」待审"
     },
     "words": {
       "add_row": "新增敏感词",
@@ -3095,7 +3101,8 @@
       "select_row": "选择「{{word}}」",
       "batch_region": "敏感词批量操作",
       "delete_selected": "删除所选",
-      "confirm_title": "删除 {{n}} 个敏感词？"
+      "confirm_title": "删除 {{n}} 个敏感词？",
+      "category_placeholder": "— 选择类别 —"
     },
     "mutes": {
       "col_soul": "灵魂",

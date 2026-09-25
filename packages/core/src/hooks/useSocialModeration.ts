@@ -90,7 +90,7 @@ export function useModerateContent() {
 }
 
 export function useAddSensitiveWord() {
-  return useModerationWrite(async (word: string | NewSensitiveWord) => (await socialModerationApi.addWord(word)).data);
+  return useModerationWrite(async (word: NewSensitiveWord) => (await socialModerationApi.addWord(word)).data);
 }
 
 export function useRemoveSensitiveWord() {
