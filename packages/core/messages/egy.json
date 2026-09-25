@@ -327,6 +327,20 @@
       "hint": "J / K Em Khet · Em Tepy · Esc",
       "open_full": "Wen Sesh Neb →",
       "load_error": "Nen Ini Medu."
+    },
+    "batch": {
+      "region": "Aha Seth Wu",
+      "selected": "Setep Seth {{n}}",
+      "select_row": "Setep {{name}}",
+      "select_all": "Setep Neb Em Seshet",
+      "clear": "Sehen Setep",
+      "confirm_title": "Nehem {{n}} Ba Er Per Wehem?",
+      "refused_title": "Nen Nehem: {{n}} Khesef Seth",
+      "refused_list": "Ba Khesef Seth",
+      "refused_reason": {
+        "not_found": "Nen Gem, Er Nen Em Taui Pen.",
+        "not_deletable": "Wedja Khetem Seth: Nen Nehem Er Per Wehem."
+      }
     }
   },
   "common": {
@@ -538,7 +552,74 @@
       "conflict_reload_button": "Wehem Ini Netjer Pen",
       "conflict_reloading": "Em Ini...",
       "partial_save_title": "Sesh Nen Tem. Renenu Sesh Er Set:",
-      "partial_save_hint": "Wehem Iri Neb: Hab Djer Em Hemet-Sesh Tepy — Per Aa Khesef. Wehem Ini Er Tepy."
+      "partial_save_hint": "Wehem Iri Neb: Hab Djer Em Hemet-Sesh Tepy — Per Aa Khesef. Wehem Ini Er Tepy.",
+      "showing": "Was · Maa {{shown}} / {{total}}",
+      "no_differences": "Nen Weben: Netjeru Neb Wa.",
+      "role_picker": "Netjer",
+      "pending_cells": "Nen Sau {{n}}",
+      "discard": "Khet",
+      "unsaved_region": "Weben Nen Sau",
+      "saved_all": "Sau Seth {{n}}",
+      "partial_title": "Herep Seth · Sau Seth {{saved}}, Nen Sau {{failed}}",
+      "locate": "Gem",
+      "conflict_title": "Isfet {{n}}",
+      "conflict_line": "{{causes}}: Wat Hesy «{{template}}» Sekhet {{step}} ({{step_name}}) Nen Netjer Em Kheme Seth.",
+      "state": {
+        "grant": "Nen Sau · Redi",
+        "revoke": "Nen Sau · Sehen",
+        "failed": "Nen Kheme Seth",
+        "conflict": "Nen Sau · Isfet"
+      },
+      "legend": {
+        "on": "Wenen",
+        "off": "Nen Wenen",
+        "unsaved": "Nen Sau",
+        "failed": "Nen Kheme Seth",
+        "conflict": "Isfet"
+      },
+      "refused": {
+        "admin_only_permission": "Khesef: Ankh Wehem Hena Fekh Em Per Wehem — Netjer Em Tepy Wa.",
+        "version_conflict": "Ky Khemen Netjer Pen; Wehem Ini Seth. Maa Wehem.",
+        "role_not_found": "Nen Gem Netjer.",
+        "permission_not_found": "Nen Gem Was.",
+        "database_error": "Sethet: Nen Sau."
+      }
+    },
+    "segments": {
+      "label": "Aat Was",
+      "matrix": "Mesqet Was",
+      "roles": "Netjeru",
+      "definitions": "Was Neb"
+    },
+    "roles": {
+      "kind": "Kher Seth",
+      "builtin": "Tepy",
+      "custom": "Ahet Djes",
+      "members": "Netjeru",
+      "permissions": "Was",
+      "updated": "Khemen Seth",
+      "foot": "Netjer Tepy: Nen Fekh · Wen Khet → Khemen · Fekh Em Aha Seth Wer",
+      "drawer_title": "Khemen Seth Netjer · {{name}}",
+      "code_immutable": "Nen Khemen Er Kheme; Wat Hesy Djed Medu",
+      "edit_in_matrix": "Khemen Em Mesqet Was",
+      "references": "Djed",
+      "workflow_count": "Wat Hesy {{n}}",
+      "more": "Aha Seth Wer",
+      "copy": "Senn Er Netjer Renpi",
+      "copied": "Senn Seth: {{name}}",
+      "recycle": "Nehem Er Per Wehem…",
+      "recycle_action": "Nehem Er Per Wehem",
+      "recycle_title": "Nehem {{name}} Er Per Wehem?",
+      "recycle_body": "Netjeru {{members}}; Wat Hesy {{workflows}} Djed. Wenen: Khesef.",
+      "builtin_locked": "Netjer Tepy: Nen Fekh",
+      "saved": "Sau Seth",
+      "inactive": "Nen Wenen",
+      "referencing": "Wat Hesy Djed Netjer Pen",
+      "refused": {
+        "builtin_role": "Khesef: Netjer Tepy Nen Fekh.",
+        "role_in_use": "Khesef: Netjeru {{n}} Em Netjer Pen. Khemen Tepy.",
+        "role_referenced_by_workflow_templates": "Khesef: Wat Hesy {{n}} Djed. Khemen Tepy."
+      }
     }
   },
   "workflow": {
@@ -2624,7 +2705,8 @@
       "reports": "Sedjem",
       "content": "Khet Em Maat",
       "words": "Medu Djeseru",
-      "mutes": "Gerh"
+      "mutes": "Gerh",
+      "handled": "Iri Seth"
     },
     "target_type": {
       "POST": "Medu",
@@ -2707,7 +2789,10 @@
       "content": "Nen Khet Em Maat",
       "content_reason": "Khet Gem Medu Djeseru Wa Em Maat; Khet Sedjem Em Aat Sedjem.",
       "words": "Nen Medu Djeseru Djer",
-      "mutes": "Nen Sesh Gerh"
+      "mutes": "Nen Sesh Gerh",
+      "review": "Nen Khet Em Maat",
+      "review_reason": "Medu Renpi Em Maat Tepy; Sedjem Hena Gem Medu Djeseru Wa Aq.",
+      "handled": "Nen Khet Iri Seth"
     },
     "word_category": {
       "NONE": "Nen Sesh",
@@ -2725,6 +2810,51 @@
     "handling": {
       "HIDDEN": "Imen Seth",
       "DELETED": "Fekh Seth"
+    },
+    "scope_label": "Aset Ahamet",
+    "scope_all": "Wetu Aset Ahamet",
+    "review": {
+      "list_label": "Wu Em Maat",
+      "detail_label": "Medu Maat",
+      "report_n": "Sedjem {{n}}",
+      "rule_hit": "Gem · Medu Djeseru",
+      "from": "Em {{name}}",
+      "reaction_comment": "Wesheb",
+      "reason_label": "Khet (Imen: Em Tepy)",
+      "reason_required": "Imen: Khet Em Tepy",
+      "approve": "Menkh",
+      "shortcuts": "J / K · A Menkh · H Imen",
+      "user_target_note": "Sedjem Er Ba: Nen Imen. Iri Gerh, Er Menkh."
+    },
+    "words": {
+      "add_row": "Redi Medu Djeseru",
+      "col_word": "Medu Djeseru",
+      "col_category": "Ra",
+      "col_action": "Er Gem",
+      "col_hits": "Gem · Hru 30",
+      "col_by": "Redi Iri",
+      "col_at": "Ahet Redi",
+      "select_row": "Setep {{word}}",
+      "batch_region": "Aha Seth Wu · Medu Djeseru",
+      "delete_selected": "Fekh Setep Seth",
+      "confirm_title": "Fekh {{n}} Medu Djeseru?"
+    },
+    "mutes": {
+      "col_soul": "Ba",
+      "col_term": "Renpet",
+      "col_range": "Tepy → Khetem",
+      "col_by": "Iri Wetep",
+      "term_label": "Gerh {{name}} · Khery",
+      "confirm_title": "Fekh Gerh {{name}}?",
+      "confirm_body": "Iri Em Ahet; Sedjem Ba. Nen Khemu; Gerh Wehem Was."
+    },
+    "handled": {
+      "col_type": "Kher Seth",
+      "col_handling": "Iri Seth",
+      "col_by": "Iri Wetep",
+      "read_only": "Maa Wa: Iri Seth.",
+      "restore": "Ankh Wehem · Maa",
+      "in_recycle_bin": "Em Per Wehem"
     }
   },
   "soul_inbox": {

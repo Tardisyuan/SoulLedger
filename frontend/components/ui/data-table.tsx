@@ -56,6 +56,25 @@ export interface DataTableColumn {
   width?: string
 }
 
+/**
+ * 规范 v1 §3.1「有接口」的批量选择:行首一列复选框。
+ *
+ * The checkbox sits in its own cell, lifted above a `linkedRows` row's
+ * `::after` overlay (`relative z-[1]`) and wrapped in a `<label>` that fills
+ * the cell — so a click anywhere in that cell toggles the box and never
+ * follows the row link, and the box is an ordinary tab stop that Space toggles.
+ * The caller owns the set; the table only draws it.
+ */
+export interface DataTableSelection<T> {
+  selected: ReadonlySet<string>
+  onToggle: (key: string, item: T, checked: boolean) => void
+  /** The header box: true selects every row on screen, false clears them. */
+  onToggleAll: (checked: boolean) => void
+  /** Accessible name of one row's box, e.g. 「选择 沈青梧」. */
+  rowLabel: (item: T) => string
+  allLabel: string
+}
+
 export interface DataTableProps<T> {
   /**
    * Row height. `compact` is `py-2` (~36px at text-sm) against
@@ -155,6 +174,9 @@ export interface DataTableProps<T> {
    */
   transitionKey?: string
 
+  /** Leading checkbox column; see `DataTableSelection`. Omitted: no column. */
+  selection?: DataTableSelection<T>
+
   className?: string
 }
 
@@ -210,6 +232,7 @@ export function DataTable<T>({
   onPageChange,
   transitionKey,
   isRefreshing,
+  selection,
   className,
 }: DataTableProps<T>) {
 
@@ -237,6 +260,10 @@ export function DataTable<T>({
    */
   const bodyDensity = density === 'compact' ? '[&_tbody_td]:py-1' : ''
   const { t } = useI18n()
+  const colCount = columns.length + (selection ? 1 : 0)
+  const keysOnScreen = selection ? (data ?? []).map((item, i) => keyExtractor(item, i)) : []
+  const selectedOnScreen = keysOnScreen.filter((k) => selection?.selected.has(k)).length
+  const allOnScreen = keysOnScreen.length > 0 && selectedOnScreen === keysOnScreen.length
 
   const isEmpty = !isLoading && !isError && !data?.length
   const showPagination =
@@ -291,6 +318,7 @@ export function DataTable<T>({
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>
+              {selection && <col style={{ width: '40px' }} />}
               {columns.map((column) => (
                 <col key={column.key} style={column.width ? { width: column.width } : undefined} />
               ))}
@@ -298,6 +326,23 @@ export function DataTable<T>({
           )}
           <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
             <tr className="border-b border-[oklch(var(--color-block))]">
+              {selection && (
+                <th scope="col" className="w-10 p-0">
+                  <label className="flex h-full min-h-8 items-center justify-center px-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allOnScreen}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selectedOnScreen > 0 && !allOnScreen
+                      }}
+                      disabled={keysOnScreen.length === 0}
+                      onChange={(e) => selection.onToggleAll(e.target.checked)}
+                      aria-label={selection.allLabel}
+                      className="w-3.5 h-3.5 accent-[oklch(var(--color-accent))]"
+                    />
+                  </label>
+                </th>
+              )}
               {columns.map((column) => {
                 const align = ALIGN_CLASS[column.align ?? 'left']
                 const isSortable = Boolean(column.sortable && onSortChange)
@@ -345,14 +390,14 @@ export function DataTable<T>({
           {/* TableSkeleton emits bare <tr>s, so it has to be wrapped here. */}
           {isLoading && (
             <tbody>
-              <TableSkeleton rows={skeletonRows} cols={columns.length} />
+              <TableSkeleton rows={skeletonRows} cols={colCount} />
             </tbody>
           )}
 
           {isError && (
             <tbody>
               <tr>
-                <td colSpan={columns.length} className="px-3 py-6 bg-[oklch(var(--color-danger-tint))] shadow-[inset_3px_0_0_oklch(var(--color-danger))]">
+                <td colSpan={colCount} className="px-3 py-6 bg-[oklch(var(--color-danger-tint))] shadow-[inset_3px_0_0_oklch(var(--color-danger))]">
                   {/* 规范 v1 空状态「! 加载失败」:写原因,给重试;不靠颜色,前面有「!」。 */}
                   <p className="text-[oklch(var(--color-danger))]">
                     <span aria-hidden="true">! </span>
@@ -375,7 +420,7 @@ export function DataTable<T>({
           {isEmpty && (
             <tbody>
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                <td colSpan={colCount} className="px-4 py-12 text-center">
                   <p className="text-[oklch(var(--color-ink-subtle))]">
                     {isFiltered
                       ? (filteredEmptyMessage ?? t('table.no_results'))
@@ -414,7 +459,7 @@ export function DataTable<T>({
                     <tr data-group-head="" className="border-b border-[oklch(var(--color-block))]">
                       <th
                         scope="colgroup"
-                        colSpan={columns.length}
+                        colSpan={colCount}
                         className="px-4 pt-4 pb-1 text-left font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]"
                       >
                         {/* Sticky: at 393 px wide tables scroll sideways, and a
@@ -431,10 +476,25 @@ export function DataTable<T>({
                     className={cn(
                       'border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors',
                       linkedRows && 'relative cursor-pointer',
+                      selection?.selected.has(rowKey) &&
+                        'bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-accent))]',
                       entered.has(rowKey) && 'animate-row-enter',
                       changed.has(rowKey) && 'animate-row-changed'
                     )}
                   >
+                    {selection && (
+                      <td className="w-10 p-0 align-middle">
+                        <label className="relative z-[1] flex min-h-8 items-center justify-center px-3 py-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selection.selected.has(rowKey)}
+                            onChange={(e) => selection.onToggle(rowKey, item, e.target.checked)}
+                            aria-label={selection.rowLabel(item)}
+                            className="w-3.5 h-3.5 accent-[oklch(var(--color-accent))]"
+                          />
+                        </label>
+                      </td>
+                    )}
                     {renderRow(item, index)}
                   </tr>
                   </Fragment>
@@ -458,6 +518,7 @@ export function DataTable<T>({
                   data-row-state="leaving"
                   className="border-b border-[oklch(var(--color-rule))] pointer-events-none animate-row-exit"
                 >
+                  {selection && <td className="w-10" />}
                   {renderRow(item, index)}
                 </tr>
               ))}

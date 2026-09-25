@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useSouls } from "@soulledger/core/hooks/useSouls";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatchBar";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
@@ -96,6 +98,12 @@ export default function SoulsPage() {
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, isPlaceholderData, refetch } = useSouls(params);
   const souls = data?.results ?? [];
+  // 规范 v1 §3.1 批量条。The selection is keyed by the query itself, so a page
+  // turn or a filter change empties it without an effect: a selection the
+  // operator can no longer see is not one they should be able to act on.
+  const { hasPermission } = usePermissions();
+  const canRecycle = hasPermission("soul.delete");
+  const selection = useSoulSelection(JSON.stringify(params), souls);
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   // J / K step within the page on screen; at either end they do nothing
@@ -390,7 +398,10 @@ export default function SoulsPage() {
         totalPages={totalPages}
         totalCount={data?.count}
         onPageChange={setPage}
+        selection={canRecycle ? selection.tableSelection : undefined}
       />
+
+      {canRecycle && <SoulBatchBar selection={selection} />}
 
       <SoulPreviewDrawer
         soul={previewSoul}

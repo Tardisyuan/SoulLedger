@@ -58,6 +58,15 @@ export function useHandledContent(filters: HandledFilters) {
   });
 }
 
+/** The review detail's full text. `id` null: nothing selected, no request. */
+export function useModeratedItem(kind: ContentKind, id: string | null) {
+  return useQuery({
+    queryKey: socialModerationKeys.item(kind, id ?? ""),
+    queryFn: async () => (await socialModerationApi.item(kind, id as string)).data,
+    enabled: id !== null,
+  });
+}
+
 function useModerationWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const qc = useQueryClient();
   return useMutation({
