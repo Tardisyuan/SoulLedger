@@ -407,8 +407,10 @@ export default function WorkflowPage() {
             </div>
           </>
         ) : tab === "editor" ? (
-          /* Editor tab */
-          <div className="h-[calc(100vh-220px)]">
+          /* Editor tab. The fixed height is the canvas's (xyflow fills its
+             parent); below 1024 px the editor is the read-only view, which is
+             a document and takes the height its content needs. */
+          <div className="lg:h-[calc(100vh-220px)]">
             <LazyWorkflowEditor
               templateId={editingTemplateId || undefined}
               initialTemplateData={editingTemplateData}

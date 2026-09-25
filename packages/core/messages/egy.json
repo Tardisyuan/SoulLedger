@@ -648,7 +648,37 @@
       "saved": "Pet-Sesh Sau Seth",
       "save_failed": "Nen Sau",
       "title": "Khemen Pet-Sesh",
-      "relayout_done": "Tep Sekhet {{n}} Kehat"
+      "relayout_done": "Tep Sekhet {{n}} Kehat",
+      "role": {
+        "entry": "Tepy",
+        "step": "Sekhet",
+        "branch": "Setep",
+        "end": "Pehwy"
+      },
+      "branch": {
+        "pass": "Menkh",
+        "fail": "Khesef"
+      },
+      "issues": "Maat · {{n}}",
+      "issues_none": "Nen Khet",
+      "issue": {
+        "name_empty": "{{node}} Nen Ren",
+        "self_route": "{{node}} {{branch}} Er Djes-Ef; Nen Aq",
+        "duplicate_route": "{{node}} {{branch}} Khedu {{count}}; Sau Pehwy Wa"
+      },
+      "palette": "Aset Sekhet",
+      "inspector": "Mekher Sekhet",
+      "inspector_empty": "Setep Sekhet Wa",
+      "unnamed": "Nen Ren",
+      "exit": {
+        "pass_default": "Qed → {{node}}",
+        "pass_end": "Kheper",
+        "fail_default": "Khesef · Pehwy"
+      },
+      "preview": "Maa · Qed",
+      "preview_empty": "Nen Sekhet",
+      "narrow_title": "Khemen: ≥ 1024",
+      "narrow_body": "Maa Wa: Qed, Maat, Mekher Sekhet."
     },
     "templates": "Pet-Sesh Wat",
     "select_template": "Setep Pet-Sesh Er Khemen",
@@ -3078,7 +3108,25 @@
       "not_inbox": "Nen Sesh Wesekhet",
       "chat_not_configured": "Per Medu Nen Wenen",
       "chat_unavailable": "Per Medu Nen Wenen Emu"
-    }
+    },
+    "folders": "Sesh",
+    "folder": {
+      "all": "Wetu",
+      "open": "Em Weshed",
+      "closed": "Khetem Seth"
+    },
+    "by_hall": "Wesekhet",
+    "folder_empty": "Nen Sesh",
+    "newest_first": "Tepy",
+    "from_soul": "{{name}}",
+    "officer_reply": "Wesheb Wesekhet",
+    "previous": "Tepy",
+    "earlier": "Wep · {{n}}",
+    "awaiting": "Em Weshed · {{n}}",
+    "cite_hint": "/ Djed Medu",
+    "cite_label": "Medu",
+    "cite_results": "Medu {{n}}",
+    "cite_empty": "Nen Rekhyu Medu"
   },
   "sentence_plan": {
     "panel_title": "Wetep",

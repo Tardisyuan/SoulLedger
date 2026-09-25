@@ -1,17 +1,20 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { CHART_COLORS } from "@/lib/chart-colors";
 import { edgeArrow } from "@/src/components/workflow/workflowEditorGraph";
 
-import { FRONTEND_ROOT, THEMES, type ThemeName } from "./support/globalsCssTokens";
+import { FRONTEND_ROOT, THEMES, TOKENS_BY_THEME, type ThemeName } from "./support/globalsCssTokens";
 
 /**
- * 工作流的边箭头只有一个来源,而且它就是当前主题的强调色。
+ * 工作流的边只有一个来源,而且它就是区块边界色(设计稿 C · 03「连线 Edge」:
+ * 1 px 区块边界色的直角折线)。
  *
  * `workflowEditorGraph.ts` 的 `edgeArrow()` 是四处边颜色收拢成的一处(曾经有一份
  * 拷贝漂了两年,见那边的注释)。这里断言**计数**与**取值**:编辑器里不再有手写的
- * markerEnd / stroke / 十六进制,箭头颜色等于 `CHART_CHROME.accent`(按主题,
- * 由 chartColourContract 钉到 globals.css)。
+ * markerEnd / stroke / 十六进制,边画成 `--color-block`,1 px,不带箭头。
+ *
+ * 此前这里钉的是 `CHART_CHROME.accent` 字面值 + `markerEnd`:箭头进 SVG `<marker>`
+ * 的 defs 树,var() 在那里画不出来,只能按主题取字面值、建边时读一次。设计稿去掉了
+ * 箭头(方向由上入下出的端口表达),于是颜色可以直接是 token,随主题实时切换。
  */
 
 const GRAPH = path.join(FRONTEND_ROOT, "src", "components", "workflow", "workflowEditorGraph.ts");
@@ -41,17 +44,17 @@ describe("the workflow edge arrow has one source", () => {
     expect(stripComments(graphSrc).match(/#[0-9a-fA-F]{6}/g) ?? []).toEqual([]);
   });
 
-  it.each(THEMES)("draws the arrow in the %s accent", (theme: ThemeName) => {
-    document.documentElement.classList.toggle("light", theme === "light");
-    const arrow = edgeArrow();
-    document.documentElement.classList.remove("light");
-    const accent = CHART_COLORS[theme].CHART_CHROME.accent;
-    expect(arrow.markerEnd.color).toBe(accent);
-    expect(arrow.style.stroke).toBe(accent);
+  it("draws every edge as a 1 px line in the block token, through the route edge, with no arrowhead", () => {
+    const arrow: Record<string, unknown> & { style: { stroke: string; strokeWidth: number } } = edgeArrow();
+    expect(arrow.style.stroke).toBe("oklch(var(--color-block))");
+    expect(arrow.style.strokeWidth).toBe(1);
+    expect(arrow.type).toBe("route");
+    // Absence: an arrowhead would put the colour back into a <marker> defs tree.
+    expect(arrow).not.toHaveProperty("markerEnd");
   });
 
-  it("the two themes' arrows differ, so the theme is actually read", () => {
-    expect(CHART_COLORS.dark.CHART_CHROME.accent).not.toBe(CHART_COLORS.light.CHART_CHROME.accent);
+  it.each(THEMES)("the block token the edge reads is declared for the %s theme", (theme: ThemeName) => {
+    expect(TOKENS_BY_THEME[theme]["--color-block"]).toMatch(/^[\d.]+ [\d.]+ [\d.]+$/);
   });
 
   it("has no file but the source carrying a `markerEnd` written by hand", () => {

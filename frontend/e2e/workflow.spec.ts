@@ -142,6 +142,10 @@ test.describe("Workflow page", () => {
 });
 
 test.describe("Workflow editor toolbar", () => {
+  // Canvas editing exists at ≥ 1024 px only (design C · 03); on mobile-chrome
+  // this runs at a desktop width. The 393 px view is "below 1024 px" at the end.
+  test.use({ viewport: { width: 1280, height: 720 } });
+
   /**
    * `WorkflowTemplate.priority` in a real browser, end to end.
    *
@@ -215,7 +219,40 @@ test.describe("Workflow editor toolbar", () => {
   });
 });
 
+test.describe("Workflow editor selection", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  /**
+   * Clicking one card while another is selected reaches `onNodesChange` as
+   * [old: deselect, new: select]. The handler read only the first change and so
+   * cleared the selection the click had just made — the card wore the focus
+   * ring, 删除选中 stayed disabled and the inspector stayed empty.
+   */
+  test("moving the selection from one card to another selects the second", async ({ page }) => {
+    await page.goto("/workflow");
+    await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+    await page.getByRole("button", { name: "编辑", exact: true }).click();
+    const cards = page.locator(".react-flow__node");
+    await expect(cards).toHaveCount(4);
+
+    await cards.nth(0).click();
+    await cards.nth(2).click();
+
+    const inspector = page.getByRole("complementary", { name: "属性" });
+    await expect(inspector).toContainText("上级殿阎王");
+    await expect(inspector).not.toContainText("魏征 · 察查司");
+    await expect(page.getByRole("button", { name: "删除选中", exact: true })).toBeEnabled();
+    await expect(
+      page.getByRole("region", { name: "模板预览 · 线性" }).getByRole("button", { pressed: true })
+    ).toHaveText(/上级殿阎王/);
+  });
+});
+
 test.describe("Workflow editor keyboard access", () => {
+  // Canvas editing exists at ≥ 1024 px only (design C · 03); on mobile-chrome
+  // this runs at a desktop width. The 393 px view is "below 1024 px" at the end.
+  test.use({ viewport: { width: 1280, height: 720 } });
+
   /**
    * THE NODE EDIT MODAL, WITHOUT A MOUSE.
    *
@@ -396,6 +433,38 @@ test.describe("Workflow editor keyboard access", () => {
 
     await expect(dialog).toHaveCount(1);
     await expect(nameField).toHaveValue(/^改到一半/);
+  });
+});
+
+test.describe("Workflow editor below 1024 px", () => {
+  /**
+   * Design C · 03 at 393: the canvas cannot be edited on a phone, so the editor
+   * says so and shows what can be read — the linear preview, the checks and a
+   * node's properties. Asserted as absence too: no canvas, no save, no inputs.
+   * `setViewportSize` rather than a project so chromium and firefox run it as
+   * well as mobile-chrome.
+   */
+  test("shows the notice, the preview and properties, and offers no canvas or save", async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 851 });
+    await page.goto("/workflow");
+    await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+    await page.getByRole("button", { name: "编辑", exact: true }).click();
+
+    await expect(seen(page, "画布只在 ≥ 1024 px 可编辑")).toBeVisible();
+    const preview = page.getByRole("region", { name: "模板预览 · 线性" });
+    await expect(preview.getByRole("button")).toHaveCount(4);
+    await expect(page.locator(".react-flow__node")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "保存模板", exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("模板名称", { exact: true })).toHaveCount(0);
+
+    await preview.getByRole("button", { name: /酆都大帝 · 终审/ }).click();
+    const inspector = page.getByRole("complementary", { name: "属性" });
+    await expect(inspector).toContainText("FINAL");
+    await expect(inspector).toContainText("酆都");
+
+    // Nothing sideways: the read-only view is a document, not a canvas.
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 });
 

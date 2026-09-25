@@ -28,8 +28,5 @@
   },
   "src/components/ui/Modal.tsx": {
     "space": 4
-  },
-  "src/components/workflow/WorkflowEditor.tsx": {
-    "palette": 6
   }
 }

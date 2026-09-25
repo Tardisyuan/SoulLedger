@@ -1,6 +1,5 @@
 import dagre from "@dagrejs/dagre";
-import { CHART_COLORS } from "@/lib/chart-colors";
-import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 
 export interface TemplateNode {
   id?: string;
@@ -61,9 +60,15 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
       // edges into it dangling, and rendering a line to nothing would be a
       // drawing of a route that cannot run.
       if (!target || !known.has(String(target))) continue;
+      // `sourceHandle` is what `getTemplateNodes` reads the outcome back from.
+      // It was missing here, so a loaded FAIL edge came back as PASS on the
+      // next save: `a: on_pass→c, on_fail→b` saved as `on_pass→b` (last edge
+      // wins per handle) and `on_fail: null` — a round trip that silently
+      // rewrote the routing of every template that had any.
       out.push({
         id: `e${source}-${field}-${target}`,
         source,
+        sourceHandle: field,
         target: String(target),
         label: field === "pass" ? "通过" : "否决",
         ...edgeArrow(),
@@ -74,28 +79,29 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
 }
 
 /**
- * The arrow every edge in this editor is drawn with, in the theme's accent.
+ * How every edge in this editor is drawn: design C · 03 「连线 Edge」, a 1 px
+ * right-angle polyline in the block colour (`route`, the edge type in
+ * `EditableNode.tsx`, which also dashes the FAIL branch).
  *
- * A LITERAL colour, not `oklch(var(--…))`: `markerEnd` is handed to
- * @xyflow/react, which renders it into an SVG `<marker>` defs tree, and this
- * module records that the arrowheads came out unpainted from a var() there.
- * The literal is `CHART_CHROME.accent` — per theme, pinned to globals.css by
- * chartColourContract — so the edge follows the palette without a hex here.
+ * No `markerEnd` any more, and that is what lets the colour be a token. The
+ * old arrowhead was rendered by @xyflow/react into an SVG `<marker>` defs tree
+ * where `oklch(var(--…))` came out unpainted, so the colour had to be a
+ * per-theme literal read once at build time — an edge drawn before a theme
+ * switch kept the old colour. The path itself is ordinary inline SVG under
+ * this document's `:root`, so the var resolves and follows the theme live.
+ * Direction is carried by the ports: every edge leaves a bottom port and
+ * enters a top one.
  *
  * Written once rather than FOUR times: the two hydration paths, `onConnect`,
  * and `addNode`'s auto-connect each used to carry a copy, and one drifted
  * (`387c29c` → `051bf9a`). `workflowEdgeArrowSingleSource.test.ts` asserts the
- * single source.
- *
- * ponytail: the theme is read when the edge is built; an edge drawn before a
- * theme switch keeps the old accent until the editor reloads.
+ * single source. The name stays for the same reason — it is the one symbol
+ * those call sites and that test agree on.
  */
 export function edgeArrow() {
-  const theme = typeof document !== "undefined" && document.documentElement.classList.contains("light") ? "light" : "dark";
-  const color = CHART_COLORS[theme].CHART_CHROME.accent;
   return {
-    markerEnd: { type: MarkerType.ArrowClosed, color },
-    style: { stroke: color, strokeWidth: 2 },
+    type: "route",
+    style: { stroke: "oklch(var(--color-block))", strokeWidth: 1 },
   };
 }
 
