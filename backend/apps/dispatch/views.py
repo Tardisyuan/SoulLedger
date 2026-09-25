@@ -30,15 +30,32 @@ from apps.dispatch.serializers import (
     CrossTenantJudgmentParticipateSerializer,
     CrossTenantJudgmentSentenceSerializer,
     CrossTenantJudgmentSerializer,
+    DispatchDraftSerializer,
     DispatchRecordListSerializer,
     DispatchRecordSerializer,
     DispatchRejectSerializer,
     DispatchReturnSerializer,
+    DispatchSubmitSerializer,
     SeatableActorSerializer,
 )
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService, ResidenceReturnBlockedError
 from apps.perm.filters import DataScopeFilter
+from apps.realms.serializers import RealmLocalizedSerializer
 from apps.tenants.models import Tenant
+
+
+def hide_others_drafts(qs, user):
+    """草稿只给发起人看(ADMIN 例外)。别人的草稿从列表、历史、详情与每个详情动作里消失 ——
+    `get_object` 读的就是这里,所以对别人的草稿一律 404,不是 403(不承认它存在)。
+
+    `~Q(dispatched_by=user)` 在可空外键上把 `dispatched_by IS NULL` 也算进「不是我的」:
+    发起人账号删了的草稿,除 ADMIN 之外谁都看不见。
+    """
+    from django.db.models import Q
+
+    if is_tenant_exempt(user):
+        return qs
+    return qs.exclude(Q(status=DispatchStatus.DRAFT) & ~Q(dispatched_by=user))
 
 
 class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -99,6 +116,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         'reject': ['dispatch.reject'],
         'execute': ['dispatch.execute'],
         'return_home': ['dispatch.return'],
+        # 草稿与界域选项都属于「发起」,与 create 同一权限。
+        'create_draft': ['dispatch.manage'],
+        'draft': ['dispatch.manage'],
+        'submit': ['dispatch.manage'],
+        'realm_options': ['dispatch.manage'],
         'create': ['dispatch.manage'],
         'update': ['dispatch.manage'],
         'partial_update': ['dispatch.manage'],
@@ -147,6 +169,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         # RowLevelDataScope too (BD-10): the mixin this viewset lists never
         # runs, because this method replaces it rather than calling super().
         qs = qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
+        qs = hide_others_drafts(qs, user)
         return DataScopeFilter.filter_queryset(self.request, qs, DispatchRecord)
 
     def get_serializer_class(self):
@@ -214,6 +237,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                 validated.get("soul"),
                 request.user,
                 validated.get("reason", ""),
+                target_realm=validated.get("target_realm"),
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -228,6 +252,133 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         output_serializer = DispatchRecordSerializer(dispatch_record)
         headers = self.get_success_headers(output_serializer.data)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_destroy(self, instance):
+        """放弃草稿 = 软删并记下是谁(`deleted_by`),进回收站(`apps/dispatch/apps.py` 注册了
+        `dispatch_draft`),ADMIN 可从那里恢复。其余状态的删除照旧。"""
+        if instance.status == DispatchStatus.DRAFT:
+            instance.soft_delete(user=self.request.user)
+            return
+        super().perform_destroy(instance)
+
+    def _requester_tenant(self, request):
+        return getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+
+    def _own_draft_or_error(self, request, record):
+        """草稿只由发起人改、提交。ADMIN 看得见别人的草稿,但不替人改。"""
+        if record.status != DispatchStatus.DRAFT:
+            return Response({"error": f"This dispatch is {record.status}, not a draft"},
+                            status=status.HTTP_409_CONFLICT)
+        if record.dispatched_by_id != request.user.pk:
+            return Response({"error": "Only the person who saved a draft may change or submit it"},
+                            status=status.HTTP_403_FORBIDDEN)
+        return None
+
+    @extend_schema(request=DispatchDraftSerializer, responses={201: DispatchRecordSerializer})
+    @action(detail=False, methods=["post"], url_path="drafts")
+    def create_draft(self, request):
+        """存草稿(新建)。四个字段全可省;不进审批流、不通知任何人。来源是发起人自己的租户。"""
+        tenant = self._requester_tenant(request)
+        if tenant is None:
+            return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
+        body = DispatchDraftSerializer(data=request.data, context={"request": request})
+        body.is_valid(raise_exception=True)
+        set_current_user(request.user)
+        set_current_request(request)
+        try:
+            record = DispatchService.save_draft(
+                None, source_tenant=tenant, dispatcher=request.user, **body.validated_data,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        finally:
+            clear_current_user()
+        return Response(DispatchRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(request=DispatchDraftSerializer, responses=DispatchRecordSerializer)
+    @action(detail=True, methods=["patch"])
+    def draft(self, request, pk=None):
+        """存草稿(改)。只改请求体里给了的字段;仍是草稿。"""
+        record = self.get_object()
+        refused = self._own_draft_or_error(request, record)
+        if refused is not None:
+            return refused
+        body = DispatchDraftSerializer(data=request.data, context={"request": request, "draft": record})
+        body.is_valid(raise_exception=True)
+        set_current_user(request.user)
+        set_current_request(request)
+        try:
+            record = DispatchService.save_draft(
+                record, source_tenant=record.source_tenant, dispatcher=request.user, **body.validated_data,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        finally:
+            clear_current_user()
+        return Response(DispatchRecordSerializer(record).data)
+
+    @extend_schema(request=DispatchDraftSerializer, responses=DispatchRecordSerializer)
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        """草稿提交审批:DRAFT → PROPOSED。请求体可带最后一次的表单内容(同存草稿的四个字段),
+        先写上再校验;合起来要和直接发起(`create`)一样完整 —— 灵魂、目标文明、至少 20 字的理由。
+        """
+        record = self.get_object()
+        refused = self._own_draft_or_error(request, record)
+        if refused is not None:
+            return refused
+        merged = {
+            "soul": record.soul_id,
+            "target_tenant": record.target_tenant_id,
+            "target_realm": record.target_realm_id,
+            "reason": record.reason,
+            **{k: request.data[k] for k in DispatchService.DRAFT_FIELDS if k in request.data},
+        }
+        body = DispatchSubmitSerializer(data=merged, context={"request": request, "draft": record})
+        body.is_valid(raise_exception=True)
+
+        from apps.sentence_plan.services import in_progress_plan
+
+        if in_progress_plan(body.validated_data["soul"]) is not None:
+            return Response(
+                {"error": "This soul has a sentence plan in progress; dispatches follow the plan",
+                 "code": "sentence_plan_active"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        set_current_user(request.user)
+        set_current_request(request)
+        try:
+            record = DispatchService.submit(record, request.user, **body.validated_data)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response(
+                {"error": "An active dispatch already exists for this soul"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        finally:
+            clear_current_user()
+        return Response(DispatchRecordSerializer(record).data)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("target_tenant_code", str, OpenApiParameter.QUERY, required=True,
+                             description="The target civilization's tenant code."),
+        ],
+        responses=RealmLocalizedSerializer(many=True),
+    )
+    @action(detail=False, methods=["get"], url_path="realm-options", pagination_class=None, filter_backends=[])
+    def realm_options(self, request):
+        """目标文明里可作为移交目的地的界域(`DispatchService.eligible_realms`),供「目标界域」下拉。
+
+        这是 `RealmViewSet` 之外唯一一处跨租户读界域的地方:只读、只给目标租户那一个文明的、
+        `eligible_realms` 判定过的行。`display_name` 按 Accept-Language。
+        """
+        tenant = Tenant.objects.filter(code=request.query_params.get("target_tenant_code") or "").first()
+        if tenant is None:
+            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+        realms = DispatchService.eligible_realms(tenant)
+        return Response(RealmLocalizedSerializer(realms, many=True, context={"request": request}).data)
 
     @extend_schema(responses=DispatchRecordListSerializer(many=True))
     @action(detail=False, methods=["get"])
@@ -288,10 +439,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
-        history = DispatchRecord._base_manager.filter(
+        history = hide_others_drafts(DispatchRecord._base_manager.filter(
             source_tenant=tenant,
             is_deleted=False,
-        ).select_related("target_tenant", "soul").order_by("-proposed_at")
+        ), request.user).select_related("target_tenant", "soul").order_by("-proposed_at")
 
         page = self.paginate_queryset(history)
         if page is not None:

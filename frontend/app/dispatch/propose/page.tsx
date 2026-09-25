@@ -2,7 +2,14 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { DISPATCH_REASON_MIN_CHARS, dispatchApi, dispatchReasonLength, soulsApi, ledgerApi } from "@soulledger/core/api";
+import {
+  DISPATCH_REASON_MIN_CHARS,
+  dispatchApi,
+  dispatchReasonLength,
+  soulsApi,
+  ledgerApi,
+  type DispatchDraftInput,
+} from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -11,11 +18,18 @@ import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/d
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
-import { TextAreaField, type SelectOption } from "@/src/components/ui/Field";
+import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { focusFirstInvalid } from "@/src/lib/submitErrorFocus";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { useSoul } from "@soulledger/core/hooks/useSouls";
+import {
+  useDiscardDispatchDraft,
+  useDispatchRealmOptions,
+  useDispatchRecord,
+  useSaveDispatchDraft,
+  useSubmitDispatchDraft,
+} from "@soulledger/core/hooks/useDispatchDrafts";
 import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { NUMBERING_SAMPLE } from "@/src/lib/civilizationIdentity";
 import { cn } from "@/lib/utils";
@@ -52,7 +66,17 @@ function ProposeDispatchForm() {
    * is the way in, as before. If the carried soul cannot be loaded the form
    * says so and falls back to the search field rather than proposing blind.
    */
-  const carriedSoulId = useSearchParams().get("soul") ?? "";
+  const searchParams = useSearchParams();
+  /**
+   * 存草稿 (设计稿「发起移交」): `?draft=<id>` reopens the caller's own draft and
+   * pre-fills the form from it. Only a record that is still a DRAFT counts —
+   * once submitted it is a proposal, and this form no longer edits it.
+   */
+  const draftId = searchParams.get("draft") ?? "";
+  const draftQuery = useDispatchRecord(draftId);
+  const draft = draftQuery.data?.status === "DRAFT" ? draftQuery.data : undefined;
+  // A draft's soul is carried like one from the detail page: shown, not re-searched.
+  const carriedSoulId = searchParams.get("soul") ?? draft?.soul ?? "";
   const carried = useSoul(carriedSoulId);
   const carriedSoul = carriedSoulId && !carried.isError ? carried.data : undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -61,8 +85,24 @@ function ProposeDispatchForm() {
   const [form, setForm] = useState({
     soul_id: "",
     target_tenant_code: "",
+    target_realm: "",
     reason: "",
   });
+  // Pre-fill once per draft, during render (React's "adjust state when a prop
+  // changes"), so a refetch of the same draft never overwrites what is typed.
+  const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null);
+  if (draft && prefilledFrom !== draft.id) {
+    setPrefilledFrom(draft.id);
+    setForm({
+      soul_id: "",
+      target_tenant_code: draft.target_tenant_code ?? "",
+      target_realm: draft.target_realm ?? "",
+      reason: draft.reason,
+    });
+  }
+  const saveDraft = useSaveDispatchDraft();
+  const submitDraft = useSubmitDispatchDraft();
+  const discardDraft = useDiscardDispatchDraft();
 
   /**
    * SERVER-SIDE SEARCH, NOT ONE PAGE.
@@ -127,6 +167,16 @@ function ProposeDispatchForm() {
 
   const tenants = statsData?.data?.tenants || [];
 
+  // 目标界域: only the chosen target civilization's realms (`realm-options/`).
+  const realmQuery = useDispatchRealmOptions(form.target_tenant_code);
+  const realmOptions: SelectOption[] = [
+    {
+      value: "",
+      label: form.target_tenant_code ? t("dispatch.target_realm_placeholder") : t("dispatch.target_realm_pick_tenant_first"),
+    },
+    ...(realmQuery.data ?? []).map((realm) => ({ value: realm.id, label: realm.display_name })),
+  ];
+
   /**
    * An `<option>` can hold no child element, so the soul's lifecycle state is
    * the one place on this page where the enum stays a bare string — the
@@ -151,6 +201,14 @@ function ProposeDispatchForm() {
   const sourceTenantRow = tenants.find((tn) => tn.tenant_code === sourceCode);
   const targetTenantRow = tenants.find((tn) => tn.tenant_code === form.target_tenant_code);
   const dirty = Boolean(form.reason.trim() || form.target_tenant_code || (!soulId && form.soul_id));
+
+  /** The form as a draft body. Empty controls go as null: a draft may be incomplete. */
+  const draftBody = (): DispatchDraftInput => ({
+    soul: soulId || form.soul_id || null,
+    target_tenant: targetTenantRow?.tenant_id ?? null,
+    target_realm: form.target_realm || null,
+    reason: form.reason,
+  });
   // Live, as the operator types (设计「! 至少 20 字，现在 N 字」). Empty is left
   // to the submit-time required check rather than shouting before anything
   // was written. Counted the way the server counts: code points, trimmed.
@@ -171,6 +229,51 @@ function ProposeDispatchForm() {
     target_tenant: "target_tenant_code",
     source_tenant: "target_tenant_code",
     reason: "reason",
+    target_realm: "target_realm",
+  };
+
+  /** Field-keyed rejections under their controls; anything else as a toast. */
+  const showServerErrors = (err: unknown, fallbackKey: string) => {
+    const byField = drfFieldErrors(err);
+    const mapped = Object.fromEntries(
+      Object.entries(byField)
+        .filter(([apiField]) => FIELD_OF[apiField])
+        .map(([apiField, message]) => [FIELD_OF[apiField], message])
+    );
+    setFieldErrors(mapped);
+    if (Object.keys(mapped).length > 0) {
+      queueMicrotask(() => focusFirstInvalid(formRef.current));
+    } else {
+      showToast(drfNonFieldError(err, t(fallbackKey)), "error");
+    }
+  };
+
+  /** 存草稿: nothing is required yet; the server checks only the realm. */
+  const handleSaveDraft = async () => {
+    setFieldErrors({});
+    try {
+      const saved = await saveDraft.mutateAsync({ id: draft?.id, data: draftBody() });
+      showToast(t("dispatch.draft_saved"), "success");
+      // From here on the form edits that draft, and a reload reopens it.
+      if (!draft) router.replace(`/dispatch/propose?draft=${saved.id}`);
+    } catch (err) {
+      showServerErrors(err, "dispatch.draft_save_error");
+    }
+  };
+
+  /**
+   * 放弃并移入回收站. What is on the form is kept: an unsaved form is saved as a
+   * draft first, so 「已填写的理由一并保留」 is true of it too.
+   */
+  const handleDiscard = async () => {
+    setDiscardOpen(false);
+    try {
+      const id = draft?.id ?? (await saveDraft.mutateAsync({ data: draftBody() })).id;
+      await discardDraft.mutateAsync(id);
+      router.push("/dispatch");
+    } catch (err) {
+      showToast(drfNonFieldError(err, t("dispatch.discard_error")), "error");
+    }
   };
 
   /**
@@ -220,28 +323,23 @@ function ProposeDispatchForm() {
 
     setLoading(true);
     try {
-      await dispatchApi.propose({
-        source_tenant: sourceTenant.tenant_id,
-        target_tenant: targetTenant.tenant_id,
-        soul: soulId || form.soul_id,
-        reason: form.reason,
-      });
+      if (draft) {
+        // The draft becomes the proposal (DRAFT → PROPOSED), with the form as it stands.
+        await submitDraft.mutateAsync({ id: draft.id, data: draftBody() });
+      } else {
+        await dispatchApi.propose({
+          source_tenant: sourceTenant.tenant_id,
+          target_tenant: targetTenant.tenant_id,
+          soul: soulId || form.soul_id,
+          reason: form.reason,
+          target_realm: form.target_realm || null,
+        });
+      }
       router.push("/dispatch");
     } catch (err) {
       // Field-keyed rejections go under the controls; object-level ones stay a
       // toast, because the server did not name a control for them.
-      const byField = drfFieldErrors(err);
-      const mapped = Object.fromEntries(
-        Object.entries(byField)
-          .filter(([apiField]) => FIELD_OF[apiField])
-          .map(([apiField, message]) => [FIELD_OF[apiField], message])
-      );
-      setFieldErrors(mapped);
-      if (Object.keys(mapped).length > 0) {
-        queueMicrotask(() => focusFirstInvalid(formRef.current));
-      } else {
-        showToast(drfNonFieldError(err, t("dispatch.propose_error")), "error");
-      }
+      showServerErrors(err, "dispatch.propose_error");
     } finally {
       setLoading(false);
     }
@@ -252,6 +350,12 @@ function ProposeDispatchForm() {
 
   return (
     <PageShell variant="page" title={t("dispatch.propose")} subtitle={t("dispatch.propose_subtitle")}>
+      {draftId && draftQuery.isError ? (
+        <p role="alert" className="mb-4 text-sm text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true">! </span>
+          {t("dispatch.draft_load_error")}
+        </p>
+      ) : null}
       <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
       <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
         {carriedSoul ? (
@@ -359,8 +463,9 @@ function ProposeDispatchForm() {
                     // cannot take focus.
                     aria-invalid={tenantError && !isSource ? true : undefined}
                     onChange={() => {
-                      setFieldErrors(({ target_tenant_code: _drop, ...rest }) => rest);
-                      setForm({ ...form, target_tenant_code: tn.tenant_code });
+                      setFieldErrors(({ target_tenant_code: _drop, target_realm: _realm, ...rest }) => rest);
+                      // A realm belongs to one civilization: changing the target clears it.
+                      setForm({ ...form, target_tenant_code: tn.tenant_code, target_realm: "" });
                     }}
                     // Square box, square 6 px accent mark when chosen (规范 v1: 方角).
                     className="size-3.5 shrink-0 appearance-none border border-[oklch(var(--color-line))] checked:border-[oklch(var(--color-block))] checked:bg-[oklch(var(--color-accent))] checked:shadow-[inset_0_0_0_3px_oklch(var(--color-canvas))] disabled:border-[oklch(var(--color-disabled-ink))]"
@@ -384,6 +489,20 @@ function ProposeDispatchForm() {
           ) : null}
         </fieldset>
 
+        <SelectField
+          id="target_realm"
+          name="target_realm"
+          label={t("dispatch.target_realm")}
+          value={form.target_realm}
+          disabled={!form.target_tenant_code || realmQuery.isLoading}
+          error={fieldErrors.target_realm ?? (realmQuery.isError ? t("dispatch.target_realm_error") : undefined)}
+          onChange={(e) => {
+            setFieldErrors(({ target_realm: _drop, ...rest }) => rest);
+            setForm({ ...form, target_realm: e.target.value });
+          }}
+          options={realmOptions}
+        />
+
         <TextAreaField
           id="reason"
           name="reason"
@@ -399,18 +518,22 @@ function ProposeDispatchForm() {
           placeholder={t("dispatch.reason_placeholder")}
         />
 
-        {/* No 「存草稿」: the dispatch API has no draft state — a record is
-            PROPOSED the moment it exists (backend/apps/dispatch/models.py). */}
+        {/* 提交审批 / 存草稿 / 放弃… (设计稿). A draft is DRAFT on the server
+            (backend/apps/dispatch/models.py): only its author sees it, and
+            nothing is checked but the realm until it is submitted. */}
         <div className="flex flex-wrap gap-2 border-t border-[oklch(var(--color-block))] pt-3">
           <RequirePermission permissions="dispatch.manage">
             <Button type="submit" variant="primary" loading={loading}>
               {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
             </Button>
+            <Button type="button" variant="secondary" loading={saveDraft.isPending} onClick={handleSaveDraft}>
+              {t("dispatch.save_draft")}
+            </Button>
           </RequirePermission>
           <Button
             type="button"
             variant="ghost"
-            onClick={() => (dirty ? setDiscardOpen(true) : router.back())}
+            onClick={() => (dirty || draft ? setDiscardOpen(true) : router.back())}
           >
             {t("dispatch.discard")}
           </Button>
@@ -450,10 +573,7 @@ function ProposeDispatchForm() {
         cancelText={t("dispatch.discard_keep")}
         confirmText={t("dispatch.discard_confirm")}
         onCancel={() => setDiscardOpen(false)}
-        onConfirm={() => {
-          setDiscardOpen(false);
-          router.back();
-        }}
+        onConfirm={handleDiscard}
       />
     </PageShell>
   );

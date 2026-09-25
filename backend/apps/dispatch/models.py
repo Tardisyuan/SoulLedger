@@ -11,6 +11,10 @@ from apps.tenants.managers import TenantManager
 
 
 class DispatchStatus(models.TextChoices):
+    # 草稿(2026-09-25):发起人存下、还没提交审批的调拨。只有发起人(与 ADMIN)看得见,
+    # 不进审批收件箱、不占 `unique_active_dispatch`、不通知任何人;缺什么都行,提交时才校验。
+    # 是一个状态而不是一个布尔列:见 `VALID_TRANSITIONS` 上方的说明。
+    DRAFT = "DRAFT", "草稿"
     PROPOSED = "PROPOSED", "待审批"
     APPROVED = "APPROVED", "已批准"
     REJECTED = "REJECTED", "已拒绝"
@@ -50,10 +54,26 @@ class DispatchRecord(AuditUserFields, models.Model):
         "tenants.Tenant",
         on_delete=models.CASCADE,
         related_name="dispatch_records_received",
+        null=True,
+        blank=True,
     )
+    # `target_tenant` / `soul` 可空只为草稿:草稿可以不完整。提交(`DispatchService.submit`)
+    # 与直接发起(`propose`)都要求两者齐全,所以 PROPOSED 及之后的行上它们恒非空。
     soul = models.ForeignKey(
         "souls.Soul",
         on_delete=models.CASCADE,
+        related_name="dispatch_records",
+        null=True,
+        blank=True,
+    )
+    # 目标界域:灵魂到目标文明后落在哪一处。必须是**目标租户**的、目标文明的、未软删的
+    # 界域(`DispatchService.check_target_realm`);执行时写进灵魂行程(`SoulPathService.enter`)。
+    # 空 = 没指定,执行时只记「离开」,与此前一样。SET_NULL 与 `SoulPathEntry.realm` 同一取法。
+    target_realm = models.ForeignKey(
+        "realms.Realm",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="dispatch_records",
     )
     dispatched_by = models.ForeignKey(
@@ -67,7 +87,8 @@ class DispatchRecord(AuditUserFields, models.Model):
         choices=DispatchStatus.choices,
         default=DispatchStatus.PROPOSED,
     )
-    reason = models.TextField()
+    reason = models.TextField(blank=True, default="")
+    # 草稿上是建草稿的时刻;提交时改写为提交的时刻(审批收件箱按它先进先出)。
     proposed_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True, blank=True)
     executed_at = models.DateTimeField(null=True, blank=True)
@@ -102,11 +123,21 @@ class DispatchRecord(AuditUserFields, models.Model):
         ]
 
     def __str__(self):
-        return f"Dispatch {self.soul.name} {self.source_tenant.code}->{self.target_tenant.code} ({self.status})"
+        soul = self.soul.name if self.soul_id else "?"
+        target = self.target_tenant.code if self.target_tenant_id else "?"
+        return f"Dispatch {soul} {self.source_tenant.code}->{target} ({self.status})"
 
     # ── State Machine ──────────────────────────────────────────────
+    #
+    # DRAFT 是状态机的第一个状态,不是另一根布尔列。每一处读调拨的代码都已经按 `status`
+    # 筛(审批收件箱 `status=PROPOSED`、`unique_active_dispatch` 的 PROPOSED/APPROVED、
+    # 受刑计划的 EXECUTED、回归的 EXECUTED……),所以草稿**不改任何一处**就被它们排除;
+    # 一根 `is_draft` 列则要每一处都补 `is_draft=False`,漏一处就是草稿进了收件箱,
+    # 而且会造出「草稿且 APPROVED」这种无意义的组合。
+    # 放弃草稿是软删(进回收站),不是 CANCELLED:CANCELLED 是审批流里的一个结论。
 
     VALID_TRANSITIONS = {
+        DispatchStatus.DRAFT: [DispatchStatus.PROPOSED],
         DispatchStatus.PROPOSED: [DispatchStatus.APPROVED, DispatchStatus.REJECTED, DispatchStatus.CANCELLED],
         DispatchStatus.APPROVED: [DispatchStatus.EXECUTED, DispatchStatus.CANCELLED],
         DispatchStatus.REJECTED: [],

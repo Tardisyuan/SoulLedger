@@ -2261,11 +2261,13 @@ paths:
           enum:
           - APPROVED
           - CANCELLED
+          - DRAFT
           - EXECUTED
           - PROPOSED
           - REJECTED
           - RETURNED
         description: |-
+          * `DRAFT` - 草稿
           * `PROPOSED` - 待审批
           * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
@@ -2472,6 +2474,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/DispatchRecord'
           description: ''
+  /api/v1/dispatch/records/{id}/draft/:
+    patch:
+      operationId: v1_dispatch_records_draft_partial_update
+      description: 存草稿(改)。只改请求体里给了的字段;仍是草稿。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Dispatch Record.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDispatchDraft'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDispatchDraft'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDispatchDraft'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchRecord'
+          description: ''
   /api/v1/dispatch/records/{id}/execute/:
     post:
       operationId: v1_dispatch_records_execute_create
@@ -2585,6 +2621,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/DispatchRecord'
           description: ''
+  /api/v1/dispatch/records/{id}/submit/:
+    post:
+      operationId: v1_dispatch_records_submit_create
+      description: |-
+        草稿提交审批:DRAFT → PROPOSED。请求体可带最后一次的表单内容(同存草稿的四个字段),
+        先写上再校验;合起来要和直接发起(`create`)一样完整 —— 灵魂、目标文明、至少 20 字的理由。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Dispatch Record.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchDraft'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DispatchDraft'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DispatchDraft'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchRecord'
+          description: ''
+  /api/v1/dispatch/records/drafts/:
+    post:
+      operationId: v1_dispatch_records_drafts_create
+      description: 存草稿(新建)。四个字段全可省;不进审批流、不通知任何人。来源是发起人自己的租户。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchDraft'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DispatchDraft'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DispatchDraft'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchRecord'
+          description: ''
   /api/v1/dispatch/records/history/:
     get:
       operationId: v1_dispatch_records_history_list
@@ -2640,11 +2738,13 @@ paths:
           enum:
           - APPROVED
           - CANCELLED
+          - DRAFT
           - EXECUTED
           - PROPOSED
           - REJECTED
           - RETURNED
         description: |-
+          * `DRAFT` - 草稿
           * `PROPOSED` - 待审批
           * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
@@ -2731,11 +2831,13 @@ paths:
           enum:
           - APPROVED
           - CANCELLED
+          - DRAFT
           - EXECUTED
           - PROPOSED
           - REJECTED
           - RETURNED
         description: |-
+          * `DRAFT` - 草稿
           * `PROPOSED` - 待审批
           * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
@@ -2756,6 +2858,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedDispatchRecordListList'
+          description: ''
+  /api/v1/dispatch/records/realm-options/:
+    get:
+      operationId: v1_dispatch_records_realm_options_list
+      description: |-
+        目标文明里可作为移交目的地的界域(`DispatchService.eligible_realms`),供「目标界域」下拉。
+
+        这是 `RealmViewSet` 之外唯一一处跨租户读界域的地方:只读、只给目标租户那一个文明的、
+        `eligible_realms` 判定过的行。`display_name` 按 Accept-Language。
+      parameters:
+      - in: query
+        name: target_tenant_code
+        schema:
+          type: string
+        description: The target civilization's tenant code.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RealmLocalized'
           description: ''
   /api/v1/disposition/:
     get:
@@ -15340,6 +15470,27 @@ components:
           type: string
       required:
       - detail
+    DispatchDraft:
+      type: object
+      description: |-
+        存草稿的请求体:四个字段全可省、全可空,只查界域属不属目标租户。
+
+        完整性(灵魂、目标文明、至少 20 字的理由)**只在提交时**查 —— 见 `DispatchSubmitSerializer`。
+        灵魂还要属发起人的租户:这不是完整性,是访问边界 —— 草稿会把灵魂的名字读回给发起人。
+      properties:
+        soul:
+          type: string
+          format: uuid
+          nullable: true
+        target_tenant:
+          type: integer
+          nullable: true
+        target_realm:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
     DispatchRecord:
       type: object
       description: |-
@@ -15389,15 +15540,23 @@ components:
           readOnly: true
         target_tenant:
           type: integer
+          nullable: true
         target_tenant_code:
           type: string
           readOnly: true
+          nullable: true
         soul:
           type: string
           format: uuid
+          nullable: true
         soul_name:
           type: string
           readOnly: true
+          nullable: true
+        target_realm:
+          type: string
+          format: uuid
+          nullable: true
         dispatched_by:
           type: integer
           readOnly: true
@@ -15449,12 +15608,10 @@ components:
       - proposed_at
       - reason
       - returned_at
-      - soul
       - soul_name
       - source_tenant
       - source_tenant_code
       - status
-      - target_tenant
       - target_tenant_code
       - update_time
     DispatchRecordList:
@@ -15472,15 +15629,23 @@ components:
           readOnly: true
         target_tenant:
           type: integer
+          nullable: true
         target_tenant_code:
           type: string
           readOnly: true
+          nullable: true
         soul:
           type: string
           format: uuid
+          nullable: true
         soul_name:
           type: string
           readOnly: true
+          nullable: true
+        target_realm:
+          type: string
+          format: uuid
+          nullable: true
         status:
           $ref: '#/components/schemas/DispatchStatusEnum'
         proposed_at:
@@ -15498,11 +15663,9 @@ components:
       required:
       - id
       - proposed_at
-      - soul
       - soul_name
       - source_tenant
       - source_tenant_code
-      - target_tenant
       - target_tenant_code
     DispatchReturn:
       type: object
@@ -15515,6 +15678,7 @@ components:
       - reason
     DispatchStatusEnum:
       enum:
+      - DRAFT
       - PROPOSED
       - APPROVED
       - REJECTED
@@ -15523,6 +15687,7 @@ components:
       - CANCELLED
       type: string
       description: |-
+        * `DRAFT` - 草稿
         * `PROPOSED` - 待审批
         * `APPROVED` - 已批准
         * `REJECTED` - 已拒绝
@@ -20392,6 +20557,27 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedDispatchDraft:
+      type: object
+      description: |-
+        存草稿的请求体:四个字段全可省、全可空,只查界域属不属目标租户。
+
+        完整性(灵魂、目标文明、至少 20 字的理由)**只在提交时**查 —— 见 `DispatchSubmitSerializer`。
+        灵魂还要属发起人的租户:这不是完整性,是访问边界 —— 草稿会把灵魂的名字读回给发起人。
+      properties:
+        soul:
+          type: string
+          format: uuid
+          nullable: true
+        target_tenant:
+          type: integer
+          nullable: true
+        target_realm:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
     PatchedDispatchRecord:
       type: object
       description: |-
@@ -20441,15 +20627,23 @@ components:
           readOnly: true
         target_tenant:
           type: integer
+          nullable: true
         target_tenant_code:
           type: string
           readOnly: true
+          nullable: true
         soul:
           type: string
           format: uuid
+          nullable: true
         soul_name:
           type: string
           readOnly: true
+          nullable: true
+        target_realm:
+          type: string
+          format: uuid
+          nullable: true
         dispatched_by:
           type: integer
           readOnly: true

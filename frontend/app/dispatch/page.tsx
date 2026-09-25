@@ -27,6 +27,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  * 一枚字形(`StatusBadge`),所以列表不只靠颜色说状态。
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
+  DRAFT: "neutral",
   PROPOSED: "warning",
   APPROVED: "success",
   REJECTED: "error",
@@ -164,7 +165,12 @@ function DispatchTable({
           <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))]">
             {/* `soul_name` is in the same response and was going unread;
                 the card printed the primary key instead. */}
-            <Link href={`/dispatch/${d.id}`} className={ROW_LINK}>
+            {/* A draft (only its author is ever sent one) reopens in the form,
+                pre-filled; everything else opens the record. */}
+            <Link
+              href={d.status === "DRAFT" ? `/dispatch/propose?draft=${d.id}` : `/dispatch/${d.id}`}
+              className={ROW_LINK}
+            >
               {d.soul_name || <MissingValue kind="unrecorded" />}
             </Link>
             {d.reason && (
@@ -172,7 +178,7 @@ function DispatchTable({
             )}
           </td>
           <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
-            {d.source_tenant_code} → {d.target_tenant_code}
+            {d.source_tenant_code} → {d.target_tenant_code ?? <MissingValue kind="unrecorded" />}
           </td>
           {/* `proposed_at` was in the response and unread, so the queue could
               not be triaged by age. Mono + tabular-nums so the timestamps line

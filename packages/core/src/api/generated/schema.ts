@@ -1110,6 +1110,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/records/{id}/draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 存草稿(改)。只改请求体里给了的字段;仍是草稿。 */
+        patch: operations["v1_dispatch_records_draft_partial_update"];
+        trace?: never;
+    };
     "/api/v1/dispatch/records/{id}/execute/": {
         parameters: {
             query?: never;
@@ -1171,6 +1188,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/records/{id}/submit/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 草稿提交审批:DRAFT → PROPOSED。请求体可带最后一次的表单内容(同存草稿的四个字段),
+         *     先写上再校验;合起来要和直接发起(`create`)一样完整 —— 灵魂、目标文明、至少 20 字的理由。
+         */
+        post: operations["v1_dispatch_records_submit_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/records/drafts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 存草稿(新建)。四个字段全可省;不进审批流、不通知任何人。来源是发起人自己的租户。 */
+        post: operations["v1_dispatch_records_drafts_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/records/history/": {
         parameters: {
             query?: never;
@@ -1223,6 +1277,28 @@ export interface paths {
          *     between pages.
          */
         get: operations["v1_dispatch_records_proposed_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/records/realm-options/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 目标文明里可作为移交目的地的界域(`DispatchService.eligible_realms`),供「目标界域」下拉。
+         *
+         *     这是 `RealmViewSet` 之外唯一一处跨租户读界域的地方:只读、只给目标租户那一个文明的、
+         *     `eligible_realms` 判定过的行。`display_name` 按 Accept-Language。
+         */
+        get: operations["v1_dispatch_records_realm_options_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6965,6 +7041,20 @@ export interface components {
             detail: string;
         };
         /**
+         * @description 存草稿的请求体:四个字段全可省、全可空,只查界域属不属目标租户。
+         *
+         *     完整性(灵魂、目标文明、至少 20 字的理由)**只在提交时**查 —— 见 `DispatchSubmitSerializer`。
+         *     灵魂还要属发起人的租户:这不是完整性,是访问边界 —— 草稿会把灵魂的名字读回给发起人。
+         */
+        DispatchDraft: {
+            /** Format: uuid */
+            soul?: string | null;
+            target_tenant?: number | null;
+            /** Format: uuid */
+            target_realm?: string | null;
+            reason?: string;
+        };
+        /**
          * @description Serializer for DispatchRecord.
          *
          *     `status` and `dispatched_by` are read-only on purpose. They used to be
@@ -7005,11 +7095,13 @@ export interface components {
             readonly id: string;
             source_tenant: number;
             readonly source_tenant_code: string;
-            target_tenant: number;
-            readonly target_tenant_code: string;
+            target_tenant?: number | null;
+            readonly target_tenant_code: string | null;
             /** Format: uuid */
-            soul: string;
-            readonly soul_name: string;
+            soul?: string | null;
+            readonly soul_name: string | null;
+            /** Format: uuid */
+            target_realm?: string | null;
             readonly dispatched_by: number | null;
             readonly dispatched_by_name: string | null;
             readonly status: components["schemas"]["DispatchStatusEnum"];
@@ -7033,11 +7125,13 @@ export interface components {
             readonly id: string;
             source_tenant: number;
             readonly source_tenant_code: string;
-            target_tenant: number;
-            readonly target_tenant_code: string;
+            target_tenant?: number | null;
+            readonly target_tenant_code: string | null;
             /** Format: uuid */
-            soul: string;
-            readonly soul_name: string;
+            soul?: string | null;
+            readonly soul_name: string | null;
+            /** Format: uuid */
+            target_realm?: string | null;
             status?: components["schemas"]["DispatchStatusEnum"];
             /** Format: date-time */
             readonly proposed_at: string;
@@ -7051,7 +7145,8 @@ export interface components {
             reason: string;
         };
         /**
-         * @description * `PROPOSED` - 待审批
+         * @description * `DRAFT` - 草稿
+         *     * `PROPOSED` - 待审批
          *     * `APPROVED` - 已批准
          *     * `REJECTED` - 已拒绝
          *     * `EXECUTED` - 已执行
@@ -7059,7 +7154,7 @@ export interface components {
          *     * `CANCELLED` - 已取消
          * @enum {string}
          */
-        DispatchStatusEnum: "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "RETURNED" | "CANCELLED";
+        DispatchStatusEnum: "DRAFT" | "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "RETURNED" | "CANCELLED";
         /**
          * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
          *
@@ -9464,6 +9559,20 @@ export interface components {
             readonly update_time?: string;
         };
         /**
+         * @description 存草稿的请求体:四个字段全可省、全可空,只查界域属不属目标租户。
+         *
+         *     完整性(灵魂、目标文明、至少 20 字的理由)**只在提交时**查 —— 见 `DispatchSubmitSerializer`。
+         *     灵魂还要属发起人的租户:这不是完整性,是访问边界 —— 草稿会把灵魂的名字读回给发起人。
+         */
+        PatchedDispatchDraft: {
+            /** Format: uuid */
+            soul?: string | null;
+            target_tenant?: number | null;
+            /** Format: uuid */
+            target_realm?: string | null;
+            reason?: string;
+        };
+        /**
          * @description Serializer for DispatchRecord.
          *
          *     `status` and `dispatched_by` are read-only on purpose. They used to be
@@ -9504,11 +9613,13 @@ export interface components {
             readonly id?: string;
             source_tenant?: number;
             readonly source_tenant_code?: string;
-            target_tenant?: number;
-            readonly target_tenant_code?: string;
+            target_tenant?: number | null;
+            readonly target_tenant_code?: string | null;
             /** Format: uuid */
-            soul?: string;
-            readonly soul_name?: string;
+            soul?: string | null;
+            readonly soul_name?: string | null;
+            /** Format: uuid */
+            target_realm?: string | null;
             readonly dispatched_by?: number | null;
             readonly dispatched_by_name?: string | null;
             readonly status?: components["schemas"]["DispatchStatusEnum"];
@@ -13789,14 +13900,15 @@ export interface operations {
                 soul_name?: string;
                 source_tenant?: number;
                 /**
-                 * @description * `PROPOSED` - 待审批
+                 * @description * `DRAFT` - 草稿
+                 *     * `PROPOSED` - 待审批
                  *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
                  *     * `EXECUTED` - 已执行
                  *     * `RETURNED` - 已回归
                  *     * `CANCELLED` - 已取消
                  */
-                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
+                status?: "APPROVED" | "CANCELLED" | "DRAFT" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
                 target_tenant?: number;
             };
             header?: never;
@@ -13967,6 +14079,34 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_records_draft_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Dispatch Record. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDispatchDraft"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDispatchDraft"];
+                "multipart/form-data": components["schemas"]["PatchedDispatchDraft"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchRecord"];
+                };
+            };
+        };
+    };
     v1_dispatch_records_execute_create: {
         parameters: {
             query?: never;
@@ -14051,6 +14191,59 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_records_submit_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Dispatch Record. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DispatchDraft"];
+                "application/x-www-form-urlencoded": components["schemas"]["DispatchDraft"];
+                "multipart/form-data": components["schemas"]["DispatchDraft"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchRecord"];
+                };
+            };
+        };
+    };
+    v1_dispatch_records_drafts_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DispatchDraft"];
+                "application/x-www-form-urlencoded": components["schemas"]["DispatchDraft"];
+                "multipart/form-data": components["schemas"]["DispatchDraft"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchRecord"];
+                };
+            };
+        };
+    };
     v1_dispatch_records_history_list: {
         parameters: {
             query?: {
@@ -14065,14 +14258,15 @@ export interface operations {
                 soul_name?: string;
                 source_tenant?: number;
                 /**
-                 * @description * `PROPOSED` - 待审批
+                 * @description * `DRAFT` - 草稿
+                 *     * `PROPOSED` - 待审批
                  *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
                  *     * `EXECUTED` - 已执行
                  *     * `RETURNED` - 已回归
                  *     * `CANCELLED` - 已取消
                  */
-                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
+                status?: "APPROVED" | "CANCELLED" | "DRAFT" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
                 target_tenant?: number;
             };
             header?: never;
@@ -14105,14 +14299,15 @@ export interface operations {
                 soul_name?: string;
                 source_tenant?: number;
                 /**
-                 * @description * `PROPOSED` - 待审批
+                 * @description * `DRAFT` - 草稿
+                 *     * `PROPOSED` - 待审批
                  *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
                  *     * `EXECUTED` - 已执行
                  *     * `RETURNED` - 已回归
                  *     * `CANCELLED` - 已取消
                  */
-                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
+                status?: "APPROVED" | "CANCELLED" | "DRAFT" | "EXECUTED" | "PROPOSED" | "REJECTED" | "RETURNED";
                 target_tenant?: number;
             };
             header?: never;
@@ -14127,6 +14322,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedDispatchRecordListList"];
+                };
+            };
+        };
+    };
+    v1_dispatch_records_realm_options_list: {
+        parameters: {
+            query: {
+                /** @description The target civilization's tenant code. */
+                target_tenant_code: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealmLocalized"][];
                 };
             };
         };
