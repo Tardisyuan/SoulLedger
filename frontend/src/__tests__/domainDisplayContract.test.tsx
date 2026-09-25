@@ -76,6 +76,9 @@ const ENUM_FIELDS = [
   "approver_type",
   "reaction_type",
   "visibility",
+  // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),
+  // drawn through social_moderation.mutes.term.*.
+  "term",
   // Added 2026-09-03 by the meta-test below, working exactly as intended.
   // `MenuItem.menu_type` had been `string`; narrowing it to the three members
   // `apps.menus.models.MenuType` actually has made it visible to
