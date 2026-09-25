@@ -17,7 +17,7 @@ EMAIL = "forgot@example.com"
 def user(django_user_model, cn_tenant):
     cache.clear()
     return django_user_model.objects.create_user(
-        username="forgot", email=EMAIL, password="OldPass!123", role="VIEWER", tenant=cn_tenant,
+        username="forgot", email=EMAIL, password="OldPass!123", role="SOUL", tenant=cn_tenant,
     )
 
 
