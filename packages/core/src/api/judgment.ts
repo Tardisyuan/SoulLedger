@@ -57,6 +57,10 @@ export interface Judgment {
   draft_verdict?: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
   draft_saved_at?: string | null;
   draft_version?: number;
+  /** 「戊 · 发落」 draft: the chosen destination, term and eternal flag. Cleared at conclude. */
+  draft_destination_realm_id?: string | null;
+  draft_term_years?: number | null;
+  draft_eternal?: boolean;
   /**
    * The officer (a User pk) working this case — NOT `judge`, which is the
    * mythological judge (an Actor). Written only by claim / release / reassign
@@ -115,6 +119,10 @@ export interface JudgmentDraftPayload {
   version: number;
   notes?: string;
   draft_verdict?: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
+  /** 「戊 · 发落」: must be a realm of the case's tenant and civilization (400 otherwise). */
+  draft_destination_realm_id?: string | null;
+  draft_term_years?: number | null;
+  draft_eternal?: boolean;
 }
 
 

@@ -13,6 +13,9 @@ import { SelectField, TextField } from "@/src/components/ui/Field";
  * 一张平铺的名单(第三类 F 组 2.5,地府就是各殿的殿名):可选的在前;已满的照样列出但禁用、
  * 写「已满」;这个裁决去不了的(`not_applicable`)列在后面、禁用、写「不适用于 <裁决>」。
  * 其余校验(容量、永恒)在结案事务里,拒绝以 `code` 回来,显示在这一节。
+ *
+ * 选择随判词草稿自动保存(同一个 `draft/`、同一个版本号与 409),重开页面时还原,标题行右侧
+ * 写「已自动保存 HH:MM」;结案时服务端清空。
  */
 export interface Placement {
   /** 选这份发落时的裁决。裁决一换,这份发落就不再作数(见 `placementFor`)。 */
@@ -47,12 +50,39 @@ export function placementFor(
   };
 }
 
+/** 这份发落作为草稿存下的三个字段(`PATCH /judgment/{id}/draft/`)。不是为 `verdict` 选的就存空 —— 与结案同一条。 */
+export function placementDraftFields(p: Placement, verdict: string) {
+  const mine = !!verdict && p.verdict === verdict;
+  return {
+    draft_destination_realm_id: mine && p.realmId ? p.realmId : null,
+    draft_term_years: mine && !p.eternal && p.term ? Number(p.term) : null,
+    draft_eternal: mine && p.eternal,
+  };
+}
+
+/** 存下的草稿还原成一份发落;它是为草稿里的裁决选的。什么都没存就是 null。 */
+export function placementFromDraft(d: {
+  draft_verdict?: string | null;
+  draft_destination_realm_id?: string | null;
+  draft_term_years?: number | null;
+  draft_eternal?: boolean;
+}): Placement | null {
+  if (!d.draft_destination_realm_id && !d.draft_term_years && !d.draft_eternal) return null;
+  return {
+    verdict: d.draft_verdict ?? "",
+    realmId: d.draft_destination_realm_id ?? "",
+    term: d.draft_term_years ? String(d.draft_term_years) : "",
+    eternal: !!d.draft_eternal,
+  };
+}
+
 export function JudgmentPlacement({
   judgmentId,
   verdict,
   value,
   onChange,
   refusal,
+  savedAt,
 }: {
   judgmentId: string;
   verdict: string;
@@ -60,8 +90,10 @@ export function JudgmentPlacement({
   onChange: (next: Placement) => void;
   /** The conclude refusal code, when it is one of PLACEMENT_REFUSALS. */
   refusal?: string | null;
+  /** The draft's `draft_saved_at`: 「已自动保存 HH:MM」 at the right of the header while there is a draft. */
+  savedAt?: string | null;
 }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { data, isLoading, isError } = useJudgmentDestinations(judgmentId, (verdict || null) as JudgmentVerdict | null);
   const eternalId = useId();
   const current = value.verdict === verdict ? value : { ...EMPTY_PLACEMENT, verdict };
@@ -139,7 +171,7 @@ export function JudgmentPlacement({
     );
   }
 
-  // 草稿:选了目的地或刑期、还没落判 —— 这些只在本页,结案时才随请求发出,不自动保存。
+  // 草稿:选了目的地或刑期、还没落判。随判词草稿一起自动保存(`useDraftAutosave`),结案时清空。
   const drafted = !!verdict && (current.realmId !== "" || current.term !== "" || current.eternal);
   return (
     <section className="mt-6" data-testid="placement">
@@ -148,9 +180,16 @@ export function JudgmentPlacement({
         title={t("judgment.placement.title")}
         meta={
           drafted ? (
-            <span data-testid="placement-draft" className="border border-dashed border-[oklch(var(--color-ink-subtle))] px-1.5 font-mono text-2xs">
-              {t("judgment.placement.draft")}
-            </span>
+            <>
+              <span data-testid="placement-draft" className="border border-dashed border-[oklch(var(--color-ink-subtle))] px-1.5 font-mono text-2xs">
+                {t("judgment.placement.draft")}
+              </span>
+              {savedAt && (
+                <span data-testid="placement-saved" className="ml-3">
+                  {t("judgment.draft.saved_at", { time: formatDateTime(savedAt, { hour: "2-digit", minute: "2-digit" }) })}
+                </span>
+              )}
+            </>
           ) : undefined
         }
       />

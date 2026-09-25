@@ -595,6 +595,73 @@ class TestDraft:
         assert response.data["notes"] == "定稿"
 
 
+@pytest.mark.django_db
+class TestDispatchDraft:
+    """「戊 · 发落」 autosaves with the verdict draft: same endpoint, same version, same 409."""
+
+    def test_save_and_restore_the_destination_and_term(self, judge_client, cn_case, cn_tenant):
+        judgment, _, _ = cn_case
+        realm = _cn_realm(DEEPEST_COURT, cn_tenant)
+        body = {"version": 0, "draft_verdict": "FAILED", "draft_destination_realm_id": str(realm.pk),
+                "draft_term_years": 30}
+        response = judge_client.patch(_draft_url(judgment), body, format="json")
+        assert response.status_code == 200, response.data
+        assert response.data["draft_destination_realm_id"] == str(realm.pk)
+        assert (response.data["draft_term_years"], response.data["draft_eternal"]) == (30, False)
+        assert response.data["draft_version"] == 1
+        # Restore: the detail the page reloads carries the choice.
+        detail = judge_client.get(f"/api/v1/judgment/{judgment.id}/").data
+        assert (detail["draft_destination_realm_id"], detail["draft_term_years"]) == (str(realm.pk), 30)
+
+    def test_eternal_is_saved_and_a_term_can_be_cleared(self, judge_client, cn_case):
+        judgment, _, _ = cn_case
+        judge_client.patch(_draft_url(judgment), {"version": 0, "draft_term_years": 5}, format="json")
+        response = judge_client.patch(
+            _draft_url(judgment), {"version": 1, "draft_term_years": None, "draft_eternal": True}, format="json",
+        )
+        assert response.status_code == 200, response.data
+        assert (response.data["draft_term_years"], response.data["draft_eternal"]) == (None, True)
+
+    def test_a_stale_version_is_409_like_the_text(self, judge_client, cn_case, cn_tenant):
+        judgment, _, _ = cn_case
+        realm = _cn_realm(DEEPEST_COURT, cn_tenant)
+        judge_client.patch(_draft_url(judgment), {"version": 0, "draft_destination_realm_id": str(realm.pk)},
+                           format="json")
+        second = judge_client.patch(_draft_url(judgment), {"version": 0, "draft_term_years": 9}, format="json")
+        assert second.status_code == 409, second.data
+        assert second.data["code"] == "draft_conflict"
+        assert second.data["current"]["draft_destination_realm_id"] == str(realm.pk)
+        judgment.refresh_from_db()
+        assert judgment.draft_term_years is None
+
+    def test_a_realm_of_another_tenant_is_refused_and_nothing_is_written(self, judge_client, cn_case, eu_tenant):
+        judgment, _, _ = cn_case
+        foreign = _cn_realm(DEEPEST_COURT, eu_tenant)
+        response = judge_client.patch(
+            _draft_url(judgment), {"version": 0, "draft_destination_realm_id": str(foreign.pk)}, format="json",
+        )
+        assert response.status_code == 400, response.data
+        judgment.refresh_from_db()
+        assert judgment.draft_destination_realm_id is None and judgment.draft_version == 0
+
+    def test_conclude_clears_the_dispatch_draft(self, judge_client, cn_case, cn_tenant):
+        judgment, _, _ = cn_case
+        realm = _cn_realm(DEEPEST_COURT, cn_tenant)
+        judge_client.patch(
+            _draft_url(judgment),
+            {"version": 0, "draft_destination_realm_id": str(realm.pk), "draft_term_years": 7, "draft_eternal": True},
+            format="json",
+        )
+        response = judge_client.post(
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判"}, format="json",
+        )
+        assert response.status_code == 200, response.data
+        judgment.refresh_from_db()
+        assert (judgment.draft_destination_realm_id, judgment.draft_term_years, judgment.draft_eternal) == (
+            None, None, False,
+        )
+
+
 # ---------------------------------------------------------------------------
 # 7. Tenant isolation and permissions
 # ---------------------------------------------------------------------------
