@@ -911,7 +911,10 @@
       "empty_title": "本期没有流水",
       "empty_reason": "{{month}} 尚无功过登记;旧管 = 实在 = {{opening}}。",
       "load_failed": "功过总账加载失败",
-      "row_hint": "整行可点 → 该户详情「乙 · 功过」"
+      "row_hint": "整行可点 → 该户详情「乙 · 功过」",
+      "search": "灵魂姓名或 ID",
+      "export": "导出",
+      "export_failed": "导出失败"
     }
   },
   "judgment": {

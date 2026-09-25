@@ -158,3 +158,100 @@ class TestParameters:
         second = api_client.get(URL, {"month": "2026-06", "page": "2"}).json()
         assert (len(first["results"]), len(second["results"]), first["count"]) == (20, 3, 23)
         assert not {r["id"] for r in first["results"]} & {r["id"] for r in second["results"]}
+
+
+@pytest.mark.django_db
+class TestSearch:
+    """「灵魂姓名或 ID」收窄的是整张账,不只是流水:四柱、类目与行数同一组筛选。"""
+
+    def test_a_name_search_narrows_every_pillar_and_the_books_still_balance(self, api_client, judge_user, souls):
+        _login(api_client, judge_user, "ledger.read")
+        body = api_client.get(URL, {"month": "2026-06", "search": "乙"}).json()
+        # 乙: nothing before June; June +5 / −25. 甲's May opening (18) must not survive.
+        assert (body["opening"], body["received"], body["disbursed"], body["closing"]) == (0, 5, 25, -20)
+        assert body["opening"] + body["received"] - body["disbursed"] == body["closing"]
+        assert (body["record_count"], body["soul_count"]) == (2, 1)
+        assert {r["soul_name"] for r in body["results"]} == {"乙"}
+        assert body["categories"] == [
+            {"category": "CHARITY", "merit": 5, "demerit": 0},
+            {"category": "DECEPTION", "merit": 0, "demerit": 25},
+        ]
+
+    def test_an_id_search_matches_that_soul_only(self, api_client, judge_user, souls):
+        _login(api_client, judge_user, "ledger.read")
+        body = api_client.get(URL, {"month": "2026-06", "search": str(souls[0].pk)}).json()
+        assert (body["opening"], body["received"], body["disbursed"]) == (18, 40, 0)
+        assert {r["soul_id"] for r in body["results"]} == {str(souls[0].pk)}
+
+    def test_a_search_matching_nobody_is_an_empty_balanced_book(self, api_client, judge_user, souls):
+        _login(api_client, judge_user, "ledger.read")
+        body = api_client.get(URL, {"month": "2026-06", "search": "丙"}).json()
+        assert (body["opening"], body["received"], body["disbursed"], body["closing"], body["count"]) == (0, 0, 0, 0, 0)
+
+
+EXPORT = "/api/v1/ledger/journal/export/"
+
+
+def _csv(response):
+    import csv
+    import io
+
+    return list(csv.reader(io.StringIO(response.content.decode())))
+
+
+@pytest.mark.django_db
+class TestExport:
+    def test_the_file_holds_the_same_rows_the_pillars_sum(self, api_client, judge_user, souls):
+        _login(api_client, judge_user, "ledger.read")
+        response = api_client.get(EXPORT, {"month": "2026-06"})
+        assert response.status_code == 200
+        assert response["Content-Type"].startswith("text/csv")
+        header, *rows = _csv(response)
+        assert header[-2:] == ["Merit", "Demerit"]
+        body = api_client.get(URL, {"month": "2026-06"}).json()
+        assert sum(int(r[-2] or 0) for r in rows) == body["received"]
+        assert sum(int(r[-1] or 0) for r in rows) == body["disbursed"]
+        assert len(rows) == body["record_count"]
+
+    def test_filters_apply_to_the_file(self, api_client, judge_user, souls):
+        _login(api_client, judge_user, "ledger.read")
+        _, *rows = _csv(api_client.get(EXPORT, {"month": "2026-06", "search": "甲"}))
+        assert [r[3] for r in rows] == ["甲"]
+        _, *rows = _csv(api_client.get(EXPORT, {"month": "2026-06", "category": "DECEPTION"}))
+        assert [r[-1] for r in rows] == ["25"]
+
+    def test_another_tenants_rows_are_not_in_the_file(self, api_client, judge_user, souls):
+        eg = plan.tenant("EG_DUAT")
+        other = Soul.objects.create(name="外", tenant=eg, current_state=SoulState.ALIVE)
+        _record(other, RecordType.MERIT, 50, dt.datetime(2026, 6, 2, tzinfo=UTC))
+        _login(api_client, judge_user, "ledger.read")
+        _, *rows = _csv(api_client.get(EXPORT, {"month": "2026-06"}))
+        assert "外" not in {r[3] for r in rows}
+        assert len(rows) == 3
+
+    def test_a_formula_in_a_name_or_description_is_neutralised(self, api_client, judge_user, cn):
+        soul = Soul.objects.create(name='=HYPERLINK("http://evil","x")', tenant=cn, current_state=SoulState.ALIVE)
+        _record(soul, RecordType.MERIT, 1, dt.datetime(2026, 6, 3, tzinfo=UTC), description="@SUM(A1)")
+        _record(soul, RecordType.DEMERIT, 1, dt.datetime(2026, 6, 4, tzinfo=UTC), description="+1", category="GREED")
+        _record(soul, RecordType.DEMERIT, 1, dt.datetime(2026, 6, 5, tzinfo=UTC), description="-2", category="GREED")
+        _login(api_client, judge_user, "ledger.read")
+        _, *rows = _csv(api_client.get(EXPORT, {"month": "2026-06"}))
+        cells = [c for r in rows for c in (r[3], r[6])]
+        assert all(c[:1] not in "=+-@" for c in cells if c), cells
+        assert {"'@SUM(A1)", "'+1", "'-2"} <= set(cells)
+
+    def test_without_ledger_read_the_export_is_refused(self, api_client, django_user_model, cn, souls):
+        # A custom role with no grants at all: the codename gate, not a role literal, refuses it.
+        clerk = django_user_model.objects.create(username="clerk", role="LEDGERLESS", tenant=cn)
+        _login(api_client, clerk)
+        assert api_client.get(EXPORT, {"month": "2026-06"}).status_code == 403
+        _grant("LEDGERLESS", "ledger.read")
+        from apps.perm.cache import invalidate_all_permissions
+
+        invalidate_all_permissions()
+        assert api_client.get(EXPORT, {"month": "2026-06"}).status_code == 200
+
+    def test_a_bad_month_is_a_400_not_a_file(self, api_client, judge_user, souls):
+        _login(api_client, judge_user, "ledger.read")
+        response = api_client.get(EXPORT, {"month": "2026-13"})
+        assert response.status_code == 400 and response.json()["field"] == "month"

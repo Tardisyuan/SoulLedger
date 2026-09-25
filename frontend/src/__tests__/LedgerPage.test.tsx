@@ -13,10 +13,12 @@ import LedgerPage from "@/app/ledger/page";
 import { ledgerApi } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { currentMonth, groupByDay, shiftMonth, signed } from "@/src/lib/ledgerJournal";
+import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
-  ledgerApi: { journal: jest.fn() },
+  ledgerApi: { journal: jest.fn(), exportJournal: jest.fn() },
 }));
+jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 type MockUser = { id: number; role?: string; permissions?: string[] };
 let mockUser: MockUser | null = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
@@ -25,6 +27,8 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 const mockedJournal = ledgerApi.journal as jest.Mock;
+const mockedExport = ledgerApi.exportJournal as jest.Mock;
+const mockedSave = saveBlob as jest.Mock;
 
 const row = (id: string, day: string, type: "MERIT" | "DEMERIT", weight: number, soul = "沈青梧") => ({
   id,
@@ -74,6 +78,8 @@ function renderPage() {
 beforeEach(() => {
   mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
   mockedJournal.mockReset();
+  mockedExport.mockReset();
+  mockedSave.mockReset();
 });
 
 describe("pure helpers", () => {
@@ -207,5 +213,40 @@ describe("加载中 / 空 / 失败 是三屏", () => {
     mockUser = null;
     renderPage();
     expect(mockedJournal).not.toHaveBeenCalled();
+  });
+});
+
+describe("搜索与导出:同一组筛选", () => {
+  it("sends 灵魂姓名或 ID as `search` on the same request that carries the pillars, back to page 1", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    renderPage();
+    await screen.findByTestId("four-pillars");
+    fireEvent.change(screen.getByRole("searchbox", { name: "灵魂姓名或 ID" }), { target: { value: " 沈青梧 " } });
+    await waitFor(() =>
+      expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), search: "沈青梧", page: 1 })
+    );
+  });
+
+  it("exports the month with the filters on screen — and without the page", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    mockedExport.mockResolvedValue({ data: "csv" });
+    renderPage();
+    await screen.findByTestId("four-pillars");
+    fireEvent.change(screen.getByRole("searchbox", { name: "灵魂姓名或 ID" }), { target: { value: "周" } });
+    await waitFor(() => expect(mockedJournal).toHaveBeenLastCalledWith(expect.objectContaining({ search: "周" })));
+    fireEvent.click(screen.getByRole("button", { name: "导出" }));
+    await waitFor(() => expect(mockedSave).toHaveBeenCalledWith("csv", `ledger_journal_${currentMonth()}.csv`));
+    expect(mockedExport).toHaveBeenCalledWith({ month: currentMonth(), search: "周" });
+  });
+
+  it("says so when the export fails, and saves nothing", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    mockedExport.mockRejectedValue(new Error("boom"));
+    renderPage();
+    await screen.findByTestId("four-pillars");
+    fireEvent.click(screen.getByRole("button", { name: "导出" }));
+    await waitFor(() => expect(mockedExport).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "导出" })).not.toBeDisabled());
+    expect(mockedSave).not.toHaveBeenCalled();
   });
 });
