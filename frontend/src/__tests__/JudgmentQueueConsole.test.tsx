@@ -10,7 +10,7 @@
  * window, the U key and the undo strip were removed on 2026-09-25
  * (「落判即提交,不可撤回」, as on the desk).
  */
-import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
 import { judgmentApi } from "@soulledger/core/api";
@@ -265,18 +265,49 @@ describe("JudgmentQueueConsole", () => {
       fireEvent.keyDown(window, { key: "1" });
     });
 
-    await waitFor(() =>
-      expect(mockShowToast).toHaveBeenCalledWith(
-        { key: "judgment.queue.claimed_by_other", params: { name: "崔判官" } },
-        "error"
-      )
-    );
-    // Not the generic "did not land" sentence.
-    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.commit_error", "error");
+    // A warning banner split into a title and one sentence (第三类 F 组 2.2) — not a toast.
+    const banner = await screen.findByTestId("claim-refusal");
+    expect(banner).toHaveAttribute("role", "alert");
+    expect(within(banner).getByText("judgment.queue.claimed_title:崔判官")).toBeInTheDocument();
+    expect(within(banner).getByText("judgment.queue.claimed_body")).toBeInTheDocument();
+    expect(banner.className).toMatch(/color-warning/);
+    expect(banner.className).not.toMatch(/color-danger/);
+    expect(mockShowToast).not.toHaveBeenCalled();
     // Deferred for the sitting, not handed straight back to hit the same 409.
     await waitFor(() => expect(screen.getByText("judgment.queue.stat_deferred:1")).toBeInTheDocument());
     expect(screen.getByText("第二位待判者")).toBeInTheDocument();
     expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument();
+    // 「打开下一件」: the next case is already on screen; the warning goes.
+    fireEvent.click(within(banner).getByRole("button", { name: "judgment.queue.claimed_next" }));
+    expect(screen.queryByTestId("claim-refusal")).toBeNull();
+  });
+
+  it("R's bar says how many are set aside this sitting and puts them all back", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    expect(screen.queryByTestId("session-deferred")).toBeNull();
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "s" });
+    });
+    const bar = await screen.findByTestId("session-deferred");
+    expect(within(bar).getByText("judgment.queue.session_deferred:1")).toBeInTheDocument();
+    const button = within(bar).getByRole("button", { name: "judgment.queue.restore_all" });
+    expect(button).toHaveAttribute("aria-keyshortcuts", "R");
+    expect(within(button).getByText("R")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(screen.queryByTestId("session-deferred")).toBeNull();
+  });
+
+  it("the verdict buttons carry key, glyph and word; W's checkbox carries its keycap", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    const passed = document.querySelector('[data-verdict="PASSED"]') as HTMLElement;
+    expect(passed.textContent).toMatch(/^1✓/);
+    expect((document.querySelector('[data-verdict="RETRY"]') as HTMLElement).textContent).toMatch(/^4↺/);
+    const workflow = screen.getByRole("checkbox", { name: /judgment\.queue\.create_workflow/ });
+    expect(workflow.closest("label")?.querySelector("kbd")?.textContent).toBe("W");
   });
 
   it("defers on S without sending anything", async () => {

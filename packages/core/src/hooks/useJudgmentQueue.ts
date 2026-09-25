@@ -30,8 +30,10 @@ import { notify } from "../platform/index";
  *  - A refusal is never silent. A failed POST puts the case back in the queue
  *    and says so (`commit_error`). A 409 `claimed_by_other` — somebody else
  *    has claimed the case, and only they, a MODERATOR or an ADMIN may conclude
- *    it — names the claimant and defers the case for the sitting instead, since
- *    handing it back would only invite the same refusal.
+ *    it — defers the case for the sitting instead, since handing it back would
+ *    only invite the same refusal, and is handed to the screen as
+ *    `claimRefusal` (a standing warning with the claimant's name, 第三类 F 组
+ *    2.2), not a toast that is gone before it is read.
  *  - One verdict per case: a second press on the card still on screen (auto-
  *    repeat, a double click, the next case not yet arrived) is dropped while the
  *    first request for that case is in flight.
@@ -87,6 +89,8 @@ export function useJudgmentQueue(options?: { at?: string }) {
   const [holding, setHolding] = useState<string[]>([]);
   const [decided, setDecided] = useState<string[]>([]);
   const [sessionTotal, setSessionTotal] = useState<number | null>(null);
+  /** The last verdict refused because someone else holds the case: who, and which case. */
+  const [claimRefusal, setClaimRefusal] = useState<{ id: string; name: string } | null>(null);
   /** Same ids as `holding`, readable synchronously by a second press in the same tick. */
   const inFlight = useRef(new Set<string>());
 
@@ -118,6 +122,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
       const judgment = cursor.judgment;
       if (!judgment || inFlight.current.has(judgment.id)) return;
       const id = judgment.id;
+      setClaimRefusal(null); // a new verdict: the last refusal has been read
       inFlight.current.add(id);
       setHolding((prev) => [...prev, id]);
       try {
@@ -132,10 +137,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
         const refusal = claimedByOther(err);
         if (refusal) {
           setDeferred((prev) => [...prev, id]); // it was on screen, so it was not deferred
-          notify(
-            { key: "judgment.queue.claimed_by_other", params: { name: refusal.claimed_by_name ?? "" } },
-            "error"
-          );
+          setClaimRefusal({ id, name: refusal.claimed_by_name ?? "" });
         } else {
           // Nothing landed (or we cannot tell). The case goes back in the queue —
           // it is still pending, and the operator must see it again.
@@ -160,7 +162,11 @@ export function useJudgmentQueue(options?: { at?: string }) {
   }, [cursor.judgment]);
 
   /** Put every deferred case back at the head of the queue. */
-  const restoreDeferred = useCallback(() => setDeferred([]), []);
+  const restoreDeferred = useCallback(() => {
+    setDeferred([]);
+    setClaimRefusal(null);
+  }, []);
+  const dismissClaimRefusal = useCallback(() => setClaimRefusal(null), []);
 
   const total = sessionTotal ?? cursor.total;
   // A verdict counts as progress the moment it is given, not when it lands —
@@ -202,5 +208,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
     defer,
     restoreDeferred,
     deferredCount: deferred.length,
+    claimRefusal,
+    dismissClaimRefusal,
   };
 }

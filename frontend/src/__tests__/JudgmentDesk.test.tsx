@@ -178,6 +178,18 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     ]);
   });
 
+  it("勾上审批流,落判按钮就写成「落判并发起」;取消勾选再改回", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    const button = () => screen.getByRole("button", { name: new RegExp(tZh("judgment.detail.conclude")) });
+    expect(button()).not.toHaveTextContent(tZh("judgment.detail.conclude_with_workflow"));
+    const box = screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) });
+    fireEvent.click(box);
+    expect(screen.getByRole("button", { name: new RegExp(tZh("judgment.detail.conclude_with_workflow")) })).toBeInTheDocument();
+    fireEvent.click(box);
+    expect(button()).not.toHaveTextContent(tZh("judgment.detail.conclude_with_workflow"));
+  });
+
   it("⌘⏎ 与落判按钮同一道门:未选裁决、或没有 judgment.execute,都不落判", async () => {
     const a = renderPage();
     await screen.findAllByRole("radio");

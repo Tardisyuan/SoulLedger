@@ -1068,7 +1068,6 @@
       "create_workflow": "Iri Wat En Wetep-Heka",
       "defer": "Sedjer",
       "commit_error": "Sheemtet Nen Hab; Sep Aq Er Set Khery",
-      "claimed_by_other": "Sep Pen Shesep Em «{{name}}»: Khetem Wa Em Shesep, Hery Wesekhet, Sab Hery. Wedja Nen Hab; Sedjer Em Aq Pen.",
       "restore_deferred": "Ankh Wehem Sepu Sedjer",
       "stat_decided": "{{n}} Sheemtet",
       "stat_deferred": "{{n}} Sedjer",
@@ -1107,7 +1106,13 @@
       "key_restore": "Ankh Wehem Sepu Sedjer Neb",
       "key_help": "Sesh / Imen Sesh En Djed-Tep",
       "key_leave": "Per Em Set (Shu Sesh-Per Tepy)",
-      "key_notes": "Smen Medu Seth"
+      "key_notes": "Smen Medu Seth",
+      "claimed_title": "Sep Pen Shesep Em «{{name}}»",
+      "claimed_body": "Khetem Wa Em Shesep, Hery Wesekhet, Sab Hery. Wedja Nen Hab; Sedjer Em Aq Pen.",
+      "claimed_next": "Wen Ky",
+      "claimed_back": "Wehem Er Sheemtet-Set",
+      "session_deferred": "{{n}} Sedjer Em Aq Pen",
+      "restore_all": "Ankh Wehem Sepu Sedjer Neb"
     },
     "detail": {
       "loading": "Em Ini Wedja...",
@@ -1131,7 +1136,8 @@
       "conclude": "Khetem",
       "notes_placeholder": "Shesep Medu Seth...",
       "create_workflow": "Iri Wat Hesy",
-      "create_workflow_hint": "Setep Seth: Em Khetem, Wat Hesy Iri Djes-Ef Em Tut En Taui Hena Sep."
+      "create_workflow_hint": "Setep Seth: Em Khetem, Wat Hesy Iri Djes-Ef Em Tut En Taui Hena Sep.",
+      "conclude_with_workflow": "Khetem Hena Iri Wat Hesy"
     },
     "create_success": "Wedja Iri Seth",
     "create_error": "Nen Shemsu Em Kheme Sheemtet",

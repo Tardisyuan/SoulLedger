@@ -1065,10 +1065,9 @@
       "render_verdict": "宣判",
       "notes": "裁决备注",
       "notes_placeholder": "输入备注…",
-      "create_workflow": "同时发起审批流程",
+      "create_workflow": "落判时一并发起审批流",
       "defer": "延后",
       "commit_error": "裁决提交失败，该条已放回队列",
-      "claimed_by_other": "该案已由「{{name}}」认领，只有认领人、殿主或管理员能结案；裁决未提交，本次会话内已延后该条",
       "restore_deferred": "恢复延后的条目",
       "stat_decided": "已裁决 {{n}}",
       "stat_deferred": "已延后 {{n}}",
@@ -1107,7 +1106,13 @@
       "key_restore": "恢复所有已延后的条目",
       "key_help": "显示 / 隐藏键盘映射",
       "key_leave": "退出队列（在输入框内则先失焦）",
-      "key_notes": "聚焦备注"
+      "key_notes": "聚焦备注",
+      "claimed_title": "该案已由「{{name}}」认领",
+      "claimed_body": "只有认领人、殿主或管理员能结案。你的裁决没有提交；本次会话已把这件延后。",
+      "claimed_next": "打开下一件",
+      "claimed_back": "回到队列",
+      "session_deferred": "本次暂缓 {{n}} 件",
+      "restore_all": "全部放回队列"
     },
     "detail": {
       "loading": "加载审判中...",
@@ -1131,7 +1136,8 @@
       "conclude": "结案",
       "notes_placeholder": "输入备注...",
       "create_workflow": "发起审批流程",
-      "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。"
+      "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
+      "conclude_with_workflow": "落判并发起"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
