@@ -35,8 +35,8 @@ export function Kbd({ children }: { children: ReactNode }) {
  * 当偏好而不是筛选,所以只有回来的那一件就是本案时,`position` 才是本案的位置;否则不画。
  *
  * D 暂缓(理由必填),只在进度条画出来时接 —— 暂缓的案子不在 `next/` 里,进度条随之消失,
- * 不会对同一件按两次。稿子里的 K 上一件 / J 下一件 / S 跳过没有画:`next/` 只给「下一件待判」,
- * 没有「按位置取上一件 / 下一件」的接口,跳过也只活在队列控制台的会话里(`/judgment/queue`)。
+ * 不会对同一件按两次。K 上一件在页头(`/judgment/previous/`,见审判台页面);J 下一件 / S 跳过
+ * 没有画:`next/` 只给「下一件待判」,不是「这件之后那件」,跳过也只活在队列控制台的会话里。
  */
 export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string; canDefer?: boolean }) {
   const { t } = useI18n();
