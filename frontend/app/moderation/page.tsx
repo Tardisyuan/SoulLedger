@@ -42,7 +42,7 @@ function ModerationPageContent() {
   const counts: Record<Segment, number | undefined> = {
     reports: useModerationReports({}).data?.count,
     words: useSensitiveWords().data?.count,
-    mutes: useSocialMutes().data?.count,
+    mutes: useSocialMutes({ status: "ACTIVE" }).data?.count, // 禁言中,与分区的默认筛选同一个 key
     handled: useHandledContent({}).data?.count,
   };
 

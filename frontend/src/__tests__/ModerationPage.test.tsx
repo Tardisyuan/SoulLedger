@@ -586,10 +586,16 @@ describe("禁言 · filters and 禁言…", () => {
     apiMock.muteExecutors.mockResolvedValue({ data: [{ user_id: 31, display_name: "崔珏" }] });
     renderPage();
     fireEvent.click(segment("mutes"));
-    await screen.findByText(tZh("social_moderation.empty.mutes"));
-    expect(apiMock.mutes).toHaveBeenLastCalledWith({});
+    await screen.findByRole("button", { name: tZh("filter.clear_all") });
+    // The list opens on 禁言中 (2026-09-26 product decision) and can still be switched to all.
+    const status = screen.getByLabelText(tZh("social_moderation.mutes.filter_status")) as HTMLSelectElement;
+    expect(status.value).toBe("ACTIVE");
+    // Every request so far asked for 禁言中 — the unfiltered list was never fetched first.
+    expect(apiMock.mutes.mock.calls.map((c) => c[0])).toEqual(apiMock.mutes.mock.calls.map(() => ({ status: "ACTIVE" })));
+    fireEvent.change(status, { target: { value: "" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({}));
 
-    fireEvent.change(screen.getByLabelText(tZh("social_moderation.mutes.filter_status")), { target: { value: "ACTIVE" } });
+    fireEvent.change(status, { target: { value: "ACTIVE" } });
     await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE" }));
     fireEvent.change(screen.getByLabelText(tZh("social_moderation.mutes.col_term")), { target: { value: "LONG" } });
     await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG" }));
@@ -601,7 +607,7 @@ describe("禁言 · filters and 禁言…", () => {
     await waitFor(() =>
       expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG", created_by: 31, q: "素心" })
     );
-    // The filtered empty state offers to clear, and clearing asks for everything again.
+    // The filtered empty state offers to clear, and clearing asks for everything (not back to 禁言中).
     fireEvent.click(await screen.findByRole("button", { name: tZh("filter.clear_all") }));
     await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({}));
   });
@@ -614,7 +620,7 @@ describe("禁言 · filters and 禁言…", () => {
     apiMock.mute.mockResolvedValue({ data: {} });
     renderPage();
     fireEvent.click(segment("mutes"));
-    await screen.findByText(tZh("social_moderation.empty.mutes"));
+    await screen.findByRole("button", { name: tZh("filter.clear_all") });
     expect(apiMock.muteSouls).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.mutes.new") }));
     const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.mutes.new_title") });
