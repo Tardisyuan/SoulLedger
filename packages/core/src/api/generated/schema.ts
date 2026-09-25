@@ -8179,9 +8179,10 @@ export interface components {
          *     * `version_conflict` - version_conflict
          *     * `database_error` - database_error
          *     * `admin_only_permission` - admin_only_permission
+         *     * `admin_always_all` - admin_always_all
          * @enum {string}
          */
-        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission";
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all";
         MatrixChangeResult: {
             /** @description Position of the change in the request. */
             index: number;

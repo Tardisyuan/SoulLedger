@@ -197,6 +197,22 @@ describe("saving", () => {
     expect(refused).toHaveFocus();
     raf.mockRestore();
   });
+
+  it("an ADMIN revoke comes back refused (admin_always_all): the cell stays pending, marked ! with the rule", async () => {
+    api.applyChanges.mockResolvedValue({
+      data: { saved: 0, unchanged: 0, refused: 1, failed: 0, versions: { ADMIN: 4 },
+        results: [{ index: 0, role: "ADMIN", permission_id: 1, codename: "soul.read", action: "revoke", status: "refused", code: "admin_always_all", detail: "x" }] },
+    });
+    renderPage();
+    await ready();
+    fireEvent.click(cell("ADMIN", "soul.read"));
+    save();
+    const banner = await screen.findByRole("alert");
+    expect(within(banner).getByText("permissions.matrix.refused.admin_always_all")).toBeInTheDocument();
+    const refused = cell("ADMIN", "soul.read");
+    expect(glyphOf(refused)).toBe("!");
+    expect(refused).toHaveAccessibleDescription(/permissions\.matrix\.refused\.admin_always_all/);
+  });
 });
 
 describe("impact", () => {

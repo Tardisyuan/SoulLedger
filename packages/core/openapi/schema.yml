@@ -17873,6 +17873,7 @@ components:
       - version_conflict
       - database_error
       - admin_only_permission
+      - admin_always_all
       type: string
       description: |-
         * `role_not_found` - role_not_found
@@ -17880,6 +17881,7 @@ components:
         * `version_conflict` - version_conflict
         * `database_error` - database_error
         * `admin_only_permission` - admin_only_permission
+        * `admin_always_all` - admin_always_all
     MatrixChangeResult:
       type: object
       properties:

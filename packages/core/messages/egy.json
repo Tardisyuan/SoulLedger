@@ -583,7 +583,8 @@
         "version_conflict": "Ky Khemen Netjer Pen; Wehem Ini Seth. Maa Wehem.",
         "role_not_found": "Nen Gem Netjer.",
         "permission_not_found": "Nen Gem Was.",
-        "database_error": "Sethet: Nen Sau."
+        "database_error": "Sethet: Nen Sau.",
+        "admin_always_all": "Netjer Em Tepy Aba-Ef Was Neb"
       }
     },
     "segments": {

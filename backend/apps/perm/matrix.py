@@ -43,6 +43,13 @@ Each code below is a refusal `assign_role_permissions` already makes:
   and hard delete are ADMIN-only as a server rule, and `RecycleBinViewSet`
   also checks the role, so a stray grant in the table does nothing).
   Revoking them is never refused.
+
+And one refusal that is a rule rather than a restated 4xx:
+
+* ``admin_always_all`` a revoke on an ADMIN cell (maintainer decision,
+  2026-09-25). ADMIN always has everything — `check_permission` answers True
+  for it before reading any grant — so an unticked ADMIN cell would be a
+  statement the server does not honour. Nothing is written.
 """
 from django.db import DatabaseError, transaction
 
@@ -64,6 +71,7 @@ PERMISSION_NOT_FOUND = "permission_not_found"
 VERSION_CONFLICT = "version_conflict"
 DATABASE_ERROR = "database_error"
 ADMIN_ONLY_PERMISSION = "admin_only_permission"
+ADMIN_ALWAYS_ALL = "admin_always_all"
 
 ADMIN_ROLE_NAME = "ADMIN"
 #: Codenames only the ADMIN role may hold.
@@ -77,7 +85,10 @@ def admin_only_violations(role_name, codenames):
 # Choice sets for the serializers and for ENUM_NAME_OVERRIDES in settings.
 ACTIONS = [GRANT, REVOKE]
 STATUSES = [SAVED, UNCHANGED, REFUSED, FAILED]
-RESULT_CODES = [ROLE_NOT_FOUND, PERMISSION_NOT_FOUND, VERSION_CONFLICT, DATABASE_ERROR, ADMIN_ONLY_PERMISSION]
+RESULT_CODES = [
+    ROLE_NOT_FOUND, PERMISSION_NOT_FOUND, VERSION_CONFLICT, DATABASE_ERROR, ADMIN_ONLY_PERMISSION,
+    ADMIN_ALWAYS_ALL,
+]
 ROLE_DELETE_REFUSAL_CODES = ["builtin_role", "role_in_use", "role_referenced_by_workflow_templates"]
 
 
@@ -153,6 +164,10 @@ def apply_changes(changes, expected_versions=None):
                                f"Permission ID {change['permission_id']} not found")
                         continue
                     want = change["action"] == GRANT
+                    if not want and role_name == ADMIN_ROLE_NAME:
+                        result(i, REFUSED, ADMIN_ALWAYS_ALL,
+                               "ADMIN always holds every permission", permission.codename)
+                        continue
                     if want and admin_only_violations(role_name, [permission.codename]):
                         result(i, REFUSED, ADMIN_ONLY_PERMISSION,
                                f"{permission.codename} can only be granted to ADMIN", permission.codename)
