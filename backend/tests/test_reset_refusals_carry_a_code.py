@@ -113,9 +113,8 @@ class TestSetNewPasswordCodes:
 def test_a_completed_reset_signs_every_other_device_out(api_client, soul):
     """The App's success notice says 「其他设备上的登录已全部退出」: every refresh
     token the account held is blacklisted, so no device can renew its session."""
-    from rest_framework_simplejwt.tokens import RefreshToken
-
     from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+    from rest_framework_simplejwt.tokens import RefreshToken
 
     from apps.soul_accounts.authentication import SoulRefreshToken
 

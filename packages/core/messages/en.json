@@ -1329,7 +1329,10 @@
         "term_conflict": "Not executed: choose a term or eternal, not both",
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
         "destination_not_applicable": "Not executed: this case has no placement"
-      }
+      },
+      "draft": "Draft · not submitted",
+      "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
+      "not_applicable": "not for {{verdict}}"
     }
   },
   "audit": {

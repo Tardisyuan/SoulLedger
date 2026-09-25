@@ -7,7 +7,7 @@
  *
  * 后端接上之后的四条:丙 证据采信(空格切换焦点行,不采信要理由,采信后余额读服务端)、
  * 丁 判词自动保存(去抖、带版本号;409 停下并摆出对方的版本,绝不静默覆盖)、据 · 先例、
- * 进度条上的 D 暂缓(理由必填)。
+ * 进度条上的 S 暂缓(理由必填)。
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -100,9 +100,11 @@ const realm = (id: string, name: string, occupancy: number, capacity: number | n
 });
 const DESTINATIONS = [
   realm("r-5", "第五殿", 3, 10),
-  realm("r-9", "第九殿", 10, 10),
+  realm("r-7", "第七殿", 10, 10),
+  realm("r-9", "第九殿", 10, 12),
   realm("r-a", "阿鼻", 1, null, true),
 ];
+const NOT_APPLICABLE = [realm("r-h", "天堂", 0, null)];
 
 const radio = (value: string) =>
   screen.getAllByRole("radio").find((r) => (r as HTMLInputElement).value === value) as HTMLInputElement;
@@ -129,7 +131,9 @@ beforeEach(() => {
   judgmentApi.precedents.mockResolvedValue({ data: [] });
   judgmentApi.defer.mockResolvedValue({ data: {} });
   judgmentApi.destinations.mockImplementation((_id: string, verdict: string) =>
-    Promise.resolve({ data: { verdict, default_realm_id: "r-5", default_term_years: null, options: DESTINATIONS } })
+    Promise.resolve({
+      data: { verdict, default_realm_id: "r-5", default_term_years: null, options: DESTINATIONS, not_applicable: NOT_APPLICABLE },
+    })
   );
   judgmentApi.previous.mockResolvedValue({
     data: { total: 12, remaining: 12, skipped: 0, position: null, judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
@@ -590,13 +594,28 @@ describe("戊 · 发落", () => {
     fireEvent.keyDown(document.body, { key: "2" });
     await screen.findByLabelText(tZh("judgment.placement.destination"));
     expect(judgmentApi.destinations).toHaveBeenCalledWith(ID, "FAILED");
-    const labels = Array.from(destinationBox().options).map((o) => o.textContent);
-    expect(labels).toEqual([
-      tZh("judgment.placement.auto", { name: "第五殿" }),
-      "第五殿 · 3 / 10",
-      `第九殿 · 10 / 10 · ${tZh("judgment.placement.full")}`,
-      "阿鼻 · 1",
+    // 一张平铺的名单:已满的与不适用的照样列出、禁用、写明原因(第三类 F 组 2.5)。
+    const rows = Array.from(destinationBox().options).map((o) => [o.textContent, o.disabled]);
+    expect(rows).toEqual([
+      [tZh("judgment.placement.auto", { name: "第五殿" }), false],
+      ["第五殿 · 3 / 10", false],
+      [`第七殿 · 10 / 10 · ${tZh("judgment.placement.full")}`, true],
+      ["第九殿 · 10 / 12", false],
+      ["阿鼻 · 1", false],
+      [`天堂 · ${tZh("judgment.placement.not_applicable", { verdict: tZh("judgment.verdicts.failed") })}`, true],
     ]);
+    expect(screen.getByText(tZh("judgment.placement.filtered_by", { verdict: tZh("judgment.verdicts.failed") }))).toBeInTheDocument();
+  });
+
+  it("选了发落、还没落判,标题行挂「草稿 · 未提交」;什么都没选就不挂", async () => {
+    renderPage();
+    fireEvent.keyDown(await screen.findByText(tZh("judgment.placement.pick_verdict")), { key: "2" });
+    await screen.findByLabelText(tZh("judgment.placement.destination"));
+    expect(screen.queryByTestId("placement-draft")).toBeNull();
+    fireEvent.change(destinationBox(), { target: { value: "r-9" } });
+    expect(screen.getByTestId("placement-draft")).toHaveTextContent(tZh("judgment.placement.draft"));
+    fireEvent.change(destinationBox(), { target: { value: "" } });
+    expect(screen.queryByTestId("placement-draft")).toBeNull();
   });
 
   it("选了目的地与刑期就随结案发出;什么都不选,请求里没有这三个字段", async () => {

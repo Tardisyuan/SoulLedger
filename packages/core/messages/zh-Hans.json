@@ -1329,7 +1329,10 @@
         "term_conflict": "执行失败：刑期与永恒只能选一个",
         "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
         "destination_not_applicable": "执行失败：此案不设发落"
-      }
+      },
+      "draft": "草稿 · 未提交",
+      "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
+      "not_applicable": "不适用于{{verdict}}"
     }
   },
   "audit": {
