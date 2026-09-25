@@ -20774,6 +20774,10 @@ export interface operations {
     v1_social_moderation_handled_list: {
         parameters: {
             query?: {
+                /** @description 处理日期起(含),YYYY-MM-DD */
+                date_from?: string;
+                /** @description 处理日期止(含),YYYY-MM-DD */
+                date_to?: string;
                 /** @description 只看隐藏或只看删除 */
                 handling?: "DELETED" | "HIDDEN";
                 /** @description Which field to use when ordering the results. */

@@ -674,6 +674,44 @@ def test_handled_is_newest_first(cn_tenant, cn_moderator):
     assert [r["id"] for r in _handled(officer_client(cn_moderator))] == [str(newer.pk), str(older.pk)]
 
 
+def test_handled_date_range_is_inclusive_on_both_ends_across_posts_and_comments(cn_tenant, cn_moderator):
+    """「近 30 天」下拉:`date_from` / `date_to` 按处理日期闭区间,帖子与评论两半都收窄。"""
+    import datetime as dt
+
+    author, _ = soul(cn_tenant, "作者")
+    early, edge_lo, edge_hi, late = (post(author, n, Visibility.PUBLIC) for n in ("早", "起日", "止日", "晚"))
+    _, commenter = soul(cn_tenant, "评论者")
+    commenter.post(f"{SOCIAL}/posts/{late.pk}/comments/", {"content": "评论"}, format="json")
+    comment = Comment.objects.get(content="评论")
+    for row in (early, edge_lo, edge_hi, late):
+        mod.moderate_content(row, "HIDE", actor=cn_moderator)
+    mod.moderate_content(comment, "DELETE", actor=cn_moderator)
+    tz = timezone.get_current_timezone()
+    at = {
+        early: dt.datetime(2026, 6, 9, 23, 59, tzinfo=tz),
+        edge_lo: dt.datetime(2026, 6, 10, 0, 0, tzinfo=tz),
+        edge_hi: dt.datetime(2026, 6, 20, 23, 59, tzinfo=tz),
+        late: dt.datetime(2026, 6, 21, 0, 0, tzinfo=tz),
+    }
+    for row, when in at.items():
+        Post.all_objects.filter(pk=row.pk).update(moderated_at=when)
+    Comment.all_objects.filter(pk=comment.pk).update(deleted_at=dt.datetime(2026, 6, 15, 12, tzinfo=tz))
+
+    client = officer_client(cn_moderator)
+    got = {r["id"] for r in _handled(client, date_from="2026-06-10", date_to="2026-06-20")}
+    assert got == {str(edge_lo.pk), str(edge_hi.pk), str(comment.pk)}
+    assert str(early.pk) not in got and str(late.pk) not in got
+    assert {r["id"] for r in _handled(client, date_from="2026-06-21")} == {str(late.pk)}
+    assert {r["id"] for r in _handled(client, date_to="2026-06-09")} == {str(early.pk)}
+
+
+@pytest.mark.parametrize("bad", ["yesterday", "2026-02-30", "2026-6-1x"])
+def test_handled_rejects_a_malformed_date_with_400(cn_tenant, cn_moderator, bad):
+    res = officer_client(cn_moderator).get(f"{MODERATION}/handled/", {"date_from": bad})
+    assert res.status_code == 400, res.content
+    assert "date_from" in res.json()
+
+
 def test_handled_does_not_leak_across_civilizations(cn_tenant, cn_moderator, eu_moderator, eu_tenant):
     cn_author, _ = soul(cn_tenant, "地府作者")
     eu_author, _ = soul(eu_tenant, "天堂作者")

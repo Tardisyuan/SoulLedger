@@ -3169,7 +3169,11 @@
       "col_by": "Sab",
       "read_only": "Maa Wa: Iri Seth.",
       "restore": "Ankh Wehem · Maa",
-      "in_recycle_bin": "Em Per Wehem"
+      "in_recycle_bin": "Em Per Wehem",
+      "range": "Sepdet",
+      "range_30d": "Per Sepedu 30",
+      "range_90d": "Per Sepedu 90",
+      "range_all": "Wetu Seped"
     }
   },
   "soul_inbox": {

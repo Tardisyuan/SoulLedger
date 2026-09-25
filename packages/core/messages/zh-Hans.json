@@ -3169,7 +3169,11 @@
       "col_by": "处理人",
       "read_only": "只读：处理已生效。",
       "restore": "恢复可见",
-      "in_recycle_bin": "在回收站"
+      "in_recycle_bin": "在回收站",
+      "range": "时间",
+      "range_30d": "近 30 天",
+      "range_90d": "近 90 天",
+      "range_all": "全部时间"
     }
   },
   "soul_inbox": {

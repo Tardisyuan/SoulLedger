@@ -3169,7 +3169,11 @@
       "col_by": "Handled by",
       "read_only": "Read-only: the handling is in effect.",
       "restore": "Make visible again",
-      "in_recycle_bin": "In the recycle bin"
+      "in_recycle_bin": "In the recycle bin",
+      "range": "Time",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_all": "All time"
     }
   },
   "soul_inbox": {
