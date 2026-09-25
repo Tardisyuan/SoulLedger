@@ -81,7 +81,7 @@ export {
 export { ledgerApi, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable, type LedgerJournal, type LedgerJournalRow, type LedgerJournalCategory, type LedgerJournalParams } from "./ledger";
 
 // Realms
-export { realmsApi, type Realm, type RealmOccupancy } from "./realms";
+export { realmsApi, type Realm, type RealmOccupancy, type RealmCapacityResult } from "./realms";
 
 // Actors
 export { actorsApi, type Actor } from "./actors";

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { realmsApi, type Realm } from "@soulledger/core/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { realmsApi, type Realm, type RealmCapacityResult } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -14,6 +14,8 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import { Button } from "@/src/components/ui/Button";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RouteTopology, realmStationLabel } from "@/src/components/realms/RouteTopology";
 import { buildTopology } from "@/src/lib/routeTopology";
@@ -25,9 +27,10 @@ import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
  * 一个灵魂的 path,所以两处用的是同一个 `<RouteTopology>`、同一套图例,切换文明只换
  * 形状、不换颜色(文明靠 ■●▲◆ 与名字区分,规范 v1 §1.8)。
  *
- * **只读。** 设计稿说树表「可直接编辑」,而 `RealmViewSet` 是 `ReadOnlyModelViewSet`
- * —— 没有一条写入路由。按任务约定「只经由已有的界域接口编辑」,所以这一页没有编辑
- * 控件,并在表下写明原因;要编辑得先有后端路由,不是前端能补的。
+ * **只有容量可改。** `PATCH /realms/{id}/` 只收 `capacity`(别的字段 400),持
+ * `realms.manage`(默认只 ADMIN)的人在树表里行内改;其余各列来自神话语料,不经接口改。
+ * 不持有的人看到的仍是只读表,表下写明原因。容量降到在押人数以下是允许的:谁都不挪,
+ * 之后发落到这里会被拒(409 `realm_full`)—— 编辑时与保存后都用「已满」说出来。
  *
  * 在押来自 `GET /realms/occupancy/`(未离开的行程站计数,按租户划界)。容量 null
  * 是「未记录」,不是无限;在押 ≥ 容量用警示色,并另写「已满」,不单靠颜色。
@@ -101,6 +104,8 @@ function treeRows(realms: Realm[]): TreeRow[] {
 function RealmsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission("realms.manage");
   const [picked, setPicked] = useState<string | null>(null);
 
   const realmsQuery = useQuery({
@@ -170,8 +175,15 @@ function RealmsPageContent() {
             />
           </section>
           <section className="min-w-0">
-            <RealmTreeTable rows={treeRows(own)} occupancy={occupancy} occupancyFailed={occupancyQuery.isError} />
-            <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-3">{t("realms.table.read_only")}</p>
+            <RealmTreeTable
+              rows={treeRows(own)}
+              occupancy={occupancy}
+              occupancyFailed={occupancyQuery.isError}
+              canManage={canManage}
+            />
+            <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-3">
+              {canManage ? t("realms.table.edit_scope") : t("realms.table.read_only")}
+            </p>
           </section>
         </div>
       )}
@@ -179,18 +191,41 @@ function RealmsPageContent() {
   );
 }
 
+/** Blank = null (未记录); otherwise a non-negative whole number, or `undefined` = not valid. */
+function parseCapacity(draft: string): number | null | undefined {
+  const s = draft.trim();
+  if (s === "") return null;
+  return /^\d+$/.test(s) ? Number(s) : undefined;
+}
+
 function RealmTreeTable({
   rows,
   occupancy,
   occupancyFailed,
+  canManage = false,
 }: {
   rows: TreeRow[];
   occupancy: ReadonlyMap<string, number>;
   occupancyFailed: boolean;
+  canManage?: boolean;
 }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [saved, setSaved] = useState<RealmCapacityResult | null>(null);
+  const save = useMutation({
+    mutationFn: ({ id, capacity }: { id: string; capacity: number | null }) =>
+      realmsApi.setCapacity(id, capacity).then((r) => r.data),
+    onSuccess: (result) => {
+      setSaved(result);
+      setEditing(null);
+      void queryClient.invalidateQueries({ queryKey: ["realms"] });
+    },
+  });
   const th = "font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))] pb-1 text-left";
   return (
+    <>
     <table className="w-full border-collapse" data-testid="realm-tree">
       <caption className="sr-only">{t("realms.title")}</caption>
       <thead>
@@ -238,7 +273,17 @@ function RealmTreeTable({
                       : "text-[oklch(var(--color-ink-subtle))]"
                 }`}
               >
-                {occupancyFailed ? (
+                {editing === realm.id ? (
+                  <CapacityEditor
+                    held={held}
+                    draft={draft}
+                    onDraft={setDraft}
+                    pending={save.isPending}
+                    failed={save.isError}
+                    onCancel={() => setEditing(null)}
+                    onSave={(capacity) => save.mutate({ id: realm.id, capacity })}
+                  />
+                ) : occupancyFailed ? (
                   <MissingValue kind="unrecorded" reason={t("realms.table.occupancy_failed")} />
                 ) : (
                   <>
@@ -246,6 +291,21 @@ function RealmTreeTable({
                     {cap !== null ? ` / ${cap}` : <span className="sr-only"> · {t("realms.table.capacity_unrecorded")}</span>}
                     {full && <span className="ml-1 font-sans">{t("realms.table.full")}</span>}
                   </>
+                )}
+                {canManage && editing !== realm.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(realm.id);
+                      setDraft(cap === null ? "" : String(cap));
+                      setSaved(null);
+                      save.reset();
+                    }}
+                    aria-label={t("realms.table.edit_capacity_of", { name: name ?? realm.realm_code })}
+                    className="ml-2 font-sans underline text-[oklch(var(--color-accent-ink))]"
+                  >
+                    {t("realms.table.edit_capacity")}
+                  </button>
                 )}
               </td>
               <td className="text-right text-xs text-[oklch(var(--color-ink-subtle))]">
@@ -256,6 +316,71 @@ function RealmTreeTable({
         })}
       </tbody>
     </table>
+    {saved && (
+      <p data-testid="capacity-saved" role="status" className="text-xs pt-2 text-[oklch(var(--color-ink-muted))]">
+        {saved.is_full
+          ? t("realms.table.saved_full", {
+              code: saved.realm_code,
+              held: String(saved.held),
+              cap: String(saved.capacity ?? ""),
+            })
+          : t("realms.table.saved", { code: saved.realm_code })}
+      </p>
+    )}
+    </>
+  );
+}
+
+/** 行内容量编辑:数字框 + 保存 / 取消。填的数 ≤ 在押时就提示「已满」及其后果。 */
+function CapacityEditor({
+  held,
+  draft,
+  onDraft,
+  pending,
+  failed,
+  onCancel,
+  onSave,
+}: {
+  held: number;
+  draft: string;
+  onDraft: (v: string) => void;
+  pending: boolean;
+  failed: boolean;
+  onCancel: () => void;
+  onSave: (capacity: number | null) => void;
+}) {
+  const { t } = useI18n();
+  const value = parseCapacity(draft);
+  const fullAfter = typeof value === "number" && held >= value;
+  return (
+    <span className="inline-flex flex-col items-end gap-1 font-sans" data-testid="capacity-editor">
+      <span className="inline-flex items-center gap-1">
+        <span className="font-mono">{held} /</span>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          inputMode="numeric"
+          value={draft}
+          onChange={(e) => onDraft(e.target.value)}
+          aria-label={t("realms.table.capacity_label")}
+          placeholder={t("realms.table.capacity_unrecorded")}
+          className="w-20 h-7 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-1 text-right font-mono"
+        />
+        <Button type="button" size="sm" variant="primary" disabled={value === undefined || pending} onClick={() => value !== undefined && onSave(value)}>
+          {t("common.save")}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          {t("common.cancel")}
+        </Button>
+      </span>
+      {fullAfter && (
+        <span data-testid="capacity-full-warning" className="text-[oklch(var(--color-warning))] font-semibold whitespace-normal">
+          {t("realms.table.full_warning", { held: String(held) })}
+        </span>
+      )}
+      {failed && <span role="alert" className="text-[oklch(var(--color-danger))]">{t("realms.table.save_failed")}</span>}
+    </span>
   );
 }
 
