@@ -427,6 +427,11 @@ def test_a_preset_saved_through_the_api_builds_a_workflow(seeded):
     )
     assert response.status_code == 201, response.data
 
+    # Saving writes a draft (template versions, 0018); the engine reads only
+    # the published graph, so the save is published before it is built from.
+    assert client.post(
+        f"/api/v1/workflow/templates/{response.data['id']}/publish/"
+    ).status_code == 200
     stored = WorkflowTemplate.all_objects.get(pk=response.data["id"])
     assert [node["node_type"] for node in stored.nodes_json] == (
         ["TRIAL"] * 9 + ["FINAL"]

@@ -319,8 +319,16 @@ class WorkflowService:
                     .first()
                 )
             if db_template and db_template.nodes_json:
+                # `version_id` is which published version `nodes_json` is a
+                # copy of (None for a row that predates versioning and was
+                # written through the ORM). The workflow records it; see
+                # `ApprovalWorkflow.template_version`.
                 return (
-                    {"name": db_template.name, "nodes": db_template.nodes_json},
+                    {
+                        "name": db_template.name,
+                        "nodes": db_template.nodes_json,
+                        "version_id": db_template.published_version_id,
+                    },
                     db_template.priority,
                 )
         except DatabaseError:
@@ -540,6 +548,7 @@ class WorkflowService:
                 status=ApprovalWorkflowStatus.PENDING,
                 is_appeal=is_appeal,
                 tenant=judgment.tenant,
+                template_version_id=template.get("version_id"),
             )
 
             # Create nodes, and refuse a template that has none — see
@@ -707,6 +716,7 @@ class WorkflowService:
                 is_appeal=True,
                 original_workflow=original_workflow,
                 tenant=tenant,
+                template_version_id=template.get("version_id"),
             )
 
             # Same resolution as create_from_judgment, because it is the same

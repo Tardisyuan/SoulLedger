@@ -6088,6 +6088,40 @@ export interface paths {
         patch: operations["v1_workflow_templates_partial_update"];
         trace?: never;
     };
+    "/api/v1/workflow/templates/{id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description WorkflowTemplate CRUD. */
+        post: operations["v1_workflow_templates_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/templates/{id}/versions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description WorkflowTemplate CRUD. */
+        get: operations["v1_workflow_templates_versions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/": {
         parameters: {
             query?: never;
@@ -6489,6 +6523,7 @@ export interface components {
             readonly updated_at: string;
             /** Format: date-time */
             readonly completed_at: string | null;
+            readonly template_version_number: number | null;
             readonly tenant: number | null;
         };
         /** @description Lightweight serializer for listing workflows. */
@@ -9527,6 +9562,7 @@ export interface components {
             readonly updated_at?: string;
             /** Format: date-time */
             readonly completed_at?: string | null;
+            readonly template_version_number?: number | null;
             readonly tenant?: number | null;
         };
         PatchedComment: {
@@ -10155,6 +10191,8 @@ export interface components {
             priority?: number;
             is_active?: boolean;
             nodes?: components["schemas"]["WorkflowTemplateNode"][];
+            readonly published_version?: number | null;
+            readonly draft_version?: number | null;
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -12146,6 +12184,8 @@ export interface components {
             priority?: number;
             is_active?: boolean;
             nodes?: components["schemas"]["WorkflowTemplateNode"][];
+            readonly published_version: number | null;
+            readonly draft_version: number | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -12174,6 +12214,7 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
             readonly node_count: number;
+            readonly published_version: number | null;
         };
         /**
          * @description Serializer for a single template node.
@@ -12227,6 +12268,32 @@ export interface components {
          * @enum {string}
          */
         WorkflowTemplateNodeNodeTypeEnum: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
+        /**
+         * @description One row of a template's version history. Read-only: versions are written
+         *     by `versioning.py` alone, through save and publish.
+         */
+        WorkflowTemplateVersion: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly number: number;
+            readonly status: components["schemas"]["WorkflowTemplateVersionStatusEnum"];
+            readonly nodes: components["schemas"]["WorkflowTemplateNode"][];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            /** Format: date-time */
+            readonly published_at: string | null;
+            readonly saved_by_name: string | null;
+            readonly published_by_name: string | null;
+        };
+        /**
+         * @description * `DRAFT` - 草稿
+         *     * `PUBLISHED` - 已发布
+         *     * `SUPERSEDED` - 已替换
+         * @enum {string}
+         */
+        WorkflowTemplateVersionStatusEnum: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
     };
     responses: never;
     parameters: never;
@@ -22777,6 +22844,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowTemplate"];
+                };
+            };
+        };
+    };
+    v1_workflow_templates_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Workflow Template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTemplate"];
+                };
+            };
+        };
+    };
+    v1_workflow_templates_versions_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Workflow Template. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTemplateVersion"][];
                 };
             };
         };

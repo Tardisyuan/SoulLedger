@@ -1,11 +1,17 @@
 """
 Serializers for workflow app.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
-from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
+from apps.workflow.models import (
+    ApprovalNode,
+    ApprovalWorkflow,
+    WorkflowTemplate,
+    WorkflowTemplateVersion,
+)
 from apps.workflow.node_shape import normalize_template_node
 
 
@@ -91,7 +97,16 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
     ``tests/test_workflow_template_priority.py`` POSTs a 1 and reads the row
     back rather than trusting the 201.
     """
+    # VERSIONED (0018). `nodes` is the WORKING COPY: on read, the draft if the
+    # template has one, else the published graph; on write, it goes to the
+    # draft (`versioning.save_draft`) and never to `nodes_json`, which only
+    # `versioning.publish` writes. So a save from the editor cannot change what
+    # the next workflow runs on — publishing does. `published_version` /
+    # `draft_version` are the numbers the editor's badge shows
+    # (「草稿 v4 · 已发布 v3」); either can be null.
     nodes = WorkflowTemplateNodeSerializer(many=True, required=False, source='nodes_json')
+    published_version = serializers.SerializerMethodField()
+    draft_version = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkflowTemplate
@@ -104,6 +119,8 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
             "priority",
             "is_active",
             "nodes",
+            "published_version",
+            "draft_version",
             "created_at",
             "updated_at",
             "tenant",
@@ -113,6 +130,84 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
         # writable, and a MODERATOR could PATCH a template into another tenant
         # in one request -- measured 2026-08-29.
         read_only_fields = ["id", "created_at", "updated_at", "tenant"]
+
+    def get_published_version(self, obj) -> int | None:
+        return obj.published_version.number if obj.published_version_id else None
+
+    def get_draft_version(self, obj) -> int | None:
+        from apps.workflow.versioning import draft_of
+
+        draft = draft_of(obj) if obj.pk else None
+        return draft.number if draft else None
+
+    def to_representation(self, instance):
+        from apps.workflow.versioning import working_nodes
+
+        data = super().to_representation(instance)
+        data["nodes"] = WorkflowTemplateNodeSerializer(
+            working_nodes(instance), many=True
+        ).data
+        return data
+
+    def _save_nodes(self, template, nodes):
+        from apps.workflow.versioning import save_draft
+
+        request = self.context.get("request")
+        save_draft(template, nodes, user=getattr(request, "user", None))
+
+    def create(self, validated_data):
+        nodes = validated_data.pop("nodes_json", None)
+        template = super().create(validated_data)
+        if nodes is not None:
+            self._save_nodes(template, nodes)
+        return template
+
+    def update(self, instance, validated_data):
+        nodes = validated_data.pop("nodes_json", None)
+        template = super().update(instance, validated_data)
+        if nodes is not None:
+            self._save_nodes(template, nodes)
+        return template
+
+
+class WorkflowTemplateVersionSerializer(serializers.ModelSerializer):
+    """One row of a template's version history. Read-only: versions are written
+    by `versioning.py` alone, through save and publish."""
+
+    nodes = serializers.SerializerMethodField()
+    saved_by_name = serializers.SerializerMethodField()
+    published_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WorkflowTemplateVersion
+        fields = [
+            "id",
+            "number",
+            "status",
+            "nodes",
+            "created_at",
+            "updated_at",
+            "published_at",
+            "saved_by_name",
+            "published_by_name",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(WorkflowTemplateNodeSerializer(many=True))
+    def get_nodes(self, obj):
+        return WorkflowTemplateNodeSerializer(obj.nodes_json or [], many=True).data
+
+    @staticmethod
+    def _name(user) -> str | None:
+        if user is None:
+            return None
+        return getattr(user, "display_name", "") or user.username
+
+    def get_saved_by_name(self, obj) -> str | None:
+        return self._name(obj.saved_by)
+
+    def get_published_by_name(self, obj) -> str | None:
+        return self._name(obj.published_by)
 
 
 class WorkflowTemplateListSerializer(serializers.ModelSerializer):
@@ -125,6 +220,7 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
     """
 
     node_count = serializers.SerializerMethodField()
+    published_version = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkflowTemplate
@@ -142,10 +238,14 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
             "node_count",
+            "published_version",
         ]
 
     def get_node_count(self, obj) -> int:
         return len(obj.nodes_json or [])
+
+    def get_published_version(self, obj) -> int | None:
+        return obj.published_version.number if obj.published_version_id else None
 
 
 class ApprovalNodeSerializer(serializers.ModelSerializer):
@@ -327,6 +427,12 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     # runs and the fields resolve against a manager that does not scope by
     # tenant. `ApprovalNodeSerializer.validate_workflow` (same file) already
     # closed the child's half of this; these are the parent's.
+    # Which published template version this workflow runs on (0018); null for
+    # one built from the code tables or an unversioned row.
+    template_version_number = serializers.IntegerField(
+        source="template_version.number", read_only=True, allow_null=True, default=None
+    )
+
     validate_soul = tenant_scoped("soul")
     validate_judgment = tenant_scoped("judgment")
     validate_original_workflow = tenant_scoped("original_workflow")
@@ -354,6 +460,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "completed_at",
+            "template_version_number",
             "tenant",
         ]
         read_only_fields = [
