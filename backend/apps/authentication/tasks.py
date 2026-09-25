@@ -15,9 +15,14 @@ def flush_expired_tokens():
     call_command("flushexpiredtokens")
 
 
+#: Who hears about 「忘记密码」 in the account's own tenant: its administrators
+#: and its realm leads (殿主, `UserRole.MODERATOR`). See `notify_password_help`.
+PASSWORD_HELP_TENANT_ROLES = ("ADMIN", "MODERATOR")
+
+
 @shared_task(name="authentication.notify_password_help")
 def notify_password_help(username, ip_address=None, user_agent=""):
-    """「忘记密码」: tell the account's administrators, and write it down.
+    """「忘记密码」: tell the account's administrators and realm leads, and write it down.
 
     WHY THE LOOKUP HAPPENS HERE AND NOT IN THE VIEW. `password_help_request`
     enqueues this for every username it is given — known, unknown, inactive —
@@ -27,13 +32,17 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     gone. So the endpoint cannot say whether an account exists either in its
     body or in how long it takes to answer.
 
-    RECIPIENTS: the active ADMINs of the account's own tenant. If that tenant
-    has none — or the account has no tenant, i.e. it is itself a global
+    RECIPIENTS: the active ADMINs and MODERATORs (殿主) of the account's own
+    tenant — MODERATOR since 2026-09-25, the product owner's decision: the
+    realm lead is who knows the officer in person. If that tenant has
+    neither — or the account has no tenant, i.e. it is itself a global
     ADMIN — the global ADMINs (tenant NULL, the only role `scope_to_tenant`
-    lets across tenants). Never an ADMIN of another tenant: they cannot manage
-    this user (`UserViewSet.get_queryset` scopes them out), and the request
-    names an account in a tenant that is not theirs. The requester is never
-    their own recipient.
+    lets across tenants). The fallback is ADMIN only: a MODERATOR is a
+    tenant role, and one without a tenant speaks for no hall. Never anyone
+    of another tenant: they cannot manage this user
+    (`UserViewSet.get_queryset` scopes them out), and the request names an
+    account in a tenant that is not theirs. The requester is never their own
+    recipient.
 
     Soul accounts are skipped: their password is reset through
     `/soul-accounts/` (72 hours, forced change on first login), not by an
@@ -55,10 +64,14 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     if user is None:
         return 0
 
-    admins = User.objects.filter(role="ADMIN", is_active=True).exclude(pk=user.pk)
-    recipients = list(admins.filter(tenant=user.tenant)) if user.tenant_id else []
+    active = User.objects.filter(is_active=True).exclude(pk=user.pk)
+    recipients = (
+        list(active.filter(role__in=PASSWORD_HELP_TENANT_ROLES, tenant=user.tenant).order_by("pk"))
+        if user.tenant_id
+        else []
+    )
     if not recipients:
-        recipients = list(admins.filter(tenant__isnull=True))
+        recipients = list(active.filter(role="ADMIN", tenant__isnull=True).order_by("pk"))
 
     params = {"username": user.username}
     title, message = render(DEFAULT_LOCALE, "password_help_requested", params)
@@ -79,7 +92,7 @@ def notify_password_help(username, ip_address=None, user_agent=""):
         action=AuditAction.EXECUTE,
         resource="password_help",
         resource_id=str(user.pk),
-        description=f"忘记密码求助:{user.username},已通知 {len(recipients)} 位管理员"[:500],
+        description=f"忘记密码求助:{user.username},已通知 {len(recipients)} 位管理员或殿主"[:500],
         changes={"notified_admin_ids": [admin.pk for admin in recipients]},
         ip_address=ip_address,
         user_agent=(user_agent or "")[:500],

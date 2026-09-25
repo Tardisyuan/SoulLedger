@@ -35,6 +35,8 @@ class PasswordResetThrottle(ClientIPRateThrottle):
 
 class PasswordHelpThrottle(ClientIPRateThrottle):
     """「忘记密码」 help requests: 5 per hour per IP. Called by
-    `password_help_request`, which also counts per username."""
+    `password_help_request`. This is the endpoint's only limit: the
+    per-username counter it used to pair with let anyone lock a colleague out
+    of their own help request, and was removed."""
 
     scope = "password_help"

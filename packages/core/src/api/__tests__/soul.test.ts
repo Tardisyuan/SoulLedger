@@ -12,9 +12,13 @@ import {
   resetPlatform,
   type KeyValueStore,
 } from "../../platform/index";
+import ts from "typescript";
 import {
+  RESET_CODE_EXPIRED_ERROR,
+  RESET_CODE_WRONG_ERROR,
   clearSoulTokens,
   onSoulPasswordChangeRequired,
+  passwordResetErrorMessage,
   soulApi,
   soulErrorMessage,
   soulHttp,
@@ -203,6 +207,59 @@ describe("soulErrorMessage", () => {
 
   it("does not call a programming error a network failure", () => {
     expect(soulErrorMessage(new TypeError("boom")).key).toBe("soul_app.errors.unknown");
+  });
+});
+
+describe("password reset (「忘记密码」)", () => {
+  function httpError(status: number, data?: unknown) {
+    return new AxiosError("x", "ERR", undefined, null, { status, data } as AxiosResponse);
+  }
+
+  it("posts step 1 and step 2 to the auth endpoints, signed out, and hands back only {detail}", async () => {
+    script({
+      "/auth/reset-password/": [{ status: 200, data: { detail: "sent" } }],
+      "/auth/set-new-password/": [{ status: 200, data: { detail: "done" } }],
+    });
+    await expect(soulApi.requestPasswordReset("soul@example.com")).resolves.toEqual({ detail: "sent" });
+    const body = { email: "soul@example.com", code: "123456", new_password: "new-password-1" };
+    await expect(soulApi.setNewPassword(body)).resolves.toEqual({ detail: "done" });
+    expect(calls).toEqual([
+      { url: "/auth/reset-password/", auth: undefined, body: { email: "soul@example.com" } },
+      { url: "/auth/set-new-password/", auth: undefined, body },
+    ]);
+    // A reset is not a sign-in: nothing was stored.
+    expect(session.data.size + secure.data.size + persistent.data.size).toBe(0);
+  });
+
+  it.each<[string, unknown, string]>([
+    ["expired", httpError(400, { error: RESET_CODE_EXPIRED_ERROR }), "soul_app.forgot_password.code_expired"],
+    ["wrong", httpError(400, { error: RESET_CODE_WRONG_ERROR }), "soul_app.forgot_password.code_wrong"],
+    ["validator refusal", httpError(400, { error: "['This password is too common.']" }), "soul_app.errors.weak_password"],
+    ["new_password field", httpError(400, { new_password: ["too short"] }), "soul_app.errors.weak_password"],
+    ["code field", httpError(400, { code: ["验证码必须是6位数字"] }), "soul_app.forgot_password.code_wrong"],
+    ["email field", httpError(400, { email: ["bad"] }), "soul_app.errors.validation"],
+    ["too many tries", httpError(429, { error: "验证码错误次数过多,请重新获取" }), "soul_app.forgot_password.too_many_tries"],
+    ["no account", httpError(404, { error: "用户不存在" }), "soul_app.forgot_password.ask_hall"],
+    ["two accounts", httpError(409, { error: "x" }), "soul_app.forgot_password.ask_hall"],
+    ["offline", new AxiosError("Network Error", "ERR_NETWORK"), "soul_app.errors.network"],
+  ])("classifies %s", (_, error, key) => {
+    expect(passwordResetErrorMessage(error).key).toBe(key);
+  });
+
+  it("does not swallow an unexpected status", () => {
+    expect(passwordResetErrorMessage(httpError(500))).toEqual({ key: "soul_app.errors.unknown", params: { code: "500" } });
+  });
+
+  it("the two sentences it matches are still the ones set_new_password sends", () => {
+    // The backend answers both with `{error}` and no `code`, so the sentence IS
+    // the contract. Reword either there and this goes red, instead of the app
+    // quietly calling a wrong code a weak password.
+    const configPath = ts.findConfigFile(ts.sys.getCurrentDirectory(), (f) => ts.sys.fileExists(f), "tsconfig.json");
+    const views = configPath && ts.sys.readFile(configPath.replace(/tsconfig\.json$/, "../../backend/apps/authentication/views.py"));
+    if (!views) throw new Error("cannot read backend/apps/authentication/views.py");
+    const view = views.slice(views.indexOf("def set_new_password"), views.indexOf("def ", views.indexOf("def set_new_password") + 4));
+    expect(view).toContain(`{"error": "${RESET_CODE_EXPIRED_ERROR}"}`);
+    expect(view).toContain(`{"error": "${RESET_CODE_WRONG_ERROR}"}`);
   });
 });
 

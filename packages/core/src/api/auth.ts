@@ -96,6 +96,18 @@ export interface PasswordHelpAccepted {
   detail: string;
 }
 
+/** Body of `POST /auth/reset-password/`: the contact email a code is mailed to. */
+export type PasswordResetRequest = components["schemas"]["ResetPassword"];
+/** Body of `POST /auth/set-new-password/`: that email, the six-digit code, the new password. */
+export type SetNewPasswordRequest = components["schemas"]["SetNewPassword"];
+/**
+ * 200 body of both. `/auth/reset-password/` answers it for an address with no
+ * account too, so nothing may branch on its text.
+ */
+export type PasswordResetAccepted = components["schemas"]["DetailResponse"];
+/** The `{error}` body both answer a refusal with — no `code`, only a sentence. */
+export type PasswordResetRefusal = components["schemas"]["ErrorResponse"];
+
 export interface LoginRequest {
   username: string;
   password: string;
