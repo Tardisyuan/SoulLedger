@@ -10,6 +10,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
@@ -111,6 +112,18 @@ class JudgmentFilter(filters.FilterSet):
 
     def filter_group(self, queryset, name, value):
         return queryset.filter(PENDING & group_q(value, self.request.user))
+
+
+class NotesOnOpenCaseError(APIException):
+    """`notes` on an open case goes through the draft endpoint (see `perform_update`)."""
+    status_code = status.HTTP_409_CONFLICT
+    default_code = "use_draft_endpoint"
+
+    def __init__(self):
+        super().__init__({
+            "error": "The verdict text of an open case is saved through PATCH /judgment/{id}/draft/.",
+            "code": "use_draft_endpoint",
+        })
 
 
 def _enter_judgment_realm(soul, judgment):
@@ -291,11 +304,18 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     def perform_update(self, serializer):
         """Moving an open case to another court moves the soul there too (行程拓扑).
 
-        `notes` is also the verdict draft (see `Judgment.draft_version`). A write
-        to it through the plain PATCH/PUT moves the draft version too, so an
-        autosave that loaded the old text is refused instead of overwriting.
+        `notes` is also the verdict draft (see `Judgment.draft_version`). On an
+        OPEN case it is written only through `PATCH /judgment/{id}/draft/`
+        (产品负责人 2026-09-25): the plain PATCH/PUT carrying `notes` is a 409
+        `use_draft_endpoint` and writes nothing, because it has no version to
+        check and would overwrite an autosave. On a concluded case the plain
+        write is unchanged — it still moves the draft version.
         """
         from django.db import transaction
+
+        instance = serializer.instance
+        if "notes" in serializer.validated_data and instance.verdict is None and not instance.is_final:
+            raise NotesOnOpenCaseError()
 
         with transaction.atomic():
             realm_before = serializer.instance.realm_id
