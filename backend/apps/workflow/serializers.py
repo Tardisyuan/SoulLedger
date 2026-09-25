@@ -72,6 +72,24 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
         child=serializers.FloatField(), required=False, allow_null=True, default=None
     )
 
+    # 驳回到: the template-local id of an EARLIER node to send the flow back
+    # to on FAIL. Same id space as on_pass / on_fail.
+    reject_to = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=None
+    )
+    # 超时. Validated as a set by `validation.py` at publish (hours without an
+    # action, ESCALATE without a role); here only each value's own type.
+    timeout_hours = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1, max_value=24 * 365, default=None
+    )
+    timeout_action = serializers.ChoiceField(
+        choices=["ESCALATE", "AUTO_REJECT", "NOTIFY"],
+        required=False, allow_blank=True, allow_null=True, default=None,
+    )
+    timeout_role = serializers.CharField(
+        max_length=20, required=False, allow_blank=True, allow_null=True, default=None
+    )
+
     def to_representation(self, instance):
         """Render a stored node, in whichever shape it was stored.
 
@@ -326,6 +344,13 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "approver_display_name",
             "decided_at",
             "created_at",
+            "reject_to",
+            "decision_history",
+            "timeout_hours",
+            "timeout_action",
+            "timeout_role",
+            "activated_at",
+            "timed_out_at",
         ]
         read_only_fields = [
             "id",
@@ -336,6 +361,18 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "verdict",
             "approver",
             "decided_at",
+            # The 0020 columns are template-copied settings or engine state,
+            # written by `_create_nodes`, `_return_to` and the timeout
+            # processor. Writable, `decision_history` would be a forged past
+            # and `timed_out_at` a way to suppress a timeout — the same shape
+            # of hole `validate()` below closes for the decision fields.
+            "reject_to",
+            "decision_history",
+            "timeout_hours",
+            "timeout_action",
+            "timeout_role",
+            "activated_at",
+            "timed_out_at",
         ]
 
     def validate_workflow(self, value):
@@ -461,6 +498,8 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "updated_at",
             "completed_at",
             "template_version_number",
+            "return_count",
+            "end_reason",
             "tenant",
         ]
         read_only_fields = [
@@ -482,6 +521,8 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "completed_at",
+            "return_count",
+            "end_reason",
         ]
 
     def validate(self, attrs):

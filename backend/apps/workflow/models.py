@@ -33,6 +33,28 @@ TERMINAL_WORKFLOW_STATUSES = frozenset({
     "REJECTED",
 })
 
+#: How many times one workflow may be sent back by 驳回到 (`ApprovalNode.reject_to`).
+#:
+#: THE CAP IS WHAT MAKES RETURNING SAFE. Before reject-to, a decided node never
+#: became PENDING again, and that one invariant was the whole loop guard — every
+#: routing edge was followed at most once per node. A return re-opens nodes on
+#: purpose, so the invariant no longer holds on its own: two judges who keep
+#: disagreeing would bounce a soul between them forever. With the cap, a flow of
+#: N nodes decides at most `(MAX_REJECT_RETURNS + 1) * N` times and then ends.
+#: The FAIL that would exceed it ends the workflow REJECTED with
+#: `end_reason = "RETURN_LIMIT"`, so the record says why it stopped.
+MAX_REJECT_RETURNS = 3
+
+
+class TimeoutAction(models.TextChoices):
+    #: Re-designate the node to `timeout_role` (「转交上级」). It stays PENDING.
+    ESCALATE = "ESCALATE", "转交上级"
+    #: Decide the node FAILED on nobody's behalf, through `complete_node` — so a
+    #: `reject_to` on the node still applies, and so does the cap.
+    AUTO_REJECT = "AUTO_REJECT", "自动驳回"
+    #: Remind whoever the node designates. It stays PENDING.
+    NOTIFY = "NOTIFY", "提醒"
+
 
 class CaseType(models.TextChoices):
     # Chinese
@@ -159,6 +181,14 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         related_name="workflows",
     )
 
+    # How many times 驳回到 has sent this workflow back. Capped at
+    # MAX_REJECT_RETURNS; see there.
+    return_count = models.PositiveIntegerField(default=0)
+    # Why a terminal workflow ended when the node's own verdict does not say.
+    # Blank for every ordinary ending; "RETURN_LIMIT" when a FAIL would have
+    # sent it back past MAX_REJECT_RETURNS.
+    end_reason = models.CharField(max_length=20, blank=True, default="")
+
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -271,10 +301,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 )
 
             passed = verdict in ["PASSED", "CONFIRMED"]
+            now = timezone.now()
             node.status = NodeStatus.APPROVED if passed else NodeStatus.REJECTED
             node.verdict = verdict
             node.notes = notes
-            node.decided_at = timezone.now()
+            node.decided_at = now
             if user:
                 node.approver = user
             node.save()
@@ -289,11 +320,14 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             # THREE CONDITIONS, EACH LOAD-BEARING:
             #
             # * `is not None` — the field is optional and null is the default.
-            # * `status == PENDING` — the only reason no cycle validator is
-            #   needed. A decided node never returns to PENDING, so an edge
-            #   pointing backwards is followed at most once per node and then
-            #   falls through to the order-based path below. A flow can no more
-            #   loop forever than it can decide a node twice.
+            # * `status == PENDING` — a decided node returns to PENDING only
+            #   through 驳回到 (`_return_to`), and that is capped per workflow
+            #   (MAX_REJECT_RETURNS). So between two returns an edge pointing
+            #   backwards is followed at most once per node and then falls
+            #   through to the order-based path below, and the number of
+            #   returns is bounded: the flow cannot loop forever. (Before
+            #   reject-to, "never returns to PENDING" held outright and was the
+            #   whole guard; the cap is what keeps it true in bounded form.)
             # * `workflow_id == self.id` — the FK is `"self"`, so nothing in
             #   the schema stops it pointing into another workflow. Following
             #   such an edge would set `current_node` to a row this workflow
@@ -301,14 +335,26 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             #   would then refuse every decision on it: a flow stuck on a node
             #   it cannot act on. Refusing the edge leaves it on the default
             #   path instead, which is recoverable.
+            #
+            # 驳回到 comes first on a FAIL: `_return_to` re-opens the nodes
+            # from the target up to this one and makes the target current, or
+            # ends the flow REJECTED once MAX_REJECT_RETURNS is spent. It
+            # answers False when the target is not an earlier node of this
+            # workflow, and the FAIL then falls through exactly as it would
+            # have without the field.
             routed = node.on_pass if passed else node.on_fail
             if (
+                not passed
+                and node.reject_to_id is not None
+                and self._return_to(node.reject_to, node, now)
+            ):
+                pass
+            elif (
                 routed is not None
                 and routed.status == NodeStatus.PENDING
                 and routed.workflow_id == self.id
             ):
-                self.current_node = routed
-                self.status = ApprovalWorkflowStatus.IN_PROGRESS
+                self._make_current(routed, now)
             elif not passed:
                 # A refusal ends the workflow. It used to mark the node
                 # REJECTED and then advance **unconditionally**, which is why
@@ -332,21 +378,98 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 # claim a decision nobody made. `current_node = None` plus a
                 # terminal status is what stops the flow; the guard below
                 # refuses any further decision on it.
-                self.current_node = None
-                self.status = ApprovalWorkflowStatus.REJECTED
-                self.completed_at = timezone.now()
+                self._finish(ApprovalWorkflowStatus.REJECTED, now)
             else:
                 # Advance to next node
                 next_node = self.get_next_node()
                 if next_node:
-                    self.current_node = next_node
-                    self.status = ApprovalWorkflowStatus.IN_PROGRESS
+                    self._make_current(next_node, now)
                 else:
-                    self.current_node = None
-                    self.status = ApprovalWorkflowStatus.COMPLETED
-                    self.completed_at = timezone.now()
+                    self._finish(ApprovalWorkflowStatus.COMPLETED, now)
             self.save()
 
+        return True
+
+    def _make_current(self, node: "ApprovalNode", now) -> None:
+        """Point the flow at `node` and start its timeout clock.
+
+        Every assignment of `current_node` to a node goes through here, because
+        `activated_at` is what `process_workflow_timeouts` measures from: a path
+        that moved the pointer without it would leave that node's timeout
+        measured from an earlier visit, or never. `timed_out_at` is cleared for
+        the same reason — the timeout fires once per activation.
+        """
+        self.current_node = node
+        self.status = ApprovalWorkflowStatus.IN_PROGRESS
+        ApprovalNode.objects.filter(pk=node.pk).update(activated_at=now, timed_out_at=None)
+        node.activated_at = now
+        node.timed_out_at = None
+
+    def _finish(self, status: str, now, end_reason: str = "") -> None:
+        self.current_node = None
+        self.status = status
+        self.completed_at = now
+        self.end_reason = end_reason
+
+    def _return_to(self, target: "ApprovalNode", failed: "ApprovalNode", now) -> bool:
+        """驳回到: re-open `target`..`failed` and make `target` current.
+
+        Returns False — and changes nothing — when `target` is not an earlier
+        node of this workflow; the caller then treats the FAIL as if no target
+        were set. Returns True when it acted, which includes ending the flow
+        REJECTED because the cap is spent (MAX_REJECT_RETURNS).
+
+        Only nodes that were decided are re-opened. A node inside the range the
+        flow jumped over (an `on_pass` edge past it) is still PENDING and is
+        left alone. Each re-opened node's decision moves to its
+        `decision_history`, so the record of who decided what before the return
+        survives the return.
+        """
+        if target.workflow_id != self.id or target.node_order >= failed.node_order:
+            return False
+        if self.return_count >= MAX_REJECT_RETURNS:
+            self._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason="RETURN_LIMIT")
+            return True
+
+        self.return_count += 1
+        # `of=("self",)`: `approver` is a nullable join, and PostgreSQL refuses
+        # FOR UPDATE on the nullable side of an outer join
+        # (apps/core/lock_join_guard.py raises on it in tests).
+        reopened = (
+            ApprovalNode.objects.select_for_update(of=("self",))
+            .filter(
+                workflow=self,
+                node_order__gte=target.node_order,
+                node_order__lte=failed.node_order,
+            )
+            .exclude(status=NodeStatus.PENDING)
+            .select_related("approver")
+        )
+        for n in reopened:
+            n.decision_history = [
+                *(n.decision_history or []),
+                {
+                    "round": self.return_count,
+                    "status": n.status,
+                    "verdict": n.verdict,
+                    "approver_id": n.approver_id,
+                    "approver_name": (
+                        (n.approver.display_name or n.approver.username) if n.approver_id else None
+                    ),
+                    "notes": n.notes,
+                    "decided_at": n.decided_at.isoformat() if n.decided_at else None,
+                },
+            ]
+            n.status = NodeStatus.PENDING
+            n.verdict = ""
+            n.notes = ""
+            n.approver = None
+            n.decided_at = None
+            n.save(update_fields=[
+                "decision_history", "status", "verdict", "notes", "approver", "decided_at",
+            ])
+        target.refresh_from_db()
+        self._make_current(target, now)
         return True
 
     def _lock_and_reload(self):
@@ -379,8 +502,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         next_node = candidates.order_by("node_order").first()
         if next_node is None:
             return False
-        self.current_node = next_node
-        self.status = ApprovalWorkflowStatus.IN_PROGRESS
+        from django.utils import timezone
+
+        self._make_current(next_node, timezone.now())
         self.save(update_fields=["current_node", "status"])
         return True
 
@@ -437,12 +561,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 .first()
             )
             if next_node:
-                self.current_node = next_node
-                self.status = ApprovalWorkflowStatus.IN_PROGRESS
+                self._make_current(next_node, timezone.now())
             else:
-                self.current_node = None
-                self.status = ApprovalWorkflowStatus.COMPLETED
-                self.completed_at = timezone.now()
+                self._finish(ApprovalWorkflowStatus.COMPLETED, timezone.now())
             self.save()
         return True
 
@@ -720,11 +841,15 @@ class ApprovalNode(AuditUserFields, models.Model):
     # node that points. Losing a route is repairable by re-pointing it; losing
     # the deciding node is not.
     #
-    # WHY THERE IS NO CYCLE VALIDATOR. `complete_node` only follows an edge to
-    # a node that is still `PENDING`, and a decided node never returns to
-    # PENDING. So a cycle walks each node at most once and then falls through
-    # to the order-based path. The invariant does the work a validator would,
-    # and it holds for cycles nobody drew on purpose too.
+    # CYCLES. `complete_node` only follows an edge to a node that is still
+    # `PENDING`, and a decided node returns to PENDING only through 驳回到
+    # (`reject_to`, below), which is capped per workflow at MAX_REJECT_RETURNS.
+    # So at run time a cycle walks each node at most once per return and then
+    # falls through to the order-based path — bounded, for cycles nobody drew
+    # on purpose too. The PUBLISH validator (`validation.py`) additionally
+    # refuses a graph with a node that cannot reach the end, because a cycle
+    # the engine escapes only by its fallback is a design error even when it
+    # terminates.
     on_pass = models.ForeignKey(
         "self",
         null=True,
@@ -741,6 +866,45 @@ class ApprovalNode(AuditUserFields, models.Model):
         related_name="+",
         help_text="否决后跳转到的节点；为空则整个流程判为 REJECTED",
     )
+
+    # ── 驳回到 ──────────────────────────────────────────────────────────
+    #
+    # On FAIL, send the flow back to this EARLIER node instead of ending it.
+    # Every decided node from the target up to and including this one is
+    # re-opened (its decision moves into `decision_history`, it becomes
+    # PENDING), and the target becomes current. Only an earlier node of the same
+    # workflow is honoured — anything else is ignored and the FAIL ends the flow
+    # as it would have without the field. Capped per workflow by
+    # MAX_REJECT_RETURNS. Checked before `on_fail`; the publish validator
+    # refuses a node that sets both.
+    reject_to = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理",
+    )
+    # Decisions this node carried before a return re-opened it, oldest first:
+    # {round, status, verdict, approver_id, notes, decided_at}. Also timeout
+    # events: {event: "timeout", action, at, ...}. Append-only.
+    decision_history = models.JSONField(default=list, blank=True)
+
+    # ── 超时 ────────────────────────────────────────────────────────────
+    #
+    # Hours after the node became current (`activated_at`) at which
+    # `timeout_action` fires — ONLY WHEN `process_workflow_timeouts` RUNS (the
+    # management command, or the celery task of the same name). No beat entry
+    # schedules it; see `apps/workflow/timeouts.py`. `timed_out_at` marks that
+    # the action fired for this activation, so it fires once; a return that
+    # re-opens the node clears both clocks.
+    timeout_hours = models.PositiveIntegerField(null=True, blank=True)
+    timeout_action = models.CharField(
+        max_length=12, choices=TimeoutAction.choices, blank=True, default=""
+    )
+    timeout_role = models.CharField(max_length=20, blank=True, default="")
+    activated_at = models.DateTimeField(null=True, blank=True)
+    timed_out_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

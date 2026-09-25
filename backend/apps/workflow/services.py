@@ -435,13 +435,14 @@ class WorkflowService:
                 # have closed the hole for exactly as long as it took someone
                 # to create the next workflow.
                 **cls._resolve_approver(node_def, civilization, workflow.tenant_id),
+                **cls._timeout_columns(node_def),
             )
             if first_node is None:
                 first_node = node
             template_id = node_def.get("id")
             if template_id:
                 by_template_id[str(template_id)] = node
-            if node_def.get("on_pass") or node_def.get("on_fail"):
+            if node_def.get("on_pass") or node_def.get("on_fail") or node_def.get("reject_to"):
                 routing_defs.append((node, node_def))
 
         # ── Wire the routing edges ─────────────────────────────────────
@@ -458,7 +459,7 @@ class WorkflowService:
         # anyone drew the edge.
         for node, node_def in routing_defs:
             updates = []
-            for field in ("on_pass", "on_fail"):
+            for field in ("on_pass", "on_fail", "reject_to"):
                 target_id = node_def.get(field)
                 target = by_template_id.get(str(target_id)) if target_id else None
                 if target is not None and target.pk != node.pk:
@@ -475,10 +476,31 @@ class WorkflowService:
                 f"always answers with at least one node."
             )
 
-        workflow.current_node = first_node
-        workflow.status = ApprovalWorkflowStatus.IN_PROGRESS
+        from django.utils import timezone
+
+        workflow._make_current(first_node, timezone.now())
         workflow.save()
         return first_node
+
+    @staticmethod
+    def _timeout_columns(node_def: dict) -> dict:
+        """The template's 超时 settings as `ApprovalNode` columns.
+
+        Copied at creation like everything else, so a workflow keeps the
+        timeouts of the version it started on. A node with hours but no
+        action (or the reverse) gets neither: the publish validator refuses
+        that shape, and a half-set timeout on an unvalidated row must not fire
+        an action nobody chose.
+        """
+        hours = node_def.get("timeout_hours")
+        action = node_def.get("timeout_action") or ""
+        if not hours or not action:
+            return {}
+        return {
+            "timeout_hours": int(hours),
+            "timeout_action": action,
+            "timeout_role": node_def.get("timeout_role") or "",
+        }
 
     @classmethod
     def create_from_judgment(
@@ -615,6 +637,42 @@ class WorkflowService:
         ).first()
         if assignee is not None:
             EventService.notify_workflow_assigned(assignee, workflow)
+
+    @staticmethod
+    def designated_users(node, tenant_id):
+        """The active accounts `node` designates: its actor's users, or its
+        role's holders in the workflow's tenant. None for SYSTEM."""
+        from apps.authentication.models import User
+
+        if node.approver_type == "ACTOR" and node.approver_actor_id:
+            qs = User.objects.filter(actor_id=node.approver_actor_id)
+        elif node.approver_type == "ROLE" and node.approver_role:
+            qs = User.objects.filter(role=node.approver_role, tenant_id=tenant_id)
+        else:
+            return User.objects.none()
+        return qs.filter(is_active=True)
+
+    @classmethod
+    def notify_designated(cls, workflow, node, *, title: str, message: str) -> int:
+        """Tell everyone `node` designates; return how many were told.
+
+        Used by the timeout processor (reminders, escalations). Called after
+        commit, never inside `complete_node`'s lock — same rule as `announce`.
+        """
+        from apps.events.services import EventService
+
+        told = 0
+        for user in cls.designated_users(node, workflow.tenant_id):
+            EventService.notify_user(
+                user=user,
+                title=title,
+                message=message,
+                notification_type="WORKFLOW_ASSIGNED",
+                related_resource="workflow",
+                related_id=str(workflow.id),
+            )
+            told += 1
+        return told
 
     @classmethod
     def create_appeal_workflow(
