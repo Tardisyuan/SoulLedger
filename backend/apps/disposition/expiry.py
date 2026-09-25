@@ -23,8 +23,8 @@ import calendar
 import datetime
 
 from django.db import transaction
-from django.db.models import F, Q
-from django.db.models.functions import Coalesce, ExtractYear
+from django.db.models import BigIntegerField, Case, F, Q, Value, When
+from django.db.models.functions import Cast, Coalesce, ExtractDay, ExtractMonth, ExtractYear
 from django.utils import timezone
 
 #: 粗筛读候选时 `.iterator()` 的分块大小。
@@ -72,6 +72,45 @@ def term_has_ended(term_start, sentence_years, today: datetime.date) -> bool:
         end_day = calendar.monthrange(max(end_year, 1), end_month)[1]
     # 2 月 29 日起算、期满年不是闰年:3 月 1 日期满(元组比较自然给出这个答案)。
     return (today.year, today.month, today.day) >= (end_year, end_month, end_day)
+
+
+#: `term_end_sort_key` 给「没有期满日」的行的值:永久刑、没记刑期、没有起算日。
+#: 比任何真实的期满日都大,所以升序时排最后、降序时排最前 —— 「永不期满」就是最远的那一天。
+NO_TERM_END = 2**62
+
+
+def term_end_sort_key():
+    """期满日的 SQL 排序键:`年 * 10000 + 月 * 100 + 日`,一个整数,升序即期满近 → 远。
+
+    与 `effective_term_start` + `term_end` 同一条规则,在 SQL 里再写一遍 —— 列表按它排序
+    分页,Python 一侧排不了分页之外的行。起算日:`term_start_year` 有值就用 `term_start_*`
+    三列,否则用 `executed_at` 的本地日期(`Extract*` 与 `timezone.localdate` 取的是同一个
+    当前时区)。缺月取 12、缺日取 31,与 `term_has_ended` 缺精度时取最晚一天同向
+    (31 不是那个月真实的最后一天,但作为排序键它不小于该月任何一天,顺序不变)。
+    跨公元交界多加一年,与 `term_end` 相同。负年份也保序:同年内月日单调,跨年差 10000。
+
+    算不出期满日(永久、`sentence_years` 为空、既无起算日也未执行)的行取 `NO_TERM_END`。
+    先转 bigint 再算:PostgreSQL 上 `integer * 10000` 会溢出(刑期可以是上万年)。
+    """
+    big = BigIntegerField()
+    has_start = Q(term_start_year__isnull=False)
+    start_year = Case(When(has_start, then=Cast("term_start_year", big)), default=Cast(ExtractYear("executed_at"), big))
+    start_month = Case(When(has_start, then=Cast("term_start_month", big)), default=Cast(ExtractMonth("executed_at"), big))
+    start_day = Case(When(has_start, then=Cast("term_start_day", big)), default=Cast(ExtractDay("executed_at"), big))
+    years = Cast("sentence_years", big)
+    # 公元前起算、期满在公元后(`year < 0 <= year + years`)多一年。`executed_at` 不会是公元前。
+    crosses_era = When(term_start_year__lt=0, term_start_year__gte=-F("sentence_years"), then=Value(1))
+    end_year = start_year + years + Case(crosses_era, default=Value(0), output_field=big)
+    key = end_year * 10000 + Coalesce(start_month, Value(12), output_field=big) * 100 + Coalesce(
+        start_day, Value(31), output_field=big
+    )
+    return Case(
+        When(is_eternal=True, then=Value(NO_TERM_END)),
+        When(sentence_years__isnull=True, then=Value(NO_TERM_END)),
+        When(term_start_year__isnull=True, executed_at__isnull=True, then=Value(NO_TERM_END)),
+        default=key,
+        output_field=big,
+    )
 
 
 def reopen_if_term_extended(disposition, today: datetime.date | None = None) -> bool:
