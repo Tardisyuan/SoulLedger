@@ -338,6 +338,9 @@ describe("JudgmentQueueConsole", () => {
 
     expect(screen.getByText("judgment.queue.keyboard_map")).toBeInTheDocument();
     expect(screen.getByText("judgment.queue.key_verdicts")).toBeInTheDocument();
+    // Design's six, in order — no U (withdrawn with the undo window), and W / R listed.
+    const listed = Array.from(document.querySelectorAll("[data-shortcut]")).map((el) => el.getAttribute("data-shortcut"));
+    expect(listed).toEqual(["1–4", "S", "W", "R", "N", "?"]);
   });
 
   it("says the queue is clear rather than showing an error", async () => {

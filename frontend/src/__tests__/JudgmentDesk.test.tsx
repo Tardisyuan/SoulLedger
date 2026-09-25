@@ -482,14 +482,17 @@ describe("据 · 先例", () => {
   });
 });
 
-describe("进度条上的 D 暂缓", () => {
-  it("D 开理由框,理由必填,写了才发;在判词框里按 D 是写字", async () => {
+describe("进度条上的 S 暂缓", () => {
+  it("S 开理由框,理由必填,写了才发;在判词框里按 S 是写字;D 不再接", async () => {
     renderPage();
     await screen.findByTestId("queue-bar");
-    fireEvent.keyDown(notesBox(), { key: "d" });
+    fireEvent.keyDown(notesBox(), { key: "s" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.keyDown(document.body, { key: "d" });
+    await act(async () => {});
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    fireEvent.keyDown(document.body, { key: "d" });
+    fireEvent.keyDown(document.body, { key: "s" });
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.defer") }));
     expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
@@ -499,12 +502,12 @@ describe("进度条上的 D 暂缓", () => {
     await waitFor(() => expect(judgmentApi.defer).toHaveBeenCalledWith(ID, "待补证"));
   });
 
-  it("没有 judgment.execute:进度条上没有暂缓,D 也不接", async () => {
+  it("没有 judgment.execute:进度条上没有暂缓,S 也不接", async () => {
     mockUser = { ...mockUser, permissions: ["judgment.read"] };
     renderPage();
     const bar = await screen.findByTestId("queue-bar");
     expect(within(bar).queryByRole("button", { name: /暂缓/ })).toBeNull();
-    fireEvent.keyDown(document.body, { key: "d" });
+    fireEvent.keyDown(document.body, { key: "s" });
     await act(async () => {});
     expect(screen.queryByRole("dialog")).toBeNull();
   });
