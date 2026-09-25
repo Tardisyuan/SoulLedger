@@ -87,7 +87,9 @@ def test_the_whole_set_assign_refuses_them_too(world):
     assert res.status_code == 400 and res.json()["code"] == "admin_only_permission", res.content
     after = set(RolePermission.objects.filter(role__name="MODERATOR").values_list("permission_id", flat=True))
     assert after == before and perms["recycle_bin.hard_delete"].pk not in after
-    ok = world["client"].post(ASSIGN, {"role": "ADMIN", "permission_ids": ids}, format="json")
+    # ADMIN's own rows stay in the set: dropping any is refused (`admin_always_all`).
+    held = list(RolePermission.objects.filter(role__name="ADMIN").values_list("permission_id", flat=True))
+    ok = world["client"].post(ASSIGN, {"role": "ADMIN", "permission_ids": [*held, *ids]}, format="json")
     assert ok.status_code == 200, ok.content
 
 

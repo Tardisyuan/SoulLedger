@@ -474,7 +474,11 @@
     "entity_types": {
       "soul": "灵魂",
       "menu": "菜单",
-      "dispatch_draft": "移交草稿"
+      "dispatch_draft": "移交草稿",
+      "role": "角色",
+      "social_post": "帖子",
+      "social_comment": "评论",
+      "workflow_template": "审批流模板"
     },
     "col_location": "原位置",
     "col_deleted_by": "删除人",
