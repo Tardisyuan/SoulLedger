@@ -64,5 +64,24 @@ def preview_node(node_def: dict, civilization: str, tenant) -> dict:
     from apps.workflow.services import WorkflowService
 
     node = normalize_template_node(node_def)
-    assignment = WorkflowService._resolve_approver(node, civilization, tenant.pk)
-    return describe_assignment(assignment, tenant)
+    kind = node.get("kind") or "APPROVAL"
+    if kind == "END":
+        # `_kind_columns` writes SYSTEM for 结束 whatever its label says.
+        out = describe_assignment({"approver_type": "SYSTEM"}, tenant)
+    else:
+        assignment = WorkflowService._resolve_approver(node, civilization, tenant.pk)
+        out = describe_assignment(assignment, tenant)
+    out["kind"] = kind
+    out["signers"] = []
+    if kind == "COUNTERSIGN":
+        # Each signer through the same resolver `_kind_columns` uses.
+        for signer in node.get("signers") or []:
+            if not isinstance(signer, dict):
+                continue
+            assignment = WorkflowService._resolve_approver(
+                WorkflowService.signer_def(signer), civilization, tenant.pk
+            )
+            out["signers"].append(
+                {"label": signer.get("label") or "", **describe_assignment(assignment, tenant)}
+            )
+    return out

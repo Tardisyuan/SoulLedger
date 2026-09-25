@@ -101,9 +101,19 @@ def _fire(workflow_pk, now) -> str | None:
             node.approver_type = "ROLE"
             node.approver_role = node.timeout_role
             node.approver_actor = None
+            # 会签: the slots still unsigned go to the role; signed ones stand.
+            signed = {sig["signer"] for sig in node.signatures_json or []}
+            node.signers_json = [
+                slot if index in signed else {
+                    **slot, "approver_type": "ROLE", "approver_actor_id": None,
+                    "approver_role": node.timeout_role,
+                }
+                for index, slot in enumerate(node.signers_json or [])
+            ]
         node.decision_history = [*(node.decision_history or []), entry]
         node.save(update_fields=[
             "timed_out_at", "decision_history", "approver_type", "approver_role", "approver_actor",
+            "signers_json",
         ])
 
         if action == TimeoutAction.AUTO_REJECT:

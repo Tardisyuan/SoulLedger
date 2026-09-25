@@ -81,6 +81,32 @@ class NodeStatus(models.TextChoices):
     REJECTED = "REJECTED", "已拒绝"
     SKIPPED = "SKIPPED", "已跳过"
     ESCALATED = "ESCALATED", "已升级"
+    # The flow went through an automatic node — 通知 (NOTIFY) or 结束 (END) —
+    # without anybody deciding it. Not APPROVED: nobody approved anything, and
+    # `announce` would log a WORKFLOW_APPROVED event for a decision nobody made.
+    TRAVERSED = "TRAVERSED", "已经过"
+
+
+class NodeKind(models.TextChoices):
+    """What a node does, as opposed to which stage it is (`NodeType`).
+
+    APPROVAL     one designated approver decides (every node before 0021).
+    COUNTERSIGN  会签: `signers_json` each sign; the node passes when
+                 `threshold` of them (default: all) have approved and fails
+                 as soon as that can no longer happen.
+    NOTIFY       通知: tells whoever it designates and moves on at once;
+                 nobody decides it.
+    END          结束: reaching it completes the workflow. Nodes the flow
+                 never reached stay PENDING under a terminal status.
+    """
+    APPROVAL = "APPROVAL", "审批"
+    COUNTERSIGN = "COUNTERSIGN", "会签"
+    NOTIFY = "NOTIFY", "通知"
+    END = "END", "结束"
+
+
+#: Kinds the engine passes through without waiting for anybody.
+AUTOMATIC_KINDS = frozenset({NodeKind.NOTIFY, NodeKind.END})
 
 
 class NodeType(models.TextChoices):
@@ -302,6 +328,25 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
 
             passed = verdict in ["PASSED", "CONFIRMED"]
             now = timezone.now()
+
+            # 会签: one signature is not yet the node's decision. It is
+            # recorded, and the node is decided only once the signatures settle
+            # it (`countersign.outcome`) — until then the flow stays put. A call
+            # with no user (the timeout processor's auto-reject) decides the
+            # whole node, as it would for any other kind.
+            if node.kind == NodeKind.COUNTERSIGN and user is not None:
+                from apps.workflow import countersign
+
+                settled = countersign.sign(node, user, verdict, notes, now)
+                if settled is None:
+                    return False  # this user holds no unsigned slot
+                if settled == countersign.OPEN:
+                    node.save(update_fields=["signatures_json"])
+                    self.save(update_fields=["updated_at"])
+                    return True
+                passed = settled == countersign.PASSED
+                verdict = "PASSED" if passed else "FAILED"
+
             node.status = NodeStatus.APPROVED if passed else NodeStatus.REJECTED
             node.verdict = verdict
             node.notes = notes
@@ -342,20 +387,20 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             # answers False when the target is not an earlier node of this
             # workflow, and the FAIL then falls through exactly as it would
             # have without the field.
-            routed = node.on_pass if passed else node.on_fail
-            if (
-                not passed
-                and node.reject_to_id is not None
+            #
+            # A PASS goes to `_pass_successor` — condition branches first,
+            # then `on_pass`, then the order-based default — and `_enter` runs
+            # any automatic node (通知 / 结束) it lands on.
+            if passed:
+                self._advance_from(node, now)
+            elif (
+                node.reject_to_id is not None
                 and self._return_to(node.reject_to, node, now)
             ):
                 pass
-            elif (
-                routed is not None
-                and routed.status == NodeStatus.PENDING
-                and routed.workflow_id == self.id
-            ):
-                self._make_current(routed, now)
-            elif not passed:
+            elif self._routable(node.on_fail):
+                self._enter(node.on_fail, now)
+            else:
                 # A refusal ends the workflow. It used to mark the node
                 # REJECTED and then advance **unconditionally**, which is why
                 # `ApprovalWorkflowStatus.REJECTED` was declared and assigned
@@ -379,16 +424,85 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 # terminal status is what stops the flow; the guard below
                 # refuses any further decision on it.
                 self._finish(ApprovalWorkflowStatus.REJECTED, now)
-            else:
-                # Advance to next node
-                next_node = self.get_next_node()
-                if next_node:
-                    self._make_current(next_node, now)
-                else:
-                    self._finish(ApprovalWorkflowStatus.COMPLETED, now)
             self.save()
 
         return True
+
+    def _routable(self, target: "ApprovalNode | None") -> bool:
+        """An edge is followed only into a PENDING node of this workflow."""
+        return (
+            target is not None
+            and target.status == NodeStatus.PENDING
+            and target.workflow_id == self.id
+        )
+
+    def _pass_successor(self, node: "ApprovalNode") -> "ApprovalNode | None":
+        """Where a PASS on `node` goes: the first branch whose conditions hold,
+        else `on_pass`, else the first PENDING node by order (the behaviour
+        every node had before either existed). None means nothing is left.
+
+        A branch whose conditions hold but whose target is no longer PENDING
+        is not taken, and neither is any later branch: conditions select one
+        branch, and falling through to the *next* matching one would take a
+        branch the author wrote for a different case. The default applies.
+        """
+        if node.branches_json:
+            from apps.workflow.conditions import case_facts, matches
+
+            facts = case_facts(self)
+            for branch in node.branches_json:
+                if matches(branch.get("when") or [], facts):
+                    target = self.nodes.filter(pk=branch.get("target")).first()
+                    if self._routable(target):
+                        return target
+                    break
+        if self._routable(node.on_pass):
+            return node.on_pass
+        return self.get_next_node()
+
+    def _advance_from(self, node: "ApprovalNode", now) -> None:
+        successor = self._pass_successor(node)
+        if successor is None:
+            self._finish(ApprovalWorkflowStatus.COMPLETED, now)
+        else:
+            self._enter(successor, now)
+
+    def _enter(self, node: "ApprovalNode", now) -> None:
+        """Arrive at `node`: wait there, or run it if nobody decides it.
+
+        通知 tells whoever it designates (after commit — never from inside the
+        caller's lock, same rule as `WorkflowService.announce`) and moves on;
+        结束 completes the workflow. Each is marked TRAVERSED, so it is not
+        PENDING and cannot be entered twice without a return re-opening it —
+        which is capped — so the loop below is finite.
+        """
+        from django.db import transaction
+
+        while node.kind in AUTOMATIC_KINDS:
+            node.status = NodeStatus.TRAVERSED
+            node.decided_at = now
+            node.verdict = "NOTIFIED" if node.kind == NodeKind.NOTIFY else ""
+            node.save(update_fields=["status", "decided_at", "verdict"])
+            if node.kind == NodeKind.END:
+                self._finish(ApprovalWorkflowStatus.COMPLETED, now)
+                return
+            notified = node
+            transaction.on_commit(lambda n=notified: self._send_notify_node(n))
+            successor = self._pass_successor(node)
+            if successor is None:
+                self._finish(ApprovalWorkflowStatus.COMPLETED, now)
+                return
+            node = successor
+        self._make_current(node, now)
+
+    def _send_notify_node(self, node: "ApprovalNode") -> None:
+        from apps.workflow.services import WorkflowService
+
+        WorkflowService.notify_designated(
+            self, node,
+            title=f"流程通知: {self.workflow_name}",
+            message=f"「{self.soul.name}」的审批流经过「{node.node_name}」。",
+        )
 
     def _make_current(self, node: "ApprovalNode", now) -> None:
         """Point the flow at `node` and start its timeout clock.
@@ -458,6 +572,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                     ),
                     "notes": n.notes,
                     "decided_at": n.decided_at.isoformat() if n.decided_at else None,
+                    "signatures": n.signatures_json or [],
                 },
             ]
             n.status = NodeStatus.PENDING
@@ -465,11 +580,13 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             n.notes = ""
             n.approver = None
             n.decided_at = None
+            n.signatures_json = []
             n.save(update_fields=[
                 "decision_history", "status", "verdict", "notes", "approver", "decided_at",
+                "signatures_json",
             ])
         target.refresh_from_db()
-        self._make_current(target, now)
+        self._enter(target, now)
         return True
 
     def _lock_and_reload(self):
@@ -504,6 +621,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             return False
         from django.utils import timezone
 
+        # `_make_current`, not `_enter`: advance moves the pointer and decides
+        # nothing, so it does not run an automatic node either — pointing it at
+        # 结束 must not complete a flow whose current step nobody decided.
         self._make_current(next_node, timezone.now())
         self.save(update_fields=["current_node", "status"])
         return True
@@ -561,7 +681,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 .first()
             )
             if next_node:
-                self._make_current(next_node, timezone.now())
+                self._enter(next_node, timezone.now())
             else:
                 self._finish(ApprovalWorkflowStatus.COMPLETED, timezone.now())
             self.save()
@@ -906,6 +1026,20 @@ class ApprovalNode(AuditUserFields, models.Model):
     activated_at = models.DateTimeField(null=True, blank=True)
     timed_out_at = models.DateTimeField(null=True, blank=True)
 
+    # ── 会签 / 通知 / 结束 / 条件 (0021) ────────────────────────────────
+    kind = models.CharField(max_length=12, choices=NodeKind.choices, default=NodeKind.APPROVAL)
+    # COUNTERSIGN only. Each signer as `_resolve_approver` resolved it at
+    # creation: {label, approver_type, approver_actor_id, approver_role}.
+    signers_json = models.JSONField(default=list, blank=True)
+    # How many approvals pass the node; null means all of `signers_json`.
+    threshold = models.PositiveSmallIntegerField(null=True, blank=True)
+    # One entry per signature: {signer, user_id, user_name, verdict, passed, at}.
+    signatures_json = models.JSONField(default=list, blank=True)
+    # PASS branches, tried in order before `on_pass`:
+    # [{id, when: [clause…], target: <ApprovalNode pk as str>}]. See
+    # `apps/workflow/conditions.py` — declarative clauses, nothing evaluated.
+    branches_json = models.JSONField(default=list, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -939,6 +1073,10 @@ class ApprovalNode(AuditUserFields, models.Model):
         collapsing them into one message leaves an operator re-deriving which
         one they hit.
         """
+        if self.kind == NodeKind.COUNTERSIGN:
+            from apps.workflow import countersign
+
+            return countersign.designates_anybody(self)
         if self.approver_type == "ACTOR":
             return self.approver_actor_id is not None
         if self.approver_type == "ROLE":
@@ -1005,6 +1143,17 @@ class ApprovalNode(AuditUserFields, models.Model):
         # method total rather than raising AttributeError at the call site.
         if not getattr(user, "is_authenticated", False):
             return False
+
+        # 通知 / 结束 are run by the engine and decided by nobody.
+        if self.kind in AUTOMATIC_KINDS:
+            return False
+        # 会签: the user must hold a slot that has not signed yet. The node's
+        # own approver columns are not consulted — the signers are the
+        # designation.
+        if self.kind == NodeKind.COUNTERSIGN:
+            from apps.workflow import countersign
+
+            return countersign.open_slot(self, user) is not None
 
         if self.approver_type == "ACTOR":
             if self.approver_actor_id is None:

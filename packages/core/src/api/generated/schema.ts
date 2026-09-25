@@ -6472,6 +6472,11 @@ export interface components {
             readonly activated_at: string | null;
             /** Format: date-time */
             readonly timed_out_at: string | null;
+            readonly kind: components["schemas"]["ApprovalNodeKindEnum"];
+            readonly signers_json: unknown;
+            readonly threshold: number | null;
+            readonly signatures_json: unknown;
+            readonly branches_json: unknown;
         };
         /**
          * @description * `ACTOR` - 角色
@@ -6480,6 +6485,14 @@ export interface components {
          * @enum {string}
          */
         ApprovalNodeApproverTypeEnum: "ACTOR" | "ROLE" | "SYSTEM";
+        /**
+         * @description * `APPROVAL` - 审批
+         *     * `COUNTERSIGN` - 会签
+         *     * `NOTIFY` - 通知
+         *     * `END` - 结束
+         * @enum {string}
+         */
+        ApprovalNodeKindEnum: "APPROVAL" | "COUNTERSIGN" | "NOTIFY" | "END";
         /**
          * @description * `TRIAL` - 审判
          *     * `EVALUATION` - 评估
@@ -6495,9 +6508,10 @@ export interface components {
          *     * `REJECTED` - 已拒绝
          *     * `SKIPPED` - 已跳过
          *     * `ESCALATED` - 已升级
+         *     * `TRAVERSED` - 已经过
          * @enum {string}
          */
-        ApprovalNodeStatusEnum: "PENDING" | "APPROVED" | "REJECTED" | "SKIPPED" | "ESCALATED";
+        ApprovalNodeStatusEnum: "PENDING" | "APPROVED" | "REJECTED" | "SKIPPED" | "ESCALATED" | "TRAVERSED";
         /**
          * @description * `ESCALATE` - 转交上级
          *     * `AUTO_REJECT` - 自动驳回
@@ -6605,6 +6619,8 @@ export interface components {
             node: string;
             civilization: string;
             tenant: string;
+            kind: string;
+            signers: components["schemas"]["SignerPreview"][];
         };
         ApproverPreviewActor: {
             name: string;
@@ -6840,6 +6856,16 @@ export interface components {
             content: string;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        /**
+         * @description `{fact, op, value}` — see `apps/workflow/conditions.py`. Shape only here;
+         *     whether the fact/op/value combine is checked at publish, so a half-edited
+         *     condition can still be saved as a draft.
+         */
+        ConditionClause: {
+            fact: string;
+            op: string;
+            value: unknown;
         };
         Conversation: {
             /** Format: uuid */
@@ -9577,6 +9603,11 @@ export interface components {
             readonly activated_at?: string | null;
             /** Format: date-time */
             readonly timed_out_at?: string | null;
+            readonly kind?: components["schemas"]["ApprovalNodeKindEnum"];
+            readonly signers_json?: unknown;
+            readonly threshold?: number | null;
+            readonly signatures_json?: unknown;
+            readonly branches_json?: unknown;
         };
         /**
          * @description Serializer for ApprovalWorkflow.
@@ -11218,6 +11249,14 @@ export interface components {
          * @enum {string}
          */
         SeverityEnum: "error" | "warning";
+        SignerPreview: {
+            approver_type: string;
+            actor: components["schemas"]["ApproverPreviewActor"] | null;
+            role: string | null;
+            users: components["schemas"]["ApproverPreviewUser"][];
+            user_count: number;
+            label: string;
+        };
         /**
          * @description * `POST` - Post
          *     * `COMMENT` - Comment
@@ -11847,6 +11886,24 @@ export interface components {
             readonly finished_at: string | null;
             readonly duration_ms: number | null;
         };
+        TemplateBranch: {
+            /** @default  */
+            id: string;
+            when: components["schemas"]["ConditionClause"][];
+            target: string;
+        };
+        /**
+         * @description One 会签 signer, spelled like a one-person node: a label (a person's
+         *     name, probed like a node label), or a ROLE with a role.
+         */
+        TemplateSigner: {
+            /** @default  */
+            label: string;
+            /** @default ROLE */
+            approver_type: string;
+            /** @default  */
+            approver_role: string;
+        };
         Tenant: {
             readonly id: number;
             readonly code: string;
@@ -12328,6 +12385,11 @@ export interface components {
             timeout_hours?: number | null;
             timeout_action?: (components["schemas"]["WorkflowTemplateNodeTimeoutActionEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
             timeout_role?: string | null;
+            /** @default APPROVAL */
+            kind: components["schemas"]["WorkflowTemplateNodeKindEnum"];
+            signers?: components["schemas"]["TemplateSigner"][];
+            threshold?: number | null;
+            branches?: components["schemas"]["TemplateBranch"][];
         };
         /**
          * @description * `ACTOR` - ACTOR
@@ -12336,6 +12398,14 @@ export interface components {
          * @enum {string}
          */
         WorkflowTemplateNodeApproverTypeEnum: "ACTOR" | "ROLE" | "SYSTEM";
+        /**
+         * @description * `APPROVAL` - APPROVAL
+         *     * `COUNTERSIGN` - COUNTERSIGN
+         *     * `NOTIFY` - NOTIFY
+         *     * `END` - END
+         * @enum {string}
+         */
+        WorkflowTemplateNodeKindEnum: "APPROVAL" | "COUNTERSIGN" | "NOTIFY" | "END";
         /**
          * @description * `TRIAL` - TRIAL
          *     * `EVALUATION` - EVALUATION

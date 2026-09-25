@@ -163,6 +163,11 @@ CARRIED_NODE_KEYS = (
     "timeout_hours",
     "timeout_action",
     "timeout_role",
+    # 会签 / 通知 / 结束 / 条件 (workflow/0021).
+    "kind",
+    "signers",
+    "threshold",
+    "branches",
 )
 
 

@@ -15,6 +15,37 @@ from apps.workflow.models import (
 from apps.workflow.node_shape import normalize_template_node
 
 
+class TemplateSignerSerializer(serializers.Serializer):
+    """One 会签 signer, spelled like a one-person node: a label (a person's
+    name, probed like a node label), or a ROLE with a role."""
+    label = serializers.CharField(max_length=255, allow_blank=True, default="")
+    # CharField + validator rather than a third ChoiceField over the same
+    # values: drf-spectacular would otherwise invent a hashed enum name
+    # (tests/test_schema_has_no_warnings.py).
+    approver_type = serializers.CharField(max_length=10, default="ROLE")
+    approver_role = serializers.CharField(max_length=20, allow_blank=True, default="")
+
+    def validate_approver_type(self, value):
+        if value not in ("ACTOR", "ROLE", "SYSTEM"):
+            raise serializers.ValidationError("approver_type must be ACTOR, ROLE or SYSTEM")
+        return value
+
+
+class ConditionClauseSerializer(serializers.Serializer):
+    """`{fact, op, value}` — see `apps/workflow/conditions.py`. Shape only here;
+    whether the fact/op/value combine is checked at publish, so a half-edited
+    condition can still be saved as a draft."""
+    fact = serializers.CharField(max_length=20)
+    op = serializers.CharField(max_length=10)
+    value = serializers.JSONField()
+
+
+class TemplateBranchSerializer(serializers.Serializer):
+    id = serializers.CharField(required=False, allow_blank=True, default="")
+    when = ConditionClauseSerializer(many=True)
+    target = serializers.CharField(allow_blank=True)
+
+
 class WorkflowTemplateNodeSerializer(serializers.Serializer):
     """Serializer for a single template node.
 
@@ -89,6 +120,14 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
     timeout_role = serializers.CharField(
         max_length=20, required=False, allow_blank=True, allow_null=True, default=None
     )
+
+    # 会签 / 通知 / 结束 and condition branches (workflow/0021).
+    kind = serializers.ChoiceField(
+        choices=["APPROVAL", "COUNTERSIGN", "NOTIFY", "END"], required=False, default="APPROVAL"
+    )
+    signers = TemplateSignerSerializer(many=True, required=False, default=list)
+    threshold = serializers.IntegerField(required=False, allow_null=True, min_value=1, default=None)
+    branches = TemplateBranchSerializer(many=True, required=False, default=list)
 
     def to_representation(self, instance):
         """Render a stored node, in whichever shape it was stored.
@@ -351,6 +390,11 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "timeout_role",
             "activated_at",
             "timed_out_at",
+            "kind",
+            "signers_json",
+            "threshold",
+            "signatures_json",
+            "branches_json",
         ]
         read_only_fields = [
             "id",
@@ -373,6 +417,11 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "timeout_role",
             "activated_at",
             "timed_out_at",
+            "kind",
+            "signers_json",
+            "threshold",
+            "signatures_json",
+            "branches_json",
         ]
 
     def validate_workflow(self, value):
@@ -649,7 +698,14 @@ class ApproverAssignmentSerializer(serializers.Serializer):
     user_count = serializers.IntegerField()
 
 
+class SignerPreviewSerializer(ApproverAssignmentSerializer):
+    label = serializers.CharField(allow_blank=True)
+
+
 class ApproverPreviewSerializer(ApproverAssignmentSerializer):
     node = serializers.CharField()
     civilization = serializers.CharField()
     tenant = serializers.CharField()
+    kind = serializers.CharField()
+    # 会签 only: each signer as it resolves. Empty for every other kind.
+    signers = SignerPreviewSerializer(many=True)
