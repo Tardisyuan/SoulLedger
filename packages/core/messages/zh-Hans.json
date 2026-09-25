@@ -3171,7 +3171,6 @@
     "draft_saving": "正在保存草稿…",
     "draft_saved": "草稿已保存 · {{time}}",
     "draft_failed": "草稿没有保存,请重试",
-    "draft_restored": "已恢复你上次的草稿",
     "template": {
       "label": "模板",
       "pick": "插入模板",
