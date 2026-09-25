@@ -24,8 +24,14 @@ jest.mock("@soulledger/core/api/social-moderation", () => ({
     addWord: jest.fn(),
     removeWord: jest.fn(),
     removeWords: jest.fn(),
+    updateWord: jest.fn(),
+    updateWords: jest.fn(),
+    copyWords: jest.fn(),
     handled: jest.fn(),
     mutes: jest.fn(),
+    muteSouls: jest.fn(),
+    muteExecutors: jest.fn(),
+    mute: jest.fn(),
     liftMute: jest.fn(),
   },
 }));
@@ -33,8 +39,15 @@ const { socialModerationApi: apiMock } = jest.requireMock("@soulledger/core/api/
   socialModerationApi: Record<string, jest.Mock>;
 };
 
+jest.mock("@soulledger/core/api/tenants", () => ({ tenantsApi: { list: jest.fn(), get: jest.fn() } }));
+const { tenantsApi: tenantsMock } = jest.requireMock("@soulledger/core/api/tenants") as {
+  tenantsApi: Record<string, jest.Mock>;
+};
+
 let mockUser: Record<string, unknown> | null = null;
-jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: mockUser, tenantCode: (mockUser?.tenant as { code?: string } | undefined)?.code ?? null }),
+}));
 
 const mockI18n = { t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true };
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -73,6 +86,7 @@ const post = (over: Record<string, unknown> = {}) => ({
   create_time: "2026-09-18T01:30:00Z",
   visibility: "PUBLIC",
   comment_count: 4,
+  reaction_counts: { LIKE: 5, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
   ...over,
 });
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
@@ -86,6 +100,8 @@ function renderPage() {
 
 const asRole = (...permissions: string[]) =>
   (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions, tenant: { code: "CN_DIYU", display_name: "中国地府" } });
+const asAdmin = () =>
+  (mockUser = { id: 1, username: "admin", role: "ADMIN", permissions: [], tenant: { code: "CN_DIYU", display_name: "中国地府" } });
 const segment = (key: string) => screen.getByRole("button", { name: tZh(`social_moderation.tabs.${key}`) });
 const detail = () => screen.getByRole("region", { name: tZh("social_moderation.review.detail_label") });
 
@@ -96,6 +112,8 @@ beforeEach(() => {
   apiMock.item.mockResolvedValue({ data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 2 }) });
   apiMock.words.mockResolvedValue(page([]));
   apiMock.mutes.mockResolvedValue(page([]));
+  apiMock.muteSouls.mockResolvedValue({ data: [] });
+  apiMock.muteExecutors.mockResolvedValue({ data: [] });
   apiMock.handled.mockResolvedValue(page([]));
   apiMock.resolveReport.mockResolvedValue({ data: report({ status: "RESOLVED" }) });
   apiMock.act.mockResolvedValue({ status: 200 });
@@ -152,8 +170,12 @@ describe("举报 · the C-08 review layout", () => {
     expect(apiMock.item).toHaveBeenCalledWith("posts", "p1");
     expect(within(detail()).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
     expect(within(detail()).queryByText("ABUSE")).toBeNull();
-    // Text reactions, not emoji: 「评」 and the count the API gives.
-    expect(within(detail()).getByText(tZh("social_moderation.review.reaction_comment"), { exact: false })).toBeInTheDocument();
+    // Text reactions, not emoji: 「评 N · 念 N」 with the counts the API gives. 念 is LOVE,
+    // not the total (LIKE 5 would make it 17); no 「转」 — the circle has no reposts.
+    const counts = detail().querySelector("[data-reaction-counts]") as HTMLElement;
+    expect(counts).toHaveTextContent(/^评 2·念 12$/);
+    expect(counts).not.toHaveTextContent("17");
+    expect(counts).not.toHaveTextContent("转");
   });
 
   it("H without a reason says so and sends nothing; with one it hides through the report", async () => {
@@ -170,6 +192,42 @@ describe("举报 · the C-08 review layout", () => {
     await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "HIDE", "辱骂他人", undefined));
   });
 
+  it("W without a reason says so and sends nothing; with one it warns through the report", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+
+    fireEvent.keyDown(document.body, { key: "w" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(tZh("social_moderation.review.reason_required"));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.warn")}`) }));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "注意言辞" } });
+    fireEvent.keyDown(document.body, { key: "w" });
+    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "WARN", "注意言辞", undefined));
+    expect(apiMock.resolveReport).toHaveBeenCalledTimes(1);
+    expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
+  it("a rule hit nobody reported has no 警告作者 — there is no report to resolve", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    expect(screen.queryByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.warn")}`) })).toBeNull();
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "x" } });
+    fireEvent.keyDown(document.body, { key: "w" });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+    expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
   it("letters typed into the reason box are text, not verdicts", async () => {
     asRole("social.moderate");
     renderPage();
@@ -177,6 +235,8 @@ describe("举报 · the C-08 review layout", () => {
     const box = screen.getByLabelText(tZh("social_moderation.review.reason_label"));
     fireEvent.keyDown(box, { key: "a" });
     fireEvent.keyDown(box, { key: "h" });
+    fireEvent.change(box, { target: { value: "w" } });
+    fireEvent.keyDown(box, { key: "w" });
     // A mutation reaches the API a tick later; let it, or the absence proves nothing.
     await act(async () => {
       await new Promise((r) => setTimeout(r, 20));
@@ -286,7 +346,8 @@ describe("敏感词 · E-08b", () => {
     const row = (await screen.findByText("还阳")).closest("tr") as HTMLElement;
     expect(within(row).getByText(tZh("social_moderation.word_action.REVIEW"))).toBeInTheDocument();
     expect(within(row).getByText(tZh("social_moderation.word_category.INDUCEMENT"))).toBeInTheDocument();
-    expect(within(row).queryByRole("button")).toBeNull();
+    // The row's one button is the word itself (it opens the editor) — no delete at the row end.
+    expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["还阳"]);
     // No batch bar before anything is selected.
     expect(screen.queryByRole("button", { name: tZh("social_moderation.words.delete_selected") })).toBeNull();
 
@@ -297,6 +358,90 @@ describe("敏感词 · E-08b", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
     await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(["w1"]));
     expect(apiMock.removeWord).not.toHaveBeenCalled();
+  });
+
+  it("an empty list offers 从其他文明复制 to ADMIN only", async () => {
+    asRole("social.moderate");
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText(tZh("social_moderation.empty.words"));
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.words.copy_from") })).toBeNull();
+    expect(tenantsMock.list).not.toHaveBeenCalled();
+  });
+
+  it("ADMIN copies another civilization's list: the current one is not offered as a source; the counts come back", async () => {
+    asAdmin();
+    tenantsMock.list.mockResolvedValue(
+      page([
+        { id: 1, code: "CN_DIYU", display_name: "中国地府" },
+        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" },
+      ])
+    );
+    apiMock.copyWords.mockResolvedValue({ data: { copied: 5, skipped: 1 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
+    const select = within(dialog).getByLabelText(tZh("social_moderation.words.copy_source"));
+    await within(select).findByRole("option", { name: "欧洲天堂地狱" });
+    expect(within(select).queryByRole("option", { name: "中国地府" })).toBeNull();
+    const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.words.copy_confirm") });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(select, { target: { value: "EU_HEAVEN_HELL" } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(apiMock.copyWords).toHaveBeenCalledWith("EU_HEAVEN_HELL"));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.words.copy_done", { copied: "5", skipped: "1" }), "success")
+    );
+  });
+
+  it("clicking a row opens the edit drawer; an uncategorised word cannot be saved until it gets a category", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.updateWord.mockResolvedValue({ data: { ...words[1], category: "ABUSE" } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    fireEvent.click(await screen.findByRole("button", { name: "越狱" }));
+    const drawer = await screen.findByRole("dialog");
+    const form = within(drawer).getByRole("form", { name: tZh("social_moderation.words.edit_title") });
+    const save = within(form).getByRole("button", { name: tZh("common.save") });
+    expect(within(form).getByLabelText(tZh("social_moderation.words.col_action"))).toHaveValue("HIDE");
+    expect(save).toBeDisabled();
+    fireEvent.submit(form);
+    expect(apiMock.updateWord).not.toHaveBeenCalled();
+
+    fireEvent.change(within(form).getByLabelText(tZh("social_moderation.words.col_category")), { target: { value: "ABUSE" } });
+    fireEvent.change(within(form).getByLabelText(tZh("social_moderation.words.col_action")), { target: { value: "MASK" } });
+    fireEvent.change(within(form).getByLabelText(tZh("social_moderation.fields.word")), { target: { value: " 越狱术 " } });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(apiMock.updateWord).toHaveBeenCalledWith("w2", { word: "越狱术", category: "ABUSE", action: "MASK" })
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("改动作… changes the action of every selected word in one batch-update; a refusal is told in words", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.updateWords.mockRejectedValueOnce(http(404, { detail: "x", code: "not_found", missing: ["w2"] }));
+    apiMock.updateWords.mockResolvedValueOnce({ data: { updated: 2 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText("还阳");
+    fireEvent.click(screen.getByRole("checkbox", { name: tZh("souls.batch.select_all") }));
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.change_action") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.change_action_title", { n: "2" }) });
+    expect(apiMock.updateWords).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByLabelText(tZh("social_moderation.words.col_action")), { target: { value: "HIDE" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.errors.not_found"), "error"));
+    expect(apiMock.updateWords).toHaveBeenCalledWith(["w1", "w2"], "HIDE");
+    // Refused: the dialog stays, with the choice, for another try.
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(apiMock.updateWords).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(apiMock.removeWords).not.toHaveBeenCalled();
   });
 });
 
@@ -330,6 +475,64 @@ describe("禁言 · E-08c", () => {
     expect(within(dialog).getByText(tZh("social_moderation.mutes.confirm_body"))).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.lift") }));
     await waitFor(() => expect(apiMock.liftMute).toHaveBeenCalledWith("m1"));
+  });
+});
+
+describe("禁言 · filters and 禁言…", () => {
+  it("status, term, executor and name each narrow the list through the API", async () => {
+    asRole("social.moderate");
+    apiMock.muteExecutors.mockResolvedValue({ data: [{ user_id: 31, display_name: "崔珏" }] });
+    renderPage();
+    fireEvent.click(segment("mutes"));
+    await screen.findByText(tZh("social_moderation.empty.mutes"));
+    expect(apiMock.mutes).toHaveBeenLastCalledWith({});
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.mutes.filter_status")), { target: { value: "ACTIVE" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE" }));
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.mutes.col_term")), { target: { value: "LONG" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG" }));
+    const executor = screen.getByLabelText(tZh("social_moderation.mutes.col_by"));
+    await within(executor).findByRole("option", { name: "崔珏" });
+    fireEvent.change(executor, { target: { value: "31" } });
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG", created_by: 31 }));
+    fireEvent.change(screen.getAllByLabelText(tZh("social_moderation.mutes.search"))[0], { target: { value: " 素心 " } });
+    await waitFor(() =>
+      expect(apiMock.mutes).toHaveBeenLastCalledWith({ status: "ACTIVE", term: "LONG", created_by: 31, q: "素心" })
+    );
+    // The filtered empty state offers to clear, and clearing asks for everything again.
+    fireEvent.click(await screen.findByRole("button", { name: tZh("filter.clear_all") }));
+    await waitFor(() => expect(apiMock.mutes).toHaveBeenLastCalledWith({}));
+  });
+
+  it("禁言… picks a soul by name, 1–365 days with no permanent choice, and mutes through the API", async () => {
+    asRole("social.moderate");
+    apiMock.muteSouls.mockImplementation(async (q: string) => ({
+      data: q ? [{ user_id: 42, display_name: "王素心" }] : [{ user_id: 41, display_name: "韩守一" }, { user_id: 42, display_name: "王素心" }],
+    }));
+    apiMock.mute.mockResolvedValue({ data: {} });
+    renderPage();
+    fireEvent.click(segment("mutes"));
+    await screen.findByText(tZh("social_moderation.empty.mutes"));
+    expect(apiMock.muteSouls).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.mutes.new") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.mutes.new_title") });
+    await within(dialog).findByRole("radio", { name: "韩守一" });
+
+    const submit = within(dialog).getByRole("button", { name: tZh("social_moderation.actions.mute") });
+    expect(submit).toBeDisabled();
+    const days = within(dialog).getByLabelText(tZh("social_moderation.mute_days")) as HTMLSelectElement;
+    expect([...days.options].map((o) => Number(o.value))).toEqual([1, 3, 7, 30, 90, 365]);
+
+    fireEvent.change(within(dialog).getByLabelText(tZh("social_moderation.mutes.search")), { target: { value: "素心" } });
+    await waitFor(() => expect(apiMock.muteSouls).toHaveBeenLastCalledWith("素心"));
+    await waitFor(() => expect(within(dialog).queryByRole("radio", { name: "韩守一" })).toBeNull());
+    fireEvent.click(within(dialog).getByRole("radio", { name: "王素心" }));
+    fireEvent.change(days, { target: { value: "30" } });
+    fireEvent.change(within(dialog).getByLabelText(tZh("social_moderation.fields.reason")), { target: { value: "代转阳间家书" } });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    await waitFor(() => expect(apiMock.mute).toHaveBeenCalledWith(42, 30, "代转阳间家书"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
 

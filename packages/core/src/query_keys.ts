@@ -188,6 +188,10 @@ export const socialModerationKeys = {
     ["social-moderation", kind, params] as const,
   words: (params: Record<string, string | number | undefined>) => ["social-moderation", "words", params] as const,
   mutes: (params: Record<string, string | number | undefined>) => ["social-moderation", "mutes", params] as const,
+  /** 「禁言…」's soul picker, by name. */
+  muteSouls: (q: string) => ["social-moderation", "mute-souls", q] as const,
+  /** Options of the mute list's executor filter. */
+  muteExecutors: () => ["social-moderation", "mute-executors"] as const,
   handled: (params: Record<string, string | number | undefined>) => ["social-moderation", "handled", params] as const,
   /** One post or comment, full text — the review detail. Under `all`, so every write refreshes it. */
   item: (kind: "posts" | "comments", id: string) => ["social-moderation", "item", kind, id] as const,

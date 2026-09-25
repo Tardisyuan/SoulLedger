@@ -39,6 +39,30 @@ export interface NewSensitiveWord {
   action?: SensitiveWordAction;
 }
 
+/** `PATCH sensitive-words/{id}/`: category every time (same rule as create); the rest keep their value when omitted. */
+export interface SensitiveWordEdit {
+  category: SensitiveWordCategory;
+  action?: SensitiveWordAction;
+  /** Same checks as create: trimmed, lower-cased, not empty; 409 `duplicate_word`. */
+  word?: string;
+}
+
+/** The mute list's filters (E-08c). Unknown values answer an empty list. */
+export interface MuteFilters {
+  /** ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除. */
+  status?: "ACTIVE" | "EXPIRED" | "LIFTED";
+  /** until − created_at: SHORT ≤ 7 days, MEDIUM 8–30, LONG > 30. */
+  term?: "SHORT" | "MEDIUM" | "LONG";
+  /** Executor's user id. */
+  created_by?: number;
+  /** Soul display name contains. */
+  q?: string;
+  page?: number;
+}
+
+/** A soul or an officer as the moderation API names them: id and display name, nothing else. */
+export type ModerationPerson = Schemas["ModerationAuthor"];
+
 export interface HandledFilters {
   type?: HandledContent["type"];
   handling?: HandledContent["handling"];
@@ -78,15 +102,32 @@ export const socialModerationApi = {
   /** Stored trimmed and lower-cased; 409 `duplicate_word`; 400 without a category. */
   addWord: (word: NewSensitiveWord) => api.post<SensitiveWord>("/social-moderation/sensitive-words/", word),
   removeWord: (id: string) => api.delete(`/social-moderation/sensitive-words/${id}/`),
+  updateWord: (id: string, edit: SensitiveWordEdit) =>
+    api.patch<SensitiveWord>(`/social-moderation/sensitive-words/${id}/`, edit),
+  /** 「改动作…」: all or nothing, 1–200 ids; 404 `not_found` with `missing`, like `removeWords`. */
+  updateWords: (ids: string[], action: SensitiveWordAction) =>
+    api.post<{ updated: number }>("/social-moderation/sensitive-words/batch-update/", { ids, action }),
   /** All or nothing, 1–200 ids; 404 `not_found` with `missing` when any id is not in this civilization's list. */
   removeWords: (ids: string[]) =>
     api.post<{ deleted: number }>("/social-moderation/sensitive-words/batch-delete/", { ids }),
+  /**
+   * ADMIN only (403 `admin_only` for anyone else): copy every word of another
+   * civilization into the current one, keeping category and action. Words the
+   * current list already has are skipped. The reply is two counts, never words.
+   */
+  copyWords: (sourceTenant: string) =>
+    api.post<{ copied: number; skipped: number }>("/social-moderation/sensitive-words/copy-from/", {
+      source_tenant: sourceTenant,
+    }),
   /** Hidden and officer-deleted posts and comments, newest first. */
   handled: (params: HandledFilters) =>
     api.get<PaginatedResponse<HandledContent>>("/social-moderation/handled/", { params }),
-  mutes: (params: { page?: number }) =>
-    api.get<PaginatedResponse<SocialMute>>("/social-moderation/mutes/", { params }),
-  /** Only a soul currently in this civilization; 404 otherwise. */
+  mutes: (params: MuteFilters) => api.get<PaginatedResponse<SocialMute>>("/social-moderation/mutes/", { params }),
+  /** 「禁言…」's picker: current-life souls now in this civilization, at most 20, by name. */
+  muteSouls: (q: string) => api.get<ModerationPerson[]>("/social-moderation/mutes/souls/", { params: q ? { q } : {} }),
+  /** Everyone who has muted someone in this civilization. */
+  muteExecutors: () => api.get<ModerationPerson[]>("/social-moderation/mutes/executors/"),
+  /** Only a soul currently in this civilization; 404 otherwise. 1–365 days, never permanent. */
   mute: (userId: number, days: number, reason = "") =>
     api.post<SocialMute>("/social-moderation/mutes/", { user_id: userId, days, reason }),
   /** 409 `already_lifted`. */

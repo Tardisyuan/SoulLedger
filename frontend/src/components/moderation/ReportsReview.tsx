@@ -26,7 +26,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { MODERATION_TONES, isTyping, useFailureToast } from "./shared";
+import { MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
 
 /**
  * 举报区 = C 组 08「朋友圈审阅」的版式:左列表、右详情。
@@ -39,10 +39,12 @@ import { MODERATION_TONES, isTyping, useFailureToast } from "./shared";
  * the report and approves the content, or it would come straight back as a
  * rule hit.
  *
- * A / H are the canvas's keys; W (警告作者) is not here because the API has no
- * warn resolution (`SocialReportResolutionEnum` is HIDE / DELETE / MUTE /
- * DISMISS). 删除 and 禁言 are not on the canvas but are what the queue could
- * already do, so they stay as the quieter second row.
+ * A / H / W are the canvas's keys. W (警告作者) is the report resolution WARN:
+ * the content stays as it is, the report is dismissed and the reason goes to
+ * the author — so, like H, it refuses an empty reason on the page. It needs a
+ * report to resolve: a rule hit nobody reported has no W. 删除 and 禁言 are not
+ * on the canvas but are what the queue could already do, so they stay as the
+ * quieter second row.
  */
 
 type PendingRow = ModeratedPost | ModeratedComment;
@@ -65,8 +67,6 @@ interface ReviewItem {
   time: string;
   excerpt: string;
 }
-
-const MUTE_DAYS = [1, 3, 7, 30, 90, 365];
 
 function buildItems(reports: ModerationReport[], posts: PendingRow[], comments: PendingRow[]): ReviewItem[] {
   const pendingById = new Map<string, { kind: ContentKind; row: PendingRow }>();
@@ -202,6 +202,17 @@ export function ReportsReview() {
     }
   };
 
+  const warn = () => {
+    if (!selected?.report || busy) return;
+    const note = reason.trim();
+    if (!note) {
+      setReasonError(true);
+      document.getElementById("review-reason")?.focus();
+      return;
+    }
+    void run([() => resolve.mutateAsync({ id: selected.report!.id, resolution: "WARN", note })]);
+  };
+
   const remove = () => {
     if (!selected) return;
     const note = reason.trim() || undefined;
@@ -219,7 +230,7 @@ export function ReportsReview() {
     ]);
   };
 
-  // J / K / A / H — ignored while typing, with a modifier, or under a dialog.
+  // J / K / A / H / W — ignored while typing, with a modifier, or under a dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || deleting) return;
@@ -237,6 +248,9 @@ export function ReportsReview() {
       } else if (key === "h") {
         e.preventDefault();
         hide();
+      } else if (key === "w") {
+        e.preventDefault();
+        warn();
       }
     };
     document.addEventListener("keydown", onKey);
@@ -328,11 +342,18 @@ export function ReportsReview() {
             <p className="mt-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.review.user_target_note")}</p>
           )}
 
-          {/* 反应用文字,不用表情(C-08)。只画接口给了的数:官员端的帖子序列化器只带评论数。 */}
+          {/*
+            反应用文字,不用表情(C-08):「评 N · 念 N」。念 = LOVE(灵魂端 `react.love` 同一个字)。
+            画布上的「转 N」不画:朋友圈没有转发模型,没有这个数可显示。
+          */}
           {full && "comment_count" in full && (
-            <div className="mt-3 flex gap-4 text-xs text-[oklch(var(--color-ink-muted))]">
+            <div className="mt-3 flex gap-2 text-xs text-[oklch(var(--color-ink-muted))]" data-reaction-counts>
               <span>
                 {t("social_moderation.review.reaction_comment")} <span className="font-mono">{full.comment_count}</span>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                {t("social_moderation.review.reaction_love")} <span className="font-mono">{full.reaction_counts.LOVE}</span>
               </span>
             </div>
           )}
@@ -398,6 +419,12 @@ export function ReportsReview() {
                 <Button type="button" variant="warning" size="sm" onClick={hide} disabled={busy} aria-keyshortcuts="H">
                   {t("social_moderation.actions.hide")}
                   <kbd className="ml-2 font-mono text-2xs opacity-70">H</kbd>
+                </Button>
+              )}
+              {selected.report && (
+                <Button type="button" variant="secondary" size="sm" onClick={warn} disabled={busy} aria-keyshortcuts="W">
+                  {t("social_moderation.review.warn")}
+                  <kbd className="ml-2 font-mono text-2xs opacity-70">W</kbd>
                 </Button>
               )}
               <span className="flex-1" />

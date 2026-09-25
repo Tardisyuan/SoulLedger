@@ -4629,10 +4629,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        /**
+         * @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+         *
+         *     列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+         *     `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+         *     `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+         *     `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
+         */
         get: operations["v1_social_moderation_mutes_list"];
         put?: never;
-        /** @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。 */
+        /**
+         * @description 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+         *
+         *     列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+         *     `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+         *     `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+         *     `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
+         */
         post: operations["v1_social_moderation_mutes_create"];
         delete?: never;
         options?: never;
@@ -4651,6 +4665,43 @@ export interface paths {
         put?: never;
         /** @description 解除。通知走既有的事件总线:`SOCIAL_UNMUTED` 定向发给被禁言的账号(WebSocket)。 */
         post: operations["v1_social_moderation_mutes_lift_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/mutes/executors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 执行人过滤的选项:本文明禁言记录里出现过的执行人。 */
+        get: operations["v1_social_moderation_mutes_executors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/mutes/souls/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
+         *     (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。
+         */
+        get: operations["v1_social_moderation_mutes_souls_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4842,14 +4893,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
          *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
          */
         get: operations["v1_social_moderation_sensitive_words_list"];
         put?: never;
         /**
-         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
          *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
          */
         post: operations["v1_social_moderation_sensitive_words_create"];
         delete?: never;
@@ -4869,13 +4922,19 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * @description 本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
          *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
          */
         delete: operations["v1_social_moderation_sensitive_words_destroy"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * @description 本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
+         *     列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+         *     修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
+         */
+        patch: operations["v1_social_moderation_sensitive_words_partial_update"];
         trace?: never;
     };
     "/api/v1/social-moderation/sensitive-words/batch-delete/": {
@@ -4892,6 +4951,44 @@ export interface paths {
          *     词表里 → 404,`missing` 列出它们,一条都不删。
          */
         post: operations["v1_social_moderation_sensitive_words_batch_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/sensitive-words/batch-update/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批量改「命中后」动作。码名、租户范围、全有或全无、上限 200 —— 都与 batch-delete 相同。 */
+        post: operations["v1_social_moderation_sensitive_words_batch_update_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/sensitive-words/copy-from/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+         *     这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
+         *     不该借它看见别处的词。回包只有计数,不含词本身。
+         */
+        post: operations["v1_social_moderation_sensitive_words_copy_from_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8907,6 +9004,7 @@ export interface components {
             create_time: string;
             visibility: string;
             comment_count: number;
+            readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
         };
         ModerationAction: {
             /** @default  */
@@ -10347,6 +10445,17 @@ export interface components {
             timezone?: string;
         };
         /**
+         * @description Body of `PATCH sensitive-words/{id}/`. `category` is required on every edit
+         *     (same rule as create); `action` and `word` are optional and keep their value
+         *     when omitted. `word` gets create's checks: trimmed, lower-cased, not empty,
+         *     unique within the civilization (409 `duplicate_word`).
+         */
+        PatchedSensitiveWordUpdate: {
+            word?: string;
+            category?: components["schemas"]["SocialSensitiveWordCategoryEnum"];
+            action?: components["schemas"]["SocialSensitiveWordActionEnum"];
+        };
+        /**
          * @description Soul detail. Field access is enforced in two layers, deliberately.
          *
          *     The hardcoded VIEWER checks below are the floor. FieldPermissionMixin
@@ -11367,11 +11476,31 @@ export interface components {
         SensitiveWordBatchDeleteResult: {
             deleted: number;
         };
+        /** @description Body of `POST sensitive-words/batch-update/` — the batch bar's 「改动作…」. */
+        SensitiveWordBatchUpdate: {
+            ids: string[];
+            action: components["schemas"]["SocialSensitiveWordActionEnum"];
+        };
+        SensitiveWordBatchUpdateResult: {
+            updated: number;
+        };
+        /**
+         * @description Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
+         *     civilization by code. The target is the caller's current civilization.
+         */
+        SensitiveWordCopy: {
+            source_tenant: string;
+        };
+        SensitiveWordCopyResult: {
+            copied: number;
+            /** @description 目标文明里已有的词,不覆盖。 */
+            skipped: number;
+        };
         /**
          * @description Body of `POST sensitive-words/`: a new word must name its category
          *     (maintainer decision, 2026-09-25). Words added before that stay
-         *     uncategorised ("" in the list); there is no edit endpoint, so nothing ever
-         *     asks an existing word for one.
+         *     uncategorised ("" in the list) until someone edits them: the edit body
+         *     (`SensitiveWordUpdateSerializer`) requires a category too.
          */
         SensitiveWordCreate: {
             /** Format: uuid */
@@ -11592,9 +11721,10 @@ export interface components {
          *     * `DELETE` - Delete content
          *     * `MUTE` - Mute author
          *     * `DISMISS` - Dismiss
+         *     * `WARN` - Warn author
          * @enum {string}
          */
-        SocialReportResolutionEnum: "HIDE" | "DELETE" | "MUTE" | "DISMISS";
+        SocialReportResolutionEnum: "HIDE" | "DELETE" | "MUTE" | "DISMISS" | "WARN";
         /**
          * @description * `OPEN` - Open
          *     * `RESOLVED` - Resolved
@@ -20592,12 +20722,20 @@ export interface operations {
     v1_social_moderation_mutes_list: {
         parameters: {
             query?: {
+                /** @description 执行人 user id */
+                created_by?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description 灵魂显示名包含 */
+                q?: string;
                 /** @description A search term. */
                 search?: string;
+                /** @description ACTIVE 禁言中 / EXPIRED 已到期 / LIFTED 已解除 */
+                status?: "ACTIVE" | "EXPIRED" | "LIFTED";
+                /** @description 时长:SHORT ≤ 7 天 / MEDIUM 8–30 天 / LONG > 30 天 */
+                term?: "LONG" | "MEDIUM" | "SHORT";
             };
             header?: never;
             path?: never;
@@ -20706,6 +20844,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_executors_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationAuthor"][];
+                };
+            };
+        };
+    };
+    v1_social_moderation_mutes_souls_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description 灵魂显示名包含;空 = 前 20 个 */
+                q?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationAuthor"][];
                 };
             };
         };
@@ -21168,6 +21356,58 @@ export interface operations {
             };
         };
     };
+    v1_social_moderation_sensitive_words_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this sensitive word. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSensitiveWordUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSensitiveWordUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedSensitiveWordUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWord"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
     v1_social_moderation_sensitive_words_batch_delete_create: {
         parameters: {
             query?: never;
@@ -21189,6 +21429,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SensitiveWordBatchDeleteResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_batch_update_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SensitiveWordBatchUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordBatchUpdate"];
+                "multipart/form-data": components["schemas"]["SensitiveWordBatchUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWordBatchUpdateResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_sensitive_words_copy_from_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SensitiveWordCopy"];
+                "application/x-www-form-urlencoded": components["schemas"]["SensitiveWordCopy"];
+                "multipart/form-data": components["schemas"]["SensitiveWordCopy"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SensitiveWordCopyResult"];
                 };
             };
             400: {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type {
   SensitiveWord,
   SensitiveWordAction,
@@ -8,17 +9,24 @@ import type {
 } from "@soulledger/core/api/social-moderation";
 import {
   useAddSensitiveWord,
+  useCopySensitiveWords,
   useRemoveSensitiveWords,
   useSensitiveWords,
+  useUpdateSensitiveWord,
+  useUpdateSensitiveWords,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { PAGE_SIZE } from "@soulledger/core/api";
+import { tenantsApi } from "@soulledger/core/api/tenants";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { ConfirmDialog, Modal } from "@/src/components/ui/Modal";
+import { Drawer } from "@/src/components/ui/Drawer";
 import { fieldControl } from "@/src/components/ui/Field";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { cn } from "@/lib/utils";
 import { WORD_ACTION_TONES, useFailureToast } from "./shared";
@@ -26,15 +34,19 @@ import { WORD_ACTION_TONES, useFailureToast } from "./shared";
 const CATEGORIES: SensitiveWordCategory[] = ["PRIVACY", "ABUSE", "INDUCEMENT", "CONFIDENTIAL", "OFFICIAL_DEFAMATION"];
 const ACTIONS: SensitiveWordAction[] = ["REVIEW", "HIDE", "MASK"];
 
+/** The edit drawer's form. `category` "" = an old uncategorised word: it must get one before it can be saved. */
+type WordDraft = { id: string; word: string; category: SensitiveWordCategory | ""; action: SensitiveWordAction };
+
 /**
  * 敏感词(E-08b)。新增是列表顶部的一行 —— 词 · 类别 · 命中后,回车即加,不开弹层。类别必选(2026-09-25):
  * 没选类别「添加」不可点、回车也不提交;服务端同样拒收。旧词仍显示「未分类」。
  * 删除只能先勾选、再从批量条删(batch-delete,全有或全无);行尾不放删除按钮。
  *
- * The canvas also draws 「改动作…」 in the batch bar and an edit drawer on row
- * click. Neither is here: the word list has no update endpoint (create, list,
- * delete, batch-delete — `SensitiveWordViewSet`), so both would be controls
- * that cannot do what they say.
+ * 点整行打开编辑抽屉(PATCH:类别每次都必填,与新建同一条规则 —— 旧的未分类词要先选类别才能存);
+ * 批量条的「改动作…」走 batch-update,与 batch-delete 一样全有或全无。
+ *
+ * 空词表不是死路(E-08b 空态):ADMIN 看得到「从其他文明复制」,别人看不到 —— 那是唯一一条
+ * 读别的文明词表的路径,服务端也只放 ADMIN。
  */
 export function SensitiveWordsSection() {
   const { t, formatDateTime } = useI18n();
@@ -56,6 +68,63 @@ export function SensitiveWordsSection() {
   const selected = selection.page === page ? selection.ids : new Set<string>();
   const setSelected = (ids: Set<string>) => setSelection({ page, ids });
   const [confirming, setConfirming] = useState(false);
+
+  const update = useUpdateSensitiveWord();
+  const updateMany = useUpdateSensitiveWords();
+  const [editing, setEditing] = useState<WordDraft | null>(null);
+  const [batchAction, setBatchAction] = useState<SensitiveWordAction | null>(null);
+
+  const { isAdmin } = usePermissions();
+  const { tenantCode } = useTenant();
+  const copy = useCopySensitiveWords();
+  const [copying, setCopying] = useState(false);
+  const [source, setSource] = useState("");
+  const tenants = useQuery({
+    queryKey: ["tenants", 1],
+    queryFn: async () => (await tenantsApi.list()).data,
+    enabled: isAdmin && copying,
+  });
+  const sources = (tenants.data?.results ?? []).filter((c) => c.code !== tenantCode);
+  const copyFrom = () =>
+    source &&
+    copy.mutate(source, {
+      onSuccess: ({ copied, skipped }) => {
+        setCopying(false);
+        setSource("");
+        showToast(t("social_moderation.words.copy_done", { copied: String(copied), skipped: String(skipped) }), "success");
+      },
+      onError: fail,
+    });
+
+  const saveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing || !editing.word.trim() || !editing.category || update.isPending) return;
+    const { id, word: text, category: cat, action: act } = editing;
+    update.mutate(
+      { id, edit: { word: text.trim(), category: cat, action: act } },
+      {
+        onSuccess: () => {
+          setEditing(null);
+          showToast(t("social_moderation.done"), "success");
+        },
+        onError: fail,
+      }
+    );
+  };
+
+  const applyBatchAction = () =>
+    batchAction &&
+    updateMany.mutate(
+      { ids: [...selected], action: batchAction },
+      {
+        onSuccess: () => {
+          setBatchAction(null);
+          setSelected(new Set());
+          showToast(t("social_moderation.done"), "success");
+        },
+        onError: fail,
+      }
+    );
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,6 +215,7 @@ export function SensitiveWordsSection() {
       <DataTable<SensitiveWord>
         caption={t("social_moderation.tabs.words")}
         density="compact"
+        linkedRows
         columns={[
           { key: "word", header: t("social_moderation.words.col_word") },
           { key: "category", header: t("social_moderation.words.col_category") },
@@ -159,6 +229,13 @@ export function SensitiveWordsSection() {
         isError={list.isError && !list.data}
         onRetry={() => list.refetch()}
         emptyMessage={t("social_moderation.empty.words")}
+        emptyAction={
+          isAdmin ? (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setCopying(true)}>
+              {t("social_moderation.words.copy_from")}
+            </Button>
+          ) : undefined
+        }
         keyExtractor={(w) => w.id}
         selection={{
           selected,
@@ -174,7 +251,16 @@ export function SensitiveWordsSection() {
         }}
         renderRow={(w) => (
           <>
-            <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))] break-all">{w.word}</td>
+            <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))] break-all">
+              {/* The row's one control: its ::after covers the row (ROW_LINK); the checkbox sits above it. */}
+              <button
+                type="button"
+                onClick={() => setEditing({ id: w.id, word: w.word, category: w.category, action: w.action })}
+                className={`${ROW_LINK} text-left`}
+              >
+                {w.word}
+              </button>
+            </td>
             <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]">
               {t(`social_moderation.word_category.${w.category || "NONE"}`)}
             </td>
@@ -202,6 +288,9 @@ export function SensitiveWordsSection() {
             {t("souls.batch.selected", { n: String(selected.size) })}
           </span>
           <span className="flex-1" />
+          <Button type="button" variant="secondary" size="sm" onClick={() => setBatchAction("REVIEW")}>
+            {t("social_moderation.words.change_action")}
+          </Button>
           <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)}>
             {t("social_moderation.words.delete_selected")}
           </Button>
@@ -210,6 +299,138 @@ export function SensitiveWordsSection() {
           </Button>
         </div>
       )}
+
+      <Modal
+        isOpen={batchAction !== null}
+        onClose={() => setBatchAction(null)}
+        title={t("social_moderation.words.change_action_title", { n: String(selected.size) })}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setBatchAction(null)} disabled={updateMany.isPending}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="button" variant="primary" onClick={applyBatchAction} loading={updateMany.isPending}>
+              {t("common.save")}
+            </Button>
+          </div>
+        }
+      >
+        <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
+          {t("social_moderation.words.col_action")}
+          <select
+            value={batchAction ?? "REVIEW"}
+            onChange={(e) => setBatchAction(e.target.value as SensitiveWordAction)}
+            className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+          >
+            {ACTIONS.map((a) => (
+              <option key={a} value={a}>
+                {t(`social_moderation.word_action.${a}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </Modal>
+
+      <Modal
+        isOpen={copying}
+        onClose={() => setCopying(false)}
+        title={t("social_moderation.words.copy_from")}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setCopying(false)} disabled={copy.isPending}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="button" variant="primary" onClick={copyFrom} loading={copy.isPending} disabled={!source}>
+              {t("social_moderation.words.copy_confirm")}
+            </Button>
+          </div>
+        }
+      >
+        <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.words.copy_hint")}</p>
+        <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
+          {t("social_moderation.words.copy_source")}
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+          >
+            <option value="" disabled>
+              {t("social_moderation.words.copy_source_placeholder")}
+            </option>
+            {sources.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.display_name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </Modal>
+
+      <Drawer isOpen={editing !== null} onClose={() => setEditing(null)} title={t("social_moderation.words.edit_title")}>
+        {editing && (
+          <form onSubmit={saveEdit} aria-label={t("social_moderation.words.edit_title")} className="space-y-3">
+            <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
+              {t("social_moderation.fields.word")}
+              <input
+                type="text"
+                value={editing.word}
+                maxLength={50}
+                onChange={(e) => setEditing({ ...editing, word: e.target.value })}
+                aria-describedby="word-edit-hint"
+                className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+              />
+            </label>
+            <p id="word-edit-hint" className="text-xs text-[oklch(var(--color-ink-subtle))]">
+              {t("social_moderation.words.edit_hint")}
+            </p>
+            <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
+              {t("social_moderation.words.col_category")}
+              <select
+                value={editing.category}
+                required
+                onChange={(e) => setEditing({ ...editing, category: e.target.value as SensitiveWordCategory })}
+                className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+              >
+                <option value="" disabled>
+                  {t("social_moderation.words.category_placeholder")}
+                </option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`social_moderation.word_category.${c}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
+              {t("social_moderation.words.col_action")}
+              <select
+                value={editing.action}
+                onChange={(e) => setEditing({ ...editing, action: e.target.value as SensitiveWordAction })}
+                className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+              >
+                {ACTIONS.map((a) => (
+                  <option key={a} value={a}>
+                    {t(`social_moderation.word_action.${a}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex justify-end gap-2 border-t border-[oklch(var(--color-block))] pt-3">
+              <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={update.isPending}
+                disabled={!editing.word.trim() || !editing.category}
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Drawer>
 
       <ConfirmDialog
         isOpen={confirming}
