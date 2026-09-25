@@ -1,6 +1,9 @@
 """Celery tasks for authentication."""
+from datetime import timedelta
+
 from celery import shared_task
 from django.core.management import call_command
+from django.utils import timezone
 
 
 @shared_task(name="authentication.flush_expired_tokens")
@@ -18,6 +21,9 @@ def flush_expired_tokens():
 #: Who hears about 「忘记密码」 in the account's own tenant: its administrators
 #: and its realm leads (殿主, `UserRole.MODERATOR`). See `notify_password_help`.
 PASSWORD_HELP_TENANT_ROLES = ("ADMIN", "MODERATOR")
+
+#: The window of the 「近 24 小时第 N 次」 count on a password-help notification.
+PASSWORD_HELP_COUNT_WINDOW = timedelta(hours=24)
 
 
 @shared_task(name="authentication.notify_password_help")
@@ -73,11 +79,26 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     if not recipients:
         recipients = list(active.filter(role="ADMIN", tenant__isnull=True).order_by("pk"))
 
+    # 「近 24 小时第 N 次」: this request's place among the account's requests in
+    # the last 24 hours. Read from the audit rows this task writes below, so the
+    # count is of requests that reached a real account — the only ones recorded.
+    recent = AuditLog.objects.filter(
+        resource="password_help",
+        resource_id=str(user.pk),
+        timestamp__gte=timezone.now() - PASSWORD_HELP_COUNT_WINDOW,
+    ).count()
+    context = {
+        # {locale: hall name}; the serializer picks the reader's language.
+        "hall": user.tenant.hall_names if user.tenant_id else None,
+        "role": user.role,
+        "count_24h": recent + 1,
+    }
+
     for admin in recipients:
         # A MODERATOR cannot open user management (ADMIN only), so theirs says
         # to ask an administrator. Written into `params` so the read-time
         # re-render (`kind_for`) picks the same text in every language.
-        params = {"username": user.username}
+        params = {"username": user.username, **context}
         if admin.role != "ADMIN":
             params["kind"] = "password_help_requested_moderator"
         title, message = render(DEFAULT_LOCALE, params.get("kind", "password_help_requested"), params)

@@ -6896,6 +6896,7 @@ export interface components {
             /** Format: double */
             not_admitted_net: number | null;
             reason_code: string | null;
+            current_balance?: number | null;
         };
         /**
          * @description The two configured ceilings on the key. Zero when there is no key on
@@ -7168,7 +7169,7 @@ export interface components {
             role: string;
         };
         /**
-         * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+         * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
          *     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
          */
         AssignableOfficer: {
@@ -7176,6 +7177,7 @@ export interface components {
             readonly display_name: string;
             readonly username: string;
             readonly role: string;
+            readonly in_hand: number;
         };
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
@@ -10155,6 +10157,7 @@ export interface components {
             error: string;
             code: components["schemas"]["PasswordResetRefusalCodeEnum"];
             retry_after?: number;
+            attempts_left?: number;
         };
         /**
          * @description * `rate_limited` - throttled; `retry_after` says for how long
@@ -10871,6 +10874,9 @@ export interface components {
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
          *     请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+         *
+         *     `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+         *     上下文;别的通知与旧行为 null。殿名按请求语言取。
          */
         PatchedUserNotification: {
             readonly id?: number;
@@ -10885,6 +10891,7 @@ export interface components {
             readonly related_id?: string | null;
             /** Format: date-time */
             readonly created_at?: string;
+            readonly request_context?: components["schemas"]["RequestContext"] | null;
         };
         /**
          * @description `User.preferences`, as the API reads and writes it.
@@ -11600,6 +11607,15 @@ export interface components {
             detail: string;
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description 「第五殿 · 殿司 · 近 24 小时第 1 次」:一条求助通知里请求者账号的殿、角色,
+         *     与这次请求在该账号近 24 小时求助里的序号。
+         */
+        RequestContext: {
+            hall: string | null;
+            role: string;
+            count_24h: number;
         };
         /** @description Serializer for requesting password reset. */
         ResetPassword: {
@@ -12859,6 +12875,9 @@ export interface components {
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
          *     请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+         *
+         *     `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+         *     上下文;别的通知与旧行为 null。殿名按请求语言取。
          */
         UserNotification: {
             readonly id: number;
@@ -12873,6 +12892,7 @@ export interface components {
             readonly related_id: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            readonly request_context: components["schemas"]["RequestContext"] | null;
         };
         /** @description Lightweight serializer for listing notifications. */
         UserNotificationList: {
@@ -12887,6 +12907,7 @@ export interface components {
             related_id?: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            readonly request_context: components["schemas"]["RequestContext"] | null;
         };
         /**
          * @description The three keys `UserManagementSerializer.get_organization` returns.

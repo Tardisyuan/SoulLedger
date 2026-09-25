@@ -727,11 +727,11 @@ def change_password(request):
     return Response({"detail": "密码修改成功"})
 
 
-def _reset_refusal(error, code, http_status, retry_after=None):
+def _reset_refusal(error, code, http_status, retry_after=None, **extra):
     """A refusal of the email-reset endpoints: `{error, code}`, plus
     `retry_after` when throttled. Clients branch on `code`; see
     `PasswordResetRefusalSerializer` for the full set."""
-    body = {"error": error, "code": code}
+    body = {"error": error, "code": code, **extra}
     headers = None
     if retry_after is not None:
         body["retry_after"] = retry_after
@@ -941,7 +941,12 @@ def set_new_password(request):
         # code it guards, or a guesser could simply wait for the counter to
         # expire while the code is still valid.
         cache.set(attempts_key, tries + 1, timeout=300)
-        return _reset_refusal("验证码错误", "reset_code_wrong", status.HTTP_400_BAD_REQUEST)
+        # How many more checks this code will take: the App says 「还可以再试 N 次」.
+        # Zero means the next submission, right or wrong, is `reset_code_attempts_exceeded`.
+        return _reset_refusal(
+            "验证码错误", "reset_code_wrong", status.HTTP_400_BAD_REQUEST,
+            attempts_left=MAX_RESET_CODE_ATTEMPTS - (tries + 1),
+        )
 
     # Correct code: the counter has no further job, and leaving it would let a
     # previous run's failures shorten the next legitimate reset.

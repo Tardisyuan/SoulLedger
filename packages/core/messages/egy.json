@@ -3047,12 +3047,12 @@
   },
   "official_notify": {
     "password_help_requested": {
-      "title": "Dbh · Nen Rekh Sekhem",
-      "body": "Aq «{{username}}» Dbh Wehem Sekhem Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."
+      "title": "Dbh · Wehem Sekhem",
+      "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."
     },
     "password_help_requested_moderator": {
-      "title": "Dbh · Nen Rekh Sekhem",
-      "body": "Aq «{{username}}» Dbh Wehem Sekhem Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."
+      "title": "Dbh · Wehem Sekhem",
+      "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."
     },
     "dispatch_return_blocked": {
       "title": "Ankh Er Taui Khesef",

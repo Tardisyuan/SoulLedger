@@ -3047,12 +3047,12 @@
   },
   "official_notify": {
     "password_help_requested": {
-      "title": "Password help requested",
-      "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, reset it under User Management."
+      "title": "Password reset help",
+      "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, reset it under User Management."
     },
     "password_help_requested_moderator": {
-      "title": "Password help requested",
-      "body": "Account {{username}} asked for a password reset from the sign-in page. Once you have confirmed who is asking, ask an administrator to reset it."
+      "title": "Password reset help",
+      "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, ask an administrator to reset it."
     },
     "dispatch_return_blocked": {
       "title": "Residence return blocked",

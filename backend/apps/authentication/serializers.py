@@ -540,6 +540,8 @@ class PasswordResetRefusalSerializer(serializers.Serializer):
     error = serializers.CharField()
     code = serializers.ChoiceField(choices=PASSWORD_RESET_REFUSAL_CODES)
     retry_after = serializers.IntegerField(required=False)
+    #: Present exactly when `code` is `reset_code_wrong`: further checks this code will take.
+    attempts_left = serializers.IntegerField(required=False)
 
 
 class LoginLogSerializer(serializers.ModelSerializer):
