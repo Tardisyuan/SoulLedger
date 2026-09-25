@@ -594,6 +594,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         `conclude` accepts as `destination_realm_id` (see
         apps/disposition/destination.py). Not an original judgment (amendment,
         reopen) → no options, since those conclude without a disposition.
+
+        `default_realm_id` is where `conclude` sends the soul with no choice
+        made: the automatic routing on the ledger *without* this case's
+        non-admitted evidence (`DispositionService._route_to_realm`), so the
+        picker's default is the conclusion's.
         """
         judgment = self.get_object()
         # Not `?verdict=`: that name is a JudgmentFilter field, and `get_object`
@@ -608,7 +613,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         default_realm_id = None
         if judgment.kind == JudgmentKind.ORIGINAL:
             options = list(destination_options(judgment, verdict))
-            default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method)
+            default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
             if default is not None and any(r.pk == default.pk for r in options):
                 default_realm_id = default.pk
         return Response({

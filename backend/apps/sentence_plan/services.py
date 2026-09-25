@@ -126,7 +126,7 @@ def _save(obj, *fields):
     obj.save(update_fields=[*fields, "update_time", "update_user", "version"])
 
 
-def _route_home_realm(soul, verdict, judgment_method):
+def _route_home_realm(soul, verdict, judgment_method, judgment=None):
     """按**原属**文明路由的 realm。`DispositionService._route_to_realm` 读 `soul.civilization`(管辖),
     重开审判结案时灵魂可能还在外地,所以给它一份管辖 = 原属的副本(只读,不保存)。"""
     from apps.disposition.services import DispositionService
@@ -135,7 +135,7 @@ def _route_home_realm(soul, verdict, judgment_method):
     if soul.home_tenant_id is not None:
         home_view.tenant_id = soul.home_tenant_id
         home_view.tenant = soul.home_tenant
-    return DispositionService._route_to_realm(home_view, verdict, judgment_method)
+    return DispositionService._route_to_realm(home_view, verdict, judgment_method, judgment=judgment)
 
 
 class SentencePlanService:

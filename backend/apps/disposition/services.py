@@ -119,9 +119,13 @@ class DispositionService:
     _AUTO = object()
 
     @classmethod
-    def route_realm(cls, soul: Soul, verdict: str, judgment_method: str = JudgmentMethod.STANDARD):
-        """The realm automatic routing sends this soul to for this verdict, or None."""
-        realm_code = cls._route_to_realm(soul, verdict, judgment_method)
+    def route_realm(cls, soul: Soul, verdict: str, judgment_method: str = JudgmentMethod.STANDARD,
+                    judgment: Judgment | None = None):
+        """The realm automatic routing sends this soul to for this verdict, or None.
+
+        With `judgment`, the ledger is read without that case's non-admitted
+        evidence (see `_route_to_realm`)."""
+        realm_code = cls._route_to_realm(soul, verdict, judgment_method, judgment=judgment)
         return Realm.objects.filter(realm_code=realm_code).first()
 
     @classmethod
@@ -144,7 +148,7 @@ class DispositionService:
         civilization = soul.civilization
 
         if realm is cls._AUTO:
-            realm = cls.route_realm(soul, verdict, judgment.judgment_method)
+            realm = cls.route_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
         if is_eternal is None:
             is_eternal = realm.is_eternal if realm else False
 
@@ -193,13 +197,30 @@ class DispositionService:
         soul: Soul,
         verdict: str,
         judgment_method: str = JudgmentMethod.STANDARD,
+        judgment: Judgment | None = None,
     ) -> str:
         """
         Route a soul to the correct realm based on civilization, verdict,
         karma balance, and judgment method.
+
+        ON THE ADMITTED LEDGER (产品负责人 2026-09-25). Given the `judgment`
+        being concluded, records that case ruled not admitted (采信) are left out
+        of every figure a router reads: the balance, the 不可折 demerit, European
+        culpa and the circles its deeds cite. The desk's 「采信后余额」 and the
+        destination picker's default are the same reading, so what the officer
+        sees is what the soul is routed on. Nothing excluded → the full ledger,
+        exactly as before (`LedgerService.get_admitted_routing_inputs` answers
+        None). The Greek router reads no ledger figure, so admission cannot move it.
         """
+        from apps.judgment.services import EvidenceAdmissionService
+
         civilization = soul.civilization
-        karma = soul.karmic_balance
+        admitted = None
+        if judgment is not None:
+            admitted = LedgerService.get_admitted_routing_inputs(
+                soul, judgment.cycle, EvidenceAdmissionService.not_admitted_ids(judgment)
+            )
+        karma = admitted["karma"] if admitted else soul.karmic_balance
 
         if civilization == Civilization.CHINESE:
             # 「功過有不可折者」 reaches the router here, and only here.
@@ -216,17 +237,20 @@ class DispositionService:
             # whole record set. A PASSED soul goes to heaven regardless and a
             # PURGATORY/RETRY soul waits regardless; neither should pay for a
             # ledger read to be told so.
-            unoffset_demerit = (
-                LedgerService.get_unoffset_demerit(soul)
-                if verdict == Verdict.FAILED
-                else None
-            )
+            if verdict != Verdict.FAILED:
+                unoffset_demerit = None
+            elif admitted:
+                unoffset_demerit = admitted["unoffset_demerit"]
+            else:
+                unoffset_demerit = LedgerService.get_unoffset_demerit(soul)
             return cls._route_chinese(soul, verdict, karma, unoffset_demerit)
         elif civilization == Civilization.EUROPEAN:
             # `karma` is deliberately not passed. European culpa is the demerit
             # total alone (apps/ledger/readings.py::_european_reading), so the
             # net balance is not merely unused here — handing it over is what
             # let a hundred alms buy a killing down to circle 1.
+            if admitted:
+                return cls._route_european(soul, verdict, admitted["demerit"], excluded=admitted["excluded"])
             return cls._route_european(soul, verdict, soul.demerit_score)
         elif civilization == Civilization.EGYPTIAN:
             return cls._route_egyptian(soul, verdict, judgment_method, karma)
@@ -341,7 +365,7 @@ class DispositionService:
         return cls.CHINESE_PURGATORY
 
     @classmethod
-    def _route_european(cls, soul: Soul, verdict: str, culpa: int) -> str:
+    def _route_european(cls, soul: Soul, verdict: str, culpa: int, excluded=()) -> str:
         """
         Route European soul based on verdict and culpa (Dante's Inferno circles).
 
@@ -453,7 +477,7 @@ class DispositionService:
             # instead would be the mapping the EU-INF corpus exists to avoid —
             # that vocabulary is Chinese, mapped onto 功過格 gates, with no
             # member for five of the nine circles.
-            deepest = cls._deepest_cited_circle(soul)
+            deepest = cls._deepest_cited_circle(soul, excluded)
             if deepest is not None:
                 return cls.EU_HELL_CIRCLES[deepest]
 
@@ -468,8 +492,11 @@ class DispositionService:
         return cls.EU_PURGATORY
 
     @classmethod
-    def _deepest_cited_circle(cls, soul: Soul) -> int | None:
+    def _deepest_cited_circle(cls, soul: Soul, excluded=()) -> int | None:
         """The lowest circle any of this soul's DEMERIT deeds cites, or None.
+
+        `excluded`: record ids the case being concluded did not admit — a deed
+        not admitted as evidence does not sort the soul either.
 
         Reads the circle off the cited Statute's payload rather than parsing it
         out of the code. `EU-INF-C8-B2` looks like it says 8, and it does — but
@@ -503,9 +530,8 @@ class DispositionService:
 
         codes = [
             code
-            for code in soul.current_life_records().filter(record_type="DEMERIT").values_list(
-                "inferno_article", flat=True
-            )
+            for code in soul.current_life_records().filter(record_type="DEMERIT")
+            .exclude(pk__in=list(excluded)).values_list("inferno_article", flat=True)
             if code
         ]
         if not codes:

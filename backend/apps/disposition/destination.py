@@ -119,7 +119,7 @@ def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eter
                     f"{realm.realm_code} is full ({held}/{realm.capacity})", "realm_full", status=409)
         placement["realm"] = realm
     else:
-        realm = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method)
+        realm = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
 
     if eternal and (realm is None or not realm.is_eternal):
         raise DestinationRefusedError("This destination cannot hold an eternal sentence",
