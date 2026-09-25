@@ -220,6 +220,24 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             raise serializers.ValidationError(messages)
         return attrs
 
+    #: The columns a term is made of. Changing any of them on an expired row may
+    #: move its end past today (see `update`).
+    TERM_FIELDS = frozenset({
+        "sentence_years", "is_eternal", "term_start_year", "term_start_month", "term_start_day",
+    })
+
+    def update(self, instance, validated_data):
+        """An expired disposition whose term is extended past today is serving
+        again: `expired_at` is cleared in the same write (产品负责人 2026-09-25).
+        Only when a term column is written — see `reopen_if_term_extended` for
+        which new terms count as extended."""
+        from apps.disposition.expiry import reopen_if_term_extended
+
+        instance = super().update(instance, validated_data)
+        if self.TERM_FIELDS & validated_data.keys() and reopen_if_term_extended(instance):
+            instance.save(update_fields=["expired_at"])
+        return instance
+
 
 class DispositionExecuteSerializer(serializers.Serializer):
     new_identity = serializers.CharField(required=False, default="")
