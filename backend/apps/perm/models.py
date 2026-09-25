@@ -354,6 +354,9 @@ DEFAULT_PERMISSIONS = [
     ("cross_judgment.create", "创建跨域审判", "cross_judgment"),
     # realms 权限
     ("realms.read", "查看领域", "realms"),
+    # 只管容量:`PATCH /realms/{id}/` 只收 `capacity`(apps/realms/views.py)。界域的
+    # 名字、层级、拓扑来自神话语料,不经接口改。默认只 ADMIN 持有;perm 迁移 0026 播种。
+    ("realms.manage", "管理领域容量", "realms"),
     # actors 权限
     ("actors.read", "查看角色", "actors"),
     # org 权限（read/manage 二元，同 ledger.*/disposition.* 的形状）
@@ -421,7 +424,7 @@ ROLE_PERMISSIONS = {
         "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "dispatch.return", "sentence_plan.cancel",
         "cross_judgment.read", "cross_judgment.create",
-        "realms.read", "actors.read",
+        "realms.read", "realms.manage", "actors.read",
         "org.read", "org.manage",
         "system.settings", "user.manage", "menu.read", "menu.manage",
         "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",

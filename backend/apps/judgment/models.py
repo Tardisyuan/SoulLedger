@@ -8,6 +8,7 @@ from django.db import models
 
 from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
+from apps.judgment import snapshot
 from apps.souls.models import Civilization, Soul
 from apps.tenants.managers import TenantManager
 
@@ -636,18 +637,13 @@ class Statute(AuditUserFields, models.Model):
 
         Reads through `source_actor_field` rather than hardcoding
         `negative_confession`, so a second derived corpus does not have to
-        rename the Egyptian one to reuse this."""
-        if self.source_actor_id is None or not self.source_actor_field:
-            return ""
-        payload = self.source_actor.powers_json or {}
-        return payload.get(self.source_actor_field) or ""
+        rename the Egyptian one to reuse this. The rendering lives in
+        `apps/judgment/snapshot.py` so the conclusion snapshot and the
+        serializer share one definition of "the text"."""
+        return snapshot.derived_text(self)
 
     def get_localized_title(self, locale: str = "en") -> str:
-        if locale.startswith("zh"):
-            return self.title_zh or self.title_en or self.code
-        if locale == "egy":
-            return self.title_egy or self.title_en or self.code
-        return self.title_en or self.title_zh or self.code
+        return snapshot.localized_title(self, locale)
 
     def get_localized_text(self, locale: str = "en") -> str:
         """The article body in the requested locale.
@@ -656,11 +652,14 @@ class Statute(AuditUserFields, models.Model):
         article that later acquires a real translation should show it, and the
         Egyptian clauses have no Chinese rendering at all (neither do the
         assessors' names — see seed_mythology on `name_zh`)."""
-        if locale.startswith("zh"):
-            return self.text_zh or self.text_en or self.derived_text
-        if locale == "egy":
-            return self.text_egy or self.text_en or self.derived_text
-        return self.text_en or self.text_zh or self.derived_text
+        return snapshot.localized_text(self, locale)
+
+
+class CitationSnapshotKind(models.TextChoices):
+    # 结案时在同一事务里拍下的。
+    CONCLUDED = "CONCLUDED", "Concluded"
+    # 这一列出现之前就结了的案子,由迁移用「迁移那天」的文字补录 —— 不是结案时的文字。
+    BACKFILLED = "BACKFILLED", "Backfilled"
 
 
 class JudgmentCitation(AuditUserFields, models.Model):
@@ -693,6 +692,17 @@ class JudgmentCitation(AuditUserFields, models.Model):
         help_text="How this article applies to this case.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    # 结案时这条律条渲染出来的样子(apps/judgment/snapshot.py)。标题与正文按语言各一份
+    # ({"zh","en","egy"}),埃及四十二条存的是从 `Actor.powers_json` 渲染出的正文。
+    # 未结案的案子这几列全空:它们读现行文本。
+    snapshot_title = models.JSONField(null=True, blank=True)
+    snapshot_text = models.JSONField(null=True, blank=True)
+    snapshot_source = models.TextField(blank=True, default="")
+    snapshot_hash = models.CharField(max_length=64, blank=True, default="")
+    snapshot_at = models.DateTimeField(null=True, blank=True)
+    snapshot_kind = models.CharField(
+        max_length=10, choices=CitationSnapshotKind.choices, blank=True, default="",
+    )
 
     tenant = models.ForeignKey(
         "tenants.Tenant",

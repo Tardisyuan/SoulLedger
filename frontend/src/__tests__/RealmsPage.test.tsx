@@ -1,8 +1,10 @@
 /**
  * app/realms/page.tsx —— 文明切换、左侧拓扑(与详情行程条同一个组件)、右侧树表
- * (在押 / 容量 / 永恒;满额用警示色并写「已满」)、杜阿特画成「称心二岔」、缺形状字段才退化为「示意」、只读。
+ * (在押 / 容量 / 永恒;满额用警示色并写「已满」)、杜阿特画成「称心二岔」、缺形状字段才退化为「示意」;
+ * 容量只有持 `realms.manage` 的人能行内改(`PATCH /realms/{id}/` 只收 capacity),
+ * 不持有的人看到的仍是只读表。
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Realm } from "@soulledger/core/api";
@@ -11,10 +13,11 @@ import { realmsApi } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 
 jest.mock("@soulledger/core/api", () => ({
-  realmsApi: { list: jest.fn(), occupancy: jest.fn() },
+  realmsApi: { list: jest.fn(), occupancy: jest.fn(), setCapacity: jest.fn() },
 }));
+let mockPermissions = ["realms.read"];
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, role: "JUDGE", permissions: ["realms.read"], tenant: { code: "CN_DIYU" } } }),
+  useTenant: () => ({ user: { id: 1, role: "JUDGE", permissions: mockPermissions, tenant: { code: "CN_DIYU" } } }),
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 
@@ -36,6 +39,7 @@ const REALMS: Realm[] = [
 
 const mockedList = realmsApi.list as jest.Mock;
 const mockedOcc = realmsApi.occupancy as jest.Mock;
+const mockedSet = realmsApi.setCapacity as jest.Mock;
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,6 +52,8 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  mockPermissions = ["realms.read"];
+  mockedSet.mockReset();
   mockedList.mockResolvedValue({ data: { results: REALMS, count: REALMS.length } });
   mockedOcc.mockResolvedValue({ data: [{ realm_id: "DY_00_PURGATORY", count: 2 }, { realm_id: "SUB_GATE", count: 3 }] });
 });
@@ -140,11 +146,72 @@ it("shows a typed miss, not a zero, when occupancy fails to load", async () => {
   expect(held).not.toHaveTextContent("0");
 });
 
-it("is read-only and says why — there is no realm write route", async () => {
+it("is read-only without realms.manage and says why", async () => {
   renderPage();
   await screen.findByTestId("realm-tree");
-  expect(screen.getByText(/界域接口没有写入路由/)).toBeInTheDocument();
-  expect(screen.queryByRole("textbox")).toBeNull();
+  expect(screen.getByText(/只有持 realms.manage 的人能改容量/)).toBeInTheDocument();
+  // The old reason is no longer true — there IS a write route now.
+  expect(screen.queryByText(/没有写入路由/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /改容量|的容量/ })).toBeNull();
+  expect(screen.queryByRole("spinbutton")).toBeNull();
+});
+
+describe("with realms.manage", () => {
+  beforeEach(() => {
+    mockPermissions = ["realms.read", "realms.manage"];
+  });
+
+  const editRow = async (code: string) => {
+    const tree = await screen.findByTestId("realm-tree");
+    const row = tree.querySelector(`[data-realm-row="${code}"]`) as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: /的容量/ }));
+    return row;
+  };
+
+  it("edits capacity inline and saves only the capacity", async () => {
+    mockedSet.mockResolvedValue({ data: { ...REALMS[3], capacity: 12, held: 3, is_full: false } });
+    renderPage();
+    const row = await editRow("SUB_GATE");
+    const input = within(row).getByRole("spinbutton", { name: "容量" });
+    expect(input).toHaveValue(10);
+    fireEvent.change(input, { target: { value: "12" } });
+    expect(within(row).queryByTestId("capacity-full-warning")).toBeNull();
+    fireEvent.click(within(row).getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(mockedSet).toHaveBeenCalledWith("SUB_GATE", 12));
+    expect(await screen.findByTestId("capacity-saved")).toHaveTextContent("SUB_GATE 容量已保存");
+    expect(screen.getByTestId("capacity-saved")).not.toHaveTextContent("已满");
+  });
+
+  it("warns 已满 while editing below occupancy, and says so after saving", async () => {
+    mockedSet.mockResolvedValue({ data: { ...REALMS[3], capacity: 1, held: 3, is_full: true } });
+    renderPage();
+    const row = await editRow("SUB_GATE");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "1" } });
+    expect(within(row).getByTestId("capacity-full-warning")).toHaveTextContent("谁都不挪");
+    fireEvent.click(within(row).getByRole("button", { name: "保存" }));
+    expect(await screen.findByTestId("capacity-saved")).toHaveTextContent("已满(3 / 1)");
+  });
+
+  it("blank means not recorded (null); cancel sends nothing", async () => {
+    mockedSet.mockResolvedValue({ data: { ...REALMS[3], capacity: null, held: 3, is_full: false } });
+    renderPage();
+    let row = await editRow("SUB_GATE");
+    fireEvent.click(within(row).getByRole("button", { name: "取消" }));
+    expect(within(row).queryByRole("spinbutton")).toBeNull();
+    expect(mockedSet).not.toHaveBeenCalled();
+
+    row = await editRow("SUB_GATE");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "" } });
+    fireEvent.click(within(row).getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(mockedSet).toHaveBeenCalledWith("SUB_GATE", null));
+  });
+
+  it("refuses a value that is not a whole non-negative number", async () => {
+    renderPage();
+    const row = await editRow("SUB_GATE");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "-2" } });
+    expect(within(row).getByRole("button", { name: "保存" })).toBeDisabled();
+  });
 });
 
 it("reports a failed realm list as an error, not as 'no realms'", async () => {

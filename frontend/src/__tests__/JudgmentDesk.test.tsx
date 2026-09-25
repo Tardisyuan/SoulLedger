@@ -31,12 +31,20 @@ jest.mock("react", () => {
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
 
+// 「插入审判台」落点读 `?cite=`;默认没有。
+let mockSearch = "";
+jest.mock("next/navigation", () => ({
+  ...jest.requireActual("next/navigation"),
+  useSearchParams: () => new URLSearchParams(mockSearch),
+}));
+
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: {
     get: jest.fn(),
     conclude: jest.fn(),
     next: jest.fn(),
     statutes: jest.fn(),
+    statute: jest.fn(),
     cite: jest.fn(),
     uncite: jest.fn(),
     ruleEvidence: jest.fn(),
@@ -112,6 +120,8 @@ const notesBox = () => screen.getByLabelText(tZh("judgment.detail.notes")) as HT
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSearch = "";
+  localStorage.clear();
   mockUser = { id: 2, username: "op", role: "JUDGE", permissions: ["judgment.read", "judgment.execute"], tenant: { code: "CN_DIYU" } };
   judgmentApi.get.mockResolvedValue({ data: judgment() });
   judgmentApi.conclude.mockResolvedValue({ data: judgment({ is_final: true, verdict: "PURGATORY" }) });
@@ -821,5 +831,111 @@ describe("K 上一件", () => {
     await waitFor(() => expect(judgmentApi.previous).toHaveBeenCalled());
     await act(async () => {});
     expect(screen.queryByRole("link", { name: tZh("judgment.desk.previous") })).toBeNull();
+  });
+});
+
+/** 功過格 一条:救濟門 第六条。节号「救濟門 · 六」,规范引用〔太微仙君功過格 · 救濟門 · 六〕。 */
+const JIUJI = {
+  ...statute("st-9", "CN-GGG-J-06"),
+  ordinal: 42,
+  payload_json: { gate: "救濟門", gate_ordinal: 6 },
+};
+const JIUJI_CITE = `〔${tZh("judgment.statute_corpus.GONGGUOGE")} · 救濟門 · 六〕`;
+
+describe("律条检索认得规范引用与裸节号", () => {
+  beforeEach(() => {
+    judgmentApi.statutes.mockImplementation((params: Record<string, string>) =>
+      Promise.resolve({
+        data: params.search
+          ? { count: 0, next: null, previous: null, results: [] }
+          : { count: 2, next: null, previous: null, results: [statute("st-7", "口業 · 七"), JIUJI] },
+      })
+    );
+  });
+
+  it.each([
+    ["the corpus page's copied bracket", JIUJI_CITE],
+    ["a bare sigil", "救濟門 · 六"],
+    ["a bare sigil, spaced differently", "救濟門六"],
+  ])("resolves %s to the article and cites it", async (_label, pasted) => {
+    renderPage();
+    const box = await screen.findByPlaceholderText(tZh("judgment.desk.statute_search"));
+    fireEvent.change(box, { target: { value: pasted } });
+    await screen.findByText("条文 CN-GGG-J-06");
+    // Only the resolved article — not the rest of the corpus, and no "no match".
+    expect(screen.queryByText("条文 口業 · 七")).toBeNull();
+    expect(screen.queryByText(tZh("judgment.desk.statute_search_empty"))).toBeNull();
+    // A sigil is not a column: the server search is not asked.
+    expect(judgmentApi.statutes).not.toHaveBeenCalledWith(expect.objectContaining({ search: pasted.trim() }));
+    fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.cite") }));
+    await waitFor(() => expect(judgmentApi.cite).toHaveBeenCalledWith(ID, "st-9"));
+  });
+
+  it("an unknown bracket falls through to the server search and says nothing matched", async () => {
+    renderPage();
+    const box = await screen.findByPlaceholderText(tZh("judgment.desk.statute_search"));
+    fireEvent.change(box, { target: { value: "〔不存在 · 九十九〕" } });
+    await screen.findByText(tZh("judgment.desk.statute_search_empty"));
+    expect(judgmentApi.cite).not.toHaveBeenCalled();
+  });
+});
+
+describe("插入审判台的落点(?cite=)", () => {
+  beforeEach(() => {
+    judgmentApi.statute.mockResolvedValue({ data: JIUJI });
+  });
+
+  it("asks 引用〔…〕到 <魂> 的审判？ and cites only on confirm", async () => {
+    mockSearch = "cite=st-9";
+    renderPage();
+    const message = tZh("judgment.desk.cite_from_corpus_confirm", { cite: JIUJI_CITE, soul: "沈青梧" });
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(judgmentApi.cite).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.desk.cite") }));
+    await waitFor(() => expect(judgmentApi.cite).toHaveBeenCalledWith(ID, "st-9"));
+    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
+  });
+
+  it("cancel cites nothing", async () => {
+    mockSearch = "cite=st-9";
+    renderPage();
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.cancel") }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(judgmentApi.cite).not.toHaveBeenCalled();
+  });
+
+  it("a concluded case says it can no longer cite, and asks nothing", async () => {
+    mockSearch = "cite=st-9";
+    judgmentApi.get.mockResolvedValue({ data: judgment({ is_final: true, verdict: "PASSED" }) });
+    renderPage();
+    expect(await screen.findByTestId("cite-from-corpus-closed")).toHaveTextContent(
+      tZh("judgment.desk.cite_from_corpus_closed")
+    );
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(judgmentApi.statute).not.toHaveBeenCalled();
+  });
+
+  it("without judgment.execute there is no prompt at all", async () => {
+    mockSearch = "cite=st-9";
+    mockUser = { ...mockUser, permissions: ["judgment.read"] };
+    renderPage();
+    await screen.findAllByRole("radio");
+    await act(async () => {});
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(judgmentApi.statute).not.toHaveBeenCalled();
+  });
+
+  it("remembers the last opened OPEN case per user, and forgets it once concluded", async () => {
+    const a = renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem("soulledger_last_open_case:2") ?? "null")).toEqual({ id: ID, soul_name: "沈青梧" })
+    );
+    a.unmount();
+    judgmentApi.get.mockResolvedValue({ data: judgment({ is_final: true, verdict: "PASSED" }) });
+    renderPage();
+    await waitFor(() => expect(localStorage.getItem("soulledger_last_open_case:2")).toBeNull());
   });
 });

@@ -4046,6 +4046,11 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: statute
+        schema:
+          type: string
+          format: uuid
+      - in: query
         name: verdict
         schema:
           type: string
@@ -4330,6 +4335,11 @@ paths:
           type: string
       - in: query
         name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: statute
         schema:
           type: string
           format: uuid
@@ -8869,8 +8879,16 @@ paths:
     get:
       operationId: v1_realms_list
       description: |-
-        Read-only realm listing and detail.
+        Realm listing and detail, plus one write: `PATCH /realms/{id}/` with `capacity`.
         Use '?localized=true' query param to get display_name resolved by Accept-Language.
+
+        Capacity is the only editable column. It is operational — how many souls a
+        realm holds at once — and not mythology: `seed_mythology` does not seed it
+        (apps/actors/mythology/seeding.py). Everything else on the row comes from
+        the corpus and stays read-only. `realms.manage` (ADMIN by default) gates it;
+        the row is found through `get_object`, i.e. tenant-scoped like every read;
+        `Realm` is an `AuditUserFields` model, so the write lands in AuditLog with
+        its before/after, and `AuditUserViewSetMixin` puts the user on that row.
       parameters:
       - in: query
         name: civilization
@@ -8945,8 +8963,16 @@ paths:
     get:
       operationId: v1_realms_retrieve
       description: |-
-        Read-only realm listing and detail.
+        Realm listing and detail, plus one write: `PATCH /realms/{id}/` with `capacity`.
         Use '?localized=true' query param to get display_name resolved by Accept-Language.
+
+        Capacity is the only editable column. It is operational — how many souls a
+        realm holds at once — and not mythology: `seed_mythology` does not seed it
+        (apps/actors/mythology/seeding.py). Everything else on the row comes from
+        the corpus and stays read-only. `realms.manage` (ADMIN by default) gates it;
+        the row is found through `get_object`, i.e. tenant-scoped like every read;
+        `Realm` is an `AuditUserFields` model, so the write lands in AuditLog with
+        its before/after, and `AuditUserViewSetMixin` puts the user on that row.
       parameters:
       - in: path
         name: id
@@ -8965,6 +8991,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Realm'
+          description: ''
+    patch:
+      operationId: v1_realms_partial_update
+      description: |-
+        Change `capacity` — and nothing else (any other field is a 400).
+
+        Lowering it below the number of souls already there is allowed: nobody
+        is moved, and from now on the destination picker refuses this realm
+        with 409 `realm_full` (`disposition/destination.py`). `is_full` in the
+        response says whether that is now the case, counted the same way.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Realm.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRealmCapacity'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRealmCapacity'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRealmCapacity'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RealmCapacityResult'
           description: ''
   /api/v1/realms/occupancy/:
     get:
@@ -16208,6 +16273,38 @@ components:
       - login_type
       - token
       - user_id
+    CitationSnapshot:
+      type: object
+      description: Schema of `JudgmentCitationSerializer.snapshot` (read-only).
+      properties:
+        kind:
+          $ref: '#/components/schemas/CitationSnapshotKindEnum'
+        taken_at:
+          type: string
+          format: date-time
+        display_title:
+          type: string
+        display_text:
+          type: string
+        source:
+          type: string
+        current_differs:
+          type: boolean
+      required:
+      - current_differs
+      - display_text
+      - display_title
+      - kind
+      - source
+      - taken_at
+    CitationSnapshotKindEnum:
+      enum:
+      - CONCLUDED
+      - BACKFILLED
+      type: string
+      description: |-
+        * `CONCLUDED` - Concluded
+        * `BACKFILLED` - Backfilled
     CivilizationEnum:
       enum:
       - CHINESE
@@ -18382,9 +18479,15 @@ components:
           type: string
           format: date-time
           readOnly: true
+        snapshot:
+          allOf:
+          - $ref: '#/components/schemas/CitationSnapshot'
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
+      - snapshot
       - statute
     JudgmentCitationWrite:
       type: object
@@ -23174,6 +23277,18 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedRealmCapacity:
+      type: object
+      description: |-
+        `PATCH /realms/{id}/` —— 只收 `capacity`(非负整数或 null)。
+
+        任何别的字段都是 400,而不是被 DRF 静默丢掉:界域的名字、层级、拓扑来自神话语料
+        (`seed_mythology`),一个以为自己改了 `name_zh` 却收到 200 的调用方,拿到的是一句谎话。
+      properties:
+        capacity:
+          type: integer
+          minimum: 0
+          nullable: true
     PatchedReincarnation:
       type: object
       properties:
@@ -24260,6 +24375,148 @@ components:
       required:
       - civilization
       - id
+      - name_local
+      - realm_code
+      - realm_type
+    RealmCapacityResult:
+      type: object
+      description: |-
+        The realm after a capacity change, plus what the new number means now.
+
+        `held` is the count placement compares against (`disposition.destination.realm_held`);
+        `is_full` = new placements get 409 `realm_full`. Nobody already there is moved.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        realm_code:
+          type: string
+          maxLength: 50
+        civilization:
+          $ref: '#/components/schemas/CivilizationEnum'
+        name_local:
+          type: string
+          description: Native/local name
+          maxLength: 255
+        name_zh:
+          type: string
+          description: Simplified Chinese name
+          maxLength: 255
+        name_en:
+          type: string
+          description: English name
+          maxLength: 255
+        name_egy:
+          type: string
+          description: Egyptian name (transliteration or hieroglyphs)
+          maxLength: 255
+        realm_type:
+          $ref: '#/components/schemas/RealmTypeEnum'
+        tier:
+          type: integer
+          description: Severity or bliss tier
+        parent_realm:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+        memory_reset_mechanism:
+          oneOf:
+          - $ref: '#/components/schemas/MemoryResetMechanismEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        is_eternal:
+          type: boolean
+        cycle_limit:
+          type: integer
+          nullable: true
+        order:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'Position along the civilization''s route (Chinese: court number
+            1-10)'
+        kind:
+          nullable: true
+          description: |-
+            Chinese only: 殿 / 门 / 层 / 道
+
+            * `HALL` - 殿
+            * `GATE` - 门
+            * `LAYER` - 层
+            * `PATH` - 道
+          oneOf:
+          - $ref: '#/components/schemas/RealmKindEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        capacity:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: How many souls the realm holds at once; null = not recorded
+        level:
+          type: integer
+          maximum: 9
+          minimum: 1
+          nullable: true
+          description: 'European only: circle (Inferno) or terrace (Purgatorio) number'
+        sublevel:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'European only: ring (7th circle) or bolgia (8th circle) number'
+        region:
+          nullable: true
+          description: |-
+            European only: which cantica the realm belongs to
+
+            * `INFERNO` - 地狱
+            * `PURGATORIO` - 炼狱
+            * `PARADISO` - 天堂
+          oneOf:
+          - $ref: '#/components/schemas/CommediaRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        hour:
+          type: integer
+          maximum: 12
+          minimum: 1
+          nullable: true
+          description: 'Egyptian only: hour of the night, 1-12'
+        gate:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'Egyptian only: gate number'
+        is_judgment_hall:
+          type: boolean
+          nullable: true
+          description: 'Egyptian only: the hall where the heart is weighed; null elsewhere'
+        fork:
+          nullable: true
+          description: |-
+            Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
+
+            * `LEFT` - 左(塔尔塔罗斯)
+            * `RIGHT` - 右(至福岛)
+            * `PASS` - 过(称心通过)
+            * `FAIL` - 不过(第二次死亡)
+          oneOf:
+          - $ref: '#/components/schemas/RealmForkEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        held:
+          type: integer
+          readOnly: true
+        is_full:
+          type: boolean
+          readOnly: true
+      required:
+      - civilization
+      - held
+      - id
+      - is_full
       - name_local
       - realm_code
       - realm_type

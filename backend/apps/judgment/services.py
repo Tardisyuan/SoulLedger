@@ -112,6 +112,25 @@ class StatuteCitationService:
             for statute in statutes
         ]
 
+    @staticmethod
+    def snapshot(judgment, *, at):
+        """Freeze what each cited article says right now onto its citation.
+
+        Called by `conclude` inside its transaction, after the grounds are
+        final (`assert_amendable` refuses any change from here on), so the
+        snapshot is the text the verdict was actually given against."""
+        from apps.judgment import snapshot
+        from apps.judgment.models import CitationSnapshotKind, JudgmentCitation
+
+        rows = list(
+            JudgmentCitation.all_objects
+            .filter(judgment=judgment, is_deleted=False)
+            .select_related("statute", "statute__source_actor")
+        )
+        for c in rows:
+            snapshot.fill(c, c.statute, CitationSnapshotKind.CONCLUDED, at)
+        JudgmentCitation.all_objects.bulk_update(rows, snapshot.SNAPSHOT_FIELDS)
+
     @classmethod
     def uncite(cls, judgment, statute_id):
         """Remove a ground. Returns True when something was removed.
@@ -225,6 +244,8 @@ class JudgmentConclusionService:
             # frozen from here on too (`_assert_open`).
             judgment.concluded_balance = EvidenceAdmissionService.admitted_net(judgment)
             judgment.save()
+            # 引用条文当时的文字,与裁决同一事务落盘(apps/judgment/snapshot.py)。
+            StatuteCitationService.snapshot(judgment, at=judgment.concluded_at)
 
             # An AMENDMENT (the stop's own case, situation 1) or a REOPEN (the
             # home judge's retrial) changes the sentence plan instead: no

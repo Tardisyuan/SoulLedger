@@ -39,6 +39,16 @@ class DestinationRefusedError(Exception):
 
 
 @cache
+def realm_held(realm_id, *, exclude_soul_id=None) -> int:
+    """How many souls stand in this realm now — the count `realm_full` compares
+    against `capacity`. One definition, so the capacity editor
+    (`PATCH /realms/{id}/`) reports "full" by the same rule placement refuses by."""
+    qs = SoulPathEntry.all_objects.filter(realm_id=realm_id, left_at__isnull=True)
+    if exclude_soul_id is not None:
+        qs = qs.exclude(soul_id=exclude_soul_id)
+    return qs.count()
+
+
 def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.STANDARD) -> frozenset:
     """这个文明、这个裁决(与审法)下,自动分派可能送去的全部 realm_code。"""
     from apps.disposition.services import DispositionService as D
@@ -115,12 +125,7 @@ def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eter
                 f"A {verdict} verdict cannot send a soul to {realm.realm_code}", "realm_not_allowed")
         if realm.capacity is not None:
             # 已经站在这扇门里的灵魂(例如待审所里判 PURGATORY)不占第二个位子。
-            held = (
-                SoulPathEntry.all_objects
-                .filter(realm_id=realm.pk, left_at__isnull=True)
-                .exclude(soul_id=soul.pk)
-                .count()
-            )
+            held = realm_held(realm.pk, exclude_soul_id=soul.pk)
             if held >= realm.capacity:
                 raise DestinationRefusedError(
                     f"{realm.realm_code} is full ({held}/{realm.capacity})", "realm_full", status=409)

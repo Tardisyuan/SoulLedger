@@ -1151,7 +1151,12 @@
       "note": "Iri Seth",
       "source": "Medu Ahet",
       "derived": "Ini Em",
-      "caveat": "Medu Ahet:"
+      "caveat": "Medu Ahet:",
+      "snapshot_concluded": "Medu Em Khetem",
+      "snapshot_backfilled": "Sesh Wehem",
+      "revised": "Medu Khemen Seth · Maa",
+      "compare_then": "Em Khetem",
+      "compare_now": "Medu Hru Pen"
     },
     "statute_corpus": {
       "HELL_LAW": "Hep Duat",
@@ -1193,12 +1198,20 @@
       "copied": "Senn Seth",
       "cited_by": "Djed Seth",
       "cited_by_count": "Wedja {{n}}",
-      "cited_by_gap": "Nen Hehy Wedja Em Hep; Sep Wa Dy, Nen Sesh.",
       "versions": "Hemet-Sesh",
       "versions_gap": "Nen Hemet-Sesh Hep; Khemen Em Sesh Tepy Wa.",
       "select_prompt": "Setep Hep Em Sesh Hep.",
       "no_match": "Nen Gem Hep: «{{q}}»",
-      "clear_search": "Fekh Hehy"
+      "clear_search": "Fekh Hehy",
+      "cited_by_error": "Nen Ini Wedja",
+      "cited_by_open": "Nen Khetem",
+      "insert_desk": "Djed Er Wedja",
+      "insert_none": "Nen Wedja Nen Khetem",
+      "insert_pick": "Setep Wedja Nen Khetem",
+      "related": "Medu Hena",
+      "related_gate": "Sebkhet Wa",
+      "related_circle": "Shen Wa",
+      "related_terrace": "Hesep Wa"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
@@ -1216,7 +1229,10 @@
       "balance_at_conclusion": "Sepy Em Khetem",
       "balance_now": "Sepy Emu",
       "balance_single": "Sepy",
-      "recorded_after": "{{n}} Sesh Em Khet"
+      "recorded_after": "{{n}} Sesh Em Khet",
+      "cite_from_corpus_title": "Djed Medu",
+      "cite_from_corpus_confirm": "Djed {{cite}} Er Wedja {{soul}}",
+      "cite_from_corpus_closed": "Wedja Khetem Seth · Nen Djed"
     },
     "claim": {
       "groups": {
@@ -1567,9 +1583,17 @@
       "eternal_no": "Nen",
       "full": "Nen Aq",
       "capacity_unrecorded": "Nen Sesh Hesb Aq",
-      "read_only": "Maa Wa · Ta Nen Khemen Dy",
+      "read_only": "Maa Wa · Hesb Aq Nen Khemen Dy",
       "empty_civ": "Nen Ta Em Taui Pen Djer",
-      "occupancy_failed": "Nen Ini Em Sekhet"
+      "occupancy_failed": "Nen Ini Em Sekhet",
+      "edit_scope": "Hesb Aq Khemen Wa · Ta Nen Khemen Dy",
+      "edit_capacity": "Khemen",
+      "edit_capacity_of": "Khemen Hesb Aq {{name}}",
+      "capacity_label": "Hesb Aq",
+      "full_warning": "Nen Aq · Em Shepet {{held}}",
+      "saved": "{{code}} · Hesb Aq Sau",
+      "saved_full": "{{code}} · Hesb Aq Sau · Nen Aq {{held}} / {{cap}}",
+      "save_failed": "Nen Sau Hesb Aq"
     },
     "kind": {
       "HALL": "Wesekhet",
