@@ -35,7 +35,14 @@ export interface SoulMediaUpload<S> {
 
 let seq = 0;
 
-export function useSoulMediaUploads<S>(toBody: (source: S) => FormData, max: number = SOUL_POST_MEDIA_MAX) {
+/**
+ * `toBody` may be async (the app compresses before it uploads); while it runs the
+ * item already shows as uploading at 0%, and a throw fails the item like a failed request.
+ */
+export function useSoulMediaUploads<S>(
+  toBody: (source: S) => FormData | Promise<FormData>,
+  max: number = SOUL_POST_MEDIA_MAX
+) {
   const [items, setItems] = useState<SoulMediaUpload<S>[]>([]);
   // Keys removed while their request was in flight: the upload is deleted when it lands.
   const dropped = useRef(new Set<string>());
@@ -46,8 +53,10 @@ export function useSoulMediaUploads<S>(toBody: (source: S) => FormData, max: num
 
   const start = useCallback(
     (key: string, source: S) => {
-      soulSocialApi
-        .uploadMedia(toBody(source), (progress) => patch(key, { progress }))
+      const upload = (body: FormData) => soulSocialApi.uploadMedia(body, (progress) => patch(key, { progress }));
+      const body = toBody(source);
+      // A plain body goes up at once (no extra tick); an async one (compression) first.
+      (body instanceof Promise ? body.then(upload) : upload(body))
         .then((media) => {
           if (dropped.current.delete(key)) {
             void soulSocialApi.removeMedia(media.id).catch(() => {});

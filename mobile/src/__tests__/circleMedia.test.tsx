@@ -3,6 +3,7 @@
  *
  * 上传走 core 的真客户端(`soulSocialApi.uploadMedia` → `soulHttp`),只换掉网络;
  * 图库(expo-image-picker)换成一个按测试脚本返回的替身 —— 它是系统界面,不是本 App 的代码。
+ * 压缩(expo-image-manipulator)是原生模块,也换成替身:它按 uri 报一个解码后的尺寸,记下缩放与保存参数。
  * 每个「能」都配一个「不能」:发出按钮可用的断言旁边,总有一条它在传图 / 失败时不可用。
  */
 import { NavigationContainer } from "@react-navigation/native";
@@ -33,6 +34,43 @@ jest.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: (...args: unknown[]) => mockLaunch(...args),
   UIImagePickerPreferredAssetRepresentationMode: { Compatible: "compatible" },
 }));
+
+/** uri → 解码后的 [宽, 高];没写的按 4032×3024(手机横拍原图)。`"broken"` 解不开。 */
+const mockDims: Record<string, [number, number] | "broken"> = {};
+const mockManip: { resize: unknown[]; save: unknown[] } = { resize: [], save: [] };
+jest.mock("expo-image-manipulator", () => {
+  const ref = (uri: string, w: number, h: number) => ({
+    uri,
+    width: w,
+    height: h,
+    saveAsync: async (opts: unknown) => {
+      mockManip.save.push(opts);
+      return { uri: `file:///cache/${uri.split("/").pop()}-${w}x${h}.jpg`, width: w, height: h };
+    },
+  });
+  type MockRef = ReturnType<typeof ref>;
+  const manipulate = (source: string | MockRef) => {
+    const from = typeof source === "string" ? source : source.uri;
+    let size: [number, number] | "broken" =
+      typeof source === "string" ? (mockDims[from] ?? [4032, 3024]) : [source.width, source.height];
+    const ctx = {
+      resize: ({ width, height }: { width?: number; height?: number }) => {
+        mockManip.resize.push({ width, height });
+        if (size !== "broken") {
+          const [w, h] = size;
+          size = width ? [width, Math.round((h * width) / w)] : [Math.round((w * (height ?? h)) / h), height ?? h];
+        }
+        return ctx;
+      },
+      renderAsync: async () => {
+        if (size === "broken") throw new Error("cannot decode");
+        return ref(from, size[0], size[1]);
+      },
+    };
+    return ctx;
+  };
+  return { ImageManipulator: { manipulate }, SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" } };
+});
 
 function wrap(children: ReactNode, scheme?: ColorScheme) {
   const inner = scheme ? <ThemeContext.Provider value={themeFor("CHINESE", scheme)}>{children}</ThemeContext.Provider> : children;
@@ -77,6 +115,9 @@ beforeEach(() => {
   installMobilePlatform();
   mockPopTo.mockReset();
   mockLaunch.mockReset();
+  for (const k of Object.keys(mockDims)) delete mockDims[k];
+  mockManip.resize = [];
+  mockManip.save = [];
 });
 
 describe("gridColumns", () => {
@@ -263,6 +304,64 @@ describe("composer", () => {
     await act(async () => fireEvent.press(screen.getByTestId("media-add")));
     expect(await screen.findByText("需要相册权限才能选图")).toBeTruthy();
     expect(screen.queryByTestId("upload-0")).toBeNull();
+  });
+
+  /**
+   * What each upload appended as its `file` part. The app runs React Native's FormData, which sends
+   * `{uri, name, type}` as a file; jest's FormData would stringify it, so the append itself is recorded.
+   */
+  let appended: unknown[] = [];
+  beforeEach(() => {
+    appended = [];
+    const original = FormData.prototype.append;
+    jest.spyOn(FormData.prototype, "append").mockImplementation(function (this: FormData, key: string, value: unknown) {
+      if (key === "file") appended.push(value);
+      return (original as (_k: string, _v: unknown) => void).call(this, key, value);
+    });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("compresses before uploading: the long edge goes to 2048, re-encoded as JPEG 0.85", async () => {
+    mockDims["file:///p1.jpg"] = [3024, 4032]; // portrait: the long edge is the height
+    mockDims["file:///p2.jpg"] = [4032, 3024];
+    const calls = await openWith({ "POST /me/social/media/": [uploaded("u1"), uploaded("u2")] });
+    await pick(2);
+    await waitFor(() => expect(calls.filter((c) => c.url === "/me/social/media/")).toHaveLength(2));
+    expect(mockManip.resize).toEqual([{ width: undefined, height: 2048 }, { width: 2048, height: undefined }]);
+    expect(mockManip.save).toEqual([{ format: "jpeg", compress: 0.85 }, { format: "jpeg", compress: 0.85 }]);
+    const parts = appended;
+    expect(parts).toEqual([
+      { uri: "file:///cache/p1.jpg-1536x2048.jpg", name: "p1.jpg", type: "image/jpeg" },
+      { uri: "file:///cache/p2.jpg-2048x1536.jpg", name: "p2.jpg", type: "image/jpeg" },
+    ]);
+    // Absence: the original file never goes up.
+    expect(JSON.stringify(parts)).not.toContain('"file:///p1.jpg"');
+  });
+
+  it("a picture already within 2048 is not scaled, only re-encoded; a PNG comes out as JPEG", async () => {
+    mockDims["file:///p1.jpg"] = [2048, 1000];
+    const calls = await openWith({ "POST /me/social/media/": uploaded("u1") });
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: "file:///p1.jpg", fileName: "shot.png", mimeType: "image/png" }] });
+    await act(async () => fireEvent.press(screen.getByTestId("media-add")));
+    await waitFor(() => expect(calls.some((c) => c.url === "/me/social/media/")).toBe(true));
+    expect(mockManip.resize).toEqual([]);
+    expect(appended).toEqual([{
+      uri: "file:///cache/p1.jpg-2048x1000.jpg",
+      name: "shot.jpg",
+      type: "image/jpeg",
+    }]);
+  });
+
+  it("an image the manipulator cannot decode goes up as picked; the server still decides", async () => {
+    mockDims["file:///p1.jpg"] = "broken";
+    await openWith({ "POST /me/social/media/": uploaded("u1") });
+    await pick(1);
+    await waitFor(() => expect(disabled()).toBe(false));
+    expect(appended).toEqual([{
+      uri: "file:///p1.jpg",
+      name: "p1.jpg",
+      type: "image/jpeg",
+    }]);
   });
 
   it("leaving without posting deletes what was uploaded", async () => {
