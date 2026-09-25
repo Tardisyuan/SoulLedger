@@ -20,6 +20,8 @@ export interface Role {
   id: number;
   name: string;
   display_name: string;
+  /** 角色表抽屉的「说明」(E-11b)。可空;只 ADMIN 能改。 */
+  description: string;
   scope: string;
   organization: number | null;
   organization_name: string | null;

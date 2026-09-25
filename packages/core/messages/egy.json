@@ -340,7 +340,11 @@
       "refused_reason": {
         "not_found": "Nen Gem, Er Nen Em Taui Pen.",
         "not_deletable": "Wedja Khetem Seth: Nen Nehem Er Per Wehem; Khetem Wa."
-      }
+      },
+      "transfer": "Hab-Ba…",
+      "transfer_one_only": "Hab-Ba: Ba Wa Pu. Setep Seth {{n}}.",
+      "export": "Bek Seth",
+      "export_failed": "Nen Wehem Medew"
     }
   },
   "common": {
@@ -630,7 +634,8 @@
         "builtin_role": "Khesef: Netjer Tepy Nen Fekh.",
         "role_in_use": "Khesef: Sab {{n}} Em Netjer Pen. Khemen Netjer Sab Er Tepy.",
         "role_referenced_by_workflow_templates": "Khesef: Wat Wedja {{n}} Djed. Khemen Wat Wedja Er Tepy."
-      }
+      },
+      "description": "Medu Seth"
     }
   },
   "workflow": {
@@ -1011,7 +1016,10 @@
       "empty_title": "Nen Sep Em Abed Pen",
       "empty_reason": "Nen Sep {{month}} Djer; Tepy = Sepy = {{opening}}.",
       "load_failed": "Nen Ini Sesh Nefer Hena Isfet",
-      "row_hint": "Wen → Mekher Ba · Nefer Hena Isfet"
+      "row_hint": "Wen → Mekher Ba · Nefer Hena Isfet",
+      "search": "Hehy Ren / Ren Aa",
+      "export": "Bek Seth",
+      "export_failed": "Nen Wehem Medew"
     }
   },
   "judgment": {
@@ -1245,7 +1253,11 @@
         "not_found": "Wedja Nen Gem",
         "permission_denied": "Nen Was",
         "generic": "Nen Iri"
-      }
+      },
+      "civilization_all": "Aset Ahamet · Neb",
+      "sort": "Tep Seth",
+      "sort_oldest": "Tep Seth · Qed: Ahet Tepy",
+      "sort_newest": "Tep Seth · Smen Pehwy"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -3085,6 +3097,10 @@
     "sentence_plan_cancelled": {
       "title": "Wetep Sehen Seth",
       "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."
+    },
+    "soul_inbox_assigned": {
+      "title": "Sesh Hab Er Ek",
+      "body": "{{soul}}: Sesh Hab Ky Er Ek ({{by}})."
     }
   },
   "social_moderation": {
@@ -3285,7 +3301,11 @@
       "col_by": "Sab",
       "read_only": "Maa Wa: Iri Seth.",
       "restore": "Ankh Wehem · Maa",
-      "in_recycle_bin": "Em Per Wehem"
+      "in_recycle_bin": "Em Per Wehem",
+      "range": "Sepdet",
+      "range_30d": "Per Sepedu 30",
+      "range_90d": "Per Sepedu 90",
+      "range_all": "Wetu Seped"
     }
   },
   "soul_inbox": {
@@ -3310,7 +3330,8 @@
       "closed": "Ba Wehem Mesut Seth; Medu Khetem Seth",
       "not_inbox": "Nen Sesh Wesekhet",
       "chat_not_configured": "Per Medu Nen Wenen",
-      "chat_unavailable": "Per Medu Nen Wenen Emu"
+      "chat_unavailable": "Per Medu Nen Wenen Emu",
+      "invalid_assignee": "Nen Hab Ky Er Sab Pen"
     },
     "folders": "Aat Sesh",
     "folder": {
@@ -3320,7 +3341,8 @@
       "awaiting_reply": "Em Weshed",
       "replied": "Wesheb Seth",
       "drafts": "Sesh Tepy",
-      "archived": "Per Sesh"
+      "archived": "Per Sesh",
+      "assigned_to_me": "Hab Er Ek"
     },
     "by_hall": "Wesekhet",
     "folder_empty": "Nen Sesh Dy",
@@ -3356,6 +3378,18 @@
       "saved": "Pet-Sesh Sau Seth",
       "deleted": "Pet-Sesh Fekh Seth",
       "empty_manage": "Nen Pet-Sesh Em Wesekhet Pen Djer. Sau Wesheb Er Pet-Sesh; Setep Er Hab."
+    },
+    "assign": {
+      "action": "Hab Ky…",
+      "title": "Hab Ky",
+      "to": "Hab Ky Er",
+      "hint": "Sab Em Wesekhet Pen Wesheb. Sesh Nen Hab-Ba.",
+      "none": "Nen Sab Ky",
+      "confirm": "Hab Ky",
+      "done": "Hab Ky Seth: {{name}}",
+      "assignee": "Hab Ky Er {{name}}",
+      "unassign": "Sehen",
+      "unassigned_done": "Sehen Seth"
     }
   },
   "sentence_plan": {

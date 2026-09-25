@@ -91,6 +91,7 @@ describe("RoleFormModal", () => {
     id: 1,
     name: "ADMIN",
     display_name: "管理员",
+    description: "",
     scope: "global",
     organization: null,
     organization_name: null,

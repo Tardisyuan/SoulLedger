@@ -246,6 +246,9 @@ export const soulsApi = {
   // All or nothing — see SoulBatchRecycleError. Same codename as `delete`.
   batchRecycle: (data: SoulBatchRecycleRequest) =>
     api.post<SoulBatchRecycleResult>("/souls/batch-recycle/", data),
+  // The batch bar's 「导出」: a CSV of the selected souls, scoped like the list (`soul.read`).
+  export: (ids: string[]) =>
+    api.get<Blob>("/souls/export/", { params: { ids: ids.join(",") }, responseType: "blob" }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
   karma: (id: string) => api.get<LedgerSummary>(`/souls/${id}/karma/`),

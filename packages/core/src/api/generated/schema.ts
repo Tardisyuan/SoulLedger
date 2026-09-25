@@ -680,6 +680,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat/inbox/{id}/assign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 标给一位同僚。会话不换殿:经办人必须是这个殿司里持有 `soul_inbox.reply` 的在职官员,
+         *     否则 400 `invalid_assignee`(不存在与在别的殿司答同一句)。已关闭的会话只读,409 `closed`。
+         *     标给别人时经官员通知告诉他;标给自己不发通知。
+         */
+        post: operations["v1_chat_inbox_assign_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/assignable/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 「标给同僚」的名单:这封信的收件殿司里能回信的在职官员。与 `assign` 问同一条规则。 */
+        get: operations["v1_chat_inbox_assignable_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/chat/inbox/{id}/draft/": {
         parameters: {
             query?: never;
@@ -800,6 +838,23 @@ export interface paths {
          *     全站默认(`PageNumberPagination`,每页 20)。
          */
         post: operations["v1_chat_inbox_unarchive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/inbox/{id}/unassign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 收回:清掉经办人。关闭的会话也可以(清掉遗留的交办)。 */
+        post: operations["v1_chat_inbox_unassign_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2419,13 +2474,36 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=]
+         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
          *
          *     功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
          *     只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
          *     不给 `month` 时取当前月。
          */
         get: operations["v1_ledger_journal_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/journal/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /ledger/journal/export/?month=YYYY-MM[&civilization=][&category=][&search=]
+         *
+         *     功过总账「导出」:本月、同一组筛选下的**全部**流水(不分页),一行一条。
+         *     范围、码名与 `LedgerJournalView` 相同 —— 行取自同一个 `journal_records`,所以文件里的
+         *     收 / 支之和就是屏幕上的「新收」「开除」。自由文本格一律过 `csv_safe`。
+         */
+        get: operations["v1_ledger_journal_export_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6177,6 +6255,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 批量条「导出」:所选灵魂的 CSV,一行一个。
+         *
+         *     范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
+         *     所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+         */
+        get: operations["v1_souls_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/": {
         parameters: {
             query?: never;
@@ -8030,6 +8130,9 @@ export interface components {
             /** Format: date-time */
             handled_at: string | null;
         };
+        InboxAssign: {
+            user_id: number;
+        };
         InboxDraft: {
             body: string;
         };
@@ -8040,6 +8143,8 @@ export interface components {
             replied: number;
             drafts: number;
             archived: number;
+            /** @description 未归档里同僚标给调用者的。 */
+            assigned_to_me: number;
             /** @description 未归档里调用者的未读数。 */
             unread: number;
             /** @description 未归档里往来中的。 */
@@ -8065,6 +8170,11 @@ export interface components {
             officer_title: string;
             body: string;
             timestamp: number;
+        };
+        /** @description 一位官员:经办人,或「标给同僚」弹层里的一个候选。 */
+        InboxOfficer: {
+            user_id: number;
+            readonly display_name: string;
         };
         InboxReplyTemplate: {
             /** Format: uuid */
@@ -9274,9 +9384,10 @@ export interface components {
          *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
          *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
          *     * `PASSWORD_HELP_REQUESTED` - Password Help Requested
+         *     * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerInbox: {
@@ -9309,6 +9420,10 @@ export interface components {
             readonly has_draft: boolean;
             /** @description **调用者**归档了它。 */
             readonly archived: boolean;
+            /** @description 「标给同僚」的经办人,殿司共享;没有为 null。 */
+            readonly assignee: components["schemas"]["InboxOfficer"] | null;
+            /** Format: date-time */
+            readonly assigned_at: string | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -11511,6 +11626,7 @@ export interface components {
             readonly id: number;
             name: string;
             display_name: string;
+            description?: string;
             /**
              * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
              *
@@ -11533,6 +11649,7 @@ export interface components {
         RoleCreateUpdate: {
             name: string;
             display_name: string;
+            description?: string;
             /**
              * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
              *
@@ -13900,8 +14017,9 @@ export interface operations {
                  *     * `replied` - replied
                  *     * `drafts` - drafts
                  *     * `archived` - archived
+                 *     * `assigned_to_me` - assigned_to_me
                  */
-                folder?: "all" | "awaiting_reply" | "replied" | "drafts" | "archived";
+                folder?: "all" | "awaiting_reply" | "replied" | "drafts" | "archived" | "assigned_to_me";
                 /** @description 收件殿司(租户 id)。 */
                 hall?: number;
                 /** @description Which field to use when ordering the results. */
@@ -14127,6 +14245,78 @@ export interface operations {
             };
         };
     };
+    v1_chat_inbox_assign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboxAssign"];
+                "application/x-www-form-urlencoded": components["schemas"]["InboxAssign"];
+                "multipart/form-data": components["schemas"]["InboxAssign"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerInbox"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_assignable_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                soul_a?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxOfficer"][];
+                };
+            };
+        };
+    };
     v1_chat_inbox_draft_retrieve: {
         parameters: {
             query?: never;
@@ -14327,6 +14517,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InboxState"];
+                };
+            };
+        };
+    };
+    v1_chat_inbox_unassign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this conversation. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerInbox"];
                 };
             };
         };
@@ -16982,6 +17194,8 @@ export interface operations {
                 month?: string;
                 /** @description 1-based page of the month's rows (20 per page) */
                 page?: number;
+                /** @description 灵魂姓名(包含)或灵魂 id(整条 UUID) */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -16995,6 +17209,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerJournal"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerJournalError"];
+                };
+            };
+        };
+    };
+    v1_ledger_journal_export_retrieve: {
+        parameters: {
+            query?: {
+                category?: string;
+                civilization?: string;
+                /** @description YYYY-MM; defaults to the current month */
+                month?: string;
+                /** @description 灵魂姓名(包含)或灵魂 id(整条 UUID) */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV, one row per MERIT / DEMERIT record of the month: Recorded At, Day, Soul ID, Soul Name, Type, Category, Description, Statute, Merit, Demerit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             400: {
@@ -21143,6 +21392,10 @@ export interface operations {
     v1_social_moderation_handled_list: {
         parameters: {
             query?: {
+                /** @description 处理日期起(含),YYYY-MM-DD */
+                date_from?: string;
+                /** @description 处理日期止(含),YYYY-MM-DD */
+                date_to?: string;
                 /** @description 只看隐藏或只看删除 */
                 handling?: "DELETED" | "HIDDEN";
                 /** @description Which field to use when ordering the results. */
@@ -23832,6 +24085,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulBatchRecycleError"];
+                };
+            };
+        };
+    };
+    v1_souls_export_retrieve: {
+        parameters: {
+            query: {
+                /** @description 逗号分隔的灵魂 id(UUID),至多 100 个 */
+                ids: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

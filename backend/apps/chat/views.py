@@ -34,9 +34,11 @@ from apps.chat.serializers import (
     ChatSessionSerializer,
     ConversationCreateSerializer,
     ConversationSerializer,
+    InboxAssignSerializer,
     InboxDraftSerializer,
     InboxFoldersSerializer,
     InboxMessageSerializer,
+    InboxOfficerSerializer,
     InboxReplyTemplateSerializer,
     InboxStateSerializer,
     MessageSendSerializer,
@@ -258,6 +260,10 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         # 草稿是没发出的回复:读、写、清都要能回复。
         "draft": ["soul_inbox.read", "soul_inbox.reply"],
         "reply": ["soul_inbox.reply"],
+        # 「标给同僚」:把回信的活交给别人,要的是能回信。名单同一个码名 —— 问的人就是能标的人。
+        "assign": ["soul_inbox.reply"],
+        "unassign": ["soul_inbox.reply"],
+        "assignable": ["soul_inbox.reply"],
     }
     serializer_class = OfficerInboxSerializer
     queryset = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX)
@@ -266,7 +272,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     def get_queryset(self):
         # 最近来信在前;从没来过信的排最后(PostgreSQL 的 DESC 默认把 NULL 放在最前)。
         qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related(
-            "soul_a", "tenant"
+            "soul_a", "tenant", "assignee"
         ).order_by(F("last_message_at").desc(nulls_last=True), "-created_at")
         return inbox.annotate_for(scope_to_tenant(qs, self.request), self.request.user)
 
@@ -347,6 +353,40 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         # 只有空白 = 清掉:恢复出一份全是空格的草稿没有意义。
         state = inbox.save_draft(conversation, request.user, text if text.strip() else "")
         return Response(InboxStateSerializer(state).data)
+
+    @extend_schema(responses={200: InboxOfficerSerializer(many=True)})
+    @action(detail=True, methods=["get"], pagination_class=None)
+    def assignable(self, request, pk=None):
+        """「标给同僚」的名单:这封信的收件殿司里能回信的在职官员。与 `assign` 问同一条规则。"""
+        return Response(InboxOfficerSerializer(inbox.assignable_officers(self.get_object()), many=True).data)
+
+    @extend_schema(request=InboxAssignSerializer,
+                   responses={200: OfficerInboxSerializer, 400: ChatErrorSerializer, 409: ChatErrorSerializer})
+    @action(detail=True, methods=["post"])
+    def assign(self, request, pk=None):
+        """标给一位同僚。会话不换殿:经办人必须是这个殿司里持有 `soul_inbox.reply` 的在职官员,
+        否则 400 `invalid_assignee`(不存在与在别的殿司答同一句)。已关闭的会话只读,409 `closed`。
+        标给别人时经官员通知告诉他;标给自己不发通知。"""
+        from apps.authentication.models import User
+
+        conversation = self.get_object()
+        if conversation.closed_at is not None:
+            return _error(svc.ChatError("会话已关闭(对方已转世),不能再交办。", "closed", status=409))
+        body = InboxAssignSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        target = User.objects.filter(pk=body.validated_data["user_id"]).select_related("tenant").first()
+        try:
+            inbox.assign(conversation, target, actor=request.user)
+        except inbox.InvalidAssigneeError as exc:
+            return _error(svc.ChatError(str(exc), "invalid_assignee", status=400))
+        return Response(OfficerInboxSerializer(self.get_queryset().get(pk=conversation.pk)).data)
+
+    @extend_schema(request=None, responses={200: OfficerInboxSerializer})
+    @action(detail=True, methods=["post"])
+    def unassign(self, request, pk=None):
+        """收回:清掉经办人。关闭的会话也可以(清掉遗留的交办)。"""
+        conversation = inbox.unassign(self.get_object())
+        return Response(OfficerInboxSerializer(self.get_queryset().get(pk=conversation.pk)).data)
 
     @extend_schema(request=OfficerReplySerializer,
                    responses={201: MessageSentSerializer, 409: ChatErrorSerializer,

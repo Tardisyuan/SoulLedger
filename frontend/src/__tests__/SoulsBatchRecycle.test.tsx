@@ -7,13 +7,16 @@
  * confirm in the recycle-bin wording) and 取消选择; the selection empties on a
  * page or filter change and on Esc; a refused batch names the refused souls BY
  * NAME, keeps the selection (nothing was deleted), and leaves the dialog open;
- * without `soul.delete` there is no column and no bar.
+ * without `soul.delete` the bar has no 移入回收站 (the column stays: 导出 needs only
+ * `soul.read`). 移交… carries exactly one soul into the dispatch form and, with
+ * several ticked, says so and goes nowhere; it is absent without `dispatch.manage`.
+ * 导出 sends the ticked ids and hands the body to `saveBlob`.
  *
  * The refusal is a real AxiosError run through the real
  * `soulBatchRecycleErrorOf`, so the page is tested against the shape the API
  * module actually recognises, not against a stub that agrees with the page.
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders } from "axios";
 import SoulsPage from "@/app/souls/page";
@@ -47,11 +50,19 @@ jest.mock("@soulledger/core/hooks/useSouls", () => ({
 }));
 const mockMutate = jest.fn();
 
+const mockExport = jest.fn();
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   PAGE_SIZE: 20,
-  soulsApi: { list: jest.fn().mockResolvedValue({ data: { count: 0, results: [] } }) },
+  soulsApi: {
+    list: jest.fn().mockResolvedValue({ data: { count: 0, results: [] } }),
+    export: (...args: unknown[]) => mockExport(...args),
+  },
 }));
+const mockPush = jest.fn();
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
+const mockSave = jest.fn();
+jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockSave(...args) }));
 
 let mockUser: Record<string, unknown> = { role: "OPERATOR", permissions: ["soul.read", "soul.delete"] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
@@ -90,7 +101,10 @@ function refusal(code: string, ids: string[]) {
 
 beforeEach(() => {
   mockMutate.mockReset();
-  mockUser = { role: "OPERATOR", permissions: ["soul.read", "soul.delete"] };
+  mockPush.mockReset();
+  mockExport.mockReset();
+  mockSave.mockReset();
+  mockUser = { role: "OPERATOR", permissions: ["soul.read", "soul.delete", "dispatch.manage"] };
 });
 
 it("the checkbox is its own control, outside the row link, and shows 已选 N", () => {
@@ -175,10 +189,41 @@ it("取消选择 and Esc both clear it", () => {
   expect(bar()).toBeNull();
 });
 
-it("without soul.delete there is no selection column and no bar", () => {
+it("without soul.delete or dispatch.manage the bar offers only 导出 and 取消选择", () => {
   mockUser = { role: "OPERATOR", permissions: ["soul.read"] };
   renderPage();
-  expect(screen.getByText("沈青梧")).toBeInTheDocument();
-  expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-  expect(bar()).toBeNull();
+  fireEvent.click(box("沈青梧"));
+  const b = within(bar() as HTMLElement);
+  expect(b.getByRole("button", { name: "souls.batch.export" })).toBeInTheDocument();
+  expect(b.queryByRole("button", { name: "souls.detail.confirm_delete_action" })).toBeNull();
+  expect(b.queryByRole("button", { name: "souls.batch.transfer" })).toBeNull();
+});
+
+it("移交… with one soul opens the dispatch form carrying it", () => {
+  renderPage();
+  fireEvent.click(box("周慕云"));
+  fireEvent.click(within(bar() as HTMLElement).getByRole("button", { name: "souls.batch.transfer" }));
+  expect(mockPush).toHaveBeenCalledWith("/dispatch/propose?soul=b2");
+});
+
+it("移交… with several souls says one at a time and goes nowhere", () => {
+  renderPage();
+  fireEvent.click(box("沈青梧"));
+  fireEvent.click(box("周慕云"));
+  fireEvent.click(within(bar() as HTMLElement).getByRole("button", { name: "souls.batch.transfer" }));
+  expect(mockPush).not.toHaveBeenCalled();
+  expect(within(bar() as HTMLElement).getByRole("status")).toHaveTextContent("souls.batch.transfer_one_only:2");
+  // Narrowing the selection takes the note away with it.
+  fireEvent.click(box("沈青梧"));
+  expect(within(bar() as HTMLElement).queryByRole("status")).toBeNull();
+});
+
+it("导出 sends exactly the ticked ids and saves the file", async () => {
+  mockExport.mockResolvedValue({ data: "csv-body" });
+  renderPage();
+  fireEvent.click(box("沈青梧"));
+  fireEvent.click(box("周慕云"));
+  fireEvent.click(within(bar() as HTMLElement).getByRole("button", { name: "souls.batch.export" }));
+  expect(mockExport).toHaveBeenCalledWith(["a1", "b2"]);
+  await waitFor(() => expect(mockSave).toHaveBeenCalledWith("csv-body", "souls_export.csv"));
 });

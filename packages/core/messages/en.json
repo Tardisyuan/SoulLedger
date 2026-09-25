@@ -340,7 +340,11 @@
       "refused_reason": {
         "not_found": "No longer exists, or is outside your scope.",
         "not_deletable": "Has a concluded judgment: it cannot be deleted, only archived."
-      }
+      },
+      "transfer": "Transfer…",
+      "transfer_one_only": "A transfer carries one soul at a time; {{n}} are selected. Tick just one, or start them one by one.",
+      "export": "Export",
+      "export_failed": "Export failed"
     }
   },
   "common": {
@@ -630,7 +634,8 @@
         "builtin_role": "Refused: built-in roles cannot be deleted.",
         "role_in_use": "Refused: {{n}} members still hold this role. Reassign them first.",
         "role_referenced_by_workflow_templates": "Refused: {{n}} workflows still refer to it. Change them first."
-      }
+      },
+      "description": "Description"
     }
   },
   "workflow": {
@@ -1011,7 +1016,10 @@
       "empty_title": "No entries this period",
       "empty_reason": "Nothing was recorded in {{month}}; opening = closing = {{opening}}.",
       "load_failed": "The journal failed to load",
-      "row_hint": "Click a row for that soul's merit & demerit"
+      "row_hint": "Click a row for that soul's merit & demerit",
+      "search": "Soul name or ID",
+      "export": "Export",
+      "export_failed": "Export failed"
     }
   },
   "judgment": {
@@ -1245,7 +1253,11 @@
         "not_found": "Some judgments no longer exist",
         "permission_denied": "Permission denied",
         "generic": "The action did not go through"
-      }
+      },
+      "civilization_all": "Civilization · all",
+      "sort": "Sort",
+      "sort_oldest": "Sort · longest waiting",
+      "sort_newest": "Sort · newest first"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -3085,6 +3097,10 @@
     "sentence_plan_cancelled": {
       "title": "Sentence plan cancelled",
       "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."
+    },
+    "soul_inbox_assigned": {
+      "title": "A letter handed to you",
+      "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."
     }
   },
   "social_moderation": {
@@ -3285,7 +3301,11 @@
       "col_by": "Handled by",
       "read_only": "Read-only: the handling is in effect.",
       "restore": "Make visible again",
-      "in_recycle_bin": "In the recycle bin"
+      "in_recycle_bin": "In the recycle bin",
+      "range": "Time",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_all": "All time"
     }
   },
   "soul_inbox": {
@@ -3310,7 +3330,8 @@
       "closed": "The soul has been reborn; this conversation is closed",
       "not_inbox": "This is not a hall inbox",
       "chat_not_configured": "Chat is not enabled",
-      "chat_unavailable": "Chat is temporarily unavailable"
+      "chat_unavailable": "Chat is temporarily unavailable",
+      "invalid_assignee": "That officer cannot take this hall's letters"
     },
     "folders": "Folders",
     "folder": {
@@ -3320,7 +3341,8 @@
       "awaiting_reply": "Awaiting reply",
       "replied": "Replied",
       "drafts": "Drafts",
-      "archived": "Archived"
+      "archived": "Archived",
+      "assigned_to_me": "Handed to me"
     },
     "by_hall": "By hall",
     "folder_empty": "No letters in this folder",
@@ -3356,6 +3378,18 @@
       "saved": "Template saved",
       "deleted": "Template deleted",
       "empty_manage": "This hall has no templates yet. Save a reply you write often, then insert it with one click."
+    },
+    "assign": {
+      "action": "Hand to a colleague…",
+      "title": "Hand to a colleague",
+      "to": "Hand to",
+      "hint": "Only serving officers of this hall who can reply are listed. The letter stays in this hall.",
+      "none": "No colleague in this hall can take it",
+      "confirm": "Hand over",
+      "done": "Handed to {{name}}",
+      "assignee": "With {{name}}",
+      "unassign": "Take back",
+      "unassigned_done": "Taken back"
     }
   },
   "sentence_plan": {

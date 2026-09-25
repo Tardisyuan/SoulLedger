@@ -644,6 +644,37 @@ class TestQueueList:
         got = _ids(world.clients["a"].get(BASE, {"court": "第二殿"}))
         assert got == {str(four_groups["unclaimed"].pk)}
 
+    def test_civilization_narrows_the_rows_and_the_counts_together(self, world, four_groups):
+        # 队列页的「文明」下拉:同一个参数进列表与 queue-counts。
+        Judgment.all_objects.filter(pk=four_groups["unclaimed"].pk).update(civilization="EUROPEAN")
+        client = world.clients["a"]
+        assert _ids(client.get(BASE, {"group": "unclaimed", "civilization": "EUROPEAN"})) == {
+            str(four_groups["unclaimed"].pk)
+        }
+        assert _ids(client.get(BASE, {"group": "unclaimed", "civilization": "CHINESE"})) == set()
+        counts = client.get(f"{BASE}queue-counts/", {"civilization": "CHINESE"}).data
+        assert counts == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3}
+        # 另一租户的欧洲案子不因文明筛选漏进来。
+        assert str(four_groups["foreign"].pk) not in _ids(client.get(BASE, {"civilization": "EUROPEAN"}))
+
+    def test_the_sort_dropdown_orders_by_waiting_time_both_ways(self, world):
+        import datetime as dt
+
+        from django.utils import timezone
+
+        old = _case(world.cn, name="久候")
+        new = _case(world.cn, name="新到")
+        Judgment.all_objects.filter(pk=old.pk).update(created_at=timezone.now() - dt.timedelta(days=30))
+        client = world.clients["a"]
+
+        def order(ordering):
+            response = client.get(BASE, {"group": "unclaimed", "ordering": ordering})
+            assert response.status_code == 200
+            return [row["id"] for row in response.data["results"]]
+
+        assert order("created_at") == [str(old.pk), str(new.pk)]
+        assert order("-created_at") == [str(new.pk), str(old.pk)]
+
     def test_search_by_soul_name_soul_id_and_judgment_id(self, world, four_groups):
         target = four_groups["others"]
         client = world.clients["a"]

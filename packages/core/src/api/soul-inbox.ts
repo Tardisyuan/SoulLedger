@@ -17,9 +17,12 @@ export type InboxMessage = Schemas["InboxMessage"];
 export type InboxFolderCounts = Schemas["InboxFolders"];
 export type InboxState = Schemas["InboxState"];
 export type InboxReplyTemplate = Schemas["InboxReplyTemplate"];
+/** An officer: a conversation's assignee, or one candidate in 「标给同僚」. */
+export type InboxOfficer = Schemas["InboxOfficer"];
 
-/** The server's folders (`inbox.FOLDERS`). `awaiting_reply` comes oldest first; the rest newest first. */
-export type InboxFolder = "all" | "awaiting_reply" | "replied" | "drafts" | "archived";
+/** The server's folders (`inbox.FOLDERS`). `awaiting_reply` comes oldest first; the rest newest first.
+ *  `assigned_to_me` (交给我的) cuts across the others, like `drafts`: the caller is the conversation's assignee. */
+export type InboxFolder = "all" | "awaiting_reply" | "replied" | "drafts" | "archived" | "assigned_to_me";
 
 export interface InboxListParams {
   page?: number;
@@ -43,6 +46,16 @@ export const soulInboxApi = {
   /** Blank (or whitespace only) clears it. 409 `closed`: a closed thread is read-only. */
   saveDraft: (id: string, body: string) => api.put<InboxState>(`/chat/inbox/${id}/draft/`, { body }),
   clearDraft: (id: string) => api.delete<InboxState>(`/chat/inbox/${id}/draft/`),
+  /**
+   * 「标给同僚」. The assignee is shared by the hall (not the caller's own, unlike the three above), and
+   * the letter never changes hall: 400 `invalid_assignee` unless the user is a serving officer of THIS hall
+   * holding `soul_inbox.reply`; 409 `closed` on a closed thread. The assignee is notified.
+   */
+  assign: (id: string, userId: number) =>
+    api.post<InboxConversation>(`/chat/inbox/${id}/assign/`, { user_id: userId }),
+  unassign: (id: string) => api.post<InboxConversation>(`/chat/inbox/${id}/unassign/`),
+  /** Who `assign` accepts for this conversation — the same rule, by username. */
+  assignable: (id: string) => api.get<InboxOfficer[]>(`/chat/inbox/${id}/assignable/`),
 };
 
 /** `/api/v1/chat/inbox-templates/` — the hall's reply templates. Every action needs `soul_inbox.reply`. Not paginated. */

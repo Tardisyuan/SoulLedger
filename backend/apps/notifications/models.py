@@ -42,6 +42,8 @@ class NotificationType(models.TextChoices):
     SENTENCE_PLAN_CANCELLED = "SENTENCE_PLAN_CANCELLED", "Sentence Plan Cancelled"
     # 登录页「忘记密码」→ 本殿管理员(apps/authentication/tasks.py::notify_password_help)。
     PASSWORD_HELP_REQUESTED = "PASSWORD_HELP_REQUESTED", "Password Help Requested"
+    # 殿司收件箱「标给同僚」→ 被标给的那位官员(apps/chat/inbox.py::assign)。
+    SOUL_INBOX_ASSIGNED = "SOUL_INBOX_ASSIGNED", "Soul Inbox Assigned"
 
 
 class UserNotification(AuditUserFields, models.Model):

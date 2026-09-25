@@ -67,6 +67,9 @@ export interface HandledFilters {
   type?: HandledContent["type"];
   handling?: HandledContent["handling"];
   page?: number;
+  /** 处理日期闭区间,YYYY-MM-DD,按服务端时区切日。 */
+  date_from?: string;
+  date_to?: string;
 }
 
 export const socialModerationApi = {

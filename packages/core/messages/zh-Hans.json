@@ -340,7 +340,11 @@
       "refused_reason": {
         "not_found": "已不存在，或不在你的范围内。",
         "not_deletable": "已有结案审判，不能删除，只能归档。"
-      }
+      },
+      "transfer": "移交…",
+      "transfer_one_only": "发起移交一次只带一个灵魂，已选 {{n}} 个。请只勾选一个，或逐个发起。",
+      "export": "导出",
+      "export_failed": "导出失败"
     }
   },
   "common": {
@@ -630,7 +634,8 @@
         "builtin_role": "删除被拒绝：内置角色不可删除。",
         "role_in_use": "删除被拒绝：仍有 {{n}} 名成员持有此角色。先给他们换角色。",
         "role_referenced_by_workflow_templates": "删除被拒绝：仍被 {{n}} 条审批流引用。先改这些审批流。"
-      }
+      },
+      "description": "说明"
     }
   },
   "workflow": {
@@ -1011,7 +1016,10 @@
       "empty_title": "本期没有流水",
       "empty_reason": "{{month}} 尚无功过登记;旧管 = 实在 = {{opening}}。",
       "load_failed": "功过总账加载失败",
-      "row_hint": "整行可点 → 该户详情「乙 · 功过」"
+      "row_hint": "整行可点 → 该户详情「乙 · 功过」",
+      "search": "灵魂姓名或 ID",
+      "export": "导出",
+      "export_failed": "导出失败"
     }
   },
   "judgment": {
@@ -1245,7 +1253,11 @@
         "not_found": "有审判已不存在",
         "permission_denied": "没有权限",
         "generic": "操作未能完成"
-      }
+      },
+      "civilization_all": "文明 · 全部",
+      "sort": "排序",
+      "sort_oldest": "排序 · 等待最久",
+      "sort_newest": "排序 · 最近入队"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -3085,6 +3097,10 @@
     "sentence_plan_cancelled": {
       "title": "受刑计划已撤销",
       "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"
+    },
+    "soul_inbox_assigned": {
+      "title": "来信交给你办",
+      "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"
     }
   },
   "social_moderation": {
@@ -3285,7 +3301,11 @@
       "col_by": "处理人",
       "read_only": "只读：处理已生效。",
       "restore": "恢复可见",
-      "in_recycle_bin": "在回收站"
+      "in_recycle_bin": "在回收站",
+      "range": "时间",
+      "range_30d": "近 30 天",
+      "range_90d": "近 90 天",
+      "range_all": "全部时间"
     }
   },
   "soul_inbox": {
@@ -3310,7 +3330,8 @@
       "closed": "对方已转世,会话已关闭",
       "not_inbox": "这不是殿司收件箱",
       "chat_not_configured": "聊天服务未启用",
-      "chat_unavailable": "聊天服务暂时不可用"
+      "chat_unavailable": "聊天服务暂时不可用",
+      "invalid_assignee": "这位官员不能经办本殿司的来信"
     },
     "folders": "文件夹",
     "folder": {
@@ -3320,7 +3341,8 @@
       "awaiting_reply": "待回复",
       "replied": "已回复",
       "drafts": "草稿",
-      "archived": "归档"
+      "archived": "归档",
+      "assigned_to_me": "交给我的"
     },
     "by_hall": "按殿",
     "folder_empty": "这个文件夹里没有来信",
@@ -3356,6 +3378,18 @@
       "saved": "模板已保存",
       "deleted": "模板已删除",
       "empty_manage": "这个殿司还没有模板。常用的回复存成模板,回复时一键插入。"
+    },
+    "assign": {
+      "action": "标给同僚…",
+      "title": "标给同僚",
+      "to": "交给",
+      "hint": "只列本殿司能回复来信的在职官员。信不换殿。",
+      "none": "本殿司没有可交的同僚",
+      "confirm": "标给",
+      "done": "已交给 {{name}}",
+      "assignee": "经办 · {{name}}",
+      "unassign": "收回",
+      "unassigned_done": "已收回"
     }
   },
   "sentence_plan": {

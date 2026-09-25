@@ -19,10 +19,13 @@ router 注册的 viewset 逐条断言)。这里额外一条:官员只审**灵魂
 from django.db import models
 from django.db.models import Case, Count, F, Prefetch, Q, Value, When
 from django.db.models.functions import Substr
+from django.utils.dateparse import parse_date
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
@@ -452,7 +455,7 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
     TYPES = {ReportTargetType.POST: Post, ReportTargetType.COMMENT: Comment}
     HANDLINGS = ("HIDDEN", "DELETED")
 
-    def _part(self, base, model, kind, handling):
+    def _part(self, base, model, kind, handling, date_from=None, date_to=None):
         qs = base.filter(author__role="SOUL")
         hidden = Q(is_deleted=False, moderation_status=ModerationStatus.HIDDEN)
         deleted = Q(is_deleted=True) & DELETED_BY_OFFICER
@@ -461,7 +464,7 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
         def pick(if_deleted, if_hidden, field):
             return Case(When(is_deleted=True, then=F(if_deleted)), default=F(if_hidden), output_field=field)
 
-        return qs.annotate(
+        qs = qs.annotate(
             row_type=Value(kind, output_field=models.CharField()),
             row_id=F("id"),
             post_ref=F("id") if model is Post else F("post_id"),
@@ -476,19 +479,41 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
             handled_by_ref=pick("deleted_by_id", "moderated_by_id", models.IntegerField()),
             handled_by_name=pick("deleted_by__display_name", "moderated_by__display_name", models.CharField()),
             handled_at=pick("deleted_at", "moderated_at", models.DateTimeField()),
-        ).order_by().values(*self.COLUMNS)  # 各部分不能带 Meta.ordering:UNION 的子查询不许 ORDER BY
+        )
+        # 处理日期,闭区间,按服务端时区(`settings.TIME_ZONE`)切日 —— `__date` 在 USE_TZ 下
+        # 先换到当前时区再取日期。处理时间为空的旧行(0007 之前隐藏的)在任何日期筛选下都不出现。
+        if date_from:
+            qs = qs.filter(handled_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(handled_at__date__lte=date_to)
+        return qs.order_by().values(*self.COLUMNS)  # 各部分不能带 Meta.ordering:UNION 的子查询不许 ORDER BY
 
     COLUMNS = (
         "row_type", "row_id", "post_ref", "author_ref", "author_name", "excerpt",
         "handling", "handled_reason", "handled_by_ref", "handled_by_name", "handled_at",
     )
 
+    @staticmethod
+    def _date(params, name):
+        """`YYYY-MM-DD` 或空;别的一律 400(`parse_date` 对 2026-02-30 抛 ValueError,不能让它 500)。"""
+        raw = params.get(name)
+        if not raw:
+            return None
+        try:
+            value = parse_date(raw)
+        except ValueError:
+            value = None
+        if value is None:
+            raise ValidationError({name: f"'{raw}' is not a date (expected YYYY-MM-DD)."})
+        return value
+
     def get_queryset(self):
         params = self.request.query_params
         kind, handling = params.get("type"), params.get("handling")
+        date_from, date_to = self._date(params, "date_from"), self._date(params, "date_to")
         # `all_objects`:删除的行也要。每个模型各自过一次租户隔离。
         parts = [
-            self._part(scope_to_tenant(model.all_objects.all(), self.request), model, k, handling)
+            self._part(scope_to_tenant(model.all_objects.all(), self.request), model, k, handling, date_from, date_to)
             for k, model in self.TYPES.items()
             if kind in (None, "", k)
         ]
@@ -501,6 +526,8 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
         parameters=[
             OpenApiParameter("type", str, enum=[k.value for k in TYPES], description="只看帖子或只看评论"),
             OpenApiParameter("handling", str, enum=list(HANDLINGS), description="只看隐藏或只看删除"),
+            OpenApiParameter("date_from", OpenApiTypes.DATE, description="处理日期起(含),YYYY-MM-DD"),
+            OpenApiParameter("date_to", OpenApiTypes.DATE, description="处理日期止(含),YYYY-MM-DD"),
         ],
         responses={200: HandledContentSerializer(many=True)},
     )

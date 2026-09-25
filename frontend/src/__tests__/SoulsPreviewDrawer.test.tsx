@@ -39,6 +39,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 // The real gate runs (suiteShape forbids stubbing it); an ADMIN session lets it through.
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { role: "ADMIN" } }),
 }));
