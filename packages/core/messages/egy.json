@@ -3101,7 +3101,8 @@
       "select_row": "Setep {{word}}",
       "batch_region": "Aha Seth Wu · Medu Djeseru",
       "delete_selected": "Fekh Setep Seth",
-      "confirm_title": "Fekh {{n}} Medu Djeseru?"
+      "confirm_title": "Fekh {{n}} Medu Djeseru?",
+      "category_placeholder": "— Setep Ra —"
     },
     "mutes": {
       "col_soul": "Ba",

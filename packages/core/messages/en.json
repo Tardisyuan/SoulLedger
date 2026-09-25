@@ -3101,7 +3101,8 @@
       "select_row": "Select {{word}}",
       "batch_region": "Word list batch actions",
       "delete_selected": "Delete selected",
-      "confirm_title": "Delete {{n}} words?"
+      "confirm_title": "Delete {{n}} words?",
+      "category_placeholder": "— choose a category —"
     },
     "mutes": {
       "col_soul": "Soul",

@@ -72,13 +72,15 @@ def test_the_word_list_is_per_civilization(cn_tenant, eu_tenant):
 
 def test_adding_and_removing_a_word_is_audited(cn_tenant, admin_user):
     client = officer_client(admin_user)
-    res = client.post(f"{MODERATION}/sensitive-words/", {"word": " 违禁词 "}, format="json")
+    res = client.post(f"{MODERATION}/sensitive-words/", {"word": " 违禁词 ", "category": "ABUSE"}, format="json")
     assert res.status_code == 201, res.content
     word_id = res.json()["id"]
     assert SensitiveWord.objects.get(pk=word_id).word == "违禁词", "没有归一化(去空白、小写)"
     assert audit_rows(word_id).filter(action="CREATE").count() == 1
 
-    assert client.post(f"{MODERATION}/sensitive-words/", {"word": "违禁词"}, format="json").status_code == 409
+    assert client.post(
+        f"{MODERATION}/sensitive-words/", {"word": "违禁词", "category": "ABUSE"}, format="json"
+    ).status_code == 409
     assert client.delete(f"{MODERATION}/sensitive-words/{word_id}/").status_code == 204
     assert audit_rows(word_id).filter(action="DELETE").count() == 1
 

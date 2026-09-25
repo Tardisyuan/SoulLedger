@@ -121,6 +121,15 @@ class SensitiveWordSerializer(serializers.ModelSerializer):
         return getattr(row, "hits_30d", 0) or 0
 
 
+class SensitiveWordCreateSerializer(SensitiveWordSerializer):
+    """Body of `POST sensitive-words/`: a new word must name its category
+    (maintainer decision, 2026-09-25). Words added before that stay
+    uncategorised ("" in the list); there is no edit endpoint, so nothing ever
+    asks an existing word for one."""
+
+    category = serializers.ChoiceField(choices=SensitiveWordCategory.choices)
+
+
 class SensitiveWordBatchDeleteSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=200)
 

@@ -3101,7 +3101,8 @@
       "select_row": "选择「{{word}}」",
       "batch_region": "敏感词批量操作",
       "delete_selected": "删除所选",
-      "confirm_title": "删除 {{n}} 个敏感词？"
+      "confirm_title": "删除 {{n}} 个敏感词？",
+      "category_placeholder": "— 选择类别 —"
     },
     "mutes": {
       "col_soul": "灵魂",

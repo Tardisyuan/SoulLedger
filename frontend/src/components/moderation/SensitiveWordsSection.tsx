@@ -27,7 +27,8 @@ const CATEGORIES: SensitiveWordCategory[] = ["PRIVACY", "ABUSE", "INDUCEMENT", "
 const ACTIONS: SensitiveWordAction[] = ["REVIEW", "HIDE", "MASK"];
 
 /**
- * 敏感词(E-08b)。新增是列表顶部的一行 —— 词 · 类别 · 命中后,回车即加,不开弹层。
+ * 敏感词(E-08b)。新增是列表顶部的一行 —— 词 · 类别 · 命中后,回车即加,不开弹层。类别必选(2026-09-25):
+ * 没选类别「添加」不可点、回车也不提交;服务端同样拒收。旧词仍显示「未分类」。
  * 删除只能先勾选、再从批量条删(batch-delete,全有或全无);行尾不放删除按钮。
  *
  * The canvas also draws 「改动作…」 in the batch bar and an edit drawer on row
@@ -58,9 +59,9 @@ export function SensitiveWordsSection() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!word.trim() || add.isPending) return;
+    if (!word.trim() || !category || add.isPending) return;
     add.mutate(
-      { word: word.trim(), ...(category ? { category } : {}), action },
+      { word: word.trim(), category, action },
       {
         onSuccess: () => {
           setWord("");
@@ -103,9 +104,12 @@ export function SensitiveWordsSection() {
           value={category}
           onChange={(e) => setCategory(e.target.value as SensitiveWordCategory | "")}
           aria-label={t("social_moderation.words.col_category")}
+          required
           className={fieldControl({ size: "md" })}
         >
-          <option value="">{t("social_moderation.word_category.NONE")}</option>
+          <option value="" disabled>
+            {t("social_moderation.words.category_placeholder")}
+          </option>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {t(`social_moderation.word_category.${c}`)}
@@ -124,7 +128,13 @@ export function SensitiveWordsSection() {
             </option>
           ))}
         </select>
-        <Button type="submit" variant="primary" loading={add.isPending} disabled={!word.trim()} className="col-span-2 md:col-span-1">
+        <Button
+          type="submit"
+          variant="primary"
+          loading={add.isPending}
+          disabled={!word.trim() || !category}
+          className="col-span-2 md:col-span-1"
+        >
           {t("social_moderation.actions.add_word")}
           <span aria-hidden="true" className="ml-1 font-mono">⏎</span>
         </Button>
