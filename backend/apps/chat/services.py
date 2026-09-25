@@ -34,7 +34,7 @@ ponytail: 到期靠懒同步;要准点解禁再加一个按 `until` 排的任务
 **审计不含正文。** `audit()` 写的是「谁对哪个会话做了什么」,body 一个字都不传进去。
 """
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
@@ -486,6 +486,8 @@ def notify_new_message(room_id, event_id, sender):
                     .select_related(*ACCOUNT_JOINS, "tenant").first())
     if conversation is None:
         return []
+    if conversation.kind == ConversationKind.OFFICER_INBOX:
+        record_inbox_event(conversation)
     # 「只推本世账号」由上一行的 `closed_at` 兑现:转世停用账号时先关它参与的每个会话
     # (`deactivate_for_account`),所以未关闭会话里的账号都是本世的。
     recipient, sender_name = _recipient(conversation, sender)
@@ -573,8 +575,10 @@ def send_inbox_message(account, conversation, body, *, request=None):
     identity = _live_identity(account)
     client = get_client()
     event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
-    conversation.last_message_at = timezone.now()
-    conversation.save(update_fields=["last_message_at"])
+    now = timezone.now()
+    conversation.last_message_at = conversation.last_soul_message_at = now
+    conversation.last_from = SOUL
+    conversation.save(update_fields=["last_message_at", "last_soul_message_at", "last_from"])
     audit("EXECUTE", conversation, f"致殿司:{conversation.tenant.display_name}",
           actor=account.user, request=request)
     return event_id
@@ -593,7 +597,9 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
         )
     }
     rows = []
-    for message in client.recent_messages(conversation.room_id, limit=limit):
+    timeline = client.recent_messages(conversation.room_id, limit=limit)
+    reconcile_inbox(conversation, timeline, client.service_user)
+    for message in timeline:
         from_officer = message["sender"] == client.service_user
         rows.append({
             "event_id": message["event_id"],
@@ -634,6 +640,64 @@ def officer_reply(conversation, officer, body, *, request=None):
         extra={OFFICER: officer.get_full_name() or officer.username, OFFICER_TITLE: officer_title(officer)},
     )
     conversation.last_message_at = timezone.now()
-    conversation.save(update_fields=["last_message_at"])
+    conversation.last_from = HALL
+    conversation.save(update_fields=["last_message_at", "last_from"])
     audit("EXECUTE", conversation, "殿司回复", actor=officer, request=request)
     return event_id
+
+
+# ── 收件箱:谁最后说话 ───────────────────────────────────────────────────
+
+SOUL, HALL = "soul", "hall"
+
+
+def reconcile_inbox(conversation, timeline, service_user):
+    """按 Synapse 的时间线(新的在前)重写 `last_from`,把 `last_soul_message_at` / `last_message_at`
+    只往后推。
+
+    `last_from` 取时间线**最新一封**的发送者,是覆盖不是取大:谁最后说话由 Synapse 的顺序定,
+    不由我们哪一处先写到。时刻只往后推(`max`):时间线只有最近 N 封,而且时刻来自 Synapse 的钟,
+    不能拿它把我们自己记下的更晚时刻改早。时间线为空(没有消息,或 N 封全是别的事件类型)不动。
+    """
+    if not timeline:
+        return
+    newest = timeline[0]
+    last_from = HALL if newest["sender"] == service_user else SOUL
+    fields = {}
+    if conversation.last_from != last_from:
+        fields["last_from"] = last_from
+    stamp = datetime.fromtimestamp(newest["timestamp"] / 1000, tz=UTC)
+    if conversation.last_message_at is None or stamp > conversation.last_message_at:
+        fields["last_message_at"] = stamp
+    soul_ts = next((m["timestamp"] for m in timeline if m["sender"] != service_user), None)
+    if soul_ts is not None:
+        soul_at = datetime.fromtimestamp(soul_ts / 1000, tz=UTC)
+        if conversation.last_soul_message_at is None or soul_at > conversation.last_soul_message_at:
+            fields["last_soul_message_at"] = soul_at
+    if fields:
+        for name, value in fields.items():
+            setattr(conversation, name, value)
+        Conversation.objects.filter(pk=conversation.pk).update(**fields)
+
+
+def record_inbox_event(conversation, *, client=None):
+    """Synapse 回调了一封收件箱里的新消息(`notify_new_message`)。
+
+    这是「灵魂绕过后端、直接在 Matrix 里写」的那一封**唯一**被我们看见的地方:灵魂在收件箱房间里
+    是 50 级,能直接发;App 走后端,但别的 Matrix 客户端不必。所以这里问 Synapse 一次最新的几封,
+    而不是信回调里的 sender —— 回调在后台进程里跑、可能晚到,晚到的一封灵魂来信不能盖掉
+    它之后已经发出的殿司回复。
+
+    问不到(Synapse 此刻不可达)只记日志:下一次回调或官员打开线程时补。
+    """
+    try:
+        client = client or get_client()
+        reconcile_inbox(conversation, client.recent_messages(conversation.room_id, limit=INBOX_PEEK),
+                        client.service_user)
+    except MatrixError as exc:
+        logger.warning("chat: 收件箱回调时读时间线失败 room=%s: %s(下次补)", conversation.room_id, exc)
+
+
+#: 回调时读最新几封。不是 1:`/messages` 的 limit 按**事件**数,过滤掉非 `m.room.message` 之后
+#: 可能一封不剩。
+INBOX_PEEK = 10

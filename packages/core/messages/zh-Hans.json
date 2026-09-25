@@ -3155,7 +3155,11 @@
     "folder": {
       "all": "全部来信",
       "open": "往来中",
-      "closed": "已关闭"
+      "closed": "已关闭",
+      "awaiting_reply": "待回复",
+      "replied": "已回复",
+      "drafts": "草稿",
+      "archived": "归档"
     },
     "by_hall": "按殿",
     "folder_empty": "这个文件夹里没有来信",
@@ -3168,7 +3172,30 @@
     "cite_hint": "/ 引用律条",
     "cite_label": "律条",
     "cite_results": "{{n}} 条律条,↑↓ 选择,回车插入",
-    "cite_empty": "没有匹配的律条"
+    "cite_empty": "没有匹配的律条",
+    "oldest_first": "最早在上",
+    "unread": "未读",
+    "archive": "归档",
+    "unarchive": "移回收件",
+    "archived_done": "已归档",
+    "unarchived_done": "已移回收件",
+    "save_draft": "存草稿",
+    "draft_saving": "正在保存草稿…",
+    "draft_saved": "草稿已保存 · {{time}}",
+    "draft_failed": "草稿没有保存,请重试",
+    "template": {
+      "label": "模板",
+      "pick": "插入模板",
+      "none": "还没有模板",
+      "manage": "管理模板",
+      "new": "新建模板",
+      "title": "标题",
+      "body": "正文",
+      "placeholders": "发送前替换为灵魂名与殿名:",
+      "saved": "模板已保存",
+      "deleted": "模板已删除",
+      "empty_manage": "这个殿司还没有模板。常用的回复存成模板,回复时一键插入。"
+    }
   },
   "sentence_plan": {
     "panel_title": "受刑计划",

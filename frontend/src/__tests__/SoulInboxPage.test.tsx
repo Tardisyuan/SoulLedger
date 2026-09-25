@@ -11,11 +11,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulInboxPage from "@/app/soul-inbox/page";
 import { tZh } from "./support/zhBundle";
 
+// 只换掉网络那一层;`renderTemplate` 与占位符表用真的 —— 模板替换正是被测的行为。
 jest.mock("@soulledger/core/api/soul-inbox", () => ({
-  soulInboxApi: { list: jest.fn(), messages: jest.fn(), reply: jest.fn() },
+  ...jest.requireActual("@soulledger/core/api/soul-inbox"),
+  soulInboxApi: {
+    list: jest.fn(), folders: jest.fn(), messages: jest.fn(), reply: jest.fn(), markRead: jest.fn(),
+    archive: jest.fn(), unarchive: jest.fn(), draft: jest.fn(), saveDraft: jest.fn(), clearDraft: jest.fn(),
+  },
+  inboxTemplatesApi: { list: jest.fn(), create: jest.fn(), update: jest.fn(), remove: jest.fn() },
 }));
-const { soulInboxApi: apiMock } = jest.requireMock("@soulledger/core/api/soul-inbox") as {
+const { soulInboxApi: apiMock, inboxTemplatesApi: templatesMock } = jest.requireMock("@soulledger/core/api/soul-inbox") as {
   soulInboxApi: Record<string, jest.Mock>;
+  inboxTemplatesApi: Record<string, jest.Mock>;
 };
 // 回复框的 `/` 律条检索走 judgmentApi.statutes;其余照旧用真模块。
 jest.mock("@soulledger/core/api", () => ({
@@ -47,10 +54,20 @@ const conversation = (over: Record<string, unknown> = {}) => ({
   tenant_name: "中国地府",
   hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" },
   last_message_at: "2026-09-18T01:00:00Z",
+  last_soul_message_at: "2026-09-18T00:30:00Z",
+  last_from: "hall",
+  unread: false,
+  has_draft: false,
+  archived: false,
   created_at: "2026-09-18T00:00:00Z",
   closed_at: null,
   ...over,
 });
+const COUNTS = {
+  all: 1, awaiting_reply: 0, replied: 1, drafts: 0, archived: 0, unread: 0, open: 1, closed: 0,
+  halls: [{ tenant: 1, hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, count: 1 }],
+};
+const noDraft = { data: { last_read_at: null, archived_at: null, draft: "", draft_saved_at: null } };
 // 接口新的在前。
 const MESSAGES = [
   { event_id: "$2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到", timestamp: 2000 },
@@ -77,6 +94,15 @@ beforeEach(() => {
   apiMock.list.mockResolvedValue(page([conversation()]));
   apiMock.messages.mockResolvedValue({ data: MESSAGES });
   apiMock.reply.mockResolvedValue({ data: { event_id: "$3" } });
+  apiMock.folders.mockResolvedValue({ data: COUNTS });
+  apiMock.markRead.mockResolvedValue(noDraft);
+  apiMock.archive.mockResolvedValue(noDraft);
+  apiMock.unarchive.mockResolvedValue(noDraft);
+  apiMock.draft.mockResolvedValue(noDraft);
+  apiMock.saveDraft.mockImplementation((_id: string, body: string) =>
+    Promise.resolve({ data: { ...noDraft.data, draft: body.trim() ? body : "", draft_saved_at: "2026-09-18T03:00:00Z" } })
+  );
+  templatesMock.list.mockResolvedValue({ data: [] });
 });
 
 it("refuses the page without soul_inbox.read and asks the API nothing", () => {
@@ -140,6 +166,7 @@ it("a refusal says what the server's code means", async () => {
 it("an empty inbox says so and asks for no thread", async () => {
   asRole("soul_inbox.read");
   apiMock.list.mockResolvedValue(page([]));
+  apiMock.folders.mockResolvedValue({ data: { ...COUNTS, all: 0, replied: 0, open: 0, halls: [] } });
   renderPage();
   expect(await screen.findByText(tZh("soul_inbox.empty"))).toBeInTheDocument();
   expect(apiMock.messages).not.toHaveBeenCalled();
@@ -147,31 +174,160 @@ it("an empty inbox says so and asks for no thread", async () => {
 
 // ── 设计稿 C · 09:三栏、文件夹、待回复、收起、`/` 援引 ──
 
-it("folders are what the API can answer: closed ones filter to the reborn, with true counts", async () => {
+it("folder counts are the server's totals, and a folder asks the server for its rows", async () => {
   asRole("soul_inbox.read");
-  apiMock.list.mockResolvedValue(
-    page([conversation(), conversation({ id: "c2", soul_name: "李四", closed_at: "2026-09-18T02:00:00Z" })])
-  );
+  // 第一页只回一行,计数却是 5 / 12:计数来自 `folders/`,不是数这一页。
+  apiMock.folders.mockResolvedValue({ data: { ...COUNTS, all: 12, awaiting_reply: 5, drafts: 1, closed: 2 } });
   renderPage();
   const folders = await screen.findByRole("navigation", { name: tZh("soul_inbox.folders") });
-  const closed = within(folders).getByRole("button", { name: new RegExp(tZh("soul_inbox.folder.closed")) });
-  expect(closed).toHaveTextContent("1");
-  fireEvent.click(closed);
-  const list = screen.getByRole("list", { name: tZh("soul_inbox.list_label") });
-  expect(within(list).getByRole("button", { name: /李四/ })).toBeInTheDocument();
-  // Absence: the open one is filtered out, not merely re-ordered.
-  expect(within(list).queryByRole("button", { name: /张三/ })).toBeNull();
+  const button = (key: string) => within(folders).getByRole("button", { name: new RegExp(`^${tZh(key)}`) });
+  await waitFor(() => expect(button("soul_inbox.folder.awaiting_reply")).toHaveTextContent("5"));
+  expect(button("soul_inbox.folder.all")).toHaveTextContent("12");
+  expect(button("soul_inbox.folder.drafts")).toHaveTextContent("1");
+  expect(button("soul_inbox.folder.closed")).toHaveTextContent("2");
+  expect(apiMock.list).toHaveBeenLastCalledWith({ page: 1, folder: "all" });
+
+  fireEvent.click(button("soul_inbox.folder.awaiting_reply"));
+  await waitFor(() => expect(apiMock.list).toHaveBeenLastCalledWith({ page: 1, folder: "awaiting_reply" }));
+  expect(screen.getByText(tZh("soul_inbox.oldest_first"))).toBeInTheDocument();
+  expect(screen.queryByText(tZh("soul_inbox.newest_first"))).toBeNull();
+
+  fireEvent.click(button("soul_inbox.folder.closed"));
+  await waitFor(() => expect(apiMock.list).toHaveBeenLastCalledWith({ page: 1, folder: "all", status: "closed" }));
+  fireEvent.click(within(folders).getByRole("button", { name: /^第五殿/ }));
+  await waitFor(() => expect(apiMock.list).toHaveBeenLastCalledWith({ page: 1, folder: "all", hall: 1 }));
 });
 
-it("derived counts are withheld when the first page is not the whole inbox", async () => {
+it("an unread row is bold with a marker; opening it marks it read and the marker goes", async () => {
+  asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue(
+    page([conversation({ unread: true }), conversation({ id: "c2", soul_name: "李四", unread: false })])
+  );
+  renderPage();
+  const unreadRow = await screen.findByRole("button", { name: /张三/ });
+  expect(unreadRow).toHaveAttribute("data-unread", "true");
+  expect(within(unreadRow).getByText(tZh("soul_inbox.unread"))).toBeInTheDocument();
+  expect(within(unreadRow).getByText("张三")).toHaveClass("font-semibold");
+  // 缺席:读过的那一行没有标记、不加粗。
+  const readRow = screen.getByRole("button", { name: /李四/ });
+  expect(readRow).not.toHaveAttribute("data-unread");
+  expect(within(readRow).queryByText(tZh("soul_inbox.unread"))).toBeNull();
+  expect(within(readRow).getByText("李四")).not.toHaveClass("font-semibold");
+
+  apiMock.list.mockResolvedValue(page([conversation({ unread: false }), conversation({ id: "c2", soul_name: "李四" })]));
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  await waitFor(() => expect(apiMock.markRead).toHaveBeenCalledWith("c1"));
+  expect(apiMock.markRead).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.getByRole("button", { name: /张三/ })).not.toHaveAttribute("data-unread"));
+  expect(within(screen.getByRole("button", { name: /张三/ })).queryByText(tZh("soul_inbox.unread"))).toBeNull();
+});
+
+it("opening a thread that is already read does not mark it again", async () => {
+  asRole("soul_inbox.read");
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  expect(apiMock.markRead).not.toHaveBeenCalled();
+});
+
+it("the draft is restored from the server after a reload", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.draft.mockResolvedValue({ data: { ...noDraft.data, draft: "上次没写完", draft_saved_at: "2026-09-18T02:00:00Z" } });
+  const first = renderPage();
+  let thread = await openThread();
+  const box = () => within(thread).getByLabelText(tZh("soul_inbox.reply_label")) as HTMLTextAreaElement;
+  await waitFor(() => expect(box().value).toBe("上次没写完"));
+  first.unmount();
+
+  renderPage(); // 新的 QueryClient = 重新加载页面
+  thread = await openThread();
+  await waitFor(() => expect(box().value).toBe("上次没写完"));
+  expect(within(thread).getByText(tZh("soul_inbox.draft_saved", { time: "dt(2026-09-18T02:00:00Z)" }))).toBeInTheDocument();
+  // 恢复不是一次保存。
+  expect(apiMock.saveDraft).not.toHaveBeenCalled();
+});
+
+it("typing saves the draft after a pause, and blur saves at once", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  renderPage();
+  const thread = await openThread();
+  await waitFor(() => expect(apiMock.draft).toHaveBeenCalledWith("c1"));
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label"));
+  fireEvent.change(box, { target: { value: "来信收悉" } });
+  expect(apiMock.saveDraft).not.toHaveBeenCalled();
+  await waitFor(() => expect(apiMock.saveDraft).toHaveBeenCalledWith("c1", "来信收悉"), { timeout: 2500 });
+  expect(apiMock.saveDraft).toHaveBeenCalledTimes(1);
+
+  fireEvent.change(box, { target: { value: "来信收悉,依律" } });
+  fireEvent.focusOut(box); // React 的 onBlur 听的是 focusout
+  // 失焦立即存,不等 1 秒:超时比防抖短,于是这里绿只能是失焦存的。
+  await waitFor(() => expect(apiMock.saveDraft).toHaveBeenLastCalledWith("c1", "来信收悉,依律"), { timeout: 500 });
+  await within(thread).findByText(tZh("soul_inbox.draft_saved", { time: "dt(2026-09-18T03:00:00Z)" }));
+});
+
+it("a closed thread asks for no draft and saves none", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.list.mockResolvedValue(page([conversation({ closed_at: "2026-09-18T02:00:00Z" })]));
+  renderPage();
+  const thread = await openThread();
+  await within(thread).findByText("我想申诉");
+  expect(apiMock.draft).not.toHaveBeenCalled();
+  expect(templatesMock.list).not.toHaveBeenCalled();
+  expect(within(thread).queryByRole("button", { name: tZh("soul_inbox.save_draft") })).toBeNull();
+});
+
+it("a template is filled with the soul's and the hall's name and inserted", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  templatesMock.list.mockResolvedValue({
+    data: [{ id: "t1", title: "收悉", body: "{{soul_name}}:{{ hall_name }}已收悉。", created_at: "", updated_at: "" }],
+  });
+  renderPage();
+  const thread = await openThread();
+  const picker = await within(thread).findByRole("combobox", { name: tZh("soul_inbox.template.pick") });
+  await within(picker).findByRole("option", { name: "收悉" });
+  fireEvent.change(picker, { target: { value: "t1" } });
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label")) as HTMLTextAreaElement;
+  expect(box.value).toBe("张三:第五殿已收悉。");
+  expect(box.value).not.toMatch(/\{\{/);
+  expect(apiMock.reply).not.toHaveBeenCalled();
+});
+
+it("archive and move back call the endpoints for this thread", async () => {
+  asRole("soul_inbox.read");
+  renderPage();
+  const thread = await openThread();
+  fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.archive") }));
+  await waitFor(() => expect(apiMock.archive).toHaveBeenCalledWith("c1"));
+  expect(apiMock.unarchive).not.toHaveBeenCalled();
+  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.archived_done"), "success"));
+});
+
+it("an archived thread offers to move it back", async () => {
+  asRole("soul_inbox.read");
+  apiMock.list.mockResolvedValue(page([conversation({ archived: true })]));
+  renderPage();
+  const thread = await openThread();
+  fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.unarchive") }));
+  await waitFor(() => expect(apiMock.unarchive).toHaveBeenCalledWith("c1"));
+  expect(apiMock.archive).not.toHaveBeenCalled();
+});
+
+it("pages through the server's pages", async () => {
   asRole("soul_inbox.read");
   apiMock.list.mockResolvedValue({ data: { count: 45, next: "p2", previous: null, results: [conversation()] } });
   renderPage();
-  const folders = await screen.findByRole("navigation", { name: tZh("soul_inbox.folders") });
-  expect(within(folders).getByRole("button", { name: new RegExp(tZh("soul_inbox.folder.all")) })).toHaveTextContent("45");
-  expect(within(folders).getByRole("button", { name: new RegExp(tZh("soul_inbox.folder.open")) })).toHaveTextContent(
-    new RegExp(`^${tZh("soul_inbox.folder.open")}$`)
-  );
+  await screen.findByRole("button", { name: /张三/ });
+  expect(screen.getByText(tZh("pagination.info", { page: "1", total: "3", count: "45" }))).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(tZh("common.next")) }));
+  await waitFor(() => expect(apiMock.list).toHaveBeenLastCalledWith({ page: 2, folder: "all" }));
+});
+
+it("one page of rows draws no pager", async () => {
+  asRole("soul_inbox.read");
+  renderPage();
+  await screen.findByRole("button", { name: /张三/ });
+  expect(screen.queryByRole("button", { name: new RegExp(tZh("common.next")) })).toBeNull();
 });
 
 it("a thread whose last letter is the soul's says it awaits a reply; one the hall answered last does not", async () => {

@@ -3155,7 +3155,11 @@
     "folder": {
       "all": "Sesh Neb",
       "open": "Em Shemes",
-      "closed": "Khetem Seth"
+      "closed": "Khetem Seth",
+      "awaiting_reply": "Em Weshed",
+      "replied": "Wesheb Seth",
+      "drafts": "Sesh Tepy",
+      "archived": "Per Sesh"
     },
     "by_hall": "Wesekhet",
     "folder_empty": "Nen Sesh Dy",
@@ -3168,7 +3172,30 @@
     "cite_hint": "/ Djed Hep",
     "cite_label": "Hep",
     "cite_results": "Hep {{n}} · ↑↓ Setep · ↵ Redi",
-    "cite_empty": "Nen Gem Hep"
+    "cite_empty": "Nen Gem Hep",
+    "oldest_first": "Wep Tepy",
+    "unread": "Nen Maa",
+    "archive": "Nehem Er Per Sesh",
+    "unarchive": "Nehem Er Wetu",
+    "archived_done": "Nehem Er Per Sesh Seth",
+    "unarchived_done": "Nehem Er Wetu Seth",
+    "save_draft": "Sau Sesh Tepy",
+    "draft_saving": "Em Sau Sesh Tepy…",
+    "draft_saved": "Sesh Tepy Sau Seth · {{time}}",
+    "draft_failed": "Nen Sau Sesh Tepy. Wehem Iri.",
+    "template": {
+      "label": "Pet-Sesh",
+      "pick": "Setep Pet-Sesh",
+      "none": "Nen Pet-Sesh Djer",
+      "manage": "Khemen Pet-Sesh",
+      "new": "Iri Pet-Sesh Renpi",
+      "title": "Ren",
+      "body": "Medu",
+      "placeholders": "Ren Ba Hena Ren Wesekhet Er Tepy Hab:",
+      "saved": "Pet-Sesh Sau Seth",
+      "deleted": "Pet-Sesh Fekh Seth",
+      "empty_manage": "Nen Pet-Sesh Em Wesekhet Pen Djer. Sau Wesheb Er Pet-Sesh; Setep Er Hab."
+    }
   },
   "sentence_plan": {
     "panel_title": "Wetep",
