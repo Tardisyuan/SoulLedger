@@ -85,6 +85,15 @@ export function useJudgmentQueueCounts(params?: JudgmentQueueCountsParams) {
   });
 }
 
+/** The queue's court (殿) filter options (`GET /judgment/courts/`), with pending counts. */
+export function useJudgmentCourts() {
+  return useQuery({
+    queryKey: judgmentKeys.courts(),
+    queryFn: async () => (await judgmentApi.courts()).data,
+    staleTime: 60_000,
+  });
+}
+
 /**
  * The reassign picker's list (`GET /judgment/assignable-officers/`): officers these
  * cases may be reassigned to, by the same rule `reassign` checks. Needs `judgment.assign`

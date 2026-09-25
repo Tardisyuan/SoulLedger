@@ -1896,6 +1896,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/courts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 队列殿筛选的选项:调用者范围内出现过的每一个殿(非空),各带未结案件数。
+         *
+         *     此前选项取自当前已加载的几页行,翻不到的殿就选不到。范围是 `self.get_queryset()`
+         *     —— DataScopeViewSetMixin 经 `scope_to_tenant` 收到调用者的租户,与列表同一条。
+         *     已结案件的殿也列出(`pending` 为 0):殿是场所,不因眼下没有案子而消失。
+         */
+        get: operations["v1_judgment_courts_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/next/": {
         parameters: {
             query?: never;
@@ -7738,6 +7761,16 @@ export interface components {
          * @enum {string}
          */
         JudgmentConcludeVerdictEnum: "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
+        /**
+         * @description `GET /judgment/courts/` 的一行:调用者租户里出现过的一个殿,和它眼下有几件未结案。
+         *
+         *     殿是自由文本列,没有字典表;这份名单就是队列殿筛选的选项来源。`pending` 与
+         *     `queue-counts/` 的 `total` 同一个谓词(未结案,含暂缓)。
+         */
+        JudgmentCourt: {
+            court: string;
+            pending: number;
+        };
         /**
          * @description `POST /judgment/{id}/defer/` 的输入。理由必填。
          *
@@ -15580,6 +15613,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_courts_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentCourt"][];
                 };
             };
         };

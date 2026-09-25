@@ -6,7 +6,7 @@
  * - 28 px 紧凑行、整行链到审判台;认领标是圆形头像,未认领的行给「认领」;
  * - J / K 移焦点,X 勾选,C 认领焦点行;打字时一概不接;
  * - 勾选后出批量条:认领 / 改派… / 暂缓;暂缓理由必填,改派只列同租户的官员;
- * - 搜索与殿筛选同时进列表与计数的请求。
+ * - 搜索与殿筛选同时进列表与计数的请求;殿的选项来自 `courts/`,不是已加载的行。
  *
  * 每条都断了反面:没勾选时没有批量条、理由空时不发请求、改派名单不再读 `/users/`。
  */
@@ -16,7 +16,7 @@ import JudgmentListPage from "@/app/judgment/page";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), claim: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn() },
+  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn() },
   usersApi: { list: jest.fn() },
   PAGE_SIZE: 20,
 }));
@@ -65,6 +65,8 @@ beforeEach(() => {
   });
   // 计数故意与行数不同:组头必须读服务端的数。
   judgmentApi.queueCounts.mockResolvedValue({ data: { mine: 2, unclaimed: 5, others: 4, deferred: 1, total: 12 } });
+  // 名单故意与行不同:第九殿没有任何一行,米诺斯有行却不在名单里。
+  judgmentApi.courts.mockResolvedValue({ data: [{ court: "第五殿", pending: 9 }, { court: "第九殿", pending: 0 }] });
   judgmentApi.claim.mockResolvedValue({ data: {} });
   judgmentApi.batch.mockResolvedValue({ data: { operation: "claim", count: 1, ids: [] } });
   // 名单已由服务端按案子的租户、按改派同一条规则筛好;页面照单全列。
@@ -263,6 +265,19 @@ describe("审判队列", () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it("殿的选项是 courts/ 的全部殿(带未结案数),不是已加载行里出现过的殿", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const select = screen.getByRole("combobox", { name: tZh("judgment.court") });
+    await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(3));
+    const labels = within(select).getAllByRole("option").map((o) => o.textContent);
+    expect(labels).toEqual([tZh("judgment.claim.court_all"), "第五殿 · 9", "第九殿 · 0"]);
+    // 反面:只在行里出现的米诺斯不是选项。
+    expect(within(select).queryByRole("option", { name: /米诺斯/ })).toBeNull();
+    fireEvent.change(select, { target: { value: "第九殿" } });
+    await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ court: "第九殿" }));
   });
 
   it("没有 judgment.execute 的人看不到勾选列,也没有「认领」", async () => {
