@@ -44,12 +44,18 @@ Each code below is a refusal `assign_role_permissions` already makes:
   also checks the role, so a stray grant in the table does nothing).
   Revoking them is never refused.
 
-And one refusal that is a rule rather than a restated 4xx:
+And refusals that are rules rather than restated 4xx (maintainer decisions,
+2026-09-25):
 
 * ``admin_always_all`` a revoke on an ADMIN cell (maintainer decision,
   2026-09-25). ADMIN always has everything — `check_permission` answers True
   for it before reading any grant — so an unticked ADMIN cell would be a
   statement the server does not honour. Nothing is written.
+* ``conflict_unacknowledged`` a revoke that `impact_of_changes` names as the
+  cause of a conflict — a template step or a live workflow's pending ROLE node
+  left with no approver — when the request does not carry
+  ``acknowledge_conflicts: true``. The impact is computed here, from the same
+  request, not trusted from the client's earlier preview.
 """
 from django.db import DatabaseError, transaction
 
@@ -72,6 +78,7 @@ VERSION_CONFLICT = "version_conflict"
 DATABASE_ERROR = "database_error"
 ADMIN_ONLY_PERMISSION = "admin_only_permission"
 ADMIN_ALWAYS_ALL = "admin_always_all"
+CONFLICT_UNACKNOWLEDGED = "conflict_unacknowledged"
 
 ADMIN_ROLE_NAME = "ADMIN"
 #: Codenames only the ADMIN role may hold.
@@ -87,7 +94,7 @@ ACTIONS = [GRANT, REVOKE]
 STATUSES = [SAVED, UNCHANGED, REFUSED, FAILED]
 RESULT_CODES = [
     ROLE_NOT_FOUND, PERMISSION_NOT_FOUND, VERSION_CONFLICT, DATABASE_ERROR, ADMIN_ONLY_PERMISSION,
-    ADMIN_ALWAYS_ALL,
+    ADMIN_ALWAYS_ALL, CONFLICT_UNACKNOWLEDGED,
 ]
 ROLE_DELETE_REFUSAL_CODES = ["builtin_role", "role_in_use", "role_referenced_by_workflow_templates"]
 
@@ -104,7 +111,7 @@ def _write_change(role, permission, action):
         RolePermission.objects.filter(role=role, permission=permission).delete()
 
 
-def apply_changes(changes, expected_versions=None):
+def apply_changes(changes, expected_versions=None, acknowledge_conflicts=False):
     """Apply matrix cells independently. Returns (results, versions).
 
     `changes` is a list of {"role", "permission_id", "action"}; `results` has
@@ -114,6 +121,10 @@ def apply_changes(changes, expected_versions=None):
     expected_versions = expected_versions or {}
     results = [None] * len(changes)
     permissions = Permission.objects.in_bulk({c["permission_id"] for c in changes})
+    # ponytail: read before the role locks, like the client's preview; a
+    # concurrent save that changes who can approve lands in the gap. Moving it
+    # under the locks means locking every role a conflict could name.
+    unacknowledged = set() if acknowledge_conflicts else conflicting_indices(changes)
 
     by_role = {}
     for index, change in enumerate(changes):
@@ -167,6 +178,11 @@ def apply_changes(changes, expected_versions=None):
                     if not want and role_name == ADMIN_ROLE_NAME:
                         result(i, REFUSED, ADMIN_ALWAYS_ALL,
                                "ADMIN always holds every permission", permission.codename)
+                        continue
+                    if i in unacknowledged:
+                        result(i, REFUSED, CONFLICT_UNACKNOWLEDGED,
+                               "This revoke leaves a workflow step with no approver; "
+                               "resend with acknowledge_conflicts", permission.codename)
                         continue
                     if want and admin_only_violations(role_name, [permission.codename]):
                         result(i, REFUSED, ADMIN_ONLY_PERMISSION,
@@ -293,8 +309,16 @@ def _approver_roles(step, template):
 
 
 def impact_of_changes(changes):
-    """For each proposed revoke, the template steps it leaves with no role
-    able to approve them. Reads only; writes nothing.
+    """For each proposed revoke, what it leaves with no role able to approve.
+    Reads only; writes nothing. Returns ``{"conflicts", "workflow_conflicts"}``:
+
+    * ``conflicts`` — template steps (the stored configuration: every workflow
+      built from the template from now on);
+    * ``workflow_conflicts`` — live workflows (status not terminal) with a
+      PENDING ``ROLE`` node whose role would lose ``approve_node``'s codenames
+      (maintainer decision, 2026-09-25: in-flight workflows count). ``ACTOR``
+      and ``SYSTEM`` nodes of a live workflow are decided by who they name,
+      not by a role's grant, so only ROLE nodes are read.
 
     A step "can be approved by role R" when R holds every codename
     `approve_node` requires (today: `workflow.approve`). A step is reported
@@ -317,6 +341,9 @@ def impact_of_changes(changes):
         if codename is not None:
             touching.setdefault((change["role"], codename), []).append((index, change))
 
+    if not touching:
+        return {"conflicts": [], "workflow_conflicts": []}
+
     before_cache = {}
 
     def holds(role, codename, after):
@@ -334,30 +361,68 @@ def impact_of_changes(changes):
     def can(role, after):
         return all(holds(role, codename, after) for codename in required)
 
-    if not touching:
-        return []
+    def loses_every_approver(roles):
+        return bool(roles) and any(can(r, False) for r in roles) and not any(can(r, True) for r in roles)
+
+    def causes(roles):
+        return [
+            {"index": index, "role": change["role"],
+             "permission_id": change["permission_id"], "codename": codename}
+            for role in sorted(roles)
+            for codename in required
+            for index, change in touching.get((role, codename), [])
+            if change["action"] == REVOKE
+        ]
 
     conflicts = []
     for template in _templates():
         for step in _steps(template):
             roles = _approver_roles(step, template)
-            if not roles or not any(can(r, False) for r in roles):
-                continue
-            if any(can(r, True) for r in roles):
-                continue
-            causes = [
-                {"index": index, "role": change["role"],
-                 "permission_id": change["permission_id"], "codename": codename}
-                for role in sorted(roles)
-                for codename in required
-                for index, change in touching.get((role, codename), [])
-                if change["action"] == REVOKE
-            ]
-            conflicts.append({
-                **_template_ref(template),
-                "step_order": step["node_order"],
-                "step_name": step["node_name"],
-                "approver_roles": sorted(roles),
-                "caused_by": causes,
-            })
-    return conflicts
+            if loses_every_approver(roles):
+                conflicts.append({
+                    **_template_ref(template),
+                    "step_order": step["node_order"],
+                    "step_name": step["node_name"],
+                    "approver_roles": sorted(roles),
+                    "caused_by": causes(roles),
+                })
+
+    from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES, ApprovalNode, NodeStatus
+
+    # Same reach as `_templates`: every tenant, soft-deleted rows dropped.
+    nodes = (
+        ApprovalNode.objects.filter(
+            status=NodeStatus.PENDING, approver_type="ROLE",
+            approver_role__in={role for role, _ in touching},
+            workflow__is_deleted=False,
+        )
+        .exclude(workflow__status__in=TERMINAL_WORKFLOW_STATUSES)
+        .select_related("workflow")
+        .order_by("workflow__workflow_name", "workflow_id", "node_order")
+    )
+    workflow_conflicts = [
+        {
+            "workflow_id": str(node.workflow_id),
+            "workflow_name": node.workflow.workflow_name,
+            "tenant_id": node.workflow.tenant_id,
+            "status": node.workflow.status,
+            "node_order": node.node_order,
+            "node_name": node.node_name,
+            "approver_roles": [node.approver_role],
+            "caused_by": causes({node.approver_role}),
+        }
+        for node in nodes
+        if loses_every_approver({node.approver_role})
+    ]
+    return {"conflicts": conflicts, "workflow_conflicts": workflow_conflicts}
+
+
+def conflicting_indices(changes):
+    """Indices of the changes the impact analysis names as a cause — the
+    revokes `apply_changes` refuses without `acknowledge_conflicts`."""
+    impact = impact_of_changes(changes)
+    return {
+        cause["index"]
+        for conflict in (*impact["conflicts"], *impact["workflow_conflicts"])
+        for cause in conflict["caused_by"]
+    }

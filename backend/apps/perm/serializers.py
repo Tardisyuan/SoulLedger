@@ -157,6 +157,9 @@ class MatrixChangesRequestSerializer(serializers.Serializer):
     # moved has all its cells refused `version_conflict`; roles not named are
     # not checked, as with `assign`'s optional `expected_version`.
     expected_versions = serializers.DictField(child=serializers.IntegerField(), required=False)
+    # `changes/` only: without it, a revoke the impact analysis names as a
+    # conflict's cause is refused `conflict_unacknowledged`. `impact/` ignores it.
+    acknowledge_conflicts = serializers.BooleanField(required=False, default=False)
 
     def validate_changes(self, value):
         seen = set()
@@ -223,11 +226,25 @@ class MatrixConflictSerializer(TemplateRefFieldsSerializer):
     caused_by = MatrixConflictCauseSerializer(many=True)
 
 
+class MatrixWorkflowConflictSerializer(serializers.Serializer):
+    """A live workflow's pending ROLE node that would lose every approver."""
+
+    workflow_id = serializers.UUIDField()
+    workflow_name = serializers.CharField()
+    tenant_id = serializers.IntegerField(allow_null=True)
+    status = serializers.CharField()
+    node_order = serializers.IntegerField()
+    node_name = serializers.CharField()
+    approver_roles = serializers.ListField(child=serializers.CharField())
+    caused_by = MatrixConflictCauseSerializer(many=True)
+
+
 class MatrixImpactResultSerializer(serializers.Serializer):
     # The codenames `approve_node` requires — the only grants whose revocation
     # can leave a step without an approver.
     required_codenames = serializers.ListField(child=serializers.CharField())
     conflicts = MatrixConflictSerializer(many=True)
+    workflow_conflicts = MatrixWorkflowConflictSerializer(many=True)
 
 
 class RoleDeleteRefusalSerializer(serializers.Serializer):

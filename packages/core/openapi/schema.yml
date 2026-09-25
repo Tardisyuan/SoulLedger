@@ -7720,7 +7720,7 @@ paths:
       operationId: v1_perm_role_permissions_impact_create
       description: |-
         POST /api/v1/perm/role-permissions/impact/
-        保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+        保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
 
         Same body as `changes/`; `expected_versions` is accepted and ignored.
       tags:
@@ -17874,6 +17874,7 @@ components:
       - database_error
       - admin_only_permission
       - admin_always_all
+      - conflict_unacknowledged
       type: string
       description: |-
         * `role_not_found` - role_not_found
@@ -17882,6 +17883,7 @@ components:
         * `database_error` - database_error
         * `admin_only_permission` - admin_only_permission
         * `admin_always_all` - admin_always_all
+        * `conflict_unacknowledged` - conflict_unacknowledged
     MatrixChangeResult:
       type: object
       properties:
@@ -17940,6 +17942,9 @@ components:
           type: object
           additionalProperties:
             type: integer
+        acknowledge_conflicts:
+          type: boolean
+          default: false
       required:
       - changes
     MatrixChangesResult:
@@ -18032,9 +18037,49 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MatrixConflict'
+        workflow_conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixWorkflowConflict'
       required:
       - conflicts
       - required_codenames
+      - workflow_conflicts
+    MatrixWorkflowConflict:
+      type: object
+      description: A live workflow's pending ROLE node that would lose every approver.
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        workflow_name:
+          type: string
+        tenant_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        node_order:
+          type: integer
+        node_name:
+          type: string
+        approver_roles:
+          type: array
+          items:
+            type: string
+        caused_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatrixConflictCause'
+      required:
+      - approver_roles
+      - caused_by
+      - node_name
+      - node_order
+      - status
+      - tenant_id
+      - workflow_id
+      - workflow_name
     MeAccount:
       type: object
       properties:

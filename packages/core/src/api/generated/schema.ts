@@ -3462,7 +3462,7 @@ export interface paths {
         put?: never;
         /**
          * @description POST /api/v1/perm/role-permissions/impact/
-         *     保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+         *     保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
          *
          *     Same body as `changes/`; `expected_versions` is accepted and ignored.
          */
@@ -8180,9 +8180,10 @@ export interface components {
          *     * `database_error` - database_error
          *     * `admin_only_permission` - admin_only_permission
          *     * `admin_always_all` - admin_always_all
+         *     * `conflict_unacknowledged` - conflict_unacknowledged
          * @enum {string}
          */
-        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all";
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all" | "conflict_unacknowledged";
         MatrixChangeResult: {
             /** @description Position of the change in the request. */
             index: number;
@@ -8208,6 +8209,8 @@ export interface components {
             expected_versions?: {
                 [key: string]: number;
             };
+            /** @default false */
+            acknowledge_conflicts: boolean;
         };
         MatrixChangesResult: {
             saved: number;
@@ -8240,6 +8243,19 @@ export interface components {
         MatrixImpactResult: {
             required_codenames: string[];
             conflicts: components["schemas"]["MatrixConflict"][];
+            workflow_conflicts: components["schemas"]["MatrixWorkflowConflict"][];
+        };
+        /** @description A live workflow's pending ROLE node that would lose every approver. */
+        MatrixWorkflowConflict: {
+            /** Format: uuid */
+            workflow_id: string;
+            workflow_name: string;
+            tenant_id: number | null;
+            status: string;
+            node_order: number;
+            node_name: string;
+            approver_roles: string[];
+            caused_by: components["schemas"]["MatrixConflictCause"][];
         };
         MeAccount: {
             /** @description 这个账号属于第几世;0 是第一世。 */
