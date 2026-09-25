@@ -1,11 +1,14 @@
 """
 URL configuration for SoulLedger project.
 """
+import posixpath
+import re
+
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import Http404
 from django.urls import include, path, re_path
+from django.views.static import serve as static_serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
@@ -27,8 +30,18 @@ user_router.register(r'', UserViewSet, basename='user')
 recycle_bin_router = DefaultRouter()
 recycle_bin_router.register(r'', RecycleBinViewSet, basename='recycle-bin')
 
-def _private_media_is_not_served(request):
-    raise Http404
+def _serve_media(request, path, document_root=None):
+    """DEBUG-only /media/ that refuses anything under MEDIA_ROOT/private/.
+
+    The check runs on the normalised, case-folded path, not on the URL text: a
+    regex on the URL let `/media/PRIVATE/…` through on a case-insensitive disk
+    (macOS), and `//private`, `./private`, `avatars/../private` are the same
+    directory spelled differently.
+    """
+    parts = posixpath.normpath(path.replace("\\", "/")).lstrip("/").split("/")
+    if parts and parts[0].casefold() == "private":
+        raise Http404
+    return static_serve(request, path, document_root=document_root)
 
 
 urlpatterns = [
@@ -80,7 +93,7 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ]
 
-# Uploaded avatars under DEBUG. `static()` returns [] unless DEBUG is on; in
+# Uploaded avatars under DEBUG (the route below exists only when DEBUG is on); in
 # production nginx serves /media/ from the shared volume and this adds nothing.
 #
 # THIS LINE WAS ONCE THE HOLE (BP-05). It used to sit here with neither setting
@@ -95,10 +108,12 @@ urlpatterns = [
 # MEDIA_ROOT and nothing beside it (django.views.static.serve joins with
 # safe_join, so `..` cannot climb out).
 #
-# `media/private/` is refused first: 朋友圈 post images live there and are only
+# `media/private/` is refused (in any spelling — see `_serve_media`): 朋友圈 post images live there and are only
 # served through the signed, access-checked /api/v1/social-media/ view. nginx
 # refuses the same prefix in production (nginx.conf).
 if settings.DEBUG:
-    urlpatterns += [re_path(r"^media/private/", _private_media_is_not_served)]
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [re_path(
+        rf"^{re.escape(settings.MEDIA_URL.lstrip('/'))}(?P<path>.*)$", _serve_media,
+        {"document_root": settings.MEDIA_ROOT},
+    )]
 

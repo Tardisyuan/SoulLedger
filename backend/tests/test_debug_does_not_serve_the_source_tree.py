@@ -97,7 +97,10 @@ from django.test import Client
 c = Client()
 out = {}
 for p in ["/media/avatars/2026/09/ok.png", "/media/private/post_media/2026/09/p.png",
-          "/media/PRIVATE/post_media/2026/09/p.png", "/media/manage.py", "/media/.env",
+          "/media/PRIVATE/post_media/2026/09/p.png", "/media/Private/post_media/2026/09/p.png",
+          "/media//private/post_media/2026/09/p.png", "/media/./private/post_media/2026/09/p.png",
+          "/media/%70rivate/post_media/2026/09/p.png", "/media/avatars/../private/post_media/2026/09/p.png",
+          "/media/manage.py", "/media/.env",
           "/media/../manage.py", "/media/%2e%2e/manage.py", "/media/..%2fmanage.py",
           "/media/%2e%2e/.env", "/manage.py", "/.env", "/health/"]:
     r = c.get(p)
