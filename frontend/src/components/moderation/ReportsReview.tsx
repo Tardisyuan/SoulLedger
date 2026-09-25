@@ -344,11 +344,18 @@ export function ReportsReview() {
             <p className="mt-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.review.user_target_note")}</p>
           )}
 
-          {/* 反应用文字,不用表情(C-08)。只画接口给了的数:官员端的帖子序列化器只带评论数。 */}
+          {/*
+            反应用文字,不用表情(C-08):「评 N · 念 N」。念 = LOVE(灵魂端 `react.love` 同一个字)。
+            画布上的「转 N」不画:朋友圈没有转发模型,没有这个数可显示。
+          */}
           {full && "comment_count" in full && (
-            <div className="mt-3 flex gap-4 text-xs text-[oklch(var(--color-ink-muted))]">
+            <div className="mt-3 flex gap-2 text-xs text-[oklch(var(--color-ink-muted))]" data-reaction-counts>
               <span>
                 {t("social_moderation.review.reaction_comment")} <span className="font-mono">{full.comment_count}</span>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                {t("social_moderation.review.reaction_love")} <span className="font-mono">{full.reaction_counts.LOVE}</span>
               </span>
             </div>
           )}

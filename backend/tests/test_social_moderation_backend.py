@@ -480,6 +480,31 @@ def test_restore_visible_does_not_reach_deleted_content_or_other_civilizations(
     assert hidden.moderation_status == ModerationStatus.HIDDEN
 
 
+# ── 表态数(念 …)───────────────────────────────────────────────────────────
+
+
+def test_the_officer_post_carries_per_kind_reaction_counts_without_deleted_ones(cn_tenant, cn_moderator):
+    from apps.social.models import Reaction
+
+    author, _ = soul(cn_tenant, "作者")
+    row = post(author, "有人念的帖子", Visibility.PUBLIC)
+    Post.objects.filter(pk=row.pk).update(moderation_status=ModerationStatus.PENDING)
+    fans = [soul(cn_tenant, f"读者{i}")[0].user for i in range(4)]
+    for user, kind in zip(fans, ["LOVE", "LOVE", "LIKE", "LOVE"]):
+        Reaction.objects.create(user=user, post=row, reaction_type=kind, tenant=cn_tenant)
+    Reaction.objects.filter(user=fans[3]).update(is_deleted=True)  # 撤回的不算
+    client = officer_client(cn_moderator)
+    expected = {"LIKE": 1, "LOVE": 2, "RESPECT": 0, "SYMPATHY": 0, "ETERNAL_LIGHT": 0}
+
+    listed = {r["id"]: r for r in client.get(f"{MODERATION}/posts/").json()["results"]}
+    assert listed[str(row.pk)]["reaction_counts"] == expected
+    assert client.get(f"{MODERATION}/posts/{row.pk}/").json()["reaction_counts"] == expected
+    # 处置动作的回包是同一形状,不是一行没有注解的数据。
+    approved = client.post(f"{MODERATION}/posts/{row.pk}/approve/", {}, format="json")
+    assert approved.status_code == 200, approved.content
+    assert approved.json()["reaction_counts"] == expected
+
+
 # ── 警告作者(WARN)────────────────────────────────────────────────────────
 
 

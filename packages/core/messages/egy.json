@@ -3095,7 +3095,8 @@
       "shortcuts": "J / K · A Menkh · H Imen · W Hab",
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
       "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer",
-      "warn": "Hab Khet Er Neb Medu"
+      "warn": "Hab Khet Er Neb Medu",
+      "reaction_love": "Sekha"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",

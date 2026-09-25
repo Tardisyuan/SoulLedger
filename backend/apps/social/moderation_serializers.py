@@ -21,6 +21,7 @@ from apps.social.models import (
     SensitiveWordCategory,
     SocialMute,
 )
+from apps.social.soul_serializers import SoulReactionCountsSerializer
 
 EXCERPT = 200
 
@@ -93,6 +94,8 @@ class ModeratedContentSerializer(serializers.Serializer):
 class ModeratedPostSerializer(ModeratedContentSerializer):
     visibility = serializers.CharField()
     comment_count = serializers.IntegerField()
+    #: 五种表态各自的数(未删除的),与灵魂端同一份注解。没有转发:朋友圈没有转发模型。
+    reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
 
 
 class ModeratedCommentSerializer(ModeratedContentSerializer):
