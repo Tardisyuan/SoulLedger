@@ -105,8 +105,13 @@ export type SetNewPasswordRequest = components["schemas"]["SetNewPassword"];
  * account too, so nothing may branch on its text.
  */
 export type PasswordResetAccepted = components["schemas"]["DetailResponse"];
-/** The `{error}` body both answer a refusal with — no `code`, only a sentence. */
-export type PasswordResetRefusal = components["schemas"]["ErrorResponse"];
+/**
+ * The body both answer a refusal with: `{error, code}`, plus `retry_after`
+ * (seconds) when `code` is `rate_limited`. Branch on `code`; `error` is a
+ * sentence for people and may be reworded.
+ */
+export type PasswordResetRefusal = components["schemas"]["PasswordResetRefusal"];
+export type PasswordResetRefusalCode = components["schemas"]["PasswordResetRefusalCodeEnum"];
 
 export interface LoginRequest {
   username: string;

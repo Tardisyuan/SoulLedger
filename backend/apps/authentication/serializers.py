@@ -516,6 +516,32 @@ class SetNewPasswordSerializer(serializers.Serializer):
         return value
 
 
+#: Every `code` a refusal of `/auth/reset-password/` or `/auth/set-new-password/`
+#: carries. Clients branch on these, never on the `error` sentence beside them.
+PASSWORD_RESET_REFUSAL_CODES = [
+    ("rate_limited", "throttled; `retry_after` says for how long"),
+    ("reset_code_expired", "no live code for this address"),
+    ("reset_code_wrong", "the code does not match"),
+    ("reset_code_attempts_exceeded", "too many wrong codes; the code was deleted"),
+    ("weak_password", "the password validators refused the new password"),
+    ("no_soul_account", "no soul account has this address"),
+    ("ambiguous_email", "several accounts share this address"),
+]
+
+
+class PasswordResetRefusalSerializer(serializers.Serializer):
+    """Doc-only: every refusal of the two email-reset endpoints.
+
+    `error` is for people and may be reworded; `code` is the contract.
+    `retry_after` (seconds, also the `Retry-After` header) is present exactly
+    when `code` is `rate_limited`.
+    """
+
+    error = serializers.CharField()
+    code = serializers.ChoiceField(choices=PASSWORD_RESET_REFUSAL_CODES)
+    retry_after = serializers.IntegerField(required=False)
+
+
 class LoginLogSerializer(serializers.ModelSerializer):
     """Serializer for login log entries."""
     class Meta:

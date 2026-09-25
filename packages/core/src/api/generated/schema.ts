@@ -511,6 +511,10 @@ export interface paths {
         /**
          * @description POST /api/v1/auth/set-new-password/
          *     Set new password via email + verification code from Redis.
+         *
+         *     Every refusal carries a stable `code` (`PASSWORD_RESET_REFUSAL_CODES`);
+         *     the `error` sentence is for people and may change. A field-validation 400
+         *     is DRF's `{field: [...]}` shape instead.
          */
         post: operations["v1_auth_set_new_password_create"];
         delete?: never;
@@ -9360,6 +9364,29 @@ export interface components {
             username: string;
         };
         /**
+         * @description Doc-only: every refusal of the two email-reset endpoints.
+         *
+         *     `error` is for people and may be reworded; `code` is the contract.
+         *     `retry_after` (seconds, also the `Retry-After` header) is present exactly
+         *     when `code` is `rate_limited`.
+         */
+        PasswordResetRefusal: {
+            error: string;
+            code: components["schemas"]["PasswordResetRefusalCodeEnum"];
+            retry_after?: number;
+        };
+        /**
+         * @description * `rate_limited` - throttled; `retry_after` says for how long
+         *     * `reset_code_expired` - no live code for this address
+         *     * `reset_code_wrong` - the code does not match
+         *     * `reset_code_attempts_exceeded` - too many wrong codes; the code was deleted
+         *     * `weak_password` - the password validators refused the new password
+         *     * `no_soul_account` - no soul account has this address
+         *     * `ambiguous_email` - several accounts share this address
+         * @enum {string}
+         */
+        PasswordResetRefusalCodeEnum: "rate_limited" | "reset_code_expired" | "reset_code_wrong" | "reset_code_attempts_exceeded" | "weak_password" | "no_soul_account" | "ambiguous_email";
+        /**
          * @description `{"password": "..."}` — the generated password `reset_password` returns.
          *
          *     Schema-only. The plaintext is in the response body because this is the only
@@ -12928,7 +12955,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
         };
@@ -12961,7 +12988,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
             404: {
@@ -12969,7 +12996,23 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
         };

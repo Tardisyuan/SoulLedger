@@ -20,9 +20,9 @@ const NEUTRAL = "如果这个邮箱绑定了灵魂账号，验证码已发出";
 const EMAIL = "soul@example.com";
 const REQUEST = "POST /auth/reset-password/";
 const CONFIRM = "POST /auth/set-new-password/";
-/** The two refusals `set_new_password` tells apart only by their sentence. */
-const EXPIRED = { error: "验证码已过期,请重新获取" };
-const WRONG = { error: "验证码错误" };
+/** Refusals as the backend sends them: `{error, code}` — the App reads only `code`. */
+const refusal = (code: string, extra: Record<string, unknown> = {}) => ({ error: "（任意措辞）", code, ...extra });
+const THROTTLED = (retry_after: number): Reply => ({ status: 429, data: refusal("rate_limited", { retry_after }) });
 
 function renderApp() {
   return render(
@@ -123,7 +123,7 @@ describe("step 1: the email", () => {
   });
 
   it("429 says so and stays on step 1 — the limit is counted before any lookup, so it says nothing about the address", async () => {
-    stubApi({ [REQUEST]: { status: 429, data: { error: "请求过于频繁，请稍后再试" } } });
+    stubApi({ [REQUEST]: THROTTLED(300) });
     await openForgot();
     await sendEmail();
     expect(text("forgot-error")).toBe("尝试过于频繁,请稍后再试");
@@ -163,12 +163,16 @@ describe("step 2: the code and the new password", () => {
   });
 
   it.each<[string, Reply, string]>([
-    ["a wrong code", { status: 400, data: WRONG }, "验证码不正确"],
-    ["an expired code", { status: 400, data: EXPIRED }, "验证码已失效，请重新发送"],
-    ["a password the validators refuse", { status: 400, data: { error: "['This password is too common.']" } }, "新密码强度不足,请换一个更长、更不常见的密码"],
-    ["five wrong codes (429: the code is gone)", { status: 429, data: { error: "验证码错误次数过多,请重新获取" } }, "验证码错误次数过多，已作废，请重新发送"],
+    ["a wrong code", { status: 400, data: refusal("reset_code_wrong") }, "验证码不正确"],
+    ["an expired code", { status: 400, data: refusal("reset_code_expired") }, "验证码已失效，请重新发送"],
+    // The sentence the App used to match for 「验证码错误」, under another code: the code wins.
+    ["an expired code worded like a wrong one", { status: 400, data: { error: "验证码错误", code: "reset_code_expired" } }, "验证码已失效，请重新发送"],
+    ["a password the validators refuse", { status: 400, data: refusal("weak_password") }, "新密码强度不足,请换一个更长、更不常见的密码"],
+    ["five wrong codes (429: the code is gone)", { status: 429, data: refusal("reset_code_attempts_exceeded") }, "验证码错误次数过多，已作废，请重新发送"],
+    ["a throttled confirm (429)", THROTTLED(30), "尝试过于频繁,请稍后再试"],
     ["no network", "offline", "无法连接服务器,请检查网络后重试"],
-    ["an address shared by two accounts (409)", { status: 409, data: { error: "x" } }, "这个邮箱无法重设密码，请向所属殿司申请重置密码"],
+    ["no soul account on the address (404)", { status: 404, data: refusal("no_soul_account") }, "这个邮箱无法重设密码，请向所属殿司申请重置密码"],
+    ["an address shared by two accounts (409)", { status: 409, data: refusal("ambiguous_email") }, "这个邮箱无法重设密码，请向所属殿司申请重置密码"],
   ])("%s is said as such", async (_, reply, message) => {
     await toCodeStep();
     stubApi({ [CONFIRM]: reply });
@@ -212,14 +216,34 @@ describe("step 2: the code and the new password", () => {
     expect(screen.queryByTestId("forgot-expires-in")).toBeNull();
   });
 
-  it("a resend the server rate-limits (429) says so", async () => {
+  it("a resend the server rate-limits (429) says so, and waits out its retry_after", async () => {
     await toCodeStep();
     act(() => jest.advanceTimersByTime(100_000));
-    stubApi({ [REQUEST]: { status: 429, data: { error: "请求过于频繁，请稍后再试" } } });
+    stubApi({ [REQUEST]: THROTTLED(250) });
     await act(async () => {
       fireEvent.press(screen.getByTestId("forgot-resend"));
     });
     expect(text("forgot-error")).toBe("尝试过于频繁,请稍后再试");
+    // The server's word, not our 100-second pace, now holds the button.
+    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(true);
+    act(() => jest.advanceTimersByTime(1_000));
+    expect(text("forgot-resend-in")).toBe("4:09 后可重新发送");
+    act(() => jest.advanceTimersByTime(248_000));
+    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(true);
+    act(() => jest.advanceTimersByTime(1_000));
+    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(false);
+  });
+
+  it("a 429 without retry_after leaves the resend on its own pace", async () => {
+    await toCodeStep();
+    act(() => jest.advanceTimersByTime(100_000));
+    stubApi({ [REQUEST]: { status: 429, data: refusal("rate_limited") } });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("forgot-resend"));
+    });
+    expect(text("forgot-error")).toBe("尝试过于频繁,请稍后再试");
+    act(() => jest.advanceTimersByTime(1_000));
+    expect(screen.getByTestId("forgot-resend").props.accessibilityState.disabled).toBe(false);
   });
 });
 

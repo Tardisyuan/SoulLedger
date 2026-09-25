@@ -11,7 +11,13 @@ from django.core.mail import send_mail
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -37,6 +43,7 @@ from .serializers import (
     LoginResponseSerializer,
     LogoutRequestSerializer,
     PasswordHelpRequestSerializer,
+    PasswordResetRefusalSerializer,
     PasswordResetResultSerializer,
     PublicCivilizationSerializer,
     RegisterSerializer,
@@ -720,6 +727,35 @@ def change_password(request):
     return Response({"detail": "密码修改成功"})
 
 
+def _reset_refusal(error, code, http_status, retry_after=None):
+    """A refusal of the email-reset endpoints: `{error, code}`, plus
+    `retry_after` when throttled. Clients branch on `code`; see
+    `PasswordResetRefusalSerializer` for the full set."""
+    body = {"error": error, "code": code}
+    headers = None
+    if retry_after is not None:
+        body["retry_after"] = retry_after
+        headers = {"Retry-After": str(retry_after)}
+    return Response(body, status=http_status, headers=headers)
+
+
+def _rate_limited(retry_after):
+    return _reset_refusal(
+        "请求过于频繁，请稍后再试", "rate_limited", status.HTTP_429_TOO_MANY_REQUESTS, retry_after
+    )
+
+
+def _throttle_wait(request, throttles):
+    """Whole seconds until every refusing throttle would admit `request`, or
+    None when none refuses. All are consulted, as DRF's `check_throttles` does.
+
+    The two reset views declare `@throttle_classes([])` and call this instead,
+    so the default anonymous throttle's 429 carries `code` and `retry_after`
+    too rather than DRF's bare `{detail}`."""
+    waits = [t.wait() or 1 for t in throttles if not t.allow_request(request, None)]
+    return max(1, math.ceil(max(waits))) if waits else None
+
+
 #: The only role that may reset its own password by email (2026-09 product
 #: decision). Officers are admin-provisioned: see `password_help_request`.
 SELF_RESET_ROLE = UserRole.SOUL
@@ -732,11 +768,12 @@ SELF_RESET_ROLE = UserRole.SOUL
         # body deliberately, so the document must not promise a 404 that
         # would tell an enumerator the difference.
         200: DetailResponseSerializer,
-        429: ErrorResponseSerializer,
+        429: PasswordResetRefusalSerializer,
     },
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def reset_password_request(request):
     """
     POST /api/v1/auth/reset-password/
@@ -744,6 +781,8 @@ def reset_password_request(request):
     Stores code in Redis cache with 5-minute TTL.
     """
     from django.core.cache import cache
+
+    from apps.core.throttling import AnonRateThrottle
 
     from .throttles import PasswordResetThrottle
 
@@ -759,11 +798,13 @@ def reset_password_request(request):
     # is flooded; it does nothing about one client walking a list of addresses,
     # which is the enumeration itself. `PasswordResetThrottle` is keyed by
     # `apps/core/client_ip.py`, so rotating `X-Forwarded-For` does not reset it.
-    too_frequent = Response(
-        {"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS
-    )
-    if not PasswordResetThrottle().allow_request(request, None):
-        return too_frequent
+    #
+    # Every 429 here says when to come back (`retry_after`). That number is a
+    # function of this client's and this address's request history only —
+    # both counters run before the lookup — so it discloses nothing either.
+    wait = _throttle_wait(request, [AnonRateThrottle(), PasswordResetThrottle()])
+    if wait is not None:
+        return _rate_limited(wait)
 
     serializer = ResetPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -774,10 +815,17 @@ def reset_password_request(request):
     # stays exact, as does the code's own key — `set_new_password` reads it
     # back under the address as typed.
     rate_limit_key = f"pwd_reset_rate:{email.strip().lower()}"
+    # When that window ends, as an epoch second — the counter's own TTL is not
+    # readable through Django's cache API (as in `LoginView.post`).
+    until_key = f"pwd_reset_rate_until:{email.strip().lower()}"
     attempts = cache.get(rate_limit_key, 0)
     if attempts >= MAX_RESET_REQUESTS_PER_ADDRESS:
-        return too_frequent
+        until = cache.get(until_key)
+        return _rate_limited(
+            max(1, math.ceil(until - time.time())) if until else RESET_REQUEST_WINDOW_SECONDS
+        )
     cache.set(rate_limit_key, attempts + 1, timeout=RESET_REQUEST_WINDOW_SECONDS)
+    cache.set(until_key, time.time() + RESET_REQUEST_WINDOW_SECONDS, timeout=RESET_REQUEST_WINDOW_SECONDS)
 
     # Check if user exists (but always return success for security)
     #
@@ -825,17 +873,30 @@ def reset_password_request(request):
     request=SetNewPasswordSerializer,
     responses={
         200: DetailResponseSerializer,
-        400: ErrorResponseSerializer,
-        404: ErrorResponseSerializer,
+        400: PasswordResetRefusalSerializer,
+        404: PasswordResetRefusalSerializer,
+        409: PasswordResetRefusalSerializer,
+        429: PasswordResetRefusalSerializer,
     },
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def set_new_password(request):
     """
     POST /api/v1/auth/set-new-password/
     Set new password via email + verification code from Redis.
+
+    Every refusal carries a stable `code` (`PASSWORD_RESET_REFUSAL_CODES`);
+    the `error` sentence is for people and may change. A field-validation 400
+    is DRF's `{field: [...]}` shape instead.
     """
+    from apps.core.throttling import AnonRateThrottle
+
+    wait = _throttle_wait(request, [AnonRateThrottle()])
+    if wait is not None:
+        return _rate_limited(wait)
+
     serializer = SetNewPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -848,7 +909,7 @@ def set_new_password(request):
     cached_code = cache.get(f"pwd_reset:{email}")
 
     if cached_code is None:
-        return Response({"error": "验证码已过期,请重新获取"}, status=status.HTTP_400_BAD_REQUEST)
+        return _reset_refusal("验证码已过期,请重新获取", "reset_code_expired", status.HTTP_400_BAD_REQUEST)
 
     # Cap the number of GUESSES, not just the number of codes sent.
     #
@@ -869,9 +930,10 @@ def set_new_password(request):
     if tries >= MAX_RESET_CODE_ATTEMPTS:
         cache.delete(f"pwd_reset:{email}")
         cache.delete(attempts_key)
-        return Response(
-            {"error": "验证码错误次数过多,请重新获取"},
-            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        # No `retry_after`: there is nothing to wait for. The code is gone and
+        # only a new one (`reset-password`, itself limited) helps.
+        return _reset_refusal(
+            "验证码错误次数过多,请重新获取", "reset_code_attempts_exceeded", status.HTTP_429_TOO_MANY_REQUESTS
         )
 
     if cached_code != code:
@@ -879,7 +941,7 @@ def set_new_password(request):
         # code it guards, or a guesser could simply wait for the counter to
         # expire while the code is still valid.
         cache.set(attempts_key, tries + 1, timeout=300)
-        return Response({"error": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
+        return _reset_refusal("验证码错误", "reset_code_wrong", status.HTTP_400_BAD_REQUEST)
 
     # Correct code: the counter has no further job, and leaving it would let a
     # previous run's failures shorten the next legitimate reset.
@@ -900,11 +962,10 @@ def set_new_password(request):
     try:
         user = User.objects.get(email=email, role=SELF_RESET_ROLE)
     except User.DoesNotExist:
-        return Response({"error": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+        return _reset_refusal("用户不存在", "no_soul_account", status.HTTP_404_NOT_FOUND)
     except User.MultipleObjectsReturned:
-        return Response(
-            {"error": "该邮箱对应多个账号,无法重置密码,请联系管理员"},
-            status=status.HTTP_409_CONFLICT,
+        return _reset_refusal(
+            "该邮箱对应多个账号,无法重置密码,请联系管理员", "ambiguous_email", status.HTTP_409_CONFLICT
         )
 
     # Validate password strength
@@ -912,7 +973,7 @@ def set_new_password(request):
     try:
         validate_password(new_password, user)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return _reset_refusal(str(e), "weak_password", status.HTTP_400_BAD_REQUEST)
 
     # Set new password
     user.set_password(new_password)

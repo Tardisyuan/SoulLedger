@@ -15,9 +15,13 @@
  * the address is said as itself: a rate limit (counted before any lookup), or
  * no network. A soul with no bound email therefore learns nothing here, which
  * is why both steps say what such a soul must do instead: ask its hall.
+ *
+ * Every refusal is told apart by its `code`, never by its sentence; a 429 with
+ * `retry_after` holds the resend button at least that long.
  */
 import {
   passwordResetErrorMessage,
+  passwordResetRetryAfter,
   soulApi,
   soulErrorMessage,
   soulErrorStatus,
@@ -35,14 +39,10 @@ import { NEUTRAL_ERRORS, newPasswordProblem } from "./auth";
 /**
  * What a failed step-1 request says. `null` means "say what a 200 says": a 400
  * is about the address, and anything about the address is the neutral sentence.
- * A 429 carries `{error}` and no `code`, so it is named here rather than left to
- * `soulErrorMessage` (which would show it as an unknown 429).
+ * A 429 carries `code: "rate_limited"`, which `soulErrorMessage` already names.
  */
 export function resetRequestFailure(error: unknown): SoulErrorMessage | null {
-  const status = soulErrorStatus(error);
-  if (status === 400) return null;
-  if (status === 429) return { key: "soul_app.errors.rate_limited" };
-  return soulErrorMessage(error);
+  return soulErrorStatus(error) === 400 ? null : soulErrorMessage(error);
 }
 
 /** `Date.now()`, once a second — the two countdowns read it. */
@@ -81,13 +81,16 @@ export function ForgotPasswordScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Sends a code to `email`; resolves to the send, or to the copy for a failure that is not about the address. */
-async function sendCode(email: string): Promise<Sent | SoulErrorMessage> {
+/** A step-1 failure that is not about the address, and how long the server said to wait (seconds). */
+type SendFailure = { message: SoulErrorMessage; retryAfter: number | null };
+
+/** Sends a code to `email`; resolves to the send, or to a failure that is not about the address. */
+async function sendCode(email: string): Promise<Sent | SendFailure> {
   try {
     await soulApi.requestPasswordReset(email);
   } catch (e) {
-    const failure = resetRequestFailure(e);
-    if (failure) return failure;
+    const message = resetRequestFailure(e);
+    if (message) return { message, retryAfter: passwordResetRetryAfter(e) };
   }
   return { email, at: Date.now() };
 }
@@ -107,7 +110,7 @@ function EmailStep({ onSent }: { onSent: (sent: Sent) => void }) {
     setError(null);
     const outcome = await sendCode(address);
     setBusy(false);
-    if ("key" in outcome) setError(outcome);
+    if ("message" in outcome) setError(outcome.message);
     else onSent(outcome);
   };
 
@@ -171,11 +174,14 @@ function CodeStep({
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
+  // When a refused resend was told it may try again (`retry_after`), epoch ms.
+  const [resendAt, setResendAt] = useState<number | null>(null);
 
   // Clamped: right after a resend `sent.at` is newer than the last tick.
   const elapsed = Math.max(0, (now - sent.at) / 1000);
   const left = RESET_CODE_TTL_SECONDS - elapsed;
-  const resendIn = RESEND_AFTER_SECONDS - elapsed;
+  // Our own pace, or the server's word when it refused a resend — whichever is later.
+  const resendIn = Math.max(RESEND_AFTER_SECONDS - elapsed, resendAt === null ? 0 : (resendAt - now) / 1000);
   const expired = left <= 0;
   const field = error ? CODE_FIELD_OF[error.key] : undefined;
   const fieldError = (name: CodeField) => (error && field === name ? t(error.key, error.params) : null);
@@ -201,7 +207,11 @@ function CodeStep({
     setError(null);
     const outcome = await sendCode(sent.email);
     setResending(false);
-    if ("key" in outcome) return setError(outcome);
+    if ("message" in outcome) {
+      if (outcome.retryAfter !== null) setResendAt(Date.now() + outcome.retryAfter * 1000);
+      return setError(outcome.message);
+    }
+    setResendAt(null);
     setCode("");
     onResent(outcome);
   };

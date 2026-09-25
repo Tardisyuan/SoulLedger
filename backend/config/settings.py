@@ -511,6 +511,7 @@ SPECTACULAR_SETTINGS = {
         "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",
         "ActorRoleEnum": "apps.actors.models.ActorRole.choices",
         "UserRoleEnum": "apps.authentication.models.UserRole.choices",
+        "PasswordResetRefusalCodeEnum": "apps.authentication.serializers.PASSWORD_RESET_REFUSAL_CODES",
         # Reached from both `apps.disposition` and `apps.realms`, which is the
         # "multiple names for the same choice set" warning. `apps.realms.Realm`
         # imports the class rather than restating the four values — the comment
