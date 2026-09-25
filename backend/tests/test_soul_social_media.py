@@ -261,6 +261,63 @@ class TestAttach:
 # ── 谁拿得到文件 ──────────────────────────────────────────────────────────
 
 
+class TestNginxServesTheFile:
+    """`POST_MEDIA_X_ACCEL`:检查照旧在 Django,文件由 nginx 的 internal location 发(nginx.conf)。"""
+
+    def test_an_allowed_viewer_gets_an_empty_response_pointing_nginx_under_private(
+        self, cn_tenant, settings, media_root
+    ):
+        settings.POST_MEDIA_X_ACCEL = True
+        _, author = soul(cn_tenant, "作者")
+        _, reader = soul(cn_tenant, "读者")
+        body = post_with_images(author, 1)
+        row = PostMedia.objects.get(pk=body["media"][0]["id"])
+        res = APIClient().get(urls_for(reader, body["id"])[0])
+        assert res.status_code == 200
+        assert res.content == b"" and not getattr(res, "streaming", False)
+        target = res["X-Accel-Redirect"]
+        assert target == "/protected-media/" + row.file.name.removeprefix("private/")
+        assert target.startswith("/protected-media/post_media/") and ".." not in target
+        # nginx 把前缀映射到 MEDIA_ROOT/private/:映射回去就是那个文件。
+        assert (media_root / "private" / target.removeprefix("/protected-media/")).is_file()
+        assert res["Content-Type"] == "image/png"
+        assert res["Cache-Control"] == f"private, max-age={post_media.URL_TTL}"
+        assert res["X-Content-Type-Options"] == "nosniff"
+
+    def test_a_denied_viewer_gets_404_and_no_header(self, cn_tenant, settings, moderator):
+        settings.POST_MEDIA_X_ACCEL = True
+        _, author = soul(cn_tenant, "作者")
+        _, reader = soul(cn_tenant, "读者")
+        body = post_with_images(author, 1)
+        url = urls_for(reader, body["id"])[0]
+        mod.moderate_content(Post.objects.get(pk=body["id"]), "HIDE", actor=moderator, reason="违规")
+        for denied in (url, url.split("?")[0], url[:-2] + ("aa" if not url.endswith("aa") else "bb")):
+            res = APIClient().get(denied)
+            assert res.status_code == 404, denied
+            assert not res.has_header("X-Accel-Redirect")
+
+    @pytest.mark.parametrize("name", [
+        "private/../settings.py", "private/post_media/../../x.png", "private/./post_media/a.png",
+        "private//etc/passwd", "/private/post_media/a.png", "post_media/a.png", "avatars/a.png",
+        "private/post_media/a b.png", "private/post_media/a\\..\\b.png", "private/", "private",
+        "PRIVATE/post_media/a.png", "private/post_media/%2e%2e/a.png",
+    ])
+    def test_a_stored_name_outside_private_can_never_become_a_header(self, name):
+        from django.http import Http404
+
+        from apps.social.media_views import accel_path
+
+        with pytest.raises(Http404):
+            accel_path(name)
+
+    def test_off_streams_the_file_itself(self, cn_tenant, settings):
+        settings.POST_MEDIA_X_ACCEL = False
+        _, author = soul(cn_tenant, "作者")
+        res = APIClient().get(post_with_images(author, 1)["media"][0]["url"])
+        assert res.status_code == 200 and not res.has_header("X-Accel-Redirect")
+        assert b"".join(res.streaming_content)[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 class TestAccess:
     def test_feed_and_detail_carry_ordered_media_with_dimensions(self, cn_tenant):
         _, author = soul(cn_tenant, "作者")
