@@ -545,14 +545,31 @@ class TestDraft:
         response = judge_client.patch(_draft_url(judgment), {"notes": "无版本"}, format="json")
         assert response.status_code == 400
 
-    def test_a_plain_patch_of_notes_moves_the_draft_version(self, judge_client, cn_case):
+    def test_a_plain_patch_of_notes_on_an_open_case_is_refused(self, judge_client, cn_case):
+        """产品负责人 2026-09-25:open case 的判词只走 draft/。什么都不写。"""
         judgment, _, _ = cn_case
-        response = judge_client.patch(f"/api/v1/judgment/{judgment.id}/", {"notes": "旁路"}, format="json")
+        for method in ("patch", "put"):
+            body = {"notes": "旁路"} if method == "patch" else {
+                "notes": "旁路", "soul": str(judgment.soul_id), "civilization": judgment.civilization,
+                "court": "第一殿",
+            }
+            response = getattr(judge_client, method)(f"/api/v1/judgment/{judgment.id}/", body, format="json")
+            assert response.status_code == 409, (method, response.data)
+            assert response.data["code"] == "use_draft_endpoint"
+        judgment.refresh_from_db()
+        assert judgment.notes == "" and judgment.draft_version == 0
+        # Other fields still go through the plain PATCH.
+        response = judge_client.patch(f"/api/v1/judgment/{judgment.id}/", {"court": "第二殿"}, format="json")
+        assert response.status_code == 200, response.data
+
+    def test_a_plain_patch_of_notes_on_a_concluded_case_is_unchanged(self, judge_client, cn_case):
+        judgment, _, _ = cn_case
+        judge_client.post(f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "PASSED", "notes": "判"},
+                          format="json")
+        response = judge_client.patch(f"/api/v1/judgment/{judgment.id}/", {"notes": "补记"}, format="json")
         assert response.status_code == 200, response.data
         judgment.refresh_from_db()
-        assert judgment.draft_version == 1
-        stale = judge_client.patch(_draft_url(judgment), {"version": 0, "notes": "覆盖"}, format="json")
-        assert stale.status_code == 409
+        assert judgment.notes == "补记" and judgment.draft_version == 1
 
     def test_draft_fields_are_not_writable_through_the_plain_patch(self, judge_client, cn_case):
         judgment, _, _ = cn_case

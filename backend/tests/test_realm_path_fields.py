@@ -315,7 +315,7 @@ def test_opening_a_case_in_a_court_puts_the_soul_there_and_moving_the_case_moves
     assert (second.realm_id, second.sequence, second.left_at) == (_court(2).pk, 3, None)
 
     # A PATCH that does not touch the realm is not a move.
-    assert judge.patch(f"/api/v1/judgment/{resp.data['id']}/", {"notes": "x"}, format="json").status_code == 200
+    assert judge.patch(f"/api/v1/judgment/{resp.data['id']}/", {"court": "第二殿"}, format="json").status_code == 200
     assert len(_path(soul)) == 3
 
 
