@@ -67,11 +67,13 @@ export {
   type QueueRealm,
   type JudgmentQueueGroup,
   type JudgmentQueueCounts,
+  type JudgmentCourt,
   type JudgmentQueueCountsParams,
   type JudgmentBatchOperation,
   type JudgmentBatchPayload,
   type JudgmentBatchResult,
   type JudgmentClaimRefusal,
+  type AssignableOfficer,
 } from "./judgment";
 
 // Ledger
@@ -116,6 +118,7 @@ export {
   type MatrixChangesResult,
   type MatrixImpactResult,
   type MatrixConflict,
+  type MatrixWorkflowConflict,
   type RoleDeleteRefusal,
   type RoleCopyPayload,
 } from "./perm";

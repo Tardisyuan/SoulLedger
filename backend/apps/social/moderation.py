@@ -111,10 +111,16 @@ class Screening:
 
     @property
     def moderation_fields(self):
-        """写入时要一并落库的审核字段。只有 HIDE 算「已处理」—— 进已处理列表,由系统处理。"""
-        if self.status != ModerationStatus.HIDDEN:
-            return {}
-        return {"moderated_at": timezone.now(), "moderation_reason": AUTO_REASON_PREFIX + self.decisive_word}
+        """写入时要一并落库的审核字段。只有 HIDE 算「已处理」—— 进已处理列表,由系统处理,
+        所以带 `moderated_at`。REVIEW 送审只记为什么(2026-09-25 决定):`moderation_reason`
+        写 `sensitive_word:<词>`,与 HIDE 同一个前缀;`moderated_at` 留空 —— 还没有人决定。
+        官员随后通过 / 隐藏会用自己的理由覆盖它。"""
+        reason = {"moderation_reason": AUTO_REASON_PREFIX + self.decisive_word}
+        if self.status == ModerationStatus.HIDDEN:
+            return {"moderated_at": timezone.now(), **reason}
+        if self.status == ModerationStatus.PENDING:
+            return reason
+        return {}
 
 
 def mask_words(text, words):

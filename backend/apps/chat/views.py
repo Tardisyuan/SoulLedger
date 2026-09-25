@@ -18,23 +18,27 @@ from django.core.cache import cache
 from django.db.models import F, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, status, throttling, viewsets
+from rest_framework import mixins, serializers, status, throttling, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.chat import hook
+from apps.chat import hook, inbox
 from apps.chat import services as svc
 from apps.chat.matrix import MatrixError, MatrixNotConfiguredError
-from apps.chat.models import Conversation, ConversationKind
+from apps.chat.models import Conversation, ConversationKind, InboxReplyTemplate
 from apps.chat.serializers import (
     ChatErrorSerializer,
     ChatLookupSerializer,
     ChatSessionSerializer,
     ConversationCreateSerializer,
     ConversationSerializer,
+    InboxDraftSerializer,
+    InboxFoldersSerializer,
     InboxMessageSerializer,
+    InboxReplyTemplateSerializer,
+    InboxStateSerializer,
     MessageSendSerializer,
     MessageSentSerializer,
     OfficerInboxSerializer,
@@ -219,6 +223,15 @@ class ChatPushHookView(APIView):
         return Response({"queued": len(ids)})
 
 
+class InboxListQuerySerializer(serializers.Serializer):
+    """列表的查询参数。文件夹的定义在 `apps/chat/inbox.py`。"""
+
+    folder = serializers.ChoiceField(choices=inbox.FOLDERS, default="all", required=False)
+    status = serializers.ChoiceField(choices=["open", "closed"], required=False,
+                                     help_text="`open` 往来中 / `closed` 已关闭(灵魂已转世)。")
+    hall = serializers.IntegerField(required=False, min_value=1, help_text="收件殿司(租户 id)。")
+
+
 class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
                           viewsets.GenericViewSet):
     """`/api/v1/chat/inbox/` —— 灵魂写给殿司的信。
@@ -226,6 +239,10 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     租户隔离走 `scope_to_tenant` 的**直接 tenant 列**:收件人就是那一列,而它在灵魂
     暂居结束回归原文明之后不会改变(见 `apps/chat/models.py` 的注释)。所以一个殿司
     永远只看得见写给自己的那些,包括当初暂居在这里的灵魂写的。
+
+    未读、归档、草稿是**调用者自己的**(`apps/chat/inbox.py`):每一行上的 `unread` / `archived` /
+    `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
+    全站默认(`PageNumberPagination`,每页 20)。
     """
 
     permission_classes = [TenantPermission, CodenamePermission]
@@ -234,6 +251,12 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         "list": ["soul_inbox.read"],
         "retrieve": ["soul_inbox.read"],
         "messages": ["soul_inbox.read"],
+        "folders": ["soul_inbox.read"],
+        "read": ["soul_inbox.read"],
+        "archive": ["soul_inbox.read"],
+        "unarchive": ["soul_inbox.read"],
+        # 草稿是没发出的回复:读、写、清都要能回复。
+        "draft": ["soul_inbox.read", "soul_inbox.reply"],
         "reply": ["soul_inbox.reply"],
     }
     serializer_class = OfficerInboxSerializer
@@ -245,7 +268,36 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related(
             "soul_a", "tenant"
         ).order_by(F("last_message_at").desc(nulls_last=True), "-created_at")
-        return scope_to_tenant(qs, self.request)
+        return inbox.annotate_for(scope_to_tenant(qs, self.request), self.request.user)
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if self.action != "list":
+            return queryset
+        params = InboxListQuerySerializer(data=self.request.query_params)
+        params.is_valid(raise_exception=True)
+        query = params.validated_data
+        folder = query.get("folder", "all")
+        queryset = queryset.filter(inbox.folder_q(folder))
+        if query.get("status") == "open":
+            queryset = queryset.filter(closed_at__isnull=True)
+        elif query.get("status") == "closed":
+            queryset = queryset.filter(closed_at__isnull=False)
+        if query.get("hall"):
+            queryset = queryset.filter(tenant_id=query["hall"])
+        if folder == "awaiting_reply":
+            # 设计稿 C · 09:待回复「最早在上」—— 等得最久的先回。
+            queryset = queryset.order_by(F("last_soul_message_at").asc(nulls_last=True), "created_at")
+        return queryset
+
+    @extend_schema(parameters=[InboxListQuerySerializer])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(responses={200: InboxFoldersSerializer})
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def folders(self, request):
+        return Response(inbox.counts(self.get_queryset()))
 
     @extend_schema(responses={200: InboxMessageSerializer(many=True), 503: ChatErrorSerializer})
     @action(detail=True, methods=["get"], pagination_class=None)
@@ -256,6 +308,45 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         except MatrixError as exc:
             return _unavailable(exc)
         return Response(InboxMessageSerializer(rows, many=True).data)
+
+    @extend_schema(request=None, responses={200: InboxStateSerializer})
+    @action(detail=True, methods=["post"])
+    def read(self, request, pk=None):
+        """我读到此刻。关闭的会话也可以(只读,不是不可读)。"""
+        return Response(InboxStateSerializer(inbox.mark_read(self.get_object(), request.user)).data)
+
+    @extend_schema(request=None, responses={200: InboxStateSerializer})
+    @action(detail=True, methods=["post"])
+    def archive(self, request, pk=None):
+        """只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信不会自动取消归档。"""
+        return Response(InboxStateSerializer(inbox.set_archived(self.get_object(), request.user, True)).data)
+
+    @extend_schema(request=None, responses={200: InboxStateSerializer})
+    @action(detail=True, methods=["post"])
+    def unarchive(self, request, pk=None):
+        return Response(InboxStateSerializer(inbox.set_archived(self.get_object(), request.user, False)).data)
+
+    @extend_schema(methods=["GET"], request=None, responses={200: InboxStateSerializer})
+    @extend_schema(methods=["PUT"], request=InboxDraftSerializer,
+                   responses={200: InboxStateSerializer, 409: ChatErrorSerializer})
+    @extend_schema(methods=["DELETE"], request=None, responses={200: InboxStateSerializer})
+    @action(detail=True, methods=["get", "put", "delete"])
+    def draft(self, request, pk=None):
+        """我的草稿。只存在我们的库里、只回给写它的官员;不进 Synapse、不进审计。
+        关闭的会话只读:PUT 答 409 `closed`;DELETE 仍可(清掉留下的草稿)。"""
+        conversation = self.get_object()
+        if request.method == "GET":
+            return Response(InboxStateSerializer(inbox.state_for(conversation, request.user)).data)
+        if request.method == "DELETE":
+            return Response(InboxStateSerializer(inbox.save_draft(conversation, request.user, "")).data)
+        if conversation.closed_at is not None:
+            return _error(svc.ChatError("会话已关闭(对方已转世),不能再存草稿。", "closed", status=409))
+        body = InboxDraftSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        text = body.validated_data["body"]
+        # 只有空白 = 清掉:恢复出一份全是空格的草稿没有意义。
+        state = inbox.save_draft(conversation, request.user, text if text.strip() else "")
+        return Response(InboxStateSerializer(state).data)
 
     @extend_schema(request=OfficerReplySerializer,
                    responses={201: MessageSentSerializer, 409: ChatErrorSerializer,
@@ -272,4 +363,33 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
             return _error(exc)
         except MatrixError as exc:
             return _unavailable(exc)
+        inbox.after_reply(conversation, request.user)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
+
+
+class InboxReplyTemplateViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+    """`/api/v1/chat/inbox-templates/` —— 殿司的回复模板,同一殿司的官员共用。
+
+    **每个动作都要 `soul_inbox.reply`**,读也是:模板只在回复框里用,没有回复权的人用不上它。
+    没有另开一个「管理模板」的权限码 —— 有回复权的官员就是写回复的人,由他们维护回复的
+    常用句最自然;要收紧时再加 `soul_inbox.template`。
+
+    不分页:回复框的选择器要一次拿全,而一个殿司的模板是几条到几十条,不是几千条。
+    """
+
+    permission_classes = [TenantPermission, CodenamePermission]
+    permission_codename = "soul_inbox"
+    extra_permissions = {action: ["soul_inbox.reply"] for action in
+                         ("list", "retrieve", "create", "update", "partial_update", "destroy")}
+    serializer_class = InboxReplyTemplateSerializer
+    queryset = InboxReplyTemplate.objects.all()
+    pagination_class = None
+
+    def get_queryset(self):
+        return scope_to_tenant(InboxReplyTemplate.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        tenant = getattr(self.request, "tenant", None)
+        if tenant is None:
+            raise serializers.ValidationError({"detail": "模板属于一个殿司;当前请求没有殿司。"})
+        serializer.save(tenant=tenant, created_by=self.request.user)

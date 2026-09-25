@@ -614,6 +614,32 @@ class TestQueueList:
         eu = world.clients["eu_judge"].get(f"{BASE}queue-counts/")
         assert eu.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1}
 
+    def test_courts_lists_every_court_in_scope_with_pending_counts(self, world, four_groups):
+        # 第一殿:mine / others / deferred 三件未结 + 一件已结;第二殿:一件。另一租户的第一殿不算。
+        _case(world.cn, name="无殿", court="")
+        _case(world.cn, name="仅已结", court="第三殿")
+        Judgment.all_objects.filter(court="第三殿").update(verdict="PASSED", is_final=True)
+        response = world.clients["a"].get(f"{BASE}courts/", {"court": "第二殿", "page": "2"})
+        assert response.status_code == 200, response.data
+        # 不分页、不随筛选收窄;空殿不列;只有已结案的殿也列,pending 为 0。
+        # 按 court 排,但 CJK 的先后是库的排序规则说了算(PG 与 SQLite 未必同),这里不钉顺序。
+        assert sorted(response.data, key=lambda r: r["court"]) == [
+            {"court": "第一殿", "pending": 3},
+            {"court": "第三殿", "pending": 0},
+            {"court": "第二殿", "pending": 1},
+        ]
+
+    def test_courts_are_tenant_scoped(self, world, four_groups):
+        _case(world.eu, name="Only EU", court="Minos")
+        eu = world.clients["eu_judge"].get(f"{BASE}courts/")
+        assert eu.data == [{"court": "Minos", "pending": 1}, {"court": "第一殿", "pending": 1}]
+        cn = world.clients["a"].get(f"{BASE}courts/")
+        assert "Minos" not in {row["court"] for row in cn.data}
+
+    def test_courts_need_the_queue_read(self, world, four_groups):
+        assert world.clients["viewer"].get(f"{BASE}courts/").status_code == 200
+        assert world.clients["guardian"].get(f"{BASE}courts/").status_code == 403
+
     def test_court_filter(self, world, four_groups):
         got = _ids(world.clients["a"].get(BASE, {"court": "第二殿"}))
         assert got == {str(four_groups["unclaimed"].pk)}

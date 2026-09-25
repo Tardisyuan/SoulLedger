@@ -474,10 +474,15 @@
     "entity_types": {
       "soul": "Ka",
       "menu": "Menu",
-      "dispatch_draft": "Sesh Tepy Hab-Ba"
+      "dispatch_draft": "Sesh Tepy Hab-Ba",
+      "role": "Netjer",
+      "social_post": "Medu",
+      "social_comment": "Wesheb",
+      "workflow_template": "Pet-Sesh Wat"
     },
     "col_location": "Sekhet Tepy",
-    "col_deleted_by": "Wehem Iri"
+    "col_deleted_by": "Wehem Iri",
+    "restore_missing_roles": "Nen Ankh Wehem: Nen Gem Netjer ({{roles}})."
   },
   "permissions": {
     "title": "Iri Was",
@@ -583,8 +588,13 @@
         "version_conflict": "Ky Khemen Netjer Pen; Wehem Ini Seth. Maa Wehem.",
         "role_not_found": "Nen Gem Netjer.",
         "permission_not_found": "Nen Gem Was.",
-        "database_error": "Sethet: Nen Sau."
-      }
+        "database_error": "Sethet: Nen Sau.",
+        "admin_always_all": "Netjer Em Tepy Aba-Ef Was Neb",
+        "conflict_unacknowledged": "Wat Hesy Nen Netjer Em Kheme Seth; Nen Maa — Khesef.",
+        "role_forbidden_permission": "Khesef: MODERATOR Nen Aba Was Wat Hesy — Netjer Em Tepy Wa."
+      },
+      "conflict_workflow_line": "{{causes}}: Wat Hesy «{{workflow}}» Em Wedja, Sekhet {{step}} ({{step_name}}) Nen Netjer Em Kheme Seth.",
+      "conflict_acknowledge": "Maa Seth: {{n}} Wat Hesy ({{m}} Em Wedja) Nen Netjer Em Kheme Seth"
     },
     "segments": {
       "label": "Aat Was",
@@ -1079,7 +1089,8 @@
       "uncite": "Khemu Djed {{code}}",
       "cite_error": "Nen Djed",
       "deferred_note": "Sedjer Seth: {{reason}}",
-      "previous": "Sep Tepy"
+      "previous": "Sep Tepy",
+      "next": "Sep Em Khet"
     },
     "claim": {
       "groups": {
@@ -1118,7 +1129,7 @@
       "reassign_hint": "Sab Em Per-Hemsu Pen Wa; Per Aa Maa Was Wehem",
       "pick_officer": "— Setep Sab —",
       "officer_required": "Setep Sab: Sesen",
-      "officers_unavailable": "Nen Ini Sab Neb (Sesen Was Iri Remetj)",
+      "officers_unavailable": "Nen Ini Sab Neb (Sesen Was Hab Ky)",
       "reassign_confirm": "Hab Ky",
       "done_claim": "Shesep Seth: Sep {{n}}",
       "done_reassign": "Hab Ky Seth: Sep {{n}}",
@@ -1392,7 +1403,6 @@
       },
       "fork": {
         "LEFT": "Tartaros",
-        "MIDDLE": "Qab",
         "RIGHT": "Ta Nefer"
       },
       "off_shape": "Ta {{n}}: Nen Em Tut; Maa Sesh",
@@ -3106,6 +3116,7 @@
       "approve": "Menkh",
       "shortcuts": "J / K · A Menkh · H Imen",
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
+      "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer",
       "media_n": "Tut {{n}}",
       "media_label": "Tut",
       "media_caption": "Tut {{i}} · {{w}}×{{h}}",
@@ -3122,7 +3133,8 @@
       "select_row": "Setep «{{word}}»",
       "batch_region": "Iri Neb · Medu Djeseru",
       "delete_selected": "Fekh Setep Seth",
-      "confirm_title": "Fekh {{n}} Medu Djeseru?"
+      "confirm_title": "Fekh {{n}} Medu Djeseru?",
+      "category_placeholder": "— Setep Ra —"
     },
     "mutes": {
       "col_soul": "Ba",
@@ -3170,7 +3182,11 @@
     "folder": {
       "all": "Sesh Neb",
       "open": "Em Shemes",
-      "closed": "Khetem Seth"
+      "closed": "Khetem Seth",
+      "awaiting_reply": "Em Weshed",
+      "replied": "Wesheb Seth",
+      "drafts": "Sesh Tepy",
+      "archived": "Per Sesh"
     },
     "by_hall": "Wesekhet",
     "folder_empty": "Nen Sesh Dy",
@@ -3183,7 +3199,30 @@
     "cite_hint": "/ Djed Hep",
     "cite_label": "Hep",
     "cite_results": "Hep {{n}} · ↑↓ Setep · ↵ Redi",
-    "cite_empty": "Nen Gem Hep"
+    "cite_empty": "Nen Gem Hep",
+    "oldest_first": "Wep Tepy",
+    "unread": "Nen Maa",
+    "archive": "Nehem Er Per Sesh",
+    "unarchive": "Nehem Er Wetu",
+    "archived_done": "Nehem Er Per Sesh Seth",
+    "unarchived_done": "Nehem Er Wetu Seth",
+    "save_draft": "Sau Sesh Tepy",
+    "draft_saving": "Em Sau Sesh Tepy…",
+    "draft_saved": "Sesh Tepy Sau Seth · {{time}}",
+    "draft_failed": "Nen Sau Sesh Tepy. Wehem Iri.",
+    "template": {
+      "label": "Pet-Sesh",
+      "pick": "Setep Pet-Sesh",
+      "none": "Nen Pet-Sesh Djer",
+      "manage": "Khemen Pet-Sesh",
+      "new": "Iri Pet-Sesh Renpi",
+      "title": "Ren",
+      "body": "Medu",
+      "placeholders": "Ren Ba Hena Ren Wesekhet Er Tepy Hab:",
+      "saved": "Pet-Sesh Sau Seth",
+      "deleted": "Pet-Sesh Fekh Seth",
+      "empty_manage": "Nen Pet-Sesh Em Wesekhet Pen Djer. Sau Wesheb Er Pet-Sesh; Setep Er Hab."
+    }
   },
   "sentence_plan": {
     "panel_title": "Wetep",

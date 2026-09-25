@@ -21,6 +21,8 @@ export interface DispositionListParams {
   section?: DispositionSection;
   /** `"false"`:藏起这一世之后已经转世的灵魂(「期满」段用);计数同样按它算。 */
   soul_reborn?: "true" | "false";
+  /** `term_end`:期满近 → 远,永久 / 没有期满日的排最后(服务端 SQL 排,跨页)。前缀 `-` 反向。 */
+  ordering?: "term_end" | "-term_end" | "created_at" | "-created_at" | "executed_at" | "-executed_at";
 }
 
 export interface Disposition {

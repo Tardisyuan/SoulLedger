@@ -123,11 +123,12 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     # these dates are routinely BCE. `term_start` on the serializer is a
     # HistoricalDateField over these three columns, not a real field.
     #
-    # NULL MEANS NOT RECORDED, the same convention `sentence_years` above uses
-    # and for the same reason: no invented value. Every row written before this
-    # column existed is null (see disposition/0011) and stays null until someone
-    # records an actual start, because there is nothing in those rows to derive
-    # one from.
+    # NULL MEANS NOT RECORDED, the same convention `sentence_years` above uses.
+    #
+    # 2026-09-25 产品负责人决定:执行即开始服刑。所以 `DispositionService._mark_executed`
+    # 在执行时把**空的**起算日记成执行那天(已记的史实起算日不覆盖),而执行过却仍为空的
+    # 存量行,期满计算从执行日起算(`apps.disposition.expiry.effective_term_start`)——
+    # 不回填数据。上面「两列、两件事」仍然成立:判官记了起算日,两者就各是各的。
     term_start_year = models.IntegerField(null=True, blank=True)
     term_start_month = models.SmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]
@@ -144,8 +145,12 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     # 三段(待执行 / 执行中 / 期满)由这两列推出来,见 `SECTION_FILTERS`。
     #
     # 只由 `apps.disposition.expiry` 写 —— 那里说了「期满」怎么算、为什么永久刑、
-    # 没记刑期、没记起算日的处置永远不写它。不写回 null:期满不可撤销,
-    # 刑期被改长是另一件事(见 云端报告 disposition-expiry-precedents(已移出仓库,存于项目记忆目录) 的开放问题)。
+    # 没记刑期、没执行的处置永远不写它。
+    #
+    # 写回 null 只有一种情形(产品负责人 2026-09-25 决定):期满之后刑期或起算日被改,
+    # 新的期满日落在今天之后 —— 刑期被延长了,灵魂还在服刑。改刑期的写路径是
+    # `DispositionSerializer.update`(PATCH /disposition/{id}/),它调
+    # `expiry.reopen_if_term_extended`。
     expired_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

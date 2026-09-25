@@ -12,6 +12,7 @@ from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.disposition.expiry import term_end_sort_key
 from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSection
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
 from apps.disposition.services import DispositionService
@@ -102,13 +103,24 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         soul_reborn_flag=Exists(
             Reincarnation.objects.filter(soul=OuterRef("soul"), cycle_count__gt=OuterRef("cycle"))
         ),
+    ).alias(
+        # 期满日的排序键(`?ordering=term_end`):SQL 里算,分页之外的行也排得对。
+        # 永久 / 没有期满日的排最后。规则与序列化器的 `term_end` 同源,见 `expiry.term_end_sort_key`。
+        term_end=term_end_sort_key(),
     )
     serializer_class = DispositionSerializer
     filterset_class = DispositionFilter
     pagination_class = DispositionPagination
     # 暂居只读例外(apps/core/tenant.py)。
     residence_read_actions = ("list", "retrieve")
-    ordering_fields = ["created_at", "executed_at"]
+    ordering_fields = ["created_at", "executed_at", "term_end"]
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        # 同一天期满的平局:按建档先后、再按主键 —— 分页不因平局在两页之间跳行。
+        if "term_end" in self.request.query_params.get("ordering", ""):
+            queryset = queryset.order_by(*queryset.query.order_by, "created_at", "pk")
+        return queryset
 
     def get_queryset(self):
         """Archived dispositions are off the list unless asked for.
@@ -133,6 +145,29 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         if not show_archived:
             qs = qs.filter(is_archived=False)
         return qs
+
+    def perform_create(self, serializer):
+        """A manual disposition with a destination realm moves the soul there (行程拓扑).
+
+        Same verb and same transaction as `DispositionService.create_from_judgment`:
+        `SoulPathService.enter` closes the open station and opens the realm
+        (产品负责人 2026-09-25). Not for a disposition filed under an AMENDMENT or
+        REOPEN judgment: those are heard while the soul serves a sentence plan,
+        and where it stands is the plan's to move. No realm writes nothing.
+        """
+        from django.db import transaction
+
+        from apps.judgment.models import JudgmentKind
+        from apps.realms.path import SoulPathService
+
+        with transaction.atomic():
+            super().perform_create(serializer)
+            disposition = serializer.instance
+            if disposition.destination_realm_id is None:
+                return
+            if disposition.judgment is not None and disposition.judgment.kind != JudgmentKind.ORIGINAL:
+                return
+            SoulPathService.enter(disposition.soul, disposition.destination_realm, tenant_id=disposition.tenant_id)
 
     def section_counts(self) -> dict:
         """Per-section totals under this request's filters, minus `section`.

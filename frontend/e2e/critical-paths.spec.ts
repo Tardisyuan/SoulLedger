@@ -394,7 +394,7 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(refused).toBeFocused();
   });
 
-  test("the impact check names the step that would lose its approver", async ({ page, isMobile }) => {
+  test("the impact check names the step that would lose its approver; 保存 waits for the acknowledgement", async ({ page, isMobile }) => {
     test.skip(isMobile, "393 px shows the role-first list; covered below");
     api.on("POST", "/perm/role-permissions/impact/", (call) => ({
       body: {
@@ -403,6 +403,7 @@ test.describe("Critical path: permission matrix save", () => {
           ? [{ template_id: "t1", template_name: "跨文明调度 · 两级", tenant_id: 1, civilization: "CHINESE", is_active: true, step_order: 2,
                step_name: "判官复核", approver_roles: ["JUDGE"], caused_by: [{ index: 0, role: "JUDGE", permission_id: 3, codename: "dispatch.approve" }] }]
           : [],
+        workflow_conflicts: [],
       },
     }));
     const target = page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") });
@@ -410,6 +411,10 @@ test.describe("Critical path: permission matrix save", () => {
     const conflict = page.getByRole("status").filter({ hasText: "冲突提示" });
     await expect(conflict).toContainText("审批流「跨文明调度 · 两级」的第 2 步（判官复核）将无人可批");
     await expect(target).toHaveText("◇");
+    const save = unsaved(page).getByRole("button", { name: "保存改动" });
+    await expect(save).toBeDisabled();
+    await conflict.getByRole("checkbox", { name: "我知道这会让 1 条审批流（含进行中 0 条）无人可批" }).check();
+    await expect(save).toBeEnabled();
   });
 
   test("at 393 px: pick a role, then toggle its rows", async ({ page, isMobile }) => {

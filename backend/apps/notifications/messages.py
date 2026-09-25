@@ -59,8 +59,8 @@ MESSAGES = {
         "sentence_node_refused": {"title": "Sekhet Khesef Seth", "body": "{{tenant}}: Hab Sekhet {{order}} En {{soul}} Khesef Seth. Sekhet Em Smen."},
         "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Sekhet Neb Wetep Seth."},
         "cross_sentence_submitted": {"title": "Sekhet Sesh Seth", "body": "{{tenant}}: Sekhet {{order}} En {{soul}} Sesh Seth."},
-        "password_help_requested": {"title": "Nen Rekh Sekhem", "body": "{{username}}: Nen Rekh Sekhem. Wehem Sekhem Em Iri Netjeru."},
-        "password_help_requested_moderator": {"title": "Nen Rekh Sekhem", "body": "{{username}}: Nen Rekh Sekhem. Medu Netjer Em Tepy Er Wehem Sekhem."},
+        "password_help_requested": {"title": "Dbh · Nen Rekh Sekhem", "body": "Aq «{{username}}» Dbh Wehem Sekhem Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},
+        "password_help_requested_moderator": {"title": "Dbh · Nen Rekh Sekhem", "body": "Aq «{{username}}» Dbh Wehem Sekhem Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",

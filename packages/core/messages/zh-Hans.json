@@ -474,10 +474,15 @@
     "entity_types": {
       "soul": "灵魂",
       "menu": "菜单",
-      "dispatch_draft": "移交草稿"
+      "dispatch_draft": "移交草稿",
+      "role": "角色",
+      "social_post": "帖子",
+      "social_comment": "评论",
+      "workflow_template": "审批流模板"
     },
     "col_location": "原位置",
-    "col_deleted_by": "删除人"
+    "col_deleted_by": "删除人",
+    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。"
   },
   "permissions": {
     "title": "权限管理",
@@ -583,8 +588,13 @@
         "version_conflict": "此角色已被别人改过，已重新加载，请再看一遍。",
         "role_not_found": "角色已不存在。",
         "permission_not_found": "权限项已不存在。",
-        "database_error": "数据库出错，这一格没有写入。"
-      }
+        "database_error": "数据库出错，这一格没有写入。",
+        "admin_always_all": "管理员始终拥有全部权限",
+        "conflict_unacknowledged": "这项撤销会让审批流无人可批，未经确认，已退回。请在冲突提示里勾选确认后再保存。",
+        "role_forbidden_permission": "与规则「殿主不得持有审批工作流、推进工作流与用户管理权限」冲突，已退回。"
+      },
+      "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
+      "conflict_acknowledge": "我知道这会让 {{n}} 条审批流（含进行中 {{m}} 条）无人可批"
     },
     "segments": {
       "label": "权限分区",
@@ -1079,7 +1089,8 @@
       "uncite": "撤回引用 {{code}}",
       "cite_error": "引用未能保存",
       "deferred_note": "已暂缓：{{reason}}",
-      "previous": "上一件"
+      "previous": "上一件",
+      "next": "下一件"
     },
     "claim": {
       "groups": {
@@ -1118,7 +1129,7 @@
       "reassign_hint": "只列本租户的在职官员；办案权限由服务端再核一次",
       "pick_officer": "— 选择官员 —",
       "officer_required": "请选择一位官员",
-      "officers_unavailable": "读不到官员名单（需要用户管理权限）",
+      "officers_unavailable": "读不到官员名单（需要改派权限）",
       "reassign_confirm": "改派",
       "done_claim": "已认领 {{n}} 件",
       "done_reassign": "已改派 {{n}} 件",
@@ -1392,7 +1403,6 @@
       },
       "fork": {
         "LEFT": "左 · 塔尔塔罗斯",
-        "MIDDLE": "中",
         "RIGHT": "右 · 至福岛"
       },
       "off_shape": "{{n}} 个界域在此图上没有位置,见树表",
@@ -3106,6 +3116,7 @@
       "approve": "放行",
       "shortcuts": "J / K 上下 · A 放行 · H 隐藏",
       "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
+      "held_for_word": "因敏感词「{{word}}」待审",
       "media_n": "图 {{n}}",
       "media_label": "配图",
       "media_caption": "图 {{i}} · {{w}}×{{h}}",
@@ -3122,7 +3133,8 @@
       "select_row": "选择「{{word}}」",
       "batch_region": "敏感词批量操作",
       "delete_selected": "删除所选",
-      "confirm_title": "删除 {{n}} 个敏感词？"
+      "confirm_title": "删除 {{n}} 个敏感词？",
+      "category_placeholder": "— 选择类别 —"
     },
     "mutes": {
       "col_soul": "灵魂",
@@ -3170,7 +3182,11 @@
     "folder": {
       "all": "全部来信",
       "open": "往来中",
-      "closed": "已关闭"
+      "closed": "已关闭",
+      "awaiting_reply": "待回复",
+      "replied": "已回复",
+      "drafts": "草稿",
+      "archived": "归档"
     },
     "by_hall": "按殿",
     "folder_empty": "这个文件夹里没有来信",
@@ -3183,7 +3199,30 @@
     "cite_hint": "/ 引用律条",
     "cite_label": "律条",
     "cite_results": "{{n}} 条律条,↑↓ 选择,回车插入",
-    "cite_empty": "没有匹配的律条"
+    "cite_empty": "没有匹配的律条",
+    "oldest_first": "最早在上",
+    "unread": "未读",
+    "archive": "归档",
+    "unarchive": "移回收件",
+    "archived_done": "已归档",
+    "unarchived_done": "已移回收件",
+    "save_draft": "存草稿",
+    "draft_saving": "正在保存草稿…",
+    "draft_saved": "草稿已保存 · {{time}}",
+    "draft_failed": "草稿没有保存,请重试",
+    "template": {
+      "label": "模板",
+      "pick": "插入模板",
+      "none": "还没有模板",
+      "manage": "管理模板",
+      "new": "新建模板",
+      "title": "标题",
+      "body": "正文",
+      "placeholders": "发送前替换为灵魂名与殿名:",
+      "saved": "模板已保存",
+      "deleted": "模板已删除",
+      "empty_manage": "这个殿司还没有模板。常用的回复存成模板,回复时一键插入。"
+    }
   },
   "sentence_plan": {
     "panel_title": "受刑计划",

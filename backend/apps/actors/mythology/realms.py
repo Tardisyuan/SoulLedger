@@ -181,7 +181,7 @@ EUROPEAN_REALMS = [
     # makes the reset a thing that happened to it somewhere else. A field
     # naming the mechanism *this realm* applies is the wrong place to record a
     # river two realms down the road.
-    ("EU_HEAVEN", "天堂", "上帝之国", "Kingdom of Heaven", "Heaven", RealmType.BLISS, 1,
+    ("EU_HEAVEN", "天堂", "上帝之国", "Kingdom of Heaven", "Pet", RealmType.BLISS, 1,
      "Eternal paradise - the highest bliss realm in Christian tradition", "NONE", True, None),
     # The mountain as a whole. It is a container now — the seven terraces below
     # hang off this row by `parent_realm` (see REALM_PARENTS) — so its
@@ -606,7 +606,7 @@ GREEK_REALMS = [
      # the meadow and the crossing stay NONE because nobody is sentenced to
      # either, so no rebirth follows from them.
     ("GR_ISLES_OF_THE_BLESSED", "至福岛", "至福岛", "The Isles of the Blessed",
-     "IslesOfTheBlest", RealmType.BLISS, 1,
+     "Ta Nefer", RealmType.BLISS, 1,
      "Plato, Gorgias 524a: one of the two roads out of the meadow, taken by "
      "those who have lived justly. Pindar, Olympian 2 describes the same "
      "destination as requiring three lives without injustice on either side of "
@@ -892,8 +892,9 @@ EGYPTIAN_REALMS = [
 # GREEK. `fork` places each road out of the meadow. LEFT / RIGHT are Plato's own
 # words and not a drawing convention: Republic X 614c-d has the judges send
 # the just to the right and upward through the heaven, and the unjust to the
-# left and downward. MIDDLE is in the contract's vocabulary and on no row — the
-# middle road is Asphodel, which this table refuses (see GREEK_REALMS above).
+# left and downward. There is no middle road — that would be Asphodel, which
+# this table refuses (see GREEK_REALMS above); the contract's unused MIDDLE value
+# was removed on 2026-09-25 (apps/realms/migrations/0020).
 # The meadow and the crossing are not roads and carry no fork.
 # --------------------------------------------------------------------------
 _COURT_ORDER = {

@@ -70,6 +70,18 @@ export function useJudgmentPrevious(at: string | null | undefined, skip: string[
   });
 }
 
+/** 「下一件」: the pending case just after `after` (`judgment` is null when there is none). */
+export function useJudgmentNextAfter(after: string | null | undefined, skip: string[] = []) {
+  return useQuery({
+    queryKey: judgmentKeys.after(after ?? "", skip),
+    queryFn: async () => {
+      const res = await judgmentApi.next({ after: after as string, skip });
+      return res.data;
+    },
+    enabled: !!after,
+  });
+}
+
 /**
  * The four queue groups' sizes (`GET /judgment/queue-counts/`). Pass the same
  * `court` / `search` the list is filtered by, so the tab badges agree with it.
@@ -82,6 +94,29 @@ export function useJudgmentQueueCounts(params?: JudgmentQueueCountsParams) {
       return res.data;
     },
     staleTime: 30_000,
+  });
+}
+
+/** The queue's court (殿) filter options (`GET /judgment/courts/`), with pending counts. */
+export function useJudgmentCourts() {
+  return useQuery({
+    queryKey: judgmentKeys.courts(),
+    queryFn: async () => (await judgmentApi.courts()).data,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * The reassign picker's list (`GET /judgment/assignable-officers/`): officers these
+ * cases may be reassigned to, by the same rule `reassign` checks. Needs `judgment.assign`
+ * — which is what a MODERATOR has and `/users/` (`user.manage`) is not.
+ */
+export function useAssignableOfficers(ids: readonly string[], enabled = true) {
+  return useQuery({
+    queryKey: judgmentKeys.assignableOfficers(ids),
+    queryFn: async () => (await judgmentApi.assignableOfficers(ids)).data,
+    enabled: enabled && ids.length > 0,
+    staleTime: 60_000,
   });
 }
 

@@ -111,6 +111,7 @@ class TestExpireForTenant:
         tomorrow = _disposition(tenant, "not yet", start=(2000, 6, 16))
         eternal = _disposition(tenant, "eternal", eternal=True)
         no_years = _disposition(tenant, "no term", years=None)
+        # 没记起算日、执行于 2026 年:从执行日起算,2036 年才满,BOUNDARY(2010)时未满。
         no_start = _disposition(tenant, "no start", start=None)
         pending = _disposition(tenant, "not executed", executed=False)
 
@@ -122,6 +123,27 @@ class TestExpireForTenant:
         for row in (tomorrow, eternal, no_years, no_start, pending):
             row.refresh_from_db()
             assert row.expired_at is None, row.soul.name
+
+    def test_no_start_date_counts_from_the_execution_date(self, tenant):
+        """2026-09-25 决定(翻转了原来的「没有起算日永不期满」):已执行而没记起算日的
+        存量行,从执行那天起算。执行于 2000-06-15、刑期 10 年 → 2010-06-15 期满。"""
+        executed = timezone.make_aware(datetime.datetime(2000, 6, 15, 12, 0))
+        no_start = _disposition(tenant, "no start", start=None)
+        Disposition.objects.filter(pk=no_start.pk).update(executed_at=executed)
+
+        assert expire_for_tenant(tenant, today=D(2010, 6, 14))["expired"] == 0
+        no_start.refresh_from_db()
+        assert no_start.expired_at is None
+        assert expire_for_tenant(tenant, today=BOUNDARY)["expired"] == 1
+        no_start.refresh_from_db()
+        assert no_start.expired_at is not None
+
+    def test_a_recorded_start_wins_over_the_execution_date(self, tenant):
+        """起算日记了就用它,不看执行日:执行于 2000 年而起算日是 2005 年的,2010 年未满。"""
+        row = _disposition(tenant, "recorded", start=(2005, 6, 15))
+        Disposition.objects.filter(pk=row.pk).update(
+            executed_at=timezone.make_aware(datetime.datetime(2000, 6, 15, 12, 0)))
+        assert expire_for_tenant(tenant, today=BOUNDARY)["expired"] == 0
 
     def test_eternal_never_expires_however_long_it_has_run(self, tenant):
         eternal = _disposition(tenant, "eternal", start=(-3000, 1, 1), years=1, eternal=True)
@@ -244,3 +266,62 @@ class TestManagementCommand:
     def test_unknown_tenant_is_an_error(self, tenant):
         with pytest.raises(CommandError):
             call_command("expire_dispositions", "--tenant", "NOPE")
+
+
+# ---------------------------------------------------------------------------
+# A term extended after expiry (产品负责人 2026-09-25)
+# ---------------------------------------------------------------------------
+
+def _patch(row, **data):
+    from apps.disposition.serializers import DispositionSerializer
+
+    serializer = DispositionSerializer(instance=row, data=data, partial=True)
+    assert serializer.is_valid(), serializer.errors
+    serializer.save()
+    row.refresh_from_db()
+    return row
+
+
+@pytest.mark.django_db
+class TestTermExtendedAfterExpiry:
+    @pytest.fixture
+    def expired(self, tenant):
+        row = _disposition(tenant, "served")  # 2000-06-15 + 10 → 2010-06-15
+        expire_for_tenant(tenant, today=BOUNDARY)
+        row.refresh_from_db()
+        assert row.expired_at is not None
+        return row
+
+    def test_a_term_lengthened_past_today_clears_the_expiry(self, expired):
+        years = timezone.localdate().year - 2000 + 5
+        assert _patch(expired, sentence_years=years).expired_at is None
+
+    def test_a_start_moved_so_the_end_is_in_the_future_clears_it(self, expired):
+        today = timezone.localdate()
+        start = {"year": today.year - 5, "month": today.month, "day": today.day}
+        assert _patch(expired, term_start=start).expired_at is None
+
+    def test_a_term_changed_but_still_in_the_past_keeps_it(self, expired):
+        stamp = expired.expired_at
+        assert _patch(expired, sentence_years=12).expired_at == stamp  # ends 2012
+        assert _patch(expired, sentence_years=5).expired_at == stamp
+
+    def test_a_term_made_eternal_or_unrecorded_keeps_it(self, expired):
+        stamp = expired.expired_at
+        assert _patch(expired, sentence_years=None).expired_at == stamp
+        assert _patch(expired, is_eternal=True).expired_at == stamp
+
+    def test_an_edit_that_touches_no_term_column_keeps_it(self, expired):
+        stamp = expired.expired_at
+        assert _patch(expired, notes="looked at this").expired_at == stamp
+
+    def test_the_api_clears_it_too(self, api_client, admin_user, expired):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        token = RefreshToken.for_user(admin_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+        years = timezone.localdate().year - 2000 + 5
+        response = api_client.patch(f"/api/v1/disposition/{expired.pk}/", {"sentence_years": years}, format="json")
+        assert response.status_code == 200, response.data
+        assert response.data["expired_at"] is None
+        assert response.data["section"] == "executing"

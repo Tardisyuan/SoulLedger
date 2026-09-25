@@ -107,6 +107,17 @@ class RecycleBinRestoreRequestSerializer(serializers.Serializer):
     cascade_id = serializers.UUIDField()
 
 
+class RecycleBinRestoreRefusalSerializer(serializers.Serializer):
+    """400 body of restore. `code` / `missing_roles` come with a refusal from a
+    registered restore check (`template_role_missing`: a workflow template in
+    the cascade names roles that no longer exist); the other 400s carry
+    `error` alone."""
+
+    error = serializers.CharField()
+    code = serializers.ChoiceField(choices=["template_role_missing"], required=False)
+    missing_roles = serializers.ListField(child=serializers.CharField(), required=False)
+
+
 class RecycleBinRestoreResultSerializer(serializers.Serializer):
     """Rows actually restored, across every model sharing the cascade id."""
 
@@ -161,7 +172,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         request=RecycleBinRestoreRequestSerializer,
         responses={
             200: RecycleBinRestoreResultSerializer,
-            400: ErrorResponseSerializer,
+            400: RecycleBinRestoreRefusalSerializer,
             403: ErrorResponseSerializer,
             404: ErrorResponseSerializer,
         },
@@ -183,6 +194,8 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
             return Response({"error": "cascade_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             restored = recycle_bin.restore_cascade(cascade_id)
+        except recycle_bin.RestoreRefusedError as refused:
+            return Response(refused.body, status=status.HTTP_400_BAD_REQUEST)
         except (ValueError, TypeError):
             return Response({"error": "cascade_id is not a valid UUID"}, status=status.HTTP_400_BAD_REQUEST)
         if restored == 0:

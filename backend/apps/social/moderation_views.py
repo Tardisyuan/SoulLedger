@@ -54,6 +54,7 @@ from apps.social.moderation_serializers import (
     ResolveReportSerializer,
     SensitiveWordBatchDeleteResultSerializer,
     SensitiveWordBatchDeleteSerializer,
+    SensitiveWordCreateSerializer,
     SensitiveWordSerializer,
     SocialMuteSerializer,
 )
@@ -221,9 +222,9 @@ class SensitiveWordViewSet(
         # 聚合查询不带 Meta.ordering(Django 3.1 起),显式按词排,否则分页顺序不定。
         return mod.with_recent_hits(qs).order_by("word") if self.action == "list" else qs
 
-    @extend_schema(request=SensitiveWordSerializer, responses={201: SensitiveWordSerializer, **ERRORS})
+    @extend_schema(request=SensitiveWordCreateSerializer, responses={201: SensitiveWordSerializer, **ERRORS})
     def create(self, request, *args, **kwargs):
-        body = SensitiveWordSerializer(data=request.data)
+        body = SensitiveWordCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         row = mod.add_sensitive_word(
             self.tenant, body.validated_data["word"], actor=request.user, request=request,
