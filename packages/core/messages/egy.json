@@ -1106,7 +1106,6 @@
       "key_workflow": "Shabu «Iri Wat En Wetep-Heka»",
       "key_restore": "Ankh Wehem Sepu Sedjer Neb",
       "key_help": "Sesh / Imen Sesh En Djed-Tep",
-      "key_leave": "Per Em Set (Shu Sesh-Per Tepy)",
       "key_notes": "Smen Medu Seth",
       "claimed_title": "Sep Pen Shesep Em «{{name}}»",
       "claimed_body": "Khetem Wa Em Shesep, Hery Wesekhet, Sab Hery. Wedja Nen Hab; Sedjer Em Aq Pen.",
@@ -1253,8 +1252,6 @@
       "defer_reason_hint": "Sesen · Sesh 500 Er Pehwy · Smen Em Sep; Sab Maa",
       "reassign_title": "Hab Ky Wedja: Sep {{n}}",
       "reassign_to": "Hab Ky Er",
-      "reassign_hint": "Sab Em Per-Hemsu Pen Wa; Per Aa Maa Was Wehem",
-      "pick_officer": "— Setep Sab —",
       "officer_required": "Setep Sab: Sesen",
       "officers_unavailable": "Nen Ini Sab Neb (Sesen Was Hab Ky)",
       "reassign_confirm": "Hab Ky",
@@ -1276,7 +1273,14 @@
       "civilization_all": "Aset Ahamet · Neb",
       "sort": "Tep Seth",
       "sort_oldest": "Tep Seth · Qed: Ahet Tepy",
-      "sort_newest": "Tep Seth · Smen Pehwy"
+      "sort_newest": "Tep Seth · Smen Pehwy",
+      "reassign_search": "Hehy Sab",
+      "reassign_count": "Hab Ky Er {{n}}",
+      "in_hand": "Shesep",
+      "in_hand_n": "{{n}}",
+      "reassign_you": "Ek",
+      "reassign_empty_title": "Nen Wenen · Nen Sab Ky",
+      "reassign_empty_body": "Nen Sab Ky Em Per-Hemsu Pen."
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",

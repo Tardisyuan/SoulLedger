@@ -1106,7 +1106,6 @@
       "key_workflow": "Toggle “also open an approval workflow”",
       "key_restore": "Bring every deferred case back",
       "key_help": "Show / hide this map",
-      "key_leave": "Leave the queue (blurs a text field first)",
       "key_notes": "Focus the notes field",
       "claimed_title": "Case claimed by {{name}}",
       "claimed_body": "Only the claimant, a realm lead or an administrator can conclude it. Your verdict was not submitted; this sitting has put the case aside.",
@@ -1253,8 +1252,6 @@
       "defer_reason_hint": "Required, up to 500 characters; kept with the case for whoever works it",
       "reassign_title": "Reassign {{n}} judgment(s)",
       "reassign_to": "Reassign to",
-      "reassign_hint": "Active officers in this tenant only; the server checks case permission again",
-      "pick_officer": "— Choose an officer —",
       "officer_required": "Choose an officer",
       "officers_unavailable": "Could not read the officer list (needs reassign permission)",
       "reassign_confirm": "Reassign",
@@ -1276,7 +1273,14 @@
       "civilization_all": "Civilization · all",
       "sort": "Sort",
       "sort_oldest": "Sort · longest waiting",
-      "sort_newest": "Sort · newest first"
+      "sort_newest": "Sort · newest first",
+      "reassign_search": "Search judges",
+      "reassign_count": "{{n}} can take it",
+      "in_hand": "In hand",
+      "in_hand_n": "{{n}}",
+      "reassign_you": "you",
+      "reassign_empty_title": "Empty · nobody to reassign to",
+      "reassign_empty_body": "Apart from you, no active officer who may rule can take these cases."
     },
     "admission": {
       "title": "Evidence · admission",
