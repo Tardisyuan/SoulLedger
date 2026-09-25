@@ -1996,7 +1996,7 @@ export interface paths {
          *
          *     Not symmetric in one respect, deliberately: `next/?at=X` answers X
          *     itself (enter the queue on X), `previous/?at=X` answers the case before
-         *     X. Moving forward from X is `next/?skip=X`.
+         *     X. Moving forward from X is `next/?after=X`.
          */
         get: operations["v1_judgment_previous_retrieve"];
         put?: never;
@@ -15639,6 +15639,8 @@ export interface operations {
     v1_judgment_next_retrieve: {
         parameters: {
             query?: {
+                /** @description The case the caller is on; the answer is the pending case just after it (「下一件」). Overrides `at`. */
+                after?: string;
                 /** @description Also hand out deferred (暂缓) cases. Off by default. */
                 include_deferred?: boolean;
             };

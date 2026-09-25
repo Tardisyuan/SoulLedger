@@ -373,3 +373,22 @@ class TestMineFirst:
             back.append((names[data["judgment"]["id"]], data["position"]))
             at = cases[back[-1][0]]
         assert back == [("theirs", 4), ("oldest", 3), ("mine_b", 2), ("mine_a", 1)]
+
+    def test_after_walks_the_same_order_forward(self, client, cases):
+        names = {str(c.id): n for n, c in cases.items()}
+        forward, at = [], cases["mine_a"]
+        for _ in range(len(cases) + 1):  # bounded: a wrong `after` can cycle
+            data = client.get(URL, {"after": str(at.id)}).data
+            if data["judgment"] is None:
+                assert data["position"] is None
+                break
+            forward.append((names[data["judgment"]["id"]], data["position"]))
+            at = cases[forward[-1][0]]
+        # 暂缓的 mine_deferred 不在其中;从中段出发也不回到队首。
+        assert forward == [("mine_b", 2), ("oldest", 3), ("theirs", 4), ("newest", 5)]
+        # `skip` 照样生效;`after` 压过 `at`。
+        skipped = client.get(URL, {"after": str(cases["oldest"].id), "skip": str(cases["theirs"].id)}).data
+        assert names[skipped["judgment"]["id"]] == "newest"
+        both = client.get(URL, {"after": str(cases["oldest"].id), "at": str(cases["mine_a"].id)}).data
+        assert names[both["judgment"]["id"]] == "theirs"
+

@@ -70,6 +70,18 @@ export function useJudgmentPrevious(at: string | null | undefined, skip: string[
   });
 }
 
+/** 「下一件」: the pending case just after `after` (`judgment` is null when there is none). */
+export function useJudgmentNextAfter(after: string | null | undefined, skip: string[] = []) {
+  return useQuery({
+    queryKey: judgmentKeys.after(after ?? "", skip),
+    queryFn: async () => {
+      const res = await judgmentApi.next({ after: after as string, skip });
+      return res.data;
+    },
+    enabled: !!after,
+  });
+}
+
 /**
  * The four queue groups' sizes (`GET /judgment/queue-counts/`). Pass the same
  * `court` / `search` the list is filtered by, so the tab badges agree with it.

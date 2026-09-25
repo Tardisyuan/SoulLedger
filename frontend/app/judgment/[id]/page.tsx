@@ -50,7 +50,7 @@ import {
   placementFor,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
-import { useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
+import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -90,11 +90,11 @@ import { useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
  *
  * 戊 · 发落 (original judgments): destination and term, from
  * `judgmentApi.destinations` filtered by the chosen verdict — nothing chosen
- * sends nothing, i.e. automatic routing. K opens 「上一件」 (`/judgment/previous/`).
+ * sends nothing, i.e. automatic routing. K opens 「上一件」 (`/judgment/previous/`),
+ * J 「下一件」 (`/judgment/next/?after=`, the same order walked forward).
  *
  * Still left out rather than faked: the 5-second undo (the user decided
- * against it — `conclude/` stays immediate) and J 下一件 by position (`next/`
- * hands out the next pending case, not the one after this).
+ * against it — `conclude/` stays immediate).
  *
  * ── WHAT THE DESIGN ASKED FOR AND THE PAYLOAD CANNOT PROVIDE ──────────────
  * Written down rather than invented — a judgment printing a number nobody
@@ -188,6 +188,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [planDraft, setPlanDraft] = useState<ChangesDraft>(EMPTY_DRAFT);
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
   const previousLink = useRef<HTMLAnchorElement>(null);
+  const nextLink = useRef<HTMLAnchorElement>(null);
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
   const createWorkflowId = useId();
@@ -379,6 +380,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const { data: previous } = useJudgmentPrevious(id);
   const previousId = previous?.judgment?.id ?? null;
   useHotkeys({ k: () => previousLink.current?.click() }, !!previousId);
+  /* J 下一件:同一队列、同一顺序往后一步(我认领在前,再先进先出,暂缓不在其中);与 K 同样的规矩。 */
+  const { data: nextCase } = useJudgmentNextAfter(id);
+  const nextId = nextCase?.judgment?.id ?? null;
+  useHotkeys({ j: () => nextLink.current?.click() }, !!nextId);
 
   /* A known route, so a link and not a router.back() button. */
   const backLink = (
@@ -467,6 +472,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     </span>
   );
 
+  const CURSOR_LINK =
+    "inline-flex items-center gap-1.5 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]";
   /* 三栏共用的栏距:桌面 28 px 内边、栏间一条结构线;393 下纵向堆叠,线改在栏的下沿。 */
   const COLUMN = "min-w-0 py-6 lg:px-6 border-b lg:border-b-0 border-[oklch(var(--color-line))]";
 
@@ -483,15 +490,21 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
       actions={
-        previousId ? (
-          <Link
-            ref={previousLink}
-            href={`/judgment/${previousId}`}
-            className="inline-flex items-center gap-1.5 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
-          >
-            <Kbd>K</Kbd>
-            {t("judgment.desk.previous")}
-          </Link>
+        previousId || nextId ? (
+          <span className="inline-flex items-center gap-4">
+            {previousId && (
+              <Link ref={previousLink} href={`/judgment/${previousId}`} className={CURSOR_LINK}>
+                <Kbd>K</Kbd>
+                {t("judgment.desk.previous")}
+              </Link>
+            )}
+            {nextId && (
+              <Link ref={nextLink} href={`/judgment/${nextId}`} className={CURSOR_LINK}>
+                <Kbd>J</Kbd>
+                {t("judgment.desk.next")}
+              </Link>
+            )}
+          </span>
         ) : undefined
       }
     >

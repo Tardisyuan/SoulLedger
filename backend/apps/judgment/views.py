@@ -438,6 +438,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         responses=JudgmentQueueCursorSerializer,
         parameters=[
             OpenApiParameter(
+                "after", OpenApiTypes.UUID, OpenApiParameter.QUERY,
+                description="The case the caller is on; the answer is the pending case just after it (「下一件」). "
+                "Overrides `at`.",
+            ),
+            OpenApiParameter(
                 "include_deferred",
                 OpenApiTypes.BOOL,
                 OpenApiParameter.QUERY,
@@ -516,6 +521,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # here") is still satisfiable and the alternative is a dead end on a
         # link that was valid when the page rendered.
         cursor = remaining_qs.select_related("soul", "soul__tenant")
+        if "after" in request.query_params:
+            return self._after_response(payload, remaining_qs, cursor, total, remaining)
         at = request.query_params.get("at")
         judgment = None
         if at:
@@ -531,6 +538,28 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 payload["position"] = total - remaining + ahead + 1
         if judgment is None:
             judgment = cursor.first()
+        return self._cursor_response(payload, judgment)
+
+    def _after_response(self, payload, remaining_qs, cursor, total, remaining):
+        """`next/?after=<id>` — 「下一件」 from the desk: the pending case just after `after`
+        in the same order `previous/` walks backwards. `?skip=X` alone cannot answer this:
+        it hands out the head of the queue, which is only X's successor when X is the head.
+
+        `after` is looked up in the caller's scope in any state (so 「下一件」 still works
+        from a case just concluded), the same as `previous/?at=`; missing, malformed or
+        not visible answers the empty cursor rather than 404.
+        """
+        payload["position"] = None
+        try:
+            anchor = self.get_queryset().filter(id=uuid.UUID(self.request.query_params.get("after", ""))).first()
+        except (ValueError, AttributeError, TypeError):
+            anchor = None
+        judgment = None
+        if anchor is not None:
+            judgment = cursor.exclude(self._before(anchor)).exclude(id=anchor.id).first()
+        if judgment is not None:
+            ahead = remaining_qs.filter(self._before(judgment)).count()
+            payload["position"] = total - remaining + ahead + 1
         return self._cursor_response(payload, judgment)
 
     def _cursor_response(self, payload, judgment):
@@ -590,7 +619,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
 
         Not symmetric in one respect, deliberately: `next/?at=X` answers X
         itself (enter the queue on X), `previous/?at=X` answers the case before
-        X. Moving forward from X is `next/?skip=X`.
+        X. Moving forward from X is `next/?after=X`.
         """
         queue = self._pending_queue()
         total = queue.count()

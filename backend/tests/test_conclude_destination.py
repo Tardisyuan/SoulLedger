@@ -395,3 +395,45 @@ def test_previous_is_tenant_isolated(cn_judge, eu_judge, three, eu_tenant):
     _case(eu_tenant, name="欧洲的案子", at=timezone.now() - datetime.timedelta(days=30))
     assert _id(_prev(cn_judge, a.id)) is None
     assert _prev(cn_judge, a.id).data["total"] == 3
+
+
+# ── 下一件(next/?after=)────────────────────────────────────────────────────
+
+
+def test_after_is_the_mirror_of_previous(cn_judge, three):
+    a, b, c = three
+    assert _id(_next(cn_judge, after=str(a.id))) == str(b.id)
+    assert _id(_next(cn_judge, after=str(b.id))) == str(c.id)
+    assert _id(_next(cn_judge, after=str(c.id))) is None
+    # 不是 `skip=` 的队首:从 b 往后是 c,而 `skip=b` 给的是 a。
+    assert _id(_next(cn_judge, skip=str(b.id))) == str(a.id)
+
+
+def test_after_works_from_a_case_just_concluded(cn_judge, three, cn_realms):
+    a, b, c = three
+    assert _conclude(cn_judge, a).status_code == 200
+    assert _id(_next(cn_judge, after=str(a.id))) == str(b.id)
+
+
+def test_after_excludes_deferred_unless_asked(cn_judge, three):
+    a, b, c = three
+    Judgment.all_objects.filter(pk=b.pk).update(deferred_at=timezone.now())
+    assert _id(_next(cn_judge, after=str(a.id))) == str(c.id)
+    assert _id(_next(cn_judge, after=str(a.id), include_deferred="true")) == str(b.id)
+
+
+@pytest.mark.parametrize("after", ["", "not-a-uuid", str(uuid.uuid4())])
+def test_after_without_a_usable_anchor_is_an_empty_200(cn_judge, three, after):
+    response = _next(cn_judge, after=after)
+    assert response.status_code == 200
+    assert (response.data["judgment"], response.data["position"], response.data["total"]) == (None, None, 3)
+
+
+def test_after_is_tenant_isolated(cn_judge, eu_judge, three, eu_tenant):
+    a, b, c = three
+    # 别的租户看不见锚点,也就没有「之后」—— 哪怕它自己的队列里有排在锚点之后的案子;
+    # 别的租户更晚的案子也不会出现在这里。
+    _case(eu_tenant, name="欧洲的案子", at=timezone.now())
+    assert _id(_next(eu_judge)) is not None
+    assert _id(_next(eu_judge, after=str(a.id))) is None
+    assert _id(_next(cn_judge, after=str(c.id))) is None
