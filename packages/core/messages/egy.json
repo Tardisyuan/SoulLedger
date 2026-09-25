@@ -665,7 +665,20 @@
       "issue": {
         "name_empty": "{{node}} Nen Ren",
         "self_route": "{{node}} «{{branch}}» Er Djes-Ef; Nen Shem",
-        "duplicate_route": "{{node}} «{{branch}}»: Wat {{count}}; Sau Pehwy Wa"
+        "duplicate_route": "{{node}} «{{branch}}»: Wat {{count}}; Sau Pehwy Wa",
+        "reject_not_earlier": "{{node}}: Khesef Er — Sekhet Tepy Wa",
+        "reject_and_fail_route": "{{node}}: Khesef Er Hena Khesef Wat — Wa Nen Iri",
+        "timeout_incomplete": "{{node}}: Unut Hena Aha — Sesh Neb",
+        "timeout_role_missing": "{{node}}: Hab Er Hery — Nen Sah",
+        "countersign_no_signers": "{{node}}: Sesen Hena — Nen Netjer Sesen",
+        "threshold_out_of_range": "{{node}}: Sesen Er Hry — Nen Maat",
+        "end_has_exit": "{{node}}: Pehwy — Nen Wat",
+        "condition_empty": "{{node}}: Setep Nen Gem",
+        "condition_invalid": "{{node}}: Setep Nen Maat",
+        "condition_overlap": "{{node}}: Setep Wa Hena Setep Ky — Kheper Hena",
+        "unreachable": "{{node}}: Nen Wat Er Sekhet Pen",
+        "no_exit": "{{node}}: Nen Wat Er Pehwy",
+        "no_end": "{{node}}: Nen Sekhet Pehwy"
       },
       "palette": "Sekhet Neb",
       "inspector": "Mekher Sekhet",
@@ -674,12 +687,98 @@
       "exit": {
         "pass_default": "Qed → {{node}}",
         "pass_end": "Wat Wedja Khetem",
-        "fail_default": "Khesef · Pehwy"
+        "fail_default": "Khesef · Pehwy",
+        "reject_to": "Khesef → {{node}}"
       },
       "preview": "Maa · Qed",
       "preview_empty": "Nen Sekhet Djer.",
       "narrow_title": "Khemen Tut: ≥ 1024 px",
-      "narrow_body": "Maa Wa: Qed, Maat, Mekher Sekhet."
+      "narrow_body": "Maa Wa: Qed, Maat, Mekher Sekhet.",
+      "publish": "Sesh",
+      "publishing": "Em Sesh…",
+      "published": "Sesh Kheme Seth · Hemet-Sesh {{n}}",
+      "publish_rejected": "Nen Sesh · Maat {{n}}",
+      "publish_failed": "Nen Kheme Sesh Seth",
+      "version": {
+        "draft": "Sesh Tepy · Hemet-Sesh {{n}}",
+        "published": "Sesh Kheme Seth · Hemet-Sesh {{n}}",
+        "unpublished": "Nen Sesh",
+        "history": "Hemet-Sesh · Medew Tepy",
+        "status": {
+          "DRAFT": "Sesh Tepy",
+          "PUBLISHED": "Sesh Kheme Seth",
+          "SUPERSEDED": "Khetem Seth"
+        }
+      },
+      "kind_label": "Iru Sekhet",
+      "kind": {
+        "APPROVAL": "Wedja",
+        "COUNTERSIGN": "Sesen Hena",
+        "NOTIFY": "Sedjem",
+        "END": "Pehwy"
+      },
+      "signers": "Netjer Sesen",
+      "signer_label": "Netjer Sesen {{n}}",
+      "signer_add": "Redi Netjer Sesen",
+      "signer_remove": "Fekh",
+      "threshold": "Sesen Er Hry",
+      "threshold_hint": "Nen Sesh: Netjer Neb Sesen. Nen Sesen Er Hry: Khesef.",
+      "signers_summary": "{{who}} · Sesen {{k}} / {{n}}",
+      "timeout": {
+        "label": "Unut Khetem",
+        "hours": "Unut",
+        "action_label": "Er Khet Unut Khetem",
+        "none": "Nen Unut Khetem",
+        "action": {
+          "ESCALATE": "Hab Er Hery",
+          "AUTO_REJECT": "Khesef Djes-Ef",
+          "NOTIFY": "Sedjem"
+        },
+        "role": "Hab Er Sah",
+        "hint": "Unut Khetem: Nen Djes-Ef — Iri Em Aha Wa.",
+        "summary": "Unut {{hours}} · {{action}}"
+      },
+      "reject_to": "Khesef Er",
+      "reject_to_none": "— Nen: Pehwy —",
+      "template_level": "Pet-Sesh Neb",
+      "condition": {
+        "title": "Wat · Setep",
+        "default": "Tepy",
+        "empty": "(Setep Nen Sesh)",
+        "make": "Redi Setep",
+        "clear": "Fekh Setep",
+        "add_clause": "Redi Wa",
+        "remove_clause": "Fekh Wa",
+        "fact_label": "Khet",
+        "op_label": "Aha",
+        "value_label": "Ren",
+        "yes": "Maat",
+        "no": "Nen",
+        "fact": {
+          "balance": "Unemu Tepy",
+          "civilization": "Aset Ahamet",
+          "verdict": "Sheemtet"
+        },
+        "op": {
+          "lt": "<",
+          "lte": "≤",
+          "gt": ">",
+          "gte": "≥",
+          "eq": "=",
+          "in": "∈",
+          "not_in": "∉"
+        }
+      },
+      "preview_approver": {
+        "title": "Maa Netjer Sesen",
+        "save_first": "Sau Sesh Tepy, Er Khet Maa",
+        "loading": "Em Ini…",
+        "failed": "Nen Maa",
+        "role": "Sah {{role}}",
+        "nobody": "Nen Netjer — Seshem Er Hery Wa",
+        "no_accounts": "Nen Aq Em Sesen",
+        "accounts": "Aq {{n}}: {{names}}"
+      }
     },
     "templates": "Pet-Sesh Wat",
     "select_template": "Setep Pet-Sesh Er Khemen",
@@ -747,7 +846,8 @@
       "failed": "Nen Menkh",
       "confirmed": "Sesen Seth",
       "rejected": "Khesef",
-      "skipped": "Iri Tepy"
+      "skipped": "Iri Tepy",
+      "notified": "Hab Seth"
     },
     "case_types": {
       "HEART_WEIGHING": "Unemu Ib",
@@ -797,7 +897,8 @@
       "EXCEPTION": "Set Wehem",
       "COMPLETED": "Kheper Seth",
       "SKIPPED": "Iri Tepy",
-      "ESCALATED": "Seshem Er Hery Seth"
+      "ESCALATED": "Seshem Er Hery Seth",
+      "TRAVERSED": "Shem Seth"
     },
     "no_custom_templates": "Nen Rekhyu Sesh-Set"
   },
