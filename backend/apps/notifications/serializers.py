@@ -16,6 +16,8 @@ class RequestContextSerializer(serializers.Serializer):
     hall = serializers.CharField(allow_null=True)
     role = serializers.CharField()
     count_24h = serializers.IntegerField()
+    #: 求助所指的账号名,「去用户页」据此打开 `/users?username=…`。
+    username = serializers.CharField()
 
 
 class _LocalizedMixin:
@@ -36,6 +38,7 @@ class _LocalizedMixin:
             "hall": halls.get(locale) or halls.get(messages.DEFAULT_LOCALE),
             "role": params.get("role", ""),
             "count_24h": params["count_24h"],
+            "username": params.get("username", ""),
         }
 
     def to_representation(self, instance):

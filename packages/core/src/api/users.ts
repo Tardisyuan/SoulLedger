@@ -64,6 +64,8 @@ export interface UserFilters {
   role?: string;
   is_active?: boolean;
   search?: string;
+  /** Exact username (not a contains-search): `/users?username=<u>` locates one account. */
+  username?: string;
   [key: string]: string | number | boolean | undefined;
 }
 

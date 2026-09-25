@@ -11654,6 +11654,7 @@ export interface components {
             hall: string | null;
             role: string;
             count_24h: number;
+            username: string;
         };
         /** @description Serializer for requesting password reset. */
         ResetPassword: {

@@ -24902,10 +24902,13 @@ components:
           type: string
         count_24h:
           type: integer
+        username:
+          type: string
       required:
       - count_24h
       - hall
       - role
+      - username
     ResetPassword:
       type: object
       description: Serializer for requesting password reset.
