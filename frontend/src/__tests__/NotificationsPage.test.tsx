@@ -110,6 +110,32 @@ describe("a password-help notification", () => {
   });
 });
 
+// ── 请管理员改派 (第三类 F 组 2.7) ───────────────────────────────────
+
+describe("a reassign-request notification", () => {
+  it("links to the case it names", async () => {
+    mockUser = { role: "ADMIN", permissions: [] };
+    mockedList.mockResolvedValue({
+      data: {
+        results: [
+          notification({
+            id: 8, notification_type: "JUDGMENT_REASSIGN_REQUESTED", title: "请求改派",
+            message: "崔珏 请求改派案件 张三", related_resource: "judgment", related_id: "j-42",
+          }),
+        ],
+      },
+    });
+    renderPage();
+    expect(await screen.findByRole("link", { name: "notifications.open_case" })).toHaveAttribute("href", "/judgment/j-42");
+  });
+
+  it("no other notification gets that link", async () => {
+    renderPage();
+    await screen.findByText("Verdict ready");
+    expect(screen.queryByRole("link", { name: "notifications.open_case" })).toBeNull();
+  });
+});
+
 // ── Listing ──────────────────────────────────────────────────────────
 
 describe("NotificationsPage listing", () => {

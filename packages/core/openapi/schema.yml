@@ -4848,6 +4848,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+  /api/v1/judgment/{id}/request-reassign/:
+    post:
+      operationId: v1_judgment_request_reassign_create
+      description: |-
+        「请管理员改派」:改派名单空了(本殿没有别人能接),请案子所在租户的 ADMIN 来改派。
+
+        `judgment.execute` 与 `get_object()` 的租户范围:能办这件案子的人才能为它求助。
+        同一人对同一件案子 10 分钟一次,多了 429 `rate_limited` 带 `retry_after`。
+        通知走 `claims.request_reassign`(既有的官员通知路径)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentReassignRequestResult'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentRateLimited'
+          description: ''
   /api/v1/judgment/{id}/undefer/:
     post:
       operationId: v1_judgment_undefer_create
@@ -18917,6 +18951,21 @@ components:
       - skipped
       - soul
       - total
+    JudgmentRateLimited:
+      type: object
+      description: 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema
+        only。
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+      - retry_after
     JudgmentReassign:
       type: object
       description: '`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。'
@@ -18926,6 +18975,15 @@ components:
           minimum: 1
       required:
       - to
+    JudgmentReassignRequestResult:
+      type: object
+      description: '`POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。'
+      properties:
+        notified:
+          type: integer
+          readOnly: true
+      required:
+      - notified
     KarmaBucket:
       type: object
       description: |-
@@ -20642,6 +20700,7 @@ components:
       - SENTENCE_PLAN_CANCELLED
       - PASSWORD_HELP_REQUESTED
       - SOUL_INBOX_ASSIGNED
+      - JUDGMENT_REASSIGN_REQUESTED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -20669,6 +20728,7 @@ components:
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
         * `PASSWORD_HELP_REQUESTED` - Password Help Requested
         * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
+        * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
     NullEnum:
       enum:
       - null

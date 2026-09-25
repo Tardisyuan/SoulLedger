@@ -281,3 +281,31 @@ def assignable_officers(users, tenant_id, codename: str = "judgment.execute") ->
     """
     candidates = users.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL").order_by("username")
     return [u for u in candidates if is_assignable(u, tenant_id, codename)]
+
+
+#: 「请管理员改派」:同一人对同一件案子多久能再请一次。
+REASSIGN_REQUEST_WINDOW_SECONDS = 600
+
+
+def request_reassign(judgment: Judgment, actor) -> list:
+    """改派名单空了时,请 ADMIN 来改派:通知案子所在租户的在职 ADMIN;该租户没有就通知
+    全局 ADMIN(tenant 为空,`scope_to_tenant` 唯一放行跨租户的角色)—— 与「忘记密码」
+    求助同一条收件人退路(`apps/authentication/tasks.py::notify_password_help`)。
+    求助者自己不在收件人里。返回被通知的人。
+
+    存 zh-Hans(推送与兜底),读时按请求语言重渲染(`apps/notifications/messages.py`)。
+    """
+    from apps.authentication.models import User
+    from apps.events.services import EventService
+    from apps.notifications import messages
+
+    admins = User.objects.filter(role="ADMIN", is_active=True).exclude(pk=actor.pk).order_by("pk")
+    recipients = list(admins.filter(tenant_id=judgment.tenant_id)) or list(admins.filter(tenant__isnull=True))
+    params = {"by": actor.display_name or actor.username, "soul": judgment.soul.name}
+    title, body = messages.render(messages.DEFAULT_LOCALE, "judgment_reassign_requested", params)
+    for admin in recipients:
+        EventService.notify_user(
+            admin, title=title, message=body, notification_type="JUDGMENT_REASSIGN_REQUESTED",
+            related_resource="judgment", related_id=str(judgment.pk), params=params,
+        )
+    return recipients

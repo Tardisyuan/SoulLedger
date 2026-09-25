@@ -1280,7 +1280,11 @@
       "in_hand_n": "{{n}}",
       "reassign_you": "you",
       "reassign_empty_title": "Empty · nobody to reassign to",
-      "reassign_empty_body": "Apart from you, no active officer who may rule can take these cases."
+      "reassign_empty_body": "Apart from you, no active officer who may rule can take these cases.",
+      "request_admin": "Ask an administrator to reassign",
+      "request_admin_sent": "An administrator has been asked",
+      "request_admin_limited": "Already asked. You can ask again in {{minutes}} min",
+      "request_admin_failed": "Not sent. Try again"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -1417,7 +1421,8 @@
     "mark_all_error": "Failed to mark all as read",
     "help_count_24h": "request {{n}} in the last 24 hours",
     "help_open_users": "Open users",
-    "help_ignore": "Not them · ignore"
+    "help_ignore": "Not them · ignore",
+    "open_case": "Open the case"
   },
   "realms": {
     "title": "Realms",
@@ -3154,6 +3159,10 @@
     "soul_inbox_assigned": {
       "title": "A letter handed to you",
       "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."
+    },
+    "judgment_reassign_requested": {
+      "title": "Reassignment requested",
+      "body": "{{by}} asks for the case of {{soul}} to be reassigned"
     }
   },
   "social_moderation": {

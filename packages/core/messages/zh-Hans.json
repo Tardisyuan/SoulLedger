@@ -1280,7 +1280,11 @@
       "in_hand_n": "{{n}} 件",
       "reassign_you": "你",
       "reassign_empty_title": "空 · 没有可改派的人",
-      "reassign_empty_body": "除你之外，没有能接手这些案子、持「落判」权限的在职官员。"
+      "reassign_empty_body": "除你之外，没有能接手这些案子、持「落判」权限的在职官员。",
+      "request_admin": "请管理员改派",
+      "request_admin_sent": "已请管理员改派",
+      "request_admin_limited": "已经请过，{{minutes}} 分钟后可再请",
+      "request_admin_failed": "没有发出，请重试"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -1417,7 +1421,8 @@
     "mark_all_error": "全部标记已读失败",
     "help_count_24h": "近 24 小时第 {{n}} 次",
     "help_open_users": "去用户页",
-    "help_ignore": "不是本人 · 忽略"
+    "help_ignore": "不是本人 · 忽略",
+    "open_case": "打开案件"
   },
   "realms": {
     "title": "地域",
@@ -3154,6 +3159,10 @@
     "soul_inbox_assigned": {
       "title": "来信交给你办",
       "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"
+    },
+    "judgment_reassign_requested": {
+      "title": "请求改派",
+      "body": "{{by}} 请求改派案件 {{soul}}"
     }
   },
   "social_moderation": {

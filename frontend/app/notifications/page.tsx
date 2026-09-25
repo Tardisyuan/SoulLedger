@@ -376,6 +376,16 @@ export default function NotificationsPage() {
                   </>
                 )}
 
+                {/* 「请管理员改派」(第三类 F 组 2.7):通知挂着案子,直接去那件案子改派。 */}
+                {notification.notification_type === "JUDGMENT_REASSIGN_REQUESTED" && notification.related_id && (
+                  <Link
+                    href={`/judgment/${notification.related_id}`}
+                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-2 mr-2")}
+                  >
+                    {t("notifications.open_case")}
+                  </Link>
+                )}
+
                 {/* Actions */}
                 {!notification.is_read && !notification.request_context && (
                   <Button
