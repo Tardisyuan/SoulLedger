@@ -95,7 +95,7 @@
 | playwright mobile-chrome | `npx playwright test --project=mobile-chrome` | 0 | 141 passed |
 | playwright firefox | — | **未跑** | 云端镜像没有 firefox 浏览器 |
 | core typecheck / lint / test | `npm run --workspace packages/core …` | 0 / 0 / 0 | vitest 13 files / 122 tests |
-| pytest(SQLite + 一次性 Redis) | 见 CLAUDE.md | 运行中 | 本提交时全量仍在跑,结果见下一个提交 |
+| pytest(SQLite + 一次性 Redis) | 见 CLAUDE.md | 0 | 4830 passed / 25 skipped(46 分钟;覆盖率 93.96%)|
 | ruff | `cd backend && .venv/bin/ruff check .` | 0 | — |
 | makemigrations --check | | 0 | No changes detected |
 | schema 门禁 | `test_committed_schema_matches_the_backend.py`(在 pytest 里)+ core `generatedSchemaIsCurrent` | 见上 | — |
