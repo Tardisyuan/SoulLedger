@@ -474,7 +474,11 @@
     "entity_types": {
       "soul": "Soul",
       "menu": "Menu",
-      "dispatch_draft": "Dispatch draft"
+      "dispatch_draft": "Dispatch draft",
+      "role": "Role",
+      "social_post": "Post",
+      "social_comment": "Comment",
+      "workflow_template": "Workflow template"
     },
     "col_location": "Original location",
     "col_deleted_by": "Deleted by",
