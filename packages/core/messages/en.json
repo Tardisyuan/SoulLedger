@@ -585,7 +585,9 @@
         "off": "Not granted",
         "unsaved": "Unsaved",
         "failed": "Not saved",
-        "conflict": "Causes a conflict"
+        "conflict": "Causes a conflict",
+        "lock": "always · ADMIN",
+        "deny": "forbidden · realm lead"
       },
       "refused": {
         "admin_only_permission": "Conflicts with the rule that recycle-bin restore and hard delete are ADMIN-only; sent back.",
@@ -598,7 +600,12 @@
         "role_forbidden_permission": "Conflicts with the rule that MODERATOR may not hold workflow approve, workflow advance or user management; sent back."
       },
       "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
-      "conflict_acknowledge": "I understand this leaves {{n}} workflows ({{m}} of them in flight) with no approver"
+      "conflict_acknowledge": "Confirm the conflict: these changes affect {{n}} workflows, {{m}} of them in flight.",
+      "lock_word": "always",
+      "lock_hint": "The ADMIN role always holds every permission; it cannot be unticked.",
+      "deny_word": "forbidden",
+      "deny_hint": "A realm lead cannot be granted 「{{perm}}」.",
+      "conflict_view": "View"
     },
     "segments": {
       "label": "Permission sections",

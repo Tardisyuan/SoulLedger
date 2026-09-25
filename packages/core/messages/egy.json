@@ -585,7 +585,9 @@
         "off": "Nen Wenen",
         "unsaved": "Nen Sau",
         "failed": "Nen Sau",
-        "conflict": "Khenn"
+        "conflict": "Khenn",
+        "lock": "Neheh · Netjer Em Tepy",
+        "deny": "Nen Redi · MODERATOR"
       },
       "refused": {
         "admin_only_permission": "Khesef: Ankh Wehem Hena Fekh Em Per Wehem — Sab Hery Wa.",
@@ -598,7 +600,12 @@
         "role_forbidden_permission": "Khesef: MODERATOR Nen Aba Was Wat Hesy — Netjer Em Tepy Wa."
       },
       "conflict_workflow_line": "{{causes}}: Wat Hesy «{{workflow}}» Em Wedja, Sekhet {{step}} ({{step_name}}) Nen Netjer Em Kheme Seth.",
-      "conflict_acknowledge": "Maa Seth: {{n}} Wat Hesy ({{m}} Em Wedja) Nen Netjer Em Kheme Seth"
+      "conflict_acknowledge": "Maa Seth: {{n}} Wat Hesy ({{m}} Em Wedja) Nen Netjer Em Kheme Seth",
+      "lock_word": "Neheh",
+      "lock_hint": "Netjer Em Tepy Aba-Ef Was Neb.",
+      "deny_word": "Nen Redi",
+      "deny_hint": "MODERATOR Nen Redi «{{perm}}».",
+      "conflict_view": "Maa"
     },
     "segments": {
       "label": "Aat Was",
