@@ -253,6 +253,10 @@ cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
 **差值应等于那份名单的长度**,不是固定的 5。同一天前端 jest 182 suites / 2974,mobile 235,core vitest 122,
 E2E 三个 project 各 140。
 
+**2026-09-25 再测(`07706a5e`,读退出码):** pre-push SQLite **5040 passed / 26 skipped**;真 PostgreSQL(`26554de7` + 修复)**5060 passed / 5 skipped / 1 failed**,修后重跑那 15 条全过。
+差值 26 − 5 = **21**,等于此时名单长度(21)。integ `8c799840` 门禁:jest 186 suites / 3045,
+core vitest 15 文件 / 145,mobile 259,E2E chromium 153 / firefox 153 / mobile-chrome 149。
+
 多的 5 条正是那 4 条并发测试加 `test_two_judges_cannot_both_decide_one_node.py`;
 剩下的 2 个 skip 是 `Menu` / `MenuButton`,它们**确实没有 tenant 字段**。
 **「7 skipped」不是噪音,是 5 条从没在这条路径上跑过的测试。**
