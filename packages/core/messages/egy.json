@@ -911,7 +911,10 @@
       "empty_title": "Nen Sep Em Abed Pen",
       "empty_reason": "Nen Sep {{month}} Djer; Tepy = Sepy = {{opening}}.",
       "load_failed": "Nen Ini Sesh Nefer Hena Isfet",
-      "row_hint": "Wen → Mekher Ba · Nefer Hena Isfet"
+      "row_hint": "Wen → Mekher Ba · Nefer Hena Isfet",
+      "search": "Hehy Ren / Ren Aa",
+      "export": "Bek Seth",
+      "export_failed": "Nen Wehem Medew"
     }
   },
   "judgment": {

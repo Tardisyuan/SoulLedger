@@ -911,7 +911,10 @@
       "empty_title": "No entries this period",
       "empty_reason": "Nothing was recorded in {{month}}; opening = closing = {{opening}}.",
       "load_failed": "The journal failed to load",
-      "row_hint": "Click a row for that soul's merit & demerit"
+      "row_hint": "Click a row for that soul's merit & demerit",
+      "search": "Soul name or ID",
+      "export": "Export",
+      "export_failed": "Export failed"
     }
   },
   "judgment": {

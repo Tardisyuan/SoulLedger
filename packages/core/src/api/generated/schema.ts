@@ -2419,13 +2419,36 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=]
+         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
          *
          *     功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
          *     只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
          *     不给 `month` 时取当前月。
          */
         get: operations["v1_ledger_journal_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/journal/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /ledger/journal/export/?month=YYYY-MM[&civilization=][&category=][&search=]
+         *
+         *     功过总账「导出」:本月、同一组筛选下的**全部**流水(不分页),一行一条。
+         *     范围、码名与 `LedgerJournalView` 相同 —— 行取自同一个 `journal_records`,所以文件里的
+         *     收 / 支之和就是屏幕上的「新收」「开除」。自由文本格一律过 `csv_safe`。
+         */
+        get: operations["v1_ledger_journal_export_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16671,6 +16694,8 @@ export interface operations {
                 month?: string;
                 /** @description 1-based page of the month's rows (20 per page) */
                 page?: number;
+                /** @description 灵魂姓名(包含)或灵魂 id(整条 UUID) */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -16684,6 +16709,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerJournal"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerJournalError"];
+                };
+            };
+        };
+    };
+    v1_ledger_journal_export_retrieve: {
+        parameters: {
+            query?: {
+                category?: string;
+                civilization?: string;
+                /** @description YYYY-MM; defaults to the current month */
+                month?: string;
+                /** @description 灵魂姓名(包含)或灵魂 id(整条 UUID) */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV, one row per MERIT / DEMERIT record of the month: Recorded At, Day, Soul ID, Soul Name, Type, Category, Description, Statute, Merit, Demerit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             400: {

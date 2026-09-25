@@ -303,6 +303,14 @@ export interface LedgerJournal {
   results: LedgerJournalRow[];
 }
 
+/** 总账与其导出共用的筛选。`search`:灵魂姓名(包含)或整条灵魂 id。 */
+export interface LedgerJournalParams {
+  month: string;
+  civilization?: string;
+  category?: string;
+  search?: string;
+}
+
 export const ledgerApi = {
   // soulId is a UUID: both routes are `<uuid:soul_id>` in
   // backend/apps/ledger/urls.py. These took `number`, which cannot address
@@ -311,8 +319,10 @@ export const ledgerApi = {
   recalculate: (soulId: string) => api.post<LedgerRecalculation>(`/ledger/calculate/${soulId}/`),
   // Note the ordering: inheritance/ comes before the soul id in the URLconf.
   inheritance: (soulId: string) => api.get<LedgerInheritance>(`/ledger/inheritance/${soulId}/`),
-  journal: (params: { month: string; page?: number; civilization?: string; category?: string }) =>
-    api.get<LedgerJournal>("/ledger/journal/", { params }),
+  journal: (params: LedgerJournalParams & { page?: number }) => api.get<LedgerJournal>("/ledger/journal/", { params }),
+  /** 同一组筛选下本月的全部流水,CSV(`LedgerJournalExportView`)。 */
+  exportJournal: (params: LedgerJournalParams) =>
+    api.get<Blob>("/ledger/journal/export/", { params, responseType: "blob" }),
   statsOverview: () => api.get<LedgerStatsOverview>("/ledger/stats/overview/"),
   exportStats: (params?: Record<string, string>) => api.get<Blob>("/ledger/stats/export/", { params, responseType: "blob" }),
 };

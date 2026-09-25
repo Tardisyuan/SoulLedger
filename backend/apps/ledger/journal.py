@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import uuid
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
@@ -58,9 +59,19 @@ def _signed_sums(qs) -> tuple[int, int]:
     return agg["merit"], agg["demerit"]
 
 
-def build_journal(request, *, month: str, page: int, civilization: str = "", category: str = "") -> dict:
-    if page < 1:
-        raise JournalParamError("page", "page must be >= 1")
+def soul_q(search: str) -> Q:
+    """「灵魂姓名或 ID」:姓名包含,或整条 UUID 精确等于灵魂 id。不是 UUID 的词只按姓名。"""
+    q = Q(soul__name__icontains=search)
+    try:
+        q |= Q(soul_id=uuid.UUID(search))
+    except ValueError:
+        pass
+    return q
+
+
+def journal_records(request, *, month: str, civilization: str = "", category: str = "", search: str = ""):
+    """(本期之前, 本期) 两个查询集 —— 四柱、类目、流水与导出**都**从这里取,
+    所以任何一个筛选(含搜索)同时收窄每一柱,账始终是平的。"""
     if category and category not in RecordCategory.values:
         raise JournalParamError("category", "unknown category")
     start, end = month_bounds(month)
@@ -76,9 +87,22 @@ def build_journal(request, *, month: str, page: int, civilization: str = "", cat
         qs = qs.filter(civilization=civilization)
     if category:
         qs = qs.filter(category=category)
+    search = search.strip()
+    if search:
+        qs = qs.filter(soul_q(search))
+    return qs.filter(recorded_at__lt=start), qs.filter(recorded_at__gte=start, recorded_at__lt=end)
 
-    before_merit, before_demerit = _signed_sums(qs.filter(recorded_at__lt=start))
-    period = qs.filter(recorded_at__gte=start, recorded_at__lt=end)
+
+def build_journal(
+    request, *, month: str, page: int, civilization: str = "", category: str = "", search: str = ""
+) -> dict:
+    if page < 1:
+        raise JournalParamError("page", "page must be >= 1")
+    before, period = journal_records(
+        request, month=month, civilization=civilization, category=category, search=search
+    )
+
+    before_merit, before_demerit = _signed_sums(before)
     received, disbursed = _signed_sums(period)
     opening = before_merit - before_demerit
 
