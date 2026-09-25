@@ -9,6 +9,7 @@ import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJu
 import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
+import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -66,7 +67,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const [createWorkflow, setCreateWorkflow] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
 
-  const { cursor, progress, submitVerdict, defer, restoreDeferred } = queue;
+  const { cursor, progress, submitVerdict, defer, restoreDeferred, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
 
   // Notes belong to the case in front of the operator, never to the next one.
@@ -283,16 +284,44 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           <span>{t("judgment.queue.stat_decided", { n: String(progress.decided) })}</span>
           <span>{t("judgment.queue.stat_deferred", { n: String(progress.deferred) })}</span>
           <span>{t("judgment.queue.stat_remaining", { n: String(progress.remaining) })}</span>
-          {progress.deferred > 0 && (
-            <button
-              type="button"
-              onClick={restoreDeferred}
-              className="text-[oklch(var(--color-accent-ink))] hover:underline"
-            >
-              {t("judgment.queue.restore_deferred")}
-            </button>
-          )}
         </div>
+
+        {/* R(第三类 F 组 2.8):本次暂缓的件数一条横条,右侧边框按钮「全部放回队列」+ 键帽。 */}
+        {progress.deferred > 0 && (
+          <div
+            data-testid="session-deferred"
+            className="flex flex-wrap items-center gap-3 bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))]"
+          >
+            <span className="flex-1">{t("judgment.queue.session_deferred", { n: String(progress.deferred) })}</span>
+            <Button type="button" variant="secondary" size="sm" onClick={restoreDeferred} aria-keyshortcuts="R">
+              {t("judgment.queue.restore_all")}
+              <Keycap>R</Keycap>
+            </Button>
+          </div>
+        )}
+
+        {/* 已被他人认领(第三类 F 组 2.2):警示色,不是危险色 —— 这不是操作员的错,只是晚了一步。
+            标题说谁认领了,一句说明说谁能结案、裁决没有提交、本次已延后。 */}
+        {claimRefusal && (
+          <div
+            role="alert"
+            data-testid="claim-refusal"
+            className="border border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3"
+          >
+            <p className="font-semibold text-[oklch(var(--color-ink))]">
+              {t("judgment.queue.claimed_title", { name: claimRefusal.name })}
+            </p>
+            <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.claimed_body")}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" variant="primary" size="sm" onClick={dismissClaimRefusal}>
+                {t("judgment.queue.claimed_next")}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={leave}>
+                {t("judgment.queue.claimed_back")}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {showKeys && <KeyboardMap />}
 
@@ -388,15 +417,15 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 placeholder={t("judgment.queue.notes_placeholder")}
                 className="w-full border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] mb-3"
               />
-              <label className="flex items-center gap-2 text-sm text-[oklch(var(--color-ink-muted))] mb-3">
+              <label className="flex min-h-8 items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3 max-sm:min-h-11">
                 <input
                   type="checkbox"
                   checked={createWorkflow}
                   onChange={(event) => setCreateWorkflow(event.target.checked)}
-                  className="accent-[oklch(var(--color-accent))]"
+                  className="h-4 w-4 accent-[oklch(var(--color-accent))]"
                 />
                 {t("judgment.queue.create_workflow")}
-                <kbd className="font-mono text-xs px-1 bg-[oklch(var(--color-surface-3))]">W</kbd>
+                <Keycap>W</Keycap>
               </label>
             </section>
           </>
@@ -429,34 +458,33 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               </p>
             )}
             {canRule && (
-            <div className="flex flex-wrap gap-2">
+            /* 第三类 F 组 2.8:四列(393 宽时两列),高 44;每个是键号 + 字形 + 文字,
+               字形取 `verdictGlyph`(与详情页同一张表),字色是各自的 `--color-verdict-*`。 */
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
               {VERDICTS.map((verdict) => (
                 <button
                   key={verdict.code}
                   type="button"
+                  data-verdict={verdict.code}
                   onClick={() => rule(verdict.code)}
                   /* `active:translate-y-px` and the motion tokens, matching
                      `Button`'s base — see its comment on the pressed nudge:
                      "shared by all four variants so 'pressed' is one gesture
                      in this UI rather than four". These four stayed
                      hand-rolled for a good reason (each carries its own status
-                     token as an inline colour), and the cost of that was
-                     shipping the most important buttons in the product with
-                     no pressed state at all — the exact defect `Button`'s
-                     header records as "0 of 190".
+                     colour), and the cost of that was shipping the most
+                     important buttons in the product with no pressed state at
+                     all — the exact defect `Button`'s header records as "0 of 190".
 
-                     `transition-colors` on Tailwind's bare 150ms is also
-                     replaced: `duration-state` is the token for a change in
-                     place, and the transform needs to be in the property list
-                     or the nudge is un-eased. NO overshoot, per globals.css —
-                     a bounce on a verdict button would be the app being
-                     pleased with itself while someone sentences a soul. */
-                  className="flex items-center gap-2 px-4 py-2 border text-sm font-semibold transition-[color,background-color,border-color,transform] duration-state border-[oklch(var(--color-hairline-strong))] hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
+                     NO overshoot, per globals.css — a bounce on a verdict
+                     button would be the app being pleased with itself while
+                     someone sentences a soul. */
+                  className={`flex h-11 items-center justify-center gap-2 px-3 border text-sm font-semibold transition-[color,background-color,border-color,transform] duration-state border-[oklch(var(--color-hairline-strong))] hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0`}
                   style={{ color: `oklch(var(${verdict.token}))` }}
                 >
-                  <kbd className="font-mono text-xs px-1.5 bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]">
-                    {verdict.key}
-                  </kbd>
+                  <Keycap>{verdict.key}</Keycap>
+                  <span aria-hidden="true">{verdictGlyph(verdict.code)}</span>
                   {/* A JSX position, so the component rather than the string
                       helper: <DomainEnum> renders one span, carries the raw
                       member in `title` itself, and shows translated
@@ -465,13 +493,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
                 </button>
               ))}
-              <span aria-hidden="true" className="w-px self-stretch bg-[oklch(var(--color-hairline))]" />
+              </div>
               <button
                 type="button"
                 onClick={defer}
-                className="flex items-center gap-2 px-4 py-2 border border-[oklch(var(--color-hairline-strong))] text-sm font-medium text-[oklch(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
+                className="flex h-11 items-center justify-center gap-2 px-4 border border-[oklch(var(--color-hairline-strong))] text-sm font-medium text-[oklch(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
               >
-                <kbd className="font-mono text-xs px-1.5 bg-[oklch(var(--color-surface-3))]">S</kbd>
+                <Keycap>S</Keycap>
                 {t("judgment.queue.defer")}
               </button>
             </div>
@@ -536,6 +564,15 @@ function ConsoleNotice({ title, body, action }: { title: string; body: string; a
       {body && <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{body}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
+  );
+}
+
+/** 键帽:等宽、1px 当前色边。视觉提示,不进按钮的可访问名。 */
+function Keycap({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-1.5 opacity-70">
+      {children}
+    </kbd>
   );
 }
 

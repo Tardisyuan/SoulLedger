@@ -1065,10 +1065,9 @@
       "render_verdict": "Render verdict",
       "notes": "Verdict notes",
       "notes_placeholder": "Add a note…",
-      "create_workflow": "Also open an approval workflow",
+      "create_workflow": "Also open an approval workflow when ruling",
       "defer": "Defer",
       "commit_error": "The verdict did not land; the case is back in the queue",
-      "claimed_by_other": "{{name}} has claimed this case; only they, a realm lead or an administrator can conclude it. The verdict was not sent; the case is deferred for this sitting",
       "restore_deferred": "Bring deferred cases back",
       "stat_decided": "{{n}} ruled",
       "stat_deferred": "{{n}} deferred",
@@ -1107,7 +1106,13 @@
       "key_restore": "Bring every deferred case back",
       "key_help": "Show / hide this map",
       "key_leave": "Leave the queue (blurs a text field first)",
-      "key_notes": "Focus the notes field"
+      "key_notes": "Focus the notes field",
+      "claimed_title": "Case claimed by {{name}}",
+      "claimed_body": "Only the claimant, a realm lead or an administrator can conclude it. Your verdict was not submitted; this sitting has put the case aside.",
+      "claimed_next": "Open the next case",
+      "claimed_back": "Back to the queue",
+      "session_deferred": "{{n}} set aside this sitting",
+      "restore_all": "Put all back in the queue"
     },
     "detail": {
       "loading": "Loading judgment...",
@@ -1131,7 +1136,8 @@
       "conclude": "Conclude",
       "notes_placeholder": "Enter notes...",
       "create_workflow": "Start approval workflow",
-      "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type."
+      "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
+      "conclude_with_workflow": "Rule and open workflow"
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",

@@ -413,7 +413,8 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(target).toHaveText("◇");
     const save = unsaved(page).getByRole("button", { name: "保存改动" });
     await expect(save).toBeDisabled();
-    await conflict.getByRole("checkbox", { name: "我知道这会让 1 条审批流（含进行中 0 条）无人可批" }).check();
+    // The tick lives in the unsaved bar (第三类 F 组), not in the conflict notice.
+    await unsaved(page).getByRole("checkbox", { name: "确认冲突：这次改动影响 1 条审批流，含进行中 0 条。" }).check();
     await expect(save).toBeEnabled();
   });
 

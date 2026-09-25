@@ -845,9 +845,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   loading={concludeMutation.isPending}
                   disabled={!selectedVerdict}
                 >
+                  {/* 第三类 F 组 2.8:勾上审批流后,这个不可撤回的按钮写明它会多做什么。 */}
                   {concludeMutation.isPending
                     ? t("judgment.detail.concluding")
-                    : t("judgment.detail.conclude")}
+                    : createWorkflow
+                      ? t("judgment.detail.conclude_with_workflow")
+                      : t("judgment.detail.conclude")}
                   <Kbd>⌘⏎</Kbd>
                 </Button>
               </RequirePermission>
