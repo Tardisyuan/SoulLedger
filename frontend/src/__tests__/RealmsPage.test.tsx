@@ -92,7 +92,7 @@ it("draws the Duat as 称心二岔: trunk to the weighing, the pass road, and th
   await screen.findByTestId("realm-topology");
   fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
   const topo = screen.getByTestId("realm-topology").querySelector("[data-route-topology]")! as HTMLElement;
-  expect(topo.getAttribute("data-route-topology")).toBe("weighing");
+  expect(topo.getAttribute("data-route-topology")).toBe("fork_two");
   expect(topo.getAttribute("data-schematic")).toBe("false");
   expect(topo).toHaveTextContent("称心二岔");
   expect(within(topo).queryByTestId("topology-schematic")).toBeNull();
@@ -105,6 +105,9 @@ it("draws the Duat as 称心二岔: trunk to the weighing, the pass road, and th
   expect(fail.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();
   // 通向终点的那一段是虚线,不是 3px 墨线。
   expect(fail.querySelector('[class*="border-t-[3px]"]')).toBeNull();
+  // 第二次死亡不是地方:不计在押(过那条路的站照常写 0)。
+  expect(pass.textContent).toMatch(/0/);
+  expect(fail.textContent).not.toMatch(/\d/);
 });
 
 it("falls back to the labelled schematic line for a Duat whose rows carry no order or fork", async () => {

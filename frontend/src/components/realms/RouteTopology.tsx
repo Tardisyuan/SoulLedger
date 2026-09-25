@@ -122,7 +122,7 @@ export function RouteTopology({
             {label(s)}
           </span>
           {stateText(s)}
-          {mode === "map" && <span className="block text-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{held(s)}</span>}
+          {mode === "map" && !terminal && <span className="block text-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{held(s)}</span>}
         </li>
         );
       })}
@@ -134,7 +134,7 @@ export function RouteTopology({
     case "line":
       body = compact ? <div className="relative overflow-x-auto max-w-full">{horizontal(topology.stations)}</div> : vertical(topology.stations);
       break;
-    case "weighing": {
+    case "fork_two": {
       // Horizontal trunk to the weighing, then the two roads out of it: PASS up, FAIL down.
       const hall = topology.trunk[topology.trunk.length - 1];
       body = (
