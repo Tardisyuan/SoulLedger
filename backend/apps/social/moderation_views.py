@@ -47,14 +47,20 @@ from apps.social.moderation_serializers import (
     ModeratedCommentSerializer,
     ModeratedPostSerializer,
     ModerationActionSerializer,
+    ModerationAuthorSerializer,
     ModerationErrorSerializer,
     MuteCreateSerializer,
     ReportSerializer,
     ResolveReportSerializer,
     SensitiveWordBatchDeleteResultSerializer,
     SensitiveWordBatchDeleteSerializer,
+    SensitiveWordBatchUpdateResultSerializer,
+    SensitiveWordBatchUpdateSerializer,
+    SensitiveWordCopyResultSerializer,
+    SensitiveWordCopySerializer,
     SensitiveWordCreateSerializer,
     SensitiveWordSerializer,
+    SensitiveWordUpdateSerializer,
     SocialMuteSerializer,
 )
 from apps.social.soul_circle import SocialError
@@ -152,7 +158,8 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
         row = mod.moderate_content(
             self.get_object(), verb, actor=request.user, request=request, reason=body.validated_data.get("reason", "")
         )
-        return Response(self.get_serializer(row).data)
+        # 重读一遍:锁住的那一行没有列表的注解(举报数、表态数)。
+        return Response(self.get_serializer(self.get_queryset().get(pk=row.pk)).data)
 
     @extend_schema(request=ModerationActionSerializer, responses={200: None, **ERRORS})
     @action(detail=True, methods=["post"])
@@ -188,6 +195,11 @@ class ModeratedPostViewSet(ModeratedContentViewSet):
     queryset = Post.objects.all()
     serializer_class = ModeratedPostSerializer
 
+    def get_queryset(self):
+        from apps.social.soul_circle import reaction_kind_counts
+
+        return super().get_queryset().annotate(**reaction_kind_counts())
+
     @extend_schema(responses={200: ModeratedPostSerializer(many=True)})
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -205,12 +217,15 @@ class ModeratedCommentViewSet(ModeratedContentViewSet):
 class SensitiveWordViewSet(
     ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin
 ):
-    """本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
-    列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。"""
+    """本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
+    列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+    修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。"""
 
     queryset = SensitiveWord.objects.select_related("created_by")
     serializer_class = SensitiveWordSerializer
-    extra_permissions = {"batch_delete": [MODERATE]}
+    extra_permissions = {
+        "batch_delete": [MODERATE], "batch_update": [MODERATE], "partial_update": [MODERATE], "copy_from": [MODERATE],
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -227,8 +242,30 @@ class SensitiveWordViewSet(
         )
         return Response(SensitiveWordSerializer(row).data, status=201)
 
+    @extend_schema(request=SensitiveWordUpdateSerializer, responses={200: SensitiveWordSerializer, **ERRORS})
+    def partial_update(self, request, *args, **kwargs):
+        body = SensitiveWordUpdateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        row = mod.update_sensitive_word(self.get_object(), actor=request.user, request=request, **body.validated_data)
+        return Response(SensitiveWordSerializer(mod.with_recent_hits(self.get_queryset()).get(pk=row.pk)).data)
+
     def perform_destroy(self, instance):
         mod.remove_sensitive_word(instance, actor=self.request.user, request=self.request)
+
+    @extend_schema(
+        request=SensitiveWordBatchUpdateSerializer,
+        responses={200: SensitiveWordBatchUpdateResultSerializer, 404: ModerationErrorSerializer, **ERRORS},
+    )
+    @action(detail=False, methods=["post"], url_path="batch-update")
+    def batch_update(self, request):
+        """批量改「命中后」动作。码名、租户范围、全有或全无、上限 200 —— 都与 batch-delete 相同。"""
+        body = SensitiveWordBatchUpdateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        updated = mod.update_sensitive_words(
+            self.get_queryset(), body.validated_data["ids"], actor=request.user, request=request,
+            action=body.validated_data["action"],
+        )
+        return Response({"updated": updated})
 
     @extend_schema(
         request=SensitiveWordBatchDeleteSerializer,
@@ -246,15 +283,128 @@ class SensitiveWordViewSet(
         return Response({"deleted": deleted})
 
 
+    @extend_schema(
+        request=SensitiveWordCopySerializer,
+        responses={200: SensitiveWordCopyResultSerializer, 404: ModerationErrorSerializer, **ERRORS},
+    )
+    @action(detail=False, methods=["post"], url_path="copy-from")
+    def copy_from(self, request):
+        """从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
+        不该借它看见别处的词。回包只有计数,不含词本身。"""
+        from apps.core.tenant import is_tenant_exempt
+        from apps.tenants.models import Tenant
+
+        if not is_tenant_exempt(request.user):
+            raise SocialError("只有管理员可以跨文明复制词表。", "admin_only", 403)
+        body = SensitiveWordCopySerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        if self.tenant is None:
+            raise SocialError("没有当前文明。", "no_tenant", 400)
+        source = Tenant.objects.filter(code=body.validated_data["source_tenant"]).first()
+        if source is None:
+            raise SocialError("对象不存在。", "not_found", 404)
+        copied, skipped = mod.copy_sensitive_words(source, self.tenant, actor=request.user, request=request)
+        return Response({"copied": copied, "skipped": skipped})
+
+
 class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
-    """禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。"""
+    """禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+
+    列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+    `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+    `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+    `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
+    """
 
     queryset = SocialMute.objects.select_related("user", "created_by", "lifted_by")
     serializer_class = SocialMuteSerializer
-    extra_permissions = {"lift": [MODERATE]}
+    extra_permissions = {"lift": [MODERATE], "souls": [MODERATE], "executors": [MODERATE]}
+
+    STATUSES = ("ACTIVE", "EXPIRED", "LIFTED")
+    #: 时长档 → (下限天数, 上限天数),闭区间;None = 不设。
+    TERMS = {"SHORT": (None, 7), "MEDIUM": (8, 30), "LONG": (31, None)}
+    #: 选人框一次最多给几个。
+    PICKER_LIMIT = 20
 
     def get_queryset(self):
         return super().get_queryset().order_by("-created_at")
+
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+        if self.action != "list":
+            return qs
+        from datetime import timedelta
+
+        from django.db.models import DurationField, ExpressionWrapper
+        from django.utils import timezone
+
+        params = self.request.query_params
+        status, term = params.get("status") or "", params.get("term") or ""
+        executor, q = params.get("created_by") or "", (params.get("q") or "").strip()
+        if (status and status not in self.STATUSES) or (term and term not in self.TERMS) or (
+            executor and not executor.isdigit()
+        ):
+            return qs.none()
+        now = timezone.now()
+        if status == "ACTIVE":
+            qs = qs.filter(lifted_at__isnull=True, until__gt=now)
+        elif status == "EXPIRED":
+            qs = qs.filter(lifted_at__isnull=True, until__lte=now)
+        elif status == "LIFTED":
+            qs = qs.filter(lifted_at__isnull=False)
+        if term:
+            low, high = self.TERMS[term]
+            qs = qs.annotate(term_length=ExpressionWrapper(F("until") - F("created_at"), output_field=DurationField()))
+            if low is not None:
+                qs = qs.filter(term_length__gt=timedelta(days=low - 1))
+            if high is not None:
+                qs = qs.filter(term_length__lte=timedelta(days=high))
+        if executor:
+            qs = qs.filter(created_by_id=int(executor))
+        if q:
+            qs = qs.filter(user__display_name__icontains=q)
+        return qs
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("status", str, enum=list(STATUSES), description="ACTIVE 禁言中 / EXPIRED 已到期 / LIFTED 已解除"),
+            OpenApiParameter("term", str, enum=list(TERMS), description="时长:SHORT ≤ 7 天 / MEDIUM 8–30 天 / LONG > 30 天"),
+            OpenApiParameter("created_by", int, description="执行人 user id"),
+            OpenApiParameter("q", str, description="灵魂显示名包含"),
+        ],
+        responses={200: SocialMuteSerializer(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[OpenApiParameter("q", str, description="灵魂显示名包含;空 = 前 20 个")],
+        responses={200: ModerationAuthorSerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def souls(self, request):
+        """「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
+        (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。"""
+        from apps.social.soul_circle import souls_in
+
+        if self.tenant is None:
+            return Response([])
+        qs = souls_in(self.tenant).order_by("display_name", "pk")
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            qs = qs.filter(display_name__icontains=q)
+        return Response(ModerationAuthorSerializer(qs[: self.PICKER_LIMIT], many=True).data)
+
+    @extend_schema(responses={200: ModerationAuthorSerializer(many=True)})
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def executors(self, request):
+        """执行人过滤的选项:本文明禁言记录里出现过的执行人。"""
+        from apps.authentication.models import User
+
+        ids = self.get_queryset().exclude(created_by__isnull=True).values("created_by_id")
+        rows = User.objects.filter(pk__in=ids).order_by("display_name", "pk")
+        return Response(ModerationAuthorSerializer(rows, many=True).data)
 
     @extend_schema(request=MuteCreateSerializer, responses={201: SocialMuteSerializer, **ERRORS})
     def create(self, request, *args, **kwargs):

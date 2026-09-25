@@ -3050,7 +3050,12 @@
       "invalid_word": "敏感词不能为空",
       "invalid_resolution": "针对用户的举报不能隐藏或删除,请用禁言",
       "already_lifted": "禁言已解除",
-      "not_found": "对象不存在或不在本文明"
+      "not_found": "对象不存在或不在本文明",
+      "reason_required": "请写处理理由",
+      "admin_only": "只有管理员可以跨文明复制词表",
+      "same_tenant": "源文明就是当前文明",
+      "no_tenant": "没有当前文明",
+      "invalid_days": "禁言天数须在 1–365 之间"
     },
     "empty": {
       "reports": "没有待处理的举报",
@@ -3088,12 +3093,14 @@
       "rule_hit": "规则命中 · 敏感词",
       "from": "来自 {{name}}",
       "reaction_comment": "评",
-      "reason_label": "处理理由（隐藏必填）",
-      "reason_required": "隐藏必须写理由",
+      "reason_label": "处理理由（隐藏与警告必填）",
+      "reason_required": "隐藏与警告必须写理由",
       "approve": "放行",
-      "shortcuts": "J / K 上下 · A 放行 · H 隐藏",
+      "shortcuts": "J / K 上下 · A 放行 · H 隐藏 · W 警告",
       "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
-      "held_for_word": "因敏感词「{{word}}」待审"
+      "held_for_word": "因敏感词「{{word}}」待审",
+      "warn": "警告作者",
+      "reaction_love": "念"
     },
     "words": {
       "add_row": "新增敏感词",
@@ -3107,7 +3114,17 @@
       "batch_region": "敏感词批量操作",
       "delete_selected": "删除所选",
       "confirm_title": "删除 {{n}} 个敏感词？",
-      "category_placeholder": "— 选择类别 —"
+      "category_placeholder": "— 选择类别 —",
+      "edit_title": "编辑敏感词",
+      "edit_hint": "改了词本身，30 天命中从零开始计。",
+      "change_action": "改动作…",
+      "change_action_title": "改 {{n}} 个敏感词的命中后动作",
+      "copy_from": "从其他文明复制",
+      "copy_hint": "把另一个文明的整张词表复制到当前文明，类别与命中后动作照搬；这里已有的词跳过，不覆盖。",
+      "copy_source": "源文明",
+      "copy_source_placeholder": "— 选择文明 —",
+      "copy_confirm": "复制",
+      "copy_done": "已复制 {{copied}} 个，跳过 {{skipped}} 个已有的"
     },
     "mutes": {
       "col_soul": "灵魂",
@@ -3116,7 +3133,24 @@
       "col_by": "执行人",
       "term_label": "{{name}} 禁言剩余",
       "confirm_title": "解除「{{name}}」的禁言？",
-      "confirm_body": "即时生效，灵魂端会收到通知。这一步不能撤销，但可以重新禁言。"
+      "confirm_body": "即时生效，灵魂端会收到通知。这一步不能撤销，但可以重新禁言。",
+      "new": "+ 禁言…",
+      "new_title": "禁言灵魂",
+      "search": "搜索灵魂姓名",
+      "pick_label": "选择灵魂",
+      "no_match": "没有匹配的灵魂",
+      "term_hint": "1–365 天，没有永久禁言。",
+      "filter_status": "状态",
+      "status": {
+        "ACTIVE": "禁言中",
+        "EXPIRED": "已到期",
+        "LIFTED": "已解除"
+      },
+      "term": {
+        "SHORT": "7 天以内",
+        "MEDIUM": "8–30 天",
+        "LONG": "30 天以上"
+      }
     },
     "handled": {
       "col_type": "类型",

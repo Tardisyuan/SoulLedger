@@ -384,6 +384,8 @@ class ReportResolution(models.TextChoices):
     DELETE = "DELETE", "Delete content"
     MUTE = "MUTE", "Mute author"
     DISMISS = "DISMISS", "Dismiss"
+    # 警告作者:内容照常可见,举报记为 DISMISSED,理由必填并随 SOCIAL_WARNED 发给作者。
+    WARN = "WARN", "Warn author"
 
 
 class Report(models.Model):

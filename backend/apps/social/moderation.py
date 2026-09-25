@@ -231,6 +231,74 @@ def add_sensitive_word(tenant, word, *, actor, request=None, category="", action
     return row
 
 
+def update_sensitive_word(row, *, actor, request=None, **fields):
+    """改一个词的 `category` / `action` / `word`(只改给了的)。`word` 与新建同一套校验:
+    去空白、转小写、不能为空、本文明内不能重复(409)。词本身改了,旧词的命中桶一并清掉 ——
+    它们数的是另一个字符串。审计写 `{字段: [旧, 新]}`,只记真的变了的。"""
+    if "word" in fields:
+        fields["word"] = normalize_word(fields["word"])
+        if not fields["word"]:
+            raise SocialError("敏感词不能为空。", "invalid_word", 400)
+    with transaction.atomic():
+        row = SensitiveWord.objects.select_for_update(of=("self",)).get(pk=row.pk)
+        changes = {k: [getattr(row, k), v] for k, v in fields.items() if getattr(row, k) != v}
+        if not changes:
+            return row
+        for name, (_, value) in changes.items():
+            setattr(row, name, value)
+        try:
+            with transaction.atomic():
+                row.save(update_fields=list(changes))
+        except IntegrityError:
+            raise SocialError("该敏感词已存在。", "duplicate_word", 409) from None
+        if "word" in changes:
+            row.daily_hits.all().delete()
+        audit("UPDATE", row.tenant, row.pk, f"修改敏感词「{row.word}」", actor=actor, request=request, changes=changes)
+    return row
+
+
+def update_sensitive_words(queryset, ids, *, actor, request=None, **fields):
+    """批量改(只改 `action` / `category`,不改词本身)。`queryset` 必须已按租户收窄。
+    全有或全无,规则与 `remove_sensitive_words` 相同:任何一个 id 不在查询集里 → 404 + `missing`。"""
+    ids = list(dict.fromkeys(ids))
+    if not 1 <= len(ids) <= BATCH_DELETE_MAX:
+        raise SocialError(f"一次修改 1–{BATCH_DELETE_MAX} 条。", "invalid_batch", 400)
+    with transaction.atomic():
+        rows = list(queryset.select_for_update(of=("self",)).filter(pk__in=ids))
+        found = {row.pk for row in rows}
+        missing = [str(pk) for pk in ids if pk not in found]
+        if missing:
+            raise SocialError("部分敏感词不存在。", "not_found", 404, missing=missing)
+        for row in rows:
+            update_sensitive_word(row, actor=actor, request=request, **fields)
+    return len(rows)
+
+
+def copy_sensitive_words(source, target, *, actor, request=None):
+    """把 `source` 文明的整张词表复制进 `target`,类别与动作照搬,命中计数不带。
+    `target` 里已有的词(同一个小写形)跳过。返回 `(copied, skipped)`。
+
+    **只有 ADMIN 能调**(视图里判):这是唯一一条读另一个文明词表的路径,而回包只有两个数。
+    每复制一个词走一次 `add_sensitive_word` —— 同一条审计、同一个保存点:已有的词撞唯一约束,
+    回滚的只是那一个保存点,记为「跳过」(PostgreSQL 上失败语句会中止事务,所以必须在保存点里撞)。
+    """
+    if source.pk == target.pk:
+        raise SocialError("源文明与目标文明相同。", "same_tenant", 400)
+    copied = skipped = 0
+    with transaction.atomic():
+        for row in SensitiveWord.objects.filter(tenant=source).order_by("word"):
+            try:
+                add_sensitive_word(target, row.word, actor=actor, request=request,
+                                   category=row.category, action=row.action)
+            except SocialError as exc:
+                if exc.code != "duplicate_word":
+                    raise
+                skipped += 1
+                continue
+            copied += 1
+    return copied, skipped
+
+
 def remove_sensitive_word(row, *, actor, request=None):
     with transaction.atomic():
         audit("DELETE", row.tenant, row.pk, f"删除敏感词「{row.word}」", actor=actor, request=request)
@@ -416,7 +484,13 @@ def lift_mute(mute, *, actor, request=None):
 
 
 def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None):
-    """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。"""
+    """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。
+
+    WARN:内容不动、举报记为 DISMISSED,理由必填 —— 理由就是警告本身,随 `SOCIAL_WARNED`
+    发给 `target_user`(帖子 / 评论的作者,或被举报的用户)。
+    """
+    if resolution == ReportResolution.WARN and not note.strip():
+        raise SocialError("警告作者须写理由。", "reason_required", 400)
     with transaction.atomic():
         row = Report.objects.select_for_update(of=("self",)).select_related("post", "comment", "target_user").get(
             pk=report.pk
@@ -435,12 +509,20 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             if mute_days is None:
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)
             mute_user(row.target_user, row.tenant, mute_days, actor=actor, request=request, reason=note)
+        elif resolution == ReportResolution.WARN:
+            # 理由进 payload 是有意的:没有理由的警告对作者没有意义。其余只放 id。
+            publish_event("SOCIAL_WARNED", row.tenant, [row.target_user_id], {
+                "report_id": str(row.pk), "target_type": row.target_type,
+                "target_id": str(row.post_id or row.comment_id or row.target_user_id), "reason": note[:500],
+            })
+        dismissed = resolution in (ReportResolution.DISMISS, ReportResolution.WARN)
         Report.objects.filter(pk=row.pk, status=ReportStatus.OPEN).update(
-            status=ReportStatus.DISMISSED if resolution == ReportResolution.DISMISS else ReportStatus.RESOLVED,
+            status=ReportStatus.DISMISSED if dismissed else ReportStatus.RESOLVED,
             resolution=resolution, resolved_by=actor, resolved_at=timezone.now(), resolution_note=note[:500],
         )
         audit("UPDATE", row.tenant, row.pk, f"处理举报 {row.target_type}:{resolution}",
-              actor=actor, request=request, changes={"resolution": resolution, "report_count": row.report_count})
+              actor=actor, request=request,
+              changes={"resolution": resolution, "report_count": row.report_count, "note": note[:500]})
         row.refresh_from_db()
     return row
 

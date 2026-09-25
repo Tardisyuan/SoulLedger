@@ -3050,7 +3050,12 @@
       "invalid_word": "The word cannot be empty",
       "invalid_resolution": "A report against a user cannot hide or delete content; mute instead",
       "already_lifted": "That mute was already lifted",
-      "not_found": "Not found, or not in this civilization"
+      "not_found": "Not found, or not in this civilization",
+      "reason_required": "Write a reason first",
+      "admin_only": "Only an administrator can copy a word list across civilizations",
+      "same_tenant": "The source is this civilization",
+      "no_tenant": "No current civilization",
+      "invalid_days": "A mute lasts 1–365 days"
     },
     "empty": {
       "reports": "No open reports",
@@ -3088,12 +3093,14 @@
       "rule_hit": "Rule hit · word list",
       "from": "from {{name}}",
       "reaction_comment": "Comments",
-      "reason_label": "Reason (required to hide)",
-      "reason_required": "Hiding needs a reason",
+      "reason_label": "Reason (required to hide or warn)",
+      "reason_required": "Hiding or warning needs a reason",
       "approve": "Let through",
-      "shortcuts": "J / K move · A let through · H hide",
+      "shortcuts": "J / K move · A let through · H hide · W warn",
       "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
-      "held_for_word": "Held for review by the word “{{word}}”"
+      "held_for_word": "Held for review by the word “{{word}}”",
+      "warn": "Warn the author",
+      "reaction_love": "Love"
     },
     "words": {
       "add_row": "Add a word",
@@ -3107,7 +3114,17 @@
       "batch_region": "Word list batch actions",
       "delete_selected": "Delete selected",
       "confirm_title": "Delete {{n}} words?",
-      "category_placeholder": "— choose a category —"
+      "category_placeholder": "— choose a category —",
+      "edit_title": "Edit word",
+      "edit_hint": "Changing the word itself restarts its 30-day hits from zero.",
+      "change_action": "Change action…",
+      "change_action_title": "Change the action of {{n}} words",
+      "copy_from": "Copy from another civilization",
+      "copy_hint": "Copies every word of another civilization into this one, with its category and action. Words already on this list are skipped, not overwritten.",
+      "copy_source": "Source civilization",
+      "copy_source_placeholder": "— choose a civilization —",
+      "copy_confirm": "Copy",
+      "copy_done": "Copied {{copied}}; skipped {{skipped}} already on the list"
     },
     "mutes": {
       "col_soul": "Soul",
@@ -3116,7 +3133,24 @@
       "col_by": "By",
       "term_label": "Mute remaining for {{name}}",
       "confirm_title": "Lift the mute on {{name}}?",
-      "confirm_body": "Takes effect at once and the soul is notified. It cannot be undone, but the soul can be muted again."
+      "confirm_body": "Takes effect at once and the soul is notified. It cannot be undone, but the soul can be muted again.",
+      "new": "+ Mute…",
+      "new_title": "Mute a soul",
+      "search": "Search souls by name",
+      "pick_label": "Choose a soul",
+      "no_match": "No soul matches",
+      "term_hint": "1–365 days; there is no permanent mute.",
+      "filter_status": "Status",
+      "status": {
+        "ACTIVE": "Muted",
+        "EXPIRED": "Expired",
+        "LIFTED": "Lifted"
+      },
+      "term": {
+        "SHORT": "Up to 7 days",
+        "MEDIUM": "8–30 days",
+        "LONG": "Over 30 days"
+      }
     },
     "handled": {
       "col_type": "Type",

@@ -3050,7 +3050,12 @@
       "invalid_word": "Nen Medu Djeseru Sesh",
       "invalid_resolution": "Sedjem Er Ba: Nen Imen, Nen Fekh. Iri Gerh.",
       "already_lifted": "Gerh Fekh Seth",
-      "not_found": "Nen Gem, Er Nen Em Taui Pen"
+      "not_found": "Nen Gem, Er Nen Em Taui Pen",
+      "reason_required": "Khet Sesen",
+      "admin_only": "Sab Hery Wa: Sesh Em Taui Ky",
+      "same_tenant": "Taui Ky Nen: Taui Pen",
+      "no_tenant": "Nen Taui Pen",
+      "invalid_days": "Hru Gerh: 1–365"
     },
     "empty": {
       "reports": "Nen Sedjem Em Smen",
@@ -3088,12 +3093,14 @@
       "rule_hit": "Gem · Medu Djeseru",
       "from": "Em {{name}}",
       "reaction_comment": "Wesheb",
-      "reason_label": "Khet (Imen: Sesen)",
-      "reason_required": "Imen: Khet Sesen",
+      "reason_label": "Khet (Imen, Hab: Sesen)",
+      "reason_required": "Imen, Hab: Khet Sesen",
       "approve": "Menkh",
-      "shortcuts": "J / K · A Menkh · H Imen",
+      "shortcuts": "J / K · A Menkh · H Imen · W Hab",
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
-      "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer"
+      "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer",
+      "warn": "Hab Khet Er Neb Medu",
+      "reaction_love": "Sekha"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",
@@ -3107,7 +3114,17 @@
       "batch_region": "Iri Neb · Medu Djeseru",
       "delete_selected": "Fekh Setep Seth",
       "confirm_title": "Fekh {{n}} Medu Djeseru?",
-      "category_placeholder": "— Setep Ra —"
+      "category_placeholder": "— Setep Ra —",
+      "edit_title": "Khemen Medu Djeseru",
+      "edit_hint": "Khemen Medu Djeseru: Gem · Hru 30 Wehem Tepy.",
+      "change_action": "Khemen Em Gem…",
+      "change_action_title": "Khemen Em Gem · Medu Djeseru {{n}}",
+      "copy_from": "Sesh Em Taui Ky",
+      "copy_hint": "Sesh Medu Djeseru Neb Em Taui Ky Er Taui Pen; Iru Hena Em Gem: Mi. Medu Wenen Djer: Iri Tepy.",
+      "copy_source": "Taui Ky",
+      "copy_source_placeholder": "— Setep Taui —",
+      "copy_confirm": "Sesh",
+      "copy_done": "Sesh {{copied}} · Iri Tepy {{skipped}}"
     },
     "mutes": {
       "col_soul": "Ba",
@@ -3116,7 +3133,24 @@
       "col_by": "Sab",
       "term_label": "Gerh {{name}} · Sepy",
       "confirm_title": "Fekh Gerh {{name}}?",
-      "confirm_body": "Wen Emu; Ba Sedjem. Nen Wehem Djer; Gerh Wehem Iri Wenen."
+      "confirm_body": "Wen Emu; Ba Sedjem. Nen Wehem Djer; Gerh Wehem Iri Wenen.",
+      "new": "+ Gerh…",
+      "new_title": "Gerh Ba",
+      "search": "Hehy Ren Ba",
+      "pick_label": "Setep Ba",
+      "no_match": "Nen Ba Gem",
+      "term_hint": "Hru 1–365; Nen Gerh Djet.",
+      "filter_status": "Kheperu",
+      "status": {
+        "ACTIVE": "Em Gerh",
+        "EXPIRED": "Mut",
+        "LIFTED": "Fekh Seth"
+      },
+      "term": {
+        "SHORT": "≤ Hru 7",
+        "MEDIUM": "Hru 8–30",
+        "LONG": "> Hru 30"
+      }
     },
     "handled": {
       "col_type": "Iru",

@@ -16,9 +16,11 @@ from apps.social.models import (
     Comment,
     ModerationStatus,
     Post,
+    Report,
     SensitiveWord,
     SensitiveWordAction,
     SensitiveWordDailyHit,
+    SocialMute,
     Visibility,
 )
 from tests.soul_social_support import MODERATION, SOCIAL, feed_ids, officer_client, post, soul
@@ -272,6 +274,169 @@ def test_a_new_word_must_name_its_category_and_old_ones_stay_uncategorised(cn_te
     assert rows["旧词"] == ""
 
 
+# ── 改词 ─────────────────────────────────────────────────────────────────
+
+
+def test_editing_a_word_changes_only_what_is_given_and_audits_the_diff(cn_tenant, cn_moderator):
+    row = word(cn_tenant, "旧词", SensitiveWordAction.REVIEW, category="PRIVACY")
+    mod.record_hits([row.pk])
+    client = officer_client(cn_moderator)
+
+    res = client.patch(f"{MODERATION}/sensitive-words/{row.pk}/", {"category": "ABUSE", "action": "HIDE"}, format="json")
+    assert res.status_code == 200, res.content
+    assert (res.json()["word"], res.json()["category"], res.json()["action"], res.json()["hits_30d"]) == (
+        "旧词", "ABUSE", "HIDE", 1
+    )
+    logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(row.pk), action="UPDATE")
+    assert logged.changes == {"category": ["PRIVACY", "ABUSE"], "action": ["REVIEW", "HIDE"]}
+    assert logged.user_id == cn_moderator.pk
+
+    # 词本身:与新建同一套规范化;旧词的命中不再算在新词头上。
+    res = client.patch(f"{MODERATION}/sensitive-words/{row.pk}/", {"category": "ABUSE", "word": "  新词X "}, format="json")
+    assert res.status_code == 200, res.content
+    assert (res.json()["word"], res.json()["action"], res.json()["hits_30d"]) == ("新词x", "HIDE", 0)
+    assert not SensitiveWordDailyHit.objects.filter(word=row).exists()
+
+
+def test_editing_a_word_keeps_creates_rules(cn_tenant, cn_moderator):
+    row = word(cn_tenant, "某词", category="PRIVACY")
+    word(cn_tenant, "已有")
+    client = officer_client(cn_moderator)
+    url = f"{MODERATION}/sensitive-words/{row.pk}/"
+
+    for body in ({"action": "HIDE"}, {"category": "", "action": "HIDE"}, {"category": "隐私"}):
+        res = client.patch(url, body, format="json")
+        assert res.status_code == 400 and "category" in res.json(), (body, res.content)
+    blank = client.patch(url, {"category": "ABUSE", "word": "   "}, format="json")
+    assert blank.status_code == 400 and blank.json()["code"] == "invalid_word"
+    dup = client.patch(url, {"category": "ABUSE", "word": "已有"}, format="json")
+    assert dup.status_code == 409 and dup.json()["code"] == "duplicate_word"
+    assert client.put(url, {"category": "ABUSE"}, format="json").status_code == 405
+
+    row.refresh_from_db()
+    assert (row.word, row.category, row.action) == ("某词", "PRIVACY", "REVIEW")
+    # 被拒的那几次都没写审计:之后一次成功的修改是这一行唯一的审计记录。
+    assert client.patch(url, {"category": "ABUSE"}, format="json").status_code == 200
+    logged = AuditLog.objects.filter(resource="social_moderation", resource_id=str(row.pk))
+    assert [entry.changes for entry in logged] == [{"category": ["PRIVACY", "ABUSE"]}]
+
+
+def test_editing_a_word_is_tenant_scoped_and_needs_social_moderate(cn_tenant, eu_moderator, judge_user):
+    row = word(cn_tenant, "地府的词", category="PRIVACY")
+    url = f"{MODERATION}/sensitive-words/{row.pk}/"
+    assert officer_client(eu_moderator).patch(url, {"category": "ABUSE"}, format="json").status_code == 404
+    assert officer_client(judge_user).patch(url, {"category": "ABUSE"}, format="json").status_code == 403
+    row.refresh_from_db()
+    assert row.category == "PRIVACY"
+
+
+def test_batch_update_changes_every_action_and_audits_each(cn_tenant, cn_moderator):
+    rows = [word(cn_tenant, f"词{i}", category="PRIVACY") for i in range(3)]
+    keep = word(cn_tenant, "留下")
+
+    res = officer_client(cn_moderator).post(
+        f"{MODERATION}/sensitive-words/batch-update/", {"ids": [str(r.pk) for r in rows], "action": "MASK"}, format="json"
+    )
+
+    assert res.status_code == 200, res.content
+    assert res.json() == {"updated": 3}
+    assert set(SensitiveWord.objects.filter(action="MASK").values_list("pk", flat=True)) == {r.pk for r in rows}
+    keep.refresh_from_db()
+    assert keep.action == SensitiveWordAction.REVIEW
+    for row in rows:
+        logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(row.pk), action="UPDATE")
+        assert logged.changes == {"action": ["REVIEW", "MASK"]}
+
+
+def test_batch_update_is_all_or_nothing_across_civilizations(cn_tenant, eu_tenant, eu_moderator, judge_user):
+    mine = word(eu_tenant, "天堂的词")
+    theirs = word(cn_tenant, "地府的词")
+    url = f"{MODERATION}/sensitive-words/batch-update/"
+
+    res = officer_client(eu_moderator).post(url, {"ids": [str(mine.pk), str(theirs.pk)], "action": "HIDE"}, format="json")
+
+    assert res.status_code == 404, res.content
+    assert res.json()["missing"] == [str(theirs.pk)]
+    assert set(SensitiveWord.objects.values_list("action", flat=True)) == {"REVIEW"}, "改了一半"
+    client = officer_client(eu_moderator)
+    assert client.post(url, {"ids": [], "action": "HIDE"}, format="json").status_code == 400
+    assert client.post(url, {"ids": [str(mine.pk)]}, format="json").status_code == 400
+    assert officer_client(judge_user).post(url, {"ids": [str(theirs.pk)], "action": "HIDE"}, format="json").status_code == 403
+    # 被拒的那几次都没写审计:之后一次成功的批量是唯一的审计记录。
+    assert client.post(url, {"ids": [str(mine.pk)], "action": "HIDE"}, format="json").status_code == 200
+    logged = AuditLog.objects.filter(resource="social_moderation")
+    assert [(entry.resource_id, entry.changes) for entry in logged] == [(str(mine.pk), {"action": ["REVIEW", "HIDE"]})]
+
+
+# ── 从其他文明复制词表(ADMIN)──────────────────────────────────────────────
+
+COPY = f"{MODERATION}/sensitive-words/copy-from/"
+
+
+def test_admin_copies_another_civilizations_words_skipping_duplicates(cn_tenant, eu_tenant, eu_admin_user):
+    word(cn_tenant, "还阳", SensitiveWordAction.HIDE, category="INDUCEMENT")
+    word(cn_tenant, "门牌号", SensitiveWordAction.MASK, category="PRIVACY")
+    counted = word(cn_tenant, "已有", SensitiveWordAction.HIDE, category="ABUSE")
+    mod.record_hits([counted.pk])
+    kept = word(eu_tenant, "已有", SensitiveWordAction.REVIEW, category="PRIVACY")
+
+    res = officer_client(eu_admin_user).post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
+
+    assert res.status_code == 200, res.content
+    assert res.json() == {"copied": 2, "skipped": 1}
+    rows = {w.word: (w.category, w.action, w.created_by_id) for w in SensitiveWord.objects.filter(tenant=eu_tenant)}
+    assert rows == {
+        "还阳": ("INDUCEMENT", "HIDE", eu_admin_user.pk),
+        "门牌号": ("PRIVACY", "MASK", eu_admin_user.pk),
+        "已有": ("PRIVACY", "REVIEW", None),  # 目标里原有的那条不被覆盖
+    }
+    kept.refresh_from_db()
+    assert kept.action == SensitiveWordAction.REVIEW
+    assert SensitiveWord.objects.filter(tenant=cn_tenant).count() == 3, "源文明的词表被动了"
+    copies = SensitiveWord.objects.filter(tenant=eu_tenant, created_by=eu_admin_user)
+    assert not SensitiveWordDailyHit.objects.filter(word__in=copies).exists(), "命中计数不该跟着复制"
+    for row in copies:
+        assert AuditLog.objects.filter(resource="social_moderation", resource_id=str(row.pk), action="CREATE").count() == 1
+
+
+def test_copying_again_copies_nothing(cn_tenant, eu_tenant, eu_admin_user):
+    word(cn_tenant, "还阳", category="INDUCEMENT")
+    client = officer_client(eu_admin_user)
+    assert client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json").json() == {"copied": 1, "skipped": 0}
+    assert client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json").json() == {"copied": 0, "skipped": 1}
+
+
+def test_copy_refuses_its_own_civilization_and_unknown_ones(cn_tenant, admin_user):
+    word(cn_tenant, "还阳", category="INDUCEMENT")
+    client = officer_client(admin_user)
+    same = client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
+    assert same.status_code == 400 and same.json()["code"] == "same_tenant"
+    assert client.post(COPY, {"source_tenant": "NOPE"}, format="json").status_code == 404
+    assert client.post(COPY, {}, format="json").status_code == 400
+    assert SensitiveWord.objects.count() == 1
+
+
+def test_only_admin_may_copy_and_a_moderator_learns_nothing_about_the_other_list(
+    cn_tenant, eu_tenant, eu_moderator, judge_user
+):
+    """MODERATOR 持有 social.moderate,但这是读别的文明词表的唯一入口 —— 403,且回包里没有任何一个词。"""
+    word(cn_tenant, "地府机密词", category="CONFIDENTIAL")
+
+    res = officer_client(eu_moderator).post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
+
+    assert res.status_code == 403, res.content
+    assert res.json()["code"] == "admin_only"
+    assert "地府机密词" not in res.content.decode()
+    assert not SensitiveWord.objects.filter(tenant=eu_tenant).exists()
+    # 分不出源文明存不存在、有多少词:不存在的源答同一个 403。
+    unknown = officer_client(eu_moderator).post(COPY, {"source_tenant": "NOPE"}, format="json")
+    assert (unknown.status_code, unknown.json()) == (403, res.json())
+    # 自己文明的词表照旧只列自己的。
+    assert officer_client(eu_moderator).get(f"{MODERATION}/sensitive-words/").json()["results"] == []
+    # 没有 social.moderate 的更进不来。
+    assert officer_client(judge_user).post(COPY, {"source_tenant": "CN_DIYU"}, format="json").status_code == 403
+
+
 # ── 批量删词 ─────────────────────────────────────────────────────────────
 
 
@@ -360,6 +525,86 @@ def test_lifting_a_mute_records_who_and_notifies_the_soul(cn_tenant, cn_moderato
     assert target_client.post(f"{SOCIAL}/feed/", {"content": "能说话了"}, format="json").status_code == 201
     again = officer_client(cn_moderator).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json")
     assert again.status_code == 409 and again.json()["code"] == "already_lifted"
+
+
+def _mute_ids(client, **params):
+    res = client.get(f"{MODERATION}/mutes/", params)
+    assert res.status_code == 200, res.content
+    return {r["id"] for r in res.json()["results"]}
+
+
+def test_mute_filters_status_term_executor_and_name(cn_tenant, cn_moderator, django_user_model):
+    other = django_user_model.objects.create(username="cn_mod2", role="MODERATOR", tenant=cn_tenant, display_name="崔珏")
+    short = mod.mute_user(soul(cn_tenant, "韩守一")[0].user, cn_tenant, 7, actor=cn_moderator)
+    medium = mod.mute_user(soul(cn_tenant, "王素心")[0].user, cn_tenant, 30, actor=other)
+    long_ = mod.mute_user(soul(cn_tenant, "Kleon")[0].user, cn_tenant, 365, actor=cn_moderator)
+    lifted = mod.mute_user(soul(cn_tenant, "解除的")[0].user, cn_tenant, 8, actor=other)
+    mod.lift_mute(lifted, actor=other)
+    expired = mod.mute_user(soul(cn_tenant, "到期的")[0].user, cn_tenant, 1, actor=cn_moderator)
+    SocialMute.objects.filter(pk=expired.pk).update(
+        created_at=timezone.now() - timedelta(days=3), until=timezone.now() - timedelta(days=2)
+    )
+    client = officer_client(cn_moderator)
+    ids = lambda *rows: {str(r.pk) for r in rows}  # noqa: E731
+
+    assert _mute_ids(client) == ids(short, medium, long_, lifted, expired)
+    assert _mute_ids(client, status="ACTIVE") == ids(short, medium, long_)
+    assert _mute_ids(client, status="EXPIRED") == ids(expired)
+    assert _mute_ids(client, status="LIFTED") == ids(lifted)
+    # 时长是 until − created_at,边界闭在上限:7 天算短,8 天算中,30 天算中,31 天起算长。
+    assert _mute_ids(client, term="SHORT") == ids(short, expired)
+    assert _mute_ids(client, term="MEDIUM") == ids(medium, lifted)
+    assert _mute_ids(client, term="LONG") == ids(long_)
+    assert _mute_ids(client, created_by=other.pk) == ids(medium, lifted)
+    assert _mute_ids(client, q="素心") == ids(medium)
+    assert _mute_ids(client, status="ACTIVE", created_by=cn_moderator.pk, term="LONG") == ids(long_)
+    for bad in ({"status": "FOREVER"}, {"term": "PERMANENT"}, {"created_by": "x"}):
+        assert _mute_ids(client, **bad) == set(), bad
+
+    executors = sorted(client.get(f"{MODERATION}/mutes/executors/").json(), key=lambda r: -r["user_id"])
+    assert executors == [
+        {"user_id": other.pk, "display_name": "崔珏"},
+        {"user_id": cn_moderator.pk, "display_name": "地府审核官"},
+    ]
+
+
+def test_mute_executors_and_the_soul_picker_stay_in_the_civilization(
+    cn_tenant, eu_tenant, cn_moderator, eu_moderator, judge_user
+):
+    mod.mute_user(soul(cn_tenant, "地府的")[0].user, cn_tenant, 3, actor=cn_moderator)
+    eu_soul, _ = soul(eu_tenant, "天堂的灵魂")
+    visitor, _ = soul(cn_tenant, "暂居天堂的", home_tenant=cn_tenant)
+    type(visitor.soul).all_objects.filter(pk=visitor.soul_id).update(tenant=eu_tenant)
+
+    eu = officer_client(eu_moderator)
+    assert eu.get(f"{MODERATION}/mutes/executors/").json() == []
+    names = {r["display_name"] for r in eu.get(f"{MODERATION}/mutes/souls/").json()}
+    assert names == {eu_soul.user.display_name, visitor.user.display_name}, "选人框按此刻所在文明,不按原属"
+    assert eu.get(f"{MODERATION}/mutes/souls/", {"q": "暂居"}).json() == [
+        {"user_id": visitor.user_id, "display_name": visitor.user.display_name}
+    ]
+    cn_names = {r["display_name"] for r in officer_client(cn_moderator).get(f"{MODERATION}/mutes/souls/").json()}
+    assert "天堂的灵魂" not in cn_names and "暂居天堂的" not in cn_names and "地府的" in cn_names
+    assert officer_client(judge_user).get(f"{MODERATION}/mutes/souls/").status_code == 403
+    assert officer_client(judge_user).get(f"{MODERATION}/mutes/executors/").status_code == 403
+
+
+def test_the_soul_picker_leaves_out_retired_accounts_and_officers(cn_tenant, cn_moderator):
+    live, _ = soul(cn_tenant, "本世的")
+    retired, _ = soul(cn_tenant, "上一世的")
+    type(retired).objects.filter(pk=retired.pk).update(retired_at=timezone.now())
+    rows = officer_client(cn_moderator).get(f"{MODERATION}/mutes/souls/").json()
+    assert [r["user_id"] for r in rows] == [live.user_id]
+
+
+def test_a_mute_is_one_to_365_days_never_permanent(cn_tenant, cn_moderator):
+    target, _ = soul(cn_tenant, "被禁言的")
+    client = officer_client(cn_moderator)
+    for days in (0, 366, None):
+        body = {"user_id": target.user_id} if days is None else {"user_id": target.user_id, "days": days}
+        assert client.post(f"{MODERATION}/mutes/", body, format="json").status_code == 400, days
+    assert not SocialMute.objects.exists()
+    assert client.post(f"{MODERATION}/mutes/", {"user_id": target.user_id, "days": 365}, format="json").status_code == 201
 
 
 def test_an_officer_cannot_lift_another_civilizations_mute(cn_tenant, cn_moderator, eu_moderator):
@@ -477,3 +722,101 @@ def test_restore_visible_does_not_reach_deleted_content_or_other_civilizations(
     assert officer_client(eu_moderator).post(f"{MODERATION}/posts/{hidden.pk}/restore/", {}, format="json").status_code == 404
     hidden.refresh_from_db()
     assert hidden.moderation_status == ModerationStatus.HIDDEN
+
+
+# ── 表态数(念 …)───────────────────────────────────────────────────────────
+
+
+def test_the_officer_post_carries_per_kind_reaction_counts_without_deleted_ones(cn_tenant, cn_moderator):
+    from apps.social.models import Reaction
+
+    author, _ = soul(cn_tenant, "作者")
+    row = post(author, "有人念的帖子", Visibility.PUBLIC)
+    Post.objects.filter(pk=row.pk).update(moderation_status=ModerationStatus.PENDING)
+    fans = [soul(cn_tenant, f"读者{i}")[0].user for i in range(4)]
+    for user, kind in zip(fans, ["LOVE", "LOVE", "LIKE", "LOVE"], strict=True):
+        Reaction.objects.create(user=user, post=row, reaction_type=kind, tenant=cn_tenant)
+    Reaction.objects.filter(user=fans[3]).update(is_deleted=True)  # 撤回的不算
+    client = officer_client(cn_moderator)
+    expected = {"LIKE": 1, "LOVE": 2, "RESPECT": 0, "SYMPATHY": 0, "ETERNAL_LIGHT": 0}
+
+    listed = {r["id"]: r for r in client.get(f"{MODERATION}/posts/").json()["results"]}
+    assert listed[str(row.pk)]["reaction_counts"] == expected
+    assert client.get(f"{MODERATION}/posts/{row.pk}/").json()["reaction_counts"] == expected
+    # 处置动作的回包是同一形状,不是一行没有注解的数据。
+    approved = client.post(f"{MODERATION}/posts/{row.pk}/approve/", {}, format="json")
+    assert approved.status_code == 200, approved.content
+    assert approved.json()["reaction_counts"] == expected
+
+
+# ── 警告作者(WARN)────────────────────────────────────────────────────────
+
+
+def _reported_post(tenant):
+    author, _ = soul(tenant, "作者")
+    row = post(author, "被举报的帖子", Visibility.PUBLIC)
+    _, reporter = soul(tenant, "举报人")
+    res = reporter.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(row.pk), "reason": "ABUSE"},
+                        format="json")
+    assert res.status_code == 201, res.content
+    return author, row, Report.objects.get(post=row)
+
+
+def test_warn_needs_a_reason_and_changes_nothing_without_one(cn_tenant, cn_moderator):
+    _, row, report = _reported_post(cn_tenant)
+    client = officer_client(cn_moderator)
+    for note in (None, "", "   "):
+        body = {"resolution": "WARN"} if note is None else {"resolution": "WARN", "note": note}
+        with mock.patch("apps.events.event_bus.event_bus.publish") as published:
+            res = client.post(f"{MODERATION}/reports/{report.pk}/resolve/", body, format="json")
+        assert res.status_code == 400, (note, res.content)
+        assert res.json()["code"] == "reason_required"
+        assert published.call_count == 0
+    report.refresh_from_db()
+    assert (report.status, report.resolution) == ("OPEN", "")
+    assert not AuditLog.objects.filter(resource="social_moderation", resource_id=str(report.pk)).exists()
+
+
+def test_warn_notifies_the_author_with_the_reason_keeps_the_post_and_dismisses_the_report(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks
+):
+    author, row, report = _reported_post(cn_tenant)
+    _, reader = soul(cn_tenant, "读者")
+
+    with (
+        mock.patch("apps.events.event_bus.event_bus.publish") as published,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        res = officer_client(cn_moderator).post(
+            f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "注意言辞"}, format="json"
+        )
+
+    assert res.status_code == 200, res.content
+    assert (res.json()["status"], res.json()["resolution"], res.json()["resolution_note"]) == (
+        "DISMISSED", "WARN", "注意言辞"
+    )
+    calls = [(c.kwargs["event_type"], c.kwargs["user_ids"], c.kwargs["payload"]) for c in published.call_args_list]
+    assert calls == [("SOCIAL_WARNED", [author.user_id], {
+        "report_id": str(report.pk), "target_type": "POST", "target_id": str(row.pk), "reason": "注意言辞",
+    })]
+    row.refresh_from_db()
+    assert (row.moderation_status, row.is_deleted) == (ModerationStatus.PUBLISHED, False)
+    assert str(row.pk) in feed_ids(reader), "警告不该让帖子消失"
+    logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(report.pk))
+    assert (logged.action, logged.user_id) == ("UPDATE", cn_moderator.pk)
+    assert logged.changes["resolution"] == "WARN" and logged.changes["note"] == "注意言辞"
+    # 已关闭:不能再处置一次。
+    again = officer_client(cn_moderator).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "再警告"}, format="json"
+    )
+    assert again.status_code == 409
+
+
+def test_warn_on_another_civilizations_report_is_a_404(cn_tenant, eu_moderator):
+    _, _, report = _reported_post(cn_tenant)
+    res = officer_client(eu_moderator).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "越界"}, format="json"
+    )
+    assert res.status_code == 404
+    report.refresh_from_db()
+    assert report.status == "OPEN"

@@ -10030,8 +10030,19 @@ paths:
   /api/v1/social-moderation/mutes/:
     get:
       operationId: v1_social_moderation_mutes_list
-      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      description: |-
+        禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+
+        列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+        `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+        `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+        `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
       parameters:
+      - in: query
+        name: created_by
+        schema:
+          type: integer
+        description: 执行人 user id
       - name: ordering
         required: false
         in: query
@@ -10044,12 +10055,35 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 灵魂显示名包含
       - name: search
         required: false
         in: query
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - EXPIRED
+          - LIFTED
+        description: ACTIVE 禁言中 / EXPIRED 已到期 / LIFTED 已解除
+      - in: query
+        name: term
+        schema:
+          type: string
+          enum:
+          - LONG
+          - MEDIUM
+          - SHORT
+        description: 时长:SHORT ≤ 7 天 / MEDIUM 8–30 天 / LONG > 30 天
       tags:
       - v1
       security:
@@ -10063,7 +10097,13 @@ paths:
           description: ''
     post:
       operationId: v1_social_moderation_mutes_create
-      description: 禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+      description: |-
+        禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
+
+        列表过滤(E-08c):`status`(ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除)、
+        `term`(禁言时长:SHORT ≤ 7 天、MEDIUM 8–30 天、LONG > 30 天,按 until − created_at 算)、
+        `created_by`(执行人 user id)、`q`(灵魂显示名包含)。取值不认识的一律空列表 —— 与「已处理」同一条规则。
+        `souls/` 是「禁言…」的选人框,`executors/` 是执行人过滤的选项;两者都按当前文明收窄。
       tags:
       - v1
       requestBody:
@@ -10145,6 +10185,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/mutes/executors/:
+    get:
+      operationId: v1_social_moderation_mutes_executors_list
+      description: 执行人过滤的选项:本文明禁言记录里出现过的执行人。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModerationAuthor'
+          description: ''
+  /api/v1/social-moderation/mutes/souls/:
+    get:
+      operationId: v1_social_moderation_mutes_souls_list
+      description: |-
+        「禁言…」的选人框:此刻在当前文明的本世灵魂账号,按显示名。与 `create` 同一个范围
+        (create 另收已停用的账号,那些不该出现在选人框里)。只给 user id 与显示名。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 灵魂显示名包含;空 = 前 20 个
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModerationAuthor'
           description: ''
   /api/v1/social-moderation/posts/:
     get:
@@ -10539,8 +10646,9 @@ paths:
     get:
       operationId: v1_social_moderation_sensitive_words_list
       description: |-
-        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
         列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
       parameters:
       - name: ordering
         required: false
@@ -10574,8 +10682,9 @@ paths:
     post:
       operationId: v1_social_moderation_sensitive_words_create
       description: |-
-        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
         列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
       tags:
       - v1
       requestBody:
@@ -10618,11 +10727,66 @@ paths:
                 $ref: '#/components/schemas/ModerationError'
           description: ''
   /api/v1/social-moderation/sensitive-words/{id}/:
+    patch:
+      operationId: v1_social_moderation_sensitive_words_partial_update
+      description: |-
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
+        列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive word.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveWordUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveWordUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveWordUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
     delete:
       operationId: v1_social_moderation_sensitive_words_destroy
       description: |-
-        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
         列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
       parameters:
       - in: path
         name: id
@@ -10666,6 +10830,111 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SensitiveWordBatchDeleteResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/sensitive-words/batch-update/:
+    post:
+      operationId: v1_social_moderation_sensitive_words_batch_update_create
+      description: 批量改「命中后」动作。码名、租户范围、全有或全无、上限 200 —— 都与 batch-delete 相同。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWordBatchUpdateResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/sensitive-words/copy-from/:
+    post:
+      operationId: v1_social_moderation_sensitive_words_copy_from_create
+      description: |-
+        从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
+        不该借它看见别处的词。回包只有计数,不含词本身。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordCopy'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordCopy'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordCopy'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWordCopyResult'
           description: ''
         '404':
           content:
@@ -19546,6 +19815,10 @@ components:
           type: string
         comment_count:
           type: integer
+        reaction_counts:
+          allOf:
+          - $ref: '#/components/schemas/SoulReactionCounts'
+          readOnly: true
       required:
       - author
       - comment_count
@@ -19555,6 +19828,7 @@ components:
       - moderation_reason
       - moderation_status
       - open_report_count
+      - reaction_counts
       - visibility
     ModerationAction:
       type: object
@@ -22118,6 +22392,21 @@ components:
         timezone:
           type: string
           maxLength: 63
+    PatchedSensitiveWordUpdate:
+      type: object
+      description: |-
+        Body of `PATCH sensitive-words/{id}/`. `category` is required on every edit
+        (same rule as create); `action` and `word` are optional and keep their value
+        when omitted. `word` gets create's checks: trimmed, lower-cased, not empty,
+        unique within the civilization (409 `duplicate_word`).
+      properties:
+        word:
+          type: string
+          maxLength: 50
+        category:
+          $ref: '#/components/schemas/SocialSensitiveWordCategoryEnum'
+        action:
+          $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
     PatchedSoul:
       type: object
       description: |-
@@ -24265,13 +24554,59 @@ components:
           type: integer
       required:
       - deleted
+    SensitiveWordBatchUpdate:
+      type: object
+      description: Body of `POST sensitive-words/batch-update/` — the batch bar's
+        「改动作…」.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 200
+          minItems: 1
+        action:
+          $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
+      required:
+      - action
+      - ids
+    SensitiveWordBatchUpdateResult:
+      type: object
+      properties:
+        updated:
+          type: integer
+      required:
+      - updated
+    SensitiveWordCopy:
+      type: object
+      description: |-
+        Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
+        civilization by code. The target is the caller's current civilization.
+      properties:
+        source_tenant:
+          type: string
+          maxLength: 50
+      required:
+      - source_tenant
+    SensitiveWordCopyResult:
+      type: object
+      properties:
+        copied:
+          type: integer
+        skipped:
+          type: integer
+          description: 目标文明里已有的词,不覆盖。
+      required:
+      - copied
+      - skipped
     SensitiveWordCreate:
       type: object
       description: |-
         Body of `POST sensitive-words/`: a new word must name its category
         (maintainer decision, 2026-09-25). Words added before that stay
-        uncategorised ("" in the list); there is no edit endpoint, so nothing ever
-        asks an existing word for one.
+        uncategorised ("" in the list) until someone edits them: the edit body
+        (`SensitiveWordUpdateSerializer`) requires a category too.
       properties:
         id:
           type: string
@@ -24778,12 +25113,14 @@ components:
       - DELETE
       - MUTE
       - DISMISS
+      - WARN
       type: string
       description: |-
         * `HIDE` - Hide content
         * `DELETE` - Delete content
         * `MUTE` - Mute author
         * `DISMISS` - Dismiss
+        * `WARN` - Warn author
     SocialReportStatusEnum:
       enum:
       - OPEN
