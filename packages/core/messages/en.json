@@ -1194,7 +1194,11 @@
       "cited_by_open": "Open",
       "insert_desk": "Insert into the desk",
       "insert_none": "You hold no open case",
-      "insert_pick": "Pick one of your open cases"
+      "insert_pick": "Pick one of your open cases",
+      "related": "Related articles",
+      "related_gate": "Same gate",
+      "related_circle": "Same circle",
+      "related_terrace": "Same terrace"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",

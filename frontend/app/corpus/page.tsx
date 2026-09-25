@@ -14,6 +14,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { CorpusCitedBy } from "@/src/components/judgment/CorpusCitedBy";
 import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertIntoDesk";
+import { CorpusRelated, relatedStatutes } from "@/src/components/judgment/CorpusRelated";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 
@@ -249,6 +250,21 @@ export default function CorpusPage() {
             </p>
             {(selected.statute.citation_count ?? 0) > 0 && (
               <CorpusCitedBy key={selected.statute.id} statuteId={selected.statute.id} />
+            )}
+
+            {relatedStatutes(selected.statute, data) && (
+              <>
+                <RailLabel className="pt-6">{t("judgment.corpus.related")}</RailLabel>
+                {/* A related article may sit outside the current search hits: clear the search so it can open. */}
+                <CorpusRelated
+                  statute={selected.statute}
+                  all={data}
+                  onChoose={(id) => {
+                    setQuery("");
+                    choose(id);
+                  }}
+                />
+              </>
             )}
 
             <RailLabel className="pt-6">{t("judgment.corpus.versions")}</RailLabel>
