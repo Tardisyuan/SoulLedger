@@ -17875,6 +17875,7 @@ components:
       - admin_only_permission
       - admin_always_all
       - conflict_unacknowledged
+      - role_forbidden_permission
       type: string
       description: |-
         * `role_not_found` - role_not_found
@@ -17884,6 +17885,7 @@ components:
         * `admin_only_permission` - admin_only_permission
         * `admin_always_all` - admin_always_all
         * `conflict_unacknowledged` - conflict_unacknowledged
+        * `role_forbidden_permission` - role_forbidden_permission
     MatrixChangeResult:
       type: object
       properties:

@@ -13,7 +13,12 @@ from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
-from apps.perm.matrix import ADMIN_ONLY_PERMISSION, admin_only_violations
+from apps.perm.matrix import (
+    ADMIN_ONLY_PERMISSION,
+    ROLE_FORBIDDEN_PERMISSION,
+    admin_only_violations,
+    role_forbidden_violations,
+)
 from apps.perm.services import get_role_permission_codenames
 
 from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
@@ -285,13 +290,19 @@ def assign_role_permissions(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        refused = admin_only_violations(
-            role.name, Permission.objects.filter(id__in=permission_ids).values_list("codename", flat=True)
-        )
+        requested = list(Permission.objects.filter(id__in=permission_ids).values_list("codename", flat=True))
+        refused = admin_only_violations(role.name, requested)
         if refused:
             return Response(
                 {"error": f"{', '.join(sorted(refused))} can only be granted to ADMIN",
                  "code": ADMIN_ONLY_PERMISSION},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        forbidden = role_forbidden_violations(role.name, requested)
+        if forbidden:
+            return Response(
+                {"error": f"{role.name} may not hold {', '.join(sorted(forbidden))}",
+                 "code": ROLE_FORBIDDEN_PERMISSION},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

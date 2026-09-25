@@ -8181,9 +8181,10 @@ export interface components {
          *     * `admin_only_permission` - admin_only_permission
          *     * `admin_always_all` - admin_always_all
          *     * `conflict_unacknowledged` - conflict_unacknowledged
+         *     * `role_forbidden_permission` - role_forbidden_permission
          * @enum {string}
          */
-        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all" | "conflict_unacknowledged";
+        MatrixChangeCodeEnum: "role_not_found" | "permission_not_found" | "version_conflict" | "database_error" | "admin_only_permission" | "admin_always_all" | "conflict_unacknowledged" | "role_forbidden_permission";
         MatrixChangeResult: {
             /** @description Position of the change in the request. */
             index: number;

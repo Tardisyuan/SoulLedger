@@ -468,6 +468,11 @@ ROLE_PERMISSIONS = {
     # tenant isolation outright, so a "lead of Diyu" given ADMIN would quietly
     # be a lead of everywhere.
     #
+    # workflow.approve, workflow.advance and user.manage are not merely left
+    # out here: since 2026-09-25 they are a server rule
+    # (apps/perm/checker.py::ROLE_FORBIDDEN_CODENAMES) — denied whatever the
+    # grant table says, and refused by the matrix, assign and import.
+    #
     # Deliberately no workflow.approve / workflow.advance. The ten courts exist
     # to divide the decision; a lead who both designs the flow and approves at
     # any stage of it makes that division decorative. workflow.escalate is the

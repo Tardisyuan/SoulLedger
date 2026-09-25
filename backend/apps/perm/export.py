@@ -7,7 +7,7 @@ import json
 
 from django.http import HttpResponse
 
-from apps.perm.matrix import admin_only_violations
+from apps.perm.matrix import admin_only_violations, role_forbidden_violations
 from apps.perm.models import FieldPermission, Permission, Role, RolePermission, RowLevelDataScope
 
 
@@ -115,7 +115,11 @@ def import_permissions(data, overwrite=False):
     for rp_data in data.get('role_permissions', []):
         role = Role.objects.filter(name=rp_data['role']).first()
         perm = Permission.objects.filter(codename=rp_data['permission']).first()
-        if role and perm and not admin_only_violations(role.name, [perm.codename]):
+        if (
+            role and perm
+            and not admin_only_violations(role.name, [perm.codename])
+            and not role_forbidden_violations(role.name, [perm.codename])
+        ):
             _, created = RolePermission.objects.get_or_create(
                 role=role,
                 permission=perm,
