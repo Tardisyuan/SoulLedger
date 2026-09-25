@@ -584,8 +584,11 @@
         "role_not_found": "Nen Gem Netjer.",
         "permission_not_found": "Nen Gem Was.",
         "database_error": "Sethet: Nen Sau.",
-        "admin_always_all": "Netjer Em Tepy Aba-Ef Was Neb"
-      }
+        "admin_always_all": "Netjer Em Tepy Aba-Ef Was Neb",
+        "conflict_unacknowledged": "Wat Hesy Nen Netjer Em Kheme Seth; Nen Maa — Khesef."
+      },
+      "conflict_workflow_line": "{{causes}}: Wat Hesy «{{workflow}}» Em Wedja, Sekhet {{step}} ({{step_name}}) Nen Netjer Em Kheme Seth.",
+      "conflict_acknowledge": "Maa Seth: {{n}} Wat Hesy ({{m}} Em Wedja) Nen Netjer Em Kheme Seth"
     },
     "segments": {
       "label": "Aat Was",

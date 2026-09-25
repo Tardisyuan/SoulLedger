@@ -631,6 +631,7 @@ def apply_matrix_changes(request):
     results, versions = apply_changes(
         serializer.validated_data["changes"],
         serializer.validated_data.get("expected_versions"),
+        serializer.validated_data["acknowledge_conflicts"],
     )
 
     def count(status_):
@@ -655,7 +656,7 @@ def apply_matrix_changes(request):
 def matrix_impact(request):
     """
     POST /api/v1/perm/role-permissions/impact/
-    保存前预检：哪些审批流模板的哪一步会因这些撤销而无人可批（只读，仅 ADMIN）
+    保存前预检：哪些审批流模板的哪一步、哪些进行中审批流的待审节点会因这些撤销而无人可批（只读，仅 ADMIN）
 
     Same body as `changes/`; `expected_versions` is accepted and ignored.
     """
@@ -666,7 +667,7 @@ def matrix_impact(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return Response({
         "required_codenames": approve_codenames(),
-        "conflicts": impact_of_changes(serializer.validated_data["changes"]),
+        **impact_of_changes(serializer.validated_data["changes"]),
     })
 
 

@@ -273,7 +273,7 @@ def test_a_step_the_probe_calls_orphaned_really_cannot_be_approved(world, cross_
     revoke = [_cell("JUDGE", p["workflow.approve"], "revoke")]
     assert world["client"].post(IMPACT, {"changes": revoke}, format="json").data["conflicts"]
     with django_capture_on_commit_callbacks(execute=True):
-        saved = world["client"].post(CHANGES, {"changes": revoke}, format="json")
+        saved = world["client"].post(CHANGES, {"changes": revoke, "acknowledge_conflicts": True}, format="json")
     assert saved.data["saved"] == 1, saved.data
 
     response = _client(judge_user).post(
@@ -283,6 +283,72 @@ def test_a_step_the_probe_calls_orphaned_really_cannot_be_approved(world, cross_
     assert response.status_code == 403, response.content
     step2.refresh_from_db()
     assert step2.status == NodeStatus.PENDING
+
+
+# ── 2b. in-flight workflows count, and a conflict must be acknowledged ─
+
+
+def _live_workflow(world, template, status=None):
+    soul = Soul.objects.create(name="在途者", tenant=world["tenant"])
+    workflow = ApprovalWorkflow.objects.create(soul=soul, tenant=world["tenant"], workflow_name="在途 · 两级")
+    WorkflowService._create_nodes(workflow, {"name": template.name, "nodes": template.nodes_json}, "CHINESE")
+    if status:
+        ApprovalWorkflow.objects.filter(pk=workflow.pk).update(status=status)
+    return workflow
+
+
+@pytest.mark.django_db
+def test_impact_counts_live_workflows_whose_pending_role_node_loses_every_approver(world, cross_civ_template):
+    p = world["perms"]
+    live = _live_workflow(world, cross_civ_template)
+    _live_workflow(world, cross_civ_template, status="COMPLETED")  # over: not counted
+    decided = _live_workflow(world, cross_civ_template)
+    decided.nodes.filter(node_order=2).update(status=NodeStatus.APPROVED)  # nothing pending on JUDGE
+    # The template is deleted: the live workflow is still counted on its own.
+    cross_civ_template.soft_delete()
+
+    response = world["client"].post(IMPACT, {"changes": [_cell("JUDGE", p["workflow.approve"], "revoke")]}, format="json")
+    assert response.status_code == 200, response.content
+    assert response.data["conflicts"] == []
+    wc = response.data["workflow_conflicts"]
+    assert [(w["workflow_id"], w["node_order"], w["node_name"], w["approver_roles"]) for w in wc] == [
+        (str(live.pk), 2, "复核", ["JUDGE"])
+    ]
+    assert wc[0]["caused_by"] == [
+        {"index": 0, "role": "JUDGE", "permission_id": p["workflow.approve"].pk, "codename": "workflow.approve"}
+    ]
+    # A revoke that leaves JUDGE its approver touches no live node.
+    ok = world["client"].post(IMPACT, {"changes": [_cell("JUDGE", p["workflow.read"], "revoke")]}, format="json")
+    assert ok.data["workflow_conflicts"] == []
+
+
+@pytest.mark.django_db
+def test_a_conflicting_revoke_is_refused_until_acknowledged(world, cross_civ_template):
+    p = world["perms"]
+    changes = [_cell("JUDGE", p["workflow.approve"], "revoke"), _cell("SCRIBE", p["soul.read"], "grant")]
+    refused = world["client"].post(CHANGES, {"changes": changes}, format="json")
+    assert refused.status_code == 200, refused.content
+    assert [(r["status"], r["code"]) for r in refused.data["results"]] == [
+        ("refused", "conflict_unacknowledged"), ("saved", None),
+    ]
+    assert _held("JUDGE", "workflow.approve") is True
+    assert _held("SCRIBE", "soul.read") is True
+
+    acked = world["client"].post(
+        CHANGES, {"changes": changes[:1], "acknowledge_conflicts": True}, format="json"
+    )
+    assert [(r["status"], r["code"]) for r in acked.data["results"]] == [("saved", None)]
+    assert _held("JUDGE", "workflow.approve") is False
+
+
+@pytest.mark.django_db
+def test_a_live_workflow_alone_is_enough_to_need_the_acknowledgement(world, cross_civ_template):
+    _live_workflow(world, cross_civ_template)
+    cross_civ_template.soft_delete()
+    changes = [_cell("JUDGE", world["perms"]["workflow.approve"], "revoke")]
+    refused = world["client"].post(CHANGES, {"changes": changes}, format="json")
+    assert [r["code"] for r in refused.data["results"]] == ["conflict_unacknowledged"]
+    assert _held("JUDGE", "workflow.approve") is True
 
 
 # ── 3. role table ────────────────────────────────────────────────────────

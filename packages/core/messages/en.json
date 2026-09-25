@@ -584,8 +584,11 @@
         "role_not_found": "The role no longer exists.",
         "permission_not_found": "The permission no longer exists.",
         "database_error": "A database error: this cell was not written.",
-        "admin_always_all": "ADMIN always holds every permission"
-      }
+        "admin_always_all": "ADMIN always holds every permission",
+        "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save."
+      },
+      "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
+      "conflict_acknowledge": "I understand this leaves {{n}} workflows ({{m}} of them in flight) with no approver"
     },
     "segments": {
       "label": "Permission sections",

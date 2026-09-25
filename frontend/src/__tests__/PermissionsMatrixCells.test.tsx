@@ -240,6 +240,64 @@ describe("impact", () => {
     expect(screen.queryByRole("status")).toBeNull();
     expect(stateOf(cell("JUDGE", "soul.update"))).toBe("on");
   });
+
+  it("counts in-flight workflows, and 保存 stays disabled until the acknowledgement is ticked", async () => {
+    const cause = { index: 0, role: "JUDGE", permission_id: 2, codename: "soul.update" };
+    api.impact.mockResolvedValue({
+      data: {
+        required_codenames: ["soul.update"],
+        conflicts: [{ template_id: "t1", template_name: "跨文明移交 · 两级", tenant_id: 1, civilization: "CHINESE", is_active: true,
+          step_order: 2, step_name: "判官复核", approver_roles: ["JUDGE"], caused_by: [cause] }],
+        workflow_conflicts: [
+          { workflow_id: "w1", workflow_name: "在途甲", tenant_id: 1, status: "IN_PROGRESS", node_order: 2,
+            node_name: "判官复核", approver_roles: ["JUDGE"], caused_by: [cause] },
+          { workflow_id: "w1", workflow_name: "在途甲", tenant_id: 1, status: "IN_PROGRESS", node_order: 3,
+            node_name: "终审", approver_roles: ["JUDGE"], caused_by: [cause] },
+        ],
+      },
+    });
+    api.applyChanges.mockResolvedValue({
+      data: { saved: 1, unchanged: 0, refused: 0, failed: 0, versions: { JUDGE: 8 },
+        results: [{ index: 0, role: "JUDGE", permission_id: 2, codename: "soul.update", action: "revoke", status: "saved", code: null, detail: null }] },
+    });
+    renderPage();
+    await ready();
+    fireEvent.click(cell("JUDGE", "soul.update"));
+    await flushImpact();
+    const banner = await screen.findByRole("status");
+    expect(within(banner).getByText(/conflict_workflow_line:.*在途甲,3,终审/)).toBeInTheDocument();
+    // Two distinct flows: one template + one live workflow (two nodes of it).
+    const ack = within(banner).getByRole("checkbox", { name: "permissions.matrix.conflict_acknowledge:2,1" });
+    const saveButton = within(unsavedBar() as HTMLElement).getByRole("button", { name: "permissions.matrix.save_button" });
+    expect(saveButton).toBeDisabled();
+    fireEvent.keyDown(document, { key: "s", metaKey: true });
+    expect(api.applyChanges).not.toHaveBeenCalled();
+
+    fireEvent.click(ack);
+    expect(saveButton).toBeEnabled();
+    save();
+    await waitFor(() =>
+      expect(api.applyChanges).toHaveBeenCalledWith([{ role: "JUDGE", permission_id: 2, action: "revoke" }], { JUDGE: 7 }, true)
+    );
+  });
+
+  it("a changed edit asks again: the tick belongs to the edits it was given for", async () => {
+    api.impact.mockResolvedValue({
+      data: { required_codenames: ["soul.update"], conflicts: [], workflow_conflicts: [
+        { workflow_id: "w1", workflow_name: "在途甲", tenant_id: 1, status: "PENDING", node_order: 1, node_name: "受理",
+          approver_roles: ["JUDGE"], caused_by: [{ index: 0, role: "JUDGE", permission_id: 2, codename: "soul.update" }] },
+      ] },
+    });
+    renderPage();
+    await ready();
+    fireEvent.click(cell("JUDGE", "soul.update"));
+    await flushImpact();
+    fireEvent.click(within(await screen.findByRole("status")).getByRole("checkbox"));
+    fireEvent.click(cell("YIN_CLERK", "soul.update"));
+    await flushImpact();
+    expect(within(await screen.findByRole("status")).getByRole("checkbox")).not.toBeChecked();
+    expect(within(unsavedBar() as HTMLElement).getByRole("button", { name: "permissions.matrix.save_button" })).toBeDisabled();
+  });
 });
 
 describe("filters and 393 px", () => {

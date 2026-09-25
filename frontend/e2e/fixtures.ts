@@ -1391,7 +1391,7 @@ export class ApiMock {
     });
     // Read-only "what breaks" check. No template loses its approvers by default;
     // a spec that needs a conflict registers its own handler.
-    this.on("POST", "/perm/role-permissions/impact/", { required_codenames: [], conflicts: [] });
+    this.on("POST", "/perm/role-permissions/impact/", { required_codenames: [], conflicts: [], workflow_conflicts: [] });
     this.on("PUT", "/perm/roles/:id/", (call) => {
       const role = ROLES.find((r) => r.id === Number(call.path.split("/")[3]));
       return role ? { body: { ...role, ...call.body, version: this.roleVersions[role.name] } } : { status: 404, body: { error: "Role not found" } };

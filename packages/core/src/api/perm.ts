@@ -124,6 +124,8 @@ export type MatrixChangesResult = Schemas["MatrixChangesResult"];
  */
 export type MatrixImpactResult = Schemas["MatrixImpactResult"];
 export type MatrixConflict = Schemas["MatrixConflict"];
+/** A live workflow's pending ROLE node the changes would leave with no approver. */
+export type MatrixWorkflowConflict = Schemas["MatrixWorkflowConflict"];
 /**
  * 400 body of DELETE /perm/roles/{id}/. `templates` comes with
  * `role_referenced_by_workflow_templates`, `user_count` with `role_in_use`.
@@ -159,11 +161,16 @@ export const permApi = {
     copy: (id: number, data: RoleCopyPayload) => api.post<Role>(`/perm/roles/${id}/copy/`, data),
   },
 
-  /** Per-cell save. `expectedVersions` maps role name → the version the matrix loaded. */
-  applyChanges: (changes: MatrixChange[], expectedVersions?: Record<string, number>) =>
+  /**
+   * Per-cell save. `expectedVersions` maps role name → the version the matrix loaded.
+   * Without `acknowledgeConflicts`, a revoke the impact check names as a conflict's
+   * cause comes back refused `conflict_unacknowledged`.
+   */
+  applyChanges: (changes: MatrixChange[], expectedVersions?: Record<string, number>, acknowledgeConflicts?: boolean) =>
     api.post<MatrixChangesResult>("/perm/role-permissions/changes/", {
       changes,
       ...(expectedVersions ? { expected_versions: expectedVersions } : {}),
+      ...(acknowledgeConflicts ? { acknowledge_conflicts: true } : {}),
     }),
   /** Read-only pre-check: template steps these changes would leave without an approver. */
   impact: (changes: MatrixChange[]) =>
