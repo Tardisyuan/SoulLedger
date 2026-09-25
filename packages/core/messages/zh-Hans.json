@@ -459,7 +459,8 @@
     "manage_from_bin": "在回收站中管理",
     "entity_types": {
       "soul": "灵魂",
-      "menu": "菜单"
+      "menu": "菜单",
+      "dispatch_draft": "移交草稿"
     },
     "col_location": "原位置",
     "col_deleted_by": "删除人"
@@ -1217,6 +1218,7 @@
     "execute_error": "执行失败",
     "propose_error": "发起调度失败",
     "states": {
+      "DRAFT": "草稿",
       "PROPOSED": "待审批",
       "APPROVED": "已批准",
       "REJECTED": "已拒绝",
@@ -1232,10 +1234,19 @@
     "soul_from_detail_error": "带入的灵魂加载失败，请在这里重新选择。",
     "source_label": "来源",
     "discard": "放弃…",
-    "discard_title": "放弃这份调度？",
-    "discard_message": "已填写的内容不会保存——调度没有草稿。",
+    "discard_title": "放弃这份移交草稿？",
+    "discard_message": "草稿会移入回收站，可在「系统设置 › 回收站」找回。已填写的理由一并保留。",
     "discard_keep": "继续填写",
-    "discard_confirm": "放弃",
+    "discard_confirm": "放弃并移入回收站",
+    "save_draft": "存草稿",
+    "draft_saved": "草稿已保存",
+    "draft_save_error": "草稿保存失败",
+    "draft_load_error": "草稿加载失败，请重试。",
+    "discard_error": "放弃失败",
+    "target_realm": "目标界域",
+    "target_realm_placeholder": "选择目标文明的界域（可不选）",
+    "target_realm_pick_tenant_first": "先选目标文明",
+    "target_realm_error": "界域列表加载失败。请重试。",
     "flow": {
       "title": "审批流 · 跨文明调度",
       "step_propose": "来源文明 · {{tenant}} 提交",

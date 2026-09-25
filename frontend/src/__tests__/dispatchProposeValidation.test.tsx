@@ -27,16 +27,26 @@ jest.mock("@soulledger/core/api", () => {
   return {
   DISPATCH_REASON_MIN_CHARS,
   dispatchReasonLength,
-  dispatchApi: { propose: jest.fn() },
+  dispatchApi: {
+    propose: jest.fn(),
+    get: jest.fn(),
+    createDraft: jest.fn(),
+    updateDraft: jest.fn(),
+    submitDraft: jest.fn(),
+    discardDraft: jest.fn(),
+    realmOptions: jest.fn(),
+  },
   soulsApi: { list: jest.fn(), get: jest.fn() },
   ledgerApi: { statsOverview: jest.fn() },
   };
 });
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
+const mockReplace = jest.fn();
 let mockSearch = new URLSearchParams();
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), back: mockBack }),
+  useRouter: () => ({ push: mockPush, back: mockBack, replace: mockReplace }),
   useSearchParams: () => mockSearch,
 }));
 
@@ -74,7 +84,7 @@ jest.mock("@/src/hooks/usePermissions", () => {
 
 const mockedPropose = dispatchApi.propose as jest.Mock;
 
-function renderPage() {
+function renderPage(extraTenants: object[] = []) {
   (soulsApi.list as jest.Mock).mockResolvedValue({
     data: { results: [{ id: "s1", name: "孟婆", current_state: "ALIVE" }], count: 1 },
   });
@@ -83,6 +93,7 @@ function renderPage() {
       tenants: [
         { tenant_id: 1, tenant_code: "CN_DIYU", tenant_name: "地府" },
         { tenant_id: 2, tenant_code: "GR_HADES", tenant_name: "冥界" },
+        ...extraTenants,
       ],
     },
   });
@@ -297,8 +308,8 @@ describe("the dispatch form, 规范 v1", () => {
     fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
     const flow = screen.getByRole("complementary", { name: "dispatch.flow.title" });
     expect(flow.querySelectorAll("li")).toHaveLength(3);
-    // No draft step, and no 「存草稿」 button: the API has no draft state.
-    expect(screen.queryByText(/草稿|draft/i)).not.toBeInTheDocument();
+    // A draft is not a step of the approval flow: saving one starts nothing.
+    expect(flow).not.toHaveTextContent(/草稿|draft/i);
   });
 
   it("a soul carried from the detail page is shown read-only and is what gets proposed", async () => {
@@ -342,5 +353,136 @@ describe("the dispatch form, 规范 v1", () => {
     expect(await screen.findByText("dispatch.discard_title")).toBeInTheDocument();
     fireEvent.click(screen.getByText("dispatch.discard_keep"));
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+const DRAFT = {
+  id: "d1",
+  status: "DRAFT",
+  soul: "38fb6bc2-9e41-4c07-b0a3-5d1e7f2a8c94",
+  soul_name: "沈青梧",
+  target_tenant: 2,
+  target_tenant_code: "GR_HADES",
+  target_realm: "r-meadow",
+  reason: "口业",
+};
+const REALMS = [
+  { id: "r-meadow", display_name: "审判草地" },
+  { id: "r-tartarus", display_name: "塔尔塔罗斯" },
+];
+
+/** 存草稿 / 目标界域 / 放弃… (设计稿「发起移交」). */
+describe("dispatch drafts and the target realm", () => {
+  beforeEach(() => {
+    mockSearch = new URLSearchParams();
+    (dispatchApi.realmOptions as jest.Mock).mockResolvedValue({ data: REALMS });
+    (soulsApi.get as jest.Mock).mockResolvedValue({ data: { id: DRAFT.soul, name: "沈青梧" } });
+  });
+
+  it("the realm select waits for a target civilization, then lists only that civilization's realms", async () => {
+    renderPage();
+    const realm = screen.getByLabelText(/dispatch\.target_realm/);
+    expect(realm).toBeDisabled();
+    expect(dispatchApi.realmOptions).not.toHaveBeenCalled();
+
+    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    await screen.findByRole("option", { name: "塔尔塔罗斯" });
+    expect(dispatchApi.realmOptions).toHaveBeenCalledWith("GR_HADES");
+    expect(dispatchApi.realmOptions).not.toHaveBeenCalledWith("CN_DIYU");
+    expect(realm).toBeEnabled();
+  });
+
+  it("存草稿 saves an incomplete form without a reason check and switches to editing that draft", async () => {
+    (dispatchApi.createDraft as jest.Mock).mockResolvedValue({ data: { ...DRAFT, id: "new1" } });
+    renderPage();
+    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "口业" } });
+    fireEvent.click(screen.getByText("dispatch.save_draft"));
+    await waitFor(() =>
+      expect(dispatchApi.createDraft).toHaveBeenCalledWith({
+        soul: null, target_tenant: 2, target_realm: null, reason: "口业",
+      })
+    );
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/dispatch/propose?draft=new1"));
+    expect(mockedPropose).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith("dispatch.draft_saved", "success");
+  });
+
+  it("reopening a draft pre-fills it, and 提交审批 submits that draft rather than proposing anew", async () => {
+    mockSearch = new URLSearchParams("draft=d1");
+    (dispatchApi.get as jest.Mock).mockResolvedValue({ data: DRAFT });
+    (dispatchApi.submitDraft as jest.Mock).mockResolvedValue({ data: { ...DRAFT, status: "PROPOSED" } });
+    renderPage();
+    expect(await screen.findByText("沈青梧")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("radio", { name: /冥界/ })).toBeChecked());
+    expect(screen.getByLabelText(/dispatch\.reason/)).toHaveValue("口业");
+    await waitFor(() => expect(screen.getByLabelText(/dispatch\.target_realm/)).toHaveValue("r-meadow"));
+
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: LONG_REASON } });
+    fireEvent.click(screen.getByText("dispatch.submit_proposal"));
+    await waitFor(() =>
+      expect(dispatchApi.submitDraft).toHaveBeenCalledWith("d1", {
+        soul: DRAFT.soul, target_tenant: 2, target_realm: "r-meadow", reason: LONG_REASON,
+      })
+    );
+    expect(mockedPropose).not.toHaveBeenCalled();
+  });
+
+  it("changing the target civilization clears a realm of the old one", async () => {
+    mockSearch = new URLSearchParams("draft=d1");
+    (dispatchApi.get as jest.Mock).mockResolvedValue({ data: DRAFT });
+    renderPage([{ tenant_id: 3, tenant_code: "EG_DUAT", tenant_name: "杜阿特" }]);
+    const realm = () => screen.getByLabelText(/dispatch\.target_realm/);
+    await waitFor(() => expect(realm()).toHaveValue("r-meadow"));
+    (dispatchApi.updateDraft as jest.Mock).mockResolvedValue({ data: DRAFT });
+    fireEvent.click(screen.getByRole("radio", { name: /杜阿特/ }));
+    await waitFor(() => expect(dispatchApi.realmOptions).toHaveBeenCalledWith("EG_DUAT"));
+    // What is sent, not what the <select> shows: a select cannot display a value
+    // it has no option for, so its DOM value would read "" even if the form kept
+    // the old realm and sent it.
+    fireEvent.click(screen.getByText("dispatch.save_draft"));
+    await waitFor(() =>
+      expect(dispatchApi.updateDraft).toHaveBeenCalledWith("d1", expect.objectContaining({ target_tenant: 3, target_realm: null }))
+    );
+    expect(realm()).toHaveValue("");
+  });
+
+  it("放弃… on a draft says it goes to the recycle bin, and discarding moves it there", async () => {
+    mockSearch = new URLSearchParams("draft=d1");
+    (dispatchApi.get as jest.Mock).mockResolvedValue({ data: DRAFT });
+    (dispatchApi.discardDraft as jest.Mock).mockResolvedValue({ status: 204 });
+    renderPage();
+    await screen.findByText("沈青梧");
+    fireEvent.click(screen.getByText("dispatch.discard"));
+    expect(await screen.findByText("dispatch.discard_message")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("dispatch.discard_confirm"));
+    await waitFor(() => expect(dispatchApi.discardDraft).toHaveBeenCalledWith("d1"));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/dispatch"));
+    // Kept, not dropped: nothing went back without the bin.
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it("放弃… on an unsaved form keeps what was written: saved as a draft, then binned", async () => {
+    (dispatchApi.createDraft as jest.Mock).mockResolvedValue({ data: { ...DRAFT, id: "new2" } });
+    (dispatchApi.discardDraft as jest.Mock).mockResolvedValue({ status: 204 });
+    renderPage();
+    await screen.findByRole("radio", { name: /冥界/ });
+    fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "写了一半" } });
+    fireEvent.click(screen.getByText("dispatch.discard"));
+    fireEvent.click(await screen.findByText("dispatch.discard_confirm"));
+    await waitFor(() => expect(dispatchApi.discardDraft).toHaveBeenCalledWith("new2"));
+    expect(dispatchApi.createDraft).toHaveBeenCalledWith(expect.objectContaining({ reason: "写了一半" }));
+  });
+
+  it("a realm the server refuses is shown under the realm select", async () => {
+    (dispatchApi.createDraft as jest.Mock).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { target_realm: ["Realm X is not a realm of GR_HADES"] } },
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    fireEvent.click(screen.getByText("dispatch.save_draft"));
+    expect(await screen.findByText("Realm X is not a realm of GR_HADES")).toBeInTheDocument();
+    expect(screen.getByLabelText(/dispatch\.target_realm/)).toHaveAttribute("aria-invalid", "true");
   });
 });
