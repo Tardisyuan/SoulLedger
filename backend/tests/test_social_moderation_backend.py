@@ -23,6 +23,7 @@ from apps.social.models import (
     SocialMute,
     Visibility,
 )
+from tests.soul_push_support import TOKEN_A, enqueued  # noqa: F401 — fixture
 from tests.soul_social_support import MODERATION, SOCIAL, feed_ids, officer_client, post, soul
 
 pytestmark = pytest.mark.django_db
@@ -815,7 +816,7 @@ def test_warn_needs_a_reason_and_changes_nothing_without_one(cn_tenant, cn_moder
     assert not AuditLog.objects.filter(resource="social_moderation", resource_id=str(report.pk)).exists()
 
 
-def test_warn_notifies_the_author_with_the_reason_keeps_the_post_and_dismisses_the_report(
+def test_warn_publishes_ids_only_keeps_the_post_and_dismisses_the_report(
     cn_tenant, cn_moderator, django_capture_on_commit_callbacks
 ):
     author, row, report = _reported_post(cn_tenant)
@@ -835,8 +836,10 @@ def test_warn_notifies_the_author_with_the_reason_keeps_the_post_and_dismisses_t
     )
     calls = [(c.kwargs["event_type"], c.kwargs["user_ids"], c.kwargs["payload"]) for c in published.call_args_list]
     assert calls == [("SOCIAL_WARNED", [author.user_id], {
-        "report_id": str(report.pk), "target_type": "POST", "target_id": str(row.pk), "reason": "注意言辞",
+        "report_id": str(report.pk), "target_type": "POST", "target_id": str(row.pk),
     })]
+    # 租户 webhook 收得到这个事件:理由不能在里面(2026-09-26 产品定)。
+    assert "注意言辞" not in repr(published.call_args_list)
     row.refresh_from_db()
     assert (row.moderation_status, row.is_deleted) == (ModerationStatus.PUBLISHED, False)
     assert str(row.pk) in feed_ids(reader), "警告不该让帖子消失"
@@ -848,6 +851,62 @@ def test_warn_notifies_the_author_with_the_reason_keeps_the_post_and_dismisses_t
         f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": "再警告"}, format="json"
     )
     assert again.status_code == 409
+
+
+def _resolve_warn(moderator, report, note, capture):
+    with capture(execute=True):
+        res = officer_client(moderator).post(
+            f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "WARN", "note": note}, format="json"
+        )
+    assert res.status_code == 200, res.content
+
+
+def test_warn_tells_the_author_the_reason_by_push(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery, PushDevice, PushPreference
+
+    author, _, report = _reported_post(cn_tenant)
+    device = PushDevice.objects.create(account=author, soul=author.soul, token=TOKEN_A, platform="IOS",
+                                       last_seen_at=timezone.now())
+    PushPreference.objects.create(account=author, soul=author.soul, locale="en")
+
+    _resolve_warn(cn_moderator, report, "注意言辞", django_capture_on_commit_callbacks)
+
+    row = PushDelivery.objects.get()
+    assert (row.device, row.kind, row.event_type) == (device, "social_warned", "SOCIAL_WARNED")
+    assert (row.title, row.body) == ("Your post was warned", "Your post received a warning: 注意言辞")
+    assert enqueued == [[str(row.pk)]]
+
+
+def test_warn_push_text_in_chinese_and_a_long_reason_fits_the_column(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery, PushDevice
+
+    author, _, report = _reported_post(cn_tenant)
+    PushDevice.objects.create(account=author, soul=author.soul, token=TOKEN_A, platform="IOS",
+                              last_seen_at=timezone.now())
+    _resolve_warn(cn_moderator, report, "长" * 500, django_capture_on_commit_callbacks)
+    body = PushDelivery.objects.get().body
+    assert body.startswith("你的帖子收到警告：长") and len(body) == 300
+
+
+def test_warn_a_muted_soul_with_every_push_off_or_no_device_does_not_break_the_resolution(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery, PushPreference
+
+    # 没有设备:什么都不记,处置照常成立。
+    author, _, report = _reported_post(cn_tenant)
+    SocialMute.objects.create(tenant=cn_tenant, user=author.user, until=timezone.now() + timedelta(days=3),
+                              created_by=cn_moderator)
+    PushPreference.objects.create(account=author, soul=author.soul, rebirth=False, judgment=False,
+                                  residence=False, chat=False)
+    _resolve_warn(cn_moderator, report, "注意言辞", django_capture_on_commit_callbacks)
+    report.refresh_from_db()
+    assert (report.status, report.resolution) == ("DISMISSED", "WARN")
+    assert not PushDelivery.objects.exists() and enqueued == []
 
 
 def test_warn_on_another_civilizations_report_is_a_404(cn_tenant, eu_moderator):

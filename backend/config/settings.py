@@ -205,6 +205,12 @@ STATICFILES_DIRS = []
 MEDIA_URL = "/media/"
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT") or BASE_DIR.parent / "media")
 
+# 帖子图片(MEDIA_ROOT/private/)的出口 `/api/v1/social-media/<id>/`:验完签名与可见性之后,
+# 打开 = 回一个空响应带 `X-Accel-Redirect`,由 nginx 的 internal location 发文件(nginx.conf
+# `/protected-media/`);关着 = Django 自己 `FileResponse` 流出去。**只在前面真有那个 nginx 时打开**
+# (docker-compose.production.yml 打开;DEBUG、staging 没有 nginx,开了图片就全是空的)。
+POST_MEDIA_X_ACCEL = _env_bool("POST_MEDIA_X_ACCEL", "False")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS

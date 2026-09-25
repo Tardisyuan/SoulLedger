@@ -3043,6 +3043,10 @@
     "chat_message": {
       "title": "Shemes Renpi",
       "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
+    },
+    "social_warned": {
+      "title": "Hab Er Medu",
+      "body": "Hab Er Medu Ek: {{reason}}"
     }
   },
   "official_notify": {
@@ -3239,7 +3243,6 @@
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
       "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer",
       "warn": "Hab Khet Er Neb Medu",
-      "reaction_love": "Sekha",
       "media_n": "Tut {{n}}",
       "media_label": "Tut",
       "media_caption": "Tut {{i}} · {{w}}×{{h}}",

@@ -55,6 +55,8 @@ services:
       # across statements, and `.iterator()` (ledger export, ledger and
       # death-sync tasks) opens one (IS-13).
       DISABLE_SERVER_SIDE_CURSORS: "true"
+      # 帖子图片由 nginx 发(nginx.conf `/protected-media/`);后端只验签名与可见性。
+      POST_MEDIA_X_ACCEL: "true"
     depends_on:
       - pgbouncer
     command: >
