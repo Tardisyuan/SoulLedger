@@ -1194,7 +1194,11 @@
       "cited_by_open": "未结",
       "insert_desk": "插入审判台",
       "insert_none": "你手上没有未结的案件",
-      "insert_pick": "选一件你认领的未结案"
+      "insert_pick": "选一件你认领的未结案",
+      "related": "相关条目",
+      "related_gate": "同门",
+      "related_circle": "同圈",
+      "related_terrace": "同台阶"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",

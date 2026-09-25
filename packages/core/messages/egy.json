@@ -1194,7 +1194,11 @@
       "cited_by_open": "Nen Khetem",
       "insert_desk": "Djed Er Wedja",
       "insert_none": "Nen Wedja Nen Khetem",
-      "insert_pick": "Setep Wedja Nen Khetem"
+      "insert_pick": "Setep Wedja Nen Khetem",
+      "related": "Medu Hena",
+      "related_gate": "Sebkhet Wa",
+      "related_circle": "Shen Wa",
+      "related_terrace": "Hesep Wa"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
