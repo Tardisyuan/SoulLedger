@@ -8455,6 +8455,9 @@ export interface components {
          *     `default_realm_id` is where automatic routing would send the soul (null when
          *     that realm is not among the options, e.g. an unmapped tenant);
          *     `default_term_years` is null because an automatic conclusion records no term.
+         *     `not_applicable` is the rest of the tenant's realms for this civilization —
+         *     ones this verdict cannot reach, listed so the picker can show them disabled
+         *     with the reason; `conclude` refuses them (`realm_not_allowed`).
          */
         JudgmentDestinations: {
             verdict: string;
@@ -8462,6 +8465,7 @@ export interface components {
             default_realm_id: string | null;
             default_term_years: number | null;
             options: components["schemas"]["JudgmentDestinationOption"][];
+            not_applicable: components["schemas"]["JudgmentDestinationOption"][];
         };
         /**
          * @description `GET /judgment/{id}/` — the list shape plus the evidence rulings and the

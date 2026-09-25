@@ -391,11 +391,15 @@ class JudgmentDestinationsSerializer(serializers.Serializer):
     `default_realm_id` is where automatic routing would send the soul (null when
     that realm is not among the options, e.g. an unmapped tenant);
     `default_term_years` is null because an automatic conclusion records no term.
+    `not_applicable` is the rest of the tenant's realms for this civilization —
+    ones this verdict cannot reach, listed so the picker can show them disabled
+    with the reason; `conclude` refuses them (`realm_not_allowed`).
     """
     verdict = serializers.CharField()
     default_realm_id = serializers.UUIDField(allow_null=True)
     default_term_years = serializers.IntegerField(allow_null=True)
     options = JudgmentDestinationOptionSerializer(many=True)
+    not_applicable = JudgmentDestinationOptionSerializer(many=True)
 
 
 class JudgmentQueueCursorSerializer(serializers.Serializer):

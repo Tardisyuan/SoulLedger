@@ -1329,7 +1329,10 @@
         "term_conflict": "Nen Iri: Renpet Wa, Djet Wa",
         "eternal_not_allowed": "Nen Iri: Nen Djet Em Ta Pen",
         "destination_not_applicable": "Nen Iri: Sep Pen Nen Wat Er Ta"
-      }
+      },
+      "draft": "Sesh · Nen Hab",
+      "filtered_by": "Setep Em «{{verdict}}»; Nen Aq Hena Nen Er: Maa Wa.",
+      "not_applicable": "Nen Er {{verdict}}"
     }
   },
   "audit": {

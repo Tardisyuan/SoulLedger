@@ -20,7 +20,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.disposition.destination import DestinationRefusedError, destination_options
+from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
@@ -689,9 +689,11 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 status=status.HTTP_400_BAD_REQUEST,
             )
         options = []
+        not_applicable = []
         default_realm_id = None
         if judgment.kind == JudgmentKind.ORIGINAL:
             options = list(destination_options(judgment, verdict))
+            not_applicable = list(inapplicable_destinations(judgment, verdict))
             default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
             if default is not None and any(r.pk == default.pk for r in options):
                 default_realm_id = default.pk
@@ -701,6 +703,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             "default_term_years": None,
             "options": JudgmentDestinationOptionSerializer(
                 options, many=True, context=self.get_serializer_context()).data,
+            "not_applicable": JudgmentDestinationOptionSerializer(
+                not_applicable, many=True, context=self.get_serializer_context()).data,
         })
 
     @extend_schema(
