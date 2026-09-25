@@ -3580,9 +3580,10 @@ export interface paths {
          *     复制为新角色：新 code、同一组授权（仅 ADMIN）
          *
          *     Copies the source's RolePermission rows — permission, `conditions` and
-         *     `data_scope` — i.e. what the matrix shows for it. Not copied: `parent`,
-         *     FieldPermission and RowLevelDataScope rows, and ADMIN's short-circuit (a
-         *     copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+         *     `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
+         *     2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
+         *     the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+         *     short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
          */
         post: operations["v1_perm_roles_copy_create"];
         delete?: never;
@@ -10695,6 +10696,22 @@ export interface components {
          * @enum {string}
          */
         RecycleBinLocationKindEnum: "civilization" | "organization" | "parent";
+        /**
+         * @description 400 body of restore. `code` / `missing_roles` come with a refusal from a
+         *     registered restore check (`template_role_missing`: a workflow template in
+         *     the cascade names roles that no longer exist); the other 400s carry
+         *     `error` alone.
+         */
+        RecycleBinRestoreRefusal: {
+            error: string;
+            code?: components["schemas"]["RecycleBinRestoreRefusalCodeEnum"];
+            missing_roles?: string[];
+        };
+        /**
+         * @description * `template_role_missing` - template_role_missing
+         * @enum {string}
+         */
+        RecycleBinRestoreRefusalCodeEnum: "template_role_missing";
         /**
          * @description Restore is keyed by cascade id, not by row: the whole set deleted
          *     together comes back together.
@@ -18901,7 +18918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["RecycleBinRestoreRefusal"];
                 };
             };
             403: {

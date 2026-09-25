@@ -428,6 +428,56 @@ def test_a_role_a_template_designates_cannot_be_deleted(world):
 
 
 @pytest.mark.django_db
+def test_an_inactive_template_still_blocks_deleting_the_role_it_names(world):
+    auditor = Role.objects.create(name="AUDITOR", display_name="稽核")
+    WorkflowTemplate.objects.create(
+        name="停用的稽核流", civilization="CHINESE", tenant=world["tenant"], is_active=False,
+        nodes_json=[{"node_name": "稽核", "node_order": 1, "approver_type": "ROLE", "approver_role": "AUDITOR"}],
+    )
+    response = world["client"].delete(f"{ROLES}{auditor.pk}/")
+    assert response.status_code == 400, response.content
+    assert response.data["code"] == "role_referenced_by_workflow_templates"
+    assert [t["is_active"] for t in response.data["templates"]] == [False]
+    auditor.refresh_from_db()
+    assert auditor.is_deleted is False
+
+
+BIN_RESTORE = "/api/v1/recycle-bin/restore/"
+
+
+@pytest.mark.django_db
+def test_restoring_a_template_whose_role_is_gone_is_refused_naming_the_role(world):
+    auditor = Role.objects.create(name="AUDITOR", display_name="稽核")
+    tpl = WorkflowTemplate.objects.create(
+        name="稽核流", civilization="CHINESE", tenant=world["tenant"],
+        nodes_json=[
+            {"node_name": "初核", "node_order": 1, "approver_type": "ROLE", "approver_role": "JUDGE"},
+            {"node_name": "稽核", "node_order": 2, "approver_type": "ROLE", "approver_role": "AUDITOR"},
+        ],
+    )
+    tpl.soft_delete()
+    tpl.refresh_from_db()
+    # With the template in the bin, nothing live names the role: it can go.
+    assert world["client"].delete(f"{ROLES}{auditor.pk}/").status_code == 204
+
+    refused = world["client"].post(BIN_RESTORE, {"cascade_id": str(tpl.delete_cascade_id)}, format="json")
+    assert refused.status_code == 400, refused.content
+    body = refused.json()
+    assert (body["code"], body["missing_roles"]) == ("template_role_missing", ["AUDITOR"])
+    assert "AUDITOR" in body["error"] and "JUDGE" not in body["error"]
+    assert WorkflowTemplate.all_objects.get(pk=tpl.pk).is_deleted is True  # nothing restored
+
+    # Bring the role back from the bin, and the template follows.
+    auditor = Role.all_objects.get(pk=auditor.pk)
+    assert world["client"].post(
+        BIN_RESTORE, {"cascade_id": str(auditor.delete_cascade_id)}, format="json"
+    ).status_code == 200
+    ok = world["client"].post(BIN_RESTORE, {"cascade_id": str(tpl.delete_cascade_id)}, format="json")
+    assert ok.status_code == 200, ok.content
+    assert WorkflowTemplate.objects.filter(pk=tpl.pk).exists()
+
+
+@pytest.mark.django_db
 def test_a_role_still_held_is_refused_with_its_code(world):
     User.objects.create_user(username="pm_h", password="x", role="SCRIBE", tenant=world["tenant"])
     response = world["client"].delete(f"{ROLES}{world['scribe'].pk}/")
