@@ -43,6 +43,11 @@ Each code below is a refusal `assign_role_permissions` already makes:
   and hard delete are ADMIN-only as a server rule, and `RecycleBinViewSet`
   also checks the role, so a stray grant in the table does nothing).
   Revoking them is never refused.
+* ``role_forbidden_permission`` its 400: granting a role one of its
+  `ROLE_FORBIDDEN_CODENAMES` (apps/perm/checker.py; maintainer decision,
+  2026-09-25: MODERATOR may not hold workflow.approve, workflow.advance or
+  user.manage). `check_permission` denies them anyway, so a stray grant does
+  nothing. Revoking them is never refused.
 
 And refusals that are rules rather than restated 4xx (maintainer decisions,
 2026-09-25):
@@ -60,7 +65,7 @@ And refusals that are rules rather than restated 4xx (maintainer decisions,
 from django.db import DatabaseError, transaction
 
 from apps.perm.cache import invalidate_role_permissions
-from apps.perm.checker import check_permission
+from apps.perm.checker import ROLE_FORBIDDEN_CODENAMES, check_permission
 from apps.perm.models import Permission, Role, RolePermission
 from apps.perm.services import RoleHolder
 
@@ -79,6 +84,7 @@ DATABASE_ERROR = "database_error"
 ADMIN_ONLY_PERMISSION = "admin_only_permission"
 ADMIN_ALWAYS_ALL = "admin_always_all"
 CONFLICT_UNACKNOWLEDGED = "conflict_unacknowledged"
+ROLE_FORBIDDEN_PERMISSION = "role_forbidden_permission"
 
 ADMIN_ROLE_NAME = "ADMIN"
 #: Codenames only the ADMIN role may hold.
@@ -89,12 +95,17 @@ def admin_only_violations(role_name, codenames):
     """The codenames in `codenames` that `role_name` may not be granted."""
     return set() if role_name == ADMIN_ROLE_NAME else ADMIN_ONLY_CODENAMES & set(codenames)
 
+
+def role_forbidden_violations(role_name, codenames):
+    """The codenames in `codenames` that `role_name` may never be granted."""
+    return ROLE_FORBIDDEN_CODENAMES.get(role_name, frozenset()) & set(codenames)
+
 # Choice sets for the serializers and for ENUM_NAME_OVERRIDES in settings.
 ACTIONS = [GRANT, REVOKE]
 STATUSES = [SAVED, UNCHANGED, REFUSED, FAILED]
 RESULT_CODES = [
     ROLE_NOT_FOUND, PERMISSION_NOT_FOUND, VERSION_CONFLICT, DATABASE_ERROR, ADMIN_ONLY_PERMISSION,
-    ADMIN_ALWAYS_ALL, CONFLICT_UNACKNOWLEDGED,
+    ADMIN_ALWAYS_ALL, CONFLICT_UNACKNOWLEDGED, ROLE_FORBIDDEN_PERMISSION,
 ]
 ROLE_DELETE_REFUSAL_CODES = ["builtin_role", "role_in_use", "role_referenced_by_workflow_templates"]
 
@@ -187,6 +198,10 @@ def apply_changes(changes, expected_versions=None, acknowledge_conflicts=False):
                     if want and admin_only_violations(role_name, [permission.codename]):
                         result(i, REFUSED, ADMIN_ONLY_PERMISSION,
                                f"{permission.codename} can only be granted to ADMIN", permission.codename)
+                        continue
+                    if want and role_forbidden_violations(role_name, [permission.codename]):
+                        result(i, REFUSED, ROLE_FORBIDDEN_PERMISSION,
+                               f"{role_name} may not hold {permission.codename}", permission.codename)
                         continue
                     if (permission.pk in held) == want:
                         result(i, UNCHANGED, codename=permission.codename)

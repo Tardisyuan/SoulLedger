@@ -2,6 +2,10 @@
 
 * ADMIN always has everything: a revoke on an ADMIN cell is refused
   (`admin_always_all`) and nothing is written.
+* MODERATOR may never hold workflow.approve / workflow.advance / user.manage:
+  a server rule on the same footing as the recycle-bin ADMIN-only one —
+  refused by the matrix (`role_forbidden_permission`), `assign` and import,
+  and denied by `check_permission` whatever the grant table says.
 """
 import pytest
 from rest_framework.test import APIClient
@@ -9,11 +13,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User, UserRole
 from apps.perm.cache import invalidate_all_permissions
+from apps.perm.checker import check_permission
+from apps.perm.export import import_permissions
 from apps.perm.models import Permission, Role, RolePermission
+from apps.perm.services import RoleHolder
 from apps.tenants.models import Tenant
 
 CHANGES = "/api/v1/perm/role-permissions/changes/"
-CODENAMES = ("soul.read", "soul.update")
+FORBIDDEN = ("workflow.approve", "workflow.advance", "user.manage")
+CODENAMES = ("soul.read", "soul.update", *FORBIDDEN)
+ASSIGN = "/api/v1/perm/role-permissions/assign/"
 
 
 def _client(user):
@@ -71,3 +80,63 @@ def test_a_grant_to_admin_is_still_accepted(world):
     body = _post(world, [{"role": "ADMIN", "permission_id": world["perms"]["soul.update"].pk, "action": "grant"}])
     assert [r["status"] for r in body["results"]] == ["saved"]
     assert _held("ADMIN", "soul.update")
+
+
+# ── 3. MODERATOR is forbidden workflow.approve / workflow.advance / user.manage ─
+
+
+def test_the_matrix_refuses_the_forbidden_grants_to_moderator_cell_by_cell(world):
+    Role.objects.create(name="CLERK", display_name="书吏")
+    p = world["perms"]
+    body = _post(world, [
+        *({"role": "MODERATOR", "permission_id": p[c].pk, "action": "grant"} for c in FORBIDDEN),
+        {"role": "MODERATOR", "permission_id": p["soul.read"].pk, "action": "grant"},
+        {"role": "CLERK", "permission_id": p["workflow.approve"].pk, "action": "grant"},
+    ])
+    assert [(r["role"], r["codename"], r["status"], r["code"]) for r in body["results"]] == [
+        ("MODERATOR", "workflow.approve", "refused", "role_forbidden_permission"),
+        ("MODERATOR", "workflow.advance", "refused", "role_forbidden_permission"),
+        ("MODERATOR", "user.manage", "refused", "role_forbidden_permission"),
+        ("MODERATOR", "soul.read", "saved", None),
+        ("CLERK", "workflow.approve", "saved", None),  # the rule is MODERATOR's, not the codename's
+    ]
+    assert not any(_held("MODERATOR", c) for c in FORBIDDEN)
+
+
+def test_revoking_a_stray_forbidden_grant_from_moderator_is_allowed(world):
+    moderator = Role.objects.get(name="MODERATOR")
+    RolePermission.objects.create(role=moderator, permission=world["perms"]["user.manage"])
+    body = _post(world, [{"role": "MODERATOR", "permission_id": world["perms"]["user.manage"].pk, "action": "revoke"}])
+    assert [r["status"] for r in body["results"]] == ["saved"]
+    assert not _held("MODERATOR", "user.manage")
+
+
+def test_the_whole_set_assign_refuses_them_for_moderator(world):
+    p = world["perms"]
+    before = set(RolePermission.objects.filter(role__name="MODERATOR").values_list("permission_id", flat=True))
+    res = world["client"].post(
+        ASSIGN, {"role": "MODERATOR", "permission_ids": [p["soul.read"].pk, p["workflow.advance"].pk]}, format="json"
+    )
+    assert res.status_code == 400 and res.json()["code"] == "role_forbidden_permission", res.content
+    after = set(RolePermission.objects.filter(role__name="MODERATOR").values_list("permission_id", flat=True))
+    assert after == before
+
+
+def test_an_import_does_not_grant_them_to_moderator(world):
+    import_permissions({"role_permissions": [
+        {"role": "MODERATOR", "permission": "workflow.approve"},
+        {"role": "MODERATOR", "permission": "soul.update"},
+    ]})
+    assert _held("MODERATOR", "soul.update") and not _held("MODERATOR", "workflow.approve")
+
+
+def test_check_permission_denies_moderator_even_with_the_grant_in_the_table(world):
+    moderator = Role.objects.get(name="MODERATOR")
+    judge = Role.objects.get(name="JUDGE")
+    for c in FORBIDDEN:
+        RolePermission.objects.create(role=moderator, permission=world["perms"][c])
+        RolePermission.objects.get_or_create(role=judge, permission=world["perms"][c])
+    invalidate_all_permissions()
+    assert [check_permission(RoleHolder("MODERATOR"), c) for c in FORBIDDEN] == [False, False, False]
+    # Presence of the other half: the same rows do grant them to JUDGE.
+    assert [check_permission(RoleHolder("JUDGE"), c) for c in FORBIDDEN] == [True, True, True]

@@ -585,7 +585,8 @@
         "permission_not_found": "The permission no longer exists.",
         "database_error": "A database error: this cell was not written.",
         "admin_always_all": "ADMIN always holds every permission",
-        "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save."
+        "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save.",
+        "role_forbidden_permission": "Conflicts with the rule that MODERATOR may not hold workflow approve, workflow advance or user management; sent back."
       },
       "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
       "conflict_acknowledge": "I understand this leaves {{n}} workflows ({{m}} of them in flight) with no approver"

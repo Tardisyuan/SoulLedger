@@ -585,7 +585,8 @@
         "permission_not_found": "权限项已不存在。",
         "database_error": "数据库出错，这一格没有写入。",
         "admin_always_all": "管理员始终拥有全部权限",
-        "conflict_unacknowledged": "这项撤销会让审批流无人可批，未经确认，已退回。请在冲突提示里勾选确认后再保存。"
+        "conflict_unacknowledged": "这项撤销会让审批流无人可批，未经确认，已退回。请在冲突提示里勾选确认后再保存。",
+        "role_forbidden_permission": "与规则「殿主不得持有审批工作流、推进工作流与用户管理权限」冲突，已退回。"
       },
       "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
       "conflict_acknowledge": "我知道这会让 {{n}} 条审批流（含进行中 {{m}} 条）无人可批"
