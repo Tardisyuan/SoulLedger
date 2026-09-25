@@ -8533,6 +8533,7 @@ export interface components {
             author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            moderation_reason: string;
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
@@ -8546,6 +8547,7 @@ export interface components {
             author: components["schemas"]["ModerationAuthor"];
             content: string;
             moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            moderation_reason: string;
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;

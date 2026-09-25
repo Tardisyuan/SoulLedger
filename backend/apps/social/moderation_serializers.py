@@ -79,6 +79,10 @@ class ModeratedContentSerializer(serializers.Serializer):
     author = ModerationAuthorSerializer()
     content = serializers.CharField()
     moderation_status = serializers.ChoiceField(choices=ModerationStatus.choices)
+    # Why it is in the queue, when the word list put it there: `sensitive_word:<词>`
+    # (moderation.AUTO_REASON_PREFIX). Empty for anything else; after an officer's
+    # decision it is that officer's reason.
+    moderation_reason = serializers.CharField()
     open_report_count = serializers.SerializerMethodField()
     create_time = serializers.DateTimeField()
 

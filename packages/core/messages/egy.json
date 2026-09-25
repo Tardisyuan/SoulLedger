@@ -3088,7 +3088,8 @@
       "reason_required": "Imen: Khet Em Tepy",
       "approve": "Menkh",
       "shortcuts": "J / K · A Menkh · H Imen",
-      "user_target_note": "Sedjem Er Ba: Nen Imen. Iri Gerh, Er Menkh."
+      "user_target_note": "Sedjem Er Ba: Nen Imen. Iri Gerh, Er Menkh.",
+      "held_for_word": "Medu Djeseru «{{word}}»: Nen Menkh Djer"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",

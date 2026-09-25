@@ -3088,7 +3088,8 @@
       "reason_required": "Hiding needs a reason",
       "approve": "Let through",
       "shortcuts": "J / K move · A let through · H hide",
-      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through."
+      "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
+      "held_for_word": "Held for review by the word “{{word}}”"
     },
     "words": {
       "add_row": "Add a word",

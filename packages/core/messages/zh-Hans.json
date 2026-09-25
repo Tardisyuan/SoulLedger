@@ -3088,7 +3088,8 @@
       "reason_required": "隐藏必须写理由",
       "approve": "放行",
       "shortcuts": "J / K 上下 · A 放行 · H 隐藏",
-      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。"
+      "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
+      "held_for_word": "因敏感词「{{word}}」待审"
     },
     "words": {
       "add_row": "新增敏感词",
