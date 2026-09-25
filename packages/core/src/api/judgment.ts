@@ -130,6 +130,12 @@ export interface JudgmentQueueCounts {
   total: number;
 }
 
+/** `GET /judgment/courts/`: one court (殿) in the caller's scope and its pending cases. */
+export interface JudgmentCourt {
+  court: string;
+  pending: number;
+}
+
 /** Filters `queue-counts/` honours — the list's, minus `group`. */
 export interface JudgmentQueueCountsParams {
   court?: string;
@@ -524,4 +530,6 @@ export const judgmentApi = {
   batch: (payload: JudgmentBatchPayload) => api.post<JudgmentBatchResult>("/judgment/batch/", payload),
   queueCounts: (params?: JudgmentQueueCountsParams) =>
     api.get<JudgmentQueueCounts>("/judgment/queue-counts/", { params }),
+  /** Every court in the caller's scope (unfiltered, unpaginated) — the court filter's options. */
+  courts: () => api.get<JudgmentCourt[]>("/judgment/courts/"),
 };

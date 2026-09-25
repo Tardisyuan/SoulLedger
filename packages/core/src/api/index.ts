@@ -67,6 +67,7 @@ export {
   type QueueRealm,
   type JudgmentQueueGroup,
   type JudgmentQueueCounts,
+  type JudgmentCourt,
   type JudgmentQueueCountsParams,
   type JudgmentBatchOperation,
   type JudgmentBatchPayload,

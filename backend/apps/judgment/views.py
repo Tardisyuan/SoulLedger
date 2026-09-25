@@ -46,6 +46,7 @@ from apps.judgment.serializers import (
     JudgmentDraftSerializer,
     JudgmentDraftWriteSerializer,
     JudgmentPrecedentSerializer,
+    JudgmentCourtSerializer,
     JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
     JudgmentReassignSerializer,
@@ -220,6 +221,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
         'queue_counts': ['judgment.read'],
+        # 殿筛选的选项:与队列同一个读。
+        'courts': ['judgment.read'],
     }
     queryset = (
         Judgment.objects
@@ -933,6 +936,27 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             },
         )
         return Response(counts)
+
+    @extend_schema(responses=JudgmentCourtSerializer(many=True))
+    # 不分页、不挂列表的过滤器:这是筛选条的选项,不随当前筛选收窄 —— 否则选了一个殿,
+    # 下拉里就只剩那一个。
+    @action(detail=False, methods=["get"], url_path="courts", pagination_class=None, filter_backends=[])
+    def courts(self, request):
+        """队列殿筛选的选项:调用者范围内出现过的每一个殿(非空),各带未结案件数。
+
+        此前选项取自当前已加载的几页行,翻不到的殿就选不到。范围是 `self.get_queryset()`
+        —— DataScopeViewSetMixin 经 `scope_to_tenant` 收到调用者的租户,与列表同一条。
+        已结案件的殿也列出(`pending` 为 0):殿是场所,不因眼下没有案子而消失。
+        """
+        rows = (
+            self.get_queryset()
+            .exclude(court="")
+            .order_by()
+            .values("court")
+            .annotate(pending=Count("pk", filter=PENDING))
+            .order_by("court")
+        )
+        return Response(JudgmentCourtSerializer(rows, many=True).data)
 
     # ------------------------------------------------------------------
     # Cited grounds

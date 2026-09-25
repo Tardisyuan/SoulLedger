@@ -556,6 +556,17 @@ class JudgmentClaimRefusalSerializer(serializers.Serializer):
     missing = serializers.ListField(child=serializers.UUIDField(), required=False)
 
 
+class JudgmentCourtSerializer(serializers.Serializer):
+    """`GET /judgment/courts/` 的一行:调用者租户里出现过的一个殿,和它眼下有几件未结案。
+
+    殿是自由文本列,没有字典表;这份名单就是队列殿筛选的选项来源。`pending` 与
+    `queue-counts/` 的 `total` 同一个谓词(未结案,含暂缓)。
+    """
+
+    court = serializers.CharField()
+    pending = serializers.IntegerField()
+
+
 class JudgmentQueueCountsSerializer(serializers.Serializer):
     """`GET /judgment/queue-counts/`:四个组各有几件未结案的案子。
 
