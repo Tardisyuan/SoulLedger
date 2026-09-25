@@ -1,20 +1,25 @@
 "use client";
 
 import type { Disposition, Judgment, Reincarnation, Soul } from "@soulledger/core/api";
+import { useQuery } from "@tanstack/react-query";
+import { realmsApi, soulsApi } from "@soulledger/core/api";
+import { soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RouteTopology } from "@/src/components/realms/RouteTopology";
+import { buildTopology } from "@/src/lib/routeTopology";
 import { MissingValue } from "@/src/components/ui/DomainValue";
-import { latest, stepStatuses, type StepStatus } from "./soulProgress";
+import { latest, stepStatuses } from "./soulProgress";
 
 /**
  * 户头进度(四格)+ 行程条。两者读的是同一组 `StepStatus`,所以「当前」在两处
  * 不可能各说各的。
  *
- * 行程条画的是**一条线**,站点是这个灵魂真实走过的四站:存活 → 它最近一次审判的
- * 庭(`court`,没有就写「审判」)→ 最近一次处置的去处(`realm_name`)→ 轮回。
- * 规范 §1.8 的四种拓扑(十殿一线 / 九层漏斗 / 十二时之河 / 三岔路)要的是
- * 「灵魂此刻在第几殿 / 第几层 / 第几时」,而 API 只给每份判决一个自由文本的
- * `court` —— 拿它去解析殿号就是在编数据。所以四种文明都画这条线,拓扑等后端
- * 给出逐站位置再说。
+ * 行程条是**界域页那张拓扑图 + 这个灵魂的 path**(`<RouteTopology mode="route">`,
+ * 与 /realms 同一个组件)。它此前画的是「存活 → 庭 → 去处 → 轮回」四站一条线,
+ * 因为 API 只给判决一个自由文本的 `court`;后端补上 realm 拓扑列与
+ * `GET /souls/{id}/path/` 之后,四种形状同时上线(规范 v1 规则 16),形状字段缺失的
+ * 文明画「一条线 · 示意」。站的状态只从 path 来 —— 见 src/lib/routeTopology.ts。
  */
 export function SoulLedgerProgress({
   soul,
@@ -37,7 +42,6 @@ export function SoulLedgerProgress({
     ? judgments.reduce((a, b) => (a.created_at <= b.created_at ? a : b))
     : null;
   const decided = latest(judgments.filter((j) => j.concluded_at), (j) => j.concluded_at);
-  const lastJudgment = latest(judgments, (j) => j.created_at);
   const disposition = latest(dispositions, (d) => d.executed_at ?? d.created_at);
   const rebirth = latest(reincarnations, (r) => r.reincarnated_at);
 
@@ -76,15 +80,8 @@ export function SoulLedgerProgress({
     t("souls.detail.timeline.stage_reincarnating"),
   ];
 
-  const stations = [
-    labels[0],
-    lastJudgment?.court || labels[1],
-    disposition?.realm_name || disposition?.realm_code || labels[2],
-    labels[3],
-  ];
-
   return (
-    <div>
+    <div className="min-w-0">
       <ol
         aria-label={t("souls.detail.ledger.progress_label")}
         data-testid="soul-ledger-progress"
@@ -118,51 +115,43 @@ export function SoulLedgerProgress({
         ))}
       </ol>
 
-      <div className="py-3 border-b border-[oklch(var(--color-line))] overflow-x-auto">
-        <div className="flex justify-between gap-3 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-          <span>{t("souls.detail.ledger.route_title")}</span>
-          <span aria-hidden="true">{t("souls.detail.ledger.route_legend")}</span>
-        </div>
-        <ol data-testid="soul-route" className="grid grid-cols-4 mt-2 min-w-60">
-          {stations.map((name, i) => (
-            <RouteStation key={i} name={name} status={statuses[i]} />
-          ))}
-        </ol>
-      </div>
+      <SoulRoute soulId={soul.id} civilization={soul.civilization} />
     </div>
   );
 }
 
-function RouteStation({ name, status }: { name: string; status: StepStatus }) {
-  const walked = status !== "future";
+/** 行程:这个灵魂的 path 画在它文明的形状上。两份数据各自加载、各自报错。 */
+function SoulRoute({ soulId, civilization }: { soulId: string; civilization: string }) {
+  const { t } = useI18n();
+  const realms = useQuery({
+    queryKey: ["realms", "topology"],
+    queryFn: () => realmsApi.list().then((r) => r.data.results),
+    staleTime: 5 * 60_000,
+  });
+  const path = useQuery({
+    queryKey: soulKeys.path(soulId),
+    queryFn: () => soulsApi.path(soulId).then((r) => r.data),
+  });
+
   return (
-    <li data-route-status={status} aria-current={status === "current" ? "step" : undefined} className="pr-1">
-      <div
-        aria-hidden="true"
-        className={
-          walked
-            ? "border-t-[3px] border-[oklch(var(--color-ink))]"
-            : "border-t border-dashed border-[oklch(var(--color-ink-subtle))]"
-        }
-      />
-      <div
-        aria-hidden="true"
-        className={
-          status === "current"
-            ? "w-2.5 h-2.5 -mt-1.5 bg-[oklch(var(--color-accent))]"
-            : status === "done"
-              ? "w-2 h-2 -mt-1 bg-[oklch(var(--color-ink))]"
-              : "w-2 h-2 -mt-1 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-ink-subtle))]"
-        }
-      />
-      <div
-        title={name}
-        className={`text-2xs mt-1 truncate ${
-          walked ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"
-        } ${status === "current" ? "font-semibold" : ""}`}
-      >
-        {name}
-      </div>
-    </li>
+    <div data-testid="soul-route" className="min-w-0 max-w-full overflow-hidden py-3 border-b border-[oklch(var(--color-line))]">
+      {realms.isError || path.isError ? (
+        <p role="alert" className="text-2xs text-[oklch(var(--color-danger))]">
+          ! {t("realms.topology.load_failed")}
+        </p>
+      ) : realms.isLoading || path.isLoading || !realms.data || !path.data ? (
+        <div aria-busy="true" className="space-y-2">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-6 w-full" />
+        </div>
+      ) : (
+        <RouteTopology
+          mode="route"
+          compact
+          title={t("souls.detail.ledger.route_title")}
+          topology={buildTopology(civilization, realms.data, path.data)}
+        />
+      )}
+    </div>
   );
 }

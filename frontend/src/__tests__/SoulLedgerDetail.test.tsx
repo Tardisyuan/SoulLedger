@@ -5,12 +5,23 @@
  * 真 I18nProvider,不用回显键的替身 —— 理由见 SoulLedgerBook.test.tsx 第 3 条。
  */
 import { render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import type { Disposition, Judgment, Reincarnation, Soul } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { stepStatuses } from "@/src/components/souls/detail/soulProgress";
 import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
 import { SoulLedgerSections } from "@/src/components/souls/detail/SoulLedgerSections";
+
+// 行程条自己取两份数据:全部界域与这个灵魂的 path。
+jest.mock("@soulledger/core/api", () => ({
+  realmsApi: { list: jest.fn() },
+  soulsApi: { path: jest.fn() },
+}));
+const coreApi = require("@soulledger/core/api") as {
+  realmsApi: { list: jest.Mock };
+  soulsApi: { path: jest.Mock };
+};
 
 const ALL = [true, true, true, true] as const;
 
@@ -62,11 +73,42 @@ const SOUL = {
   description: "",
 } as unknown as Soul;
 
-const wrap = (ui: React.ReactElement) => render(<I18nProvider>{ui}</I18nProvider>);
+const wrap = (ui: React.ReactElement) => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <I18nProvider>{ui}</I18nProvider>
+    </QueryClientProvider>
+  );
+};
+
+const court = (n: number) => ({
+  id: `c${n}`,
+  realm_code: `DY_COURT_0${n}_X`,
+  name: `第${n}殿`,
+  name_en: `Court ${n}`,
+  civilization: "CHINESE",
+  realm_type: "NEUTRAL",
+  tier: n,
+  is_eternal: false,
+  order: n,
+  kind: "HALL" as const,
+});
+const PEN = { ...court(0), id: "pen", realm_code: "DY_00_PURGATORY", order: null, kind: null };
+
+beforeEach(() => {
+  coreApi.realmsApi.list.mockResolvedValue({ data: { results: [PEN, court(1), court(2), court(3)], count: 4 } });
+  coreApi.soulsApi.path.mockResolvedValue({
+    data: [
+      { id: "p1", sequence: 1, realm_id: "pen", realm_code: "DY_00_PURGATORY", entered_at: "2026-06-08T00:00:00Z", left_at: "2026-06-09T00:00:00Z" },
+      { id: "p2", sequence: 2, realm_id: "c3", realm_code: "DY_COURT_03_X", entered_at: "2026-06-09T00:00:00Z", left_at: null },
+    ],
+  });
+});
 
 describe("SoulLedgerProgress", () => {
   it("marks the current step, says 未至 for later ones, and a MissingValue where a passed step has no record", () => {
-    const { container } = wrap(
+    wrap(
       <SoulLedgerProgress
         soul={SOUL}
         judgments={[]}
@@ -83,14 +125,35 @@ describe("SoulLedgerProgress", () => {
     // 02 审判已过但没有一份判决:是「未记录」,不是编一个日期,也不是「未至」。
     expect(steps[1].querySelector('[data-missing="unrecorded"]')).not.toBeNull();
     expect(steps[1]).not.toHaveTextContent("未至");
-    // 行程条与进度格读同一组状态。
-    const stations = container.querySelectorAll("[data-route-status]");
-    expect(Array.from(stations, (s) => s.getAttribute("data-route-status"))).toEqual([
-      "done",
-      "done",
+  });
+
+  it("draws the route from the soul's path on its civilization's shape — only recorded stops count as walked", async () => {
+    const { container } = wrap(
+      <SoulLedgerProgress
+        soul={SOUL}
+        judgments={[]}
+        dispositions={[]}
+        reincarnations={[] as Reincarnation[]}
+        birthDisplay={null}
+        deathDisplay={null}
+      />
+    );
+    const route = await screen.findByTestId("soul-route");
+    const shape = await within(route).findAllByRole("listitem");
+    expect(route.querySelector('[data-route-topology="line"]')?.getAttribute("data-schematic")).toBe("false");
+    const line = route.querySelector('[data-route-topology] ol')!;
+    // 一线:第一、二殿没有记录 —— 虚线待行,不因为「现在」在第三殿就算走过(规则 16)。
+    expect(Array.from(line.querySelectorAll(":scope > li"), (li) => li.getAttribute("data-station-state"))).toEqual([
+      "pending",
+      "pending",
       "current",
-      "future",
     ]);
+    // 待审所不在一线上:作为 ↳ 分支画出,已行。
+    const branches = within(route).getByTestId("topology-branches");
+    expect(branches.querySelector("li")?.getAttribute("data-station-state")).toBe("travelled");
+    expect(shape.length).toBeGreaterThan(3);
+    expect(container.querySelectorAll("[aria-current=step]").length).toBeGreaterThan(0);
+    expect(coreApi.soulsApi.path).toHaveBeenCalledWith("s1");
   });
 });
 
