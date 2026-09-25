@@ -46,6 +46,7 @@ import zh from "@soulledger/core/messages/zh-Hans.json";
 
 import REVISIONS from "./support/egyLexiconRevisions.json";
 import VOCABULARY from "./support/egyVocabulary.json";
+import OFF_LEXICON_DEBT from "./support/egyOffLexicon.json";
 
 type Bundle = Record<string, unknown>;
 
@@ -70,10 +71,10 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR"]);
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID"]);
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
-const ENGLISH_RESIDUE = ["Send", "Dismiss", "Egyptian", "Hall", "Purgatorium", "SevenArrwt", "TwentyOneSebkhet"];
+const ENGLISH_RESIDUE = ["Send", "Dismiss", "Egyptian", "Hall", "Purgatorium", "SevenArrwt", "TwentyOneSebkhet", "Heaven", "IslesOfTheBlest", "T3"];
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -182,6 +183,9 @@ const TECHNICAL: Record<string, string[]> = {
   "menus.gate_permission_nonadmin": ["menu.manage"],
   "menus.gate_roles_nonadmin": ["menu.manage"],
   "menus.gate_menu_type_nonadmin": ["menu.manage"],
+  // 第九节:搜索框提示「名字 / ID」,画布宽度门槛「≥ 1024 px」。
+  "judgment.claim.search": ["ID"],
+  "workflow.editor.narrow_title": ["px"],
   "menus.gates_footnote": ["menu.manage"],
   // 键盘上的键名:抽屉页头的快捷键提示。
   "souls.preview.hint": ["J", "K", "Esc"],
@@ -253,11 +257,17 @@ const ROOTS_APP = [
   "Sehed", "Hai", "Sekha", "Dua", "Iakeb", "Khabes", "Nehes", "Nehesu", "Wen-Neb",
   "Sau", "Nehem", "Khesbedj",
 ];
+/**
+ * 第九节「384 条占位审定」新增词根 10 个,另加小词组合 Er Pehwy(至多;Er、Pehwy 已在小词表)。
+ * Shesep 收(认领 / 采信 / 新收)、Sepy 余、Djed 引用(与 Djedu 条文分开)、Iru 类别、Khenn 冲突、Djai 越界、
+ * Hesep 层(与 Ta 界域分开)、Qab 中、Shem 行 / 动身、Tartaros 专名。
+ */
+const ROOTS_NINE = ["Shesep", "Sepy", "Djed", "Iru", "Khenn", "Djai", "Hesep", "Qab", "Shem", "Tartaros", "Er Pehwy"];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
@@ -278,6 +288,8 @@ if (process.env.EGY_VOCAB_WRITE === "1") {
   writeFileSync(path.join(__dirname, "support/egyVocabulary.json"), `{\n${lines.join(",\n")}\n}\n`);
 }
 const REGISTERED = VOCABULARY as Record<string, VocabEntry>;
+/** 定稿词表之外、尚待 Design 审定的旧词。只许删,不许加。 */
+const OFF_LEXICON = new Set(OFF_LEXICON_DEBT as string[]);
 
 describe("egy 词表规则", () => {
   it("摊平后拿到了整份包(扫不到东西的扫描器会让下面全部通过)", () => {
@@ -412,10 +424,18 @@ describe("egy 词表规则", () => {
     expect(stale).toEqual([]);
   });
 
-  it("封闭词汇:每个词都在词根 ∪ 小词 ∪ 登记表里", () => {
+  it("封闭词汇:每个词都在词根 ∪ 小词 ∪ 旧账清单里", () => {
+    // 旧账清单(support/egyOffLexicon.json)**手写,不由 EGY_VOCAB_WRITE 生成**。此前这里查的是
+    // 登记表 egyVocabulary.json,而登记表由写模式生成:写模式把任何生词记成 lexicon:false,
+    // 随后这条就放行了 —— 门禁为它自己要拦的东西背书(2026-09-25 Design 复核时查出 Wetu、Rekhyu、
+    // Sheemtet、Heaven 等都是这样进来的)。旧账只许变短:新词要么进定稿词根,要么别用。
     expect(Object.keys(USAGE).length).toBeGreaterThan(300);
-    const unregistered = Object.keys(USAGE).filter((w) => !LEXICON.has(w) && !(w in REGISTERED));
+    const unregistered = Object.keys(USAGE).filter((w) => !LEXICON.has(w) && !OFF_LEXICON.has(w));
     expect(unregistered).toEqual([]);
+  });
+
+  it("旧账清单没有陈旧项:已不再使用或已进定稿词根的词要删掉", () => {
+    expect([...OFF_LEXICON].filter((w) => !(w in USAGE) || LEXICON.has(w))).toEqual([]);
   });
 
   it("登记表没有已不再使用的词", () => {
