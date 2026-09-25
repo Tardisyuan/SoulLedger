@@ -73,7 +73,6 @@ beforeEach(() => {
     onSessionSuspend: () => () => {},
     onSessionResume: () => () => {},
     notify: () => {},
-    deliverOnExit: () => false,
     baseUrl: "http://api.test/api/v1",
   });
 });

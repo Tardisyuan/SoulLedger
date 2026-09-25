@@ -27,7 +27,6 @@ beforeEach(() => {
     onSessionSuspend: () => () => {},
     onSessionResume: () => () => {},
     notify: () => {},
-    deliverOnExit: () => false,
     baseUrl: "http://api.test/api/v1",
   });
   api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
