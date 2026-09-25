@@ -164,9 +164,13 @@ def test_a_real_export_round_trips_with_overwrite(seeded):
     assert exported.status_code == 200
     document = exported.json()
     document["overwrite"] = True
+    admin_rows = set(RolePermission.objects.filter(role__name="ADMIN").values_list("pk", flat=True))
 
     response = client.post(IMPORT, document, format="json")
 
     assert response.status_code == 200, response.content
-    assert response.data["stats"]["role_permissions"] == RolePermission.objects.count()
+    # Overwrite keeps ADMIN's rows in place (admin_always_all), so only the
+    # other roles' rows are deleted and recreated.
+    assert set(RolePermission.objects.filter(role__name="ADMIN").values_list("pk", flat=True)) == admin_rows
+    assert response.data["stats"]["role_permissions"] == RolePermission.objects.exclude(role__name="ADMIN").count()
     assert _grants_of(seeded["role"]) == ["imp.read", "imp.write"]

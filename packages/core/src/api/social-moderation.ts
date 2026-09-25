@@ -33,8 +33,8 @@ export interface ModerationFilters {
 
 export interface NewSensitiveWord {
   word: string;
-  /** Omitted: uncategorized (""). */
-  category?: SensitiveWordCategory | "";
+  /** Required on create since 2026-09-25; only words added before that are uncategorised (""). */
+  category: SensitiveWordCategory;
   /** Omitted: REVIEW — what every word did before actions existed. */
   action?: SensitiveWordAction;
 }
@@ -75,9 +75,8 @@ export const socialModerationApi = {
   /** Each row carries `hits_30d` — hits over the last 30 days. */
   words: (params: { page?: number }) =>
     api.get<PaginatedResponse<SensitiveWord>>("/social-moderation/sensitive-words/", { params }),
-  /** Stored trimmed and lower-cased; 409 `duplicate_word`. */
-  addWord: (word: string | NewSensitiveWord) =>
-    api.post<SensitiveWord>("/social-moderation/sensitive-words/", typeof word === "string" ? { word } : word),
+  /** Stored trimmed and lower-cased; 409 `duplicate_word`; 400 without a category. */
+  addWord: (word: NewSensitiveWord) => api.post<SensitiveWord>("/social-moderation/sensitive-words/", word),
   removeWord: (id: string) => api.delete(`/social-moderation/sensitive-words/${id}/`),
   /** All or nothing, 1–200 ids; 404 `not_found` with `missing` when any id is not in this civilization's list. */
   removeWords: (ids: string[]) =>
