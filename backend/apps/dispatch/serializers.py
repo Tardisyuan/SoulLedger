@@ -48,9 +48,10 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
     through it. That is the whole defect: the invariant lives in the create
     path and the update path was never told about it.
     """
-    soul_name = serializers.CharField(source="soul.name", read_only=True)
+    # allow_null:草稿可以还没选灵魂或目标文明(`DispatchStatus.DRAFT`)。
+    soul_name = serializers.CharField(source="soul.name", read_only=True, allow_null=True)
     source_tenant_code = serializers.CharField(source="source_tenant.code", read_only=True)
-    target_tenant_code = serializers.CharField(source="target_tenant.code", read_only=True)
+    target_tenant_code = serializers.CharField(source="target_tenant.code", read_only=True, allow_null=True)
     dispatched_by_name = serializers.CharField(source="dispatched_by.username", read_only=True, allow_null=True)
 
     class Meta:
@@ -63,6 +64,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "target_tenant_code",
             "soul",
             "soul_name",
+            "target_realm",
             "dispatched_by",
             "dispatched_by_name",
             "status",
@@ -74,6 +76,9 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "create_time",
             "update_time",
         ]
+        # `reason` stays required and non-blank on the wire, as it was before
+        # the model column gained `blank=True, default=""` for drafts.
+        extra_kwargs = {"reason": {"required": True, "allow_blank": False}}
         read_only_fields = [
             "id",
             "status",
@@ -112,8 +117,20 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
         `DispatchService.propose()` instead), so `self.instance` is always
         None for POST and there is nothing here to guard.
         """
+        if self.instance is None:
+            # The model lets `soul` / `target_tenant` be empty for a draft
+            # (`DispatchStatus.DRAFT`); a proposal still needs both. Checked
+            # here rather than with `required=True` on the fields so the
+            # published response shape keeps them nullable — a draft read back
+            # through this serializer has them null.
+            missing = {f: "This field is required." for f in ("soul", "target_tenant") if attrs.get(f) is None}
+            if missing:
+                raise serializers.ValidationError(missing, code="required")
+            _check_realm(attrs.get("target_tenant"), attrs.get("target_realm"))
         if self.instance is not None:
-            _party_fields = ("soul", "source_tenant", "target_tenant")
+            # `target_realm` rides with the parties: it is where the target
+            # tenant approved the soul to go, and approval is not re-asked.
+            _party_fields = ("soul", "source_tenant", "target_tenant", "target_realm")
             blocked = [
                 field
                 for field in ("status", "dispatched_by") + _party_fields
@@ -141,19 +158,93 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
         """Proposals only. A PATCH of an existing record is left as it was,
         and `DispatchService.propose()` called by the sentence plan (the
         system proposing a leg) does not come through this serializer."""
-        if self.instance is None and len(value.strip()) < DISPATCH_REASON_MIN_CHARS:
-            raise serializers.ValidationError(
-                f"The reason must be at least {DISPATCH_REASON_MIN_CHARS} characters.",
-                code="reason_too_short",
-            )
+        if self.instance is None:
+            _check_reason_length(value)
+        return value
+
+
+def _check_reason_length(value):
+    if len(value.strip()) < DISPATCH_REASON_MIN_CHARS:
+        raise serializers.ValidationError(
+            f"The reason must be at least {DISPATCH_REASON_MIN_CHARS} characters.",
+            code="reason_too_short",
+        )
+
+
+def _check_realm(target_tenant, realm):
+    """`DispatchService.check_target_realm`, keyed on the field so the form can put it under the select."""
+    from apps.dispatch.services import DispatchService
+
+    try:
+        DispatchService.check_target_realm(target_tenant, realm)
+    except ValueError as e:
+        raise serializers.ValidationError({"target_realm": str(e)}, code="realm_not_in_target") from e
+
+
+class DispatchDraftSerializer(serializers.ModelSerializer):
+    """存草稿的请求体:四个字段全可省、全可空,只查界域属不属目标租户。
+
+    完整性(灵魂、目标文明、至少 20 字的理由)**只在提交时**查 —— 见 `DispatchSubmitSerializer`。
+    灵魂还要属发起人的租户:这不是完整性,是访问边界 —— 草稿会把灵魂的名字读回给发起人。
+    """
+
+    class Meta:
+        model = DispatchRecord
+        fields = ["soul", "target_tenant", "target_realm", "reason"]
+        extra_kwargs = {
+            "soul": {"required": False, "allow_null": True},
+            "target_tenant": {"required": False, "allow_null": True},
+            "target_realm": {"required": False, "allow_null": True},
+            "reason": {"required": False, "allow_blank": True},
+        }
+
+    def validate_soul(self, soul):
+        from apps.core.tenant import is_tenant_exempt
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if soul is None or user is None or is_tenant_exempt(user):
+            return soul
+        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+        if tenant is None or soul.tenant_id != tenant.pk:
+            raise serializers.ValidationError("Soul does not belong to your tenant", code="soul_not_in_tenant")
+        return soul
+
+    def validate(self, attrs):
+        # The draft on the row plus this body: a body that only changes the
+        # target tenant can still leave a realm of the old one behind.
+        current = self.context.get("draft")
+        target = attrs["target_tenant"] if "target_tenant" in attrs else getattr(current, "target_tenant", None)
+        realm = attrs["target_realm"] if "target_realm" in attrs else getattr(current, "target_realm", None)
+        _check_realm(target, realm)
+        return attrs
+
+
+class DispatchSubmitSerializer(DispatchDraftSerializer):
+    """提交草稿:草稿上已有的值加上请求体,合起来必须是一份完整的提案。
+
+    视图把草稿当前的四个值垫在请求体下面再交给它,所以「必填」说的是合起来之后。
+    """
+
+    class Meta(DispatchDraftSerializer.Meta):
+        extra_kwargs = {
+            "soul": {"required": True, "allow_null": False},
+            "target_tenant": {"required": True, "allow_null": False},
+            "target_realm": {"required": False, "allow_null": True},
+            "reason": {"required": True, "allow_blank": False},
+        }
+
+    def validate_reason(self, value):
+        _check_reason_length(value)
         return value
 
 
 class DispatchRecordListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing dispatch records."""
-    soul_name = serializers.CharField(source="soul.name", read_only=True)
+    # allow_null:草稿可以还没选灵魂或目标文明(`DispatchStatus.DRAFT`)。
+    soul_name = serializers.CharField(source="soul.name", read_only=True, allow_null=True)
     source_tenant_code = serializers.CharField(source="source_tenant.code", read_only=True)
-    target_tenant_code = serializers.CharField(source="target_tenant.code", read_only=True)
+    target_tenant_code = serializers.CharField(source="target_tenant.code", read_only=True, allow_null=True)
 
     class Meta:
         model = DispatchRecord
@@ -165,6 +256,7 @@ class DispatchRecordListSerializer(serializers.ModelSerializer):
             "target_tenant_code",
             "soul",
             "soul_name",
+            "target_realm",
             "status",
             "proposed_at",
             "executed_at",

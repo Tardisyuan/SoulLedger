@@ -37,23 +37,40 @@ class DispatchService:
     """
 
     @staticmethod
-    def propose(source_tenant, target_tenant, soul, dispatcher, reason):
+    def eligible_realms(target_tenant):
+        """目标文明里可作为移交目的地的界域:属**目标租户**、属目标租户的文明、未软删。
+
+        不再往下筛,理由都在现有数据里:
+        * 每一行界域都是灵魂可以站的地方 —— `SoulPathService.enter` 对任何一行都照写,
+          拓扑列(`order` / `level` / `fork` ……)描述的是位置,没有一列说「不可前往」。
+        * 「只要叶子」看着干净,但会删掉希腊的审判草地(`EU_PLATO_MEADOW`,塔尔塔罗斯与
+          至福岛挂在它下面):被移交去**审理**的灵魂最该落的恰是那里。
+        * `is_eternal` 不是排除条件:永久的界域(第九层)正是设计稿举的例子。
+        * 文明也要对上(同 `submit_sentence`):租户对上而文明不对的行是数据错误,不给选。
         """
-        Propose a cross-tenant dispatch.
+        from apps.realms.models import Realm
+        from apps.souls.models import TENANT_CIVILIZATION
 
-        Args:
-            source_tenant: Tenant the soul currently belongs to
-            target_tenant: Tenant to receive the soul
-            soul: Soul to dispatch
-            dispatcher: User proposing the dispatch
-            reason: Reason for dispatch
+        civilization = TENANT_CIVILIZATION.get(target_tenant.code) if target_tenant else None
+        if civilization is None:
+            return Realm.all_objects.none()
+        return Realm.all_objects.filter(
+            tenant_id=target_tenant.pk, civilization=civilization, is_deleted=False,
+        ).order_by("realm_type", "tier", "realm_code")
 
-        Returns:
-            DispatchRecord: The created dispatch record
+    @staticmethod
+    def check_target_realm(target_tenant, realm):
+        """`realm` 为空放行;否则必须在 `eligible_realms(target_tenant)` 里。ValueError 说明原因。"""
+        if realm is None:
+            return
+        if target_tenant is None:
+            raise ValueError("Choose the target civilization before its realm")
+        if not DispatchService.eligible_realms(target_tenant).filter(pk=realm.pk).exists():
+            raise ValueError(f"Realm {realm.realm_code} is not a realm of {target_tenant.code}")
 
-        Raises:
-            ValueError: If soul doesn't belong to source tenant or active dispatch exists
-        """
+    @staticmethod
+    def _check_proposable(source_tenant, soul):
+        """提交审批前的业务检查,`propose` 与 `submit` 共用。"""
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
@@ -81,36 +98,111 @@ class DispatchService:
         if active_dispatch:
             raise ValueError("An active dispatch already exists for this soul")
 
+    @staticmethod
+    def propose(source_tenant, target_tenant, soul, dispatcher, reason, target_realm=None):
+        """
+        Propose a cross-tenant dispatch.
+
+        Args:
+            source_tenant: Tenant the soul currently belongs to
+            target_tenant: Tenant to receive the soul
+            soul: Soul to dispatch
+            dispatcher: User proposing the dispatch
+            reason: Reason for dispatch
+            target_realm: Optional realm of the target tenant (`check_target_realm`)
+
+        Returns:
+            DispatchRecord: The created dispatch record
+
+        Raises:
+            ValueError: If soul doesn't belong to source tenant or active dispatch exists
+        """
+        DispatchService._check_proposable(source_tenant, soul)
+        DispatchService.check_target_realm(target_tenant, target_realm)
+
         with transaction.atomic():
             dispatch_record = DispatchRecord.objects.create(
                 source_tenant=source_tenant,
                 target_tenant=target_tenant,
                 soul=soul,
+                target_realm=target_realm,
                 dispatched_by=dispatcher,
                 status=DispatchStatus.PROPOSED,
                 reason=reason,
                 tenant=source_tenant,
             )
 
-        # Notify target tenant
-        DispatchService._notify_target_tenant(dispatch_record)
+        DispatchService._announce_proposal(dispatch_record, dispatcher)
+        return dispatch_record
 
-        # Log domain event
+    #: What a draft save may write. Everything else on the row is set by the server.
+    DRAFT_FIELDS = ("soul", "target_tenant", "target_realm", "reason")
+
+    @staticmethod
+    def save_draft(record, *, source_tenant, dispatcher, **fields):
+        """建或改一份草稿(`record` 为 None 即新建)。不校验完整性、不通知、不记事件。
+
+        唯一的业务检查是界域:给了就要属目标租户(没给目标文明就给界域,也拒)。
+        """
+        unknown = set(fields) - set(DispatchService.DRAFT_FIELDS)
+        if unknown:
+            raise ValueError(f"Not a draft field: {', '.join(sorted(unknown))}")
+        with transaction.atomic():
+            if record is None:
+                record = DispatchRecord(
+                    source_tenant=source_tenant, tenant=source_tenant,
+                    dispatched_by=dispatcher, status=DispatchStatus.DRAFT,
+                )
+            else:
+                record = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=record.pk)
+                if record.status != DispatchStatus.DRAFT or record.is_deleted:
+                    raise ValueError(f"Only a draft can be edited or submitted; this dispatch is {record.status}")
+            for name, value in fields.items():
+                setattr(record, name, "" if name == "reason" and value is None else value)
+            DispatchService.check_target_realm(record.target_tenant, record.target_realm)
+            record.save()
+        return record
+
+    @staticmethod
+    def submit(record, dispatcher, **fields):
+        """草稿提交审批:DRAFT → PROPOSED。与 `propose` 同一套业务检查、同一份通知与事件。
+
+        `fields`(可空)先写到草稿上 —— 表单上最后一次的内容,不必先存一次再提交。
+        完整性与理由长度由调用方(视图的提交序列化器)校验过;这里在行锁下再问一次状态,
+        两次并发提交只有一次成功。`unique_active_dispatch` 从这一刻才开始约束这一行 ——
+        撞上时是 IntegrityError,由视图答 400,与 `create` 同一处理。
+        """
+        with transaction.atomic():
+            locked = DispatchService.save_draft(record, source_tenant=None, dispatcher=dispatcher, **fields)
+            if locked.soul_id is None or locked.target_tenant_id is None:
+                raise ValueError("A dispatch needs a soul and a target civilization")
+            DispatchService._check_proposable(locked.source_tenant, locked.soul)
+            locked.status = DispatchStatus.PROPOSED
+            locked.proposed_at = timezone.now()
+            locked.save()
+        DispatchService._announce_proposal(locked, dispatcher)
+        return locked
+
+    @staticmethod
+    def _announce_proposal(dispatch_record, dispatcher):
+        """提案成立之后的两件事:通知目标租户,记领域事件。草稿在提交之前一件都不做。"""
+        DispatchService._notify_target_tenant(dispatch_record)
+        payload = {
+            "action": "DISPATCH_PROPOSED",
+            "dispatch_id": str(dispatch_record.id),
+            "target_tenant": dispatch_record.target_tenant.code,
+            "reason": dispatch_record.reason,
+        }
+        if dispatch_record.target_realm_id:
+            payload["target_realm"] = dispatch_record.target_realm.realm_code
         SoulEvent.objects.create(
-            tenant=source_tenant,
-            soul=soul,
+            tenant=dispatch_record.source_tenant,
+            soul=dispatch_record.soul,
             event_type=EventType.STATE_CHANGED,
-            payload={
-                "action": "DISPATCH_PROPOSED",
-                "dispatch_id": str(dispatch_record.id),
-                "target_tenant": target_tenant.code,
-                "reason": reason,
-            },
+            payload=payload,
             # 受刑计划推进由系统发起(`dispatcher=None`,设计稿 §2.4)。
             actor=str(dispatcher) if dispatcher is not None else "system",
         )
-
-        return dispatch_record
 
     @staticmethod
     def _notify_target_tenant(dispatch_record):
@@ -262,10 +354,16 @@ class DispatchService:
             old_tenant = soul.tenant
             soul.tenant = dispatch_record.target_tenant
             soul.save()
-            # 行程拓扑:离开源租户里所在的那一站。到达的那一站(若有)由下面
-            # `on_dispatch_executed` 建处置时记;手动调拨没有目的界域,只记离开。
+            # 行程拓扑:离开源租户里所在的那一站。指定了目标界域的,同一时刻进入那一站
+            # (`enter` 关掉旧的、开新的,这一站记在目标租户);没指定的只记离开。受刑计划的
+            # 调拨不带界域,到达的那一站仍由下面 `on_dispatch_executed` 建处置时记。
             from apps.realms.path import SoulPathService
-            SoulPathService.leave(soul)
+            if dispatch_record.target_realm_id:
+                SoulPathService.enter(
+                    soul, dispatch_record.target_realm, tenant_id=dispatch_record.target_tenant_id,
+                )
+            else:
+                SoulPathService.leave(soul)
             dispatch_record.soul = soul
 
             # Create soul event
