@@ -8,6 +8,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
 import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -540,17 +541,8 @@ function ConsoleNotice({ title, body, action }: { title: string; body: string; a
 
 function KeyboardMap() {
   const { t } = useI18n();
-  const rows: [string, string][] = [
-    ["1 · 2 · 3 · 4", t("judgment.queue.key_verdicts")],
-    ["S", t("judgment.queue.key_defer")],
-    ["W", t("judgment.queue.key_workflow")],
-    ["R", t("judgment.queue.key_restore")],
-    ["N", t("judgment.queue.key_notes")],
-    // Both spellings listed, because a help key nobody can find is not help:
-    // `?` needs Shift on most non-US layouts.
-    ["? · H", t("judgment.queue.key_help")],
-    ["Esc", t("judgment.queue.key_leave")],
-  ];
+  // Design's six (`src/lib/queueShortcuts.ts`). `h` and Esc still work — see the keydown above.
+  const rows = QUEUE_SHORTCUTS.map(({ key, label }) => [key, t(label)] as const);
   return (
     <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] p-4">
       <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-2">
@@ -558,7 +550,7 @@ function KeyboardMap() {
       </h2>
       <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         {rows.map(([keys, label]) => (
-          <div key={keys} className="flex items-baseline gap-3 text-sm">
+          <div key={keys} data-shortcut={keys} className="flex items-baseline gap-3 text-sm">
             <dt className="font-mono text-xs text-[oklch(var(--color-ink))] min-w-[7ch]">{keys}</dt>
             <dd className="text-[oklch(var(--color-ink-muted))]">{label}</dd>
           </div>
