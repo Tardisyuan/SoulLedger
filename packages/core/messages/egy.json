@@ -3054,7 +3054,8 @@
       "reason_required": "Khet Sesen",
       "admin_only": "Sab Hery Wa: Sesh Em Taui Ky",
       "same_tenant": "Taui Ky Nen: Taui Pen",
-      "no_tenant": "Nen Taui Pen"
+      "no_tenant": "Nen Taui Pen",
+      "invalid_days": "Hru Gerh: 1–365"
     },
     "empty": {
       "reports": "Nen Sedjem Em Smen",
@@ -3132,7 +3133,24 @@
       "col_by": "Sab",
       "term_label": "Gerh {{name}} · Sepy",
       "confirm_title": "Fekh Gerh {{name}}?",
-      "confirm_body": "Wen Emu; Ba Sedjem. Nen Wehem Djer; Gerh Wehem Iri Wenen."
+      "confirm_body": "Wen Emu; Ba Sedjem. Nen Wehem Djer; Gerh Wehem Iri Wenen.",
+      "new": "+ Gerh…",
+      "new_title": "Gerh Ba",
+      "search": "Hehy Ren Ba",
+      "pick_label": "Setep Ba",
+      "no_match": "Nen Ba Gem",
+      "term_hint": "Hru 1–365; Nen Gerh Djet.",
+      "filter_status": "Kheperu",
+      "status": {
+        "ACTIVE": "Em Gerh",
+        "EXPIRED": "Mut",
+        "LIFTED": "Fekh Seth"
+      },
+      "term": {
+        "SHORT": "≤ Hru 7",
+        "MEDIUM": "Hru 8–30",
+        "LONG": "> Hru 30"
+      }
     },
     "handled": {
       "col_type": "Iru",

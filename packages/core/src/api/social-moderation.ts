@@ -47,6 +47,22 @@ export interface SensitiveWordEdit {
   word?: string;
 }
 
+/** The mute list's filters (E-08c). Unknown values answer an empty list. */
+export interface MuteFilters {
+  /** ACTIVE 禁言中 / EXPIRED 到期未解除 / LIFTED 已解除. */
+  status?: "ACTIVE" | "EXPIRED" | "LIFTED";
+  /** until − created_at: SHORT ≤ 7 days, MEDIUM 8–30, LONG > 30. */
+  term?: "SHORT" | "MEDIUM" | "LONG";
+  /** Executor's user id. */
+  created_by?: number;
+  /** Soul display name contains. */
+  q?: string;
+  page?: number;
+}
+
+/** A soul or an officer as the moderation API names them: id and display name, nothing else. */
+export type ModerationPerson = Schemas["ModerationAuthor"];
+
 export interface HandledFilters {
   type?: HandledContent["type"];
   handling?: HandledContent["handling"];
@@ -106,9 +122,12 @@ export const socialModerationApi = {
   /** Hidden and officer-deleted posts and comments, newest first. */
   handled: (params: HandledFilters) =>
     api.get<PaginatedResponse<HandledContent>>("/social-moderation/handled/", { params }),
-  mutes: (params: { page?: number }) =>
-    api.get<PaginatedResponse<SocialMute>>("/social-moderation/mutes/", { params }),
-  /** Only a soul currently in this civilization; 404 otherwise. */
+  mutes: (params: MuteFilters) => api.get<PaginatedResponse<SocialMute>>("/social-moderation/mutes/", { params }),
+  /** 「禁言…」's picker: current-life souls now in this civilization, at most 20, by name. */
+  muteSouls: (q: string) => api.get<ModerationPerson[]>("/social-moderation/mutes/souls/", { params: q ? { q } : {} }),
+  /** Everyone who has muted someone in this civilization. */
+  muteExecutors: () => api.get<ModerationPerson[]>("/social-moderation/mutes/executors/"),
+  /** Only a soul currently in this civilization; 404 otherwise. 1–365 days, never permanent. */
   mute: (userId: number, days: number, reason = "") =>
     api.post<SocialMute>("/social-moderation/mutes/", { user_id: userId, days, reason }),
   /** 409 `already_lifted`. */

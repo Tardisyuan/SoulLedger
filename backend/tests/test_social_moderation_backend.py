@@ -20,6 +20,7 @@ from apps.social.models import (
     SensitiveWord,
     SensitiveWordAction,
     SensitiveWordDailyHit,
+    SocialMute,
     Visibility,
 )
 from tests.soul_social_support import MODERATION, SOCIAL, feed_ids, officer_client, post, soul
@@ -524,6 +525,86 @@ def test_lifting_a_mute_records_who_and_notifies_the_soul(cn_tenant, cn_moderato
     assert target_client.post(f"{SOCIAL}/feed/", {"content": "能说话了"}, format="json").status_code == 201
     again = officer_client(cn_moderator).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json")
     assert again.status_code == 409 and again.json()["code"] == "already_lifted"
+
+
+def _mute_ids(client, **params):
+    res = client.get(f"{MODERATION}/mutes/", params)
+    assert res.status_code == 200, res.content
+    return {r["id"] for r in res.json()["results"]}
+
+
+def test_mute_filters_status_term_executor_and_name(cn_tenant, cn_moderator, django_user_model):
+    other = django_user_model.objects.create(username="cn_mod2", role="MODERATOR", tenant=cn_tenant, display_name="崔珏")
+    short = mod.mute_user(soul(cn_tenant, "韩守一")[0].user, cn_tenant, 7, actor=cn_moderator)
+    medium = mod.mute_user(soul(cn_tenant, "王素心")[0].user, cn_tenant, 30, actor=other)
+    long_ = mod.mute_user(soul(cn_tenant, "Kleon")[0].user, cn_tenant, 365, actor=cn_moderator)
+    lifted = mod.mute_user(soul(cn_tenant, "解除的")[0].user, cn_tenant, 8, actor=other)
+    mod.lift_mute(lifted, actor=other)
+    expired = mod.mute_user(soul(cn_tenant, "到期的")[0].user, cn_tenant, 1, actor=cn_moderator)
+    SocialMute.objects.filter(pk=expired.pk).update(
+        created_at=timezone.now() - timedelta(days=3), until=timezone.now() - timedelta(days=2)
+    )
+    client = officer_client(cn_moderator)
+    ids = lambda *rows: {str(r.pk) for r in rows}  # noqa: E731
+
+    assert _mute_ids(client) == ids(short, medium, long_, lifted, expired)
+    assert _mute_ids(client, status="ACTIVE") == ids(short, medium, long_)
+    assert _mute_ids(client, status="EXPIRED") == ids(expired)
+    assert _mute_ids(client, status="LIFTED") == ids(lifted)
+    # 时长是 until − created_at,边界闭在上限:7 天算短,8 天算中,30 天算中,31 天起算长。
+    assert _mute_ids(client, term="SHORT") == ids(short, expired)
+    assert _mute_ids(client, term="MEDIUM") == ids(medium, lifted)
+    assert _mute_ids(client, term="LONG") == ids(long_)
+    assert _mute_ids(client, created_by=other.pk) == ids(medium, lifted)
+    assert _mute_ids(client, q="素心") == ids(medium)
+    assert _mute_ids(client, status="ACTIVE", created_by=cn_moderator.pk, term="LONG") == ids(long_)
+    for bad in ({"status": "FOREVER"}, {"term": "PERMANENT"}, {"created_by": "x"}):
+        assert _mute_ids(client, **bad) == set(), bad
+
+    executors = sorted(client.get(f"{MODERATION}/mutes/executors/").json(), key=lambda r: -r["user_id"])
+    assert executors == [
+        {"user_id": other.pk, "display_name": "崔珏"},
+        {"user_id": cn_moderator.pk, "display_name": "地府审核官"},
+    ]
+
+
+def test_mute_executors_and_the_soul_picker_stay_in_the_civilization(
+    cn_tenant, eu_tenant, cn_moderator, eu_moderator, judge_user
+):
+    mod.mute_user(soul(cn_tenant, "地府的")[0].user, cn_tenant, 3, actor=cn_moderator)
+    eu_soul, _ = soul(eu_tenant, "天堂的灵魂")
+    visitor, _ = soul(cn_tenant, "暂居天堂的", home_tenant=cn_tenant)
+    type(visitor.soul).all_objects.filter(pk=visitor.soul_id).update(tenant=eu_tenant)
+
+    eu = officer_client(eu_moderator)
+    assert eu.get(f"{MODERATION}/mutes/executors/").json() == []
+    names = {r["display_name"] for r in eu.get(f"{MODERATION}/mutes/souls/").json()}
+    assert names == {eu_soul.user.display_name, visitor.user.display_name}, "选人框按此刻所在文明,不按原属"
+    assert eu.get(f"{MODERATION}/mutes/souls/", {"q": "暂居"}).json() == [
+        {"user_id": visitor.user_id, "display_name": visitor.user.display_name}
+    ]
+    cn_names = {r["display_name"] for r in officer_client(cn_moderator).get(f"{MODERATION}/mutes/souls/").json()}
+    assert "天堂的灵魂" not in cn_names and "暂居天堂的" not in cn_names and "地府的" in cn_names
+    assert officer_client(judge_user).get(f"{MODERATION}/mutes/souls/").status_code == 403
+    assert officer_client(judge_user).get(f"{MODERATION}/mutes/executors/").status_code == 403
+
+
+def test_the_soul_picker_leaves_out_retired_accounts_and_officers(cn_tenant, cn_moderator):
+    live, _ = soul(cn_tenant, "本世的")
+    retired, _ = soul(cn_tenant, "上一世的")
+    type(retired).objects.filter(pk=retired.pk).update(retired_at=timezone.now())
+    rows = officer_client(cn_moderator).get(f"{MODERATION}/mutes/souls/").json()
+    assert [r["user_id"] for r in rows] == [live.user_id]
+
+
+def test_a_mute_is_one_to_365_days_never_permanent(cn_tenant, cn_moderator):
+    target, _ = soul(cn_tenant, "被禁言的")
+    client = officer_client(cn_moderator)
+    for days in (0, 366, None):
+        body = {"user_id": target.user_id} if days is None else {"user_id": target.user_id, "days": days}
+        assert client.post(f"{MODERATION}/mutes/", body, format="json").status_code == 400, days
+    assert not SocialMute.objects.exists()
+    assert client.post(f"{MODERATION}/mutes/", {"user_id": target.user_id, "days": 365}, format="json").status_code == 201
 
 
 def test_an_officer_cannot_lift_another_civilizations_mute(cn_tenant, cn_moderator, eu_moderator):

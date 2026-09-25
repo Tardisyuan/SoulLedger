@@ -24,6 +24,9 @@ export const WORD_ACTION_TONES: Record<string, BadgeTone> = {
   MASK: "neutral",
 };
 
+/** 禁言天数的选项 —— 举报处置与「禁言…」共用。1–365,没有永久(产品决定;服务端同一上限)。 */
+export const MUTE_DAYS = [1, 3, 7, 30, 90, 365];
+
 /** A server refusal in words: `{detail, code}` → `social_moderation.errors.<code>`. */
 export function useFailureToast() {
   const { t } = useI18n();
