@@ -583,7 +583,8 @@
         "version_conflict": "Someone else changed this role; it was reloaded — look again.",
         "role_not_found": "The role no longer exists.",
         "permission_not_found": "The permission no longer exists.",
-        "database_error": "A database error: this cell was not written."
+        "database_error": "A database error: this cell was not written.",
+        "admin_always_all": "ADMIN always holds every permission"
       }
     },
     "segments": {

@@ -583,7 +583,8 @@
         "version_conflict": "此角色已被别人改过，已重新加载，请再看一遍。",
         "role_not_found": "角色已不存在。",
         "permission_not_found": "权限项已不存在。",
-        "database_error": "数据库出错，这一格没有写入。"
+        "database_error": "数据库出错，这一格没有写入。",
+        "admin_always_all": "管理员始终拥有全部权限"
       }
     },
     "segments": {
