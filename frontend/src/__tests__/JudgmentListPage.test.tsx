@@ -8,7 +8,7 @@
  * - 勾选后出批量条:认领 / 改派… / 暂缓;暂缓理由必填,改派只列同租户的官员;
  * - 搜索与殿筛选同时进列表与计数的请求。
  *
- * 每条都断了反面:没勾选时没有批量条、理由空时不发请求、别的租户的官员不在名单里。
+ * 每条都断了反面:没勾选时没有批量条、理由空时不发请求、改派名单不再读 `/users/`。
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -16,7 +16,7 @@ import JudgmentListPage from "@/app/judgment/page";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), claim: jest.fn(), batch: jest.fn() },
+  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), claim: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn() },
   usersApi: { list: jest.fn() },
   PAGE_SIZE: 20,
 }));
@@ -67,15 +67,12 @@ beforeEach(() => {
   judgmentApi.queueCounts.mockResolvedValue({ data: { mine: 2, unclaimed: 5, others: 4, deferred: 1, total: 12 } });
   judgmentApi.claim.mockResolvedValue({ data: {} });
   judgmentApi.batch.mockResolvedValue({ data: { operation: "claim", count: 1, ids: [] } });
-  usersApi.list.mockResolvedValue({
-    data: {
-      count: 3, next: null, previous: null,
-      results: [
-        { id: 7, username: "qinguang", email: "", role: "JUDGE", is_active: true, tenant: { code: "diyu", display_name: "地府" } },
-        { id: 8, username: "minos", email: "", role: "JUDGE", is_active: true, tenant: { code: "inferno", display_name: "地狱" } },
-        { id: 9, username: "retired", email: "", role: "JUDGE", is_active: false, tenant: { code: "diyu", display_name: "地府" } },
-      ],
-    },
+  // 名单已由服务端按案子的租户、按改派同一条规则筛好;页面照单全列。
+  judgmentApi.assignableOfficers.mockResolvedValue({
+    data: [
+      { id: 7, display_name: "秦广王", username: "qinguang", role: "JUDGE" },
+      { id: 9, display_name: "", username: "songdi", role: "MODERATOR" },
+    ],
   });
 });
 
@@ -214,7 +211,7 @@ describe("审判队列", () => {
     await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "defer", ids: ["a"], reason: "待补证" }));
   });
 
-  it("改派只给持 judgment.assign 的人,名单只列同租户的在职官员", async () => {
+  it("殿主(MODERATOR,没有用户管理权)打开改派,看得到名单,且名单按勾选的案子取,不读 /users/", async () => {
     mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
     renderPage();
     await screen.findByText("沈青梧");
@@ -222,18 +219,21 @@ describe("审判队列", () => {
     fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
     const dialog = await screen.findByRole("dialog");
     const select = await within(dialog).findByRole("combobox");
-    await waitFor(() => expect(within(select).getByRole("option", { name: "qinguang" })).toBeInTheDocument());
-    expect(within(select).queryByRole("option", { name: /minos/ })).toBeNull();
-    expect(within(select).queryByRole("option", { name: /retired/ })).toBeNull();
+    await waitFor(() => expect(within(select).getByRole("option", { name: "秦广王" })).toBeInTheDocument());
+    // 没有 display_name 的人退回 username。
+    expect(within(select).getByRole("option", { name: "songdi" })).toBeInTheDocument();
+    expect(within(select).queryByRole("option", { name: "qinguang" })).toBeNull();
+    expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["a"]);
+    expect(usersApi.list).not.toHaveBeenCalled();
 
     fireEvent.change(select, { target: { value: "7" } });
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
     await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["a"], to: 7 }));
   });
 
-  it("官员名单读不到(殿主没有用户管理权)时照实说,不给一个空下拉", async () => {
+  it("连可改派名单也被拒(403)时照实说,不给一个空下拉", async () => {
     mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
-    usersApi.list.mockRejectedValue({ response: { status: 403 } });
+    judgmentApi.assignableOfficers.mockRejectedValue({ response: { status: 403 } });
     renderPage();
     await screen.findByText("沈青梧");
     fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));

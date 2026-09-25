@@ -72,6 +72,7 @@ export {
   type JudgmentBatchPayload,
   type JudgmentBatchResult,
   type JudgmentClaimRefusal,
+  type AssignableOfficer,
 } from "./judgment";
 
 // Ledger

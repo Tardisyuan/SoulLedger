@@ -1832,6 +1832,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/assignable-officers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 改派弹层的名单:能被改派到这些案子上的官员 —— 与 `reassign` 校验对象用的是同一个
+         *     `claims.is_assignable`,名单里的人改派必收,不在名单里的必拒。
+         *
+         *     租户取自案子,不取自调用者:ADMIN 没有租户,案子有。案子要在 `self.get_queryset()`
+         *     里 —— 与批量同一条范围,不在就整体 404 并列出 `missing`。一批跨了租户时没有人能
+         *     接下全部,答空名单(批量改派也会逐件拒)。
+         *
+         *     不分页、不搜索:一个租户的官员是几十人的量级,弹层要一次拿全;上了几百人再加 `search`。
+         */
+        get: operations["v1_judgment_assignable_officers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/batch/": {
         parameters: {
             query?: never;
@@ -6522,6 +6548,16 @@ export interface components {
          * @enum {string}
          */
         ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED";
+        /**
+         * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+         *     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
+         */
+        AssignableOfficer: {
+            readonly id: number;
+            readonly display_name: string;
+            readonly username: string;
+            readonly role: string;
+        };
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -15375,6 +15411,46 @@ export interface operations {
                 };
             };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_assignable_officers_list: {
+        parameters: {
+            query: {
+                /** @description The case(s) about to be reassigned. Repeat for a batch (at most 100). */
+                judgment: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableOfficer"][];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
