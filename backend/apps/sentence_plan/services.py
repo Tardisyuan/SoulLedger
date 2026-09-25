@@ -126,6 +126,18 @@ def _save(obj, *fields):
     obj.save(update_fields=[*fields, "update_time", "update_user", "version"])
 
 
+def _leave_waiting_station(soul, node):
+    """原属地的 WAITING 节点放行:关上它的处置那一站,与执行时不暂留会做的一样。"""
+    from apps.disposition.models import Disposition
+    from apps.disposition.services import DispositionService
+
+    if node.disposition_id is None:
+        return
+    disposition = Disposition.all_objects.filter(pk=node.disposition_id).first()
+    if disposition is not None:
+        DispositionService._leave_served_realm(disposition, soul)
+
+
 def _route_home_realm(soul, verdict, judgment_method, judgment=None):
     """按**原属**文明路由的 realm。`DispositionService._route_to_realm` 读 `soul.civilization`(管辖),
     重开审判结案时灵魂可能还在外地,所以给它一份管辖 = 原属的副本(只读,不保存)。"""
@@ -470,6 +482,8 @@ class SentencePlanService:
             node.completed_at = timezone.now()
             _save(node, "status", "completed_at")
             SentencePlanService._node_finished(locked, plan, node)
+            # 刑满暂留时灵魂留在那一站(`_leave_served_realm` 跳过了 WAITING),放行才离开。
+            _leave_waiting_station(locked, node)
         nxt = next((n for n in nodes if n.status == SentenceNodeStatus.PENDING), None)
         if nxt is None:
             SentencePlanService._complete(locked, plan, nodes)

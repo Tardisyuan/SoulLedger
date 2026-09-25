@@ -824,15 +824,22 @@ class DispositionService:
         disposition.save()
 
     @staticmethod
-    def _leave_served_realm(disposition, soul):
+    def _leave_served_realm(disposition, soul, node=None):
         """行程拓扑:刑满(执行)即离开服刑的界域;永久刑期不离开。
 
         只关「就是这个界域」的那一站 —— 灵魂此刻若已不在那里(例如又被调走),
         什么都不写。三条执行分支都调它,与 `is_executed` 同一事务。
+
+        刑满暂留(受刑计划节点 WAITING)也不离开(产品负责人 2026-09-25):灵魂被未结案
+        审判留在那一站,人还在那里。放行时再关 —— 暂居地由 `end_residence` 关,原属地由
+        `SentencePlanService._step` 在 WAITING → COMPLETED 时调这里关。
         """
         from apps.realms.path import SoulPathService
+        from apps.sentence_plan.models import SentenceNodeStatus
 
         if disposition.is_eternal or disposition.destination_realm_id is None:
+            return
+        if node is not None and node.status == SentenceNodeStatus.WAITING:
             return
         SoulPathService.leave(soul, realm=disposition.destination_realm)
 
@@ -858,8 +865,8 @@ class DispositionService:
             ):
                 return False
             DispositionService._mark_executed(disposition)
-            DispositionService._leave_served_realm(disposition, locked)
-            SentencePlanService.on_disposition_executed(locked, disposition)
+            node = SentencePlanService.on_disposition_executed(locked, disposition)
+            DispositionService._leave_served_realm(disposition, locked, node)
             SentencePlanService.advance(locked)
         return True
 
@@ -898,8 +905,8 @@ class DispositionService:
             ):
                 return False
             DispositionService._mark_executed(disposition)
-            DispositionService._leave_served_realm(disposition, locked)
             node = SentencePlanService.on_disposition_executed(locked, disposition)
+            DispositionService._leave_served_realm(disposition, locked, node)
             if node is not None:
                 if node.status == "WAITING":
                     open_ids = list(open_judgments(locked).values_list("pk", flat=True))
