@@ -75,3 +75,10 @@ class SoulPathEntrySerializer(serializers.ModelSerializer):
         model = SoulPathEntry
         fields = ["id", "sequence", "realm_id", "realm_code", "entered_at", "left_at"]
         read_only_fields = fields
+
+
+class RealmOccupancySerializer(serializers.Serializer):
+    """One row of `GET /realms/occupancy/`: souls whose open path entry
+    (`left_at` null) is in this realm — 在押."""
+    realm_id = serializers.UUIDField()
+    count = serializers.IntegerField()

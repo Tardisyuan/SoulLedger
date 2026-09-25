@@ -77,7 +77,10 @@ export function stripComments(source: string): string {
 }
 
 /** `page: 1`, `params.page`, `{ page }` — a page number going OUT in a request. */
-const REQUESTS_A_PAGE = /\bpage:\s*[\w({]|\bparams\.page\b|\{\s*page\s*[,}]/;
+// The last alternative reads `page` as a shorthand member anywhere in an object
+// literal, not only first: `{ month, page, ...rest }` (app/ledger) was invisible
+// to the `{ page` form until 2026-09-25.
+const REQUESTS_A_PAGE = /\bpage:\s*[\w({]|\bparams\.page\b|\{[^{}]*?[{,]\s*page\s*[,}]|\{\s*page\s*[,}]/;
 
 /**
  * Something that can move the page number off a constant.
@@ -133,7 +136,9 @@ describe("the scan is looking at something", () => {
   it("ignores a page number that is only mentioned in prose", () => {
     // The two false accusations that made stripping necessary. Both files talk
     // about "this page:" in a doc comment and neither requests one.
-    for (const rel of ["app/actors/page.tsx", "app/ledger/page.tsx"]) {
+    // `app/ledger/page.tsx` used to be the second case; since 2026-09-25 it is
+    // the 功过总账 and really does request page N (and offers the next one).
+    for (const rel of ["app/actors/page.tsx"]) {
       const raw = readFileSync(path.join(FRONTEND_ROOT, rel), "utf8");
       expect(REQUESTS_A_PAGE.test(raw)).toBe(true); // matches the prose…
       expect(REQUESTS_A_PAGE.test(stripComments(raw))).toBe(false); // …and not the code
@@ -146,6 +151,7 @@ describe("the scan is looking at something", () => {
     expect(REQUESTS_A_PAGE.test('api.get(url, { params: { page } })')).toBe(true);
     expect(REQUESTS_A_PAGE.test("soulsApi.list({ page: 1, search })")).toBe(true);
     expect(REQUESTS_A_PAGE.test("const params = { page };")).toBe(true);
+    expect(REQUESTS_A_PAGE.test("const params = { month, page, ...rest };")).toBe(true);
     // And not fire on an unrelated identifier ending in `page`.
     expect(REQUESTS_A_PAGE.test("const homepage = 1;")).toBe(false);
   });
@@ -167,7 +173,10 @@ describe("the scan is looking at something", () => {
     // Five shapes ship today and the rule names none of them. A page whose
     // control lives inside a grid, a slot, or a component invented tomorrow is
     // judged the same way.
-    const byShape = ["app/souls/page.tsx", "app/audit/page.tsx", "app/corpus/page.tsx", "app/tenants/page.tsx"];
+    // `app/corpus/page.tsx` left this list 2026-09-25: the reading page loads the
+    // whole corpus (useAllStatutes) and requests no page of its own. The
+    // 功过总账 took its place — the same PageShell-slot shape.
+    const byShape = ["app/souls/page.tsx", "app/audit/page.tsx", "app/ledger/page.tsx", "app/tenants/page.tsx"];
     for (const rel of byShape) {
       expect(REQUESTING).toContain(rel);
       expect(offersAWay(codeOf(rel))).toBe(true);

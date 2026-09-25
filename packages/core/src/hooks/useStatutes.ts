@@ -74,3 +74,28 @@ export function groupStatutesByCorpus(statutes: Statute[]): CorpusGroup[] {
 
   return groups;
 }
+
+/**
+ * Every article, walked page by page through the same list endpoint
+ * (`GET /judgment/statutes/`, PAGE_SIZE 20 — 172 rows today, nine requests).
+ *
+ * The reading page (/corpus) needs the whole corpus at once: its contents rail
+ * lists every rulebook, a typed code jumps to any article, and search hits are
+ * marked in place. `ordering=code` keeps each document contiguous across page
+ * boundaries (see app/corpus/page.tsx); the caller re-sorts by `ordinal`
+ * within a corpus, which is that document's own order.
+ */
+export function useAllStatutes() {
+  return useQuery({
+    queryKey: judgmentKeys.statutes({ all: "true", ordering: "code" }),
+    queryFn: async () => {
+      const rows: Statute[] = [];
+      for (let n = 1; ; n += 1) {
+        const res = await judgmentApi.statutes({ ordering: "code", page: String(n) });
+        rows.push(...res.data.results);
+        if (!res.data.next) return rows;
+      }
+    },
+    staleTime: 5 * 60_000,
+  });
+}

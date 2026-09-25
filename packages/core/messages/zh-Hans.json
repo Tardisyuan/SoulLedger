@@ -847,7 +847,31 @@
     "decayed_merit": "衰减后 功德",
     "decayed_demerit": "衰减后 罪业",
     "raw_balance_sr": "原始余额 {{n}}",
-    "advisory_disclaimer": "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出"
+    "advisory_disclaimer": "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出",
+    "journal": {
+      "title": "功过总账",
+      "subtitle": "旧管 + 新收 − 开除 = 实在 · 按登记原值计,不计衰减",
+      "month": "月份",
+      "month_prev": "上一月",
+      "month_next": "下一月",
+      "pillar_opening": "旧管 · 期初",
+      "pillar_received": "新收 · 功德",
+      "pillar_disbursed": "开除 · 罪业",
+      "pillar_closing": "实在 · 期末",
+      "formula": "旧管 + 新收 − 开除 = 实在 · {{souls}} 户 · 本期 {{records}} 条",
+      "col_day": "日",
+      "col_soul": "灵魂",
+      "col_entry": "条目",
+      "col_basis": "依据",
+      "subtotal": "小计",
+      "page_total": "本页合计 · {{n}} 条",
+      "categories": "按类目 · 图例账",
+      "category": "类目",
+      "empty_title": "本期没有流水",
+      "empty_reason": "{{month}} 尚无功过登记;旧管 = 实在 = {{opening}}。",
+      "load_failed": "功过总账加载失败",
+      "row_hint": "整行可点 → 该户详情「乙 · 功过」"
+    }
   },
   "judgment": {
     "title": "审判",
@@ -1004,7 +1028,25 @@
       "listed_count": "本页 {{n}} 条",
       "empty_reason": "这套语料尚无转录条文。",
       "citations_absent": "本次响应不带引用计数。",
-      "sigil_absent": "此条无转录节号。"
+      "sigil_absent": "此条无转录节号。",
+      "search_jump": "检索律条,或输入编号直达",
+      "toc": "目录",
+      "original": "原文",
+      "translation": "今译",
+      "original_absent": "只转录了译文,未存原语原文",
+      "notes": "注 · 编者",
+      "source": "出处",
+      "cite": "引用",
+      "copy_cite": "复制引用",
+      "copied": "已复制",
+      "cited_by": "被引用",
+      "cited_by_count": "{{n}} 件判决",
+      "cited_by_gap": "接口不能按律条查判决,所以这里只有件数,没有清单。",
+      "versions": "版本",
+      "versions_gap": "律条没有版本记录:更正在种子数据里就地改写。",
+      "select_prompt": "从目录选一条律条。",
+      "no_match": "没有匹配「{{q}}」的律条",
+      "clear_search": "清除检索"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",
@@ -1310,7 +1352,52 @@
       "EG_AARU": "芦苇原",
       "EG_ANNIHILATION": "湮灭"
     },
-    "no_realms": "还没有登记任何殿域。"
+    "no_realms": "还没有登记任何殿域。",
+    "topology": {
+      "map_title": "拓扑",
+      "legend": "━ 已行 ┅ 待行 ▪ 现在 □ 站",
+      "schematic": "示意",
+      "shape_line": "一线",
+      "shape_funnel": "漏斗",
+      "shape_river": "十二时之河",
+      "shape_fork": "三岔路",
+      "state_travelled": "已行",
+      "state_current": "现在",
+      "state_pending": "待行",
+      "region": {
+        "INFERNO": "地狱篇",
+        "PURGATORIO": "炼狱篇",
+        "PARADISO": "天堂篇"
+      },
+      "fork": {
+        "LEFT": "左 · 塔尔塔罗斯",
+        "MIDDLE": "中",
+        "RIGHT": "右 · 至福岛"
+      },
+      "off_shape": "{{n}} 个界域在此图上没有位置,见树表",
+      "no_stops": "还没有行程记录",
+      "load_failed": "行程加载失败"
+    },
+    "table": {
+      "col_name": "名称",
+      "col_code": "编号",
+      "col_kind": "类型",
+      "col_held": "在押 / 容量",
+      "col_eternal": "永恒",
+      "eternal_yes": "是",
+      "eternal_no": "否",
+      "full": "已满",
+      "capacity_unrecorded": "容量未记录",
+      "read_only": "只读 · 界域接口没有写入路由,本页不提供编辑",
+      "empty_civ": "此文明尚未配置界域",
+      "occupancy_failed": "在押人数加载失败"
+    },
+    "kind": {
+      "HALL": "殿",
+      "GATE": "门",
+      "LAYER": "层",
+      "PATH": "道"
+    }
   },
   "organization": {
     "title": "组织架构",

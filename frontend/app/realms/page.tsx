@@ -2,70 +2,60 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { realmsApi, type Realm } from "@soulledger/core/api";
+import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { CardSkeleton } from "@/components/ui/skeleton";
-import { ChevronDown, Castle, Cloud, Flame, CircleDot, Columns } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Castle, Cloud, Flame, CircleDot } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { RouteTopology, realmStationLabel } from "@/src/components/realms/RouteTopology";
+import { buildTopology } from "@/src/lib/routeTopology";
+import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 
-const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNode }> = {
-  CHINESE: { nameKey: "realms.civilizations.CHINESE", icon: <Castle className="w-6 h-6" /> },
-  EUROPEAN: { nameKey: "realms.civilizations.EUROPEAN", icon: <Cloud className="w-6 h-6" /> },
-  EGYPTIAN: { nameKey: "realms.civilizations.EGYPTIAN", icon: <CircleDot className="w-6 h-6" /> },
-  // The fork in the road, the Isles of the Blessed and Tartarus. Without an
-  // entry the whole GREEK group renders headerless — the realms are fetched and
-  // then grouped by a config that does not know the key.
-  GREEK: { nameKey: "realms.civilizations.GREEK", icon: <Columns className="w-6 h-6" /> },
+/**
+ * 界域(第三类 B · /realms):左边是这个文明的行程拓扑,右边是同一批数据的树表
+ * (在押 / 容量 / 永恒)。界域就是行程拓扑的「底图」—— 详情页的行程条 = 这张图 +
+ * 一个灵魂的 path,所以两处用的是同一个 `<RouteTopology>`、同一套图例,切换文明只换
+ * 形状、不换颜色(文明靠 ■●▲◆ 与名字区分,规范 v1 §1.8)。
+ *
+ * **只读。** 设计稿说树表「可直接编辑」,而 `RealmViewSet` 是 `ReadOnlyModelViewSet`
+ * —— 没有一条写入路由。按任务约定「只经由已有的界域接口编辑」,所以这一页没有编辑
+ * 控件,并在表下写明原因;要编辑得先有后端路由,不是前端能补的。
+ *
+ * 在押来自 `GET /realms/occupancy/`(未离开的行程站计数,按租户划界)。容量 null
+ * 是「未记录」,不是无限;在押 ≥ 容量用警示色,并另写「已满」,不单靠颜色。
+ */
+
+/** The switch's four entries. Keyed by civilization so a fifth one missing here is caught
+ *  (src/__tests__/civilizationMapCoverage.test.ts); the mark comes from civilizationIdentity. */
+const CIVILIZATION_CONFIG: Record<string, { nameKey: string }> = {
+  CHINESE: { nameKey: "realms.civilizations.CHINESE" },
+  EUROPEAN: { nameKey: "realms.civilizations.EUROPEAN" },
+  EGYPTIAN: { nameKey: "realms.civilizations.EGYPTIAN" },
+  GREEK: { nameKey: "realms.civilizations.GREEK" },
 };
 
 /**
  * The realm-type badge, drawn from the VERDICT palette — the domain layer —
- * rather than the system-feedback one it used to borrow.
+ * rather than the system-feedback one it used to borrow. Shown in the tree
+ * table's 类型 column for a realm that has no 殿 / 门 / 层 / 道 `kind`.
  *
- * HELL/PURGATORY/BLISS were on --color-status-error/-info/-success, which
- * app/globals.css disallows in as many words on the block that declares them:
- * "System-layer feedback: transient chrome only (toast, inline validation,
- * banner), always beside an icon — never a row, a badge or a chart." A badge is
- * the named counter-example, and the rule lived only in that comment.
+ * NEUTRAL is the authored dim neutral: `RealmType.NEUTRAL` is a waypoint nobody
+ * is sentenced to, so no verdict token can mirror it. Its LABEL is ink-muted
+ * rather than ink-tertiary because ink-tertiary on a 10% tint of itself is
+ * under the 4.5:1 floor (2.56:1 light).
  *
- * NOTHING ON SCREEN MOVES FOR THOSE THREE. globals.css aliases the two
- * palettes to identical triples on purpose ("PASSED/FAILED alias
- * karma-merit/feedback-error deliberately — two reds 30° apart would read as
- * one colour applied inconsistently"), so this is a rename, in both themes.
- * That is the point: the value was never the problem, the layer was, and a
- * badge sitting on a feedback token is a badge that moves the day the feedback
- * palette is re-tuned for toasts. These are the same three tokens
- * `REALM_COLORS` in lib/chart-colors.ts mirrors, so the chart legend and the
- * badge now name one palette instead of two that happen to agree.
- *
- * NEUTRAL DOES CHANGE, from the accent amber to the authored dim neutral,
- * following the same ruling `REALM_COLORS.NEUTRAL` records: `RealmType.NEUTRAL`
- * is a waypoint nobody is sentenced to, so no verdict token can mirror it, and
- * --color-status-lost is a lifecycle token meaning the soul went missing.
- * Amber was the accent — the colour of every button, link and heading — which
- * said "act on this" about the ferry crossing.
- *
- * The ruling pins --color-ink-tertiary, and that is what fills and outlines
- * this badge. The LABEL is --color-ink-muted instead, because the ruling was
- * made about a chart fill and a chart fill has no text sitting on it:
- * ink-tertiary over a 10% tint of itself measures 2.56:1 in light mode
- * (4.51:1 dark) — below the 4.5:1 AA floor. ink-muted on that same tint is
- * 6.41:1 light / 10.51:1 dark. The amber it replaces was itself under the
- * floor at 4.47:1 on the card and 4.27:1 on its hover state.
- *
- * src/__tests__/statusTokenLayering.test.ts holds this map to the rule, and to
- * every other domain-enum-keyed badge map in the app. It reads these four
- * entries AS TEXT, one line per key, and parses the `x-[oklch(var(--t)/a)]`
- * utilities out of each — so the four lines below stay one-line literals and
- * the alphas stay 0.1 / 0.3 / 1.
+ * src/__tests__/statusTokenLayering.test.ts holds this map to the rule. It reads
+ * these four entries AS TEXT, one line per key, and parses the
+ * `x-[oklch(var(--t)/a)]` utilities out of each — so the four lines below stay
+ * one-line literals and the alphas stay 0.1 / 0.3 / 1.
  */
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
   HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-failed)/0.1)] border-[oklch(var(--color-verdict-failed)/0.3)] text-[oklch(var(--color-verdict-failed))]' },
@@ -74,28 +64,61 @@ const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: stri
   NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
 };
 
+/** One row of the tree table: a realm and how deep it sits under `parent_realm`. */
+interface TreeRow {
+  realm: Realm;
+  depth: number;
+}
+
+/**
+ * Depth-first over `parent_realm`, in the API's order at each level. A parent
+ * outside this list (another civilization, or deleted) makes the realm a root —
+ * and a cycle cannot hang the page: a realm is emitted at most once.
+ */
+function treeRows(realms: Realm[]): TreeRow[] {
+  const ids = new Set(realms.map((r) => r.id));
+  const children = new Map<string, Realm[]>();
+  const roots: Realm[] = [];
+  for (const r of realms) {
+    if (r.parent_realm && ids.has(r.parent_realm) && r.parent_realm !== r.id) {
+      children.set(r.parent_realm, [...(children.get(r.parent_realm) ?? []), r]);
+    } else roots.push(r);
+  }
+  const out: TreeRow[] = [];
+  const seen = new Set<string>();
+  const walk = (r: Realm, depth: number) => {
+    if (seen.has(r.id)) return;
+    seen.add(r.id);
+    out.push({ realm: r, depth });
+    for (const c of children.get(r.id) ?? []) walk(c, depth + 1);
+  };
+  roots.forEach((r) => walk(r, 0));
+  // Anything only reachable through a cycle is still listed, flat.
+  realms.forEach((r) => walk(r, 0));
+  return out;
+}
+
 function RealmsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [picked, setPicked] = useState<string | null>(null);
 
-  const { data: realms = [], isLoading, isError, refetch } = useQuery({
+  const realmsQuery = useQuery({
     queryKey: ["realms", user?.tenant?.code, user?.role],
-    queryFn: () => realmsApi.list().then(r => r.data.results || []),
+    queryFn: () => realmsApi.list().then((r) => r.data.results || []),
+    enabled: !!user,
+  });
+  const occupancyQuery = useQuery({
+    queryKey: ["realms", "occupancy", user?.tenant?.code],
+    queryFn: () => realmsApi.occupancy().then((r) => r.data),
     enabled: !!user,
   });
 
-  // Group by civilization
-  const grouped: Record<string, Realm[]> = realms.reduce<Record<string, Realm[]>>((acc, realm) => {
-    const civ = realm.civilization || "UNKNOWN";
-    if (!acc[civ]) acc[civ] = [];
-    acc[civ].push(realm);
-    return acc;
-  }, {});
-
-  const toggleCollapse = (civ: string) => {
-    setCollapsed(prev => ({ ...prev, [civ]: !prev[civ] }));
-  };
+  const realms = realmsQuery.data ?? [];
+  const civilization =
+    picked ?? CIVILIZATION_OPTIONS.find((c) => realms.some((r) => r.civilization === c)) ?? CIVILIZATION_OPTIONS[0];
+  const own = realms.filter((r) => r.civilization === civilization);
+  const occupancy = new Map((occupancyQuery.data ?? []).map((o) => [o.realm_id, o.count]));
 
   return (
     <PageShell
@@ -107,103 +130,157 @@ function RealmsPageContent() {
         </>
       }
       subtitle={t("realms.subtitle")}
-      isLoading={isLoading}
-      skeleton={
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <CardSkeleton key={i} />
+      filters={
+        <div role="group" aria-label={t("souls.filter_civilization")} className="flex flex-wrap border border-[oklch(var(--color-block))] text-xs">
+          {Object.entries(CIVILIZATION_CONFIG).map(([civ, config]) => (
+            <button
+              key={civ}
+              type="button"
+              aria-pressed={civ === civilization}
+              onClick={() => setPicked(civ)}
+              className={`px-3 h-8 ${
+                civ === civilization
+                  ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
+                  : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+              }`}
+            >
+              <span aria-hidden="true">{CIVILIZATION_MARK[civ]} </span>
+              {t(config.nameKey)}
+            </button>
           ))}
         </div>
       }
     >
-      {/* This page destructured `error` from useQuery and never read it, so a
-          failed request rendered the heading and an empty grid -- the same
-          thing "no realms exist" renders. Measured 2026-08-29: identical page
-          text between a 500 and an empty list. */}
-      {isError && <QueryError onRetry={() => refetch()} />}
-      {/* The third state — see the note on the error branch above. That round
-          measured a 500 and an empty list rendering identical text and fixed
-          the 500; an empty list still rendered the heading and an empty grid. */}
-      {!isLoading && !isError && realms.length === 0 && (
+      {realmsQuery.isError ? (
+        <QueryError onRetry={() => realmsQuery.refetch()} />
+      ) : realmsQuery.isLoading ? (
+        <RealmsSkeleton />
+      ) : realms.length === 0 ? (
         <EmptyState title={t("realms.title")} reason={t("realms.no_realms")} />
+      ) : own.length === 0 ? (
+        <EmptyState title={t(`realms.civilizations.${civilization}`)} reason={t("realms.table.empty_civ")} />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-x-10 gap-y-6 pt-2">
+          <section data-testid="realm-topology">
+            <RouteTopology
+              mode="map"
+              title={t("realms.topology.map_title")}
+              topology={buildTopology(civilization, realms)}
+              occupancy={occupancyQuery.isError ? undefined : occupancy}
+            />
+          </section>
+          <section className="min-w-0">
+            <RealmTreeTable rows={treeRows(own)} occupancy={occupancy} occupancyFailed={occupancyQuery.isError} />
+            <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-3">{t("realms.table.read_only")}</p>
+          </section>
+        </div>
       )}
-      <div className="space-y-6">
-        {Object.entries(grouped).map(([civ, civRealms]) => {
-          const config = CIVILIZATION_CONFIG[civ] || { nameKey: `realms.civilizations.${civ}`, icon: <Castle className="w-6 h-6" /> };
-          const isCollapsed = collapsed[civ];
-
-          return (
-            <div key={civ}>
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                onClick={() => toggleCollapse(civ)}
-                className="w-full justify-start mb-4 text-left"
-              >
-                <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">{config.icon}</span>
-                <span className="flex-1 min-w-0">
-                  <span title={t(config.nameKey)} className="block text-md text-[oklch(var(--color-ink))] truncate">{t(config.nameKey)}</span>
-                  <span className="block text-sm text-[oklch(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</span>
-                </span>
-                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-              </Button>
-
-              {!isCollapsed && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {civRealms.map((realm) => {
-                    const typeConfig = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
-                    return (
-                      <div key={realm.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent)/0.5)] hover:bg-[oklch(var(--color-surface-2))] transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">{typeConfig.icon}</div>
-                          <div className="flex-1 min-w-0">
-                            <h3 title={t(`realms.names.${realm.realm_code}`) || realm.name_en} className="text-sm font-semibold text-[oklch(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
-                            <p title={t(`realms.codes.${realm.realm_code}`) || realm.name_local} className="text-sm text-[oklch(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <Badge glyph={typeConfig.icon} className={typeConfig.className}>
-                            <DomainEnum namespace="realms.types" value={realm.realm_type} />
-                          </Badge>
-                        </div>
-                        {/* DECIDED, not pending: `Realm.description` stays off this
-                            card, and the API is right to keep it off the list row.
-                            The TODO that used to sit here was half accurate — the
-                            field is on the model and in RealmSerializer, but
-                            RealmListSerializer (what `action == "list"` returns, and
-                            this page fetches the list) does not carry it — and wrong
-                            about the remedy. What it holds is maintainer prose in
-                            English with citations in it, and in one row a source
-                            review addressed to the next editor of the seed table;
-                            this page defaults to zh-Hans. Realm text that is product
-                            copy is already keyed on realm_code in the three bundles,
-                            which is where a blurb would go if one is ever wanted.
-                            Pinned by tests/test_realm_actor_api.py::
-                            TestRealmDescriptionStaysOffTheCard. */}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
     </PageShell>
   );
 }
 
+function RealmTreeTable({
+  rows,
+  occupancy,
+  occupancyFailed,
+}: {
+  rows: TreeRow[];
+  occupancy: ReadonlyMap<string, number>;
+  occupancyFailed: boolean;
+}) {
+  const { t } = useI18n();
+  const th = "font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))] pb-1 text-left";
+  return (
+    <table className="w-full border-collapse" data-testid="realm-tree">
+      <caption className="sr-only">{t("realms.title")}</caption>
+      <thead>
+        <tr className="border-b border-[oklch(var(--color-block))]">
+          <th scope="col" className={th}>{t("realms.table.col_name")}</th>
+          <th scope="col" className={`${th} max-md:hidden`}>{t("realms.table.col_code")}</th>
+          <th scope="col" className={th}>{t("realms.table.col_kind")}</th>
+          <th scope="col" className={`${th} !text-right`}>{t("realms.table.col_held")}</th>
+          <th scope="col" className={`${th} !text-right`}>{t("realms.table.col_eternal")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ realm, depth }) => {
+          const held = occupancy.get(realm.id) ?? 0;
+          const cap = realm.capacity ?? null;
+          const full = cap !== null && held >= cap;
+          const type = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
+          const name = realmStationLabel(t, { id: realm.id, code: realm.realm_code, realm, state: "pending" });
+          return (
+            <tr key={realm.id} data-realm-row={realm.realm_code} data-depth={depth} data-full={full ? "true" : undefined} className="border-b border-[oklch(var(--color-rule))] h-8">
+              <td
+                className={`text-sm pr-3 ${depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}`}
+                style={{ paddingLeft: depth * 14 }}
+              >
+                {depth > 0 && <span aria-hidden="true">└ </span>}
+                {name ?? realm.realm_code}
+              </td>
+              <td className="font-mono text-xs pr-3 max-md:hidden">{realm.realm_code}</td>
+              <td className="text-sm pr-3 text-[oklch(var(--color-ink-muted))]">
+                {realm.kind ? (
+                  t(`realms.kind.${realm.kind}`)
+                ) : (
+                  <Badge glyph={type.icon} className={type.className}>
+                    <DomainEnum namespace="realms.types" value={realm.realm_type} />
+                  </Badge>
+                )}
+              </td>
+              <td
+                data-testid="realm-held"
+                className={`font-mono text-xs text-right whitespace-nowrap ${
+                  full
+                    ? "text-[oklch(var(--color-warning))] font-semibold"
+                    : held
+                      ? "text-[oklch(var(--color-ink))]"
+                      : "text-[oklch(var(--color-ink-subtle))]"
+                }`}
+              >
+                {occupancyFailed ? (
+                  <MissingValue kind="unrecorded" reason={t("realms.table.occupancy_failed")} />
+                ) : (
+                  <>
+                    {held}
+                    {cap !== null ? ` / ${cap}` : <span className="sr-only"> · {t("realms.table.capacity_unrecorded")}</span>}
+                    {full && <span className="ml-1 font-sans">{t("realms.table.full")}</span>}
+                  </>
+                )}
+              </td>
+              <td className="text-right text-xs text-[oklch(var(--color-ink-subtle))]">
+                {realm.is_eternal ? t("realms.table.eternal_yes") : t("realms.table.eternal_no")}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/** 拓扑与树表同时出骨架;文明切换先渲染(它在 filters 槽里,不等数据)。 */
+function RealmsSkeleton() {
+  return (
+    <div aria-busy="true" data-testid="realms-skeleton" className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-10 pt-2">
+      <div className="space-y-3">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <Skeleton key={i} className="h-5 w-3/4" />
+        ))}
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <Skeleton key={i} className="h-7 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* 页级门。**后端才是正解,这里是纵深** —— `apps/realms/views.py` 已经挂了
-   `CodenamePermission`,这道门挡不住任何直接打接口的人。它挡的是另一件事:
-   在补上后端之前,VIEWER 直接输 URL 就能打开一个功能完整的页面并拿到数据,
-   而侧边栏的菜单过滤**只藏链接、不挡路由**。三个页面 grep
-   `RequirePermission|hasPermission` 都是零命中 —— 前端没有掩盖后端的洞,
-   洞是直接可点的。
-
-   `fallback={<PermissionDenied />}` 而不是渲染空白:一个没有权限的人应当看到
-   「你没有这个权限」,而不是一个看起来加载失败的页面。 */
+   `CodenamePermission`,这道门挡不住任何直接打接口的人;它挡的是侧边栏的菜单过滤
+   **只藏链接、不挡路由**。`fallback={<PermissionDenied />}` 而不是空白:没有权限的人
+   应当看到「你没有这个权限」,而不是一个看起来加载失败的页面。 */
 export default function RealmsPage() {
   return (
     <RequirePermission permissions="realms.read" fallback={<PermissionDenied />}>

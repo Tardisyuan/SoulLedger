@@ -847,7 +847,31 @@
     "decayed_merit": "Decayed merit",
     "decayed_demerit": "Decayed demerit",
     "raw_balance_sr": "Raw balance {{n}}",
-    "advisory_disclaimer": "For the bench's reference only · karma is not part of the verdict calculation; the judge decides"
+    "advisory_disclaimer": "For the bench's reference only · karma is not part of the verdict calculation; the judge decides",
+    "journal": {
+      "title": "Merit & Demerit Journal",
+      "subtitle": "Opening + received − disbursed = closing · recorded weight, before decay",
+      "month": "Month",
+      "month_prev": "Previous month",
+      "month_next": "Next month",
+      "pillar_opening": "Opening",
+      "pillar_received": "Received · merit",
+      "pillar_disbursed": "Disbursed · demerit",
+      "pillar_closing": "Closing",
+      "formula": "Opening + received − disbursed = closing · {{souls}} accounts · {{records}} entries this period",
+      "col_day": "Day",
+      "col_soul": "Soul",
+      "col_entry": "Entry",
+      "col_basis": "Basis",
+      "subtotal": "Subtotal",
+      "page_total": "Page total · {{n}} entries",
+      "categories": "By category",
+      "category": "Category",
+      "empty_title": "No entries this period",
+      "empty_reason": "Nothing was recorded in {{month}}; opening = closing = {{opening}}.",
+      "load_failed": "The journal failed to load",
+      "row_hint": "Click a row for that soul's merit & demerit"
+    }
   },
   "judgment": {
     "title": "Judgment",
@@ -1004,7 +1028,25 @@
       "listed_count": "{{n}} listed",
       "empty_reason": "No article in this corpus has been transcribed.",
       "citations_absent": "This response does not carry a citation count.",
-      "sigil_absent": "This article has no transcribed number."
+      "sigil_absent": "This article has no transcribed number.",
+      "search_jump": "Search, or type a code to jump to it",
+      "toc": "Contents",
+      "original": "Original",
+      "translation": "Translation",
+      "original_absent": "Only a translation was transcribed; the source-language text is not stored",
+      "notes": "Editor's notes",
+      "source": "Source",
+      "cite": "Citation",
+      "copy_cite": "Copy citation",
+      "copied": "Copied",
+      "cited_by": "Cited by",
+      "cited_by_count": "{{n}} judgments",
+      "cited_by_gap": "The API cannot look judgments up by article, so only the count is shown, not the list.",
+      "versions": "Versions",
+      "versions_gap": "Articles carry no version history: corrections are made in place in the seed data.",
+      "select_prompt": "Choose an article from the contents.",
+      "no_match": "No article matches “{{q}}”",
+      "clear_search": "Clear search"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",
@@ -1310,7 +1352,52 @@
       "EG_AARU": "Field of Reeds (Aaru)",
       "EG_ANNIHILATION": "Second Death (annihilation by Ammit)"
     },
-    "no_realms": "No realms are recorded yet."
+    "no_realms": "No realms are recorded yet.",
+    "topology": {
+      "map_title": "Topology",
+      "legend": "━ travelled ┅ ahead ▪ now □ station",
+      "schematic": "Schematic",
+      "shape_line": "Line",
+      "shape_funnel": "Funnel",
+      "shape_river": "River of twelve hours",
+      "shape_fork": "Three roads",
+      "state_travelled": "travelled",
+      "state_current": "now",
+      "state_pending": "ahead",
+      "region": {
+        "INFERNO": "Inferno",
+        "PURGATORIO": "Purgatorio",
+        "PARADISO": "Paradiso"
+      },
+      "fork": {
+        "LEFT": "Left · Tartarus",
+        "MIDDLE": "Middle",
+        "RIGHT": "Right · the Isles of the Blessed"
+      },
+      "off_shape": "{{n}} realms have no place on this shape — see the table",
+      "no_stops": "No stops recorded yet",
+      "load_failed": "The route failed to load"
+    },
+    "table": {
+      "col_name": "Name",
+      "col_code": "Code",
+      "col_kind": "Type",
+      "col_held": "Held / capacity",
+      "col_eternal": "Eternal",
+      "eternal_yes": "Yes",
+      "eternal_no": "No",
+      "full": "full",
+      "capacity_unrecorded": "Capacity not recorded",
+      "read_only": "Read-only · the realm API has no write route, so nothing here is editable",
+      "empty_civ": "No realms are configured for this civilization",
+      "occupancy_failed": "Occupancy failed to load"
+    },
+    "kind": {
+      "HALL": "Court",
+      "GATE": "Gate",
+      "LAYER": "Layer",
+      "PATH": "Path"
+    }
   },
   "organization": {
     "title": "Organizations",

@@ -5,8 +5,9 @@ import csv
 
 from django.db.models import Count, F, Q
 from django.http import HttpResponse
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,10 +17,13 @@ from apps.core.csv_safe import csv_safe
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.disposition.models import Disposition
+from apps.ledger.journal import JournalParamError, build_journal
 from apps.ledger.serializers import (
     LedgerEffectiveSerializer,
     LedgerErrorSerializer,
     LedgerInheritanceSerializer,
+    LedgerJournalErrorSerializer,
+    LedgerJournalSerializer,
     LedgerOverviewStatsSerializer,
     LedgerRecalculateResultSerializer,
     LedgerSummarySerializer,
@@ -201,6 +205,53 @@ class LedgerInheritanceView(APIView):
         except RebirthNotApplicable as exc:
             return Response(exc.detail, status=exc.status_code)
         return Response(result)
+
+
+class LedgerJournalView(APIView):
+    """
+    GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=]
+
+    功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
+    只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
+    不给 `month` 时取当前月。
+    """
+    permission_classes = [TenantPermission, CodenamePermission]
+    #: See LedgerBalanceView.serializer_class.
+    serializer_class = LedgerJournalSerializer
+
+    def get_required_permissions(self):
+        return ['ledger.read']
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("month", OpenApiTypes.STR, description="YYYY-MM; defaults to the current month"),
+            OpenApiParameter("page", OpenApiTypes.INT, description="1-based page of the month's rows (20 per page)"),
+            OpenApiParameter("civilization", OpenApiTypes.STR),
+            OpenApiParameter("category", OpenApiTypes.STR),
+        ],
+        responses={200: LedgerJournalSerializer, 400: LedgerJournalErrorSerializer},
+    )
+    def get(self, request):
+        params = request.query_params
+        month = params.get("month") or timezone.localtime().strftime("%Y-%m")
+        try:
+            page = int(params.get("page") or 1)
+        except ValueError:
+            page = 0
+        try:
+            body = build_journal(
+                request,
+                month=month,
+                page=page,
+                civilization=params.get("civilization", ""),
+                category=params.get("category", ""),
+            )
+        except JournalParamError as exc:
+            return Response(
+                {"error": "INVALID_PARAMETER", "field": exc.field, "message": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(LedgerJournalSerializer(body).data)
 
 
 class LedgerOverviewStatsView(APIView):

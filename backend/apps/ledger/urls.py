@@ -5,11 +5,13 @@ from apps.ledger.views import (
     LedgerEffectiveView,
     LedgerExportStatsView,
     LedgerInheritanceView,
+    LedgerJournalView,
     LedgerOverviewStatsView,
     LedgerRecalculateView,
 )
 
 urlpatterns = [
+    path("journal/", LedgerJournalView.as_view(), name="ledger-journal"),
     path("stats/overview/", LedgerOverviewStatsView.as_view(), name="ledger-stats-overview"),
     path("stats/export/", LedgerExportStatsView.as_view(), name="ledger-stats-export"),
     path("balance/<uuid:soul_id>/", LedgerBalanceView.as_view(), name="ledger-balance"),
