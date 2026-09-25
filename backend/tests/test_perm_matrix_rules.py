@@ -155,6 +155,19 @@ def test_an_import_does_not_grant_them_to_moderator(world):
     assert _held("MODERATOR", "soul.update") and not _held("MODERATOR", "workflow.approve")
 
 
+def test_an_overwrite_import_keeps_every_admin_row(world):
+    admin = Role.objects.get(name="ADMIN")
+    for c in CODENAMES:
+        RolePermission.objects.get_or_create(role=admin, permission=world["perms"][c])
+    RolePermission.objects.get_or_create(role=Role.objects.get(name="JUDGE"), permission=world["perms"]["soul.update"])
+    before = set(RolePermission.objects.filter(role=admin).values_list("permission_id", flat=True))
+    assert before
+    import_permissions({"role_permissions": [{"role": "JUDGE", "permission": "soul.read"}]}, overwrite=True)
+    assert set(RolePermission.objects.filter(role=admin).values_list("permission_id", flat=True)) == before
+    # Absence on the other side: overwrite still clears the other roles.
+    assert _held("JUDGE", "soul.read") and not _held("JUDGE", "soul.update")
+
+
 def test_check_permission_denies_moderator_even_with_the_grant_in_the_table(world):
     moderator = Role.objects.get(name="MODERATOR")
     judge = Role.objects.get(name="JUDGE")

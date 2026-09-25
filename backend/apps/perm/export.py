@@ -7,7 +7,7 @@ import json
 
 from django.http import HttpResponse
 
-from apps.perm.matrix import admin_only_violations, role_forbidden_violations
+from apps.perm.matrix import ADMIN_ROLE_NAME, admin_only_violations, role_forbidden_violations
 from apps.perm.models import FieldPermission, Permission, Role, RolePermission, RowLevelDataScope
 
 
@@ -80,7 +80,8 @@ def import_permissions(data, overwrite=False):
 
     Args:
         data: dict from export_permissions()
-        overwrite: if True, delete existing data before import
+        overwrite: if True, delete existing data before import (ADMIN's role
+            permissions are kept)
 
     Returns:
         dict with import statistics
@@ -90,7 +91,9 @@ def import_permissions(data, overwrite=False):
     if overwrite:
         FieldPermission.objects.all().delete()
         RowLevelDataScope.objects.all().delete()
-        RolePermission.objects.all().delete()
+        # ADMIN always has everything (`admin_always_all`, 2026-09-25): an
+        # overwrite import whose file lacks an ADMIN row must not strip it.
+        RolePermission.objects.exclude(role__name=ADMIN_ROLE_NAME).delete()
 
     # Import permissions. `revive_or_create`, not `get_or_create`: a binned
     # row with the same natural key comes back rather than gaining a twin.
