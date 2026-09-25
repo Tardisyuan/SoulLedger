@@ -187,6 +187,7 @@ const COLLECTED_FILES = [
   "readingQuantityContract.test.tsx",
   "reducedMotionContract.test.ts",
   "refreshCookieLifetime.test.ts",
+  "roleForbiddenCodenamesMatchBackend.test.ts",
   "routeTopology.test.ts",
   "searchSelectIsServerFiltered.test.tsx",
   "setup.test.ts",
