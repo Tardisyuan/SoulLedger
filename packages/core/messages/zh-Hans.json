@@ -1138,7 +1138,12 @@
       "note": "适用理由",
       "source": "出处",
       "derived": "派生自",
-      "caveat": "出处存疑："
+      "caveat": "出处存疑：",
+      "snapshot_concluded": "结案时文本",
+      "snapshot_backfilled": "补录",
+      "revised": "现行文本已修订 · 查看",
+      "compare_then": "结案时",
+      "compare_now": "现行"
     },
     "statute_corpus": {
       "HELL_LAW": "冥律",

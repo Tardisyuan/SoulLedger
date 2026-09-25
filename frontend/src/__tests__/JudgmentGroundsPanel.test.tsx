@@ -15,7 +15,7 @@
  *      one-to-one and docs/11's 十恶 table lists six. Dropping `source_notes`
  *      would present a documented uncertainty as an assertion.
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { JudgmentGroundsPanel } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { MISSING_GLYPH } from "@/src/lib/domainDisplay";
@@ -237,5 +237,64 @@ describe("JudgmentGroundsPanel", () => {
       citation({ id: "b", statute: statute({ id: "st-2", code: "CN-HL-O04" }) }),
     ]);
     expect(screen.getByText(/2/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * 结案时文本(apps/judgment/snapshot.py)。已结案子读快照,不读今天的律条:
+ * 律条改了,已结案子显示的仍是裁决依据的那句话,且要说出「现行文本已修订」。
+ * 未结案 `snapshot` 为 null,读现行文本。
+ */
+describe("the snapshot a concluded judgment carries", () => {
+  const revised = statute({ display_title: "杀生(修订)", display_text: "修订后的条文。", source: "docs/11 §4.2" });
+
+  it("shows the snapshot, not today's article, and tags it 结案时文本", () => {
+    renderPanel([
+      citation({
+        statute: revised,
+        snapshot: {
+          kind: "CONCLUDED",
+          taken_at: "2026-01-01T00:00:00Z",
+          display_title: "杀生",
+          display_text: "故意杀害人/动物。",
+          source: "docs/11 §4.1",
+          current_differs: true,
+        },
+      }),
+    ]);
+    expect(screen.getByText("故意杀害人/动物。")).toBeInTheDocument();
+    expect(screen.getByText("docs/11 §4.1")).toBeInTheDocument();
+    // Absence: the revised text is not on the page until the reader asks for it.
+    expect(screen.queryByText("修订后的条文。")).toBeNull();
+    expect(screen.queryByText("杀生(修订)")).toBeNull();
+    expect(screen.getByTestId("ground-snapshot-kind").textContent).toBe("结案时文本");
+
+    fireEvent.click(screen.getByRole("button", { name: "现行文本已修订 · 查看" }));
+    const compare = screen.getByTestId("ground-compare");
+    expect(compare.textContent).toContain("故意杀害人/动物。");
+    expect(compare.textContent).toContain("修订后的条文。");
+  });
+
+  it("tags a migration-backfilled snapshot 补录 and offers no compare when nothing changed", () => {
+    renderPanel([
+      citation({
+        snapshot: {
+          kind: "BACKFILLED",
+          taken_at: "2026-01-01T00:00:00Z",
+          display_title: "杀生",
+          display_text: "故意杀害人/动物。",
+          source: "docs/11 §4.1",
+          current_differs: false,
+        },
+      }),
+    ]);
+    expect(screen.getByTestId("ground-snapshot-kind").textContent).toBe("补录");
+    expect(screen.queryByRole("button", { name: /现行文本已修订/ })).toBeNull();
+  });
+
+  it("an open case (no snapshot) reads the live article and carries no tag", () => {
+    renderPanel([citation({ statute: revised, snapshot: null })]);
+    expect(screen.getByText("修订后的条文。")).toBeInTheDocument();
+    expect(screen.queryByTestId("ground-snapshot-kind")).toBeNull();
   });
 });

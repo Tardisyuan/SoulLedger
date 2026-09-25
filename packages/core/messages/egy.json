@@ -1138,7 +1138,12 @@
       "note": "Iri Seth",
       "source": "Medu Ahet",
       "derived": "Ini Em",
-      "caveat": "Medu Ahet:"
+      "caveat": "Medu Ahet:",
+      "snapshot_concluded": "Medu Em Khetem",
+      "snapshot_backfilled": "Sesh Wehem",
+      "revised": "Medu Khemen Seth · Maa",
+      "compare_then": "Em Khetem",
+      "compare_now": "Medu Hru Pen"
     },
     "statute_corpus": {
       "HELL_LAW": "Hep Duat",

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -172,6 +172,13 @@ export function JudgmentGroundsPanel({ citations }: { citations: JudgmentCitatio
 function GroundRow({ citation }: { citation: JudgmentCitation }) {
   const { t } = useI18n();
   const statute = citation.statute;
+  const [comparing, setComparing] = useState(false);
+  /* 已结案:读结案时的快照(或迁移补录的),不读今天的律条 —— 裁决依据的是当时那句话。
+     未结案 `snapshot` 为 null,照读现行文本。 */
+  const snap = citation.snapshot ?? null;
+  const title = snap ? snap.display_title : statute.display_title;
+  const text = snap ? snap.display_text : statute.display_text;
+  const source = snap ? snap.source : statute.source;
 
   /**
    * `formatSigil` THROWS for a civilization it has no numbering system for,
@@ -218,13 +225,18 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
       {/* 条文正文 */}
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-medium text-[oklch(var(--color-ink))]">{statute.display_title}</h3>
+          <h3 className="text-sm font-medium text-[oklch(var(--color-ink))]">{title}</h3>
           <Badge tone={POLARITY_TONE[statute.polarity] ?? "neutral"}>
             <DomainEnum namespace="judgment.statute_polarity" value={statute.polarity} />
           </Badge>
           <Badge tone="neutral">
             <DomainEnum namespace="judgment.statute_corpus" value={statute.corpus} />
           </Badge>
+          {snap && (
+            <Badge tone="neutral" data-testid="ground-snapshot-kind" title={snap.taken_at}>
+              {snap.kind === "BACKFILLED" ? t("judgment.grounds.snapshot_backfilled") : t("judgment.grounds.snapshot_concluded")}
+            </Badge>
+          )}
         </div>
 
         {/* SERIF = WORDS SOMEONE SAID. An article is transcribed testimony from
@@ -234,8 +246,37 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
             in. The rule is stated once, on the page, and this is its second
             landing site. */}
         <p className="font-serif text-quote text-[oklch(var(--color-ink))] mt-2">
-          <DomainText value={statute.display_text} />
+          <DomainText value={text} />
         </p>
+
+        {snap?.current_differs && (
+          <>
+            <button
+              type="button"
+              aria-expanded={comparing}
+              onClick={() => setComparing((v) => !v)}
+              className="mt-2 text-xs underline text-[oklch(var(--color-accent-ink))]"
+            >
+              {t("judgment.grounds.revised")}
+            </button>
+            {comparing && (
+              <div data-testid="ground-compare" className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2 border-t border-[oklch(var(--color-rule))] pt-2">
+                <div>
+                  <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.grounds.compare_then")}</p>
+                  <p className="font-serif text-sm text-[oklch(var(--color-ink))]">
+                    <DomainText value={snap.display_text} />
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.grounds.compare_now")}</p>
+                  <p className="font-serif text-sm text-[oklch(var(--color-ink))]">
+                    <DomainText value={statute.display_text} />
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {citation.note && (
           <p className="text-sm text-[oklch(var(--color-ink-muted))] mt-2">
@@ -255,7 +296,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
           <span className="text-2xs uppercase text-[oklch(var(--color-ink-tertiary))] block">
             {statute.is_derived ? t("judgment.grounds.derived") : t("judgment.grounds.source")}
           </span>
-          {statute.source}
+          {source}
         </p>
         {/* The caveat is prose, not a Latin title, so it separates from the
             source by ink and not by `italic` — this page reserves italic for

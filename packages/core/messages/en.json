@@ -1138,7 +1138,12 @@
       "note": "Applied",
       "source": "Source",
       "derived": "Derived from",
-      "caveat": "Source note:"
+      "caveat": "Source note:",
+      "snapshot_concluded": "Text at conclusion",
+      "snapshot_backfilled": "Backfilled",
+      "revised": "Current text revised · View",
+      "compare_then": "At conclusion",
+      "compare_now": "Current"
     },
     "statute_corpus": {
       "HELL_LAW": "Hell Law",

@@ -282,12 +282,31 @@ export interface Statute {
   citation_count?: number | null;
 }
 
+/**
+ * What a cited article said when the verdict was given
+ * (`apps/judgment/snapshot.py`). `CONCLUDED` was taken in the conclusion's own
+ * transaction; `BACKFILLED` was written by migration judgment/0029 for cases
+ * concluded before snapshots existed — that is the migration day's text, not
+ * the conclusion day's, and the desk says so.
+ */
+export interface CitationSnapshot {
+  kind: "CONCLUDED" | "BACKFILLED";
+  taken_at: string;
+  display_title: string;
+  display_text: string;
+  source: string;
+  /** Today's rendering of the article no longer matches the snapshot (hash compare). */
+  current_differs: boolean;
+}
+
 export interface JudgmentCitation {
   id: string;
   statute: Statute;
   /** How this article applies to this case. */
   note: string;
   created_at: string;
+  /** Null on an open case: it reads the live `statute`. Optional: older payloads lack it. */
+  snapshot?: CitationSnapshot | null;
 }
 
 export interface ConcludeJudgmentPayload {
