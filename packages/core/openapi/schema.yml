@@ -4015,6 +4015,11 @@ paths:
         `conclude` accepts as `destination_realm_id` (see
         apps/disposition/destination.py). Not an original judgment (amendment,
         reopen) → no options, since those conclude without a disposition.
+
+        `default_realm_id` is where `conclude` sends the soul with no choice
+        made: the automatic routing on the ledger *without* this case's
+        non-admitted evidence (`DispositionService._route_to_realm`), so the
+        picker's default is the conclusion's.
       parameters:
       - in: query
         name: candidate_verdict
@@ -4152,9 +4157,14 @@ paths:
         `GET /api/v1/judgment/{id}/precedents/?limit=5`
 
         Same tenant and civilization as this judgment, ranked by same court,
-        then closest balance, then shared cited statutes. The ranking and what
-        is excluded are written down in apps/judgment/precedents.py. A bare
-        array, not a page: it is a short ranked list, not a collection to walk.
+        then closest balance **bucketed by 10** (`floor(balance / 10)`, so two
+        precedents 2 and 8 away tie), then shared cited statutes — which is
+        what breaks a tie inside a bucket — then newest conclusion. `balance`
+        is the one frozen at conclusion (`concluded_balance`), or the soul's
+        current balance for a case concluded before that column. The ranking
+        and what is excluded are written down in apps/judgment/precedents.py.
+        A bare array, not a page: it is a short ranked list, not a collection
+        to walk.
       parameters:
       - in: path
         name: id
@@ -4392,6 +4402,10 @@ paths:
         Every one of those is an existing serializer/service called as-is;
         nothing here re-implements a read that already exists elsewhere.
 
+        Order. The caller's own claimed cases (「我认领」) come first, oldest
+        first; then the rest of the queue in FIFO order. `previous/` walks the
+        same order backwards. Deferred cases stay out either way.
+
         Progress. `total` is how many cases are pending in scope right now,
         `remaining` how many of those the caller has not skipped, and
         `position` = total - remaining + 1, i.e. "the Nth of M". These are
@@ -4426,8 +4440,9 @@ paths:
       description: |-
         The pending case just before `?at=<id>` in queue order — 「上一件」.
 
-        Same queue as `next/`: the same tenant/DataScope scoping, FIFO on
-        `created_at` (ties by `id`), deferred cases left out unless
+        Same queue and order as `next/`: the same tenant/DataScope scoping, the
+        caller's claimed cases first, then FIFO on `created_at` (ties by `id`),
+        deferred cases left out unless
         `include_deferred`, `?skip=` honoured. `at` itself is looked up in the
         caller's scope in any state, so 「上一件」 still works from a case that
         has just been concluded. `at` missing, malformed, or not visible to the
