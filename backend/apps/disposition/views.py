@@ -134,6 +134,29 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             qs = qs.filter(is_archived=False)
         return qs
 
+    def perform_create(self, serializer):
+        """A manual disposition with a destination realm moves the soul there (行程拓扑).
+
+        Same verb and same transaction as `DispositionService.create_from_judgment`:
+        `SoulPathService.enter` closes the open station and opens the realm
+        (产品负责人 2026-09-25). Not for a disposition filed under an AMENDMENT or
+        REOPEN judgment: those are heard while the soul serves a sentence plan,
+        and where it stands is the plan's to move. No realm writes nothing.
+        """
+        from django.db import transaction
+
+        from apps.judgment.models import JudgmentKind
+        from apps.realms.path import SoulPathService
+
+        with transaction.atomic():
+            super().perform_create(serializer)
+            disposition = serializer.instance
+            if disposition.destination_realm_id is None:
+                return
+            if disposition.judgment is not None and disposition.judgment.kind != JudgmentKind.ORIGINAL:
+                return
+            SoulPathService.enter(disposition.soul, disposition.destination_realm, tenant_id=disposition.tenant_id)
+
     def section_counts(self) -> dict:
         """Per-section totals under this request's filters, minus `section`.
 

@@ -365,7 +365,7 @@ def conclude_reopened(judgment):
     for node in sorted((n for n in live if n.order > anchor), key=lambda n: -n.order):
         node.order += 1
         _save(node, "order")
-    realm_code = _route_home_realm(soul, judgment.verdict, judgment.judgment_method)
+    realm_code = _route_home_realm(soul, judgment.verdict, judgment.judgment_method, judgment=judgment)
     realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
     home_code = plan.tenant.code
     live.append(SentenceNode.objects.create(

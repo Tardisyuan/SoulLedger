@@ -107,6 +107,12 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     is_final = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     concluded_at = models.DateTimeField(null=True, blank=True)
+    # 结案那一刻采信后的业力净值(功 − 过,剔除本案不采信的记录,与 `get_ledger_summary`
+    # 同一套衰减)。灵魂的余额之后还会变(新记录、衰减、转世),结案时的数不会:审判台对已结案
+    # 案子显示的「采信后余额」与「据 · 先例」的排序都读它。每个文明都记 —— 先例对所有文明
+    # 都按功 − 过排;审判台只在读法是余额(中国)时显示它。null = 这一列出现之前结的案,
+    # 或结案时案子不属于灵魂当前这一世(没有可重算的底)。
+    concluded_balance = models.IntegerField(null=True, blank=True)
 
     tenant = models.ForeignKey(
         'tenants.Tenant',
