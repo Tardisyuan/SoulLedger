@@ -3285,7 +3285,8 @@
       "media_n": "{{n}} images",
       "media_label": "Images",
       "media_caption": "Image {{i}} · {{w}}×{{h}}",
-      "media_load_failed": "Could not load the image"
+      "media_load_failed": "Could not load the image",
+      "held_for_words": "Held for review by the word “{{word}}” and others ({{n}} in all)"
     },
     "words": {
       "add_row": "Add a word",

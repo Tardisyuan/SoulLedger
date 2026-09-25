@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
   ContentKind,
   ModeratedComment,
   ModeratedPost,
   ModerationReport,
+  SensitiveWord,
 } from "@soulledger/core/api/social-moderation";
 import {
   useModeratedContent,
@@ -13,6 +14,7 @@ import {
   useModerateContent,
   useModerationReports,
   useResolveReport,
+  useSensitiveWords,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -55,6 +57,48 @@ const SENSITIVE_WORD_PREFIX = "sensitive_word:";
 function heldForWord(row: PendingRow): string | null {
   const reason = row.moderation_reason ?? "";
   return reason.startsWith(SENSITIVE_WORD_PREFIX) ? reason.slice(SENSITIVE_WORD_PREFIX.length) : null;
+}
+
+/**
+ * Every listed word the text contains, the one that held it first. Same match as
+ * the backend's screening (lower-cased substring, `moderation.py::hits_sensitive_word`).
+ *
+ * ponytail: reads the first page of the word list only (`useSensitiveWords(1)`);
+ * a word past it is still named (it is in `moderation_reason`) but not counted
+ * or highlighted. Page through, or add a `word` filter to the endpoint, if lists grow past a page.
+ */
+export function wordHits(text: string, held: string, words: readonly string[]): string[] {
+  const lower = text.toLowerCase();
+  const others = words.filter((w) => w && w !== held && lower.includes(w));
+  return [held, ...others];
+}
+
+/** The text with every hit marked: warning tint and a 2 px warning underline — the corpus search's mark, recoloured. */
+function MarkWords({ text, words }: { text: string; words: readonly string[] }) {
+  const lower = text.toLowerCase();
+  const spans: [number, number][] = [];
+  for (const w of words) {
+    for (let at = w ? lower.indexOf(w) : -1; at !== -1; at = lower.indexOf(w, at + 1)) spans.push([at, at + w.length]);
+  }
+  spans.sort((a, b) => a[0] - b[0]);
+  const parts: ReactNode[] = [];
+  let from = 0;
+  for (const [start, end] of spans) {
+    if (start < from) continue; // overlapping hits: the first one wins
+    parts.push(text.slice(from, start));
+    parts.push(
+      <mark
+        key={start}
+        data-word-hit=""
+        className="bg-[oklch(var(--color-warning-tint))] text-inherit shadow-[inset_0_-2px_0_oklch(var(--color-warning))]"
+      >
+        {text.slice(start, end)}
+      </mark>
+    );
+    from = end;
+  }
+  parts.push(text.slice(from));
+  return <>{parts.map((p, i) => <Fragment key={i}>{p}</Fragment>)}</>;
 }
 
 interface ReviewItem {
@@ -121,10 +165,20 @@ export function ReportsReview() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const fail = useFailureToast();
-  /** 「因敏感词「…」待审」 when the word list says which word; the generic label otherwise. */
-  const ruleHit = (row: PendingRow) => {
+  const wordList = useSensitiveWords(1);
+  const listed: SensitiveWord[] = wordList.data?.results ?? [];
+  /** The words a held row's text contains, the holding one first; null when no word held it. */
+  const hitsOf = (row: PendingRow): string[] | null => {
     const word = heldForWord(row);
-    return word ? t("social_moderation.review.held_for_word", { word }) : t("social_moderation.review.rule_hit");
+    return word ? wordHits(row.content ?? "", word, listed.map((w) => w.word)) : null;
+  };
+  /** 「因敏感词「…」待审」, with 「等 N 个」 when the text holds more than one; the generic label when no word is named. */
+  const ruleHit = (row: PendingRow) => {
+    const hits = hitsOf(row);
+    if (!hits) return t("social_moderation.review.rule_hit");
+    return hits.length > 1
+      ? t("social_moderation.review.held_for_words", { word: hits[0], n: String(hits.length) })
+      : t("social_moderation.review.held_for_word", { word: hits[0] });
   };
   const reports = useModerationReports({});
   const posts = useModeratedContent("posts", {});
@@ -346,7 +400,11 @@ export function ReportsReview() {
 
           {selected.target ? (
             <p className="mt-4 max-w-[72ch] whitespace-pre-wrap break-words font-serif text-md text-[oklch(var(--color-ink))]">
-              {full?.content ?? selected.excerpt}
+              {selected.pending && hitsOf(selected.pending.row) ? (
+                <MarkWords text={full?.content ?? selected.excerpt} words={hitsOf(selected.pending.row) as string[]} />
+              ) : (
+                full?.content ?? selected.excerpt
+              )}
             </p>
           ) : (
             <p className="mt-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.review.user_target_note")}</p>
@@ -394,8 +452,22 @@ export function ReportsReview() {
             </>
           )}
           {selected.pending && (
-            <p className="mt-3 flex items-center gap-2 text-sm">
-              <Badge tone="warning" glyph="◇">{ruleHit(selected.pending.row)}</Badge>
+            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <Badge tone="warning" glyph="◐">{ruleHit(selected.pending.row)}</Badge>
+              {(() => {
+                // 第三类 F 组 2.4:徽章旁等宽写出这个词的类别与命中后动作(词表里查得到时)。
+                const held = heldForWord(selected.pending.row);
+                const entry = listed.find((w) => w.word === held);
+                return entry ? (
+                  <span data-word-meta="" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                    {t("social_moderation.words.col_category")}{" "}
+                    <DomainEnum namespace="social_moderation.word_category" value={entry.category || "NONE"} />
+                    {" · "}
+                    {t("social_moderation.words.col_action")}{" "}
+                    <DomainEnum namespace="social_moderation.word_action" value={entry.action} />
+                  </span>
+                ) : null;
+              })()}
             </p>
           )}
 
