@@ -713,7 +713,6 @@ class DispositionService:
         refusal cannot leave the flag behind.
         """
         from django.db import transaction
-        from django.utils import timezone
 
         from apps.souls.models import SoulState
 
@@ -774,11 +773,29 @@ class DispositionService:
                 # instead of recording an execution that did not happen.
                 return False
 
-            disposition.is_executed = True
-            disposition.executed_at = timezone.now()
-            disposition.save()
+            DispositionService._mark_executed(disposition)
             DispositionService._leave_served_realm(disposition, soul)
         return True
+
+    @staticmethod
+    def _mark_executed(disposition):
+        """执行的那一笔写入,三条执行分支共用:`is_executed` / `executed_at`,以及起算日。
+
+        起算日没记的,记成执行那天(产品负责人 2026-09-25 决定:执行即开始服刑)。已经记了的
+        —— 判官录入的史实起算日,例如公元前 399 年 —— 不覆盖。自动生成的处置
+        (`create_from_judgment`)建出来时没有起算日,也是在这里、执行时记上。
+        """
+        from django.utils import timezone
+
+        now = timezone.now()
+        disposition.is_executed = True
+        disposition.executed_at = now
+        if disposition.term_start_year is None:
+            today = timezone.localdate(now)
+            disposition.term_start_year = today.year
+            disposition.term_start_month = today.month
+            disposition.term_start_day = today.day
+        disposition.save()
 
     @staticmethod
     def _leave_served_realm(disposition, soul):
@@ -802,7 +819,6 @@ class DispositionService:
         拒绝(返回 False,什么都不写):灵魂不在 DISPOSED,或此刻不在原属地。
         """
         from django.db import transaction
-        from django.utils import timezone
 
         from apps.sentence_plan.services import SentencePlanService
         from apps.souls.models import Soul, SoulState
@@ -815,9 +831,7 @@ class DispositionService:
                 or locked.current_state != SoulState.DISPOSED
             ):
                 return False
-            disposition.is_executed = True
-            disposition.executed_at = timezone.now()
-            disposition.save()
+            DispositionService._mark_executed(disposition)
             DispositionService._leave_served_realm(disposition, locked)
             SentencePlanService.on_disposition_executed(locked, disposition)
             SentencePlanService.advance(locked)
@@ -843,7 +857,6 @@ class DispositionService:
         (`resume_return_after_case_closed` 已删,设计稿 G4/G6),要原属手动 `return-home`。
         """
         from django.db import transaction
-        from django.utils import timezone
 
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
         from apps.judgment.models import open_judgments
@@ -858,9 +871,7 @@ class DispositionService:
                 or locked.current_state != SoulState.DISPOSED
             ):
                 return False
-            disposition.is_executed = True
-            disposition.executed_at = timezone.now()
-            disposition.save()
+            DispositionService._mark_executed(disposition)
             DispositionService._leave_served_realm(disposition, locked)
             node = SentencePlanService.on_disposition_executed(locked, disposition)
             if node is not None:

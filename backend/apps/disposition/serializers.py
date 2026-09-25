@@ -8,7 +8,7 @@ from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
-from apps.disposition.expiry import term_end
+from apps.disposition.expiry import effective_term_start, term_end
 from apps.disposition.models import Disposition, DispositionSection
 from apps.judgment.models import Verdict
 from apps.souls.dates import ERROR, check_term_start, to_representation
@@ -37,7 +37,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     realm_id = serializers.UUIDField(source="destination_realm_id", read_only=True, allow_null=True)
     # 刑期走完的那一天 —— 与每日期满检查同一个算法(apps/disposition/expiry.py),
     # 页面的刑期条读它,不自己拿 term_start + sentence_years 再算一遍。
-    # null:永久刑,或没记刑期 / 起算日。
+    # null:永久刑,或没记刑期,或既没记起算日也没执行。
     term_end = serializers.SerializerMethodField()
     # 产生这份处置的判决。`judgment` 为空(外地节点的处置,或审判被硬删)时为 null。
     verdict = serializers.ChoiceField(
@@ -58,7 +58,9 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         if obj.is_eternal:
             return None
         end = term_end(
-            (obj.term_start_year, obj.term_start_month, obj.term_start_day),
+            effective_term_start(
+                (obj.term_start_year, obj.term_start_month, obj.term_start_day), obj.executed_at,
+            ),
             obj.sentence_years,
         )
         return to_representation(*end) if end else None

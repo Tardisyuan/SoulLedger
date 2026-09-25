@@ -191,3 +191,89 @@ class TestTermStartWrites:
         or dates the rules would otherwise object to."""
         soul = self._soul(state=SoulState.ALIVE, death=(None, None, None))
         assert self._write(soul, None).pk
+
+
+@pytest.mark.django_db
+class TestExecutionRecordsTheTermStart:
+    """2026-09-25 决定:执行即开始服刑。空的起算日在执行时记成执行那天。"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="GR_HADES", defaults={"display_name": "GR_HADES"}
+        )[0]
+
+    def _disposed(self):
+        soul = Soul.objects.create(
+            name="Er", current_state=SoulState.DISPOSED, tenant=self.tenant,
+            death_year=-402, death_month=6, death_day=1,
+        )
+        return soul
+
+    def test_executing_records_today_as_the_term_start(self):
+        from django.utils import timezone
+
+        from apps.disposition.services import DispositionService
+
+        disposition = Disposition.objects.create(soul=self._disposed(), tenant=self.tenant, sentence_years=5)
+        assert DispositionService.execute(disposition) is True
+        disposition.refresh_from_db()
+        today = timezone.localdate(disposition.executed_at)
+        assert (disposition.term_start_year, disposition.term_start_month, disposition.term_start_day) == (
+            today.year, today.month, today.day,
+        )
+        # 序列化器的期满日读同一个起算日。
+        assert DispositionSerializer(disposition).data["term_end"] == {
+            "year": today.year + 5, "month": today.month, "day": today.day,
+        }
+
+    def test_a_recorded_start_is_not_overwritten(self):
+        from apps.disposition.services import DispositionService
+
+        disposition = Disposition.objects.create(
+            soul=self._disposed(), tenant=self.tenant,
+            term_start_year=-399, term_start_month=2, term_start_day=15,
+        )
+        assert DispositionService.execute(disposition) is True
+        disposition.refresh_from_db()
+        assert (disposition.term_start_year, disposition.term_start_month, disposition.term_start_day) == (
+            -399, 2, 15,
+        )
+
+    def test_a_refused_execution_records_nothing(self):
+        from apps.disposition.services import DispositionService
+
+        soul = self._disposed()
+        soul.current_state = SoulState.ALIVE
+        soul.save(update_fields=["current_state"])
+        disposition = Disposition.objects.create(soul=soul, tenant=self.tenant)
+        assert DispositionService.execute(disposition) is False
+        disposition.refresh_from_db()
+        assert disposition.term_start_year is None
+
+    def test_an_automatic_disposition_has_none_until_it_is_executed(self):
+        """`create_from_judgment` 建出来时没有起算日;执行时才记。"""
+        from apps.disposition.services import DispositionService
+        from apps.judgment.models import Judgment, Verdict
+
+        soul = self._disposed()
+        judgment = Judgment.objects.create(
+            soul=soul, civilization=soul.civilization, tenant=self.tenant, verdict=Verdict.FAILED,
+        )
+        disposition = DispositionService.create_from_judgment(judgment)
+        assert disposition.term_start_year is None
+        assert DispositionService.execute(disposition) is True
+        disposition.refresh_from_db()
+        assert disposition.term_start_year is not None
+
+    def test_the_serializer_counts_an_old_row_from_its_execution_date(self):
+        """执行过、起算日为空的存量行:`term_end` 从执行日算,与期满检查同一个函数。"""
+        import datetime
+
+        from django.utils import timezone
+
+        disposition = Disposition.objects.create(
+            soul=self._disposed(), tenant=self.tenant, sentence_years=10, is_executed=True,
+            executed_at=timezone.make_aware(datetime.datetime(2000, 6, 15, 12, 0)),
+        )
+        assert DispositionSerializer(disposition).data["term_end"] == {"year": 2010, "month": 6, "day": 15}
