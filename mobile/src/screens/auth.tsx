@@ -1,5 +1,6 @@
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import { soulErrorMessage, type SoulErrorMessage } from "@soulledger/core/api/soul";
+import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -12,7 +13,7 @@ import { useSession } from "../session";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
 
 /** Refusals are the user's to fix (red); a rate limit or a dead network is not (neutral). */
-const NEUTRAL_ERRORS = new Set(["soul_app.errors.rate_limited", "soul_app.errors.network"]);
+export const NEUTRAL_ERRORS = new Set(["soul_app.errors.rate_limited", "soul_app.errors.network"]);
 
 export function LanguageSwitch() {
   const t = useTheme();
@@ -42,9 +43,14 @@ export function LanguageSwitch() {
   );
 }
 
+export type LoginParams = { passwordReset?: boolean } | undefined;
+
 export function LoginScreen() {
   const theme = useTheme();
   const { t } = useI18n();
+  const navigation = useNavigation<NavigationProp<{ Login: LoginParams; ForgotPassword: undefined }>>();
+  // Set by the 「忘记密码」 flow on its way back here. It says the reset worked; it does not sign in.
+  const reset = useRoute<RouteProp<{ Login: LoginParams }, "Login">>().params?.passwordReset === true;
   const { state, signIn } = useSession();
   const [soulCode, setSoulCode] = useState("");
   const [password, setPassword] = useState("");
@@ -84,6 +90,13 @@ export function LoginScreen() {
         <Txt tone="muted" style={styles.lead}>
           {t(busy ? "soul_app.login.verifying" : "soul_app.login.subtitle")}
         </Txt>
+        {reset && !error ? (
+          <View style={styles.gapTop}>
+            <Notice tone="neutral" testID="login-reset-notice">
+              {t("soul_app.forgot_password.success")}
+            </Notice>
+          </View>
+        ) : null}
         {error ? (
           <View style={styles.gapTop}>
             <Notice
@@ -128,6 +141,18 @@ export function LoginScreen() {
           onPress={submit}
           busy={busy}
         />
+        <Pressable
+          testID="login-forgot"
+          accessibilityRole="link"
+          disabled={busy}
+          onPress={() => navigation.navigate("ForgotPassword")}
+          hitSlop={6}
+          style={styles.forgot}
+        >
+          <Txt variant="label" tone="accent" style={styles.noSpacing}>
+            {t("soul_app.forgot_password.link")}
+          </Txt>
+        </Pressable>
       </View>
       <View style={styles.fill} />
       <View style={[styles.footer, { borderTopColor: theme.hair }]}>
@@ -138,6 +163,17 @@ export function LoginScreen() {
 }
 
 export const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * The App's own password rules, before anything is sent: the first-login change
+ * and the 「忘记密码」 reset both ask this, so the two cannot drift apart. The
+ * server's validators still have the last word (`errors.weak_password`).
+ */
+export function newPasswordProblem(newPassword: string, confirm: string): SoulErrorMessage | null {
+  if (newPassword.length < MIN_PASSWORD_LENGTH) return { key: "soul_app.change_password.too_short" };
+  if (newPassword !== confirm) return { key: "soul_app.change_password.mismatch" };
+  return null;
+}
 
 type PasswordField = "old" | "new" | "confirm";
 
@@ -219,8 +255,8 @@ export function ChangePasswordScreen() {
   const fieldError = (name: PasswordField) => (error && field === name ? t(error.key, error.params) : null);
 
   const submit = async () => {
-    if (newPassword.length < MIN_PASSWORD_LENGTH) return setError({ key: "soul_app.change_password.too_short" });
-    if (newPassword !== confirm) return setError({ key: "soul_app.change_password.mismatch" });
+    const problem = newPasswordProblem(newPassword, confirm);
+    if (problem) return setError(problem);
     setBusy(true);
     setError(null);
     try {
@@ -293,6 +329,7 @@ const styles = StyleSheet.create({
   fields: { marginTop: 20, gap: 16 },
   dimmed: { opacity: 0.6 },
   submit: { marginTop: 24 },
+  forgot: { alignSelf: "center", minHeight: 44, justifyContent: "center", paddingHorizontal: 10, marginTop: 10 },
   footer: { borderTopWidth: 1, marginHorizontal: 28, marginTop: 28, paddingTop: 26, paddingBottom: 30 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
