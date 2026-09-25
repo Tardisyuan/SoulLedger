@@ -107,6 +107,40 @@ class TestRanking:
 
 
 @pytest.mark.django_db
+class TestConcludedBalanceSnapshot:
+    """The balance a precedent is ranked on is the one frozen at its conclusion
+    (`Judgment.concluded_balance`); only a case concluded before the column
+    existed (null) falls back to the soul's balance today."""
+
+    def test_the_snapshot_not_todays_balance_ranks_and_is_shown(self, judge, cn_tenant):
+        target = _judgment(cn_tenant, "target", balance=0, verdict=None)
+        # Today both souls read 500; at conclusion one read 2 and one 300.
+        near = _judgment(cn_tenant, "near at conclusion", balance=500)
+        far = _judgment(cn_tenant, "far at conclusion", balance=500)
+        Judgment.all_objects.filter(pk=near.pk).update(concluded_balance=2)
+        Judgment.all_objects.filter(pk=far.pk).update(concluded_balance=300)
+        body = judge.get(_url(target)).json()
+        assert [row["name"] for row in body] == ["near at conclusion", "far at conclusion"]
+        assert [row["balance"] for row in body] == [2, 300]
+
+    def test_a_null_snapshot_falls_back_to_the_current_balance(self, judge, cn_tenant):
+        target = _judgment(cn_tenant, "target", balance=0, verdict=None)
+        old = _judgment(cn_tenant, "older case", balance=3)
+        snap = _judgment(cn_tenant, "snapshotted", balance=0)
+        Judgment.all_objects.filter(pk=snap.pk).update(concluded_balance=90)
+        body = judge.get(_url(target)).json()
+        assert old.concluded_balance is None
+        assert [(row["name"], row["balance"]) for row in body] == [("older case", 3), ("snapshotted", 90)]
+
+    def test_a_concluded_target_is_compared_on_its_own_snapshot(self, judge, cn_tenant):
+        target = _judgment(cn_tenant, "target", balance=0)
+        Judgment.all_objects.filter(pk=target.pk).update(concluded_balance=100)
+        _judgment(cn_tenant, "at zero", balance=0)
+        _judgment(cn_tenant, "at a hundred", balance=100)
+        assert _names(judge.get(_url(target))) == ["at a hundred", "at zero"]
+
+
+@pytest.mark.django_db
 class TestScope:
     def test_only_concluded_same_civilization_other_souls_unarchived(self, judge, cn_tenant):
         target = _judgment(cn_tenant, "target", verdict=None)

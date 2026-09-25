@@ -610,6 +610,21 @@ class LedgerService:
         return result
 
     @classmethod
+    def get_admitted_net(cls, soul: Soul, cycle: int, not_admitted_ids) -> int | None:
+        """Admitted merit − demerit as a bare number, whatever the cosmology's reading.
+
+        For the conclusion snapshot (`Judgment.concluded_balance`), which the
+        precedents ranking compares across every civilization the way it
+        compares `merit_score − demerit_score`. Not a reading: the desk still
+        shows a balance only where `get_admitted_balance` says the reading is
+        one. None for a judgment from an earlier life (no base to re-sum on).
+        """
+        if cycle != soul.life_index:
+            return None
+        sums = cls._admitted_sums(soul, cycle, {str(pk) for pk in not_admitted_ids})
+        return round(sums["merit"]) - round(sums["demerit"])
+
+    @classmethod
     def _admitted_sums(cls, soul: Soul, cycle: int, excluded: set) -> dict:
         """One life's MERIT/DEMERIT records summed the way `get_ledger_summary`
         sums them (same decay, same unrounded accumulation, same inherited base,
