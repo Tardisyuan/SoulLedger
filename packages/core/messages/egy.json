@@ -3171,7 +3171,6 @@
     "draft_saving": "Em Sau Sesh Tepy…",
     "draft_saved": "Sesh Tepy Sau Seth · {{time}}",
     "draft_failed": "Nen Sau Sesh Tepy. Wehem Iri.",
-    "draft_restored": "Sesh Tepy Ek Ankh Wehem Seth",
     "template": {
       "label": "Pet-Sesh",
       "pick": "Setep Pet-Sesh",

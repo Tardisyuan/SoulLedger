@@ -3171,7 +3171,6 @@
     "draft_saving": "Saving draft…",
     "draft_saved": "Draft saved · {{time}}",
     "draft_failed": "Draft not saved; try again",
-    "draft_restored": "Your last draft was restored",
     "template": {
       "label": "Template",
       "pick": "Insert template",
