@@ -370,11 +370,16 @@ class EvidenceAdmissionService:
         result = LedgerService.get_admitted_balance(
             judgment.soul, judgment.cycle, cls.not_admitted_ids(judgment)
         )
+        # `current_balance`: today's admitted figure, beside the snapshot — the
+        # desk's 「结案时余额 / 现值」. Null while the case is open (then
+        # `balance` already is today's figure) or when there is no snapshot.
+        result["current_balance"] = None
         if (
             judgment.verdict is not None
             and judgment.concluded_balance is not None
             and result["reading_kind"] == "BALANCE"
         ):
+            result["current_balance"] = result["balance"]
             result["balance"] = judgment.concluded_balance
         return result
 

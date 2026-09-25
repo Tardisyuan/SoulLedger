@@ -256,6 +256,7 @@ class TestAdmittedBalance:
             "not_admitted_count": 0,
             "not_admitted_net": 0.0,
             "reason_code": None,
+            "current_balance": None,
         }
         assert result["balance"] == 10  # 30 merit − 20 demerit, undecayed at age 0
 
@@ -309,6 +310,7 @@ class TestAdmittedBalance:
             "not_admitted_count": 1,
             "not_admitted_net": None,
             "reason_code": "BALANCE_NOT_APPLICABLE",
+            "current_balance": None,
         }
 
     def test_an_unmapped_tenant_carries_the_readings_own_reason(self):
@@ -482,10 +484,14 @@ class TestConcludedBalanceSnapshot:
         LedgerService._invalidate_cache(judgment.soul)
         detail = judge_client.get(f"/api/v1/judgment/{judgment.id}/")
         assert detail.data["admitted_balance"]["balance"] == 10
+        # Today's figure rides beside it: the desk's 「结案时余额 +10 / 现值 +60」.
+        assert detail.data["admitted_balance"]["current_balance"] == 60
         # A null snapshot (a case concluded before the column) is the live figure.
         Judgment.all_objects.filter(pk=judgment.pk).update(concluded_balance=None)
         judgment.refresh_from_db()
-        assert EvidenceAdmissionService.admitted_balance(judgment)["balance"] == 60
+        live = EvidenceAdmissionService.admitted_balance(judgment)
+        assert live["balance"] == 60
+        assert live["current_balance"] is None  # nothing frozen to set it beside
 
 
 # ---------------------------------------------------------------------------

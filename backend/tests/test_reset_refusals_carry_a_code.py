@@ -57,7 +57,15 @@ class TestSetNewPasswordCodes:
 
     def test_a_wrong_code_is_reset_code_wrong(self, api_client, soul):
         cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
-        _refusal(_set(api_client, code="000000"), 400, "reset_code_wrong")
+        body = _refusal(_set(api_client, code="000000"), 400, "reset_code_wrong")
+        assert body["attempts_left"] == MAX_RESET_CODE_ATTEMPTS - 1
+
+    def test_attempts_left_counts_down_to_the_refusal(self, api_client, soul):
+        cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
+        left = [_set(api_client, code="000000").data["attempts_left"] for _ in range(MAX_RESET_CODE_ATTEMPTS)]
+        assert left == list(range(MAX_RESET_CODE_ATTEMPTS - 1, -1, -1))
+        # attempts_left 0 meant it: even the right code is now refused.
+        _refusal(_set(api_client), 429, "reset_code_attempts_exceeded")
 
     def test_too_many_wrong_codes_is_attempts_exceeded_with_nothing_to_wait_for(self, api_client, soul):
         cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)

@@ -869,7 +869,17 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             return Response([])
         # 调用者自己的租户范围再收一道:非 ADMIN 只可能看见自己租户的人。
         users = scope_to_tenant(User.objects.all(), request)
-        officers = claims.assignable_officers(users, tenant_ids.pop())
+        tenant_id = tenant_ids.pop()
+        officers = claims.assignable_officers(users, tenant_id)
+        # 「在手」:每人手上认领着、还没结案的件数,与队列同一个 PENDING。一条聚合,不逐人查。
+        in_hand = dict(
+            Judgment.objects.filter(PENDING, tenant_id=tenant_id, claimed_by__in=officers)
+            .order_by()
+            .values_list("claimed_by")
+            .annotate(n=Count("pk"))
+        )
+        for officer in officers:
+            officer.in_hand = in_hand.get(officer.pk, 0)
         return Response(AssignableOfficerSerializer(officers, many=True).data)
 
     @staticmethod

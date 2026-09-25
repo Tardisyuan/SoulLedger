@@ -46,14 +46,31 @@ class TestAssignableOfficers:
         u = crowd.users
         assert _ids(_officers(crowd.clients["mod"], case)) == {u["a"].pk, u["b"].pk, u["mod"].pk}
 
-    def test_each_row_carries_exactly_four_fields(self, crowd):
+    def test_each_row_carries_exactly_five_fields(self, crowd):
         crowd.users["a"].display_name = "秦广王"
         crowd.users["a"].email = "qin@example.com"
         crowd.users["a"].save()
         rows = _officers(crowd.clients["mod"], _case(crowd.cn)).data
         row = next(r for r in rows if r["id"] == crowd.users["a"].pk)
-        assert row == {"id": crowd.users["a"].pk, "display_name": "秦广王", "username": "claim_judge_a", "role": "JUDGE"}
+        assert row == {
+            "id": crowd.users["a"].pk, "display_name": "秦广王", "username": "claim_judge_a", "role": "JUDGE", "in_hand": 0,
+        }
         assert "email" not in row and "phone" not in row
+
+    def test_in_hand_counts_each_officers_claimed_pending_cases_only(self, crowd):
+        u = crowd.users
+        mine = [_case(crowd.cn, name=f"在手{i}") for i in range(3)]
+        for case in mine[:2]:
+            case.claimed_by = u["a"]
+            case.save(update_fields=["claimed_by"])
+        mine[2].claimed_by = u["b"]
+        mine[2].verdict = "PASSED"  # 已结案:不算在手
+        mine[2].save(update_fields=["claimed_by", "verdict"])
+        other_tenant = _case(crowd.eu, name="别殿")
+        other_tenant.claimed_by = u["a"]  # 别的租户的案子不算进本殿的在手
+        other_tenant.save(update_fields=["claimed_by"])
+        rows = {r["id"]: r["in_hand"] for r in _officers(crowd.clients["mod"], _case(crowd.cn)).data}
+        assert rows == {u["a"].pk: 2, u["b"].pk: 0, u["mod"].pk: 0}
 
     def test_a_judge_without_judgment_assign_is_403(self, crowd):
         response = _officers(crowd.clients["a"], _case(crowd.cn))

@@ -368,12 +368,50 @@ class TestPasswordHelpReachesTheRightAdministrators:
     def test_the_notification_names_the_account_and_renders_per_locale(self, api_client, cast, eager):
         _ask(api_client, "cn_judge")
         note = UserNotification.objects.filter(user=cast["cn_admin"]).get()
-        assert note.params == {"username": "cn_judge"}
+        assert note.params["username"] == "cn_judge"
         assert "cn_judge" in note.message and note.related_resource == "user"
         api_client.force_authenticate(cast["cn_admin"])
         listed = api_client.get("/api/v1/notifications/", HTTP_ACCEPT_LANGUAGE="en").data
         rows = listed["results"] if isinstance(listed, dict) else listed
-        assert rows[0]["title"] == "Password help requested"
+        assert rows[0]["title"] == "Password reset help"
+
+    def test_the_text_says_someone_asked_as_the_account_not_that_the_account_asked(self, cast):
+        """The requester is unverified: anyone can type a username on the sign-in
+        page. So the text says 「有人以账号……请求」, never 「cn_judge 请求」."""
+        tasks.notify_password_help.run("cn_judge")
+        for note in UserNotification.objects.all():
+            assert note.message.startswith("有人在登录页以账号「cn_judge」请求重设密码。"), note.message
+
+    def test_the_request_context_is_hall_role_and_the_24h_count(self, cast):
+        tasks.notify_password_help.run("cn_judge")
+        tasks.notify_password_help.run("cn_judge")
+        client = officer_client(cast["cn_admin"])
+        listed = client.get("/api/v1/notifications/", HTTP_ACCEPT_LANGUAGE="zh-Hans").data
+        rows = listed["results"] if isinstance(listed, dict) else listed
+        contexts = sorted(r["request_context"]["count_24h"] for r in rows)
+        assert contexts == [1, 2]
+        first = rows[0]["request_context"]
+        assert first["role"] == "JUDGE"
+        assert first["hall"] == cast["judge"].tenant.hall_names["zh-Hans"]
+
+    def test_the_24h_count_forgets_requests_older_than_a_day(self, cast):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        tasks.notify_password_help.run("cn_judge")
+        AuditLog.objects.filter(resource="password_help").update(timestamp=timezone.now() - timedelta(hours=25))
+        tasks.notify_password_help.run("cn_judge")
+        newest = UserNotification.objects.filter(user=cast["cn_admin"]).order_by("-pk").first()
+        assert newest.params["count_24h"] == 1
+
+    def test_other_notifications_carry_no_request_context(self, cast):
+        from apps.notifications.models import notify_user
+
+        notify_user(cast["cn_admin"], title="t", message="m", notification_type=NotificationType.SYSTEM)
+        rows = officer_client(cast["cn_admin"]).get("/api/v1/notifications/").data
+        rows = rows["results"] if isinstance(rows, dict) else rows
+        assert [r["request_context"] for r in rows] == [None]
 
     def test_an_audit_row_is_written_for_an_existing_account(self, api_client, cast, eager):
         _ask(api_client, "cn_judge", ip="10.9.9.9")

@@ -15229,6 +15229,9 @@ components:
         reason_code:
           type: string
           nullable: true
+        current_balance:
+          type: integer
+          nullable: true
       required:
       - balance
       - not_admitted_count
@@ -15767,7 +15770,7 @@ components:
     AssignableOfficer:
       type: object
       description: |-
-        `GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+        `GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
         没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。
       properties:
         id:
@@ -15782,9 +15785,13 @@ components:
         role:
           type: string
           readOnly: true
+        in_hand:
+          type: integer
+          readOnly: true
       required:
       - display_name
       - id
+      - in_hand
       - role
       - username
     AuditActionCount:
@@ -21977,6 +21984,8 @@ components:
           $ref: '#/components/schemas/PasswordResetRefusalCodeEnum'
         retry_after:
           type: integer
+        attempts_left:
+          type: integer
       required:
       - code
       - error
@@ -23329,6 +23338,9 @@ components:
       description: |-
         分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
         请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+
+        `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+        上下文;别的通知与旧行为 null。殿名按请求语言取。
       properties:
         id:
           type: integer
@@ -23361,6 +23373,11 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
+        request_context:
+          allOf:
+          - $ref: '#/components/schemas/RequestContext'
+          nullable: true
           readOnly: true
     PatchedUserPreferences:
       type: object
@@ -24804,6 +24821,23 @@ components:
       - detail
       - reason
       - reporter
+    RequestContext:
+      type: object
+      description: |-
+        「第五殿 · 殿司 · 近 24 小时第 1 次」:一条求助通知里请求者账号的殿、角色,
+        与这次请求在该账号近 24 小时求助里的序号。
+      properties:
+        hall:
+          type: string
+          nullable: true
+        role:
+          type: string
+        count_24h:
+          type: integer
+      required:
+      - count_24h
+      - hall
+      - role
     ResetPassword:
       type: object
       description: Serializer for requesting password reset.
@@ -27678,6 +27712,9 @@ components:
       description: |-
         分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
         请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+
+        `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+        上下文;别的通知与旧行为 null。殿名按请求语言取。
       properties:
         id:
           type: integer
@@ -27711,6 +27748,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        request_context:
+          allOf:
+          - $ref: '#/components/schemas/RequestContext'
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
@@ -27718,6 +27760,7 @@ components:
       - notification_type
       - related_id
       - related_resource
+      - request_context
       - title
       - user
     UserNotificationList:
@@ -27750,10 +27793,16 @@ components:
           type: string
           format: date-time
           readOnly: true
+        request_context:
+          allOf:
+          - $ref: '#/components/schemas/RequestContext'
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
       - message
+      - request_context
       - title
     UserOrganizationRef:
       type: object

@@ -273,6 +273,9 @@ class AdmittedBalanceSerializer(serializers.Serializer):
     not_admitted_count = serializers.IntegerField()
     not_admitted_net = serializers.FloatField(allow_null=True)
     reason_code = serializers.CharField(allow_null=True)
+    #: A concluded case whose `balance` is the conclusion snapshot: today's
+    #: admitted figure for the same reading. Null otherwise.
+    current_balance = serializers.IntegerField(allow_null=True, required=False)
 
 
 class EvidenceRulingResultSerializer(serializers.Serializer):
@@ -503,13 +506,15 @@ class JudgmentReassignSerializer(serializers.Serializer):
 
 
 class AssignableOfficerSerializer(serializers.Serializer):
-    """`GET /judgment/assignable-officers/` 的一行:改派弹层要的四样,别无其他 ——
+    """`GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
     没有邮箱、电话。`display_name` 可能为空,客户端退回 `username`。"""
 
     id = serializers.IntegerField(read_only=True)
     display_name = serializers.CharField(read_only=True)
     username = serializers.CharField(read_only=True)
     role = serializers.CharField(read_only=True)
+    #: 这位官员手上认领着、尚未结案的案子件数(本租户)。
+    in_hand = serializers.IntegerField(read_only=True)
 
 
 class JudgmentBatchSerializer(serializers.Serializer):

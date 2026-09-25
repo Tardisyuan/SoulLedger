@@ -1,6 +1,7 @@
 """
 Serializers for notifications.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.locale import locale_from_context
@@ -8,9 +9,34 @@ from apps.notifications import messages
 from apps.notifications.models import UserNotification
 
 
+class RequestContextSerializer(serializers.Serializer):
+    """「第五殿 · 殿司 · 近 24 小时第 1 次」:一条求助通知里请求者账号的殿、角色,
+    与这次请求在该账号近 24 小时求助里的序号。"""
+
+    hall = serializers.CharField(allow_null=True)
+    role = serializers.CharField()
+    count_24h = serializers.IntegerField()
+
+
 class _LocalizedMixin:
     """分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
-    请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。"""
+    请求的语言不是三种之一,或行上没有 params(旧行),就返回存下来的原文。
+
+    `request_context`:求助类通知(`authentication.tasks.notify_password_help`)的那一行
+    上下文;别的通知与旧行为 null。殿名按请求语言取。"""
+
+    @extend_schema_field(RequestContextSerializer(allow_null=True))
+    def get_request_context(self, instance):
+        params = instance.params or {}
+        if "count_24h" not in params:
+            return None
+        halls = params.get("hall") or {}
+        locale = locale_from_context(self.context)
+        return {
+            "hall": halls.get(locale) or halls.get(messages.DEFAULT_LOCALE),
+            "role": params.get("role", ""),
+            "count_24h": params["count_24h"],
+        }
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -22,6 +48,8 @@ class _LocalizedMixin:
 
 
 class UserNotificationSerializer(_LocalizedMixin, serializers.ModelSerializer):
+    request_context = serializers.SerializerMethodField()
+
     class Meta:
         model = UserNotification
         fields = [
@@ -34,6 +62,7 @@ class UserNotificationSerializer(_LocalizedMixin, serializers.ModelSerializer):
             "related_resource",
             "related_id",
             "created_at",
+            "request_context",
         ]
         # `user` stays read-only from the client's perspective: it is always
         # forced to request.user by NotificationViewSet.perform_create, never
@@ -61,6 +90,8 @@ class UserNotificationSerializer(_LocalizedMixin, serializers.ModelSerializer):
 class UserNotificationListSerializer(_LocalizedMixin, serializers.ModelSerializer):
     """Lightweight serializer for listing notifications."""
 
+    request_context = serializers.SerializerMethodField()
+
     class Meta:
         model = UserNotification
         fields = [
@@ -72,6 +103,7 @@ class UserNotificationListSerializer(_LocalizedMixin, serializers.ModelSerialize
             "related_resource",
             "related_id",
             "created_at",
+            "request_context",
         ]
 
 
