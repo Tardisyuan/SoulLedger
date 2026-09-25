@@ -1,12 +1,49 @@
 """
 Serializers for workflow app.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
-from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
+from apps.workflow.models import (
+    ApprovalNode,
+    ApprovalWorkflow,
+    WorkflowTemplate,
+    WorkflowTemplateVersion,
+)
 from apps.workflow.node_shape import normalize_template_node
+
+
+class TemplateSignerSerializer(serializers.Serializer):
+    """One 会签 signer, spelled like a one-person node: a label (a person's
+    name, probed like a node label), or a ROLE with a role."""
+    label = serializers.CharField(max_length=255, allow_blank=True, default="")
+    # CharField + validator rather than a third ChoiceField over the same
+    # values: drf-spectacular would otherwise invent a hashed enum name
+    # (tests/test_schema_has_no_warnings.py).
+    approver_type = serializers.CharField(max_length=10, default="ROLE")
+    approver_role = serializers.CharField(max_length=20, allow_blank=True, default="")
+
+    def validate_approver_type(self, value):
+        if value not in ("ACTOR", "ROLE", "SYSTEM"):
+            raise serializers.ValidationError("approver_type must be ACTOR, ROLE or SYSTEM")
+        return value
+
+
+class ConditionClauseSerializer(serializers.Serializer):
+    """`{fact, op, value}` — see `apps/workflow/conditions.py`. Shape only here;
+    whether the fact/op/value combine is checked at publish, so a half-edited
+    condition can still be saved as a draft."""
+    fact = serializers.CharField(max_length=20)
+    op = serializers.CharField(max_length=10)
+    value = serializers.JSONField()
+
+
+class TemplateBranchSerializer(serializers.Serializer):
+    id = serializers.CharField(required=False, allow_blank=True, default="")
+    when = ConditionClauseSerializer(many=True)
+    target = serializers.CharField(allow_blank=True)
 
 
 class WorkflowTemplateNodeSerializer(serializers.Serializer):
@@ -66,6 +103,32 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
         child=serializers.FloatField(), required=False, allow_null=True, default=None
     )
 
+    # 驳回到: the template-local id of an EARLIER node to send the flow back
+    # to on FAIL. Same id space as on_pass / on_fail.
+    reject_to = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=None
+    )
+    # 超时. Validated as a set by `validation.py` at publish (hours without an
+    # action, ESCALATE without a role); here only each value's own type.
+    timeout_hours = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1, max_value=24 * 365, default=None
+    )
+    timeout_action = serializers.ChoiceField(
+        choices=["ESCALATE", "AUTO_REJECT", "NOTIFY"],
+        required=False, allow_blank=True, allow_null=True, default=None,
+    )
+    timeout_role = serializers.CharField(
+        max_length=20, required=False, allow_blank=True, allow_null=True, default=None
+    )
+
+    # 会签 / 通知 / 结束 and condition branches (workflow/0021).
+    kind = serializers.ChoiceField(
+        choices=["APPROVAL", "COUNTERSIGN", "NOTIFY", "END"], required=False, default="APPROVAL"
+    )
+    signers = TemplateSignerSerializer(many=True, required=False, default=list)
+    threshold = serializers.IntegerField(required=False, allow_null=True, min_value=1, default=None)
+    branches = TemplateBranchSerializer(many=True, required=False, default=list)
+
     def to_representation(self, instance):
         """Render a stored node, in whichever shape it was stored.
 
@@ -91,7 +154,16 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
     ``tests/test_workflow_template_priority.py`` POSTs a 1 and reads the row
     back rather than trusting the 201.
     """
+    # VERSIONED (0018). `nodes` is the WORKING COPY: on read, the draft if the
+    # template has one, else the published graph; on write, it goes to the
+    # draft (`versioning.save_draft`) and never to `nodes_json`, which only
+    # `versioning.publish` writes. So a save from the editor cannot change what
+    # the next workflow runs on — publishing does. `published_version` /
+    # `draft_version` are the numbers the editor's badge shows
+    # (「草稿 v4 · 已发布 v3」); either can be null.
     nodes = WorkflowTemplateNodeSerializer(many=True, required=False, source='nodes_json')
+    published_version = serializers.SerializerMethodField()
+    draft_version = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkflowTemplate
@@ -104,6 +176,8 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
             "priority",
             "is_active",
             "nodes",
+            "published_version",
+            "draft_version",
             "created_at",
             "updated_at",
             "tenant",
@@ -113,6 +187,84 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
         # writable, and a MODERATOR could PATCH a template into another tenant
         # in one request -- measured 2026-08-29.
         read_only_fields = ["id", "created_at", "updated_at", "tenant"]
+
+    def get_published_version(self, obj) -> int | None:
+        return obj.published_version.number if obj.published_version_id else None
+
+    def get_draft_version(self, obj) -> int | None:
+        from apps.workflow.versioning import draft_of
+
+        draft = draft_of(obj) if obj.pk else None
+        return draft.number if draft else None
+
+    def to_representation(self, instance):
+        from apps.workflow.versioning import working_nodes
+
+        data = super().to_representation(instance)
+        data["nodes"] = WorkflowTemplateNodeSerializer(
+            working_nodes(instance), many=True
+        ).data
+        return data
+
+    def _save_nodes(self, template, nodes):
+        from apps.workflow.versioning import save_draft
+
+        request = self.context.get("request")
+        save_draft(template, nodes, user=getattr(request, "user", None))
+
+    def create(self, validated_data):
+        nodes = validated_data.pop("nodes_json", None)
+        template = super().create(validated_data)
+        if nodes is not None:
+            self._save_nodes(template, nodes)
+        return template
+
+    def update(self, instance, validated_data):
+        nodes = validated_data.pop("nodes_json", None)
+        template = super().update(instance, validated_data)
+        if nodes is not None:
+            self._save_nodes(template, nodes)
+        return template
+
+
+class WorkflowTemplateVersionSerializer(serializers.ModelSerializer):
+    """One row of a template's version history. Read-only: versions are written
+    by `versioning.py` alone, through save and publish."""
+
+    nodes = serializers.SerializerMethodField()
+    saved_by_name = serializers.SerializerMethodField()
+    published_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WorkflowTemplateVersion
+        fields = [
+            "id",
+            "number",
+            "status",
+            "nodes",
+            "created_at",
+            "updated_at",
+            "published_at",
+            "saved_by_name",
+            "published_by_name",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(WorkflowTemplateNodeSerializer(many=True))
+    def get_nodes(self, obj):
+        return WorkflowTemplateNodeSerializer(obj.nodes_json or [], many=True).data
+
+    @staticmethod
+    def _name(user) -> str | None:
+        if user is None:
+            return None
+        return getattr(user, "display_name", "") or user.username
+
+    def get_saved_by_name(self, obj) -> str | None:
+        return self._name(obj.saved_by)
+
+    def get_published_by_name(self, obj) -> str | None:
+        return self._name(obj.published_by)
 
 
 class WorkflowTemplateListSerializer(serializers.ModelSerializer):
@@ -125,6 +277,7 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
     """
 
     node_count = serializers.SerializerMethodField()
+    published_version = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkflowTemplate
@@ -142,10 +295,14 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
             "node_count",
+            "published_version",
         ]
 
     def get_node_count(self, obj) -> int:
         return len(obj.nodes_json or [])
+
+    def get_published_version(self, obj) -> int | None:
+        return obj.published_version.number if obj.published_version_id else None
 
 
 class ApprovalNodeSerializer(serializers.ModelSerializer):
@@ -226,6 +383,18 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "approver_display_name",
             "decided_at",
             "created_at",
+            "reject_to",
+            "decision_history",
+            "timeout_hours",
+            "timeout_action",
+            "timeout_role",
+            "activated_at",
+            "timed_out_at",
+            "kind",
+            "signers_json",
+            "threshold",
+            "signatures_json",
+            "branches_json",
         ]
         read_only_fields = [
             "id",
@@ -236,6 +405,23 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "verdict",
             "approver",
             "decided_at",
+            # The 0020 columns are template-copied settings or engine state,
+            # written by `_create_nodes`, `_return_to` and the timeout
+            # processor. Writable, `decision_history` would be a forged past
+            # and `timed_out_at` a way to suppress a timeout — the same shape
+            # of hole `validate()` below closes for the decision fields.
+            "reject_to",
+            "decision_history",
+            "timeout_hours",
+            "timeout_action",
+            "timeout_role",
+            "activated_at",
+            "timed_out_at",
+            "kind",
+            "signers_json",
+            "threshold",
+            "signatures_json",
+            "branches_json",
         ]
 
     def validate_workflow(self, value):
@@ -327,6 +513,12 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     # runs and the fields resolve against a manager that does not scope by
     # tenant. `ApprovalNodeSerializer.validate_workflow` (same file) already
     # closed the child's half of this; these are the parent's.
+    # Which published template version this workflow runs on (0018); null for
+    # one built from the code tables or an unversioned row.
+    template_version_number = serializers.IntegerField(
+        source="template_version.number", read_only=True, allow_null=True, default=None
+    )
+
     validate_soul = tenant_scoped("soul")
     validate_judgment = tenant_scoped("judgment")
     validate_original_workflow = tenant_scoped("original_workflow")
@@ -354,6 +546,9 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "completed_at",
+            "template_version_number",
+            "return_count",
+            "end_reason",
             "tenant",
         ]
         read_only_fields = [
@@ -375,6 +570,8 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "completed_at",
+            "return_count",
+            "end_reason",
         ]
 
     def validate(self, attrs):
@@ -475,3 +672,40 @@ class WorkflowStatsSerializer(serializers.Serializer):
     completed_nodes = serializers.IntegerField()
     pending_nodes = serializers.IntegerField()
     progress_percent = serializers.FloatField()
+
+
+# ── Approver preview (doc-only shapes; `apps/workflow/preview.py` builds the dict) ──
+
+
+class ApproverPreviewUserSerializer(serializers.Serializer):
+    display_name = serializers.CharField()
+    role = serializers.CharField()
+
+
+class ApproverPreviewActorSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    name_zh = serializers.CharField(allow_blank=True)
+    role = serializers.CharField()
+
+
+class ApproverAssignmentSerializer(serializers.Serializer):
+    # CharField, not a ChoiceField: a third copy of the ACTOR/ROLE/SYSTEM set
+    # makes drf-spectacular invent a hashed enum name (test_schema_has_no_warnings).
+    approver_type = serializers.CharField()
+    actor = ApproverPreviewActorSerializer(allow_null=True)
+    role = serializers.CharField(allow_null=True)
+    users = ApproverPreviewUserSerializer(many=True)
+    user_count = serializers.IntegerField()
+
+
+class SignerPreviewSerializer(ApproverAssignmentSerializer):
+    label = serializers.CharField(allow_blank=True)
+
+
+class ApproverPreviewSerializer(ApproverAssignmentSerializer):
+    node = serializers.CharField()
+    civilization = serializers.CharField()
+    tenant = serializers.CharField()
+    kind = serializers.CharField()
+    # 会签 only: each signer as it resolves. Empty for every other kind.
+    signers = SignerPreviewSerializer(many=True)

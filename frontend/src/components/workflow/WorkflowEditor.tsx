@@ -43,7 +43,14 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { workflowApi } from "@soulledger/core/api";
+import {
+  workflowApi,
+  type ConditionClause,
+  type TemplateBranch,
+  type TemplateSigner,
+  type TemplateValidationIssue,
+  type WorkflowTemplate,
+} from "@soulledger/core/api";
 import { workflowKeys } from "@soulledger/core/query_keys";
 import {
   CIVILIZATION_OPTIONS,
@@ -65,7 +72,13 @@ import {
   WorkflowPalette,
   type PaletteType,
 } from "@/src/components/workflow/WorkflowEditorPanels";
-import { branchOf, nodeRoles, validateFlow } from "@/src/components/workflow/workflowValidation";
+import { SAVE_BLOCKING, branchOf, nodeRoles, validateFlow, whenOf } from "@/src/components/workflow/workflowValidation";
+import { whenText } from "@/src/components/workflow/workflowConditions";
+import {
+  ApproverPreviewSection,
+  ExitConditionsSection,
+  VersionHistorySection,
+} from "@/src/components/workflow/WorkflowInspectorExtras";
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import {
   NodeEditModal,
@@ -78,6 +91,7 @@ import { prefersReducedMotion } from "@/lib/motion";
 import {
   appendPosition,
   edgeArrow,
+  extendedData,
   layoutNodes,
   presetTemplateToFlow,
   savedTemplateToFlow,
@@ -487,11 +501,23 @@ export default function WorkflowEditor({
      * has to choose; taking the most recent matches what the operator just
      * did rather than what they did first.
      */
-    const routing = new Map<string, { on_pass?: string; on_fail?: string }>();
+    const routing = new Map<string, { on_pass?: string; on_fail?: string; branches?: TemplateBranch[] }>();
     for (const edge of edges) {
       if (!edge.source || !edge.target) continue;
-      const field = edge.sourceHandle === "fail" ? "on_fail" : "on_pass";
       const current = routing.get(edge.source) ?? {};
+      // A PASS edge carrying a condition is a BRANCH, not the node's
+      // `on_pass`: each keeps its own target, and they are tried in the order
+      // drawn before the default. `branchId` survives the round trip.
+      const when = whenOf(edge);
+      if (branchOf(edge) === "pass" && when !== undefined) {
+        const branchId = (edge.data as { branchId?: string } | undefined)?.branchId ?? edge.id;
+        routing.set(edge.source, {
+          ...current,
+          branches: [...(current.branches ?? []), { id: branchId, when, target: edge.target }],
+        });
+        continue;
+      }
+      const field = edge.sourceHandle === "fail" ? "on_fail" : "on_pass";
       routing.set(edge.source, { ...current, [field]: edge.target });
     }
 
@@ -508,6 +534,17 @@ export default function WorkflowEditor({
       // omitting the key would leave whatever was stored before.
       on_pass: routing.get(n.id)?.on_pass ?? null,
       on_fail: routing.get(n.id)?.on_fail ?? null,
+      branches: routing.get(n.id)?.branches ?? [],
+      // 驳回到 / 超时 / 会签 (0020, 0021). `|| null` on the timeout action: the
+      // serializer's ChoiceField takes null for "none", and "" is what the
+      // form holds.
+      kind: (n.data.kind as TemplateNode["kind"]) ?? "APPROVAL",
+      signers: (n.data.signers as TemplateSigner[] | undefined) ?? [],
+      threshold: (n.data.threshold as number | null | undefined) ?? null,
+      reject_to: (n.data.rejectTo as string | null | undefined) ?? null,
+      timeout_hours: (n.data.timeoutHours as number | null | undefined) ?? null,
+      timeout_action: ((n.data.timeoutAction as TemplateNode["timeout_action"]) || null),
+      timeout_role: (n.data.timeoutRole as string | undefined) || null,
       // Rounded because these are pixels on a canvas, not measurements: the
       // drag handler produces long floats and storing them makes every save a
       // diff even when nothing moved.
@@ -526,31 +563,66 @@ export default function WorkflowEditor({
     // `onSuccess`, never from an effect, so a new identity costs nothing.
   }, [nodes, edges]);
 
-  // Save template mutation
+  /**
+   * The id a save writes to. `templateId` for an existing template; for a new
+   * one, the id the first save created — so that 发布 after a failed publish,
+   * or a second 存草稿, updates that template instead of creating another.
+   */
+  const createdIdRef = useRef<string | null>(null);
+  const writeDraft = useCallback(async (data: WorkflowTemplateInput): Promise<WorkflowTemplate> => {
+    const id = templateId ?? createdIdRef.current;
+    const res = id ? await workflowApi.templates.update(id, data) : await workflowApi.templates.create(data);
+    if (!id && res.data?.id) createdIdRef.current = res.data.id;
+    return res.data;
+  }, [templateId]);
+  const finish = useCallback(() => {
+    onSave?.({
+      name: templateName,
+      description: templateDescription,
+      civilization: templateCiv,
+      case_type: templateCaseType,
+      priority: templatePriority,
+      nodes: getTemplateNodes(),
+    });
+  }, [onSave, templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes]);
+
+  // 存草稿. A save writes the template's DRAFT version (backend 0018): it
+  // changes what the editor reopens, never what a workflow runs on.
   const saveMutation = useMutation({
-    mutationFn: async (data: WorkflowTemplateInput) => {
-      if (templateId) {
-        const res = await workflowApi.templates.update(templateId, data);
-        return res.data;
-      } else {
-        const res = await workflowApi.templates.create(data);
-        return res.data;
-      }
-    },
+    mutationFn: writeDraft,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workflowKeys.templates.all });
       showToast(t("workflow.editor.saved"), "success");
-      onSave?.({
-        name: templateName,
-        description: templateDescription,
-        civilization: templateCiv,
-        case_type: templateCaseType,
-        priority: templatePriority,
-        nodes: getTemplateNodes(),
-      });
+      finish();
     },
     onError: () => {
       showToast(t("workflow.editor.save_failed"), "error");
+    },
+  });
+
+  // 发布: save the canvas as the draft, then put that draft into service. Two
+  // requests, in that order, so what is published is exactly what is on screen.
+  const publishMutation = useMutation({
+    mutationFn: async (data: WorkflowTemplateInput) => {
+      const saved = await writeDraft(data);
+      const res = await workflowApi.templates.publish(saved.id);
+      return res.data;
+    },
+    onSuccess: (template) => {
+      queryClient.invalidateQueries({ queryKey: workflowKeys.templates.all });
+      showToast(t("workflow.editor.published", { n: String(template?.published_version ?? "") }), "success");
+      finish();
+    },
+    onError: (error: unknown) => {
+      queryClient.invalidateQueries({ queryKey: workflowKeys.templates.all });
+      const issues = (error as { response?: { data?: { issues?: TemplateValidationIssue[] } } })?.response?.data
+        ?.issues;
+      showToast(
+        Array.isArray(issues)
+          ? t("workflow.editor.publish_rejected", { n: String(issues.length) })
+          : t("workflow.editor.publish_failed"),
+        "error"
+      );
     },
   });
 
@@ -560,7 +632,7 @@ export default function WorkflowEditor({
   // that type where 「添加节点」 would put it, a drop puts it where it landed.
   // The toolbar button passes neither and gets TRIAL at the append position,
   // exactly as before.
-  const addNode = useCallback((nodeType: PaletteType = "TRIAL", position?: { x: number; y: number }) => {
+  const addNode = useCallback((kind: PaletteType = "APPROVAL", position?: { x: number; y: number }) => {
     stopLayoutTravel();
     const newId = `node-${Date.now()}`;
     const newNode: Node = {
@@ -570,10 +642,11 @@ export default function WorkflowEditor({
       data: {
         id: newId,
         label: `${t("workflow.editor.new_node")} ${nodes.length + 1}`,
-        nodeType,
+        nodeType: kind === "END" ? "FINAL" : "TRIAL",
         courtCode: "",
         approverRole: "",
         approverType: "ROLE",
+        ...extendedData({ kind }),
       },
     };
 
@@ -839,6 +912,13 @@ export default function WorkflowEditor({
         court_code: (node.data.courtCode as string) || "",
         approver_role: (node.data.approverRole as string) || "",
         approver_type: (node.data.approverType as NodeEditData["approver_type"]) || "ROLE",
+        kind: (node.data.kind as NodeEditData["kind"]) || "APPROVAL",
+        signers: (node.data.signers as TemplateSigner[] | undefined) ?? [],
+        threshold: (node.data.threshold as number | null | undefined) ?? null,
+        timeout_hours: (node.data.timeoutHours as number | null | undefined) ?? null,
+        timeout_action: (node.data.timeoutAction as NodeEditData["timeout_action"]) || "",
+        timeout_role: (node.data.timeoutRole as string | undefined) || "",
+        reject_to: (node.data.rejectTo as string | null | undefined) ?? null,
       });
       setEditModalOpen(true);
     }
@@ -983,11 +1063,42 @@ export default function WorkflowEditor({
    */
   const displayEdges = useMemo<Edge[]>(() => {
     const branching = new Set(edges.filter((e) => branchOf(e) === "fail").map((e) => e.source));
-    return edges.map((e) => ({
-      ...e,
-      data: { ...e.data, branch: branchOf(e), labelled: branching.has(e.source) },
-    }));
-  }, [edges]);
+    // A node with a condition on any PASS edge: its conditional edges read
+    // 「是 · 余额 < 0」 and its unconditional PASS edge 「否 · 默认」.
+    const conditional = new Set(edges.filter((e) => whenOf(e) !== undefined).map((e) => e.source));
+    return edges.map((e) => {
+      const when = whenOf(e);
+      return {
+        ...e,
+        data: {
+          ...e.data,
+          branch: branchOf(e),
+          labelled: branching.has(e.source) || conditional.has(e.source),
+          conditionText: when?.length ? whenText(when, t) : undefined,
+          isDefault: when === undefined && branchOf(e) === "pass" && conditional.has(e.source),
+        },
+      };
+    });
+  }, [edges, t]);
+
+  /** Set or clear the condition on one PASS edge (the inspector's 出口 · 条件). */
+  const setEdgeWhen = useCallback(
+    (edgeId: string, when: ConditionClause[] | undefined) => {
+      stopLayoutTravel();
+      setEdges((eds) =>
+        eds.map((e) => {
+          if (e.id !== edgeId) return e;
+          const { when: _w, branchId: _b, ...rest } = (e.data ?? {}) as Record<string, unknown>;
+          void _w;
+          void _b;
+          return when === undefined
+            ? { ...e, data: rest }
+            : { ...e, data: { ...rest, when, branchId: (e.data as { branchId?: string } | undefined)?.branchId ?? e.id } };
+        })
+      );
+    },
+    [setEdges, stopLayoutTravel]
+  );
 
   /**
    * Select a node from outside the canvas — the linear preview and the issue
@@ -1019,6 +1130,15 @@ export default function WorkflowEditor({
     },
     [addNode]
   );
+
+  /** 驳回到's choices for the node being edited: the nodes before it, by order. */
+  const rejectOptions = useMemo(() => {
+    const idx = editData ? nodes.findIndex((n) => n.id === editData.id) : -1;
+    return nodes.slice(0, Math.max(idx, 0)).map((n, i) => ({
+      value: n.id,
+      label: `N${i + 1}「${(typeof n.data.label === "string" && n.data.label) || t("workflow.editor.unnamed")}」`,
+    }));
+  }, [editData, nodes, t]);
 
   // Update node data
   const updateNodeData = useCallback(
@@ -1073,17 +1193,23 @@ export default function WorkflowEditor({
   );
 
   // Save template
-  const handleSave = useCallback(() => {
-    const templateData: WorkflowTemplateInput = {
+  const templatePayload = useCallback(
+    (): WorkflowTemplateInput => ({
       name: templateName,
       description: templateDescription,
       civilization: templateCiv,
       case_type: templateCaseType,
       priority: templatePriority,
       nodes: getTemplateNodes(),
-    };
-    saveMutation.mutate(templateData);
-  }, [templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes, saveMutation]);
+    }),
+    [templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes]
+  );
+  const handleSave = useCallback(() => {
+    saveMutation.mutate(templatePayload());
+  }, [templatePayload, saveMutation]);
+  const handlePublish = useCallback(() => {
+    publishMutation.mutate(templatePayload());
+  }, [templatePayload, publishMutation]);
 
   // 三档急缓的文案复用 `workflow.detail.*`——`app/workflow/[id]/page.tsx` 用同一
   // 组键把 `ApprovalWorkflow.priority` 的 0/1/2 显示成普通/紧急/危急，三份 bundle
@@ -1095,6 +1221,24 @@ export default function WorkflowEditor({
     { value: 1, label: t("workflow.detail.urgent") },
     { value: 2, label: t("workflow.detail.critical") },
   ];
+
+  const busy = saveMutation.isPending || publishMutation.isPending;
+  const saveBlocked = issues.some((i) => SAVE_BLOCKING.has(i.code));
+  /** 「草稿 v4 · 已发布 v3」, design C · 03 — from the template as last loaded. */
+  const draftVersion = existingTemplate?.draft_version ?? null;
+  const publishedVersion = existingTemplate?.published_version ?? null;
+  const versionBadge = (
+    <span className="font-mono text-2xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]" data-testid="version-badge">
+      {[
+        draftVersion != null ? t("workflow.editor.version.draft", { n: String(draftVersion) }) : null,
+        publishedVersion != null
+          ? t("workflow.editor.version.published", { n: String(publishedVersion) })
+          : t("workflow.editor.version.unpublished"),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+    </span>
+  );
 
   // A template we were asked to edit but could not read. Returning the error
   // instead of the editor is the point: an editor whose canvas is empty
@@ -1123,6 +1267,23 @@ export default function WorkflowEditor({
     );
   }
 
+  /**
+   * Whether the server's copy of this node is what is on screen — the approver
+   * preview resolves the SAVED working copy, so a node added or re-designated
+   * since the last save has nothing server-side to preview yet.
+   */
+  const savedAsShown = (node: Node): boolean => {
+    const stored = (existingTemplate?.nodes ?? []).find((n) => n.id === node.id);
+    if (!stored) return false;
+    return (
+      stored.node_name === node.data.label &&
+      (stored.approver_type ?? "ROLE") === (node.data.approverType ?? "ROLE") &&
+      (stored.approver_role ?? "") === (node.data.approverRole ?? "") &&
+      (stored.kind ?? "APPROVAL") === (node.data.kind ?? "APPROVAL") &&
+      JSON.stringify(stored.signers ?? []) === JSON.stringify(node.data.signers ?? [])
+    );
+  };
+
   const inspector = (
     <WorkflowInspector
       t={t}
@@ -1134,6 +1295,25 @@ export default function WorkflowEditor({
       onSelect={selectNode}
       onEdit={wide ? handleNodeEdit : undefined}
       validationId={validationId}
+      nodeExtras={(node) => (
+        <>
+          <ApproverPreviewSection
+            t={t}
+            templateId={templateId ?? createdIdRef.current ?? undefined}
+            nodeId={node.id}
+            civilization={templateCiv}
+            saved={savedAsShown(node)}
+          />
+          <ExitConditionsSection
+            t={t}
+            node={node}
+            nodes={nodes}
+            edges={edges}
+            onChange={wide ? setEdgeWhen : undefined}
+          />
+        </>
+      )}
+      footer={<VersionHistorySection t={t} templateId={templateId} />}
     />
   );
   const preview = (
@@ -1165,6 +1345,7 @@ export default function WorkflowEditor({
             {t(`workflow.civilizations.${templateCiv}`)} · {t(`workflow.case_types.${templateCaseType}`)} ·{" "}
             {priorityOptions.find((o) => o.value === templatePriority)?.label}
           </p>
+          {versionBadge}
         </div>
         {preview}
         {inspector}
@@ -1253,6 +1434,7 @@ export default function WorkflowEditor({
               </option>
             ))}
           </select>
+          {versionBadge}
         </div>
 
         {/* Action buttons */}
@@ -1338,14 +1520,26 @@ export default function WorkflowEditor({
               `workflowValidation.ts` is one the backend or the engine acts on
               (a 400, an edge that is never taken, an edge dropped on save), so
               saving past it would store something other than what is drawn. */}
+          {/* 存草稿 is blocked only by what a draft cannot hold (SAVE_BLOCKING);
+              发布 by every issue, and by an empty canvas — the backend refuses
+              both with the same codes. */}
           <button
             type="button"
             onClick={handleSave}
-            disabled={saveMutation.isPending || (!!templateId && isTemplateLoading) || issues.length > 0}
+            disabled={busy || (!!templateId && isTemplateLoading) || saveBlocked}
+            aria-describedby={saveBlocked ? validationId : undefined}
+            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
+          >
+            {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
+          </button>
+          <button
+            type="button"
+            onClick={handlePublish}
+            disabled={busy || (!!templateId && isTemplateLoading) || issues.length > 0 || nodes.length === 0}
             aria-describedby={issues.length > 0 ? validationId : undefined}
             className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors disabled:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
           >
-            {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
+            {publishMutation.isPending ? t("workflow.editor.publishing") : t("workflow.editor.publish")}
           </button>
         </div>
       </div>
@@ -1477,6 +1671,7 @@ export default function WorkflowEditor({
         editData={editData}
         setEditData={setEditData}
         onSave={updateNodeData}
+        rejectOptions={rejectOptions}
         t={t}
       />
     </div>

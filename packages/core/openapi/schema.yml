@@ -14344,6 +14344,104 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/workflow/templates/{id}/approver-preview/:
+    get:
+      operationId: v1_workflow_templates_approver_preview_retrieve
+      description: WorkflowTemplate CRUD.
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Workflow Template.
+        required: true
+      - in: query
+        name: node
+        schema:
+          type: string
+        description: 模板内节点 id
+        required: true
+      - in: query
+        name: tenant
+        schema:
+          type: string
+        description: 租户代码,仅 ADMIN
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproverPreview'
+          description: ''
+  /api/v1/workflow/templates/{id}/publish/:
+    post:
+      operationId: v1_workflow_templates_publish_create
+      description: WorkflowTemplate CRUD.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Workflow Template.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowTemplate'
+          description: ''
+  /api/v1/workflow/templates/{id}/versions/:
+    get:
+      operationId: v1_workflow_templates_versions_list
+      description: WorkflowTemplate CRUD.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Workflow Template.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowTemplateVersion'
+          description: ''
   /api/v1/workflows/:
     get:
       operationId: v1_workflows_list
@@ -15068,16 +15166,71 @@ components:
           type: string
           format: date-time
           readOnly: true
+        reject_to:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+        decision_history:
+          readOnly: true
+        timeout_hours:
+          type: integer
+          readOnly: true
+          nullable: true
+        timeout_action:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeTimeoutActionEnum'
+          readOnly: true
+        timeout_role:
+          type: string
+          readOnly: true
+        activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        timed_out_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeKindEnum'
+          readOnly: true
+        signers_json:
+          readOnly: true
+        threshold:
+          type: integer
+          readOnly: true
+          nullable: true
+        signatures_json:
+          readOnly: true
+        branches_json:
+          readOnly: true
       required:
+      - activated_at
       - approver
       - approver_display_name
       - approver_username
+      - branches_json
       - created_at
       - decided_at
+      - decision_history
       - id
+      - kind
       - node_name
       - node_order
+      - reject_to
+      - signatures_json
+      - signers_json
       - status
+      - threshold
+      - timed_out_at
+      - timeout_action
+      - timeout_hours
+      - timeout_role
       - verdict
       - workflow
     ApprovalNodeApproverTypeEnum:
@@ -15090,6 +15243,18 @@ components:
         * `ACTOR` - 角色
         * `ROLE` - 职能角色
         * `SYSTEM` - 系统自动
+    ApprovalNodeKindEnum:
+      enum:
+      - APPROVAL
+      - COUNTERSIGN
+      - NOTIFY
+      - END
+      type: string
+      description: |-
+        * `APPROVAL` - 审批
+        * `COUNTERSIGN` - 会签
+        * `NOTIFY` - 通知
+        * `END` - 结束
     ApprovalNodeNodeTypeEnum:
       enum:
       - TRIAL
@@ -15111,6 +15276,7 @@ components:
       - REJECTED
       - SKIPPED
       - ESCALATED
+      - TRAVERSED
       type: string
       description: |-
         * `PENDING` - 待审批
@@ -15118,6 +15284,17 @@ components:
         * `REJECTED` - 已拒绝
         * `SKIPPED` - 已跳过
         * `ESCALATED` - 已升级
+        * `TRAVERSED` - 已经过
+    ApprovalNodeTimeoutActionEnum:
+      enum:
+      - ESCALATE
+      - AUTO_REJECT
+      - NOTIFY
+      type: string
+      description: |-
+        * `ESCALATE` - 转交上级
+        * `AUTO_REJECT` - 自动驳回
+        * `NOTIFY` - 提醒
     ApprovalWorkflow:
       type: object
       description: |-
@@ -15215,6 +15392,16 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        template_version_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        return_count:
+          type: integer
+          readOnly: true
+        end_reason:
+          type: string
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -15224,12 +15411,15 @@ components:
       - created_at
       - current_node
       - current_node_detail
+      - end_reason
       - id
       - judgment_verdict
       - nodes
+      - return_count
       - soul
       - soul_name
       - status
+      - template_version_number
       - tenant
       - updated_at
       - workflow_name
@@ -15294,6 +15484,70 @@ components:
         * `APPEAL` - 申诉中
         * `EXCEPTION` - 异常处理
         * `COMPLETED` - 流程完成
+    ApproverPreview:
+      type: object
+      properties:
+        approver_type:
+          type: string
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/ApproverPreviewActor'
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApproverPreviewUser'
+        user_count:
+          type: integer
+        node:
+          type: string
+        civilization:
+          type: string
+        tenant:
+          type: string
+        kind:
+          type: string
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignerPreview'
+      required:
+      - actor
+      - approver_type
+      - civilization
+      - kind
+      - node
+      - role
+      - signers
+      - tenant
+      - user_count
+      - users
+    ApproverPreviewActor:
+      type: object
+      properties:
+        name:
+          type: string
+        name_zh:
+          type: string
+        role:
+          type: string
+      required:
+      - name
+      - name_zh
+      - role
+    ApproverPreviewUser:
+      type: object
+      properties:
+        display_name:
+          type: string
+        role:
+          type: string
+      required:
+      - display_name
+      - role
     AssignableOfficer:
       type: object
       description: |-
@@ -15819,6 +16073,24 @@ components:
       - create_time
       - id
       - post
+    ConditionClause:
+      type: object
+      description: |-
+        `{fact, op, value}` — see `apps/workflow/conditions.py`. Shape only here;
+        whether the fact/op/value combine is checked at publish, so a half-edited
+        condition can still be saved as a draft.
+      properties:
+        fact:
+          type: string
+          maxLength: 20
+        op:
+          type: string
+          maxLength: 10
+        value: {}
+      required:
+      - fact
+      - op
+      - value
     Conversation:
       type: object
       properties:
@@ -21596,6 +21868,49 @@ components:
           type: string
           format: date-time
           readOnly: true
+        reject_to:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: 驳回时退回到的更早节点；为空则按 on_fail / REJECTED 处理
+        decision_history:
+          readOnly: true
+        timeout_hours:
+          type: integer
+          readOnly: true
+          nullable: true
+        timeout_action:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeTimeoutActionEnum'
+          readOnly: true
+        timeout_role:
+          type: string
+          readOnly: true
+        activated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        timed_out_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalNodeKindEnum'
+          readOnly: true
+        signers_json:
+          readOnly: true
+        threshold:
+          type: integer
+          readOnly: true
+          nullable: true
+        signatures_json:
+          readOnly: true
+        branches_json:
+          readOnly: true
     PatchedApprovalWorkflow:
       type: object
       description: |-
@@ -21693,6 +22008,16 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        template_version_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        return_count:
+          type: integer
+          readOnly: true
+        end_reason:
+          type: string
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -22919,6 +23244,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkflowTemplateNode'
+        published_version:
+          type: integer
+          nullable: true
+          readOnly: true
+        draft_version:
+          type: integer
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -25172,6 +25505,33 @@ components:
       description: |-
         * `error` - error
         * `warning` - warning
+    SignerPreview:
+      type: object
+      properties:
+        approver_type:
+          type: string
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/ApproverPreviewActor'
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApproverPreviewUser'
+        user_count:
+          type: integer
+        label:
+          type: string
+      required:
+      - actor
+      - approver_type
+      - label
+      - role
+      - user_count
+      - users
     SocialHandledTypeEnum:
       enum:
       - POST
@@ -26676,6 +27036,39 @@ components:
       - started_at
       - status
       - trigger
+    TemplateBranch:
+      type: object
+      properties:
+        id:
+          type: string
+          default: ''
+        when:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConditionClause'
+        target:
+          type: string
+      required:
+      - target
+      - when
+    TemplateSigner:
+      type: object
+      description: |-
+        One 会签 signer, spelled like a one-person node: a label (a person's
+        name, probed like a node label), or a ROLE with a role.
+      properties:
+        label:
+          type: string
+          default: ''
+          maxLength: 255
+        approver_type:
+          type: string
+          default: ROLE
+          maxLength: 10
+        approver_role:
+          type: string
+          default: ''
+          maxLength: 20
     Tenant:
       type: object
       properties:
@@ -27451,6 +27844,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkflowTemplateNode'
+        published_version:
+          type: integer
+          nullable: true
+          readOnly: true
+        draft_version:
+          type: integer
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -27465,8 +27866,10 @@ components:
           nullable: true
       required:
       - created_at
+      - draft_version
       - id
       - name
+      - published_version
       - tenant
       - updated_at
     WorkflowTemplateList:
@@ -27506,11 +27909,16 @@ components:
         node_count:
           type: integer
           readOnly: true
+        published_version:
+          type: integer
+          nullable: true
+          readOnly: true
       required:
       - created_at
       - id
       - name
       - node_count
+      - published_version
     WorkflowTemplateNode:
       type: object
       description: |-
@@ -27566,6 +27974,40 @@ components:
             type: number
             format: double
           nullable: true
+        reject_to:
+          type: string
+          nullable: true
+        timeout_hours:
+          type: integer
+          maximum: 8760
+          minimum: 1
+          nullable: true
+        timeout_action:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WorkflowTemplateNodeTimeoutActionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        timeout_role:
+          type: string
+          nullable: true
+          maxLength: 20
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/WorkflowTemplateNodeKindEnum'
+          default: APPROVAL
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateSigner'
+        threshold:
+          type: integer
+          minimum: 1
+          nullable: true
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateBranch'
       required:
       - node_name
     WorkflowTemplateNodeApproverTypeEnum:
@@ -27578,6 +28020,18 @@ components:
         * `ACTOR` - ACTOR
         * `ROLE` - ROLE
         * `SYSTEM` - SYSTEM
+    WorkflowTemplateNodeKindEnum:
+      enum:
+      - APPROVAL
+      - COUNTERSIGN
+      - NOTIFY
+      - END
+      type: string
+      description: |-
+        * `APPROVAL` - APPROVAL
+        * `COUNTERSIGN` - COUNTERSIGN
+        * `NOTIFY` - NOTIFY
+        * `END` - END
     WorkflowTemplateNodeNodeTypeEnum:
       enum:
       - TRIAL
@@ -27592,6 +28046,79 @@ components:
         * `APPEAL` - APPEAL
         * `FINAL` - FINAL
         * `EXECUTION` - EXECUTION
+    WorkflowTemplateNodeTimeoutActionEnum:
+      enum:
+      - ESCALATE
+      - AUTO_REJECT
+      - NOTIFY
+      type: string
+      description: |-
+        * `ESCALATE` - ESCALATE
+        * `AUTO_REJECT` - AUTO_REJECT
+        * `NOTIFY` - NOTIFY
+    WorkflowTemplateVersion:
+      type: object
+      description: |-
+        One row of a template's version history. Read-only: versions are written
+        by `versioning.py` alone, through save and publish.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/WorkflowTemplateVersionStatusEnum'
+          readOnly: true
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowTemplateNode'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        saved_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        published_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - nodes
+      - number
+      - published_at
+      - published_by_name
+      - saved_by_name
+      - status
+      - updated_at
+    WorkflowTemplateVersionStatusEnum:
+      enum:
+      - DRAFT
+      - PUBLISHED
+      - SUPERSEDED
+      type: string
+      description: |-
+        * `DRAFT` - 草稿
+        * `PUBLISHED` - 已发布
+        * `SUPERSEDED` - 已替换
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

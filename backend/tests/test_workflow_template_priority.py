@@ -115,6 +115,16 @@ def _judgment(civilization, tenant, name):
 
 
 def _post_template(client, *, priority, case_type=CaseType.SPECIAL):
+    """POST the template, then publish it — a save alone is a draft (0018)
+    and the engine builds only from the published graph. Returns the POST."""
+    response = _save_template(client, priority=priority, case_type=case_type)
+    if response.status_code == 201:
+        published = client.post(f"{TEMPLATES}/{response.data['id']}/publish/")
+        assert published.status_code == 200, published.data
+    return response
+
+
+def _save_template(client, *, priority, case_type=CaseType.SPECIAL):
     return client.post(
         f"{TEMPLATES}/",
         {

@@ -3,7 +3,7 @@ REST views for workflow app.
 """
 from django.db import transaction
 from django.db.models import Prefetch
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,10 +19,12 @@ from apps.workflow.serializers import (
     ApprovalNodeSerializer,
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
+    ApproverPreviewSerializer,
     WorkflowNodeActionSerializer,
     WorkflowStatsSerializer,
     WorkflowTemplateListSerializer,
     WorkflowTemplateSerializer,
+    WorkflowTemplateVersionSerializer,
 )
 from apps.workflow.services import WorkflowService
 
@@ -44,6 +46,11 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     # directions are pinned in apps/perm/test_matrix_snapshot.py.
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "workflow"
+    extra_permissions = {
+        "publish": ["workflow.update"],
+        "versions": ["workflow.read"],
+        "approver_preview": ["workflow.read"],
+    }
     queryset = WorkflowTemplate.objects.select_related("tenant").all()
     serializer_class = WorkflowTemplateSerializer
     filterset_class = None  # Templates are small, no filtering needed
@@ -59,13 +66,108 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # filter — deleted templates kept appearing in the list. Exclude them
         # explicitly rather than going back to `objects`, which would
         # reintroduce the contextvar problem this override exists to solve.
-        qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related("tenant")
+        qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related(
+            "tenant", "published_version"
+        )
         return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), WorkflowTemplate)
 
     def get_serializer_class(self):
         if self.action == "list":
             return WorkflowTemplateListSerializer
+        if self.action == "versions":
+            return WorkflowTemplateVersionSerializer
         return WorkflowTemplateSerializer
+
+    # Template versions (0018). A save (POST/PATCH with `nodes`) writes a draft;
+    # this makes the draft the version new workflows are built from. It is
+    # `workflow.update` because it is an edit of the template — the same people
+    # who may change a template may put the change into service — and a 400
+    # with the validation issues when the draft is not publishable, so the
+    # editor can show them against the nodes they name.
+    @extend_schema(request=None, responses=WorkflowTemplateSerializer)
+    @action(detail=True, methods=["post"])
+    def publish(self, request, pk=None):
+        from apps.workflow import versioning
+
+        template = self.get_object()
+        try:
+            versioning.publish(template, user=request.user)
+        except versioning.NothingToPublishError:
+            return Response(
+                {"error": "no_draft", "detail": "该模板没有待发布的草稿。"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except versioning.PublishRejectedError as rejected:
+            return Response(
+                {"error": "invalid_draft", "issues": rejected.issues},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        template.refresh_from_db()
+        return Response(WorkflowTemplateSerializer(template, context={"request": request}).data)
+
+    # Who a node's approver resolves to, for a target civilization and tenant.
+    # Read-only: `preview.preview_node` calls `_resolve_approver` — the resolver
+    # `_create_nodes` uses — and describes its answer with names and roles only.
+    #
+    # `tenant` (a tenant code) is honoured for ADMIN only, the one role that
+    # sees across tenants; everybody else previews in their own tenant, and a
+    # foreign code is a 403 rather than a silent substitution. With no
+    # `tenant`, ADMIN gets the tenant that hosts the requested civilization
+    # (`CIVILIZATION_TENANT`), since "按目标文明解析" is the question asked.
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("node", str, required=True, description="模板内节点 id"),
+            OpenApiParameter("civilization", str, required=False),
+            OpenApiParameter("tenant", str, required=False, description="租户代码,仅 ADMIN"),
+        ],
+        responses=ApproverPreviewSerializer,
+    )
+    @action(detail=True, methods=["get"], url_path="approver-preview")
+    def approver_preview(self, request, pk=None):
+        from apps.core.tenant import is_tenant_exempt
+        from apps.souls.models import CIVILIZATION_TENANT, Civilization
+        from apps.tenants.models import Tenant
+        from apps.workflow import preview, versioning
+
+        template = self.get_object()
+        node_id = request.query_params.get("node", "")
+        node = next(
+            (n for n in versioning.working_nodes(template)
+             if isinstance(n, dict) and str(n.get("id", "")) == node_id),
+            None,
+        ) if node_id else None
+        if node is None:
+            return Response({"error": "node_not_found"}, status=status.HTTP_404_NOT_FOUND)
+
+        civilization = request.query_params.get("civilization") or template.civilization
+        if civilization not in Civilization.values:
+            return Response({"error": "invalid_civilization"}, status=status.HTTP_400_BAD_REQUEST)
+
+        own = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        code = request.query_params.get("tenant")
+        if is_tenant_exempt(request.user):
+            code = code or CIVILIZATION_TENANT.get(civilization)
+            tenant = Tenant.objects.filter(code=code).first() if code else own
+        elif code and (own is None or code != own.code):
+            return Response({"error": "tenant_forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            tenant = own
+        if tenant is None:
+            return Response({"error": "tenant_not_found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        body = preview.preview_node(node, civilization, tenant)
+        body.update({"node": node_id, "civilization": civilization, "tenant": tenant.code})
+        return Response(body)
+
+    # Read-only history, newest first. Every version the template ever had —
+    # superseded ones included, because in-flight workflows may still be
+    # running on them.
+    @extend_schema(responses=WorkflowTemplateVersionSerializer(many=True))
+    @action(detail=True, methods=["get"])
+    def versions(self, request, pk=None):
+        template = self.get_object()
+        rows = template.versions.select_related("saved_by", "published_by").order_by("-number")
+        return Response(WorkflowTemplateVersionSerializer(rows, many=True).data)
 
 
 def _nodes_with_approver():
@@ -94,7 +196,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'create_from_judgment': ['workflow.create'],
     }
     queryset = ApprovalWorkflow.objects.select_related(
-        "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm"
+        "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm", "template_version"
     ).prefetch_related(_nodes_with_approver()).all()
     filterset_class = WorkflowFilter
     search_fields = WorkflowFilter.search_fields
@@ -105,7 +207,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """Fresh queryset to avoid stale TenantManager contextvar filters.
         Applies tenant filtering for non-ADMIN users."""
         qs = ApprovalWorkflow._base_manager.select_related(
-            "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm"
+            "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm", "template_version"
         ).prefetch_related(_nodes_with_approver()).all()
         return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), ApprovalWorkflow)
 

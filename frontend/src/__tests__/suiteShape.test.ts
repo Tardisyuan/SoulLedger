@@ -222,6 +222,7 @@ const COLLECTED_FILES = [
   "useSouls.test.ts",
   "workflowAutoLayoutMotion.test.tsx",
   "workflowEditorEdgeRouting.test.tsx",
+  "workflowEngineEditor.test.tsx",
   "workflowEdgeArrowSingleSource.test.ts",
   "workflowEditorLayout.test.ts",
   "viewportHeightContract.test.ts",

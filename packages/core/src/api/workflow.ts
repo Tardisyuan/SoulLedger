@@ -38,6 +38,12 @@ export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   nodes?: ApprovalNode[];
   updated_at: string;
   tenant?: number;
+  /** Which published template version this workflow runs on; null for a built-in flow. */
+  template_version_number?: number | null;
+  /** How many times 驳回到 sent it back (capped at 3). */
+  return_count?: number;
+  /** "RETURN_LIMIT" when a FAIL would have exceeded the cap; "" otherwise. */
+  end_reason?: string;
 }
 
 /**
@@ -85,9 +91,50 @@ export interface ApprovalNode {
   decided_at: string | null;
   notes: string;
   created_at?: string;
+  kind?: WorkflowNodeKind;
+  /** Decisions a 驳回到 re-opened, and timeout events, oldest first. */
+  decision_history?: Record<string, unknown>[];
+  signatures_json?: { signer: number; user_name: string; verdict: string; passed: boolean; at: string }[];
+  timeout_hours?: number | null;
+  timeout_action?: WorkflowTimeoutAction | "";
 }
 
-/** One node of a WorkflowTemplate (serializers.py:9). */
+/** What a node does (`NodeKind`, backend/apps/workflow/models.py). Absent reads as APPROVAL. */
+export type WorkflowNodeKind = "APPROVAL" | "COUNTERSIGN" | "NOTIFY" | "END";
+
+/** What a per-node timeout does (`TimeoutAction`). Fires only when `process_workflow_timeouts` runs. */
+export type WorkflowTimeoutAction = "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
+
+/**
+ * A condition clause (`apps/workflow/conditions.py`): a whitelisted case fact
+ * compared to a constant. Declarative — nothing is parsed or evaluated as code.
+ * `balance` takes an integer and lt/lte/gt/gte/eq; `civilization` and `verdict`
+ * take a non-empty list of members and in/not_in.
+ */
+export type ConditionFact = "balance" | "civilization" | "verdict";
+export type ConditionOp = "lt" | "lte" | "gt" | "gte" | "eq" | "in" | "not_in";
+export interface ConditionClause {
+  fact: ConditionFact;
+  op: ConditionOp;
+  value: number | string[];
+}
+
+/** A PASS branch: taken when every clause holds; tried before `on_pass`. */
+export interface TemplateBranch {
+  id?: string;
+  when: ConditionClause[];
+  /** Template-local id of the target node. */
+  target: string;
+}
+
+/** A 会签 signer, spelled like a one-person node (label probed for a name, or a ROLE). */
+export interface TemplateSigner {
+  label: string;
+  approver_type: "ACTOR" | "ROLE" | "SYSTEM";
+  approver_role: string;
+}
+
+/** One node of a WorkflowTemplate (serializers.py `WorkflowTemplateNodeSerializer`). */
 export interface WorkflowTemplateNode {
   id?: string;
   node_name: string;
@@ -96,6 +143,19 @@ export interface WorkflowTemplateNode {
   approver_role: string;
   approver_type: "ACTOR" | "ROLE" | "SYSTEM";
   node_order: number;
+  on_pass?: string | null;
+  on_fail?: string | null;
+  position?: { x: number; y: number } | null;
+  /** 驳回到: template-local id of an EARLIER node the flow returns to on FAIL. */
+  reject_to?: string | null;
+  timeout_hours?: number | null;
+  timeout_action?: WorkflowTimeoutAction | "" | null;
+  timeout_role?: string | null;
+  kind?: WorkflowNodeKind;
+  signers?: TemplateSigner[];
+  /** 会签: approvals needed to pass; null means all signers. */
+  threshold?: number | null;
+  branches?: TemplateBranch[];
 }
 
 /** WorkflowTemplateListSerializer (serializers.py:47) — no `nodes`. */
@@ -116,6 +176,8 @@ export interface WorkflowTemplateListItem {
   created_at: string;
   /** How many nodes this template has — `len(nodes_json)` on the backend. */
   node_count: number;
+  /** The published version's number (0018); null for a template never published. */
+  published_version?: number | null;
   /**
    * Present only on a locally-built preview object for a not-yet-saved
    * predefined template (see app/workflow/page.tsx). A template fetched from
@@ -135,9 +197,56 @@ export interface WorkflowTemplateListItem {
  * model field name and never appears on the wire (`source='nodes_json'`).
  */
 export interface WorkflowTemplate extends WorkflowTemplateListItem {
+  /**
+   * The WORKING COPY: the draft when there is one, else the published graph.
+   * A save writes `nodes` into the draft; only `publish` puts it into service.
+   */
   nodes?: WorkflowTemplateNode[];
+  published_version: number | null;
+  /** The open draft's number, or null when the working copy is the published graph. */
+  draft_version: number | null;
   updated_at: string;
   tenant?: number;
+}
+
+/** GET /workflow/templates/{id}/versions/ — read-only history, newest first. */
+export interface WorkflowTemplateVersion {
+  id: string;
+  number: number;
+  status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
+  nodes: WorkflowTemplateNode[];
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  saved_by_name: string | null;
+  published_by_name: string | null;
+}
+
+/** One resolved designation, names and roles only (`apps/workflow/preview.py`). */
+export interface ApproverAssignment {
+  approver_type: "ACTOR" | "ROLE" | "SYSTEM";
+  actor: { name: string; name_zh: string; role: string } | null;
+  role: string | null;
+  /** A sample of at most 10 accounts; `user_count` is exact. */
+  users: { display_name: string; role: string }[];
+  user_count: number;
+}
+
+/** GET /workflow/templates/{id}/approver-preview/?node=… */
+export interface ApproverPreview extends ApproverAssignment {
+  node: string;
+  civilization: string;
+  tenant: string;
+  kind: WorkflowNodeKind;
+  /** 会签 only: each signer as `_resolve_approver` resolves it. */
+  signers: (ApproverAssignment & { label: string })[];
+}
+
+/** One validation issue as `POST publish/` reports it (`apps/workflow/validation.py`). */
+export interface TemplateValidationIssue {
+  node: string;
+  code: string;
+  [detail: string]: unknown;
 }
 
 /** `CaseType.REBIRTH_APPLICATION` — a soul's rebirth application (backend/apps/soul_accounts/rebirth.py). */
@@ -198,5 +307,14 @@ export const workflowApi = {
     create: (data: object) => api.post<WorkflowTemplate>("/workflow/templates/", data),
     update: (id: string, data: object) => api.patch<WorkflowTemplate>(`/workflow/templates/${id}/`, data),
     delete: (id: string) => api.delete<void>(`/workflow/templates/${id}/`),
+    /**
+     * Put the draft into service. 400 `{error: "no_draft"}` or
+     * `{error: "invalid_draft", issues: TemplateValidationIssue[]}`.
+     */
+    publish: (id: string) => api.post<WorkflowTemplate>(`/workflow/templates/${id}/publish/`),
+    versions: (id: string) => api.get<WorkflowTemplateVersion[]>(`/workflow/templates/${id}/versions/`),
+    /** Read-only: who `_resolve_approver` would assign, for a node of the working copy. */
+    approverPreview: (id: string, params: { node: string; civilization?: string; tenant?: string }) =>
+      api.get<ApproverPreview>(`/workflow/templates/${id}/approver-preview/`, { params }),
   },
 };

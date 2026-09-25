@@ -319,8 +319,16 @@ class WorkflowService:
                     .first()
                 )
             if db_template and db_template.nodes_json:
+                # `version_id` is which published version `nodes_json` is a
+                # copy of (None for a row that predates versioning and was
+                # written through the ORM). The workflow records it; see
+                # `ApprovalWorkflow.template_version`.
                 return (
-                    {"name": db_template.name, "nodes": db_template.nodes_json},
+                    {
+                        "name": db_template.name,
+                        "nodes": db_template.nodes_json,
+                        "version_id": db_template.published_version_id,
+                    },
                     db_template.priority,
                 )
         except DatabaseError:
@@ -426,14 +434,23 @@ class WorkflowService:
                 # (0011_backfill_ten_court_approvers) without fixing this would
                 # have closed the hole for exactly as long as it took someone
                 # to create the next workflow.
-                **cls._resolve_approver(node_def, civilization, workflow.tenant_id),
+                # Merged, not spread side by side: `_kind_columns` overrides the
+                # approver for 结束 (SYSTEM whatever its label says).
+                **{
+                    **cls._resolve_approver(node_def, civilization, workflow.tenant_id),
+                    **cls._timeout_columns(node_def),
+                    **cls._kind_columns(node_def, civilization, workflow.tenant_id),
+                },
             )
             if first_node is None:
                 first_node = node
             template_id = node_def.get("id")
             if template_id:
                 by_template_id[str(template_id)] = node
-            if node_def.get("on_pass") or node_def.get("on_fail"):
+            if (
+                node_def.get("on_pass") or node_def.get("on_fail")
+                or node_def.get("reject_to") or node_def.get("branches")
+            ):
                 routing_defs.append((node, node_def))
 
         # ── Wire the routing edges ─────────────────────────────────────
@@ -450,12 +467,28 @@ class WorkflowService:
         # anyone drew the edge.
         for node, node_def in routing_defs:
             updates = []
-            for field in ("on_pass", "on_fail"):
+            for field in ("on_pass", "on_fail", "reject_to"):
                 target_id = node_def.get(field)
                 target = by_template_id.get(str(target_id)) if target_id else None
                 if target is not None and target.pk != node.pk:
                     setattr(node, field, target)
                     updates.append(field)
+            # Condition branches name their target by template id too. Same
+            # rule as the edges above: a branch into a node this template does
+            # not define is dropped, and the PASS then takes the default.
+            branches = [
+                {
+                    "id": str(b.get("id") or ""),
+                    "when": list(b.get("when") or []),
+                    "target": str(by_template_id[str(b["target"])].pk),
+                }
+                for b in node_def.get("branches") or []
+                if isinstance(b, dict) and str(b.get("target")) in by_template_id
+                and by_template_id[str(b["target"])].pk != node.pk
+            ]
+            if branches:
+                node.branches_json = branches
+                updates.append("branches_json")
             if updates:
                 node.save(update_fields=updates)
 
@@ -467,10 +500,80 @@ class WorkflowService:
                 f"always answers with at least one node."
             )
 
-        workflow.current_node = first_node
-        workflow.status = ApprovalWorkflowStatus.IN_PROGRESS
+        from django.utils import timezone
+
+        # `_enter`, so a flow that opens with 通知 sends it and moves on.
+        workflow._enter(first_node, timezone.now())
         workflow.save()
         return first_node
+
+    @staticmethod
+    def _timeout_columns(node_def: dict) -> dict:
+        """The template's 超时 settings as `ApprovalNode` columns.
+
+        Copied at creation like everything else, so a workflow keeps the
+        timeouts of the version it started on. A node with hours but no
+        action (or the reverse) gets neither: the publish validator refuses
+        that shape, and a half-set timeout on an unvalidated row must not fire
+        an action nobody chose.
+        """
+        hours = node_def.get("timeout_hours")
+        action = node_def.get("timeout_action") or ""
+        if not hours or not action:
+            return {}
+        return {
+            "timeout_hours": int(hours),
+            "timeout_action": action,
+            "timeout_role": node_def.get("timeout_role") or "",
+        }
+
+    @classmethod
+    def _kind_columns(cls, node_def: dict, civilization: str, tenant_id) -> dict:
+        """会签 / 通知 / 结束 as `ApprovalNode` columns.
+
+        Each 会签 signer goes through `_resolve_approver` — the same resolver,
+        with the signer's label standing where a node's label stands — so a
+        signer resolves exactly as a one-person node with that label would, and
+        the approver preview can show each one by calling the same method.
+        """
+        from apps.workflow.models import NodeKind
+
+        kind = node_def.get("kind") or NodeKind.APPROVAL
+        if kind not in NodeKind.values:
+            kind = NodeKind.APPROVAL
+        columns: dict = {"kind": kind}
+        if kind == NodeKind.END:
+            columns.update(approver_type="SYSTEM", approver_actor=None, approver_role="")
+        if kind == NodeKind.COUNTERSIGN:
+            columns["signers_json"] = [
+                cls.resolve_signer(signer, civilization, tenant_id)
+                for signer in node_def.get("signers") or []
+                if isinstance(signer, dict)
+            ]
+            threshold = node_def.get("threshold")
+            columns["threshold"] = int(threshold) if threshold else None
+        return columns
+
+    @classmethod
+    def signer_def(cls, signer: dict) -> dict:
+        """A 会签 signer spelled as a template node, for `_resolve_approver`."""
+        return {
+            "node_name": signer.get("label") or "",
+            "actor": signer.get("actor"),
+            "approver_type": signer.get("approver_type") or "ROLE",
+            "approver_role": signer.get("approver_role") or "",
+        }
+
+    @classmethod
+    def resolve_signer(cls, signer: dict, civilization: str, tenant_id) -> dict:
+        assignment = cls._resolve_approver(cls.signer_def(signer), civilization, tenant_id)
+        actor = assignment.get("approver_actor")
+        return {
+            "label": signer.get("label") or "",
+            "approver_type": assignment["approver_type"],
+            "approver_actor_id": str(actor.pk) if actor is not None else None,
+            "approver_role": assignment.get("approver_role", ""),
+        }
 
     @classmethod
     def create_from_judgment(
@@ -540,6 +643,7 @@ class WorkflowService:
                 status=ApprovalWorkflowStatus.PENDING,
                 is_appeal=is_appeal,
                 tenant=judgment.tenant,
+                template_version_id=template.get("version_id"),
             )
 
             # Create nodes, and refuse a template that has none — see
@@ -597,6 +701,18 @@ class WorkflowService:
         # Whoever the now-current node names. `None` after a terminal decision,
         # which is the correct time to tell nobody.
         current = workflow.current_node
+        from apps.workflow.models import NodeKind
+
+        if node is not None and current is not None and node.pk == current.pk:
+            # A 会签 signature that did not settle the node: the flow has not
+            # moved, and the remaining signers were told when it arrived.
+            return
+        if current is not None and current.kind == NodeKind.COUNTERSIGN:
+            # Every signer still owed a signature, actor-designated or not:
+            # a 会签 is addressed to named people by construction.
+            for assignee in WorkflowService.designated_users(current, workflow.tenant_id):
+                EventService.notify_workflow_assigned(assignee, workflow)
+            return
         if current is None or current.approver_actor_id is None:
             return
         from apps.authentication.models import User
@@ -606,6 +722,57 @@ class WorkflowService:
         ).first()
         if assignee is not None:
             EventService.notify_workflow_assigned(assignee, workflow)
+
+    @staticmethod
+    def designated_users(node, tenant_id):
+        """The active accounts `node` designates: its actor's users, or its
+        role's holders in the workflow's tenant. None for SYSTEM."""
+        from django.db.models import Q
+
+        from apps.authentication.models import User
+        from apps.workflow.models import NodeKind
+
+        if node.kind == NodeKind.COUNTERSIGN:
+            # The slots that have not signed yet — the people still owed.
+            signed = {s["signer"] for s in node.signatures_json or []}
+            q = Q(pk__in=[])
+            for index, slot in enumerate(node.signers_json or []):
+                if index in signed:
+                    continue
+                if slot.get("approver_type") == "ACTOR" and slot.get("approver_actor_id"):
+                    q |= Q(actor_id=slot["approver_actor_id"])
+                elif slot.get("approver_type") == "ROLE" and slot.get("approver_role"):
+                    q |= Q(role=slot["approver_role"], tenant_id=tenant_id)
+            return User.objects.filter(q, is_active=True)
+        if node.approver_type == "ACTOR" and node.approver_actor_id:
+            qs = User.objects.filter(actor_id=node.approver_actor_id)
+        elif node.approver_type == "ROLE" and node.approver_role:
+            qs = User.objects.filter(role=node.approver_role, tenant_id=tenant_id)
+        else:
+            return User.objects.none()
+        return qs.filter(is_active=True)
+
+    @classmethod
+    def notify_designated(cls, workflow, node, *, title: str, message: str) -> int:
+        """Tell everyone `node` designates; return how many were told.
+
+        Used by the timeout processor (reminders, escalations). Called after
+        commit, never inside `complete_node`'s lock — same rule as `announce`.
+        """
+        from apps.events.services import EventService
+
+        told = 0
+        for user in cls.designated_users(node, workflow.tenant_id):
+            EventService.notify_user(
+                user=user,
+                title=title,
+                message=message,
+                notification_type="WORKFLOW_ASSIGNED",
+                related_resource="workflow",
+                related_id=str(workflow.id),
+            )
+            told += 1
+        return told
 
     @classmethod
     def create_appeal_workflow(
@@ -707,6 +874,7 @@ class WorkflowService:
                 is_appeal=True,
                 original_workflow=original_workflow,
                 tenant=tenant,
+                template_version_id=template.get("version_id"),
             )
 
             # Same resolution as create_from_judgment, because it is the same
