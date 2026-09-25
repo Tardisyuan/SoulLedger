@@ -10539,8 +10539,9 @@ paths:
     get:
       operationId: v1_social_moderation_sensitive_words_list
       description: |-
-        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
         列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
       parameters:
       - name: ordering
         required: false
@@ -10574,8 +10575,9 @@ paths:
     post:
       operationId: v1_social_moderation_sensitive_words_create
       description: |-
-        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
         列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
       tags:
       - v1
       requestBody:
@@ -10618,11 +10620,66 @@ paths:
                 $ref: '#/components/schemas/ModerationError'
           description: ''
   /api/v1/social-moderation/sensitive-words/{id}/:
+    patch:
+      operationId: v1_social_moderation_sensitive_words_partial_update
+      description: |-
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
+        列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this sensitive word.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveWordUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveWordUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSensitiveWordUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
     delete:
       operationId: v1_social_moderation_sensitive_words_destroy
       description: |-
-        本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
+        本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
         列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+        修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。
       parameters:
       - in: path
         name: id
@@ -10666,6 +10723,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SensitiveWordBatchDeleteResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/sensitive-words/batch-update/:
+    post:
+      operationId: v1_social_moderation_sensitive_words_batch_update_create
+      description: 批量改「命中后」动作。码名、租户范围、全有或全无、上限 200 —— 都与 batch-delete 相同。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SensitiveWordBatchUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensitiveWordBatchUpdateResult'
           description: ''
         '404':
           content:
@@ -22123,6 +22231,21 @@ components:
         timezone:
           type: string
           maxLength: 63
+    PatchedSensitiveWordUpdate:
+      type: object
+      description: |-
+        Body of `PATCH sensitive-words/{id}/`. `category` is required on every edit
+        (same rule as create); `action` and `word` are optional and keep their value
+        when omitted. `word` gets create's checks: trimmed, lower-cased, not empty,
+        unique within the civilization (409 `duplicate_word`).
+      properties:
+        word:
+          type: string
+          maxLength: 50
+        category:
+          $ref: '#/components/schemas/SocialSensitiveWordCategoryEnum'
+        action:
+          $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
     PatchedSoul:
       type: object
       description: |-
@@ -24270,13 +24393,37 @@ components:
           type: integer
       required:
       - deleted
+    SensitiveWordBatchUpdate:
+      type: object
+      description: Body of `POST sensitive-words/batch-update/` — the batch bar's
+        「改动作…」.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 200
+          minItems: 1
+        action:
+          $ref: '#/components/schemas/SocialSensitiveWordActionEnum'
+      required:
+      - action
+      - ids
+    SensitiveWordBatchUpdateResult:
+      type: object
+      properties:
+        updated:
+          type: integer
+      required:
+      - updated
     SensitiveWordCreate:
       type: object
       description: |-
         Body of `POST sensitive-words/`: a new word must name its category
         (maintainer decision, 2026-09-25). Words added before that stay
-        uncategorised ("" in the list); there is no edit endpoint, so nothing ever
-        asks an existing word for one.
+        uncategorised ("" in the list) until someone edits them: the edit body
+        (`SensitiveWordUpdateSerializer`) requires a category too.
       properties:
         id:
           type: string

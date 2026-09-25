@@ -3110,7 +3110,11 @@
       "batch_region": "Word list batch actions",
       "delete_selected": "Delete selected",
       "confirm_title": "Delete {{n}} words?",
-      "category_placeholder": "— choose a category —"
+      "category_placeholder": "— choose a category —",
+      "edit_title": "Edit word",
+      "edit_hint": "Changing the word itself restarts its 30-day hits from zero.",
+      "change_action": "Change action…",
+      "change_action_title": "Change the action of {{n}} words"
     },
     "mutes": {
       "col_soul": "Soul",

@@ -39,6 +39,14 @@ export interface NewSensitiveWord {
   action?: SensitiveWordAction;
 }
 
+/** `PATCH sensitive-words/{id}/`: category every time (same rule as create); the rest keep their value when omitted. */
+export interface SensitiveWordEdit {
+  category: SensitiveWordCategory;
+  action?: SensitiveWordAction;
+  /** Same checks as create: trimmed, lower-cased, not empty; 409 `duplicate_word`. */
+  word?: string;
+}
+
 export interface HandledFilters {
   type?: HandledContent["type"];
   handling?: HandledContent["handling"];
@@ -78,6 +86,11 @@ export const socialModerationApi = {
   /** Stored trimmed and lower-cased; 409 `duplicate_word`; 400 without a category. */
   addWord: (word: NewSensitiveWord) => api.post<SensitiveWord>("/social-moderation/sensitive-words/", word),
   removeWord: (id: string) => api.delete(`/social-moderation/sensitive-words/${id}/`),
+  updateWord: (id: string, edit: SensitiveWordEdit) =>
+    api.patch<SensitiveWord>(`/social-moderation/sensitive-words/${id}/`, edit),
+  /** 「改动作…」: all or nothing, 1–200 ids; 404 `not_found` with `missing`, like `removeWords`. */
+  updateWords: (ids: string[], action: SensitiveWordAction) =>
+    api.post<{ updated: number }>("/social-moderation/sensitive-words/batch-update/", { ids, action }),
   /** All or nothing, 1–200 ids; 404 `not_found` with `missing` when any id is not in this civilization's list. */
   removeWords: (ids: string[]) =>
     api.post<{ deleted: number }>("/social-moderation/sensitive-words/batch-delete/", { ids }),

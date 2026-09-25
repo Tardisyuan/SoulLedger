@@ -3110,7 +3110,11 @@
       "batch_region": "Iri Neb · Medu Djeseru",
       "delete_selected": "Fekh Setep Seth",
       "confirm_title": "Fekh {{n}} Medu Djeseru?",
-      "category_placeholder": "— Setep Ra —"
+      "category_placeholder": "— Setep Ra —",
+      "edit_title": "Khemen Medu Djeseru",
+      "edit_hint": "Khemen Medu Djeseru: Gem · Hru 30 Wehem Tepy.",
+      "change_action": "Khemen Em Gem…",
+      "change_action_title": "Khemen Em Gem · Medu Djeseru {{n}}"
     },
     "mutes": {
       "col_soul": "Ba",

@@ -53,8 +53,11 @@ from apps.social.moderation_serializers import (
     ResolveReportSerializer,
     SensitiveWordBatchDeleteResultSerializer,
     SensitiveWordBatchDeleteSerializer,
+    SensitiveWordBatchUpdateResultSerializer,
+    SensitiveWordBatchUpdateSerializer,
     SensitiveWordCreateSerializer,
     SensitiveWordSerializer,
+    SensitiveWordUpdateSerializer,
     SocialMuteSerializer,
 )
 from apps.social.soul_circle import SocialError
@@ -211,12 +214,13 @@ class ModeratedCommentViewSet(ModeratedContentViewSet):
 class SensitiveWordViewSet(
     ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin
 ):
-    """本文明的敏感词表。创建与删除都经 `moderation.py` —— 那里写审计。
-    列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。"""
+    """本文明的敏感词表。创建、修改、删除都经 `moderation.py` —— 那里写审计。
+    列表带 `hits_30d`(近 30 天命中次数,按天分桶求和,见 models.SensitiveWordDailyHit)。
+    修改只有 PATCH(`partial_update`):没有 PUT,每次都必须给类别,其余字段不给就不动。"""
 
     queryset = SensitiveWord.objects.select_related("created_by")
     serializer_class = SensitiveWordSerializer
-    extra_permissions = {"batch_delete": [MODERATE]}
+    extra_permissions = {"batch_delete": [MODERATE], "batch_update": [MODERATE], "partial_update": [MODERATE]}
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -233,8 +237,30 @@ class SensitiveWordViewSet(
         )
         return Response(SensitiveWordSerializer(row).data, status=201)
 
+    @extend_schema(request=SensitiveWordUpdateSerializer, responses={200: SensitiveWordSerializer, **ERRORS})
+    def partial_update(self, request, *args, **kwargs):
+        body = SensitiveWordUpdateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        row = mod.update_sensitive_word(self.get_object(), actor=request.user, request=request, **body.validated_data)
+        return Response(SensitiveWordSerializer(mod.with_recent_hits(self.get_queryset()).get(pk=row.pk)).data)
+
     def perform_destroy(self, instance):
         mod.remove_sensitive_word(instance, actor=self.request.user, request=self.request)
+
+    @extend_schema(
+        request=SensitiveWordBatchUpdateSerializer,
+        responses={200: SensitiveWordBatchUpdateResultSerializer, 404: ModerationErrorSerializer, **ERRORS},
+    )
+    @action(detail=False, methods=["post"], url_path="batch-update")
+    def batch_update(self, request):
+        """批量改「命中后」动作。码名、租户范围、全有或全无、上限 200 —— 都与 batch-delete 相同。"""
+        body = SensitiveWordBatchUpdateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        updated = mod.update_sensitive_words(
+            self.get_queryset(), body.validated_data["ids"], actor=request.user, request=request,
+            action=body.validated_data["action"],
+        )
+        return Response({"updated": updated})
 
     @extend_schema(
         request=SensitiveWordBatchDeleteSerializer,

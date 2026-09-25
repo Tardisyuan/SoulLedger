@@ -73,7 +73,8 @@ test.describe("Circle moderation", () => {
     });
 
     const row = page.locator("tr", { hasText: SENSITIVE_WORDS[0].word });
-    await expect(row.getByRole("button")).toHaveCount(0);
+    // The row's one button is the word (it opens the editor); no delete at the row end.
+    await expect(row.getByRole("button")).toHaveText([SENSITIVE_WORDS[0].word]);
     await row.getByRole("checkbox").check();
     await page.getByRole("button", { name: "删除所选" }).click();
     const dialog = page.getByRole("alertdialog");
