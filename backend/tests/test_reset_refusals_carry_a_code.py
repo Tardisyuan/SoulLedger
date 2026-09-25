@@ -110,6 +110,20 @@ class TestSetNewPasswordCodes:
 
 
 @pytest.mark.django_db
+def test_a_completed_reset_signs_every_other_device_out(api_client, soul):
+    """The App's success notice says 「其他设备上的登录已全部退出」: every refresh
+    token the account held is blacklisted, so no device can renew its session."""
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    held = [str(RefreshToken.for_user(soul)) for _ in range(2)]
+    cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
+    assert _set(api_client).status_code == 200
+    for token in held:
+        res = api_client.post("/api/v1/auth/refresh/", {"refresh": token}, format="json")
+        assert res.status_code == 401, res.data
+
+
+@pytest.mark.django_db
 class TestResetRequestCodes:
     def test_the_address_limit_is_rate_limited_with_its_remaining_window(self, api_client, soul):
         for i in range(MAX_RESET_REQUESTS_PER_ADDRESS):
