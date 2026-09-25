@@ -1,507 +1,485 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { PAGE_SIZE, type Statute, type StatuteCorpus } from "@soulledger/core/api";
-import { useStatutes, groupStatutesByCorpus, type CorpusGroup } from "@soulledger/core/hooks/useStatutes";
+import type { Statute, StatuteCorpus } from "@soulledger/core/api";
+import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
+import { isCivilizationOption } from "@soulledger/core/config/civilizations";
+import { formatSigil, type StatuteRef } from "@soulledger/core/config/civilizationSigil";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { PageSpinner } from "@/src/components/ui/Spinner";
+import { QueryError } from "@/src/components/ui/PageError";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fieldControl } from "@/src/components/ui/Field";
-import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
-import {
-  CIVILIZATION_OPTIONS,
-  isCivilizationOption,
-} from "@soulledger/core/config/civilizations";
-import {
-  civilizationNamesOffences,
-  formatSigil,
-  sigilSystemName,
-  type StatuteRef,
-} from "@soulledger/core/config/civilizationSigil";
+import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { cn } from "@/lib/utils";
 
 /**
- * The corpus browser — 172 transcribed articles, previously reachable from
- * nowhere.
+ * 律条语料 —— 长文本阅读页(第三类 B · /corpus):左目录、中阅读栏(限 72ch)、
+ * 右栏引用 / 被引用 / 版本。
  *
- * They existed before this page did: `judgmentApi.statutes` has been wired
- * since the grounds feature landed, and `StatuteViewSet` paginates, filters and
- * searches them. The only place any of them ever reached a screen was
- * `JudgmentGroundsPanel`, which shows the handful a single verdict cites. A
- * hundred and seventy-five articles of transcription with no index is a library
- * with no catalogue.
+ * ── 衬线只给「原文」与「今译」 ────────────────────────────────────────────
+ * 它们是「被说出的话」;编号用等宽,编者注、元数据、目录用无衬线(规范 v1 表态 1)。
+ * 这一页的衬线数由测试钉住:阅读栏里恰好两段。
  *
- * ── WHY THIS IS SET AS A CODE AND NOT AS A MANUSCRIPT ────────────────────────
+ * ── 原文 / 今译 取哪一列,以及为什么多数条目的「原文」是缺值 ───────────────
+ * 库里存的是 `text_zh` / `text_en` / `text_egy` 与按语言解析的 `display_text`。
+ * 只有《太微仙君功過格》是按原语转录的 —— 它的 `text_zh` 就是道藏原文,于是
+ * 原文 = `text_zh`,今译 = 英译(`text_en`;egy 界面有 `text_egy` 时取它)。
+ * 其余五部的原语(意大利语、希腊语、埃及语)没有入库,`text_*` 都是译文:
+ * 原文写成「未记录」并说明原因,今译 = `display_text`。拿译文冒充原文,就是在
+ * 一页讲出处的纸上编出处。
  *
- * The obvious move with this material is the illuminated page: centred column,
- * swash capitals, a drop cap. It is the wrong one. These articles are not read
- * for pleasure — they are the *norms verdicts are founded on*, and what a
- * reader does here is look one up, set it beside its neighbour, and ask how
- * often it has actually been relied on. Those are the three things a statute
- * book's layout is for: a numbered margin you can scan, a body column of even
- * measure, and a tally. A centred manuscript block defeats all three, because
- * ragged-both-sides text has no scannable edge and a decorated initial is a
- * hundred milliseconds spent on the letter rather than the article.
+ * ── 被引用 / 版本 ────────────────────────────────────────────────────────
+ * `citation_count` 是有的(本租户引用次数,0 与 null 不同,见 core/api/judgment.ts);
+ * 「哪些判决引用了它」没有接口 —— `JudgmentFilter` 不能按律条筛 —— 所以只给件数,
+ * 并写明没有清单的原因。律条没有版本模型(更正走 `seed_mythology --update`
+ * 就地改写),版本栏同样写明缺口,不造一个 v1。
  *
- * So exactly one thing survives from the manuscript reading, and it is the one
- * that costs nothing: the article body is set in the serif. Everything around
- * it — sigil, headings, tally — is the mono/sans apparatus of a code.
- *
- * ── ORDERING, AND WHY IT DEPENDS ON THE FILTER ───────────────────────────────
- *
- * `StatuteViewSet.ordering_fields` allows `ordinal`, `code` and
- * `citation_count`, and there is no ordering here that is right in both cases:
- *
- *   * With one corpus chosen the rows are one document, so `ordinal` — which is
- *     that document's own order of articles — is the only correct sort. It is
- *     not `code`: 《太微仙君功過格》's codes are `CN-GGG-{門}-{門內序號}`, and the
- *     門 segments sort alphabetically (F-FX, F-JD, F-JJ, F-YS…) while the text's
- *     order is 救濟門, 教典門, 焚修門, 用事門, 不仁門… Sorting by code silently
- *     reprints the 功過格 with its gates shuffled.
- *   * With no corpus chosen the rows span up to six documents, and `ordinal`
- *     interleaves them: every corpus has an article 1, so page 1 would be six
- *     first articles, then six seconds. `code` is the only allowed field whose
- *     prefix (`CN-GGG`, `EG-NC`, `EU-DS`, `EU-INF`, `GR-ER`, `GR-GRG`) keeps a
- *     document's articles contiguous, which is what makes a page of twenty rows
- *     read as one or two rulebooks rather than a shuffled deck.
- *
- * Neither is a default that can be picked once, so it is picked from the
- * filter. The cost is stated rather than hidden: in the unfiltered view a
- * 功過格 page is in code order, gates out of the text's sequence — pick the
- * corpus and it comes back.
+ * ── 检索与编号直达 ──────────────────────────────────────────────────────
+ * 输入框同时是检索与跳转:与某条的节号(`IX · XXVI`、`救濟門 · 六`、`§ 27 / 42`、
+ * `614b`)或 `code` 逐字相等(忽略空白与「·」、大小写)就直接打开那一条;否则按
+ * 标题与正文检索,命中处用底色加 2 px 强调下线标出,不改字重。
  */
 
-/**
- * The six rulebooks, as a runtime list the corpus filter can render.
- *
- * Spelled as a `Record<StatuteCorpus, true>` rather than an array literal so
- * that `npx tsc --noEmit` fails on a member added to the union and not offered
- * here — an array typed `StatuteCorpus[]` catches a member that does not exist
- * but says nothing about one that is missing, and a filter silently short one
- * rulebook is a rulebook nobody can reach. The same caveat applies as in
- * `src/config/civilizationSigil.ts`: `isolatedModules` means ts-jest does not
- * type-check, so this is a `tsc` guard and the jest run proves nothing about it.
- *
- * HELL_LAW is listed even though the corpus is empty and stays empty. There is
- * no codified 冥律 to transcribe and the articles written against that shape
- * were withdrawn; selecting it lands on the empty state, which is the true
- * answer. Leaving it out of the filter would make the absence look like the
- * value never existed, when what happened is that it was retracted.
- */
-const CORPUS_MEMBERS: Record<StatuteCorpus, true> = {
-  GONGGUOGE: true,
-  HELL_LAW: true,
-  NEGATIVE_CONFESSION: true,
-  DEADLY_SIN: true,
-  INFERNO: true,
-  GORGIAS: true,
-  REPUBLIC_ER: true,
-};
+/** Contents order: the seven rulebooks, one civilization after another. */
+const CORPUS_ORDER: StatuteCorpus[] = [
+  "GONGGUOGE",
+  "HELL_LAW",
+  "INFERNO",
+  "DEADLY_SIN",
+  "NEGATIVE_CONFESSION",
+  "GORGIAS",
+  "REPUBLIC_ER",
+];
 
-const CORPUS_OPTIONS = Object.keys(CORPUS_MEMBERS) as StatuteCorpus[];
-
-/**
- * The parts of `payload_json` a sigil is built from, narrowed on the way out.
- *
- * `payload_json` is `Record<string, unknown>` on the wire and each corpus fills
- * a different subset, so every field is checked for its own type rather than
- * cast. A `stephanus` that arrived as a number is not a Stephanus page, and
- * handing it to the formatter would print a location that is not in Plato.
- */
+/** The parts of `payload_json` a sigil is built from, each checked for its own type. */
 function sigilRef(statute: Statute): StatuteRef {
   const payload = statute.payload_json ?? {};
   return {
     ordinal: statute.ordinal,
     division: typeof payload.gate === "string" ? payload.gate : undefined,
-    // `gate_ordinal`, not `ordinal`: the 門 is a contiguous range of the
-    // corpus-wide count, so `ordinal` beside a 門 name is a real-looking
-    // citation that points nowhere. See StatuteRef.gateOrdinal.
-    gateOrdinal:
-      typeof payload.gate_ordinal === "number" ? payload.gate_ordinal : undefined,
+    // `gate_ordinal`, not `ordinal`: see StatuteRef.gateOrdinal.
+    gateOrdinal: typeof payload.gate_ordinal === "number" ? payload.gate_ordinal : undefined,
     circle: typeof payload.circle === "number" ? payload.circle : undefined,
     stephanus: typeof payload.stephanus === "string" ? payload.stephanus : undefined,
   };
 }
 
+/** An unknown civilization is a data condition: no sigil, not a crashed page. */
+function sigilOf(statute: Statute): string | null {
+  return isCivilizationOption(statute.civilization) ? formatSigil(statute.civilization, sigilRef(statute)) : null;
+}
+
+const squash = (s: string) => s.replace(/[\s·・]/g, "").toLowerCase();
+
+interface Article {
+  statute: Statute;
+  sigil: string | null;
+  division: string | null;
+}
+
+function MarkHits({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const parts: ReactNode[] = [];
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  let from = 0;
+  for (let at = lower.indexOf(q); at !== -1; at = lower.indexOf(q, from)) {
+    parts.push(text.slice(from, at));
+    parts.push(
+      <mark
+        key={at}
+        data-search-hit=""
+        className="bg-[oklch(var(--color-surface-2))] text-inherit shadow-[inset_0_-2px_0_oklch(var(--color-accent))]"
+      >
+        {text.slice(at, at + query.length)}
+      </mark>
+    );
+    from = at + query.length;
+  }
+  parts.push(text.slice(from));
+  return <>{parts.map((p, i) => <Fragment key={i}>{p}</Fragment>)}</>;
+}
+
 export default function CorpusPage() {
-  const { t } = useI18n();
-  const [page, setPage] = useState(1);
-  const [civilization, setCivilization] = useState("");
-  const [corpus, setCorpus] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const { t, locale } = useI18n();
+  const { data, isLoading, isError, refetch } = useAllStatutes();
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  // Same 300ms the souls list uses, so typing costs one request rather than one
-  // per keystroke.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const articles: Article[] = useMemo(() => {
+    const rank = (c: string) => {
+      const i = CORPUS_ORDER.indexOf(c as StatuteCorpus);
+      return i === -1 ? CORPUS_ORDER.length : i;
+    };
+    return [...(data ?? [])]
+      .sort((a, b) => rank(a.corpus) - rank(b.corpus) || a.corpus.localeCompare(b.corpus) || a.ordinal - b.ordinal)
+      .map((statute) => ({
+        statute,
+        sigil: sigilOf(statute),
+        division: typeof statute.payload_json?.gate === "string" ? (statute.payload_json.gate as string) : null,
+      }));
+  }, [data]);
 
-  const params: Record<string, string> = {
-    page: String(page),
-    // See the ordering note in the file header.
-    ordering: corpus ? "ordinal" : "code",
+  const trimmed = query.trim();
+  const jump = trimmed
+    ? articles.find((a) => (a.sigil && squash(a.sigil) === squash(trimmed)) || squash(a.statute.code) === squash(trimmed))
+    : undefined;
+  const hits = useMemo(() => {
+    if (!trimmed || jump) return articles;
+    const q = trimmed.toLowerCase();
+    return articles.filter(({ statute: s }) =>
+      [s.display_title, s.display_text, s.text_zh, s.text_en, s.code].some((f) => (f ?? "").toLowerCase().includes(q))
+    );
+  }, [articles, trimmed, jump]);
+
+  const selected =
+    jump ?? hits.find((a) => a.statute.id === selectedId) ?? hits[0] ?? null;
+  const highlight = trimmed && !jump ? trimmed : "";
+  const position = selected ? hits.indexOf(selected) : -1;
+
+  const choose = (id: string) => {
+    setSelectedId(id);
+    setCopied(false);
+    // A jump is finished once taken: leave the typed code, drop the lock.
+    if (jump) setQuery("");
   };
-  if (civilization) params.civilization = civilization;
-  if (corpus) params.corpus = corpus;
-  if (search) params.search = search;
 
-  const { data, isLoading, isError, refetch } = useStatutes(params);
+  const corpusName = (c: string) => t(`judgment.statute_corpus.${c}`);
+  const citation = selected
+    ? `〔${corpusName(selected.statute.corpus)} · ${selected.sigil ?? selected.statute.code}〕`
+    : "";
 
-  const statutes = data?.results ?? [];
-  const groups = groupStatutesByCorpus(statutes);
-  const total = data?.count ?? 0;
-  const totalPages = total > 0 ? Math.ceil(total / PAGE_SIZE) : 0;
+  const searchBar = (
+    <div className="flex flex-wrap items-center gap-3 w-full">
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={t("judgment.corpus.search_jump")}
+        aria-label={t("judgment.corpus.search_jump")}
+        className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+      />
+      {data && (
+        <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" data-testid="corpus-hit-count">
+          {t("judgment.corpus.article_count", { n: String(jump ? 1 : hits.length) })}
+        </span>
+      )}
+    </div>
+  );
+
+  let body: ReactNode;
+  if (isError) {
+    body = <QueryError onRetry={() => refetch()} />;
+  } else if (isLoading || !data) {
+    body = <CorpusSkeleton />;
+  } else if (articles.length === 0) {
+    body = <EmptyState title={t("table.no_results")} reason={t("judgment.corpus.empty_reason")} />;
+  } else if (hits.length === 0) {
+    body = (
+      <EmptyState
+        title={t("judgment.corpus.no_match", { q: trimmed })}
+        reason={t("judgment.corpus.search_jump")}
+        action={
+          <Button type="button" variant="secondary" size="sm" onClick={() => setQuery("")}>
+            {t("judgment.corpus.clear_search")}
+          </Button>
+        }
+      />
+    );
+  } else {
+    body = (
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_300px] border-t border-[oklch(var(--color-line))]">
+        <Toc articles={hits} selectedId={selected?.statute.id ?? null} onChoose={choose} corpusName={corpusName} />
+        {/* 393 px: the contents rail becomes one select. */}
+        <div className="lg:hidden px-4 pt-3">
+          <select
+            aria-label={t("judgment.corpus.toc")}
+            value={selected?.statute.id ?? ""}
+            onChange={(e) => choose(e.target.value)}
+            className={cn(fieldControl({ size: "md" }), "w-full")}
+          >
+            {groupBy(hits).map(([corpus, list]) => (
+              <optgroup key={corpus} label={corpusName(corpus)}>
+                {list.map((a) => (
+                  <option key={a.statute.id} value={a.statute.id}>
+                    {a.sigil ?? a.statute.code} · {a.statute.display_title}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        {selected ? (
+          <Reading
+            article={selected}
+            highlight={highlight}
+            locale={locale}
+            corpusName={corpusName}
+            prev={position > 0 ? hits[position - 1] : null}
+            next={position >= 0 && position < hits.length - 1 ? hits[position + 1] : null}
+            onChoose={choose}
+          />
+        ) : (
+          <p className="px-10 py-6 text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.corpus.select_prompt")}</p>
+        )}
+        {selected && (
+          <aside
+            data-testid="corpus-rail"
+            className="px-4 md:px-6 py-6 border-t lg:border-t-0 lg:border-l border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
+          >
+            <RailLabel>{t("judgment.corpus.cite")}</RailLabel>
+            <p data-testid="corpus-citation" className="font-mono text-sm py-2">{citation}</p>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard?.writeText(citation).then(() => setCopied(true), () => setCopied(false));
+              }}
+            >
+              {copied ? t("judgment.corpus.copied") : t("judgment.corpus.copy_cite")}
+            </Button>
+
+            <RailLabel className="pt-6">{t("judgment.corpus.cited_by")}</RailLabel>
+            <p data-testid="corpus-cited-by" className="text-sm py-2">
+              {typeof selected.statute.citation_count === "number" ? (
+                t("judgment.corpus.cited_by_count", { n: String(selected.statute.citation_count) })
+              ) : (
+                <DomainNumber
+                  value={selected.statute.citation_count}
+                  missingKind="unrecorded"
+                  missingReason={t("judgment.corpus.citations_absent")}
+                />
+              )}
+            </p>
+            <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.corpus.cited_by_gap")}</p>
+
+            <RailLabel className="pt-6">{t("judgment.corpus.versions")}</RailLabel>
+            <p data-testid="corpus-versions" className="text-xs text-[oklch(var(--color-ink-subtle))] py-2">
+              {t("judgment.corpus.versions_gap")}
+            </p>
+          </aside>
+        )}
+      </div>
+    );
+  }
 
   return (
     <PageShell
-      /* `full`, not `page`: four columns of which one is a body column of even
-         measure, beside a 2-up grid. Clamped to 1200 the two article columns
-         fall to ~560px each and the serif body wraps every five or six words,
-         which is the one thing a statute column must not do. */
       variant="full"
+      /* `document`: this is the long-reading page — the one route whose body is
+         prose to be read rather than rows to be scanned. */
+      density="document"
       title={t("judgment.corpus.title")}
-      // The count comes from the response, not from the translation. All
-      // three bundles said 175 while the real figure is 172 -- and the file
-      // header of this very page had already been corrected to 172, so the
-      // comment was right and the words on screen were wrong, one file apart.
-      // Key parity across the bundles could not catch it: all three were
-      // wrong together.
-      subtitle={t("judgment.corpus.subtitle", { n: String(total) })}
-      filters={
-        /* Visible labels do not fit: the sticky slot is 32px of content height
-           and a `Field`'s stacked label is taller than that. Each control
-           carries an `aria-label` instead — a placeholder is not an accessible
-           name and vanishes the moment the user types. Skin is `fieldControl`,
-           the same one every form control in the app wears. */
-        <>
-          <input
-            type="text"
-            placeholder={t("search.placeholder")}
-            aria-label={t("search.aria_label")}
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[160px]")}
-          />
-          <select
-            value={civilization}
-            aria-label={t("judgment.civilization")}
-            onChange={(event) => {
-              setCivilization(event.target.value);
-              setPage(1);
-            }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            <option value="">{t("filter.all")}</option>
-            {CIVILIZATION_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {t(`souls.civilizations.${option}`)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={corpus}
-            aria-label={t("judgment.corpus.filter_corpus")}
-            onChange={(event) => {
-              setCorpus(event.target.value);
-              setPage(1);
-            }}
-            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
-          >
-            <option value="">{t("filter.all")}</option>
-            {CORPUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {t(`judgment.statute_corpus.${option}`)}
-              </option>
-            ))}
-          </select>
-        </>
-      }
-      /* This page does not go through DataTable, so the slot is free — see
-         PageShell's note on the two-pagination-bars trap. `<Pagination>` itself
-         is deliberately NOT what goes in it: that component is one block with
-         its own `justify-between mt-4 px-2`, and PageShell's slot already
-         supplies the row, the 2px rule and the left/right split. Nesting it
-         inside `controls` (a `shrink-0` right-hand cell) would collapse its own
-         justify-between to nothing, print a second record count beside the one
-         on the left, and hang a 16px top margin off a vertically centred row.
-         So the count goes left as text and two plain buttons go right, which is
-         the shape the slot was built for. */
-      pagination={{
-        count:
-          total > 0 ? (
-            <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))]">
-              {t("pagination.info", {
-                page: String(page),
-                total: String(totalPages),
-                count: String(total),
-              })}
-            </p>
-          ) : null,
-        controls: (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-            >
-              {t("common.prev")}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              {t("common.next")}
-            </Button>
-          </div>
-        ),
-      }}
-      isLoading={isLoading}
-      skeleton={<PageSpinner />}
-      isEmpty={!isError && groups.length === 0}
-      empty={
-        <EmptyState
-          title={t("table.no_results")}
-          reason={t("judgment.corpus.empty_reason")}
-        />
-      }
+      subtitle={t("judgment.corpus.subtitle", { n: String(articles.length) })}
+      filters={searchBar}
     >
-      {isError ? (
-        <EmptyState
-          title={t("common.error")}
-          reason={t("judgment.corpus.empty_reason")}
-          action={
-            <Button type="button" variant="secondary" size="sm" onClick={() => refetch()}>
-              {t("common.retry")}
-            </Button>
-          }
-        />
-      ) : (
-        /* Two columns of cards, 40px apart in both axes and NO rule between
-           them. That gap is load-bearing where a civilization has two corpora:
-           the seven terraces and the nine circles sit side by side under two
-           headings, and a divider drawn between them would read as a grouping
-           line inside one table — the exact "these are one list with sections"
-           claim that the two corpora exist to deny. Whitespace separates; a
-           line joins. `items-start` so a 7-row card does not stretch to the
-           height of a 26-row one and manufacture an alignment nobody meant. */
-        <div data-corpus-grid="" className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-          {groups.map((group) => (
-            <CorpusCard
-              key={group.key}
-              group={group}
-              // `data.count` is the count of the *filtered* query. It equals
-              // this corpus's size only when the filter names one corpus;
-              // otherwise it is every corpus added together and would be a
-              // worse answer than "how many are listed".
-              corpusTotal={corpus ? total : null}
-            />
-          ))}
-        </div>
-      )}
+      <div className="space-y-10">{body}</div>
     </PageShell>
   );
 }
 
-function CorpusCard({
-  group,
-  corpusTotal,
-}: {
-  group: CorpusGroup;
-  /** How many articles this corpus has in total, or null if unknown.
-   *
-   * Only the page component knows: it is `data.count` from the response, and
-   * it only means "this corpus" when the list is filtered to one corpus. With
-   * no filter the response counts every corpus together, so there is no
-   * honest per-corpus figure on this page and the card says how many are
-   * listed instead. */
-  corpusTotal: number | null;
-}) {
-  const { t } = useI18n();
+function groupBy(list: Article[]): [string, Article[]][] {
+  const out: [string, Article[]][] = [];
+  for (const a of list) {
+    const last = out[out.length - 1];
+    if (last && last[0] === a.statute.corpus) last[1].push(a);
+    else out.push([a.statute.corpus, [a]]);
+  }
+  return out;
+}
 
-  /**
-   * An unrecognised civilization is a data condition, not a programming error.
-   * `formatSigil` and `civilizationNamesOffences` both throw for one, and that
-   * is right at a call site holding a value it chose; this one reads whatever
-   * the API sent. A fifth cosmology seeded before the frontend knows it would
-   * take the whole page down through error.tsx, which is a worse answer than
-   * showing its articles with no sigil.
-   *
-   * The offence column is KEPT in that case rather than dropped. Dropping a
-   * column hides data; showing one the corpus does not fill costs a blank cell.
-   * The conservative default belongs on the side that loses nothing.
-   */
-  const known = isCivilizationOption(group.civilization);
-  const namesOffences = known ? civilizationNamesOffences(group.civilization) : true;
-
+function RailLabel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section
-      data-corpus={group.corpus}
-      data-civilization={group.civilization}
-      data-names-offences={namesOffences ? "true" : "false"}
-      className="border-t border-[oklch(var(--color-block))] pt-4"
-    >
-      <header className="flex items-baseline gap-3 mb-4">
-        <h2 className="text-md text-[oklch(var(--color-ink))]">
-          <DomainEnum namespace="judgment.statute_corpus" value={group.corpus} />
-        </h2>
-        <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
-          <DomainEnum namespace="souls.civilizations" value={group.civilization} />
-        </p>
-        <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))] ml-auto">
-          {/* `group.statutes` holds only the rows on *this page* (PAGE_SIZE
-              20, both ends). Rendering that as "N articles" reported 功過格
-              as 20 when it has 74, and split any corpus that straddles a page
-              boundary into two groups each reporting a fraction. A number
-              that looks entirely reasonable, about the wrong subject.
-
-              Shown only when the list is filtered to a single corpus, where
-              "how many are on screen" and "how big is this corpus" coincide
-              -- and even then labelled as a count of what is listed. */}
-          {corpusTotal !== null
-            ? t("judgment.corpus.article_count", { n: String(corpusTotal) })
-            : t("judgment.corpus.listed_count", {
-                n: String(group.statutes.length),
-              })}
-        </p>
-      </header>
-
-      <table className="w-full table-fixed border-collapse">
-        <caption className="sr-only">
-          {t("judgment.corpus.title")}
-        </caption>
-        {/* 88 / 180 / rest / 64. The offence column is absent for GREEK, so the
-            Greek table is genuinely three columns wide — see the <th> note. */}
-        <colgroup>
-          <col className="w-[88px]" />
-          {namesOffences ? <col className="w-[180px]" /> : null}
-          <col />
-          <col className="w-16" />
-        </colgroup>
-        <thead>
-          <tr className="border-b-2 border-[oklch(var(--color-ink-subtle))]">
-            <th
-              scope="col"
-              /* The numbering system's own name, for anyone wondering why the
-                 column reads `§ 27 / 42` in one card and `614b` in the next.
-                 Comes from the sigil table, so it cannot drift from the
-                 formatter that produced the cells below it. */
-              title={known ? sigilSystemName(group.civilization) : undefined}
-              className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-right pb-2 pr-2"
-            >
-              {t("judgment.corpus.col_sigil")}
-            </th>
-            {/* ONE COLUMN FEWER FOR GREECE, and not a column left blank.
-                21 of the 23 Greek articles are PROCEDURE because
-                neither Platonic myth contains a code of offences: the Gorgias
-                and the Myth of Er say who judges, when, stripped of the body,
-                and what follows — court rules, not charges. A blank 罪名 column
-                would assert that Plato has offences and this deployment failed
-                to transcribe them. The question is asked as
-                `civilizationNamesOffences(civ)` rather than
-                `civ === "GREEK"` so that a fifth cosmology which also names no
-                offences gets the right table instead of the Greek accident. */}
-            {namesOffences ? (
-              <th scope="col" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-left pb-2 pr-3">
-                {t("judgment.corpus.col_offence")}
-              </th>
-            ) : null}
-            <th scope="col" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-left pb-2 pr-3">
-              {t("judgment.corpus.col_text")}
-            </th>
-            <th scope="col" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] text-right pb-2">
-              {t("judgment.corpus.col_citations")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {group.statutes.map((statute) => (
-            <StatuteRow
-              key={statute.id}
-              statute={statute}
-              civilizationIsKnown={known}
-              namesOffences={namesOffences}
-            />
-          ))}
-        </tbody>
-      </table>
-    </section>
+    <h2 className={`font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] ${className}`}>
+      {children}
+    </h2>
   );
 }
 
-function StatuteRow({
-  statute,
-  civilizationIsKnown,
-  namesOffences,
+/** 目录:每部一组,当前一部展开;当前条 surface-2 底 + 左 3 px 墨线。 */
+function Toc({
+  articles,
+  selectedId,
+  onChoose,
+  corpusName,
 }: {
-  statute: Statute;
-  civilizationIsKnown: boolean;
-  namesOffences: boolean;
+  articles: Article[];
+  selectedId: string | null;
+  onChoose: (id: string) => void;
+  corpusName: (c: string) => string;
 }) {
   const { t } = useI18n();
+  const current = articles.find((a) => a.statute.id === selectedId)?.statute.corpus;
+  return (
+    <nav aria-label={t("judgment.corpus.toc")} className="max-lg:hidden border-r border-[oklch(var(--color-line))] py-3 text-sm">
+      {groupBy(articles).map(([corpus, list]) => (
+        <div key={corpus} data-toc-corpus={corpus}>
+          <button
+            type="button"
+            onClick={() => onChoose(list[0].statute.id)}
+            aria-expanded={corpus === current}
+            className="w-full flex justify-between px-4 py-2 border-b border-[oklch(var(--color-rule))] font-medium text-left hover:bg-[oklch(var(--color-surface-2))]"
+          >
+            <span>{corpusName(corpus)}</span>
+            <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{list.length}</span>
+          </button>
+          {corpus === current && (
+            <ol>
+              {list.map((a, i) => {
+                const on = a.statute.id === selectedId;
+                const newDivision = a.division && a.division !== list[i - 1]?.division;
+                return (
+                  <li key={a.statute.id}>
+                    {newDivision && (
+                      <div className="px-6 pt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{a.division}</div>
+                    )}
+                    <button
+                      type="button"
+                      aria-current={on ? "true" : undefined}
+                      onClick={() => onChoose(a.statute.id)}
+                      className={`w-full grid grid-cols-[5.5rem_1fr] gap-2 px-6 py-1 text-left border-b border-[oklch(var(--color-rule))] ${
+                        on
+                          ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))] font-medium text-[oklch(var(--color-ink))]"
+                          : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                      }`}
+                    >
+                      <span className="font-mono text-2xs truncate" title={a.sigil ?? a.statute.code}>{a.sigil ?? a.statute.code}</span>
+                      <span className="text-xs truncate" title={a.statute.display_title}>{a.statute.display_title}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      ))}
+    </nav>
+  );
+}
 
-  /**
-   * `null` here means "this article carries nothing this system can number
-   * from" — a Greek article with no transcribed Stephanus page, a 功過格 ordinal
-   * past the formatter's 99, an Egyptian ordinal outside the Forty-Two. It
-   * never means "fall back to the ordinal": three of the four systems do not
-   * number by ordinal at all, so `22` where `621b` belongs is a number in the
-   * right place meaning nothing.
-   */
-  const sigil = civilizationIsKnown ? formatSigil(statute.civilization, sigilRef(statute)) : null;
+function Reading({
+  article,
+  highlight,
+  locale,
+  corpusName,
+  prev,
+  next,
+  onChoose,
+}: {
+  article: Article;
+  highlight: string;
+  locale: string;
+  corpusName: (c: string) => string;
+  prev: Article | null;
+  next: Article | null;
+  onChoose: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const s = article.statute;
+  // See the file header: only the 功過格 is stored in its source language.
+  const transcribedInOriginal = s.corpus === "GONGGUOGE";
+  const original = transcribedInOriginal ? s.text_zh || null : null;
+  const translation = transcribedInOriginal
+    ? (locale === "egy" && s.text_egy) || s.text_en || null
+    : s.display_text || null;
+  const serif = "font-serif text-quote mt-3 text-[oklch(var(--color-ink))]";
 
   return (
-    <tr className="border-b border-[oklch(var(--color-hairline))] last:border-b-0">
-      <td className="text-xs font-mono text-right align-top py-3 pr-2 text-[oklch(var(--color-ink-subtle))]">
-        <DomainText
-          value={sigil}
-          missingKind="unrecorded"
-          missingReason={t("judgment.corpus.sigil_absent")}
-        />
-      </td>
-      {namesOffences ? (
-        <td className="align-top py-3 pr-3">
-          <p className="text-sm text-[oklch(var(--color-ink))]">{statute.display_title}</p>
-          {/* Inside the offence column on purpose: the polarity says what KIND
-              of naming this is — 功 or 過, a prohibition or a declaration of
-              innocence — and a corpus that names no offences has no such kind
-              to report. Putting it in its own column would hand Greece a column
-              of "rule of the court" repeated twenty times. */}
-          <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mt-1">
-            <DomainEnum namespace="judgment.statute_polarity" value={statute.polarity} />
+    <article data-testid="corpus-reading" className="px-4 md:px-10 py-6 min-w-0">
+      <div className="max-w-[72ch]">
+        <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+          {corpusName(s.corpus)}
+          {article.division && ` › ${article.division}`}
+          {" · "}
+          <DomainEnum namespace="souls.civilizations" value={s.civilization} />
+        </p>
+        <h1 data-testid="corpus-sigil" className="font-mono text-lg font-medium mt-2">
+          {article.sigil ?? <MissingValue kind="unrecorded" reason={t("judgment.corpus.sigil_absent")} />}
+        </h1>
+        <p className="text-md font-medium mt-1">
+          <MarkHits text={s.display_title} query={highlight} />
+        </p>
+        <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-1">
+          <DomainEnum namespace="judgment.statute_polarity" value={s.polarity} />
+        </p>
+
+        <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.original")}</h2>
+        {original ? (
+          <p data-testid="corpus-original" className={serif}>
+            <MarkHits text={original} query={highlight} />
           </p>
-        </td>
-      ) : null}
-      {/* The one thing kept from the manuscript reading. `display_text` and not
-          `text_en`: the Egyptian Forty-Two are DERIVED — their `text_*` columns
-          are empty by design and the body is read from the assessor's own
-          record, so the resolved field is the only one with anything in it. */}
-      <td className="font-serif text-quote text-[oklch(var(--color-ink))] align-top py-3 pr-3">
-        <DomainText value={statute.display_text} missingKind="unrecorded" />
-      </td>
-      <td className="text-right align-top py-3">
-        {/* Not `citation_count || 0`. Zero is a fact — this article exists and
-            no verdict here has ever rested on it — and `null` is the absence of
-            the annotation entirely. Printing 0 for the second would invent a
-            reading of the tenant's own case history. <DomainNumber> prints the
-            digit for one and a typed miss for the other. */}
-        <DomainNumber
-          value={statute.citation_count}
-          missingKind="unrecorded"
-          missingReason={t("judgment.corpus.citations_absent")}
-        />
-      </td>
-    </tr>
+        ) : (
+          <p data-testid="corpus-original" className="text-sm mt-3 text-[oklch(var(--color-ink-muted))]">
+            <MissingValue kind="unrecorded" reason={t("judgment.corpus.original_absent")} />{" "}
+            {t("judgment.corpus.original_absent")}
+          </p>
+        )}
+
+        <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.translation")}</h2>
+        {translation ? (
+          <p data-testid="corpus-translation" className={serif}>
+            <MarkHits text={translation} query={highlight} />
+          </p>
+        ) : (
+          <p data-testid="corpus-translation" className="mt-3">
+            <MissingValue kind="unrecorded" />
+          </p>
+        )}
+
+        {s.source_notes?.length > 0 && (
+          <>
+            <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.notes")}</h2>
+            <ul className="mt-3 space-y-2 text-sm text-[oklch(var(--color-ink-muted))]">
+              {s.source_notes.map((note, i) => (
+                <li key={i}>{note}</li>
+              ))}
+            </ul>
+          </>
+        )}
+        {s.source && (
+          <>
+            <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.source")}</h2>
+            <p className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">{s.source}</p>
+          </>
+        )}
+
+        <div className="flex justify-between gap-3 pt-8">
+          <Button type="button" variant="ghost" size="sm" disabled={!prev} onClick={() => prev && onChoose(prev.statute.id)}>
+            ‹ {prev ? prev.sigil ?? prev.statute.code : t("common.prev")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" disabled={!next} onClick={() => next && onChoose(next.statute.id)}>
+            {next ? next.sigil ?? next.statute.code : t("common.next")} ›
+          </Button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/** 目录先出形状;正文按段落出骨架,行高与最终一致。 */
+function CorpusSkeleton() {
+  return (
+    <div aria-busy="true" data-testid="corpus-skeleton" className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_300px] gap-6 pt-4">
+      <div className="space-y-2 max-lg:hidden">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <Skeleton key={i} className="h-6 w-full" />
+        ))}
+      </div>
+      <div className="space-y-3 max-w-[72ch]">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-11/12" />
+        <Skeleton className="h-8 w-3/4" />
+      </div>
+      <div className="space-y-2 max-lg:hidden">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    </div>
   );
 }

@@ -17,7 +17,7 @@
  * 每一个都有 overflow-x 祖先,而文档确实是宽的。
  */
 
-import { expect, test, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, setupAuthenticatedPage, SOULS } from "./fixtures";
 
 /** 共用 PageShell / 同一套布局的静态路由。动态路由([id])要另配 fixture,
  *  不在这个文件的范围内 —— 它们的容器是同一批,溢出会先在这里出现。 */
@@ -51,6 +51,11 @@ const ROUTES = [
   "/scheduler",
   "/soul-credentials",
   "/rebirth-applications",
+  // 动态路由,fixture 现成(SOULS[0] 的详情、path、界域都在 ApiMock 里)。
+  // 2026-09-25 行程条换成共享拓扑组件时,393 下它的 sr-only 状态字(absolute)
+  // 从没有 `relative` 的横向滚动框里逃出来,把文档撑到 705px;这张表当时没有
+  // 这条路由,是 soul-accounts.spec 的弹窗按钮点不中才暴露的。
+  `/souls/${SOULS[0].id}`,
 ];
 
 test.describe("文档不比视口宽", () => {

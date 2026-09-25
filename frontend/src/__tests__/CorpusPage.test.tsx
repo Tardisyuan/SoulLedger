@@ -1,37 +1,17 @@
 /**
- * Tests for app/corpus/page.tsx — the corpus browser.
+ * app/corpus/page.tsx —— 律条阅读页。
  *
- * Three properties here are structural claims about the material rather than
- * about the component, and each one has a plausible "tidier" implementation
- * that is wrong:
+ * 钉住的几条,每一条都有一个「更整齐」却错误的写法:
  *
- *   1. GREECE HAS ONE COLUMN FEWER. 21 of the 23 Greek articles are
- *      PROCEDURE, because neither the Gorgias myth nor the Myth of Er contains
- *      a code of offences. A table that keeps the column and leaves it blank
- *      asserts that Plato has offences and this deployment failed to transcribe
- *      them. So the assertion is on the cell COUNT, which a blank column would
- *      pass — an emptiness check would not distinguish the two.
- *
- *   2. TWO CORPORA NEVER SHARE A TABLE, AND NO LINE IS DRAWN BETWEEN THEM.
- *      Europe's seven terraces and nine circles, Greece's two Platonic myths.
- *      A rule between the two cards reads as a grouping line inside one table,
- *      which is exactly the "one list with sections" claim the split exists to
- *      deny. Whitespace separates; a line joins.
- *
- *   3. EVERY SIGIL IS ITS OWN SYSTEM'S. `§ 27 / 42` keeps its denominator
- *      because the Negative Confession is answered in full or not at all;
- *      `614b` is transcribed and never derived from an ordinal. The assertions
- *      are on exact strings, and the Egyptian one additionally asserts that the
- *      bare ordinal is NOT what appears — a fallback to `statute.ordinal` would
- *      print a number in the right place meaning nothing, and "27 is somewhere
- *      on the page" is true either way.
- *
- * The `citation_count` pair is the same shape: `0` and a miss must be
- * distinguishable, so the null row asserts the absence of "0" as well as the
- * presence of the typed miss.
+ *   1. 每个节号是它自己体系的(§ 27 / 42 带分母、614b 是转录的斯特方页码、功過格按
+ *      門內序號)—— 断言逐字,并断言裸 ordinal 不出现。
+ *   2. 衬线只给原文与今译:阅读栏里恰好两段 `.font-serif`。
+ *   3. 原文只在真按原语转录的功過格上有;别的五部写「未记录」,不拿译文冒充。
+ *   4. citation_count 的 0 与 null 可区分;「被引用」清单与「版本」没有接口,写明缺口。
+ *   5. 检索命中用 <mark>(底色 + 2 px 强调下线,不改字重);输入节号直达那一条。
  */
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CorpusPage from "@/app/corpus/page";
 import { I18nProvider } from "@/src/contexts/I18nContext";
@@ -44,41 +24,29 @@ jest.mock("@soulledger/core/api", () => ({
 
 const mockedStatutes = judgmentApi.statutes as jest.Mock;
 
-let container: HTMLElement;
-
-interface StatuteFixture {
-  id: string;
-  code: string;
-  civilization: string;
-  corpus: string;
-  ordinal: number;
-  polarity: string;
-  display_title: string;
-  display_text: string;
-  payload_json: Record<string, unknown>;
-  citation_count: number | null;
-}
-
-function statute(overrides: Partial<StatuteFixture> & Pick<StatuteFixture, "id" | "civilization" | "corpus" | "ordinal">): StatuteFixture {
+type Fixture = Record<string, unknown> & { id: string; civilization: string; corpus: string; ordinal: number };
+function statute(o: Fixture) {
   return {
-    code: `CODE-${overrides.id}`,
+    code: `CODE-${o.id}`,
     polarity: "OFFENCE",
-    display_title: `title-${overrides.id}`,
-    display_text: `text-${overrides.id}`,
+    title_zh: "",
+    title_en: "",
+    title_egy: "",
+    text_zh: "",
+    text_en: "",
+    text_egy: "",
+    display_title: `title-${o.id}`,
+    display_text: `text-${o.id}`,
+    is_derived: false,
+    source: `source-${o.id}`,
+    source_notes: [],
     payload_json: {},
     citation_count: 0,
-    ...overrides,
-  } as StatuteFixture;
+    ...o,
+  };
 }
 
-/**
- * One article from each of the six rulebooks, with the payload each numbering
- * system actually needs: the 門 for a 功過格 article, the circle for an Inferno
- * one, the Stephanus page for both Platonic myths, and nothing at all for the
- * Egyptian Forty-Two, whose sigil is built from the ordinal and the doctrine's
- * total.
- */
-const FIXTURES: StatuteFixture[] = [
+const FIXTURES = [
   statute({
     id: "cn-17",
     civilization: "CHINESE",
@@ -86,259 +54,175 @@ const FIXTURES: StatuteFixture[] = [
     ordinal: 17,
     polarity: "MERIT",
     payload_json: { gate: "救濟門", gate_ordinal: 6 },
+    text_zh: "凡善多而口业未净者，勿遽转生。",
+    text_en: "One whose good is great but whose speech is not yet clean shall not be reborn in haste.",
+    display_text: "凡善多而口业未净者，勿遽转生。",
+    source_notes: ["编者注:期三年为上限。"],
     citation_count: 3,
   }),
-  statute({
-    id: "eu-ds-7",
-    civilization: "EUROPEAN",
-    corpus: "DEADLY_SIN",
-    ordinal: 7,
-    citation_count: 0,
-  }),
-  statute({
-    id: "eu-inf-26",
-    civilization: "EUROPEAN",
-    corpus: "INFERNO",
-    ordinal: 26,
-    payload_json: { circle: 9 },
-    citation_count: null,
-  }),
-  statute({
-    id: "eg-27",
-    civilization: "EGYPTIAN",
-    corpus: "NEGATIVE_CONFESSION",
-    ordinal: 27,
-    polarity: "DENIAL",
-    citation_count: 12,
-  }),
-  statute({
-    id: "gr-grg-3",
-    civilization: "GREEK",
-    corpus: "GORGIAS",
-    ordinal: 3,
-    polarity: "PROCEDURE",
-    payload_json: { stephanus: "523a-b" },
-    citation_count: 1,
-  }),
-  statute({
-    id: "gr-er-4",
-    civilization: "GREEK",
-    corpus: "REPUBLIC_ER",
-    ordinal: 4,
-    polarity: "PROCEDURE",
-    payload_json: { stephanus: "614b" },
-    citation_count: 5,
-  }),
+  statute({ id: "eu-ds-7", civilization: "EUROPEAN", corpus: "DEADLY_SIN", ordinal: 7, citation_count: 0 }),
+  statute({ id: "eu-inf-26", civilization: "EUROPEAN", corpus: "INFERNO", ordinal: 26, payload_json: { circle: 9 }, citation_count: null }),
+  statute({ id: "eg-27", civilization: "EGYPTIAN", corpus: "NEGATIVE_CONFESSION", ordinal: 27, polarity: "DENIAL", citation_count: 12 }),
+  statute({ id: "gr-er-4", civilization: "GREEK", corpus: "REPUBLIC_ER", ordinal: 4, polarity: "PROCEDURE", payload_json: { stephanus: "614b" } }),
 ];
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={client}>
       <I18nProvider>{children}</I18nProvider>
     </QueryClientProvider>
   );
   return render(<CorpusPage />, { wrapper: Wrapper });
 }
 
-function card(corpus: string): HTMLElement {
-  const found = container.querySelector<HTMLElement>(`[data-corpus="${corpus}"]`);
-  if (found === null) throw new Error(`no card rendered for corpus ${corpus}`);
-  return found;
+const search = () => screen.getByRole("searchbox");
+const sigil = () => screen.getByTestId("corpus-sigil").textContent?.trim();
+async function open(query: string) {
+  fireEvent.change(search(), { target: { value: query } });
+  await waitFor(() => expect(screen.getByTestId("corpus-reading")).toBeInTheDocument());
 }
 
-/** The sigil is the first cell of the first row of that corpus's table. */
-function sigilOf(corpus: string): string {
-  const cell = card(corpus).querySelector("tbody tr td");
-  return (cell?.textContent ?? "").trim();
-}
-
-beforeEach(async () => {
+beforeEach(() => {
   jest.clearAllMocks();
-  mockedStatutes.mockResolvedValue({
-    data: { count: FIXTURES.length, next: null, previous: null, results: FIXTURES },
-  });
-  const rendered = renderPage();
-  container = rendered.container;
-  // The grid only exists once the query resolves. Anchored on an article body
-  // rather than on a sigil, so a broken sigil fails the sigil tests instead of
-  // taking the whole file down in `beforeEach`.
-  await screen.findByText("text-gr-er-4");
+  // Two pages, so the walk over `next` is exercised.
+  mockedStatutes.mockImplementation((params: Record<string, string>) =>
+    Promise.resolve({
+      data:
+        params.page === "1"
+          ? { count: 5, next: "p2", previous: null, results: FIXTURES.slice(0, 3) }
+          : { count: 5, next: null, previous: "p1", results: FIXTURES.slice(3) },
+    })
+  );
 });
 
-// ── Grouping ─────────────────────────────────────────────────────────
-
-describe("corpus grouping", () => {
-  it("renders one card per rulebook, never one card for two", () => {
-    const cards = container.querySelectorAll("[data-corpus]");
-    expect(cards.length).toBe(6);
-    expect([...cards].map((node) => node.getAttribute("data-corpus")).sort()).toEqual([
-      "DEADLY_SIN",
-      "GONGGUOGE",
-      "GORGIAS",
-      "INFERNO",
-      "NEGATIVE_CONFESSION",
-      "REPUBLIC_ER",
+describe("loading the corpus", () => {
+  it("walks every page of the list endpoint in code order", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    expect(mockedStatutes.mock.calls.map((c) => c[0])).toEqual([
+      { ordering: "code", page: "1" },
+      { ordering: "code", page: "2" },
     ]);
+    expect(screen.getByTestId("corpus-hit-count")).toHaveTextContent("5 条");
   });
 
-  it("gives each of Europe's two corpora its own table — seven terraces are not nine circles", () => {
-    expect(card("DEADLY_SIN").getAttribute("data-civilization")).toBe("EUROPEAN");
-    expect(card("INFERNO").getAttribute("data-civilization")).toBe("EUROPEAN");
-    expect(card("DEADLY_SIN").querySelectorAll("table").length).toBe(1);
-    expect(card("INFERNO").querySelectorAll("table").length).toBe(1);
-    // Neither table holds the other's article.
-    expect(card("DEADLY_SIN").textContent).not.toContain("text-eu-inf-26");
-    expect(card("INFERNO").textContent).not.toContain("text-eu-ds-7");
+  it("opens on the first article of the first rulebook", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    expect(sigil()).toBe("救濟門 · 六");
   });
 
-  it("gives each of Plato's two myths its own table — the seal is not the circuit", () => {
-    expect(card("GORGIAS").querySelectorAll("table").length).toBe(1);
-    expect(card("REPUBLIC_ER").querySelectorAll("table").length).toBe(1);
-    expect(card("GORGIAS").textContent).not.toContain("614b");
-    expect(card("REPUBLIC_ER").textContent).not.toContain("523a-b");
-  });
-
-  it("separates the cards with 40px of nothing and draws no rule between them", () => {
-    const grid = container.querySelector<HTMLElement>("[data-corpus-grid]");
-    expect(grid).not.toBeNull();
-    expect(grid!.className).toMatch(/\bgap-10\b/);
-    // A `divide-y` on the grid would put a line between the rows of cards,
-    // which is the "one table with sections" reading in another spelling.
-    expect(grid!.className).not.toMatch(/\bdivide-/);
-
-    // Each card's only rule is the 3px civilization mark on top. Any bottom or
-    // side border would close the card into a box and re-join the pair.
-    for (const node of container.querySelectorAll<HTMLElement>("[data-corpus]")) {
-      expect(node.className).toMatch(/\bborder-t\b/);
-      expect(node.className).not.toMatch(/\bborder-(b|l|r|y|x)\b/);
-    }
+  it("says a failure is a failure", async () => {
+    mockedStatutes.mockRejectedValue(new Error("500"));
+    renderPage();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByTestId("corpus-reading")).toBeNull();
   });
 });
 
-// ── One column fewer for Greece ──────────────────────────────────────
-
-describe("the Greek table carries one column fewer", () => {
-  it("flags both Greek corpora as naming no offences and the other three as naming them", () => {
-    expect(card("GORGIAS").getAttribute("data-names-offences")).toBe("false");
-    expect(card("REPUBLIC_ER").getAttribute("data-names-offences")).toBe("false");
-    expect(card("GONGGUOGE").getAttribute("data-names-offences")).toBe("true");
-    expect(card("INFERNO").getAttribute("data-names-offences")).toBe("true");
-    expect(card("NEGATIVE_CONFESSION").getAttribute("data-names-offences")).toBe("true");
+describe("typing a code jumps straight to it — each in its own system", () => {
+  it.each([
+    ["IX · XXVI", "IX · XXVI"],
+    ["ix·xxvi", "IX · XXVI"],
+    ["§ 27 / 42", "§ 27 / 42"],
+    ["614b", "614b"],
+    ["VII", "VII"],
+    ["救濟門 · 六", "救濟門 · 六"],
+  ])("%s opens %s", async (typed, expected) => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    await open(typed);
+    expect(sigil()).toBe(expected);
   });
 
-  it("gives the Greek tables three columns and the others four", () => {
-    // Header and body both, because a header that lost a cell while the rows
-    // kept theirs is a table whose columns no longer mean what they say.
-    for (const corpus of ["GORGIAS", "REPUBLIC_ER"]) {
-      expect(card(corpus).querySelectorAll("thead th").length).toBe(3);
-      expect(card(corpus).querySelectorAll("colgroup col").length).toBe(3);
-      for (const row of card(corpus).querySelectorAll("tbody tr")) {
-        expect(row.querySelectorAll("td").length).toBe(3);
-      }
-    }
-    for (const corpus of ["GONGGUOGE", "DEADLY_SIN", "INFERNO", "NEGATIVE_CONFESSION"]) {
-      expect(card(corpus).querySelectorAll("thead th").length).toBe(4);
-      expect(card(corpus).querySelectorAll("colgroup col").length).toBe(4);
-      for (const row of card(corpus).querySelectorAll("tbody tr")) {
-        expect(row.querySelectorAll("td").length).toBe(4);
-      }
-    }
-  });
-
-  it("prints no polarity for a Greek article — 'rule of the court', twenty times, is not a column", () => {
-    // The polarity lives inside the offence column, so a corpus with no offence
-    // column has no polarity cell either. Asserted through the raw member,
-    // which <DomainEnum> puts in `title`, so this does not depend on which
-    // bundle the test happens to run under.
-    expect(card("GORGIAS").querySelector('[title="PROCEDURE"]')).toBeNull();
-    expect(card("REPUBLIC_ER").querySelector('[title="PROCEDURE"]')).toBeNull();
-    // The three that do name offences still say which kind.
-    expect(card("GONGGUOGE").querySelector('[title="MERIT"]')).not.toBeNull();
-    expect(card("NEGATIVE_CONFESSION").querySelector('[title="DENIAL"]')).not.toBeNull();
-  });
-
-  it("still shows the Greek article's body and tally — the missing column is the offence, not the article", () => {
-    expect(card("GORGIAS").textContent).toContain("text-gr-grg-3");
-    expect(sigilOf("GORGIAS")).toBe("523a-b");
+  it("never prints a bare ordinal where the system's sigil belongs", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    await open("§ 27 / 42");
+    expect(sigil()).not.toBe("27");
+    await open("614b");
+    expect(sigil()).not.toBe("4");
   });
 });
 
-// ── Sigils ───────────────────────────────────────────────────────────
-
-describe("each corpus is numbered in its own system", () => {
-  it("numbers a 功過格 article by 門 and Han numeral — not by 卷, which the text does not have", () => {
-    // 六, from `gate_ordinal: 6` — NOT 十七 from `ordinal: 17`. This fixture
-    // already carried both numbers and the expectation used the wrong one.
-    // 門 are contiguous ranges of the corpus-wide count, so an `ordinal`
-    // printed beside a 門 name is a citation that resolves to nothing.
-    expect(sigilOf("GONGGUOGE")).toBe("救濟門 · 六");
+describe("serif, original and translation", () => {
+  it("sets exactly two serif passages — 原文 and 今译 — for the 功過格, original = text_zh", async () => {
+    renderPage();
+    const reading = await screen.findByTestId("corpus-reading");
+    expect(reading.querySelectorAll(".font-serif")).toHaveLength(2);
+    expect(within(reading).getByTestId("corpus-original")).toHaveTextContent("凡善多而口业未净者");
+    expect(within(reading).getByTestId("corpus-translation")).toHaveTextContent("shall not be reborn in haste");
+    // Editor notes and metadata are sans.
+    expect(within(reading).getByText("编者注:期三年为上限。").closest(".font-serif")).toBeNull();
+    expect(within(reading).getByTestId("corpus-sigil").className).toContain("font-mono");
   });
 
-  it("numbers an Inferno article in roman with the circle first, and a terrace article bare", () => {
-    expect(sigilOf("INFERNO")).toBe("IX · XXVI");
-    // The seven terraces are a different structure and carry no circle, so a
-    // bare numeral is the correct output there rather than a degraded one.
-    expect(sigilOf("DEADLY_SIN")).toBe("VII");
+  it("does not pass a translation off as the original for a rulebook stored only in translation", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    await open("IX · XXVI");
+    const reading = screen.getByTestId("corpus-reading");
+    const original = within(reading).getByTestId("corpus-original");
+    expect(original.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(original).not.toHaveTextContent("text-eu-inf-26");
+    expect(within(reading).getByTestId("corpus-translation")).toHaveTextContent("text-eu-inf-26");
+    expect(reading.querySelectorAll(".font-serif")).toHaveLength(1);
   });
 
-  it("prints the Egyptian denominator — forty-one declarations is no declaration", () => {
-    expect(sigilOf("NEGATIVE_CONFESSION")).toBe("§ 27 / 42");
-    // And not the bare ordinal: a formatter that dropped the doctrine would
-    // still put a 27 in this cell.
-    expect(sigilOf("NEGATIVE_CONFESSION")).not.toBe("27");
-    expect(sigilOf("NEGATIVE_CONFESSION")).toContain("/ 42");
-  });
-
-  it("prints the transcribed Stephanus page and never the ordinal", () => {
-    expect(sigilOf("GORGIAS")).toBe("523a-b");
-    expect(sigilOf("REPUBLIC_ER")).toBe("614b");
-    // Ordinals 3 and 4 are artefacts of the seeder's insertion order.
-    expect(sigilOf("GORGIAS")).not.toBe("3");
-    expect(sigilOf("REPUBLIC_ER")).not.toBe("4");
+  it("caps the reading column at 72ch", async () => {
+    renderPage();
+    const reading = await screen.findByTestId("corpus-reading");
+    expect(reading.querySelector(".max-w-\\[72ch\\]")).not.toBeNull();
   });
 });
 
-// ── Citation tally ───────────────────────────────────────────────────
-
-describe("citation_count", () => {
-  function tallyCell(corpus: string): HTMLElement {
-    const cells = card(corpus).querySelectorAll<HTMLElement>("tbody tr td");
-    return cells[cells.length - 1];
-  }
-
-  it("prints a recorded zero as a digit — the article exists and nothing rests on it", () => {
-    const cell = tallyCell("DEADLY_SIN");
-    expect(cell.textContent?.trim()).toBe("0");
-    expect(cell.querySelector('[data-zero="true"]')).not.toBeNull();
-    expect(cell.querySelector("[data-missing]")).toBeNull();
+describe("search", () => {
+  it("marks hits with a tint and a 2px accent underline, not a weight change", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    fireEvent.change(search(), { target: { value: "口业" } });
+    const hit = await screen.findAllByText("口业", { selector: "mark" });
+    expect(hit[0].className).toContain("--color-surface-2");
+    expect(hit[0].className).toContain("inset_0_-2px_0_oklch(var(--color-accent))");
+    expect(hit[0].className).not.toMatch(/font-(semibold|bold|medium)/);
+    expect(screen.getByTestId("corpus-hit-count")).toHaveTextContent("1 条");
   });
 
-  it("prints a typed miss for null, and specifically not a zero", () => {
-    const cell = tallyCell("INFERNO");
-    expect(cell.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
-    // The defect this guards: `citation_count ?? 0` invents a reading of the
-    // tenant's case history out of a field the response did not carry.
-    expect(cell.textContent).not.toContain("0");
-  });
-
-  it("prints the number when there is one", () => {
-    expect(tallyCell("GONGGUOGE").textContent?.trim()).toBe("3");
-    expect(tallyCell("NEGATIVE_CONFESSION").textContent?.trim()).toBe("12");
+  it("says nothing matched, with a way out", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    fireEvent.change(search(), { target: { value: "口孽" } });
+    expect(await screen.findByText("没有匹配「口孽」的律条")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "清除检索" }));
+    await screen.findByTestId("corpus-reading");
   });
 });
 
-// ── Request wiring ───────────────────────────────────────────────────
+describe("the right rail", () => {
+  it("formats the citation as 〔rulebook · sigil〕", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    expect(screen.getByTestId("corpus-citation").textContent).toMatch(/^〔.+ · 救濟門 · 六〕$/);
+  });
 
-describe("ordering follows the corpus filter", () => {
-  it("asks for code order while several rulebooks can share a page", () => {
-    // Unfiltered, `ordinal` interleaves six documents' article 1s; `code` is
-    // the only allowed field that keeps a document contiguous.
-    expect(mockedStatutes).toHaveBeenCalledWith(
-      expect.objectContaining({ ordering: "code", page: "1" })
-    );
-    expect(mockedStatutes).not.toHaveBeenCalledWith(
-      expect.objectContaining({ ordering: "ordinal" })
-    );
+  it("prints a recorded zero as a count, and a typed miss — not a zero — for null", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    await open("VII");
+    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent("0 件判决");
+    await open("IX · XXVI");
+    const miss = screen.getByTestId("corpus-cited-by");
+    expect(miss.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(miss).not.toHaveTextContent("0");
+  });
+
+  it("states the cited-by list and version gaps instead of inventing them", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    const rail = screen.getByTestId("corpus-rail");
+    expect(rail).toHaveTextContent("接口不能按律条查判决");
+    expect(within(rail).getByTestId("corpus-versions")).toHaveTextContent("律条没有版本记录");
+    expect(rail).not.toHaveTextContent("v1");
   });
 });

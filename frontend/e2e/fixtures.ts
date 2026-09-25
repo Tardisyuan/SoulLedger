@@ -258,6 +258,148 @@ export const SOUL_DETAIL = {
   tenant: 1,
 };
 
+/**
+ * 界域 with the topology columns `RealmListSerializer` carries (TOPOLOGY_FIELDS).
+ * Values follow backend/apps/actors/mythology/realms.py REALM_TOPOLOGY: the ten
+ * courts carry `order`, the Duat carries no `hour` (so /realms draws it as the
+ * labelled 示意 line), Greece's two roads carry `fork`.
+ */
+const court = (n: number, code: string) => ({
+  id: `cccccccc-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`,
+  realm_code: code,
+  name_en: `Court ${n}`,
+  civilization: "CHINESE",
+  realm_type: "NEUTRAL",
+  tier: n,
+  parent_realm: null,
+  is_eternal: false,
+  order: n,
+  kind: "HALL",
+  capacity: null,
+});
+export const REALMS = [
+  { id: "cccccccc-0000-4000-8000-000000000000", realm_code: "DY_00_PURGATORY", name_en: "Holding pen", civilization: "CHINESE", realm_type: "PURGATORY", tier: 1, parent_realm: null, is_eternal: false, order: null, kind: null, capacity: 2 },
+  court(1, "DY_COURT_01_QINGUANG"),
+  court(2, "DY_COURT_02_CHUJIANG"),
+  court(3, "DY_COURT_03_SONGDI"),
+  court(4, "DY_COURT_04_WUGUAN"),
+  court(5, "DY_COURT_05_YANLUO"),
+  court(6, "DY_COURT_06_BIANCHENG"),
+  court(7, "DY_COURT_07_TAISHAN"),
+  court(8, "DY_COURT_08_DUSHI"),
+  court(9, "DY_COURT_09_PINGDENG"),
+  court(10, "DY_COURT_10_ZHUANLUN"),
+  { id: "cccccccc-0000-4000-8000-000000000011", realm_code: "DY_01_HEAVEN", name_en: "First heaven", civilization: "CHINESE", realm_type: "BLISS", tier: 1, parent_realm: null, is_eternal: true, order: null, kind: null, capacity: null },
+  { id: "eeeeeeee-0000-4000-8000-000000000001", realm_code: "EG_DUAT_ENTRY", name_en: "Duat entry", civilization: "EGYPTIAN", realm_type: "NEUTRAL", tier: 1, parent_realm: null, is_eternal: false, is_judgment_hall: false, hour: null },
+  { id: "eeeeeeee-0000-4000-8000-000000000002", realm_code: "EG_HALL_TWO_TRUTHS", name_en: "Hall of Two Truths", civilization: "EGYPTIAN", realm_type: "NEUTRAL", tier: 2, parent_realm: null, is_eternal: false, is_judgment_hall: true, hour: null },
+];
+
+/** GET /realms/occupancy/ — the holding pen at capacity (drawn in the warning colour). */
+export const REALM_OCCUPANCY = [
+  { realm_id: "cccccccc-0000-4000-8000-000000000000", count: 2 },
+  { realm_id: "cccccccc-0000-4000-8000-000000000003", count: 1 },
+];
+
+/** GET /souls/{id}/path/ — SOULS[0] died into the pen and now stands before the third court. */
+export const SOUL_PATH = [
+  { id: "p0000000-0000-4000-8000-000000000001", sequence: 1, realm_id: "cccccccc-0000-4000-8000-000000000000", realm_code: "DY_00_PURGATORY", entered_at: "2026-06-08T15:28:00Z", left_at: "2026-06-09T09:00:00Z" },
+  { id: "p0000000-0000-4000-8000-000000000002", sequence: 2, realm_id: "cccccccc-0000-4000-8000-000000000003", realm_code: "DY_COURT_03_SONGDI", entered_at: "2026-06-09T09:00:00Z", left_at: null },
+];
+
+const journalRow = (id: string, day: string, time: string, soul: number, type: "MERIT" | "DEMERIT", category: string, description: string, weight: number, clause = "") => ({
+  id: `aaaaaaaa-0000-4000-8000-0000000000${id}`,
+  soul_id: SOULS[soul % SOULS.length].id,
+  soul_name: SOULS[soul % SOULS.length].name,
+  record_type: type,
+  category,
+  description,
+  weight,
+  statute_clause: clause,
+  recorded_at: `${day}T${time}:00Z`,
+  day,
+});
+
+/** GET /ledger/journal/ — one month of the 功过总账; the pillars balance. */
+export const LEDGER_JOURNAL = {
+  month: "2026-06",
+  opening: 18420,
+  received: 3912,
+  disbursed: 2640,
+  closing: 19692,
+  soul_count: 33,
+  record_count: 8,
+  categories: [
+    { category: "CHARITY", merit: 1480, demerit: 0 },
+    { category: "PIETY", merit: 1210, demerit: 0 },
+    { category: "OTHER", merit: 1222, demerit: 1040 },
+    { category: "DECEPTION", merit: 0, demerit: 980 },
+    { category: "MURDER", merit: 0, demerit: 620 },
+  ],
+  page: 1,
+  page_size: 20,
+  count: 8,
+  results: [
+    journalRow("01", "2026-06-16", "09:12", 0, "MERIT", "CHARITY", "布施药材", 40, "救濟門#3:施藥"),
+    journalRow("02", "2026-06-16", "11:40", 1, "DEMERIT", "CRUELTY", "殴人", 120),
+    journalRow("03", "2026-06-16", "15:02", 0, "MERIT", "PIETY", "侍奉病母", 80),
+    journalRow("04", "2026-06-15", "08:30", 1, "DEMERIT", "DECEPTION", "詈骂邻人(补登)", 25),
+    journalRow("05", "2026-06-15", "10:05", 0, "MERIT", "HONESTY", "不曾偷盗", 30),
+    journalRow("06", "2026-06-15", "16:44", 1, "MERIT", "COMPASSION", "善待异乡人", 50),
+    journalRow("07", "2026-06-14", "09:00", 0, "DEMERIT", "MURDER", "杀生 · 屠犬", 200),
+    journalRow("08", "2026-06-14", "13:20", 1, "MERIT", "CHARITY", "修桥", 150),
+  ],
+};
+
+const statute = (id: string, civilization: string, corpus: string, ordinal: number, extra: Record<string, unknown>) => ({
+  id: `55555555-0000-4000-8000-0000000000${id}`,
+  code: `${corpus}-${ordinal}`,
+  civilization,
+  corpus,
+  ordinal,
+  polarity: "OFFENCE",
+  title_zh: "",
+  title_en: "",
+  title_egy: "",
+  text_zh: "",
+  text_en: "",
+  text_egy: "",
+  display_title: `${corpus} ${ordinal}`,
+  display_text: "",
+  is_derived: false,
+  source: "",
+  source_notes: [],
+  payload_json: {},
+  citation_count: 0,
+  ...extra,
+});
+
+/** GET /judgment/statutes/ — one page, three rulebooks. */
+export const STATUTES = [
+  statute("01", "CHINESE", "GONGGUOGE", 17, {
+    polarity: "MERIT",
+    display_title: "救濟門 · 六",
+    payload_json: { gate: "救濟門", gate_ordinal: 6 },
+    text_zh: "凡善多而口业未净者，勿遽转生，入此门补过，期三年。",
+    text_en: "One whose good is great but whose speech is not yet clean shall not be reborn in haste.",
+    display_text: "凡善多而口业未净者，勿遽转生，入此门补过，期三年。",
+    source: "《太微仙君功過格》,正統道藏 洞真部戒律類",
+    source_notes: ["「期三年」为上限,不是固定期限。"],
+    citation_count: 38,
+  }),
+  statute("02", "EUROPEAN", "INFERNO", 26, {
+    display_title: "Traitors to their lords",
+    display_text: "Those who betrayed their lords and benefactors are held fast in the ice of Judecca.",
+    payload_json: { circle: 9 },
+    citation_count: null,
+  }),
+  statute("03", "EGYPTIAN", "NEGATIVE_CONFESSION", 27, {
+    polarity: "DENIAL",
+    display_title: "I have not been deaf to words of truth",
+    display_text: "O Kenemti, who comes forth from Kenmet, I have not been deaf to words of truth.",
+    citation_count: 12,
+  }),
+];
+
 /** GET /souls/{id}/karma/ — LedgerSummary. */
 export const SOUL_LEDGER = {
   soul_id: SOULS[0].id,
@@ -1232,16 +1374,7 @@ export class ApiMock {
       { id: 1, code: "CN_DIYU", display_name: "中国地府", is_active: true },
       { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱", is_active: true },
     ]));
-    this.on("GET", "/realms/", paginated([
-      {
-        id: 1,
-        realm_code: "DY_01",
-        name_en: "First Court",
-        civilization: "CHINESE",
-        realm_type: "PURGATORY",
-        tier: 1,
-      },
-    ]));
+    this.on("GET", "/realms/", paginated(REALMS));
     this.on("GET", "/actors/", paginated([
       {
         id: 1,
@@ -1306,6 +1439,15 @@ export class ApiMock {
     // Not a list endpoint: see SOUL_INHERITANCE. (The paragraph above still
     // holds for the other five.)
     this.on("GET", "/ledger/inheritance/:id/", SOUL_INHERITANCE);
+
+    // ── 第三类 B:功过总账 / 界域 / 律条语料 与详情行程条 ──
+    // Registered after `/realms/:id/`-style and `/judgment/:id/` routes on
+    // purpose: `on()` unshifts, the last registration wins, and `:id` would
+    // otherwise swallow `occupancy` / `statutes`.
+    this.on("GET", "/ledger/journal/", LEDGER_JOURNAL);
+    this.on("GET", "/realms/occupancy/", REALM_OCCUPANCY);
+    this.on("GET", "/souls/:id/path/", SOUL_PATH);
+    this.on("GET", "/judgment/statutes/", paginated(STATUTES));
 
     // ── Scheduler (backend/apps/scheduler/views.py) ──
     this.on("GET", "/scheduler/jobs/", SCHEDULER_JOBS);
