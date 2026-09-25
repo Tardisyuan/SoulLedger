@@ -933,7 +933,97 @@
       "cite": "引用",
       "cited": "已引用",
       "uncite": "撤回引用 {{code}}",
-      "cite_error": "引用未能保存"
+      "cite_error": "引用未能保存",
+      "deferred_note": "已暂缓：{{reason}}"
+    },
+    "claim": {
+      "groups": {
+        "mine": "我认领",
+        "unclaimed": "待认领",
+        "others": "他人认领",
+        "deferred": "暂缓"
+      },
+      "hints": {
+        "unclaimed": "等待最久在上",
+        "others": "只读，可改派"
+      },
+      "search": "搜索姓名或 ID",
+      "court_all": "殿 · 全部",
+      "select": "勾选",
+      "select_row": "勾选「{{name}}」",
+      "selected": "已选 {{n}}",
+      "claim": "认领",
+      "reassign": "改派…",
+      "defer": "暂缓",
+      "clear_selection": "取消选择",
+      "batch_limit": "一次至多 {{n}} 件，其余请下一批",
+      "balance": "余额",
+      "claimant": "认领",
+      "group_empty": "本组暂无",
+      "key_move": "上下移动",
+      "key_open": "打开审判台",
+      "claimed_by": "由 {{name}} 认领",
+      "claimed_by_me": "你已认领",
+      "reason": "理由",
+      "reason_required": "请写明理由",
+      "defer_title": "暂缓 {{n}} 件审判",
+      "defer_reason_hint": "必填，至多 500 字；随案子留存，办案人会看到",
+      "reassign_title": "改派 {{n}} 件审判",
+      "reassign_to": "改派给",
+      "reassign_hint": "只列本租户的在职官员；办案权限由服务端再核一次",
+      "pick_officer": "— 选择官员 —",
+      "officer_required": "请选择一位官员",
+      "officers_unavailable": "读不到官员名单（需要用户管理权限）",
+      "reassign_confirm": "改派",
+      "done_claim": "已认领 {{n}} 件",
+      "done_reassign": "已改派 {{n}} 件",
+      "done_defer": "已暂缓 {{n}} 件",
+      "refused": {
+        "already_claimed": "已被他人认领",
+        "not_claimed": "这件尚无人认领",
+        "not_claimant": "这件由他人认领；替他人操作需要改派权限",
+        "not_pending": "已结案，不能再改",
+        "already_deferred": "已经暂缓",
+        "not_deferred": "并未暂缓",
+        "invalid_assignee": "该官员不在本租户，或没有办案权限",
+        "not_found": "有审判已不存在",
+        "permission_denied": "没有权限",
+        "generic": "操作未能完成"
+      }
+    },
+    "admission": {
+      "title": "证据 · 采信",
+      "toggle_hint": "切换采信",
+      "toggle_row": "采信「{{item}}」",
+      "balance_label": "采信后余额",
+      "not_admitted_net": "（未采信 {{n}} 条 {{net}}）",
+      "not_admitted_count": "（未采信 {{n}} 条）",
+      "reason_title": "不采信「{{item}}」",
+      "reason_hint": "必填；随案卷留存",
+      "confirm_not_admit": "不采信",
+      "rule_error": "采信未能保存",
+      "not_current_life": "这件审判不属于灵魂当前这一世，证据不在此列出",
+      "empty": "这一世没有功过记录",
+      "reason_shown": "理由：{{reason}}"
+    },
+    "draft": {
+      "saved_at": "已自动保存 {{time}}",
+      "saving": "保存中…",
+      "save_failed": "自动保存未成功，下次改动时会再试",
+      "conflict_title": "他处已保存了另一版（{{time}}）",
+      "conflict_body": "你的改动还没有保存，也不会自动覆盖。对方的版本如下，请选一个：",
+      "server_version": "对方的版本",
+      "use_server": "改用对方的版本",
+      "keep_mine": "保留我的版本（覆盖对方）",
+      "concluded": "此案已结案，草稿不再保存",
+      "empty_text": "（空）"
+    },
+    "precedents": {
+      "title": "据 · 先例",
+      "empty": "尚无可比的已结案审判",
+      "same_court": "同殿",
+      "shared": "共同援引 {{n}}",
+      "error": "先例读取失败"
     }
   },
   "audit": {

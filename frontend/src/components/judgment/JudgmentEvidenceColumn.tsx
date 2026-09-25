@@ -42,14 +42,14 @@ function EvidenceValue({ value }: { value: unknown }) {
   return <span className="font-mono text-xs">{JSON.stringify(value)}</span>;
 }
 
-export function JudgmentEvidenceColumn({ evidence }: { evidence: Record<string, unknown> }) {
+export function JudgmentEvidenceColumn({ evidence, mark = "丙" }: { evidence: Record<string, unknown>; mark?: string }) {
   const { t } = useI18n();
   const entries = Object.entries(evidence ?? {});
 
   return (
     <section className="min-w-0">
       <JudgmentSectionHead
-        mark="丙"
+        mark={mark}
         title={t("judgment.detail.evidence")}
         meta={entries.length > 0 ? String(entries.length) : undefined}
       />

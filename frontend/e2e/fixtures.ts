@@ -1100,6 +1100,10 @@ export class ApiMock {
       total: 0, remaining: 0, skipped: 0, position: null,
       judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [],
     });
+    // The /judgment page's four group headers (JudgmentQueueCounts) and the desk's
+    // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
+    this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
+    this.on("GET", "/judgment/:id/precedents/", []);
 
     // ── Dispatch ──
     this.on("GET", "/dispatch/records/", () => ({

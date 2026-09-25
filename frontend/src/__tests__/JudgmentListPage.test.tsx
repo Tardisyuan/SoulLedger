@@ -1,21 +1,26 @@
 /**
  * /judgment 审判队列(规范 v1 第三类 A·02)。
  *
- * - 分段切换带两边的真实计数(各取自一次 `has_verdict` 查询的 count);
- * - Q 进入队列,打字时不接;
- * - 紧凑行(28 px 那一档)、整行点进审判台;
- * - 后端没有认领 / 批量接口:不画勾选列,不画认领列 —— 断的是「不在」。
+ * - 分段切换带两边的真实计数(各取自一次 `has_verdict` 查询的 count);Q 进入队列,打字时不接;
+ * - 「待审」按谁在处理分四组,组头的数来自 `queue-counts/` —— 不是本页行数;
+ * - 28 px 紧凑行、整行链到审判台;认领标是圆形头像,未认领的行给「认领」;
+ * - J / K 移焦点,X 勾选,C 认领焦点行;打字时一概不接;
+ * - 勾选后出批量条:认领 / 改派… / 暂缓;暂缓理由必填,改派只列同租户的官员;
+ * - 搜索与殿筛选同时进列表与计数的请求。
+ *
+ * 每条都断了反面:没勾选时没有批量条、理由空时不发请求、别的租户的官员不在名单里。
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import JudgmentListPage from "@/app/judgment/page";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { list: jest.fn() },
+  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), claim: jest.fn(), batch: jest.fn() },
+  usersApi: { list: jest.fn() },
   PAGE_SIZE: 20,
 }));
-const { judgmentApi } = jest.requireMock("@soulledger/core/api") as Record<string, Record<string, jest.Mock>>;
+const { judgmentApi, usersApi } = jest.requireMock("@soulledger/core/api") as Record<string, Record<string, jest.Mock>>;
 
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -23,34 +28,67 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }),
 }));
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "yama", role: "ADMIN", permissions: [], tenant: null } }),
-}));
+const mockShowToast = jest.fn();
+jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant: { code: string } | null };
+jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 
-const row = (id: string, name: string) => ({
+const row = (id: string, name: string, over: Record<string, unknown> = {}) => ({
   id, soul: `s-${id}`, soul_name: name, civilization: "CHINESE", judge: null, judge_name: "阎罗王",
   court: "第五殿", evidence_json: {}, confession: "", verdict: null, notes: "", citations: [], is_final: false,
   created_at: new Date(Date.now() - 7.5 * 86_400_000).toISOString(), concluded_at: null,
+  claimed_by: null, claimed_by_name: null, deferred_at: null, defer_reason: "", karmic_balance: 347, evidence_count: 12,
+  ...over,
 });
+
+const GROUP_ROWS: Record<string, ReturnType<typeof row>[]> = {
+  mine: [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗" })],
+  unclaimed: [row("b", "Marguerite Vey", { civilization: "EUROPEAN", court: "米诺斯", karmic_balance: null, evidence_count: 7 })],
+  others: [row("c", "陆晚晴", { claimed_by: 2, claimed_by_name: "秦广" })],
+  deferred: [],
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
-  judgmentApi.list.mockImplementation(async (params: Record<string, string>) => ({
-    data: params.has_verdict === "false"
-      ? { count: 12, next: null, previous: null, results: [row("a", "沈青梧")] }
-      : { count: 148, next: null, previous: null, results: [] },
-  }));
+  mockUser = { id: 1, username: "yama", role: "JUDGE", permissions: ["judgment.read", "judgment.execute"], tenant: { code: "diyu" } };
+  judgmentApi.list.mockImplementation(async (params: Record<string, string>) => {
+    if (params.group) {
+      const results = GROUP_ROWS[params.group];
+      return { data: { count: results.length, next: null, previous: null, results } };
+    }
+    return {
+      data: params.has_verdict === "false"
+        ? { count: 12, next: null, previous: null, results: [] }
+        : { count: 148, next: null, previous: null, results: [] },
+    };
+  });
+  // 计数故意与行数不同:组头必须读服务端的数。
+  judgmentApi.queueCounts.mockResolvedValue({ data: { mine: 2, unclaimed: 5, others: 4, deferred: 1, total: 12 } });
+  judgmentApi.claim.mockResolvedValue({ data: {} });
+  judgmentApi.batch.mockResolvedValue({ data: { operation: "claim", count: 1, ids: [] } });
+  usersApi.list.mockResolvedValue({
+    data: {
+      count: 3, next: null, previous: null,
+      results: [
+        { id: 7, username: "qinguang", email: "", role: "JUDGE", is_active: true, tenant: { code: "diyu", display_name: "地府" } },
+        { id: 8, username: "minos", email: "", role: "JUDGE", is_active: true, tenant: { code: "inferno", display_name: "地狱" } },
+        { id: 9, username: "retired", email: "", role: "JUDGE", is_active: false, tenant: { code: "diyu", display_name: "地府" } },
+      ],
+    },
+  });
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <JudgmentListPage />
     </QueryClientProvider>
   );
 }
+
+const rowOf = (name: string) => screen.getByRole("link", { name }).closest("tr") as HTMLElement;
 
 describe("审判队列", () => {
   it("分段切换两边都带计数,当前一段 aria-pressed", async () => {
@@ -76,14 +114,165 @@ describe("审判队列", () => {
     field.remove();
   });
 
-  it("行是紧凑档、整行链到审判台,等待天数由 created_at 算出;没有勾选列、没有认领列", async () => {
+  it("四组各一次 group 查询,组头的数是 queue-counts 的,不是本页行数", async () => {
+    renderPage();
+    await screen.findByText("沈青梧");
+    for (const group of ["mine", "unclaimed", "others", "deferred"]) {
+      expect(judgmentApi.list).toHaveBeenCalledWith({ group, page: "1", ordering: "created_at" });
+    }
+    await waitFor(() => expect(screen.getByTestId("group-count-unclaimed")).toHaveTextContent("5"));
+    expect(screen.getByTestId("group-count-mine")).toHaveTextContent("2");
+    expect(screen.getByTestId("group-count-others")).toHaveTextContent("4");
+    expect(screen.getByTestId("group-count-deferred")).toHaveTextContent("1");
+    expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
+  });
+
+  it("行是 28 px、整行链到审判台;余额与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "沈青梧" });
     expect(link).toHaveAttribute("href", "/judgment/a");
-    const table = screen.getByRole("table");
-    expect(table.className).toContain("[&_tbody_td]:py-1");
-    expect(within(table).getByText(tZh("judgment.waiting_days", { n: "7" }))).toBeInTheDocument();
-    expect(within(table).queryByRole("checkbox")).toBeNull();
-    expect(within(table).getAllByRole("columnheader")).toHaveLength(4);
+    const mine = rowOf("沈青梧");
+    expect(mine.className).toContain("h-7");
+    expect(within(mine).getByText("+347")).toBeInTheDocument();
+    expect(within(mine).getByText("12")).toBeInTheDocument();
+    expect(within(mine).getByText(tZh("judgment.waiting_days", { n: "7" }))).toBeInTheDocument();
+    const avatar = within(mine).getByRole("img", { name: tZh("judgment.claim.claimed_by_me") });
+    expect(avatar.className).toContain("rounded-full");
+    expect(within(mine).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
+
+    const others = rowOf("陆晚晴");
+    expect(within(others).getByRole("img", { name: tZh("judgment.claim.claimed_by", { name: "秦广" }) })).toHaveTextContent("秦");
+
+    const unclaimed = rowOf("Marguerite Vey");
+    expect(within(unclaimed).queryByRole("img")).toBeNull();
+    // 非功过格的余额是「不适用」,不是 0。
+    expect(within(unclaimed).queryByText("0")).toBeNull();
+    fireEvent.click(within(unclaimed).getByRole("button", { name: tZh("judgment.claim.claim") }));
+    await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
+  });
+
+  it("J 移到第一行、再 J 到下一行;C 认领焦点行;打字时 J / C 都不接", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const search = screen.getByPlaceholderText(tZh("judgment.claim.search"));
+    search.focus();
+    fireEvent.keyDown(search, { key: "j" });
+    fireEvent.keyDown(search, { key: "c" });
+    expect(document.activeElement).toBe(search);
+    expect(judgmentApi.claim).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document.body, { key: "j" });
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "沈青梧" }));
+    fireEvent.keyDown(document.body, { key: "j" });
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Marguerite Vey" }));
+    expect(rowOf("Marguerite Vey")).toHaveAttribute("data-focused", "true");
+
+    fireEvent.keyDown(document.body, { key: "c" });
+    await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
+    expect(judgmentApi.claim).toHaveBeenCalledTimes(1);
+  });
+
+  it("没有勾选时没有批量条;X 勾选焦点行后出现,批量认领带勾选的 id", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    expect(screen.queryByTestId("batch-bar")).toBeNull();
+
+    fireEvent.keyDown(document.body, { key: "j" });
+    fireEvent.keyDown(document.body, { key: "x" });
+    const bar = await screen.findByTestId("batch-bar");
+    expect(within(bar).getByText(tZh("judgment.claim.selected", { n: "1" }))).toBeInTheDocument();
+    // JUDGE 没有 judgment.assign:没有「改派…」。
+    expect(within(bar).queryByRole("button", { name: tZh("judgment.claim.reassign") })).toBeNull();
+
+    fireEvent.click(within(rowOf("陆晚晴")).getByRole("checkbox"));
+    fireEvent.click(within(bar).getByRole("button", { name: tZh("judgment.claim.claim") }));
+    await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "claim", ids: ["a", "c"] }));
+    await waitFor(() => expect(screen.queryByTestId("batch-bar")).toBeNull());
+  });
+
+  it("批量被拒时按拒绝码说是什么,不回显服务端英文", async () => {
+    judgmentApi.batch.mockRejectedValue({ response: { status: 409, data: { error: "This judgment is already claimed", code: "already_claimed", id: "c" } } });
+    renderPage();
+    await screen.findByText("陆晚晴");
+    fireEvent.click(within(rowOf("陆晚晴")).getByRole("checkbox"));
+    fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.claim") }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.refused.already_claimed"), "error"));
+  });
+
+  it("暂缓要理由:空理由不发请求,写了才带着理由发", async () => {
+    renderPage();
+    await screen.findByText("沈青梧");
+    fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+    fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.defer") }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.defer") }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(tZh("judgment.claim.reason_required"));
+    expect(judgmentApi.batch).not.toHaveBeenCalled();
+
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "  待补证  " } });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.defer") }));
+    await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "defer", ids: ["a"], reason: "待补证" }));
+  });
+
+  it("改派只给持 judgment.assign 的人,名单只列同租户的在职官员", async () => {
+    mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    renderPage();
+    await screen.findByText("沈青梧");
+    fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+    fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
+    const dialog = await screen.findByRole("dialog");
+    const select = await within(dialog).findByRole("combobox");
+    await waitFor(() => expect(within(select).getByRole("option", { name: "qinguang" })).toBeInTheDocument());
+    expect(within(select).queryByRole("option", { name: /minos/ })).toBeNull();
+    expect(within(select).queryByRole("option", { name: /retired/ })).toBeNull();
+
+    fireEvent.change(select, { target: { value: "7" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
+    await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["a"], to: 7 }));
+  });
+
+  it("官员名单读不到(殿主没有用户管理权)时照实说,不给一个空下拉", async () => {
+    mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    usersApi.list.mockRejectedValue({ response: { status: 403 } });
+    renderPage();
+    await screen.findByText("沈青梧");
+    fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+    fireEvent.click(within(screen.getByTestId("batch-bar")).getByRole("button", { name: tZh("judgment.claim.reassign") }));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(tZh("judgment.claim.officers_unavailable"));
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
+  });
+
+  it("搜索(去抖后)与殿筛选同时进列表与计数的请求", async () => {
+    jest.useFakeTimers();
+    try {
+      renderPage();
+      await act(async () => {
+        await jest.runOnlyPendingTimersAsync();
+      });
+      fireEvent.change(screen.getByPlaceholderText(tZh("judgment.claim.search")), { target: { value: "沈" } });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(400);
+      });
+      await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ search: "沈" }));
+      expect(judgmentApi.list).toHaveBeenCalledWith({ search: "沈", group: "unclaimed", page: "1", ordering: "created_at" });
+
+      fireEvent.change(screen.getByRole("combobox", { name: tZh("judgment.court") }), { target: { value: "第五殿" } });
+      await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ search: "沈", court: "第五殿" }));
+      expect(judgmentApi.list).toHaveBeenCalledWith({ search: "沈", court: "第五殿", group: "mine", page: "1", ordering: "created_at" });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("没有 judgment.execute 的人看不到勾选列,也没有「认领」", async () => {
+    mockUser = { ...mockUser, permissions: ["judgment.read"] };
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
+    fireEvent.keyDown(document.body, { key: "j" });
+    fireEvent.keyDown(document.body, { key: "c" });
+    expect(judgmentApi.claim).not.toHaveBeenCalled();
   });
 });
