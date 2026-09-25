@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <script src="_ds/soulledger-current-ui-redesign-brief-02f39b44-de22-40b4-b34c-3065a6f44d55/_ds_bundle.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    html{background:#1c1c1e}body{margin:0;background:#1c1c1e;min-width:max-content;color:#e6e4df;font-family:'Archivo','Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+    p{margin:0}h1,h2,h3{margin:0;font-weight:inherit}
+  </style>
+</helmet>
+
+<section style="padding:56px 64px 24px;max-width:1240px;font-size:15px;line-height:1.7">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;color:#9a978f;margin-bottom:12px">SOULLEDGER · 第三类出稿 · A 组 / 共 D 组 · 依「规范 v1」</div>
+  <h1 style="font-size:36px;line-height:1.2;font-weight:600">审判台 · 审判队列 · 处置</h1>
+  <p style="color:#cfccc4;margin-top:12px;max-width:960px">这三页是同一条流水线：队列里认领 → 审判台落判 → 处置执行。每页四幅整页（1440 深 / 1440 浅 / 393 深 / 393 浅），下面一排是空 / 加载 / 错误三态（只画内容区，深浅各一）。样本数据为示例。新增原语已并入「规范 v1」第 2 节 2.9。</p>
+</section>
+
+<sc-for list="{{ pages }}" as="a" hint-placeholder-count="3">
+  <section style="padding:40px 64px;border-top:1px solid #333">
+    <div style="display:flex;gap:16px;align-items:baseline;flex-wrap:wrap">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#e6e4df;color:#1c1c1e;padding:3px 8px">{{ a.no }}</span>
+      <h2 style="font-size:28px;font-weight:600">{{ a.title }}</h2>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#9a978f">{{ a.route }}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:32px;margin-top:14px;max-width:1400px;font-size:14px;line-height:1.7;color:#cfccc4">
+      <p>{{ a.claim }}</p>
+      <p><b style="color:#e6e4df">新增原语</b>　{{ a.prims }}</p>
+    </div>
+    <div style="display:flex;gap:40px;margin-top:24px;align-items:flex-start">
+      <sc-for list="{{ a.vs }}" as="v" hint-placeholder-count="4">
+        <div style="flex:none">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;margin-bottom:10px">{{ v.label }}</div>
+          <div style="{{ v.style }}">
+            <div style="width:var(--w);min-height:var(--h);background:var(--bg);color:var(--ink);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:13px;line-height:20px;display:flex;position:relative;overflow:hidden">
+              <nav style="display:var(--side);flex-direction:column;width:200px;flex:none;border-right:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+                <div style="padding:0 14px;height:40px;display:flex;align-items:center;border-bottom:1px solid var(--block);font-weight:600">SOULLEDGER</div>
+                <sc-for list="{{ v.nav }}" as="n" hint-placeholder-count="10"><div style="{{ n.st }}"><span>{{ n.label }}</span><span style="color:var(--ink3);font-size:11px">{{ n.tail }}</span></div></sc-for>
+                <div style="margin-top:auto;padding:10px 14px;color:var(--ink3);font-size:10.5px">⌘K 跳转 · v0.1</div>
+              </nav>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                <header style="display:flex;align-items:center;gap:12px;padding:0 var(--pad);height:var(--hh);border-bottom:1px solid var(--block);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2);flex:none">
+                  <span style="display:var(--mob);font-size:16px;color:var(--ink)">☰</span>
+                  <span style="display:var(--dskf);gap:8px"><span>{{ v.c1 }}</span><span style="color:var(--ink3)">/</span><span>{{ v.c2 }}</span><span style="color:var(--ink3)">/</span><b style="color:var(--ink);font-weight:600">{{ v.c3 }}</b></span>
+                  <span style="display:var(--mob);color:var(--ink);font-weight:600">{{ v.c3 }}</span>
+                  <span style="margin-left:auto;display:flex;gap:14px;align-items:center"><span>通知 <span style="background:var(--ink);color:var(--bg);padding:0 5px">3</span></span><span style="display:var(--dskf)">系统管理员 ▾</span><span style="display:var(--mob)">我</span></span>
+                </header>
+
+                <sc-if value="{{ v.isDesk }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:12px;padding:8px var(--pad);border-bottom:1px solid var(--line);background:var(--s1);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2);flex-wrap:wrap">
+                    <span style="color:var(--ink);font-weight:600">队列 3 / 12</span>
+                    <span style="flex:1;min-width:80px;height:3px;background:var(--s3);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:25%;background:var(--ink)"></span></span>
+                    <span style="display:var(--dskf);gap:12px;align-items:center"><span><span style="border:1px solid var(--line);padding:0 5px">K</span> 上一件</span><span><span style="border:1px solid var(--line);padding:0 5px">J</span> 下一件</span><span><span style="border:1px solid var(--line);padding:0 5px">S</span> 跳过</span><span><span style="border:1px solid var(--line);padding:0 5px">D</span> 暂缓</span><span><span style="border:1px solid var(--line);padding:0 5px">⌘Z</span> 撤回上一件</span></span>
+                    <span>退出 Esc</span>
+                  </div>
+                  <main style="display:grid;grid-template-columns:var(--c3);flex:1">
+                    <div style="padding:18px var(--pad) 24px;border-right:1px solid var(--line)">
+                      <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h1 style="font-size:22px;line-height:28px;font-weight:600">沈青梧</h1><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:16px;padding:1px 6px;border:1px solid var(--warn);color:var(--warn)">◐ 审判中</span></div>
+                      <div style="color:var(--ink2);margin-top:2px">中国地府 · 第五殿 · 阎罗王</div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:16px 0 4px;border-bottom:1px solid var(--block)">甲 · 身份</div>
+                      <div style="display:grid;grid-template-columns:48px 1fr;font-size:12.5px">
+                        <span style="padding:5px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">ID</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:11.5px">38fb6bc2</span>
+                        <span style="padding:5px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">出生</span><span style="padding:5px 0;border-bottom:1px solid var(--rule)"><span style="font-family:'IBM Plex Mono',monospace">1951-03-12</span> · 苏州</span>
+                        <span style="padding:5px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">死亡</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace">2026-06-08 15:28</span>
+                        <span style="padding:5px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">候审</span><span style="padding:5px 0;border-bottom:1px solid var(--rule)">第五殿 · 7 天</span>
+                      </div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block);display:grid;grid-template-columns:1fr 60px 60px 60px"><span>乙 · 功过</span><span style="text-align:right">收</span><span style="text-align:right">支</span><span style="text-align:right">结</span></div>
+                      <div style="display:grid;grid-template-columns:1fr 60px 60px 60px;font-family:'IBM Plex Mono',monospace;font-size:12.5px">
+                        <span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif">功德</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);text-align:right;color:var(--ok)">1,284</span><span style="border-bottom:1px solid var(--rule)"></span><span style="border-bottom:1px solid var(--rule)"></span>
+                        <span style="padding:5px 0;border-bottom:1px solid var(--block);font-family:'Archivo','Noto Sans SC',sans-serif">罪业</span><span style="border-bottom:1px solid var(--block)"></span><span style="padding:5px 0;border-bottom:1px solid var(--block);text-align:right;color:var(--danger)">937</span><span style="border-bottom:1px solid var(--block)"></span>
+                        <span style="padding:6px 0;border-bottom:3px double var(--block);font-family:'Archivo','Noto Sans SC',sans-serif;font-weight:600">余额</span><span style="border-bottom:3px double var(--block)"></span><span style="border-bottom:3px double var(--block)"></span><span style="padding:6px 0;border-bottom:3px double var(--block);text-align:right;font-weight:600">+347</span>
+                      </div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block)">前世 · 2</div>
+                      <sc-for list="{{ lives }}" as="l" hint-placeholder-count="2">
+                        <div style="padding:6px 0;border-bottom:1px solid var(--rule);font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>{{ l.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3)">{{ l.y }}</span></div><div style="color:var(--ink2)">{{ l.v }}</div></div>
+                      </sc-for>
+                    </div>
+                    <div style="padding:18px var(--pad) 24px;border-right:1px solid var(--line);min-width:0">
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>丙 · 证据 · 采信 11 / 12</span><span>空格 切换采信</span></div>
+                      <sc-for list="{{ evid }}" as="e" hint-placeholder-count="6">
+                        <div style="{{ e.row }}">
+                          <span style="{{ e.chk }}">{{ e.cm }}</span>
+                          <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3);display:var(--dskf)">{{ e.d }}</span>
+                          <span style="{{ e.itemSt }}">{{ e.item }}<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);line-height:14px">{{ e.basis }}</span></span>
+                          <span style="{{ e.amtSt }}">{{ e.amt }}</span>
+                        </div>
+                      </sc-for>
+                      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--block);font-size:12.5px"><span style="color:var(--ink2)">采信后余额（未采信 1 条 +40）</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">+307</span></div>
+
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>丁 · 判词</span><span>/ 引用律条</span></div>
+                      <div style="margin-top:10px;border:1px solid var(--block);background:var(--s1);padding:12px 14px;outline:2px solid var(--acc);outline-offset:0">
+                        <div style="font-family:'Source Serif 4','Noto Serif SC',serif;font-size:20px;line-height:32px">功过相抵，善念居多；惟口业未净，暂入<span style="background:var(--s2);box-shadow:inset 0 -1px 0 var(--acc)">救濟門十七</span>，三年补过，期满转生。<span style="display:inline-block;width:1px;height:22px;background:var(--ink);vertical-align:-4px"></span></div>
+                      </div>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">
+                        <sc-for list="{{ cites }}" as="c" hint-placeholder-count="2"><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;border:1px solid var(--line);padding:2px 8px;display:flex;gap:8px"><span>{{ c }}</span><span style="color:var(--ink3)">×</span></span></sc-for>
+                        <span style="font-size:12px;color:var(--ink3);margin-left:auto">34 字 · 已自动保存</span>
+                      </div>
+
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">戊 · 发落</div>
+                      <div style="display:grid;grid-template-columns:var(--c2eq);gap:12px;padding-top:10px">
+                        <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">目的地</label><div style="height:var(--ctl);border:1px solid var(--block);background:var(--s1);display:flex;align-items:center;padding:0 10px;justify-content:space-between"><span>救濟門 · 十七 <span style="color:var(--ink3)">（第五殿）</span></span><span style="color:var(--ink3)">▾</span></div><span style="font-size:12px;color:var(--ink3)">随裁决过滤：补过只列可补过的门</span></div>
+                        <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">期限</label><div style="display:flex;gap:8px"><div style="flex:1;height:var(--ctl);border:1px solid var(--line);background:var(--s1);display:flex;align-items:center;padding:0 10px;font-family:'IBM Plex Mono',monospace">3 年</div><div style="height:var(--ctl);display:flex;align-items:center;gap:8px;color:var(--ink2)"><span style="width:14px;height:14px;border:1px solid var(--block);box-sizing:border-box"></span>永恒</div></div><span style="font-size:12px;color:var(--ink3)">期满 2029-06-15</span></div>
+                      </div>
+
+                      <div style="display:grid;grid-template-columns:var(--vb);gap:8px;margin-top:22px;padding-top:14px;border-top:1px solid var(--block)">
+                        <sc-for list="{{ verdicts }}" as="k" hint-placeholder-count="4">
+                          <div style="{{ k.st }}"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ k.k }}</span><span style="{{ k.gst }}">{{ k.g }}</span><span style="font-weight:500">{{ k.l }}</span></div>
+                        </sc-for>
+                        <div style="grid-column:var(--vbspan);height:48px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;gap:10px;padding:0 20px;font-weight:600">落判 <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:400;opacity:.8">⌘⏎</span></div>
+                      </div>
+                      <p style="font-size:12px;color:var(--ink3);margin-top:8px">落判后 5 秒内可撤回；随后自动打开队列下一件（周慕云）。</p>
+                    </div>
+                    <div style="padding:18px var(--pad) 24px;background:var(--s1);min-width:0">
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>据 · 律条</span><span>172 条</span></div>
+                      <div style="height:var(--ctl);border:1px solid var(--line);background:var(--bg);display:flex;align-items:center;padding:0 10px;margin-top:10px">口业 <span style="color:var(--ink3);margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px">3 条</span></div>
+                      <sc-for list="{{ laws }}" as="w" hint-placeholder-count="3">
+                        <div style="{{ w.row }}">
+                          <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ w.ref }}</span><span style="font-size:11.5px;color:var(--ink3)">{{ w.tag }}</span></div>
+                          <div style="font-family:'Source Serif 4','Noto Serif SC',serif;font-size:15px;line-height:24px;margin-top:3px">{{ w.text }}</div>
+                        </div>
+                      </sc-for>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">据 · 先例 3</div>
+                      <sc-for list="{{ precs }}" as="p" hint-placeholder-count="3">
+                        <div style="display:grid;grid-template-columns:1fr 50px 64px;padding:6px 0;border-bottom:1px solid var(--rule);font-size:12.5px;align-items:baseline"><span>{{ p.n }}<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ p.no }}</span></span><span style="font-family:'IBM Plex Mono',monospace;text-align:right">{{ p.k }}</span><span style="{{ p.vst }}">{{ p.v }}</span></div>
+                      </sc-for>
+                    </div>
+                  </main>
+                </sc-if>
+
+                <sc-if value="{{ v.isQueue }}" hint-placeholder-val="{{ false }}">
+                  <main style="padding:20px var(--pad) 32px">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-bottom:14px">
+                      <h1 style="font-size:22px;line-height:28px;font-weight:600">审判</h1>
+                      <span style="display:flex;border:1px solid var(--block);font-size:12px"><span style="padding:4px 10px;background:var(--ink);color:var(--bg)">待审 <span style="font-family:'IBM Plex Mono',monospace">12</span></span><span style="padding:4px 10px">已结案 <span style="font-family:'IBM Plex Mono',monospace">148</span></span></span>
+                      <span style="margin-left:auto;height:var(--ctl);padding:0 14px;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);font-weight:500">进入队列 · 从「我认领」<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.8">Q</span></span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:var(--fq);gap:8px;padding:10px 0;border-top:1px solid var(--block);border-bottom:1px solid var(--line)">
+                      <span style="height:var(--ctl);border:1px solid var(--line);background:var(--s1);display:flex;align-items:center;padding:0 10px;color:var(--ink3)">搜索姓名或 ID</span>
+                      <span style="display:var(--dskf);height:var(--ctl);border:1px solid var(--block);background:var(--s1);align-items:center;padding:0 10px;justify-content:space-between"><span>殿 · 全部</span><span style="color:var(--ink3)">▾</span></span>
+                      <span style="display:var(--dskf);height:var(--ctl);border:1px solid var(--block);background:var(--s1);align-items:center;padding:0 10px;justify-content:space-between"><span>文明 · 全部</span><span style="color:var(--ink3)">▾</span></span>
+                      <span style="display:var(--dskf);height:var(--ctl);border:1px solid var(--block);background:var(--s1);align-items:center;padding:0 10px;justify-content:space-between"><span>排序 · 等待最久</span><span style="color:var(--ink3)">▾</span></span>
+                      <span style="display:var(--mobf);height:var(--ctl);border:1px solid var(--block);align-items:center;justify-content:center;padding:0 12px;font-weight:500">筛选</span>
+                    </div>
+                    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--block)">
+                      <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">已选 2</span><span style="text-decoration:underline">认领 C</span><span style="text-decoration:underline">改派…</span><span style="text-decoration:underline">暂缓</span>
+                      <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">需后端批量接口 · 无则隐藏此条与勾选列</span>
+                    </div>
+                    <div style="display:var(--dskg);grid-template-columns:var(--qcols);column-gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:8px 0 4px;border-bottom:1px solid var(--block)"><span></span><span>姓名</span><span>文明</span><span>殿 · 判官</span><span style="text-align:right">余额</span><span style="text-align:right">证据</span><span style="text-align:right">等待 ↓</span><span style="text-align:right">认领</span></div>
+                    <sc-for list="{{ qrows }}" as="r" hint-placeholder-count="12">
+                      <div style="{{ r.wrap }}">
+                        <sc-if value="{{ r.isHead }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex;justify-content:space-between;align-items:center;height:32px;border-bottom:1px solid var(--block);margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px"><span style="font-weight:600">{{ r.g }} <span style="color:var(--ink3);font-weight:400">· {{ r.count }}</span></span><span style="color:var(--ink3)">{{ r.hint }}</span></div>
+                        </sc-if>
+                        <sc-if value="{{ r.isRow }}" hint-placeholder-val="{{ true }}">
+                          <div style="{{ r.row }}">
+                            <span style="grid-area:c;display:flex;align-items:center"><span style="{{ r.chk }}">{{ r.cm }}</span></span>
+                            <span style="grid-area:n;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.n }}</span>
+                            <span style="grid-area:v;color:var(--ink2);font-size:12px">{{ r.civ }}</span>
+                            <span style="grid-area:h;color:var(--ink2);font-size:12px">{{ r.hall }}</span>
+                            <span style="grid-area:k;display:flex;justify-content:flex-end"><span style="{{ r.kst }}">{{ r.k }}</span></span>
+                            <span style="grid-area:e;font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--ink2);white-space:nowrap"><span style="display:var(--mobi);color:var(--ink3)">证据 </span>{{ r.ev }}</span>
+                            <span style="grid-area:w;display:flex;justify-content:flex-end;white-space:nowrap"><span style="{{ r.wst }}">{{ r.w }}</span></span>
+                            <span style="grid-area:a;display:flex;justify-content:flex-end"><span style="{{ r.av }}">{{ r.who }}</span></span>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                    <p style="font-size:12px;color:var(--ink3);margin-top:10px;font-family:'IBM Plex Mono',monospace">行高 28 · J/K 移动 · X 勾选 · C 认领 · ⏎ 打开审判台</p>
+                  </main>
+                </sc-if>
+
+                <sc-if value="{{ v.isDisp }}" hint-placeholder-val="{{ false }}">
+                  <main style="padding:20px var(--pad) 32px">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--block)">
+                      <h1 style="font-size:22px;line-height:28px;font-weight:600">处置</h1>
+                      <span style="display:flex;border:1px solid var(--block);font-size:12px"><span style="padding:4px 10px;background:var(--ink);color:var(--bg)">待执行 <span style="font-family:'IBM Plex Mono',monospace">4</span></span><span style="padding:4px 10px">执行中 <span style="font-family:'IBM Plex Mono',monospace">17</span></span><span style="padding:4px 10px">期满 <span style="font-family:'IBM Plex Mono',monospace">2</span></span></span>
+                      <span style="margin-left:auto;color:var(--ink2);display:var(--dskf)">下次自动期满检查 · <span style="font-family:'IBM Plex Mono',monospace">今日 24:00</span></span>
+                    </div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block);display:var(--dskg);grid-template-columns:1.3fr 110px 1.3fr 90px 80px 100px"><span>甲 · 待执行 4</span><span>判决</span><span>目的地</span><span>期限</span><span>判于</span><span></span></div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block);display:var(--mobb)">甲 · 待执行 4</div>
+                    <sc-for list="{{ dq }}" as="r" hint-placeholder-count="4">
+                      <div style="display:grid;grid-template-columns:var(--dcols);align-items:center;min-height:var(--rowh);border-bottom:1px solid var(--rule);gap:0 8px">
+                        <span style="font-weight:500">{{ r.n }}<span style="display:var(--mobb);font-size:12px;font-weight:400;color:var(--ink2)">{{ r.dest }} · {{ r.term }}</span></span>
+                        <span style="{{ r.vst }}">{{ r.v }}</span>
+                        <span style="display:var(--dskb);font-family:'IBM Plex Mono',monospace;font-size:12px">{{ r.dest }}</span>
+                        <span style="display:var(--dskb);color:var(--ink2)">{{ r.term }}</span>
+                        <span style="display:var(--dskb);font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink3)">{{ r.at }}</span>
+                        <span style="display:flex;justify-content:flex-end"><span style="height:28px;padding:0 12px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500;font-size:12.5px">执行</span></span>
+                      </div>
+                    </sc-for>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:24px 0 4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>乙 · 执行中 17</span><span>按期满近 → 远</span></div>
+                    <sc-for list="{{ dr }}" as="r" hint-placeholder-count="4">
+                      <div style="display:grid;grid-template-columns:var(--rcols);align-items:center;min-height:var(--rowh);border-bottom:1px solid var(--rule);gap:4px 12px;padding:4px 0">
+                        <span style="font-weight:500">{{ r.n }}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ r.dest }}</span>
+                        <span style="display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)"><span>{{ r.a }}</span><span style="{{ r.track }}"><span style="{{ r.fill }}"></span></span><span>{{ r.b }}</span></span>
+                        <span style="{{ r.lst }}">{{ r.left }}</span>
+                      </div>
+                    </sc-for>
+                    <div style="padding:8px 0;color:var(--ink2);text-decoration:underline;font-size:12.5px">显示其余 13 件</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block)">丙 · 期满 2 · 待安排轮回</div>
+                    <sc-for list="{{ de }}" as="r" hint-placeholder-count="2">
+                      <div style="display:grid;grid-template-columns:var(--ecols);align-items:center;min-height:var(--rowh);border-bottom:1px solid var(--rule);gap:0 12px">
+                        <span style="font-weight:500">{{ r.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink2)">{{ r.dest }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--warn)">{{ r.at }}</span>
+                        <span style="display:flex;justify-content:flex-end"><span style="height:28px;padding:0 12px;display:flex;align-items:center;background:var(--ink);color:var(--bg);font-weight:500;font-size:12.5px">安排轮回</span></span>
+                      </div>
+                    </sc-for>
+                  </main>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;margin:32px 0 10px">三态 · 内容区 · 浅 / 深</div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <sc-for list="{{ a.st }}" as="t" hint-placeholder-count="2">
+        <div style="{{ t.style }}">
+          <div style="display:grid;grid-template-columns:repeat(3,480px);gap:1px;background:var(--line);width:max-content;color:var(--ink);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:13px;line-height:20px">
+            <div style="background:var(--bg);padding:16px 20px;min-height:220px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">空 · {{ t.label }}</div>
+              <div style="margin-top:18px;border:1px dashed var(--line2x);padding:16px 18px">
+                <div style="font-size:16px;line-height:24px;font-weight:600">{{ a.e1 }}</div>
+                <div style="color:var(--ink2);margin-top:4px">{{ a.e2 }}</div>
+                <div style="display:flex;gap:8px;margin-top:14px"><span style="height:32px;padding:0 14px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500">{{ a.e3 }}</span></div>
+              </div>
+            </div>
+            <div style="background:var(--bg);padding:16px 20px;min-height:220px" aria-busy="true">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">加载 · {{ t.label }}</div>
+              <div style="display:grid;grid-template-columns:{{ a.skCols }};gap:16px;margin-top:14px">
+                <div style="display:flex;flex-direction:column;gap:10px"><span style="height:14px;width:60%;background:var(--s3)"></span><span style="height:10px;background:var(--s3)"></span><span style="height:10px;width:80%;background:var(--s3)"></span><span style="height:10px;width:70%;background:var(--s3)"></span><span style="height:10px;width:50%;background:var(--s3)"></span></div>
+                <div style="display:flex;flex-direction:column;gap:10px"><span style="height:10px;background:var(--s3)"></span><span style="height:10px;width:85%;background:var(--s3)"></span><span style="height:10px;width:90%;background:var(--s3)"></span><span style="height:40px;background:var(--s3)"></span><span style="height:10px;width:40%;background:var(--s3)"></span></div>
+              </div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:14px">{{ a.l1 }}</div>
+            </div>
+            <div style="background:var(--bg);padding:16px 20px;min-height:220px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">错误 · {{ t.label }}</div>
+              <div role="alert" style="margin-top:18px;border:1px solid var(--danger);background:var(--dangerBg);padding:14px 16px">
+                <div style="font-weight:600;color:var(--danger)">! {{ a.x1 }}</div>
+                <div style="color:var(--ink2);margin-top:4px">{{ a.x2 }}</div>
+                <div style="display:flex;gap:8px;margin-top:12px"><span style="height:32px;padding:0 14px;display:flex;align-items:center;background:var(--ink);color:var(--bg);font-weight:500">重试</span><span style="height:32px;padding:0 14px;display:flex;align-items:center;color:var(--ink2);font-weight:500">{{ a.x3 }}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</sc-for>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#f8f5ec', s1:'#fdfbf6', s2:'#efe9da', s3:'#e3dcc8', rule:'#e2c4bc', line:'#d3ccb9', line2x:'#8f8a7c', block:'#17181a', ink:'#17181a', ink2:'#45474c', ink3:'#65686e', dis:'#a6a294', disBg:'#eeeadf', acc:'#1d4e9e', accInk:'#ffffff', danger:'#b3261e', dangerBg:'#f6e1da', ok:'#23663a', okBg:'#e1ebdb', warn:'#7a5000', warnBg:'#f2e4c4', scrim:'rgba(23,24,26,.42)', shadow:'0 12px 32px rgba(23,24,26,.18)' };
+    const D = { bg:'#0c0d10', s1:'#121419', s2:'#1a1d24', s3:'#252932', rule:'#342a2c', line:'#2a2e37', line2x:'#6d717b', block:'#c9ccd3', ink:'#e8e9ec', ink2:'#b3b7bf', ink3:'#8a8f99', dis:'#4f535c', disBg:'#16181d', acc:'#8db2ff', accInk:'#0c0d10', danger:'#f28273', dangerBg:'#2b1715', ok:'#6acb8a', okBg:'#13231a', warn:'#f0b44a', warnBg:'#2a2011', scrim:'rgba(0,0,0,.62)', shadow:'0 12px 32px rgba(0,0,0,.55)' };
+    const vars = p => { const s = {}; for (const k in p) s['--' + k] = p[k]; return s; };
+    const mono = "'IBM Plex Mono',monospace", sans = "'Archivo','Noto Sans SC',sans-serif";
+    const G = [['01 概览', [], 'dash'], ['02 灵魂业务', [['灵魂管理',''],['审判','12','queue desk'],['处置','4','disp'],['功过总账','','ledger']]], ['03 流程协作', [['移交','1'],['跨文明审判',''],['工作流','','wf'],['殿司收件箱','5','inbox']]], ['04 组织与领域', [['界域','','realms'],['律条语料','','corpus'],['组织','']]], ['05 社交', [['朋友圈审阅','3','social']]], ['06 系统设置', [['用户',''],['回收站','']]]];
+    const cur = { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--ink)', color: 'var(--ink)', fontWeight: 500 };
+    const nav = id => { const out = []; for (const [g, kids, gid] of G) { const open = kids.some(k => k[2] && k[2].split(' ').includes(id)); out.push({ label: g, tail: kids.length ? (open ? '−' : '+') : '', st: Object.assign({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '30px', padding: '0 14px', borderBottom: '1px solid var(--rule)', color: 'var(--ink)', fontFamily: mono, fontSize: '11.5px', boxSizing: 'border-box' }, gid === id ? cur : {}) }); if (open) for (const [l, t, k] of kids) out.push({ label: l, tail: t, st: Object.assign({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '30px', padding: '0 14px 0 30px', borderBottom: '1px solid var(--rule)', color: 'var(--ink2)', fontFamily: sans, fontSize: '12.5px', boxSizing: 'border-box' }, k && k.split(' ').includes(id) ? cur : {}) }); } return out; };
+    const frame = (p, m) => Object.assign(vars(p), {
+      '--w': m ? '393px' : '1440px', '--h': m ? 'auto' : '940px', '--side': m ? 'none' : 'flex', '--mob': m ? 'flex' : 'none',
+      '--dskf': m ? 'none' : 'flex', '--dskg': m ? 'none' : 'grid', '--dskb': m ? 'none' : 'block', '--mobb': m ? 'block' : 'none', '--mobf': m ? 'flex' : 'none',
+      '--pad': m ? '16px' : '28px', '--hh': m ? '48px' : '40px', '--ctl': m ? '44px' : '32px', '--rowh': m ? '52px' : '36px',
+      '--c3': m ? '1fr' : '300px minmax(0,1fr) 340px', '--c2eq': m ? '1fr' : '1fr 1fr', '--vb': m ? '1fr 1fr' : 'repeat(4,1fr) auto', '--vbspan': m ? '1 / -1' : 'auto',
+      '--fq': m ? '1fr auto' : '1.6fr 1fr 1fr 1fr',
+      '--mobi': m ? 'inline' : 'none', '--evc': m ? '24px minmax(0,1fr) 60px' : '24px 88px minmax(0,1fr) 60px', '--qcols': m ? '24px 1fr 1fr 64px 64px' : '24px 1.6fr 1fr 1.1fr 70px 50px 80px 50px',
+      '--qa': m ? '"c n n k a" "c v h e w"' : '"c n v h k e w a"', '--qpad': m ? '8px 0' : '0',
+      '--dcols': m ? '1fr auto 80px' : '1.3fr 110px 1.3fr 90px 80px 100px', '--rcols': m ? '1fr auto' : '1.3fr 1.1fr 2fr 110px', '--ecols': m ? '1fr 100px' : '1.3fr 1.3fr 1fr 120px',
+    });
+    const V = [['1440 · 深色', D, 0], ['1440 · 浅色', L, 0], ['393 · 深色', D, 1], ['393 · 浅色', L, 1]];
+    const chk = on => ({ width: '14px', height: '14px', boxSizing: 'border-box', border: on ? '1px solid var(--acc)' : '1px solid var(--block)', background: on ? 'var(--acc)' : 'transparent', color: 'var(--accInk)', fontSize: '10px', lineHeight: '12px', textAlign: 'center', flex: 'none' });
+    const vcol = { '✓': 'var(--ok)', '✕': 'var(--danger)', '◇': 'var(--warn)', '↺': 'var(--acc)' };
+    const vbadge = v => ({ fontFamily: mono, fontSize: '11px', lineHeight: '16px', padding: '1px 6px', color: vcol[v[0]], border: '1px solid currentColor', whiteSpace: 'nowrap', justifySelf: 'start' });
+    const amt = s => ({ fontFamily: mono, textAlign: 'right', fontSize: '12.5px', color: s[0] === '+' ? 'var(--ok)' : 'var(--danger)' });
+
+    const lives = [{ n: '第 1 世', y: '1872–1931 · 常熟', v: '◇ 补过 · 救濟門 · 九' }, { n: '第 2 世', y: '1933–1949 · 苏州', v: '✓ 通过 · 六道 · 人道' }];
+    const evid = [[1,'1998–2026','侍奉双亲 二十八年','功過格 · 孝順門 · 一','+600'],[1,'2011-05-11','救溺 · 胥江','功過格 · 救濟門 · 一','+120'],[1,'2026-06-02','布施米粮 · 城南','功過格 · 救濟門 · 三','+40'],[0,'2026-06-02','布施米粮（疑重复登记）','不采信 · 与上条同日同事','+40'],[1,'2019-03','妄语欺店主','功過格 · 口業 · 七','−60'],[1,'2026-04-20','詈骂邻人','功過格 · 口業 · 三','−25']]
+      .map(([on, d, item, basis, a]) => ({ d, item, basis, amt: a, cm: on ? '✓' : '', chk: chk(on), row: { display: 'grid', gridTemplateColumns: 'var(--evc)', gap: '0 10px', alignItems: 'center', minHeight: '40px', borderBottom: '1px solid var(--rule)', padding: '3px 0', opacity: on ? 1 : .65 }, itemSt: { textDecoration: on ? 'none' : 'line-through' }, amtSt: Object.assign(amt(a), on ? {} : { color: 'var(--ink3)' }) }));
+    const cites = ['功過格 · 救濟門 · 十七', '功過格 · 口業 · 三'];
+    const verdicts = [['1','✓','通过'],['2','✕','不通过'],['3','◇','补过'],['4','↺','重审']].map(([k, g, l]) => ({ k, g, l, gst: { color: vcol[g], fontFamily: mono, fontSize: '16px' }, st: Object.assign({ height: '48px', border: '1px solid var(--block)', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 14px', boxSizing: 'border-box' }, g === '◇' ? { background: 'var(--s2)', boxShadow: 'inset 0 -3px 0 var(--warn)' } : {}) }));
+    const laws = [['功過格 · 救濟門 · 十七','已引用','善多而口业未净者，入此门补过，期三年。'],['功過格 · 口業 · 三','已引用','詈骂他人一次，记十过；于尊长前，倍之。'],['功過格 · 口業 · 七','⏎ 引用','妄语欺人以取利者，记五十过。']].map(([ref, tag, text], i) => ({ ref, tag, text, row: Object.assign({ padding: '10px 0', borderBottom: '1px solid var(--rule)' }, i === 2 ? { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--acc)', paddingLeft: '10px' } : {}) }));
+    const precs = [['周慕云','+298','◇ 补过','救濟門 · 十七'],['韩守一','+12','◇ 补过','救濟門 · 九'],['陆晚晴','+410','✓ 通过','六道 · 人道']].map(([n, k, v, no]) => ({ n, k, v, no, vst: Object.assign(vbadge(v), { justifySelf: 'end' }) }));
+
+    const QG = [['我认领', '2', '阎罗王 · 你', [['沈青梧','中国 · 地府','第五殿 · 阎罗王','+347','12','7 天','阎',0,1],['周慕云','中国 · 地府','第五殿 · 阎罗王','+298','9','6 天','阎',0,1]]],
+      ['待认领', '5', '等待最久在上', [['Test Soul for Judgment','中国 · 地府','第一殿 · 秦广王','+0','0','137 天','',1,0],['Debug Soul','中国 · 地府','第一殿 · 秦广王','+0','0','53 天','',1,0],['Marguerite Vey','欧洲 · 天堂地狱','米诺斯','−212','7','2 天','',0,0],['Aldo Ferri','欧洲 · 天堂地狱','米诺斯','−88','4','1 天','',0,0],['王素心','中国 · 地府','第二殿 · 楚江王','+64','6','1 天','',0,0]]],
+      ['他人认领', '4', '只读，可改派', [['陆晚晴','中国 · 地府','第五殿 · 阎罗王','+410','14','1 天','秦',0,0],['Nebet-Iunu','埃及 · 杜阿特','四十二判官','+58','42','3 天','玛',0,0],['Kleon','希腊 · 冥府','拉达曼提斯','+0','2','4 天','拉',0,0],['李守拙','中国 · 地府','第三殿 · 宋帝王','−31','8','2 天','宋',0,0]]],
+      ['暂缓', '1', '待补证', [['韩守一','中国 · 地府','第三殿 · 宋帝王','+12','5','21 天','阎',0,0]]]];
+    const qrows = [];
+    for (const [g, count, hint, rows] of QG) {
+      qrows.push({ isHead: true, isRow: false, g, count, hint, wrap: {} });
+      for (const [n, civ, hall, k, ev, w, who, sel, mine] of rows) qrows.push({ isHead: false, isRow: true, n, civ, hall, k, ev, w, who: who || '认领', cm: sel ? '✓' : '', chk: chk(sel), wrap: {},
+        row: Object.assign({ display: 'grid', gridTemplateColumns: 'var(--qcols)', gridTemplateAreas: 'var(--qa)', alignItems: 'center', minHeight: '28px', padding: 'var(--qpad)', columnGap: '8px', borderBottom: '1px solid var(--rule)' }, sel ? { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--acc)' } : {}),
+        kst: { fontFamily: mono, fontSize: '12px', textAlign: 'right', color: k[0] === '+' && k !== '+0' ? 'var(--ok)' : k[0] === '−' ? 'var(--danger)' : 'var(--ink3)' },
+        wst: { fontFamily: mono, fontSize: '12px', textAlign: 'right', color: parseInt(w) > 30 ? 'var(--warn)' : 'var(--ink2)' },
+        av: who ? { width: '20px', height: '20px', borderRadius: '9999px', background: mine ? 'var(--ink)' : 'var(--s3)', color: mine ? 'var(--bg)' : 'var(--ink)', fontSize: '10.5px', display: 'flex', alignItems: 'center', justifyContent: 'center' } : { fontSize: '11.5px', color: 'var(--acc)', textDecoration: 'underline' } });
+    }
+    const dq = [['周慕云','◇ 补过','救濟門 · 十七','3 年','06-18'],['Marguerite Vey','✕ 不通过','IX · XXVI','永恒','06-17'],['陆晚晴','✓ 通过','六道 · 人道','不适用','06-16'],['Nebet-Iunu','◇ 补过','§ 27 / 42','12 时','06-15']].map(([n, v, dest, term, at]) => ({ n, v, dest, term, at, vst: vbadge(v) }));
+    const dr = [['Merit-Ptah','§ 9 / 42','05-01','08-01',94,'余 7 天'],['李守拙','救濟門 · 九','2024-02','2027-01',82,'余 223 天'],['沈青梧','救濟門 · 十七','2026-06','2029-06',3,'余 1,085 天'],['Aldo Ferri','VII · XIII','2025-11','永恒',null,'永恒 · 不计时']].map(([n, dest, a, b, pct, left]) => ({ n, dest, a, b, left,
+      track: { flex: 1, height: '6px', background: pct === null ? 'transparent' : 'var(--s3)', border: pct === null ? '1px dashed var(--ink3)' : '0', boxSizing: 'border-box', position: 'relative', minWidth: '60px' },
+      fill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: (pct || 0) + '%', background: pct > 90 ? 'var(--warn)' : 'var(--ink)' },
+      lst: { fontFamily: mono, fontSize: '12px', textAlign: 'right', color: pct > 90 ? 'var(--warn)' : 'var(--ink2)' } }));
+    const de = [['王素娥','救濟門 · 十七','期满 06-01'],['Hunefer','芦苇原 · § 42 / 42','期满 05-20']].map(([n, dest, at]) => ({ n, dest, at }));
+
+    const P = [
+      { id: 'desk', no: '01', route: '/judgment/[id]', title: '审判台', c: ['灵魂业务','审判','沈青梧'],
+        claim: '全站最重的决策面，分三栏，从左读到右就是一次审理：左栏「卷」是身份、功过、前世；中栏「判」依次是采信证据、写判词、定发落、落判；右栏「据」是律条检索和先例。判词是正被说出的话，所以输入框本身用衬线（衬线规则不变，只是第一次出现在输入框里）。裁决键 1–4 选定，⌘⏎ 落判；落判后 5 秒内可撤回，然后自动打开下一件。393 下三栏按「卷 → 判 → 据」顺序纵向排列，裁决键排成 2×2，每键高 48。',
+        prims: '裁决键组 VerdictBar · 证据行（采信开关）EvidenceRow · 律条引用签 CitationChip · 衬线输入 QuoteInput · 队列进度条 QueueBar · 键帽 Kbd',
+        e1: '这件审判已结案', e2: '2026-06-15 由第五殿落判 ◇ 补过。只读查看，不可再改。', e3: '回到队列', l1: '三栏按最终宽度出骨架；判词框先渲染，可立即输入。', x1: '落判未送达', x2: '判词、采信与发落已保存在本机，不会丢。网络恢复后重试即可。', x3: '留在此页', skCols: '1fr 2fr' },
+      { id: 'queue', no: '02', route: '/judgment · /judgment/queue', title: '审判队列', c: ['灵魂业务','审判','待审'],
+        claim: '按「谁在处理」分组，不按状态分：我认领 / 待认领 / 他人认领 / 暂缓。28 px 紧凑行只用在这里。批量只做认领、改派、暂缓，不做批量裁决（brief §4.2 已定）；后端没有批量接口时，勾选列和批量条一起隐藏，单件认领用快捷键 C。「进入队列」从「我认领」的第一件开始，打开审判台；/judgment/queue 就是审判台加上队列进度条，不另设页面。',
+        prims: '分组头 GroupHeader · 紧凑行 28 px · 认领标 ClaimAvatar（圆形，属头像例外）· 分段切换 Segmented',
+        e1: '队列已清空', e2: '今天你落判 12 件。新到的审判会出现在「待认领」。', e3: '看已结案', l1: '分组头先渲染真实计数，行出骨架。', x1: '队列拉取失败', x2: '显示的是 14:02 的缓存，认领操作暂不可用。', x3: '继续看缓存', skCols: '1fr 1fr' },
+      { id: 'disp', no: '07', route: '/disposition', title: '处置', c: ['灵魂业务','处置','全部'],
+        claim: '一页三段：待执行 → 执行中 → 期满，就是处置本身的时间顺序。执行中一段用期限条代替百分比；永恒处置画虚线框，不画进度。待执行和期满两段保留行尾动作按钮，因为这两段的工作就是那一个动作；这是「无操作列」规则唯一的例外，需要写进规范。',
+        prims: '期限条 TermBar · 行尾动作（例外，仅限「动作即工作」的分段）',
+        e1: '没有待执行的处置', e2: '执行中 17 件照常计时；期满的会在今日 24:00 检查后出现在丙段。', e3: '看执行中', l1: '三段标题与计数先出，行出骨架。', x1: '执行失败：目的地已满', x2: '「救濟門 · 十七」容量 200 / 200。改选同殿其他门，或等待期满腾位。', x3: '改目的地', skCols: '1fr 1fr' },
+    ];
+    const pages = P.map(p => Object.assign({}, p, {
+      vs: V.map(([label, pal, m]) => ({ label, style: frame(pal, m), nav: nav(p.id), c1: p.c[0], c2: p.c[1], c3: p.c[2], isDesk: p.id === 'desk', isQueue: p.id === 'queue', isDisp: p.id === 'disp' })),
+      st: [{ label: '浅色', style: vars(L) }, { label: '深色', style: vars(D) }],
+    }));
+    return { pages, lives, evid, cites, verdicts, laws, precs, qrows, dq, dr, de };
+  }
+}
+</script>
+</body>
+</html>

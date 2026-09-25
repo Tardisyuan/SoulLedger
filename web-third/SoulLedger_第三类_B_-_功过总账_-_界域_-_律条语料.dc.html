@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <script src="_ds/soulledger-current-ui-redesign-brief-02f39b44-de22-40b4-b34c-3065a6f44d55/_ds_bundle.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    html{background:#1c1c1e}body{margin:0;background:#1c1c1e;min-width:max-content;color:#e6e4df;font-family:'Archivo','Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+    p{margin:0}h1,h2,h3{margin:0;font-weight:inherit}
+  </style>
+</helmet>
+
+<section style="padding:56px 64px 24px;max-width:1240px;font-size:15px;line-height:1.7">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;color:#9a978f;margin-bottom:12px">SOULLEDGER · 第三类出稿 · B 组 / 共 D 组 · 依「规范 v1」</div>
+  <h1 style="font-size:36px;line-height:1.2;font-weight:600">功过总账 · 界域 · 律条语料</h1>
+  <p style="color:#cfccc4;margin-top:12px;max-width:960px">三张「参考」页：钱从哪里来（总账）、灵魂去了哪里（界域）、依据是什么（律条）。界域一节同时定下行程拓扑的四种形状，以及每种形状需要的数据。样本数据与律文均为示例。</p>
+</section>
+
+<sc-for list="{{ pages }}" as="a" hint-placeholder-count="3">
+  <section style="padding:40px 64px;border-top:1px solid #333">
+    <div style="display:flex;gap:16px;align-items:baseline;flex-wrap:wrap">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#e6e4df;color:#1c1c1e;padding:3px 8px">{{ a.no }}</span>
+      <h2 style="font-size:28px;font-weight:600">{{ a.title }}</h2>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#9a978f">{{ a.route }}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:32px;margin-top:14px;max-width:1400px;font-size:14px;line-height:1.7;color:#cfccc4">
+      <p>{{ a.claim }}</p>
+      <p><b style="color:#e6e4df">新增原语</b>　{{ a.prims }}</p>
+    </div>
+    <div style="display:flex;gap:40px;margin-top:24px;align-items:flex-start">
+      <sc-for list="{{ a.vs }}" as="v" hint-placeholder-count="4">
+        <div style="flex:none">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;margin-bottom:10px">{{ v.label }}</div>
+          <div style="{{ v.style }}">
+            <div style="width:var(--w);min-height:var(--h);background:var(--bg);color:var(--ink);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:13px;line-height:20px;display:flex;position:relative;overflow:hidden">
+              <nav style="display:var(--side);flex-direction:column;width:200px;flex:none;border-right:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+                <div style="padding:0 14px;height:40px;display:flex;align-items:center;border-bottom:1px solid var(--block);font-weight:600">SOULLEDGER</div>
+                <sc-for list="{{ v.nav }}" as="n" hint-placeholder-count="10"><div style="{{ n.st }}"><span>{{ n.label }}</span><span style="color:var(--ink3);font-size:11px">{{ n.tail }}</span></div></sc-for>
+                <div style="margin-top:auto;padding:10px 14px;color:var(--ink3);font-size:10.5px">⌘K 跳转 · v0.1</div>
+              </nav>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                <header style="display:flex;align-items:center;gap:12px;padding:0 var(--pad);height:var(--hh);border-bottom:1px solid var(--block);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2);flex:none">
+                  <span style="display:var(--mob);font-size:16px;color:var(--ink)">☰</span>
+                  <span style="display:var(--dskf);gap:8px"><span>{{ v.c1 }}</span><span style="color:var(--ink3)">/</span><span>{{ v.c2 }}</span><span style="color:var(--ink3)">/</span><b style="color:var(--ink);font-weight:600">{{ v.c3 }}</b></span>
+                  <span style="display:var(--mob);color:var(--ink);font-weight:600">{{ v.c3 }}</span>
+                  <span style="margin-left:auto;display:flex;gap:14px;align-items:center"><span>通知 <span style="background:var(--ink);color:var(--bg);padding:0 5px">3</span></span><span style="display:var(--dskf)">系统管理员 ▾</span><span style="display:var(--mob)">我</span></span>
+                </header>
+
+                <sc-if value="{{ v.isLedger }}" hint-placeholder-val="{{ false }}">
+                  <main style="padding:20px var(--pad) 32px">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-bottom:12px">
+                      <h1 style="font-size:22px;line-height:28px;font-weight:600">功过总账</h1>
+                      <span style="height:var(--ctl);border:1px solid var(--block);display:flex;align-items:center;padding:0 10px;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"><span style="color:var(--ink3)">‹</span>2026-06<span style="color:var(--ink3)">›</span></span>
+                      <span style="margin-left:auto;display:var(--dskf);gap:8px"><span style="height:32px;border:1px solid var(--line);background:var(--s1);display:flex;align-items:center;padding:0 10px;color:var(--ink3);width:180px">灵魂姓名或 ID</span><span style="height:32px;border:1px solid var(--block);background:var(--s1);display:flex;align-items:center;padding:0 10px">文明 · 全部 ▾</span><span style="height:32px;border:1px solid var(--block);background:var(--s1);display:flex;align-items:center;padding:0 10px">类目 · 全部 ▾</span><span style="height:32px;padding:0 12px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500">导出</span></span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:var(--p4);border-top:1px solid var(--block)">
+                      <div style="padding:10px 14px 12px 0;border-right:1px solid var(--line);border-bottom:1px solid var(--line)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">旧管 · 期初</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;line-height:28px">+18,420</div></div>
+                      <div style="padding:10px 14px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">新收 · 功德</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;line-height:28px;color:var(--ok)">+3,912</div></div>
+                      <div style="padding:10px 14px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">开除 · 罪业</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;line-height:28px;color:var(--danger)">−2,640</div></div>
+                      <div style="padding:10px 14px 12px;border-bottom:3px double var(--block)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">实在 · 期末</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;line-height:28px;font-weight:600">+19,692</div></div>
+                    </div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:6px 0">旧管 + 新收 − 开除 = 实在 · 33 户 · 本期 214 条</div>
+                    <div style="display:grid;grid-template-columns:var(--c2r);gap:24px 32px;margin-top:10px">
+                      <div style="min-width:0">
+                        <div style="display:var(--dskg);grid-template-columns:var(--jc);column-gap:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)"><span>日</span><span>灵魂</span><span>条目</span><span>依据</span><span style="text-align:right">收</span><span style="text-align:right">支</span></div>
+                        <sc-for list="{{ journal }}" as="j" hint-placeholder-count="11">
+                          <div>
+                            <sc-if value="{{ j.isHead }}" hint-placeholder-val="{{ false }}">
+                              <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-bottom:1px solid var(--block);font-family:'IBM Plex Mono',monospace;font-size:11.5px"><span style="font-weight:600">{{ j.day }}</span><span style="color:var(--ink3)">小计 <span style="color:var(--ok)">{{ j.r }}</span> / <span style="color:var(--danger)">{{ j.p }}</span></span></div>
+                            </sc-if>
+                            <sc-if value="{{ j.isRow }}" hint-placeholder-val="{{ true }}">
+                              <div style="display:grid;grid-template-columns:var(--jc);grid-template-areas:var(--ja);column-gap:12px;align-items:center;min-height:36px;padding:var(--jpad);border-bottom:1px solid var(--rule)">
+                                <span style="grid-area:d;display:var(--dskb);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3)">{{ j.t }}</span>
+                                <span style="grid-area:s;font-weight:500">{{ j.s }}</span>
+                                <span style="grid-area:i">{{ j.i }}</span>
+                                <span style="grid-area:b;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2)">{{ j.b }}</span>
+                                <span style="grid-area:r;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--ok)">{{ j.r }}</span>
+                                <span style="grid-area:p;font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--danger)">{{ j.p }}</span>
+                              </div>
+                            </sc-if>
+                          </div>
+                        </sc-for>
+                        <div style="display:grid;grid-template-columns:1fr 80px 80px;padding:8px 0;border-bottom:3px double var(--block);font-family:'IBM Plex Mono',monospace;font-weight:600"><span style="font-family:'Archivo','Noto Sans SC',sans-serif">本页合计 · 8 条</span><span style="text-align:right;color:var(--ok)">+400</span><span style="text-align:right;color:var(--danger)">−345</span></div>
+                        <div style="display:flex;justify-content:space-between;padding-top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink2)"><span>1–8 / 214 · 整行可点 → 该户详情「乙 · 功过」</span><span>‹ 1 2 3 … 27 ›</span></div>
+                      </div>
+                      <div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">按类目 · 图例账</div>
+                        <sc-for list="{{ cats }}" as="c" hint-placeholder-count="6">
+                          <div style="display:grid;grid-template-columns:1fr 70px;border-bottom:1px solid var(--rule);min-height:44px;align-items:center;padding:4px 0">
+                            <span style="display:flex;flex-direction:column;gap:4px"><span>{{ c.n }}</span><span style="{{ c.bar }}"></span></span>
+                            <span style="{{ c.vst }}">{{ c.v }}</span>
+                          </div>
+                        </sc-for>
+                        <p style="font-size:12px;color:var(--ink2);margin-top:10px">与详情页呼应：详情「乙 · 功过」是一户的四柱缩写——户从零开始，没有旧管，所以只剩收 / 支 / 结三栏；总账是所有户的完整四柱。两处用同一套线：合计用单线，终结用双线。</p>
+                      </div>
+                    </div>
+                  </main>
+                </sc-if>
+
+                <sc-if value="{{ v.isRealms }}" hint-placeholder-val="{{ false }}">
+                  <main style="padding:20px var(--pad) 32px">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--block)">
+                      <h1 style="font-size:22px;line-height:28px;font-weight:600">界域</h1>
+                      <span style="display:flex;border:1px solid var(--block);font-size:12px;flex-wrap:wrap"><span style="padding:4px 10px;background:var(--ink);color:var(--bg)">■ 地府</span><span style="padding:4px 10px">● 天堂地狱</span><span style="padding:4px 10px">▲ 杜阿特</span><span style="padding:4px 10px">◆ 冥府</span></span>
+                      <span style="margin-left:auto;display:var(--dskf);gap:8px"><span style="height:32px;padding:0 12px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500">+ 新增界域</span></span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:var(--c2rl);gap:24px 40px;padding-top:16px">
+                      <div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>拓扑 · 十殿一线</span><span>在押 / 容量</span></div>
+                        <div style="padding-top:8px">
+                          <sc-for list="{{ realmRows }}" as="r" hint-placeholder-count="16">
+                            <div style="display:grid;grid-template-columns:24px 1fr 120px;min-height:32px;align-items:stretch">
+                              <div style="display:flex;flex-direction:column;align-items:center"><span style="{{ r.lineTop }}"></span><span style="{{ r.mark }}"></span><span style="{{ r.lineBot }}"></span></div>
+                              <div style="{{ r.lab }}"><span style="{{ r.elbow }}"></span><span>{{ r.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ r.code }}</span></div>
+                              <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><span style="{{ r.occBar }}"><span style="{{ r.occFill }}"></span></span><span style="{{ r.occSt }}">{{ r.occ }}</span></div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <div style="min-width:0">
+                        <div style="display:var(--dskg);grid-template-columns:1.6fr 1.2fr 60px 90px 60px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)"><span>名称</span><span>编号</span><span>类型</span><span style="text-align:right">在押 / 容量</span><span style="text-align:right">永恒</span></div>
+                        <div style="display:var(--dskb)">
+                          <sc-for list="{{ realmRows }}" as="r" hint-placeholder-count="16">
+                            <div style="display:grid;grid-template-columns:1.6fr 1.2fr 60px 90px 60px;min-height:32px;align-items:center;border-bottom:1px solid var(--rule)">
+                              <span style="{{ r.tn }}">{{ r.tree }}{{ r.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ r.code }}</span><span style="color:var(--ink2)">{{ r.kind }}</span><span style="{{ r.occSt }}">{{ r.occ }}</span><span style="text-align:right;color:var(--ink3)">{{ r.et }}</span>
+                            </div>
+                          </sc-for>
+                        </div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">四种拓扑 · 同一套图例（━ 已行 ┅ 待行 ▪ 现在 □ 站）</div>
+                        <div style="display:grid;grid-template-columns:var(--p4);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:10px">
+                          <div style="background:var(--bg);padding:10px">
+                            <div style="font-size:12px;font-weight:500">■ 地府 · 一线</div>
+                            <svg viewBox="0 0 120 110" style="width:100%;height:auto;display:block;margin-top:6px"><line x1="30" y1="6" x2="30" y2="104" style="stroke:var(--ink);stroke-width:3"></line><rect x="26" y="8" width="8" height="8" style="fill:var(--ink)"></rect><rect x="26" y="28" width="8" height="8" style="fill:var(--ink)"></rect><rect x="25" y="48" width="10" height="10" style="fill:var(--acc)"></rect><line x1="35" y1="53" x2="80" y2="53" style="stroke:var(--ink3);stroke-width:1"></line><rect x="80" y="49" width="8" height="8" style="fill:none;stroke:var(--ink3)"></rect><rect x="26" y="72" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect><rect x="26" y="94" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect></svg>
+                          </div>
+                          <div style="background:var(--bg);padding:10px">
+                            <div style="font-size:12px;font-weight:500">● 地狱篇 · 漏斗</div>
+                            <svg viewBox="0 0 120 110" style="width:100%;height:auto;display:block;margin-top:6px"><line x1="10" y1="10" x2="110" y2="10" style="stroke:var(--ink);stroke-width:3"></line><line x1="18" y1="30" x2="102" y2="30" style="stroke:var(--ink);stroke-width:3"></line><line x1="28" y1="50" x2="92" y2="50" style="stroke:var(--line2x);stroke-width:1"></line><line x1="38" y1="70" x2="82" y2="70" style="stroke:var(--line2x);stroke-width:1"></line><line x1="50" y1="90" x2="70" y2="90" style="stroke:var(--line2x);stroke-width:1"></line><line x1="60" y1="10" x2="60" y2="30" style="stroke:var(--ink);stroke-width:3"></line><line x1="60" y1="30" x2="60" y2="92" style="stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3"></line><rect x="55" y="25" width="10" height="10" style="fill:var(--acc)"></rect></svg>
+                          </div>
+                          <div style="background:var(--bg);padding:10px">
+                            <div style="font-size:12px;font-weight:500">▲ 杜阿特 · 十二时之河</div>
+                            <svg viewBox="0 0 120 110" style="width:100%;height:auto;display:block;margin-top:6px"><line x1="6" y1="55" x2="54" y2="55" style="stroke:var(--ink);stroke-width:3"></line><line x1="54" y1="55" x2="114" y2="55" style="stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3"></line><rect x="4" y="51" width="8" height="8" style="fill:var(--ink)"></rect><rect x="22" y="51" width="8" height="8" style="fill:var(--ink)"></rect><rect x="40" y="51" width="8" height="8" style="fill:var(--ink)"></rect><rect x="54" y="49" width="12" height="12" style="fill:var(--acc)"></rect><rect x="74" y="51" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect><rect x="92" y="51" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect><rect x="108" y="51" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect><text x="60" y="80" style="fill:var(--ink3);font-size:9px;font-family:'IBM Plex Mono',monospace" text-anchor="middle">VI 称心</text></svg>
+                          </div>
+                          <div style="background:var(--bg);padding:10px">
+                            <div style="font-size:12px;font-weight:500">◆ 冥府 · 三岔路</div>
+                            <svg viewBox="0 0 120 110" style="width:100%;height:auto;display:block;margin-top:6px"><line x1="60" y1="6" x2="60" y2="48" style="stroke:var(--ink);stroke-width:3"></line><rect x="55" y="44" width="10" height="10" style="fill:var(--acc)"></rect><line x1="60" y1="54" x2="18" y2="100" style="stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3"></line><line x1="60" y1="54" x2="60" y2="100" style="stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3"></line><line x1="60" y1="54" x2="102" y2="100" style="stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 3"></line><rect x="14" y="98" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect><rect x="56" y="98" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect><rect x="98" y="98" width="8" height="8" style="fill:var(--bg);stroke:var(--ink3)"></rect></svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </sc-if>
+
+                <sc-if value="{{ v.isCorpus }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:10px;align-items:center;padding:10px var(--pad);border-bottom:1px solid var(--line);flex-wrap:wrap">
+                    <span style="flex:1;min-width:200px;height:var(--ctl);border:1px solid var(--block);background:var(--s1);display:flex;align-items:center;padding:0 10px;gap:10px">口业<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">10 条 · 编号直达：输入 IX · XXVI</span></span>
+                    <span style="display:var(--mobf);height:var(--ctl);border:1px solid var(--block);align-items:center;padding:0 10px;width:100%;box-sizing:border-box;justify-content:space-between">功過格 › 救濟門 <span style="color:var(--ink3)">▾</span></span>
+                  </div>
+                  <main style="display:grid;grid-template-columns:var(--c3);flex:1">
+                    <div style="display:var(--dskb);border-right:1px solid var(--line);padding:14px 0;font-size:12.5px">
+                      <sc-for list="{{ toc }}" as="t" hint-placeholder-count="12"><div style="{{ t.st }}"><span>{{ t.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ t.c }}</span></div></sc-for>
+                    </div>
+                    <article style="padding:22px var(--pad) 40px;min-width:0">
+                      <div style="max-width:72ch">
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3)">功過格 › 救濟門 › 十七　·　v3 · 2026-02 修订</div>
+                        <h1 style="font-family:'IBM Plex Mono',monospace;font-size:22px;line-height:28px;font-weight:500;margin-top:8px">救濟門 · 十七</h1>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block)">原文</div>
+                        <p style="font-family:'Source Serif 4','Noto Serif SC',serif;font-size:20px;line-height:32px;margin-top:10px;text-wrap:pretty">凡善多而<mark style="background:var(--s2);color:inherit;box-shadow:inset 0 -2px 0 var(--acc)">口业</mark>未净者，勿遽转生，入此门补过，期三年。期内每月省过一次，过尽则早出；过不尽，满期亦出。</p>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">今译</div>
+                        <p style="font-family:'Source Serif 4','Noto Serif SC',serif;font-size:20px;line-height:32px;margin-top:10px;text-wrap:pretty">善行多、但言语上的过失还没有消尽的人，不要急于转生，先入此门补过三年。其间每月反省一次，过失消尽可提前出门；消不尽，期满也出。</p>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">注 · 编者</div>
+                        <p style="margin-top:10px;color:var(--ink2)">「期三年」为上限，不是固定期限；系统据此把处置期限默认填为 3 年，可在审判台改短。「口业」对应口業门三至十条。</p>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">相关条目</div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;border:1px solid var(--line);padding:2px 8px">救濟門 · 十六</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;border:1px solid var(--line);padding:2px 8px">救濟門 · 十八</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;border:1px solid var(--line);padding:2px 8px">口業 · 三</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;border:1px solid var(--line);padding:2px 8px">地狱篇 · Purg. XIII</span></div>
+                      </div>
+                    </article>
+                    <aside style="padding:22px var(--pad) 32px;border-left:1px solid var(--line);background:var(--s1)">
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">引用</div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 0">〔功過格 · 救濟門 · 十七 · v3〕</div>
+                      <div style="display:flex;gap:8px"><span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;background:var(--ink);color:var(--bg);font-weight:500">复制引用</span><span style="height:var(--ctl);padding:0 12px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500">插入审判台</span></div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>被引用 · 38 件</span><span>近 → 远</span></div>
+                      <sc-for list="{{ citedBy }}" as="c" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:1fr auto;padding:6px 0;border-bottom:1px solid var(--rule);font-size:12.5px"><span>{{ c.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3)">{{ c.d }}</span></div></sc-for>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">版本</div>
+                      <div style="display:grid;grid-template-columns:40px 1fr;padding:6px 0;border-bottom:1px solid var(--rule);font-size:12.5px"><span style="font-family:'IBM Plex Mono',monospace">v3</span><span>2026-02 · 现行 · 加「过尽则早出」</span></div>
+                      <div style="display:grid;grid-template-columns:40px 1fr;padding:6px 0;border-bottom:1px solid var(--rule);font-size:12.5px;color:var(--ink2)"><span style="font-family:'IBM Plex Mono',monospace">v2</span><span>2024-09 · 12 件判决仍引此版</span></div>
+                    </aside>
+                  </main>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ a.hasData }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1400px;margin-top:32px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;padding-bottom:6px;border-bottom:1px solid #e6e4df">每种拓扑需要的数据 · 回答「行程只做了一条线」</div>
+        <sc-for list="{{ dataReq }}" as="d" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:160px 1.4fr 1fr 1fr;gap:16px;padding:10px 0;border-bottom:1px solid #3a3a3d;font-size:13.5px;line-height:1.6;color:#cfccc4">
+            <span style="color:#e6e4df;font-weight:500">{{ d.shape }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ d.fields }}</span><span>{{ d.draw }}</span><span>{{ d.now }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;margin:32px 0 10px">三态 · 内容区 · 浅 / 深</div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <sc-for list="{{ a.st }}" as="t" hint-placeholder-count="2">
+        <div style="{{ t.style }}">
+          <div style="display:grid;grid-template-columns:repeat(3,480px);gap:1px;background:var(--line);width:max-content;color:var(--ink);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:13px;line-height:20px">
+            <div style="background:var(--bg);padding:16px 20px;min-height:220px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">空 · {{ t.label }}</div>
+              <div style="margin-top:18px;border:1px dashed var(--line2x);padding:16px 18px">
+                <div style="font-size:16px;line-height:24px;font-weight:600">{{ a.e1 }}</div>
+                <div style="color:var(--ink2);margin-top:4px">{{ a.e2 }}</div>
+                <div style="display:flex;gap:8px;margin-top:14px"><span style="height:32px;padding:0 14px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500">{{ a.e3 }}</span></div>
+              </div>
+            </div>
+            <div style="background:var(--bg);padding:16px 20px;min-height:220px" aria-busy="true">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">加载 · {{ t.label }}</div>
+              <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-top:14px">
+                <div style="display:flex;flex-direction:column;gap:10px"><span style="height:10px;background:var(--s3)"></span><span style="height:10px;width:80%;background:var(--s3)"></span><span style="height:10px;width:70%;background:var(--s3)"></span><span style="height:10px;width:50%;background:var(--s3)"></span></div>
+                <div style="display:flex;flex-direction:column;gap:10px"><span style="height:14px;width:40%;background:var(--s3)"></span><span style="height:10px;background:var(--s3)"></span><span style="height:10px;width:90%;background:var(--s3)"></span><span style="height:10px;width:95%;background:var(--s3)"></span><span style="height:10px;width:60%;background:var(--s3)"></span></div>
+              </div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:14px">{{ a.l1 }}</div>
+            </div>
+            <div style="background:var(--bg);padding:16px 20px;min-height:220px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">错误 · {{ t.label }}</div>
+              <div role="alert" style="margin-top:18px;border:1px solid var(--danger);background:var(--dangerBg);padding:14px 16px">
+                <div style="font-weight:600;color:var(--danger)">! {{ a.x1 }}</div>
+                <div style="color:var(--ink2);margin-top:4px">{{ a.x2 }}</div>
+                <div style="display:flex;gap:8px;margin-top:12px"><span style="height:32px;padding:0 14px;display:flex;align-items:center;background:var(--ink);color:var(--bg);font-weight:500">重试</span><span style="height:32px;padding:0 14px;display:flex;align-items:center;color:var(--ink2);font-weight:500">{{ a.x3 }}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</sc-for>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#f8f5ec', s1:'#fdfbf6', s2:'#efe9da', s3:'#e3dcc8', rule:'#e2c4bc', line:'#d3ccb9', line2x:'#8f8a7c', block:'#17181a', ink:'#17181a', ink2:'#45474c', ink3:'#65686e', dis:'#a6a294', disBg:'#eeeadf', acc:'#1d4e9e', accInk:'#ffffff', danger:'#b3261e', dangerBg:'#f6e1da', ok:'#23663a', okBg:'#e1ebdb', warn:'#7a5000', warnBg:'#f2e4c4', scrim:'rgba(23,24,26,.42)', shadow:'0 12px 32px rgba(23,24,26,.18)' };
+    const D = { bg:'#0c0d10', s1:'#121419', s2:'#1a1d24', s3:'#252932', rule:'#342a2c', line:'#2a2e37', line2x:'#6d717b', block:'#c9ccd3', ink:'#e8e9ec', ink2:'#b3b7bf', ink3:'#8a8f99', dis:'#4f535c', disBg:'#16181d', acc:'#8db2ff', accInk:'#0c0d10', danger:'#f28273', dangerBg:'#2b1715', ok:'#6acb8a', okBg:'#13231a', warn:'#f0b44a', warnBg:'#2a2011', scrim:'rgba(0,0,0,.62)', shadow:'0 12px 32px rgba(0,0,0,.55)' };
+    const vars = p => { const s = {}; for (const k in p) s['--' + k] = p[k]; return s; };
+    const mono = "'IBM Plex Mono',monospace", sans = "'Archivo','Noto Sans SC',sans-serif";
+    const G = [['01 概览', [], 'dash'], ['02 灵魂业务', [['灵魂管理',''],['审判','12','queue desk'],['处置','4','disp'],['功过总账','','ledger']]], ['03 流程协作', [['移交','1'],['跨文明审判',''],['工作流','','wf'],['殿司收件箱','5','inbox']]], ['04 组织与领域', [['界域','','realms'],['律条语料','','corpus'],['组织','']]], ['05 社交', [['朋友圈审阅','3','social']]], ['06 系统设置', [['用户',''],['回收站','']]]];
+    const cur = { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--ink)', color: 'var(--ink)', fontWeight: 500 };
+    const nav = id => { const out = []; for (const [g, kids, gid] of G) { const open = kids.some(k => k[2] && k[2].split(' ').includes(id)); out.push({ label: g, tail: kids.length ? (open ? '−' : '+') : '', st: Object.assign({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '30px', padding: '0 14px', borderBottom: '1px solid var(--rule)', color: 'var(--ink)', fontFamily: mono, fontSize: '11.5px', boxSizing: 'border-box' }, gid === id ? cur : {}) }); if (open) for (const [l, t, k] of kids) out.push({ label: l, tail: t, st: Object.assign({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '30px', padding: '0 14px 0 30px', borderBottom: '1px solid var(--rule)', color: 'var(--ink2)', fontFamily: sans, fontSize: '12.5px', boxSizing: 'border-box' }, k && k.split(' ').includes(id) ? cur : {}) }); } return out; };
+    const frame = (p, m) => Object.assign(vars(p), {
+      '--w': m ? '393px' : '1440px', '--h': m ? 'auto' : '940px', '--side': m ? 'none' : 'flex', '--mob': m ? 'flex' : 'none',
+      '--dskf': m ? 'none' : 'flex', '--dskg': m ? 'none' : 'grid', '--dskb': m ? 'none' : 'block', '--mobb': m ? 'block' : 'none', '--mobf': m ? 'flex' : 'none',
+      '--pad': m ? '16px' : '28px', '--hh': m ? '48px' : '40px', '--ctl': m ? '44px' : '32px',
+      '--p4': m ? '1fr 1fr' : 'repeat(4,1fr)', '--c2r': m ? '1fr' : 'minmax(0,1fr) 320px', '--c2rl': m ? '1fr' : '420px minmax(0,1fr)', '--c3': m ? '1fr' : '240px minmax(0,1fr) 300px',
+      '--jc': m ? '1fr 1fr 64px 64px' : '50px 1fr 1.3fr 1.3fr 70px 70px', '--ja': m ? '"s s r p" "i i b b"' : '"d s i b r p"', '--jpad': m ? '8px 0' : '0',
+    });
+    const V = [['1440 · 深色', D, 0], ['1440 · 浅色', L, 0], ['393 · 深色', D, 1], ['393 · 浅色', L, 1]];
+
+    const J = [['06-16', '+120', '−120', [['09:12','周慕云','布施药材','功過格 · 救濟門 · 三','+40',''],['11:40','Marguerite Vey','Wrath · 殴人','地狱篇 · VII · II','','−120'],['15:02','王素心','侍奉病母','功過格 · 孝順門 · 二','+80','']]],
+      ['06-15', '+80', '−25', [['08:30','沈青梧','詈骂邻人（补登）','功過格 · 口業 · 三','','−25'],['10:05','Nebet-Iunu','不曾偷盗','否定告白 · § 5 / 42','+30',''],['16:44','Kleon','善待异乡人','高尔吉亚 · 526c','+50','']]],
+      ['06-14', '+150', '−200', [['09:00','李守拙','杀生 · 屠犬','功過格 · 殺生 · 四','','−200'],['13:20','陆晚晴','修桥','功過格 · 救濟門 · 五','+150','']]]];
+    const journal = [];
+    for (const [day, r, p, rows] of J) { journal.push({ isHead: true, isRow: false, day, r, p }); for (const [t, s, i, b, rr, pp] of rows) journal.push({ isHead: false, isRow: true, t, s, i, b, r: rr, p: pp }); }
+    const cats = [['救濟門', 1480, 1], ['孝順門', 1210, 1], ['其他功德', 1222, 1], ['口業', -980, 0], ['殺生', -620, 0], ['其他罪业', -1040, 0]].map(([n, v, pos]) => ({ n, v: (v > 0 ? '+' : '−') + Math.abs(v).toLocaleString('en'), vst: { fontFamily: mono, textAlign: 'right', color: pos ? 'var(--ok)' : 'var(--danger)' }, bar: { display: 'block', height: '6px', width: Math.abs(v) / 1480 * 100 + '%', background: pos ? 'var(--ok)' : 'var(--danger)' } }));
+
+    const RR = [[0,'第一殿 · 秦广王','','殿',2,null,'否'],[0,'第二殿 · 楚江王','','殿',1,null,'否'],[0,'第三殿 · 宋帝王','','殿',2,null,'否'],[0,'第四殿 · 五官王','','殿',0,null,'否'],[0,'第五殿 · 阎罗王','','殿',3,null,'否'],[1,'救濟門','救濟門','门',241,400,'否'],[2,'九','救濟門 · 九','层',41,200,'否'],[2,'十七','救濟門 · 十七','层',200,200,'否'],[0,'第六殿 · 卞城王','','殿',0,null,'否'],[0,'第七殿 · 泰山王','','殿',0,null,'否'],[0,'第八殿 · 都市王','','殿',0,null,'否'],[0,'第九殿 · 平等王','','殿',0,null,'否'],[0,'第十殿 · 转轮王','','殿',0,null,'否'],[1,'六道','六道','道',3,null,'否'],[2,'人道','六道 · 人道','道',3,null,'否'],[2,'地狱道','六道 · 地狱道','道',0,null,'是']];
+    const realmRows = RR.map(([dep, n, code, kind, occ, cap, et], i) => {
+      const full = cap && occ >= cap, last = i === RR.length - 1;
+      const nextTop = RR[i + 1] && RR[i + 1][0] === 0;
+      return { n, code, kind, et, tree: dep === 0 ? '' : (dep === 1 ? '└ ' : '　└ '),
+        occ: cap ? `${occ} / ${cap}` : String(occ), occSt: { fontFamily: mono, fontSize: '12px', textAlign: 'right', whiteSpace: 'nowrap', color: full ? 'var(--warn)' : occ ? 'var(--ink)' : 'var(--ink3)' },
+        occBar: { display: cap ? 'block' : 'none', width: '36px', height: '5px', background: 'var(--s3)', position: 'relative' },
+        occFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: cap ? occ / cap * 100 + '%' : 0, background: full ? 'var(--warn)' : 'var(--ink)' },
+        tn: { paddingLeft: dep * 14 + 'px', fontWeight: dep === 0 ? 500 : 400, color: dep ? 'var(--ink2)' : 'var(--ink)' },
+        lineTop: { width: 0, flex: 1, borderLeft: i === 0 ? '0' : '3px solid var(--ink)' },
+        lineBot: { width: 0, flex: 1, borderLeft: last ? '0' : '3px solid var(--ink)' },
+        mark: dep === 0 ? { width: '10px', height: '10px', background: occ ? 'var(--ink)' : 'var(--bg)', border: '2px solid var(--ink)', boxSizing: 'border-box', flex: 'none', margin: '0 0 0 1.5px' } : { display: 'none' },
+        lab: { display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: dep ? (dep * 16) + 'px' : '6px', fontWeight: dep === 0 ? 500 : 400, fontSize: dep ? '12.5px' : '13px' },
+        elbow: dep ? { width: '12px', height: '10px', borderLeft: '1px solid var(--ink3)', borderBottom: '1px solid var(--ink3)', marginTop: '-10px', flex: 'none' } : { display: 'none' } };
+    });
+    const dataReq = [
+      { shape: '通用（四种都要）', fields: 'realm { id, parent_id, order, kind, code, capacity, is_eternal } · judgment.realm_id · disposition.realm_id · soul.path[] = (realm_id, entered_at, left_at)', draw: '站点、层级、在押、「现在」位置', now: '现在只有 judgment.court（殿名，自由文本），缺 realm_id 与 path' },
+      { shape: '■ 一线 · 地府', fields: 'order（1–10 纵向次序）· kind ∈ 殿 / 门 / 层 / 道', draw: '殿按 order 排成一条纵线；门、层作分支', now: '殿名能靠字符串映射到 order，可先画；门、层要等 realm_id' },
+      { shape: '● 漏斗 · 地狱篇', fields: 'level（1–9）· sublevel（环 / 囊）· region ∈ 地狱 / 炼狱 / 天堂', draw: '层越深越窄；炼狱、天堂画成倒漏斗', now: '缺 level，画不出' },
+      { shape: '▲ 河 · 杜阿特', fields: 'hour（1–12）· gate · is_judgment_hall', draw: '十二时横排成一条河；第六时（称心厅）加粗', now: '缺 hour，画不出' },
+      { shape: '◆ 三岔 · 冥府', fields: 'fork ∈ 左 / 中 / 右（塔耳塔洛斯 / 长春花原 / 至福乐土）· parent = 审判处', draw: '一段主干，在审判处分成三路', now: '缺 fork，画不出' },
+    ];
+    const tocRaw = [['功過格', '64', 0, 0], ['孝順門', '8', 1, 0], ['救濟門', '18', 1, 1], ['口業', '10', 1, 0], ['殺生', '9', 1, 0], ['其余四門', '19', 1, 0], ['地狱篇', '34', 0, 0], ['否定告白', '42', 0, 0], ['高尔吉亚', '32', 0, 0]];
+    const toc = tocRaw.map(([n, c, dep, on]) => ({ n, c, st: Object.assign({ display: 'flex', justifyContent: 'space-between', padding: dep ? '6px 16px 6px 30px' : '8px 16px', borderBottom: '1px solid var(--rule)', fontWeight: dep ? 400 : 500, color: dep ? 'var(--ink2)' : 'var(--ink)' }, on ? cur : {}) }));
+    const citedBy = [['沈青梧 · ◇ 补过', '06-15'], ['周慕云 · ◇ 补过', '06-18'], ['王素娥 · ◇ 补过', '2023-06']].map(([n, d]) => ({ n, d }));
+
+    const P = [
+      { id: 'ledger', no: '04', route: '/ledger', title: '功过总账', c: ['灵魂业务','功过总账','2026-06'],
+        claim: '跨灵魂的流水，用中国账房的「四柱」做页首：旧管 + 新收 − 开除 = 实在。流水按日分组，每日一条小计（单线），页末合计收双线。整行可点，进入该户详情的「乙 · 功过」。393 下每条流水排成两行：第一行灵魂与金额，第二行条目与依据；日期由分组头承担。',
+        prims: '四柱 FourPillars · 日小计 SubtotalRow · 类目条 CategoryBar（复用图例账）',
+        e1: '本期没有流水', e2: '2026-06 尚无功过登记；旧管 = 实在 = +18,420。', e3: '看上一期', l1: '四柱先出（来自日结汇总），流水分页加载。', x1: '流水加载失败', x2: '四柱来自日结，数字仍然可信；只是明细暂时看不了。', x3: '只看四柱' },
+      { id: 'realms', no: '05', route: '/realms', title: '界域', hasData: true, c: ['组织与领域','界域','中国 · 地府'],
+        claim: '界域就是行程拓扑的「底图」：详情页的行程条 = 这张图 + 一个灵魂的 path。所以两处共用一套图例（━ 已行 ┅ 待行 ▪ 现在 □ 站），切换文明只换形状、不换颜色。左侧是拓扑，右侧是同一批数据的树表（在押 / 容量 / 永恒），可直接编辑。容量满的层标警示色。',
+        prims: '拓扑站 Station · 分支肘线 Branch · 树表行 TreeRow · 文明切换 CivSwitch（形状标记 ■●▲◆）',
+        e1: '此文明尚未配置界域', e2: '冥府还没有任何界域。可以从「三岔路」模板导入，再逐项改名。', e3: '从模板导入', l1: '拓扑与树表同时出骨架，文明切换先渲染。', x1: '拓扑无法绘制', x2: '有 2 个界域的上级不存在（循环或缺失），已在树表中标出。', x3: '只看树表' },
+      { id: 'corpus', no: '06', route: '/corpus', title: '律条语料', c: ['组织与领域','律条语料','救濟門 · 十七'],
+        claim: '长文本阅读页，也是衬线用得最多的一页，但规则不变：衬线只给「原文」与「今译」，因为它们是被说出的话；编号用等宽，编者注、元数据、目录用无衬线。正文限宽 72 字、20/32。检索命中处用底色加 2 px 强调下线标出，不改字重。可以直接输入编号跳转（例如 IX · XXVI）。右栏显示被引用次数和版本；判决引用的是当时的版本，律条修订后旧引用不会变。',
+        prims: '阅读栏 ReadingColumn（72ch）· 目录 TOC · 检索高亮 Mark · 引用格式 CiteFormat · 版本签 VersionTag',
+        e1: '没有匹配「口孽」的律条', e2: '你要找的是不是「口业」？也可以直接输入编号，如 IX · XXVI。', e3: '清除检索', l1: '目录先出；正文按段落出骨架，行高与最终一致。', x1: '律条加载失败', x2: '目录和检索仍可用；已缓存的 24 条可离线阅读。', x3: '看缓存' },
+    ];
+    const pages = P.map(p => Object.assign({ hasData: false }, p, {
+      vs: V.map(([label, pal, m]) => ({ label, style: frame(pal, m), nav: nav(p.id), c1: p.c[0], c2: p.c[1], c3: p.c[2], isLedger: p.id === 'ledger', isRealms: p.id === 'realms', isCorpus: p.id === 'corpus' })),
+      st: [{ label: '浅色', style: vars(L) }, { label: '深色', style: vars(D) }],
+    }));
+    return { pages, journal, cats, realmRows, dataReq, toc, citedBy };
+  }
+}
+</script>
+</body>
+</html>

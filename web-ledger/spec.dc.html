@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{{const n=new URLSearchParams(location.search).get("theme");if(n==="light"||n==="dark"){document.documentElement.dataset.theme=n}}{if(new URLSearchParams(location.search).get("_omthumb")==="1"){const n=(f)=>{const g=f.focus;if(!g)return;f.focus=function(h){g.call(this,{...h,preventScroll:true})}};n(HTMLElement.prototype);n(SVGElement.prototype);if(typeof MathMLElement!=="undefined"){n(MathMLElement.prototype)}const d=(f)=>{f.removeAttribute("autofocus");f.inert=true;if(!(f instanceof HTMLElement))f.removeAttribute("tabindex")};const p=(f)=>{if(f.hasAttribute("autofocus"))d(f);for(const g of f.querySelectorAll("[autofocus]")){d(g)}};p(document.documentElement);new MutationObserver((f)=>{for(const g of f){for(const h of g.addedNodes){if(h.nodeType===1)p(h)}}}).observe(document,{childList:true,subtree:true})}}{const n=()=>{try{if(document.querySelector('meta[name="color-scheme"]'))return;const d=getComputedStyle(document.documentElement).getPropertyValue("color-scheme").trim();if(d&&d!=="normal")return;const p=(y)=>{if(!y)return null;const m=getComputedStyle(y).backgroundColor.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+%?))?\s*\)$/);if(!m)return null;const w=m[4]==null?1:parseFloat(m[4])/(m[4].endsWith("%")?100:1);if(w<0.99)return null;return[+m[1],+m[2],+m[3]]};const f=p(document.body)||p(document.documentElement);if(!f)return;const g=(y)=>{const m=y/255;return m<=0.04045?m/12.92:((m+0.055)/1.055)**2.4};const h=0.2126*g(f[0])+0.7152*g(f[1])+0.0722*g(f[2]);document.documentElement.style.setProperty("color-scheme",h<0.4?"dark":"light")}catch{}};if(document.readyState==="complete")n();else window.addEventListener("load",n)}var I=["https://claude.ai","https://preview.claude.ai","https://1c181b7e-ae89-497f-a57b-ae3295e6213e.claudeusercontent.com"];var B=true;var K=false;var C=()=>{};if(K===true){try{const n=setTimeout.bind(window);const d=1e4;const p=15;const f=1e4;const g=120000;const h=200;const y=(o)=>{try{let r;if(typeof o==="string")r=o;else if(o instanceof URL)r=o.href;else if(typeof Request!=="undefined"&&o instanceof Request)r=o.url;else return null;if(!r)return null;const l=document.baseURI;const i=new URL(r,l);if(i.protocol!=="http:"&&i.protocol!=="https:")return null;if(i.origin!==new URL(l).origin)return null;return i.origin+i.pathname}catch{return null}};const m=new Map;const w=(o)=>{let r=m.get(o);if(!r){if(m.size>=h){const l=m.keys().next().value;if(l!==undefined)m.delete(l)}r={fails:[],until:0,cooldown:f,hard:false};m.set(o,r)}return r};const R=(o)=>{const r=m.get(o);return r!==undefined&&r.until>Date.now()};const O=(o,r)=>{const l=Date.now();const i=w(o);if(r)i.hard=true;if(i.until>l)return;i.fails.push(l);while(i.fails.length>0&&i.fails[0]<=l-d)i.fails.shift();if(i.fails.length>=p){i.until=l+i.cooldown;if(i.hard)i.cooldown=Math.min(i.cooldown*2,g);i.fails.length=0;try{n(()=>{try{S(true)}catch{}},i.until-l+100)}catch{}console.warn("[omelette] asset circuit breaker: pausing requests to "+o+" for "+Math.round((i.until-l)/1000)+"s after "+p+" failures in "+d/1000+"s")}};const e=(o)=>{m.delete(o)};const t=100;const a=new WeakMap;const u=new Set;let s=null;const S=(o)=>{for(const r of Array.from(u)){try{const l=a.get(r);if(l===undefined){u.delete(r);continue}if(o){const i=y(l);if(i!==null&&R(i))continue}a.delete(r);u.delete(r);if(s!==null)s.call(r,l)}catch{}}};C=()=>{try{m.clear();S(false)}catch{}};document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")C()});const _=window.fetch;if(typeof _==="function"){const o=function(...r){let l=null;try{l=y(r[0])}catch{}if(l!==null&&R(l)){let c;try{if(r[1]&&r[1].signal!==undefined){c=r[1].signal||undefined}else if(typeof Request!=="undefined"&&r[0]instanceof Request){c=r[0].signal||undefined}}catch{c=undefined}return new Promise((k,b)=>{const E=()=>{try{return c.reason!==undefined?c.reason:new DOMException("The operation was aborted.","AbortError")}catch{return new DOMException("The operation was aborted.","AbortError")}};try{if(c&&c.aborted){b(E());return}}catch{}let T=false;const j=()=>{if(T)return;T=true;b(E())};try{if(c)c.addEventListener("abort",j,{once:true})}catch{}n(()=>{if(T)return;T=true;try{if(c)c.removeEventListener("abort",j)}catch{}let L;try{L=new Response(null,{status:429,statusText:"Too Many Requests",headers:{"Retry-After":"10"}})}catch{L={ok:false,status:429}}k(L)},250)})}const i=_.apply(window,r);if(l!==null){const c=l;i.then((k)=>{try{if(k.ok)e(c);else if(k.status===401||k.status===403||k.status===404||k.status===429){O(c,k.status!==404)}}catch{}},()=>{})}return i};window.fetch=o}const v=Object.getOwnPropertyDescriptor(HTMLImageElement.prototype,"src");if(v!==undefined&&v.set!==undefined&&v.get!==undefined){const o=v.set;s=o;Object.defineProperty(HTMLImageElement.prototype,"src",{configurable:true,enumerable:v.enumerable,get:v.get,set(r){const l=`${r}`;try{const i=y(l);if(i!==null&&R(i)){a.set(this,l);if(u.size<t)u.add(this);return}}catch{}try{a.delete(this);u.delete(this)}catch{}o.call(this,l)}})}try{const o=HTMLImageElement.prototype.setAttribute;HTMLImageElement.prototype.setAttribute=function(r,l){if(arguments.length<2){o.apply(this,arguments);return}if(typeof r==="string"&&r.toLowerCase()==="src"){const i=`${l}`;try{const c=y(i);if(c!==null&&R(c)){a.set(this,i);if(u.size<t)u.add(this);return}a.delete(this);u.delete(this)}catch{}o.call(this,r,i);return}o.call(this,r,l)}}catch{}window.addEventListener("error",(o)=>{try{const r=o.target;if(r instanceof HTMLImageElement){const l=y(r.currentSrc||r.src||"");if(l!==null)O(l,true)}}catch{}},true);window.addEventListener("load",(o)=>{try{const r=o.target;if(r instanceof HTMLImageElement){const l=y(r.currentSrc||r.src||"");if(l!==null)e(l);const i=a.get(r);if(i!==undefined){let c=false;try{c=new URL(i,document.baseURI).href===new URL(r.currentSrc||r.src||"",document.baseURI).href}catch{c=false}if(c){a.delete(r);u.delete(r)}}}}catch{}},true)}catch{}}var J=30000;var G=3000;document.addEventListener("DOMContentLoaded",()=>{const n=window.Babel;const d="om-src-id";if(n&&n.registerPlugin&&!(n.availablePlugins&&n.availablePlugins[d])){n.registerPlugin(d,({types:h})=>({visitor:{JSXOpeningElement(y,m){const w=y.node;if(w.name&&w.name.type==="JSXMemberExpression")return;for(let t=0;t<w.attributes.length;t++){const a=w.attributes[t];if(a.type==="JSXAttribute"&&a.name&&a.name.name==="data-om-id")return}const R=m.file&&m.file.opts&&m.file.opts.filename||"?";const O=w.loc&&w.loc.start;const e=`jsx:${R}:${w.start??0}:${O?O.line:0}:${O?O.column+1:0}`;w.attributes.push(h.jsxAttribute(h.jsxIdentifier("data-om-id"),h.stringLiteral(e)))}}}))}const p="om-text-extract";let f=false;if(B&&n&&n.registerPlugin&&!(n.availablePlugins&&n.availablePlugins[p])){const h=window.React;if(h&&h.useSyncExternalStore&&h.createElement){f=true;const y={};const m=new Set;let w=0;window.__omTextO=y;window.__omTextSet=(e)=>{for(const t in e){const a=e[t];if(a==null)delete y[t];else y[t]=a}w++;m.forEach((t)=>t())};const R=(e)=>{m.add(e);return()=>m.delete(e)};const O=()=>w;window.__OmT=function e(t){h.useSyncExternalStore(R,O,O);return h.createElement("span",{"data-om-text":t.i,className:"__om-t"},t.i in y?y[t.i]:t.children)};n.registerPlugin(p,({types:e})=>{const t={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const a={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const u=(o,r)=>e.logicalExpression("??",e.memberExpression(e.logicalExpression("||",e.memberExpression(e.identifier("window"),e.identifier("__omTextO")),e.objectExpression([])),e.stringLiteral(o),true),r);const s=(o)=>o.file&&o.file.opts&&o.file.opts.filename||"?";const S=(o)=>o.file&&o.file.code||"";const _=(o,r)=>{const l=(c)=>c&&c.start!=null&&c.end!=null&&(c.type==="StringLiteral"||c.type==="TemplateLiteral"&&c.expressions.length===0)?[c.start,c.end]:null;const i=l(r);if(i)return i;if(r&&r.type==="Identifier"){const c=o.scope.getBinding(r.name);if(c&&c.constant&&c.path.node.type==="VariableDeclarator"){return l(c.path.node.init)}}return null};const v=(o,r,l)=>{const i=o.node;let c=false;const k=(E,T)=>{c=true;return e.jsxElement(e.jsxOpeningElement(e.jsxIdentifier("__OmT"),[e.jsxAttribute(e.jsxIdentifier("i"),e.stringLiteral(E))],false),e.jsxClosingElement(e.jsxIdentifier("__OmT")),[T],false)};const b=i.children.map((E)=>{if(E.type==="JSXText"){if(E.start==null||E.end==null)return E;const T=l.slice(E.start,E.end);const j=T.length-T.trimStart().length;const L=T.length-T.trimEnd().length;if(j+L>=T.length)return E;return k(`txt:${r}:${E.start+j}:${E.end-L}`,E)}if(E.type==="JSXExpressionContainer"){const T=_(o,E.expression);if(T)return k(`str:${r}:${T[0]}:${T[1]}`,E)}return E});if(c)i.children=b};return{visitor:{JSXOpeningElement(o,r){const l=o.node;const i=s(r);const c={};for(let k=0;k<l.attributes.length;k++){const b=l.attributes[k];if(b.type!=="JSXAttribute"||!b.name)continue;const E=b.name.name;if(!a[E])continue;if(!b.value||b.value.type!=="StringLiteral")continue;if(b.value.start==null||b.value.end==null)continue;const T=`txt:${i}:${b.value.start}:${b.value.end}`;c[E]=T;b.value=e.jsxExpressionContainer(u(T,e.stringLiteral(b.value.value)))}if(Object.keys(c).length){l.attributes.push(e.jsxAttribute(e.jsxIdentifier("data-om-text-attrs"),e.stringLiteral(JSON.stringify(c))))}},JSXElement(o,r){const l=o.node.openingElement;const i=l&&l.name&&l.name.name;if(i==="__OmT")return;if(typeof i==="string"&&t[i])return;v(o,s(r),S(r))},JSXFragment(o,r){v(o,s(r),S(r))}}}})}}const g=f?["transform-react-jsx-source",d,p]:["transform-react-jsx-source",d];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((h,y)=>{const m=h.getAttribute("data-plugins")||"";const w=g.filter((R)=>m.indexOf(R)<0);if(w.length){h.setAttribute("data-plugins",m?`${m},${w.join(",")}`:w.join(","))}if(!h.hasAttribute("data-filename")){h.setAttribute("data-filename",h.getAttribute("src")||`inline-${y}`)}})});var A=window.parent;var U="not editable here — open the project in the Claude Design editor to save";var W=()=>Promise.resolve({persisted:false,noHost:true,reason:U});var H=W;var M="data/storage.json";var z=()=>{try{const n=new URL(document.baseURI);const d=n.pathname.match(/\/projects\/([^/]+)\/serve\//);if(d)return d[1];return n.hostname.split(".")[0]||""}catch{return location.hostname.split(".")[0]||""}};var Z=()=>{try{const n=new URL(document.baseURI);const d=n.pathname.indexOf("/serve/");if(d>=0)return n.origin+n.pathname.slice(0,d+"/serve/".length)+M}catch{}return"./"+M};var x=null;var N=()=>{if(!x){x=fetch(Z(),{cache:"no-store"}).then((n)=>{if(n.ok)return n.text();return n.status===404?"":null}).catch(()=>null).then((n)=>{if(n===null){x=null;return null}const d=new Map;if(!n)return d;let p;try{p=JSON.parse(n)}catch{console.warn("[omelette.storage] "+M+" is not valid JSON; treating the store as unreadable so a save cannot overwrite the "+"hand-edited bytes. Fix the JSON (or delete the file) to re-enable persistence.");x=null;return null}if(p===null||typeof p!=="object"||Array.isArray(p)){console.warn("[omelette.storage] "+M+" doesn't hold a JSON object; treating the store as unreadable so a save cannot "+"overwrite the hand-edited bytes. Make the top level a JSON object to re-enable persistence.");x=null;return null}const f=p;if("data"in f){const g=f.data;if(g===null||typeof g!=="object"||Array.isArray(g)){console.warn("[omelette.storage] "+M+' has a "data" field that is not a JSON object; treating the store as unreadable so a '+'save cannot overwrite the hand-edited bytes. Make "data" a JSON object to re-enable persistence.');x=null;return null}const h=f._meta;const y=h!==null&&typeof h==="object"?h.project:undefined;if(typeof y==="string"&&y!==""&&y!==z())return d;for(const m of Object.keys(g))d.set(m,g[m]);return d}for(const g of Object.keys(f)){if(g!=="_meta")d.set(g,f[g])}return d})}return x};var F=(n)=>H(M,JSON.stringify({_meta:{project:z(),version:1},data:Object.fromEntries(n)},null,2));var D=Promise.resolve();var $=(n)=>{const d=D.then(n);D=d.then(()=>{return},()=>{return});return d};var V=/sk-(?:ant-)?[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[a-z]-[A-Za-z0-9][A-Za-z0-9-]{9,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/;var Y=/password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|credential/i;var Q=(n,d,p)=>{if(V.test(d)||Y.test(n)&&typeof p==="string"&&p.length>=8){console.warn('[omelette.storage] the value for "'+n+'" looks like a credential. The storage file is a plaintext project file — visible to '+"everyone with project access and copied when the project is duplicated. Do not store secrets here.")}};var q={persisted:false,reason:"could not load the existing store — not overwriting it"};var X={persisted:false,reason:"stored value changed since a failed read — re-read this key before saving"};var P=new Set;var ee={get:(n)=>{if(typeof n!=="string"){return Promise.reject(new TypeError("storage.get: key must be a string"))}return $(N).then((d)=>{if(d===null){P.add(n);return null}P.delete(n);if(!d.has(n))return null;const p=d.get(n);return p==null?null:JSON.parse(JSON.stringify(p))})},set:(n,d)=>{if(typeof n!=="string"){return Promise.reject(new TypeError("storage.set: key must be a string"))}let p;try{p=JSON.stringify(d)}catch(g){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable ("+String(g)+")"))}if(p===undefined){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable"))}Q(n,p,d);const f=JSON.parse(p);return $(()=>N().then((g)=>{if(g===null)return q;if(P.has(n)){if(g.has(n))return X;P.delete(n)}g.set(n,f);return F(g)}))},delete:(n)=>{if(typeof n!=="string"){return Promise.reject(new TypeError("storage.delete: key must be a string"))}return $(()=>N().then((d)=>{if(d===null)return q;if(P.has(n)){if(d.has(n))return X;P.delete(n)}d.delete(n);return F(d)}))},keys:()=>$(N).then((n)=>n===null?[]:Array.from(n.keys()))};window.omelette={writeFile:(n,d)=>H(n,d).then((p)=>{if(!p.persisted&&!p.noHost){throw new Error(p.reason||"write failed")}}),storage:ee};if(A&&A!==window){const n=(e,t)=>{try{A.postMessage({__omelette_log:true,type:e,data:t},"*")}catch{}};["log","warn","error"].forEach((e)=>{const t=console[e];console[e]=(...a)=>{const u=a.map((s)=>{try{return typeof s==="object"?JSON.stringify(s):String(s)}catch{try{return String(s)}catch{return"[unstringifiable]"}}}).join(" ");n(e,u);t.apply(console,a)}});window.addEventListener("error",(e)=>{const t=e.target;if(t&&t!==window&&t.tagName){const a=t.src||t.href||"";n("resource_error",`${t.tagName} failed to load: ${a}`)}else{n("error",`${e.message||"Unknown error"} at ${e.filename||"?"}:${e.lineno||0}:${e.colno||0}`)}},true);window.addEventListener("unhandledrejection",(e)=>{const t=e.reason;const a=t instanceof Error?`${t.message} ${t.stack}`:String(t);n("error",`Unhandled rejection: ${a}`)});window.addEventListener("click",(e)=>{if(e.defaultPrevented||e.button!==0)return;if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;const t=e.composedPath?e.composedPath():[];const a=["button","input","select","textarea","summary","label"];let u=null;for(const v of t){if(!(v instanceof Element))continue;if(v.localName==="a"){if(!(v instanceof HTMLAnchorElement))return;u=v;break}if(a.indexOf(v.localName)!==-1)return}if(!u)return;if(u.isContentEditable)return;const s=u.closest("[contenteditable]");if(s&&s.getAttribute("contenteditable")!=="false")return;const S=(u.getAttribute("target")||"_self").toLowerCase();if(S!=="_self"&&S!=="_top"&&S!=="_parent")return;let _;try{_=new URL(u.href)}catch{return}if(_.protocol!=="http:"&&_.protocol!=="https:")return;if(location.origin==="null")return;if(_.origin===location.origin)return;e.preventDefault();window.open(_.href,"_blank","noopener,noreferrer")});const d=()=>{try{A.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(window.ResizeObserver)new ResizeObserver(d).observe(document.documentElement);const p=()=>{d();if(!document.querySelector('script[type="text/babel"],script[type="text/jsx"]'))return;const e=()=>document.getElementById("root")||document.querySelector("body > div[id]");const t=e()?.firstElementChild??null;let a=0;const u=()=>{const s=e();if(s&&s.firstElementChild!==t||++a>30){d();return}setTimeout(u,100)};setTimeout(u,100)};if(document.readyState==="complete")p();else window.addEventListener("load",p);const f={};let g=0;const h=(e)=>new Promise((t,a)=>{if(!I.length){a(new Error("claude.complete: no parent origin"));return}const u=`c${++g}`;const s=()=>setTimeout(()=>{delete f[u];a(new Error(`claude.complete: no data for ${J/1000}s`))},J);const S=s();f[u]={resolve:t,reject:a,text:"",t:S,arm:s};try{for(const _ of I){A.postMessage({__om_api:true,id:u,body:e},_)}}catch(_){clearTimeout(S);delete f[u];a(_)}});const y=8;const m=async(e,t)=>{if(!Array.isArray(e.messages)){throw new Error("claude.complete: tools require a messages array")}const a=e.messages.slice();const u={...e,tools:e.tools.map((_)=>{if(_===null||typeof _!=="object")return _;const v={};for(const o of Object.keys(_)){if(typeof _[o]!=="function")v[o]=_[o]}return v})};const s=u.tool_choice;const S=s!=null&&(s.type==="any"||s.type==="tool")?{...u,tool_choice:s.disable_parallel_tool_use!==undefined?{type:"auto",disable_parallel_tool_use:s.disable_parallel_tool_use}:{type:"auto"}}:u;for(let _=0;_<y;_++){const v=await h({..._===0?u:S,messages:a});const o=v.message;const r=o&&Array.isArray(o.content)?o.content:null;const l=r?r.filter((c)=>c?.type==="tool_use"):[];if(o?.stop_reason!=="tool_use"||l.length===0){return v.text}const i=[];for(const c of l){const k=t.get(c.name);if(!k){i.push({type:"tool_result",tool_use_id:c.id,content:`no handler for tool "${c.name}"`,is_error:true});continue}try{const b=await k(c.input);const E=typeof b==="string"?b:O(b)??"";i.push({type:"tool_result",tool_use_id:c.id,content:E})}catch(b){i.push({type:"tool_result",tool_use_id:c.id,content:String(b?.message??b??"tool handler failed"),is_error:true})}}a.push({role:"assistant",content:r},{role:"user",content:i})}throw new Error(`claude.complete: exceeded ${y} tool turns`)};window.claude={complete(e){const t=e;if(t!==null&&typeof t==="object"&&Array.isArray(t.tools)&&t.tools.some((a)=>a!==null&&typeof a==="object"&&typeof a.run==="function")){const a=new Map;for(const u of t.tools){if(u!==null&&typeof u==="object"&&typeof u.run==="function"){a.set(String(u.name),u.run)}}return m(t,a)}return h(e).then((a)=>a.text)}};const w={};let R=0;H=(e,t)=>new Promise((a)=>{if(!I.length){a({persisted:false,noHost:true,reason:U});return}const u=`f${++R}`;const s=setTimeout(()=>{delete w[u];a({persisted:false,noHost:true,reason:U})},G);w[u]={settle:a,t:s};try{for(const S of I){A.postMessage({__om_file:true,id:u,op:"write",path:e,content:t},S)}}catch{clearTimeout(s);delete w[u];a({persisted:false,noHost:true,reason:U})}});const O=(e)=>{try{return JSON.stringify(e)}catch{return JSON.stringify(String(e))}};window.addEventListener("message",(e)=>{if(I.indexOf(e.origin)<0)return;if(e.source!==A)return;const t=e.data;if(!t)return;if(t.type==="omelette-preview-refresh"){if(typeof t.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(t.token))return;const s=Math.max(1,Math.floor((t.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+t.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+s;C();return}if(t.__om_file_r){const s=w[t.id];if(!s)return;clearTimeout(s.t);delete w[t.id];s.settle(t.ok?{persisted:true}:{persisted:false,reason:t.error||"write failed"});return}if(t.__om_api_r){const s=f[t.id];if(!s)return;if(t.error!=null){clearTimeout(s.t);delete f[t.id];s.reject(new Error(t.error));return}if(t.chunk!=null){clearTimeout(s.t);s.t=s.arm();s.text+=t.chunk;return}if(t.done){clearTimeout(s.t);delete f[t.id];s.resolve({text:t.text!=null?t.text:s.text,message:t.message});return}return}if(!t.__om_eval)return;const a=t;const u=(s)=>{e.source.postMessage({...s,__om_eval_r:1,id:a.id},e.origin)};try{const s=(0,eval)(a.code);if(s&&typeof s.then==="function"){s.then((S)=>u({ok:1,v:O(S)}),(S)=>u({ok:0,e:String(S)}))}else{u({ok:1,v:O(s)})}}catch(s){u({ok:0,e:String(s)})}})}})();
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <script src="_ds/soulledger-current-ui-redesign-brief-02f39b44-de22-40b4-b34c-3065a6f44d55/_ds_bundle.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    html{background:#1c1c1e}body{margin:0;background:#1c1c1e;min-width:max-content;color:#e6e4df;font-family:'Archivo','Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+    p{margin:0}h1,h2,h3{margin:0;font-weight:inherit}pre{margin:0}
+  </style>
+</helmet>
+
+<section style="padding:56px 64px 32px;max-width:1240px;font-size:15px;line-height:1.7">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;color:#9a978f;margin-bottom:12px">SOULLEDGER · 规范 v1 · 账簿 × 卷宗 · Web / Next.js + Tailwind</div>
+  <h1 style="font-size:40px;line-height:1.15;font-weight:600;max-width:980px">改壳与原语，不画逐页。</h1>
+  <p style="color:#cfccc4;margin-top:16px;max-width:900px">这一版只覆盖 Web（官员端）。App 卷宗的差异（衬线卷名、40 px 姓名、印章）在第 4 节单列一行，本轮不出组件。所有颜色以 HSL 三元组交付，与 <span style="font-family:'IBM Plex Mono',monospace">app/globals.css</span> 现有格式一致；对比度按 WCAG 2.1 相对亮度实时计算，写在色板里。</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;font-size:13px;color:#9a978f">
+    <a href="#s1" style="border:1px solid #3a3a3d;padding:8px 14px">1 · 设计令牌</a>
+    <a href="#s2" style="border:1px solid #3a3a3d;padding:8px 14px">2 · 核心原语</a>
+    <a href="#s3" style="border:1px solid #3a3a3d;padding:8px 14px">3 · 页面原型</a>
+    <a href="#s4" style="border:1px solid #3a3a3d;padding:8px 14px">4 · 被推翻的规则</a>
+  </div>
+</section>
+
+<!-- ================= 1 · TOKENS ================= -->
+<section id="s1" data-screen-label="1 设计令牌" style="padding:40px 64px;border-top:1px solid #333">
+  <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#e6e4df;color:#1c1c1e;padding:3px 8px">1</span><h2 style="font-size:28px;font-weight:600">设计令牌</h2></div>
+
+  <div style="{{ docStyle }}">
+    <div style="width:1320px;margin-top:24px;background:var(--bg);color:var(--ink);padding:32px 40px 40px;font-size:13px;line-height:20px">
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>1.1 · 色板 · 深浅两套</span><span>对比度 = 对 canvas；文字类须 ≥ 4.5，线与焦点须 ≥ 3（仅焦点环、区块边界）</span></div>
+      <div style="display:grid;grid-template-columns:190px 1fr 250px 250px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:6px 0;border-bottom:1px solid var(--block)"><span>令牌</span><span style="font-family:'Archivo','Noto Sans SC',sans-serif">用在哪里</span><span>浅 · HSL · 对比</span><span>深 · HSL · 对比</span></div>
+      <sc-for list="{{ colorRows }}" as="c" hint-placeholder-count="20">
+        <div style="display:grid;grid-template-columns:190px 1fr 250px 250px;border-bottom:1px solid var(--rule);align-items:center;min-height:34px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ c.token }}</span>
+          <span style="color:var(--ink2);padding-right:16px">{{ c.role }}</span>
+          <span style="display:flex;gap:10px;align-items:center"><span style="{{ c.lsw }}"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ c.lhsl }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);margin-left:auto;padding-right:16px">{{ c.lcr }}</span></span>
+          <span style="display:flex;gap:10px;align-items:center"><span style="{{ c.dsw }}"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ c.dhsl }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);margin-left:auto">{{ c.dcr }}</span></span>
+        </div>
+      </sc-for>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:32px">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">1.2 · 领域状态 = 颜色 + 字形（不单靠颜色）</div>
+          <sc-for list="{{ statusRows }}" as="s" hint-placeholder-count="9">
+            <div style="display:grid;grid-template-columns:150px 110px 1fr;border-bottom:1px solid var(--rule);align-items:center;min-height:34px">
+              <span><span style="{{ s.badge }}">{{ s.glyph }} {{ s.zh }}</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ s.enum }}</span>
+              <span style="color:var(--ink2)">{{ s.token }}</span>
+            </div>
+          </sc-for>
+          <p style="color:var(--ink2);margin-top:10px">修掉两处撞色：已处置 / 轮回中原来相差 3° 色相，现在一个是墨色 ■、一个是强调蓝 ↻；补过原与轮回中同值，现在是警示色 ◇。系统错误与「不通过」同为 danger，但系统错误永远带 <b>!</b> 与文案，判决永远是徽章。</p>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">1.3 · 图表字面值（Recharts 读不到 CSS 变量）</div>
+          <div style="display:grid;grid-template-columns:130px 1fr 1fr;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:6px 0;border-bottom:1px solid var(--block)"><span>键</span><span>浅</span><span>深</span></div>
+          <sc-for list="{{ chartRows }}" as="c" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--rule);align-items:center;min-height:30px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+              <span>{{ c.k }}</span>
+              <span style="display:flex;gap:8px;align-items:center"><span style="{{ c.lsw }}"></span>{{ c.l }}</span>
+              <span style="display:flex;gap:8px;align-items:center"><span style="{{ c.dsw }}"></span>{{ c.d }}</span>
+            </div>
+          </sc-for>
+          <p style="color:var(--ink2);margin-top:10px">导出为 <span style="font-family:'IBM Plex Mono',monospace">lib/chart-colors.ts</span> 的 <span style="font-family:'IBM Plex Mono',monospace">CHART.light / CHART.dark</span> 两个对象，由主题 hook 选择，不再只有深色一份。小占比标签一律不画在扇区上：见 3.4 仪表盘的「图例账」。</p>
+        </div>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:32px 0 4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>1.4 · 字号 · 字重 · 行高（Web 七档，替换现有八档）</span><span>字重只用 400 / 500 / 600</span></div>
+      <div style="display:grid;grid-template-columns:130px 90px 180px 1fr 420px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:6px 0;border-bottom:1px solid var(--block)"><span>Tailwind</span><span>px / 行高</span><span>字体 · 字重</span><span style="font-family:'Archivo','Noto Sans SC',sans-serif">用在哪</span><span>样本</span></div>
+      <sc-for list="{{ typeRows }}" as="t" hint-placeholder-count="7">
+        <div style="display:grid;grid-template-columns:130px 90px 180px 1fr 420px;border-bottom:1px solid var(--rule);align-items:center;min-height:44px;padding:6px 0">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ t.tw }}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ t.px }}</span>
+          <span style="color:var(--ink2)">{{ t.font }}</span>
+          <span style="color:var(--ink2);padding-right:16px">{{ t.use }}</span>
+          <span style="{{ t.st }}">{{ t.sample }}</span>
+        </div>
+      </sc-for>
+      <p style="color:var(--ink2);margin-top:10px;max-width:1000px">字体（全部 SIL Open Font License 1.1，可商用、可随包分发）：Archivo（Omnibus-Type）· IBM Plex Mono（IBM）· Source Serif 4（Adobe）· Noto Sans SC / Noto Serif SC（Google / Adobe 思源）。无新增字体。等宽字的权限从「数字与编号」扩大到「栏目标签、表头、导航编号」——见第 4 节。</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:32px">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">1.5 · 线（五种，替换原四级）</div>
+          <sc-for list="{{ lineRows }}" as="l" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:110px 150px 1fr;border-bottom:1px solid var(--rule);align-items:center;min-height:48px;gap:12px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ l.name }}</span>
+              <span style="display:flex;flex-direction:column;gap:4px"><span style="{{ l.demo }}"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ l.tw }}</span></span>
+              <span style="color:var(--ink2)">{{ l.use }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">1.6 · 间距（4 px 基数，Tailwind 默认刻度的子集）</div>
+          <sc-for list="{{ spaceRows }}" as="s" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:60px 50px 70px 1fr;border-bottom:1px solid var(--rule);align-items:center;min-height:30px;gap:8px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ s.tw }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ s.px }}</span>
+              <span><span style="{{ s.bar }}"></span></span>
+              <span style="color:var(--ink2)">{{ s.use }}</span>
+            </div>
+          </sc-for>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:20px 0 4px;border-bottom:1px solid var(--block)">1.7 · 圆角 · 高度 · 动效</div>
+          <div style="display:grid;grid-template-columns:110px 1fr;border-bottom:1px solid var(--rule);padding:7px 0"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">圆角</span><span style="color:var(--ink2)"><span style="font-family:'IBM Plex Mono',monospace">rounded-none</span> 全部元素；<span style="font-family:'IBM Plex Mono',monospace">rounded-full</span> 只给头像。焦点环改方角。</span></div>
+          <div style="display:grid;grid-template-columns:110px 1fr;border-bottom:1px solid var(--rule);padding:7px 0"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">高度</span><span style="color:var(--ink2)">页面内零阴影，层级靠线。只有浮层（弹层、抽屉、菜单）用一档 <span style="font-family:'IBM Plex Mono',monospace">shadow-overlay</span> + 1 px 区块边界。</span></div>
+          <div style="display:grid;grid-template-columns:110px 1fr;border-bottom:1px solid var(--rule);padding:7px 0"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">控件高</span><span style="color:var(--ink2)">32 px（表格内 28 px）；393 px 下控件与行一律 ≥ 44 px 点击区。</span></div>
+          <div style="display:grid;grid-template-columns:110px 1fr;border-bottom:1px solid var(--rule);padding:7px 0"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">动效</span><span style="color:var(--ink2)"><span style="font-family:'IBM Plex Mono',monospace">duration-150 ease-out</span> 颜色；<span style="font-family:'IBM Plex Mono',monospace">duration-200</span> 抽屉位移。骨架屏不闪烁，400 ms 后才出现。</span></div>
+        </div>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:32px 0 4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>1.8 · 四种文明 · 保留编号法，撤销文明色，加一层「行程拓扑」</span><span>身份层 = 编号字符串 + 行程条形状 + 称谓；不进颜色层</span></div>
+      <div style="display:grid;grid-template-columns:150px 130px 150px 190px 150px 1fr;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:6px 0;border-bottom:1px solid var(--block)"><span>文明</span><span>编号法</span><span>编号样例</span><span>行程拓扑</span><span>图表标记</span><span style="font-family:'Archivo','Noto Sans SC',sans-serif">判官 · 称谓</span></div>
+      <sc-for list="{{ civs }}" as="c" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:150px 130px 150px 190px 150px 1fr;border-bottom:1px solid var(--rule);align-items:center;min-height:40px">
+          <span>{{ c.civ }}</span><span style="color:var(--ink2)">{{ c.law }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:14px">{{ c.no }}</span><span style="color:var(--ink2)">{{ c.shape }}</span><span style="font-family:'IBM Plex Mono',monospace">{{ c.mark }}</span><span style="color:var(--ink2)">{{ c.judge }}</span>
+        </div>
+      </sc-for>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:12px;color:var(--ink2)">
+        <p><b style="color:var(--ink);font-weight:600">保留</b>　编号法是唯一身份层。编号字符串由后端按文明生成，前端只按 <span style="font-family:'IBM Plex Mono',monospace">font-mono</span> 原样显示，不拼、不翻译。</p>
+        <p><b style="color:var(--ink);font-weight:600">撤销</b>　<span style="font-family:'IBM Plex Mono',monospace">--color-civ-cn / eu / eg</span> 删除；地府不再与强调色同值。文明名以文字出现，不出现 <span style="font-family:'IBM Plex Mono',monospace">CHINESE</span> 之类枚举。</p>
+        <p><b style="color:var(--ink);font-weight:600">新增</b>　行程条的形状随文明换（一条线 / 漏斗 / 河 / 岔路），图例相同。图表里区分文明用形状标记 + 直接标注，系列色不绑定文明。</p>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:32px 0 4px;border-bottom:1px solid var(--block)">1.9 · 落到 Tailwind（tailwind.config.ts 摘要）</div>
+      <pre style="font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:19px;color:var(--ink2);background:var(--s1);border:1px solid var(--line);padding:16px 20px;margin-top:12px;white-space:pre">{{ twSnippet }}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2 · PRIMITIVES ================= -->
+<section id="s2" data-screen-label="2 核心原语" style="padding:40px 64px;border-top:1px solid #333">
+  <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#e6e4df;color:#1c1c1e;padding:3px 8px">2</span><h2 style="font-size:28px;font-weight:600">核心原语 · 全部状态</h2></div>
+  <p style="font-size:14px;color:#cfccc4;margin-top:8px;max-width:900px">七列固定为：常态 / 悬停 / 按下 / 焦点 / 禁用 / 错误 / 加载。某原语没有某状态时写「不适用」并说明原因，不留空。深浅两套并排。</p>
+  <div style="display:flex;gap:40px;margin-top:24px;align-items:flex-start">
+    <sc-for list="{{ primThemes }}" as="th" hint-placeholder-count="2">
+      <div style="flex:none">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;margin-bottom:10px">{{ th.label }}</div>
+        <div style="{{ th.style }}">
+          <div style="width:1060px;background:var(--bg);color:var(--ink);padding:28px 32px 36px;font-size:13px;line-height:20px">
+            <div style="display:grid;grid-template-columns:120px repeat(7,1fr);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)"><span></span><span>常态</span><span>悬停</span><span>按下</span><span>焦点</span><span>禁用</span><span>错误</span><span>加载</span></div>
+            <sc-for list="{{ stateGrid }}" as="r" hint-placeholder-count="8">
+              <div style="display:grid;grid-template-columns:120px repeat(7,1fr);border-bottom:1px solid var(--rule);align-items:center;min-height:64px;padding:10px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2);line-height:16px">{{ r.name }}</span>
+                <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="7">
+                  <div style="padding-right:10px;display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+                    <span style="{{ c.st }}">{{ c.text }}</span>
+                    <span style="font-size:10.5px;line-height:14px;color:var(--ink3)">{{ c.note }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:28px 0 4px;border-bottom:1px solid var(--block)">表单字段 · 完整结构（标签 · 控件 · 说明 / 错误）</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding-top:14px">
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">理由 <span style="color:var(--ink3);font-weight:400">必填</span></label><div style="border:1px solid var(--line);background:var(--s1);height:32px;padding:0 10px;display:flex;align-items:center;color:var(--ink3)">说明移交原因</div><span style="font-size:12px;color:var(--ink3)">至少 20 字，审批人会看到</span></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">理由 <span style="color:var(--ink3);font-weight:400">必填</span></label><div style="border:1px solid var(--danger);box-shadow:inset 0 -2px 0 var(--danger);background:var(--s1);height:32px;padding:0 10px;display:flex;align-items:center">口业</div><span style="font-size:12px;color:var(--danger)">! 至少 20 字，现在 2 字</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink3)">role="alert" · aria-describedby</span></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">目标文明</label>
+                <div style="display:flex;flex-direction:column">
+                  <div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)"><span style="width:14px;height:14px;border:1px solid var(--block);box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span style="width:6px;height:6px;background:var(--acc)"></span></span>欧洲 · 天堂地狱 <span style="font-family:'IBM Plex Mono',monospace;color:var(--ink3);margin-left:auto">IX · XXVI</span></div>
+                  <div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)"><span style="width:14px;height:14px;border:1px solid var(--line);box-sizing:border-box"></span>埃及 · 杜阿特 <span style="font-family:'IBM Plex Mono',monospace;color:var(--ink3);margin-left:auto">§ 27 / 42</span></div>
+                  <div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule);color:var(--dis)"><span style="width:14px;height:14px;border:1px solid var(--dis);box-sizing:border-box"></span>中国 · 地府（来源，不可选）</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:28px">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">徽章 · 只有常态（非交互）</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 0">
+                  <sc-for list="{{ statusRows }}" as="s" hint-placeholder-count="9"><span style="{{ s.badge }}">{{ s.glyph }} {{ s.zh }}</span></sc-for>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:16px;padding:1px 6px;color:var(--ink3);border:1px dashed var(--ink3)">已删除 · 可恢复</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:16px;padding:1px 6px;background:var(--ink);color:var(--bg)">3</span>
+                </div>
+                <p style="font-size:12px;color:var(--ink2)">悬停 / 按下 / 焦点：不适用——徽章从不可点；需要点的是下面的「筛选签」。禁用：不适用。加载：随所在行出骨架。</p>
+              </div>
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">空状态 · 六种，文案各不同</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px">
+                  <div style="border:1px dashed var(--line2x);padding:10px 12px"><div style="font-weight:500">未至</div><div style="font-size:12px;color:var(--ink2)">流程还没走到这里。写明何时到。</div></div>
+                  <div style="border-bottom:1px solid var(--rule);padding:10px 12px"><div style="font-family:'IBM Plex Mono',monospace">+0</div><div style="font-size:12px;color:var(--ink2)">零：是值，照常显示数字。</div></div>
+                  <div style="border-bottom:1px solid var(--rule);padding:10px 12px"><div style="color:var(--ink3)">不适用</div><div style="font-size:12px;color:var(--ink2)">存活灵魂的「死亡」。用字，不用 —。</div></div>
+                  <div style="border-bottom:1px solid var(--rule);padding:10px 12px"><div style="color:var(--ink3)">未记录</div><div style="font-size:12px;color:var(--ink2)">应有而缺。只有这种用 —，悬停说明。</div></div>
+                  <div style="border:1px solid var(--line);padding:10px 12px"><div style="font-weight:500">无匹配</div><div style="font-size:12px;color:var(--ink2)">筛选后为空，附「清除筛选」。</div></div>
+                  <div style="border:1px solid var(--danger);background:var(--dangerBg);padding:10px 12px"><div style="font-weight:500;color:var(--danger)">! 加载失败</div><div style="font-size:12px;color:var(--ink2)">写原因，给「重试」。</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:28px 0 4px;border-bottom:1px solid var(--block)">表格 · 行的七种状态</div>
+            <div style="display:grid;grid-template-columns:36px 150px 110px 110px 1fr 80px 70px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:8px 0 4px;border-bottom:1px solid var(--block)"><span></span><span>姓名</span><span>文明</span><span>状态</span><span>编号 · 位置</span><span style="text-align:right">业力</span><span style="text-align:right">行状态</span></div>
+            <sc-for list="{{ tableStates }}" as="r" hint-placeholder-count="7">
+              <div style="{{ r.row }}">
+                <span style="{{ r.chk }}">{{ r.chkMark }}</span>
+                <span style="{{ r.name }}">{{ r.n }}</span>
+                <span style="color:var(--ink2)">{{ r.civ }}</span>
+                <span><span style="{{ r.badge }}">{{ r.b }}</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ r.no }}</span>
+                <span style="{{ r.karma }}">{{ r.k }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink3);text-align:right">{{ r.state }}</span>
+              </div>
+            </sc-for>
+            <p style="font-size:12px;color:var(--ink2);margin-top:8px">数字右对齐、等宽、带正负号；文字左对齐；操作列取消——整行可点进入详情，行尾不再放「查看 →」。表头 11 px 等宽，下接区块边界；行高 36（紧凑 28，仅审判队列用）。</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:28px">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">卡片 = 区块（无底色、无阴影、无圆角）</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:12px">
+                  <sc-for list="{{ cardStates }}" as="c" hint-placeholder-count="7">
+                    <div style="{{ c.box }}">
+                      <div style="{{ c.head }}"><span>{{ c.title }}</span><span style="color:var(--ink3)">{{ c.state }}</span></div>
+                      <sc-if value="{{ c.skel }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;gap:6px;padding-top:8px"><span style="height:10px;width:70%;background:var(--s3)"></span><span style="height:10px;width:45%;background:var(--s3)"></span></div>
+                      </sc-if>
+                      <sc-if value="{{ c.body }}" hint-placeholder-val="{{ true }}">
+                        <div style="{{ c.bodySt }}">{{ c.text }}</div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">加载骨架</div>
+                <div style="padding-top:12px;display:flex;flex-direction:column">
+                  <div style="display:grid;grid-template-columns:24px 1.4fr 1fr 1fr 60px;gap:12px;align-items:center;height:36px;border-bottom:1px solid var(--rule)"><span style="height:14px;width:14px;background:var(--s3)"></span><span style="height:10px;background:var(--s3)"></span><span style="height:10px;width:70%;background:var(--s3)"></span><span style="height:10px;width:50%;background:var(--s3)"></span><span style="height:10px;background:var(--s3)"></span></div>
+                  <div style="display:grid;grid-template-columns:24px 1.4fr 1fr 1fr 60px;gap:12px;align-items:center;height:36px;border-bottom:1px solid var(--rule)"><span style="height:14px;width:14px;background:var(--s3)"></span><span style="height:10px;width:80%;background:var(--s3)"></span><span style="height:10px;width:60%;background:var(--s3)"></span><span style="height:10px;width:65%;background:var(--s3)"></span><span style="height:10px;background:var(--s3)"></span></div>
+                  <div style="display:grid;grid-template-columns:24px 1.4fr 1fr 1fr 60px;gap:12px;align-items:center;height:36px;border-bottom:1px solid var(--rule)"><span style="height:14px;width:14px;background:var(--s3)"></span><span style="height:10px;width:60%;background:var(--s3)"></span><span style="height:10px;width:75%;background:var(--s3)"></span><span style="height:10px;width:40%;background:var(--s3)"></span><span style="height:10px;background:var(--s3)"></span></div>
+                </div>
+                <p style="font-size:12px;color:var(--ink2);margin-top:8px">只有「加载」一种状态。形状照最终版式画（同列宽、同行高），加载完成不跳版。表头、分页、筛选条不做骨架，先渲染真的。<span style="font-family:'IBM Plex Mono',monospace">aria-busy="true"</span> 挂在表格上。</p>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:28px">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">弹层 · 常态 / 提交中 / 错误</div>
+                <div style="position:relative;height:300px;background:var(--scrim);margin-top:12px;display:flex;align-items:center;justify-content:center">
+                  <div style="width:380px;background:var(--bg);border:1px solid var(--block);box-shadow:var(--shadow)">
+                    <div style="padding:14px 18px;border-bottom:1px solid var(--block);font-size:16px;line-height:24px;font-weight:600;display:flex;justify-content:space-between"><span>删除「沈青梧」？</span><span style="font-size:13px;font-weight:400;color:var(--ink3)">Esc</span></div>
+                    <div style="padding:14px 18px;color:var(--ink2)">会移入回收站，不会真的抹去。可在「系统设置 › 回收站」恢复，其审判、处置记录一并保留。</div>
+                    <div style="margin:0 18px;padding:8px 10px;background:var(--dangerBg);color:var(--danger);font-size:12px">! 上次提交失败：网络中断。再试一次。</div>
+                    <div style="padding:14px 18px;display:flex;gap:8px;justify-content:flex-end"><span style="height:32px;padding:0 14px;display:flex;align-items:center;font-weight:500;color:var(--ink2)">取消</span><span style="height:32px;padding:0 14px;display:flex;align-items:center;font-weight:500;border:1px solid var(--danger);color:var(--danger)">移入回收站</span><span style="height:32px;padding:0 14px;display:flex;align-items:center;font-weight:500;border:1px solid var(--line);color:var(--dis);background:var(--disBg)">处理中…</span></div>
+                  </div>
+                </div>
+                <p style="font-size:12px;color:var(--ink2);margin-top:8px">弹层只放「需要确认的一句话」。标题 16/600，下接区块边界；按钮右对齐，破坏性动作用次按钮 + 危险色，不用实心红。三个按钮同框是为了示意三种状态，实际只出现其一。</p>
+              </div>
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">抽屉 · 右侧 480 px · 不离开列表看详情</div>
+                <div style="position:relative;height:300px;background:var(--s1);margin-top:12px;overflow:hidden;border:1px solid var(--line)">
+                  <div style="padding:10px 14px;display:flex;flex-direction:column;gap:10px;opacity:.5"><span style="height:10px;width:60%;background:var(--s3)"></span><span style="height:10px;width:50%;background:var(--s3)"></span><span style="height:10px;width:70%;background:var(--s3)"></span></div>
+                  <div style="position:absolute;right:0;top:0;bottom:0;width:260px;background:var(--bg);border-left:1px solid var(--block);box-shadow:var(--shadow)">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:16px;font-weight:600">沈青梧</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">J / K 上下条 · Esc</span></div>
+                    <div style="padding:10px 16px;display:grid;grid-template-columns:52px 1fr;gap:6px 10px;font-size:12px"><span style="color:var(--ink3)">状态</span><span>■ 已处置</span><span style="color:var(--ink3)">位置</span><span>救濟門 · 十七</span><span style="color:var(--ink3)">余额</span><span style="font-family:'IBM Plex Mono',monospace">+347</span></div>
+                    <div style="padding:6px 16px;font-size:12px;color:var(--acc);text-decoration:underline">打开完整卷宗 →</div>
+                  </div>
+                </div>
+                <p style="font-size:12px;color:var(--ink2);margin-top:8px">抽屉加载时内部出骨架；错误时在抽屉头下出错误条。焦点锁定在抽屉内，关闭后回到触发行。</p>
+              </div>
+            </div>
+
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:28px 0 4px;border-bottom:1px solid var(--block)">页头 · 面包屑 · 用户菜单（壳的上半）</div>
+            <div style="border:1px solid var(--line);margin-top:12px">
+              <div style="display:flex;align-items:center;gap:14px;padding:0 20px;height:40px;border-bottom:1px solid var(--block);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2)">
+                <span style="text-decoration:underline">灵魂业务</span><span style="color:var(--ink3)">/</span><span style="outline:2px solid var(--acc);outline-offset:2px">灵魂管理</span><span style="color:var(--ink3)">/</span><span style="color:var(--ink);font-weight:600" aria-current="page">沈青梧</span>
+                <span style="margin-left:auto;display:flex;gap:16px;align-items:center"><span>通知 <span style="background:var(--ink);color:var(--bg);padding:0 5px">3</span></span><span style="color:var(--ink);background:var(--s2);padding:4px 8px">系统管理员 ▾</span></span>
+              </div>
+              <div style="display:flex;gap:24px;padding:16px 20px;align-items:flex-start">
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;line-height:28px;font-weight:600">沈青梧</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:16px;padding:1px 6px;border:1px solid var(--ink)">■ 已处置</span><span style="color:var(--ink2)">中国地府 · 第五殿 · 阎罗王</span></div>
+                  <p style="font-size:12px;color:var(--ink2)">面包屑四态：链接（悬停下划线）· 焦点（方角 2 px 强调环）· 当前页（600，不可点，aria-current）· 加载（当前页位出 80 px 骨架）。连接状态从页头移走，只在断线时出现在页头下一条警示条。</p>
+                </div>
+                <div style="width:220px;border:1px solid var(--block);background:var(--bg);box-shadow:var(--shadow);font-size:13px">
+                  <div style="padding:8px 12px;border-bottom:1px solid var(--rule);color:var(--ink3);font-size:12px">系统管理员 · ADMIN</div>
+                  <div style="padding:8px 12px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between"><span>语言</span><span style="color:var(--ink2)">简体中文 ›</span></div>
+                  <div style="padding:8px 12px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;background:var(--s2)"><span>主题</span><span style="color:var(--ink2)">跟随系统 ›</span></div>
+                  <div style="padding:8px 12px;border-bottom:1px solid var(--rule)">设置</div>
+                  <div style="padding:8px 12px">登出</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:28px 0 4px;border-bottom:1px solid var(--block)">侧栏与导航 · 分组展开时的样子</div>
+            <div style="display:grid;grid-template-columns:200px 1fr;gap:28px;padding-top:12px">
+              <div style="border:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+                <div style="padding:10px 14px;border-bottom:1px solid var(--block);font-weight:600">SOULLEDGER</div>
+                <div style="padding:7px 14px;border-bottom:1px solid var(--rule);color:var(--ink2)">01 概览</div>
+                <div style="padding:7px 14px;border-bottom:1px solid var(--rule);color:var(--ink)">02 灵魂业务 <span style="float:right">−</span></div>
+                <div style="padding:6px 14px 6px 32px;border-bottom:1px solid var(--rule);background:var(--s2);box-shadow:inset 3px 0 0 var(--ink);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:12.5px;font-weight:500">灵魂管理</div>
+                <div style="padding:6px 14px 6px 32px;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:12.5px;color:var(--ink2);display:flex;justify-content:space-between"><span>审判队列</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px">2</span></div>
+                <div style="padding:6px 14px 6px 32px;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;font-size:12.5px;color:var(--ink2)">处置 · 轮回</div>
+                <div style="padding:7px 14px;border-bottom:1px solid var(--rule);color:var(--ink2)">03 流程协作 <span style="float:right">+</span></div>
+                <div style="padding:7px 14px;border-bottom:1px solid var(--rule);color:var(--ink2)">04 组织与领域 <span style="float:right">+</span></div>
+                <div style="padding:7px 14px;border-bottom:1px solid var(--rule);color:var(--ink2)">05 社交 <span style="float:right">+</span></div>
+                <div style="padding:7px 14px;border-bottom:1px solid var(--rule);color:var(--ink2)">06 系统设置 <span style="float:right">+</span></div>
+                <div style="padding:30px 14px 10px;color:var(--ink3);font-size:10.5px">⌘K 跳转 · v0.1</div>
+              </div>
+              <div style="color:var(--ink2);font-size:12.5px;display:flex;flex-direction:column;gap:8px">
+                <p>一次只展开一组（手风琴），当前页所在组默认展开。一级 = 等宽编号 + 组名，不可点，只切换展开；二级 = 页面，可点。</p>
+                <p>当前项：<b style="color:var(--ink)">surface-2 底 + 左 3 px 墨线 + 500</b>。不再用琥珀色整块填充六个组。</p>
+                <p>二级项右侧可挂等宽计数（审判队列 2），只给「有待办」的页面，不给统计型页面。</p>
+                <p>宽 200 px；≤ 1024 px 收成 56 px 编号栏（01–06），悬停展开浮层；393 px 下变抽屉，由页头 ☰ 打开。</p>
+                <p>无权限的页面不显示（不是灰掉）；「禁用」列只用于维护中的页面，带「维护中」字样。</p>
+                <p>底部原来的暗条删除；版本号与 ⌘K 提示放在最底一行。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- ================= 3 · ARCHETYPES ================= -->
+<section id="s3" data-screen-label="3 页面原型" style="padding:40px 64px;border-top:1px solid #333">
+  <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#e6e4df;color:#1c1c1e;padding:3px 8px">3</span><h2 style="font-size:28px;font-weight:600">四种页面原型 · 同一个壳</h2></div>
+  <p style="font-size:14px;color:#cfccc4;margin-top:8px;max-width:960px">壳 = 200 px 侧栏 + 40 px 页头（面包屑 · 通知 · 用户菜单）+ 内容区左右 40 px 边距。内容区不限最大宽度，表格拉满；只有详情页的引文行限 72 字宽。</p>
+  <sc-for list="{{ arch }}" as="a" hint-placeholder-count="4">
+    <div style="margin-top:40px">
+      <div style="display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;border-bottom:1px solid #3a3a3d;padding-bottom:8px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#9a978f">{{ a.no }}</span>
+        <span style="font-size:22px;font-weight:600">{{ a.title }}</span>
+        <span style="font-size:13px;color:#9a978f">套用于：{{ a.covers }}</span>
+      </div>
+      <div style="display:flex;gap:40px;margin-top:20px;align-items:flex-start">
+        <sc-for list="{{ a.vs }}" as="v" hint-placeholder-count="3">
+          <div style="flex:none">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f;margin-bottom:10px">{{ v.label }}</div>
+            <div style="{{ v.style }}">
+              <div style="width:var(--w);min-height:var(--h);background:var(--bg);color:var(--ink);font-size:13px;line-height:20px;display:flex;position:relative;overflow:hidden">
+                <nav style="display:var(--side);flex-direction:column;width:200px;flex:none;border-right:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:11.5px">
+                  <div style="padding:0 14px;height:40px;display:flex;align-items:center;border-bottom:1px solid var(--block);font-weight:600">SOULLEDGER</div>
+                  <sc-for list="{{ v.nav }}" as="n" hint-placeholder-count="12">
+                    <div style="{{ n.st }}"><span>{{ n.label }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">{{ n.tail }}</span></div>
+                  </sc-for>
+                  <div style="margin-top:auto;padding:10px 14px;color:var(--ink3);font-size:10.5px">⌘K 跳转 · v0.1</div>
+                </nav>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                  <header style="display:flex;align-items:center;gap:12px;padding:0 var(--pad);height:var(--hh);border-bottom:1px solid var(--block);font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink2);flex:none">
+                    <span style="display:var(--mob);font-size:16px;color:var(--ink);width:28px">☰</span>
+                    <span style="display:var(--side);gap:8px"><span>{{ v.c1 }}</span><span style="color:var(--ink3)">/</span><span>{{ v.c2 }}</span><span style="color:var(--ink3)">/</span><b style="color:var(--ink);font-weight:600">{{ v.c3 }}</b></span>
+                    <span style="display:var(--mob);color:var(--ink);font-weight:600">{{ v.c3 }}</span>
+                    <span style="margin-left:auto;display:flex;gap:14px;align-items:center"><span>通知 <span style="background:var(--ink);color:var(--bg);padding:0 5px">3</span></span><span style="display:var(--side)">系统管理员 ▾</span><span style="display:var(--mob)">我</span></span>
+                  </header>
+
+                  <sc-if value="{{ v.isList }}" hint-placeholder-val="{{ false }}">
+                    <main style="padding:20px var(--pad) 32px;display:flex;flex-direction:column">
+                      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding-bottom:14px">
+                        <h1 style="font-size:22px;line-height:28px;font-weight:600">灵魂</h1>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink3)">33</span>
+                        <span style="margin-left:auto;display:flex;gap:8px">
+                          <span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500">+ 登记</span>
+                          <span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;background:var(--ink);color:var(--bg);font-weight:500">进入审判队列 · 2</span>
+                        </span>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--fcols);gap:8px;padding:10px 0;border-top:1px solid var(--block);border-bottom:1px solid var(--line)">
+                        <span style="height:var(--ctl);border:1px solid var(--line);background:var(--s1);display:flex;align-items:center;padding:0 10px;color:var(--ink3)">搜索姓名或 ID</span>
+                        <span style="display:var(--dskf);height:var(--ctl);border:1px solid var(--block);background:var(--s1);align-items:center;padding:0 10px;justify-content:space-between"><span>文明 · 全部</span><span style="color:var(--ink3)">▾</span></span>
+                        <span style="display:var(--dskf);height:var(--ctl);border:1px solid var(--block);background:var(--s2);align-items:center;padding:0 10px;justify-content:space-between;box-shadow:inset 0 -2px 0 var(--acc)"><span>状态 · 审判中</span><span style="color:var(--ink3)">×</span></span>
+                        <span style="display:var(--dskf);height:var(--ctl);border:1px solid var(--line);background:var(--s1);align-items:center;padding:0 10px;justify-content:space-between"><span>业力 · 不限</span><span style="color:var(--ink3)">▾</span></span>
+                        <span style="display:var(--dskf);height:var(--ctl);align-items:center;gap:8px;color:var(--ink2)"><span style="width:14px;height:14px;border:1px solid var(--block);box-sizing:border-box"></span>显示已删除</span>
+                        <span style="display:var(--mobf);height:var(--ctl);border:1px solid var(--block);align-items:center;justify-content:center;padding:0 12px;font-weight:500">筛选 · 1</span>
+                      </div>
+                      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--block);font-size:13px">
+                        <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">已选 2 / 33</span>
+                        <span style="text-decoration:underline">移交…</span><span style="text-decoration:underline">导出</span><span style="text-decoration:underline;color:var(--danger)">移入回收站</span>
+                        <span style="margin-left:auto;color:var(--ink2)">取消选择 · Esc</span>
+                      </div>
+                      <div style="display:var(--dsk)">
+                        <div style="display:grid;grid-template-columns:36px 1.5fr 1.1fr 110px 1.3fr 90px 150px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding:8px 0 4px;border-bottom:1px solid var(--block)"><span></span><span>姓名 ↑</span><span>文明</span><span>状态</span><span>编号 · 位置</span><span style="text-align:right">业力</span><span style="text-align:right">死亡</span></div>
+                        <sc-for list="{{ souls }}" as="s" hint-placeholder-count="8">
+                          <div style="{{ s.row }}">
+                            <span style="{{ s.chk }}">{{ s.cm }}</span>
+                            <span style="display:flex;flex-direction:column"><span style="font-weight:500">{{ s.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);line-height:14px">{{ s.id }}</span></span>
+                            <span style="color:var(--ink2)">{{ s.civ }}</span>
+                            <span><span style="{{ s.badge }}">{{ s.b }}</span></span>
+                            <span style="{{ s.noSt }}">{{ s.no }}</span>
+                            <span style="{{ s.karma }}">{{ s.k }}</span>
+                            <span style="{{ s.deathSt }}">{{ s.death }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display:var(--mobb)">
+                        <sc-for list="{{ souls }}" as="s" hint-placeholder-count="8">
+                          <div style="{{ s.mrow }}">
+                            <span style="{{ s.chk }}">{{ s.cm }}</span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                              <div style="display:flex;gap:8px;align-items:baseline;justify-content:space-between"><span style="font-weight:500">{{ s.n }}</span><span style="{{ s.karma }}">{{ s.k }}</span></div>
+                              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink2)"><span style="{{ s.badge }}">{{ s.b }}</span><span>{{ s.civ }}</span><span style="font-family:'IBM Plex Mono',monospace">{{ s.no }}</span></div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:12px;padding-top:12px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink2)">
+                        <span>1–20 / 33</span>
+                        <span style="margin-left:auto;display:flex;gap:4px">
+                          <span style="height:var(--ctl);min-width:var(--ctl);display:flex;align-items:center;justify-content:center;color:var(--dis)">‹</span>
+                          <span style="height:var(--ctl);min-width:var(--ctl);display:flex;align-items:center;justify-content:center;border:1px solid var(--block);color:var(--ink);font-weight:600">1</span>
+                          <span style="height:var(--ctl);min-width:var(--ctl);display:flex;align-items:center;justify-content:center">2</span>
+                          <span style="height:var(--ctl);min-width:var(--ctl);display:flex;align-items:center;justify-content:center">›</span>
+                        </span>
+                      </div>
+                    </main>
+                  </sc-if>
+
+                  <sc-if value="{{ v.isDetail }}" hint-placeholder-val="{{ false }}">
+                    <main style="padding:14px var(--pad) 40px">
+                      <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--block)">
+                        <h1 style="font-size:22px;line-height:28px;font-weight:600">沈青梧</h1>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:16px;padding:1px 6px;border:1px solid var(--ink)">■ 已处置</span>
+                        <span style="color:var(--ink2)">中国地府 · 第五殿 · 阎罗王</span>
+                        <span style="margin-left:auto;display:flex;gap:8px">
+                          <span style="height:var(--ctl);padding:0 12px;display:flex;align-items:center;font-weight:500;color:var(--ink2)">编辑</span>
+                          <span style="height:var(--ctl);padding:0 12px;display:flex;align-items:center;font-weight:500;border:1px solid var(--danger);color:var(--danger)">移入回收站</span>
+                          <span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;font-weight:500;background:var(--ink);color:var(--bg)">安排轮回</span>
+                        </span>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--steps);border-bottom:1px solid var(--block);font-family:'IBM Plex Mono',monospace;font-size:11px">
+                        <div style="padding:8px 10px 8px 0;border-right:1px solid var(--rule)"><div style="color:var(--ink3)">01 存活</div><div>1951-03-12 — 2026-06-08</div></div>
+                        <div style="padding:8px 10px;border-right:1px solid var(--rule)"><div style="color:var(--ink3)">02 审判</div><div>06-09 开庭 · 06-15 判</div></div>
+                        <div style="padding:8px 10px;border-right:1px solid var(--rule);background:var(--s2);box-shadow:inset 0 -3px 0 var(--ink)"><div style="font-weight:600">03 处置 · 当前</div><div>至 2029-06-15</div></div>
+                        <div style="padding:8px 10px"><div style="color:var(--ink3)">04 轮回</div><div style="color:var(--ink3)">未至</div></div>
+                      </div>
+                      <div style="padding:10px 0 12px;border-bottom:1px solid var(--line);overflow-x:auto">
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);display:flex;justify-content:space-between;gap:10px"><span>行程 · 十殿一线</span><span>━ 已行 ┅ 待行 ▪ 现在</span></div>
+                        <div style="display:grid;grid-template-columns:repeat(13,minmax(60px,1fr));min-width:820px;margin-top:8px">
+                          <sc-for list="{{ route }}" as="r" hint-placeholder-count="13">
+                            <div style="padding-right:4px"><div style="{{ r.line }}"></div><div style="{{ r.mark }}"></div><div style="{{ r.name }}">{{ r.label }}</div></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--cols);gap:0 40px">
+                        <div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block)">甲 · 身份</div>
+                          <div style="display:grid;grid-template-columns:72px 1fr">
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">ID</span><span style="padding:6px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:12px;word-break:break-all">38fb6bc2-9e41-4c07-b0a3-5d1e7f2a8c94</span>
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">文明</span><span style="padding:6px 0;border-bottom:1px solid var(--rule)">中国 · 地府</span>
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">出生</span><span style="padding:6px 0;border-bottom:1px solid var(--rule)"><span style="font-family:'IBM Plex Mono',monospace">1951-03-12</span> · 苏州</span>
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">死亡</span><span style="padding:6px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace">2026-06-08 15:28</span>
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);color:var(--ink3)">位置</span><span style="padding:6px 0;border-bottom:1px solid var(--rule)">第五殿 · 救濟門 · 十七</span>
+                          </div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:22px 0 4px;border-bottom:1px solid var(--block);display:grid;grid-template-columns:1fr 70px 70px 70px"><span>乙 · 功过</span><span style="text-align:right">收</span><span style="text-align:right">支</span><span style="text-align:right">结</span></div>
+                          <div style="display:grid;grid-template-columns:1fr 70px 70px 70px;font-family:'IBM Plex Mono',monospace">
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif">功德</span><span style="padding:6px 0;border-bottom:1px solid var(--rule);text-align:right;color:var(--ok)">1,284</span><span style="border-bottom:1px solid var(--rule)"></span><span style="border-bottom:1px solid var(--rule)"></span>
+                            <span style="padding:6px 0;border-bottom:1px solid var(--block);font-family:'Archivo','Noto Sans SC',sans-serif">罪业</span><span style="border-bottom:1px solid var(--block)"></span><span style="padding:6px 0;border-bottom:1px solid var(--block);text-align:right;color:var(--danger)">937</span><span style="border-bottom:1px solid var(--block)"></span>
+                            <span style="padding:7px 0;border-bottom:3px double var(--block);font-family:'Archivo','Noto Sans SC',sans-serif;font-weight:600">余额</span><span style="border-bottom:3px double var(--block)"></span><span style="border-bottom:3px double var(--block)"></span><span style="padding:7px 0;border-bottom:3px double var(--block);text-align:right;font-weight:600;font-size:16px">+347</span>
+                          </div>
+                          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3);padding-top:6px"><span>42 条记录</span><span style="text-decoration:underline">展开明细</span></div>
+                        </div>
+                        <div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:18px 0 4px;border-bottom:1px solid var(--block);display:grid;grid-template-columns:var(--jcols)"><span style="grid-column:var(--jlab);padding-bottom:var(--jlabpad)">丙 · 审判 1</span><span>殿 · 判官</span><span>编号</span><span style="text-align:right">判决</span></div>
+                          <div style="display:grid;grid-template-columns:var(--jcols)">
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:12px">06-15 14:12</span><span style="padding:6px 0;border-bottom:1px solid var(--rule)">第五殿 · 阎罗王</span><span style="padding:6px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:12px">救濟門 · 十七</span><span style="padding:6px 0;border-bottom:1px solid var(--rule);text-align:right;color:var(--warn)">◇ 补过</span>
+                          </div>
+                          <div style="padding:14px 0 16px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:var(--vcols);gap:6px 16px">
+                            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);padding-top:5px">判词</span>
+                            <div style="max-width:72ch">
+                              <blockquote style="margin:0;padding-left:14px;border-left:2px solid var(--ink);font-family:'Source Serif 4','Noto Serif SC',serif;font-size:20px;line-height:32px;text-wrap:pretty">功过相抵，善念居多；惟口业未净，暂入救濟門十七，三年补过，期满转生。</blockquote>
+                              <div style="padding-left:16px;margin-top:4px;font-size:12px;color:var(--ink2)">— 第五殿 阎罗王</div>
+                            </div>
+                          </div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:22px 0 4px;border-bottom:1px solid var(--block);display:grid;grid-template-columns:var(--jcols)"><span style="grid-column:var(--jlab);padding-bottom:var(--jlabpad)">丁 · 处置 1</span><span>目的地</span><span>性质</span><span style="text-align:right">期满</span></div>
+                          <div style="display:grid;grid-template-columns:var(--jcols)">
+                            <span style="padding:6px 0;border-bottom:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:12px">06-16 08:00</span><span style="padding:6px 0;border-bottom:1px solid var(--rule)">救濟門 · 十七</span><span style="padding:6px 0;border-bottom:1px solid var(--rule)">非永恒 · 三年</span><span style="padding:6px 0;border-bottom:1px solid var(--rule);text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px">2029-06-15</span>
+                          </div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:22px 0 4px;border-bottom:1px solid var(--block)">戊 · 轮回 0</div>
+                          <div style="margin-top:8px;border:1px dashed var(--line2x);padding:8px 12px;color:var(--ink2)"><b style="color:var(--ink);font-weight:500">未至</b> · 处置期满（2029-06-15）后记入</div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:22px 0 4px;border-bottom:1px solid var(--block)">己 · 事件日志 5</div>
+                          <div style="display:grid;grid-template-columns:var(--lcols);font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink2)">
+                            <span style="padding:5px 0;border-bottom:1px solid var(--rule)">06-16 08:00:00</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;color:var(--ink)">处置执行</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);display:var(--side);color:var(--ink3)">DISPOSITION_EXECUTED</span>
+                            <span style="padding:5px 0;border-bottom:1px solid var(--rule)">06-15 14:12:40</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;color:var(--ink)">判决落定</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);display:var(--side);color:var(--ink3)">VERDICT_RENDERED</span>
+                            <span style="padding:5px 0;border-bottom:1px solid var(--rule)">06-09 09:00:00</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;color:var(--ink)">开庭</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);display:var(--side);color:var(--ink3)">JUDGMENT_OPENED</span>
+                            <span style="padding:5px 0;border-bottom:1px solid var(--rule)">06-08 15:31:02</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;color:var(--ink)">标记死亡</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);display:var(--side);color:var(--ink3)">DEATH_MARKED</span>
+                            <span style="padding:5px 0;border-bottom:1px solid var(--rule)">06-08 15:28:54</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);font-family:'Archivo','Noto Sans SC',sans-serif;color:var(--ink)">立户</span><span style="padding:5px 0;border-bottom:1px solid var(--rule);display:var(--side);color:var(--ink3)">SOUL_CREATED</span>
+                          </div>
+                        </div>
+                      </div>
+                    </main>
+                  </sc-if>
+
+                  <sc-if value="{{ v.isForm }}" hint-placeholder-val="{{ false }}">
+                    <main style="padding:20px var(--pad) 40px">
+                      <div style="padding-bottom:12px;border-bottom:1px solid var(--block)">
+                        <h1 style="font-size:22px;line-height:28px;font-weight:600">发起移交</h1>
+                        <p style="color:var(--ink2);margin-top:2px">把一个灵魂转交到另一文明审理。需两级审批。</p>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--cols);gap:24px 48px;padding-top:18px">
+                        <div style="display:flex;flex-direction:column;gap:18px;max-width:560px">
+                          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">灵魂</label><div style="height:var(--ctl);border:1px solid var(--line);background:var(--disBg);color:var(--ink2);display:flex;align-items:center;padding:0 10px;gap:10px">沈青梧 <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">38fb6bc2</span></div><span style="font-size:12px;color:var(--ink3)">从详情页带入，不可改</span></div>
+                          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">目标文明</label>
+                            <div style="display:flex;flex-direction:column;border-top:1px solid var(--block)">
+                              <div style="display:flex;gap:10px;align-items:center;min-height:var(--ctl);border-bottom:1px solid var(--rule);color:var(--dis)"><span style="width:14px;height:14px;border:1px solid var(--dis);box-sizing:border-box;flex:none"></span>中国 · 地府 <span style="margin-left:auto;font-size:12px">来源</span></div>
+                              <div style="display:flex;gap:10px;align-items:center;min-height:var(--ctl);border-bottom:1px solid var(--rule);background:var(--s2)"><span style="width:14px;height:14px;border:1px solid var(--block);box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:6px;height:6px;background:var(--acc)"></span></span>欧洲 · 天堂地狱 <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;color:var(--ink3)">IX · XXVI</span></div>
+                              <div style="display:flex;gap:10px;align-items:center;min-height:var(--ctl);border-bottom:1px solid var(--rule)"><span style="width:14px;height:14px;border:1px solid var(--line);box-sizing:border-box;flex:none"></span>埃及 · 杜阿特 <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;color:var(--ink3)">§ 27 / 42</span></div>
+                              <div style="display:flex;gap:10px;align-items:center;min-height:var(--ctl);border-bottom:1px solid var(--rule)"><span style="width:14px;height:14px;border:1px solid var(--line);box-sizing:border-box;flex:none"></span>希腊 · 冥府 <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;color:var(--ink3)">523a</span></div>
+                            </div>
+                          </div>
+                          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">目标界域</label><div style="height:var(--ctl);border:1px solid var(--block);background:var(--s1);display:flex;align-items:center;padding:0 10px;justify-content:space-between"><span>第九层 · <span style="font-family:'IBM Plex Mono',monospace">IX · XXVI</span></span><span style="color:var(--ink3)">▾</span></div></div>
+                          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:500">理由 <span style="color:var(--ink3);font-weight:400">必填</span></label><div style="min-height:72px;border:1px solid var(--danger);box-shadow:inset 0 -2px 0 var(--danger);background:var(--s1);padding:8px 10px">口业</div><span style="font-size:12px;color:var(--danger)">! 至少 20 字，现在 2 字</span></div>
+                          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--block)">
+                            <span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;background:var(--ink);color:var(--bg);font-weight:500;margin-top:10px">提交审批</span>
+                            <span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;border:1px solid var(--block);font-weight:500;margin-top:10px">存草稿</span>
+                            <span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;color:var(--ink2);font-weight:500;margin-top:10px">放弃…</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding-bottom:4px;border-bottom:1px solid var(--block)">审批流 · 跨文明移交</div>
+                          <div style="display:grid;grid-template-columns:24px 1fr auto;border-bottom:1px solid var(--rule);padding:7px 0"><span style="font-family:'IBM Plex Mono',monospace;color:var(--ink3)">1</span><span>来源文明 · 第五殿</span><span style="color:var(--ink3)">待提交</span></div>
+                          <div style="display:grid;grid-template-columns:24px 1fr auto;border-bottom:1px solid var(--rule);padding:7px 0"><span style="font-family:'IBM Plex Mono',monospace;color:var(--ink3)">2</span><span>目标文明 · 米诺斯</span><span style="color:var(--ink3)">—</span></div>
+                        </div>
+                      </div>
+                      <div style="position:absolute;inset:0;background:var(--scrim);display:flex;align-items:var(--malign);justify-content:center;padding:var(--mpad)">
+                        <div style="width:var(--mw);background:var(--bg);border:1px solid var(--block);box-shadow:var(--shadow)">
+                          <div style="padding:14px 18px;border-bottom:1px solid var(--block);font-size:16px;line-height:24px;font-weight:600">放弃这份移交草稿？</div>
+                          <div style="padding:14px 18px;color:var(--ink2)">草稿会移入回收站，可在「系统设置 › 回收站」找回。已填写的理由一并保留。</div>
+                          <div style="padding:6px 18px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;font-weight:500;color:var(--ink2)">继续填写</span><span style="height:var(--ctl);padding:0 14px;display:flex;align-items:center;font-weight:500;border:1px solid var(--danger);color:var(--danger)">放弃并移入回收站</span></div>
+                        </div>
+                      </div>
+                    </main>
+                  </sc-if>
+
+                  <sc-if value="{{ v.isDash }}" hint-placeholder-val="{{ false }}">
+                    <main style="padding:20px var(--pad) 40px">
+                      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding-bottom:12px">
+                        <h1 style="font-size:22px;line-height:28px;font-weight:600">概览</h1>
+                        <span style="margin-left:auto;display:flex;border:1px solid var(--block);font-size:12px"><span style="padding:4px 10px;background:var(--ink);color:var(--bg)">管理员</span><span style="padding:4px 10px">操作员</span></span>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--todo);border-top:1px solid var(--block);border-bottom:1px solid var(--block)">
+                        <div style="padding:var(--todoPad0);border-right:var(--todoBr);border-bottom:var(--todoBb)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">待我审批 · 移交</div><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'IBM Plex Mono',monospace;font-size:28px;line-height:32px">1</span><span style="text-decoration:underline;color:var(--acc)">去审批 →</span></div></div>
+                        <div style="padding:var(--todoPad);border-right:var(--todoBr);border-bottom:var(--todoBb)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">审判队列</div><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'IBM Plex Mono',monospace;font-size:28px;line-height:32px">2</span><span style="text-decoration:underline;color:var(--acc)">进入 →</span></div></div>
+                        <div style="padding:var(--todoPad)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3)">死亡同步异常</div><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'IBM Plex Mono',monospace;font-size:28px;line-height:32px;color:var(--ink3)">0</span><span style="color:var(--ink3)">无异常</span></div></div>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--kpi);border-bottom:1px solid var(--line)">
+                        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+                          <div style="padding:12px 14px 12px 0"><div style="font-size:12px;color:var(--ink2)"><span style="{{ k.gst }}">{{ k.g }}</span> {{ k.label }}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:22px;line-height:28px">{{ k.n }}</div></div>
+                        </sc-for>
+                      </div>
+                      <div style="display:grid;grid-template-columns:var(--cols);gap:24px 40px;margin-top:8px">
+                        <div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:16px 0 4px;border-bottom:1px solid var(--block);display:grid;grid-template-columns:1.3fr 50px 1.4fr"><span>各文明</span><span style="text-align:right">灵魂</span><span style="padding-left:14px">占比</span></div>
+                          <sc-for list="{{ civDist }}" as="c" hint-placeholder-count="4">
+                            <div style="display:grid;grid-template-columns:1.3fr 50px 1.4fr;border-bottom:1px solid var(--rule);align-items:center;min-height:36px">
+                              <span><span style="font-family:'IBM Plex Mono',monospace;color:var(--ink3);margin-right:6px">{{ c.mark }}</span>{{ c.civ }}</span>
+                              <span style="{{ c.nst }}">{{ c.n }}</span>
+                              <span style="padding-left:14px;display:flex;align-items:center;gap:8px"><span style="{{ c.bar }}"></span><span style="font-size:12px;color:var(--ink3)">{{ c.note }}</span></span>
+                            </div>
+                          </sc-for>
+                          <p style="font-size:12px;color:var(--ink2);margin-top:8px">没有灵魂的文明不画空卡片，写一行「尚未入册」并给入口。</p>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:22px 0 4px;border-bottom:1px solid var(--block)">生命周期 · 33</div>
+                          <div style="display:flex;height:14px;margin-top:10px;gap:1px">
+                            <sc-for list="{{ life }}" as="l" hint-placeholder-count="5"><span style="{{ l.seg }}"></span></sc-for>
+                          </div>
+                          <div style="margin-top:8px">
+                            <sc-for list="{{ life }}" as="l" hint-placeholder-count="5">
+                              <div style="display:grid;grid-template-columns:18px 1fr 40px 50px;border-bottom:1px solid var(--rule);align-items:center;min-height:28px;font-size:12.5px">
+                                <span style="{{ l.key }}"></span><span>{{ l.g }} {{ l.label }}</span><span style="font-family:'IBM Plex Mono',monospace;text-align:right">{{ l.n }}</span><span style="font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--ink3)">{{ l.pct }}</span>
+                              </div>
+                            </sc-for>
+                          </div>
+                          <p style="font-size:12px;color:var(--ink2);margin-top:8px">图例账：不画饼图，不在色块上写字。比例条只示意，数字全在下方账行里——小占比永远不会叠字。</p>
+                        </div>
+                        <div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:16px 0 4px;border-bottom:1px solid var(--block);display:flex;justify-content:space-between"><span>业力分布 · 余额</span><span>n = 33</span></div>
+                          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:150px;padding-top:12px;border-bottom:1px solid var(--block);background-image:linear-gradient(var(--rule) 1px,transparent 1px);background-size:100% 37px;background-position:0 12px">
+                            <sc-for list="{{ hist }}" as="h" hint-placeholder-count="7">
+                              <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink2)">{{ h.n }}</span><span style="{{ h.bar }}"></span></div>
+                            </sc-for>
+                          </div>
+                          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink3);text-align:center;padding-top:4px">
+                            <sc-for list="{{ hist }}" as="h" hint-placeholder-count="7"><span>{{ h.label }}</span></sc-for>
+                          </div>
+                          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);padding:22px 0 4px;border-bottom:1px solid var(--block)">最近活动 · 合并同类</div>
+                          <sc-for list="{{ acts }}" as="x" hint-placeholder-count="4">
+                            <div style="display:grid;grid-template-columns:var(--acols);border-bottom:1px solid var(--rule);min-height:34px;align-items:center;gap:0 12px">
+                              <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3)">{{ x.t }}</span>
+                              <span><b style="font-weight:500">{{ x.who }}</b> {{ x.what }}</span>
+                              <span style="{{ x.cst }}">{{ x.count }}</span>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </main>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</section>
+
+<!-- ================= 4 · RULES ================= -->
+<section id="s4" data-screen-label="4 被推翻的规则" style="padding:40px 64px 80px;border-top:1px solid #333">
+  <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:#e6e4df;color:#1c1c1e;padding:3px 8px">4</span><h2 style="font-size:28px;font-weight:600">这个方向推翻了哪些现有规则</h2></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px;max-width:1320px">
+    <div style="border:1px solid #e6e4df;padding:18px 20px;font-size:14px;line-height:1.7;color:#cfccc4">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f">表态 1 · 衬线只出现在引文上</div>
+      <div style="font-size:20px;font-weight:600;color:#e6e4df;margin:6px 0">Web：保留，一字不改。</div>
+      衬线仍只给「有人说过的话」：判词、忏悔录、古典语料。账页上唯一的衬线就是判词行，这正是它有分量的原因。App 卷宗将衬线扩到「已定案的记录」（卷名、姓名、目的地）——那是 App 的规则，Web lint 不放开。
+    </div>
+    <div style="border:1px solid #e6e4df;padding:18px 20px;font-size:14px;line-height:1.7;color:#cfccc4">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9a978f">表态 2 · 全部方角，圆角只给头像和焦点环</div>
+      <div style="font-size:20px;font-weight:600;color:#e6e4df;margin:6px 0">收紧：圆角只给头像，焦点环也改方角。</div>
+      现有焦点环带 2 px 圆角，套在方角控件外面会出现「方里套圆」。改成 0 px，环和控件同形；环仍是 2 px 强调色、偏移 2 px，深浅两套对 canvas 都 ≥ 3:1。lint 从「两种圆角」收成「一种」。
+    </div>
+  </div>
+  <div style="max-width:1320px;margin-top:28px">
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr 1.3fr 1.2fr;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a978f;padding-bottom:6px;border-bottom:1px solid #e6e4df;gap:16px"><span>#</span><span>原规则</span><span>新规则</span><span>为什么</span><span>lint 要改什么</span></div>
+    <sc-for list="{{ rules }}" as="r" hint-placeholder-count="12">
+      <div style="display:grid;grid-template-columns:40px 1fr 1fr 1.3fr 1.2fr;gap:16px;padding:12px 0;border-bottom:1px solid #3a3a3d;font-size:13.5px;line-height:1.6;color:#cfccc4">
+        <span style="font-family:'IBM Plex Mono',monospace;color:#9a978f">{{ r.n }}</span>
+        <span>{{ r.old }}</span>
+        <span style="color:#e6e4df">{{ r.neu }}</span>
+        <span>{{ r.why }}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#b9b6ae">{{ r.lint }}</span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#f8f5ec', s1:'#fdfbf6', s2:'#efe9da', s3:'#e3dcc8', rule:'#e2c4bc', line:'#d3ccb9', line2x:'#8f8a7c', block:'#17181a', ink:'#17181a', ink2:'#45474c', ink3:'#65686e', dis:'#a6a294', disBg:'#eeeadf', acc:'#1d4e9e', accInk:'#ffffff', danger:'#b3261e', dangerBg:'#f6e1da', ok:'#23663a', okBg:'#e1ebdb', warn:'#7a5000', warnBg:'#f2e4c4', scrim:'rgba(23,24,26,.42)', shadow:'0 12px 32px rgba(23,24,26,.18)' };
+    const D = { bg:'#0c0d10', s1:'#121419', s2:'#1a1d24', s3:'#252932', rule:'#342a2c', line:'#2a2e37', line2x:'#6d717b', block:'#c9ccd3', ink:'#e8e9ec', ink2:'#b3b7bf', ink3:'#8a8f99', dis:'#4f535c', disBg:'#16181d', acc:'#8db2ff', accInk:'#0c0d10', danger:'#f28273', dangerBg:'#2b1715', ok:'#6acb8a', okBg:'#13231a', warn:'#f0b44a', warnBg:'#2a2011', scrim:'rgba(0,0,0,.62)', shadow:'0 12px 32px rgba(0,0,0,.55)' };
+    const vars = p => { const s = {}; for (const k in p) s['--' + k] = p[k]; return s; };
+    const rgb = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+    const lum = h => { const [r,g,b] = rgb(h).map(c => c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4)); return .2126*r + .7152*g + .0722*b; };
+    const cr = (a, b) => { const x = lum(a), y = lum(b); return ((Math.max(x,y) + .05) / (Math.min(x,y) + .05)).toFixed(2) + ':1'; };
+    const hsl = h => { if (h[0] !== '#') return h; let [r,g,b] = rgb(h); const mx = Math.max(r,g,b), mn = Math.min(r,g,b); let H = 0, S = 0; const l = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; S = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); H = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; H *= 60; } return `${Math.round(H)} ${Math.round(S*100)}% ${Math.round(l*100)}%`; };
+    const sw = c => ({ width: '22px', height: '22px', background: c, border: '1px solid rgba(128,128,128,.35)', flex: 'none', boxSizing: 'border-box' });
+    const C = [
+      ['canvas','bg','页面背景；弹层、抽屉底',0], ['surface-1','s1','卡片内衬（仅需要时）、输入框底、代码块',0], ['surface-2','s2','悬停行、选中行、当前导航、批量操作条',0], ['surface-3','s3','按下态、骨架块',0],
+      ['rule','rule','行线：表格行、清单行（纸本账页的红格）',0], ['line','line','结构线：侧栏边、栏间、输入框默认边、卡片边',0], ['block','block','区块边界：区块标题下线、表头下线、页头下线、合计线',3], ['ink','ink','正文；主按钮底',4.5],
+      ['ink-muted','ink2','次要文字、说明',4.5], ['ink-subtle','ink3','栏目标签、表头、元信息、占位符',4.5], ['accent','acc','强调：链接、焦点环、选中勾、单选点、筛选生效标',4.5], ['danger','danger','危险：删除、错误、罪业、不通过',4.5],
+      ['danger-tint','dangerBg','错误提示条底、错误行底',0], ['success','ok','成功：功德、存活、通过、成功提示',4.5], ['success-tint','okBg','成功提示条底',0], ['warning','warn','警示：审判中、补过、待审批',4.5],
+      ['warning-tint','warnBg','警示条底（断线、维护中）',0], ['disabled-ink','dis','禁用文字与边（WCAG 豁免，故意低对比）',0], ['disabled-surface','disBg','禁用控件底、只读字段底',0], ['scrim','scrim','弹层遮罩',0],
+    ];
+    const colorRows = C.map(([token, k, role, min]) => ({
+      token: '--color-' + token, role, lsw: sw(L[k]), dsw: sw(D[k]), lhsl: hsl(L[k]), dhsl: hsl(D[k]),
+      lcr: min && L[k][0] === '#' ? cr(L[k], L.bg) : '', dcr: min && D[k][0] === '#' ? cr(D[k], D.bg) : '',
+    }));
+    const badge = c => ({ fontFamily: "'IBM Plex Mono',monospace", fontSize: '11px', lineHeight: '16px', padding: '1px 6px', color: c, border: '1px solid currentColor', whiteSpace: 'nowrap', display: 'inline-block' });
+    const S = [['○','存活','ALIVE','ok','success'],['◐','审判中','JUDGING','warn','warning'],['■','已处置','DISPOSED','ink','ink'],['↻','轮回中','REINCARNATING','acc','accent'],['×','迷失','LOST','ink3','ink-subtle'],['✓','通过','PASSED','ok','success'],['✕','不通过','FAILED','danger','danger'],['◇','补过','PURGATORY','warn','warning'],['↺','重审','RETRY','acc','accent']];
+    const statusRows = S.map(([glyph, zh, en, k, t]) => ({ glyph, zh, enum: en, token: '--color-' + t, badge: badge('var(--' + k + ')') }));
+    const CH = [['series-1','ink'],['series-2','acc'],['series-3','warn'],['series-4','ink3'],['merit','ok'],['demerit','danger'],['grid','rule'],['axis','block'],['tick','ink3'],['tooltip-bg','s1']];
+    const chartRows = CH.map(([k2, k]) => ({ k: k2, l: L[k], d: D[k], lsw: sw(L[k]), dsw: sw(D[k]) }));
+    const mono = "'IBM Plex Mono',monospace", sans = "'Archivo','Noto Sans SC',sans-serif", serif = "'Source Serif 4','Noto Serif SC',serif";
+    const typeRows = [
+      ['text-2xs','11 / 16','Plex Mono · 400 · 字距 .1em','栏目标签、表头、区块标题、导航编号、徽章', mono, 11, 16, 400, '丙 · 审判 1　IX · XXVI'],
+      ['text-xs','12 / 16','Archivo / Noto Sans · 400·500','元信息、面包屑、帮助与错误文字、分页、表单标签(500)', sans, 12, 16, 400, '至少 20 字，审批人会看到'],
+      ['text-sm','13 / 20','Archivo / Noto Sans · 400·500','正文、表格单元、输入框、按钮(500)。页面默认字号', sans, 13, 20, 400, '中国地府 · 第五殿 · 阎罗王'],
+      ['text-md','16 / 24','Archivo · 600','合计数字、弹层与抽屉标题', sans, 16, 24, 600, '余额 +347'],
+      ['text-quote','20 / 32','Source Serif 4 / Noto Serif SC · 400','只给引文：判词、忏悔录、古典语料。限宽 72ch', serif, 20, 32, 400, '功过相抵，善念居多。'],
+      ['text-lg','22 / 28','Archivo · 600','页面标题，每页一个', sans, 22, 28, 600, '沈青梧'],
+      ['text-xl','28 / 32','Plex Mono · 400','仪表盘关键数字，只给数字', mono, 28, 32, 400, '33'],
+    ].map(([tw, px, font, use, ff, fs, lh, fw, sample]) => ({ tw, px, font, use, sample, st: { fontFamily: ff, fontSize: fs + 'px', lineHeight: lh + 'px', fontWeight: fw, letterSpacing: tw === 'text-2xs' ? '.1em' : undefined } }));
+    const lineRows = [
+      ['rule','border-b border-rule','1 px 行线：表格与清单的每一行', { borderTop: '1px solid var(--rule)', width: '120px' }],
+      ['line','border border-line','1 px 结构线：侧栏、栏间、输入框默认边、卡片边', { borderTop: '1px solid var(--line)', width: '120px' }],
+      ['block','border-b border-block','1 px 区块边界：区块 / 表头 / 页头下线；合计上方单线。原「章节下划线」并入此级', { borderTop: '1px solid var(--block)', width: '120px' }],
+      ['double','border-b-[3px] border-double','3 px 双线：只在「终结」处——余额、合计。一页至多一两处', { borderTop: '3px double var(--block)', width: '120px' }],
+      ['mark','shadow-[inset_3px_0_0]','3 px 实线：「当前」——当前导航、当前步骤、选中行左标、行程已行段', { borderTop: '3px solid var(--ink)', width: '120px' }],
+      ['quote','border-l-2 border-ink','2 px：引文左线；焦点环 2 px outline 同宽', { borderLeft: '2px solid var(--ink)', height: '18px', width: '0' }],
+    ].map(([name, tw, use, demo]) => ({ name, tw, use, demo: Object.assign({ display: 'block', boxSizing: 'border-box' }, demo) }));
+    const spaceRows = [['0.5',2,'徽章内边距（纵）'],['1',4,'图标与字、表头下内边距'],['1.5',6,'行内纵向内边距（紧凑行）'],['2',8,'控件间距、按钮组 gap'],['3',12,'区块内分组、筛选条纵向'],['4',16,'393 px 页边距；弹层内边距'],['6',24,'区块间距（纵）'],['8',32,'大区块间距'],['10',40,'桌面页边距；栏间距'],['14',56,'页面顶部留白（仅空状态页）']]
+      .map(([tw, px, use]) => ({ tw, px: px + ' px', use, bar: { display: 'block', height: '8px', width: px + 'px', background: 'var(--ink)' } }));
+    const civs = [
+      { civ: '中国 · 地府', law: '功过格', no: '救濟門 · 十七', shape: '十殿一线（纵）', mark: '■ 方', judge: '阎罗王 · 殿 / 门 / 层' },
+      { civ: '欧洲 · 天堂地狱', law: '地狱篇', no: 'IX · XXVI', shape: '九层漏斗', mark: '● 圆', judge: '米诺斯 · 层 / 歌' },
+      { civ: '埃及 · 杜阿特', law: '否定告白', no: '§ 27 / 42', shape: '十二时之河', mark: '▲ 三角', judge: '四十二判官 · 告白序号' },
+      { civ: '希腊 · 冥府', law: '斯特方页码', no: '523a', shape: '三岔路', mark: '◆ 菱', judge: '拉达曼提斯 · 页码' },
+    ];
+    const twSnippet = [
+      "colors: {",
+      "  canvas: 'hsl(var(--color-canvas) / <alpha-value>)',",
+      "  surface: { 1: 'hsl(var(--color-surface-1))', 2: '…-2', 3: '…-3' },",
+      "  rule: 'hsl(var(--color-rule))', line: 'hsl(var(--color-line))', block: 'hsl(var(--color-block))',",
+      "  ink: { DEFAULT: '…', muted: '…', subtle: '…' },",
+      "  accent: '…', danger: { DEFAULT: '…', tint: '…' }, success: {…}, warning: {…}, disabled: { ink: '…', surface: '…' },",
+      "},",
+      "fontSize: {            // 替换默认刻度，只留七档",
+      "  '2xs': ['11px','16px'], xs: ['12px','16px'], sm: ['13px','20px'], md: ['16px','24px'],",
+      "  quote: ['20px','32px'], lg: ['22px','28px'], xl: ['28px','32px'],",
+      "},",
+      "fontWeight: { normal: '400', medium: '500', semibold: '600' },",
+      "fontFamily: { sans: ['Archivo','Noto Sans SC'], serif: ['Source Serif 4','Noto Serif SC'], mono: ['IBM Plex Mono','Noto Sans SC'] },",
+      "borderRadius: { none: '0', full: '9999px' },   // 其余全部删除",
+      "borderWidth: { DEFAULT: '1px', 0: '0', 2: '2px', 3: '3px' },",
+      "boxShadow: { overlay: 'var(--shadow-overlay)', none: 'none' },",
+      "spacing: 保留 0.5 1 1.5 2 3 4 6 8 10 14，其余由 lint 拦截",
+    ].join('\n');
+
+    // state grid
+    const St = ['常态','悬停','按下','焦点','禁用','错误','加载'];
+    const btnBase = { height: '32px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', fontWeight: 500, fontSize: '13px', boxSizing: 'border-box', whiteSpace: 'nowrap' };
+    const focus = { outline: '2px solid var(--acc)', outlineOffset: '2px' };
+    const dis = { background: 'var(--disBg)', color: 'var(--dis)', border: '1px solid var(--line)' };
+    const mk = (name, base, per, texts, notes) => ({ name, cells: St.map((s, i) => ({ st: Object.assign({}, base, per[i] || {}), text: texts[i] ?? texts[0], note: notes ? notes[i] || '' : '' })) });
+    const T = ['提交','提交','提交','提交','提交','! 重试','处理中…'];
+    const stateGrid = [
+      mk('按钮 · 主', Object.assign({ background: 'var(--ink)', color: 'var(--bg)', border: '1px solid var(--ink)' }, btnBase), [{}, { background: 'var(--ink2)', borderColor: 'var(--ink2)' }, { boxShadow: 'inset 0 2px 0 rgba(0,0,0,.35)', transform: 'translateY(1px)' }, focus, dis, { background: 'var(--danger)', borderColor: 'var(--danger)', color: 'var(--bg)' }, { opacity: .7, cursor: 'progress' }], T, ['每屏至多一个', '', '下移 1 px', '方角环', '', '失败后原位变', '保留宽度']),
+      mk('按钮 · 次', Object.assign({ background: 'transparent', color: 'var(--ink)', border: '1px solid var(--block)' }, btnBase), [{}, { background: 'var(--s2)' }, { background: 'var(--s3)' }, focus, dis, { borderColor: 'var(--danger)', color: 'var(--danger)' }, { color: 'var(--ink3)', cursor: 'progress' }], ['存草稿','存草稿','存草稿','存草稿','存草稿','! 重试','保存中…'], ['危险动作用此档+危险色']),
+      mk('按钮 · 幽', Object.assign({ background: 'transparent', color: 'var(--ink2)', border: '1px solid transparent' }, btnBase), [{}, { background: 'var(--s2)', color: 'var(--ink)' }, { background: 'var(--s3)', color: 'var(--ink)' }, focus, { color: 'var(--dis)' }, { color: 'var(--danger)' }, { color: 'var(--ink3)' }], ['取消','取消','取消','取消','取消','! 重试','取消中…'], ['行内、弹层取消']),
+      mk('输入框', { height: '32px', width: '118px', padding: '0 10px', display: 'flex', alignItems: 'center', border: '1px solid var(--line)', background: 'var(--s1)', color: 'var(--ink3)', boxSizing: 'border-box', fontSize: '13px' }, [{}, { borderColor: 'var(--ink3)' }, { borderColor: 'var(--block)', color: 'var(--ink)' }, Object.assign({ borderColor: 'var(--block)', color: 'var(--ink)' }, { outline: '2px solid var(--acc)', outlineOffset: '0' }), dis, { borderColor: 'var(--danger)', boxShadow: 'inset 0 -2px 0 var(--danger)', color: 'var(--ink)' }, { color: 'var(--ink3)' }], ['姓名或 ID','姓名或 ID','沈青|','沈青梧','只读','口业','校验中…'], ['', '', '输入中', '环贴边', '只读同此', '下 2 px 危险线', '异步校验']),
+      mk('筛选签', { height: '28px', padding: '0 10px', display: 'inline-flex', alignItems: 'center', border: '1px solid var(--line)', fontSize: '12px', boxSizing: 'border-box', whiteSpace: 'nowrap' }, [{}, { background: 'var(--s2)' }, { background: 'var(--s3)' }, focus, { color: 'var(--dis)' }, { borderColor: 'var(--danger)', color: 'var(--danger)' }, { color: 'var(--ink3)' }], ['审判中','审判中','审判中 ×','审判中','地府','! 失效','…'], ['', '', '生效：下 2 px 强调线', '', '无数据可筛', '条件失效', '计数中']),
+      mk('分页', { height: '32px', minWidth: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: mono, fontSize: '12px', boxSizing: 'border-box', border: '1px solid transparent' }, [{}, { background: 'var(--s2)' }, { background: 'var(--s3)' }, focus, { color: 'var(--dis)' }, { color: 'var(--danger)', borderColor: 'var(--danger)' }, { color: 'var(--ink3)' }], ['2','2','2','2','‹','! 2','…'], ['当前页：区块边框+600', '', '', '', '首页的「上一页」', '翻页失败', '保留页码宽']),
+      mk('导航项', { height: '28px', width: '120px', padding: '0 10px', display: 'flex', alignItems: 'center', fontSize: '12.5px', color: 'var(--ink2)', boxSizing: 'border-box' }, [{}, { background: 'var(--s2)', color: 'var(--ink)' }, { background: 'var(--s3)', color: 'var(--ink)' }, Object.assign({}, focus, { outlineOffset: '-2px' }), { color: 'var(--dis)' }, { color: 'var(--danger)' }, { color: 'var(--ink3)' }], ['审判队列','审判队列','审判队列','审判队列','维护中','! 审判队列','审判队列 …'], ['当前：s2+左 3 px 墨线', '', '', '内环', '无权限则隐藏', '计数拉取失败', '计数加载']),
+      mk('面包屑', { fontFamily: mono, fontSize: '11.5px', color: 'var(--ink2)' }, [{}, { textDecoration: 'underline', color: 'var(--ink)' }, { color: 'var(--ink)' }, focus, { color: 'var(--ink)', fontWeight: 600 }, { color: 'var(--danger)' }, { color: 'var(--ink3)' }], ['灵魂管理','灵魂管理','灵魂管理','灵魂管理','沈青梧','! 未找到','……'], ['', '', '', '', '「禁用」= 当前页', '记录已删', '名称加载']),
+    ];
+    const rowBase = { display: 'grid', gridTemplateColumns: '36px 150px 110px 110px 1fr 80px 70px', alignItems: 'center', minHeight: '36px', borderBottom: '1px solid var(--rule)' };
+    const chk = on => ({ width: '14px', height: '14px', boxSizing: 'border-box', border: on ? '1px solid var(--acc)' : '1px solid var(--block)', background: on ? 'var(--acc)' : 'transparent', color: 'var(--accInk)', fontSize: '10px', lineHeight: '12px', textAlign: 'center' });
+    const kst = v => ({ fontFamily: mono, textAlign: 'right', color: v > 0 ? 'var(--ok)' : v < 0 ? 'var(--danger)' : 'var(--ink3)' });
+    const tableStates = [
+      ['常态', {}, false, '沈青梧', '中国 · 地府', 2, '救濟門 · 十七', 347],
+      ['悬停', { background: 'var(--s2)' }, false, 'Marguerite Vey', '欧洲 · 天堂地狱', 2, 'IX · XXVI', -212],
+      ['选中 / 按下', { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--acc)' }, true, 'Debug Soul', '中国 · 地府', 1, '第一殿', 0],
+      ['焦点', { outline: '2px solid var(--acc)', outlineOffset: '-2px' }, false, 'Nebet-Iunu', '埃及 · 杜阿特', 3, '§ 27 / 42', 58],
+      ['已删除', { color: 'var(--ink3)' }, false, 'Trace Soul 5', '中国 · 地府', 4, '—', -4],
+      ['错误', { background: 'var(--dangerBg)', boxShadow: 'inset 3px 0 0 var(--danger)' }, false, 'Kleon', '希腊 · 冥府', 0, '! 死亡同步失败 · 重试', 0],
+    ].map(([state, extra, on, n, civ, si, no, k]) => ({ state, row: Object.assign({}, rowBase, extra), chk: chk(on), chkMark: on ? '✓' : '', name: { fontWeight: 500, textDecoration: state === '已删除' ? 'line-through' : 'none' }, n, civ, badge: state === '已删除' ? badge('var(--ink3)') : statusRows[si].badge, b: state === '已删除' ? '已删除 · 恢复' : statusRows[si].glyph + ' ' + statusRows[si].zh, no, karma: kst(state === '已删除' ? 0 : k), k: (k > 0 ? '+' : k < 0 ? '−' : '+') + Math.abs(k) }));
+    tableStates.push({ state: '加载', row: Object.assign({}, rowBase), chk: { width: '14px', height: '14px', background: 'var(--s3)' }, chkMark: '', name: { height: '10px', width: '100px', background: 'var(--s3)', display: 'block' }, n: '', civ: '', badge: { display: 'block', height: '10px', width: '60px', background: 'var(--s3)' }, b: '', no: '', karma: { display: 'block', height: '10px', width: '40px', background: 'var(--s3)', marginLeft: 'auto' }, k: '' });
+    const cb = { border: '1px solid var(--line)', padding: '10px 12px', minHeight: '78px', boxSizing: 'border-box' };
+    const ch = { display: 'flex', justifyContent: 'space-between', fontFamily: mono, fontSize: '11px', paddingBottom: '4px', borderBottom: '1px solid var(--block)' };
+    const cardStates = [
+      ['常态', {}, {}, '审判记录 1 · 06-15', {}], ['悬停（可点时）', { background: 'var(--s2)' }, {}, '审判记录 1 · 06-15', {}], ['按下', { background: 'var(--s3)' }, {}, '审判记录 1 · 06-15', {}],
+      ['焦点', { outline: '2px solid var(--acc)', outlineOffset: '2px' }, {}, '审判记录 1 · 06-15', {}], ['禁用', { borderColor: 'var(--line)', color: 'var(--dis)' }, { borderBottomColor: 'var(--line)' }, '已归档，只读', {}],
+      ['错误', { borderColor: 'var(--danger)' }, { borderBottomColor: 'var(--danger)', color: 'var(--danger)' }, '! 加载失败 · 重试', { color: 'var(--danger)' }], ['加载', {}, {}, '', {}],
+    ].map(([state, b, h, text, bs]) => ({ state, title: '丙 · 审判', box: Object.assign({}, cb, b), head: Object.assign({}, ch, h), text, bodySt: Object.assign({ paddingTop: '8px', fontSize: '12.5px' }, bs), skel: state === '加载', body: state !== '加载' }));
+
+    // archetypes
+    const frame = (p, m) => Object.assign(vars(p), {
+      '--w': m ? '393px' : '1280px', '--h': m ? 'auto' : '900px', '--side': m ? 'none' : 'flex', '--mob': m ? 'flex' : 'none',
+      '--dsk': m ? 'none' : 'block', '--mobb': m ? 'block' : 'none', '--dskf': m ? 'none' : 'flex', '--mobf': m ? 'flex' : 'none',
+      '--pad': m ? '16px' : '40px', '--hh': m ? '48px' : '40px', '--ctl': m ? '44px' : '32px',
+      '--cols': m ? '1fr' : '1fr 1.3fr', '--fcols': m ? '1fr auto' : '1.6fr 1fr 1fr 1fr auto', '--steps': m ? '1fr 1fr' : 'repeat(4,1fr)',
+      '--jcols': m ? '84px 1fr 1fr 56px' : '96px 1fr 1fr 80px', '--jlab': m ? '1 / -1' : 'auto', '--jlabpad': m ? '4px' : '0',
+      '--todoPad0': m ? '10px 0' : '10px 14px 10px 0', '--todoPad': m ? '10px 0' : '10px 14px',
+      '--todoBr': m ? '0' : '1px solid var(--line)', '--todoBb': m ? '1px solid var(--rule)' : '0', '--vcols': m ? '1fr' : '84px 1fr', '--lcols': m ? '120px 1fr' : '120px 80px 1fr',
+      '--todo': m ? '1fr' : 'repeat(3,1fr)', '--kpi': m ? '1fr 1fr' : 'repeat(5,1fr)', '--acols': m ? '90px 1fr auto' : '120px 1fr auto',
+      '--malign': m ? 'flex-end' : 'center', '--mw': m ? '100%' : '440px', '--mpad': m ? '0' : '24px',
+    });
+    const NAV = [['01 概览','', 0, 'dash'], ['02 灵魂业务','−', 0], ['灵魂管理','', 1, 'list detail'], ['审判队列','2', 1], ['处置 · 轮回','', 1], ['业力统计','', 1], ['03 流程协作','−', 0], ['移交','1', 1, 'form'], ['跨文明审判','', 1], ['工作流','', 1], ['04 组织与领域','+', 0], ['05 社交','+', 0], ['06 系统设置','+', 0]];
+    const nav = id => NAV.map(([label, tail, child, on]) => {
+      const cur = on && on.split(' ').includes(id);
+      return { label, tail, st: Object.assign({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '30px', padding: child ? '0 14px 0 30px' : '0 14px', borderBottom: '1px solid var(--rule)', color: child ? 'var(--ink2)' : 'var(--ink)', fontFamily: child ? sans : mono, fontSize: child ? '12.5px' : '11.5px', boxSizing: 'border-box' }, cur ? { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--ink)', color: 'var(--ink)', fontWeight: 500 } : {}) };
+    });
+    const A = [
+      { id: 'list', no: '3.1', title: '列表页 · 筛选 · 分页 · 批量', covers: '灵魂 / 审判 / 处置 / 轮回 / 移交 / 跨文明审判 / 死亡同步 / 界域 / 神祇 / 组织 / 租户 / 用户 / 角色 / 菜单 / 菜单按钮 / 审计 / 通知 等', c: ['灵魂业务','灵魂管理','列表'] },
+      { id: 'detail', no: '3.2', title: '详情页 · 多区块 · 引文区', covers: '灵魂 / 审判 / 处置 / 轮回 / 移交 / 用户 / 组织 / 租户 / 个人资料 等所有单对象页', c: ['灵魂业务','灵魂管理','沈青梧'] },
+      { id: 'form', no: '3.3', title: '表单与弹层', covers: '新建 / 编辑所有实体、移交发起、删除与恢复确认、审批意见', c: ['流程协作','移交','发起'] },
+      { id: 'dash', no: '3.4', title: '仪表盘 · 图表', covers: '概览、业力概览、各文明概况、个人工作台', c: ['概览','管理员','总览'] },
+    ];
+    const arch = A.map(a => ({ no: a.no, title: a.title, covers: a.covers, vs: [['1280 · 深色', D, false], ['1280 · 浅色', L, false], ['393 · 浅色', L, true]].map(([label, p, m]) => ({ label, style: frame(p, m), nav: nav(a.id), c1: a.c[0], c2: a.c[1], c3: a.c[2], isList: a.id === 'list', isDetail: a.id === 'detail', isForm: a.id === 'form', isDash: a.id === 'dash' })) }));
+
+    const SO = [
+      ['沈青梧','38fb6bc2','中国 · 地府',2,'救濟門 · 十七',347,'2026-06-08',false],
+      ['Debug Soul','a91c07e4','中国 · 地府',1,'第一殿',0,'2026-08-02',true],
+      ['Marguerite Vey','5d20bb91','欧洲 · 天堂地狱',2,'IX · XXVI',-212,'2026-05-30',false],
+      ['Nebet-Iunu','e7730a1f','埃及 · 杜阿特',3,'§ 27 / 42',58,'2026-04-11',false],
+      ['Test Soul for Judgment','0c4f9d22','中国 · 地府',1,'第一殿',0,'2026-05-10',true],
+      ['李长庚','71be3a08','中国 · 地府',0,'不适用',126,'不适用',false],
+      ['Trace Soul 5','c3d81e57','中国 · 地府',4,'未记录',-4,'2026-03-02',false],
+      ['Kleon','2f6a4dc9','欧洲 · 天堂地狱',0,'不适用',0,'不适用',false],
+    ];
+    const souls = SO.map(([n, id, civ, si, no, k, death, sel]) => {
+      const na = no === '不适用' || no === '未记录';
+      return {
+        n, id, civ, no, death, b: statusRows[si].glyph + ' ' + statusRows[si].zh, badge: statusRows[si].badge,
+        k: (k > 0 ? '+' : k < 0 ? '−' : '+') + Math.abs(k), karma: kst(k), chk: chk(sel), cm: sel ? '✓' : '',
+        noSt: { fontFamily: na ? sans : mono, fontSize: '12px', color: na ? 'var(--ink3)' : 'var(--ink)' },
+        deathSt: { fontFamily: death === '不适用' ? sans : mono, fontSize: '12px', textAlign: 'right', color: death === '不适用' ? 'var(--ink3)' : 'var(--ink2)' },
+        row: Object.assign({ display: 'grid', gridTemplateColumns: '36px 1.5fr 1.1fr 110px 1.3fr 90px 150px', alignItems: 'center', minHeight: '44px', borderBottom: '1px solid var(--rule)' }, sel ? { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--acc)' } : {}),
+        mrow: Object.assign({ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 0', minHeight: '56px', boxSizing: 'border-box', borderBottom: '1px solid var(--rule)' }, sel ? { background: 'var(--s2)', boxShadow: 'inset 3px 0 0 var(--acc)', paddingLeft: '8px' } : {}),
+      };
+    });
+    const R = [['阳间','done'],['鬼门关','done'],['一殿','done'],['二殿','done'],['三殿','done'],['四殿','done'],['五殿 ▪','cur'],['六殿','skip'],['七殿','skip'],['八殿','skip'],['九殿','skip'],['十殿','next'],['六道','next']];
+    const route = R.map(([label, st]) => ({
+      label,
+      line: { borderTop: st === 'done' || st === 'cur' ? '3px solid var(--ink)' : st === 'skip' ? '1px solid var(--line)' : '1px dashed var(--ink3)', height: 0, marginRight: '-4px' },
+      mark: { width: st === 'cur' ? '10px' : '7px', height: st === 'cur' ? '10px' : '7px', marginTop: st === 'cur' ? '-6px' : '-4px', background: st === 'cur' ? 'var(--acc)' : st === 'done' ? 'var(--ink)' : 'var(--bg)', border: st === 'done' || st === 'cur' ? '0' : '1px solid var(--ink3)', boxSizing: 'border-box' },
+      name: { fontSize: '11.5px', marginTop: '4px', color: st === 'skip' || st === 'next' ? 'var(--ink3)' : 'var(--ink)', fontWeight: st === 'cur' ? 600 : 400 },
+    }));
+    const LIFE = [[0,6],[1,2],[2,21],[3,3],[4,1]];
+    const life = LIFE.map(([si, n]) => { const c = 'var(--' + S[si][3] + ')'; return { g: S[si][0], label: S[si][1], n, pct: Math.round(n / 33 * 100) + '%', seg: { flex: n, background: c, minWidth: '3px' }, key: { width: '10px', height: '10px', background: c, display: 'block' } }; });
+    const kpis = LIFE.map(([si, n]) => ({ g: S[si][0], label: S[si][1], n, gst: { color: 'var(--' + S[si][3] + ')', fontFamily: mono } }));
+    const civDist = [['■','中国 · 地府',30],['●','欧洲 · 天堂地狱',2],['▲','埃及 · 杜阿特',1],['◆','希腊 · 冥府',0]].map(([mark, civ, n]) => ({ mark, civ, n, note: n === 0 ? '尚未入册 · 去登记' : Math.round(n / 33 * 100) + '%', nst: { fontFamily: mono, textAlign: 'right', color: n ? 'var(--ink)' : 'var(--ink3)' }, bar: { display: 'block', height: '8px', width: n ? Math.max(3, n / 30 * 150) + 'px' : '0', background: 'var(--ink)', flex: 'none' } }));
+    const hist = [['≤−300',1],['−300',3],['−100',5],['0',9],['+100',6],['+300',6],['≥+300',3]].map(([label, n], i) => ({ label, n, bar: { width: '100%', height: n / 9 * 100 + 'px', background: i < 3 ? 'var(--danger)' : i === 3 ? 'var(--ink3)' : 'var(--ok)', display: 'block' } }));
+    const acts = [['06-16 08:00','沈青梧','处置执行 → 救濟門 · 十七',''],['06-15 14:12','阎罗王','判决 2 件',''],['06-08 15:28','系统管理员','删除角色权限','×10 · 展开'],['06-08 09:02','死亡同步','导入 3 条登记','']].map(([t, who, what, count]) => ({ t, who, what, count, cst: { fontFamily: mono, fontSize: '11.5px', color: count ? 'var(--acc)' : 'var(--ink3)', textDecoration: count ? 'underline' : 'none' } }));
+
+    const rules = [
+      { n: '01', old: '八档字号', neu: '七档：11 / 12 / 13 / 16 / 20 / 22 / 28，20 只给引文，28 只给数字', why: '账页靠行线与等宽做层级，不靠字号；八档中有三档只被一两个页面用', lint: 'type-scale 允许表替换为 text-2xs…text-xl 七项；禁止任意值 text-[..]' },
+      { n: '02', old: '圆角：头像 + 焦点环', neu: '圆角只给头像；焦点环方角', why: '「方里套圆」；环与控件同形', lint: 'radius 允许表删 rounded-sm(2px)，只留 rounded-none、rounded-full(限 <Avatar>)；:focus-visible 去掉 border-radius:2px' },
+      { n: '03', old: '衬线只给引文', neu: 'Web 不变；App 扩到已定案记录', why: '见上方表态 1', lint: 'Web 不变；RN 端另起规则（本轮不做）' },
+      { n: '04', old: '四级线宽：行线 / 区块边界 / 章节下划线 / 文明身份线', neu: '五种：rule / line / block / double / mark（+ 2 px 引文线）', why: '章节下划线并入区块边界；文明身份线撤销（文明不靠线区分）；新增双线表达「终结」、3 px 表达「当前」', lint: '允许 border-double 且仅配 border-b-[3px]；允许 border-l-2；禁止其他 border-[n]' },
+      { n: '05', old: '卡片 = 带底色圆角框', neu: '卡片 = 区块：标题 + 区块边界下线，无底色、无阴影', why: '现状四种卡片内边距；账页里「框」是最大的噪音来源', lint: '新增：页面内禁止 shadow-*（仅 shadow-overlay 限浮层组件）' },
+      { n: '06', old: '文明色 civ-cn / eu / eg', neu: '撤销；编号法 + 行程拓扑 + 称谓', why: '地府 = 强调色的冲突消失；色点从未承载足够信息', lint: '删除 --color-civ-*；禁止 text-civ-* / bg-civ-*' },
+      { n: '07', old: '强调色 = 琥珀', neu: '强调色 = 墨蓝（链接、焦点、选中）；主按钮 = 墨色实底', why: '琥珀同时是地府、审判中、警示与按钮；墨蓝在账页上像批注', lint: '无；token 值变更' },
+      { n: '08', old: '状态只靠颜色；已处置 ≈ 轮回中', neu: '颜色 + 字形 ○◐■↻×；判决 ✓✕◇↺', why: '不单靠颜色；修掉 3° 色相的撞色', lint: '<StatusBadge> 必传 glyph（组件级约束）' },
+      { n: '09', old: '等宽只给数字与编号', neu: '另加：栏目标签、表头、导航一级编号、面包屑', why: '让整页像同一台机器打的；标签与内容一眼可分', lint: 'font-mono 允许出现在 <th>、<SectionLabel>、<Breadcrumb>' },
+      { n: '10', old: '枚举原样外露（ALIVE — 存活、CHINESE · ?）', neu: '只显示中文；枚举码只在事件日志「代码」列', why: 'brief §4.6', lint: '禁止在 JSX 中直接渲染 *.status / *.civilization 原值（自定义规则）' },
+      { n: '11', old: '缺值一律 —', neu: '零 = 数字；不适用 = 字；未记录 = —；未至 = 虚线框', why: '四种「没有」意义不同', lint: '无；<Empty kind> 组件约束' },
+      { n: '12', old: '页头八个控件；连接状态常驻', neu: '面包屑 · 通知 · 用户菜单（语言 / 主题 / 设置 / 登出）；断线才出警示条', why: 'brief §4.4；信息未删，收进菜单', lint: '无' },
+      { n: '13', old: '操作列「查看 →」', neu: '整行可点；行尾不放链接', why: '省一列，点击区变大', lint: '无' },
+      { n: '14', old: '删除 = 消失', neu: '「移入回收站」；删除行可「显示已删除」查看与恢复', why: '后端本就是软删', lint: '文案规则：禁止「永久删除」字样出现在非管理员界面' },
+    ];
+
+    return {
+      docStyle: vars(L), colorRows, statusRows, chartRows, typeRows, lineRows, spaceRows, civs, twSnippet,
+      primThemes: [{ label: '浅色', style: vars(L) }, { label: '深色', style: vars(D) }],
+      stateGrid, tableStates, cardStates, arch, souls, route, life, kpis, civDist, hist, acts, rules,
+    };
+  }
+}
+</script>
+</body>
+</html>
