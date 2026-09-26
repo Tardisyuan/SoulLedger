@@ -110,3 +110,26 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
     yield
     cache.clear()
     invalidate_all_permissions()
+
+
+@pytest.fixture(scope="session")
+def django_db_setup(django_db_setup):
+    """Close the database connection that `database_sync_to_async` left open,
+    before pytest-django drops the test database.
+
+    Async tests call `database_sync_to_async` with no outer `async_to_sync`, so
+    asgiref runs the ORM in `SyncToAsync.single_thread_executor` -- one thread
+    that lives as long as the process. `CONN_MAX_AGE=600` (settings.py) makes
+    `close_old_connections()` keep that thread's connection open, and
+    `destroy_test_db()` only closes the main thread's. So `DROP DATABASE` met
+    "is being accessed by other users", pytest-django turned that into a
+    PytestWarning, the run exited 0, and `test_soulledger` stayed on the
+    PostgreSQL box. Reproduced 2026-09-26 with one test,
+    `tests/test_workflow_events.py::TestWorkflowEventService::test_log_workflow_created`.
+    This teardown runs before pytest-django's, because it overrides that fixture.
+    """
+    yield
+    from asgiref.sync import SyncToAsync
+    from django.db import connections
+
+    SyncToAsync.single_thread_executor.submit(connections.close_all).result()
