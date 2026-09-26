@@ -37,6 +37,9 @@ export interface SoulAccount {
   last_login: string | null;
   contact_email_masked: string;
   contact_phone_masked: string;
+  /** "taken": the contact email is held by another account, so it was not made this
+   *  account's login email and the soul cannot reset by email — only the hall can. */
+  email_not_synced: "taken" | null;
 }
 
 /** InitialCredentialSerializer. **No secret** — the plaintext only ever leaves through `revealCredential`. */
@@ -60,6 +63,8 @@ export interface InitialCredential {
   revealed_by: string | null;
   delivered_at: string | null;
   delivered_by: string | null;
+  /** As on `SoulAccount`, for the credential's account. */
+  email_not_synced: "taken" | null;
 }
 
 /** RevealedCredentialSerializer — served once, with `Cache-Control: no-store`. */

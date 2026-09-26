@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from apps.reincarnation.models import RebirthForm
 from apps.soul_accounts.models import InitialCredential, RebirthApplication, SoulAccount
+from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
 
 # ── 灵魂端 ───────────────────────────────────────────────────────────────
@@ -220,6 +221,11 @@ def mask_phone(value):
     return f"{value[:3]}****{value[-2:]}" if value and len(value) > 5 else ("****" if value else "")
 
 
+#: 联系邮箱没有同步成登录邮箱的原因。只有一个:地址已被别的账号占用
+#: (`services.sync_login_email`)。None = 已同步,或没有联系邮箱。
+EMAIL_NOT_SYNCED_FIELD = serializers.ChoiceField(choices=["taken"], allow_null=True, read_only=True)
+
+
 class SoulAccountSerializer(serializers.ModelSerializer):
     soul_code = serializers.CharField(source="soul.soul_code", read_only=True)
     soul_name = serializers.CharField(source="soul.name", read_only=True)
@@ -227,15 +233,20 @@ class SoulAccountSerializer(serializers.ModelSerializer):
     last_login = serializers.DateTimeField(source="user.last_login", read_only=True, allow_null=True)
     contact_email_masked = serializers.SerializerMethodField()
     contact_phone_masked = serializers.SerializerMethodField()
+    email_not_synced = serializers.SerializerMethodField()
 
     class Meta:
         model = SoulAccount
         fields = [
             "id", "soul", "soul_code", "soul_name", "cycle", "previous_account", "origin", "username",
             "must_change_password", "initial_password_expires_at", "retired_at", "created_at", "last_login",
-            "contact_email_masked", "contact_phone_masked",
+            "contact_email_masked", "contact_phone_masked", "email_not_synced",
         ]
         read_only_fields = fields
+
+    @extend_schema_field(EMAIL_NOT_SYNCED_FIELD)
+    def get_email_not_synced(self, obj):
+        return login_email_not_synced(obj)
 
     def get_contact_email_masked(self, obj) -> str:
         return mask_email(obj.soul.contact_email)
@@ -269,15 +280,20 @@ class InitialCredentialSerializer(serializers.ModelSerializer):
     cycle = serializers.IntegerField(source="account.cycle", read_only=True)
     revealed_by = serializers.CharField(source="revealed_by.username", read_only=True, allow_null=True)
     delivered_by = serializers.CharField(source="delivered_by.username", read_only=True, allow_null=True)
+    email_not_synced = serializers.SerializerMethodField()
 
     class Meta:
         model = InitialCredential
         fields = [
             "id", "account", "soul", "soul_code", "soul_name", "cycle", "channel", "status", "expires_at",
             "attempts", "last_error", "created_at", "sent_at", "revealed_at", "revealed_by",
-            "delivered_at", "delivered_by",
+            "delivered_at", "delivered_by", "email_not_synced",
         ]
         read_only_fields = fields
+
+    @extend_schema_field(EMAIL_NOT_SYNCED_FIELD)
+    def get_email_not_synced(self, obj):
+        return login_email_not_synced(obj.account)
 
 
 class RevealedCredentialSerializer(serializers.Serializer):

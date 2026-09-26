@@ -2,7 +2,11 @@
  * 「忘记密码」 for a soul: the backend's email-code reset, in two steps
  * (第三类 F 组画布:393 宽,卷宗版式,方角,3px 封皮线,整条流程不用衬线).
  *
- *   1. The contact email on the soul's account → `POST /auth/reset-password/`.
+ *   1. The soul's contact email → `POST /auth/reset-password/`. The backend
+ *      copies a contact email to the soul's login account when it is written
+ *      (`sync_login_email`), except an address another account already holds:
+ *      a family sharing one address resets through the first soul only; the
+ *      others receive no code and go the no-email way (ask the hall).
  *   2. The six-digit code + a new password → `POST /auth/set-new-password/`.
  *
  * Then back to sign-in with a notice. Never signed in from here: the reset

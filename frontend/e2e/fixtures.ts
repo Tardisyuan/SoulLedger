@@ -746,6 +746,7 @@ export const SOUL_ACCOUNT = {
   last_login: null as string | null,
   contact_email_masked: "",
   contact_phone_masked: "",
+  email_not_synced: null as "taken" | null,
 };
 
 /** `/soul-accounts/credentials/?status=PENDING` — no contact on file, never sent. */
@@ -768,6 +769,7 @@ export const CREDENTIALS_PENDING = [
     revealed_by: null as string | null,
     delivered_at: null as string | null,
     delivered_by: null as string | null,
+    email_not_synced: null as "taken" | null,
   },
 ];
 
