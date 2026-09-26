@@ -66,6 +66,7 @@ from apps.social.moderation_serializers import (
     SensitiveWordSerializer,
     SensitiveWordUpdateSerializer,
     SocialMuteSerializer,
+    officer_media,
 )
 from apps.social.soul_circle import SocialError
 
@@ -532,4 +533,13 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
         responses={200: HandledContentSerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        page = self.paginate_queryset(self.filter_queryset(self.get_queryset()))
+        rows = list(page)
+        # 图数和举报队列同一条规则(`officer_media`):只对本页的帖子行查一次,评论为 0。
+        post_ids = [r["row_id"] for r in rows if r["row_type"] == ReportTargetType.POST]
+        posts = Post.all_objects.filter(pk__in=post_ids).prefetch_related(
+            Prefetch("media", queryset=PostMedia.all_objects.all(), to_attr="all_media_rows"))
+        counts = {p.pk: len(officer_media(p)) for p in posts}
+        for r in rows:
+            r["media_count"] = counts.get(r["row_id"], 0) if r["row_type"] == ReportTargetType.POST else 0
+        return self.get_paginated_response(self.get_serializer(rows, many=True).data)

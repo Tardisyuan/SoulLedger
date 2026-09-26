@@ -8195,6 +8195,8 @@ export interface components {
             readonly handled_by: components["schemas"]["ModerationAuthor"] | null;
             /** Format: date-time */
             handled_at: string | null;
+            /** @description 帖子的图片张数(与举报队列同一条规则);评论为 0。 */
+            media_count: number;
         };
         InboxAssign: {
             user_id: number;

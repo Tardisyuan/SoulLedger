@@ -139,6 +139,22 @@ describe("access", () => {
   });
 });
 
+describe("email_not_synced", () => {
+  it("warns on the flagged row and in the reveal confirm, and nowhere else", async () => {
+    asManager();
+    soulAccountsApi.credentials.mockResolvedValue(page([credential({ email_not_synced: "taken" }), credential({ id: "c2" })]));
+    const { container } = renderPage();
+    await screen.findAllByText("张三");
+    const row = (id: string) => within(container.querySelector(`[data-credential-id="${id}"]`) as HTMLElement);
+    const copy = tZh("soul_accounts.account.email_not_synced");
+    expect(copy).toBe("邮箱已被其他账号占用，未同步为登录邮箱：这个灵魂只能找殿司重设密码");
+    expect(row("c1").getByRole("note")).toHaveTextContent(copy);
+    expect(row("c2").queryByRole("note")).toBeNull();
+    fireEvent.click(row("c1").getByRole("button", { name: tZh("soul_accounts.credentials.actions.reveal") }));
+    expect(within(await screen.findByRole("dialog")).getByRole("note")).toHaveTextContent(copy);
+  });
+});
+
 describe("reveal: once, and gone when the dialog closes", () => {
   async function openConfirm() {
     fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.credentials.actions.reveal") }));
