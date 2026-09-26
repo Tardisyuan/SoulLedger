@@ -99,7 +99,7 @@ function event(overrides: Partial<SoulEvent> = {}): SoulEvent {
 async function translatorFor(locale: (typeof LOCALES)[number]) {
   const { result } = renderHook(() => useI18n(), { wrapper: I18nProvider });
   act(() => result.current.setLocale(locale));
-  const marker = { "zh-Hans": "状态变更", en: "State changed", egy: "Set Medu Khemen Seth" }[locale];
+  const marker = { "zh-Hans": "状态变更", en: "State changed", egy: "Kheperu Khemen Seth" }[locale];
   await waitFor(() => expect(result.current.t("souls.events.STATE_CHANGED")).toBe(marker));
   return result.current.t;
 }
@@ -108,7 +108,7 @@ describe("system-event copy resolves through the shipped bundles", () => {
   const expected: Record<(typeof LOCALES)[number], { event: string; from: string; to: string }> = {
     "zh-Hans": { event: "状态变更", from: "审判中", to: "已处置" },
     en: { event: "State changed", from: "Judging", to: "Disposed" },
-    egy: { event: "Set Medu Khemen Seth", from: "Em Wedja", to: "Wetep Seth" },
+    egy: { event: "Kheperu Khemen Seth", from: "Em Wedja", to: "Wetep Seth" },
   };
 
   it.each(LOCALES)("renders a STATE_CHANGED row in %s and leaks no raw member", async (locale) => {
