@@ -27,6 +27,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { RevealCredentialDialog } from "@/src/components/soul-accounts/RevealCredentialDialog";
+import { EmailNotSyncedNote } from "@/src/components/soul-accounts/EmailNotSyncedNote";
 import {
   CREDENTIAL_FILTERS,
   credentialTone,
@@ -179,6 +180,7 @@ function CredentialsPageContent() {
                 <div className="min-w-0">
                   <p className={label}>{t("soul_accounts.fields.reason")}</p>
                   <p className="text-sm text-[oklch(var(--color-ink-muted))] break-words">{t(reason.key, reason.params)}</p>
+                  {c.email_not_synced === "taken" && <EmailNotSyncedNote />}
                   {c.revealed_at && (
                     <p className="text-xs text-[oklch(var(--color-ink-subtle))] break-words">
                       {t("soul_accounts.credentials.revealed_by", { by: c.revealed_by ?? "", time: formatDateTime(c.revealed_at) })}

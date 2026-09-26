@@ -2075,6 +2075,7 @@
       "contact_email": "联系邮箱",
       "contact_phone": "联系手机号",
       "contact_hint": "留空则不修改现有联系方式",
+      "email_not_synced": "邮箱已被其他账号占用，未同步为登录邮箱：这个灵魂只能找殿司重设密码",
       "chain": "账号链（各世）",
       "created_at": "开通于 {{time}}",
       "retired_at": "停用于 {{time}}",

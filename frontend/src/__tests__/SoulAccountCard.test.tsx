@@ -196,6 +196,29 @@ it("loading failure shows a retry, not 'no account'", async () => {
   expect(screen.queryByText(tZh("soul_accounts.account.none"))).toBeNull();
 });
 
+it("warns when the contact email was not synced as the login email, and only then", async () => {
+  asRole("soul_account.read");
+  soulAccountsApi.accounts.mockResolvedValue(page([PAST_LIFE, account({ email_not_synced: "taken" })]));
+  const { unmount } = renderCard();
+  expect(await screen.findByRole("note")).toHaveTextContent(
+    "邮箱已被其他账号占用，未同步为登录邮箱：这个灵魂只能找殿司重设密码"
+  );
+  unmount();
+
+  soulAccountsApi.accounts.mockResolvedValue(page([PAST_LIFE, account()]));
+  renderCard();
+  await screen.findByTestId("current-soul-account");
+  expect(screen.queryByTestId("email-not-synced")).toBeNull();
+});
+
+it("a retired life's flag does not warn: only this life's account counts", async () => {
+  asRole("soul_account.read");
+  soulAccountsApi.accounts.mockResolvedValue(page([{ ...PAST_LIFE, email_not_synced: "taken" }]));
+  renderCard();
+  expect(await screen.findByText(tZh("soul_accounts.account.none"))).toBeInTheDocument();
+  expect(screen.queryByTestId("email-not-synced")).toBeNull();
+});
+
 it("an unknown origin renders as unrecognized with the raw member in title", async () => {
   asRole("soul_account.read");
   soulAccountsApi.accounts.mockResolvedValue(page([account({ origin: "TELEPORTED" })]));

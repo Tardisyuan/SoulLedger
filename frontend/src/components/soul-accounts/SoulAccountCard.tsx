@@ -12,6 +12,7 @@ import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountCredentialModal } from "./AccountCredentialModal";
+import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
 import { lifeNumber } from "./soulAccountsView";
 
 /**
@@ -57,6 +58,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
   } else {
     body = (
       <div className="space-y-4">
+        {current?.email_not_synced === "taken" && <EmailNotSyncedNote />}
         {current ? (
           <dl className="space-y-2 text-sm" data-testid="current-soul-account">
             {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(current.cycle) }))}
