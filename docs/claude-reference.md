@@ -1,5 +1,10 @@
 # Claude Code Reference — SoulLedger
 
+> **2026-09-26 注:下面的 `SendMessage` 示例已被 `CLAUDE.md` 的「Agent Comms」一节取代。**
+> 子代理的工具集里**没有** `SendMessage`(2026-09-07 一轮五个代理全部报告了这件事),
+> 所以「完成后 SendMessage 给 X」无法执行。子代理把报告写在**最终回复**里,那份回复本来就会回到主会话;
+> 要串联就由主会话在收到结果后再派下一个。本文件其余内容保留原样。
+
 ## Agent Communication Patterns
 
 ### Spawning a Coordinated Team

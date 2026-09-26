@@ -264,8 +264,18 @@ def recalculate_for_tenant(tenant_id):
 
 ### 8.1 怎么跑
 
-**用 `pytest`，不是 `manage.py test`** —— Django runner 收不到 774 条模块级函数
-（根 `AGENTS.md:225-229`）。配置在**仓库根** `pytest.ini`（`:2-3` `pythonpath = backend`）。
+**用 `pytest`，不是 `manage.py test`** —— Django runner 收不到模块级函数（2026-09-06 是 774 条，
+2026-09-26 约 1780 条；根 `AGENTS.md:261-266`）。配置在**仓库根** `pytest.ini`（`:2-3` `pythonpath = backend`）。
+
+**仓库根 `conftest.py` 管整个会话的隔离**（两棵测试树都在它之下）：缓存换成进程内 LocMem、
+每个用例之间清空（`_isolate_cache_from_redis` / `_clear_cache_between_tests`）；密码哈希换成 MD5
+（`_fast_password_hasher`，断言哈希前缀要读 `get_hasher().algorithm`）；`apps/perm/cache.py` 自开的
+Redis 客户端与 channel layer 各拿一个按进程区分的前缀（`_private_permission_cache_prefix` /
+`_private_channel_layer_prefix`）；`django_db_setup` 包装在会话结束前关掉
+`database_sync_to_async` 线程握着的连接，否则 PostgreSQL 上 `DROP DATABASE` 失败、
+`test_soulledger` 留在 115 上（`bf406a6f`，2026-09-26）。`pytest.ini` 的 `filterwarnings`
+把 pytest-django 那条「Error when trying to teardown test databases」warning 升成 error，
+下一次泄漏的连接不再以 exit 0 收场。
 
 ```bash
 # 两个后端服务都要隔离。.env 把 DATABASE_URL 和 REDIS_URL 都指向共享的 115。
@@ -287,8 +297,15 @@ cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:639
 两条都**不可能**在 SQLite 上测出来。碰事务、约束、列宽之前，先在 PG 上跑一遍：
 
 ```bash
-cd backend && .venv/bin/python -m pytest -q --no-cov --create-db
+# 先起一次性 Redis：redis-server --port 6399 --daemonize yes --save '' --appendonly no
+cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
+  CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
+  CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
+  .venv/bin/python -m pytest -q --no-cov --create-db
 ```
+
+只放开数据库，Redis 必须覆盖：否则 `REDIS_URL` 读 `.env` 指向 115，
+`apps/perm/cache.py` 会往共享 Redis 写权限缓存键、并删掉那里的 `perm:*`。
 
 `--create-db` 是必需的：陈旧的 `test_soulledger` 会造成上千条"环境错误"。
 

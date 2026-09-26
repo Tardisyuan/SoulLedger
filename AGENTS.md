@@ -8,8 +8,9 @@
 
 ## 1. 设计系统
 
-**权威是 `frontend/app/globals.css`。** 其次是 `frontend/eslint.config.mjs` 的六条
-design-system 规则。`DESIGN.md` 只解释决定，不定义数值 —— 它自己第 3 行就是这么写的。
+**权威是 `frontend/app/globals.css`。** 其次是 `frontend/eslint.config.mjs` 的七条
+design-system 规则（`type-scale` / `spacing-rhythm` / `dead-radius` / `no-page-shadow` /
+`no-raw-palette` / `no-hex-colour` / `no-styles-in-csstext`，`eslint.config.mjs:663-671`）。`DESIGN.md` 只解释决定，不定义数值 —— 它自己第 3 行就是这么写的。
 
 完整规约见 **[`docs/CONVENTIONS-frontend.md`](docs/CONVENTIONS-frontend.md)**，那里每条
 都标了执法机制。下面只留新写代码时最容易踩的三条。
@@ -33,8 +34,9 @@ Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 
 
 ### 1.2 所有圆角是 0，这是刻意的
 
-`globals.css:193-202` 里 8 个 shape radius 全为 `0`，只剩 `--radius-focus: 2px` 与
-`--radius-full`。所以 `rounded` / `rounded-sm` / `-md` / `-lg` / `-xl` / `-2xl` / `-3xl`
+`globals.css:185-193` 里 8 个 shape radius 全为 `0`，只剩 `--radius-full`
+（`--radius-focus` 已随规范 v1 的方角焦点环删除，`e78e5d88`）。`rounded-full` 只准出现在
+`eslint.config.mjs:121-129` 的 `ROUND_ALLOW` 文件里（头像与转圈）。所以 `rounded` / `rounded-sm` / `-md` / `-lg` / `-xl` / `-2xl` / `-3xl`
 **全是死类名**：不产生视觉差异，但会让读代码的人以为那里有圆角。
 执法：eslint `design-system/dead-radius`（error）。
 
@@ -44,12 +46,18 @@ Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 
 token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-palette`（error）。
 十六进制走 `no-hex-colour`（error，四处已登记例外）。
 
-### 1.4 另外三条
+### 1.4 另外几条
 
-- **字号只有八档** `text-01`…`text-08`（11/12/13/15/18/22/32/56px，自带行高字距字重）。
-  `text-sm` 之类与 `text-[11px]` 之类都是 error（`design-system/type-scale`）。
-- **间距只有** 1/2/3/4/6/10/16 + 0/px/auto（`design-system/spacing-rhythm`）。
-- **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识八档字号）。
+- **字号只有七档** `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl`
+  （11/12/13/16/20/22/28px，自带行高，`globals.css:162-177`；规范 v1，`16f4e149`）。
+  旧八档 `text-01`…`text-08`、`text-base`/`text-2xl` 之类与 `text-[11px]` 之类都是 error
+  （`design-system/type-scale`）。
+- **间距只有** 0.5/1/1.5/2/3/4/6/8/10/14 + 0/px/auto（`design-system/spacing-rhythm`，
+  `eslint.config.mjs:108`）。豁免表 `RHYTHM_EXEMPT` 为空（Badge 的 `py-0.5` 随刻度收进 0.5 而删除）。
+- **页面内零阴影**：浮层用 `shadow-overlay`（`design-system/no-page-shadow`）。
+- **没有文明色**：`--color-civ-*` / `--civ-*` 与 `[data-civ]` 已在 `a2044b28` 撤销，
+  `src/__tests__/ledgerPaletteContract.test.ts` 断言它们既不声明也不被读取。
+- **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识七档字号）。
 
 ### 1.5 迁移基线是双向的
 
@@ -62,6 +70,9 @@ token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-p
 > `text-ink` / `border-hairline` 的裸类名 token 表。**那四类今天全部是 eslint error，
 > 那张表里的裸类名在产品代码里用量为 0。** `DESIGN.md:5-18` 早已写明旧规范"是一条活的、
 > 要你撤销刻意工作的指令"，但这一节仍在原地照抄它，并让人"必读 DESIGN.md"。
+>
+> （2026-09-26 注：上面「四类全部是 eslint error」里的 `text-sm` 一项已不成立 ——
+> 规范 v1 的七档字号（`16f4e149`）把 `text-sm`（13px）收回成合法档位；其余三类仍是 error。）
 
 ---
 
@@ -105,7 +116,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 ```
 
 **重要**：
-- z 轴用 `z-dialog`（= 80，`globals.css:213-215`），**不是** `z-[10000]`
+- z 轴用 `z-dialog`（= 80，`globals.css:247`），**不是** `z-[10000]`
 - 进出场动效走 Base UI 的 `data-starting-style` / `data-ending-style`，不是 `<Transition>`
 - **`max-h` + `flex flex-col` + 可滚动的 body 三者是一套，缺一不可。** 缺的后果只在小屏
   出现：面板没有高度上限时 `items-center` 会让它上下对称溢出，页脚连同提交按钮被挤出
@@ -120,13 +131,15 @@ import { BaseModal } from "@/src/components/ui/Modal";
 ```
 frontend/src/components/
 ├── ui/
-│   ├── Modal.tsx      ← BaseModal 弹窗基座
-│   └── Toast.tsx     ← Toast 通知（已修复，无阴影）
+│   ├── Modal.tsx      ← BaseModal 弹窗基座；SoulCreateModal 也在这个文件里（`:121`）
+│   └── Toast.tsx      ← Toast 通知
 ├── souls/
-│   └── SoulCreateModal.tsx   ← 创建灵魂弹窗
 │   └── SoulEditModal.tsx     ← 编辑灵魂弹窗
-└── UserModal.tsx             ← 用户信息弹窗
+└── users/
+    └── UserModal.tsx         ← 用户信息弹窗
 ```
+
+（2026-09-26 核对：此前列的 `souls/SoulCreateModal.tsx` 与 `components/UserModal.tsx` 两个路径不存在。）
 
 ### Toast 规范
 
@@ -155,7 +168,7 @@ showToast("消息内容", "success");            // (message, type?, duration = 
 ### 架构
 
 - 上下文：`src/contexts/I18nContext.tsx`
-- 语言文件：`messages/{locale}.json`
+- 语言文件：`packages/core/messages/{zh-Hans,en,egy}.json`（不在 `frontend/` 里）
 - 支持语言：中文（zh-Hans）、英文（en）、埃及语（egy）
 
 ### 支持插值的 t() 函数
@@ -170,7 +183,7 @@ t("nav.greeting", { username: user.username })
 
 | 页面/模块 | Key 前缀 |
 |----------|---------|
-| NavBar | `nav.*` |
+| 页头 / 侧栏 / 用户菜单 | `nav.*` |
 | 登录 | `auth.*` |
 | 灵魂列表 | `souls.*` |
 | 通用 | `common.*` |
@@ -179,7 +192,7 @@ t("nav.greeting", { username: user.username })
 
 - 切换语言时页面不刷新
 - Footer 等装饰性内容（象形文字）只在对应语言选中时显示
-- 语言切换器用下拉菜单，不用按钮组
+- 语言与主题切换收在页头用户菜单的弹层里（`src/components/layout/AppLayout.tsx:38`、`:282-291`），不单独占页头
 
 ---
 
@@ -249,13 +262,15 @@ t("nav.greeting", { username: user.username })
    `unittest.TestCase` 子类；实测 `backend/tests/` 里有 **774 个模块级
    `def test_` 函数**对 **22 个 TestCase 类**，前者它一条都收不到。
    照旧写法跑会得到一个绿色的、几乎什么都没验的结果。
+   （2026-09-26 复数：约 1780 个模块级 `def test_`，TestCase 类仍是 22 个；
+   `grep -rhE '^def test_' backend/tests | wc -l`。）
    完整命令（含必须隔离的 Redis）见 `CLAUDE.md` 的 Build & Test。
 2. 特别检查 `test_tenant_isolation.py` 全部通过
 3. 如有 model/serializer 修改，运行对应 migration
 
 ### packages/core（这份文件此前完全没提它）
 
-2026-09-02 起仓库是 npm workspaces：根 + `frontend/` + `packages/core/`。
+2026-09-02 起仓库是 npm workspaces：根 + `frontend/` + `packages/core/`（后来又加了 `mobile/`，见 `package.json:6-10`）。
 那个包是平台无关层，有**自己的三条门禁**，`.git/hooks/pre-push` 在任何
 `^packages/` 改动上全跑：
 
@@ -266,7 +281,7 @@ npm run --workspace packages/core test      # vitest，不是 jest
 ```
 
 `test` 抓的东西 `typecheck` 抓不到：`domBoundary.test.ts` 断言
-`@types/react` 漏进来的约 146 个 DOM 类型名保持不可解析 —— 它们是空接口，
+`@types/react` 漏进来的约 150 个 DOM 类型名（React 19.2 下；18.3 时是 146）保持不可解析 —— 它们是空接口，
 所以 `const el: HTMLElement = {}` 是能编译的。
 
 ### Git 提交规范
@@ -305,8 +320,9 @@ TanStack Query v5
 TypeScript
 ```
 
-仓库是 **npm workspaces**：根 + `frontend/` + `packages/core/`。根上那份
-`package-lock.json` 是唯一锁文件，`cd frontend && npm ci` **不再可用**。
+仓库是 **npm workspaces**：根 + `frontend/` + `mobile/` + `packages/*`（`package.json:6-10`）。根上那份
+`package-lock.json` 是唯一锁文件，`cd frontend && npm ci` **不再可用**。装依赖的顺序
+（npm 11、`npm rebuild …`、还原锁文件）见 `CLAUDE.md` 的 Build & Test。
 
 ### 后端
 
@@ -328,7 +344,7 @@ SoulLedger/
 ├── AGENTS.md          ← 本文件
 ├── package.json       ← workspaces 根;package-lock.json 也在这里
 ├── backend/
-│   ├── apps/              ← 19 个 app,见 config/settings.py:64-82
+│   ├── apps/              ← 24 个本地 app,见 config/settings.py:69-92
 │   │   ├── souls/         ← 灵魂 CRUD
 │   │   ├── tenants/       ← 多租户(TenantManager / 中间件)
 │   │   ├── authentication/ ← 登录/JWT
@@ -336,22 +352,23 @@ SoulLedger/
 │   │   └── core/           ← 不在 INSTALLED_APPS,只装 mixin/middleware/permission
 │   ├── config/settings.py
 │   └── tests/             ← 后端测试分散在两处,另一处是 apps/*/tests.py
-├── packages/core/         ← 平台无关层:API 契约 / WS 客户端 / 领域配置 / 六个数据 hook
+├── packages/core/         ← 平台无关层:API 契约 / WS 客户端 / 领域配置 / 十六个数据 hook
 │   ├── src/platform/      ← 8 个宿主端口;tsconfig 不含 "dom",这是执法机制
 │   ├── messages/          ← 三份语言包 zh-Hans / en / egy
 │   └── openapi/schema.yml ← 前端类型的来源,后端有门禁盯着它逐字节一致
 ├── frontend/
-│   ├── app/               ← Next.js 路由,37 个 page.tsx
+│   ├── app/               ← Next.js 路由,43 个 page.tsx
 │   │   └── globals.css    ← **设计 token 的权威**
 │   ├── src/
 │   │   ├── components/    ← UI 组件
 │   │   ├── contexts/      ← React Context
-│   │   ├── hooks/         ← 只剩视图层四个,数据 hook 在 packages/core
+│   │   ├── hooks/         ← 只剩视图层五个,数据 hook 在 packages/core
 │   │   └── __tests__/     ← 契约测试(它们才是真正的规范)
 │   ├── components/ui/     ← 第三个源根:data-table / data-grid / page-section / skeleton
 │   ├── lib/platform/web.ts ← 平台端口的 web 实现
 │   ├── middleware.ts      ← 路由守卫(在 frontend/ 根,不在 src/)
-│   └── eslint.config.mjs  ← 六条 design-system 规则
+│   └── eslint.config.mjs  ← 七条 design-system 规则
+├── mobile/                ← 灵魂端 App(Expo);门禁见 CLAUDE.md 的 Build & Test
 └── scripts/
     ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
     ├── start-frontend.sh
@@ -373,30 +390,39 @@ SoulLedger/
 5. Migration：`cd backend && .venv/bin/python manage.py makemigrations`（解释器是 `backend/.venv`，不是 PATH 上的 `python`；建法与原因见 `CLAUDE.md` 的 Build & Test）
 
 **前端**：
-1. `lib/api.ts` — 添加 API 方法（JWT Authorization）
-2. `hooks/useXxx.ts` — TanStack Query hooks
-3. `app/xxx/page.tsx` — 列表页（Linear 样式）
+1. `packages/core/src/api/xxx.ts` — 添加 API 方法（JWT Authorization；`frontend/lib/api.ts` 已不存在）
+2. `packages/core/src/hooks/useXxx.ts` — TanStack Query hooks（`frontend/src/hooks/` 只放视图层 hook）
+3. `frontend/app/xxx/page.tsx` — 列表页（`PageShell` 骨架，样式守 §1）
 4. `components/xxx/XxxModal.tsx` — 创建/编辑弹窗（用 `BaseModal`）
 5. Build + 验证
 
 ### 新增 i18n key
 
-1. 在 `messages/zh-Hans.json` 添加 key
-2. 在 `messages/en.json` 添加对应翻译
-3. 在 `messages/egy.json` 添加对应翻译
+1. 在 `packages/core/messages/zh-Hans.json` 添加 key
+2. 在 `packages/core/messages/en.json` 添加对应翻译
+3. 在 `packages/core/messages/egy.json` 添加对应翻译。**egy 是封闭词汇**：
+   `frontend/src/__tests__/egyLexiconRules.test.ts` 要求每个词都在定稿词根 ∪ 小词 ∪ 专名里
+   （旧账清单 `support/egyOffLexicon.json` 只许删不许加），新词要先进词表，不能随手造。
+   `EGY_VOCAB_WRITE=1 npx jest egyLexiconRules`（在 `frontend/` 下）只重写登记表
+   `support/egyVocabulary.json` 的次数与标记，**不会让未登记的词通过**
 4. 在组件中调用 `t("page.key")`
-5. 如需插值，使用 `{{variable}}` 格式
+5. 如需插值，使用 `{{variable}}` 格式（egy 每条的占位符集合须与 zh-Hans 同键一致，`egyLexiconRules` 查）
 
-### 添加按钮/组件到 NavBar
+### 添加按钮/组件到页头
 
-NavBar 路径：`src/components/NavBar.tsx`
-- 未登录：右侧显示"登录"按钮（amber 药丸形）
-- 已登录：右侧显示用户名（可点击弹窗）+ 登出
-- 主题切换、语言切换始终显示
+`src/components/NavBar.tsx` 已不存在。页头与侧栏在 `src/components/layout/AppLayout.tsx`：
+- 页头 40px：面包屑 · 通知 · 用户菜单（`a2044b28`）
+- 语言 / 主题 / 设置 / 登出收在用户菜单的弹层里（`AppLayout.tsx:38`、`:282-291`）
+- 连接状态只在断线时出现在页头下的警示条
 
 ---
 
 ## 8. 当前里程碑状态
+
+> **以下 §8–§10 为 2026-05 的历史记录，不是现状（2026-09-26 加注）。** M4–M7 早已交付；
+> 角色不止四种（`apps/authentication/models.py:56-67` 有六种，含 MODERATOR 与 SOUL）；
+> 目录树里的 `karma/`、`RouteGuard.tsx`、`useAuth.ts` 等路径已改名或不存在。现状以 `git log`、
+> 本文件 §1–§7 与 `backend/config/settings.py:69-92` 为准；里程碑见 `docs/MILESTONES.md`（同样落后于代码）。
 
 | 里程碑 | 状态 | 说明 |
 |--------|------|------|

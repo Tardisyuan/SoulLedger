@@ -26,11 +26,11 @@ recoverable from the code, and it points at the code for everything else.
 
 | What | Where | Notes |
 |---|---|---|
-| Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. Each block is commented with the measurement behind it. |
-| Type scale | `frontend/app/globals.css` `@theme` | `--text-01` … `--text-08`, eight steps, with line-height / tracking / weight attached to each. |
+| Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v1 "账簿 × 卷宗" (`a2044b28`, 2026-09-24); `ledgerPaletteContract` holds each token to the spec's hex. |
+| Type scale | `frontend/app/globals.css` `@theme` (`:162-177`) | Seven steps — `--text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl` (11/12/13/16/20/22/28px), with line-height attached to each (`16f4e149`). |
 | Font families | `frontend/app/fonts.ts` | Three, each with one stated job. |
-| Civilization identity | `frontend/app/globals.css` | `--color-civ-hue-*`, `--color-civ-mark-*`, `--color-civ-ink-*` plus the `[data-civ]` rules. |
-| Enforcement | `frontend/src/__tests__/` | `civilizationColourContract`, `inkOnSurfaceContract`, `civIdentityInkContract`, `cssTokenReferenceContract`, `designGuardContract`. These re-derive the claims rather than restating them. |
+| Civilization identity | — | **Not in the colour layer any more.** The per-tenant `--color-civ-*` / `--civ-*` tokens and the `[data-civ]` rules were removed in `a2044b28` (spec v1 §1.8); a civilization is told apart by its numbering, its path shape and its titles. |
+| Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
 
 If a number here would ever contradict one of those files, the file wins and
 this document is the bug.
@@ -40,9 +40,10 @@ this document is the bug.
 ## The decisions worth writing down
 
 **Square corners are a decision, not an omission.** Every *shape* radius is `0`
-— `--radius` and its eight siblings. The two exceptions are deliberate and
-named: `--radius-focus` (2px, the focus ring) and `--radius-full` (a pill,
-where the shape carries meaning).
+— `--radius` and its seven siblings (`globals.css:185-192`). The one exception is deliberate and
+named: `--radius-full`, for avatars and spinners only, in the files listed in
+`ROUND_ALLOW` (`frontend/eslint.config.mjs:121-129`). The focus ring went square with
+spec v1 (`e78e5d88`), and `--radius-focus` was deleted with it.
 `Badge`'s `shape: "square"` variant emits *no class at all*, because `rounded`
 would render `border-radius: 0` and read as a choice that had been made when it
 had not. Pills exist only where a shape carries meaning.
@@ -74,13 +75,12 @@ OKLCH since `7db2c6e` (2026-09-09); wrapping it in `hsl()` the old way clamps
 lightness to 100% and paints white, with every gate green.
 
 **Four cosmologies, and they number their own scripture.**
-`frontend/src/config/civilizationSigil.ts` is the idea: an Egyptian article is
+`packages/core/src/config/civilizationSigil.ts` is the idea: an Egyptian article is
 `§ 27 / 42` because the Negative Confession is a closed tally; a 功過格 article
 is a 卷-numbered 門; an Inferno circle is a roman numeral; a Platonic citation
-is a Stephanus page. Each tenant also tints its own surface ramp
-(`--civ-hue`) and owns a mark (graphics) and an ink (text) — see the long
-comment above the civilization block in `globals.css` for why those are two
-tokens and not one.
+is a Stephanus page. Numbering is now the *only* visual difference: the
+per-tenant surface tint (`--civ-hue`), mark and ink were removed in `a2044b28`
+(2026-09-24), and `ledgerPaletteContract` asserts no civ token is declared or read.
 
 **Reduced motion collapses to 1ms, not `none`.** Base UI waits for
 `transitionend` before unmounting a popup; `none` would strand them mounted

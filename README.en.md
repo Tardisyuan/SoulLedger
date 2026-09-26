@@ -109,7 +109,11 @@ runs without it.
 > there, did nothing, and looked like it was working.
 
 ```bash
-npm install          # repository root
+# Repository root. Use npm 11, not the npm 10 that ships with nvm's node 20 (it exits 0
+# yet installs no typescript and no .bin); the measurements are in CLAUDE.md, Build & Test
+npx -y npm@11 ci
+npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli   # npm 11 skips install scripts
+git checkout -- package-lock.json   # npm ci strips the lockfile's libc fields; restore it
 npm run dev --workspace frontend   # already pins PORT=3333
 ```
 
@@ -146,13 +150,26 @@ the command is the only seeding entry point. Further seeding also lives in
 Django management commands:
 
 ```bash
-python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, GR_HADES
-python manage.py seed_mythology             # realms + actors, all four (idempotent)
-python manage.py consolidate_eu_pantheon
-python manage.py seed_workflow_templates
-python manage.py seed_field_permissions
-python manage.py init_organizations
-python manage.py create_api_key             # for the Death Sync external API
+cd backend   # the interpreter is backend/.venv, not whatever `python` is on PATH
+.venv/bin/python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, GR_HADES
+.venv/bin/python manage.py seed_mythology             # realms + actors, all four (idempotent)
+.venv/bin/python manage.py consolidate_eu_pantheon
+.venv/bin/python manage.py seed_workflow_templates
+.venv/bin/python manage.py seed_field_permissions
+.venv/bin/python manage.py init_organizations
+.venv/bin/python manage.py create_api_key             # for the Death Sync external API
+.venv/bin/python manage.py sync_permissions           # create missing permission codenames and their
+                                                      # default grants; run after a deploy that adds
+                                                      # codenames (--dry-run lists, writes nothing)
+```
+
+Maintenance commands (can also be run by hand):
+
+```bash
+.venv/bin/python manage.py backfill_soul_entry_path   # first path station for souls that died before death wrote one (--dry-run)
+.venv/bin/python manage.py cleanup_orphan_post_media  # delete circle images uploaded but never attached to a post
+.venv/bin/python manage.py process_workflow_timeouts  # fire due per-node workflow timeouts (escalate / auto-reject / notify)
+.venv/bin/python manage.py reconcile_inbox            # recompute each hall-inbox conversation's latest message from Synapse
 ```
 
 ### Convenience scripts
@@ -181,11 +198,16 @@ Backend  (Django 5 + DRF)          →  http://localhost:8000/api/v1/
 API docs (drf-spectacular)         →  http://localhost:8000/api/docs/
 Health                             →  http://localhost:8000/health/  and /health/detailed/
 WebSocket (channels + daphne)      →  ws://localhost:8000/ws/notifications/
-Soul app (Expo / React Native)     →  expo start (mobile/, iOS and Android simulators)
+Soul app (Expo / React Native)     →  expo start (mobile/, iOS and Android simulators; a dev client, not Expo Go)
 Synapse (letters)                  →  :8008   (loopback only, no federation)
 PostgreSQL 16                      →  :5432   (SQLite fallback for local dev)
 Redis 7                            →  :6379   (channel layer + Celery broker)
 ```
+
+After a native dependency changes in the soul app (e.g. `expo-image-picker`,
+`expo-image-manipulator`), rebuild the dev client with `npm run --workspace mobile android`
+/ `ios` (`expo run:*`). `expo start --clear` only swaps the JS bundle; it does not add
+native modules to the installed app.
 
 **Multi-tenancy.** A `Tenant` is an administrative record; a civilization is a
 claim about what happens to the dead. The mapping between them lives in exactly
@@ -198,7 +220,9 @@ and the meta-test in `tests/test_tenant_scoping_contract.py` pins every ViewSet 
 The `contextvars` tenant exists so `apps/audit/signals.py` can attribute a
 write, not so queries filter themselves.
 
-**Permissions.** Four roles (ADMIN / JUDGE / GUARDIAN / VIEWER) over
+**Permissions.** Six roles (ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL,
+`backend/apps/authentication/models.py:56-67`; SOUL is the soul itself, never assignable
+and kept out of every officer endpoint) over
 codename-based permissions, plus `DataScope` for row visibility and
 `FieldPermission` for per-field visibility. API enforcement is via
 `CodenameViewSetMixin`; the frontend mirrors it with `RequirePermission` /
@@ -258,6 +282,7 @@ Everything is under `/api/v1/`. Authenticated endpoints expect
 | Prefix | App |
 |---|---|
 | `auth/`, `users/` | JWT login/refresh, user management |
+| `recycle-bin/` | Recycle bin: list, restore and hard-delete soft-deleted records |
 | `souls/` | Soul CRUD plus state transitions |
 | `ledger/` | Merit/demerit records, balance, decay, per-civilization reading |
 | `judgment/`, `disposition/`, `reincarnation/` | The judgment pipeline |
@@ -272,6 +297,7 @@ Everything is under `/api/v1/`. Authenticated endpoints expect
 | `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
 | `soul-accounts/`, `soul-auth/`, `me/` | Soul account provisioning and credential handover, soul-side login, a soul's own endpoints |
 | `chat/` | Letters: Matrix credentials minted by the backend, and Synapse's new-message hook |
+| `social-media/<uuid>/` | File exit for circle post images (signed URL, visibility re-checked on every request) |
 
 The ledger reading described above is served from
 `GET /api/v1/ledger/balance/{soul_id}/`. The response carries both
@@ -286,7 +312,7 @@ are authoritative; the table above is a map, not a contract.
 
 ## Testing and CI
 
-`.github/workflows/ci.yml` defines three jobs. **It is now `workflow_dispatch` only**
+`.github/workflows/ci.yml` defines four jobs. **It is now `workflow_dispatch` only**
 — no push or PR triggers it (GitHub Actions quota exhausted; `security.yml`'s weekly
 cron is off for the same reason). So "CI is green" is not a statement this repository
 makes automatically any more. The local gate is.
@@ -294,13 +320,14 @@ makes automatically any more. The local gate is.
 | Job | Steps |
 |---|---|
 | **backend** | `makemigrations --check --dry-run`, `migrate`, `pytest`, `ruff check`, `pip-audit` |
-| **frontend** | `tsc --noEmit`, `eslint`, `next build`, `jest`, `npm audit` |
+| **frontend** | `packages/core` typecheck / lint / vitest, then `tsc --noEmit`, `eslint`, `next build`, `npm run test:coverage`, `npm audit` |
+| **mobile** | `mobile/` typecheck / lint / test |
 | **e2e** | Playwright matrix: one leg each for chromium / firefox / mobile-chrome, `fail-fast: false`, a separate report artifact per leg |
 
 Backend CI runs against real PostgreSQL 16 and Redis 7 service containers.
 
 Both `pip-audit` and `npm audit` **block** now — neither is `continue-on-error`
-any more. The backend scan is scoped to `-r requirements.txt` rather than the whole
+any more. The backend scan is scoped to `-r requirements.lock --no-deps` (`ci.yml:97`) rather than the whole
 runner environment, the frontend one is `npm audit --audit-level=high`, and the
 accepted-advisory count is none on both sides. The reasons are written into the
 workflow file next to each step, including an explicit instruction not to put
@@ -387,10 +414,11 @@ backend/
                     apps/*/ — see Testing & CI)
 packages/core/      The platform-independent layer. **No DOM** — its tsconfig omits
   src/api/          One typed client per backend app (was frontend/lib/api/)
-  src/hooks/        Thirteen data hooks (useSouls / useSocial / useSocialModeration /
+  src/hooks/        Sixteen data hooks (useSouls / useSocial / useSocialModeration /
                     useJudgments / useJudgmentQueue / useStatutes / useDispositions /
+                    useDispatchDrafts / usePermissionMatrix /
                     useReincarnation / useSentencePlans / useScheduler /
-                    useSoulAccounts / useSoulChat / useSoulInbox)
+                    useSoulAccounts / useSoulChat / useSoulInbox / useSoulMediaUploads)
   src/platform/     Eight host-capability ports; the web impl is in
                     frontend/lib/platform/web.ts
   src/config/       Domain config: the four-cosmology maps, civilizationSigil,
@@ -400,8 +428,8 @@ packages/core/      The platform-independent layer. **No DOM** — its tsconfig 
                     gate asserting it byte-for-byte
 frontend/
   app/              Next.js App Router pages (43 page.tsx, 40 of them on PageShell)
-  src/hooks/        Only four view-layer hooks remain: useChartColors /
-                    usePermissions / useRowTransitions / useSidebarMenus
+  src/hooks/        Only five view-layer hooks remain: useChartColors /
+                    usePermissions / useRowTransitions / useSidebarMenus / useWideViewport
   src/components/   UI, including the RBAC gating components
   src/__tests__/    The contract tests — these are the conventions that are enforced
   components/ui/    A third source root: data-table / data-grid / page-section
@@ -455,8 +483,8 @@ There is now a written-down type system.
 | Layer | What it is |
 |---|---|
 | Type | Archivo (UI) · Source Serif 4 (quotation) · IBM Plex Mono (figures, identifiers), each paired with Noto Sans SC / Noto Serif SC. All SIL OFL. |
-| Scale | Eight steps, `text-01`…`text-08` (11/12/13/15/18/22/32/56px). Largest-to-body goes from 1.71 to 3.7; table body *tightens* to 13px, so density is not the price. |
-| Radius | **Square everywhere.** `rounded-full` is reserved for identity objects (avatars, the 7px civilization dot), `rounded-focus` for the focus ring. |
+| Scale | Seven steps, `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl` (11/12/13/16/20/22/28px, `frontend/app/globals.css:162-177`; spec v1). Table body is 13px, so density is not the price. |
+| Radius | **Square everywhere**, the focus ring included. `rounded-full` is for avatars and spinners only, in the files listed in `ROUND_ALLOW` in `eslint.config.mjs`. |
 | Rules | Four weights: 1px row rule / 1px block edge / 2px section underline / 3px civilization line and sealed-verdict band. |
 | Shell | One `PageShell` replaces 36 hand-written page shells; eight content widths collapse to three. |
 | Primitives | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
@@ -480,17 +508,24 @@ Confession 42, European Deadly Sins 7 + Inferno 26, Greek Gorgias 12 + Republic/
 `backend/apps/actors/mythology/__init__.py`, which
 `backend/tests/test_corpus_provenance.py` checks against a real seed run). Before it they surfaced only inside the
 judgment page's citation picker — 172 researched articles with nowhere to read them.
+The right rail's "cited by" lists the judgments citing the article (count and list come from
+the same set of judgments the caller can see), and an officer holding `judgment.execute` can
+"insert into the judgment desk" to cite it on one of their open cases (`frontend/app/corpus/page.tsx`).
 
 ### The rules are enforced by lint, not by discipline
 
 Tailwind's `theme.extend` can add and override but not remove: `text-sm` still
-resolves, `rounded-lg` still resolves (to 0). So the eight steps, the six spacing
-steps and the two radii are all **restrictions**, and a restriction has no
+resolves, `rounded-lg` still resolves (to 0). So the seven type steps, the ten spacing
+steps and the one radius are all **restrictions**, and a restriction has no
 expression in Tailwind — only lint can impose it. `frontend/eslint.config.mjs`
-carries five custom rules plus jsx-a11y, all at `error`.
+carries seven custom rules (type-scale / spacing-rhythm / dead-radius / no-page-shadow /
+no-raw-palette / no-hex-colour / no-styles-in-csstext, `eslint.config.mjs:663-671`) plus
+jsx-a11y, all at `error`. There are no civilization colours: `--color-civ-*` was removed in
+`a2044b28`, and `ledgerPaletteContract.test.ts` holds that.
 
-`npm run lint` is a bare `eslint .`, and ESLint exits 0 when only warnings exist, so
-a warn-level rule here is worth nothing. Migration relief is a **baseline** instead:
+Until 2026-09-05 `npm run lint` was a bare `eslint .`, which exits 0 when only warnings
+exist; it is now `eslint . --max-warnings 0` in both `frontend` and `packages/core`.
+Migration relief is a **baseline**:
 `frontend/eslint.design-guard-baseline.json` records each file's current violation
 count, and it fires in **both** directions — a count that drops below its budget is
 as red as one that exceeds it, because a stale baseline is an unwatched gap.
@@ -501,7 +536,7 @@ as red as one that exceeds it, because a stale baseline is an unwatched gap.
 contract.** Three backend tests (`test_workflow_template_cast.py`,
 `test_workflow_preset_node_types.py`, `test_workflow_template_priority.py`) open
 this frontend file by hardcoded path and regex its *layout* — two-space keys,
-four-space fields, one-line node literals. 491 of its lines are load-bearing text.
+four-space fields, one-line node literals. All 499 of its lines (2026-09-26) are load-bearing text.
 **Running `prettier` over it silently breaks those three backend tests.**
 
 **`min-h-screen` belongs only to routes outside `AppLayout`.** `AppLayout` hands a
