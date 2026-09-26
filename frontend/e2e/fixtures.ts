@@ -864,8 +864,8 @@ export const SENSITIVE_WORDS = [
 
 /** GET `/social-moderation/handled/` — HandledContentSerializer; one hidden post, one deleted comment. */
 export const HANDLED_CONTENT = [
-  { type: "POST", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", author: MODERATION_AUTHOR, excerpt: "判词不公，阎王只听殿司一面之词……", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "测试管理员" }, handled_at: "2026-09-18T05:00:00Z" },
-  { type: "COMMENT", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd04", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd01", author: MODERATION_AUTHOR, excerpt: "你们等着，我还阳之后……", handling: "DELETED", reason: "越界诱导", handled_by: null as { user_id: number; display_name: string } | null, handled_at: "2026-09-18T04:00:00Z" },
+  { type: "POST", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", author: MODERATION_AUTHOR, excerpt: "判词不公，阎王只听殿司一面之词……", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "测试管理员" }, handled_at: "2026-09-18T05:00:00Z", media_count: 1 },
+  { type: "COMMENT", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd04", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd01", author: MODERATION_AUTHOR, excerpt: "你们等着，我还阳之后……", handling: "DELETED", reason: "越界诱导", handled_by: null as { user_id: number; display_name: string } | null, handled_at: "2026-09-18T04:00:00Z", media_count: 0 },
 ];
 
 /** GET `/social-moderation/mutes/`. */

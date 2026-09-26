@@ -165,7 +165,14 @@ export function HandledSection() {
                 {r.author?.display_name}
               </button>
             </td>
-            <td title={r.excerpt} className="max-w-[40ch] truncate px-3 py-2 font-serif text-sm text-[oklch(var(--color-ink))]">{r.excerpt}</td>
+            <td className="max-w-[40ch] px-3 py-2">
+              <span title={r.excerpt} className="block truncate font-serif text-sm text-[oklch(var(--color-ink))]">{r.excerpt}</span>
+              {r.type === "POST" && (
+                <span data-media-count className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                  {t("social_moderation.review.media_n", { n: String(r.media_count) })}
+                </span>
+              )}
+            </td>
             <td className="px-3 py-2">
               <Badge tone={HANDLING_TONE[r.handling]}>{t(`social_moderation.handling.${r.handling}`)}</Badge>
             </td>

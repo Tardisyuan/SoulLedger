@@ -675,8 +675,8 @@ describe("禁言 · filters and 禁言…", () => {
 
 describe("已处理 · E-08d", () => {
   const handled = [
-    { type: "POST", id: "h1", post: "h1", author, excerpt: "被隐藏的帖子", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "崔珏" }, handled_at: "t" },
-    { type: "COMMENT", id: "h2", post: "p0", author, excerpt: "被删除的评论", handling: "DELETED", reason: "", handled_by: null, handled_at: "t" },
+    { type: "POST", id: "h1", post: "h1", author, excerpt: "被隐藏的帖子", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "崔珏" }, handled_at: "t", media_count: 2 },
+    { type: "COMMENT", id: "h2", post: "p0", author, excerpt: "被删除的评论", handling: "DELETED", reason: "", handled_by: null, handled_at: "t", media_count: 0 },
   ];
 
   it("a HIDDEN row opens read-only with 恢复可见; restoring calls the restore action", async () => {
@@ -707,6 +707,17 @@ describe("已处理 · E-08d", () => {
     await waitFor(() => expect(apiMock.handled).toHaveBeenLastCalledWith({ date_from: rangeStart("90d") }));
     fireEvent.change(screen.getByRole("combobox", { name: tZh("social_moderation.handled.range") }), { target: { value: "" } });
     await waitFor(() => expect(apiMock.handled).toHaveBeenLastCalledWith({}));
+  });
+
+  it("a handled post row says 图 N like the reports list; a comment row says nothing about images", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const postRow = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    expect(within(postRow).getByText(tZh("social_moderation.review.media_n", { n: "2" }))).toBeInTheDocument();
+    const commentRow = screen.getByText("被删除的评论").closest("tr") as HTMLElement;
+    expect(commentRow.querySelector("[data-media-count]")).toBeNull();
   });
 
   it("rangeStart counts today as the first of N days, in UTC", () => {
