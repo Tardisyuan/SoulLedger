@@ -204,6 +204,61 @@ describe("SoulLedgerProgress", () => {
     expect(topo.querySelector('[data-fork="FAIL"]')?.getAttribute("data-terminal")).toBe("dashed");
     expect(topo.querySelector('[data-fork="PASS"]')?.getAttribute("data-terminal")).toBeNull();
   });
+
+  it("称心二岔, the FAIL road once walked: its segment is solid (path[] decides), its end stays a dashed square (not a place)", async () => {
+    // Design, 2026-09-26: a segment's line depends only on whether path[] records it; the end square's
+    // dash depends only on whether the realm is a place. Neither affects the other.
+    const eg = (id: string, order: number, extra: Record<string, unknown> = {}) => ({
+      id, realm_code: id, name: id, civilization: "EGYPTIAN", realm_type: "PURGATORY", tier: order,
+      is_eternal: false, order, is_judgment_hall: false, fork: null, ...extra,
+    });
+    coreApi.realmsApi.list.mockResolvedValue({
+      data: {
+        results: [
+          eg("EG_DUAT_ENTRY", 1),
+          eg("EG_SEVEN_ARRWT", 2),
+          eg("EG_HALL_TWO_TRUTHS", 3, { is_judgment_hall: true }),
+          eg("EG_TWENTYONE_SEBKHET", 4, { fork: "PASS" }),
+          eg("EG_AARU", 5, { fork: "PASS" }),
+          eg("EG_ANNIHILATION", 4, { fork: "FAIL" }),
+        ],
+        count: 6,
+      },
+    });
+    coreApi.soulsApi.path.mockResolvedValue({
+      data: [
+        { id: "p1", sequence: 1, realm_id: "EG_DUAT_ENTRY", realm_code: "EG_DUAT_ENTRY", entered_at: "2026-06-08T00:00:00Z", left_at: "2026-06-09T00:00:00Z" },
+        { id: "p2", sequence: 2, realm_id: "EG_SEVEN_ARRWT", realm_code: "EG_SEVEN_ARRWT", entered_at: "2026-06-09T00:00:00Z", left_at: "2026-06-10T00:00:00Z" },
+        { id: "p3", sequence: 3, realm_id: "EG_HALL_TWO_TRUTHS", realm_code: "EG_HALL_TWO_TRUTHS", entered_at: "2026-06-10T00:00:00Z", left_at: "2026-06-11T00:00:00Z" },
+        { id: "p4", sequence: 4, realm_id: "EG_ANNIHILATION", realm_code: "EG_ANNIHILATION", entered_at: "2026-06-11T00:00:00Z", left_at: null },
+      ],
+    });
+    wrap(
+      <SoulLedgerProgress
+        soul={{ ...SOUL, civilization: "EGYPTIAN" } as Soul}
+        judgments={[]}
+        dispositions={[]}
+        reincarnations={[] as Reincarnation[]}
+        birthDisplay={null}
+        deathDisplay={null}
+      />
+    );
+    const route = await screen.findByTestId("soul-route");
+    await within(route).findAllByRole("listitem");
+    const topo = route.querySelector('[data-route-topology="fork_two"]')!;
+    const fail = topo.querySelector('[data-fork="FAIL"]')!;
+    const li = fail.querySelector("li")!;
+    expect(li.getAttribute("data-station-state")).toBe("current");
+    // The segment into the second death: walked, so solid (3px) — and not the dashed "ahead" line.
+    const into = li.querySelector('[aria-hidden="true"] > span')!;
+    expect(into.className).toContain("border-t-[3px]");
+    expect(into.className).not.toContain("border-dashed");
+    // The end is still a dashed square: not a place.
+    expect(li.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();
+    // The PASS road was not walked: its segments stay dashed.
+    const passInto = topo.querySelector('[data-fork="PASS"] li [aria-hidden="true"] > span')!;
+    expect(passInto.className).toContain("border-dashed");
+  });
 });
 
 describe("SoulLedgerSections — 丙 · 审判", () => {

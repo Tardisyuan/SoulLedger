@@ -63,7 +63,8 @@ export type Topology =
       schematic: false;
       /** By `order`; the last one is the weighing. */
       trunk: Station[];
-      /** PASS first (drawn up), FAIL second (drawn down). `terminal`: the road ends in no place — drawn dashed. */
+      /** PASS first (drawn up), FAIL second (drawn down). `terminal`: the road ends in no place — its end is a dashed square;
+       *  its segments are solid once walked, like any other road. */
       roads: { fork: WeighingRoad; terminal: boolean; stations: Station[] }[];
     })
   | (Common & { kind: "fork"; schematic: false; trunk: Station[]; roads: { fork: Fork; stations: Station[] }[] });
