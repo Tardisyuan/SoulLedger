@@ -396,7 +396,7 @@ describe("the conversation's eight states", () => {
 
   it("the hall: officer bubbles, writable; a hall left behind is sealed and offers the current one", () => {
     openConversation(
-      hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } }),
+      hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } }),
       [{ ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "崔珏", officerTitle: "判官" }]
     );
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
@@ -406,8 +406,8 @@ describe("the conversation's eight states", () => {
   });
 
   it("a hall is named in the interface language, falling back to the server's hall", () => {
-    const c = hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" } });
-    expect([hallOf(c, "zh-Hans"), hallOf(c, "en"), hallOf(c, "egy")]).toEqual(["第五殿", "The Fifth Court", "Yanluo Qedi"]);
+    const c = hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } });
+    expect([hallOf(c, "zh-Hans"), hallOf(c, "en"), hallOf(c, "egy")]).toEqual(["第五殿", "The Fifth Court", "Yanluo Wesekhet"]);
     expect(hallOf(hall({ hall: "第五殿", hall_names: null }), "en")).toBe("第五殿");
   });
 
