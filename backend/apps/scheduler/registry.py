@@ -86,6 +86,10 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 每天一次足够 —— 期满以日计;排在 02:00 之后,避开上面三条的时段。幂等,
     # 所以漏跑一天由第二天补上,不会重复发事件。
     JobSpec("disposition.expire_due_for_tenant", TENANT, "30 2 * * *", max_runtime=1800),
+    # 审批节点超时(apps/workflow/timeouts.py):转交 / 自动驳回 / 提醒。审批流按租户存,
+    # 自动驳回写的审计行要带租户,所以按租户一行。每 5 分钟 = 超时最多晚 5 分钟触发;
+    # 没有到期节点时只是一条查询。锁 240s 的理由同下面的 webhook 重试。
+    JobSpec("workflow.process_timeouts_for_tenant", TENANT, "*/5 * * * *", max_runtime=240),
     # ---- global jobs ---------------------------------------------------------
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make
@@ -98,6 +102,14 @@ REGISTRY: tuple[JobSpec, ...] = (
     # (apps/soul_push/services.py)。
     # 每 5 分钟;回执只查发出满 15 分钟的,所以更密没有意义。锁 240s 同上一条的理由。
     JobSpec("soul_push.sweep", GLOBAL, "*/5 * * * *", max_runtime=240),
+    # 朋友圈孤儿图片(apps/social/media.py::cleanup_orphans):上传超过 24 小时仍未挂到帖子的行与文件,
+    # 加上 private/post_media/ 下无主的文件。GLOBAL:孤儿图片没有帖子,也就没有租户(租户经帖子);
+    # 无主文件连行都没有。每天一次,阈值 24 小时,所以更密没有意义。
+    JobSpec("social.cleanup_orphan_post_media", GLOBAL, "15 3 * * *", max_runtime=1800),
+    # 殿司收件箱「谁最后说话」按 Synapse 对一遍(apps/chat/tasks.py)。GLOBAL:问的是同一台 Synapse、
+    # 用同一个服务账号,它不可达是全局的事,按租户拆只会把一次故障告警 N 遍;写的是 `.update()`,
+    # 不经审计信号,不需要租户 contextvar。聊天没配置时什么也不做,记 SUCCESS。
+    JobSpec("chat.reconcile_inbox", GLOBAL, "45 3 * * *", max_runtime=1800),
     # ---- this app's own maintenance --------------------------------------------
     # Every 5 minutes: the finest-grained job above is 5-minutely, so a stuck
     # run is noticed within one period of its own max_runtime; two indexed

@@ -758,7 +758,7 @@
           "NOTIFY": "Remind"
         },
         "role": "Escalate to role",
-        "hint": "Timeouts fire only when the process_workflow_timeouts command runs; nothing schedules it.",
+        "hint": "A scheduled job checks timeouts every 5 minutes; they do not fire while the scheduler is not running.",
         "summary": "After {{hours}} h · {{action}}"
       },
       "reject_to": "On refusal, return to",
@@ -2347,7 +2347,10 @@
       "scheduler_reap_stale_runs": "Close out stuck runs",
       "scheduler_check_overdue": "Detect overdue jobs",
       "scheduler_prune_runs": "Prune old run history",
-      "soul_push_sweep": "Soul push: requeue and fetch receipts"
+      "soul_push_sweep": "Soul push: requeue and fetch receipts",
+      "workflow_process_timeouts_for_tenant": "Process approval-node timeouts",
+      "social_cleanup_orphan_post_media": "Delete unposted circle images",
+      "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse"
     },
     "status": {
       "PENDING": "Queued",
