@@ -112,10 +112,12 @@ export function themeFor(civilization: string | null | undefined, scheme: ColorS
 /**
  * The pre-sign-in palette (第三类 F 组 canvas, "App 调色板"): parchment, not a
  * civilization's ground — before sign-in there is no soul to skin by. Copied
- * verbatim; `preLoginTheme` maps it onto the Theme slots.
+ * verbatim except light ink3: the canvas's #77705f was 4.29:1 on bg, so it is
+ * darkened (same OKLCH hue) to #6d6655, AA on bg and bg2. `preLoginTheme` maps
+ * it onto the Theme slots.
  */
 export const parchment = {
-  light: { bg: "#f4efe4", bg2: "#ebe4d3", ink: "#1e1a14", ink2: "#5a5145", ink3: "#77705f", line: "#cfc6b4", line2: "#8f8672", acc: "#a8281e", merit: "#2f6b3a", demerit: "#a8281e", warnBg: "#efe0bf" },
+  light: { bg: "#f4efe4", bg2: "#ebe4d3", ink: "#1e1a14", ink2: "#5a5145", ink3: "#6d6655", line: "#cfc6b4", line2: "#8f8672", acc: "#a8281e", merit: "#2f6b3a", demerit: "#a8281e", warnBg: "#efe0bf" },
   dark: { bg: "#15130f", bg2: "#1f1c16", ink: "#ede5d3", ink2: "#b8ad98", ink3: "#8f8572", line: "#332e26", line2: "#6a6252", acc: "#d8503f", merit: "#7fc48a", demerit: "#e0685a", warnBg: "#2a2213" },
 } as const;
 
