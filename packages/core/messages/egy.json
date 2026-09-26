@@ -3128,9 +3128,17 @@
       "title": "Shemes Renpi",
       "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
     },
-    "social_warned": {
+    "social_warned_post": {
       "title": "Hab Er Medu",
       "body": "Hab Er Medu Ek: {{reason}}"
+    },
+    "social_warned_comment": {
+      "title": "Hab Er Wesheb",
+      "body": "Hab Er Wesheb Ek: {{reason}}"
+    },
+    "social_warned_user": {
+      "title": "Hab Er Aq",
+      "body": "Hab Er Aq Ek: {{reason}}"
     }
   },
   "official_notify": {
