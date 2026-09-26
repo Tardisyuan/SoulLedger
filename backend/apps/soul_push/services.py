@@ -166,7 +166,8 @@ KIND_CATEGORY = {
     "sentence_pardoned": "rebirth",
     "chat_message": "chat",
     # 没有「朋友圈」偏好类别:警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送)。
-    "social_warned": None,
+    # 按被举报的是什么分三种文案(2026-09-26 产品定):帖子 / 评论 / 账号。
+    **{f"social_warned_{target}": None for target in ("post", "comment", "user")},
 }
 
 
@@ -210,14 +211,17 @@ def record_chat_message(account, conversation, event_id, sender_name):
 SOCIAL_WARNED_EVENT = "SOCIAL_WARNED"
 
 
-def record_social_warning(user_id, report_id, reason):
-    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的、没有设备的:不记。"""
+def record_social_warning(user_id, report_id, target_type, reason):
+    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的、没有设备的:不记。
+
+    `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。"""
     from apps.soul_accounts.models import SoulAccount
 
     account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
     if account is None:
         return []
-    return _record(account, SOCIAL_WARNED_EVENT, None, "social_warned", f"warn:{report_id}"[:120],
+    kind = f"social_warned_{target_type.lower()}"
+    return _record(account, SOCIAL_WARNED_EVENT, None, kind, f"warn:{report_id}"[:120],
                    {"screen": "Life"}, params=lambda locale: {"reason": reason})
 
 

@@ -874,7 +874,7 @@ def test_warn_tells_the_author_the_reason_by_push(
     _resolve_warn(cn_moderator, report, "注意言辞", django_capture_on_commit_callbacks)
 
     row = PushDelivery.objects.get()
-    assert (row.device, row.kind, row.event_type) == (device, "social_warned", "SOCIAL_WARNED")
+    assert (row.device, row.kind, row.event_type) == (device, "social_warned_post", "SOCIAL_WARNED")
     assert (row.title, row.body) == ("Your post was warned", "Your post received a warning: 注意言辞")
     assert enqueued == [[str(row.pk)]]
 
@@ -890,6 +890,58 @@ def test_warn_push_text_in_chinese_and_a_long_reason_fits_the_column(
     _resolve_warn(cn_moderator, report, "长" * 500, django_capture_on_commit_callbacks)
     body = PushDelivery.objects.get().body
     assert body.startswith("你的帖子收到警告：长") and len(body) == 300
+
+
+def _report_of(tenant, target_type):
+    """被举报的帖子 / 评论 / 用户,都是同一个灵魂 `author`。返回 (author, report)。"""
+    author, author_client = soul(tenant, "作者")
+    _, reporter = soul(tenant, "举报人")
+    if target_type == "USER":
+        target_id = author.user_id
+    else:
+        row = post(author, "被举报的帖子", Visibility.PUBLIC)
+        if target_type == "COMMENT":
+            res = author_client.post(f"{SOCIAL}/posts/{row.pk}/comments/", {"content": "被举报的评论"}, format="json")
+            assert res.status_code == 201, res.content
+            row = Comment.objects.get(content="被举报的评论")
+        target_id = row.pk
+    res = reporter.post(f"{SOCIAL}/reports/", {"target_type": target_type, "target_id": str(target_id),
+                                               "reason": "ABUSE"}, format="json")
+    assert res.status_code == 201, res.content
+    return author, Report.objects.get(target_type=target_type)
+
+
+WARN_TEXT = {
+    # 2026-09-26 产品定:推送说清被警告的是什么。
+    "zh-Hans": {"POST": ("帖子收到警告", "你的帖子收到警告：注意言辞"),
+                "COMMENT": ("评论收到警告", "你的评论收到警告：注意言辞"),
+                "USER": ("账号收到警告", "你的账号收到警告：注意言辞")},
+    "en": {"POST": ("Your post was warned", "Your post received a warning: 注意言辞"),
+           "COMMENT": ("Your comment was warned", "Your comment received a warning: 注意言辞"),
+           "USER": ("Your account was warned", "Your account received a warning: 注意言辞")},
+    "egy": {"POST": ("Hab Er Medu", "Hab Er Medu Ek: 注意言辞"),
+            "COMMENT": ("Hab Er Wesheb", "Hab Er Wesheb Ek: 注意言辞"),
+            "USER": ("Hab Er Aq", "Hab Er Aq Ek: 注意言辞")},
+}
+
+
+@pytest.mark.parametrize("locale", ["zh-Hans", "en", "egy"])
+@pytest.mark.parametrize("target_type", ["POST", "COMMENT", "USER"])
+def test_warn_push_names_what_was_warned(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued, target_type, locale,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery, PushDevice, PushPreference
+
+    author, report = _report_of(cn_tenant, target_type)
+    PushDevice.objects.create(account=author, soul=author.soul, token=TOKEN_A, platform="IOS",
+                              last_seen_at=timezone.now())
+    PushPreference.objects.create(account=author, soul=author.soul, locale=locale)
+
+    _resolve_warn(cn_moderator, report, "注意言辞", django_capture_on_commit_callbacks)
+
+    row = PushDelivery.objects.get()
+    assert (row.kind, row.data["kind"]) == (f"social_warned_{target_type.lower()}",) * 2
+    assert (row.title, row.body) == WARN_TEXT[locale][target_type]
 
 
 def test_warn_a_muted_soul_with_every_push_off_or_no_device_does_not_break_the_resolution(

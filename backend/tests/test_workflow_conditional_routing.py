@@ -100,10 +100,32 @@ def test_on_pass_skips_ahead(flow):
     workflow.refresh_from_db()
     # 第 2 殿按 node_order 本该是下一个,边把它跳过了。
     assert workflow.current_node_id == nodes[2].id
-    # 被跳过的节点**不改状态**:没有人对它做过决定,写成任何「已跳过」的值
-    # 都是替不存在的决定记账。
+    # 被跳过的节点记为 SKIPPED,之后不再回来(2026-09-26 产品定;此前这里钉的是
+    # 「不改状态」,而留在 PENDING 的它会在第 3 殿判完后被按序默认捡回来)。
     nodes[1].refresh_from_db()
-    assert nodes[1].status == NodeStatus.PENDING
+    assert nodes[1].status == NodeStatus.SKIPPED
+
+
+@pytest.mark.django_db
+def test_a_node_skipped_by_on_pass_never_comes_back_and_the_flow_completes(flow):
+    workflow, nodes = flow
+    nodes[0].on_pass = nodes[2]
+    nodes[0].save(update_fields=["on_pass"])
+
+    visited = []
+    while workflow.status in (ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS):
+        current = workflow.get_current_node()
+        visited.append(current.node_order)
+        assert workflow.complete_node(current.id, "PASSED") is True
+        workflow.refresh_from_db()
+        # 跳过之后,第 2 殿一次都不再是 PENDING —— 也就不能按 node_id 被判。
+        assert ApprovalNode.objects.get(pk=nodes[1].pk).status == NodeStatus.SKIPPED
+
+    assert visited == [1, 3, 4], "第 2 殿被按序默认捡回来了"
+    assert workflow.status == ApprovalWorkflowStatus.COMPLETED
+    assert {n.node_order: n.status for n in workflow.nodes.all()} == {
+        1: NodeStatus.APPROVED, 2: NodeStatus.SKIPPED, 3: NodeStatus.APPROVED, 4: NodeStatus.APPROVED,
+    }
 
 
 # ── 3. on_fail 转向而不是终止 ─────────────────────────────────────────
@@ -123,6 +145,8 @@ def test_on_fail_routes_instead_of_ending_the_flow(flow):
     # 节点自己仍然记为被否决 —— 转向的是流程,不是这一次裁决的结果。
     nodes[0].refresh_from_db()
     assert nodes[0].status == NodeStatus.REJECTED
+    # 否决转向跳过的节点同样记为 SKIPPED,不会被按序默认捡回来。
+    assert [ApprovalNode.objects.get(pk=n.pk).status for n in nodes[1:3]] == [NodeStatus.SKIPPED] * 2
 
 
 # ── 4. 指向已决节点时回退到默认 ───────────────────────────────────────
@@ -130,24 +154,25 @@ def test_on_fail_routes_instead_of_ending_the_flow(flow):
 @pytest.mark.django_db
 def test_an_edge_into_a_decided_node_falls_back(flow):
     workflow, nodes = flow
-    # 对照:先让第 1 殿指向第 4 殿,证明路由在工作。少了这一步,下面那条断言
+    # 对照:先让第 1 殿指向第 3 殿,证明路由在工作。少了这一步,下面那条断言
     # 在「功能根本不存在」时同样成立。
-    nodes[0].on_pass = nodes[3]
+    nodes[0].on_pass = nodes[2]
     nodes[0].save(update_fields=["on_pass"])
     workflow.complete_node(nodes[0].id, "PASSED")
     workflow.refresh_from_db()
-    assert workflow.current_node_id == nodes[3].id, "路由未生效,下面的断言无意义"
+    assert workflow.current_node_id == nodes[2].id, "路由未生效,下面的断言无意义"
 
-    # 现在让第 4 殿指回已经判掉的第 1 殿。
-    nodes[3].refresh_from_db()
-    nodes[3].on_pass = nodes[0]
-    nodes[3].save(update_fields=["on_pass"])
+    # 现在让第 3 殿指回已经判掉的第 1 殿。
+    nodes[2].refresh_from_db()
+    nodes[2].on_pass = nodes[0]
+    nodes[2].save(update_fields=["on_pass"])
 
-    workflow.complete_node(nodes[3].id, "PASSED")
+    workflow.complete_node(nodes[2].id, "PASSED")
 
     workflow.refresh_from_db()
-    # 回到已决节点是无意义的,所以走默认:按序的下一个 PENDING。
-    assert workflow.current_node_id == nodes[1].id
+    # 回到已决节点是无意义的,所以走默认:按序的下一个 PENDING —— 第 4 殿,
+    # 不是被跳过的第 2 殿(它已是 SKIPPED)。
+    assert workflow.current_node_id == nodes[3].id
 
 
 # ── 5. 环不挂死 ───────────────────────────────────────────────────────
@@ -166,21 +191,21 @@ def test_a_cycle_terminates(flow):
 
     # 对照:先证明路由**确实在工作**。没有这一步,下面那条断言在「功能根本
     # 不存在」时同样成立 —— 它就分不出「守卫拒了这条边」和「压根没有边」。
-    nodes[0].on_pass = nodes[3]
+    nodes[0].on_pass = nodes[2]
     nodes[0].save(update_fields=["on_pass"])
     workflow.complete_node(nodes[0].id, "PASSED")
     workflow.refresh_from_db()
-    assert workflow.current_node_id == nodes[3].id, "路由未生效,下面的断言无意义"
+    assert workflow.current_node_id == nodes[2].id, "路由未生效,下面的断言无意义"
 
-    # 现在造环:第 4 殿指回第 1 殿,而第 1 殿已不是 PENDING。
-    nodes[3].refresh_from_db()
-    nodes[3].on_pass = nodes[0]
-    nodes[3].save(update_fields=["on_pass"])
+    # 现在造环:第 3 殿指回第 1 殿,而第 1 殿已不是 PENDING。
+    nodes[2].refresh_from_db()
+    nodes[2].on_pass = nodes[0]
+    nodes[2].save(update_fields=["on_pass"])
 
-    workflow.complete_node(nodes[3].id, "PASSED")
+    workflow.complete_node(nodes[2].id, "PASSED")
     workflow.refresh_from_db()
-    # 边被拒,落回按序推进的下一个 PENDING —— 第 2 殿。
-    assert workflow.current_node_id == nodes[1].id
+    # 边被拒,落回按序推进的下一个 PENDING —— 第 4 殿(第 2 殿被跳过,是 SKIPPED)。
+    assert workflow.current_node_id == nodes[3].id
 
 
 # ── 6. 跨流程的边被拒 ─────────────────────────────────────────────────
@@ -221,8 +246,8 @@ def test_an_edge_into_another_workflow_is_refused(db, cn_tenant, flow):
     workflow.complete_node(nodes[2].id, "PASSED")
 
     workflow.refresh_from_db()
-    # 边被拒,落回按序:第 2 殿仍然 PENDING 且 node_order 最小。
-    assert workflow.current_node_id == nodes[1].id
+    # 边被拒,落回按序:第 4 殿是剩下唯一的 PENDING(第 2 殿被跳过,是 SKIPPED)。
+    assert workflow.current_node_id == nodes[3].id
     # 而且没有碰到别人的流程。
     other_flow.refresh_from_db()
     assert other_flow.current_node_id is None
