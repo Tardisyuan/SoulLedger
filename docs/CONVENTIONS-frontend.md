@@ -69,7 +69,7 @@ This file is not.」
 | `packages/core` 是平台无关层：API 契约 / 两个 WS 客户端 / 领域配置 / 校验 / 三份语言包 / 六个数据 hook | `packages/core/src/index.ts:1-11` | **`[tsc]`** `tsconfig.json:4-12` 的 `lib: ["ES2020"]` + `types: []`；**`[test:domBoundary]`** 从 `@types/react` 派生 ~146 个 DOM 类型名并断言不可解析；**`[test:nodeGlobals]`**；`[eslint]` 禁 `process` 与 `import.meta` |
 | 宿主能力只能走 `PlatformAdapter` 的 8 个端口 | `packages/core/src/platform/types.ts`；白名单 `host-globals.d.ts:1-51`「ADDING TO THIS FILE IS THE DECISION」 | `[tsc]` + 上述两测试 |
 | 根布局必须渲染 `PlatformProvider` | web 实现 `frontend/lib/platform/web.ts` | `[test:platformAdapterIsInstalled]`（读 `app/layout.tsx` 源码断言） |
-| `frontend/src/hooks/` 只剩视图层四个：`useChartColors` / `usePermissions` / `useRowTransitions` / `useSidebarMenus` | 目录实况 | `[多数派]` |
+| `frontend/src/hooks/` 只剩视图层五个：`useChartColors` / `usePermissions` / `useRowTransitions` / `useSidebarMenus` / `useWideViewport`（2026-09-26 目录实况；数据 hook 十六个在 `packages/core/src/hooks/`） | 目录实况 | `[多数派]` |
 
 **`domBoundary.test.ts` 为什么不能被 `typecheck` 替代：** 那些 DOM 类型是空接口，
 `const el: HTMLElement = {}` 能编译过。**只有那份测试在执法"平台无关"这个断言。**
@@ -96,6 +96,7 @@ global 的 67/58/57/67 互不影响。2026-09-14 实测:前端 global
 **已失效的路径引用**（根 `AGENTS.md:149-150,317-323,343,359`）：`src/middleware.ts`
 （实为 `frontend/middleware.ts`）、`lib/api.ts`（已进 `packages/core/src/api/*`）、
 `src/components/NavBar.tsx`（不存在）、`messages/{locale}.json`（实为 `packages/core/messages/`）。
+2026-09-26 这四处已在 `AGENTS.md` 里改正（行号随之变动，上面的行号是旧的）。
 
 ---
 
@@ -118,19 +119,23 @@ text-ink                                  ❌ Tailwind 4 的 @theme 与 :root �
 `[test:cssTokenReferenceContract:315-371]`「colour tokens are referenced one way only」；
 同一份测试还断言每个 `var(--color-*|--civ-*)` 必须在 globals.css 有声明。
 
-### 2.2 六条 design-guard eslint 规则（全部 `error`）
+### 2.2 七条 design-guard eslint 规则（全部 `error`）
+
+> **2026-09-26 按规范 v1（`16f4e149` 字号、`a2044b28` 间距与色板、`e78e5d88` 圆角与阴影）改过这张表。**
+> 行号是 `frontend/eslint.config.mjs` 当天的行号；启用清单在 `:663-671`。
 
 | 规则 | 禁什么 | 位置 |
 |---|---|---|
-| `type-scale` | `text-xs`…`text-9xl`、`text-[11px]` 等任意长度。只许 `text-01`…`text-08`（11/12/13/15/18/22/32/56px，自带行高字距字重） | `eslint.config.mjs:297-305`；`globals.css:159-186` |
-| `spacing-rhythm` | p/m/gap/space 只许 1/2/3/4/6/10/16 + 0/px/auto。**刻意不进 config**（`ADDENDUM.md:429-431`） | `:307-319`。唯一豁免 `Badge.tsx` 的 `py-0.5` |
-| `dead-radius` | `rounded` / `-sm` / `-md` / `-lg` / `-xl`… 全是死类名 —— **8 个 shape radius 全为 0**，只剩 `--radius-focus: 2px` 与 `--radius-full` | `:321-327`；`globals.css:193-202` |
-| `no-raw-palette` | Tailwind 原生调色板（22 色 × 11 档）与任意值写死颜色 `bg-[hsl(38,92%,50%)]` | `:329-341` |
-| `no-hex-colour` | 十六进制。例外 `HEX_ALLOW`：`src/components/workflow/`、`src/components/charts/`、`SettingsDrawer.tsx`、`app/global-error.tsx` | `:394-419` |
-| `no-styles-in-csstext` | `style.cssText` 写 radius/animation/transition/font/color/background。`CSSTEXT_ALLOW = []`（刻意空表） | `:364-392` |
+| `type-scale` | Tailwind 默认名（`text-base`、`text-2xl`…`text-9xl`）、旧八档名 `text-01`…`text-08`、`text-[11px]` 等任意长度。只许七档 `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl`（11/12/13/16/20/22/28px，自带行高） | `eslint.config.mjs:302`（正则 `:84`、`:100`）；`globals.css:162-177` |
+| `spacing-rhythm` | p/m/gap/space 只许 0.5/1/1.5/2/3/4/6/8/10/14 + 0/px/auto（规范 v1 §1.6）。**刻意不进 config**（`ADDENDUM.md:429-431`） | `:312`（刻度 `:108`）。豁免表 `RHYTHM_EXEMPT`（`:114`）为空 —— Badge 的 `py-0.5` 随 0.5 进刻度而删除 |
+| `dead-radius` | `rounded` / `-sm` / `-md` / `-lg` / `-xl`… 全是死类名 —— **8 个 shape radius 全为 0**，只剩 `--radius-full`（`--radius-focus` 已删，焦点环方角）。`rounded-full` 只许出现在 `ROUND_ALLOW` 的文件里（头像、转圈） | `:326`（`ROUND_ALLOW` `:121-129`）；`globals.css:185-193` |
+| `no-page-shadow` | 页面内阴影（规范 v1 §1.7）。浮层用 `shadow-overlay`，画线用 border 或 inset 阴影 | `:336`（正则 `:133`） |
+| `no-raw-palette` | Tailwind 原生调色板（22 色 × 11 档）与任意值写死颜色 `bg-[hsl(38,92%,50%)]` | `:344` |
+| `no-hex-colour` | 十六进制。例外 `HEX_ALLOW`：`src/components/workflow/`、`src/components/charts/`、`SettingsDrawer.tsx`、`app/global-error.tsx` | `:409`（`HEX_ALLOW` `:150-162`） |
+| `no-styles-in-csstext` | `style.cssText` 写 radius/animation/transition/font/color/background。`CSSTEXT_ALLOW = []`（刻意空表） | `:379` |
 
-**「守卫的守卫」是真的：**`[test:designGuardContract:131-192]` 起真 ESLint 子进程去
-lint 违规片段，确认这六条会红。同一份测试还钉住 design-guard 的覆盖范围
+**「守卫的守卫」是真的：**`[test:designGuardContract:131-206]` 起真 ESLint 子进程去
+lint 违规片段，确认其中六条会红（`no-styles-in-csstext` 没有探针）。同一份测试还钉住 design-guard 的覆盖范围
 （探针打到 `app/ src/ components/ lib/ hooks/` 五个源根）。
 
 ### 2.3 LEGACY 基线是双向的
@@ -149,15 +154,16 @@ lint 违规片段，确认这六条会红。同一份测试还钉住 design-guar
 - **动效三档** `--transition-duration-{press,state,settle}` = 100/160/240ms + 两条缓动
   `--ease-enter/exit`，**无 overshoot**（`globals.css:49-145`）
 - **层级（elevation）仍未定义** —— surface 相邻步差仅 1.02–1.05:1，靠 1px hairline 分层
-  （`DESIGN.md:50-57`）。`[test:civilizationColourContract:239-300]` 反向钉住「ramp 必须保持平」
+  （`DESIGN.md:50-57`）。此前由 `civilizationColourContract` 反向钉住「ramp 必须保持平」；
+  那份测试随文明色一起删除（`a2044b28`），色板现由 `[test:ledgerPaletteContract]` 按规范 v1 的 hex 逐项钉住
 - **容器** `--container-prose: 720px` / `--container-page: 1200px`。旧值 `max-w-5xl/6xl` 还有 12 处，`[文字]`
 - **z 轴** progress 60 / drawer 70 / dialog 80。旧值 `z-10`…`z-50` 还有 26 处，`[文字]`
 - **三族字体一职**：Archivo（UI）/ IBM Plex Mono（标识与数字）/ **Source Serif 4 只用于
   "某人说过的话"**（`app/fonts.ts:24-47`）。`[test:designGuardContract:391-428]` 只保证
   DESIGN.md 不点名 Inter/JetBrains；**衬线的用途本身无执法**
-- **类名合并只用 `cn()`**（`lib/utils.ts:4-49`，它扩展了 tailwind-merge 认识 `text-01…08`）
+- **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识七档字号；`[test:designGuardContract:357-404]`）
 - **Recharts 不读 CSS 变量**，`lib/chart-colors.ts` 是**镜像**且双主题。
-  `[test:chartColourContract]` + `[test:civilizationColourContract]` 双向比对
+  `[test:chartColourContract]` 按主题双向比对（`CHART_TOKENS` 记每项对应的令牌）
 
 ### 2.5 状态 token 分层（容易搞错的一条）
 
@@ -176,6 +182,13 @@ lint 违规片段，确认这六条会红。同一份测试还钉住 design-guar
 ---
 
 ## 3. 四文明主题
+
+> **2026-09-26 注：本节「三个 token 族」与「表面 ramp」两小节是 2026-09-06 的记录，不是现状。**
+> 规范 v1 撤销了文明色（`a2044b28`，§1.8 / 第 4 节 06）：`--color-civ-hue-*` / `-mark-*` / `-ink-*`、
+> `[data-civ]` 规则、`TenantProvider` 的 `data-civ` 标记与 `TenantSignal` 全部删除，
+> `civilizationColourContract` / `tenantSignalContract` 两份测试随之删除；
+> `[test:ledgerPaletteContract]`（`describe("civilization is not a colour")`）断言没有任何 civ token
+> 被声明或读取。文明现在只靠编号法、行程形状与称谓区分（见本节末「四种读数」一小节与编号法那一段，它们仍成立）。
 
 四文明 `CHINESE / EUROPEAN / EGYPTIAN / GREEK` ↔ `CN_DIYU / EU_HEAVEN_HELL / EG_DUAT / GR_HADES`，
 前缀 cn/eu/eg/gr 由租户码派生，**一处列全**（`packages/core/src/config/civilizations.ts:31-79`）。
@@ -215,8 +228,8 @@ lint 违规片段，确认这六条会红。同一份测试还钉住 design-guar
 每个文明编号自己的条文：功過格用 卷/門 汉数字、Inferno 罗马数字、
 Negative Confession `§ n / 42`、Stephanus 页。`[test:civilizationSigilContract]`
 
-Greek 用 88° 而不是 138°，理由是避免与 merit 绿（150°）语义冲突 —— 值被 contract 钉住，
-理由是 `[文字]`。
+~~Greek 用 88° 而不是 138°，理由是避免与 merit 绿（150°）语义冲突 —— 值被 contract 钉住，
+理由是 `[文字]`。~~ 2026-09-26：色相随文明色一起撤销（`a2044b28`），这一条已无对象。
 
 ---
 
@@ -264,7 +277,7 @@ export default function XPage() {                    // 页级权限门包在默
 }
 ```
 
-**`PageShell` 自己决定的事**（`src/components/ui/PageShell.tsx`）：`<h1 text-07>` 唯一；
+**`PageShell` 自己决定的事**（`src/components/ui/PageShell.tsx`）：`<h1 text-lg>` 唯一（`:315`）；
 页头不 sticky、只有 `filters` sticky `top-16`；列宽由 `variant` 决定；
 `skeleton`/`empty` 三选一且 loading 优先；不渲染面包屑（归 `AppLayout.tsx:330`）。
 
@@ -314,7 +327,8 @@ export default function XPage() {                    // 页级权限门包在默
 
 ### 5.3 空态
 
-`EmptyState`（23 个文件）：居左、24×2px `--civ-mark` 短线、`text-01` 标题 + `text-04` 原因 + 一个动作。
+`EmptyState`（23 个文件）：居左、24×2px `--color-block` 短线、`text-2xs` 标题 + `text-sm` 原因 + 一个动作
+（`src/components/ui/EmptyState.tsx:43-55`；2026-09-26 核对，此前的 `--civ-mark` 与八档字号已随规范 v1 撤换）。
 `DataTable` 自带 `emptyMessage` / `filteredEmptyMessage + onClearFilters`。
 
 **标题语义两派**：以区块名为 title、"没有 X"为 reason（5 页）vs 直接以"没有 X"为 title、
@@ -671,6 +685,10 @@ cd frontend && npx playwright test --project=mobile-chrome
 > 抽查的十余个计数里，只有少数与实测相符；`QueryError` 那条经 `git log -S` 确认
 > **写下的当天就是错的**，不是后来漂的。原因见 §13 开头：裸 grep 会把注释与测试
 > 一并算进去。
+>
+> 另注（2026-09-26）：下表里的字号名 `text-01`…`text-08` 是八档时代的写法，规范 v1
+> 已换成七档 `text-2xs`…`text-xl`（`globals.css:162-177`）；表里所说「多种写法并存」的结论
+> 需在新字号下重数，旧名本身今天是 `type-scale` error。
 >
 > 所以下表**只说有几种写法、分别在哪些页面**，不再给处数。要数就用 §16 的脚本现数
 > —— 一个没有任何东西断言的计数，写下来的那一刻就开始腐烂，而腐烂后读起来和新鲜的
