@@ -43,7 +43,29 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 手动验证续期路径:
   `$DC run --rm --no-deps --entrypoint certbot certbot renew --dry-run --webroot -w /var/www/certbot`
 
+## 每次部署之后
+
+- **权限码名:** `$DC exec backend python manage.py sync_permissions`(先 `--dry-run` 看会做什么)。
+  补建代码里新加、库里还没有的权限码名,并按 `ROLE_PERMISSIONS` 授给默认角色;已有的码名一行不碰,
+  管理员在权限矩阵里的改动保留。启动命令**不**自动跑它,加了新码名的版本部署后要手动跑一次。
+- 定时任务的行不用手动补:启动命令已经跑 `setup_scheduled_tasks`(见下节)。
+
 ## 定时任务(celery beat)
+
+- **现状(2026-09-26):没有任何环境在跑 beat。** compose 里有 `celery-beat` 服务,但 115 测试环境
+  没起它,生产还没上线。所以下面所有「每 N 分钟」的任务目前都不会自动触发,只能在 `/scheduler`
+  页面手动运行。上线时:起 `celery`(worker)与**一个** `celery-beat`,backend 启动时的
+  `setup_scheduled_tasks` 会把调度表补齐;之后在 `/scheduler` 确认各行已启用、`/health/detailed/`
+  的 `scheduler` 字段不是 `"overdue"`。
+- 2026-09-26 新登记的三个维护任务(此前只能手动跑同名命令,命令仍保留):
+
+  | 任务 | 范围 | 默认 cron(UTC) | 作用 |
+  |---|---|---|---|
+  | `workflow.process_timeouts_for_tenant` | 按租户 | `*/5 * * * *` | 审批节点超时按节点配置自动处理 |
+  | `social.cleanup_orphan_post_media` | 全局 | `15 3 * * *` | 删上传了但没发出去的朋友圈图片 |
+  | `chat.reconcile_inbox` | 全局 | `45 3 * * *` | 按 Synapse 校对殿司收件箱;聊天没配置时记成功并跳过 |
+
+  beat 没跑时审批**不会**因超时自动处理,节点会一直停在待办。
 
 - 调度存在数据库里(`DatabaseScheduler`),清单在 `backend/apps/scheduler/registry.py`。
   backend 的启动命令每次都会跑 `python manage.py setup_scheduled_tasks`:按
@@ -72,6 +94,25 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   每个 beat 派发的任务同时向 Sentry Crons 报到(`CeleryIntegration(monitor_beat_tasks=True)`)。
 - 执行状态与调度变更通过既有 WebSocket 管道推送(domain `scheduler`,权限门
   `scheduler.read`;租户行只进该租户分组,全局行只到 ADMIN)。
+
+## 帖子图片(nginx 发文件)
+
+- `docker-compose.production.yml` 给 backend 设了 `POST_MEDIA_X_ACCEL: "true"`:后端验完签名与可见性后
+  只回 `X-Accel-Redirect: /protected-media/…`,由 `nginx.conf` 里 `internal` 的 `/protected-media/`
+  location 从 `/var/www/media/private/` 发文件。外部直接请求这个前缀是 404。
+- **只有前面真有这份 nginx 时才能打开。** 没有 nginx 的环境(DEBUG、staging)保持默认 `False`,
+  由 Django 自己流文件;误开了,图片全是空响应。
+- 改 `nginx.conf` 的这个 location 时**不要**加 `add_header` / `expires`,否则 server 级的安全头
+  在这个 location 里全部失效(注释里写了原因)。
+
+## 邮件(找回密码验证码)
+
+- 目前只有找回密码的验证码会发邮件。非 DEBUG 时走 SMTP,变量:`EMAIL_HOST`、`EMAIL_PORT`(默认 25)、
+  `EMAIL_HOST_USER`、`EMAIL_HOST_PASSWORD`、`EMAIL_USE_TLS` / `EMAIL_USE_SSL`、`EMAIL_TIMEOUT`(默认 10 秒)、
+  `DEFAULT_FROM_EMAIL`。
+- 没配 `EMAIL_HOST` 只在启动时告警,不拒绝启动。除找回密码外一切照常;找回密码接口无论发没发出去
+  都回同一个响应(不让它变成「这个邮箱注册过没有」的探针),所以**发信失败不会在界面上显出来**,
+  上线后要真发一次验证。
 
 ## 灵魂端推送(Expo Push Service)
 
