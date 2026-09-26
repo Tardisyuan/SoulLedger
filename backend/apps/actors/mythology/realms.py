@@ -79,7 +79,7 @@ CHINESE_REALMS = [
     # fictional element on the strength of a failed search, and "I could not
     # find it" is not "it does not exist". Whoever knows where this came from
     # should replace this note with the answer.
-    ("DY_02_YANGLIU", "杨柳宫", "杨柳宫", "Yangliu Palace", "Yanglju Anpu", RealmType.BLISS, 2,
+    ("DY_02_YANGLIU", "杨柳宫", "杨柳宫", "Yangliu Palace", "Yangliu", RealmType.BLISS, 2,
      "Souls awaiting reunion with loved ones. SOURCE UNKNOWN: no underworld "
      "place by this name appears in 《玉历宝钞》 or 《十王经》; treat as this "
      "project's own element until a source is produced",
@@ -113,11 +113,11 @@ CHINESE_REALMS = [
     ("DY_00_PURGATORY", "待审所", "待审所", "Purgatory Holding", "Daishensuo", RealmType.PURGATORY, 1,
      "Souls awaiting judgment - held before the first court reads the ledger",
      "NONE", False, None),
-    ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Qedi 1 - Qinguang",
+    ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Wesekhet 1 · Qinguang",
      RealmType.HELL, 1,
      "Intake court - the Ledger of Life and Death is read and the soul's case "
      "opened; no punishment is administered here", "MENGPO", False, None),
-    ("DY_COURT_02_CHUJIANG", "第二殿", "第二殿楚江王", "Second Court Chujiang", "Qedi 2 - Chujiang",
+    ("DY_COURT_02_CHUJIANG", "第二殿", "第二殿楚江王", "Second Court Chujiang", "Wesekhet 2 · Chujiang",
      RealmType.HELL, 2,
      "活大地狱 - the mildest punishment court; thieves and those who wounded "
      "others in life", "MENGPO", False, 100),
@@ -127,22 +127,22 @@ CHINESE_REALMS = [
     # counterpart in the text. Note that filial offence is split across two
     # courts in 《玉历》 — defying one's elders here, failing to keep or bury
     # one's parents at the eighth — and the repo had put all of it at the eighth.
-    ("DY_COURT_03_SONGDI", "第三殿", "第三殿宋帝王", "Third Court Songdi", "Qedi 3 - Songdi",
+    ("DY_COURT_03_SONGDI", "第三殿", "第三殿宋帝王", "Third Court Songdi", "Wesekhet 3 · Songdi",
      RealmType.HELL, 3,
      "黑绳大地狱 - 忤逆尊长, 教唆兴讼, 背恩失节: defying one's elders, inciting "
      "litigation, betraying a trust", "MENGPO", False, 80),
-    ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Qedi 4 - Wuguan",
+    ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Wesekhet 4 · Wuguan",
      RealmType.HELL, 4,
      "合大地狱 - fraud, withheld dues, falsified accounts", "MENGPO", False, 60),
-    ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yama", "Qedi 5 - Yanluo",
+    ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yama", "Wesekhet 5 · Yanluo",
      RealmType.HELL, 5,
      "叫唤大地狱 and the 十六诛心小地狱 - the court that tries the intent behind "
      "the act: malice, ingratitude, envy, miserliness. The 望乡台 stands here",
      "MENGPO", False, 50),
-    ("DY_COURT_06_BIANCHENG", "第六殿", "第六殿卞城王", "Sixth Court Biancheng", "Qedi 6 - Biancheng",
+    ("DY_COURT_06_BIANCHENG", "第六殿", "第六殿卞城王", "Sixth Court Biancheng", "Wesekhet 6 · Biancheng",
      RealmType.HELL, 6,
      "大叫唤大地狱 - sacrilege and irreverence", "MENGPO", False, 40),
-    ("DY_COURT_07_TAISHAN", "第七殿", "第七殿泰山王", "Seventh Court Taishan", "Qedi 7 - Taishan",
+    ("DY_COURT_07_TAISHAN", "第七殿", "第七殿泰山王", "Seventh Court Taishan", "Wesekhet 7 · Taishan",
      RealmType.HELL, 7,
      "热恼地狱 - desecration of the dead, trafficking in bodies", "MENGPO", False, 30),
     # COURTS 8 AND 9 ARE SWAPPED BETWEEN THE TWO MAJOR SYSTEMS, AND THIS REPO
@@ -154,14 +154,14 @@ CHINESE_REALMS = [
     # find two courts apparently transposed and has no way to tell a version
     # difference from a bug. The rest of the file is 玉历 too (楚江 not 初江,
     # 卞城 not 变成, 泰山 not 太山), so the choice is at least consistent.
-    ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Qedi 8 - Dushi",
+    ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Wesekhet 8 · Dushi",
      RealmType.HELL, 8,
      "大热恼地狱 - unfilial conduct and betrayal of one's own house", "MENGPO", False, 20),
-    ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Qedi 9 - Pingdeng",
+    ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Wesekhet 9 · Pingdeng",
      RealmType.HELL, 9,
      "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy",
      "MENGPO", False, 10),
-    ("DY_COURT_10_ZHUANLUN", "第十殿", "第十殿转轮王", "Tenth Court Zhuanlun", "Qedi 10 - Zhuanlun",
+    ("DY_COURT_10_ZHUANLUN", "第十殿", "第十殿转轮王", "Tenth Court Zhuanlun", "Wesekhet 10 · Zhuanlun",
      RealmType.HELL, 10,
      "The wheel of rebirth - sentences are complete; the next life is assigned "
      "and the broth of forgetting drunk. No punishment is administered here",
@@ -256,28 +256,28 @@ EUROPEAN_REALMS = [
     # and heaven now; the two rows that still say LETHE are the mountain and
     # EU_EARTHLY_PARADISE, which is the only place the water actually is.
     ("EU_PURGATORY_T1_PRIDE", "炼狱第一层", "傲慢之台", "First Terrace - Pride",
-     "Superbia", RealmType.PURGATORY, 1,
+     "Ta Hesmen 1 · Superbia", RealmType.PURGATORY, 1,
      "First terrace: pride. The penitent walks bent double beneath a great "
      "stone, past carved exempla of humility (Purg. X-XII). Love perverted. "
      "Pride has no circle in the Inferno at all — this is its only place in "
      "the poem",
      "NONE", False, None),
     ("EU_PURGATORY_T2_ENVY", "炼狱第二层", "嫉妒之台", "Second Terrace - Envy",
-     "Invidia", RealmType.PURGATORY, 2,
+     "Ta Hesmen 2 · Invidia", RealmType.PURGATORY, 2,
      "Second terrace: envy. The penitent's eyelids are sewn shut with iron "
      "wire (Purg. XIII-XV). Love perverted. Envy has no circle in the Inferno "
      "either; the withdrawn EU-DS-07 gave it an iron cage in the eighth "
      "circle, and no part of the poem contains one",
      "NONE", False, None),
     ("EU_PURGATORY_T3_WRATH", "炼狱第三层", "愤怒之台", "Third Terrace - Wrath",
-     "Ira", RealmType.PURGATORY, 3,
+     "Ta Hesmen 3 · Ira", RealmType.PURGATORY, 3,
      "Third terrace: wrath. The penitent walks through thick, blinding, "
      "choking smoke (Purg. XV-XVII). Love perverted. The Inferno's fifth "
      "circle also holds the wrathful, but it holds them as incontinence, not "
      "as one of the seven",
      "NONE", False, None),
     ("EU_PURGATORY_T4_SLOTH", "炼狱第四层", "懒惰之台", "Fourth Terrace - Sloth",
-     "Acedia", RealmType.PURGATORY, 4,
+     "Ta Hesmen 4 · Acedia", RealmType.PURGATORY, 4,
      "Fourth terrace: sloth (acedia). The penitent runs without pause, calling "
      "out exempla of zeal (Purg. XVIII-XIX). Love defective — the single sin "
      "of too little love, and the hinge of the mountain. Sloth has no circle "
@@ -286,20 +286,20 @@ EUROPEAN_REALMS = [
      "disputed",
      "NONE", False, None),
     ("EU_PURGATORY_T5_AVARICE", "炼狱第五层", "贪婪之台", "Fifth Terrace - Avarice",
-     "Avaritia", RealmType.PURGATORY, 5,
+     "Ta Hesmen 5 · Avaritia", RealmType.PURGATORY, 5,
      "Fifth terrace: avarice, and prodigality with it. The penitent lies face "
      "down on the ground (Purg. XIX-XXII). Love excessive. Two directions of "
      "one disorder share the terrace, the same pairing the Inferno's fourth "
      "circle makes of the avaricious and the prodigal",
      "NONE", False, None),
     ("EU_PURGATORY_T6_GLUTTONY", "炼狱第六层", "暴食之台", "Sixth Terrace - Gluttony",
-     "Gula", RealmType.PURGATORY, 6,
+     "Ta Hesmen 6 · Gula", RealmType.PURGATORY, 6,
      "Sixth terrace: gluttony. The penitent starves and thirsts beneath fruit "
      "trees whose scent draws and whose branches withhold (Purg. XXII-XXIV). "
      "Love excessive",
      "NONE", False, None),
     ("EU_PURGATORY_T7_LUST", "炼狱第七层", "淫欲之台", "Seventh Terrace - Lust",
-     "Luxuria", RealmType.PURGATORY, 7,
+     "Ta Hesmen 7 · Luxuria", RealmType.PURGATORY, 7,
      "Seventh and last terrace: lust. The penitent passes through a wall of "
      "flame (Purg. XXV-XXVII). Love excessive. What lies above is not an "
      "eighth terrace but the summit itself — the Earthly Paradise, Lethe and "
@@ -340,7 +340,7 @@ EUROPEAN_REALMS = [
     # to the mountain, and a soul reaches the summit by finishing the climb
     # rather than by being sentenced to it.
     ("EU_EARTHLY_PARADISE", "地上乐园", "地上乐园", "The Earthly Paradise",
-     "EarthlyParadise", RealmType.PURGATORY, 8,
+     "Paradiso Terrestre", RealmType.PURGATORY, 8,
      "The summit of Mount Purgatory, above the seventh terrace: the garden of "
      "Eden, where Matelda keeps the two streams (Purg. XXVIII). A soul that "
      "has finished the seven terraces is "
@@ -366,28 +366,28 @@ EUROPEAN_REALMS = [
     #
     # `docs/01`'s comparison table already said 「基督教 记忆消除=否」 while
     # these rows said LETHE — one of the two had to be wrong, and it was these.
-    ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Limbo", RealmType.HELL, 1,
+    ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Duat 1 · Limbo", RealmType.HELL, 1,
      "Limbo - virtuous pagans, unbaptized infants", "NONE", True, None),
     # name_zh was 「贪食深渊」 (gluttony) against a name_en of "Second Circle -
     # Lust". Dante's second circle is lust (Inf. V) and gluttony is the third
     # (Inf. VI), so the Chinese alias was one circle out of step with the
     # English on the same row — and EU_HELL_3RD already carries 「饕餮泥沼」,
     # so the repo named gluttony twice and lust not at all.
-    ("EU_HELL_2ND", "第二层地狱", "色欲之风", "Second Circle - Lust", "Lust", RealmType.HELL, 2,
+    ("EU_HELL_2ND", "第二层地狱", "色欲之风", "Second Circle - Lust", "Duat 2 · Luxuria", RealmType.HELL, 2,
      "Lustful souls - tossed by violent winds (Dante's Inferno)", "NONE", True, None),
-    ("EU_HELL_3RD", "第三层地狱", "饕餮泥沼", "Third Circle - Gluttony", "Gluttony", RealmType.HELL, 3,
+    ("EU_HELL_3RD", "第三层地狱", "饕餮泥沼", "Third Circle - Gluttony", "Duat 3 · Gula", RealmType.HELL, 3,
      "Gluttons - lie in icy sludge beneath rain and hail", "NONE", True, None),
-    ("EU_HELL_4TH", "第四层地狱", "贪婪深渊", "Fourth Circle - Greed", "Greed", RealmType.HELL, 4,
+    ("EU_HELL_4TH", "第四层地狱", "贪婪深渊", "Fourth Circle - Greed", "Duat 4 · Avaritia", RealmType.HELL, 4,
      "Avaricious and prodigal - push heavy weights (Dante)", "NONE", True, None),
-    ("EU_HELL_5TH", "第五层地狱", "愤怒沼泽", "Fifth Circle - Anger", "Anger", RealmType.HELL, 5,
+    ("EU_HELL_5TH", "第五层地狱", "愤怒沼泽", "Fifth Circle - Anger", "Duat 5 · Ira", RealmType.HELL, 5,
      "Wrathful and sullen - fight on the Stygian marsh", "NONE", True, None),
-    ("EU_HELL_6TH", "第六层地狱", "异端荒原", "Sixth Circle - Heresy", "Heresy", RealmType.HELL, 6,
+    ("EU_HELL_6TH", "第六层地狱", "异端荒原", "Sixth Circle - Heresy", "Duat 6 · Haeresis", RealmType.HELL, 6,
      "Heretics - burned in flaming tombs", "NONE", True, None),
-    ("EU_HELL_7TH", "第七层地狱", "暴力之渊", "Seventh Circle - Violence", "Violence", RealmType.HELL, 7,
+    ("EU_HELL_7TH", "第七层地狱", "暴力之渊", "Seventh Circle - Violence", "Duat 7 · Violentia", RealmType.HELL, 7,
      "Violent against neighbors, selves, God - in three rings", "NONE", True, None),
-    ("EU_HELL_8TH", "第八层地狱", "欺诈深渊", "Eighth Circle - Malebolge", "Malebolge", RealmType.HELL, 8,
+    ("EU_HELL_8TH", "第八层地狱", "欺诈深渊", "Eighth Circle - Malebolge", "Duat 8 · Malebolge", RealmType.HELL, 8,
      "Fraud - ten concentric fosses of Malebolge", "NONE", True, None),
-    ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Treachery", RealmType.HELL, 9,
+    ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Duat 9 · Proditio", RealmType.HELL, 9,
      "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "NONE", True, None),
     # --------------------------------------------------------------------
     # THE CROSSING, WHICH IS DANTE'S AND STAYS HERE.
@@ -523,7 +523,7 @@ EUROPEAN_REALMS = [
 # is not: nobody is sentenced to it. See `DispositionService._route_greek`.
 GREEK_REALMS = [
     ("EU_PLATO_MEADOW", "岔路草原", "审判岔路", "The Meadow at the Parting of the Ways",
-     "Meadow", RealmType.NEUTRAL, 0,
+     "Leimon", RealmType.NEUTRAL, 0,
      "Plato, Gorgias 524a: the dead are judged in a meadow at the fork in the "
      "road, one way leading to the Isles of the Blessed and the other to "
      "Tartarus. This is a sorting point that stands BEFORE any punishment, "
