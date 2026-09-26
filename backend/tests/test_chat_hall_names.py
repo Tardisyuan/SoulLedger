@@ -15,7 +15,7 @@ CONVERSATIONS = "/api/v1/me/chat/conversations/"
 INBOX = "/api/v1/chat/inbox/"
 
 
-def _hall(tenant, zh="第五殿", en="The Fifth Court", egy="Yanluo Qedi"):
+def _hall(tenant, zh="第五殿", en="The Fifth Court", egy="Yanluo Wesekhet"):
     tenant.hall_name, tenant.hall_name_en, tenant.hall_name_egy = zh, en, egy
     tenant.save()
     return tenant
@@ -32,7 +32,7 @@ def test_the_inbox_row_names_the_hall_in_three_languages(cn_tenant, matrix):  # 
     _, client = ready_soul(cn_tenant, name="甲")
     row = client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
     assert row["hall"] == "第五殿"
-    assert row["hall_names"] == {"zh-Hans": "第五殿", "en": "The Fifth Court", "egy": "Yanluo Qedi"}
+    assert row["hall_names"] == {"zh-Hans": "第五殿", "en": "The Fifth Court", "egy": "Yanluo Wesekhet"}
     assert "Chinese Diyu" not in str(row)  # 管理名不出现在灵魂看到的地方
     me = client.get("/api/v1/me/").data
     assert me["tenant"]["hall_names"]["zh-Hans"] == "第五殿"
@@ -102,3 +102,19 @@ def test_the_default_hall_names_fill_only_blanks(cn_tenant, eu_tenant):
     cn, eu = Tenant.objects.get(pk=cn_tenant.pk), Tenant.objects.get(pk=eu_tenant.pk)
     assert (cn.hall_name, cn.hall_name_en, cn.hall_name_egy) == ("第五殿", "The Fifth Court", "Yanluo Qedi")
     assert (eu.hall_name, eu.hall_name_en) == ("运维改过的名字", "Purgatory")
+
+
+def test_the_section_ten_hall_name_moves_only_the_old_value(cn_tenant, eu_tenant):
+    """tenants/0013:egy 第十节 Qedi → Wesekhet。只改仍是旧值的行,倒回去还原。
+    变异:去掉 `hall_name_egy=OLD` 条件 → 运维改过的名字被覆盖,红。"""
+    mig = importlib.import_module("apps.tenants.migrations.0013_egy_hall_name_section_ten")
+    _hall(cn_tenant, egy="Yanluo Qedi")
+    _hall(eu_tenant, egy="Ta Hesmen")
+    mig.forwards(live_apps, None)
+    assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "Yanluo Wesekhet"
+    mig.backwards(live_apps, None)
+    assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "Yanluo Qedi"
+    _hall(cn_tenant, egy="运维改过的名字")
+    mig.forwards(live_apps, None)
+    assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "运维改过的名字"
+    assert Tenant.objects.get(pk=eu_tenant.pk).hall_name_egy == "Ta Hesmen"

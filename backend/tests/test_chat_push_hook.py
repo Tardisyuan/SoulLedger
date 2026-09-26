@@ -155,7 +155,7 @@ def test_a_hall_reply_names_the_hall_in_the_souls_push_language(cn_tenant, matri
     变异:殿司名固定取 zh-Hans → en 收件人看到「第五殿」,红。"""
     from apps.authentication.models import User
 
-    cn_tenant.hall_name, cn_tenant.hall_name_en, cn_tenant.hall_name_egy = "第五殿", "The Fifth Court", "Yanluo Qedi"
+    cn_tenant.hall_name, cn_tenant.hall_name_en, cn_tenant.hall_name_egy = "第五殿", "The Fifth Court", "Yanluo Wesekhet"
     cn_tenant.save()
     a, a_client = ready_soul(cn_tenant, name="甲")
     register(a_client, TOKEN_A)

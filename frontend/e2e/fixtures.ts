@@ -911,7 +911,7 @@ export const INBOX_CONVERSATIONS = [
     soul_code: "ABCDEFGHJK",
     tenant: 1,
     tenant_name: "中国地府",
-    hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" },
+    hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" },
     last_message_at: "2026-09-18T01:00:00Z",
     last_soul_message_at: "2026-09-18T00:30:00Z",
     last_from: "soul",

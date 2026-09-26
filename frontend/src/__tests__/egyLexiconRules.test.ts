@@ -18,6 +18,8 @@
  * 定稿同时把后定的值**回填**到早先各节的行里,所以全表十节 824 行、779 个键,每个键全表只有一个值。
  * 夹具现为 778 个键:`judgment.queue.skew_discarded` 随审判队列撤回窗口一起删除(2026-09-25),
  * 包里已无此键,夹具同步删去那一行;定稿全表本身未改。
+ * 第十节「egy 旧词审定 · 277 个」没有逐键修订表,只给了义项与替换规则(ROOTS_TEN / PROPER_NAMES / ABOLISHED_TEN_WORDS);
+ * 按规则改包时有 38 个夹具键的旧值含被换掉的旧词,夹具里这 38 条随包回填为新值,键数不变。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -35,8 +37,9 @@
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 24、小词 18 个,
- *   现有文案用到四百多个词形。新生词要在评审里看它在登记表 diff 里那一行。
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 24 + 11 + 63、
+ *   小词 21 个、专名一张表,现有文案用到约三百个词形。新生词要在评审里看它在登记表 diff 里那一行。
+ * - 第十节按义项替换靠同键中文判义,门禁只能查「旧词还在不在」,查不了「换成的是不是那个义项」。
  */
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -74,7 +77,31 @@ const offenders = (keys: string[], bad: Rule) =>
 const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID"]);
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
-const ENGLISH_RESIDUE = ["Send", "Dismiss", "Egyptian", "Hall", "Purgatorium", "SevenArrwt", "TwentyOneSebkhet", "Heaven", "IslesOfTheBlest", "T3"];
+const ENGLISH_RESIDUE = [
+  "Send", "Dismiss", "Egyptian", "Hall", "Purgatorium", "SevenArrwt", "TwentyOneSebkhet", "Heaven", "IslesOfTheBlest", "T3",
+  // 第十节:地狱各圈的英文罪名改成与炼狱同一套拉丁写法,地上乐园、柏拉图的草原、查询同理。
+  "Lust", "Gluttony", "Greed", "Anger", "Heresy", "Violence", "Treachery", "EarthlyParadise", "Meadow", "Query",
+];
+
+/**
+ * 第十节「换掉」一节里、已从包里换净的旧词(按义项分别替换:同一个旧词按同键中文换成不同的新词)。
+ * 仍有键没换的(义项第十节没给写法)留在旧账清单里,不在这里;换净一个就从旧账挪过来。
+ * 星期词组里的 Ra / Ka 与厅名里的 Maaty 不在这里 —— 它们整体出现时合规,单独出现由封闭词汇拦下。
+ */
+const ABOLISHED_TEN_WORDS = [
+  "Aashu", "Aba-Ef", "Amenti", "Ami", "Amset", "An", "Anpu", "Aper", "Awy", "Benet", "Bu", "Dema", "Diu", "Diyu",
+  "Djam", "Djed-Tep", "Djeser", "Djew", "Eremitee", "Fedu", "Fekh-Es", "Hanacht", "Herep", "Hor", "Ier", "Ii", "Im",
+  "Ineb", "Ipen", "Iret", "Irtu", "Iwen", "Iyt", "Kefa", "Kemet-Shen", "Khefere", "Khemet", "Khemt", "Khemu", "Khen",
+  "Khenty", "Khered", "Khetaw", "Maat-Benet", "Maatheru", "Maau", "Makhat", "Mdu", "Medu-Ib", "Mehi", "Men", "Meng",
+  "Mes", "Meseh", "Mesi", "Mesjet", "Metru", "Nau", "Neh", "Neken", "Nemu", "Neteru", "Pedjet", "Pepi", "Pepy", "Pesy",
+  "Petep", "Po", "Pu", "Qed", "Qedi", "Redit", "Rekhet", "Ren-Es", "Sah", "Sebekhet", "Sedjem-Ash", "Sedjet", "Sefet",
+  "Sekht", "Sema", "Semau", "Seneb", "Sepedu", "Sesep", "Sesh-Set", "Seshen", "Sesheshet", "Seshet", "Sesheta", "Seshu",
+  "Sethen", "Shabu", "Sheemtet", "Sheemtet-Set", "Shems", "Sheseb", "Shesed", "Smedj", "Ta-Hemet", "Ta-U",
+  "Tem", "Ten", "Twt", "Wahet", "Wedja-Medu", "Wedjen", "Wep", "Wepwy-Em-Senu", "Wetep-Heka", "Wetjes", "Wets", "Wetu",
+  "Yama", "Yanglju", "Yunan",
+];
+/** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
+const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -97,11 +124,8 @@ const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
  * 第六节把「Ma Sethet」四处改写(Culpa (Isfet)、Khet Hru、Ankh Nen Maat、Maa Khet Wa),它们随之移出;
  * 第七节把 souls.date_problem_marker.error 改成 Khet Hru,它也移出。
  */
+// 第十节:怯懦改写 Nen Qen、移至改写 Nehem Er,四键随之移出。剩下三处的 Ma 义项第十节没有给写法。
 const MA_NOT_NEGATION = new Set([
-  "souls.categories.COWARDICE",
-  "souls.detail.delete_to_recycle_bin",
-  "menus.delete_confirm_title",
-  "menus.delete_confirm_action",
   "permissions.matrix.only_differences",
   "permissions.matrix.confirm_removed_label",
   "workflow.detail.escalate_reason_placeholder",
@@ -196,12 +220,33 @@ const TECHNICAL: Record<string, string[]> = {
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
 const bare = (token: string) => token.replace(/^[^A-Za-z0-9#{]+|[^A-Za-z0-9}]+$/g, "");
 const tokens = (k: string) => prose(EGY[k]).split(/\s+/).map(bare);
-/** 一条文案里的词:去占位符、去该键的技术词,取字母串;连字符复合词(Djes-Ef)算一个词。 */
-const words = (k: string) =>
-  prose(EGY[k])
+/**
+ * 第十节:只许整体出现的专名词组。七个星期名按行星命名,Ra、Iah、Heru、Sebeg、Wepesh、Sebau、Ka
+ * 只在这七个词组里放行;Maaty 只在两个厅名里。词组整体算一个词(「Hru Ra」),所以单出现的 Ra 仍是生词。
+ */
+const WHOLE_PHRASES = [
+  "Hru Ra", "Hru Iah", "Hru Heru Desher", "Hru Sebeg", "Hru Heru Wepesh", "Hru Sebau", "Hru Heru Ka Pet",
+  "Weret Maaty", "Wesekhet Maaty",
+];
+const PHRASE_RE = new RegExp(
+  `(?<![A-Za-z-])(${[...WHOLE_PHRASES].sort((a, b) => b.length - a.length).join("|")})(?![A-Za-z-])`,
+  "g"
+);
+/**
+ * 一条文案里的词:去占位符、去该键的技术词,取字母串;连字符复合词(Wa-Ek)算一个词。
+ * 第十节:后置小词 -Ef(其 / 它的)接在任何词后都合规,所以 Iri-Ef 拆成 Iri 与 -Ef 两个词。
+ */
+const words = (k: string) => {
+  const text = prose(EGY[k]);
+  const phrases = [...text.matchAll(PHRASE_RE)].map((m) => m[1]);
+  const rest = text
+    .replace(PHRASE_RE, " ")
     .split(/\s+/)
     .filter((t) => !(TECHNICAL[k] ?? []).includes(bare(t)))
-    .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? []);
+    .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? [])
+    .flatMap((w) => (w.length > 3 && w.endsWith("-Ef") ? [w.slice(0, -3), "-Ef"] : [w]));
+  return [...phrases, ...rest];
+};
 
 /**
  * 定稿词表:词根 39 个、审核域词根 18 个、笔误修订词根 24 个、一词一义词根 14 个、收口词根 5 个、末轮收口词根 12 个、
@@ -263,11 +308,99 @@ const ROOTS_APP = [
  * Hesep 层(与 Ta 界域分开)、Qab 中、Shem 行 / 动身、Tartaros 专名。
  */
 const ROOTS_NINE = ["Shesep", "Sepy", "Djed", "Iru", "Khenn", "Djai", "Hesep", "Qab", "Shem", "Tartaros", "Er Pehwy"];
+/**
+ * 第十节「egy 旧词审定 · 277 个」的「进表」一节:给旧账里的词补上义项,新词根只有 Dens 与 Khebi 两个;
+ * Nub(金 / 琥珀)与 Sab Sia、Sab Sen、Sedjem Sab、Em Sekhet、Sepu Wedja 是用已有词组合出的新写法
+ * (Sepu 是 Sep 的复数「诸条」,第三节笔误一节已登;这里随 Sepu Wedja 一起入表)。
+ */
+const ROOTS_TEN = [
+  "Maa", //         看 / 见 / 查核 —— 只读 Maa Wa、审计日志 Medew Maa
+  "Maat", //        真 / 实 / 正 —— 证据 Medu Maat;兼作女神名。功德写 Nefer,不写 Maat
+  "Sekhet", //      站 / 节点 / 步 —— 位置 Sekhet、在押 Em Sekhet;芦苇之野 Sekhet Aaru 整体是专名
+  "Hru", //         日 / 天 —— 今日 Hru Pen,{{days}} 天 Hru {{days}}
+  "Renpet", //      年
+  "Abed", //        月
+  "Sefekh", //      周
+  "Unut", //        小时(计时单位),与 Ahet(时间 / 调度)分开
+  "At", //          分钟
+  "Sepdet", //      时刻(第六节已登;Seped 换成它)
+  "Djet", //        永久 —— 长明灯 Khabes Djet;问候语里的 Djet 已换掉
+  "Hery", //        上 / 高位 —— 只用于 Sab Hery(管理员)与 Seshem Er Hery(越级)
+  "Heri-Tep", //    首领 / 主持 —— 殿主 Heri-Tep Per Ahet
+  "Sehen", //       取消(驳回已归 Khesef)
+  "Senn", //        复制
+  "Netjeru", //     Netjer(角色)的复数
+  "Tepyu", //       Tepy 的复数 · 前者 —— 前世 Ankh Tepyu
+  "Khery", //       下 / 下方 / 下一个
+  "Rekh", //        知 —— 忘记密码 Nen Rekh Sekhem
+  "Tut", //         像 / 图标 / 头像(Twt 换成 Tut)
+  "Sen", //         同侪 / 二 —— 第二次死亡 Mut Sen
+  "Iyi", //         来 / 回 / 到 —— 返回 Iyi Er
+  "Hehy", //        检索 / 搜索
+  "Qen", //         勇 —— 怯懦 Nen Qen
+  "Nut", //         籍贯 / 起源地(「位置」不用它)
+  "Sepat", //       地区 —— 只用于时区 Ahet Sepat
+  "Hesb", //        计 / 数 —— 容量 Hesb Aq、排序 Hesb
+  "Redu", //        份 / 占比 / 分布
+  "Mer", //         期望 / 愿 —— 「可选」不写 Mer,写 Nen Sesen
+  "Djes", //        自 / 本人 —— 个人中心 Djes
+  "Shu", //         空(羽一律 Shut)
+  "Bin", //         恶(形容) —— 三恶道 Wat Bin 3
+  "It", //          父 / 上级 —— 父级 It,顶级 Tepy
+  "Sa", //          安全 / 护 —— 只作「安全」
+  "Sedjer", //      延后 / 暂缓 / 休眠
+  "Menu", //        菜单(借词)
+  "Kat", //         组件(技术)
+  "Menf", //        令牌(技术)
+  "Desher", //      红
+  "Wadj", //        绿
+  "Kem", //         黑 / 深色
+  "Hedj", //        白 / 浅色
+  "Nedjes", //      小
+  "Nub", //         金 / 琥珀(新写法,替换 Sesheshet)
+  "Gereg", //       欺 / 伪
+  "Sma", //         杀(Sema 因此换成 Senb)
+  "Sebi", //        叛 / 渎
+  "Awn", //         贪
+  "Awt", //         畜 —— 畜生道 Wat Awt
+  "Heqer", //       饿 —— 饿鬼道 Wat Khaibit Heqer
+  "Khaibit", //     影 / 鬼
+  "Sia", //         智 —— 顾问 Sab Sia
+  "Wah", //         等 / 久
+  "Mu", //          水 / 汤 —— 孟婆汤 Mu Mengpo
+  "Itru", //        河 —— 忘川 Itru Lethe
+  "Iaut", //        职 / 役 —— 审批角色 Iaut Sab
+  "Dens", //        重(新词根) —— 心重于羽 Ib Dens Er Shut;权重 Dens
+  "Khebi", //       减 / 衰减(新词根) —— 衰减后 Khebi Seth
+  "Sab Sia", //     顾问
+  "Sab Sen", //     联合审判官
+  "Sedjem Sab", //  官员端「通知」,与推送 Sedjem Ba 成对;单写 Sedjem 是「举报」
+  "Em Sekhet", //   在押
+  "Sepu Wedja", //  审判队列
+];
+/**
+ * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
+ * 冥界统一「Duat + 国名」;欧洲地狱各圈改用与炼狱同一套拉丁罪名。技术词 IP / JPEG / MB / PNG / WebP / Webhook
+ * 原样;MODERATOR 只作代码示例(见下面那条);A(快捷键)与 N 是键名 / 变量名。
+ */
+const PROPER_NAMES = [
+  "Qinguang", "Chujiang", "Songdi", "Wuguan", "Yanluo", "Biancheng", "Taishan", "Dushi", "Pingdeng", "Zhuanlun",
+  "Daishensuo", "Tianjie", "Mengpo", "Sherer", "Yangliu",
+  "Limbo", "Malebolge", "Acheron", "Lethe", "Dante", "Culpa", "Poena", "Superbia", "Invidia", "Ira", "Acedia",
+  "Avaritia", "Gula", "Luxuria", "Haeresis", "Violentia", "Proditio", "Paradiso Terrestre", "Leimon", "Kristos",
+  "Haunebut", "Gorgias", "Kemet", "Wepwawet", "Europa",
+  "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
+];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
+  // 第十节:如 / 同(例如 Mi)、是(与 Nen 相对)、后置的「其 / 它的」(Iri-Ef;-Es 换成 -Ef,界面不分性别)。
+  "Mi", "Iu", "-Ef",
 ];
-const LEXICON = new Set([...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)));
+const LEXICON = new Set([
+  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...WHOLE_PHRASES,
+]);
 
 /**
  * 封闭词汇登记表(support/egyVocabulary.json):egy 文案用到的
@@ -342,8 +475,20 @@ describe("egy 词表规则", () => {
       /\bSethety\b/, /\bPedet\b/, /\bWerpet\b/, /\bKhemut\b/, /\bPert Abuf\b/,
       // 一之八:恢复写作两词 Ankh Wehem,连字符形废止。
       /\bAnkh-Wehem\b/,
+      // 第十节「换掉」:已从包里换净的旧词。数词一律阿拉伯数字(Diu / Khemet / Khemt / Fedu 废止);
+      // 后置小词 -Es 换成 -Ef。仍在旧账清单里的(Aa、Aba、Kheme……)还有键没换,换净之后移进来。
+      ABOLISHED_TEN,
+      /[A-Za-z]-Es\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
+  });
+
+  it("第十节「换掉」清单与旧账清单不重叠:换净了才能进废止名单", () => {
+    expect(ABOLISHED_TEN_WORDS.filter((w) => OFF_LEXICON.has(w))).toEqual([]);
+  });
+
+  it("MODERATOR 只作代码示例:给人看的句子写 Heri-Tep Per Ahet", () => {
+    expect(offenders(KEYS, (v, k) => /\bMODERATOR\b/.test(prose(v)) && k !== "permissions.role_name_placeholder")).toEqual([]);
   });
 
   it("失败一律 Nen + 动词:Nen Kheper 只在白名单两键里出现", () => {
@@ -412,7 +557,8 @@ describe("egy 词表规则", () => {
   });
 
   it("每词首字母大写:含小词,连字符复合词的每一段都算", () => {
-    expect(offenders(KEYS, (_v, k) => words(k).some((w) => w.split("-").some((s) => !/^[A-Z]/.test(s))))).toEqual(
+    // 后置小词 -Ef 以连字符起头,空段不算。
+    expect(offenders(KEYS, (_v, k) => words(k).some((w) => w.split("-").filter(Boolean).some((s) => !/^[A-Z]/.test(s))))).toEqual(
       []
     );
   });
@@ -429,7 +575,8 @@ describe("egy 词表规则", () => {
     // 登记表 egyVocabulary.json,而登记表由写模式生成:写模式把任何生词记成 lexicon:false,
     // 随后这条就放行了 —— 门禁为它自己要拦的东西背书(2026-09-25 Design 复核时查出 Wetu、Rekhyu、
     // Sheemtet、Heaven 等都是这样进来的)。旧账只许变短:新词要么进定稿词根,要么别用。
-    expect(Object.keys(USAGE).length).toBeGreaterThan(300);
+    // 空扫保护。第十节换净 125 个旧词、专名词组整体计一词之后,词形从四百多降到 300 上下。
+    expect(Object.keys(USAGE).length).toBeGreaterThan(250);
     const unregistered = Object.keys(USAGE).filter((w) => !LEXICON.has(w) && !OFF_LEXICON.has(w));
     expect(unregistered).toEqual([]);
   });

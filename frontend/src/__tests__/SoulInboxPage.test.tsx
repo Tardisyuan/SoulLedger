@@ -53,7 +53,7 @@ const conversation = (over: Record<string, unknown> = {}) => ({
   soul_code: "ABCDEFGHJK",
   tenant: 1,
   tenant_name: "中国地府",
-  hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" },
+  hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" },
   last_message_at: "2026-09-18T01:00:00Z",
   last_soul_message_at: "2026-09-18T00:30:00Z",
   last_from: "hall",
@@ -68,7 +68,7 @@ const conversation = (over: Record<string, unknown> = {}) => ({
 });
 const COUNTS = {
   all: 1, awaiting_reply: 0, replied: 1, drafts: 0, archived: 0, assigned_to_me: 0, unread: 0, open: 1, closed: 0,
-  halls: [{ tenant: 1, hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, count: 1 }],
+  halls: [{ tenant: 1, hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" }, count: 1 }],
 };
 const noDraft = { data: { last_read_at: null, archived_at: null, draft: "", draft_saved_at: null } };
 // 接口新的在前。
