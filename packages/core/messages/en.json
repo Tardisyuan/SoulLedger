@@ -2075,6 +2075,7 @@
       "contact_email": "Contact email",
       "contact_phone": "Contact phone",
       "contact_hint": "Leave blank to keep the contact on file",
+      "email_not_synced": "This email is held by another account and was not synced as the sign-in email: this soul can only have the hall reset its password",
       "chain": "Account chain (every life)",
       "created_at": "Opened {{time}}",
       "retired_at": "retired {{time}}",

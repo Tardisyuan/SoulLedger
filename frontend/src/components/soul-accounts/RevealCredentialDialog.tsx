@@ -9,6 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
+import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
 import { failureKey, lifeNumber } from "./soulAccountsView";
 
 interface Props {
@@ -104,6 +105,7 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
             n: lifeNumber(credential.cycle),
           })}
         </p>
+        {credential.email_not_synced === "taken" && <EmailNotSyncedNote className="mt-3" />}
       </BaseModal>
     );
   }
