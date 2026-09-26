@@ -98,7 +98,9 @@ export function RouteTopology({
   );
 
   /** `lead`: the station this run branches off (draws the segment into the first one).
-   *  `terminal`: a road into no place — every segment dashed, the mark a dashed square. */
+   *  `terminal`: a road into no place — the mark is a dashed square and its occupancy is not shown.
+   *  The segments follow the legend like everywhere else (2026-09-26, Design): solid iff `path[]` records
+   *  both ends, dashed otherwise. "Not a place" is the square's job; the line only says walked / not walked. */
   const horizontal = (stations: Station[], bold?: (s: Station) => boolean, lead: Station | null = null, terminal = false) => (
     <ol className="flex min-w-max">
       {stations.map((s, i) => {
@@ -111,7 +113,7 @@ export function RouteTopology({
           className="min-w-16 flex-1 pr-1"
         >
           <span aria-hidden="true" className="flex items-center h-3">
-            <span className={`flex-1 h-0 ${into === null ? "" : into && !terminal ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
+            <span className={`flex-1 h-0 ${into === null ? "" : into ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
             {mark(s, bold?.(s), terminal)}
             <span className={`flex-1 h-0 ${i === stations.length - 1 ? "" : segmentWalked(stations, i + 1) ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
           </span>
