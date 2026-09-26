@@ -594,6 +594,21 @@ class TestDraft:
         assert response.status_code == 200, response.data
         assert response.data["notes"] == "定稿"
 
+    def test_conclude_clears_the_verdict_draft(self, judge_client, cn_case):
+        judgment, _, _ = cn_case
+        judge_client.patch(
+            _draft_url(judgment), {"version": 0, "notes": "草稿", "draft_verdict": "PASSED"}, format="json",
+        )
+        judgment.refresh_from_db()
+        assert judgment.draft_verdict == "PASSED"  # the draft really landed
+        response = judge_client.post(
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "定稿"}, format="json",
+        )
+        assert response.status_code == 200, response.data
+        judgment.refresh_from_db()
+        # The draft text is `notes` itself: the final text replaced it, nothing of 「草稿」 is left.
+        assert (judgment.verdict, judgment.draft_verdict, judgment.notes) == ("FAILED", None, "定稿")
+
 
 @pytest.mark.django_db
 class TestDispatchDraft:
