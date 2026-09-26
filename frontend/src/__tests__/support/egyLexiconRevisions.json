@@ -141,7 +141,7 @@
   "scheduler.refresh": "Wehem Maa",
   "scheduler.rebuild": "Wehem Iri Ahet",
   "scheduler.rebuild_confirm_title": "Wehem Iri Ahet Neb?",
-  "scheduler.rebuild_confirm_message": "Sesh Ahet Nen Wenen Er Per Neb Em Sesh Tepy; Nen Em Sesh Tepy: Khetem. Wen, Sesh Ahet, Ahet Sepat En Sab: Wenen.",
+  "scheduler.rebuild_confirm_message": "Sesh Ahet Nen Wenen Er Per Neb Em Sesh Tepy; Nen Em Sesh Tepy: Khetem. Wen, Sesh Ahet, Ahet Sepat Khemen In Sab: Wenen.",
   "scheduler.rebuild_done": "Kheper: {{created}} Iri, {{updated}} Khemen, {{removed}} Khetem, {{legacy_removed}} Sesh Tepy Khetem",
   "scheduler.rebuild_failed": "Nen Wehem Iri Ahet",
   "scheduler.manage_hint": "Wen, Khemen Ahet, Iri: Was scheduler.manage",

@@ -2314,7 +2314,7 @@
     "refresh": "Wehem Maa",
     "rebuild": "Wehem Iri Ahet",
     "rebuild_confirm_title": "Wehem Iri Ahet Neb?",
-    "rebuild_confirm_message": "Sesh Ahet Nen Wenen Er Per Neb Em Sesh Tepy; Nen Em Sesh Tepy: Khetem. Wen, Sesh Ahet, Ahet Sepat En Sab: Wenen.",
+    "rebuild_confirm_message": "Sesh Ahet Nen Wenen Er Per Neb Em Sesh Tepy; Nen Em Sesh Tepy: Khetem. Wen, Sesh Ahet, Ahet Sepat Khemen In Sab: Wenen.",
     "rebuild_done": "Kheper: {{created}} Iri, {{updated}} Khemen, {{removed}} Khetem, {{legacy_removed}} Sesh Tepy Khetem",
     "rebuild_failed": "Nen Wehem Iri Ahet",
     "manage_hint": "Wen, Khemen Ahet, Iri: Was scheduler.manage",
@@ -3155,7 +3155,7 @@
     },
     "dispatch_return_blocked": {
       "title": "Ankh Er Taui Khesef",
-      "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."
+      "body": "{{soul}}: Ankh Er Taui Khesef In Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."
     },
     "sentence_node_active": {
       "title": "Sekhet Wetep Tepy",
