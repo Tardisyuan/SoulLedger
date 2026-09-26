@@ -158,7 +158,9 @@ export async function compressForUpload(image: PickedImage): Promise<PickedImage
         : decoded;
     const saved = await fitted.saveAsync({ format: SaveFormat.JPEG, compress: UPLOAD_JPEG_QUALITY });
     return { uri: saved.uri, name: image.name.replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" };
-  } catch {
+  } catch (error) {
+    // The App has no error reporter; a dev build at least says why the original went up.
+    if (__DEV__) console.warn("compressForUpload failed; uploading the original", error);
     return image;
   }
 }
@@ -183,6 +185,10 @@ export async function pickImages(room: number): Promise<PickedImage[] | null> {
       mediaTypes: ["images"],
       allowsMultipleSelection: true,
       selectionLimit: room,
+      // iOS 15+: the order the soul tapped. Android: expo-image-picker 57 passes it to
+      // the system Photo Picker (`setOrderedSelection`), which honours it only when the
+      // device's picker is new enough; an older one returns media order, and there is
+      // nothing further to ask it for.
       orderedSelection: true,
       quality: 0.8,
       exif: false,
