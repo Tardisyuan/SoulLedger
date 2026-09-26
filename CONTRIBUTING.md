@@ -15,8 +15,15 @@ uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python --no-dep
 .venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
 
 # Frontend — install at the REPO ROOT, not in frontend/: this is an npm
-# workspaces repo and the only lockfile is the root package-lock.json
-nvm use && npm ci && npm run dev --workspace frontend
+# workspaces repo and the only lockfile is the root package-lock.json.
+# npm 11, not nvm's npm 10 (exit 0, but no typescript and no .bin); npm 11 skips
+# install scripts, and `npm ci` strips the lockfile's libc fields — hence the
+# last two lines. Measurements: CLAUDE.md, Build & Test.
+nvm use
+npx -y npm@11 ci
+npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+git checkout -- package-lock.json
+npm run dev --workspace frontend
 ```
 
 Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
@@ -26,7 +33,7 @@ Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make changes and add tests
-4. Run tests: `cd backend && pytest` / `cd frontend && npm run test:coverage`
+4. Run tests: `cd backend && .venv/bin/python -m pytest` / `cd frontend && npm run test:coverage`
    (the backend suite needs `DATABASE_URL` **and** `REDIS_URL` pointed at throwaway
    services first — see `CLAUDE.md`, Build & Test, for the exact invocation)
 5. Commit: `git commit -m "feat: description"`
@@ -44,7 +51,8 @@ Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
 ### Frontend (TypeScript/React)
 - Use `useI18n()` for all user-facing strings — no hardcoded text
 - Use `RequirePermission` for CRUD button gating
-- Use `PageShell` for page layouts (33 of 37 routes do; `PageSection` is for
+- Use `PageShell` for page layouts (40 of 43 `page.tsx` do, by grep on 2026-09-26 —
+  the three that don't are `(auth)/login`, `judgment/queue` and `admin/stats`; `PageSection` is for
   sub-blocks within a page. `TableSkeleton` has zero callers under `app/` —
   table loading goes through `<DataTable isLoading>`)
 - Colours have exactly one spelling: `text-[oklch(var(--color-ink))]`. The bare
@@ -62,7 +70,8 @@ there is no commit-msg hook — so three copies drifted silently. Now there is o
 
 ## Testing
 
-- Backend: `cd backend && pytest --cov=apps` (isolate `DATABASE_URL` and `REDIS_URL` — see `CLAUDE.md`)
+- Backend: `cd backend && .venv/bin/python -m pytest` (`pytest.ini` already adds `--cov=apps`;
+  the interpreter is `backend/.venv`, not `python` on PATH; isolate `DATABASE_URL` and `REDIS_URL` — see `CLAUDE.md`)
 - Frontend unit: `cd frontend && npm run test:coverage` — **not `npm test`**, which
   is bare `jest`: `jest.config.js` sets `coverageThreshold` without
   `collectCoverage`, so the threshold is only evaluated with `--coverage`
@@ -70,6 +79,9 @@ there is no commit-msg hook — so three copies drifted silently. Now there is o
 - `packages/core` (the platform-independent workspace) has three of its own,
   and `pre-push` runs all three on any `^packages/` change:
   `npm run --workspace packages/core typecheck | lint | test` (the last is vitest)
+- `mobile/` (the soul app, Expo) has three as well, run by `pre-push` on any `^mobile/`
+  or `frontend/app/globals.css` change and by CI's `mobile` job: `npm run --workspace mobile typecheck | lint | test`
+  (the last is jest + jest-expo)
 - Frontend E2E: **`npm run build` first**, then
   `npx playwright test --project=chromium|firefox|mobile-chrome` — three
   projects, and CI's matrix runs all three. `webServer` serves the build
@@ -81,5 +93,7 @@ there is no commit-msg hook — so three copies drifted silently. Now there is o
 
 ## Architecture
 
-See `docs/TECHNICAL_DOCS.md` for architecture overview.
+See `AGENTS.md` (§6 has the current project tree) and `docs/ARCHITECTURE.md` for an
+architecture overview. `docs/TECHNICAL_DOCS.md` is an older short summary; its app list
+lags `backend/config/settings.py`, which is the authority.
 See `docs/API.md` for API documentation.
