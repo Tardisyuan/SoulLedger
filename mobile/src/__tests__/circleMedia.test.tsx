@@ -143,6 +143,15 @@ describe("feed and viewer", () => {
     expect(image.props.source.uri).toMatch(/^http:\/\/(localhost|10\.0\.2\.2):8000\/api\/v1\/social-media\/m2\/\?t=sig2$/);
   });
 
+  it("a published post's grid reads its own image count, not the composer's 'out of 9'", async () => {
+    stubApi({ "/me/social/feed/": page([post({ id: "a", media: media(1) }), post({ id: "c", media: media(3) })]) });
+    wrap(<CircleScreen />);
+    await screen.findByTestId("post-a");
+    expect(screen.getByTestId("media-a").props.accessibilityLabel).toBe("共 1 张图片");
+    expect(screen.getByTestId("media-c").props.accessibilityLabel).toBe("共 3 张图片");
+    expect(screen.queryByLabelText(/\/ 9/)).toBeNull();
+  });
+
   it("one image is large; two columns for 2–4; three for 5–9", async () => {
     stubApi({ "/me/social/feed/": page([post({ id: "one", media: media(1) }), post({ id: "four", media: media(4) }), post({ id: "nine", media: media(9) })]) });
     wrap(<CircleScreen />);

@@ -254,6 +254,14 @@ describe("step 2: the code and the new password", () => {
     expect(input.props).toMatchObject({ caretHidden: true, selectionColor: "transparent", textContentType: "oneTimeCode", autoComplete: "one-time-code" });
   });
 
+  it("the cells' tap target takes no focus of its own: only the input is focusable", async () => {
+    await toCodeStep();
+    // Focusable, it is where Android puts focus when another field blurs outside touch
+    // mode, and the system focus highlight greys the six cells.
+    expect(screen.getByTestId("forgot-code-cells").props.focusable).toBe(false);
+    expect(screen.getByTestId("forgot-code").props.editable).not.toBe(false);
+  });
+
   it("pre-login chrome: the bar's app name is in the serif; the caret is ink", async () => {
     stubApi({});
     await openForgot();
