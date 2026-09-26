@@ -1,18 +1,20 @@
-"""Fire every per-node workflow timeout that is due.
+"""Fire every per-node workflow timeout that is due, now, without celery.
 
-Timeouts fire ONLY when this runs (or the celery task `workflow.process_timeouts`,
-which calls the same function). Nothing schedules either: the beat scheduler is
-not deployed, and the task is deliberately not in `apps/scheduler/registry.py`.
-To make timeouts real, run this from cron, e.g. every 15 minutes:
+    manage.py process_workflow_timeouts                        # every active tenant
+    manage.py process_workflow_timeouts --now 2026-09-27T10:00:00+00:00
 
-    */15 * * * *  cd backend && .venv/bin/python manage.py process_workflow_timeouts
-
-See `apps/workflow/timeouts.py` for what each action does.
+The scheduled job `workflow.process_timeouts_for_tenant` does the same every
+5 minutes per active tenant; this is its manual entry point, one tenant at a
+time through the same `process_due_for_tenant`. See `apps/workflow/timeouts.py`
+for what each action does.
 """
+from collections import Counter
+
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from apps.workflow.timeouts import process_due
+from apps.tenants.models import Tenant
+from apps.workflow.timeouts import process_due_for_tenant
 
 
 class Command(BaseCommand):
@@ -26,7 +28,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         now = parse_datetime(options["now"]) if options.get("now") else None
-        counts = process_due(now=now)
+        counts: Counter = Counter()
+        for tenant in Tenant.objects.filter(is_active=True).order_by("code"):
+            counts.update(process_due_for_tenant(tenant, now=now))
         self.stdout.write(
             "workflow timeouts: "
             + ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))

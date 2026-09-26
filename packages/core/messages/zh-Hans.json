@@ -758,7 +758,7 @@
           "NOTIFY": "提醒"
         },
         "role": "转交给角色",
-        "hint": "超时只在运行 process_workflow_timeouts 命令时触发;系统没有定时调度它。",
+        "hint": "超时由定时任务每 5 分钟检查一次后触发;定时调度没有运行时不会触发。",
         "summary": "{{hours}} 小时后 · {{action}}"
       },
       "reject_to": "驳回到",
@@ -2347,7 +2347,10 @@
       "scheduler_reap_stale_runs": "收尾卡死的执行记录",
       "scheduler_check_overdue": "检测超时未跑的任务",
       "scheduler_prune_runs": "清理过期执行记录",
-      "soul_push_sweep": "灵魂推送:重新入队与查回执"
+      "soul_push_sweep": "灵魂推送:重新入队与查回执",
+      "workflow_process_timeouts_for_tenant": "处理审批超时",
+      "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
+      "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱"
     },
     "status": {
       "PENDING": "排队中",
