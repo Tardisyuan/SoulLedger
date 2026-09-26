@@ -8,6 +8,7 @@ import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Emblem, Icon, type IconName } from "./emblems";
+import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { Txt, useLayout, useTheme } from "./ui";
 
@@ -26,8 +27,11 @@ export function AppHeader({
   onBack,
   onAccount,
   action,
+  serif,
 }: {
   title: string;
+  /** The app name on the pre-login bar, set in the serif (product decision 2026-09-26). */
+  serif?: boolean;
   onBack?: () => void;
   /** One, or several side by side (朋友圈 1a: find people, my page). */
   action?: HeaderAction | HeaderAction[];
@@ -60,7 +64,12 @@ export function AppHeader({
           accessibilityRole="header"
           variant="nav"
           numberOfLines={2}
-          style={[styles.title, android && !onBack && styles.titleStart, { textAlign: onBack || android ? "left" : "center" }]}
+          style={[
+            styles.title,
+            android && !onBack && styles.titleStart,
+            { textAlign: onBack || android ? "left" : "center" },
+            serif && { fontFamily: quoteFamily(title) },
+          ]}
         >
           {title}
         </Txt>

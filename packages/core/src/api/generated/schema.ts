@@ -7953,6 +7953,11 @@ export interface components {
          */
         DispositionSectionEnum: "pending" | "executing" | "expired";
         /**
+         * @description * `taken` - taken
+         * @enum {string}
+         */
+        EmailNotSyncedEnum: "taken";
+        /**
          * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
          *
          *     Kept distinct from `DetailResponseSerializer` rather than unified: the two
@@ -8306,6 +8311,7 @@ export interface components {
             /** Format: date-time */
             readonly delivered_at: string | null;
             readonly delivered_by: string | null;
+            readonly email_not_synced: (components["schemas"]["EmailNotSyncedEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /**
          * @description * `QUEUED` - 待发送
@@ -12380,6 +12386,7 @@ export interface components {
             readonly last_login: string | null;
             readonly contact_email_masked: string;
             readonly contact_phone_masked: string;
+            readonly email_not_synced: (components["schemas"]["EmailNotSyncedEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /** @description Request body of `POST /souls/batch-recycle/`. */
         SoulBatchRecycle: {

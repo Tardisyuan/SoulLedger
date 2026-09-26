@@ -1,8 +1,13 @@
 /**
  * 「忘记密码」 for a soul: the backend's email-code reset, in two steps
- * (第三类 F 组画布:393 宽,卷宗版式,方角,3px 封皮线,整条流程不用衬线).
+ * (第三类 F 组画布:393 宽,卷宗版式,方角,3px 封皮线,整条流程不用衬线 —— 唯一例外是顶栏的
+ * App 名「灵魂簿」,产品 2026-09-26 定为衬线,见 navigation.tsx 的 `AppHeader serif`).
  *
- *   1. The contact email on the soul's account → `POST /auth/reset-password/`.
+ *   1. The soul's contact email → `POST /auth/reset-password/`. The backend
+ *      copies a contact email to the soul's login account when it is written
+ *      (`sync_login_email`), except an address another account already holds:
+ *      a family sharing one address resets through the first soul only; the
+ *      others receive no code and go the no-email way (ask the hall).
  *   2. The six-digit code + a new password → `POST /auth/set-new-password/`.
  *
  * Then back to sign-in with a notice. Never signed in from here: the reset
@@ -254,7 +259,10 @@ function EmailStep({ onSent, onNoEmail }: { onSent: (sent: Sent) => void; onNoEm
           testID="forgot-email"
           label={t("soul_app.forgot_password.email")}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (invalid && isPlausibleEmail(v.trim())) setInvalid(false);
+          }}
           editable={!busy}
           keyboardType="email-address"
           autoComplete="email"
@@ -365,6 +373,10 @@ function CodeCells({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         caretHidden
+        contextMenuHidden
+        selectionColor="transparent"
+        cursorColor="transparent"
+        underlineColorAndroid="transparent"
         style={styles.hiddenInput}
       />
     </Pressable>
@@ -419,6 +431,32 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
     problem && problem.field === name ? (
       <FieldProblem testID={`forgot-${name}-error`} title={problem.title} body={problem.body} />
     ) : null;
+
+  // A field's message goes as soon as what is typed passes that field's check —
+  // not only on the next submit. Only the field being edited is rechecked (a new
+  // password does not clear a wrong code), plus confirm when the password it must
+  // match changes. `values` is the form as it is after this keystroke.
+  const recheck = (edited: FieldName, values: Record<FieldName, string>) => {
+    if (!problem || (problem.field !== edited && !(edited === "new" && problem.field === "confirm"))) return;
+    const ok = {
+      code: RESET_CODE.test(values.code),
+      new: values.new.length >= MIN_PASSWORD_LENGTH,
+      confirm: values.confirm === values.new,
+    }[problem.field];
+    if (ok) setProblem(null);
+  };
+  const changeCode = (v: string) => {
+    setCode(v);
+    recheck("code", { code: v, new: newPassword, confirm });
+  };
+  const changeNew = (v: string) => {
+    setNew(v);
+    recheck("new", { code, new: v, confirm });
+  };
+  const changeConfirm = (v: string) => {
+    setConfirm(v);
+    recheck("confirm", { code, new: newPassword, confirm: v });
+  };
 
   const clearAll = () => {
     setProblem(null);
@@ -540,7 +578,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
           </View>
           <CodeCells
             value={code}
-            onChange={setCode}
+            onChange={changeCode}
             bad={problem?.field === "code"}
             editable={!busy}
             label={t("soul_app.forgot_password.code")}
@@ -553,7 +591,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
             testID="forgot-new-password"
             label={t("soul_app.change_password.new_password")}
             value={newPassword}
-            onChangeText={setNew}
+            onChangeText={changeNew}
             editable={!busy}
             secureTextEntry
             secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
@@ -568,7 +606,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
             testID="forgot-confirm-password"
             label={t("soul_app.change_password.confirm_password")}
             value={confirm}
-            onChangeText={setConfirm}
+            onChangeText={changeConfirm}
             editable={!busy}
             secureTextEntry
             invalid={problem?.field === "confirm"}
@@ -622,11 +660,17 @@ const styles = StyleSheet.create({
   status: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 10, paddingHorizontal: 12 },
   field: { gap: 7 },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  countdown: { fontSize: 12 },
+  countdown: { fontSize: 12, fontVariant: ["tabular-nums"] },
   cells: { flexDirection: "row", gap: 6 },
   cell: { flex: 1, height: 52, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  cellText: { fontFamily: family.mono[500], fontSize: 22, lineHeight: 28 },
-  hiddenInput: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.02, color: "transparent" },
+  cellText: { fontFamily: family.mono[500], fontSize: 22, lineHeight: 28, fontVariant: ["tabular-nums"] },
+  // Covers the cells, so a tap anywhere focuses it and the one-time-code autofill
+  // (iOS keyboard bar, Android SMS/autofill) still has a real, focusable field.
+  // Not opacity 0 and not zero-size: either can stop a platform from offering
+  // autofill to it. Its own text is transparent AND 1pt, so nothing of it shows
+  // behind the first cell even where a platform does not honour a transparent
+  // text colour (the Android "ghost digits").
+  hiddenInput: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: "transparent", fontSize: 1 },
   strength: { gap: 6 },
   segments: { flexDirection: "row", gap: 4 },
   segment: { flex: 1, height: 4 },

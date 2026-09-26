@@ -254,7 +254,7 @@ export function RootNavigator() {
               name="ForgotPassword"
               component={ForgotPassword}
               options={({ navigation }) => ({
-                header: () => <AppHeader title={t("soul_app.app_name")} onBack={navigation.goBack} />,
+                header: () => <AppHeader title={t("soul_app.app_name")} onBack={navigation.goBack} serif />,
               })}
             />
           </>

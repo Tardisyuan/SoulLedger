@@ -24,6 +24,7 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Animated,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -391,6 +392,13 @@ export function Input({
             autoCapitalize="none"
             autoCorrect={false}
             multiline={multiline}
+            // Caret and handles in ink, like the focus ring — not the platform accent,
+            // which here reads as the seal red of an error. On Android `selectionColor`
+            // would also paint the selection box solid ink over ink text, so there only
+            // the caret and the handles are set.
+            cursorColor={t.ink}
+            selectionHandleColor={t.ink}
+            selectionColor={Platform.OS === "ios" ? t.ink : undefined}
             {...rest}
             secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
             onFocus={(e) => {
