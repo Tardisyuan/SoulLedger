@@ -3055,6 +3055,7 @@
       "media": {
         "add": "Add images",
         "count": "Images {{n}} / {{max}}",
+        "grid": "Images: {{n}}",
         "uploading": "Uploading {{percent}}%",
         "failed": "Upload failed",
         "retry": "Retry",

@@ -3055,6 +3055,7 @@
       "media": {
         "add": "添加图片",
         "count": "图片 {{n}} / {{max}}",
+        "grid": "共 {{n}} 张图片",
         "uploading": "上传中 {{percent}}%",
         "failed": "上传失败",
         "retry": "重试",

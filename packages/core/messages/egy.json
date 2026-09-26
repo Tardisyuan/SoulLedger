@@ -3055,6 +3055,7 @@
       "media": {
         "add": "Ini Tut",
         "count": "Tut {{n}} / {{max}}",
+        "grid": "Tut Neb: {{n}}",
         "uploading": "Em Hab {{percent}}%",
         "failed": "Nen Hab",
         "retry": "Wehem Iri",

@@ -66,7 +66,8 @@ export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: Pos
   const cols = gridColumns(media.length);
   const size = cols === 1 ? Math.round((width * 2) / 3) : Math.floor((width - GAP * (cols - 1)) / cols);
   return (
-    <View testID={testID} accessibilityLabel={tr("soul_app.circle.media.count", { n: String(media.length), max: String(SOUL_POST_MEDIA_MAX) })} style={[styles.grid, { width: cols === 1 ? size : width }]}>
+    // `grid`, not the composer's `count`: a published post has no "out of 9".
+    <View testID={testID} accessibilityLabel={tr("soul_app.circle.media.grid", { n: String(media.length) })} style={[styles.grid, { width: cols === 1 ? size : width }]}>
       {media.map((m, i) => (
         <Tile
           key={m.id}
