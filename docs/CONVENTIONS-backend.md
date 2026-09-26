@@ -297,8 +297,15 @@ cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:639
 两条都**不可能**在 SQLite 上测出来。碰事务、约束、列宽之前，先在 PG 上跑一遍：
 
 ```bash
-cd backend && .venv/bin/python -m pytest -q --no-cov --create-db
+# 先起一次性 Redis：redis-server --port 6399 --daemonize yes --save '' --appendonly no
+cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
+  CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
+  CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
+  .venv/bin/python -m pytest -q --no-cov --create-db
 ```
+
+只放开数据库，Redis 必须覆盖：否则 `REDIS_URL` 读 `.env` 指向 115，
+`apps/perm/cache.py` 会往共享 Redis 写权限缓存键、并删掉那里的 `perm:*`。
 
 `--create-db` 是必需的：陈旧的 `test_soulledger` 会造成上千条"环境错误"。
 

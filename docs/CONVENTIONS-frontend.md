@@ -73,7 +73,7 @@ This file is not.」
 
 **`domBoundary.test.ts` 为什么不能被 `typecheck` 替代：** 那些 DOM 类型是空接口，
 `const el: HTMLElement = {}` 能编译过。**只有那份测试在执法"平台无关"这个断言。**
-而 `ci.yml:98-101` 只跑 core 的 typecheck+lint，**不跑 core 的 vitest** —— pre-push 三条都跑。
+`ci.yml:119-137` 跑 core 的 typecheck、lint、vitest 三条（vitest 自 2026-09-14 起，审计 IS-16），与 pre-push 一致。
 
 **2026-09-14 前:代码搬进 `packages/core` = 搬出 jest 覆盖率分母。** jest 只对
 `rootDir` 之内的文件计量,而 `rootDir` 当时是 `frontend/`,`packages/core` 是它的
