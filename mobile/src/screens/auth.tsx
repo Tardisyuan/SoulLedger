@@ -50,12 +50,26 @@ export function LoginScreen() {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<{ Login: LoginParams; ForgotPassword: undefined }>>();
   // Set by the 「忘记密码」 flow on its way back here. It says the reset worked; it does not sign in.
-  const reset = useRoute<RouteProp<{ Login: LoginParams }, "Login">>().params?.passwordReset === true;
+  const params = useRoute<RouteProp<{ Login: LoginParams }, "Login">>().params;
+  const reset = params?.passwordReset === true;
   const { state, signIn } = useSession();
   const [soulCode, setSoulCode] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(state.status === "signedOut" ? (state.notice ?? null) : null);
+  // `popTo("Login")` returns to THIS screen, not a fresh one: an earlier failed
+  // sign-in's error (which hid the notice) and the old password are still here.
+  // Each arrival carries a new params object, so a second reset clears them too.
+  // Adjusted during render (react.dev "storing information from previous renders"),
+  // not in an effect, so the stale error is never painted over the notice.
+  const [arrival, setArrival] = useState(params);
+  if (arrival !== params) {
+    setArrival(params);
+    if (params?.passwordReset) {
+      setError(null);
+      setPassword("");
+    }
+  }
 
   const submit = async () => {
     if (!soulCode.trim() || !password) {
