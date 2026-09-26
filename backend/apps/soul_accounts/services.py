@@ -372,6 +372,15 @@ def change_password(account, old_password, new_password):
     if old_password == new_password:
         raise SoulAccountError("新密码不能与原密码相同。", "password_unchanged", 400)
     validate_password(new_password, user)
+    set_password_chosen_by_soul(account, new_password)
+    return issue_tokens(account)
+
+
+def set_password_chosen_by_soul(account, new_password):
+    """灵魂自己定的密码 —— 改初始密码与邮箱重置(`set_new_password`)共用。
+    初始密码的生命周期到此结束:不再强制改密、不再过期;否则邮箱重置之后
+    仍被要求「修改初始密码」,而初始密码已过期时新密码也登不进去。"""
+    user = account.user
     with transaction.atomic():
         user.set_password(new_password)
         user.save(update_fields=["password"])
@@ -381,7 +390,6 @@ def change_password(account, old_password, new_password):
         # 灵魂已经自己设了密码:还没交付的初始密码没有意义了,明文立即作废。
         _void_open_credentials(account)
         _revoke_refresh_tokens(user)
-    return issue_tokens(account)
 
 
 def _revoke_refresh_tokens(user):
