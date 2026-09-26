@@ -242,9 +242,10 @@ const mutation = useMutation({
 —— 一句从没有人执行过的「验证安装」。活着的权限 app 是 `apps/perm`:
 
 ```bash
-python manage.py migrate perm
+# 在 backend/ 下;解释器是 backend/.venv,不是 PATH 上的 python(2026-09-26 改,见根 CLAUDE.md 的 Build & Test)
+.venv/bin/python manage.py migrate perm
 # `python -c` 不 setup Django，实跑报 ImproperlyConfigured: Requested setting AUTH_USER_MODEL
-python manage.py shell -c "from apps.perm.models import DataScope; print('OK')"
+.venv/bin/python manage.py shell -c "from apps.perm.models import DataScope; print('OK')"
 ```
 
 ---
