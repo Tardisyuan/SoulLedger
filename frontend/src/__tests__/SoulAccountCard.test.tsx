@@ -46,6 +46,7 @@ function account(over: Record<string, unknown> = {}) {
     last_login: null,
     contact_email_masked: "z***@example.com",
     contact_phone_masked: "",
+    email_not_synced: null,
     ...over,
   };
 }

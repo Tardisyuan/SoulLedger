@@ -5,7 +5,9 @@
  *   mono   IBM Plex Mono      every value a person could check against a record:
  *                            codes, dates, counts, scores, raw enum members
  *   serif  Source Serif 4     only words someone SAID: a statement, an appeal,
- *          + Noto Serif SC    a rejection reason (the Han serif, a bundled subset)
+ *          + Noto Serif SC    a rejection reason (the Han serif, a bundled subset);
+ *                            one exception: the app name on the pre-login bar
+ *                            (`AppHeader serif`, product decision 2026-09-26)
  *
  * React Native has no font-family fallback list and picks no file by
  * `fontWeight` for a custom family, so each weight is its own family name.

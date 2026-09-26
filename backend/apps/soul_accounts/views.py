@@ -116,7 +116,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
 
     def get_queryset(self):
         svc.expire_due_credentials()
-        qs = InitialCredential.objects.select_related("soul", "account", "revealed_by", "delivered_by")
+        qs = InitialCredential.objects.select_related("soul", "account__user", "revealed_by", "delivered_by")
         return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=None, responses={200: RevealedCredentialSerializer, 409: SoulErrorSerializer,

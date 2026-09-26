@@ -145,6 +145,7 @@ def provision_account(soul, origin, *, actor=None, request=None):
                 )
         except IntegrityError:
             return SoulAccount.objects.get(soul=soul, cycle=cycle), False
+        sync_login_email(soul)
         credential = _issue_credential(account, soul)
         audit("CREATE", soul, f"开通灵魂账号(第 {cycle} 世,{origin})", actor=actor, request=request,
               resource_id=account.pk, changes={"cycle": cycle, "origin": origin, "channel": credential.channel})
@@ -371,6 +372,15 @@ def change_password(account, old_password, new_password):
     if old_password == new_password:
         raise SoulAccountError("新密码不能与原密码相同。", "password_unchanged", 400)
     validate_password(new_password, user)
+    set_password_chosen_by_soul(account, new_password)
+    return issue_tokens(account)
+
+
+def set_password_chosen_by_soul(account, new_password):
+    """灵魂自己定的密码 —— 改初始密码与邮箱重置(`set_new_password`)共用。
+    初始密码的生命周期到此结束:不再强制改密、不再过期;否则邮箱重置之后
+    仍被要求「修改初始密码」,而初始密码已过期时新密码也登不进去。"""
+    user = account.user
     with transaction.atomic():
         user.set_password(new_password)
         user.save(update_fields=["password"])
@@ -380,7 +390,6 @@ def change_password(account, old_password, new_password):
         # 灵魂已经自己设了密码:还没交付的初始密码没有意义了,明文立即作废。
         _void_open_credentials(account)
         _revoke_refresh_tokens(user)
-    return issue_tokens(account)
 
 
 def _revoke_refresh_tokens(user):
@@ -405,7 +414,9 @@ def retire_account_for_rebirth(soul, ended_cycle):
     account.retired_at = timezone.now()
     account.save(update_fields=["retired_at"])
     account.user.is_active = False
-    account.user.save(update_fields=["is_active"])
+    # 停用的账号不再占着登录邮箱:下一世的账号要用它,邮箱重置也只该找到可登录的那个。
+    account.user.email = ""
+    account.user.save(update_fields=["is_active", "email"])
     _void_open_credentials(account)
     _revoke_refresh_tokens(account.user)
     # 同一事务里停用推送设备:停用的账号不再收到任何推送,回滚则一起回滚。
@@ -420,12 +431,60 @@ def retire_account_for_rebirth(soul, ended_cycle):
 
 
 def apply_contacts(soul, contact_email="", contact_phone=""):
-    """有值才写;save 而不是 update,走审计信号,值由 PII_FIELD_NAMES 遮蔽。"""
+    """有值才写;save 而不是 update,走审计信号,值由 PII_FIELD_NAMES 遮蔽。
+    写了邮箱就同步到本世账号的登录邮箱(`sync_login_email`)。"""
+    old_email = soul.contact_email
     updates = {f: v for f, v in (("contact_email", contact_email), ("contact_phone", contact_phone)) if v}
     for field, value in updates.items():
         setattr(soul, field, value)
     if updates:
         soul.save(update_fields=list(updates))
+    if "contact_email" in updates:
+        sync_login_email(soul, old_email)
+
+
+def sync_login_email(soul, old_email=""):
+    """联系邮箱 → 本世账号的 `User.email`,邮箱自助重置(`reset_password_request`)
+    按后者找人(2026-09-26 产品决定)。没有本世账号就什么也不做 —— 开号时再同步一次。
+
+    `User.email` 在未删除的行里唯一(大小写不敏感,authentication 0016),而一家人
+    可以共用一个联系邮箱。地址已被**别的**账号占用时不写,账号的登录邮箱保持原样,
+    写一条审计;官员侧从 `email_not_synced` 看到它,这个灵魂只能由官员重置密码。
+    联系邮箱被清空时,只在登录邮箱仍等于旧联系邮箱时才清。返回 `"taken"` 或 None。
+    """
+    account = current_account_of(soul)
+    if account is None:
+        return None
+    user = account.user
+    new = soul.contact_email
+    if not new:
+        if old_email and user.email.lower() == old_email.lower():
+            user.email = ""
+            user.save(update_fields=["email"])
+        return None
+    if user.email.lower() == new.lower():
+        return None
+    # 占用与否交给唯一约束判断(它和这里要的规则逐字相同,也挡得住并发写者),
+    # 在保存点里撞,PostgreSQL 上外层事务不中止。
+    user.email = new
+    try:
+        with transaction.atomic():
+            user.save(update_fields=["email"])
+        return None
+    except IntegrityError:
+        user.refresh_from_db(fields=["email"])
+    audit("UPDATE", soul, f"联系邮箱已被其他账号占用,未同步为登录邮箱(第 {account.cycle} 世)",
+          resource_id=account.pk, changes={"email_not_synced": "taken"})
+    return "taken"
+
+
+def email_not_synced(account):
+    """官员侧响应里的 `email_not_synced`:本世账号有联系邮箱、登录邮箱却不是它 ——
+    每个写联系邮箱的路径都同步,所以不一致只可能是地址被别的账号占着。"""
+    contact = account.soul.contact_email
+    if account.retired_at is not None or not contact:
+        return None
+    return None if account.user.email.lower() == contact.lower() else "taken"
 
 
 def provision_on_death(soul, origin):

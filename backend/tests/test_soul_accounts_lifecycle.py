@@ -60,7 +60,8 @@ def test_death_sync_opens_the_account_and_mails_the_password_once(
     assert response.status_code == 201, response.data
     account = SoulAccount.objects.get(soul=soul)
     assert (account.cycle, account.origin, account.must_change_password) == (0, AccountOrigin.DEATH_SYNC, True)
-    assert account.user.role == "SOUL" and account.user.email == ""
+    # 联系邮箱同步为登录邮箱(2026-09-26):此前这里断言它是空的,正是邮箱重置收不到码的缺陷。
+    assert account.user.role == "SOUL" and account.user.email == "zhang@example.com"
     assert len(mail.outbox) == 1 and mail.outbox[0].to == ["zhang@example.com"]
     password = password_in_last_mail()
     credential = InitialCredential.objects.get(account=account)

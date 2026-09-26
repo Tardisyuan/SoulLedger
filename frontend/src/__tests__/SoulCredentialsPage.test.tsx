@@ -69,6 +69,7 @@ function credential(over: Record<string, unknown> = {}) {
     revealed_by: null,
     delivered_at: null,
     delivered_by: null,
+    email_not_synced: null,
     ...over,
   };
 }

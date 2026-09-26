@@ -354,6 +354,7 @@ describe("composer", () => {
 
   it("an image the manipulator cannot decode goes up as picked; the server still decides", async () => {
     mockDims["file:///p1.jpg"] = "broken";
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     await openWith({ "POST /me/social/media/": uploaded("u1") });
     await pick(1);
     await waitFor(() => expect(disabled()).toBe(false));
@@ -362,6 +363,8 @@ describe("composer", () => {
       name: "p1.jpg",
       type: "image/jpeg",
     }]);
+    // …and the failure is not swallowed silently: a dev build says why.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("compressForUpload"), expect.objectContaining({ message: "cannot decode" }));
   });
 
   it("leaving without posting deletes what was uploaded", async () => {
