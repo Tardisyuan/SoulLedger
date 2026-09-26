@@ -11,6 +11,7 @@ import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -118,6 +119,17 @@ describe("step 1: the email", () => {
     expect(screen.getByText("填写绑定的邮箱")).toBeTruthy();
   });
 
+  it("「请填写有效的邮箱」 goes as soon as the address is plausible, not on the next send", async () => {
+    stubApi({});
+    await openForgot();
+    await sendEmail("not-an-address");
+    expect(screen.getByText("! 请填写有效的邮箱")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("forgot-email"), "soul@exam");
+    expect(screen.getByText("! 请填写有效的邮箱")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("forgot-email"), EMAIL);
+    expect(screen.queryByText("! 请填写有效的邮箱")).toBeNull();
+  });
+
   it("「没有绑定邮箱？」 opens 找殿司重设, which goes back to sign-in", async () => {
     stubApi({});
     await openForgot();
@@ -212,6 +224,55 @@ describe("step 2: the code and the new password", () => {
     expect(screen.getByText(message)).toBeTruthy();
     expect(screen.queryByTestId("forgot-error")).toBeNull();
     expect(calls.filter((c) => c.url === "/auth/set-new-password/")).toEqual([]);
+  });
+
+  it.each([
+    ["12345", "new-password-1", "new-password-1", "code", "forgot-code", "123456"],
+    ["123456", "short", "short", "new", "forgot-new-password", "new-password-1"],
+    ["123456", "new-password-1", "new-password-2", "confirm", "forgot-confirm-password", "new-password-1"],
+    // Confirm is also valid again when the password it must match is changed to it.
+    ["123456", "new-password-1", "new-password-2", "confirm", "forgot-new-password", "new-password-2"],
+  ])("code %p / %p / %p: the %s message goes as soon as %s becomes valid", async (code, password, confirm, field, input, fixed) => {
+    await toCodeStep();
+    fillCode(code, password, confirm);
+    await submitCode();
+    expect(screen.getByTestId(`forgot-${field}-error`)).toBeTruthy();
+    // Still not valid: the message stays.
+    fireEvent.changeText(screen.getByTestId(input), fixed.slice(0, 4));
+    expect(screen.getByTestId(`forgot-${field}-error`)).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId(input), fixed);
+    expect(screen.queryByTestId(`forgot-${field}-error`)).toBeNull();
+  });
+
+  it("the hidden code input shows nothing of itself, yet stays a real focusable field", async () => {
+    await toCodeStep();
+    const input = screen.getByTestId("forgot-code");
+    const style = StyleSheet.flatten(input.props.style);
+    expect(style).toMatchObject({ color: "transparent", fontSize: 1 });
+    // Not 0: a fully transparent or zero-size field can lose the one-time-code autofill.
+    expect(style.opacity).toBeGreaterThan(0);
+    expect(input.props).toMatchObject({ caretHidden: true, selectionColor: "transparent", textContentType: "oneTimeCode", autoComplete: "one-time-code" });
+  });
+
+  it("pre-login chrome: the bar's app name is in the serif; the caret is ink", async () => {
+    stubApi({});
+    await openForgot();
+    const title = screen.getByText("灵魂簿");
+    expect(StyleSheet.flatten(title.props.style).fontFamily).toBe("NotoSerifSC_400");
+    const email = screen.getByTestId("forgot-email");
+    expect(email.props.cursorColor).toBeTruthy();
+    expect(email.props.cursorColor).toBe(email.props.selectionHandleColor);
+    expect(email.props.cursorColor).toBe(StyleSheet.flatten(email.props.style).color); // the ink token
+  });
+
+  it("a wrong code stays said while another field is edited", async () => {
+    await toCodeStep();
+    stubApi({ [CONFIRM]: { status: 400, data: refusal("reset_code_wrong", { attempts_left: 2 }) } });
+    fillCode("123456", "new-password-1");
+    await submitCode();
+    expect(screen.getByTestId("forgot-code-error")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("forgot-new-password"), "new-password-12");
+    expect(screen.getByTestId("forgot-code-error")).toBeTruthy();
   });
 
   // [what, reply, where: a field's testID or a banner's, title, body]
