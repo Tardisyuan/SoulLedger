@@ -24,6 +24,8 @@
  * 夹具里有 4 条随包回填(enqueue_failed、errors.section 与两条 Per Aa),键数不变。
  * 第十二节「36 词逐键审定」给了逐键写法(约五十键)与 ROOTS_TWELVE;夹具里 7 条随包回填,键数不变;旧账清单只剩 Her、Ma(escalate_reason_placeholder 未改,见废止名单注释)。
  * 第十三节「Unemu 误用 · 42 键」给了逐键写法,并定 Hemsu 只作「系统」(判官 Sab Wedja);夹具无回填。
+ * 第十四节给了逐键写法(法庭 Wesekhet、席 Sab、开始 / 执行审判 Tepy / Iri Wedja、租户 Per、功过格 Sesh Nefer Isfet、
+ * 由 / 被 In,En 只作属格);夹具里 5 条随包回填,键数不变;旧账清单清空。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -35,8 +37,8 @@
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
  * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
  * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单两键(第七节);
- * - 服务器写 Per Hemsu(Per Aa 废止)、功德义的「功」不配 Maat(第十一、十二节);
- * - Unemu 只表「色」、中文含「判官」的键不出现 Hemsu(第十三节);
+ * - 服务器写 Per Hemsu(Per Aa 废止)、中文含「功」的键里 Maat 只作 Medu Maat(第十一、十二、十四节);
+ * - Unemu 只表「色」、中文含「判官」的键不出现 Hemsu(第十三节);Hemsu 只在系统 / 服务器 / 队列 / 连接义的键里(第十四节);
  * - Dbh 政策:推送 / 申请类页面副题 / 点名键写全 Dbh Wehem Mesut,点名的页内键只写 Dbh(第四节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
@@ -110,10 +112,11 @@ const ABOLISHED_TEN_WORDS = [
   "Kehat", "Abuf", "Neter", "Wi", "Setesh", "Seped",
   // 第十二节「这一轮之后应当废止的写法」(Per Aa 是词组,单列在下面)。Hotep(「待」义)与 Rekhyu(「原因 / 方式」义)
   // 只按义项废止,整词名单表达不了义项,所以不在这里 —— 包里已无这两个词,单独出现由封闭词汇拦下。
-  // Her 与 Ma 也在第十二节名单里,但它们唯一的键(escalate_reason_placeholder)第十二节给的写法 Khet: Seshem Sekhet Pen
-  // 撞了「Seshem 只表推进」(中文是「跳过」),所以那一键没改,两词留在旧账清单里,等 Design 定。
   "Am", "Aru", "Aset", "Ahamet", "Aba", "Djewet", "Hemset", "Kheme", "Mech", "Renenu", "Ru", "Seh",
   "Senu", "Set", "Shen", "Tep", "We", "Weben", "Wepet", "Wer", "Wu",
+  // Her 与 Ma 也在第十二节名单里;它们唯一的键 escalate_reason_placeholder 第十四节改写 Khet: Nen Iri Sekhet Pen
+  // (第十二节给的 Khet: Seshem Sekhet Pen 撞了「Seshem 只表推进」),换净,从旧账挪来。
+  "Her", "Ma",
 ];
 /** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
 const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
@@ -126,18 +129,18 @@ const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")
 const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
 
 /**
- * 第十一节:功 = Nefer、过 = Isfet,Maat 只作「真 / 实」与女神名。中文里作功德讲的「功」不许配 Maat。
- * 「功」只取功德义:成功 / 功能 不算,「功过」也不算 —— 功过格、功过台账写 Sesh Maat(账簿名,第十一节没有改它),
- * 功过明细 / 功过分数与「证据 Medu Maat」同句(soul_app.push.*)。所以判据是「功德」或不接成 / 过 / 能的单字「功」。
+ * 第十一节:功 = Nefer、过 = Isfet,Maat 只作「真 / 实」与女神名。第十四节把功过格、功过台账也改写 Sesh Nefer Isfet,
+ * 于是判据放宽到中文含「功」的任何键(功德、功过、成功、功能都算):这些键里 Maat 只许以「证据 Medu Maat」出现
+ * (功过明细 / 功过分数与证据同句,soul_app.push.*)。
+ * 引文括号〔功過格 · …〕是文献名,豁免:括号内的文字先剥掉再查。2026-09-26 实测包里没有一条 egy 值含〔〕,
+ * 这一步现在不改变结果,是给将来引用典籍的文案留的。
  */
-const isMeritZh = (zh: string) => /功德|(?<!成)功(?![过過能])/.test(zh);
+const maatOutsideEvidence = (v: string) => /\bMaat\b/.test(prose(v).replace(/〔[^〕]*〕/g, "").replace(/\bMedu Maat\b/g, ""));
 
 /**
  * 第十三节:Unemu 只剩「色」一个义项(强调色 Unemu Tepy)。它曾担的裁决 / 判(Wedja)、功过(Nefer Isfet)、
- * 余额(Sepy)、称重(Dens)等 42 键已逐键改写。souls.balance_withheld(余额未提供)不在那 42 键里,
- * 第十三节没有给它写法,所以留着并点名放行,等 Design 定。
+ * 余额(Sepy)、称重(Dens)等 42 键已逐键改写;第十四节把最后一键 souls.balance_withheld 改写 Sepy Imen,放行清单随之删除。
  */
-const UNEMU_NOT_COLOUR_PENDING = new Set(["souls.balance_withheld"]);
 const hasUnemu = (v: string) => /\bUnemu\b/.test(prose(v));
 /**
  * 中文里作颜色讲的「色」。角色、色情里的「色」不算 —— 只查「色」字的话,balance_withheld 的「本角色不可见」
@@ -147,6 +150,13 @@ const isColourZh = (zh: string) => /(?<!角)色(?!情)/.test(zh);
 
 /** 第十三节:Hemsu 只作「系统」;判官写 Sab Wedja,原审判官写 Sab Wedja Tepy。 */
 const hasHemsu = (v: string) => /\bHemsu\b/.test(prose(v));
+/**
+ * 第十四节:法庭 Wesekhet、席 Sab、开始 / 执行审判 Tepy / Iri Wedja 之后,Hemsu 只剩「系统」(含系统设置)、
+ * 服务器 Per Hemsu、系统的队列 Sepu Hemsu 三义。判据是同键中文含 系统 / 服务器 / 队列 / 连接:
+ * 「连接」是 soul_app.forgot_password.err_offline_title(中文只写「没有连接」,egy 写「连不上 Per Hemsu」)。
+ * Design 给的「后台」没有收:2026-09-26 实测没有任何含 Hemsu 的键中文写「后台」,放进去是一条没人用过的放行。
+ */
+const isSystemZh = (zh: string) => /系统|服务器|队列|连接/.test(zh);
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -162,13 +172,6 @@ const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
   "soul_app.change_password.expired_consequence",
 ]);
 const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
-
-/**
- * 仍含单词 Ma 的键 —— 这些 Ma 不是否定(「有误」「移至」等早期写法),按同键中文判过义。
- * 否定一律 Nen:任何不在这里的 Ma 都是漏改的否定。第六、七、十节逐步改写移出;第十二节改写了
- * only_differences 与 confirm_removed_label。剩下这一键第十二节给的写法撞了 Seshem 规则(见 ABOLISHED_TEN_WORDS 那条注释)。
- */
-const MA_NOT_NEGATION = new Set(["workflow.detail.escalate_reason_placeholder"]);
 
 /**
  * 第六节:「Pert Abuf」整个废止(它是密码的旧写法,误贴到了调度上;调度统一 Hab-Ba)。Pert 本义「出」,
@@ -311,7 +314,7 @@ const ROOTS_MOD = [
 const ROOTS_FIX = [
   "Hemsu", "Remetj", "Sep", "Dbh", "Mekher", "Maakheru", "Aaru", "Wesir", "Wser", "Smen", "Wen", "Mut",
   "Ammit", "Weret", "Fai", "Sebkhet", "Hesmen", "Hep", "Djadjat", "Gesu", "Hemet-Sesh", "Medu-Sesu",
-  "Wat-Ha", "Per-Hemsu",
+  "Wat-Ha", "Per-Hemsu", // Per-Hemsu 第十四节废止(租户写 Per),照抄定稿不删;已废止写法那条拦住它
 ];
 /**
  * 一词一义收口(第四节,Sekhem 九义拆净)。Ini(加载)、Wen-Khetem(开关)、Arrwt(通路)、Wa-Ek(仅自己)为新词,
@@ -474,6 +477,8 @@ const PARTICLES = [
   "Mi", "Iu", "-Ef",
   // 第十一节:属格 En(只用在两个名词之间,Sesh En Ba;形容词尾的「的」不写);后置 -I(我的,Sedjem-I)。
   "En", "-I",
+  // 第十四节:In 表「由 / 被」(触发人 Iri In);En 从此只作属格。
+  "In",
 ];
 const LEXICON = new Set([
   ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
@@ -559,27 +564,28 @@ describe("egy 词表规则", () => {
       /[A-Za-z]-Es\b/,
       // 第十一、十二节:服务器 Per Aa(法老)→ Per Hemsu,宫殿 → Wesekhet。
       PER_AA,
+      // 第十四节:租户一律 Per(连字符的 Per-Hemsu 废止;服务器 Per Hemsu 是两词,不受影响)。
+      /\bPer-Hemsu\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
   });
 
-  it("功德写 Nefer:中文作功德讲的「功」的键里不出现 Maat", () => {
-    // 空扫保护:判据至少命中第十一节点名的四个键。
-    const merit = KEYS.filter((k) => isMeritZh(ZH[k] ?? ""));
+  it("功德 / 功过写 Nefer (Isfet):中文含「功」的键里 Maat 只作 Medu Maat(证据)", () => {
+    // 空扫保护:判据至少命中第十一节点名的四个键、第十四节改写的三个功过格键、与证据同句的推送键。
+    const merit = KEYS.filter((k) => (ZH[k] ?? "").includes("功"));
     expect(merit).toEqual(
-      expect.arrayContaining(["ledger.raw_merit", "ledger.book.col_merit", "judgment.queue.merit", "judgment.statute_polarity.MERIT"])
+      expect.arrayContaining([
+        "ledger.raw_merit", "ledger.book.col_merit", "judgment.queue.merit", "judgment.statute_polarity.MERIT",
+        "ledger.book.title", "breadcrumb.menu.ledger", "scheduler.jobs.ledger_recalculate_tenant", "soul_app.push.never",
+      ])
     );
-    expect(offenders(merit, (v) => /\bMaat\b/.test(prose(v)))).toEqual([]);
+    expect(offenders(merit, maatOutsideEvidence)).toEqual([]);
+    // 放行的 Medu Maat 仍在「功」键里(否则上面那条只是没东西可放)。
+    expect(merit.filter((k) => /\bMedu Maat\b/.test(EGY[k])).length).toBeGreaterThan(0);
   });
 
-  it("Unemu 只表「色」:中文不含「色」的键不出现 Unemu(待定的点名键除外)", () => {
-    expect(
-      offenders(KEYS, (v, k) => hasUnemu(v) && !isColourZh(ZH[k] ?? "") && !UNEMU_NOT_COLOUR_PENDING.has(k))
-    ).toEqual([]);
-    // 放行的键若已不含 Unemu,或中文已有颜色义的「色」,就该删掉。
-    expect(
-      [...UNEMU_NOT_COLOUR_PENDING].filter((k) => !hasUnemu(EGY[k] ?? "") || isColourZh(ZH[k] ?? ""))
-    ).toEqual([]);
+  it("Unemu 只表「色」:中文不含「色」的键不出现 Unemu", () => {
+    expect(offenders(KEYS, (v, k) => hasUnemu(v) && !isColourZh(ZH[k] ?? ""))).toEqual([]);
     // 空扫保护:「色」义的 Unemu 仍在(强调色)。
     expect(hasUnemu(EGY["settings.accent_color"] ?? "")).toBe(true);
   });
@@ -588,6 +594,14 @@ describe("egy 词表规则", () => {
     const judgeKeys = KEYS.filter((k) => (ZH[k] ?? "").includes("判官"));
     expect(judgeKeys.length).toBeGreaterThan(5);
     expect(offenders(judgeKeys, hasHemsu)).toEqual([]);
+  });
+
+  it("Hemsu 只在系统 / 服务器 / 队列 / 连接义的键里(第十四节)", () => {
+    expect(offenders(KEYS, (v, k) => hasHemsu(v) && !isSystemZh(ZH[k] ?? ""))).toEqual([]);
+    // 空扫保护:三个义项各至少一处仍在。
+    expect(hasHemsu(EGY["welcome.system_version"] ?? "")).toBe(true);
+    expect(hasHemsu(EGY["error.description"] ?? "")).toBe(true);
+    expect(hasHemsu(EGY["scheduler.run.enqueue_failed"] ?? "")).toBe(true);
   });
 
   it("第十节「换掉」清单与旧账清单不重叠:换净了才能进废止名单", () => {
@@ -649,11 +663,9 @@ describe("egy 词表规则", () => {
     expect(stale).toEqual([]);
   });
 
-  it("否定一律 Nen:单词 Ma 只剩判过义的非否定用法", () => {
-    expect(offenders(KEYS, (v, k) => !MA_NOT_NEGATION.has(k) && /\b[Mm]a\b/.test(prose(v)))).toEqual([]);
-    // 白名单里的键若已不含 Ma,就该从白名单删掉,否则它会替将来的漏改背书。
-    const stale = [...MA_NOT_NEGATION].filter((k) => !/\b[Mm]a\b/.test(prose(EGY[k] ?? "")));
-    expect(stale).toEqual([]);
+  it("否定一律 Nen:单词 Ma 不出现", () => {
+    // 第十四节改写了最后一个非否定的 Ma(escalate_reason_placeholder),白名单随之删除。
+    expect(offenders(KEYS, (v) => /\b[Mm]a\b/.test(prose(v)))).toEqual([]);
   });
 
   it("加载一律 Ini:中文含「加载 / 载入」的键必含 Ini", () => {
