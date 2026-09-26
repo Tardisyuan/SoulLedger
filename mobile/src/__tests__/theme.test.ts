@@ -151,9 +151,9 @@ describe("themeFor", () => {
 });
 
 describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
-  /** The canvas's "App 调色板", as printed. */
+  /** The canvas's "App 调色板", as printed — except light ink3, darkened for AA (was #77705f). */
   const CANVAS = {
-    light: "bg #f4efe4 · bg2 #ebe4d3 · ink #1e1a14 · ink2 #5a5145 · ink3 #77705f · line #cfc6b4 · line2 #8f8672 · acc #a8281e · merit #2f6b3a · demerit #a8281e · warnBg #efe0bf",
+    light: "bg #f4efe4 · bg2 #ebe4d3 · ink #1e1a14 · ink2 #5a5145 · ink3 #6d6655 · line #cfc6b4 · line2 #8f8672 · acc #a8281e · merit #2f6b3a · demerit #a8281e · warnBg #efe0bf",
     dark: "bg #15130f · bg2 #1f1c16 · ink #ede5d3 · ink2 #b8ad98 · ink3 #8f8572 · line #332e26 · line2 #6a6252 · acc #d8503f · merit #7fc48a · demerit #e0685a · warnBg #2a2213",
   };
   const parse = (line: string) => Object.fromEntries(line.split(" · ").map((pair) => pair.split(" ")));
@@ -172,25 +172,22 @@ describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
     expect(redSlots).toEqual(["neg", "negInk", "negStrong"]);
   });
 
-  it.each(SCHEMES)("%s: contrast holds on parchment", (scheme) => {
+  it.each(SCHEMES)("%s: every text token reaches AA on both grounds", (scheme) => {
     const t = preLoginTheme(scheme);
+    // Every slot drawn as text, on bg (s0) and bg2 (s2). negStrong is borders only.
+    // Unrounded: light ink3 sits at 4.5004 on bg2, and rounding would hide a 4.495.
+    const text: (keyof Theme)[] = ["ink", "inkMuted", "inkSubtle", "neg", "pos"];
     const pairs: [keyof Theme, keyof Theme][] = [
-      ["ink", "s0"],
-      ["ink", "s2"],
-      ["inkMuted", "s0"],
-      ["inkSubtle", "s0"],
+      ...text.flatMap((fg) => [[fg, "s0"], [fg, "s2"]] as [keyof Theme, keyof Theme][]),
       ["onAccent", "accent"],
-      ["neg", "s0"],
       ["negInk", "negBg"],
-      ["pos", "s0"],
     ];
     const low = pairs
-      .map(([fg, bg]) => ({ fg, bg, ratio: Math.round(contrast(t[fg] as string, t[bg] as string) * 100) / 100 }))
+      .map(([fg, bg]) => ({ fg, bg, ratio: contrast(t[fg] as string, t[bg] as string) }))
       .filter(({ ratio }) => ratio < 4.5);
-    // The canvas's light ink3 (#77705f) is 4.29:1 on bg — under AA for body text. Kept as
-    // printed (a product-owner palette) and pinned here, so it cannot silently get worse
-    // or spread to another pair; raised in the round's report.
-    expect(low).toEqual(scheme === "light" ? [{ fg: "inkSubtle", bg: "s0", ratio: 4.29 }] : []);
+    // The canvas printed light ink3 as #77705f (4.29:1 on bg, 3.88 on bg2). The product
+    // owner had it darkened, same OKLCH hue (88°), to the nearest value clearing 4.5 on both.
+    expect(low).toEqual([]);
   });
 
   it("is not any civilization's ground — a signed-in soul never gets it", () => {
