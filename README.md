@@ -94,7 +94,11 @@ Celery 需要，REST API 没有它也能运行。
 > 副本，完全不生效，而且看起来生效。
 
 ```bash
-npm install          # 仓库根
+# 仓库根。用 npm 11,不要用 nvm 自带的 npm 10(后者退出码 0 却装不出 typescript 与 .bin);
+# 理由与实测见 CLAUDE.md 的 Build & Test
+npx -y npm@11 ci
+npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli   # npm 11 默认不跑安装脚本
+git checkout -- package-lock.json   # npm ci 会删掉锁文件里的 libc 字段;不是有意改依赖就还原
 npm run dev --workspace frontend   # 脚本内已固定 PORT=3333
 ```
 
@@ -130,13 +134,25 @@ seed_mythology`，后者会载入四种文明的领域与角色。它曾经调�
 命令这一个入口。其余种子数据同样由 Django 管理命令提供：
 
 ```bash
-python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT、GR_HADES
-python manage.py seed_mythology             # 四种文明的领域与角色（幂等）
-python manage.py consolidate_eu_pantheon
-python manage.py seed_workflow_templates
-python manage.py seed_field_permissions
-python manage.py init_organizations
-python manage.py create_api_key             # Death Sync 外部 API 用
+cd backend   # 解释器是 backend/.venv,不是 PATH 上的 python
+.venv/bin/python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT、GR_HADES
+.venv/bin/python manage.py seed_mythology             # 四种文明的领域与角色（幂等）
+.venv/bin/python manage.py consolidate_eu_pantheon
+.venv/bin/python manage.py seed_workflow_templates
+.venv/bin/python manage.py seed_field_permissions
+.venv/bin/python manage.py init_organizations
+.venv/bin/python manage.py create_api_key             # Death Sync 外部 API 用
+.venv/bin/python manage.py sync_permissions           # 补建库里缺的权限码名及默认授权;
+                                                      # 加了新码名的部署之后要跑(--dry-run 只列不写)
+```
+
+维护类命令(也可手动运行):
+
+```bash
+.venv/bin/python manage.py backfill_soul_entry_path   # 给死亡时还没写入口站的灵魂补第一站(--dry-run)
+.venv/bin/python manage.py cleanup_orphan_post_media  # 删掉上传了却没挂到帖子上的朋友圈图片
+.venv/bin/python manage.py process_workflow_timeouts  # 触发到期的流程节点超时(升级 / 自动驳回 / 通知)
+.venv/bin/python manage.py reconcile_inbox            # 从 Synapse 重算殿司收件箱每个会话的最近来信
 ```
 
 ### 便捷脚本
@@ -163,11 +179,15 @@ bash scripts/install-hooks.sh  # pre-commit：对暂存的前端文件跑 ESLint
 API 文档 (drf-spectacular)     →  http://localhost:8000/api/docs/
 健康检查                        →  http://localhost:8000/health/ 与 /health/detailed/
 WebSocket (channels + daphne)  →  ws://localhost:8000/ws/notifications/
-灵魂端 App (Expo / RN)         →  expo start（mobile/，iOS 与 Android 模拟器）
+灵魂端 App (Expo / RN)         →  expo start（mobile/，iOS 与 Android 模拟器；dev-client，不能用 Expo Go）
 Synapse（书信）                →  :8008   （仅回环，无联邦；灵魂之间的私信）
 PostgreSQL 16                  →  :5432   （本地开发回落 SQLite）
 Redis 7                        →  :6379   （Channel Layer + Celery broker）
 ```
+
+灵魂端 App 改了原生依赖（如 `expo-image-picker`、`expo-image-manipulator`）之后，要用
+`npm run --workspace mobile android` / `ios`（即 `expo run:*`）重建 dev client ——
+`expo start --clear` 只换 JS bundle，不会把新的原生模块装进已安装的 App。
 
 **多租户**：`Tenant` 是一条管理记录，而「文明」是一项关于死者去向的主张。两者的映射
 只写在一个地方——`backend/apps/souls/models.py` 中的 `TENANT_CIVILIZATION`。行级隔离
@@ -177,7 +197,8 @@ Redis 7                        →  :6379   （Channel Layer + Celery broker）
 缺字段则拒绝），`tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet 都走它。
 `contextvars` 里的当前租户只供 `apps/audit/signals.py` 归属写操作，不用于过滤。
 
-**权限**：四种角色（ADMIN / JUDGE / GUARDIAN / VIEWER）叠加 codename 权限，再加
+**权限**：六种角色（ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL，
+`backend/apps/authentication/models.py:56-67`；SOUL 是灵魂本人，不可分配、进不了官员接口）叠加 codename 权限，再加
 `DataScope`（行可见性）与 `FieldPermission`（字段可见性）。API 侧由
 `CodenameViewSetMixin` 强制；前端用 `RequirePermission` / `RequireButton` 做 UI 门控。
 前端门控只是外观，真正的检查在后端。`/permissions` 页面是一张角色×codename 矩阵而非
@@ -225,6 +246,7 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 | 前缀 | 应用 |
 |---|---|
 | `auth/`、`users/` | JWT 登录/刷新，用户管理 |
+| `recycle-bin/` | 回收站：软删除记录的查看、恢复与彻底删除 |
 | `souls/` | 灵魂 CRUD 与状态转换 |
 | `ledger/` | 功过记录、余额、时间衰减、按文明的读数 |
 | `judgment/`、`disposition/`、`reincarnation/` | 审判流水线 |
@@ -239,6 +261,7 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 | `scheduler/` | 定时任务与执行记录（`runs/` 支持多状态、时间区间与搜索） |
 | `soul-accounts/`、`soul-auth/`、`me/` | 灵魂账号开通与凭据交付、灵魂端登录、灵魂自己的接口 |
 | `chat/` | 书信：Matrix 凭据代签与 Synapse 的新消息回调 |
+| `social-media/<uuid>/` | 朋友圈帖子图片的文件出口（签名地址，每次重查可见性） |
 
 上文提到的按文明读数由 `GET /api/v1/ledger/balance/{soul_id}/` 返回。响应同时携带
 `karmic_balance`（原始净额，系统其余部分据此路由）与 `reading`（该灵魂自身文明使用的
@@ -251,20 +274,21 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 
 ## 测试与 CI
 
-`.github/workflows/ci.yml` 定义了三个 job。**它现在只有 `workflow_dispatch` 触发**——
+`.github/workflows/ci.yml` 定义了四个 job。**它现在只有 `workflow_dispatch` 触发**——
 没有任何 push 或 PR 会自动跑它（GitHub Actions 额度耗尽，`security.yml` 的周 cron 也一并
 关掉了）。所以「CI 是绿的」在这个仓库里目前不是一句自动成立的话，本地门禁才是。
 
 | Job | 步骤 |
 |---|---|
 | **backend** | `makemigrations --check --dry-run`、`migrate`、`pytest`、`ruff check`、`pip-audit` |
-| **frontend** | `tsc --noEmit`、`eslint`、`next build`、`jest`、`npm audit` |
+| **frontend** | `packages/core` 的 typecheck / lint / vitest，然后 `tsc --noEmit`、`eslint`、`next build`、`npm run test:coverage`、`npm audit` |
+| **mobile** | `mobile/` 的 typecheck / lint / test |
 | **e2e** | Playwright 矩阵：chromium / firefox / mobile-chrome 各一条腿，`fail-fast: false`，每条腿单独上传报告 artifact |
 
 后端 CI 跑在真实的 PostgreSQL 16 与 Redis 7 service container 上。
 
 `pip-audit` 与 `npm audit` 现在都是**阻断性**的，不再是 `continue-on-error`：后端扫的是
-`-r requirements.txt`（而不是整个运行环境），前端是 `npm audit --audit-level=high`，两处
+`-r requirements.lock --no-deps`（而不是整个运行环境；`ci.yml:97`），前端是 `npm audit --audit-level=high`，两处
 的已接受公告数都是 none。要接受某条公告的话请先读 workflow 文件里各自步骤旁边的注释——
 它明确写了不要把 `continue-on-error` 加回来。
 
@@ -344,18 +368,19 @@ backend/
   tests/            跨应用 pytest 套件（后端测试还有一半在 apps/*/ 里，见「测试与 CI」）
 packages/core/      平台无关层。**不含 DOM** —— 它的 tsconfig 没有 "dom"，
   src/api/          每个后端应用一个类型安全客户端（原 frontend/lib/api/）
-  src/hooks/        十三个数据 hook（useSouls / useSocial / useSocialModeration /
+  src/hooks/        十六个数据 hook（useSouls / useSocial / useSocialModeration /
                     useJudgments / useJudgmentQueue / useStatutes / useDispositions /
+                    useDispatchDrafts / usePermissionMatrix /
                     useReincarnation / useSentencePlans / useScheduler /
-                    useSoulAccounts / useSoulChat / useSoulInbox）
+                    useSoulAccounts / useSoulChat / useSoulInbox / useSoulMediaUploads）
   src/platform/     八个宿主能力端口；web 实现在 frontend/lib/platform/web.ts
   src/config/       领域配置：四文明映射、civilizationSigil、workflow-templates
   messages/         i18n：zh-Hans、en、egy（原 frontend/messages/）
   openapi/          schema.yml —— 前端类型的来源，后端有门禁盯着它逐字节一致
 frontend/
   app/              Next.js App Router 页面（43 个 page.tsx，其中 40 个用 PageShell）
-  src/hooks/        只剩四个视图层 hook：useChartColors / usePermissions /
-                    useRowTransitions / useSidebarMenus
+  src/hooks/        只剩五个视图层 hook：useChartColors / usePermissions /
+                    useRowTransitions / useSidebarMenus / useWideViewport
   src/components/   UI，含 RBAC 门控组件
   src/__tests__/    契约测试 —— 它们才是真正被执法的规范
   components/ui/    第三个源根：data-table / data-grid / page-section / skeleton
@@ -399,8 +424,8 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 | 层 | 内容 |
 |---|---|
 | 字体 | Archivo（UI）· Source Serif 4（引文）· IBM Plex Mono（数字/ID），各配 Noto Sans SC / Noto Serif SC，全部 SIL OFL 可商用 |
-| 字号 | 八档 `text-01`…`text-08`（11/12/13/15/18/22/32/56px）。最大与正文之比从 1.71 拉到 3.7；表格正文反而收紧到 13px，密度不降 |
-| 圆角 | **全部方角**。`rounded-full` 只留给身份物（头像、7px 文明点），`rounded-focus` 留给焦点环 |
+| 字号 | 七档 `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl`（11/12/13/16/20/22/28px，`frontend/app/globals.css:162-177`；规范 v1）。表格正文 13px，密度不降 |
+| 圆角 | **全部方角**，焦点环也是。`rounded-full` 只留给头像与转圈，限 `eslint.config.mjs` 的 `ROUND_ALLOW` 所列文件 |
 | 线宽 | 四级：1px 行线 / 1px 区块边界 / 2px 章节下划线 / 3px 文明身份线与判决落印带 |
 | 外壳 | 一个 `PageShell` 替掉 36 个手写页面外壳，八种内容宽度收到三种 |
 | 原语 | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
@@ -418,14 +443,17 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 欧洲七宗罪 7 + 地狱篇 26、希腊高尔吉亚 12 + 厄尔神话 11 —— 与
 `backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE` 逐条对上，
 那张表由 `backend/tests/test_corpus_provenance.py` 比对真实 seed 结果）。在此之前它们只在判决页的引用选择器里露过面——
-考据做了 172 条，界面上没有一个地方能看。
+考据做了 172 条，界面上没有一个地方能看。右栏的「被引用」列出引用该条的判决（件数与清单取自调用者看得见的同一批判决），
+持 `judgment.execute` 的官员可「插入审判台」，把这一条引用到自己手上的未结案（`frontend/app/corpus/page.tsx`）。
 
 ### 这些规矩由 lint 施加，不是靠自觉
 
 Tailwind 的 `theme.extend` 只能新增或覆盖，不能删除：`text-sm` 仍然解析，`rounded-lg` 仍然
-解析（只是解析成 0）。所以八档、六档间距、两种圆角全都是**限制**，而限制在 Tailwind 里
-没有表达方式——只能由 lint 施加。`frontend/eslint.config.mjs` 里有五条自定义规则加上
-jsx-a11y，全部 `error` 级：
+解析（只是解析成 0）。所以七档字号、十档间距、一种圆角全都是**限制**，而限制在 Tailwind 里
+没有表达方式——只能由 lint 施加。`frontend/eslint.config.mjs` 里有七条自定义规则
+（type-scale / spacing-rhythm / dead-radius / no-page-shadow / no-raw-palette / no-hex-colour /
+no-styles-in-csstext，`eslint.config.mjs:663-671`）加上 jsx-a11y，全部 `error` 级。
+没有文明色：`--color-civ-*` 已在 `a2044b28` 撤销，`ledgerPaletteContract.test.ts` 守着。
 
 ~~`npm run lint` 是裸 `eslint .`，ESLint 在只有 warning 时退出码是 0，所以一条 warn 级规则
 在这个仓库里等于零。~~ **2026-09-05 起不再是这样**：`lint` 收紧成
@@ -439,7 +467,7 @@ jsx-a11y，全部 `error` 级：
 **`packages/core/src/config/workflow-templates.ts` 的缩进是后端契约。** 三个后端测试
 （`test_workflow_template_cast.py` / `test_workflow_preset_node_types.py` /
 `test_workflow_template_priority.py`）按硬编码路径打开这个前端文件，用正则匹配它的
-**排版**——两空格的键、四空格的字段、单行节点字面量。491 行是承重文本。**跑一遍
+**排版**——两空格的键、四空格的字段、单行节点字面量。全文 499 行（2026-09-26）都是承重文本。**跑一遍
 `prettier` 会静默炸掉那三个后端测试。**
 
 **`min-h-screen` 只准出现在 AppLayout 之外的路由上。** `AppLayout` 把页面放进一个

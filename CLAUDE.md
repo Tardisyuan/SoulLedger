@@ -87,6 +87,8 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
   2026-09-24 22:02 在 15 分钟负载约 36 时,六个系统应用和 SoulLedger 同时 ANR,读起来像 App 缺陷;
   空闲时连续操作 25 分钟零 ANR。
 - 书信在本机没配 Matrix 时 `/me/chat/session/` 返回 503 `chat_not_configured`,这是设计如此;App 现在收到它只问一次。
+- **改了原生依赖(如 `expo-image-picker`、`expo-image-manipulator`)要重建 dev client**:`npm run --workspace mobile android` / `ios`
+  (即 `expo run:*`,`mobile/package.json` 的脚本)。`expo start --clear` 只换 JS bundle,不会把新的原生模块装进已安装的 App。
 
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
 2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
@@ -201,8 +203,14 @@ npm run --workspace packages/core test
 # `cd frontend && npm run test:coverage` above — is where core's coverage is
 # actually gated now.
 
+# mobile/(灵魂端 App,Expo)—— 同样三条,脚本名见 `mobile/package.json`;
+# pre-push 在任何 `^mobile/` 或 `frontend/app/globals.css` 改动上全跑,CI 的 `mobile` job 也跑这三条。
+npm run --workspace mobile typecheck
+npm run --workspace mobile lint
+npm run --workspace mobile test      # jest + jest-expo
+
 # E2E —— **三个 project,不是一个,而且要先 build**。
-# `playwright.config.ts:51-53` 定义 chromium / firefox / mobile-chrome,而
+# `playwright.config.ts:55-59` 定义 chromium / firefox / mobile-chrome,而
 # `.github/workflows/ci.yml` 的 matrix 三个都跑。这份文件此前只给了 chromium,
 # 于是「跑过 E2E」在本地和在 CI 是两件不同的事 —— 393px 下工作流工具栏的按钮
 # 压在输入框上那条真缺陷,在 main 上待了一整轮,因为没有人跑过那个 project。
@@ -322,6 +330,9 @@ transactions, constraints, or column widths, run it against PostgreSQL.
 - CI runs `pip-audit --strict` (local can skip)
 - CI runs `npm audit --audit-level=high` (local can skip)
 - CI runs E2E separately (local can run on demand)
+- CI has a separate `mobile` job (`ci.yml:183-199`): `npm ci`, then mobile typecheck / lint / test.
+  Locally pre-push runs the same three only when `^mobile/` or `frontend/app/globals.css` changed
+  (`scripts/install-hooks.sh:176`)
 
 ## Verification & Root Cause
 

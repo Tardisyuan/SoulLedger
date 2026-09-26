@@ -49,6 +49,17 @@ Content-Type: application/json
 | GET | /judgment/ | List judgments |
 | POST | /judgment/ | Create judgment |
 | GET | /judgment/{id}/ | Get judgment detail |
+| GET | /judgment/queue-counts/ | Case count per queue group, one query |
+| GET | /judgment/assignable-officers/ | Officers a case can be reassigned to (unpaginated) |
+| POST | /judgment/{id}/request-reassign/ | Ask the case's tenant ADMIN to reassign it (when no one else can take it) |
+| PATCH | /judgment/{id}/draft/ | Autosave verdict text, chosen verdict and draft destination; 409 on a conflicting save |
+| GET | /judgment/{id}/precedents/ | Ranked precedent list (unpaginated, list filters do not apply) |
+| GET/POST | /judgment/{id}/citations/ | The statutes a judgment is founded on / cite one (`{"statute": "<uuid>", "note": ""}`) |
+| DELETE | /judgment/{id}/citations/{statute_id}/ | Withdraw a citation from an unconcluded judgment |
+
+Paths verified 2026-09-26 against `backend/apps/judgment/views.py` (`@action` `url_path`s) and
+`backend/apps/judgment/urls.py` (the viewset is registered at the `judgment/` root). Not exhaustive —
+claim / release / defer / conclude and friends are in the generated schema.
 
 ### Ledger
 
@@ -63,6 +74,10 @@ Formerly "karma". The app was renamed to `ledger` and the routes moved with it �
 | GET | /ledger/inheritance/{soul_id}/ | Inherited karma |
 | GET | /ledger/stats/overview/ | Aggregate stats |
 | GET | /ledger/stats/export/ | CSV export |
+| GET | /ledger/journal/?month=YYYY-MM | 功过总账: the four columns (旧管 / 新收 / 开除 / 实在), per-category totals, one page of entries |
+| GET | /ledger/journal/export/?month=YYYY-MM | The same month and filters, every entry, one row each (CSV) |
+
+(`backend/apps/ledger/urls.py:15-16`; filters `civilization`, `category`, `search`.)
 
 `GET /ledger/balance/{soul_id}/` returns both `karmic_balance` (the raw net
 total, which the rest of the system routes on) and `reading` — the instrument
