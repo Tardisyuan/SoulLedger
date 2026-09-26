@@ -3,21 +3,25 @@
  *   1. 记着这个用户最后打开的未结案 → 直达 `/judgment/<id>?cite=<statute>`,不列清单;
  *   2. 没记着 → 列他认领着的未结案(`?group=mine`),每件都是带 `?cite=` 的链接;
  *   3. 一件都没有 → 「你手上没有未结的案件」。
+ *   4. 记着的那件已在别处结案 → 点下去先问现状,已结就忘掉它、改开清单,不送去审判台。
  * 记忆按用户分键:别人记着的案子不是我的。
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { judgmentApi } from "@soulledger/core/api";
 import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertIntoDesk";
 import { I18nProvider } from "@/src/contexts/I18nContext";
-import { rememberOpenCase } from "@/src/lib/lastOpenCase";
+import { lastOpenCase, rememberOpenCase } from "@/src/lib/lastOpenCase";
 
-jest.mock("@soulledger/core/api", () => ({ judgmentApi: { list: jest.fn() } }));
+jest.mock("@soulledger/core/api", () => ({ judgmentApi: { list: jest.fn(), get: jest.fn() } }));
+const mockPush = jest.fn();
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 7, role: "JUDGE", permissions: ["judgment.execute"], tenant: { code: "CN_DIYU" } } }),
 }));
 const mockedList = judgmentApi.list as jest.Mock;
+const mockedGet = judgmentApi.get as jest.Mock;
 
 function renderIt() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -32,6 +36,8 @@ function renderIt() {
 beforeEach(() => {
   localStorage.clear();
   mockedList.mockReset();
+  mockedGet.mockReset();
+  mockPush.mockReset();
 });
 
 it("goes straight to the remembered open case with ?cite=", () => {
@@ -74,4 +80,28 @@ it("says so when the user holds no open case", async () => {
   fireEvent.click(screen.getByTestId("corpus-insert"));
   expect(await screen.findByText("你手上没有未结的案件")).toBeInTheDocument();
   expect(screen.queryByRole("link")).toBeNull();
+});
+
+it("a remembered case still open: the click checks, then goes to the desk with ?cite=", async () => {
+  rememberOpenCase(7, { id: "j-42", soul_name: "沈青梧" });
+  mockedGet.mockResolvedValue({ data: { id: "j-42", is_final: false } });
+  renderIt();
+  fireEvent.click(screen.getByTestId("corpus-insert"));
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/judgment/j-42?cite=st-9"));
+  expect(mockedGet).toHaveBeenCalledWith("j-42");
+  expect(lastOpenCase(7)?.id).toBe("j-42");
+  expect(screen.queryByTestId("corpus-insert-picker")).toBeNull();
+});
+
+it("a remembered case concluded elsewhere: forgotten, and the picker opens instead of the desk", async () => {
+  rememberOpenCase(7, { id: "j-42", soul_name: "沈青梧" });
+  mockedGet.mockResolvedValue({ data: { id: "j-42", is_final: true } });
+  mockedList.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+  renderIt();
+  fireEvent.click(screen.getByTestId("corpus-insert"));
+  expect(await screen.findByText("你手上没有未结的案件")).toBeInTheDocument();
+  expect(lastOpenCase(7)).toBeNull();
+  expect(mockPush).not.toHaveBeenCalled();
+  expect(screen.queryByText(/沈青梧/)).toBeNull();
+  expect(mockedList).toHaveBeenCalledWith({ group: "mine", ordering: "-created_at" });
 });

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { judgmentApi } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
@@ -9,7 +10,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { Button } from "@/src/components/ui/Button";
 import { DomainText } from "@/src/components/ui/DomainValue";
-import { lastOpenCase } from "@/src/lib/lastOpenCase";
+import { forgetOpenCase, lastOpenCase } from "@/src/lib/lastOpenCase";
 
 const deskHref = (judgmentId: string, statuteId: string) =>
   `/judgment/${judgmentId}?cite=${encodeURIComponent(statuteId)}`;
@@ -21,6 +22,9 @@ const deskHref = (judgmentId: string, statuteId: string) =>
  * 带 `?cite=`;审判台先问「引用〔…〕到 <魂> 的审判？」再引用(`CiteFromCorpus`)。
  * 没有记着的,就列出他认领着的未结案(`?group=mine`,隐含未结)供挑一件;一件都没有,
  * 就直说「你手上没有未结的案件」。只给持 `judgment.execute` 的人 —— 引用是对案子的动作。
+ *
+ * 记着的那件可能已经在别处结了(另一个标签页、另一位官员)。所以点下去先问一次它的现状:
+ * 已结就忘掉它、改开上面那张清单,而不是把人送到审判台去读「这件案子已结案」。
  */
 export function CorpusInsertIntoDesk({ statuteId }: { statuteId: string }) {
   const { t } = useI18n();
@@ -28,6 +32,7 @@ export function CorpusInsertIntoDesk({ statuteId }: { statuteId: string }) {
   // Read in render: the rail only renders once the corpus has loaded client-side, and
   // `lastOpenCase` answers null (not a throw) where there is no localStorage.
   const remembered = user ? lastOpenCase(user.id) : null;
+  const router = useRouter();
   const [picking, setPicking] = useState(false);
   const mine = useQuery({
     queryKey: [...judgmentKeys.all, "mine-open", user?.id],
@@ -35,10 +40,25 @@ export function CorpusInsertIntoDesk({ statuteId }: { statuteId: string }) {
     enabled: picking,
   });
 
+  const goRemembered = async (e: MouseEvent<HTMLAnchorElement>) => {
+    // A modified click (new tab) goes as a plain link; the desk still says it is closed.
+    if (!remembered || !user || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    const href = deskHref(remembered.id, statuteId);
+    const fresh = await judgmentApi.get(remembered.id).then((r) => r.data, () => null);
+    if (fresh?.is_final) {
+      forgetOpenCase(user.id, remembered.id);
+      setPicking(true); // re-renders without the remembered case: the picker, open
+    } else {
+      router.push(href);
+    }
+  };
+
   if (remembered) {
     return (
       <Link
         href={deskHref(remembered.id, statuteId)}
+        onClick={goRemembered}
         data-testid="corpus-insert"
         className="inline-flex items-center h-8 px-3 border border-[oklch(var(--color-line))] text-sm hover:bg-[oklch(var(--color-surface-2))]"
         title={remembered.soul_name || undefined}
