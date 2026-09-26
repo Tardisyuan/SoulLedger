@@ -342,7 +342,11 @@ function CodeCells({
   const input = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   return (
-    <Pressable accessible={false} onPress={() => input.current?.focus()} style={styles.cells}>
+    // Not focusable: it only forwards a tap to the input. Focusable (Pressable's default),
+    // it is the screen's first focusable view, so on Android a blurred field hands it
+    // focus outside touch mode (a hardware Enter) and the system focus highlight greys
+    // all six cells until the next touch.
+    <Pressable testID="forgot-code-cells" accessible={false} focusable={false} onPress={() => input.current?.focus()} style={styles.cells}>
       {Array.from({ length: 6 }, (_, i) => {
         const active = focused && i === Math.min(value.length, 5);
         return (
