@@ -55,8 +55,8 @@ MESSAGES = {
     "egy": {
         "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."},
         "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."},
-        "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Hemsu Tepy Er Wedja."},
-        "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh Ek Wedja Seth Em Hemsu Tepy."},
+        "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Sab Wedja Tepy Er Wedja."},
+        "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh Ek Wedja Seth Em Sab Wedja Tepy."},
         "sentence_node_active": {"title": "Sekhet Wetep Tepy", "body": "{{soul}}: Iyi Seth. Sekhet {{order}} Wetep Em {{tenant}}."},
         "sentence_node_done": {"title": "Sekhet Wetep Seth", "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) Wetep Seth."},
         "sentence_node_waiting": {"title": "Hemes Smen", "body": "{{soul}}: Sekhet {{order}} Em {{tenant}} Wetep Seth; Hemes Smen Em Wedja. Wedja Pehwy, Iyi Er Taui Tepy."},
