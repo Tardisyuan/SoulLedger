@@ -25,7 +25,9 @@ MESSAGES = {
         "residence_started": {"title": "暂居开始", "body": "你已被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_returned": {"title": "暂居结束", "body": "你已回归原属文明,打开灵魂簿查看。"},
         "chat_message": {"title": "新书信", "body": "{{name}} 给你写了一封信,打开灵魂簿查看。"},
-        "social_warned": {"title": "帖子收到警告", "body": "你的帖子收到警告：{{reason}}"},
+        "social_warned_post": {"title": "帖子收到警告", "body": "你的帖子收到警告：{{reason}}"},
+        "social_warned_comment": {"title": "评论收到警告", "body": "你的评论收到警告：{{reason}}"},
+        "social_warned_user": {"title": "账号收到警告", "body": "你的账号收到警告：{{reason}}"},
     },
     "en": {
         "sentence_pardoned": {"title": "Sentence plan cancelled", "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."},
@@ -65,7 +67,15 @@ MESSAGES = {
             "body": "You have returned to your home civilization. Open Soul Ledger to see it.",
         },
         "chat_message": {"title": "New letter", "body": "{{name}} wrote you a letter. Open Soul Ledger to read it."},
-        "social_warned": {"title": "Your post was warned", "body": "Your post received a warning: {{reason}}"},
+        "social_warned_post": {"title": "Your post was warned", "body": "Your post received a warning: {{reason}}"},
+        "social_warned_comment": {
+            "title": "Your comment was warned",
+            "body": "Your comment received a warning: {{reason}}",
+        },
+        "social_warned_user": {
+            "title": "Your account was warned",
+            "body": "Your account received a warning: {{reason}}",
+        },
     },
     "egy": {
         "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."},
@@ -81,13 +91,15 @@ MESSAGES = {
         "residence_started": {"title": "Hemes Tepy", "body": "Ek Hemes Em Taui Ky. Wen Medjat Ba Er Maa."},
         "residence_returned": {"title": "Hemes Khetem", "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."},
         "chat_message": {"title": "Shemes Renpi", "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."},
-        "social_warned": {"title": "Hab Er Medu", "body": "Hab Er Medu Ek: {{reason}}"},
+        "social_warned_post": {"title": "Hab Er Medu", "body": "Hab Er Medu Ek: {{reason}}"},
+        "social_warned_comment": {"title": "Hab Er Wesheb", "body": "Hab Er Wesheb Ek: {{reason}}"},
+        "social_warned_user": {"title": "Hab Er Aq", "body": "Hab Er Aq Ek: {{reason}}"},
     },
 }
 
 
 def render(locale, kind, **params):
-    """`params` 填 `{{占位符}}`(与语言包同一写法;chat_message 的 `name`、social_warned 的 `reason`)。"""
+    """`params` 填 `{{占位符}}`(与语言包同一写法;chat_message 的 `name`、social_warned_* 的 `reason`)。"""
     pack = MESSAGES.get(locale) or MESSAGES[DEFAULT_LOCALE]
     title, body = pack[kind]["title"], pack[kind]["body"]
     for key, value in params.items():

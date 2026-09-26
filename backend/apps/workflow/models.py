@@ -97,7 +97,7 @@ class NodeKind(models.TextChoices):
     NOTIFY       通知: tells whoever it designates and moves on at once;
                  nobody decides it.
     END          结束: reaching it completes the workflow. Nodes the flow
-                 never reached stay PENDING under a terminal status.
+                 never reached are marked SKIPPED (`_finish`).
     """
     APPROVAL = "APPROVAL", "审批"
     COUNTERSIGN = "COUNTERSIGN", "会签"
@@ -399,6 +399,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             ):
                 pass
             elif self._routable(node.on_fail):
+                self._skip_jumped(node, node.on_fail, now)
                 self._enter(node.on_fail, now)
             else:
                 # A refusal ends the workflow. It used to mark the node
@@ -465,7 +466,32 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         if successor is None:
             self._finish(ApprovalWorkflowStatus.COMPLETED, now)
         else:
+            self._skip_jumped(node, successor, now)
             self._enter(successor, now)
+
+    def _skip_jumped(self, source: "ApprovalNode", target: "ApprovalNode", now) -> None:
+        """A forward edge in a LINEAR template skips the nodes between: mark them SKIPPED.
+
+        A skipped node stays skipped (2026-09-26 product decision). Left PENDING,
+        the order-based default in `_pass_successor` — "the first PENDING node by
+        order" — handed the node straight back once the jump target was decided,
+        and `approve_node` accepted a decision on it by `node_id` meanwhile.
+
+        Linear only. In a GRAPH template (any 结束 or branch, as in
+        `validation._graph_issues`) the order is not the path, so "between by
+        order" says nothing about what was skipped; there every node has an
+        explicit exit, nothing falls back to the order, and whatever the flow
+        never reached is marked SKIPPED when it completes (`_finish`).
+        """
+        if target.node_order <= source.node_order:
+            return
+        if any(kind == NodeKind.END or branches for kind, branches in self.nodes.values_list("kind", "branches_json")):
+            return
+        self.nodes.filter(
+            status=NodeStatus.PENDING,
+            node_order__gt=source.node_order,
+            node_order__lt=target.node_order,
+        ).update(status=NodeStatus.SKIPPED, decided_at=now)
 
     def _enter(self, node: "ApprovalNode", now) -> None:
         """Arrive at `node`: wait there, or run it if nobody decides it.
@@ -496,6 +522,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             if successor is None:
                 self._finish(ApprovalWorkflowStatus.COMPLETED, now)
                 return
+            self._skip_jumped(node, successor, now)
             node = successor
         self._make_current(node, now)
 
@@ -524,6 +551,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         node.timed_out_at = None
 
     def _finish(self, status: str, now, end_reason: str = "") -> None:
+        # A completed flow's untouched nodes were routed past (a branch not
+        # taken, a node behind a 结束): SKIPPED. A REJECTED flow's stay PENDING —
+        # the refusal ended it, not routing (see `complete_node`).
+        if status == ApprovalWorkflowStatus.COMPLETED:
+            self.nodes.filter(status=NodeStatus.PENDING).update(status=NodeStatus.SKIPPED, decided_at=now)
         self.current_node = None
         self.status = status
         self.completed_at = now
@@ -538,8 +570,8 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         REJECTED because the cap is spent (MAX_REJECT_RETURNS).
 
         Only nodes that were decided are re-opened. A node inside the range the
-        flow jumped over (an `on_pass` edge past it) is still PENDING and is
-        left alone. Each re-opened node's decision moves to its
+        flow jumped over (an `on_pass` edge past it) is SKIPPED, or PENDING in a
+        flow that jumped before `_skip_jumped` existed, and is left alone. Each re-opened node's decision moves to its
         `decision_history`, so the record of who decided what before the return
         survives the return.
         """
@@ -560,7 +592,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 node_order__gte=target.node_order,
                 node_order__lte=failed.node_order,
             )
-            .exclude(status=NodeStatus.PENDING)
+            .exclude(status__in=(NodeStatus.PENDING, NodeStatus.SKIPPED))
             .select_related("approver")
         )
         for n in reopened:

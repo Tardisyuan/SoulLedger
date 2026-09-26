@@ -529,7 +529,7 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             })
             from apps.soul_push import services as push
 
-            ids = push.record_social_warning(row.target_user_id, row.pk, note)
+            ids = push.record_social_warning(row.target_user_id, row.pk, row.target_type, note)
             if ids:
                 transaction.on_commit(lambda: push.enqueue(ids))
         dismissed = resolution in (ReportResolution.DISMISS, ReportResolution.WARN)
