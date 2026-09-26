@@ -257,6 +257,12 @@ E2E 三个 project 各 140。
 差值 26 − 5 = **21**,等于此时名单长度(21)。integ `8c799840` 门禁:jest 186 suites / 3045,
 core vitest 15 文件 / 145,mobile 259,E2E chromium 153 / firefox 153 / mobile-chrome 149。
 
+**2026-09-26 再测(读退出码):** main `35f2d95f` pre-push SQLite **5328 passed / 26 skipped**;
+真 PostgreSQL(第六轮 integ `33a38e77`)**5349 passed / 5 skipped**,跑完 `test_soulledger*` 残留 `NONE`。
+差值 26 − 5 = **21** = 名单长度(21);通过数之差大于 21,因为两个数量的是不同的树。
+第六轮 integ 门禁:jest 192 suites / 3183(egy-sec14 之后 3187),core vitest 16 文件 / 158,
+mobile 300,E2E chromium 155 / firefox 155 / mobile-chrome 151,egyLexiconRules 28。
+
 多的 5 条正是那 4 条并发测试加 `test_two_judges_cannot_both_decide_one_node.py`;
 剩下的 2 个 skip 是 `Menu` / `MenuButton`,它们**确实没有 tenant 字段**。
 **「7 skipped」不是噪音,是 5 条从没在这条路径上跑过的测试。**
@@ -289,6 +295,10 @@ core vitest 15 文件 / 145,mobile 259,E2E chromium 153 / firefox 153 / mobile-c
 残留,**不是空库**。删它之前先确认 `pg_stat_activity` 里对它的连接数为 0。
 成因没查出来:我自己那次全量跑是正常结束的(exit 0、打了汇总行),
 所以要么残留早于它,要么有一次没被观察到的 teardown 被打断 —— **分不出是哪种**。
+**2026-09-26 查到并修掉(`bf406a6f`):两种都不是。** `database_sync_to_async` 的单线程
+executor 因 `conn_max_age` 一直握着一条连接,DROP 失败,而 pytest-django 把它降成一条
+warning —— exit 0、汇总行照打,残留照留。修法是根 `conftest.py` 的 `django_db_setup`
+包装(会话结束前关掉那条连接),加 `pytest.ini` 把那条 warning 升成 error。
 
 **SQLITE HIDES A WHOLE CLASS OF DEFECT, AND THE SUITE ONLY RUNS ON SQLITE.**
 Two shipped bugs surfaced the first time this code met a real PostgreSQL
