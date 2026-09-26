@@ -1586,6 +1586,7 @@
       "read_only": "只读 · 只有持 realms.manage 的人能改容量;其余各列来自神话语料,不经接口改",
       "empty_civ": "此文明尚未配置界域",
       "occupancy_failed": "在押人数加载失败",
+      "not_a_place": "— · 不是地方",
       "edit_scope": "只有容量可改;其余各列来自神话语料,不经接口改。容量降到在押人数以下时谁都不挪,之后发落到这里会被拒。",
       "edit_capacity": "改容量",
       "edit_capacity_of": "改 {{name}} 的容量",

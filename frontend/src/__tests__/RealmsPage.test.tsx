@@ -116,6 +116,30 @@ it("draws the Duat as 称心二岔: trunk to the weighing, the pass road, and th
   expect(fail.textContent).not.toMatch(/\d/);
 });
 
+it("the tree table puts the second death at 不计 — the same fail-road rule as the topology, not a realm code", async () => {
+  mockPermissions = ["realms.read", "realms.manage"];
+  // Held and full would show if the row were counted; renamed so no realm code can be what decides it.
+  mockedList.mockResolvedValue({
+    data: { results: [...REALMS, R("EG_RENAMED_END", "EGYPTIAN", { order: 6, fork: "FAIL", capacity: 1 })], count: REALMS.length + 1 },
+  });
+  mockedOcc.mockResolvedValue({ data: [{ realm_id: "EG_RENAMED_END", count: 4 }, { realm_id: "EG_AARU", count: 1 }] });
+  renderPage();
+  await screen.findByTestId("realm-topology");
+  fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
+  const tree = screen.getByTestId("realm-tree");
+  const cell = (code: string) => within(tree.querySelector(`[data-realm-row="${code}"]`) as HTMLElement).getByTestId("realm-held");
+  for (const code of ["EG_ANNIHILATION", "EG_RENAMED_END"]) {
+    expect(cell(code)).toHaveTextContent("— · 不是地方");
+    expect(cell(code)).not.toHaveTextContent(/\d|已满/);
+    expect(within(cell(code)).queryByRole("button")).toBeNull();
+  }
+  expect(tree.querySelector('[data-realm-row="EG_RENAMED_END"]')!.getAttribute("data-full")).toBeNull();
+  // The pass road is a place: counted, and editable.
+  expect(cell("EG_AARU")).toHaveTextContent("1");
+  expect(cell("EG_AARU")).not.toHaveTextContent("不是地方");
+  expect(within(cell("EG_AARU")).getByRole("button")).toBeInTheDocument();
+});
+
 it("falls back to the labelled schematic line for a Duat whose rows carry no order or fork", async () => {
   mockedList.mockResolvedValue({
     data: { results: REALMS.map((r) => (r.civilization === "EGYPTIAN" ? { ...r, order: null, fork: null } : r)), count: REALMS.length },

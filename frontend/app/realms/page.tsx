@@ -18,7 +18,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RouteTopology, realmStationLabel } from "@/src/components/realms/RouteTopology";
-import { buildTopology } from "@/src/lib/routeTopology";
+import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
 import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 
 /**
@@ -241,7 +241,9 @@ function RealmTreeTable({
         {rows.map(({ realm, depth }) => {
           const held = occupancy.get(realm.id) ?? 0;
           const cap = realm.capacity ?? null;
-          const full = cap !== null && held >= cap;
+          // 第二次死亡不是地方:拓扑不画它的在押,这里也不计(同一条规则,routeTopology.isTerminalRealm)。
+          const noPlace = isTerminalRealm(realm);
+          const full = !noPlace && cap !== null && held >= cap;
           const type = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
           const name = realmStationLabel(t, { id: realm.id, code: realm.realm_code, realm, state: "pending" });
           return (
@@ -273,7 +275,9 @@ function RealmTreeTable({
                       : "text-[oklch(var(--color-ink-subtle))]"
                 }`}
               >
-                {editing === realm.id ? (
+                {noPlace ? (
+                  <span className="font-sans">{t("realms.table.not_a_place")}</span>
+                ) : editing === realm.id ? (
                   <CapacityEditor
                     held={held}
                     draft={draft}
@@ -292,7 +296,7 @@ function RealmTreeTable({
                     {full && <span className="ml-1 font-sans">{t("realms.table.full")}</span>}
                   </>
                 )}
-                {canManage && editing !== realm.id && (
+                {canManage && !noPlace && editing !== realm.id && (
                   <button
                     type="button"
                     onClick={() => {
