@@ -196,13 +196,62 @@ def test_a_balance_condition_picks_the_branch(cn_tenant):
     negative = _workflow(cn_tenant, BRANCHED, merit=1, demerit=5)
     assert _run_passes(negative) == ["来源殿审批", "余额 < 0 ?", "会签 · 两文明判官"]
     assert negative.status == ApprovalWorkflowStatus.COMPLETED
-    # The branch not taken did not run: absence, not only presence.
-    assert negative.nodes.get(node_order=4).status == NodeStatus.PENDING
+    # The branch not taken did not run, and is marked so: absence, not only presence.
+    assert negative.nodes.get(node_order=4).status == NodeStatus.SKIPPED
 
     zero = _workflow(cn_tenant, BRANCHED, merit=3, demerit=3)
     assert _run_passes(zero) == ["来源殿审批", "余额 < 0 ?", "目标文明判官"]
-    assert zero.nodes.get(node_order=3).status == NodeStatus.PENDING
+    assert zero.nodes.get(node_order=3).status == NodeStatus.SKIPPED
     assert zero.nodes.get(node_order=5).status == NodeStatus.TRAVERSED
+
+
+# A LINEAR template (no 结束, no branch) with an on_pass jump: 2026-09-26 product
+# decision — a skipped node stays skipped, the same as in a graph.
+JUMPING = [_node(1, "一殿", on_pass="n3"), _node(2, "二殿"), _node(3, "三殿"), _node(4, "四殿")]
+
+
+@pytest.mark.django_db
+def test_a_linear_template_never_revives_the_node_it_jumped(cn_tenant):
+    assert validate_template_nodes(JUMPING) == []
+    wf = _workflow(cn_tenant, JUMPING)
+    second = wf.nodes.get(node_order=2)
+
+    wf.complete_node(wf.current_node.id, "PASSED")
+    second.refresh_from_db()
+    assert second.status == NodeStatus.SKIPPED  # never PENDING again, so never decidable
+
+    wf.refresh_from_db()
+    assert _run_passes(wf) == ["三殿", "四殿"]
+    assert wf.status == ApprovalWorkflowStatus.COMPLETED
+    assert [n.status for n in wf.nodes.order_by("node_order")] == [
+        NodeStatus.APPROVED, NodeStatus.SKIPPED, NodeStatus.APPROVED, NodeStatus.APPROVED,
+    ]
+
+
+@pytest.mark.django_db
+def test_a_graph_whose_path_runs_against_the_order_is_not_skipped_by_order(cn_tenant):
+    """In a graph the order is not the path: 一 → 三 → 二 → 结束. Marking 「between by
+    order」 on the first jump would skip 二, which the flow reaches next."""
+    nodes = [_node(1, "一殿", on_pass="n3"), _node(2, "二殿", on_pass="n4"), _node(3, "三殿", on_pass="n2"),
+             _node(4, "结束", kind="END")]
+    assert validate_template_nodes(nodes) == []
+    wf = _workflow(cn_tenant, nodes)
+    assert _run_passes(wf) == ["一殿", "三殿", "二殿"]
+    assert wf.status == ApprovalWorkflowStatus.COMPLETED
+
+
+@pytest.mark.django_db
+def test_a_return_does_not_reopen_the_skipped_node(cn_tenant):
+    nodes = [_node(1, "一殿", on_pass="n3"), _node(2, "二殿"), _node(3, "三殿", reject_to="n1"), _node(4, "四殿")]
+    wf = _workflow(cn_tenant, nodes)
+    wf.complete_node(wf.current_node.id, "PASSED")
+    wf.refresh_from_db()
+    wf.complete_node(wf.current_node.id, "FAILED")  # 三殿 驳回到 一殿
+    wf.refresh_from_db()
+    assert wf.current_node.node_name == "一殿" and wf.return_count == 1
+    skipped = wf.nodes.get(node_order=2)
+    assert (skipped.status, skipped.decision_history) == (NodeStatus.SKIPPED, [])
+    assert _run_passes(wf) == ["一殿", "三殿", "四殿"]
 
 
 @pytest.mark.django_db
