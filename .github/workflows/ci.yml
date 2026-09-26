@@ -102,7 +102,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: package-lock.json
       # Installed at the workspace root, not in `frontend`. `frontend` is an
@@ -110,8 +110,13 @@ jobs:
       # `packages/core` — outside `frontend`, so `cd frontend && npm ci` cannot
       # see it. The root lockfile is the only lockfile; frontend no longer has
       # one.
+      # npm 11, not the npm 10 bundled with node 20 — the lockfile is npm 11's, and npm 10's
+      # `npm ci` exits 0 with an incomplete tree (no typescript, no .bin; CLAUDE.md, 2026-09-17).
+      # npm 11 skips install scripts, so the native ones are rebuilt explicitly.
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
       # `@soulledger/core` has its own tsconfig and its own eslint config; the
       # frontend's `eslint .` cannot reach outside its base path, so a job that
       # only ran the frontend's gates would be checking 5,196 fewer lines than
@@ -186,11 +191,16 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: package-lock.json
+      # npm 11, not the npm 10 bundled with node 20 — the lockfile is npm 11's, and npm 10's
+      # `npm ci` exits 0 with an incomplete tree (no typescript, no .bin; CLAUDE.md, 2026-09-17).
+      # npm 11 skips install scripts, so the native ones are rebuilt explicitly.
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
       - name: Typecheck mobile
         run: npm run typecheck --workspace @soulledger/mobile
       - name: Lint mobile
@@ -227,7 +237,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: package-lock.json
       # Installed at the workspace root, not in `frontend`. `frontend` is an
@@ -235,8 +245,13 @@ jobs:
       # `packages/core` — outside `frontend`, so `cd frontend && npm ci` cannot
       # see it. The root lockfile is the only lockfile; frontend no longer has
       # one.
+      # npm 11, not the npm 10 bundled with node 20 — the lockfile is npm 11's, and npm 10's
+      # `npm ci` exits 0 with an incomplete tree (no typescript, no .bin; CLAUDE.md, 2026-09-17).
+      # npm 11 skips install scripts, so the native ones are rebuilt explicitly.
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
       - name: Install Playwright browsers
         run: |
           cd frontend
