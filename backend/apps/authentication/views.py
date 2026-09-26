@@ -989,16 +989,24 @@ def set_new_password(request):
     except Exception as e:
         return _reset_refusal(str(e), "weak_password", status.HTTP_400_BAD_REQUEST)
 
-    # Set new password
-    user.set_password(new_password)
-    user.save(update_fields=["password"])
+    # Set new password — through the same path as a soul changing its initial
+    # password, so the reset also ends the initial-password lifecycle: not
+    # forced to change it again, and an initial password that had already
+    # lapsed no longer makes `soul_accounts.services.login` refuse the new one.
     # 「其他设备上的登录已全部退出」: every refresh token this account holds is
-    # blacklisted, as when a soul sets its own password after an officer's
-    # reset. An access token already issued lives out its lifetime
+    # blacklisted there. An access token already issued lives out its lifetime
     # (`ACCESS_TOKEN_LIFETIME`, 30 minutes by default) and cannot be renewed.
-    from apps.soul_accounts.services import _revoke_refresh_tokens
+    from apps.soul_accounts.models import SoulAccount
+    from apps.soul_accounts.services import _revoke_refresh_tokens, set_password_chosen_by_soul
 
-    _revoke_refresh_tokens(user)
+    account = SoulAccount.objects.filter(user=user).first()
+    if account is not None:
+        account.user = user
+        set_password_chosen_by_soul(account, new_password)
+    else:  # a SOUL-role user with no soul account (none are created that way now)
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        _revoke_refresh_tokens(user)
 
     # Invalidate the code
     cache.delete(f"pwd_reset:{email}")
