@@ -22,6 +22,7 @@
  * 按规则改包时有 38 个夹具键的旧值含被换掉的旧词,夹具里这 38 条随包回填为新值,键数不变。
  * 第十一节「第二轮复核」同样只给义项(ROOTS_ELEVEN、En 与 -I 进小词、Asura 进专名、Per Aa 废止、功德写 Nefer);
  * 夹具里有 4 条随包回填(enqueue_failed、errors.section 与两条 Per Aa),键数不变。
+ * 第十二节「36 词逐键审定」给了逐键写法(约五十键)与 ROOTS_TWELVE;夹具里 7 条随包回填,键数不变;旧账清单只剩 Her、Ma(escalate_reason_placeholder 未改,见废止名单注释)。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -33,14 +34,14 @@
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
  * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
  * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单两键(第七节);
- * - 服务器写 Per Hemsu(Per Aa 只留宫殿本义)、功德义的「功」不配 Maat(第十一节);
+ * - 服务器写 Per Hemsu(Per Aa 废止)、功德义的「功」不配 Maat(第十一、十二节);
  * - Dbh 政策:推送 / 申请类页面副题 / 点名键写全 Dbh Wehem Mesut,点名的页内键只写 Dbh(第四节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
  * - 封闭词汇:每个词都在「词根 ∪ 小词 ∪ 登记表」里,登记表不含已不用的词。
  *
  * 不守什么,说清楚:
- * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 24 + 11 + 63 + 9、
+ * - 登记表只管「这个词形有没有被显式登记」,不管它是否合乎词表 —— 词根 39 + 18 + 24 + 14 + 5 + 12 + 4 + 24 + 11 + 63 + 9 + 8、
  *   小词 23 个、专名一张表,现有文案用到约三百个词形。新生词要在评审里看它在登记表 diff 里那一行。
  * - 第十节按义项替换靠同键中文判义,门禁只能查「旧词还在不在」,查不了「换成的是不是那个义项」。
  */
@@ -105,17 +106,22 @@ const ABOLISHED_TEN_WORDS = [
   // 第十一节换净:同步 Kehat → Senb、发起 Abuf → Tepy Iri;第十节已定、这一轮才换净的 Neter(→ Wat Asura)、
   // Wi(→ Sedjem-I)、Setesh(error.description 整句重写)、Seped(→ Sepdet)。
   "Kehat", "Abuf", "Neter", "Wi", "Setesh", "Seped",
+  // 第十二节「这一轮之后应当废止的写法」(Per Aa 是词组,单列在下面)。Hotep(「待」义)与 Rekhyu(「原因 / 方式」义)
+  // 只按义项废止,整词名单表达不了义项,所以不在这里 —— 包里已无这两个词,单独出现由封闭词汇拦下。
+  // Her 与 Ma 也在第十二节名单里,但它们唯一的键(escalate_reason_placeholder)第十二节给的写法 Khet: Seshem Sekhet Pen
+  // 撞了「Seshem 只表推进」(中文是「跳过」),所以那一键没改,两词留在旧账清单里,等 Design 定。
+  "Am", "Aru", "Aset", "Ahamet", "Aba", "Djewet", "Hemset", "Kheme", "Mech", "Renenu", "Ru", "Seh",
+  "Senu", "Set", "Shen", "Tep", "We", "Weben", "Wepet", "Wer", "Wu",
 ];
 /** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
 const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
 
 /**
- * 第十一节:Per Aa 是「法老」(大房子),不能表示服务器 —— 服务器一律 Per Hemsu。按两词词组查,单写的 Aa
- * (完整 ID、榜首、要事……)不受影响。workflow.editor.court_code 的中文是「法庭/宫殿代码」,那里的 Per Aa
- * 是宫殿本义,不是服务器;第十一节没有给它另外的写法,所以留着并点名放行。
+ * 第十一节:Per Aa 是「法老」(大房子),不能表示服务器 —— 服务器一律 Per Hemsu;第十二节把宫殿义的
+ * workflow.editor.court_code 改写 Wesekhet,Per Aa 于是整个废止。按两词词组查:Aa 单独出现由封闭词汇拦下
+ * (第十二节:ID 写 Ren Hesb,Aa 的其余写法全部作废,包里已无 Aa)。
  */
-const PER_AA_PALACE = new Set(["workflow.editor.court_code"]);
-const hasPerAa = (v: string) => /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/.test(prose(v));
+const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
 
 /**
  * 第十一节:功 = Nefer、过 = Isfet,Maat 只作「真 / 实」与女神名。中文里作功德讲的「功」不许配 Maat。
@@ -141,16 +147,10 @@ const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
 
 /**
  * 仍含单词 Ma 的键 —— 这些 Ma 不是否定(「有误」「移至」等早期写法),按同键中文判过义。
- * 否定一律 Nen:任何不在这里的 Ma 都是漏改的否定。
- * 第六节把「Ma Sethet」四处改写(Culpa (Isfet)、Khet Hru、Ankh Nen Maat、Maa Khet Wa),它们随之移出;
- * 第七节把 souls.date_problem_marker.error 改成 Khet Hru,它也移出。
+ * 否定一律 Nen:任何不在这里的 Ma 都是漏改的否定。第六、七、十节逐步改写移出;第十二节改写了
+ * only_differences 与 confirm_removed_label。剩下这一键第十二节给的写法撞了 Seshem 规则(见 ABOLISHED_TEN_WORDS 那条注释)。
  */
-// 第十节:怯懦改写 Nen Qen、移至改写 Nehem Er,四键随之移出。剩下三处的 Ma 义项第十节没有给写法。
-const MA_NOT_NEGATION = new Set([
-  "permissions.matrix.only_differences",
-  "permissions.matrix.confirm_removed_label",
-  "workflow.detail.escalate_reason_placeholder",
-]);
+const MA_NOT_NEGATION = new Set(["workflow.detail.escalate_reason_placeholder"]);
 
 /**
  * 第六节:「Pert Abuf」整个废止(它是密码的旧写法,误贴到了调度上;调度统一 Hab-Ba)。Pert 本义「出」,
@@ -419,6 +419,20 @@ const ROOTS_ELEVEN = [
   "Ta Ahau", //     中立界域类型(暂留之地)
 ];
 /**
+ * 第十二节「36 词逐键审定」的新登记:新词根 Hem、Imy-Ra;Sia 已在第十节表里,这里正式登记「解读 / 领会」义项;
+ * 其余是组合写法。Iwen(颜色)没有登记:第十节已把它换成 Unemu,accent_hex_too_dark 写 Unemu(待 Design 确认)。
+ */
+const ROOTS_TWELVE = [
+  "Sia", //           解读 / 领会
+  "Hem", //           仆 / 执行者(worker)
+  "Imy-Ra", //        监理
+  "Nen Shu", //       必填(不空)
+  "Ren Hesb", //      ID(名 + 数),不再写 Ren Aa
+  "Per Pen", //       本域;租户写 Per
+  "Per Hena", //      参与方
+  "Per Tepy Iri", //  发起方
+];
+/**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
  * 冥界统一「Duat + 国名」;欧洲地狱各圈改用与炼狱同一套拉丁罪名。技术词 IP / JPEG / MB / PNG / WebP / Webhook
  * 原样;MODERATOR 只作代码示例(见下面那条);A(快捷键)与 N 是键名 / 变量名。
@@ -431,6 +445,8 @@ const PROPER_NAMES = [
   "Haunebut", "Gorgias", "Kemet", "Wepwawet", "Europa",
   // 第十一节:梵语借词,和 Kristos 同类(阿修罗道 Wat Asura)。
   "Asura",
+  // 第十二节:成都(如:成都)。
+  "Chengdu",
   "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
 ];
 const PARTICLES = [
@@ -442,7 +458,7 @@ const PARTICLES = [
   "En", "-I",
 ];
 const LEXICON = new Set([
-  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
@@ -523,14 +539,10 @@ describe("egy 词表规则", () => {
       // 后置小词 -Es 换成 -Ef。仍在旧账清单里的(Aa、Aba、Kheme……)还有键没换,换净之后移进来。
       ABOLISHED_TEN,
       /[A-Za-z]-Es\b/,
+      // 第十一、十二节:服务器 Per Aa(法老)→ Per Hemsu,宫殿 → Wesekhet。
+      PER_AA,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
-  });
-
-  it("服务器写 Per Hemsu:Per Aa(法老)只留宫殿本义的点名键", () => {
-    expect(offenders(KEYS, (v, k) => hasPerAa(v) && !PER_AA_PALACE.has(k))).toEqual([]);
-    // 放行的键若已不含 Per Aa,就该删掉。
-    expect([...PER_AA_PALACE].filter((k) => !hasPerAa(EGY[k] ?? ""))).toEqual([]);
   });
 
   it("功德写 Nefer:中文作功德讲的「功」的键里不出现 Maat", () => {
