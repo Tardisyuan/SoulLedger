@@ -69,7 +69,7 @@ MESSAGES = {
         "judgment_reassign_requested": {"title": "Dbh Hab Ky", "body": "{{by}}: Dbh Hab Ky Wedja En {{soul}}"},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
-            "body": "{{soul}}: Ankh Er Taui Khesef En Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
+            "body": "{{soul}}: Ankh Er Taui Khesef In Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
         },
     },
 }
