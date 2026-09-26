@@ -16,13 +16,14 @@ import uuid
 from datetime import timedelta
 
 from django.core import signing
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
 from apps.social import images
-from apps.social.models import DELETED_BY_OFFICER, PostMedia
+from apps.social.models import DELETED_BY_OFFICER, PRIVATE_MEDIA_PREFIX, PostMedia
 from apps.social.soul_circle import SOUL_ROLE, SocialError, ensure_can_write, visible_posts_for_soul
 
 #: 每条帖子最多几张。
@@ -113,6 +114,42 @@ def purge_for_post(post):
 def orphans(older_than=ORPHAN_AFTER):
     """上传超过 `older_than` 仍未挂到帖子的图片。"""
     return PostMedia.all_objects.filter(post__isnull=True, created_at__lt=timezone.now() - older_than)
+
+
+MEDIA_DIR = f"{PRIVATE_MEDIA_PREFIX}post_media"
+
+
+def _walk(storage, path):
+    if not storage.exists(path):
+        return
+    dirs, files = storage.listdir(path)
+    for name in files:
+        yield f"{path}/{name}"
+    for name in dirs:
+        yield from _walk(storage, f"{path}/{name}")
+
+
+def _stray_files(before):
+    """`private/post_media/` 下没有任何行指向、且早于 `before` 的文件(存盘成功、建行失败的残留)。"""
+    known = set(PostMedia.all_objects.values_list("file", flat=True))
+    return [
+        name for name in _walk(default_storage, MEDIA_DIR)
+        if name not in known and default_storage.get_modified_time(name) < before
+    ]
+
+
+def cleanup_orphans(older_than=ORPHAN_AFTER, *, dry_run=False) -> dict:
+    """删孤儿图片(行与文件)与无主文件。`manage.py cleanup_orphan_post_media` 与定时任务
+    `social.cleanup_orphan_post_media` 共用这一个函数。幂等:第二次运行什么也不删。"""
+    rows = orphans(older_than)
+    count = rows.count()
+    if not dry_run:
+        rows.delete()  # 真 DELETE;文件由 PostMedia 的 post_delete 在提交后删
+    stray = _stray_files(timezone.now() - older_than)
+    if not dry_run:
+        for name in stray:
+            default_storage.delete(name)
+    return {"orphans": count, "stray_files": len(stray), "dry_run": dry_run}
 
 
 # ── 访问判定与签名地址 ────────────────────────────────────────────────────

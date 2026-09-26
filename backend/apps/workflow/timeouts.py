@@ -7,15 +7,13 @@
                  as they would to a person's FAIL.
     NOTIFY       whoever the node designates is reminded; it stays PENDING.
 
-THESE ONLY FIRE WHEN SOMETHING RUNS `process_due`. That is the management
-command `process_workflow_timeouts` or the celery task of the same name
-(`apps/workflow/tasks.py`). The beat scheduler is not deployed, and this change
-deliberately does not register the task in `apps/scheduler/registry.py`: an
-entry there is a claim that it runs on a cron, and nothing would be making that
-claim true. Until an operator runs the command from cron (or deploys beat and
-registers the task), a node past its deadline simply waits — the timeout is a
-setting, not a guarantee. `docs`-level note: the editor says the same under the
-timeout field.
+THESE ONLY FIRE WHEN SOMETHING RUNS `process_due`. That is the scheduled job
+`workflow.process_timeouts_for_tenant` (`apps/workflow/tasks.py`, registered in
+`apps/scheduler/registry.py`: every 5 minutes, one row per active tenant) or,
+by hand, the management command `process_workflow_timeouts`. Both go through
+`process_due_for_tenant`. The job runs only where celery beat and a worker run;
+without them a node past its deadline simply waits — the editor says so under
+the timeout field. So a timeout fires up to one period (5 minutes) late.
 
 A node's clock starts at `activated_at` (set whenever it becomes current,
 `ApprovalWorkflow._make_current`) and the action fires once per activation
@@ -77,6 +75,19 @@ def process_due(now=None, tenant_id=None) -> dict:
         action = _fire(workflow.pk, now)
         counts[action or "skipped"] += 1
     return {str(k): v for k, v in counts.items()}
+
+
+def process_due_for_tenant(tenant, now=None) -> dict:
+    """`process_due` for one tenant, under that tenant's contextvar so the audit
+    rows an AUTO_REJECT writes (apps.audit.signals) carry the tenant — celery
+    has no TenantMiddleware. The `_tell` on_commit callbacks fire inside it too."""
+    from apps.tenants.managers import clear_current_tenant, set_current_tenant
+
+    set_current_tenant(tenant)
+    try:
+        return process_due(now=now, tenant_id=tenant.pk)
+    finally:
+        clear_current_tenant()
 
 
 def _fire(workflow_pk, now) -> str | None:
