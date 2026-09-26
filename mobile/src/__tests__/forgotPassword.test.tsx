@@ -343,4 +343,29 @@ describe("success", () => {
     expect(sessionStore.get("soulledger_access")).toBeNull();
     expect(screen.getByTestId("login-submit")).toBeTruthy();
   });
+
+  it("an earlier failed sign-in does not hide the notice: its error and the old password are cleared", async () => {
+    stubApi({ "POST /soul-auth/login/": { status: 401, data: { detail: "x", code: "invalid_credentials" } } });
+    renderApp();
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "ABCDEFGH23");
+    fireEvent.changeText(screen.getByTestId("login-password"), "old-wrong-password");
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("login-submit"));
+    });
+    expect(await screen.findByTestId("login-error")).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("login-forgot"));
+    await screen.findByTestId("forgot-email");
+    stubApi({ [REQUEST]: { status: 200, data: { detail: "验证码已发送到邮箱" } } });
+    await sendEmail();
+    await screen.findByTestId("forgot-code");
+    stubApi({ [CONFIRM]: { status: 200, data: { detail: "密码重置成功" } } });
+    fillCode("123456", "new-password-1");
+    await submitCode();
+
+    expect(await screen.findByTestId("login-reset-notice")).toBeTruthy();
+    expect(screen.queryByTestId("login-error")).toBeNull();
+    expect(screen.getByTestId("login-password").props.value).toBe("");
+    expect(screen.getByTestId("login-soul-code").props.value).toBe("ABCDEFGH23");
+  });
 });
