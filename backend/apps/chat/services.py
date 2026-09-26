@@ -704,3 +704,19 @@ def record_inbox_event(conversation, *, client=None):
 #: 回调时读最新几封。不是 1:`/messages` 的 limit 按**事件**数,过滤掉非 `m.room.message` 之后
 #: 可能一封不剩。
 INBOX_PEEK = 10
+
+
+def reconcile_all_inboxes(client):
+    """每一个殿司收件箱会话按 Synapse 时间线对一遍(`reconcile_inbox`)。幂等。
+
+    `manage.py reconcile_inbox` 与定时任务 `chat.reconcile_inbox` 共用。读不到的房间不中断其余的,
+    收进 `failed`(房间 id → 错误),由调用方决定算不算失败。"""
+    done, failed = 0, {}
+    for conversation in Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).iterator():
+        try:
+            reconcile_inbox(conversation, client.recent_messages(conversation.room_id, limit=INBOX_PEEK),
+                            client.service_user)
+            done += 1
+        except MatrixError as exc:
+            failed[conversation.room_id] = str(exc)
+    return done, failed

@@ -323,8 +323,9 @@ export function NodeEditModal({
               />
             )}
             {/* Said where the field is, because it is the one thing about a
-                timeout an operator cannot see from the value: nothing fires it
-                unless `process_workflow_timeouts` runs. */}
+                timeout an operator cannot see from the value: it fires only
+                when the 5-minutely `workflow.process_timeouts_for_tenant` job
+                runs, i.e. only where beat and a worker run. */}
             <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.timeout.hint")}</p>
             <SelectField
               id={rejectToId}

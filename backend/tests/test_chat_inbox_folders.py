@@ -124,6 +124,62 @@ def test_reconcile_inbox_command_backfills_existing_rows(cn_tenant, matrix):  # 
     assert cid in _ids(api, folder="awaiting_reply")
 
 
+# ── 定时任务 chat.reconcile_inbox(经调度基类跑,`apply()`)─────────────────
+
+
+def _scheduled_run(task_id):
+    from apps.chat.tasks import reconcile_inbox
+    from apps.scheduler.models import TaskRun
+    from apps.scheduler.services import sync_schedules
+
+    sync_schedules()
+    result = reconcile_inbox.apply(task_id=task_id, throw=False)
+    return result, TaskRun.objects.select_related("job").get(celery_task_id=task_id)
+
+
+def test_the_scheduled_reconcile_backfills_like_the_command(cn_tenant, matrix):  # noqa: F811
+    _, soul = ready_soul(cn_tenant, name="甲")
+    cid = _write(soul)
+    Conversation.objects.filter(pk=cid).update(last_from="", last_soul_message_at=None)
+
+    result, run = _scheduled_run("chat-reconcile-ok")
+    assert result.get() == {"reconciled": 1}
+    assert run.status == "SUCCESS"
+    assert Conversation.objects.get(pk=cid).last_from == "soul"
+
+
+def test_without_synapse_the_scheduled_reconcile_is_a_quiet_success(cn_tenant, settings):
+    """测试里、115 上都没配 Matrix。那不是故障:记 SUCCESS、不告警。
+    变异:任务里不接 `MatrixNotConfiguredError` → 这条红(FAILURE + 一条通知)。"""
+    from apps.notifications.models import UserNotification
+
+    settings.MATRIX_ENABLED = False
+    User.objects.create_user(username="sched_admin", password="x", role="ADMIN", is_active=True)
+
+    result, run = _scheduled_run("chat-reconcile-off")
+    assert result.get() == {"skipped": "chat_not_configured"}
+    assert run.status == "SUCCESS" and run.job.consecutive_failures == 0
+    assert not UserNotification.objects.filter(related_resource="scheduler").exists()
+
+
+def test_an_unreadable_room_fails_the_scheduled_reconcile_and_alerts(cn_tenant, matrix, monkeypatch):  # noqa: F811
+    from apps.chat.matrix import MatrixError
+    from apps.notifications.models import UserNotification
+
+    _, soul = ready_soul(cn_tenant, name="甲")
+    _write(soul)
+    User.objects.create_user(username="sched_admin", password="x", role="ADMIN", is_active=True)
+
+    def boom(self, room_id, *, limit=50):
+        raise MatrixError("connection refused")
+
+    monkeypatch.setattr(matrix, "recent_messages", boom)
+    result, run = _scheduled_run("chat-reconcile-down")
+    assert result.failed()
+    assert run.status == "FAILURE" and "1 of 1 inbox room(s) unreadable" in run.error
+    assert UserNotification.objects.filter(related_resource="scheduler").count() == 1
+
+
 # ── 每位官员自己的状态 ─────────────────────────────────────────────────────
 
 

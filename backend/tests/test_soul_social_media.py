@@ -599,3 +599,26 @@ class TestOrphanCleanup:
         out = io.StringIO()
         call_command("cleanup_orphan_post_media", stdout=out)
         assert "deleted 0 orphan image(s) and 0 unreferenced file(s)" in out.getvalue()
+
+    def test_the_scheduled_job_runs_the_same_cleanup_through_the_task_base(
+        self, cn_tenant, media_root, django_capture_on_commit_callbacks,
+    ):
+        """`social.cleanup_orphan_post_media` 经 celery 的 tracer 与调度基类(`apply()`)跑:
+        记一条 SUCCESS 的 TaskRun,删的与命令一样(24 小时阈值,近期的留下)。"""
+        from apps.scheduler.models import RunStatus, TaskRun
+        from apps.scheduler.services import sync_schedules
+        from apps.social.tasks import cleanup_orphan_post_media
+
+        sync_schedules()
+        _, author = soul(cn_tenant, "作者")
+        old = uploaded(author)["id"]
+        recent = uploaded(author)["id"]
+        PostMedia.objects.filter(pk=old).update(created_at=timezone.now() - timedelta(hours=25))
+
+        with django_capture_on_commit_callbacks(execute=True):
+            result = cleanup_orphan_post_media.apply(task_id="orphan-media-run")
+        assert result.get() == {"orphans": 1, "stray_files": 0, "dry_run": False}
+        run = TaskRun.objects.get(celery_task_id="orphan-media-run")
+        assert run.status == RunStatus.SUCCESS and run.job is not None
+        assert list(PostMedia.all_objects.values_list("pk", flat=True)) == [PostMedia.objects.get(pk=recent).pk]
+        assert len(stored(media_root)) == 1

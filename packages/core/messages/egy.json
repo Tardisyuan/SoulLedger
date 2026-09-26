@@ -758,7 +758,7 @@
           "NOTIFY": "Sedjem"
         },
         "role": "Hab Er Netjer",
-        "hint": "Unut Khetem: Nen Djes-Ef — Iri Em Aha Wa.",
+        "hint": "Unut Khetem: Baku Ahet Maa Djes-Ef; Nen Ahet, Nen Iri.",
         "summary": "Unut {{hours}} · {{action}}"
       },
       "reject_to": "Khesef Er",
@@ -2347,7 +2347,10 @@
       "scheduler_reap_stale_runs": "Khetem Sesh Iri Nen Wetep",
       "scheduler_check_overdue": "Maa Baku Ahet Sesh",
       "scheduler_prune_runs": "Khetem Sesh Iri Tepy",
-      "soul_push_sweep": "Sedjem Ba: Wehem Smen Hena Maa Sesh Iri"
+      "soul_push_sweep": "Sedjem Ba: Wehem Smen Hena Maa Sesh Iri",
+      "workflow_process_timeouts_for_tenant": "Maa Unut Khetem Wat Wedja",
+      "social_cleanup_orphan_post_media": "Fekh Tut Shemsu Nen Hab",
+      "chat_reconcile_inbox": "Senb Sesh Wesekhet"
     },
     "status": {
       "PENDING": "Em Smen",

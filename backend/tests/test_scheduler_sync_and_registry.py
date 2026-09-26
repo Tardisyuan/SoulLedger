@@ -143,6 +143,35 @@ def test_every_registry_task_is_one_a_worker_can_run_with_the_kwargs_we_send():
         spec.cron_fields()  # five fields, or ValueError
 
 
+MAINTENANCE_JOBS = {
+    # key: (scope, cron) — the three that were management commands only until 2026-09-26.
+    "workflow.process_timeouts_for_tenant": (registry.TENANT, "*/5 * * * *"),
+    "social.cleanup_orphan_post_media": (registry.GLOBAL, "15 3 * * *"),
+    "chat.reconcile_inbox": (registry.GLOBAL, "45 3 * * *"),
+}
+
+
+@pytest.mark.django_db
+def test_the_three_maintenance_commands_are_scheduled_jobs(cn_tenant, eu_tenant):
+    """Named, not derived: every other test here reads the registry, so a job
+    dropped from it would take its own checks along silently."""
+    from config.celery import app
+
+    app.loader.import_default_modules()
+    for key, (scope, cron) in MAINTENANCE_JOBS.items():
+        spec = registry.get(key)
+        assert spec is not None, key
+        assert (spec.scope, spec.cron) == (scope, cron), key
+        assert key in app.tasks, key
+
+    sync_schedules()
+    names = _names()
+    assert {f"workflow.process_timeouts_for_tenant@{t.code}" for t in (cn_tenant, eu_tenant)} <= names
+    assert "workflow.process_timeouts_for_tenant" not in names  # per tenant, never one global row
+    assert {"social.cleanup_orphan_post_media", "chat.reconcile_inbox"} <= names
+    assert not any(n.startswith(("social.cleanup_orphan_post_media@", "chat.reconcile_inbox@")) for n in names)
+
+
 def test_the_lock_ttl_of_a_five_minutely_job_stays_under_its_period():
     """A crashed run's lock must expire before the next tick, or the next
     tick is SKIPPED for no reason. Pinned for the two 5-minutely jobs."""

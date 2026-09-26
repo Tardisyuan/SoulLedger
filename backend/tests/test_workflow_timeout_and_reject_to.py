@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from apps.authentication.models import User
 from apps.judgment.models import Judgment
-from apps.scheduler.registry import REGISTRY
+from apps.scheduler import registry
 from apps.souls.models import Soul
 from apps.workflow import timeouts, versioning
 from apps.workflow.models import (
@@ -283,8 +283,43 @@ def test_the_command_runs_the_same_processor(cn_tenant):
     assert wf.status == ApprovalWorkflowStatus.REJECTED
 
 
-def test_the_timeout_task_is_deliberately_not_scheduled():
-    """No beat is deployed; registering the task would claim a cron nobody runs.
-    If this goes red, somebody scheduled it — update timeouts.py's docstring
-    and the editor's hint in the same change."""
-    assert "workflow.process_timeouts" not in {spec.key for spec in REGISTRY}
+def test_the_timeout_task_is_scheduled_per_tenant_every_five_minutes():
+    """Flipped 2026-09-26: this used to assert the task was NOT registered.
+    timeouts.py's docstring and the editor's hint changed in the same commit."""
+    spec = registry.get("workflow.process_timeouts_for_tenant")
+    assert spec is not None and spec.scope == registry.TENANT
+    assert spec.cron == "*/5 * * * *"
+    assert "workflow.process_timeouts" not in {s.key for s in registry.REGISTRY}  # the old all-tenant name
+
+
+@pytest.mark.django_db
+def test_the_scheduled_run_fires_only_its_own_tenant_and_records_success(cn_tenant, eu_tenant):
+    """Through celery's tracer and the scheduler task base (`apply()`), the way
+    beat's message would run: a TaskRun row, SUCCESS, the counts as result."""
+    from apps.scheduler.models import RunStatus, TaskRun
+    from apps.scheduler.services import sync_schedules
+    from apps.workflow.tasks import process_timeouts_for_tenant
+
+    sync_schedules()
+    mine = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT")])
+    # `_workflow`'s template is CHINESE, so an EU soul falls through to the
+    # hardcoded flow, which has no timeout: set one on its node directly.
+    theirs = _workflow(eu_tenant, [_node(1)])
+    ApprovalNode.objects.filter(pk=theirs.current_node_id).update(timeout_hours=1, timeout_action="AUTO_REJECT")
+    _age(mine.current_node, 2)
+    _age(theirs.current_node, 2)
+
+    result = process_timeouts_for_tenant.apply(kwargs={"tenant_id": str(cn_tenant.pk)}, task_id="wf-timeout-run")
+    assert result.successful(), result.traceback
+    assert result.get()["AUTO_REJECT"] == 1
+
+    run = TaskRun.objects.get(celery_task_id="wf-timeout-run")
+    assert run.status == RunStatus.SUCCESS
+    assert run.job is not None and run.job.tenant_id == cn_tenant.pk
+    mine.refresh_from_db()
+    theirs.refresh_from_db()
+    assert mine.status == ApprovalWorkflowStatus.REJECTED
+    assert theirs.status == ApprovalWorkflowStatus.IN_PROGRESS
+    # ...and it was due: its own tenant's run fires it. Without this the line
+    # above would also hold for a node that was never eligible.
+    assert timeouts.process_due(tenant_id=eu_tenant.pk)["AUTO_REJECT"] == 1

@@ -102,7 +102,7 @@ export interface ApprovalNode {
 /** What a node does (`NodeKind`, backend/apps/workflow/models.py). Absent reads as APPROVAL. */
 export type WorkflowNodeKind = "APPROVAL" | "COUNTERSIGN" | "NOTIFY" | "END";
 
-/** What a per-node timeout does (`TimeoutAction`). Fires only when `process_workflow_timeouts` runs. */
+/** What a per-node timeout does (`TimeoutAction`). Fires when the scheduled job `workflow.process_timeouts_for_tenant` (every 5 min) or `process_workflow_timeouts` runs. */
 export type WorkflowTimeoutAction = "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
 
 /**

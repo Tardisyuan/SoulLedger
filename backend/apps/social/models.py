@@ -116,8 +116,8 @@ class PostMedia(SoftDeleteMixin, models.Model):
     """帖子的一张图片(2026-09-25)。
 
     **先传后发**:上传时 `post` 为空,只有上传者本人能看、能删;发帖时按顺序挂到帖子上
-    (`position` 0..8)。挂不上的(App 崩了、用户放弃)由 `manage.py cleanup_orphan_post_media`
-    清掉,行与文件一起。
+    (`position` 0..8)。挂不上的(App 崩了、用户放弃)由每天的定时任务
+    `social.cleanup_orphan_post_media`(手动入口 `manage.py cleanup_orphan_post_media`)清掉,行与文件一起。
 
     **租户经帖子**(`post__tenant`),没有自己的 tenant 列;未挂帖子的图片只属于上传者。
     **可见性也经帖子**:没有自己的审核状态 —— 帖子被隐藏,它的图片就对灵魂不可见
