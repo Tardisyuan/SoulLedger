@@ -236,7 +236,9 @@ class JudgmentConclusionService:
             judgment.notes = notes
             judgment.is_final = True
             judgment.concluded_at = timezone.now()
-            # 「戊 · 发落」的草稿随结案作废:发落已经写进结案本身。
+            # 草稿随结案作废:裁决与发落已经写进结案本身。判词草稿就是 `notes`,
+            # 上面已被定稿覆盖;`draft_saved_at` / `draft_version` 是历史,不清。
+            judgment.draft_verdict = None
             judgment.draft_destination_realm = None
             judgment.draft_term_years = None
             judgment.draft_eternal = False
