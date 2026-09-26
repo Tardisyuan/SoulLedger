@@ -23,6 +23,7 @@
  * 第十一节「第二轮复核」同样只给义项(ROOTS_ELEVEN、En 与 -I 进小词、Asura 进专名、Per Aa 废止、功德写 Nefer);
  * 夹具里有 4 条随包回填(enqueue_failed、errors.section 与两条 Per Aa),键数不变。
  * 第十二节「36 词逐键审定」给了逐键写法(约五十键)与 ROOTS_TWELVE;夹具里 7 条随包回填,键数不变;旧账清单只剩 Her、Ma(escalate_reason_placeholder 未改,见废止名单注释)。
+ * 第十三节「Unemu 误用 · 42 键」给了逐键写法,并定 Hemsu 只作「系统」(判官 Sab Wedja);夹具无回填。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -35,6 +36,7 @@
  * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
  * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单两键(第七节);
  * - 服务器写 Per Hemsu(Per Aa 废止)、功德义的「功」不配 Maat(第十一、十二节);
+ * - Unemu 只表「色」、中文含「判官」的键不出现 Hemsu(第十三节);
  * - Dbh 政策:推送 / 申请类页面副题 / 点名键写全 Dbh Wehem Mesut,点名的页内键只写 Dbh(第四节);
  * - 每条的 {{占位符}} 集合与 zh-Hans 同键一致;
  * - 每词首字母大写(含小词;连字符复合词的每一段,如 Djes-Ef);
@@ -129,6 +131,22 @@ const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
  * 功过明细 / 功过分数与「证据 Medu Maat」同句(soul_app.push.*)。所以判据是「功德」或不接成 / 过 / 能的单字「功」。
  */
 const isMeritZh = (zh: string) => /功德|(?<!成)功(?![过過能])/.test(zh);
+
+/**
+ * 第十三节:Unemu 只剩「色」一个义项(强调色 Unemu Tepy)。它曾担的裁决 / 判(Wedja)、功过(Nefer Isfet)、
+ * 余额(Sepy)、称重(Dens)等 42 键已逐键改写。souls.balance_withheld(余额未提供)不在那 42 键里,
+ * 第十三节没有给它写法,所以留着并点名放行,等 Design 定。
+ */
+const UNEMU_NOT_COLOUR_PENDING = new Set(["souls.balance_withheld"]);
+const hasUnemu = (v: string) => /\bUnemu\b/.test(prose(v));
+/**
+ * 中文里作颜色讲的「色」。角色、色情里的「色」不算 —— 只查「色」字的话,balance_withheld 的「本角色不可见」
+ * 就让它漏过去了(实测),任何角色类文案都能再用 Unemu。
+ */
+const isColourZh = (zh: string) => /(?<!角)色(?!情)/.test(zh);
+
+/** 第十三节:Hemsu 只作「系统」;判官写 Sab Wedja,原审判官写 Sab Wedja Tepy。 */
+const hasHemsu = (v: string) => /\bHemsu\b/.test(prose(v));
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -552,6 +570,24 @@ describe("egy 词表规则", () => {
       expect.arrayContaining(["ledger.raw_merit", "ledger.book.col_merit", "judgment.queue.merit", "judgment.statute_polarity.MERIT"])
     );
     expect(offenders(merit, (v) => /\bMaat\b/.test(prose(v)))).toEqual([]);
+  });
+
+  it("Unemu 只表「色」:中文不含「色」的键不出现 Unemu(待定的点名键除外)", () => {
+    expect(
+      offenders(KEYS, (v, k) => hasUnemu(v) && !isColourZh(ZH[k] ?? "") && !UNEMU_NOT_COLOUR_PENDING.has(k))
+    ).toEqual([]);
+    // 放行的键若已不含 Unemu,或中文已有颜色义的「色」,就该删掉。
+    expect(
+      [...UNEMU_NOT_COLOUR_PENDING].filter((k) => !hasUnemu(EGY[k] ?? "") || isColourZh(ZH[k] ?? ""))
+    ).toEqual([]);
+    // 空扫保护:「色」义的 Unemu 仍在(强调色)。
+    expect(hasUnemu(EGY["settings.accent_color"] ?? "")).toBe(true);
+  });
+
+  it("Hemsu 只表系统:中文含「判官」的键不出现 Hemsu(判官 Sab Wedja)", () => {
+    const judgeKeys = KEYS.filter((k) => (ZH[k] ?? "").includes("判官"));
+    expect(judgeKeys.length).toBeGreaterThan(5);
+    expect(offenders(judgeKeys, hasHemsu)).toEqual([]);
   });
 
   it("第十节「换掉」清单与旧账清单不重叠:换净了才能进废止名单", () => {
