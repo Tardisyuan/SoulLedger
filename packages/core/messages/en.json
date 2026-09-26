@@ -1586,6 +1586,7 @@
       "read_only": "Read-only · only holders of realms.manage can change capacity; every other column comes from the mythology corpus",
       "empty_civ": "No realms are configured for this civilization",
       "occupancy_failed": "Occupancy failed to load",
+      "not_a_place": "— · not a place",
       "edit_scope": "Only capacity can be changed; every other column comes from the mythology corpus. Lowering it below the souls held moves nobody — new placements here are refused.",
       "edit_capacity": "Edit",
       "edit_capacity_of": "Edit capacity of {{name}}",
