@@ -257,6 +257,7 @@ class HandledContentSerializer(serializers.Serializer):
     reason = serializers.CharField(source="handled_reason")
     handled_by = serializers.SerializerMethodField()
     handled_at = serializers.DateTimeField(allow_null=True)
+    media_count = serializers.IntegerField(help_text="帖子的图片张数(与举报队列同一条规则);评论为 0。")
 
     @extend_schema_field(ModerationAuthorSerializer)
     def get_author(self, row):

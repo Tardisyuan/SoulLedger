@@ -17928,6 +17928,9 @@ components:
           type: string
           format: date-time
           nullable: true
+        media_count:
+          type: integer
+          description: 帖子的图片张数(与举报队列同一条规则);评论为 0。
       required:
       - author
       - excerpt
@@ -17935,6 +17938,7 @@ components:
       - handled_by
       - handling
       - id
+      - media_count
       - post
       - reason
       - type

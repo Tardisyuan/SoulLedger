@@ -81,7 +81,8 @@ def import_permissions(data, overwrite=False):
     Args:
         data: dict from export_permissions()
         overwrite: if True, delete existing data before import (ADMIN's role
-            permissions are kept)
+            permissions are kept), and existing roles take the file's
+            display_name / description
 
     Returns:
         dict with import statistics
@@ -107,14 +108,21 @@ def import_permissions(data, overwrite=False):
 
     # Import roles
     for role_data in data.get('roles', []):
-        _, created = Role.revive_or_create(
-            role_data['name'],
-            display_name=role_data['display_name'], scope=role_data.get('scope', 'ORG'),
+        labels = {
+            'display_name': role_data['display_name'],
             # Files exported before the field existed carry no description: blank, not an error.
-            description=role_data.get('description', ''),
-        )
+            'description': role_data.get('description', ''),
+        }
+        role, created = Role.revive_or_create(role_data['name'], scope=role_data.get('scope', 'ORG'), **labels)
         if created:
             stats['roles'] += 1
+        # Overwrite: the file's labels win for a role that already existed too
+        # (2026-09-26 product decision). A normal import leaves existing roles alone.
+        # Only the two labels — ADMIN's grants keep the protections above and below.
+        if overwrite and any(getattr(role, k) != v for k, v in labels.items()):
+            for k, v in labels.items():
+                setattr(role, k, v)
+            role.save(update_fields=list(labels))
 
     # Import role-permission assignments
     for rp_data in data.get('role_permissions', []):

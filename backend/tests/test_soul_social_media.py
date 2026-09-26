@@ -470,6 +470,26 @@ class TestModeration:
         assert [m["id"] for m in detail["media"]] == [m["id"] for m in pending["media"]]
         assert all((m["width"], m["height"]) == (64, 48) for m in detail["media"])
 
+    def test_handled_rows_carry_the_count_by_the_same_rule_as_the_queue(self, cn_tenant, moderator):
+        """「已处理」:隐藏的帖子数它现存的图,官员删除的帖子数与它同一次删除的图,评论为 0。"""
+        author_account, author = soul(cn_tenant, "作者")
+        hidden = post_with_images(author, 3, content="要被隐藏")
+        deleted = post_with_images(author, 2, content="要被删除")
+        text_only = post(author_account, "只有字")
+        author.post(f"{SOCIAL}/posts/{text_only.pk}/comments/", {"content": "评论"}, format="json")
+        from apps.social.models import Comment
+
+        mod.moderate_content(Post.objects.get(pk=hidden["id"]), "HIDE", actor=moderator)
+        mod.moderate_content(Post.objects.get(pk=deleted["id"]), "DELETE", actor=moderator)
+        mod.moderate_content(text_only, "HIDE", actor=moderator)
+        mod.moderate_content(Comment.objects.get(content="评论"), "HIDE", actor=moderator)
+        # 隐藏帖子的一张图被单独删掉:活着的帖子只数未删除的图。
+        PostMedia.objects.filter(post_id=hidden["id"]).order_by("position").first().delete()
+
+        rows = officer_client(moderator).get(f"{MODERATION}/handled/").json()["results"]
+        got = {(r["type"], r["excerpt"]): r["media_count"] for r in rows}
+        assert got == {("POST", "要被隐藏"): 2, ("POST", "要被删除"): 2, ("POST", "只有字"): 0, ("COMMENT", "评论"): 0}
+
     def test_a_text_only_post_has_no_media(self, cn_tenant, moderator):
         author_account, _ = soul(cn_tenant, "作者")
         p = post(author_account, "只有字")

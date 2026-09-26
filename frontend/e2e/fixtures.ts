@@ -274,8 +274,8 @@ export const SOUL_DETAIL = {
 /**
  * 界域 with the topology columns `RealmListSerializer` carries (TOPOLOGY_FIELDS).
  * Values follow backend/apps/actors/mythology/realms.py REALM_TOPOLOGY: the ten
- * courts carry `order`, the Duat carries no `hour` (so /realms draws it as the
- * labelled 示意 line), Greece's two roads carry `fork`.
+ * courts carry `order`; the Duat carries `order` + `fork` (realms/0022), so /realms
+ * draws it as 称心二岔 and not the labelled 示意 line.
  */
 const court = (n: number, code: string) => ({
   id: `cccccccc-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`,
@@ -290,6 +290,20 @@ const court = (n: number, code: string) => ({
   kind: "HALL",
   capacity: null,
 });
+const duat = (n: string, code: string, name_en: string, realm_type: string, tier: number, route: Record<string, unknown>) => ({
+  id: `eeeeeeee-0000-4000-8000-0000000000${n}`,
+  realm_code: code,
+  name_en,
+  civilization: "EGYPTIAN",
+  realm_type,
+  tier,
+  parent_realm: null,
+  is_eternal: false,
+  is_judgment_hall: false,
+  hour: null,
+  fork: null,
+  ...route,
+});
 export const REALMS = [
   { id: "cccccccc-0000-4000-8000-000000000000", realm_code: "DY_00_PURGATORY", name_en: "Holding pen", civilization: "CHINESE", realm_type: "PURGATORY", tier: 1, parent_realm: null, is_eternal: false, order: null, kind: null, capacity: 2 },
   court(1, "DY_COURT_01_QINGUANG"),
@@ -303,8 +317,13 @@ export const REALMS = [
   court(9, "DY_COURT_09_PINGDENG"),
   court(10, "DY_COURT_10_ZHUANLUN"),
   { id: "cccccccc-0000-4000-8000-000000000011", realm_code: "DY_01_HEAVEN", name_en: "First heaven", civilization: "CHINESE", realm_type: "BLISS", tier: 1, parent_realm: null, is_eternal: true, order: null, kind: null, capacity: null },
-  { id: "eeeeeeee-0000-4000-8000-000000000001", realm_code: "EG_DUAT_ENTRY", name_en: "Duat entry", civilization: "EGYPTIAN", realm_type: "NEUTRAL", tier: 1, parent_realm: null, is_eternal: false, is_judgment_hall: false, hour: null },
-  { id: "eeeeeeee-0000-4000-8000-000000000002", realm_code: "EG_HALL_TWO_TRUTHS", name_en: "Hall of Two Truths", civilization: "EGYPTIAN", realm_type: "NEUTRAL", tier: 2, parent_realm: null, is_eternal: false, is_judgment_hall: true, hour: null },
+  // 称心二岔 — order / fork / tier as realms/0022 writes them (REALM_TOPOLOGY's EGYPTIAN part).
+  duat("01", "EG_DUAT_ENTRY", "Gate of Duat", "PURGATORY", 1, { order: 1 }),
+  duat("03", "EG_SEVEN_ARRWT", "The Seven Approaches", "PURGATORY", 2, { order: 2 }),
+  duat("02", "EG_HALL_TWO_TRUTHS", "Hall of Two Truths", "PURGATORY", 3, { order: 3, is_judgment_hall: true }),
+  duat("04", "EG_TWENTYONE_SEBKHET", "The Twenty-One Portals", "PURGATORY", 4, { order: 4, fork: "PASS" }),
+  duat("05", "EG_AARU", "Field of Reeds (Aaru)", "BLISS", 1, { order: 5, fork: "PASS" }),
+  duat("06", "EG_ANNIHILATION", "Second Death", "HELL", 10, { order: 4, fork: "FAIL" }),
 ];
 
 /** GET /realms/occupancy/ — the holding pen at capacity (drawn in the warning colour). */
@@ -864,8 +883,8 @@ export const SENSITIVE_WORDS = [
 
 /** GET `/social-moderation/handled/` — HandledContentSerializer; one hidden post, one deleted comment. */
 export const HANDLED_CONTENT = [
-  { type: "POST", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", author: MODERATION_AUTHOR, excerpt: "判词不公，阎王只听殿司一面之词……", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "测试管理员" }, handled_at: "2026-09-18T05:00:00Z" },
-  { type: "COMMENT", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd04", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd01", author: MODERATION_AUTHOR, excerpt: "你们等着，我还阳之后……", handling: "DELETED", reason: "越界诱导", handled_by: null as { user_id: number; display_name: string } | null, handled_at: "2026-09-18T04:00:00Z" },
+  { type: "POST", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd03", author: MODERATION_AUTHOR, excerpt: "判词不公，阎王只听殿司一面之词……", handling: "HIDDEN", reason: "诽谤官员", handled_by: { user_id: 1, display_name: "测试管理员" }, handled_at: "2026-09-18T05:00:00Z", media_count: 1 },
+  { type: "COMMENT", id: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd04", post: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcd01", author: MODERATION_AUTHOR, excerpt: "你们等着，我还阳之后……", handling: "DELETED", reason: "越界诱导", handled_by: null as { user_id: number; display_name: string } | null, handled_at: "2026-09-18T04:00:00Z", media_count: 0 },
 ];
 
 /** GET `/social-moderation/mutes/`. */

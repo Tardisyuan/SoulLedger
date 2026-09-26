@@ -72,3 +72,38 @@ def test_export_carries_it_and_import_restores_it(clerk_role):
 def test_an_export_from_before_the_field_imports_with_a_blank_description(db):
     import_permissions({"roles": [{"name": "OLD_FILE", "display_name": "旧文件", "scope": "ORG"}]})
     assert Role.objects.get(name="OLD_FILE").description == ""
+
+
+FILE = {"roles": [{"name": "YIN_CLERK", "display_name": "文书殿司", "scope": "ORG", "description": "文件里的说明"}]}
+
+
+@pytest.mark.django_db
+def test_an_overwrite_import_updates_an_existing_roles_display_name_and_description(clerk_role):
+    stats = import_permissions(FILE, overwrite=True)
+    clerk_role.refresh_from_db()
+    assert (clerk_role.display_name, clerk_role.description) == ("文书殿司", "文件里的说明")
+    assert stats["roles"] == 0, "更新不是新建"
+    assert Role.all_objects.filter(name="YIN_CLERK").count() == 1
+
+
+@pytest.mark.django_db
+def test_a_normal_import_leaves_an_existing_role_alone_and_still_creates_missing_ones(clerk_role):
+    data = {"roles": FILE["roles"] + [{"name": "NEW_ONE", "display_name": "新角色", "scope": "ORG"}]}
+    stats = import_permissions(data)
+    clerk_role.refresh_from_db()
+    assert (clerk_role.display_name, clerk_role.description) == ("殿司", "")
+    assert stats["roles"] == 1 and Role.objects.get(name="NEW_ONE").display_name == "新角色"
+
+
+@pytest.mark.django_db
+def test_an_overwrite_import_relabels_admin_but_keeps_its_grants(db):
+    from apps.perm.models import Permission, RolePermission
+
+    admin, _ = Role.objects.get_or_create(name="ADMIN", defaults={"display_name": "管理员"})
+    perm, _ = Permission.objects.get_or_create(codename="perm.manage", defaults={"name": "权限管理", "category": "perm"})
+    RolePermission.objects.get_or_create(role=admin, permission=perm)
+    import_permissions({"roles": [{"name": "ADMIN", "display_name": "阎君", "scope": "ORG", "description": "d"}]},
+                       overwrite=True)
+    admin.refresh_from_db()
+    assert (admin.display_name, admin.description) == ("阎君", "d")
+    assert RolePermission.objects.filter(role=admin, permission=perm).exists(), "文件里没有 ADMIN 的授权行,也不许剥掉"

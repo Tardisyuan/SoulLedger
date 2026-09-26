@@ -82,6 +82,12 @@ export function stationStates(path: readonly SoulPathEntry[] | null | undefined)
 const REGION_ORDER: FunnelRegion[] = ["INFERNO", "PURGATORIO", "PARADISO"];
 const FORK_ORDER: Fork[] = ["LEFT", "RIGHT"];
 const WEIGHING_ROADS: WeighingRoad[] = ["PASS", "FAIL"];
+/** 称心二岔里走进「不是地方」的那条路。拓扑的虚线终点与界域表的「不计」都读它。 */
+const TERMINAL_ROAD: WeighingRoad = "FAIL";
+
+/** A realm on the terminal road: no place, so nobody is held there — its occupancy is not counted. */
+export const isTerminalRealm = (realm: Pick<Realm, "civilization" | "fork">): boolean =>
+  CIVILIZATION_SHAPE[realm.civilization] === "fork_two" && realm.fork === TERMINAL_ROAD;
 
 const isSet = <T>(v: T | null | undefined): v is T => v !== null && v !== undefined;
 
@@ -178,7 +184,7 @@ function placeShape(
       const trunk = byOrder(own.filter((r) => !isSet(r.fork)));
       const roads = WEIGHING_ROADS.map((fork) => ({
         fork,
-        terminal: fork === "FAIL",
+        terminal: fork === TERMINAL_ROAD,
         stations: byOrder(own.filter((r) => r.fork === fork)).map(station),
       })).filter((road) => road.stations.length > 0);
       // No trunk (order missing) or no road out of the weighing (fork missing): not this shape.
