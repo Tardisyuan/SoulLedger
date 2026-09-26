@@ -835,13 +835,16 @@ def reset_password_request(request):
 
     # Check if user exists (but always return success for security)
     #
-    # `.filter().count()`, not `.get()`. `User.email` has no unique constraint
-    # (it is `AbstractUser`'s, and only `username` is unique), so `.get()` raises
-    # `MultipleObjectsReturned` on a duplicate — an uncaught 500. Registration is
-    # `AllowAny`, so anyone could create a second account on someone else's
-    # address and take that address's password reset offline permanently. Every
-    # write path now refuses a duplicate (BP-04), but rows predating that are
-    # still possible, so both counts stay handled here.
+    # `.filter().count()`, not `.get()`. Since authentication 0016 `User.email`
+    # is unique among live rows (case-insensitively), and `User.objects` sees only
+    # live rows, so more than one match should no longer happen; the count is
+    # kept because a `.get()` that ever did meet two would be an uncaught 500.
+    #
+    # A soul's address gets here only through `sync_login_email`
+    # (apps/soul_accounts/services.py), which copies the soul's contact email to
+    # its current account and skips an address another account already holds. A
+    # family sharing one contact address therefore resets through the first
+    # account that got it; the others are flagged `email_not_synced` for the hall.
     #
     # Zero and many are both answered with the same success sentence as one: this
     # endpoint deliberately does not disclose whether an address is registered,
@@ -960,8 +963,8 @@ def set_new_password(request):
 
     # Get user
     #
-    # `MultipleObjectsReturned` must be caught alongside `DoesNotExist`: `email`
-    # carries no unique constraint (see reset_password_request above). Refusing
+    # `MultipleObjectsReturned` stays caught alongside `DoesNotExist` for the
+    # same reason as the count in reset_password_request above. Refusing
     # is the only safe answer — with two accounts on one address there is no way
     # to know whose password this code was meant to change, and picking `.first()`
     # would hand one user's account to whoever else registered the address.

@@ -17464,6 +17464,11 @@ components:
         * `pending` - 待执行
         * `executing` - 执行中
         * `expired` - 期满
+    EmailNotSyncedEnum:
+      enum:
+      - taken
+      type: string
+      description: '* `taken` - taken'
     ErrorResponse:
       type: object
       description: |-
@@ -18199,6 +18204,12 @@ components:
           type: string
           readOnly: true
           nullable: true
+        email_not_synced:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EmailNotSyncedEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - account
       - attempts
@@ -18207,6 +18218,7 @@ components:
       - cycle
       - delivered_at
       - delivered_by
+      - email_not_synced
       - expires_at
       - id
       - last_error
@@ -26605,11 +26617,18 @@ components:
         contact_phone_masked:
           type: string
           readOnly: true
+        email_not_synced:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EmailNotSyncedEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - contact_email_masked
       - contact_phone_masked
       - created_at
       - cycle
+      - email_not_synced
       - id
       - initial_password_expires_at
       - last_login
