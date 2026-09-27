@@ -2790,10 +2790,10 @@
       "entered": "You have entered {{civ}}",
       "skip": "Tap to skip",
       "realm": {
-        "CHINESE": "the Chinese Diyu",
+        "CHINESE": "Chinese Diyu",
         "EUROPEAN": "Heaven and Hell",
         "EGYPTIAN": "the Duat",
-        "GREEK": "the Greek Underworld"
+        "GREEK": "Greek Underworld"
       }
     },
     "settings": {
