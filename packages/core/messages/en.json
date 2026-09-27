@@ -3089,6 +3089,64 @@
           "too_many_pending": "Too many unposted images: post or remove some first"
         }
       }
+    },
+    "sentence": {
+      "section_title": "My sentence",
+      "all": "All",
+      "station": "Station {{n}}",
+      "progress": "Station {{cur}} of {{total}}",
+      "realm": "Realm",
+      "term": "Term",
+      "term_years": "{{years}} years",
+      "term_eternal": "Eternal",
+      "span": "From — to",
+      "home_civ": "Home",
+      "away_civ": "Residing",
+      "state": {
+        "pending": "Not started",
+        "active": "Serving",
+        "waiting": "Term served, still here",
+        "done": "Completed",
+        "eternal": "Eternal",
+        "pardoned": "Pardoned"
+      },
+      "waiting_why": "This term is served. A judgment at home is still open; you move once it closes.",
+      "eternal_title": "The term is eternal",
+      "eternal_body": "This station has no end, and none follows it.",
+      "eternal_no_rebirth": "Those under an eternal term do not apply for rebirth.",
+      "pardoned_title": "The remaining term is pardoned",
+      "pardoned_body": "The remaining stations are not carried out and count as served.",
+      "all_done_title": "Your sentence is fully served",
+      "all_done_body": "All three stations are complete. You may apply for rebirth now.",
+      "go_apply": "Apply for rebirth",
+      "next_not_started": "The next station has not begun",
+      "next_not_started_body": "You wait at home. Nothing is required of you before you move.",
+      "amended_tag": "New",
+      "amended_note": "Term changed from {{old}} to {{new}}",
+      "empty": "No sentence yet. It is entered here once judgment ends.",
+      "loading": "Loading…",
+      "error": "This part could not be loaded. The rest is shown as usual.",
+      "blocked_title": "Your sentence is not yet served",
+      "blocked_body": "You may apply for rebirth once all {{total}} stations are complete.",
+      "blocked_link": "See my sentence",
+      "push": {
+        "completed": {
+          "title": "Sentence fully served",
+          "body": "Your sentence is fully served. Open Soul Ledger to see it."
+        },
+        "waiting": {
+          "title": "A term is served; you stay for now",
+          "body": "One of your terms is served. Open Soul Ledger to see it."
+        },
+        "amended": {
+          "title": "Your sentence changed",
+          "body": "Your sentence plan has changed. Open Soul Ledger to see it."
+        },
+        "pardoned": {
+          "title": "Remaining term pardoned",
+          "body": "Part of your term was pardoned. Open Soul Ledger to see it."
+        }
+      }
     }
   },
   "soul_push": {
@@ -3125,20 +3183,20 @@
       "body": "You have returned to your home civilization. Open Soul Ledger to see it."
     },
     "sentence_completed": {
-      "title": "Sentence served",
-      "body": "You have served your whole sentence and may apply for rebirth. Open Soul Ledger to see it."
+      "title": "Sentence fully served",
+      "body": "Your sentence is fully served. Open Soul Ledger to see it."
     },
     "sentence_waiting": {
-      "title": "Held after serving",
-      "body": "You have served this stop and wait for a judgment to close before returning. Open Soul Ledger to see it."
+      "title": "A term is served; you stay for now",
+      "body": "One of your terms is served. Open Soul Ledger to see it."
     },
     "sentence_amended": {
-      "title": "Sentence plan changed",
+      "title": "Your sentence changed",
       "body": "Your sentence plan has changed. Open Soul Ledger to see it."
     },
     "sentence_pardoned": {
-      "title": "Sentence plan cancelled",
-      "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."
+      "title": "Remaining term pardoned",
+      "body": "Part of your term was pardoned. Open Soul Ledger to see it."
     },
     "chat_message": {
       "title": "New letter",

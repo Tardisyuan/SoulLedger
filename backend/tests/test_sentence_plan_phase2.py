@@ -273,7 +273,7 @@ def test_each_served_stop_pushes_once_and_completion_says_rebirth_is_open(cn, eg
     keys = set(PushDelivery.objects.filter(kind="disposition_executed").values_list("dedupe_key", flat=True))
     assert keys == {f"node:{plan.node(p, 1).pk}:done", f"node:{plan.node(p, 2).pk}:done"}
     completed = PushDelivery.objects.get(kind="sentence_completed")
-    assert (completed.title, completed.data) == ("受刑完毕", {"screen": "Life", "kind": "sentence_completed"})
+    assert (completed.title, completed.data) == ("受刑已全部服完", {"screen": "Life", "kind": "sentence_completed"})
 
 
 def test_a_waiting_soul_is_told_it_waits_and_nothing_about_the_case(cn, eg, enqueued):  # noqa: F811

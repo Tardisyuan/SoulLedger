@@ -6214,6 +6214,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/sentence-plan/:
+    get:
+      operationId: v1_me_sentence_plan_retrieve
+      description: 本人本世的受刑计划(App「我的受刑」)。只读;从 `self.account` 出发,不接受任何 id。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeSentencePlan'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/me/social/comments/{comment_id}/:
     delete:
       operationId: v1_me_social_comment_delete
@@ -20400,6 +20421,67 @@ components:
       - rebirth_form
       - reincarnated_at
       - target_realm
+    MeSentencePlan:
+      type: object
+      description: 本人本世的受刑计划。没有计划时 `state=none`、`stations=[]`。
+      properties:
+        state:
+          $ref: '#/components/schemas/SoulSentencePlanStateEnum'
+        rebirth_open:
+          type: boolean
+        stations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeSentenceStation'
+      required:
+      - rebirth_open
+      - state
+      - stations
+    MeSentenceStation:
+      type: object
+      description: |-
+        受刑计划的一站(App「我的受刑」1a):九档节点状态已合并成灵魂看的五档 + 赦免(`apps/sentence_plan/soul_view.py`)。
+        **没有** reason、disposition / dispatch / request 的 id(Q10)。
+      properties:
+        id:
+          type: string
+          format: uuid
+        n:
+          type: integer
+        status:
+          $ref: '#/components/schemas/SoulSentenceStationStatusEnum'
+        is_home:
+          type: boolean
+        civilization:
+          type: string
+        realm:
+          allOf:
+          - $ref: '#/components/schemas/MeRealm'
+          nullable: true
+        sentence_years:
+          type: integer
+          nullable: true
+        is_eternal:
+          type: boolean
+        started_on:
+          type: string
+          format: date
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - civilization
+      - ends_on
+      - id
+      - is_eternal
+      - is_home
+      - n
+      - realm
+      - sentence_years
+      - started_on
+      - status
     MeTenant:
       type: object
       properties:
@@ -27506,6 +27588,40 @@ components:
       - is_active
       - is_following
       - user_id
+    SoulSentencePlanStateEnum:
+      enum:
+      - none
+      - serving
+      - between
+      - waiting
+      - eternal
+      - pardoned
+      - completed
+      type: string
+      description: |-
+        * `none` - none
+        * `serving` - serving
+        * `between` - between
+        * `waiting` - waiting
+        * `eternal` - eternal
+        * `pardoned` - pardoned
+        * `completed` - completed
+    SoulSentenceStationStatusEnum:
+      enum:
+      - pending
+      - active
+      - waiting
+      - done
+      - eternal
+      - pardoned
+      type: string
+      description: |-
+        * `pending` - pending
+        * `active` - active
+        * `waiting` - waiting
+        * `done` - done
+        * `eternal` - eternal
+        * `pardoned` - pardoned
     SoulSocialError:
       type: object
       properties:

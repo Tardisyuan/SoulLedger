@@ -140,10 +140,13 @@ def _sentence_rule(event_type, payload):
         return ("judgment", "disposition_executed", f"node:{node_id}:done", life)
     if event_type == "SENTENCE_NODE_WAITING":
         node_id = payload.get("node_id")
-        return ("residence", "sentence_waiting", f"node:{node_id}:waiting", life) if node_id else None
+        return ("residence", "sentence_waiting", f"node:{node_id}:waiting", {**life, "node_ids": [node_id]}) \
+            if node_id else None
     if event_type == "SENTENCE_PLAN_AMENDED":
         key = payload.get("_event_id")
-        return ("judgment", "sentence_amended", f"plan-amended:{key}", life) if key else None
+        # 落地时标「新」的站(App「我的受刑」1d)。只有 id,不说加在哪、为什么。
+        data = {**life, "node_ids": list(payload.get("added_node_ids") or [])}
+        return ("judgment", "sentence_amended", f"plan-amended:{key}", data) if key else None
     plan_id = payload.get("sentence_plan_id")
     if not plan_id or not payload.get("rebirth_open"):
         return None
