@@ -18,13 +18,15 @@ from rest_framework_simplejwt.exceptions import TokenError
 from apps.soul_accounts import rebirth
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.authentication import SoulJWTAuthentication, SoulRefreshToken
-from apps.soul_accounts.models import RebirthApplication
+from apps.soul_accounts.models import RebirthApplication, SoulAccount
 from apps.soul_accounts.serializers import (
     ChangePasswordRequestSerializer,
     MeLifeSerializer,
     MeProfileSerializer,
     MeRebirthApplicationListSerializer,
     MeRebirthApplicationSerializer,
+    MeWelcomedRequestSerializer,
+    MeWelcomedSerializer,
     RebirthAppealSerializer,
     RebirthApplicationCreateSerializer,
     SoulErrorSerializer,
@@ -173,6 +175,31 @@ class MeView(SoulAPIView):
     def get(self, request):
         account = self.account
         return Response(MeProfileSerializer(account.soul, context={"account": account}).data)
+
+
+class MeWelcomedView(SoulAPIView):
+    """记下「欢迎过场已为这个文明播过」(App 设计「文明气质」1b)。幂等:末项已是它就不写。
+
+    已记过的文明被移到末尾而不是重复追加 —— 末项是「上一次欢迎进入的文明」,App 据此
+    判断「回归原籍」要不要照播一次;列表本身仍是集合。只写本人这一行(`self.account`),
+    行锁挡两台设备同时写时的丢更新。"""
+
+    @extend_schema(request=MeWelcomedRequestSerializer,
+                   responses={200: MeWelcomedSerializer, 400: OpenApiResponse(description="字段校验失败"),
+                              403: SoulErrorSerializer})
+    def post(self, request):
+        from django.db import transaction
+
+        body = MeWelcomedRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        civilization = body.validated_data["civilization"]
+        with transaction.atomic():
+            account = SoulAccount.objects.select_for_update().get(pk=self.account.pk)
+            welcomed = list(account.welcomed_civilizations)
+            if welcomed[-1:] != [civilization]:
+                account.welcomed_civilizations = [c for c in welcomed if c != civilization] + [civilization]
+                account.save(update_fields=["welcomed_civilizations"])
+        return Response({"welcomed_civilizations": account.welcomed_civilizations})
 
 
 class MePasswordView(SoulAPIView):
