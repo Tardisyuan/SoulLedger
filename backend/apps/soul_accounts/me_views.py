@@ -25,6 +25,7 @@ from apps.soul_accounts.serializers import (
     MeProfileSerializer,
     MeRebirthApplicationListSerializer,
     MeRebirthApplicationSerializer,
+    MeSentencePlanSerializer,
     MeWelcomedRequestSerializer,
     MeWelcomedSerializer,
     RebirthAppealSerializer,
@@ -271,6 +272,16 @@ class MePastLivesView(SoulAPIView):
         account = self.account
         return Response(MeLifeSerializer(build_lives(account, past=True), many=True,
                                          context={"account": account}).data)
+
+
+class MeSentencePlanView(SoulAPIView):
+    """本人本世的受刑计划(App「我的受刑」)。只读;从 `self.account` 出发,不接受任何 id。"""
+
+    @extend_schema(responses={200: MeSentencePlanSerializer, 403: SoulErrorSerializer})
+    def get(self, request):
+        from apps.sentence_plan.soul_view import soul_plan
+
+        return Response(MeSentencePlanSerializer(soul_plan(self.account)).data)
 
 
 class MeRebirthApplicationsView(SoulAPIView):

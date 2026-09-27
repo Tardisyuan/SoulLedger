@@ -27,6 +27,7 @@ me_urlpatterns = [
     path("welcomed/", me_views.MeWelcomedView.as_view(), name="me-welcomed"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
+    path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),
     path("rebirth-applications/", me_views.MeRebirthApplicationsView.as_view(), name="me-rebirth-applications"),
     path("rebirth-applications/<uuid:application_id>/", me_views.MeRebirthApplicationDetailView.as_view(),
          name="me-rebirth-application"),

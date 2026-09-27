@@ -19,6 +19,8 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./screens/sentence";
+
 /** The Expo token this device last registered — what sign-out must unregister. */
 export const PUSH_TOKEN_KEY = "soul_push_token";
 /** The permission primer is offered once; "not now" does not call the system API. */
@@ -135,7 +137,11 @@ export function installNotificationHandler(): void {
   });
 }
 
-export type Landing = { screen: "ApplicationDetail"; id: string } | { screen: "Conversation"; id: string } | { screen: "Life" };
+export type Landing =
+  | { screen: "ApplicationDetail"; id: string }
+  | { screen: "Conversation"; id: string }
+  | { screen: "Life" }
+  | { screen: "Sentence"; landing: SentenceLanding };
 
 /** An application id as the server sends it (a UUID); anything else is not navigated to. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -143,11 +149,19 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Where a tapped notification lands, from its `data` — or `null`: just open the app. */
 export function landingOf(data: unknown): Landing | null {
   if (!data || typeof data !== "object") return null;
-  const { screen, application_id: id, conversation_id: conversation } = data as Record<string, unknown>;
+  const { screen, application_id: id, conversation_id: conversation, kind, node_ids: nodes } = data as Record<string, unknown>;
   if (screen === "ApplicationDetail") return typeof id === "string" && ID.test(id) ? { screen, id } : { screen: "Life" };
   // Reserved: the server sends no chat push yet (no Synapse → push path; see the round's report).
   // A malformed id opens the app and no more — a letter is not worth guessing at.
   if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
-  if (screen === "Life") return { screen };
+  if (screen === "Life") {
+    // 受刑 1d: the four sentence pushes say `screen: Life` (an older app still lands there) and are
+    // told apart by `kind`; `node_ids` names the stations to mark 「新」. A malformed id is dropped, not guessed at.
+    if ((SENTENCE_PUSH_KINDS as readonly unknown[]).includes(kind)) {
+      const nodeIds = Array.isArray(nodes) ? nodes.filter((n): n is string => typeof n === "string" && ID.test(n)) : [];
+      return { screen: "Sentence", landing: { kind: kind as SentencePushKind, nodeIds } };
+    }
+    return { screen };
+  }
   return null;
 }

@@ -2837,6 +2837,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/sentence-plan/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本人本世的受刑计划(App「我的受刑」)。只读;从 `self.account` 出发,不接受任何 id。 */
+        get: operations["v1_me_sentence_plan_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/social/comments/{comment_id}/": {
         parameters: {
             query?: never;
@@ -9265,6 +9282,31 @@ export interface components {
             /** Format: date-time */
             reincarnated_at: string;
         };
+        /** @description 本人本世的受刑计划。没有计划时 `state=none`、`stations=[]`。 */
+        MeSentencePlan: {
+            state: components["schemas"]["SoulSentencePlanStateEnum"];
+            rebirth_open: boolean;
+            stations: components["schemas"]["MeSentenceStation"][];
+        };
+        /**
+         * @description 受刑计划的一站(App「我的受刑」1a):九档节点状态已合并成灵魂看的五档 + 赦免(`apps/sentence_plan/soul_view.py`)。
+         *     **没有** reason、disposition / dispatch / request 的 id(Q10)。
+         */
+        MeSentenceStation: {
+            /** Format: uuid */
+            id: string;
+            n: number;
+            status: components["schemas"]["SoulSentenceStationStatusEnum"];
+            is_home: boolean;
+            civilization: string;
+            realm: components["schemas"]["MeRealm"] | null;
+            sentence_years: number | null;
+            is_eternal: boolean;
+            /** Format: date */
+            started_on: string | null;
+            /** Format: date */
+            ends_on: string | null;
+        };
         MeTenant: {
             code: string;
             display_name: string;
@@ -12764,6 +12806,27 @@ export interface components {
             readonly is_active: boolean;
             is_following: boolean;
         };
+        /**
+         * @description * `none` - none
+         *     * `serving` - serving
+         *     * `between` - between
+         *     * `waiting` - waiting
+         *     * `eternal` - eternal
+         *     * `pardoned` - pardoned
+         *     * `completed` - completed
+         * @enum {string}
+         */
+        SoulSentencePlanStateEnum: "none" | "serving" | "between" | "waiting" | "eternal" | "pardoned" | "completed";
+        /**
+         * @description * `pending` - pending
+         *     * `active` - active
+         *     * `waiting` - waiting
+         *     * `done` - done
+         *     * `eternal` - eternal
+         *     * `pardoned` - pardoned
+         * @enum {string}
+         */
+        SoulSentenceStationStatusEnum: "pending" | "active" | "waiting" | "done" | "eternal" | "pardoned";
         SoulSocialError: {
             detail: string;
             code: string;
@@ -18229,6 +18292,33 @@ export interface operations {
                 };
             };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_sentence_plan_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeSentencePlan"];
+                };
+            };
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

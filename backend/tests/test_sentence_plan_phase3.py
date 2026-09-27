@@ -508,7 +508,7 @@ def test_cancelling_pushes_the_pardon_not_the_completion(cn, eg, enqueued):  # n
     PushDelivery.objects.all().delete()
     assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p, reason="SECRET-REASON").status_code == 200
     [push] = PushDelivery.objects.filter(kind__startswith="sentence_")
-    assert (push.kind, push.title) == ("sentence_pardoned", "受刑计划已撤销")
+    assert (push.kind, push.title) == ("sentence_pardoned", "剩余刑期已赦免")
     assert "SECRET" not in push.body and "SECRET" not in push.title
 
 

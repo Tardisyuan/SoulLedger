@@ -117,6 +117,52 @@ export const CORNER: Record<CivKey, string> = {
   gr: "M1 13V1H13M4 10V4H9V7H7",
 };
 
+/**
+ * A journey node (1g, viewBox 24): 殿 / 圈 / 门 / 台阶 — the only thing that
+ * changes by civilization on a line of stops. The sentence plan draws each
+ * station in ITS civilization's shape (受刑 handoff 1c).
+ */
+export const NODE: Record<CivKey, string> = {
+  neutral: "M2 2H22V22H2Z",
+  cn: "M0 6H24M3 2H21M4 6V24H20V6",
+  eu: "M12 1A11 11 0 1 1 11.9 1M12 6A6 6 0 1 1 11.9 6",
+  eg: "M3 24V4M21 24V4M0 4H24M0 1H24",
+  gr: "M0 24H24M4 24V16H20V24M8 16V8H16V16",
+};
+
+/**
+ * One stop on a line (1g): `reached` = filled (done), `current` = thick
+ * stroke, otherwise a thin stroke. The caller picks the stroke colour — the
+ * theme's mark for anything recorded, hair2 for not reached.
+ */
+export function Node({
+  civ,
+  size,
+  stroke,
+  filled,
+  current,
+  testID,
+}: {
+  civ: CivKey;
+  size: number;
+  stroke: string;
+  filled?: boolean;
+  current?: boolean;
+  testID?: string;
+}) {
+  return (
+    <Svg testID={testID} width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ overflow: "visible" }}>
+      <Path
+        d={NODE[civ]}
+        stroke={stroke}
+        strokeWidth={current ? 3.2 : filled ? 2.4 : 1.6}
+        fill={filled ? stroke : "none"}
+        fillOpacity={filled ? 0.35 : 0}
+      />
+    </Svg>
+  );
+}
+
 /** The civilization's illustration: full at 72 (stroke 1.1), compact at 24 (stroke 2.4); the welcome draws it at 96, 0.9. */
 export function Hero({
   civ,

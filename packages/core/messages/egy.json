@@ -3089,6 +3089,64 @@
           "too_many_pending": "Tut Em Smen Er Pehwy: Hab Medu Er Fekh Tut"
         }
       }
+    },
+    "sentence": {
+      "section_title": "Shepet-I",
+      "all": "Neb",
+      "station": "Sekhet-Shepet {{n}}",
+      "progress": "Sekhet-Shepet {{cur}} Em {{total}}",
+      "realm": "Ta",
+      "term": "Renpet",
+      "term_years": "Renpet {{years}}",
+      "term_eternal": "Djet",
+      "span": "Tepy — Pehwy",
+      "home_civ": "Taui Tepy",
+      "away_civ": "Hemes",
+      "state": {
+        "pending": "Nen Tepy Djer",
+        "active": "Em Shepet",
+        "waiting": "Renpet Khetem, Ahau",
+        "done": "Khetem Seth",
+        "eternal": "Djet",
+        "pardoned": "Nedj Seth"
+      },
+      "waiting_why": "Renpet Sekhet Pen Khetem Seth. Wedja Em Taui Tepy Nen Khetem Djer; Er Khet Khetem, Shem.",
+      "eternal_title": "Renpet Djet",
+      "eternal_body": "Sekhet-Shepet Pen Nen Pehwy; Nen Sekhet Em Khet.",
+      "eternal_no_rebirth": "Em Renpet Djet: Nen Dbh Wehem Mesut.",
+      "pardoned_title": "Renpet Sepy Nedj Seth",
+      "pardoned_body": "Sekhet-Shepet Sepy Nen Iri; Khetem Mi Seth.",
+      "all_done_title": "Shepet Wetep-Neb Seth",
+      "all_done_body": "Sekhet-Shepet Neb Khetem Seth. Dbh Wehem Mesut Emu.",
+      "go_apply": "Dbh Wehem Mesut",
+      "next_not_started": "Sekhet-Shepet Em Khet Nen Tepy Djer",
+      "next_not_started_body": "Ahau Em Taui Tepy. Nen Iri Er Tepy Shem.",
+      "amended_tag": "Renpi",
+      "amended_note": "Renpet Khemen: {{old}} Er {{new}}",
+      "empty": "Nen Shepet Djer. Sesh Em Khet Wedja Khetem.",
+      "loading": "Em Ini…",
+      "error": "Nen Ini Sekhet Pen. Ky Maa Mi Tepy.",
+      "blocked_title": "Shepet Nen Khetem Djer",
+      "blocked_body": "Er Khet Sekhet-Shepet {{total}} Khetem: Dbh Wehem Mesut.",
+      "blocked_link": "Maa Shepet-I",
+      "push": {
+        "completed": {
+          "title": "Shepet Wetep-Neb Seth",
+          "body": "Shepet Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."
+        },
+        "waiting": {
+          "title": "Renpet Khetem; Ahau",
+          "body": "Renpet Wa Khetem Seth. Wen Medjat Ba Er Maa."
+        },
+        "amended": {
+          "title": "Khemen-Shepet",
+          "body": "Shepet Ek Khemen Seth. Wen Medjat Ba Er Maa."
+        },
+        "pardoned": {
+          "title": "Renpet Sepy Nedj Seth",
+          "body": "Renpet Ek Nedj Seth. Wen Medjat Ba Er Maa."
+        }
+      }
     }
   },
   "soul_push": {
@@ -3125,20 +3183,20 @@
       "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."
     },
     "sentence_completed": {
-      "title": "Wetep Neb Seth",
-      "body": "Wetep Ek Neb Seth; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."
+      "title": "Shepet Wetep-Neb Seth",
+      "body": "Shepet Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."
     },
     "sentence_waiting": {
-      "title": "Hemes Smen",
-      "body": "Sekhet Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."
+      "title": "Renpet Khetem; Ahau",
+      "body": "Renpet Wa Khetem Seth. Wen Medjat Ba Er Maa."
     },
     "sentence_amended": {
-      "title": "Wetep Khemen Seth",
-      "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."
+      "title": "Khemen-Shepet",
+      "body": "Shepet Ek Khemen Seth. Wen Medjat Ba Er Maa."
     },
     "sentence_pardoned": {
-      "title": "Wetep Sehen Seth",
-      "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."
+      "title": "Renpet Sepy Nedj Seth",
+      "body": "Renpet Ek Nedj Seth. Wen Medjat Ba Er Maa."
     },
     "chat_message": {
       "title": "Shemes Renpi",

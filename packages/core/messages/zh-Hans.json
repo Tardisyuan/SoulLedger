@@ -3089,6 +3089,64 @@
           "too_many_pending": "未发出的图片太多，先发帖或移除一些"
         }
       }
+    },
+    "sentence": {
+      "section_title": "我的受刑",
+      "all": "全部",
+      "station": "站 {{n}}",
+      "progress": "第 {{cur}} / {{total}} 站",
+      "realm": "界域",
+      "term": "刑期",
+      "term_years": "{{years}} 年",
+      "term_eternal": "永久",
+      "span": "起止",
+      "home_civ": "原属",
+      "away_civ": "暂居",
+      "state": {
+        "pending": "未开始",
+        "active": "受刑中",
+        "waiting": "刑满暂留",
+        "done": "已完成",
+        "eternal": "永久",
+        "pardoned": "已赦免"
+      },
+      "waiting_why": "这一站的刑期已满。原属地尚有审判未结，结案后才动身。",
+      "eternal_title": "刑期永久",
+      "eternal_body": "这一站没有尽期，此后不再有下一站。",
+      "eternal_no_rebirth": "刑期永久者不申请转生。",
+      "pardoned_title": "剩余刑期已赦免",
+      "pardoned_body": "余下的站不再执行，视同服完。",
+      "all_done_title": "受刑已全部服完",
+      "all_done_body": "三站全部完成。现在可以申请转生。",
+      "go_apply": "去申请转生",
+      "next_not_started": "下一站尚未开始",
+      "next_not_started_body": "你在原属地等待。动身之前无须做什么。",
+      "amended_tag": "新",
+      "amended_note": "刑期由 {{old}} 改为 {{new}}",
+      "empty": "尚未定下受刑。审判结束后此处入簿。",
+      "loading": "加载中…",
+      "error": "这一段没取到。其余部分照常显示。",
+      "blocked_title": "受刑尚未服完",
+      "blocked_body": "全部 {{total}} 站完成之后才能申请转生。",
+      "blocked_link": "看我的受刑",
+      "push": {
+        "completed": {
+          "title": "受刑已全部服完",
+          "body": "你的受刑已全部服完，打开灵魂簿查看。"
+        },
+        "waiting": {
+          "title": "一站刑满，暂留原地",
+          "body": "你有一站刑期已满，打开灵魂簿查看。"
+        },
+        "amended": {
+          "title": "受刑计划有变动",
+          "body": "你的受刑计划有变动，打开灵魂簿查看。"
+        },
+        "pardoned": {
+          "title": "剩余刑期已赦免",
+          "body": "你有刑期获赦，打开灵魂簿查看。"
+        }
+      }
     }
   },
   "soul_push": {
@@ -3125,20 +3183,20 @@
       "body": "你已回归原属文明,打开灵魂簿查看。"
     },
     "sentence_completed": {
-      "title": "受刑完毕",
-      "body": "你的受刑已全部完毕,可以申请转生,打开灵魂簿查看。"
+      "title": "受刑已全部服完",
+      "body": "你的受刑已全部服完，打开灵魂簿查看。"
     },
     "sentence_waiting": {
-      "title": "刑满暂留",
-      "body": "本站刑满,等待审判结案后回归,打开灵魂簿查看。"
+      "title": "一站刑满，暂留原地",
+      "body": "你有一站刑期已满，打开灵魂簿查看。"
     },
     "sentence_amended": {
-      "title": "受刑计划有变更",
-      "body": "你的受刑计划有变更,打开灵魂簿查看。"
+      "title": "受刑计划有变动",
+      "body": "你的受刑计划有变动，打开灵魂簿查看。"
     },
     "sentence_pardoned": {
-      "title": "受刑计划已撤销",
-      "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"
+      "title": "剩余刑期已赦免",
+      "body": "你有刑期获赦，打开灵魂簿查看。"
     },
     "chat_message": {
       "title": "新书信",
