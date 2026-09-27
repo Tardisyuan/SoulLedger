@@ -609,3 +609,11 @@ The menu and permission system design draws on
 [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
 
 Maintainer: Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
+
+---
+
+## License
+
+[Apache-2.0](LICENSE). Third-party notices are in [`NOTICE`](NOTICE): the Noto Serif SC
+subset bundled with the app is under the SIL OFL-1.1, full text in
+[`mobile/assets/fonts/OFL.txt`](mobile/assets/fonts/OFL.txt).
