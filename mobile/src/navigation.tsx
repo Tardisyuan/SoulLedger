@@ -41,6 +41,7 @@ import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen } from "./screens/life";
+import { SentenceScreen } from "./screens/sentence";
 import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
 import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, SoulProfileScreen } from "./screens/circlePeople";
 import { ConversationScreen } from "./screens/conversation";
@@ -128,6 +129,10 @@ function Conversation({ route }: NativeStackScreenProps<AppStackParams, "Convers
   return <ConversationScreen id={route.params.id} landed={route.params.landed} />;
 }
 
+function Sentence({ route }: NativeStackScreenProps<AppStackParams, "Sentence">) {
+  return <SentenceScreen landing={route.params?.landing} />;
+}
+
 function CirclePost({ route }: NativeStackScreenProps<AppStackParams, "CirclePost">) {
   return <PostScreen id={route.params.id} />;
 }
@@ -209,6 +214,10 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
     pending.current = null;
     if (landing.screen === "ApplicationDetail") navigationRef.navigate("ApplicationDetail", { id: landing.id, landed: true });
     else if (landing.screen === "Conversation") navigationRef.navigate("Conversation", { id: landing.id, landed: true });
+    // 受刑 1d: completion lands on the life page's section (the new 「可申请转生」 row is there); the rest on the full list.
+    else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
+      navigationRef.navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
+    else if (landing.screen === "Sentence") navigationRef.navigate("Sentence", { landing: landing.landing });
     else navigationRef.navigate("Tabs", { screen: "Life" });
   }, [arrived, signedIn, ready]);
 
@@ -325,6 +334,13 @@ export function RootNavigator() {
               component={CircleSearchScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.circle.search.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="Sentence"
+              component={Sentence}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.sentence.section_title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen

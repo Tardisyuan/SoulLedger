@@ -1,10 +1,10 @@
 import { soulApi, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
-import { useNavigation, type NavigationProp } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
-import { useContext, useEffect, useReducer, useState } from "react";
+import { useCallback, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
@@ -38,7 +38,8 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams, LifeParams } from "./applications";
+import { SentenceSection, useSentencePlan } from "./sentence";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -47,7 +48,7 @@ import type { AppStackParams } from "./applications";
  */
 const SOUL_STATES = ["soul_app", "soul_states"].join(".");
 
-function realmName(realm: { name_zh: string; name_en: string; name_local: string }, locale: Locale): string {
+export function realmName(realm: { name_zh: string; name_en: string; name_local: string }, locale: Locale): string {
   return (locale === "zh-Hans" ? realm.name_zh : realm.name_en) || realm.name_local;
 }
 
@@ -117,8 +118,11 @@ export function LifeSections({
   onToggle,
   onOpenApplication,
   lex,
+  sentence,
 }: {
   life: MeLife;
+  /** 受刑 1b: the current life's sentence section, between judgments and dispositions. Past lives have none. */
+  sentence?: ReactNode;
   /** The lexicon: the soul's HOME civilization. */
   lex: CivKey;
   sealed?: boolean;
@@ -171,6 +175,7 @@ export function LifeSections({
           <Empty text={tr("soul_app.life.no_judgments")} />
         )}
       </Section>
+      {sentence}
       <Section title={tr("soul_app.life.dispositions")} count={count(life.dispositions.length)} {...section("dispositions")}>
         {life.dispositions.length ? (
           life.dispositions.map((d, i) => (
@@ -404,6 +409,15 @@ export function MyLifeScreen() {
   const { t, locale } = useI18n();
   const { state, refreshProfile } = useSession();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
+  // A sentence push landed here (受刑 1d): highlighted until the page is left, then forgotten —
+  // the param is the whole record, nothing is stored.
+  const landing = useRoute<RouteProp<{ Life: LifeParams }, "Life">>().params?.sentenceLanding;
+  useFocusEffect(
+    useCallback(() => {
+      if (!landing) return;
+      return () => (navigation.setParams as (p: LifeParams) => void)({ sentenceLanding: undefined });
+    }, [landing, navigation])
+  );
   const life = useRemote(soulApi.life);
   const residence = useResidence();
   useReloadOnRefocus(life.reload);
@@ -414,6 +428,7 @@ export function MyLifeScreen() {
     applications: false,
   });
   const [refreshes, setRefreshes] = useState(0);
+  const sentence = useSentencePlan({ landing, reloadKey: refreshes });
   if (state.status !== "signedIn") return null;
   const me = state.profile;
   const unrecorded = t("common.value.unrecorded");
@@ -448,6 +463,7 @@ export function MyLifeScreen() {
             open={open}
             onToggle={(key) => setOpen((o) => ({ ...o, [key]: !o[key] }))}
             onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
+            sentence={<SentenceSection remote={sentence} landing={landing} />}
           />
         </FadeIn>
       ) : life.error ? (

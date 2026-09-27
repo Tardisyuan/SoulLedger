@@ -44,13 +44,19 @@ import {
   useTheme,
 } from "../ui";
 import { useResidence } from "./life";
+import { SentenceBlocked, type SentenceLanding } from "./sentence";
+
+/** The life tab's params: a sentence push that landed on its section (受刑 1d). */
+export type LifeParams = { sentenceLanding?: SentenceLanding };
 
 export type AppStackParams = {
   /**
    * `screen` picks the tab (a push landing on the life tab). The circle's
    * `pendingId`: the post just sent went to review — the feed says so over it.
    */
-  Tabs: { screen: "Life" | "Applications" | "Letters" | "Circle"; params?: { pendingId?: string } } | undefined;
+  Tabs: { screen: "Life" | "Applications" | "Letters" | "Circle"; params?: { pendingId?: string } & LifeParams } | undefined;
+  /** 受刑 1c. `landing`: opened from a tapped sentence push — the stations it names are marked 「新」 once. */
+  Sentence: { landing?: SentenceLanding } | undefined;
   NewApplication: undefined;
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
@@ -101,6 +107,8 @@ export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationL
   const { t } = useI18n();
   const reason = list.reason ? soulCodeMessage(list.reason) : null;
   const until = formatStamp(list.cooldown_until);
+  // 受刑 1d: an unfinished sentence gets its own block (how many stations, where, until when) instead of the one-line reason.
+  const sentence = !list.can_apply && list.reason === "sentence_in_progress";
   return (
     <Block testID="eligibility">
       <Button
@@ -109,8 +117,9 @@ export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationL
         onPress={onApply}
         disabled={!list.can_apply}
         reasonTestID="eligibility-reason"
-        reason={reason ? t(reason.key, reason.params) : t("soul_app.applications.cannot_apply")}
+        reason={sentence ? undefined : reason ? t(reason.key, reason.params) : t("soul_app.applications.cannot_apply")}
       />
+      {sentence ? <SentenceBlocked /> : null}
       {!list.can_apply && until ? (
         <Interp
           testID="cooldown-until"
