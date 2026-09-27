@@ -12,10 +12,10 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
-        "sentence_pardoned": {"title": "受刑计划已撤销", "body": "你的剩余刑期已免除,可以申请转生,打开灵魂簿查看。"},
-        "sentence_amended": {"title": "受刑计划有变更", "body": "你的受刑计划有变更,打开灵魂簿查看。"},
-        "sentence_completed": {"title": "受刑完毕", "body": "你的受刑已全部完毕,可以申请转生,打开灵魂簿查看。"},
-        "sentence_waiting": {"title": "刑满暂留", "body": "本站刑满,等待审判结案后回归,打开灵魂簿查看。"},
+        "sentence_pardoned": {"title": "剩余刑期已赦免", "body": "你有刑期获赦，打开灵魂簿查看。"},
+        "sentence_amended": {"title": "受刑计划有变动", "body": "你的受刑计划有变动，打开灵魂簿查看。"},
+        "sentence_completed": {"title": "受刑已全部服完", "body": "你的受刑已全部服完，打开灵魂簿查看。"},
+        "sentence_waiting": {"title": "一站刑满，暂留原地", "body": "你有一站刑期已满，打开灵魂簿查看。"},
         "rebirth_approved": {"title": "转生申请已批准", "body": "你的转生申请已批准,打开灵魂簿查看。"},
         "rebirth_rejected": {"title": "转生申请被驳回", "body": "你的转生申请被驳回,打开灵魂簿查看理由。"},
         "rebirth_appeal_rejected": {"title": "申诉被驳回", "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"},
@@ -30,10 +30,10 @@ MESSAGES = {
         "social_warned_user": {"title": "账号收到警告", "body": "你的账号收到警告：{{reason}}"},
     },
     "en": {
-        "sentence_pardoned": {"title": "Sentence plan cancelled", "body": "The rest of your sentence is waived and you may apply for rebirth. Open Soul Ledger to see it."},
-        "sentence_amended": {"title": "Sentence plan changed", "body": "Your sentence plan has changed. Open Soul Ledger to see it."},
-        "sentence_completed": {"title": "Sentence served", "body": "You have served your whole sentence and may apply for rebirth. Open Soul Ledger to see it."},
-        "sentence_waiting": {"title": "Held after serving", "body": "You have served this stop and wait for a judgment to close before returning. Open Soul Ledger to see it."},
+        "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
+        "sentence_amended": {"title": "Your sentence changed", "body": "Your sentence plan has changed. Open Soul Ledger to see it."},
+        "sentence_completed": {"title": "Sentence fully served", "body": "Your sentence is fully served. Open Soul Ledger to see it."},
+        "sentence_waiting": {"title": "A term is served; you stay for now", "body": "One of your terms is served. Open Soul Ledger to see it."},
         "rebirth_approved": {
             "title": "Rebirth application approved",
             "body": "Your rebirth application was approved. Open Soul Ledger to see it.",
@@ -78,10 +78,10 @@ MESSAGES = {
         },
     },
     "egy": {
-        "sentence_pardoned": {"title": "Wetep Sehen Seth", "body": "Ky Wetep Ek Nen; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."},
-        "sentence_amended": {"title": "Wetep Khemen Seth", "body": "Wetep Ek Khemen Seth. Wen Medjat Ba Er Maa."},
-        "sentence_completed": {"title": "Wetep Neb Seth", "body": "Wetep Ek Neb Seth; Dbh Wehem Mesut Wen. Wen Medjat Ba Er Maa."},
-        "sentence_waiting": {"title": "Hemes Smen", "body": "Sekhet Ek Wetep Seth; Hemes Smen Er Wedja Pehwy. Wen Medjat Ba Er Maa."},
+        "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet Ek Nedj Seth. Wen Medjat Ba Er Maa."},
+        "sentence_amended": {"title": "Khemen-Shepet", "body": "Shepet Ek Khemen Seth. Wen Medjat Ba Er Maa."},
+        "sentence_completed": {"title": "Shepet Wetep-Neb Seth", "body": "Shepet Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."},
+        "sentence_waiting": {"title": "Renpet Khetem; Ahau", "body": "Renpet Wa Khetem Seth. Wen Medjat Ba Er Maa."},
         "rebirth_approved": {"title": "Dbh Wehem Mesut Hesy Seth", "body": "Dbh Wehem Mesut Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Wehem Mesut Khesef Seth", "body": "Dbh Wehem Mesut Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."},

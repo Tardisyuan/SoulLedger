@@ -62,6 +62,11 @@ export type MeRecord = Schemas["MeRecord"];
 export type MeJudgment = Schemas["MeJudgment"];
 export type MeDisposition = Schemas["MeDisposition"];
 export type MeReincarnation = Schemas["MeReincarnation"];
+/** 「我的受刑」:本人本世的计划,节点状态已按画布 1a 合并成灵魂看的几档(REMOVED 不出现)。 */
+export type MeSentencePlan = Schemas["MeSentencePlan"];
+export type MeSentenceStation = Schemas["MeSentenceStation"];
+export type SentencePlanState = Schemas["SoulSentencePlanStateEnum"];
+export type SentenceStationStatus = Schemas["SoulSentenceStationStatusEnum"];
 export type MeRebirthApplication = Schemas["MeRebirthApplication"];
 export type MeRebirthApplicationList = Schemas["MeRebirthApplicationList"];
 export type DesiredRebirthForm = Schemas["DesiredRebirthFormEnum"];
@@ -196,6 +201,7 @@ export const soulApi = {
   me: () => soulHttp.get<MeProfile>("/me/").then((r) => r.data),
   life: () => soulHttp.get<MeLife>("/me/life/").then((r) => r.data),
   pastLives: () => soulHttp.get<MeLife[]>("/me/past-lives/").then((r) => r.data),
+  sentencePlan: () => soulHttp.get<MeSentencePlan>("/me/sentence-plan/").then((r) => r.data),
   applications: () =>
     soulHttp.get<MeRebirthApplicationList>("/me/rebirth-applications/").then((r) => r.data),
   application: (id: string) =>
