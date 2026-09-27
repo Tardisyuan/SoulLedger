@@ -51,6 +51,11 @@ class SoulAccount(models.Model):
     initial_password_expires_at = models.DateTimeField(null=True, blank=True)
     retired_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # App 的欢迎过场(设计「灵魂簿 App · 文明气质」1b)已为哪些文明播过:`Civilization` 值,
+    # 按最近一次播放排序,末项 = 上一次欢迎进入的文明。存在服务端,换设备、重装都不再重播。
+    # 挂在账号(每一世一行)上:新的一世从空列表开始、欢迎重播一次 —— 产品决定 2026-09-27。
+    # 写入只经 `/me/welcomed/`。
+    welcomed_civilizations = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["soul", "cycle"]

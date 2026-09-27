@@ -94,6 +94,8 @@ describe("soul_app copy", () => {
       ...(["neutral", "cn", "eu", "eg", "gr"] as const).flatMap((civ) => LEXICON_WORDS.map((w) => lexiconKey(civ, w))),
       // The report form reads the moderation section's reasons by member (egy settled there).
       ...["SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "OTHER"].map((r) => `social_moderation.reason.${r}`),
+      // The welcome names the underworld it enters, by civilization code (文明气质 1b).
+      ...["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((c) => `soul_app.welcome.realm.${c}`),
       "common.value.unrecorded",
       "common.value.unrecognized",
       // The settings switches and the primer's list build their keys from the category.

@@ -49,8 +49,9 @@ const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string
   { path: (s) => semantic[s].negStrong, triples: ["0.600 0.130 25", "0.550 0.170 25"] },
   { path: (s) => semantic[s].negInk, triples: ["0.900 0.050 25", "0.430 0.160 25"] },
   { path: (s) => semantic[s].negBg, triples: ["0.240 0.040 25", "0.960 0.020 25"] },
-  // 朋友圈 handoff 1e draws the lamp dark only; the light pair is not from the handoff.
-  { path: (s) => semantic[s].lamp, triples: ["0.860 0.110 85", "0.500 0.100 75"] },
+  // 朋友圈 handoff 1e draws the lamp dark only. Light lamp: 文明气质 1i gives #6A3E00 (confirmed 2026-09-27) —
+  // the triple is that hex's OKLCH; lampBg light is still ours.
+  { path: (s) => semantic[s].lamp, triples: ["0.860 0.110 85", "0.408 0.091 66"] },
   { path: (s) => semantic[s].lampBg, triples: ["0.230 0.030 80", "0.960 0.030 85"] },
 ];
 

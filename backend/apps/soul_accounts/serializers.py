@@ -12,6 +12,7 @@ from apps.reincarnation.models import RebirthForm
 from apps.soul_accounts.models import InitialCredential, RebirthApplication, SoulAccount
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
+from apps.souls.models import Civilization
 
 # ── 灵魂端 ───────────────────────────────────────────────────────────────
 
@@ -80,10 +81,25 @@ class MeProfileSerializer(serializers.Serializer):
     merit_score = serializers.IntegerField()
     demerit_score = serializers.IntegerField()
     account = serializers.SerializerMethodField()
+    welcomed_civilizations = serializers.SerializerMethodField()
 
     @extend_schema_field(MeAccountSerializer)
     def get_account(self, soul):
         return MeAccountSerializer(self.context["account"]).data
+
+    @extend_schema_field(serializers.ListField(child=serializers.ChoiceField(choices=Civilization.choices)))
+    def get_welcomed_civilizations(self, soul):
+        return self.context["account"].welcomed_civilizations
+
+
+class MeWelcomedRequestSerializer(serializers.Serializer):
+    """边界校验:只收 `Civilization` 的四个值;列表里因此不会出现别的字符串。"""
+
+    civilization = serializers.ChoiceField(choices=Civilization.choices)
+
+
+class MeWelcomedSerializer(serializers.Serializer):
+    welcomed_civilizations = serializers.ListField(child=serializers.ChoiceField(choices=Civilization.choices))
 
 
 class MeRecordSerializer(serializers.Serializer):

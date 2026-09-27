@@ -39,10 +39,10 @@ import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import {
   Button,
-  Empty,
   FadeIn,
   Interp,
   Notice,
+  PageEmptyArt,
   Screen,
   Skeleton,
   SmallButton,
@@ -428,10 +428,13 @@ export function CircleScreen() {
         </View>
       ) : feed.posts.length === 0 ? (
         <View testID="circle-empty" style={styles.empty}>
+          <PageEmptyArt />
           <Txt variant="bodyLg" tone="muted" style={styles.center}>
             {tr("soul_app.circle.feed.empty_title")}
           </Txt>
-          <Empty text={tr("soul_app.circle.feed.empty_body")} />
+          <Txt variant="caption" tone="subtle" style={styles.center}>
+            {tr("soul_app.circle.feed.empty_body")}
+          </Txt>
           <Button testID="circle-write" title={tr("soul_app.circle.feed.write")} onPress={write} />
         </View>
       ) : (

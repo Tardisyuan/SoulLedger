@@ -7060,6 +7060,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulSocialError'
           description: ''
+  /api/v1/me/welcomed/:
+    post:
+      operationId: v1_me_welcomed_create
+      description: |-
+        记下「欢迎过场已为这个文明播过」(App 设计「文明气质」1b)。幂等:末项已是它就不写。
+
+        已记过的文明被移到末尾而不是重复追加 —— 末项是「上一次欢迎进入的文明」,App 据此
+        判断「回归原籍」要不要照播一次;列表本身仍是集合。只写本人这一行(`self.account`),
+        行锁挡两台设备同时写时的丢更新。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeWelcomedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeWelcomedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeWelcomedRequest'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeWelcomed'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/menus/:
     get:
       operationId: v1_menus_list
@@ -20174,6 +20214,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/MeAccount'
           readOnly: true
+        welcomed_civilizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CivilizationEnum'
+          readOnly: true
       required:
       - account
       - birth_date
@@ -20190,6 +20235,7 @@ components:
       - origin_location
       - soul_code
       - tenant
+      - welcomed_civilizations
     MeRealm:
       type: object
       properties:
@@ -20371,6 +20417,23 @@ components:
       - code
       - display_name
       - hall_names
+    MeWelcomed:
+      type: object
+      properties:
+        welcomed_civilizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CivilizationEnum'
+      required:
+      - welcomed_civilizations
+    MeWelcomedRequest:
+      type: object
+      description: 边界校验:只收 `Civilization` 的四个值;列表里因此不会出现别的字符串。
+      properties:
+        civilization:
+          $ref: '#/components/schemas/CivilizationEnum'
+      required:
+      - civilization
     MemoryResetMechanismEnum:
       enum:
       - MENGPO

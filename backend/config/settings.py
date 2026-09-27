@@ -546,6 +546,9 @@ SPECTACULAR_SETTINGS = {
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
+        # `welcomed_civilizations`(App 欢迎过场)用的是灵魂的 Civilization 选项集;钉在既有的
+        # `CivilizationEnum` 上,否则多出一个同值的 `WelcomedCivilizationsEnum` 并报 warning。
+        "CivilizationEnum": "apps.souls.models.Civilization.choices",
         # approve_node 的请求体(WorkflowNodeActionSerializer)写进文档之后,它的 verdict 与
         # judgment 的 Verdict 撞名;不钉住,既有的 `VerdictEnum` 会被改成带哈希的名字,
         # frontend 的 enumsMatchTheSchema 测试按名字找它。

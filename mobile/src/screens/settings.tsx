@@ -19,7 +19,7 @@ import { platform } from "@soulledger/core/platform";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon, type IconName } from "../emblems";
 import { useAskLogout, useToast } from "../feedback";
@@ -33,6 +33,7 @@ import {
   EnumValue,
   GUTTER,
   Hairline,
+  Loader,
   Notice,
   Screen,
   SectionError,
@@ -88,7 +89,7 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
           {translate(l, "soul_app.settings.language_note")}
         </Txt>
       </View>
-      {busy ? <ActivityIndicator testID="language-saving" size="small" color={theme.inkSubtle} /> : null}
+      {busy ? <Loader testID="language-saving" size={20} /> : null}
       {selected && !busy ? (
         <View style={[styles.current, { borderColor: theme.accent }]}>
           <Txt variant="label" tone="accent" style={styles.currentText}>

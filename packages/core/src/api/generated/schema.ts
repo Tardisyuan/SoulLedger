@@ -3173,6 +3173,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/welcomed/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 记下「欢迎过场已为这个文明播过」(App 设计「文明气质」1b)。幂等:末项已是它就不写。
+         *
+         *     已记过的文明被移到末尾而不是重复追加 —— 末项是「上一次欢迎进入的文明」,App 据此
+         *     判断「回归原籍」要不要照播一次;列表本身仍是集合。只写本人这一行(`self.account`),
+         *     行锁挡两台设备同时写时的丢更新。
+         */
+        post: operations["v1_me_welcomed_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/menus/": {
         parameters: {
             query?: never;
@@ -9180,6 +9203,7 @@ export interface components {
             merit_score: number;
             demerit_score: number;
             readonly account: components["schemas"]["MeAccount"];
+            readonly welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
         };
         MeRealm: {
             realm_code: string;
@@ -9248,6 +9272,13 @@ export interface components {
             readonly hall_names: {
                 [key: string]: string;
             };
+        };
+        MeWelcomed: {
+            welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
+        };
+        /** @description 边界校验:只收 `Civilization` 的四个值;列表里因此不会出现别的字符串。 */
+        MeWelcomedRequest: {
+            civilization: components["schemas"]["CivilizationEnum"];
         };
         /**
          * @description * `MENGPO` - 孟婆汤 (Mengpo Soup)
@@ -19106,6 +19137,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_welcomed_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeWelcomedRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MeWelcomedRequest"];
+                "multipart/form-data": components["schemas"]["MeWelcomedRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeWelcomed"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
                 };
             };
         };

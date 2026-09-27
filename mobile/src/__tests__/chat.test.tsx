@@ -252,6 +252,8 @@ describe("the list", () => {
     wrap(chatState({ conversations: [] }), <LettersScreen />);
     expect(screen.getByTestId("hall-row")).toBeTruthy();
     expect(screen.getByText("还没有往来")).toBeTruthy();
+    // 文明气质 1e: the empty letters page carries the illustration.
+    expect(within(screen.getByTestId("chat-empty")).getByTestId("empty-hero-neutral")).toBeTruthy();
     fireEvent.press(screen.getByTestId("chat-empty-find"));
     expect(mockNavigate).toHaveBeenCalledWith("FindSoul");
   });
@@ -288,6 +290,10 @@ describe("the conversation's eight states", () => {
   it("① not landed: no highlight at all", () => {
     openConversation(conv(), [msg("e2", PEER, "明天一起去等榜吧。", NOW - 60_000)]);
     expect(screen.queryByTestId("landing-highlight")).toBeNull();
+    // 文明气质 1f: letter paper is for the hall's officers only; a soul's letter has no corners.
+    expect(screen.queryAllByTestId(/^letter-corner-/)).toEqual([]);
+    // 1c: the conversation's own title bar carries the band in place of its rule.
+    expect(screen.getByTestId("header-band-neutral")).toBeTruthy();
   });
 
   it("② my request, waiting: a dotted line and the mono time it opens — never a disabled box", () => {
@@ -402,6 +408,11 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
     // The byline: the hall's display name, the officer's position, the officer — as the backend stamped them.
     expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿 · 判官 崔珏")).toBeTruthy();
+    // 文明气质 1f: the officer's letter is paper — four corners, 4 in, mirrored; the body padded 22.
+    const bubble = screen.getByTestId("officer-bubble");
+    expect(["tl", "tr", "bl", "br"].map((k) => within(bubble).getByTestId(`letter-corner-${k}`))).toHaveLength(4);
+    expect(StyleSheet.flatten(within(bubble).getByTestId("letter-corner-br").props.style)).toMatchObject({ right: 4, bottom: 4 });
+    expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 22 });
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
   });
 
