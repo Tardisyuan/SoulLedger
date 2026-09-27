@@ -12,7 +12,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { NODE } from "../emblems";
@@ -316,5 +316,53 @@ describe("a sentence push (1d)", () => {
     expect(navigationRef.getCurrentRoute()?.name).toBe("Sentence");
     expect(await screen.findByTestId("station-2-new")).toBeTruthy();
     expect(screen.queryByTestId("station-3-new")).toBeNull();
+  });
+
+  it("a reduction-only amendment (no node_ids) opens the full list with no 「新」 at all", async () => {
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/sentence-plan/": { status: 200, data: PLANS.serving },
+      "GET /me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    tap({ screen: "Life", kind: "sentence_amended", node_ids: [] });
+    await screen.findByTestId("sentence-screen-serving");
+    expect(navigationRef.getCurrentRoute()).toMatchObject({ name: "Sentence", params: { landing: { kind: "sentence_amended", nodeIds: [] } } });
+    expect(screen.getAllByTestId(/^station-\d+$/)).toHaveLength(3);
+    expect(screen.queryAllByTestId(/-new$/)).toEqual([]);
+  });
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])("completion scrolls the section into view (reduce-motion %s → animated %s), once", async (reduced, animated) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/past-lives/": { status: 200, data: [] },
+      "/me/sentence-plan/": { status: 200, data: PLANS.completed },
+      "GET /me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    const section = await screen.findByTestId("section-sentence");
+    // The block holding the life sections (FadeIn) sits 400 down the page; the section 120 into it.
+    let block = section.parent;
+    while (block && !(block.props.onLayout && block.props.testID !== "section-sentence")) block = block.parent;
+    fireEvent(block!, "layout", { nativeEvent: { layout: { x: 0, y: 400, width: 390, height: 900 } } });
+    fireEvent(section, "layout", { nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 200 } } });
+    expect(scrollTo).not.toHaveBeenCalled(); // opened by hand: no scroll
+    tap({ screen: "Life", kind: "sentence_completed" });
+    await screen.findByTestId("sentence-landing-tag");
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ y: 520, animated }));
+    // A later layout pass (the highlight re-lays the section) does not scroll again.
+    fireEvent(screen.getByTestId("section-sentence"), "layout", { nativeEvent: { layout: { x: 0, y: 130, width: 390, height: 220 } } });
+    await act(async () => {});
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    scrollTo.mockRestore();
   });
 });

@@ -4,8 +4,8 @@ import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
-import { useCallback, useContext, useEffect, useReducer, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon } from "../emblems";
 import { family } from "../fonts";
@@ -33,13 +33,14 @@ import {
   ThemeContext,
   Txt,
   enumText,
+  useReducedMotion,
   useReloadOnRefocus,
   useRemote,
   useLayout,
   useTheme,
 } from "../ui";
 import type { AppStackParams, LifeParams } from "./applications";
-import { SentenceSection, useSentencePlan } from "./sentence";
+import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -405,6 +406,25 @@ function Homecoming({ me }: { me: MeProfile }) {
   );
 }
 
+/**
+ * 受刑 1d: a push that lands on the life page's sentence section scrolls it into
+ * view — once per landing, with no animation under reduce-motion. The section's
+ * top is the sections block's top plus the section's own offset inside it.
+ */
+export function useScrollToLanding(landing: SentenceLanding | undefined) {
+  const ref = useRef<ScrollView>(null);
+  const reduced = useReducedMotion();
+  const [at, setAt] = useState<{ sections?: number; section?: number }>({});
+  const done = useRef<SentenceLanding | undefined>(undefined);
+  useEffect(() => {
+    if (!landing || done.current === landing || at.sections === undefined || at.section === undefined) return;
+    done.current = landing;
+    ref.current?.scrollTo({ y: Math.max(0, at.sections + at.section), animated: !reduced });
+  }, [landing, at, reduced]);
+  const place = useCallback((part: "sections" | "section", y: number) => setAt((a) => (a[part] === y ? a : { ...a, [part]: y })), []);
+  return { ref, place };
+}
+
 export function MyLifeScreen() {
   const { t, locale } = useI18n();
   const { state, refreshProfile } = useSession();
@@ -429,6 +449,7 @@ export function MyLifeScreen() {
   });
   const [refreshes, setRefreshes] = useState(0);
   const sentence = useSentencePlan({ landing, reloadKey: refreshes });
+  const scroll = useScrollToLanding(landing);
   if (state.status !== "signedIn") return null;
   const me = state.profile;
   const unrecorded = t("common.value.unrecorded");
@@ -440,7 +461,13 @@ export function MyLifeScreen() {
   };
 
   return (
-    <Screen refreshing={life.loading && !!life.data} onRefresh={refresh} edges={["left", "right"]} testID="profile-card">
+    <Screen
+      refreshing={life.loading && !!life.data}
+      onRefresh={refresh}
+      edges={["left", "right"]}
+      testID="profile-card"
+      scrollRef={scroll.ref}
+    >
       <Homecoming me={me} />
       <Identity me={me} residence={residence} />
       <Scores me={me} life={life.data} lex={residence.home} />
@@ -456,14 +483,14 @@ export function MyLifeScreen() {
         </DataRows>
       </Block>
       {life.data ? (
-        <FadeIn>
+        <FadeIn onLayout={(e) => scroll.place("sections", e.nativeEvent.layout.y)}>
           <LifeSections
             life={life.data}
             lex={residence.home}
             open={open}
             onToggle={(key) => setOpen((o) => ({ ...o, [key]: !o[key] }))}
             onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
-            sentence={<SentenceSection remote={sentence} landing={landing} />}
+            sentence={<SentenceSection remote={sentence} landing={landing} onPlaced={(y) => scroll.place("section", y)} />}
           />
         </FadeIn>
       ) : life.error ? (
