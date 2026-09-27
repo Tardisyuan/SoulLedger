@@ -73,7 +73,7 @@ export const semantic = {
 export const space = [2, 4, 7, 10, 14, 20, 26, 34] as const;
 export const radius = { none: 0, pill: 999, focus: 2 } as const;
 /** ms. The only motion is opacity; reduce-motion sets every duration to 0. */
-export const motion = { fade: 120, toast: 160, toastHold: 1900 } as const;
+export const motion = { fade: 120, toast: 160, toastHold: 1900, breath: 1600, welcomeIn: 600, welcomeHold: 1200, welcomeOut: 240 } as const;
 
 export interface Theme {
   scheme: ColorScheme;

@@ -29,6 +29,7 @@ import { useI18n } from "./i18n";
 import { useSession } from "./session";
 import { preLoginTheme, themeFor } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
+import { Welcome } from "./welcome";
 import {
   ApplicationDetailScreen,
   ApplicationsScreen,
@@ -342,6 +343,8 @@ export function RootNavigator() {
             <Stack.Navigator>{screens}</Stack.Navigator>
           </NavigationContainer>
           <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
+          {/* 文明气质 1b: over everything, the first time this soul enters its current civilization. */}
+          {state.status === "signedIn" ? <Welcome profile={state.profile} scheme={scheme} /> : null}
         </ChatProvider>
       );
     }

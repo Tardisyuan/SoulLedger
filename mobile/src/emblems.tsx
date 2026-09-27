@@ -73,6 +73,82 @@ export function Emblem({
   );
 }
 
+// ── civilization flavour (handoff "灵魂簿 App · 文明气质", 1c–1h) ─────────────
+// Copied path for path from the handoff's data block. Line art only, one stroke
+// (the civilization's mark); the neutral theme uses only circles and rules.
+
+/**
+ * The title bar's band (1c): one 12×6 unit, baseline at y 5.5 (the Greek key adds
+ * a top line at 0.5), the motif inside x ∈ [1, 11] so units meet without seams.
+ * `d` is the full unit; `dc` is what a unit keeps when compact drops its motif.
+ */
+export const BAND: Record<CivKey, { d: string; dc: string }> = {
+  neutral: { d: "M0 5.5H12", dc: "M0 5.5H12" },
+  cn: { d: "M0 5.5H12M2 5.5V1H9V4H5V2.5H7", dc: "M0 5.5H12" },
+  eu: { d: "M0 5.5H12M1 5.5V3.5A2.5 2.5 0 0 1 6 3.5V5.5M6 3.5A2.5 2.5 0 0 1 11 3.5V5.5", dc: "M0 5.5H12" },
+  eg: { d: "M0 5.5H12M6 5.5C6 3.5 4 2.5 3 1C5 1.5 6 2.5 6 3.5C6 2.5 7 1.5 9 1C8 2.5 6 3.5 6 5.5", dc: "M0 5.5H12" },
+  gr: { d: "M0 0.5H12M0 5.5H12M2 5.5V2H8V4H5", dc: "M0 0.5H12M0 5.5H12" },
+};
+
+/**
+ * The one illustration per civilization (1e), viewBox 48: `f` at 72 for the
+ * whole-page empty states and the welcome, `c` (outline and base only) at 24–28.
+ */
+export const HERO: Record<CivKey, { f: string; c: string }> = {
+  neutral: { f: "M24 8A16 16 0 1 1 23.9 8M8 40H40", c: "M24 10A14 14 0 1 1 23.9 10" },
+  cn: { f: "M6 14H42M10 10H38M12 14V42M36 14V42M20 14V42M28 14V42M6 42H42M16 22H32", c: "M6 12H42M12 12V42M36 12V42M6 42H42" },
+  eu: {
+    f: "M10 42V20A14 14 0 0 1 38 20V42M24 6V42M10 26H38M17 20A7 7 0 0 1 31 20M10 42H38",
+    c: "M10 42V20A14 14 0 0 1 38 20V42M10 42H38",
+  },
+  eg: {
+    f: "M24 42V20M24 20C24 12 16 8 10 6C14 12 18 16 24 20C30 16 34 12 38 6C32 8 24 12 24 20M24 20C21 14 22 8 24 4C26 8 27 14 24 20M12 42H36",
+    c: "M24 42V20C24 12 16 8 10 6M24 20C24 12 32 8 38 6M12 42H36",
+  },
+  gr: { f: "M8 10H40M10 14H38M14 14V38M22 14V38M26 14V38M34 14V38M10 38H38M6 42H42", c: "M8 10H40M14 10V42M34 10V42M6 42H42" },
+};
+
+/** The letter paper's corner (1f), 14×14, drawn for the top-left and mirrored for the other three. */
+export const CORNER: Record<CivKey, string> = {
+  neutral: "M1 1H6",
+  cn: "M1 13V1H13M4 10V4H10V8H7",
+  eu: "M1 13V5A4 4 0 0 1 5 1H13M5 13V7A2 2 0 0 1 7 5H13",
+  eg: "M1 13V1H13M5 9C5 6 7 5 9 5",
+  gr: "M1 13V1H13M4 10V4H9V7H7",
+};
+
+/** The civilization's illustration: full at 72 (stroke 1.1), compact at 24 (stroke 2.4); the welcome draws it at 96, 0.9. */
+export function Hero({
+  civ,
+  stroke,
+  compact,
+  size,
+  strokeWidth,
+  testID,
+}: {
+  civ: CivKey;
+  stroke: string;
+  compact?: boolean;
+  size?: number;
+  strokeWidth?: number;
+  testID?: string;
+}) {
+  return (
+    <Svg
+      testID={testID}
+      width={size ?? (compact ? 24 : 72)}
+      height={size ?? (compact ? 24 : 72)}
+      viewBox="0 0 48 48"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={strokeWidth ?? (compact ? 2.4 : 1.1)}
+      strokeLinecap="square"
+    >
+      <Path d={compact ? HERO[civ].c : HERO[civ].f} />
+    </Svg>
+  );
+}
+
 /** The ledger crossed out: whole-screen "could not reach the ledger". */
 export function LedgerUnreachable({ size, stroke }: { size: number; stroke: string }) {
   return (

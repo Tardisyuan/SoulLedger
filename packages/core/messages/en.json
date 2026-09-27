@@ -2786,6 +2786,10 @@
       "body": "Your residence in {{from}} has ended. The ledger and its colours are {{home}}'s again.",
       "ok": "Got it"
     },
+    "welcome": {
+      "entered": "You have entered {{civ}}",
+      "skip": "Tap to skip"
+    },
     "settings": {
       "title": "Settings",
       "language": "Language",
