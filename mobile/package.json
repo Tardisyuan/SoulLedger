@@ -2,6 +2,7 @@
   "name": "@soulledger/mobile",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "灵魂端 App(Expo / React Native)。平台无关的一切来自 @soulledger/core,这里只有屏幕、导航与移动端端口实现。",
   "main": "index.ts",
   "scripts": {

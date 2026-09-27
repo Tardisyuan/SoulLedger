@@ -2,6 +2,7 @@
   "name": "@soulledger/core",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Platform-independent SoulLedger layer: API contract, realtime clients, domain config, validation schemas and message bundles. No DOM, no React DOM, no Next.js.",
   "type": "module",
   "main": "./src/index.ts",
