@@ -499,10 +499,14 @@ function PastLife({ life, open, onToggle, lex }: { life: MeLife; open: boolean; 
       {open ? (
         <ThemeContext.Provider value={sealed}>
           <View testID={`sealed-${life.cycle}`} style={[styles.sealed, { borderColor: t.hair, backgroundColor: t.s1 }]}>
-            <View style={[styles.stamp, { borderColor: t.hair2 }]}>
-              <Txt variant="label" tone="subtle" style={styles.stampText}>
-                {tr("soul_app.past_lives.sealed")}
-              </Txt>
+            {/* A row of its own, not an absolute corner: at large text an absolute stamp grew past the
+                card's reserved top padding and sat on the first section title (功过). */}
+            <View style={styles.stampRow}>
+              <View testID={`sealed-stamp-${life.cycle}`} style={[styles.stamp, { borderColor: t.hair2 }]}>
+                <Txt variant="label" tone="subtle" style={styles.stampText}>
+                  {tr("soul_app.past_lives.sealed")}
+                </Txt>
+              </View>
             </View>
             <LifeSections life={life} sealed lex={lex} />
             <Txt variant="caption" tone="subtle" style={styles.sealedFoot}>
@@ -610,8 +614,9 @@ const styles = StyleSheet.create({
   pastLife: { borderBottomWidth: 1, opacity: 0.92 },
   pastHead: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
   pastNo: { paddingTop: 4, letterSpacing: 0.8 },
-  sealed: { marginHorizontal: 14, marginBottom: 14, borderWidth: 1, paddingTop: 34 },
-  stamp: { position: "absolute", right: 12, top: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3 },
+  sealed: { marginHorizontal: 14, marginBottom: 14, borderWidth: 1 },
+  stampRow: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 12, paddingHorizontal: 12 },
+  stamp: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3 },
   stampText: { fontSize: 10, letterSpacing: 1.6 },
   sealedFoot: { paddingHorizontal: GUTTER, paddingVertical: 12 },
 });

@@ -87,6 +87,8 @@ export const PROFILE = {
   merit_score: 12,
   demerit_score: 3,
   account: { cycle: 1, must_change_password: false, initial_password_expires_at: null, created_at: "2026-09-01T00:00:00Z" },
+  // Already welcomed here (文明气质 1b), so the welcome overlay stays out of tests about something else.
+  welcomed_civilizations: ["CHINESE"],
 };
 
 export function application(overrides: Record<string, unknown> = {}) {

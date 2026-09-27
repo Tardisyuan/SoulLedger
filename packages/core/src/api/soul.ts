@@ -71,6 +71,7 @@ export type PushPlatform = Schemas["PushPlatformEnum"];
 export type PushLocale = Schemas["PushLocaleEnum"];
 export type NotificationSettings = Schemas["NotificationSettings"];
 export type NotificationSettingsPatch = Schemas["PatchedNotificationSettings"];
+export type Civilization = Schemas["CivilizationEnum"];
 
 /** The six forms a soul may ask for — the schema's enum, `OTHER` excluded server-side. */
 export const DESIRED_REBIRTH_FORMS: readonly DesiredRebirthForm[] = [
@@ -207,6 +208,14 @@ export const soulApi = {
     soulHttp
       .post<MeRebirthApplication>(`/me/rebirth-applications/${id}/appeal/`, { statement })
       .then((r) => r.data),
+  /**
+   * The welcome transition has played for `civilization` (App「文明气质」1b). Idempotent;
+   * the answer is the whole list, most recent welcome last (`/me/`'s `welcomed_civilizations`).
+   */
+  markWelcomed: (civilization: Civilization) =>
+    soulHttp
+      .post<Schemas["MeWelcomed"]>("/me/welcomed/", { civilization } satisfies Schemas["MeWelcomedRequest"])
+      .then((r) => r.data.welcomed_civilizations),
   /**
    * Register this device's Expo push token for the signed-in soul. Idempotent:
    * 201 the first time, 200 after. A token already held by another soul account

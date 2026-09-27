@@ -1,16 +1,59 @@
 /**
  * The navigator's chrome, drawn by the app instead of the platform: a 52pt
- * title bar with a hairline under it, and a three-item tab bar whose selected
- * item is the civilization's emblem in its mark colour with a 2px rule on top.
+ * title bar with the civilization's band under it (a plain hairline in the
+ * neutral theme), and a three-item tab bar whose selected item is the
+ * civilization's emblem in its mark colour with a 2px rule on top.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { G, Path } from "react-native-svg";
 
-import { Emblem, Icon, type IconName } from "./emblems";
+import { BAND, Emblem, Icon, type IconName } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import { Txt, useLayout, useTheme } from "./ui";
+import { Txt, useFlavorCompact, useLayout, useTheme } from "./ui";
+
+/** The band's unit (文明气质 1c): 12 wide, 6 high. */
+const UNIT = 12;
+
+/**
+ * Where the band's units go across a bar `width` wide. The pattern starts at
+ * (width mod 12) / 2, so what does not divide is cut equally at both ends; a
+ * unit that starts before 0 is the cut half on the left. Compact keeps the
+ * motif on one unit in three and only the rules on the others.
+ */
+export function bandUnits(width: number, compact: boolean): { x: number; motif: boolean }[] {
+  const offset = (width % UNIT) / 2;
+  const units = [];
+  for (let x = offset > 0 ? offset - UNIT : 0, i = 0; x < width; x += UNIT, i++) units.push({ x, motif: !compact || i % 3 === 1 });
+  return units;
+}
+
+/**
+ * 1c / 1d: a 6pt band in place of the bar's 1px bottom rule — absolutely placed
+ * at the bottom, so no screen changes height. Its baseline (y 5.5) runs the full
+ * width where the rule was; in the neutral theme that baseline, in `hair`, is
+ * all there is — the rule exactly as before. Compact: screen < 340 or text ≥ 1.7×.
+ */
+export function HeaderBand() {
+  const t = useTheme();
+  const { width } = useWindowDimensions();
+  const compact = useFlavorCompact();
+  const neutral = t.civ === "neutral";
+  return (
+    <Svg testID={`header-band-${t.civ}`} width={width} height={6} style={styles.band} fill="none" strokeWidth={1} strokeLinecap="square">
+      {neutral
+        ? null
+        : bandUnits(width, compact).map((u) => (
+            <G key={u.x} transform={`translate(${u.x} 0)`}>
+              <Path d={u.motif ? BAND[t.civ].d : BAND[t.civ].dc} stroke={t.mark} />
+            </G>
+          ))}
+      <Path testID="header-band-baseline" d={`M0 5.5H${width}`} stroke={neutral ? t.hair : t.mark} />
+    </Svg>
+  );
+}
 
 /** A title-bar action in the account icon's place (the 书信 tab's "new" / search, handoff chat 1b / 1e). */
 export interface HeaderAction {
@@ -50,7 +93,7 @@ export function AppHeader({
   // open for a back key it does not have, and back is an arrow. iOS: centred, chevron.
   const android = Platform.OS === "android";
   return (
-    <View style={{ paddingTop: insets.top, backgroundColor: t.s0, borderBottomWidth: 1, borderBottomColor: t.hair }}>
+    <View testID="header" style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
       <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
         {onBack ? (
           <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
@@ -94,6 +137,7 @@ export function AppHeader({
           <View style={styles.icon} />
         )}
       </View>
+      <HeaderBand />
     </View>
   );
 }
@@ -165,6 +209,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
+  band: { position: "absolute", left: 0, right: 0, bottom: 0 },
   bar: { minHeight: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: 6 },
   barCompact: { minHeight: 46, paddingHorizontal: 2 },
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },

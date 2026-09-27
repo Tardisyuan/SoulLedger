@@ -34,6 +34,7 @@ const RESIDING = {
   home_tenant: CN_TENANT,
   home_civilization: "CHINESE",
   is_residing: true,
+  welcomed_civilizations: ["CHINESE", "EGYPTIAN"],
 };
 /** The same soul after the residence ended: back in the Diyu. */
 const RETURNED = { ...PROFILE, tenant: CN_TENANT, home_tenant: CN_TENANT, is_residing: false };
@@ -45,6 +46,7 @@ const NATIVE_EG = {
   home_tenant: EG_TENANT,
   home_civilization: "EGYPTIAN",
   is_residing: false,
+  welcomed_civilizations: ["EGYPTIAN"],
 };
 
 function renderApp() {
@@ -165,6 +167,9 @@ describe("a soul residing in another civilization", () => {
     expect(apply.props.accessibilityState.disabled).toBe(false);
     expect(screen.queryByTestId("terminal-empty")).toBeNull();
     expect(screen.getByText("还没有转生申请")).toBeTruthy();
+    // 文明气质 1e: the whole-page empty state wears the illustration of where the soul IS.
+    expect(within(screen.getByTestId("applications-empty")).getByTestId("empty-hero-eg")).toBeTruthy();
+    expect(screen.queryByTestId("empty-hero-cn")).toBeNull();
   });
 
   it("an application from before the dispatch is appealable whenever the server says can_appeal", async () => {
@@ -212,6 +217,8 @@ describe("a native soul of the Duat", () => {
     expect(screen.getByTestId("eligibility-reason").props.children).toBe("你所属的文明没有转生。此处的去向是终局。");
     const empty = screen.getByTestId("terminal-empty");
     expect(within(empty).getByText("杜阿特没有转生")).toBeTruthy();
+    // 文明气质 1e: the no-rebirth variant uses the same illustration as the plain empty page.
+    expect(within(empty).getByTestId("empty-hero-eg")).toBeTruthy();
     expect(screen.queryByText("还没有转生申请")).toBeNull();
   });
 

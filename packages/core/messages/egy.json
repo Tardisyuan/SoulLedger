@@ -2786,6 +2786,16 @@
       "body": "Hemes Em {{from}} Djer. Sesh Hena Unemu Er {{home}}.",
       "ok": "Rekh"
     },
+    "welcome": {
+      "entered": "Aq Er {{civ}}",
+      "skip": "Iri Tepy",
+      "realm": {
+        "CHINESE": "Duat Sherer",
+        "EUROPEAN": "Pet Hena Duat",
+        "EGYPTIAN": "Duat",
+        "GREEK": "Duat Haunebut"
+      }
+    },
     "settings": {
       "title": "Smen",
       "language": "Medu",

@@ -2786,6 +2786,16 @@
       "body": "在{{from}}的暂居已结束。簿册与配色已回{{home}}式样。",
       "ok": "知道了"
     },
+    "welcome": {
+      "entered": "你已进入{{civ}}",
+      "skip": "轻点跳过",
+      "realm": {
+        "CHINESE": "中国地府",
+        "EUROPEAN": "天堂与地狱",
+        "EGYPTIAN": "杜阿特",
+        "GREEK": "希腊冥界"
+      }
+    },
     "settings": {
       "title": "设置",
       "language": "语言",

@@ -93,6 +93,8 @@ describe("feed", () => {
     fireEvent.press(screen.getByText("重试"));
     expect(await screen.findByTestId("circle-empty")).toBeTruthy();
     expect(screen.getByText("还没有可看的帖子")).toBeTruthy();
+    // 文明气质 1e: a whole-page empty state carries the illustration (neutral here: no theme provided).
+    expect(within(screen.getByTestId("circle-empty")).getByTestId("empty-hero-neutral")).toBeTruthy();
     fireEvent.press(screen.getByTestId("circle-write"));
     expect(mockNavigate).toHaveBeenCalledWith("ComposePost");
   });
@@ -161,7 +163,7 @@ describe("reactions", () => {
   // Design 定稿:浅色下「点灯」反色 —— 深金底、米色字;深色下仍是亮金底、深色字。
   // 字面色值,不读 t.lamp:主题里两值对调,这里要红。
   it.each([
-    ["light", "#845A0F", "#FBF1DC"],
+    ["light", "#6A3E00", "#FBF1DC"], // 文明气质 1i, confirmed 2026-09-27 (was #845A0F)
     ["dark", "#F2CC7A", "#241B0C"],
   ] as const)("%s: the lamp button is %s with %s text", async (scheme, bg, ink) => {
     detail({}, STATUS, scheme);
