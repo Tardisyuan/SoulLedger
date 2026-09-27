@@ -15,19 +15,22 @@
  *     recorded before, but coming back is a change of civilization, not a
  *     return visit, so it plays once more (1b, "回归原籍").
  *
- * The record is written as it starts. If that write fails it still plays, and
- * the next launch decides again: one welcome too many, never one missed.
- * Under reduce-motion every duration is 0 — nothing is shown — and the record
- * is still written.
+ * The record is written only once the welcome has been SEEN: when it finishes,
+ * or when a tap skips it (user decision 2026-09-27). One that is cut short —
+ * the app killed, the soul signed out mid-fade — writes nothing, so the next
+ * launch plays it again. If the write fails it is not retried here: within this
+ * process each soul × civilization plays once (`PLAYED`), and the next launch
+ * decides again — one welcome too many, never one missed. Under reduce-motion
+ * every duration is 0: nothing is shown and the record is written at once.
  */
 import { soulApi, type Civilization, type MeProfile } from "@soulledger/core/api/soul";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 
 import { Hero } from "./emblems";
 import { useI18n } from "./i18n";
 import { civ, civKeyOf, motion, themeFor, type CivKey, type ColorScheme } from "./theme";
-import { Txt, enumText } from "./ui";
+import { Txt } from "./ui";
 
 type Welcomable = Pick<MeProfile, "civilization" | "home_civilization" | "welcomed_civilizations">;
 
@@ -43,10 +46,17 @@ export function welcomeFrom(profile: Welcomable): CivKey | null {
   return null;
 }
 
+/**
+ * Once per soul × civilization in this process, whatever the server answered —
+ * module-level, so a remount (sign out and back in) does not replay it either.
+ */
+const PLAYED = new Set<string>();
+
+/** Record the welcome as seen. A failure is left for the next launch to re-decide. */
+const record = (civilization: string) => void soulApi.markWelcomed(civilization as Civilization).catch(() => {});
+
 export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: ColorScheme }) {
-  const { t, enumLabel } = useI18n();
-  // Once per soul × civilization in this process, whatever the server answered.
-  const played = useRef(new Set<string>());
+  const { t } = useI18n();
   const [shown, setShown] = useState<{ from: CivKey; civilization: string } | null>(null);
   const [top] = useState(() => new Animated.Value(0));
   const [whole] = useState(() => new Animated.Value(1));
@@ -55,15 +65,25 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
   const key = `${profile.soul_code}:${civilization}`;
 
   useEffect(() => {
-    if (from === null || played.current.has(key)) return;
-    played.current.add(key);
-    soulApi.markWelcomed(civilization as Civilization).catch(() => {});
+    if (from === null || PLAYED.has(key)) return;
+    PLAYED.add(key);
+    let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled()
       .catch(() => false)
       .then((reduced) => {
-        if (!reduced) setShown({ from, civilization });
+        if (reduced) record(civilization);
+        else if (alive) setShown({ from, civilization });
       });
+    return () => {
+      alive = false;
+    };
   }, [key, from, civilization]);
+
+  /** Seen: to the end, or skipped. */
+  const done = (civilization: string) => {
+    record(civilization);
+    setShown(null);
+  };
 
   useEffect(() => {
     if (!shown) return;
@@ -74,13 +94,19 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
       Animated.delay(motion.welcomeHold),
       Animated.timing(whole, { toValue: 0, duration: motion.welcomeOut, useNativeDriver: true }),
     ]);
-    run.start(({ finished }) => finished && setShown(null));
+    // `finished` is false when the run is stopped by an unmount: not seen, not recorded.
+    run.start(({ finished }) => {
+      if (!finished) return;
+      record(shown.civilization);
+      setShown(null);
+    });
     return () => run.stop();
   }, [shown, top, whole]);
 
   if (!shown) return null;
   const to = themeFor(shown.civilization, scheme);
-  const text = t("soul_app.welcome.entered", { civ: enumText(enumLabel("souls.civilizations", shown.civilization), t) });
+  // The underworld's name (中国地府, 杜阿特 …), not the civilization's (user decision 2026-09-27).
+  const text = t("soul_app.welcome.entered", { civ: t(`soul_app.welcome.realm.${shown.civilization}`) });
   return (
     <Animated.View testID="welcome" style={[StyleSheet.absoluteFill, { opacity: whole }]}>
       <Pressable
@@ -88,7 +114,7 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
         accessibilityRole="button"
         accessibilityLabel={text}
         accessibilityHint={t("soul_app.welcome.skip")}
-        onPress={() => setShown(null)}
+        onPress={() => done(shown.civilization)}
         style={[StyleSheet.absoluteFill, { backgroundColor: civ[shown.from][scheme].s1 }]}
       >
         <Animated.View testID={`welcome-${shown.from}-${to.civ}`} style={[styles.top, { backgroundColor: to.s1, opacity: top }]}>

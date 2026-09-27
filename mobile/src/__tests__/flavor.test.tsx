@@ -144,7 +144,9 @@ describe("the loader (1h)", () => {
 });
 
 describe("the welcome (1b)", () => {
-  const P = (over: Record<string, unknown>) => ({ ...PROFILE, ...over }) as never;
+  // Once per soul × civilization per process is module state: each test is a soul of its own.
+  let n = 0;
+  const P = (over: Record<string, unknown>) => ({ ...PROFILE, soul_code: `SL-CN-W${++n}`, ...over }) as never;
 
   it("when it plays, and from which ground", () => {
     const at = (civilization: string, home: string, welcomed: string[]) =>
@@ -157,38 +159,88 @@ describe("the welcome (1b)", () => {
     expect(at("ATLANTEAN", "ATLANTEAN", [])).toBeNull(); // nothing to enter
   });
 
-  function play(profile: never, reply: { status: number; data?: unknown } = { status: 200, data: { welcomed_civilizations: ["CHINESE"] } }) {
+  const OK = { status: 200, data: { welcomed_civilizations: ["CHINESE"] } };
+  const tree = (profile: never) => (
+    <I18nProvider>
+      <Welcome profile={profile} scheme="dark" />
+    </I18nProvider>
+  );
+  function play(profile: never, reply: { status: number; data?: unknown } = OK) {
     const calls = stubApi({ "POST /me/welcomed/": reply });
-    const view = render(
-      <I18nProvider>
-        <Welcome profile={profile} scheme="dark" />
-      </I18nProvider>
-    );
+    const view = render(tree(profile));
     return { calls, view };
   }
+  const writes = (calls: { url: string }[]) => calls.filter((c) => c.url === "/me/welcomed/");
 
-  it("first sign-in: neutral → the civilization, recorded on the server; a tap skips it", async () => {
-    const { calls } = play(P({ welcomed_civilizations: [] }));
+  it("first sign-in: neutral → the Diyu, named as the underworld, not the civilization", async () => {
+    play(P({ welcomed_civilizations: [] }));
     await act(async () => {});
     expect(screen.getByTestId("welcome-neutral-cn")).toBeTruthy();
-    expect(screen.getByText("你已进入中国")).toBeTruthy();
-    expect(calls).toEqual([expect.objectContaining({ method: "POST", url: "/me/welcomed/", body: { civilization: "CHINESE" } })]);
-    fireEvent.press(screen.getByTestId("welcome-skip"));
-    expect(screen.queryByTestId("welcome")).toBeNull();
+    expect(screen.getByText("你已进入中国地府")).toBeTruthy();
+    expect(screen.queryByText("你已进入中国")).toBeNull();
+  });
+
+  it("each civilization is entered by its underworld's name", async () => {
+    const names: [string, string][] = [["EUROPEAN", "你已进入天堂与地狱"], ["EGYPTIAN", "你已进入杜阿特"], ["GREEK", "你已进入希腊冥界"]];
+    for (const [civilization, text] of names) {
+      const { view } = play(P({ civilization, home_civilization: civilization, welcomed_civilizations: [] }));
+      await act(async () => {});
+      expect(screen.getByText(text)).toBeTruthy();
+      view.unmount();
+    }
+  });
+
+  describe("the record is written once the welcome has been seen — not when it starts", () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it("started, then unmounted before it finished: nothing is written", async () => {
+      const { calls, view } = play(P({ welcomed_civilizations: [] }));
+      await act(async () => {});
+      expect(screen.getByTestId("welcome")).toBeTruthy();
+      await act(async () => void jest.advanceTimersByTime(700)); // faded in, still holding
+      view.unmount();
+      await act(async () => void jest.advanceTimersByTime(5000));
+      expect(writes(calls)).toEqual([]);
+    });
+
+    it("played to the end: written once, and the overlay is gone", async () => {
+      const { calls } = play(P({ welcomed_civilizations: [] }));
+      await act(async () => {});
+      await act(async () => void jest.advanceTimersByTime(1000));
+      expect(writes(calls)).toEqual([]); // mid-way: not yet
+      await act(async () => void jest.advanceTimersByTime(3000));
+      expect(screen.queryByTestId("welcome")).toBeNull();
+      expect(writes(calls)).toEqual([expect.objectContaining({ method: "POST", body: { civilization: "CHINESE" } })]);
+    });
+
+    it("skipped with a tap: written once, at the tap", async () => {
+      const { calls } = play(P({ welcomed_civilizations: [] }));
+      await act(async () => {});
+      expect(writes(calls)).toEqual([]);
+      fireEvent.press(screen.getByTestId("welcome-skip"));
+      await act(async () => {});
+      expect(screen.queryByTestId("welcome")).toBeNull();
+      expect(writes(calls)).toHaveLength(1);
+      await act(async () => void jest.advanceTimersByTime(5000));
+      expect(writes(calls)).toHaveLength(1);
+    });
   });
 
   it("plays once per soul × civilization: the same profile again does not replay or rewrite", async () => {
-    const { calls, view } = play(P({ welcomed_civilizations: [] }));
+    const profile = P({ welcomed_civilizations: [] });
+    const { calls, view } = play(profile);
     await act(async () => {});
     fireEvent.press(screen.getByTestId("welcome-skip"));
-    view.rerender(
-      <I18nProvider>
-        <Welcome profile={P({ welcomed_civilizations: [] })} scheme="dark" />
-      </I18nProvider>
-    );
+    view.rerender(tree(profile));
     await act(async () => {});
     expect(screen.queryByTestId("welcome")).toBeNull();
-    expect(calls).toHaveLength(1);
+    // Nor after a remount (sign out and in) in the same process.
+    view.unmount();
+    render(tree(profile));
+    await act(async () => {});
+    expect(screen.queryByTestId("welcome")).toBeNull();
+    expect(writes(calls)).toHaveLength(1);
   });
 
   it("the server already has it: nothing plays and nothing is written", async () => {
@@ -199,23 +251,28 @@ describe("the welcome (1b)", () => {
   });
 
   it("home again after a residence: the Duat → the Diyu, although home was recorded before", async () => {
-    const { calls } = play(P({ welcomed_civilizations: ["CHINESE", "EGYPTIAN"] }));
+    play(P({ welcomed_civilizations: ["CHINESE", "EGYPTIAN"] }));
     await act(async () => {});
     expect(screen.getByTestId("welcome-eg-cn")).toBeTruthy();
-    expect(calls).toHaveLength(1);
   });
 
-  it("reduce-motion: nothing shown, and the record is still written", async () => {
+  it("reduce-motion: nothing shown, and the record is written at once", async () => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
     const { calls } = play(P({ welcomed_civilizations: [] }));
     await act(async () => {});
     expect(screen.queryByTestId("welcome")).toBeNull();
-    expect(calls).toHaveLength(1);
+    expect(writes(calls)).toHaveLength(1);
   });
 
-  it("the server write fails: it plays anyway (the next launch asks again)", async () => {
-    play(P({ welcomed_civilizations: [] }), { status: 500 });
+  it("the write fails: no replay in this process (the next launch decides again)", async () => {
+    const profile = P({ welcomed_civilizations: [] });
+    const { calls, view } = play(profile, { status: 500 });
     await act(async () => {});
-    expect(screen.getByTestId("welcome-neutral-cn")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("welcome-skip"));
+    await act(async () => {});
+    view.rerender(tree(profile));
+    await act(async () => {});
+    expect(screen.queryByTestId("welcome")).toBeNull();
+    expect(writes(calls)).toHaveLength(1);
   });
 });
