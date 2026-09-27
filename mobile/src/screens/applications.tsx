@@ -13,7 +13,7 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 
-import { Emblem, Icon } from "../emblems";
+import { Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
@@ -23,7 +23,6 @@ import {
   Button,
   DataRow,
   DataRows,
-  Empty,
   EnumBadge,
   EnumValue,
   FadeIn,
@@ -31,6 +30,7 @@ import {
   Input,
   Interp,
   Notice,
+  PageEmptyArt,
   Quote,
   Screen,
   ScreenError,
@@ -77,12 +77,11 @@ export type AppStackParams = {
 export const TERMINAL_REASON = "terminal_cosmology";
 
 function TerminalEmpty() {
-  const theme = useTheme();
   const { t } = useI18n();
   const { home } = useResidence();
   return (
     <View testID="terminal-empty" style={styles.terminal}>
-      <Emblem civ={home} size={24} stroke={theme.hair2} strokeWidth={2} />
+      <PageEmptyArt />
       <Txt variant="nav" style={styles.center}>
         {t(lexiconKey(home, "no_rebirth_title"))}
       </Txt>
@@ -208,7 +207,12 @@ export function ApplicationsScreen() {
             list.data.reason === TERMINAL_REASON ? (
               <TerminalEmpty />
             ) : (
-              <Empty text={t("soul_app.applications.empty")} />
+              <View testID="applications-empty" style={styles.terminal}>
+                <PageEmptyArt />
+                <Txt variant="caption" tone="subtle" style={styles.center}>
+                  {t("soul_app.applications.empty")}
+                </Txt>
+              </View>
             )
           ) : null}
           {list.data.results.map((a) => (

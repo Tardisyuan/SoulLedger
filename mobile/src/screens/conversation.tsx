@@ -20,7 +20,6 @@ import { hasRead, type ChatMessage } from "@soulledger/core/api/matrix";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -31,15 +30,18 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
 import { bubbleStamp, chatMode, dayOf, daysLeft, type ChatMode } from "../chatRules";
-import { Icon } from "../emblems";
+import { HeaderBand } from "../chrome";
+import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { Button, Interp, Notice, Skeleton, Txt, useReducedMotion, useTheme } from "../ui";
+import type { CivKey } from "../theme";
+import { Button, Interp, Loader, Notice, Skeleton, Txt, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
@@ -274,9 +276,8 @@ function BackButton({ onBack }: { onBack: () => void }) {
 }
 
 function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void; title: string; subtitle?: string; muted?: boolean; right?: ReactNode }) {
-  const t = useTheme();
   return (
-    <View style={[styles.header, { borderBottomColor: t.hair }]}>
+    <View style={styles.header}>
       <BackButton onBack={onBack} />
       {/* 1e: iOS centres the title, Android sets it left. */}
       <View style={[styles.fill, !ANDROID && styles.centered]}>
@@ -290,6 +291,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
         ) : null}
       </View>
       {right ?? (ANDROID ? null : <View style={styles.icon} />)}
+      <HeaderBand />
     </View>
   );
 }
@@ -470,7 +472,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
       >
         <Body text={o.body} dim={failed || queued} />
         <View style={[styles.meta, styles.metaMine]}>
-          {queued || o.state === "sending" ? <ActivityIndicator size="small" color={t.inkSubtle} style={styles.spinner} /> : null}
+          {queued || o.state === "sending" ? <Loader size={14} /> : null}
           <Txt variant="label" tone={failed ? "negInk" : "subtle"} style={styles.metaText}>
             {tr(receipt)}
           </Txt>
@@ -496,6 +498,7 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
   return (
     <View style={styles.bubbleRow}>
       <View testID="officer-bubble" style={[styles.bubble, styles.officer, { borderColor: line, borderLeftWidth: 3, backgroundColor: t.s1 }]}>
+        <LetterCorners civ={t.civ} stroke={line} />
         <View style={styles.byline}>
           {sealed ? null : <Glyph text={tr("soul_app.chat.section.hall")} tone="mark" size={16} />}
           <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.mark }]}>{byline}</Txt>
@@ -507,6 +510,37 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
       </View>
     </View>
   );
+}
+
+/**
+ * 文明气质 1f: the officer's letter as paper — four 14pt corners of the
+ * civilization's ornament, 4 in from the edges, mirrored per corner. The body's
+ * padding (22) keeps the text clear of them; nothing sits under the text.
+ */
+const CORNERS = [
+  { key: "tl", at: { left: 4, top: 4 }, flip: [] },
+  { key: "tr", at: { right: 4, top: 4 }, flip: [{ scaleX: -1 }] },
+  { key: "bl", at: { left: 4, bottom: 4 }, flip: [{ scaleY: -1 }] },
+  { key: "br", at: { right: 4, bottom: 4 }, flip: [{ scaleX: -1 }, { scaleY: -1 }] },
+] as const;
+
+function LetterCorners({ civ, stroke }: { civ: CivKey; stroke: string }) {
+  return CORNERS.map((c) => (
+    <Svg
+      key={c.key}
+      testID={`letter-corner-${c.key}`}
+      pointerEvents="none"
+      width={14}
+      height={14}
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={1}
+      style={[styles.corner, c.at, { transform: [...c.flip] }]}
+    >
+      <Path d={CORNER[civ]} />
+    </Svg>
+  ));
 }
 
 // ── the dock: composer, or what replaces it ────────────────────────────
@@ -622,7 +656,7 @@ const styles = StyleSheet.create({
   pad: { padding: 20 },
   noSpacing: { letterSpacing: 0 },
   inlineMono: { fontSize: 12.5, lineHeight: 19 },
-  header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 6, borderBottomWidth: 1 },
+  header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 6 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
   subtitle: { fontSize: 11, lineHeight: 15 },
   hallHeader: { flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 10, paddingRight: 16, borderBottomWidth: 1 },
@@ -639,13 +673,13 @@ const styles = StyleSheet.create({
   bubbleRow: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
   bubble: { maxWidth: "76%", borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
-  officer: { maxWidth: "82%", paddingHorizontal: 15, paddingVertical: 13 },
+  officer: { maxWidth: "82%", padding: 22 },
+  corner: { position: "absolute" },
   body: { fontSize: 15, lineHeight: 26 },
   meta: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 7 },
   metaMine: { justifyContent: "flex-end" },
   metaTime: { fontSize: 10.5, lineHeight: 14 },
   metaText: { fontSize: 10, lineHeight: 14, letterSpacing: 0 },
-  spinner: { transform: [{ scale: 0.6 }] },
   newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
   newTagText: { fontFamily: family.ui[500], fontSize: 9.5, lineHeight: 13, letterSpacing: 1.1 },
   byline: { flexDirection: "row", alignItems: "center", gap: 7 },

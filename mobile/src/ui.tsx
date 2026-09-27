@@ -3,7 +3,8 @@
  *
  *   radius 0 everywhere — only the 2px focus ring and pill badges are round;
  *   depth is 1px hairlines between two surfaces, never a shadow;
- *   the only motion is a 120ms opacity change, and reduce-motion makes it 0.
+ *   the only motion is opacity — a 120ms fade, the loader breathing, the welcome —
+ *   and reduce-motion stills all of it.
  */
 import type { SoulErrorMessage } from "@soulledger/core/api/soul";
 import type { EnumDisplay } from "@soulledger/core/domain/enumDisplay";
@@ -22,8 +23,8 @@ import {
 } from "react";
 import {
   AccessibilityInfo,
-  ActivityIndicator,
   Animated,
+  Easing,
   Platform,
   Pressable,
   RefreshControl,
@@ -41,10 +42,10 @@ import {
 } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
-import { Emblem, Icon, LedgerUnreachable } from "./emblems";
+import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import { badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./rules";
+import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./rules";
 import { motion, radius, space, themeFor, type Theme } from "./theme";
 
 // ── theme & motion ─────────────────────────────────────────────────────
@@ -133,6 +134,16 @@ const COMPACT_TYPE: Partial<Record<keyof typeof TYPE, TextStyle>> = {
 export function useLayout(): Layout {
   const { width, fontScale } = useWindowDimensions();
   return layoutFor(width, fontScale);
+}
+
+/**
+ * 文明气质 1c: the band and the illustrations drop to their compact drawing on a
+ * screen under 340pt or at ≥ 1.7× text. (Strictly under 340 — `layoutFor`'s
+ * `compact` is ≤ 340; the handoff draws the two lines separately.)
+ */
+export function useFlavorCompact(): boolean {
+  const { width, fontScale } = useWindowDimensions();
+  return width < 340 || fontScale >= STACK_FONT_SCALE;
 }
 
 /**
@@ -299,6 +310,22 @@ export function Empty({ text, testID }: { text: string; testID?: string }) {
       <Txt testID={testID} variant="caption" tone="subtle" style={styles.center}>
         {text}
       </Txt>
+    </View>
+  );
+}
+
+/**
+ * 文明气质 1e: the civilization's illustration over a WHOLE-PAGE empty state —
+ * 书信, 朋友圈, 申请 (and the no-rebirth variant of 申请). One drawing per
+ * civilization for all three; which page it is, the language bundle says. An
+ * empty section inside a page keeps `Empty`'s dash.
+ */
+export function PageEmptyArt() {
+  const t = useTheme();
+  const compact = useFlavorCompact();
+  return (
+    <View style={styles.emptyArt}>
+      <Hero testID={`empty-hero-${t.civ}`} civ={t.civ} stroke={t.mark} compact={compact} />
     </View>
   );
 }
@@ -490,7 +517,7 @@ export function Button({
           pressed && styles.pressed,
         ]}
       >
-        {busy ? <ActivityIndicator size="small" color={t.inkSubtle} /> : null}
+        {busy ? <Loader size={20} /> : null}
         <Text
           numberOfLines={2}
           style={[kind === "secondary" ? styles.buttonTextSecondary : styles.buttonText, { color: look.ink }]}
@@ -782,6 +809,40 @@ export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: strin
   );
 }
 
+/**
+ * 文明气质 1h: waiting is the civilization's compact illustration breathing —
+ * opacity 0.35 ↔ 1 over 1.6s, ease-in-out; never a rotation or a scale. Under
+ * reduce-motion it stands still at full opacity. It still says what it is: a
+ * busy progress indicator named "loading".
+ */
+export function Loader({ size = 28, testID }: { size?: number; testID?: string }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const reduced = useReducedMotion();
+  const [opacity] = useState(() => new Animated.Value(0.35));
+  useEffect(() => {
+    if (reduced) return;
+    const half = { duration: motion.breath / 2, easing: Easing.inOut(Easing.ease), useNativeDriver: true };
+    const breath = Animated.loop(
+      Animated.sequence([Animated.timing(opacity, { toValue: 1, ...half }), Animated.timing(opacity, { toValue: 0.35, ...half })])
+    );
+    breath.start();
+    return () => breath.stop();
+  }, [opacity, reduced]);
+  return (
+    <Animated.View
+      testID={testID}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={tr("soul_app.common.loading")}
+      accessibilityState={{ busy: true }}
+      style={{ opacity: reduced ? 1 : opacity }}
+    >
+      <Hero civ={t.civ} stroke={t.mark} compact size={size} />
+    </Animated.View>
+  );
+}
+
 // ── data ───────────────────────────────────────────────────────────────
 
 /** Loading / error / data for one request, with a `reload` for pull-to-refresh and retry. */
@@ -843,6 +904,7 @@ export const styles = StyleSheet.create({
   sectionHeader: { minHeight: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[4] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: 18 },
   empty: { alignItems: "center", gap: 9, paddingVertical: 18 },
+  emptyArt: { alignSelf: "center", marginBottom: 6 },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },

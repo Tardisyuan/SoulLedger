@@ -2786,6 +2786,10 @@
       "body": "Hemes Em {{from}} Djer. Sesh Hena Unemu Er {{home}}.",
       "ok": "Rekh"
     },
+    "welcome": {
+      "entered": "Aq Er {{civ}}",
+      "skip": "Iri Tepy"
+    },
     "settings": {
       "title": "Smen",
       "language": "Medu",

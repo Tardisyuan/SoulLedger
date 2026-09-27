@@ -25,7 +25,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import type { Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, Screen, Skeleton, Txt, useLayout, useTheme } from "../ui";
+import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
@@ -274,7 +274,7 @@ export function LettersScreen() {
           <SectionLabel text={tr("soul_app.chat.section.souls")} tone="subtle" />
           {souls.length === 0 ? (
             <View testID="chat-empty" style={styles.empty}>
-              <View style={{ width: 28, height: 1, backgroundColor: t.hair2 }} />
+              <PageEmptyArt />
               <Txt variant="nav">{tr("soul_app.chat.empty.title")}</Txt>
               <Txt variant="caption" tone="subtle" style={styles.center}>
                 {tr("soul_app.chat.empty.body")}

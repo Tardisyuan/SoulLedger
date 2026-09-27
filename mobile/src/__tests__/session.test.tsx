@@ -195,7 +195,7 @@ describe("a stored session", () => {
     const me = heldReply();
     stubApi({ "/me/": me.reply, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
-    await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "EGYPTIAN" } }));
+    await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "EGYPTIAN", welcomed_civilizations: ["EGYPTIAN"] } }));
     const card = screen.getByTestId("profile-card");
     const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
     expect(style).toMatchObject({ backgroundColor: themeFor("EGYPTIAN", "light").s0 }); // jest reports a light colour scheme
