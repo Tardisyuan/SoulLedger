@@ -56,11 +56,17 @@ export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
 /**
  * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
  * one reaction and nowhere else in the app. The handoff draws dark only
- * (oklch 0.860 0.110 85 on 0.230 0.030 80); the light pair is ours, same hue.
+ * (oklch 0.860 0.110 85 on 0.230 0.030 80). Light lamp #6A3E00 on #FBF1DC is
+ * Design's (文明气质 1i, confirmed 2026-09-27; 8.13:1): our earlier #845A0F sat at
+ * the Egyptian light mark's lightness and chroma, differing only in hue. Against
+ * the Egyptian light ACCENT (#695621) lightness and chroma cannot part in gamut,
+ * so the two are told apart by form: the lamp's gold only ever appears on a solid
+ * lampBg chip (the lit lamp, circle.tsx reactions); the accent only on a hollow
+ * chip outlined in it (a reaction I made).
  */
 export const semantic = {
   dark: { pos: "#82CB92", neg: "#F4928A", negStrong: "#C25D58", negInk: "#FED2CD", negBg: "#301715", lamp: "#F2CC7A", lampBg: "#241B0C" },
-  light: { pos: "#197037", neg: "#AC3031", negStrong: "#C13C3B", negInk: "#94151D", negBg: "#FFEDEB", lamp: "#845A0F", lampBg: "#FBF1DC" },
+  light: { pos: "#197037", neg: "#AC3031", negStrong: "#C13C3B", negInk: "#94151D", negBg: "#FFEDEB", lamp: "#6A3E00", lampBg: "#FBF1DC" },
 } as const;
 
 /** pt. `space[5]` (20) is the screen gutter. */
