@@ -24,6 +24,7 @@ soul_auth_urlpatterns = [
 me_urlpatterns = [
     path("", me_views.MeView.as_view(), name="me"),
     path("password/", me_views.MePasswordView.as_view(), name="me-password"),
+    path("welcomed/", me_views.MeWelcomedView.as_view(), name="me-welcomed"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("rebirth-applications/", me_views.MeRebirthApplicationsView.as_view(), name="me-rebirth-applications"),
