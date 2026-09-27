@@ -272,6 +272,7 @@ def _apply(soul, plan, req):
         _save(node, "status", "removed_by_request_id")
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
     added = req.changes.get("add", [])
+    added_nodes = []
     if added:
         if req.requested_by_judgment_id is not None:
             current = [n for n in live if n.status in OCCUPYING_NODE_STATUSES]
@@ -285,26 +286,30 @@ def _apply(soul, plan, req):
             node.order += shift
             _save(node, "order")
         for i, item in enumerate(added, start=1):
-            live.append(SentenceNode.objects.create(
+            added_nodes.append(SentenceNode.objects.create(
                 plan=plan, order=anchor + i, tenant_code=item["tenant_code"], is_home=False,
                 status=SentenceNodeStatus.PENDING, realm_code=item["realm_code"],
                 sentence_years=item["sentence_years"], is_eternal=item["is_eternal"],
                 memory_reset=item["memory_reset"], added_by_request_id=req.pk,
                 added_by_judgment_id=req.requested_by_judgment_id, reason=item["reason"],
             ))
+        live.extend(added_nodes)
     _assert_eternal_last(live)
     touched = {item["tenant_code"] for item in added} | {by_id[pk].tenant_code for pk in req.changes.get("remove", [])}
-    plan_amended(soul, plan, touched, request_id=req.pk)
+    plan_amended(soul, plan, touched, request_id=req.pk, added=added_nodes)
 
 
-def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None):
-    """节点集合变了:事件、审计、通知(被加 / 被删节点所在文明的判官 + 原属判官)、推送。"""
+def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None, added=()):
+    """节点集合变了:事件、审计、通知(被加 / 被删节点所在文明的判官 + 原属判官)、推送。
+
+    `added_node_ids`:新加的站 —— 推送落地时 App 在这几站上标「新」(画布 1d)。减项的站灵魂看不见,不列。"""
     from apps.audit.models import AuditAction, AuditLog
     from apps.events.models import EventType
 
     record_event(soul, EventType.SENTENCE_PLAN_AMENDED, {
         "sentence_plan_id": str(plan.pk), "request_id": str(request_id) if request_id else None,
         "judgment_id": str(judgment_id) if judgment_id else None,
+        "added_node_ids": [str(n.pk) for n in added],
     })
     AuditLog.objects.create(
         tenant_id=plan.tenant_id, action=AuditAction.UPDATE, resource="sentence_plan", resource_id=str(plan.pk),
@@ -368,14 +373,15 @@ def conclude_reopened(judgment):
     realm_code = _route_home_realm(soul, judgment.verdict, judgment.judgment_method, judgment=judgment)
     realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
     home_code = plan.tenant.code
-    live.append(SentenceNode.objects.create(
+    new_node = SentenceNode.objects.create(
         plan=plan, order=anchor + 1, tenant_code=home_code, is_home=True, status=SentenceNodeStatus.PENDING,
         realm_code=realm.realm_code if realm else "", is_eternal=realm.is_eternal if realm else False,
         memory_reset=(realm.memory_reset_mechanism if realm else None) or "NONE",
         added_by_judgment_id=judgment.pk, reason=judgment.notes or "",
-    ))
+    )
+    live.append(new_node)
     _assert_eternal_last(live)
-    plan_amended(soul, plan, {home_code}, judgment_id=judgment.pk)
+    plan_amended(soul, plan, {home_code}, judgment_id=judgment.pk, added=[new_node])
 
 
 # ── 撤销(Q11)──────────────────────────────────────────────────────────

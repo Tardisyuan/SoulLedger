@@ -9,6 +9,8 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.reincarnation.models import RebirthForm
+from apps.sentence_plan.soul_view import PLAN_STATES as SOUL_PLAN_STATES
+from apps.sentence_plan.soul_view import STATION_STATUSES as SOUL_STATION_STATUSES
 from apps.soul_accounts.models import InitialCredential, RebirthApplication, SoulAccount
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
@@ -189,6 +191,33 @@ class MeReincarnationSerializer(serializers.Serializer):
     rebirth_form = serializers.CharField()
     target_realm = serializers.CharField()
     reincarnated_at = serializers.DateTimeField()
+
+
+class MeSentenceStationSerializer(serializers.Serializer):
+    """受刑计划的一站(App「我的受刑」1a):九档节点状态已合并成灵魂看的五档 + 赦免(`apps/sentence_plan/soul_view.py`)。
+    **没有** reason、disposition / dispatch / request 的 id(Q10)。"""
+
+    id = serializers.UUIDField()
+    #: 第几站:按灵魂看得见的站重新数(已减项的站不占号)。
+    n = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=SOUL_STATION_STATUSES)
+    is_home = serializers.BooleanField()
+    civilization = serializers.CharField()
+    realm = MeRealmSerializer(allow_null=True)
+    sentence_years = serializers.IntegerField(allow_null=True)
+    is_eternal = serializers.BooleanField()
+    started_on = serializers.DateField(allow_null=True)
+    #: 已结束的站:结束那天;在受 / 暂留的站:起始 + 刑期。其余为空。
+    ends_on = serializers.DateField(allow_null=True)
+
+
+class MeSentencePlanSerializer(serializers.Serializer):
+    """本人本世的受刑计划。没有计划时 `state=none`、`stations=[]`。"""
+
+    state = serializers.ChoiceField(choices=SOUL_PLAN_STATES)
+    #: 原属文明有转生(与推送 `sentence_completed` 的 rebirth_open 同一条判据)。
+    rebirth_open = serializers.BooleanField()
+    stations = MeSentenceStationSerializer(many=True)
 
 
 class MeLifeSerializer(serializers.Serializer):
