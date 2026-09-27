@@ -239,3 +239,26 @@ def test_hidden_moves_push_nothing_to_the_sentence_section(cn, eg, eu):
     plan.serve(soul, p, 1)
     plan.arrive(soul, p, 2)
     assert _sentence_pushes() == []
+
+
+@pytest.mark.parametrize("home_code", ["EG_DUAT", "EU_HEAVEN_HELL"])
+def test_a_pardon_reaches_a_soul_whose_civilization_has_no_rebirth(cn, eg, eu, home_code):
+    """赦免推给所有灵魂(2026-09-27 用户决定);「全部服完」仍只推给有转生的(文案说可以申请转生)。"""
+    home = eg if home_code == "EG_DUAT" else eu
+    soul, p, client = _planned_soul(home, [(cn, plan.stop_realm(cn), 5)], name=f"终局魂{home_code}")
+    PushDelivery.objects.all().delete()
+    mod = plan.officer(f"mod_{home_code}", "MODERATOR", home)
+    assert officer_client(mod).post(f"{PLANS}{p.pk}/cancel/", {"reason": "复核"}, format="json").status_code == 200
+    data = _get(client)
+    assert (data["state"], data["rebirth_open"]) == ("pardoned", False)
+    [push] = _sentence_pushes()
+    assert (push.kind, push.title) == ("sentence_pardoned", "剩余刑期已赦免")
+
+
+def test_completion_still_does_not_reach_a_soul_without_rebirth(cn, eg):
+    soul, p, client = _planned_soul(eg, [(cn, plan.stop_realm(cn), 5)], name="埃及服完")
+    plan.serve(soul, p, 1)
+    plan.arrive(soul, p, 2)
+    plan.serve(soul, p, 2)
+    assert _get(client)["state"] == "completed"
+    assert _sentence_pushes() == []

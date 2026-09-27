@@ -20,6 +20,7 @@ import {
   useState,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from "react";
 import {
   AccessibilityInfo,
@@ -33,6 +34,7 @@ import {
   Text,
   TextInput,
   View,
+  type LayoutChangeEvent,
   type StyleProp,
   type TextInputProps,
   type TextProps,
@@ -71,13 +73,25 @@ export function useReducedMotion(): boolean {
 }
 
 /** Fades its content in over 120ms when it mounts; instantly under reduce-motion. */
-export function FadeIn({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function FadeIn({
+  children,
+  style,
+  onLayout,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  onLayout?: (e: LayoutChangeEvent) => void;
+}) {
   const reduced = useReducedMotion();
   const [opacity] = useState(() => new Animated.Value(reduced ? 1 : 0));
   useEffect(() => {
     Animated.timing(opacity, { toValue: 1, duration: reduced ? 0 : motion.fade, useNativeDriver: true }).start();
   }, [opacity, reduced]);
-  return <Animated.View style={[{ opacity }, style]}>{children}</Animated.View>;
+  return (
+    <Animated.View onLayout={onLayout} style={[{ opacity }, style]}>
+      {children}
+    </Animated.View>
+  );
 }
 
 // ── type ───────────────────────────────────────────────────────────────
@@ -169,6 +183,7 @@ export function Screen({
   scroll = true,
   edges = ["left", "right", "bottom"],
   testID,
+  scrollRef,
 }: {
   children: ReactNode;
   refreshing?: boolean;
@@ -176,6 +191,8 @@ export function Screen({
   scroll?: boolean;
   edges?: Edge[];
   testID?: string;
+  /** For a screen that scrolls itself to a block (a push landing, 受刑 1d). */
+  scrollRef?: Ref<ScrollView>;
 }) {
   const t = useTheme();
   // The spinner belongs to a pull. A reload the app starts itself (tab refocus)
@@ -195,6 +212,7 @@ export function Screen({
     >
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.grow}
           keyboardShouldPersistTaps="handled"
           refreshControl={

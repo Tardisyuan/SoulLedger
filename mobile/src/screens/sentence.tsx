@@ -18,7 +18,7 @@ import {
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useEffect, type ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
 import { Emblem, Node } from "../emblems";
@@ -225,11 +225,21 @@ function Axis({ plan }: { plan: MeSentencePlan }) {
 }
 
 /** The 3px mark rule down the section's left — "the block to read on this page" — and, on a landing, the tag. */
-function Ruled({ landed, children, testID }: { landed: boolean; children: ReactNode; testID?: string }) {
+function Ruled({
+  landed,
+  children,
+  testID,
+  onLayout,
+}: {
+  landed: boolean;
+  children: ReactNode;
+  testID?: string;
+  onLayout?: (e: LayoutChangeEvent) => void;
+}) {
   const theme = useTheme();
   const { gutter } = useLayout();
   return (
-    <View testID={testID} style={[styles.ruled, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, landed && { backgroundColor: theme.s1 }]}>
+    <View testID={testID} onLayout={onLayout} style={[styles.ruled, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, landed && { backgroundColor: theme.s1 }]}>
       <View testID={landed ? "sentence-landing-rule" : undefined} pointerEvents="none" style={[styles.rule, { backgroundColor: theme.mark }]} />
       {children}
     </View>
@@ -265,7 +275,16 @@ export function useSentencePlan({ landing, reloadKey }: { landing?: SentenceLand
   return remote;
 }
 
-export function SentenceSection({ remote, landing }: { remote: SentenceRemote; landing?: SentenceLanding }) {
+export function SentenceSection({
+  remote,
+  landing,
+  onPlaced,
+}: {
+  remote: SentenceRemote;
+  landing?: SentenceLanding;
+  /** The section's top within its parent — the life page scrolls a landing to it. */
+  onPlaced?: (y: number) => void;
+}) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const plan = remote.data;
@@ -273,7 +292,7 @@ export function SentenceSection({ remote, landing }: { remote: SentenceRemote; l
   const hasPlan = !!plan && plan.state !== "none";
   const final = plan?.state === "eternal";
   return (
-    <Ruled landed={!!landing} testID="section-sentence">
+    <Ruled landed={!!landing} testID="section-sentence" onLayout={onPlaced && ((e) => onPlaced(e.nativeEvent.layout.y))}>
       <View style={styles.head}>
         <Txt variant="section">{t("soul_app.sentence.section_title")}</Txt>
         {hasPlan && current && !final ? (
