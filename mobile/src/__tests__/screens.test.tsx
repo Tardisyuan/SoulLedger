@@ -57,6 +57,30 @@ describe("past lives", () => {
     expect(screen.queryByText("提交申请")).toBeNull();
     expect(calls.every((c) => c.method === "GET")).toBe(true);
   });
+
+  it("the 已封存 stamp is a row of its own above the sections — never an absolute corner over 功过", async () => {
+    stubApi({ "/me/past-lives/": { status: 200, data: [life(0)] } });
+    wrap(<PastLivesSection lex="cn" reloadKey={0} />);
+    fireEvent.press(screen.getByTestId("section-past_lives-toggle"));
+    await screen.findByTestId("past-life-0");
+    fireEvent.press(screen.getByTestId("past-life-0-toggle"));
+    const card = screen.getByTestId("sealed-0");
+    const stamp = within(card).getByTestId("sealed-stamp-0");
+    expect(within(stamp).getByText("已封存")).toBeTruthy();
+    // Neither the stamp nor anything between it and the card is taken out of the flow.
+    type El = { parent: El | null; props: { style?: unknown } };
+    for (let n: El | null = stamp as unknown as El; n && n !== (card as unknown as El); n = n.parent) {
+      expect((StyleSheet.flatten(n.props.style as never) as { position?: string } | undefined)?.position).not.toBe("absolute");
+    }
+    // …and it comes before the first section in the card's order.
+    type Host = { type: unknown; props: Record<string, unknown> };
+    const ids = (card as unknown as { findAll: (p: (n: Host) => boolean) => Host[] })
+      .findAll((n) => typeof n.type === "string" && typeof n.props.testID === "string")
+      .map((n) => n.props.testID as string)
+      .filter((id) => id === "sealed-stamp-0" || /^section-[a-z_]+$/.test(id));
+    expect(ids[0]).toBe("sealed-stamp-0");
+    expect(ids.length).toBeGreaterThan(1);
+  });
 });
 
 describe("applying", () => {
