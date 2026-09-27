@@ -535,3 +535,11 @@ Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=Fals
 菜单与权限系统的设计参考了 [Snowy](https://github.com/xiaonuobase/Snowy)（Apache-2.0）。
 
 维护者：Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
+
+---
+
+## 许可证
+
+[Apache-2.0](LICENSE)。第三方声明见 [`NOTICE`](NOTICE)：App 内置的 Noto Serif SC
+子集字体采用 SIL OFL-1.1，原文在
+[`mobile/assets/fonts/OFL.txt`](mobile/assets/fonts/OFL.txt)。
