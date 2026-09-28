@@ -68,7 +68,8 @@ class Provider(Protocol):
 
 - 内部消息格式用一种中性结构,两个适配器各自翻译成 OpenAI Chat Completions / Anthropic Messages 的格式。**翻译层是最容易出错的地方,要有单元测试**(注入假的 SDK 客户端,断言请求体与响应解析)。
 - 配置全部来自环境变量:`ASSISTANT_PROVIDER`(`openai_compat` / `anthropic`)、`ASSISTANT_BASE_URL`、`ASSISTANT_API_KEY`、`ASSISTANT_MODEL`。换厂商只改配置。
-- **超时与重试显式设置。** SDK 默认超时 10 分钟、重试 2 次;这里设 `timeout` 使整个请求不超过 30 秒,`max_retries=0`。超时返回 503 `assistant_unavailable`。
+- **超时与重试显式设置。** SDK 默认超时 10 分钟、重试 2 次;这里设 `timeout` 使整个请求不超过 **22 秒**,`max_retries=0`。超时返回 503 `assistant_unavailable`。App 的设计稿(画布「灵魂簿 App · 问一问」1e)在 25 秒时按超时处理;服务端必须先于客户端放弃,否则客户端已提示超时、服务端仍在占线程与配额。
+- **客户端「取消」不中断服务端。** 灵魂在等待中点取消,请求照常跑完并落库;下次打开这个会话能看到那条回答。
 - Anthropic 默认模型 `claude-opus-5`,`output_config.effort="low"`(帮助台不需要深推理);system prompt 加 `cache_control`。OpenAI 兼容后端的缓存各家不同,不统一处理。
 - `FakeProvider` 按脚本返回,只用于测试。
 - **兼容性未逐家实测。** 各家的工具调用质量差别大(Ollama 小模型尤其不稳)。启用某个供应商前,先跑 §8 的行为评测。
@@ -117,7 +118,7 @@ class Provider(Protocol):
 - `ASSISTANT_ENABLED` 为假,或原属殿的 `assistant_enabled` 不为真 → 503 `assistant_not_configured`。写法同 `MATRIX_ENABLED`(`backend/config/settings.py:401`);App 已有「收到 503 只提示一次」的先例(`mobile/src/chat.tsx:255,331`)。
 - 按账号节流 `assist: 30/hour`,写法同 `ChatLookupThrottle`(`apps/chat/views.py:126-131`),429 带 `code`。
 - **并发。** 生产是 daphne(`backend/Dockerfile:40`);Django ASGI 每个请求一个线程,同步视图不受 daphne 限制,**真正的上限是 PG 连接数**(`conn_max_age=600`,`settings.py:168`)。所以:
-  - 调模型前 `connection.close()`,不让一次 30 秒的调用一直占着连接;
+  - 调模型前 `connection.close()`,不让一次 22 秒的调用一直占着连接;
   - Redis 计数限制全局同时进行的问答数,超过答 429(仓库尚无 `cache.incr` 先例,**未核实**原子性写法)。
 
 ### 4.6 审计与隐私
