@@ -299,7 +299,11 @@ export function AssistEntry({ screen }: { screen: AssistScreen }) {
 export function AskGlyph({ color, glyph = "问" }: { color: string; glyph?: string }) {
   return (
     <View style={[styles.glyph, { borderColor: color }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-      <Text style={[styles.glyphText, { color }]}>{glyph}</Text>
+      {/* An icon, not prose: its 20pt box does not grow with the system font scale, so the
+          character must not either — at 1.8× it overflowed the box and was clipped. */}
+      <Text allowFontScaling={false} style={[styles.glyphText, { color }]}>
+        {glyph}
+      </Text>
     </View>
   );
 }

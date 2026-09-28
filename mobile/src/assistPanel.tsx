@@ -11,7 +11,7 @@
  */
 import { assistAnswerLocale, isEmptyAnswer, type AssistConversation, type AssistMessage, type AssistScreen } from "@soulledger/core/api/soul-assist";
 import { useEffect, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
@@ -91,13 +91,18 @@ export function AssistPanel() {
         <KeyboardAvoidingView
           testID="assist-panel"
           accessibilityViewIsModal
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={[
-            styles.sheet,
-            { backgroundColor: t.s0, borderTopColor: t.hair2, paddingTop: full ? insets.top : 0, paddingBottom: insets.bottom },
-          ]}
+          // Both platforms, as in screens/conversation.tsx: Android draws edge-to-edge (SDK 57), so the
+          // window no longer shrinks for the keyboard and the input sat under it (seen on the emulator).
+          // No negative keyboardVerticalOffset here (unlike conversation.tsx): inside a Modal it
+          // over-corrects — the input stayed half under the keyboard.
+          behavior="padding"
+          style={[styles.sheet, { backgroundColor: t.s0, borderTopColor: t.hair2, paddingTop: full ? insets.top : 0 }]}
         >
-          <Sheet assist={assist} />
+          {/* The gesture-bar inset lives on an inner view: behavior="padding" writes the avoiding
+              view's own paddingBottom and would silently drop it (the input sank into the bar). */}
+          <View style={[styles.fill, { paddingBottom: insets.bottom }]}>
+            <Sheet assist={assist} />
+          </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
