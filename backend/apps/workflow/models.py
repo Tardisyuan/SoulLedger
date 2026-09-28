@@ -1,6 +1,6 @@
 """
 Workflow models — approval workflow engine for soul judgment.
-Supports multi-stage approvals across Chinese, European, and Egyptian civilizations.
+Supports multi-stage approvals across Chinese, European, Egyptian, and Greek civilizations.
 """
 import uuid
 

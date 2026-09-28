@@ -134,7 +134,7 @@ def _rejected_original(civilization, tenant, name):
     )
 
 
-# ── the case: three civilizations, one door ───────────────────────────
+# ── the case: four civilizations, one door ───────────────────────────
 
 
 @pytest.mark.django_db
