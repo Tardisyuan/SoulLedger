@@ -715,6 +715,8 @@ if not SENTRY_DSN and not DEBUG:
         stacklevel=2,
     )
 if SENTRY_DSN:
+    from apps.soul_assist.sentry import scrub_assist
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
@@ -730,4 +732,6 @@ if SENTRY_DSN:
         ],
         traces_sample_rate=0.1,
         send_default_pii=False,
+        # 助手接口的请求体与栈帧局部变量是灵魂的原文(apps/soul_assist/sentry.py)。
+        before_send=scrub_assist,
     )

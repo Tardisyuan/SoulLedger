@@ -14,5 +14,5 @@ questions:
 - soul_state:你当前的状态不能申请。受刑计划服完、进入轮回之后才开放。如果受刑已显示服完仍是这样,请写信给殿司。
 - application_open:你已有一份审理中或申诉中的申请,同一时间只能有一份。等它有结论。
 - application_approved:本世的申请已获批准,不需要再申请。
-- cooldown:上一份申请被最终驳回后处于冷却期。可再申请的日期以工具返回的 cooldown_until 为准。
+- cooldown:上一份申请被驳回(或申诉被驳回)后处于冷却期。可再申请的日期以工具返回的 cooldown_until 为准。
 - sentence_in_progress:受刑计划还没有全部服完。全部站完成(或剩余刑期被赦免)后才能申请。

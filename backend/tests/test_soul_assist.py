@@ -151,6 +151,9 @@ def test_an_answer_is_stored_with_its_question_and_audited_without_the_text(cn_t
     row = AuditLog.objects.get(resource="assistant")
     assert row.tenant_id == cn_tenant.pk and row.changes["tools"] == ["rebirth"]
     assert "我的秘密问题" not in json.dumps(row.changes, ensure_ascii=False) + row.description
+    # 加密钥的哈希:裸 SHA-256 对短问题可以猜(审查 5)。
+    import hashlib
+    assert row.changes["question_hmac"] != hashlib.sha256("我的秘密问题".encode()).hexdigest()
     assert "你的受刑尚未服完" not in json.dumps(row.changes, ensure_ascii=False)
 
 
@@ -173,8 +176,9 @@ def test_the_tool_loop_is_capped(cn_tenant):
     _, client = ready_soul(cn_tenant)
     FakeProvider.script = [{"tools": ["me"]}] * 5 + [{"text": "完"}]
     assert _ask(client).status_code == 200
-    stored = AssistMessage.objects.get(role="assistant")
-    assert stored.tool_calls == ["me"] * service.MAX_ROUNDS
+    # 真正的上限在适配器里(test_soul_assist_providers 的 last_round_forbids_tools);
+    # 这里只钉服务层交给适配器的是 MAX_ROUNDS。
+    assert FakeProvider.calls[-1]["max_rounds"] == service.MAX_ROUNDS == 3
 
 
 def test_a_provider_failure_is_503_and_stores_nothing(cn_tenant):
@@ -297,3 +301,72 @@ def test_purge_removes_expired_messages_deleted_and_retired_conversations(cn_ten
     assert AssistMessage.objects.filter(conversation_id=kept).count() == 2
     assert result["conversations"] == 3
     assert service.purge_history() == {"messages": 0, "conversations": 0}  # 幂等
+
+
+def test_a_continued_conversation_deleted_mid_answer_gets_a_new_one(cn_tenant, monkeypatch):
+    """模型答题的 22 秒里会话被删(灵魂删,或留存清理删空):回答落进新会话,不 500、不丢(审查 6)。"""
+    _enable(cn_tenant)
+    _, client = ready_soul(cn_tenant)
+    first = _ask(client).data["conversation_id"]
+
+    real_run = tools.run
+
+    def delete_then_run(name, account):
+        AssistConversation.all_objects.filter(pk=first).delete()
+        return real_run(name, account)
+
+    monkeypatch.setattr(tools, "run", delete_then_run)
+    FakeProvider.script = [{"tools": ["me"]}, {"text": "答"}]
+    response = _ask(client, conversation_id=first)
+    assert response.status_code == 200
+    assert response.data["conversation_id"] != first
+    assert AssistMessage.objects.filter(conversation_id=response.data["conversation_id"]).count() == 2
+
+
+def test_the_concurrency_counter_never_goes_negative():
+    """键过期重建后,迟到的 decr 不能把计数压成负数、放进多余的请求(审查 1)。"""
+    from django.core.cache import cache
+
+    cache.set(service.INFLIGHT_KEY, 0, 60)
+    service._Slot().__exit__()
+    assert cache.get(service.INFLIGHT_KEY) == 0
+    cache.delete(service.INFLIGHT_KEY)
+    service._Slot().__exit__()  # 键不在:不抛
+    with service._Slot():
+        assert cache.get(service.INFLIGHT_KEY) == 1
+    assert cache.get(service.INFLIGHT_KEY) == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_an_answer_works_when_the_db_connection_really_is_released(settings):
+    """其余测试都在事务里,`_release_db()` 从不真关连接(审查 8)。这里不在事务里:
+    调模型前、每个工具之后都真的关掉连接,再由 Django 按需重连。"""
+    from apps.tenants.models import Tenant
+
+    tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu",
+                                   settings={"assistant_enabled": True})
+    _, client = ready_soul(tenant)
+    FakeProvider.script = [{"tools": ["me", "rebirth"]}, {"text": "好"}]
+    response = _ask(client)
+    assert response.status_code == 200, response.data
+    assert AssistMessage.objects.count() == 2
+
+
+def test_sentry_events_from_the_assistant_lose_the_body_and_frame_variables():
+    from apps.soul_assist.sentry import scrub_assist
+
+    event = {"request": {"url": "https://x/api/v1/me/assist/", "data": {"question": "秘密"}},
+             "exception": {"values": [{"stacktrace": {"frames": [{"function": "answer", "vars": {"question": "秘密"}}]}}]}}
+    scrubbed = scrub_assist(event, {})
+    assert "data" not in scrubbed["request"]
+    assert "vars" not in scrubbed["exception"]["values"][0]["stacktrace"]["frames"][0]
+    other = {"request": {"url": "https://x/api/v1/me/", "data": {"k": "v"}}}
+    assert scrub_assist(other, {})["request"]["data"] == {"k": "v"}
+
+
+def test_sentry_is_wired_to_the_scrubber():
+    """settings 里只有配了 DSN 才 init;这里钉住 init 调用确实带着它。"""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "config" / "settings.py").read_text(encoding="utf-8")
+    assert "before_send=scrub_assist" in source

@@ -7,6 +7,7 @@
 服务端照常跑完并落库,下次打开会话能看到(§3)。
 """
 import hashlib
+import hmac
 import time
 from datetime import timedelta
 
@@ -58,14 +59,24 @@ class _Slot:
 
     def __enter__(self):
         cache.add(INFLIGHT_KEY, 0, self.TTL)
-        if cache.incr(INFLIGHT_KEY) > settings.ASSISTANT_MAX_CONCURRENT:
+        try:
+            count = cache.incr(INFLIGHT_KEY)
+        except ValueError:  # add 与 incr 之间键过期了
+            cache.set(INFLIGHT_KEY, 1, self.TTL)
+            count = 1
+        # INCR 保留原 TTL,键在 exists 与 INCR 之间过期还会被建成**无 TTL**;每次进出都重设。
+        cache.touch(INFLIGHT_KEY, self.TTL)
+        if count > settings.ASSISTANT_MAX_CONCURRENT:
             self.__exit__()
             raise AssistError("助手正忙,请稍后再问。", "assistant_busy", 429)
         return self
 
     def __exit__(self, *exc):
         try:
-            cache.decr(INFLIGHT_KEY)
+            if cache.decr(INFLIGHT_KEY) < 0:  # 键曾过期重建:别让负数放进多余的请求
+                cache.set(INFLIGHT_KEY, 0, self.TTL)
+            else:
+                cache.touch(INFLIGHT_KEY, self.TTL)
         except ValueError:  # 键已过期
             pass
 
@@ -89,7 +100,8 @@ def conversation_for(account, screen, conversation_id=None):
 
 
 def _sha(text):
-    return hashlib.sha256(text.encode()).hexdigest()
+    """加密钥的哈希:短问题(「怎么申请转生?」)的裸 SHA-256 猜得出来,而审计行比原文活得久。"""
+    return hmac.new(settings.SECRET_KEY.encode(), text.encode(), hashlib.sha256).hexdigest()
 
 
 def answer(account, question, screen, *, locale, conversation_id=None, request=None):
@@ -121,14 +133,15 @@ def answer(account, question, screen, *, locale, conversation_id=None, request=N
             raise AssistError("助手一时答不上来,请稍后重试。", "assistant_unavailable", 503) from exc
     text = result.text.strip() or EMPTY_ANSWER[lang]
     with transaction.atomic():
-        if conversation is None:
+        # 续的会话可能在模型答题的这 22 秒里被删(灵魂删、或留存清理删空):那就新开一个,不丢这条回答。
+        if conversation is None or not AssistConversation.objects.filter(pk=conversation.pk).exists():
             conversation = AssistConversation.objects.create(account=account, screen=screen)
         AssistMessage.objects.create(conversation=conversation, role="user", content=question)
         reply = AssistMessage.objects.create(conversation=conversation, role="assistant", content=text,
                                              tool_calls=result.tool_calls, tokens=result.usage)
         AssistConversation.objects.filter(pk=conversation.pk).update(last_active_at=timezone.now())
         _audit(account, conversation, "EXECUTE", "assistant answer", request, {
-            "question_sha256": _sha(question), "answer_sha256": _sha(text), "tools": result.tool_calls,
+            "question_hmac": _sha(question), "answer_hmac": _sha(text), "tools": result.tool_calls,
             "provider": settings.ASSISTANT_PROVIDER.rsplit(".", 1)[-1], "model": settings.ASSISTANT_MODEL,
             "tokens": result.usage, "locale": lang,
         })

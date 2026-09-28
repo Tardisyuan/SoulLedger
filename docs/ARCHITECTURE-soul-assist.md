@@ -123,8 +123,8 @@ class Provider(Protocol):
 
 ### 4.6 审计与隐私
 
-- `AuditLog(resource="assistant")`:问题与回答的哈希、调用过的工具、供应商、token 用量放在 `changes` JSON(`AuditLog` 没有 token 列,`apps/audit/models.py:44-53`)。**不存原文**,原文只在 `AssistMessage` 里、30 天。
-- 加一条断言:Sentry 不采集这个接口的请求正文(`send_default_pii=False` 只挡 PII,不挡请求体,`settings.py:708`)。
+- `AuditLog(resource="assistant")`:问题与回答的 **HMAC**(以 `SECRET_KEY` 为密钥;裸 SHA-256 对短问题可以猜,而审计行比原文活得久)、调用过的工具、供应商、token 用量放在 `changes` JSON(`AuditLog` 没有 token 列,`apps/audit/models.py:44-53`)。**不存原文**,原文只在 `AssistMessage` 里、30 天。
+- Sentry 的 `before_send` 对 `/me/assist/` 的事件删掉请求体与栈帧局部变量(`apps/soul_assist/sentry.py`);`send_default_pii=False` 只挡 PII,不挡这两样。供应商的一切 SDK 异常都转成 503,不以 500 冒出去。
 
 ## 5. 帮助语料
 
