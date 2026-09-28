@@ -29,7 +29,7 @@ INFLIGHT_KEY = "soul_assist:inflight"
 
 #: 模型交回空文本(拒答、只输出了思考)时的固定回答。
 EMPTY_ANSWER = {
-    "zh-Hans": "这个问题我答不了。需要人来处理的事,请写信给殿司。",
+    "zh-Hans": "这个问题我答不了。需要人来处理的事，请写信给殿司。",
     "en": "I can't answer that. For anything that needs a person, write to the hall office.",
 }
 
