@@ -812,7 +812,7 @@ class WorkflowService:
         refuses.
 
         **This is not a no-op**, and the one case it changes is worth stating.
-        For the three civilizations the answer is identical before and after,
+        For the four civilizations the answer is identical before and after,
         because ``APPEAL`` is now in every set. It differs for a soul whose
         ``civilization`` is ``UNKNOWN_CIVILIZATION`` — a soul whose tenant is
         missing or whose tenant code is not in ``TENANT_CIVILIZATION``. Before,

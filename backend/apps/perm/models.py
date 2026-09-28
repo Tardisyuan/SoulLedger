@@ -468,7 +468,7 @@ ROLE_PERMISSIONS = {
     #
     # Scoping comes from the tenant, not the role — every user belongs to
     # exactly one tenant and non-ADMIN querysets are filtered to it, so one
-    # role covers all three civilizations without any of its holders seeing
+    # role covers all four civilizations without any of its holders seeing
     # each other's. That is also why this must never be ADMIN: ADMIN bypasses
     # tenant isolation outright, so a "lead of Diyu" given ADMIN would quietly
     # be a lead of everywhere.
