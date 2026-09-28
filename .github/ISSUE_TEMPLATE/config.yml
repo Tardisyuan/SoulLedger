@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability / 安全漏洞
+    url: https://github.com/Tardisyuan/SoulLedger/security/advisories/new
+    about: Report privately, not in a public issue. See SECURITY.md. / 请私下报告，不要公开提 issue。见 SECURITY.md。
