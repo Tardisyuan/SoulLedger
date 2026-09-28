@@ -39,7 +39,7 @@ import {
   useRemote,
   useTheme,
 } from "../ui";
-import type { AppStackParams } from "./applications";
+import { useResidenceNames, type AppStackParams } from "./applications";
 import { realmName } from "./life";
 
 /** The four push kinds that land on the sentence plan (1d). */
@@ -173,9 +173,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function StationDetail({ station, fresh }: { station: MeSentenceStation; fresh: boolean }) {
+function StationDetail({ station, fresh, landing }: { station: MeSentenceStation; fresh: boolean; landing?: SentenceLanding }) {
   const { t, locale } = useI18n();
   const struck = station.status === "pardoned";
+  // An amendment names only the stations it added (a reduction names none), so the note says "added".
+  const added = landing?.kind === "sentence_amended" && landing.nodeIds.includes(station.id);
   return (
     <View testID={`station-${station.n}`} style={struck ? styles.struck : undefined}>
       <View style={styles.stationHead}>
@@ -187,6 +189,11 @@ function StationDetail({ station, fresh }: { station: MeSentenceStation; fresh: 
         </Txt>
         {fresh ? <NewTag testID={`station-${station.n}-new`} /> : null}
       </View>
+      {added ? (
+        <Txt testID={`station-${station.n}-added`} variant="caption" tone="muted">
+          {t("soul_app.sentence.amended_note")}
+        </Txt>
+      ) : null}
       <CivLine station={station} />
       <View style={styles.rows}>
         <Row label={t("soul_app.sentence.term")}>
@@ -200,12 +207,15 @@ function StationDetail({ station, fresh }: { station: MeSentenceStation; fresh: 
   );
 }
 
-function StatusText({ station }: { station: MeSentenceStation }) {
+/** `withEnd`: where the soul is, the state line also says until when (1c 「受刑中 · 至 …」). */
+function StatusText({ station, withEnd }: { station: MeSentenceStation; withEnd?: boolean }) {
   const { t } = useI18n();
-  const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : OCCUPYING.includes(station.status) ? "accent" : "mark";
+  const here = OCCUPYING.includes(station.status);
+  const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "accent" : "mark";
+  const state = t(STATUS_KEY[station.status]);
   return (
     <Txt testID={`station-${station.n}-status`} variant="caption" tone={tone}>
-      {t(STATUS_KEY[station.status])}
+      {withEnd && here && station.ends_on ? `${state} · ${t("soul_app.sentence.until", { date: station.ends_on })}` : state}
     </Txt>
   );
 }
@@ -316,7 +326,7 @@ export function SentenceSection({
             {final ? null : <Axis plan={plan} />}
             {current ? (
               <>
-                <StationDetail station={current} fresh={isNew(landing, current, plan)} />
+                <StationDetail station={current} fresh={isNew(landing, current, plan)} landing={landing} />
                 <StatusText station={current} />
               </>
             ) : null}
@@ -366,7 +376,7 @@ function Banner({ plan }: { plan: MeSentencePlan }) {
       <Txt variant="bodyLg">{t(c.title)}</Txt>
       {c.body.map((k) => (
         <Txt key={k} variant="caption" tone="muted">
-          {t(k)}
+          {t(k, { total: String(plan.stations.length) })}
         </Txt>
       ))}
       <ApplyRow plan={plan} />
@@ -388,9 +398,11 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
       </View>
       <View style={[styles.fill, next && styles.stationGap]}>
         <View style={[here && [styles.here, { borderColor: theme.mark, backgroundColor: theme.s1 }]]}>
-          <StationDetail station={station} fresh={isNew(landing, station, plan)} />
+          <StationDetail station={station} fresh={isNew(landing, station, plan)} landing={landing} />
           <View style={styles.rows}>
-            <StatusText station={station} />
+            <Row label={t("soul_app.sentence.field_state")}>
+              <StatusText station={station} withEnd />
+            </Row>
           </View>
           {station.status === "waiting" ? (
             <Txt testID={`station-${station.n}-why`} variant="caption" tone="muted" style={[styles.why, { borderLeftColor: theme.accent }]}>
@@ -409,6 +421,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
   const { t } = useI18n();
   const { gutter } = useLayout();
   const remote = useRemote(soulApi.sentencePlan);
+  const residence = useResidenceNames();
   const plan = remote.data;
   if (remote.error && !plan) {
     return (
@@ -433,18 +446,31 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
         <Empty testID="sentence-empty" text={t("soul_app.sentence.empty")} />
       ) : (
         <>
-          <Banner plan={plan} />
-          {plan.state !== "eternal" && current ? (
-            <View style={[styles.summary, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
-              <Txt variant="value" tone="muted">
-                {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
-              </Txt>
-              <View style={styles.fill} />
-              <Txt variant="caption" tone="subtle">
-                {t(STATUS_KEY[current.status])}
+          {residence ? (
+            <View testID="sentence-residing" style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: theme.accent, backgroundColor: theme.s1 }]}>
+              <Txt variant="bodyLg">{t("soul_app.life.residing", residence)}</Txt>
+              <Txt variant="caption" tone="muted">
+                {t("soul_app.sentence.residing_body", residence)}
               </Txt>
             </View>
           ) : null}
+          <Banner plan={plan} />
+          <View style={[styles.summary, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
+            <Txt testID="sentence-total" variant="label" tone="subtle">
+              {t("soul_app.sentence.total_stations", { total: String(plan.stations.length) })}
+            </Txt>
+            <View style={styles.fill} />
+            {plan.state !== "eternal" && current ? (
+              <>
+                <Txt variant="value" tone="muted">
+                  {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
+                </Txt>
+                <Txt variant="caption" tone="subtle">
+                  {t(STATUS_KEY[current.status])}
+                </Txt>
+              </>
+            ) : null}
+          </View>
           <View style={{ padding: gutter }}>
             {plan.stations.map((s, i) => (
               <StationRow key={s.id} station={s} next={plan.stations[i + 1]} plan={plan} landing={landing} />
@@ -487,7 +513,11 @@ export function SentenceBlocked() {
           <Txt variant="body">
             {`${current.realm ? realmName(current.realm, locale) : t("common.value.unrecorded")} · ${underworld(current.civilization)}`}
           </Txt>
-          <Span station={current} />
+          {current.ends_on ? (
+            <Txt testID="sentence-blocked-until" variant="value" tone="subtle">
+              {t("soul_app.sentence.until", { date: current.ends_on })}
+            </Txt>
+          ) : null}
         </View>
       ) : null}
       <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={8} onPress={() => navigation.navigate("Sentence", {})}>
@@ -519,7 +549,7 @@ const styles = StyleSheet.create({
   strike: { textDecorationLine: "line-through" },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   banner: { paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 7 },
-  summary: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
+  summary: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1 },
   stationRow: { flexDirection: "row", gap: 14 },
   rail: { width: 13, alignItems: "center" },
   nodeNudge: { marginTop: 5 },
