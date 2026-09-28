@@ -8,7 +8,9 @@ tool_calls / role=tool 消息),在同一次请求里原样来回最不容易错�
 超时按**截止时刻**算:每次调用的 timeout = 剩下的时间,重试关掉(SDK 默认 10 分钟、
 重试 2 次)。服务端必须先于 App 的 25 秒放弃(§3)。
 """
+import functools
 import json
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -16,6 +18,16 @@ from typing import Protocol
 
 from django.conf import settings
 from django.utils.module_loading import import_string
+
+logger = logging.getLogger(__name__)
+
+
+def _fail(exc):
+    """供应商的 4xx 与宕机对灵魂都是 503;日志里分开,否则配置错误(模型不支持 effort 等)
+    和对方宕机看起来一模一样。不记请求体:里面是灵魂的原文。"""
+    logger.warning("assistant provider failed: %s status=%s body=%s", type(exc).__name__,
+                   getattr(exc, "status_code", None), str(getattr(exc, "body", ""))[:500])
+    return ProviderError(type(exc).__name__)
 
 
 class ProviderError(Exception):
@@ -92,11 +104,13 @@ class OpenAICompatibleProvider:
                     model=settings.ASSISTANT_MODEL, messages=messages, tools=specs,
                     tool_choice="none" if last else "auto",
                 )
-            except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
-                raise ProviderError(type(exc).__name__) from exc
+            except openai.APIError as exc:
+                raise _fail(exc) from exc
             usage = getattr(response, "usage", None)
             if usage is not None:
                 _add_usage(result.usage, input=usage.prompt_tokens, output=usage.completion_tokens)
+            if not response.choices:
+                raise ProviderError("empty choices")
             message = response.choices[0].message
             calls = message.tool_calls or []
             if not calls or last:
@@ -154,8 +168,8 @@ class AnthropicProvider:
                     messages=messages, tools=specs,
                     tool_choice={"type": "none"} if last else {"type": "auto"},
                 )
-            except (anthropic.APITimeoutError, anthropic.APIConnectionError, anthropic.APIStatusError) as exc:
-                raise ProviderError(type(exc).__name__) from exc
+            except anthropic.APIError as exc:
+                raise _fail(exc) from exc
             usage = response.usage
             _add_usage(result.usage, input=usage.input_tokens, output=usage.output_tokens,
                        cache_read=getattr(usage, "cache_read_input_tokens", 0))
@@ -202,4 +216,10 @@ class FakeProvider:
 
 
 def get_provider() -> Provider:
-    return import_string(settings.ASSISTANT_PROVIDER)()
+    return _provider(settings.ASSISTANT_PROVIDER)
+
+
+@functools.cache
+def _provider(path):
+    """每个进程一个客户端:复用连接池,不必每问一次 TLS 握手。"""
+    return import_string(path)()

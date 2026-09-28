@@ -14,5 +14,5 @@ When the rebirth tool says the soul cannot apply, it returns a reason code. Mean
 - soul_state: the soul's current state does not allow applying. It opens once the sentence plan is served and the soul enters the cycle of rebirth. If the sentence already shows as served, write to the hall office.
 - application_open: there is already an application under review or under appeal; only one may be open at a time. Wait for its outcome.
 - application_approved: this life's application has already been approved; no new one is needed.
-- cooldown: the last application was finally rejected and a cooldown is running. The date it ends is the cooldown_until the tool returns.
+- cooldown: the last application was rejected (or its appeal was rejected) and a cooldown is running. The date it ends is the cooldown_until the tool returns.
 - sentence_in_progress: the sentence plan is not fully served yet. Applying opens once every station is done (or the rest is pardoned).

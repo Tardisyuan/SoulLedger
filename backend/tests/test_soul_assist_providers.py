@@ -173,3 +173,15 @@ def test_a_passed_deadline_fails_before_any_request():
                                                 call_tool=lambda n: "{}", max_rounds=3,
                                                 deadline=time.monotonic() - 1)
     assert client.requests == []
+
+
+def test_openai_validation_errors_and_empty_choices_become_provider_errors():
+    """未被接住的 SDK 异常会成 500,而 500 会把原文带进 Sentry(审查 2)。"""
+    request = httpx2.Request("POST", "http://example.invalid")
+    response = httpx2.Response(200, request=request)
+    bad = openai.APIResponseValidationError(response=response, body=None)
+    with pytest.raises(ProviderError):
+        _run(OpenAICompatibleProvider(FakeClient([bad])), [])
+    empty = SimpleNamespace(choices=[], usage=None)
+    with pytest.raises(ProviderError):
+        _run(OpenAICompatibleProvider(FakeClient([empty])), [])

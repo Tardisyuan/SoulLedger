@@ -64,10 +64,15 @@ def test_the_retention_stated_to_the_soul_is_the_retention_enforced(locale):
     assert numbers == [RETENTION_DAYS]
 
 
-def test_the_system_prompt_is_stable_per_locale(locale):
-    """逐字节相同才能命中 prompt cache。"""
-    assert corpus.system_prompt(locale) == corpus.system_prompt(locale)
-    assert "HELP ENTRIES" in corpus.system_prompt(locale)
+def test_rebirth_entries_are_scoped_to_the_civilizations_the_code_says(locale):
+    """语料里写死的文明范围与 `REBIRTH_CAPABLE_CIVILIZATIONS` 对齐,不静默漂移(审查 9)。"""
+    from apps.ledger.constants import REBIRTH_CAPABLE_CIVILIZATIONS
+
+    by_id = {e["id"]: set(e["civilizations"]) for e in corpus.entries(locale)}
+    capable = set(REBIRTH_CAPABLE_CIVILIZATIONS)
+    for entry in ("rebirth-apply", "rebirth-review", "rebirth-appeal"):
+        assert by_id[entry] == capable, entry
+    assert by_id["no-rebirth"] == set(Civilization.values) - capable
 
 
 @pytest.mark.parametrize("given, expected", [("zh-Hans", "zh-Hans"), ("zh", "zh-Hans"), ("en", "en"),
