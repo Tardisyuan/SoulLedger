@@ -162,7 +162,7 @@ function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => 
  * Handoff 3b: a residing soul's applications are still its home civilization's
  * to decide — said once, at the top of the tab, in the current skin.
  */
-function useResidenceNames(): { current: string; home: string } | null {
+export function useResidenceNames(): { current: string; home: string } | null {
   const { t, enumLabel } = useI18n();
   const { residing } = useResidence();
   const session = useContext(SessionContext);

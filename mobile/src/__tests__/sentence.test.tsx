@@ -22,7 +22,7 @@ import { installMobilePlatform } from "../platform";
 import { landingOf } from "../push";
 import { ApplicationsScreen } from "../screens/applications";
 import { SentenceScreen, SentenceSection, useSentencePlan, type SentenceLanding } from "../screens/sentence";
-import { SessionProvider } from "../session";
+import { SessionContext, SessionProvider, type Session } from "../session";
 import { PROFILE, life, pressTab, stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -213,6 +213,73 @@ describe("the full list in the six plan states (1c)", () => {
   });
 });
 
+describe("the full list's revised copy (1c/1d)", () => {
+  const TWO = plan("completed", [station(1, "done"), station(2, "done")]);
+
+  it("all_done_body counts the soul's own stations: a two-station plan says 2, never 3", async () => {
+    stubApi({ "/me/sentence-plan/": { status: 200, data: TWO } });
+    wrap(<SentenceScreen />);
+    await screen.findByTestId("sentence-banner-completed");
+    expect(screen.getByText("全部 2 站完成。现在可以申请转生。")).toBeTruthy();
+    expect(screen.queryByText(/三站|3 站完成/)).toBeNull();
+  });
+
+  it("the header says how many stations in all — eternal included — and each state line is labelled", async () => {
+    stubApi({ "/me/sentence-plan/": { status: 200, data: TWO } });
+    const view = wrap(<SentenceScreen />);
+    expect((await screen.findByTestId("sentence-total")).props.children).toBe("共 2 站");
+    expect(screen.queryByText("共 3 站")).toBeNull();
+    expect(screen.getAllByText("状态")).toHaveLength(2);
+    view.unmount();
+    stubApi({ "/me/sentence-plan/": { status: 200, data: PLANS.eternal } });
+    wrap(<SentenceScreen />);
+    expect((await screen.findByTestId("sentence-total")).props.children).toBe("共 2 站");
+  });
+
+  it("where the soul is, the state line says until when; elsewhere it does not", async () => {
+    stubApi({ "/me/sentence-plan/": { status: 200, data: PLANS.serving } });
+    wrap(<SentenceScreen />);
+    await screen.findByTestId("station-2");
+    expect(screen.getByTestId("station-2-status").props.children).toBe("受刑中 · 至 2038-09-14");
+    expect(screen.getByTestId("station-1-status").props.children).toBe("已完成");
+  });
+
+  it("an amendment that added a station says 「新增了一站」 on that station only", async () => {
+    stubApi({ "/me/sentence-plan/": { status: 200, data: PLANS.serving } });
+    const view = wrap(<SentenceScreen landing={{ kind: "sentence_amended", nodeIds: [ID(3)] }} />);
+    expect((await screen.findByTestId("station-3-added")).props.children).toBe("新增了一站");
+    expect(screen.getAllByText("新增了一站")).toHaveLength(1);
+    view.unmount();
+    // A reduction names no station: no note anywhere.
+    wrap(<SentenceScreen landing={{ kind: "sentence_amended", nodeIds: [] }} />);
+    await screen.findByTestId("station-3");
+    expect(screen.queryByText("新增了一站")).toBeNull();
+    expect(screen.queryByText(/\{\{/)).toBeNull();
+  });
+
+  it("a residing soul's list opens with the residing banner, both civilizations named", async () => {
+    stubApi({ "/me/sentence-plan/": { status: 200, data: PLANS.serving } });
+    const residing = { ...PROFILE, civilization: "EGYPTIAN", home_civilization: "CHINESE", is_residing: true };
+    const session = { state: { status: "signedIn", profile: residing } } as unknown as Session;
+    wrap(
+      <SessionContext.Provider value={session}>
+        <SentenceScreen />
+      </SessionContext.Provider>
+    );
+    const banner = await screen.findByTestId("sentence-residing");
+    expect(banner).toBeTruthy();
+    expect(screen.getByText("暂居 埃及 · 原属 中国")).toBeTruthy();
+    expect(screen.getByText("原属 中国。这一站在 埃及 服完后回归。")).toBeTruthy();
+  });
+
+  it("a soul at home gets no residing banner", async () => {
+    stubApi({ "/me/sentence-plan/": { status: 200, data: PLANS.serving } });
+    wrap(<SentenceScreen />);
+    await screen.findByTestId("station-2");
+    expect(screen.queryByTestId("sentence-residing")).toBeNull();
+  });
+});
+
 describe("the rebirth page's refusal (1d)", () => {
   it("says how many stations, where the soul is and until when — and links to the plan", async () => {
     stubApi({
@@ -224,7 +291,9 @@ describe("the rebirth page's refusal (1d)", () => {
     expect(await screen.findByText("全部 3 站完成之后才能申请转生。")).toBeTruthy();
     expect(screen.getByText("第 2 / 3 站")).toBeTruthy();
     expect(screen.getByText("寒冰狱 · 杜阿特")).toBeTruthy();
-    expect(screen.getByText("2026-09-14 — 2038-09-14")).toBeTruthy();
+    // Only the end date, alone (1d 「至 …」); not the span.
+    expect(screen.getByTestId("sentence-blocked-until").props.children).toBe("至 2038-09-14");
+    expect(screen.queryByText("2026-09-14 — 2038-09-14")).toBeNull();
     // The block replaces the one-line reason; it does not repeat it.
     expect(screen.queryByTestId("eligibility-reason")).toBeNull();
     fireEvent.press(screen.getByTestId("sentence-blocked-link"));
