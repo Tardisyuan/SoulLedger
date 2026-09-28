@@ -56,7 +56,7 @@ export function assistAnswerLocale(locale: Locale): "zh-Hans" | "en" {
  * "cannot answer". mobile's assist drift test pins these to the backend's text.
  */
 export const ASSIST_EMPTY_ANSWER: Record<"zh-Hans" | "en", string> = {
-  "zh-Hans": "这个问题我答不了。需要人来处理的事,请写信给殿司。",
+  "zh-Hans": "这个问题我答不了。需要人来处理的事，请写信给殿司。",
   en: "I can't answer that. For anything that needs a person, write to the hall office.",
 };
 
