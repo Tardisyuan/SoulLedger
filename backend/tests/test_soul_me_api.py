@@ -23,7 +23,7 @@ pytestmark = pytest.mark.django_db
 PROFILE_KEYS = {
     "soul_code", "name", "birth_name", "civilization", "tenant", "home_tenant", "home_civilization", "is_residing",
     "current_state", "birth_date", "death_date",
-    "origin_location", "merit_score", "demerit_score", "account", "welcomed_civilizations",
+    "origin_location", "merit_score", "demerit_score", "account", "welcomed_civilizations", "assistant_enabled",
 }
 ACCOUNT_KEYS = {"cycle", "must_change_password", "initial_password_expires_at", "created_at"}
 LIFE_KEYS = {"cycle", "records", "judgments", "dispositions", "rebirth_applications", "reincarnation"}

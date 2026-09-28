@@ -20441,8 +20441,12 @@ components:
           items:
             $ref: '#/components/schemas/CivilizationEnum'
           readOnly: true
+        assistant_enabled:
+          type: boolean
+          readOnly: true
       required:
       - account
+      - assistant_enabled
       - birth_date
       - birth_name
       - civilization
