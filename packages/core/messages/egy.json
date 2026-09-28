@@ -2350,7 +2350,8 @@
       "soul_push_sweep": "Sedjem Ba: Wehem Smen Hena Maa Sesh Iri",
       "workflow_process_timeouts_for_tenant": "Maa Unut Khetem Wat Wedja",
       "social_cleanup_orphan_post_media": "Fekh Tut Shemsu Nen Hab",
-      "chat_reconcile_inbox": "Senb Sesh Wesekhet"
+      "chat_reconcile_inbox": "Senb Sesh Wesekhet",
+      "soul_assist_purge_history": "Fekh Medew Hehy Medu"
     },
     "status": {
       "PENDING": "Em Smen",

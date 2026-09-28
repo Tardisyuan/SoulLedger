@@ -2350,7 +2350,8 @@
       "soul_push_sweep": "灵魂推送:重新入队与查回执",
       "workflow_process_timeouts_for_tenant": "处理审批超时",
       "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
-      "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱"
+      "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
+      "soul_assist_purge_history": "清理助手会话"
     },
     "status": {
       "PENDING": "排队中",

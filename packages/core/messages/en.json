@@ -2350,7 +2350,8 @@
       "soul_push_sweep": "Soul push: requeue and fetch receipts",
       "workflow_process_timeouts_for_tenant": "Process approval-node timeouts",
       "social_cleanup_orphan_post_media": "Delete unposted circle images",
-      "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse"
+      "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
+      "soul_assist_purge_history": "Purge assistant history"
     },
     "status": {
       "PENDING": "Queued",

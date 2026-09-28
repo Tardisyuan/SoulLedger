@@ -2604,6 +2604,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/assist/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_assist_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/assist/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_assist_conversations_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/assist/conversations/{conversation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["v1_me_assist_conversations_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/chat/conversations/": {
         parameters: {
             query?: never;
@@ -7268,6 +7316,47 @@ export interface components {
             readonly role: string;
             readonly in_hand: number;
         };
+        AssistAnswer: {
+            /** Format: uuid */
+            conversation_id: string;
+            answer: components["schemas"]["AssistMessage"];
+        };
+        AssistAsk: {
+            question: string;
+            screen: components["schemas"]["ScreenEnum"];
+            /** Format: uuid */
+            conversation_id?: string | null;
+        };
+        AssistConversation: {
+            /** Format: uuid */
+            readonly id: string;
+            screen: components["schemas"]["ScreenEnum"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly last_active_at: string;
+            readonly first_question: string;
+            readonly messages: components["schemas"]["AssistMessage"][];
+        };
+        AssistError: {
+            detail: string;
+            code: string;
+            /** Format: date-time */
+            retry_at?: string;
+        };
+        AssistMessage: {
+            readonly id: number;
+            role: components["schemas"]["AssistMessageRoleEnum"];
+            content: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `user` - user
+         *     * `assistant` - assistant
+         * @enum {string}
+         */
+        AssistMessageRoleEnum: "user" | "assistant";
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -12057,6 +12146,17 @@ export interface components {
          * @enum {string}
          */
         ScopeEnum: "GLOBAL" | "ORG";
+        /**
+         * @description * `applications` - applications
+         *     * `sentence` - sentence
+         *     * `life` - life
+         *     * `letters` - letters
+         *     * `circle` - circle
+         *     * `settings` - settings
+         *     * `other` - other
+         * @enum {string}
+         */
+        ScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other";
         /**
          * @description `seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁;顾问席混着几种神祇,
          *     所以带上 `role`(ActorRole)。
@@ -17688,6 +17788,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_assist_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistAsk"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssistAsk"];
+                "multipart/form-data": components["schemas"]["AssistAsk"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistAnswer"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_me_assist_conversations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistConversation"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_me_assist_conversations_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
                 };
             };
         };

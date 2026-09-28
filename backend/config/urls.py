@@ -82,6 +82,8 @@ urlpatterns = [
     # 聊天(apps/chat)。灵魂侧同样在 /me/ 之下;/chat/ 是官员的殿司收件箱,走官员令牌。
     path("api/v1/me/", include(chat_urls.me_urlpatterns)),
     path("api/v1/chat/", include(chat_urls.officer_urlpatterns)),
+    # 灵魂端助手(apps/soul_assist)。同一个 /me/ 前缀、同一个 SoulAPIView 分界。
+    path("api/v1/me/", include("apps.soul_assist.urls")),
     # 灵魂朋友圈(2026-09-17)。灵魂侧在 /me/ 之下,与上面两段同一条认证分界;
     # 官员审核后台是另一段前缀、另一套码名(social.moderate),两者不共用路由。
     path("api/v1/me/social/", include(social_urls.me_social_urlpatterns)),
