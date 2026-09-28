@@ -370,3 +370,16 @@ def test_sentry_is_wired_to_the_scrubber():
 
     source = (Path(__file__).resolve().parents[1] / "config" / "settings.py").read_text(encoding="utf-8")
     assert "before_send=scrub_assist" in source
+
+
+def test_me_tells_the_app_whether_to_show_the_entry(cn_tenant, eu_tenant, settings):
+    """设计稿「问一问」1a:未开通就隐藏入口,所以 App 在点开之前就要知道。与 /me/assist/ 同一个判据
+    (全局开关 + 原属殿开关)。变异:`get_assistant_enabled` 恒返回 True → 红。"""
+    account, client = ready_soul(cn_tenant)
+    assert client.get("/api/v1/me/").data["assistant_enabled"] is False
+    _enable(cn_tenant)
+    assert client.get("/api/v1/me/").data["assistant_enabled"] is True
+    type(account.soul).all_objects.filter(pk=account.soul.pk).update(tenant=eu_tenant, home_tenant=cn_tenant)
+    assert client.get("/api/v1/me/").data["assistant_enabled"] is True  # 暂居:仍读原属殿
+    settings.ASSISTANT_ENABLED = False
+    assert client.get("/api/v1/me/").data["assistant_enabled"] is False

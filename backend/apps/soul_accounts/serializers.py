@@ -84,6 +84,9 @@ class MeProfileSerializer(serializers.Serializer):
     demerit_score = serializers.IntegerField()
     account = serializers.SerializerMethodField()
     welcomed_civilizations = serializers.SerializerMethodField()
+    #: 助手是否对这个灵魂开通(全局开关 + 原属殿开关,apps/soul_assist/service.py::enabled_for)。
+    #: App 据此决定显示不显示「问一问」:设计稿定「未开通就隐藏入口」,所以点开之前就要知道。
+    assistant_enabled = serializers.SerializerMethodField()
 
     @extend_schema_field(MeAccountSerializer)
     def get_account(self, soul):
@@ -92,6 +95,11 @@ class MeProfileSerializer(serializers.Serializer):
     @extend_schema_field(serializers.ListField(child=serializers.ChoiceField(choices=Civilization.choices)))
     def get_welcomed_civilizations(self, soul):
         return self.context["account"].welcomed_civilizations
+
+    def get_assistant_enabled(self, soul) -> bool:
+        from apps.soul_assist.service import enabled_for
+
+        return enabled_for(self.context["account"])
 
 
 class MeWelcomedRequestSerializer(serializers.Serializer):

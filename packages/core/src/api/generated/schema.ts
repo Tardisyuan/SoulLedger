@@ -9310,6 +9310,7 @@ export interface components {
             demerit_score: number;
             readonly account: components["schemas"]["MeAccount"];
             readonly welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
+            readonly assistant_enabled: boolean;
         };
         MeRealm: {
             realm_code: string;
