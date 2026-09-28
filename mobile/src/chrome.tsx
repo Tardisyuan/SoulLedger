@@ -9,6 +9,9 @@ import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "reac
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { G, Path } from "react-native-svg";
 
+import type { AssistScreen } from "@soulledger/core/api/soul-assist";
+
+import { AssistEntry, useAssist } from "./assist";
 import { BAND, Emblem, Icon, type IconName } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
@@ -71,8 +74,11 @@ export function AppHeader({
   onAccount,
   action,
   serif,
+  assist,
 }: {
   title: string;
+  /** 「问一问」 (canvas 1b): this page's id for the assistant; the entry sits left of the account icon or the actions. */
+  assist?: AssistScreen;
   /** The app name on the pre-login bar, set in the serif (product decision 2026-09-26). */
   serif?: boolean;
   onBack?: () => void;
@@ -92,6 +98,9 @@ export function AppHeader({
   // Chat handoff 1e (Material): on Android the title sits at the left, with nothing held
   // open for a back key it does not have, and back is an arrow. iOS: centred, chevron.
   const android = Platform.OS === "android";
+  const assistant = useAssist();
+  const asking = !!assist && !!assistant?.visible;
+  const rightCount = (Array.isArray(action) ? action.length : 1) + (asking ? 1 : 0);
   return (
     <View testID="header" style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
       <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
@@ -101,7 +110,7 @@ export function AppHeader({
           </Pressable>
         ) : android ? null : (
           // iOS centres the title: as wide on the left as the actions are on the right.
-          <View style={[styles.icon, { width: 44 * (Array.isArray(action) ? action.length : 1) }]} />
+          <View style={[styles.icon, { width: 44 * rightCount }]} />
         )}
         <Txt
           accessibilityRole="header"
@@ -116,6 +125,7 @@ export function AppHeader({
         >
           {title}
         </Txt>
+        {assist ? <AssistEntry screen={assist} /> : null}
         {action ? (
           (Array.isArray(action) ? action : [action]).map((a) => (
             <Pressable

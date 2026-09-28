@@ -19,9 +19,12 @@ import {
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { platform } from "@soulledger/core/platform";
 import * as Notifications from "expo-notifications";
-import { useEffect, useRef, useState } from "react";
+import type { MeProfile } from "@soulledger/core/api/soul";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useColorScheme } from "react-native";
 
+import { AssistProvider } from "./assist";
+import { AssistPanel } from "./assistPanel";
 import { ChatProvider, useChat } from "./chat";
 import { AppHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
@@ -67,6 +70,7 @@ function MainTabs() {
             // Chat handoff 1e: iOS "new" is a framed plus in the bar; Android has the FAB, and search here.
             <AppHeader
               title={t(TAB_TITLES[route.name])}
+              assist="letters"
               action={{
                 icon: ANDROID ? "search" : "plus",
                 framed: !ANDROID,
@@ -79,13 +83,18 @@ function MainTabs() {
             // 1a: find people and my page; settings stay on the life tab.
             <AppHeader
               title={t(TAB_TITLES[route.name])}
+              assist="circle"
               action={[
                 { icon: "search", label: t("soul_app.circle.search.title"), testID: "circle-search-open", onPress: () => navigation.navigate("CircleSearch") },
                 { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigation.navigate("MyCircle") },
               ]}
             />
           ) : (
-            <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
+            <AppHeader
+              title={t(TAB_TITLES[route.name])}
+              assist={route.name === "Applications" ? "applications" : "life"}
+              onAccount={() => navigation.navigate("Settings")}
+            />
           ),
       })}
     >
@@ -147,6 +156,18 @@ function CircleFollows({ route }: NativeStackScreenProps<AppStackParams, "Circle
 
 function CircleReport({ route }: NativeStackScreenProps<AppStackParams, "CircleReport">) {
   return <ReportScreen target={route.params.target} id={route.params.id} preview={route.params.preview} />;
+}
+
+/** 「问一问」 above the navigator, so a drawer closed mid-answer still gets its answer. */
+function AssistRoot({ profile, children }: { profile: MeProfile | null; children: ReactNode }) {
+  const chat = useChat();
+  const openLetters = useCallback(() => navigationRef.navigate("Tabs", { screen: "Letters" }), []);
+  return (
+    <AssistProvider profile={profile} onOpenLetters={chat.availability === "not_configured" ? null : openLetters}>
+      {children}
+      <AssistPanel />
+    </AssistProvider>
+  );
 }
 
 /** Notification ids already landed in this process. */
@@ -292,7 +313,7 @@ export function RootNavigator() {
               name="Settings"
               component={SettingsScreen}
               options={({ navigation }) => ({
-                header: () => <AppHeader title={t("soul_app.settings.title")} onBack={navigation.goBack} />,
+                header: () => <AppHeader title={t("soul_app.settings.title")} onBack={navigation.goBack} assist="settings" />,
               })}
             />
             <Stack.Screen name="NotificationPrimer" component={NotificationPrimerScreen} options={{ headerShown: false }} />
@@ -340,7 +361,7 @@ export function RootNavigator() {
               name="Sentence"
               component={Sentence}
               options={({ navigation }) => ({
-                header: () => <AppHeader title={t("soul_app.sentence.section_title")} onBack={navigation.goBack} />,
+                header: () => <AppHeader title={t("soul_app.sentence.section_title")} onBack={navigation.goBack} assist="sentence" />,
               })}
             />
             <Stack.Screen
@@ -355,9 +376,11 @@ export function RootNavigator() {
       }
       body = (
         <ChatProvider account={state.status === "signedIn" ? state.profile.soul_code : null}>
-          <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setReady((n) => n + 1)}>
-            <Stack.Navigator>{screens}</Stack.Navigator>
-          </NavigationContainer>
+          <AssistRoot profile={state.status === "signedIn" ? state.profile : null}>
+            <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setReady((n) => n + 1)}>
+              <Stack.Navigator>{screens}</Stack.Navigator>
+            </NavigationContainer>
+          </AssistRoot>
           <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
           {/* 文明气质 1b: over everything, the first time this soul enters its current civilization. */}
           {state.status === "signedIn" ? <Welcome profile={state.profile} scheme={scheme} /> : null}
