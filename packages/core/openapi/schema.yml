@@ -5667,6 +5667,109 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/assist/:
+    post:
+      operationId: v1_me_assist_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistAsk'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssistAsk'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssistAsk'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistAnswer'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/me/assist/conversations/:
+    get:
+      operationId: v1_me_assist_conversations_list
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssistConversation'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/me/assist/conversations/{conversation_id}/:
+    delete:
+      operationId: v1_me_assist_conversations_destroy
+      parameters:
+      - in: path
+        name: conversation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/me/chat/conversations/:
     get:
       operationId: v1_me_chat_conversations_list
@@ -15963,6 +16066,104 @@ components:
       - in_hand
       - role
       - username
+    AssistAnswer:
+      type: object
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        answer:
+          $ref: '#/components/schemas/AssistMessage'
+      required:
+      - answer
+      - conversation_id
+    AssistAsk:
+      type: object
+      properties:
+        question:
+          type: string
+          maxLength: 1000
+        screen:
+          $ref: '#/components/schemas/ScreenEnum'
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - question
+      - screen
+    AssistConversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        screen:
+          $ref: '#/components/schemas/ScreenEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_active_at:
+          type: string
+          format: date-time
+          readOnly: true
+        first_question:
+          type: string
+          readOnly: true
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssistMessage'
+          readOnly: true
+      required:
+      - created_at
+      - first_question
+      - id
+      - last_active_at
+      - messages
+      - screen
+    AssistError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        retry_at:
+          type: string
+          format: date-time
+      required:
+      - code
+      - detail
+    AssistMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/AssistMessageRoleEnum'
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content
+      - created_at
+      - id
+      - role
+    AssistMessageRoleEnum:
+      enum:
+      - user
+      - assistant
+      type: string
+      description: |-
+        * `user` - user
+        * `assistant` - assistant
     AuditActionCount:
       type: object
       description: One row of `stats.action_distribution` — a `values("action").annotate(count=…)`.
@@ -25820,6 +26021,24 @@ components:
       description: |-
         * `GLOBAL` - 全局
         * `ORG` - 组织级
+    ScreenEnum:
+      enum:
+      - applications
+      - sentence
+      - life
+      - letters
+      - circle
+      - settings
+      - other
+      type: string
+      description: |-
+        * `applications` - applications
+        * `sentence` - sentence
+        * `life` - life
+        * `letters` - letters
+        * `circle` - circle
+        * `settings` - settings
+        * `other` - other
     SeatableActor:
       type: object
       description: |-
