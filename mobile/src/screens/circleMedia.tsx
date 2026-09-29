@@ -192,13 +192,20 @@ export async function uploadBody(image: PickedImage): Promise<FormData> {
   return body;
 }
 
+/** 选图的结果。`unreadable`:选了却打不开的张数(数不清时记 1)。 */
+export type PickResult = { images: PickedImage[]; unreadable: number };
+
 /**
  * 打开系统图库,最多选 `room` 张。`quality` < 1 让 iOS 把 HEIC 转成 JPEG(服务器只收
  * PNG / JPEG / WebP),也让一张手机原图多半落在 5 MB 之内;`exif: false` 本地也不读 EXIF
  * —— 服务器反正会去掉。返回 null:没有相册权限。
+ *
+ * 打不开的图(Android 图库里已失效的媒体,logcat「Picker file open failed」):expo-image-picker 57
+ * 对类型读不出的一项仍返回它,但 `type` 为 null(MediaHandler.readExtras);一张都读不出时可能
+ * 什么都不返回,或整个调用抛错(FailedToReadFile 之类)。这三种都记成 `unreadable`,不再静默。
  */
-export async function pickImages(room: number): Promise<PickedImage[] | null> {
-  if (room <= 0) return [];
+export async function pickImages(room: number): Promise<PickResult | null> {
+  if (room <= 0) return { images: [], unreadable: 0 };
   try {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -213,14 +220,19 @@ export async function pickImages(room: number): Promise<PickedImage[] | null> {
       exif: false,
       preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
-    if (res.canceled) return [];
-    return res.assets.slice(0, room).map((a, i) => ({
+    if (res.canceled) return { images: [], unreadable: 0 };
+    const assets = res.assets ?? [];
+    const readable = assets.filter((a) => a.type != null);
+    const images = readable.slice(0, room).map((a, i) => ({
       uri: a.uri,
       name: a.fileName ?? `image-${i + 1}.jpg`,
       type: a.mimeType ?? "image/jpeg",
     }));
-  } catch {
-    return null;
+    return { images, unreadable: assets.length ? assets.length - readable.length : 1 };
+  } catch (error) {
+    // The library asks for no permission itself (Android Photo Picker, iOS PHPicker); only this code means one was refused.
+    if ((error as { code?: unknown } | null)?.code === "ERR_USER_REJECTED_PERMISSIONS") return null;
+    return { images: [], unreadable: 1 };
   }
 }
 
