@@ -289,7 +289,7 @@ export default function LoginPage() {
           <figure className="m-0 flex flex-col gap-3">
             <blockquote
               data-testid="login-statute"
-              className="m-0 max-w-[28ch] border-l-2 border-[oklch(var(--color-ink))] pl-4 font-serif text-quote md:text-xl text-pretty text-[oklch(var(--color-ink))]"
+              className="m-0 max-w-[28ch] border-l-2 border-[oklch(var(--color-ink))] pl-4 font-serif text-md font-normal md:text-xl text-pretty text-[oklch(var(--color-ink))]"
             >
               {statute.text}
             </blockquote>
@@ -387,6 +387,7 @@ export default function LoginPage() {
                     }}
                     error={getError("password")}
                     placeholder="••••••••"
+                    data-revealed={showPassword || undefined}
                     required
                   />
                   {/* In the label row rather than inside the input: the input's
@@ -398,7 +399,7 @@ export default function LoginPage() {
                     aria-controls="login-password"
                     aria-pressed={showPassword}
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-0 top-0 text-xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
+                    className="absolute right-0 top-0 text-xs text-[oklch(var(--color-ink-muted))] underline underline-offset-2 hover:text-[oklch(var(--color-ink))]"
                   >
                     {showPassword ? t("soul_app.common.hide") : t("soul_app.common.show")}
                   </button>

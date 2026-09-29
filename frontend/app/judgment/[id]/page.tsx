@@ -628,7 +628,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 reads as an aside, and italic is then unavailable for what italic
                 is for. */}
             {judgment.confession ? (
-              <p className="font-serif text-quote text-[oklch(var(--color-ink))] mt-2">{judgment.confession}</p>
+              <p className="font-serif text-md font-normal text-[oklch(var(--color-ink))] mt-2">{judgment.confession}</p>
             ) : (
               <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-2">
                 <MissingValue kind="unrecorded" />
@@ -784,7 +784,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。
                这里原先是 sans,理由是「法庭自己写的字」;规范 v1 把判词划进了引文。 */
             judgment.notes ? (
-              <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] max-w-[72ch]">
+              <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] max-w-[72ch]">
                 {judgment.notes}
               </blockquote>
             ) : (
@@ -797,7 +797,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <label htmlFor={notesId} className="sr-only">
                 {t("judgment.detail.notes")}
               </label>
-              {/* 衬线输入 QuoteInput:判词是正被说出的话,所以输入框本身用衬线、字号 text-quote。 */}
+              {/* 衬线输入 QuoteInput:判词是正被说出的话,所以输入框本身用衬线、字号 text-md font-normal。 */}
               <textarea
                 id={notesId}
                 value={notes}
@@ -808,7 +808,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 }}
                 rows={4}
                 placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-3 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-quote text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
+                className="block w-full mt-3 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
               />
               {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
               {!draft.conflict && <DraftStatusLine status={draft.status} savedAt={judgment.draft_saved_at} />}
