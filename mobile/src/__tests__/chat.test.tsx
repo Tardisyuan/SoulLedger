@@ -19,7 +19,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
-import { Platform, StyleSheet, TextInput } from "react-native";
+import { FlatList, Platform, StyleSheet, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, readOutbox, useChat, type Chat } from "../chat";
@@ -187,7 +187,11 @@ const withRoom = (roomId: string, messages: ChatMessage[], extra = {}) => ({
 });
 
 function wrap(chat: Chat, children: ReactNode) {
-  return render(
+  return render(providers(chat, children));
+}
+
+function providers(chat: Chat, children: ReactNode) {
+  return (
     <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
       <I18nProvider>
         <ChatContext.Provider value={chat}>
@@ -427,6 +431,89 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall_sealed")).toBeTruthy();
     expect(screen.getByTestId("go-current-hall")).toBeTruthy();
     composerGone();
+  });
+});
+
+describe("the thread is an inverted FlatList: newest at the bottom, older pages read on reaching the top", () => {
+  const MINUTE = 60_000;
+  /** n letters a minute apart, all on one day, the newest at NOW; alternating sender. */
+  const letters = (n: number, from = 0) =>
+    Array.from({ length: n }, (_, i) => msg(`e${from + i}`, i % 2 ? ME : PEER, `第 ${from + i} 封`, NOW - (from + n - 1 - i) * MINUTE));
+  const thread = () => screen.UNSAFE_getByType(FlatList);
+  const keys = () => (thread().props.data as { key: string }[]).map((l) => l.key);
+  const endReached = () => act(async () => thread().props.onEndReached?.({ distanceFromEnd: 0 }));
+
+  it("opens on the newest letter and does not mount the whole room", () => {
+    openConversation(conv(), letters(60));
+    expect(thread().props.inverted).toBe(true);
+    expect(screen.getByText("第 59 封")).toBeTruthy();
+    // Virtualized: the oldest letter is not rendered until the reader scrolls up to it.
+    expect(screen.queryByText("第 0 封")).toBeNull();
+    // Newest first in the inverted data, keyed by event id; the day divider sits above its day's first letter.
+    expect(keys().slice(0, 2)).toEqual(["e59", "e58"]);
+    expect(keys().at(-1)).toBe(`d${dayOf(NOW)}`);
+  });
+
+  it("reads one older page at a time: nothing more while one is on its way, then the next", async () => {
+    const pending: (() => void)[] = [];
+    const loadOlder = jest.fn(() => new Promise<void>((resolve) => pending.push(resolve)));
+    const c = conv();
+    wrap(chatState({ conversations: [c], timeline: withRoom(c.room_id, letters(5), { prevBatch: "t1" }), loadOlder }), <ConversationScreen id={c.id} />);
+    // The room opened with only what sync brought: one page is asked for at once.
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    expect(loadOlder).toHaveBeenCalledWith(c.room_id);
+    expect(screen.getByTestId("chat-older-loading").props.accessibilityLabel).toBe("加载中…");
+    expect(screen.queryByTestId("chat-older")).toBeNull();
+    await endReached();
+    await endReached();
+    expect(loadOlder).toHaveBeenCalledTimes(1);
+    await act(async () => pending.shift()?.());
+    // Settled, and the room still has more: the manual button is back, and the top of the list reads the next page.
+    expect(screen.queryByTestId("chat-older-loading")).toBeNull();
+    expect(screen.getByTestId("chat-older")).toBeTruthy();
+    await endReached();
+    expect(loadOlder).toHaveBeenCalledTimes(2);
+    await act(async () => pending.shift()?.());
+    fireEvent.press(screen.getByTestId("chat-older"));
+    expect(loadOlder).toHaveBeenCalledTimes(3);
+    await act(async () => pending.shift()?.());
+  });
+
+  it("at the start of the room: nothing is asked for, and there is no button", async () => {
+    const c = conv();
+    const chat = openConversation(c, letters(3));
+    await endReached();
+    expect(chat.loadOlder).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("chat-older")).toBeNull();
+    expect(screen.queryByTestId("chat-older-loading")).toBeNull();
+  });
+
+  it("an older page joins at the top without duplicates and without pulling the reader down", async () => {
+    const c = conv();
+    const chat = chatState({ conversations: [c], timeline: withRoom(c.room_id, letters(3, 10)) });
+    const { rerender } = wrap(chat, <ConversationScreen id={c.id} />);
+    const scroll = jest.spyOn(FlatList.prototype, "scrollToOffset");
+    // The page brings e7..e12: three older letters and the three already held (the store merges by id).
+    rerender(providers({ ...chat, timeline: withRoom(c.room_id, [...letters(3, 7), ...letters(3, 10)]) }, <ConversationScreen id={c.id} />));
+    expect(keys().filter((k) => k.startsWith("e"))).toEqual(["e12", "e11", "e10", "e9", "e8", "e7"]);
+    expect(new Set(keys()).size).toBe(keys().length);
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it("a send of mine, and a new letter of theirs, bring the thread back down to the newest", async () => {
+    const c = conv();
+    const chat = chatState({ conversations: [c], timeline: withRoom(c.room_id, letters(20)) });
+    const { rerender } = wrap(chat, <ConversationScreen id={c.id} />);
+    const scroll = jest.spyOn(FlatList.prototype, "scrollToOffset");
+    const o = { txnId: "t-new", conversationId: c.id, roomId: c.room_id, body: "我到了。", ts: NOW + 1000, state: "sending" as const };
+    rerender(providers({ ...chat, outbox: [o] }, <ConversationScreen id={c.id} />));
+    expect(scroll).toHaveBeenCalledWith({ offset: 0, animated: true });
+    expect(keys()[0]).toBe("t-new");
+    expect(within(screen.getByTestId("pending-sending")).getByText("我到了。")).toBeTruthy();
+    scroll.mockClear();
+    const theirs = msg("e-new", PEER, "好。", NOW + 2000);
+    rerender(providers({ ...chat, outbox: [o], timeline: withRoom(c.room_id, [...letters(20), theirs]) }, <ConversationScreen id={c.id} />));
+    expect(scroll).toHaveBeenCalledWith({ offset: 0, animated: true });
   });
 });
 

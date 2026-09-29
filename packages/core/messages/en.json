@@ -2925,6 +2925,7 @@
         "profile": "Open profile"
       },
       "new_marker": "New",
+      "older": "Earlier letters",
       "errors": {
         "request_throttled": "One letter a day. Try tomorrow.",
         "muted": "You are muted and cannot write to souls. You can still write to the hall.",
