@@ -162,6 +162,10 @@ describe("role badge in the users table", () => {
     await screen.findByText("assist-eval-officer");
     const tags = screen.getAllByText("assist_admin.identities.tag");
     expect(tags).toHaveLength(1);
-    expect(tags[0].closest("td")).toHaveTextContent("assist-eval-officer");
+    expect(tags[0].closest("tr")).toHaveTextContent("assist-eval-officer");
+    // Design: after the row's status tag, same cell; dashed neutral border, not a status colour.
+    expect(tags[0].previousElementSibling).toHaveTextContent("users.active");
+    expect(tags[0].className).toContain("border-dashed");
+    expect(tags[0].className).not.toMatch(/color-(success|warning|danger|accent)/);
   });
 });

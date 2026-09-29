@@ -135,5 +135,8 @@ describe("souls list drawer", () => {
     const tags = screen.getAllByText("assist_admin.identities.tag");
     expect(tags).toHaveLength(1);
     expect(tags[0].closest("tr")).toHaveTextContent("Nebet-Iunu");
+    // Design: after the row's status tag, in the same cell; dashed neutral border.
+    expect(tags[0].previousElementSibling).toHaveAttribute("title", "ALIVE");
+    expect(tags[0].className).toContain("border-dashed");
   });
 });
