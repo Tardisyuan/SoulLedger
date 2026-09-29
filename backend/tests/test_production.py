@@ -233,18 +233,26 @@ class TestDockerConfiguration:
         matching ws/wss is not something every browser has done), Sentry's
         ingest host when NEXT_PUBLIC_SENTRY_DSN is set, and the replay
         integration `instrumentation-client.ts` lazy-loads from Sentry's CDN
-        and runs in a blob: worker. The API itself is same-origin via nginx."""
-        csp = re.search(r'Content-Security-Policy "([^"]+)"', _read(NGINX_CONF)).group(1)
-        directives = {
-            d.split()[0]: d.split()[1:] for d in csp.split(";") if d.strip()
-        }
-        assert "'self'" in directives["connect-src"]
-        assert "wss://$host" in directives["connect-src"]
-        assert "https://*.sentry.io" in directives["connect-src"]
-        assert "https://browser.sentry-cdn.com" in directives["script-src"]
-        assert "blob:" in directives["worker-src"]
-        # Not a blanket scheme: `wss:` or `https:` would allow any host.
-        assert not {"wss:", "https:", "*"} & set(directives["connect-src"])
+        and runs in a blob: worker. The API itself is same-origin via nginx.
+
+        Since 2026-09-29 the pages' CSP is built per request (it carries a
+        nonce) in frontend/proxy.ts, and nginx only adds a fallback to
+        responses that arrive without one — so these sources are asserted
+        there, by frontend/src/__tests__/proxyAuthGate.test.ts, against the
+        header proxy.ts actually emits. What stays here is the nginx side:
+        its CSP must not stack on top of the frontend's (browsers intersect
+        multiple CSP headers)."""
+        content = _read(NGINX_CONF)
+        assert re.search(
+            r"map\s+\$upstream_http_content_security_policy\s+\$fallback_csp", content
+        )
+        assert re.findall(r"add_header\s+Content-Security-Policy\s+(\S+)", content) == [
+            "$fallback_csp"
+        ]
+        proxy = _read(os.path.join(REPO_ROOT, "frontend", "proxy.ts"))
+        for source in ("wss://", "https://*.sentry.io", "https://browser.sentry-cdn.com",
+                       "worker-src 'self' blob:"):
+            assert source in proxy, source
 
     def test_nginx_does_not_log_the_websocket_token(self):
         """Older clients connect to `/ws/notifications/?token=<jwt>` (the

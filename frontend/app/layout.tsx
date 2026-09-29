@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 // CJK 两支:包自带的 index.css 各含 101 条 @font-face,每条带自己的 unicode-range,
 // 浏览器只取页面真正用到的分片。必须在 globals.css 之前 import,让 Tailwind 的
 // base 层能覆盖它们带来的任何默认值。见 app/fonts.ts 顶部关于为何不走 next/font/local。
@@ -68,6 +68,10 @@ export default async function RootLayout({
   // 每个请求都在读写同一个 cookie,且全站页面都要认证。
   const cookieLocale = (await cookies()).get(LOCALE_COOKIE)?.value;
   const locale = isLocale(cookieLocale) ? cookieLocale : undefined;
+  // CSP nonce minted per request by proxy.ts. The CSP has no 'unsafe-inline'
+  // in script-src, so THEME_BOOTSTRAP runs only because it carries this.
+  // Next stamps its own scripts from the same request header by itself.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     // suppressHydrationWarning 只作用于这一个元素的属性,是 anti-FOUC 脚本的必要配套:
@@ -81,7 +85,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body className="antialiased min-h-screen">
         <PlatformProvider />
