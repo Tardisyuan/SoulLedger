@@ -232,6 +232,7 @@ function RunDetail({ id }: { id: number }) {
   const cases = useEvalCases();
   const [open, setOpen] = useState<string | null>(null);
   const expected = useMemo(() => new Map((cases.data ?? []).map((c) => [c.id, c.expected_tools ?? []])), [cases.data]);
+  const expectedEntries = useMemo(() => new Map((cases.data ?? []).map((c) => [c.id, c.expected_entries ?? []])), [cases.data]);
   const rows = useMemo(() => groupByCase(run.data), [run.data]);
 
   if (!run.data) return null;
@@ -253,6 +254,10 @@ function RunDetail({ id }: { id: number }) {
             <dd className={MONO}>{s.tool_accuracy == null ? <MissingValue kind="unrecorded" /> : pct(s.tool_accuracy)}</dd>
             <dt className={MUTED}>{t("assist_admin.eval.hit_rate")}</dt>
             <dd className={MONO}>{s.phrase_hit_rate == null ? <MissingValue kind="unrecorded" /> : pct(s.phrase_hit_rate)}</dd>
+            <dt className={MUTED}>{t("assist_admin.eval.retrieval_hit_rate")}</dt>
+            <dd className={MONO} data-testid="aa-retrieval-hit-rate">
+              {s.retrieval_hit_rate == null ? <MissingValue kind="unrecorded" /> : pct(s.retrieval_hit_rate)}
+            </dd>
             <dt className={MUTED}>{t("assist_admin.eval.latency")}</dt>
             <dd className={MONO}>{s.mean_latency_ms == null ? <MissingValue kind="unrecorded" /> : `${count(Math.round(s.mean_latency_ms))} ms`}</dd>
             <dt className={MUTED}>{t("assist_admin.eval.cost")}</dt>
@@ -267,6 +272,7 @@ function RunDetail({ id }: { id: number }) {
               <th className="py-1 font-normal">#</th>
               <th className="py-1 font-normal">{t("assist_admin.eval.question")}</th>
               <th className="py-1 font-normal">{t("assist_admin.eval.expected")}</th>
+              <th className="py-1 font-normal">{t("assist_admin.eval.retrieval")}</th>
               {detail.candidates.map((_, i) => (
                 <th key={i} className="py-1 font-normal">
                   {t("assist_admin.eval.actual", { label: LABELS[i] })}
@@ -278,6 +284,8 @@ function RunDetail({ id }: { id: number }) {
           <tbody>
             {rows.map((row, n) => {
               const isOpen = open === row.key;
+              const wanted = row.caseId != null ? (expectedEntries.get(row.caseId) ?? []) : [];
+              const ret = retrievalOf(row.byCandidate, wanted);
               return (
                 <Fragment key={row.key}>
                   <tr className="border-t border-[oklch(var(--color-hairline))] align-top">
@@ -288,6 +296,15 @@ function RunDetail({ id }: { id: number }) {
                       </button>
                     </td>
                     <td className={`py-1 ${MONO}`}>{(row.caseId != null ? expected.get(row.caseId) : undefined)?.join(", ") || <MissingValue kind="inapplicable" />}</td>
+                    <td className={`py-1 ${MONO}`} data-testid="aa-retrieval-cell">
+                      {ret ? (
+                        <span className={ret.hit ? "text-[oklch(var(--color-success))]" : "text-[oklch(var(--color-danger))]"}>
+                          {ret.hits}/{wanted.length}
+                        </span>
+                      ) : (
+                        <MissingValue kind="inapplicable" />
+                      )}
+                    </td>
                     {detail.candidates.map((_, i) => (
                       <td key={i} className={`py-1 ${MONO}`}>
                         <Verdict result={row.byCandidate[i]} />
@@ -306,7 +323,8 @@ function RunDetail({ id }: { id: number }) {
                   </tr>
                   {isOpen && (
                     <tr>
-                      <td colSpan={4 + detail.candidates.length} className="pb-2">
+                      <td colSpan={5 + detail.candidates.length} className="pb-2">
+                        {ret && <RetrievalDetail wanted={wanted} got={ret.got} allHit={ret.hit} />}
                         <div className="grid gap-2 sm:grid-cols-2">
                           {row.byCandidate.map((r, i) =>
                             r ? (
@@ -327,6 +345,61 @@ function RunDetail({ id }: { id: number }) {
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One 检索 cell per question: retrieval depends only on the embedding settings, so A and B share it
+ * (canvas note under the eval table) — read from the first candidate that answered. `retrieval_hit`
+ * is the backend's verdict (it also counts the always-sent entry); the count is hits / expected.
+ */
+function retrievalOf(byCandidate: (AssistAdminEvalResult | undefined)[], wanted: string[]) {
+  const r = byCandidate.find((x) => x && x.retrieval_hit != null);
+  if (!r || wanted.length === 0) return null;
+  const got = Array.isArray(r.retrieved) ? (r.retrieved as string[]) : [];
+  const hit = r.retrieval_hit === true;
+  return { hit, got, hits: hit ? wanted.length : wanted.filter((e) => got.includes(e)).length };
+}
+
+/** Expanded row: expected entries (hit at rank n, or missed in red) beside the actual top k, hits marked. */
+function RetrievalDetail({ wanted, got, allHit }: { wanted: string[]; got: string[]; allHit: boolean }) {
+  const { t } = useI18n();
+  return (
+    <div className="mb-2 grid gap-2 sm:grid-cols-2" data-testid="aa-retrieval-detail">
+      <div className="border border-[oklch(var(--color-hairline))] p-2">
+        <p className={SUBTLE}>{t("assist_admin.eval.expected_entries")}</p>
+        <ul className="mt-1 grid gap-0.5">
+          {wanted.map((e) => {
+            const at = got.indexOf(e);
+            return (
+              <li key={e} className={MONO}>
+                {e}{" "}
+                {/* A hit that is not in the top k is the always-sent entry (corpus.PINNED): hit, no rank. */}
+                {at < 0 && !allHit ? (
+                  <span className="text-[oklch(var(--color-danger))]">{t("assist_admin.eval.entry_missed")}</span>
+                ) : (
+                  <span className="text-[oklch(var(--color-accent))]">
+                    {t("assist_admin.eval.entry_hit")}
+                    {at >= 0 && ` · ${at + 1}`}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div className="border border-[oklch(var(--color-hairline))] p-2">
+        <p className={SUBTLE}>{t("assist_admin.eval.retrieved_top", { k: String(got.length) })}</p>
+        <ol className="mt-1 grid gap-0.5">
+          {got.map((e, i) => (
+            <li key={e} className={`${MONO} ${wanted.includes(e) ? "border-l-2 border-[oklch(var(--color-accent))] pl-1" : MUTED}`}>
+              {i + 1} {e}
+              {wanted.includes(e) && <span className="text-[oklch(var(--color-accent))]"> {t("assist_admin.eval.entry_hit")}</span>}
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   );

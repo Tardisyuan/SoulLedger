@@ -92,15 +92,24 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
         </Section>
 
         <Section title={t("assist_admin.usage.quality")} id="aa-quality">
-          <dl className="grid grid-cols-3 gap-3 text-sm">
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             {(["unavailable", "rate_limited", "empty"] as const).map((k) => (
               <div key={k}>
                 <dt className={MUTED}>{t(`assist_admin.usage.rate_${k}`)}</dt>
                 <dd className={`text-md ${MONO}`}>{pct(usage.failure_rates[k])}</dd>
               </div>
             ))}
+            {/* 检索降级: the embedding service was down (or had no vectors) and the whole corpus went in.
+                A low-similarity fallback is retrieval working as meant, so it is not counted here. */}
+            <div>
+              <dt className={MUTED}>{t("assist_admin.usage.rate_fallback")}</dt>
+              <dd className={`text-md ${MONO}`} data-testid="aa-rate-fallback">
+                {pct(usage.requests ? usage.by_retrieval.fallback / usage.requests : 0)}
+              </dd>
+            </div>
           </dl>
           <p className={`mt-2 ${SUBTLE}`}>{t("assist_admin.usage.quality_note", { count: count(usage.requests) })}</p>
+          <p className={SUBTLE}>{t("assist_admin.usage.fallback_note")}</p>
         </Section>
 
         <Section
