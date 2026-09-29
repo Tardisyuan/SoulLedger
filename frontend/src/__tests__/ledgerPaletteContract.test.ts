@@ -50,7 +50,9 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-danger-strong": { light: "#A8103E", dark: "#C21D4D" },
   "--color-danger-tint": { light: "#FFECEF", dark: "#33101A" },
   "--color-danger-on-tint": { light: "#8A0C33", dark: "#FFD3DC" },
-  "--color-warning": { light: "#A65000", dark: "#FF9A3C" },
+  "--color-warning": { light: "#9F4A00", dark: "#FF9A3C" },
+  "--color-success-tint": { light: "#E4FBE7", dark: "#102515" },
+  "--color-warning-tint": { light: "#FFF1E2", dark: "#301904" },
   "--color-lamp": { light: "#6A3E00", dark: "#F2CC7A" },
   "--color-lamp-bg": { light: "#FBF1DC", dark: "#241B0C" },
   "--color-disabled-ink": { light: "#655c53", dark: "#a3968a" },
@@ -72,7 +74,7 @@ describe("palette (规范 v2 §一–§三)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 27);
+    expect(rows).toHaveLength(2 * 29);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {

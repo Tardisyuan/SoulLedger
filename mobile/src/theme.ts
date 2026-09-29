@@ -84,7 +84,7 @@ export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
  */
 export const semantic = {
   dark: { pos: "#82CB92", neg: "#FF7A93", negStrong: "#C21D4D", negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
-  light: { pos: "#197037", neg: "#A8103E", negStrong: "#A8103E", negInk: "#8A0C33", negBg: "#FFECEF", warn: "#A65000", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
+  light: { pos: "#197037", neg: "#A8103E", negStrong: "#A8103E", negInk: "#8A0C33", negBg: "#FFECEF", warn: "#9F4A00", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
 } as const;
 // `scrim` rides along here because it is global too (补足 A2 阴影与遮罩): one use —
 // under a dialog or a sheet — and one value per scheme, 0.42 light / 0.62 dark.

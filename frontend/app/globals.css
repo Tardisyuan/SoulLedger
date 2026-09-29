@@ -383,11 +383,11 @@
     --color-danger-tint: 0.233082 0.057680 4.8370;
     --color-danger-on-tint: 0.906877 0.050597 4.3604;
     --color-success: 0.778968 0.109344 150.2017;
-    /* v2 没给成功、警示的提示条底色(待 Design 定)。深色两档与浅色成功沿用 v1;浅色警示
-       换成 #FFF1E2 —— v1 那档 #f2e4c4 上 v2 的橙只有 4.42:1,过不了 AA(inkOnSurfaceContract)。 */
-    --color-success-tint: 0.238515 0.027888 158.7330;
+    /* 提示条底色 · Design D2:成功底 浅 #E4FBE7 / 深 #102515,警示底 浅 #FFF1E2 / 深 #301904,
+       明度与失败底对齐;底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
+    --color-success-tint: 0.241388 0.040904 150.1078;
     --color-warning: 0.776001 0.158964 59.2368;
-    --color-warning-tint: 0.251046 0.029877 76.8628;
+    --color-warning-tint: 0.240511 0.049375 60.4681;
     /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
     --color-lamp: 0.860675 0.109733 85.2786;
     --color-lamp-bg: 0.228754 0.029413 79.2504;
@@ -418,13 +418,12 @@
     --color-hairline-strong: var(--color-line-strong);
     --color-hairline-tertiary: var(--color-line-strong);
     --color-ink-tertiary: var(--color-ink-subtle);
-    /* 领域状态 = 颜色 + 字形。v2 撤掉强调色后,「轮回中」不能再取 accent(那会和「已处置」
-       同为墨);状态色都有专属含义(长明灯也是),所以取图表梯度的冷灰蓝 —— 它不属于任何
-       文明、任何反馈。待 Design 确认。 */
+    /* 领域状态 = 颜色 + 字形。「轮回中」· Design D1:图表里取梯度第 4 档(浅 #53687F / 深 #96AEC7);
+       图表以外不给颜色 —— 徽章是「↻ 轮回中」、ink 字、1px ink3 框,逐页改版时换过去。 */
     --color-status-alive: var(--color-success);
     --color-status-judging: var(--color-warning);
     --color-status-disposed: var(--color-ink);
-    --color-status-reincarnating: var(--color-chart-3);
+    --color-status-reincarnating: var(--color-chart-4);
     --color-status-lost: var(--color-ink-subtle);
     --color-status-settled: var(--color-ink-muted);
     --color-karma-merit: var(--color-success);
@@ -463,8 +462,8 @@
     --color-danger-tint: 0.959029 0.020979 6.6063;
     --color-danger-on-tint: 0.409460 0.155831 12.0157;
     --color-success: 0.481178 0.119975 150.1017;
-    --color-success-tint: 0.928130 0.023827 133.4666;
-    --color-warning: 0.529090 0.135424 52.3541;
+    --color-success-tint: 0.965876 0.035762 149.1233;
+    --color-warning: 0.508784 0.132855 50.8763;
     --color-warning-tint: 0.965162 0.024981 69.4434;
     --color-lamp: 0.407751 0.090608 66.2502;
     --color-lamp-bg: 0.960430 0.029660 85.5642;

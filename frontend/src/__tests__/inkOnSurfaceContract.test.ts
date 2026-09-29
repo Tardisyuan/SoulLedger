@@ -44,12 +44,11 @@ const ratio = (theme: ThemeName, fg: string, bg: string) =>
   );
 
 /**
- * 规范 v2 §二 的警示橙 #A65000 只对 bg 与 s1 量过对比(设计稿 `webBg = [bg, s1]`),
- * 放在浅色 s2(#ebe1cd)上是 4.29:1,过不了 AA。色值是 Design 定的,不在这里改;
- * 这一格记成例外 —— 规则因此是「警示字不放在 s2 上」—— 并在下面断言它**确实**不过,
- * 免得哪天色值改好了而例外还留着。已作为待定项报给 Design。
+ * 已知不过 AA 的格子。曾有一格:浅色警示 #A65000 在 s2 上 4.29:1;Design D3 把浅色警示改成
+ * #9F4A00(s2 上 4.69),例外随之删除。下面那条「例外仍低于 AA」的测试保证例外不会在色值
+ * 修好后还留着。
  */
-const KNOWN_BELOW_AA: ReadonlyArray<readonly [ThemeName, string, string]> = [["light", "--color-warning", "--color-surface-2"]];
+const KNOWN_BELOW_AA: ReadonlyArray<readonly [ThemeName, string, string]> = [];
 const isKnown = (theme: ThemeName, fg: string, bg: string) =>
   KNOWN_BELOW_AA.some(([t, f, b]) => t === theme && f === fg && b === bg);
 
@@ -66,8 +65,8 @@ describe("ink on surface", () => {
     expect(MATRIX).toHaveLength(FULL_MATRIX.length - KNOWN_BELOW_AA.length);
   });
 
-  it.each(KNOWN_BELOW_AA)("known exception still below AA (else delete it): %s %s on %s", (theme, fg, bg) => {
-    expect(ratio(theme, fg, bg)).toBeLessThan(AA_NORMAL_TEXT);
+  it("every known exception is still below AA (else delete it)", () => {
+    for (const [theme, fg, bg] of KNOWN_BELOW_AA) expect({ theme, fg, bg, below: ratio(theme, fg, bg) < AA_NORMAL_TEXT }).toEqual({ theme, fg, bg, below: true });
   });
 
   it.each(MATRIX)("%s: %s on %s ≥ 4.5:1", (theme, fg, bg) => {
