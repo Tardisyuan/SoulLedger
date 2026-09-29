@@ -43,9 +43,9 @@ export const CHART_TOKENS: { [K in keyof ChartColors]: Record<string, string> } 
     ALIVE: "--color-chart-1",
     JUDGING: "--color-chart-2",
     DISPOSED: "--color-chart-3",
-    LOST: "--color-chart-4",
-    REINCARNATING: "--color-chart-5",
-    SETTLED: "--color-chart-6",
+    REINCARNATING: "--color-chart-4",
+    SETTLED: "--color-chart-5",
+    LOST: "--color-chart-1",
   },
   REALM_COLORS: {
     PURGATORY: "--color-chart-1",
@@ -80,6 +80,20 @@ export const REALM_PATTERNS: Record<string, ChartPattern> = {
   NEUTRAL: "outline",
 };
 
+/**
+ * 状态 → 图案(Design D5)。在世→审判中→已处置→轮回中→已终结占梯度第 1–5 档、实底;
+ * 「迷失」不进梯度 —— 它是偏离流程的异常,放在梯度中间会被读成介于两个状态之间 ——
+ * 用第 1 档色的空框,排在最后。
+ */
+export const STATE_PATTERNS: Record<string, ChartPattern> = {
+  ALIVE: "solid",
+  JUDGING: "solid",
+  DISPOSED: "solid",
+  REINCARNATING: "solid",
+  SETTLED: "solid",
+  LOST: "outline",
+};
+
 /** 功 = 实底,过 = 空框斜线(A5「功 / 过 · 实底与空框斜线 · 零线 2px ink」)。 */
 export const KARMA_PATTERNS: Record<"merit" | "demerit", ChartPattern> = {
   merit: "solid",
@@ -94,9 +108,9 @@ const DARK: ChartColors = {
     ALIVE: "oklch(0.946168 0.032488 229.2456)",
     JUDGING: "oklch(0.869674 0.044412 250.4438)",
     DISPOSED: "oklch(0.800399 0.044801 248.3861)",
-    LOST: "oklch(0.740999 0.045000 249.5047)",
-    REINCARNATING: "oklch(0.690172 0.045147 250.6443)",
-    SETTLED: "oklch(0.650533 0.044564 249.6206)",
+    REINCARNATING: "oklch(0.740999 0.045000 249.5047)",
+    SETTLED: "oklch(0.690172 0.045147 250.6443)",
+    LOST: "oklch(0.946168 0.032488 229.2456)",
   },
   REALM_COLORS: {
     PURGATORY: "oklch(0.946168 0.032488 229.2456)",
@@ -125,9 +139,9 @@ const LIGHT: ChartColors = {
     ALIVE: "oklch(0.259075 0.045425 251.0858)",
     JUDGING: "oklch(0.360350 0.044648 250.3338)",
     DISPOSED: "oklch(0.440635 0.045391 248.8937)",
-    LOST: "oklch(0.509215 0.044595 251.0144)",
-    REINCARNATING: "oklch(0.570530 0.044052 249.7496)",
-    SETTLED: "oklch(0.620712 0.045066 249.6583)",
+    REINCARNATING: "oklch(0.509215 0.044595 251.0144)",
+    SETTLED: "oklch(0.570530 0.044052 249.7496)",
+    LOST: "oklch(0.259075 0.045425 251.0858)",
   },
   REALM_COLORS: {
     PURGATORY: "oklch(0.259075 0.045425 251.0858)",

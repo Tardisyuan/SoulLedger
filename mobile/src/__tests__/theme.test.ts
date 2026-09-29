@@ -96,7 +96,7 @@ describe("tokens are the design's OKLCH table, converted", () => {
 describe("v2 tokens are the spec's (规范 v2 §一–§三)", () => {
   const STATUS = {
     dark: "pos #82CB92 · neg #FF7A93 · negStrong #C21D4D · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · lamp #F2CC7A · lampBg #241B0C",
-    light: "pos #197037 · neg #A8103E · negStrong #A8103E · negBg #FFECEF · negInk #8A0C33 · warn #A65000 · lamp #6A3E00 · lampBg #FBF1DC",
+    light: "pos #197037 · neg #A8103E · negStrong #A8103E · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · lamp #6A3E00 · lampBg #FBF1DC",
   };
   const PLAQUE = "neutral #2b2724 #6e665e · cn #9a2f1f #b3402c · eu #4a2a6a #7a52a6 · eg #1f3f8a #3e62b8 · gr #1f3b3e #3f7076";
   const APP_INK = { dark: ["#F4F5F6", "#C4CBD4", "#89909A"], light: ["#16181D", "#505662", "#636874"] };

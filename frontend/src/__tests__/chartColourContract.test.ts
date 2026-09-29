@@ -9,7 +9,7 @@
  *   `realms.types` — a state the API can send but no chart can colour is red,
  *   and so is an entry for a state that no longer exists.
  */
-import { CHART_COLORS, CHART_TOKENS, KARMA_PATTERNS, REALM_PATTERNS, type ChartColors } from "@/lib/chart-colors";
+import { CHART_COLORS, CHART_TOKENS, KARMA_PATTERNS, REALM_PATTERNS, STATE_PATTERNS, type ChartColors } from "@/lib/chart-colors";
 
 import {
   THEMES,
@@ -70,14 +70,20 @@ describe("charts are a gray-blue ramp plus patterns (规范 v2 A5)", () => {
     }
   });
 
-  it.each(THEMES)("%s: the six soul states are six ramp steps, in order", (theme) => {
-    const tokens = Object.values(CHART_TOKENS.STATE_COLORS);
-    expect(tokens).toEqual([1, 2, 3, 4, 5, 6].map((n) => `--color-chart-${n}`));
+  it.each(THEMES)("%s: the five lifecycle states are ramp steps 1–5, in order; LOST is an outline of step 1 (Design D5)", (theme) => {
+    const { LOST, ...lifecycle } = CHART_TOKENS.STATE_COLORS;
+    expect(Object.keys(lifecycle)).toEqual(["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"]);
+    const tokens = Object.values(lifecycle);
+    expect(tokens).toEqual([1, 2, 3, 4, 5].map((n) => `--color-chart-${n}`));
+    expect(LOST).toBe("--color-chart-1");
+    expect(STATE_PATTERNS.LOST).toBe("outline");
+    expect(Object.entries(STATE_PATTERNS).filter(([k]) => k !== "LOST").every(([, p]) => p === "solid")).toBe(true);
+    expect(Object.keys(STATE_PATTERNS).sort()).toEqual(Object.keys(CHART_TOKENS.STATE_COLORS).sort());
     // Monotone lightness: dark → light in the light theme, light → dark in the dark theme.
     const L = tokens.map((t) => Number(literalOfIn(theme, t).slice(6).split(" ")[0]));
     const sorted = [...L].sort((a, b) => (theme === "light" ? a - b : b - a));
     expect(L).toEqual(sorted);
-    expect(new Set(L).size).toBe(6);
+    expect(new Set(L).size).toBe(5);
   });
 
   it.each(THEMES)("%s: every ramp step is ≥ 3:1 against the page (A5「图形对 bg 至少 3:1」)", (theme) => {
