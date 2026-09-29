@@ -10,6 +10,11 @@ def _delete_officer_conversations(apps, schema_editor):
     NOT NULL, which fails on PostgreSQL once any officer row (account NULL) exists. Those rows cannot
     be represented before 0002, so they are deleted. Listed last, so it runs first on the way back."""
     apps.get_model("soul_assist", "AssistConversation")._base_manager.filter(account__isnull=True).delete()
+    # The delete cascades to messages through deferred FK constraints; on PostgreSQL their trigger
+    # events stay pending in this transaction and the next ALTER TABLE is refused ("pending trigger
+    # events"). Fire them now. SQLite has no such state, which is why only the PG run caught it.
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute("SET CONSTRAINTS ALL IMMEDIATE")
 
 
 class Migration(migrations.Migration):
