@@ -106,9 +106,9 @@ describe("the error state exists at all, on every control", () => {
     const invalid = fieldControl({ invalid: true });
     expect(invalid).toContain("border-[oklch(var(--color-danger))]");
     expect(invalid).toContain("focus-visible:border-[oklch(var(--color-danger))]");
-    // 规范 v1: the error field also carries a 2 px danger underline.
-    expect(invalid).toContain("shadow-[inset_0_-2px_0_oklch(var(--color-danger))]");
-    expect(invalid).not.toContain("focus-visible:border-[oklch(var(--color-block))]");
+    // 规范 v2 A1: the error border is 2 px (no underline, no shake).
+    expect(invalid.split(/\s+/)).toContain("border-2");
+    expect(invalid).not.toContain("focus-visible:border-[oklch(var(--color-ink))]");
   });
 });
 
@@ -129,15 +129,15 @@ describe("focus-visible, not focus", () => {
 
   it.each(FIELD_SIZES)("%s uses focus-visible for its focus border", (size) => {
     const classes = fieldControl({ size }).split(/\s+/);
-    expect(classes).toContain("focus-visible:border-[oklch(var(--color-block))]");
+    // 规范 v2 A1: the focused border turns ink (plus the global ink ring).
+    expect(classes).toContain("focus-visible:border-[oklch(var(--color-ink))]");
     expect(classes.filter((c) => /^focus:/.test(c))).toEqual([]);
   });
 
   it("writes no outline-none, leaving the global ring-3 alone", () => {
-    // app/globals.css:459 is `:focus-visible { outline-solid: ... !important }`, and
-    // the rule immediately below it sets outline-offset: 0 for input/select/
-    // textarea so the ring and the accent border are not read as a double
-    // outline. A component participates by doing nothing.
+    // app/globals.css has `:focus-visible { outline: 2px solid … !important }`
+    // (规范 v2 A2: 2px ink, offset 2 — on inputs too; A1 keeps the ink border
+    // AND the ring). A component participates by doing nothing.
     expect(CODE).not.toMatch(/\boutline-none\b/);
     expect(CODE).not.toMatch(/\bfocus(-visible)?:ring/);
   });

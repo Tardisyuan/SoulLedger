@@ -76,10 +76,10 @@ function EditableNodeComponent({
     <div
       data-role={role}
       data-issues={issues > 0 ? issues : undefined}
-      className={`relative min-w-[180px] px-3 py-2 border bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))] cursor-pointer transition-[outline-color,box-shadow] duration-state ${
+      className={`relative min-w-[180px] px-3 py-2 border bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))] cursor-pointer transition-[outline-color] duration-state ${
         issues > 0 ? "border-[oklch(var(--color-danger))]" : "border-[oklch(var(--color-block))]"
       } ${selected ? "outline-2 outline-offset-2 outline-[oklch(var(--color-focus))]" : ""} ${
-        dragging ? "shadow-overlay" : ""
+        dragging ? "outline-1 outline-[oklch(var(--color-ink))]" : ""
       }`}
     >
       {issues > 0 && (

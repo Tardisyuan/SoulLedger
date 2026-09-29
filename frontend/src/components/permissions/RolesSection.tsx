@@ -290,7 +290,7 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
           {menuOpen && (
             <div
               id="role-drawer-more"
-              className="absolute bottom-full left-0 z-10 mb-1 flex min-w-48 flex-col border border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] shadow-overlay"
+              className="absolute bottom-full left-0 z-10 mb-1 flex min-w-48 flex-col border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))]"
             >
               <button
                 type="button"

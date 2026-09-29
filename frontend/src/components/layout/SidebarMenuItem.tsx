@@ -106,7 +106,7 @@ function SidebarGroupInner({
           </button>
         )}
         {children.length ? (
-          <div className="invisible absolute left-full top-0 z-drawer w-50 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] opacity-0 shadow-overlay group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+          <div className="invisible absolute left-full top-0 z-drawer w-50 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] opacity-0 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
             <p className="px-3 py-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))]">
               {number} {label}
             </p>

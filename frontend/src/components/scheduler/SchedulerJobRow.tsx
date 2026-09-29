@@ -151,15 +151,17 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
             aria-label={t("scheduler.actions.toggle", { job: job.task_name })}
             disabled={togglePending}
             onClick={() => onToggle(job)}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center border transition-colors disabled:opacity-50 ${
+            // 规范 v2 A1「开关」:32 × 18、1.5px 框;开 = ink 实底、纸色滑块在右;关 = 空底、
+            // ink3 框与滑块在左;禁用 = s2 底、line 框(不调透明度)。选中不用匾色。
+            className={`relative inline-flex h-[18px] w-8 shrink-0 items-center border-[1.5px] p-0.5 transition-colors duration-instant disabled:cursor-not-allowed disabled:border-[oklch(var(--color-line))] disabled:bg-[oklch(var(--color-disabled-surface))] ${
               job.enabled
-                ? "bg-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]"
-                : "bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline))]"
+                ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
+                : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
             }`}
           >
             <span
               aria-hidden="true"
-              className={`inline-block h-4 w-4 bg-[oklch(var(--color-ink))] transition-transform ${job.enabled ? "translate-x-6" : "translate-x-1"}`}
+              className={`block size-[11px] ${job.enabled ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`}
             />
           </button>
         )}
