@@ -97,7 +97,7 @@ def _admin_routes():
 
 def test_the_route_list_is_not_empty():
     """下面那条 403 测试的主体清单来自 URLconf;清单空了它就恒绿。"""
-    assert len(_admin_routes()) == 13
+    assert len(_admin_routes()) == 16
 
 
 @pytest.mark.parametrize("role", ["MODERATOR", "JUDGE", "GUARDIAN", "VIEWER"])

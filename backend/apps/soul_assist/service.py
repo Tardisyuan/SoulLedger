@@ -19,7 +19,7 @@ from django.core.cache import cache
 from django.db import connection, transaction
 from django.utils import timezone
 
-from apps.soul_assist import config, corpus, tools, usage
+from apps.soul_assist import config, corpus, tools, usage, vectors
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.providers import ProviderError, Turn, get_provider
 
@@ -131,6 +131,7 @@ class Asker:
     tools: list
     run_tool: Callable[[str], str]
     empty_answer: dict = None  # 模型交回空文本时的固定回答,按回答语言;见 EMPTY_ANSWER / OFFICER_EMPTY_ANSWER
+    civilization: str = None  # 检索按它过滤条目(§7.5);官员为 None,不按文明过滤
 
     @property
     def side(self):
@@ -141,7 +142,7 @@ def soul_asker(account, screen, lang):
     soul = account.soul
     return Asker(owner={"account": account}, user=account.user, tenant=soul.home_tenant or soul.tenant,
                  system=corpus.system_prompt(lang), facts=corpus.facts(account, screen), tools=tools.SPECS,
-                 run_tool=lambda name: tools.run(name, account))
+                 run_tool=lambda name: tools.run(name, account), civilization=soul.home_civilization)
 
 
 def answer(account, question, screen, *, locale, conversation_id=None, request=None):
@@ -224,13 +225,21 @@ def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_ev
             finally:
                 _release_db()
 
+        # 取问题向量(至多 3 秒)也算在总预算里(§7.5)。
+        deadline = time.monotonic() + settings.ASSISTANT_TIMEOUT_SECONDS
+        found = vectors.retrieve(question, lang, asker.side, asker.civilization, release=_release_db)
+        system, facts = asker.system, asker.facts
+        if found.mode == "vector":
+            # 规则(与 PINNED 条目)仍是缓存前缀;检索出的 k 条随问题变,接在断点之后的事实头后面。
+            by_id = {e["id"]: e for e in corpus.entries(lang, asker.side)}
+            system = corpus.system_prompt(lang, asker.side, retrieved=True)
+            facts = f"{asker.facts}\n\n{corpus.entries_block([by_id[i] for i in found.entries])}"
         _release_db()
         try:
             provider = get_provider(conn)  # 建客户端也可能失败(ProviderError):同样是 503、记用量
             result = provider.answer(
-                system=asker.system, facts=asker.facts, history=history, tools=asker.tools,
-                call_tool=call_tool, max_rounds=MAX_ROUNDS,
-                deadline=time.monotonic() + settings.ASSISTANT_TIMEOUT_SECONDS,
+                system=system, facts=facts, history=history, tools=asker.tools,
+                call_tool=call_tool, max_rounds=MAX_ROUNDS, deadline=deadline,
             )
         except ProviderError as exc:
             raise AssistError("助手一时答不上来,请稍后重试。", "assistant_unavailable", 503) from exc
@@ -246,10 +255,12 @@ def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_ev
         _audit(asker.user, asker.tenant, conversation, "EXECUTE", "assistant answer", request, {
             "question_hmac": _sha(question), "answer_hmac": _sha(text), "tools": result.tool_calls,
             "provider": conn.provider.rsplit(".", 1)[-1], "model": conn.model,
-            "tokens": result.usage, "locale": lang, **({"eval": True} if is_eval else {}),
+            "tokens": result.usage, "locale": lang, "retrieval": found.mode, **({"eval": True} if is_eval else {}),
         })
         usage.record(asker.side, asker.tenant, "ok" if result.text.strip() else "empty", conn.model, result.usage,
-                     is_eval=is_eval)
+                     is_eval=is_eval, retrieval=found.mode)
+    #: 不落库,只给评测与试问看:这一问的检索方式与进了上下文的条目(`vectors.Retrieval`)。
+    reply.retrieval = found
     if not is_eval:
         # 回答已经落库:上限检查坏了也不能让提问的人拿到 500(他会重问,再花一次钱)。只记异常,不记原文。
         try:

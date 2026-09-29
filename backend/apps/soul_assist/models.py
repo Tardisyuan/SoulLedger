@@ -9,6 +9,7 @@
 import uuid
 
 from django.db import models
+from pgvector.django import VectorField
 
 from apps.core.soft_delete import SoftDeleteMixin
 from apps.death_sync.fields import EncryptedCharField
@@ -87,6 +88,12 @@ class AssistConfig(models.Model):
     #: 后者非空 = 总开关是**上限**关的,次月 1 日起首次读开关时自动重开;管理员手动改过开关就清空,不再自动开。
     cap_alert_sent_for = models.CharField(max_length=7, blank=True, default="")
     cap_closed_for = models.CharField(max_length=7, blank=True, default="")
+    #: 上次重建向量(`vectors.sync`)的时间与所用模型(「模型」或「模型@截断维度」);管理页显示。
+    vectors_synced_at = models.DateTimeField(null=True, blank=True)
+    vectors_synced_model = models.CharField(max_length=220, blank=True, default="")
+    #: 上次重建失败的原因(`vectors.ERROR_KINDS`)与时间;成功一次就清空。失败的那次什么都没换进去。
+    vectors_error = models.CharField(max_length=30, blank=True, default="")
+    vectors_error_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
@@ -94,6 +101,9 @@ class AssistUsage(models.Model):
     """每次提问一行,**不含任何原文**:成功、空回答与各种失败都记,用量页与月度上限只读这张表。"""
 
     STATUSES = [(s, s) for s in ("ok", "empty", "unavailable", "busy", "rate_limited", "not_configured")]
+    #: 这一问的帮助条目怎么来的(§7.5):向量检索的 top-k;向量服务不通 / 超时 / 库里没有向量时的整份语料;
+    #: 最近一条也不够像时的整份语料。没走到检索的失败(未开通、忙)为空。
+    RETRIEVALS = [(s, s) for s in ("vector", "fallback", "fallback_low_similarity")]
     SIDES = (("soul", "soul"), ("officer", "officer"))
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -104,6 +114,7 @@ class AssistUsage(models.Model):
     input_tokens = models.PositiveIntegerField(default=0)
     output_tokens = models.PositiveIntegerField(default=0)
     cache_read_tokens = models.PositiveIntegerField(default=0)
+    retrieval = models.CharField(max_length=30, choices=RETRIEVALS, blank=True, default="")
     #: 评测的请求:不计入用量与月度上限。
     is_eval = models.BooleanField(default=False)
 
@@ -120,6 +131,8 @@ class AssistEvalCase(models.Model):
     expected_tools = models.JSONField(default=list, blank=True)
     must_include = models.JSONField(default=list, blank=True)
     must_not_include = models.JSONField(default=list, blank=True)
+    #: 期望进入检索 top-k 的帮助条目 id(§7.6);空 = 这条用例不计检索命中率。
+    expected_entries = models.JSONField(default=list, blank=True)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -160,9 +173,39 @@ class AssistEvalResult(models.Model):
     included = models.JSONField(default=dict)  # 短语 → 是否出现
     excluded = models.JSONField(default=dict)  # 短语 → 是否(错误地)出现
     passed = models.BooleanField(default=False)
+    #: 检索方式(AssistUsage.RETRIEVALS)、进了上下文的条目 id、期望条目是否在其中(用例没写期望 = None)。
+    retrieval = models.CharField(max_length=30, blank=True, default="")
+    retrieved = models.JSONField(default=list)
+    retrieval_hit = models.BooleanField(null=True)
     latency_ms = models.PositiveIntegerField(default=0)
     tokens = models.JSONField(default=dict)
     cost = models.FloatField(null=True)
 
     class Meta:
         ordering = ["candidate", "id"]
+
+
+class HelpChunk(models.Model):
+    """帮助条目的向量(docs/ARCHITECTURE-soul-assist.md §7.3)。**条目即块**:一个 (语言, 条目) 一行。
+
+    由 `vectors.sync` 维护,不手改。`embedding` 是**不定维**的 `vector`:换模型、换维度不用迁移,重建即可;
+    检索只比同一 `model`、同一 `dims` 的行。SQLite 上同一列存成 `[x,y,…]` 文本,余弦在 Python 里算。
+    过滤用的元数据(受众、文明)在检索时按当前语料文件取,这里的副本只供查看。"""
+
+    entry_id = models.CharField(max_length=100)
+    locale = models.CharField(max_length=10)
+    audience = models.CharField(max_length=10)
+    screens = models.JSONField(default=list)
+    civilizations = models.JSONField(default=list)
+    #: 送给模型的正文。
+    content = models.TextField()
+    #: 嵌入的文本(questions + 正文)连同截断维度的 SHA-256:两者任一变了就重嵌。
+    content_hash = models.CharField(max_length=64)
+    model = models.CharField(max_length=200)
+    dims = models.PositiveIntegerField()
+    embedding = VectorField()
+    embedded_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["locale", "entry_id"], name="help_chunk_one_per_entry")]
+        indexes = [models.Index(fields=["locale", "audience", "model", "dims"])]

@@ -1,10 +1,11 @@
 """助手管理页的请求 / 响应形状(docs/ARCHITECTURE-assist-admin.md)。API key 只写不读。"""
 from rest_framework import serializers
 
-from apps.soul_assist import config
+from apps.soul_assist import config, corpus, vectors
 from apps.soul_assist.models import OFFICER_SCREENS, SCREENS, AssistEvalCase, AssistEvalResult, AssistEvalRun
-from apps.soul_assist.serializers import MAX_QUESTION_LENGTH
+from apps.soul_assist.serializers import MAX_QUESTION_LENGTH, AssistErrorSerializer
 
+RETRIEVALS = ("vector", "fallback", "fallback_low_similarity")
 ERROR_KINDS = ("auth", "model_not_found", "timeout", "rate_limited", "connection", "tools_unsupported", "other")
 
 
@@ -117,11 +118,14 @@ class EvalCaseSerializer(serializers.ModelSerializer):
     must_include = serializers.ListField(child=serializers.CharField(max_length=200), max_length=20, required=False)
     must_not_include = serializers.ListField(child=serializers.CharField(max_length=200), max_length=20,
                                              required=False)
+    expected_entries = serializers.ListField(
+        child=serializers.CharField(max_length=100), max_length=10, required=False,
+        help_text="期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率")
 
     class Meta:
         model = AssistEvalCase
         fields = ["id", "side", "locale", "screen", "question", "expected_tools", "must_include", "must_not_include",
-                  "active", "created_at"]
+                  "expected_entries", "active", "created_at"]
         read_only_fields = ["id", "created_at"]
 
     def validate(self, attrs):
@@ -135,6 +139,11 @@ class EvalCaseSerializer(serializers.ModelSerializer):
         unknown = set(attrs.get("expected_tools", getattr(self.instance, "expected_tools", []))) - known
         if unknown:
             raise serializers.ValidationError({"expected_tools": f"{side}端没有这些工具:{sorted(unknown)}"})
+        locale = attrs.get("locale", getattr(self.instance, "locale", "zh-Hans"))
+        ids = {e["id"] for e in corpus.entries(locale, side)}
+        missing = set(attrs.get("expected_entries", getattr(self.instance, "expected_entries", []))) - ids
+        if missing:
+            raise serializers.ValidationError({"expected_entries": f"{side}端 {locale} 语料里没有这些条目:{sorted(missing)}"})
         return attrs
 
 
@@ -176,6 +185,9 @@ class TryResultSerializer(serializers.Serializer):
     side = serializers.ChoiceField(choices=("soul", "officer"))
     answer = serializers.CharField()
     tools_called = serializers.ListField(child=serializers.CharField(), help_text="按调用顺序的工具名,不含结果")
+    retrieval = serializers.ChoiceField(choices=RETRIEVALS)
+    retrieved_entries = serializers.ListField(child=serializers.CharField(),
+                                              help_text="检索进上下文的条目 id,近的在前;退回整份语料时为空")
     latency_ms = serializers.IntegerField()
     tokens = serializers.DictField(child=serializers.IntegerField())
     provider = serializers.CharField()
@@ -195,6 +207,10 @@ class EvalSummarySerializer(serializers.Serializer):
     errors = serializers.IntegerField()
     tool_accuracy = serializers.FloatField(allow_null=True)
     phrase_hit_rate = serializers.FloatField(allow_null=True)
+    retrieval_hit_rate = serializers.FloatField(
+        allow_null=True, help_text="写了期望条目的已答用例里,期望条目进了检索 top-k 的比例;没有这样的用例为 null")
+    retrieval_fallbacks = serializers.IntegerField(allow_null=True,
+                                                   help_text="已答用例里退回整份语料的条数;早于检索的运行为 null")
     mean_latency_ms = serializers.FloatField(allow_null=True)
     cost = serializers.FloatField(allow_null=True)
     input_tokens = serializers.IntegerField()
@@ -221,7 +237,8 @@ class EvalResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssistEvalResult
         fields = ["id", "candidate", "case", "side", "question", "tools_called", "answer", "error", "tools_ok",
-                  "included", "excluded", "passed", "latency_ms", "tokens", "cost"]
+                  "included", "excluded", "passed", "retrieval", "retrieved", "retrieval_hit", "latency_ms", "tokens",
+                  "cost"]
 
 
 class EvalRunSerializer(serializers.ModelSerializer):
@@ -287,6 +304,12 @@ class Phase4Serializer(serializers.Serializer):
     empty_reached = serializers.BooleanField()
 
 
+class UsageRetrievalSerializer(serializers.Serializer):
+    vector = serializers.IntegerField()
+    fallback = serializers.IntegerField(help_text="向量服务不通、超时,或库里没有向量")
+    fallback_low_similarity = serializers.IntegerField(help_text="最近一条也低于相似度下限")
+
+
 class UsageSerializer(serializers.Serializer):
     month = serializers.CharField()
     spent = serializers.FloatField()
@@ -295,6 +318,7 @@ class UsageSerializer(serializers.Serializer):
     requests = serializers.IntegerField()
     by_status = UsageStatusSerializer()
     failure_rates = FailureRatesSerializer()
+    by_retrieval = UsageRetrievalSerializer(help_text="已答的请求按帮助条目的来源分(§7.5)")
     by_day = UsageDaySerializer(many=True)
     by_side = UsageSideSerializer(many=True)
     by_hall = UsageHallSerializer(many=True)
@@ -321,3 +345,69 @@ class CorpusSerializer(serializers.Serializer):
     prompts = CorpusPromptSerializer(many=True)
     total_tokens = serializers.IntegerField(help_text="最大的一份 system prompt(一次请求实际带上的)的估计")
     threshold = serializers.IntegerField()
+
+
+# ── 向量检索(docs/ARCHITECTURE-soul-assist.md §7.6)────────────────────────
+
+
+class EmbeddingCandidateSerializer(serializers.Serializer):
+    """一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。"""
+
+    embedding_url = serializers.URLField(max_length=500, required=False)
+    embedding_model = serializers.CharField(max_length=200, min_length=1, required=False)
+    embedding_dims = serializers.IntegerField(min_value=1, max_value=16000, allow_null=True, required=False)
+
+
+class EmbeddingUpdateSerializer(EmbeddingCandidateSerializer):
+    retrieval_k = serializers.IntegerField(min_value=1, max_value=20, required=False)
+    retrieval_min_similarity = serializers.FloatField(min_value=-1, max_value=1, required=False)
+
+
+class EmbeddingStatusSerializer(serializers.Serializer):
+    entries = serializers.IntegerField(help_text="两种语言、两端的语料条目总数")
+    embedded = serializers.IntegerField(help_text="按当前模型与维度、当前正文已嵌入的条数")
+    needs_rebuild = serializers.BooleanField(
+        help_text="当前模型 / 维度 / 正文下有条目没有向量。测试通过不会自动重建;重建完成前检索退回整份语料")
+    model = serializers.CharField(help_text="当前配置:模型,截断时为「模型@维度」")
+    last_rebuild_at = serializers.DateTimeField(allow_null=True)
+    last_rebuild_model = serializers.CharField(allow_null=True)
+    last_error = serializers.ChoiceField(choices=vectors.ERROR_KINDS, allow_null=True,
+                                         help_text="上次重建失败的原因;那次没有换进任何向量。成功一次即清空")
+    last_error_at = serializers.DateTimeField(allow_null=True)
+    rebuild_running = serializers.BooleanField(help_text="正在重建;此时再点重建答 409 rebuild_running")
+
+
+class EmbeddingConfigSerializer(serializers.Serializer):
+    embedding_url = serializers.CharField()
+    embedding_model = serializers.CharField()
+    embedding_dims = serializers.IntegerField(allow_null=True, help_text="null = 模型原生维度")
+    retrieval_k = serializers.IntegerField()
+    retrieval_min_similarity = serializers.FloatField(
+        help_text="最近一条的余弦相似度低于它,这一问退回整份语料(fallback_low_similarity)")
+    overridden = serializers.ListField(child=serializers.CharField(), help_text="页面改过(不再跟 env)的键")
+    status = EmbeddingStatusSerializer()
+
+
+class EmbeddingTestResultSerializer(serializers.Serializer):
+    ok = serializers.BooleanField()
+    error_kind = serializers.ChoiceField(choices=vectors.ERROR_KINDS, allow_null=True)
+    latency_ms = serializers.IntegerField()
+    dims = serializers.IntegerField(allow_null=True, help_text="返回的维度;失败时为 null")
+    embedding_url = serializers.CharField()
+    embedding_model = serializers.CharField()
+    embedding_dims = serializers.IntegerField(allow_null=True, help_text="要求的截断维度;null = 原生")
+
+
+class EmbeddingErrorSerializer(AssistErrorSerializer):
+    error_kind = serializers.ChoiceField(choices=vectors.ERROR_KINDS)
+
+
+class EmbeddingRebuildSerializer(serializers.Serializer):
+    embedded = serializers.IntegerField(help_text="这次新嵌入或重嵌的条数")
+    unchanged = serializers.IntegerField()
+    deleted = serializers.IntegerField(help_text="语料里已不存在而删掉的行")
+    model = serializers.CharField()
+    dims = serializers.IntegerField(allow_null=True)
+    index = serializers.CharField(allow_null=True, help_text="PostgreSQL 上现有的 HNSW 索引名;行数未到阈值为 null")
+    dropped = serializers.ListField(child=serializers.CharField(), help_text="删掉的旧模型 / 旧维度索引")
+    status = EmbeddingStatusSerializer()

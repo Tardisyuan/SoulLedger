@@ -15,13 +15,19 @@ from rest_framework.views import APIView
 
 from apps.core.tenant import ADMIN_ROLE
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
-from apps.soul_assist import config, corpus, eval_identities, evals, service, usage
+from apps.soul_assist import config, corpus, eval_identities, evals, service, usage, vectors
 from apps.soul_assist.admin_serializers import (
     CandidateSerializer,
     ConfigSerializer,
     ConfigUpdateSerializer,
     ConnectivityResultSerializer,
     CorpusSerializer,
+    EmbeddingCandidateSerializer,
+    EmbeddingConfigSerializer,
+    EmbeddingErrorSerializer,
+    EmbeddingRebuildSerializer,
+    EmbeddingTestResultSerializer,
+    EmbeddingUpdateSerializer,
     EvalCaseSerializer,
     EvalIdentitiesSerializer,
     EvalPreviewRequestSerializer,
@@ -307,3 +313,78 @@ class CorpusView(AdminView):
                                           "total_tokens": max(p["tokens"] for p in prompts),
                                           "threshold": usage.CORPUS_TOKEN_THRESHOLD}).data)
 
+
+
+# ── 向量检索(docs/ARCHITECTURE-soul-assist.md §7.6)────────────────────────
+
+
+def _embedding_body(eff: config.Effective):
+    return EmbeddingConfigSerializer({
+        **{k: config.current_value(eff, k) for k in config.EMBEDDING_KEYS},
+        "embedding_url": config.redact_url(eff.embedding.url),
+        "overridden": [k for k in eff.overridden if k in config.EMBEDDING_KEYS],
+        "status": vectors.status(),
+    }).data
+
+
+class EmbeddingView(AdminView):
+    @extend_schema(operation_id="assist_admin_embedding_retrieve", responses={200: EmbeddingConfigSerializer})
+    def get(self, request):
+        return Response(_embedding_body(config.effective()))
+
+    @extend_schema(operation_id="assist_admin_embedding_update", request=EmbeddingUpdateSerializer,
+                   responses={200: EmbeddingConfigSerializer, 400: AssistErrorSerializer})
+    def patch(self, request):
+        """地址、模型、截断维度任一变了,要先在 15 分钟内测通**同一套**(与供应商连接同一规则);k 与相似度下限不用。
+        换模型或维度保存后 `status.needs_rebuild` 为真:检索在重建前退回整份语料,不会拿旧向量去比。"""
+        body = EmbeddingUpdateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        with transaction.atomic():
+            AssistConfig.objects.get_or_create(pk=1)
+            row = AssistConfig.objects.select_for_update().get(pk=1)
+            eff = config.effective(row)
+            data = dict(body.validated_data)
+            if data.get("embedding_url") == config.redact_url(eff.embedding.url):
+                data["embedding_url"] = eff.embedding.url  # 回传的去敏地址 = 没改
+            after = config.embedding_candidate(data, eff.embedding)
+            if after != eff.embedding and not config.was_tested(after):
+                return _error("向量模型配置变了:先用这套配置通过测试再保存。", "untested_embedding")
+            config.save_changes(row, data, user=request.user, request=request,
+                                description="assistant embedding config updated")
+        return Response(_embedding_body(config.effective()))
+
+
+class EmbeddingTestView(AdminView):
+    @extend_schema(operation_id="assist_admin_embedding_test", request=EmbeddingCandidateSerializer,
+                   responses={200: EmbeddingTestResultSerializer, 400: AssistErrorSerializer})
+    def post(self, request):
+        """对一句固定问题取向量:报延迟与返回维度。要了截断维度而返回的不是它 → `dims_mismatch`,判失败。"""
+        body = EmbeddingCandidateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        base = config.effective().embedding
+        data = dict(body.validated_data)
+        if data.get("embedding_url") == config.redact_url(base.url):
+            data["embedding_url"] = base.url
+        emb = config.embedding_candidate(data, base)
+        return Response(EmbeddingTestResultSerializer({
+            **vectors.probe(emb), "embedding_url": config.redact_url(emb.url), "embedding_model": emb.model,
+            "embedding_dims": emb.dims}).data)
+
+
+class EmbeddingRebuildView(AdminView):
+    @extend_schema(operation_id="assist_admin_embedding_rebuild", request=None,
+                   responses={200: EmbeddingRebuildSerializer, 409: AssistErrorSerializer,
+                              503: EmbeddingErrorSerializer})
+    def post(self, request):
+        """与 `manage.py sync_help_vectors` 同一个函数,同步执行(语料几十条,热模型约一两秒)。失败什么都不改。"""
+        try:
+            result = vectors.sync()
+        except vectors.RebuildRunningError:
+            return _error("正在重建,请稍后再看。", "rebuild_running", status.HTTP_409_CONFLICT)
+        except vectors.EmbeddingError as exc:
+            return Response({"detail": "向量服务不可用,没有改动任何向量。", "code": "embedding_unavailable",
+                             "error_kind": exc.kind}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        config.audit(request.user, "assistant vectors rebuilt",
+                     {k: result[k] for k in ("embedded", "unchanged", "deleted", "model", "dims", "index", "dropped")},
+                     request, resource_id="vectors")
+        return Response(EmbeddingRebuildSerializer({**result, "status": vectors.status()}).data)

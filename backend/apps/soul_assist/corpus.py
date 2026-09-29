@@ -1,7 +1,7 @@
 """帮助语料与 system prompt(docs/ARCHITECTURE-soul-assist.md §4.4、§5)。
 
-语料是 `help/<locale>/<id>.md`:YAML 头 + 正文,一个问题一个条目。v1 整份进 system prompt;
-以后上向量检索,条目即块、头即过滤条件(§5.4),不必重写。
+语料是 `help/<locale>/<id>.md`:YAML 头 + 正文,一个问题一个条目。整份进 system prompt,
+或经向量检索只放最近的 k 条(§7,`vectors.py`);条目即块、头即过滤条件(§5.4)。
 
 **回答语言按请求头**(决策 A5):zh 开头用中文语料与中文回答;其余(en、egy 以及任何别的)
 用英文 —— egy 是古埃及语转写,不能拿来写说明或对话。
@@ -99,14 +99,30 @@ def entries(locale: str, audience: str = "soul") -> tuple:
     return tuple(r for r in rows if r["audience"] == audience)
 
 
-def system_prompt(locale: str, audience: str = "soul") -> str:
-    """稳定前缀:规则 + 该受众的全部条目。同一语言、同一受众逐字节相同,才能命中 prompt cache。"""
+#: 检索时也总在缓存前缀里的条目:规则点名要它(原因代码对照表),而它与问题的措辞无关 ——
+#: 工具返回一个代码时,问题本身可能一点也不像「代码」。
+PINNED = ("codes",)
+
+
+def _render(e) -> str:
+    scope = f" (civilizations: {', '.join(e['civilizations'])})" if e["civilizations"] else ""
+    return f"### {e['id']}{scope}\n{e['body']}"
+
+
+def system_prompt(locale: str, audience: str = "soul", *, retrieved: bool = False) -> str:
+    """稳定前缀:规则 + 该受众的全部条目。同一语言、同一受众逐字节相同,才能命中 prompt cache。
+
+    `retrieved=True`(向量检索,§7.5):只放规则与 `PINNED`;检索出的条目由 `entries_block`
+    放在缓存断点之后。"""
     rules = {"soul": RULES, "officer": OFFICER_RULES}[audience]
     parts = [rules.format(language=LANGUAGE_LINE[locale]), "HELP ENTRIES"]
-    for e in entries(locale, audience):
-        scope = f" (civilizations: {', '.join(e['civilizations'])})" if e["civilizations"] else ""
-        parts.append(f"### {e['id']}{scope}\n{e['body']}")
+    parts += [_render(e) for e in entries(locale, audience) if not retrieved or e["id"] in PINNED]
     return "\n\n".join(parts)
+
+
+def entries_block(rows) -> str:
+    """检索出的条目,接在事实头之后(每次请求变化,在缓存断点之后)。"""
+    return "\n\n".join(["HELP ENTRIES (retrieved for this question)"] + [_render(e) for e in rows])
 
 
 def facts(account, screen: str) -> str:
