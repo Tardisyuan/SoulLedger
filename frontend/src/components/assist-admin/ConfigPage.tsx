@@ -304,7 +304,11 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
             {tested && (
               <div role="status" className={`mt-3 border-l-2 pl-3 text-sm ${tested.result.ok ? "border-[oklch(var(--color-success))]" : "border-[oklch(var(--color-danger))]"}`}>
                 <p>{tested.result.ok ? t("assist_admin.test.ok") : t("assist_admin.test.failed")}</p>
-                {!tested.result.ok && tested.result.error_kind && <p>{t(`assist_admin.test.kind.${tested.result.error_kind}`)}</p>}
+                {!tested.result.ok && tested.result.error_kind && (
+                  <p>
+                    {t(`assist_admin.test.kind.${tested.result.error_kind}`)} <span className={MONO}>{tested.result.error_kind}</span>
+                  </p>
+                )}
                 <p className={`${MONO} ${SUBTLE}`}>
                   {t("assist_admin.test.detail", {
                     provider: tested.result.provider,
