@@ -11,6 +11,7 @@ import uuid
 from django.db import models
 
 from apps.core.soft_delete import SoftDeleteMixin
+from apps.death_sync.fields import EncryptedCharField
 
 #: App 的「问一问」来自哪一页。只作提示(先调哪个工具、给哪些建议问题),不改变数据范围。
 SCREENS = ("applications", "sentence", "life", "letters", "circle", "settings", "other")
@@ -37,6 +38,8 @@ class AssistConversation(SoftDeleteMixin, models.Model):
     screen = models.CharField(max_length=20, choices=[(s, s) for s in dict.fromkeys(SCREENS + OFFICER_SCREENS)])
     created_at = models.DateTimeField(auto_now_add=True)
     last_active_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    #: 管理页评测(`apps/soul_assist/evals.py`)开的会话:不续、不进本人的会话列表,留存与清理照常。
+    is_eval = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-last_active_at"]
@@ -61,3 +64,101 @@ class AssistMessage(models.Model):
 
     class Meta:
         ordering = ["created_at", "id"]
+
+
+# ── 管理页(docs/ARCHITECTURE-assist-admin.md)──────────────────────────────
+
+
+class AssistConfig(models.Model):
+    """单行。**没写进 `values` 的键就用 env**(env 是初始值;总开关的 env 还是硬上限),
+    所以没人保存过时,行为与只有 env 时逐字节相同。读取走 `apps/soul_assist/config.py::effective`。"""
+
+    #: 页面改过的键 → 值;键见 `config.EDITABLE`。API key 不在这里。
+    values = models.JSONField(default=dict, blank=True)
+    #: 密文存库(`ENCRYPTION_KEY`)。`api_key_set_at` 为空 = 没改过,用 env;不为空时 "" 表示已清除。
+    api_key = EncryptedCharField(max_length=1000, blank=True, default="")
+    api_key_set_at = models.DateTimeField(null=True, blank=True)
+    #: 评测用的测试身份(§3.2);数据范围照正式规则走。
+    eval_soul_account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.SET_NULL, null=True,
+                                          blank=True, related_name="+")
+    eval_officer = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class AssistUsage(models.Model):
+    """每次提问一行,**不含任何原文**:成功、空回答与各种失败都记,用量页与月度上限只读这张表。"""
+
+    STATUSES = [(s, s) for s in ("ok", "empty", "unavailable", "busy", "rate_limited", "not_configured")]
+    SIDES = (("soul", "soul"), ("officer", "officer"))
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    side = models.CharField(max_length=10, choices=SIDES)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    status = models.CharField(max_length=20, choices=STATUSES)
+    model = models.CharField(max_length=200, blank=True, default="")
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    cache_read_tokens = models.PositiveIntegerField(default=0)
+    #: 评测的请求:不计入用量与月度上限。
+    is_eval = models.BooleanField(default=False)
+
+
+class AssistEvalCase(models.Model):
+    """评测集(§7 Q1 = A):我们起草、管理员增删;**不从灵魂的提问原文里取**。"""
+
+    SIDES = AssistUsage.SIDES
+
+    side = models.CharField(max_length=10, choices=SIDES)
+    locale = models.CharField(max_length=10, choices=[("zh-Hans", "zh-Hans"), ("en", "en")], default="zh-Hans")
+    screen = models.CharField(max_length=20, choices=[(s, s) for s in dict.fromkeys(SCREENS + OFFICER_SCREENS)])
+    question = models.CharField(max_length=1000)
+    expected_tools = models.JSONField(default=list, blank=True)
+    must_include = models.JSONField(default=list, blank=True)
+    must_not_include = models.JSONField(default=list, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["side", "id"]
+
+
+class AssistEvalRun(models.Model):
+    STATUSES = [(s, s) for s in ("queued", "running", "done", "stopped_at_cap", "failed")]
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, related_name="+")
+    status = models.CharField(max_length=20, choices=STATUSES, default="queued")
+    #: 候选配置(一或两套);其中的 API key 是 Fernet 密文,响应里不出。
+    candidates = models.JSONField(default=list)
+    case_ids = models.JSONField(default=list)
+    estimated_cost = models.FloatField(default=0)
+    total = models.PositiveIntegerField(default=0)
+    done = models.PositiveIntegerField(default=0)
+    summary = models.JSONField(default=list, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class AssistEvalResult(models.Model):
+    run = models.ForeignKey(AssistEvalRun, on_delete=models.CASCADE, related_name="results")
+    candidate = models.PositiveSmallIntegerField()
+    case = models.ForeignKey(AssistEvalCase, on_delete=models.SET_NULL, null=True, related_name="+")
+    #: 题目的快照:用例之后被改被删,旧的运行记录仍然读得懂。
+    question = models.CharField(max_length=1000)
+    side = models.CharField(max_length=10, choices=AssistUsage.SIDES)
+    tools_called = models.JSONField(default=list)
+    answer = models.TextField(blank=True, default="")
+    error = models.CharField(max_length=40, blank=True, default="")
+    tools_ok = models.BooleanField(default=False)
+    included = models.JSONField(default=dict)  # 短语 → 是否出现
+    excluded = models.JSONField(default=dict)  # 短语 → 是否(错误地)出现
+    passed = models.BooleanField(default=False)
+    latency_ms = models.PositiveIntegerField(default=0)
+    tokens = models.JSONField(default=dict)
+    cost = models.FloatField(null=True)
+
+    class Meta:
+        ordering = ["candidate", "id"]

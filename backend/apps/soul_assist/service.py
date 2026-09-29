@@ -18,7 +18,7 @@ from django.core.cache import cache
 from django.db import connection, transaction
 from django.utils import timezone
 
-from apps.soul_assist import corpus, tools
+from apps.soul_assist import config, corpus, tools, usage
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.providers import ProviderError, Turn, get_provider
 
@@ -49,8 +49,9 @@ class AssistError(Exception):
 
 
 def enabled_for(account) -> bool:
-    """全局开关 + 原属殿的开关(决策 A6:读 home_tenant,与冷却天数同一处)。两个都默认关。"""
-    if not settings.ASSISTANT_ENABLED:
+    """全局开关 + 原属殿的开关(决策 A6:读 home_tenant,与冷却天数同一处)。两个都默认关。
+    全局开关是生效配置(管理页覆盖 env,env 为假时恒关,`config.Effective.enabled`)。"""
+    if not config.effective().enabled:
         return False
     home = account.soul.home_tenant or account.soul.tenant
     return (home.settings or {}).get("assistant_enabled") is True
@@ -95,7 +96,8 @@ def _release_db():
 
 
 def conversation_for(owner, screen, conversation_id=None):
-    """`owner` 是会话归属的过滤条件:灵魂 `{"account": a}`,官员 `{"user": u}`。"""
+    """`owner` 是会话归属的过滤条件:灵魂 `{"account": a}`,官员 `{"user": u}`。评测开的会话不续。"""
+    owner = {**owner, "is_eval": False}
     if conversation_id is not None:
         found = AssistConversation.objects.filter(pk=conversation_id, **owner).first()
         if found is None:
@@ -126,16 +128,26 @@ class Asker:
     run_tool: Callable[[str], str]
     empty_answer: dict = None  # 模型交回空文本时的固定回答,按回答语言;见 EMPTY_ANSWER / OFFICER_EMPTY_ANSWER
 
+    @property
+    def side(self):
+        return "soul" if "account" in self.owner else "officer"
+
+
+def soul_asker(account, screen, lang):
+    soul = account.soul
+    return Asker(owner={"account": account}, user=account.user, tenant=soul.home_tenant or soul.tenant,
+                 system=corpus.system_prompt(lang), facts=corpus.facts(account, screen), tools=tools.SPECS,
+                 run_tool=lambda name: tools.run(name, account))
+
 
 def answer(account, question, screen, *, locale, conversation_id=None, request=None):
     if not enabled_for(account):
+        soul = account.soul
+        usage.record("soul", soul.home_tenant or soul.tenant, "not_configured")
         raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
     lang = corpus.corpus_locale(locale)
-    soul = account.soul
-    asker = Asker(owner={"account": account}, user=account.user, tenant=soul.home_tenant or soul.tenant,
-                  system=corpus.system_prompt(lang), facts=corpus.facts(account, screen), tools=tools.SPECS,
-                  run_tool=lambda name: tools.run(name, account))
-    return ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request)
+    return ask(soul_asker(account, screen, lang), question, screen, lang=lang, conversation_id=conversation_id,
+               request=request)
 
 
 def officer_enabled_for(request) -> bool:
@@ -146,7 +158,7 @@ def officer_enabled_for(request) -> bool:
     (`TenantPermission` 先拒),万一到了也答关。"""
     from apps.core.tenant import is_tenant_exempt
 
-    if not settings.ASSISTANT_ENABLED:
+    if not config.effective().enabled:
         return False
     tenant = getattr(request, "tenant", None)
     if tenant is None:
@@ -154,18 +166,23 @@ def officer_enabled_for(request) -> bool:
     return (tenant.settings or {}).get("assistant_enabled") is True
 
 
-def officer_answer(request, question, screen, *, locale, conversation_id=None):
+def officer_asker(request, screen, lang):
     from apps.soul_assist import officer_tools
 
+    user = request.user
+    return Asker(owner={"user": user}, user=user, tenant=getattr(request, "tenant", None),
+                 system=corpus.system_prompt(lang, "officer"), facts=corpus.officer_facts(request, screen),
+                 tools=officer_tools.offered(user), run_tool=lambda name: officer_tools.run(name, request),
+                 empty_answer=OFFICER_EMPTY_ANSWER)
+
+
+def officer_answer(request, question, screen, *, locale, conversation_id=None):
     if not officer_enabled_for(request):
+        usage.record("officer", getattr(request, "tenant", None), "not_configured")
         raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
     lang = corpus.corpus_locale(locale)
-    user = request.user
-    asker = Asker(owner={"user": user}, user=user, tenant=getattr(request, "tenant", None),
-                  system=corpus.system_prompt(lang, "officer"), facts=corpus.officer_facts(request, screen),
-                  tools=officer_tools.offered(user), run_tool=lambda name: officer_tools.run(name, request),
-                  empty_answer=OFFICER_EMPTY_ANSWER)
-    return ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request)
+    return ask(officer_asker(request, screen, lang), question, screen, lang=lang, conversation_id=conversation_id,
+               request=request)
 
 
 def officer_delete_conversation(request, conversation_id):
@@ -173,9 +190,25 @@ def officer_delete_conversation(request, conversation_id):
             "assistant conversation deleted by the officer", request)
 
 
-def ask(asker, question, screen, *, lang, conversation_id=None, request=None):
+#: 记进用量表的失败(`AssistError.code` → `AssistUsage.status`)。会话不存在是调用方的错,不记。
+FAILURE_STATUS = {"assistant_busy": "busy", "assistant_unavailable": "unavailable"}
+
+
+def ask(asker, question, screen, *, lang, conversation_id=None, request=None, conn=None, is_eval=False):
+    """`conn` 缺省是生效配置;管理页评测传候选配置,并以 `is_eval` 开新会话、不计用量与月度上限。"""
+    conn = conn or config.effective().connection
+    try:
+        return _ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request,
+                    conn=conn, is_eval=is_eval)
+    except AssistError as exc:
+        if exc.code in FAILURE_STATUS:
+            usage.record(asker.side, asker.tenant, FAILURE_STATUS[exc.code], conn.model, is_eval=is_eval)
+        raise
+
+
+def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_eval):
     with _Slot():
-        conversation = conversation_for(asker.owner, screen, conversation_id)
+        conversation = None if is_eval else conversation_for(asker.owner, screen, conversation_id)
         recent = [] if conversation is None else list(
             conversation.messages.order_by("-created_at", "-id")[:settings.ASSISTANT_HISTORY_TURNS])
         history = [Turn(m.role, m.content) for m in reversed(recent)] + [Turn("user", question)]
@@ -186,7 +219,7 @@ def ask(asker, question, screen, *, lang, conversation_id=None, request=None):
             finally:
                 _release_db()
 
-        provider = get_provider()
+        provider = get_provider(conn)
         _release_db()
         try:
             result = provider.answer(
@@ -200,16 +233,20 @@ def ask(asker, question, screen, *, lang, conversation_id=None, request=None):
     with transaction.atomic():
         # 续的会话可能在模型答题的这 22 秒里被删(本人删、或留存清理删空):那就新开一个,不丢这条回答。
         if conversation is None or not AssistConversation.objects.filter(pk=conversation.pk).exists():
-            conversation = AssistConversation.objects.create(**asker.owner, screen=screen)
+            conversation = AssistConversation.objects.create(**asker.owner, screen=screen, is_eval=is_eval)
         AssistMessage.objects.create(conversation=conversation, role="user", content=question)
         reply = AssistMessage.objects.create(conversation=conversation, role="assistant", content=text,
                                              tool_calls=result.tool_calls, tokens=result.usage)
         AssistConversation.objects.filter(pk=conversation.pk).update(last_active_at=timezone.now())
         _audit(asker.user, asker.tenant, conversation, "EXECUTE", "assistant answer", request, {
             "question_hmac": _sha(question), "answer_hmac": _sha(text), "tools": result.tool_calls,
-            "provider": settings.ASSISTANT_PROVIDER.rsplit(".", 1)[-1], "model": settings.ASSISTANT_MODEL,
-            "tokens": result.usage, "locale": lang,
+            "provider": conn.provider.rsplit(".", 1)[-1], "model": conn.model,
+            "tokens": result.usage, "locale": lang, **({"eval": True} if is_eval else {}),
         })
+        usage.record(asker.side, asker.tenant, "ok" if result.text.strip() else "empty", conn.model, result.usage,
+                     is_eval=is_eval)
+    if not is_eval:
+        usage.enforce_cap()
     return conversation, reply
 
 

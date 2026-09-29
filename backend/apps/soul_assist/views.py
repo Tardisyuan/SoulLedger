@@ -21,7 +21,7 @@ from apps.core.permissions import TenantPermission
 from apps.core.throttling import ClientIPIdentMixin
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_accounts.me_views import SoulAPIView
-from apps.soul_assist import service
+from apps.soul_assist import config, service, usage
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.serializers import (
     AssistAnswerSerializer,
@@ -35,19 +35,21 @@ from apps.soul_assist.serializers import (
 
 
 class AssistThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
-    """按灵魂账号计;速率在 `DEFAULT_THROTTLE_RATES["assist"]`。同 `ChatLookupThrottle`。"""
+    """按灵魂账号计。速率是生效配置(管理页可改,没改过就是 `DEFAULT_THROTTLE_RATES["assist"]`)。"""
 
     scope = "assist"
+    side = "soul"
+
+    def get_rate(self):
+        return config.effective().rate(self.side)
 
 
 class OfficerAssistThrottle(AssistThrottle):
-    """按官员账号计,**速率与灵魂端同一个设置**(Q3 = A:共用 30/hour,看用量再拆)。
-    另一个 scope 只是让两端的计数键分开;要分开设速率时把 `get_rate` 删掉、加一个设置即可。"""
+    """按官员账号计。两端的每殿开关共用(Q3 = A),每小时次数在管理页上各一个数;
+    没改过时两端都是 `DEFAULT_THROTTLE_RATES["assist"]`。"""
 
     scope = "assist_officer"
-
-    def get_rate(self):
-        return self.THROTTLE_RATES[AssistThrottle.scope]
+    side = "officer"
 
 
 class _AssistErrors:
@@ -63,6 +65,11 @@ class _AssistErrors:
         return super().handle_exception(exc)
 
     def throttled(self, request, wait):
+        if isinstance(self, OfficerAssistBaseView):
+            usage.record("officer", getattr(request, "tenant", None), "rate_limited")
+        else:
+            soul = getattr(getattr(self, "account", None), "soul", None)
+            usage.record("soul", soul and (soul.home_tenant or soul.tenant), "rate_limited")
         error = service.AssistError("提问太频繁,请稍后再问。", "rate_limited", 429)
         error.retry_at = timezone.now() + timedelta(seconds=math.ceil(wait or 0))
         raise error
@@ -93,7 +100,7 @@ class MeAssistView(AssistView):
 class MeAssistConversationsView(AssistView):
     @extend_schema(responses={200: AssistConversationSerializer(many=True), 403: AssistErrorSerializer})
     def get(self, request):
-        rows = (AssistConversation.objects.filter(account=self.account)
+        rows = (AssistConversation.objects.filter(account=self.account, is_eval=False)
                 .prefetch_related(Prefetch("messages", queryset=AssistMessage.objects.order_by("created_at", "id"))))
         return Response(AssistConversationSerializer(rows, many=True).data)
 
@@ -135,7 +142,7 @@ class OfficerAssistConversationsView(OfficerAssistBaseView):
     @extend_schema(operation_id="officer_assist_conversations_list",
                    responses={200: OfficerAssistConversationSerializer(many=True), 403: AssistErrorSerializer})
     def get(self, request):
-        rows = (AssistConversation.objects.filter(user=request.user)
+        rows = (AssistConversation.objects.filter(user=request.user, is_eval=False)
                 .prefetch_related(Prefetch("messages", queryset=AssistMessage.objects.order_by("created_at", "id"))))
         return Response(OfficerAssistConversationSerializer(rows, many=True).data)
 
