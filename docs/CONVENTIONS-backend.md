@@ -275,7 +275,10 @@ Redis 客户端与 channel layer 各拿一个按进程区分的前缀（`_privat
 `database_sync_to_async` 线程握着的连接，否则 PostgreSQL 上 `DROP DATABASE` 失败、
 `test_soulledger` 留在 115 上（`bf406a6f`，2026-09-26）。`pytest.ini` 的 `filterwarnings`
 把 pytest-django 那条「Error when trying to teardown test databases」warning 升成 error，
-下一次泄漏的连接不再以 exit 0 收场。
+下一次泄漏的连接不再以 exit 0 收场。`django_db_modify_db_settings` 包装给 PostgreSQL
+测试库加每次运行的后缀（`test_soulledger_<8 位 hex>`，xdist 下是 `test_soulledger_gw0_<hex>`；
+`backend/config/testdb.py`，2026-09-29），两个会话同时 `--create-db` 不再撞库；
+`SOULLEDGER_TEST_DB_SUFFIX` 可固定后缀。SQLite 不受影响。
 
 ```bash
 # 两个后端服务都要隔离。.env 把 DATABASE_URL 和 REDIS_URL 都指向共享的 115。
@@ -307,7 +310,8 @@ cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
 只放开数据库，Redis 必须覆盖：否则 `REDIS_URL` 读 `.env` 指向 115，
 `apps/perm/cache.py` 会往共享 Redis 写权限缓存键、并删掉那里的 `perm:*`。
 
-`--create-db` 是必需的：陈旧的 `test_soulledger` 会造成上千条"环境错误"。
+`--create-db` 是必需的：陈旧的 `test_soulledger` 会造成上千条"环境错误"。残留查
+`datname like 'test_soulledger%'`，带后缀的名字同样匹配。
 
 `tests/test_concurrency.py` 里 4 条 `skipif(SQLITE)` 是全仓唯一真正检验
 `select_for_update` 的东西，SQLite 路径一条都不跑。
