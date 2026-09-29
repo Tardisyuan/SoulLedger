@@ -54,7 +54,13 @@ def tenant(db):
 
 def _ws_authenticate(raw_token):
     middleware = JWTAuthMiddleware(lambda scope, receive, send: None)
-    return async_to_sync(middleware._authenticate_token)(raw_token)
+
+    # `_authenticate_token` is a `database_sync_to_async` object, not a
+    # coroutine function; async_to_sync warns when handed one.
+    async def authenticate():
+        return await middleware._authenticate_token(raw_token)
+
+    return async_to_sync(authenticate)()
 
 
 @pytest.mark.django_db(transaction=True)
