@@ -1337,6 +1337,20 @@ export class ApiMock {
       total: 0, remaining: 0, skipped: 0, position: null,
       judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [],
     });
+    // 丁 · 判词自动保存 (`save_draft` → JudgmentDraftSerializer). It fires
+    // AUTOSAVE_DEBOUNCE_MS (1200) after the last edit, so without this handler a
+    // test that types into 备注 passed or failed on how fast its remaining steps ran.
+    this.on("PATCH", "/judgment/:id/draft/", (call) => {
+      const { version = 0, ...fields } = call.body ?? {};
+      return {
+        body: {
+          notes: "", draft_verdict: null, draft_destination_realm_id: null, draft_term_years: null, draft_eternal: false,
+          ...fields,
+          draft_version: version + 1,
+          draft_saved_at: "2026-08-13T02:05:00Z",
+        },
+      };
+    });
     this.on("GET", "/judgment/:id/destinations/", (call) => ({
       body: {
         verdict: call.query.candidate_verdict ?? null,
