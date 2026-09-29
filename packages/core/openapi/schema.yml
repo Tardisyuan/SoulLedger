@@ -246,6 +246,112 @@ paths:
               schema:
                 $ref: '#/components/schemas/Corpus'
           description: ''
+  /api/v1/assist-admin/embedding/:
+    get:
+      operationId: assist_admin_embedding_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingConfig'
+          description: ''
+    patch:
+      operationId: assist_admin_embedding_update
+      description: |-
+        地址、模型、截断维度任一变了,要先在 15 分钟内测通**同一套**(与供应商连接同一规则);k 与相似度下限不用。
+        换模型或维度保存后 `status.needs_rebuild` 为真:检索在重建前退回整份语料,不会拿旧向量去比。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEmbeddingUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEmbeddingUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEmbeddingUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingConfig'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist-admin/embedding/rebuild/:
+    post:
+      operationId: assist_admin_embedding_rebuild
+      description: 与 `manage.py sync_help_vectors` 同一个函数,同步执行(语料几十条,热模型约一两秒)。失败什么都不改。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingRebuild'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingError'
+          description: ''
+  /api/v1/assist-admin/embedding/test/:
+    post:
+      operationId: assist_admin_embedding_test
+      description: 对一句固定问题取向量:报延迟与返回维度。要了截断维度而返回的不是它 → `dims_mismatch`,判失败。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddingCandidate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmbeddingCandidate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmbeddingCandidate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingTestResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/assist-admin/eval/cases/:
     get:
       operationId: v1_assist_admin_eval_cases_list
@@ -16793,6 +16899,16 @@ components:
       description: |-
         * `user` - user
         * `assistant` - assistant
+    AssistRetrievalEnum:
+      enum:
+      - vector
+      - fallback
+      - fallback_low_similarity
+      type: string
+      description: |-
+        * `vector` - vector
+        * `fallback` - fallback
+        * `fallback_low_similarity` - fallback_low_similarity
     AssistSideEnum:
       enum:
       - soul
@@ -18567,6 +18683,208 @@ components:
       - taken
       type: string
       description: '* `taken` - taken'
+    EmbeddingCandidate:
+      type: object
+      description: 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。
+      properties:
+        embedding_url:
+          type: string
+          format: uri
+          maxLength: 500
+        embedding_model:
+          type: string
+          maxLength: 200
+          minLength: 1
+        embedding_dims:
+          type: integer
+          maximum: 16000
+          minimum: 1
+          nullable: true
+    EmbeddingConfig:
+      type: object
+      properties:
+        embedding_url:
+          type: string
+        embedding_model:
+          type: string
+        embedding_dims:
+          type: integer
+          nullable: true
+          description: null = 模型原生维度
+        retrieval_k:
+          type: integer
+        retrieval_min_similarity:
+          type: number
+          format: double
+          description: 最近一条的余弦相似度低于它,这一问退回整份语料(fallback_low_similarity)
+        overridden:
+          type: array
+          items:
+            type: string
+          description: 页面改过(不再跟 env)的键
+        status:
+          $ref: '#/components/schemas/EmbeddingStatus'
+      required:
+      - embedding_dims
+      - embedding_model
+      - embedding_url
+      - overridden
+      - retrieval_k
+      - retrieval_min_similarity
+      - status
+    EmbeddingError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        retry_at:
+          type: string
+          format: date-time
+        error_kind:
+          $ref: '#/components/schemas/EmbeddingErrorKindEnum'
+      required:
+      - code
+      - detail
+      - error_kind
+    EmbeddingErrorKindEnum:
+      enum:
+      - timeout
+      - connection
+      - model_not_found
+      - dims_mismatch
+      - bad_response
+      - other
+      type: string
+      description: |-
+        * `timeout` - timeout
+        * `connection` - connection
+        * `model_not_found` - model_not_found
+        * `dims_mismatch` - dims_mismatch
+        * `bad_response` - bad_response
+        * `other` - other
+    EmbeddingRebuild:
+      type: object
+      properties:
+        embedded:
+          type: integer
+          description: 这次新嵌入或重嵌的条数
+        unchanged:
+          type: integer
+        deleted:
+          type: integer
+          description: 语料里已不存在而删掉的行
+        model:
+          type: string
+        dims:
+          type: integer
+          nullable: true
+        index:
+          type: string
+          nullable: true
+          description: PostgreSQL 上现有的 HNSW 索引名;行数未到阈值为 null
+        dropped:
+          type: array
+          items:
+            type: string
+          description: 删掉的旧模型 / 旧维度索引
+        status:
+          $ref: '#/components/schemas/EmbeddingStatus'
+      required:
+      - deleted
+      - dims
+      - dropped
+      - embedded
+      - index
+      - model
+      - status
+      - unchanged
+    EmbeddingStatus:
+      type: object
+      properties:
+        entries:
+          type: integer
+          description: 两种语言、两端的语料条目总数
+        embedded:
+          type: integer
+          description: 按当前模型与维度、当前正文已嵌入的条数
+        needs_rebuild:
+          type: boolean
+          description: 当前模型 / 维度 / 正文下有条目没有向量。测试通过不会自动重建;重建完成前检索退回整份语料
+        model:
+          type: string
+          description: 当前配置:模型,截断时为「模型@维度」
+        last_rebuild_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_rebuild_model:
+          type: string
+          nullable: true
+        last_error:
+          nullable: true
+          description: |-
+            上次重建失败的原因;那次没有换进任何向量。成功一次即清空
+
+            * `timeout` - timeout
+            * `connection` - connection
+            * `model_not_found` - model_not_found
+            * `dims_mismatch` - dims_mismatch
+            * `bad_response` - bad_response
+            * `other` - other
+          oneOf:
+          - $ref: '#/components/schemas/EmbeddingErrorKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        last_error_at:
+          type: string
+          format: date-time
+          nullable: true
+        rebuild_running:
+          type: boolean
+          description: 正在重建;此时再点重建答 409 rebuild_running
+      required:
+      - embedded
+      - entries
+      - last_error
+      - last_error_at
+      - last_rebuild_at
+      - last_rebuild_model
+      - model
+      - needs_rebuild
+      - rebuild_running
+    EmbeddingTestResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        error_kind:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EmbeddingErrorKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        latency_ms:
+          type: integer
+        dims:
+          type: integer
+          nullable: true
+          description: 返回的维度;失败时为 null
+        embedding_url:
+          type: string
+        embedding_model:
+          type: string
+        embedding_dims:
+          type: integer
+          nullable: true
+          description: 要求的截断维度;null = 原生
+      required:
+      - dims
+      - embedding_dims
+      - embedding_model
+      - embedding_url
+      - error_kind
+      - latency_ms
+      - ok
     ErrorKindEnum:
       enum:
       - auth
@@ -18653,6 +18971,13 @@ components:
             type: string
             maxLength: 200
           maxItems: 20
+        expected_entries:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+          description: 期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率
+          maxItems: 10
         active:
           type: boolean
         created_at:
@@ -18883,6 +19208,13 @@ components:
         excluded: {}
         passed:
           type: boolean
+        retrieval:
+          type: string
+          maxLength: 30
+        retrieved: {}
+        retrieval_hit:
+          type: boolean
+          nullable: true
         latency_ms:
           type: integer
           minimum: 0
@@ -19013,6 +19345,15 @@ components:
           type: number
           format: double
           nullable: true
+        retrieval_hit_rate:
+          type: number
+          format: double
+          nullable: true
+          description: 写了期望条目的已答用例里,期望条目进了检索 top-k 的比例;没有这样的用例为 null
+        retrieval_fallbacks:
+          type: integer
+          nullable: true
+          description: 已答用例里退回整份语料的条数;早于检索的运行为 null
         mean_latency_ms:
           type: number
           format: double
@@ -19037,6 +19378,8 @@ components:
       - passed
       - phrase_hit_rate
       - provider
+      - retrieval_fallbacks
+      - retrieval_hit_rate
       - tool_accuracy
     EventTypeEnum:
       enum:
@@ -24735,6 +25078,32 @@ components:
           description: The soul has been reborn since the life this disposition belongs
             to.
           readOnly: true
+    PatchedEmbeddingUpdate:
+      type: object
+      description: 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。
+      properties:
+        embedding_url:
+          type: string
+          format: uri
+          maxLength: 500
+        embedding_model:
+          type: string
+          maxLength: 200
+          minLength: 1
+        embedding_dims:
+          type: integer
+          maximum: 16000
+          minimum: 1
+          nullable: true
+        retrieval_k:
+          type: integer
+          maximum: 20
+          minimum: 1
+        retrieval_min_similarity:
+          type: number
+          format: double
+          maximum: 1
+          minimum: -1
     PatchedEvalCase:
       type: object
       properties:
@@ -24768,6 +25137,13 @@ components:
             type: string
             maxLength: 200
           maxItems: 20
+        expected_entries:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+          description: 期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率
+          maxItems: 10
         active:
           type: boolean
         created_at:
@@ -29972,6 +30348,13 @@ components:
           items:
             type: string
           description: 按调用顺序的工具名,不含结果
+        retrieval:
+          $ref: '#/components/schemas/AssistRetrievalEnum'
+        retrieved_entries:
+          type: array
+          items:
+            type: string
+          description: 检索进上下文的条目 id,近的在前;退回整份语料时为空
         latency_ms:
           type: integer
         tokens:
@@ -29987,6 +30370,8 @@ components:
       - latency_ms
       - model
       - provider
+      - retrieval
+      - retrieved_entries
       - side
       - tokens
       - tools_called
@@ -30029,6 +30414,10 @@ components:
           $ref: '#/components/schemas/UsageStatus'
         failure_rates:
           $ref: '#/components/schemas/FailureRates'
+        by_retrieval:
+          allOf:
+          - $ref: '#/components/schemas/UsageRetrieval'
+          description: 已答的请求按帮助条目的来源分(§7.5)
         by_day:
           type: array
           items:
@@ -30046,6 +30435,7 @@ components:
       required:
       - by_day
       - by_hall
+      - by_retrieval
       - by_side
       - by_status
       - cap
@@ -30115,6 +30505,21 @@ components:
       - output_tokens
       - requests
       - tenant_id
+    UsageRetrieval:
+      type: object
+      properties:
+        vector:
+          type: integer
+        fallback:
+          type: integer
+          description: 向量服务不通、超时,或库里没有向量
+        fallback_low_similarity:
+          type: integer
+          description: 最近一条也低于相似度下限
+      required:
+      - fallback
+      - fallback_low_similarity
+      - vector
     UsageSide:
       type: object
       properties:
