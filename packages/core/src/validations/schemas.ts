@@ -90,10 +90,3 @@ export const judgmentCreateSchema = z.object({
 // NONE) — and nothing ever imported the schema, so the mismatch could not
 // surface as a failure. Reinstate one only alongside a form that submits it,
 // and derive its fields from the serializer.
-
-// ── Type inference ───────────────────────────────────
-
-export type LoginInput = z.infer<typeof loginSchema>
-export type SoulCreateInput = z.infer<typeof soulCreateSchema>
-export type SoulUpdateInput = z.infer<typeof soulUpdateSchema>
-export type JudgmentCreateInput = z.infer<typeof judgmentCreateSchema>
