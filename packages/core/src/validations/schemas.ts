@@ -2,6 +2,14 @@ import { z } from 'zod'
 
 import { CIVILIZATION_OPTIONS } from '../config/civilizations'
 
+// No JIT. On the first object parse zod 4 probes `new Function("")` to decide
+// whether it may compile a fast path. It catches the failure, but under the
+// web CSP (frontend/proxy.ts: no 'unsafe-eval') the probe itself still files a
+// `script-src eval` violation on every page that validates a form. Hermes
+// (mobile) has no runtime eval either, so both hosts already ran the
+// interpreted path; this only stops the probe. e2e/csp.spec.ts catches it.
+z.config({ jitless: true })
+
 // ── Auth ─────────────────────────────────────────────
 //
 // `registerSchema` and `changePasswordSchema` were here with ZERO consumers,
