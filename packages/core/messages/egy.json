@@ -1113,7 +1113,9 @@
       "claimed_next": "Wen Ky",
       "claimed_back": "Wehem Er Sepu Wedja",
       "session_deferred": "{{n}} Sedjer Em Aq Pen",
-      "restore_all": "Ankh Wehem Sepu Sedjer Neb"
+      "restore_all": "Ankh Wehem Sepu Sedjer Neb",
+      "key_claim": "Shesep Sep Pen",
+      "reassigned": "Hab Ky Seth · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "Em Ini Wedja...",

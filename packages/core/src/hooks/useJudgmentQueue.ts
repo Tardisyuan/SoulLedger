@@ -88,13 +88,19 @@ export function useJudgmentQueue(options?: { at?: string }) {
    */
   const [holding, setHolding] = useState<string[]>([]);
   const [decided, setDecided] = useState<string[]>([]);
+  /**
+   * Handed to another officer from the console (改派). Out of this operator's
+   * hands for good, so — unlike `deferred` — R does not bring it back, and it
+   * is not counted as deferred. Skipped like the other two.
+   */
+  const [handedOff, setHandedOff] = useState<string[]>([]);
   const [sessionTotal, setSessionTotal] = useState<number | null>(null);
   /** The last verdict refused because someone else holds the case: who, and which case. */
   const [claimRefusal, setClaimRefusal] = useState<{ id: string; name: string } | null>(null);
   /** Same ids as `holding`, readable synchronously by a second press in the same tick. */
   const inFlight = useRef(new Set<string>());
 
-  const skip = useMemo(() => [...deferred, ...holding], [deferred, holding]);
+  const skip = useMemo(() => [...deferred, ...holding, ...handedOff], [deferred, holding, handedOff]);
 
   const query = useQuery({
     queryKey: judgmentKeys.queue(skip, at),
@@ -168,13 +174,18 @@ export function useJudgmentQueue(options?: { at?: string }) {
   }, []);
   const dismissClaimRefusal = useCallback(() => setClaimRefusal(null), []);
 
+  /** A case reassigned away from this operator: skip it for the rest of the sitting. */
+  const setAside = useCallback((id: string) => {
+    setHandedOff((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  }, []);
+
   const total = sessionTotal ?? cursor.total;
   // A verdict counts as progress the moment it is given, not when it lands —
   // the operator has moved on. `holding` carries the ids in flight and
   // `decided` the ones that landed; the union covers the one-render gap in
   // which an id belongs to neither. A claimed-by-other refusal moves its id to
   // `deferred`, so it is counted once, there.
-  const processed = new Set([...deferred, ...decided, ...holding]).size;
+  const processed = new Set([...deferred, ...decided, ...holding, ...handedOff]).size;
   const progress: QueueProgress = {
     position: cursor.judgment ? Math.min(processed + 1, Math.max(total, 1)) : processed,
     total,
@@ -207,6 +218,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
     submitVerdict,
     defer,
     restoreDeferred,
+    setAside,
     deferredCount: deferred.length,
     claimRefusal,
     dismissClaimRefusal,

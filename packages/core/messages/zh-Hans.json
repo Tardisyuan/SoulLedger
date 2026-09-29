@@ -1113,7 +1113,9 @@
       "claimed_next": "打开下一件",
       "claimed_back": "回到队列",
       "session_deferred": "本次暂缓 {{n}} 件",
-      "restore_all": "全部放回队列"
+      "restore_all": "全部放回队列",
+      "key_claim": "认领当前这一件",
+      "reassigned": "已改派 · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "加载审判中...",
