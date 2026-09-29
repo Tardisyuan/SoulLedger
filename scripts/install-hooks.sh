@@ -287,6 +287,13 @@ fi
 
 fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
 
+# One heavy gate at a time across every worktree and session (scripts/gate-lock.sh).
+# A branch that predates the file simply runs without it.
+if [ -f "$ROOT/scripts/gate-lock.sh" ]; then
+    . "$ROOT/scripts/gate-lock.sh"
+    gate_lock "pre-push $(git rev-parse --abbrev-ref HEAD)"
+fi
+
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
 # Core first: it is the frontend's dependency, it is fast, and a boundary
