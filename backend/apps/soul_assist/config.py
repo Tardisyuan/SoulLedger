@@ -153,11 +153,20 @@ class KeyRequiredError(Exception):
     """换了供应商或地址却没给 key:已存的 key 不能发到一个新的端点去。"""
 
 
+def unredact(data, base: Connection):
+    """页面拿到的 base_url 去掉了 `user:pass@`(`redact_url`);整表回传时它等于已存地址的去敏形式,
+    按「没改」处理、还原成已存的完整地址 —— 否则每次保存都像换了地址,还会要求重填 key。"""
+    if "base_url" in data and base.base_url and "@" in base.base_url and data["base_url"] == redact_url(base.base_url):
+        return {**data, "base_url": base.base_url}
+    return data
+
+
 def candidate(data, base: Connection) -> Connection:
     """候选配置:请求里给了的键覆盖 `base`。`api_key` 不给就沿用 —— 页面上的 key 只写不读。
 
     **但换了 `provider` 或 `base_url` 就必须同时给 key**(`KeyRequiredError`):否则一个指向任意主机的
     候选会带着已存的 key 出去(连通测试、评测、保存后的每次提问)。"""
+    data = unredact(data, base)
     moved = (("provider" in data and provider_path(data["provider"]) != base.provider)
              or ("base_url" in data and data["base_url"] != base.base_url))
     if moved and data.get("api_key") is None:

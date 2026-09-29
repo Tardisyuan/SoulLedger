@@ -187,8 +187,12 @@ class AnthropicProvider:
             import anthropic
 
             c = self._conn()
+            if not c.api_key:
+                # 不能交 None 给 SDK:它会退回去读进程环境里的 ANTHROPIC_API_KEY,
+                # 管理员在页面上「清除 key」就成了空话。没有 key 就是鉴权失败。
+                raise ProviderError("no api key", "auth")
             try:
-                client = anthropic.Anthropic(api_key=c.api_key or None, base_url=c.base_url or None, max_retries=0)
+                client = anthropic.Anthropic(api_key=c.api_key, base_url=c.base_url or None, max_retries=0)
             except Exception as exc:
                 raise _unexpected(exc, c) from exc
         self.client = client
