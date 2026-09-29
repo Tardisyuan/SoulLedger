@@ -40,6 +40,7 @@ import path from "node:path";
 // is the record of a deliberate set; adding a test file means adding a line
 // here, and removing one means removing a line here on purpose.
 const COLLECTED_FILES = [
+  "AboutPage.test.tsx",
   "ActorsPage.test.tsx",
   "AppLayout.test.tsx",
   "AuditPage.test.tsx",
