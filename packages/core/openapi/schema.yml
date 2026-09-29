@@ -157,6 +157,411 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistError'
           description: ''
+  /api/v1/assist-admin/config/:
+    get:
+      operationId: assist_admin_config_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+          description: ''
+    patch:
+      operationId: assist_admin_config_update
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConfigUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConfigUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConfigUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist-admin/config/test/:
+    post:
+      operationId: assist_admin_config_test
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectivityResult'
+          description: ''
+  /api/v1/assist-admin/corpus/:
+    get:
+      operationId: assist_admin_corpus
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Corpus'
+          description: ''
+  /api/v1/assist-admin/eval/cases/:
+    get:
+      operationId: v1_assist_admin_eval_cases_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EvalCase'
+          description: ''
+    post:
+      operationId: v1_assist_admin_eval_cases_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvalCase'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvalCase'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvalCase'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalCase'
+          description: ''
+  /api/v1/assist-admin/eval/cases/{id}/:
+    get:
+      operationId: v1_assist_admin_eval_cases_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalCase'
+          description: ''
+    put:
+      operationId: v1_assist_admin_eval_cases_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvalCase'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvalCase'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvalCase'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalCase'
+          description: ''
+    patch:
+      operationId: v1_assist_admin_eval_cases_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEvalCase'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEvalCase'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEvalCase'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalCase'
+          description: ''
+    delete:
+      operationId: v1_assist_admin_eval_cases_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/assist-admin/eval/preview/:
+    post:
+      operationId: assist_admin_eval_preview
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvalPreviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvalPreviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvalPreviewRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalPreview'
+          description: ''
+  /api/v1/assist-admin/eval/runs/:
+    get:
+      operationId: assist_admin_eval_runs_list
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EvalRun'
+          description: ''
+    post:
+      operationId: assist_admin_eval_run_start
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvalStart'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvalStart'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvalStart'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalRun'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist-admin/eval/runs/{id}/:
+    get:
+      operationId: v1_assist_admin_eval_runs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalRunDetail'
+          description: ''
+  /api/v1/assist-admin/halls/:
+    get:
+      operationId: assist_admin_halls_list
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Hall'
+          description: ''
+  /api/v1/assist-admin/halls/{tenant_id}/:
+    patch:
+      operationId: assist_admin_hall_update
+      parameters:
+      - in: path
+        name: tenant_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedHallUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedHallUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedHallUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hall'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist-admin/usage/:
+    get:
+      operationId: assist_admin_usage
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM,缺省本月
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/assist/conversations/:
     get:
       operationId: officer_assist_conversations_list
@@ -15659,6 +16064,25 @@ components:
       required:
       - per_hour
       - per_minute
+    ApiKeyState:
+      type: object
+      properties:
+        set:
+          type: boolean
+        last4:
+          type: string
+          nullable: true
+        set_at:
+          type: string
+          format: date-time
+          nullable: true
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+      required:
+      - last4
+      - set
+      - set_at
+      - source
     ApprovalNode:
       type: object
       description: |-
@@ -16254,6 +16678,20 @@ components:
       required:
       - code
       - detail
+    AssistEvalRunStatusEnum:
+      enum:
+      - queued
+      - running
+      - done
+      - stopped_at_cap
+      - failed
+      type: string
+      description: |-
+        * `queued` - queued
+        * `running` - running
+        * `done` - done
+        * `stopped_at_cap` - stopped_at_cap
+        * `failed` - failed
     AssistMessage:
       type: object
       properties:
@@ -16281,6 +16719,14 @@ components:
       description: |-
         * `user` - user
         * `assistant` - assistant
+    AssistSideEnum:
+      enum:
+      - soul
+      - officer
+      type: string
+      description: |-
+        * `soul` - soul
+        * `officer` - officer
     AuditActionCount:
       type: object
       description: One row of `stats.action_distribution` — a `values("action").annotate(count=…)`.
@@ -16557,6 +17003,33 @@ components:
     BlankEnum:
       enum:
       - ''
+    Candidate:
+      type: object
+      description: 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+      properties:
+        provider:
+          $ref: '#/components/schemas/ProviderEnum'
+        base_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        api_key:
+          type: string
+          writeOnly: true
+          maxLength: 500
+        model:
+          type: string
+          maxLength: 200
+          minLength: 1
+        effort:
+          oneOf:
+          - $ref: '#/components/schemas/EffortEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        fallbacks:
+          type: boolean
     CaseTypeEnum:
       enum:
       - ROUTINE
@@ -16833,6 +17306,105 @@ components:
       - fact
       - op
       - value
+    Config:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: 实际生效:env 允许且页面开关为开
+        switch:
+          type: boolean
+          description: 页面上的总开关
+        env_enabled:
+          type: boolean
+          description: 部署的 ASSISTANT_ENABLED;为假时页面开关无效
+        provider:
+          type: string
+        base_url:
+          type: string
+        model:
+          type: string
+        effort:
+          type: string
+        fallbacks:
+          type: boolean
+        soul_per_hour:
+          type: integer
+        officer_per_hour:
+          type: integer
+        monthly_cap:
+          type: number
+          format: double
+          nullable: true
+        eval_spend_cap:
+          type: number
+          format: double
+        prices:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Price'
+        api_key:
+          $ref: '#/components/schemas/ApiKeyState'
+        eval_soul_account:
+          type: string
+          format: uuid
+          nullable: true
+        eval_officer:
+          type: integer
+          nullable: true
+        overridden:
+          type: array
+          items:
+            type: string
+          description: 页面改过(不再跟 env)的键
+        read_only:
+          $ref: '#/components/schemas/ReadOnlySettings'
+      required:
+      - api_key
+      - base_url
+      - effort
+      - enabled
+      - env_enabled
+      - eval_officer
+      - eval_soul_account
+      - eval_spend_cap
+      - fallbacks
+      - model
+      - monthly_cap
+      - officer_per_hour
+      - overridden
+      - prices
+      - provider
+      - read_only
+      - soul_per_hour
+      - switch
+    ConnectivityResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        error_kind:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ErrorKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        latency_ms:
+          type: integer
+        tokens:
+          type: object
+          additionalProperties:
+            type: integer
+        provider:
+          type: string
+        model:
+          type: string
+      required:
+      - error_kind
+      - latency_ms
+      - model
+      - ok
+      - provider
+      - tokens
     Conversation:
       type: object
       properties:
@@ -16953,6 +17525,53 @@ components:
       description: |-
         * `DIRECT` - 灵魂私聊
         * `OFFICER_INBOX` - 官员收件箱
+    Corpus:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CorpusEntry'
+        prompts:
+          type: array
+          items:
+            $ref: '#/components/schemas/CorpusPrompt'
+        total_tokens:
+          type: integer
+          description: 最大的一份 system prompt(一次请求实际带上的)的估计
+        threshold:
+          type: integer
+      required:
+      - entries
+      - prompts
+      - threshold
+      - total_tokens
+    CorpusEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        locale:
+          type: string
+        audience:
+          type: string
+        screens:
+          type: array
+          items:
+            type: string
+        civilizations:
+          type: array
+          items:
+            type: string
+        tokens:
+          type: integer
+      required:
+      - audience
+      - civilizations
+      - id
+      - locale
+      - screens
+      - tokens
     CorpusEnum:
       enum:
       - HELL_LAW
@@ -16971,6 +17590,19 @@ components:
         * `INFERNO` - Inferno — the Circles of Dante's Hell (European)
         * `GORGIAS` - Gorgias — the Judgement of the Dead (Greek)
         * `REPUBLIC_ER` - Republic X — the Myth of Er (Greek)
+    CorpusPrompt:
+      type: object
+      properties:
+        locale:
+          type: string
+        audience:
+          type: string
+        tokens:
+          type: integer
+      required:
+      - audience
+      - locale
+      - tokens
     CrossCivilizationDecision:
       type: object
       properties:
@@ -17843,11 +18475,36 @@ components:
         * `pending` - 待执行
         * `executing` - 执行中
         * `expired` - 期满
+    EffortEnum:
+      enum:
+      - low
+      - medium
+      - high
+      type: string
+      description: "* `` - \n* `low` - low\n* `medium` - medium\n* `high` - high"
     EmailNotSyncedEnum:
       enum:
       - taken
       type: string
       description: '* `taken` - taken'
+    ErrorKindEnum:
+      enum:
+      - auth
+      - model_not_found
+      - timeout
+      - rate_limited
+      - connection
+      - tools_unsupported
+      - other
+      type: string
+      description: |-
+        * `auth` - auth
+        * `model_not_found` - model_not_found
+        * `timeout` - timeout
+        * `rate_limited` - rate_limited
+        * `connection` - connection
+        * `tools_unsupported` - tools_unsupported
+        * `other` - other
     ErrorResponse:
       type: object
       description: |-
@@ -17861,6 +18518,426 @@ components:
           type: string
       required:
       - error
+    EvalCandidateOut:
+      type: object
+      description: 落库的候选配置,**不含 key**。
+      properties:
+        provider:
+          type: string
+          readOnly: true
+        base_url:
+          type: string
+        model:
+          type: string
+        effort:
+          type: string
+        fallbacks:
+          type: boolean
+          readOnly: true
+      required:
+      - base_url
+      - effort
+      - fallbacks
+      - model
+      - provider
+    EvalCase:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+        locale:
+          $ref: '#/components/schemas/EvalCaseLocaleEnum'
+        screen:
+          $ref: '#/components/schemas/EvalCaseScreenEnum'
+        question:
+          type: string
+          maxLength: 1000
+        expected_tools:
+          type: array
+          items:
+            type: string
+            maxLength: 60
+          maxItems: 10
+        must_include:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          maxItems: 20
+        must_not_include:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          maxItems: 20
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - question
+      - screen
+      - side
+    EvalCaseLocaleEnum:
+      enum:
+      - zh-Hans
+      - en
+      type: string
+      description: |-
+        * `zh-Hans` - zh-Hans
+        * `en` - en
+    EvalCaseScreenEnum:
+      enum:
+      - applications
+      - sentence
+      - life
+      - letters
+      - circle
+      - settings
+      - other
+      - actors
+      - admin
+      - audit
+      - corpus
+      - cross-judgments
+      - dashboard
+      - death-sync
+      - dispatch
+      - disposition
+      - judgment
+      - ledger
+      - menus
+      - moderation
+      - notifications
+      - organizations
+      - permissions
+      - profile
+      - realms
+      - rebirth-applications
+      - recycle-bin
+      - scheduler
+      - sentence-requests
+      - social
+      - soul-credentials
+      - soul-inbox
+      - souls
+      - tenants
+      - users
+      - welcome
+      - workflow
+      type: string
+      description: |-
+        * `applications` - applications
+        * `sentence` - sentence
+        * `life` - life
+        * `letters` - letters
+        * `circle` - circle
+        * `settings` - settings
+        * `other` - other
+        * `actors` - actors
+        * `admin` - admin
+        * `audit` - audit
+        * `corpus` - corpus
+        * `cross-judgments` - cross-judgments
+        * `dashboard` - dashboard
+        * `death-sync` - death-sync
+        * `dispatch` - dispatch
+        * `disposition` - disposition
+        * `judgment` - judgment
+        * `ledger` - ledger
+        * `menus` - menus
+        * `moderation` - moderation
+        * `notifications` - notifications
+        * `organizations` - organizations
+        * `permissions` - permissions
+        * `profile` - profile
+        * `realms` - realms
+        * `rebirth-applications` - rebirth-applications
+        * `recycle-bin` - recycle-bin
+        * `scheduler` - scheduler
+        * `sentence-requests` - sentence-requests
+        * `social` - social
+        * `soul-credentials` - soul-credentials
+        * `soul-inbox` - soul-inbox
+        * `souls` - souls
+        * `tenants` - tenants
+        * `users` - users
+        * `welcome` - welcome
+        * `workflow` - workflow
+    EvalPreview:
+      type: object
+      properties:
+        asks:
+          type: integer
+        max_asks:
+          type: integer
+        estimated_cost:
+          type: number
+          format: double
+        spend_cap:
+          type: number
+          format: double
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvalPreviewCandidate'
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemsEnum'
+        confirm_token:
+          type: string
+          nullable: true
+          description: problems 为空时才有;开始运行要带它
+      required:
+      - asks
+      - candidates
+      - confirm_token
+      - estimated_cost
+      - max_asks
+      - problems
+      - spend_cap
+    EvalPreviewCandidate:
+      type: object
+      properties:
+        candidate:
+          type: integer
+        provider:
+          type: string
+        model:
+          type: string
+        asks:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        estimated_cost:
+          type: number
+          format: double
+          nullable: true
+          description: 模型不在价目表里时为 null
+      required:
+      - asks
+      - candidate
+      - estimated_cost
+      - input_tokens
+      - model
+      - output_tokens
+      - provider
+    EvalPreviewRequest:
+      type: object
+      properties:
+        side:
+          $ref: '#/components/schemas/EvalPreviewRequestSideEnum'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candidate'
+      required:
+      - candidates
+      - side
+    EvalPreviewRequestSideEnum:
+      enum:
+      - soul
+      - officer
+      - both
+      type: string
+      description: |-
+        * `soul` - soul
+        * `officer` - officer
+        * `both` - both
+    EvalResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        candidate:
+          type: integer
+          minimum: 0
+        case:
+          type: integer
+          nullable: true
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+        question:
+          type: string
+          maxLength: 1000
+        tools_called: {}
+        answer:
+          type: string
+        error:
+          type: string
+          maxLength: 40
+        tools_ok:
+          type: boolean
+        included: {}
+        excluded: {}
+        passed:
+          type: boolean
+        latency_ms:
+          type: integer
+          minimum: 0
+        tokens: {}
+        cost:
+          type: number
+          format: double
+          nullable: true
+      required:
+      - candidate
+      - id
+      - question
+      - side
+    EvalRun:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/AssistEvalRunStatusEnum'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvalCandidateOut'
+          readOnly: true
+        estimated_cost:
+          type: number
+          format: double
+        total:
+          type: integer
+          minimum: 0
+        done:
+          type: integer
+          minimum: 0
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvalSummary'
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - candidates
+      - created_at
+      - id
+      - summary
+    EvalRunDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/AssistEvalRunStatusEnum'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvalCandidateOut'
+          readOnly: true
+        estimated_cost:
+          type: number
+          format: double
+        total:
+          type: integer
+          minimum: 0
+        done:
+          type: integer
+          minimum: 0
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvalSummary'
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvalResult'
+          readOnly: true
+      required:
+      - candidates
+      - created_at
+      - id
+      - results
+      - summary
+    EvalStart:
+      type: object
+      properties:
+        confirm_token:
+          type: string
+          maxLength: 64
+      required:
+      - confirm_token
+    EvalSummary:
+      type: object
+      properties:
+        candidate:
+          type: integer
+        provider:
+          type: string
+        model:
+          type: string
+        cases:
+          type: integer
+        passed:
+          type: integer
+        errors:
+          type: integer
+        tool_accuracy:
+          type: number
+          format: double
+          nullable: true
+        phrase_hit_rate:
+          type: number
+          format: double
+          nullable: true
+        mean_latency_ms:
+          type: number
+          format: double
+          nullable: true
+        cost:
+          type: number
+          format: double
+          nullable: true
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+      required:
+      - candidate
+      - cases
+      - cost
+      - errors
+      - input_tokens
+      - mean_latency_ms
+      - model
+      - output_tokens
+      - passed
+      - phrase_hit_rate
+      - provider
+      - tool_accuracy
     EventTypeEnum:
       enum:
       - SOUL_CREATED
@@ -18148,6 +19225,25 @@ components:
       - name
       - system_type
       - usage_count
+    FailureRates:
+      type: object
+      properties:
+        unavailable:
+          type: number
+          format: double
+          description: 503 不可用 / 全部请求
+        rate_limited:
+          type: number
+          format: double
+          description: 429(限流 + 忙) / 全部请求
+        empty:
+          type: number
+          format: double
+          description: 「答不了」 / 答出的请求
+      required:
+      - empty
+      - rate_limited
+      - unavailable
     Follow:
       type: object
       properties:
@@ -18269,6 +19365,26 @@ components:
       - kind
       - poena
       - poena_missing
+    Hall:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        display_name:
+          type: string
+        souls_homed:
+          type: integer
+          description: 原属该殿的灵魂数
+        assistant_enabled:
+          type: boolean
+      required:
+      - assistant_enabled
+      - code
+      - display_name
+      - id
+      - souls_homed
     HandledContent:
       type: object
       description: |-
@@ -23140,6 +24256,63 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedConfigUpdate:
+      type: object
+      description: 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+      properties:
+        provider:
+          $ref: '#/components/schemas/ProviderEnum'
+        base_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        api_key:
+          type: string
+          writeOnly: true
+          maxLength: 500
+        model:
+          type: string
+          maxLength: 200
+          minLength: 1
+        effort:
+          oneOf:
+          - $ref: '#/components/schemas/EffortEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        fallbacks:
+          type: boolean
+        enabled:
+          type: boolean
+        soul_per_hour:
+          type: integer
+          maximum: 10000
+          minimum: 1
+        officer_per_hour:
+          type: integer
+          maximum: 10000
+          minimum: 1
+        monthly_cap:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        eval_spend_cap:
+          type: number
+          format: double
+          minimum: 0
+        prices:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Price'
+        eval_soul_account:
+          type: string
+          format: uuid
+          nullable: true
+        eval_officer:
+          type: integer
+          nullable: true
     PatchedCrossTenantJudgment:
       type: object
       description: |-
@@ -23469,6 +24642,45 @@ components:
           description: The soul has been reborn since the life this disposition belongs
             to.
           readOnly: true
+    PatchedEvalCase:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+        locale:
+          $ref: '#/components/schemas/EvalCaseLocaleEnum'
+        screen:
+          $ref: '#/components/schemas/EvalCaseScreenEnum'
+        question:
+          type: string
+          maxLength: 1000
+        expected_tools:
+          type: array
+          items:
+            type: string
+            maxLength: 60
+          maxItems: 10
+        must_include:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          maxItems: 20
+        must_not_include:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          maxItems: 20
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedExternalApiKey:
       type: object
       description: Serializer for ExternalApiKey (hides key_hash, shows raw_key on
@@ -23518,6 +24730,11 @@ components:
           type: string
           readOnly: true
           title: ' raw key'
+    PatchedHallUpdate:
+      type: object
+      properties:
+        assistant_enabled:
+          type: boolean
     PatchedInboxReplyTemplate:
       type: object
       properties:
@@ -24529,6 +25746,30 @@ components:
       - permissions
       - role_permissions
       - roles
+    Phase4:
+      type: object
+      properties:
+        corpus_tokens:
+          type: integer
+        corpus_threshold:
+          type: integer
+        corpus_reached:
+          type: boolean
+        empty_share:
+          type: number
+          format: double
+        empty_threshold:
+          type: number
+          format: double
+        empty_reached:
+          type: boolean
+      required:
+      - corpus_reached
+      - corpus_threshold
+      - corpus_tokens
+      - empty_reached
+      - empty_share
+      - empty_threshold
     PolarityEnum:
       enum:
       - OFFENCE
@@ -24664,6 +25905,49 @@ components:
       - id
       - url
       - width
+    Price:
+      type: object
+      description: 每百万 token 的价格,单位由管理员自定(与月度上限同一单位)。`cache_read` 不填按 `input` 算。
+      properties:
+        input:
+          type: number
+          format: double
+          minimum: 0
+        output:
+          type: number
+          format: double
+          minimum: 0
+        cache_read:
+          type: number
+          format: double
+          minimum: 0
+      required:
+      - input
+      - output
+    ProblemsEnum:
+      enum:
+      - unpriced_model
+      - no_cases
+      - too_many_asks
+      - over_spend_cap
+      - no_eval_soul
+      - no_eval_officer
+      type: string
+      description: |-
+        * `unpriced_model` - unpriced_model
+        * `no_cases` - no_cases
+        * `too_many_asks` - too_many_asks
+        * `over_spend_cap` - over_spend_cap
+        * `no_eval_soul` - no_eval_soul
+        * `no_eval_officer` - no_eval_officer
+    ProviderEnum:
+      enum:
+      - anthropic
+      - openai_compatible
+      type: string
+      description: |-
+        * `anthropic` - anthropic
+        * `openai_compatible` - openai_compatible
     ProvisionRequest:
       type: object
       properties:
@@ -24840,6 +26124,23 @@ components:
         * `RESPECT` - Respect
         * `SYMPATHY` - Sympathy
         * `ETERNAL_LIGHT` - Eternal Light
+    ReadOnlySettings:
+      type: object
+      properties:
+        max_concurrent:
+          type: integer
+        timeout_seconds:
+          type: number
+          format: double
+        history_turns:
+          type: integer
+        retention_days:
+          type: integer
+      required:
+      - history_turns
+      - max_concurrent
+      - retention_days
+      - timeout_seconds
     Realm:
       type: object
       description: |-
@@ -28152,6 +29453,14 @@ components:
       - count
       - realm_code
       - realm_name
+    SourceEnum:
+      enum:
+      - page
+      - env
+      type: string
+      description: |-
+        * `page` - page
+        * `env` - env
     Statute:
       type: object
       description: |-
@@ -28550,6 +29859,163 @@ components:
       - civilization
       - kind
       - reason_code
+    Usage:
+      type: object
+      properties:
+        month:
+          type: string
+        spent:
+          type: number
+          format: double
+        cap:
+          type: number
+          format: double
+          nullable: true
+        unpriced_models:
+          type: array
+          items:
+            type: string
+        requests:
+          type: integer
+        by_status:
+          $ref: '#/components/schemas/UsageStatus'
+        failure_rates:
+          $ref: '#/components/schemas/FailureRates'
+        by_day:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageDay'
+        by_side:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageSide'
+        by_hall:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageHall'
+        phase4:
+          $ref: '#/components/schemas/Phase4'
+      required:
+      - by_day
+      - by_hall
+      - by_side
+      - by_status
+      - cap
+      - failure_rates
+      - month
+      - phase4
+      - requests
+      - spent
+      - unpriced_models
+    UsageDay:
+      type: object
+      properties:
+        requests:
+          type: integer
+        answered:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: 只含已定价模型
+        date:
+          type: string
+          format: date
+      required:
+      - answered
+      - cache_read_tokens
+      - cost
+      - date
+      - input_tokens
+      - output_tokens
+      - requests
+    UsageHall:
+      type: object
+      properties:
+        requests:
+          type: integer
+        answered:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: 只含已定价模型
+        tenant_id:
+          type: integer
+          nullable: true
+        code:
+          type: string
+          nullable: true
+      required:
+      - answered
+      - cache_read_tokens
+      - code
+      - cost
+      - input_tokens
+      - output_tokens
+      - requests
+      - tenant_id
+    UsageSide:
+      type: object
+      properties:
+        requests:
+          type: integer
+        answered:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: 只含已定价模型
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+      required:
+      - answered
+      - cache_read_tokens
+      - cost
+      - input_tokens
+      - output_tokens
+      - requests
+      - side
+    UsageStatus:
+      type: object
+      properties:
+        ok:
+          type: integer
+        empty:
+          type: integer
+        unavailable:
+          type: integer
+        busy:
+          type: integer
+        rate_limited:
+          type: integer
+        not_configured:
+          type: integer
+      required:
+      - busy
+      - empty
+      - not_configured
+      - ok
+      - rate_limited
+      - unavailable
     User:
       type: object
       description: |-
