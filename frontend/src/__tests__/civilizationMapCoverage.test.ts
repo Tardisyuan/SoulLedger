@@ -3,7 +3,6 @@ import path from "node:path";
 
 import {
   CIVILIZATION_CODES,
-  CIVILIZATION_DISPLAY_NAMES,
   CIVILIZATION_LABELS,
   CIVILIZATION_OPTIONS,
 } from "@soulledger/core/config/civilizations";
@@ -150,19 +149,16 @@ describe("every civilization-keyed map covers every civilization", () => {
     expect(CIVILIZATION_OPTIONS.filter((civ) => !CIVILIZATION_LABELS[civ])).toEqual([]);
   });
 
-  it("CIVILIZATION_DISPLAY_NAMES covers every tenant code", () => {
-    const missing = CIVILIZATION_OPTIONS
-      .map((civ) => CIVILIZATION_CODES[civ])
-      .filter((code) => !CIVILIZATION_DISPLAY_NAMES[code]);
-    expect(missing).toEqual([]);
-  });
-
-  it("names all six addresses at once when one is short", () => {
+  it("names all four addresses at once when one is short", () => {
     // The message is the point. A fifth civilization turns exactly one file red
     // and needs to be told every place it has to be added, or it will be added
     // in one and forgotten in five.
     //
-    // Five, not six. This number is the count of places a fifth civilization
+    // Four, not five: CIVILIZATION_DISPLAY_NAMES was deleted (2026-09-29) once
+    // `getDisplayNameForTenant` went and this test was its only reader — a map
+    // kept alive only to be checked for coverage covers nothing.
+    //
+    // (Five, not six, earlier:) This number is the count of places a fifth civilization
     // has to be added, so it drops whenever two addresses become one — and
     // CIVILIZATION_ICONS just did: it was written into two pages and is now
     // written once in config. A fifth cosmology needs the icon added in ONE
@@ -174,9 +170,8 @@ describe("every civilization-keyed map covers every civilization", () => {
     const addresses = [
       ...TEXT_MAPS.map((m) => `${m.file}::${m.name}`),
       "packages/core/src/config/civilizations.ts::CIVILIZATION_LABELS",
-      "packages/core/src/config/civilizations.ts::CIVILIZATION_DISPLAY_NAMES",
     ];
-    expect(addresses).toHaveLength(5);
+    expect(addresses).toHaveLength(4);
   });
 });
 
