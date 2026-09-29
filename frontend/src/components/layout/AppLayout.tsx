@@ -297,6 +297,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       >
                         {t("nav.settings")}
                       </button>
+                      <Link
+                        href="/about"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                      >
+                        {t("about.title")}
+                      </Link>
                       <button
                         type="button"
                         onClick={() => {

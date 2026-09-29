@@ -51,7 +51,7 @@ def test_a_mail_failure_does_not_become_a_registration_oracle(api_client, user, 
     """A 500 only for registered addresses would disclose registration."""
     from unittest.mock import patch
 
-    with patch("apps.authentication.views.send_mail", side_effect=OSError("smtp down")):
+    with patch("apps.authentication.views.send_neutral_mail", side_effect=OSError("smtp down")):
         resp = api_client.post(URL, {"email": EMAIL}, format="json")
     assert resp.status_code == 200
     code = cache.get(f"pwd_reset:{EMAIL}")

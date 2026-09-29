@@ -302,6 +302,7 @@ export function SettingsScreen() {
   const askLogout = useAskLogout();
   const { state } = useSession();
   const { gutter } = useLayout();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const remote = useRemote(soulApi.notificationSettings);
   // The last settings the SERVER confirmed; a toggle shows its new value at once and falls back on failure.
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -362,6 +363,7 @@ export function SettingsScreen() {
 
       <View style={[styles.end, { paddingHorizontal: gutter }]}>
         <EmblemDivider />
+        <Button testID="open-about" kind="secondary" title={t("about.title")} onPress={() => navigation.navigate("About")} />
         <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
         <Txt variant="value" tone="subtle" style={styles.version}>
           {t("soul_app.settings.version", { version: Constants.expoConfig?.version ?? "" })}
