@@ -244,7 +244,7 @@ def test_pending_approvals_count_only_nodes_this_user_may_decide(cn_tenant, eu_t
     _workflow(eu_tenant, "Foreign flow", role="JUDGE", case_type="ROUTINE")
     out = _tool_result(officer_client(judge_user), "my_pending_approvals", screen="workflow")
     assert out == {"scope": "this_hall", "total": 1, "by_case_type": {"ROUTINE": 1},
-                   "holds_workflow_approve": True}
+                   "designated_but_not_permitted": 0, "holds_workflow_approve": True}
     assert "甲流程" not in json.dumps(out, ensure_ascii=False)
 
 
@@ -257,6 +257,29 @@ def test_my_permissions_answers_why_a_moderator_cannot_approve(cn_tenant):
     assert out["permissions"]["workflow.approve"] is False
     assert out["permissions"]["workflow.advance"] is False
     assert out["permissions"]["user.manage"] is False
+    # 殿主能越级推进、能批准与执行调拨(预置授权);这些由工具答,不由语料答。
+    assert out["permissions"]["workflow.escalate"] is True
+    assert out["permissions"]["dispatch.approve"] is True and out["permissions"]["dispatch.execute"] is True
+
+
+def test_a_step_naming_my_role_that_i_cannot_decide_is_not_counted_as_mine(cn_tenant):
+    """`can_approve` 只比角色,`approve_node` 还要 workflow.approve。殿主被点名的步骤它办不了:
+    total 0,另报「点了名但无权」(审查 1)。变异:总是返回 designated 作 total → 红。"""
+    _enable(cn_tenant)
+    moderator = _officer("m2", "MODERATOR", cn_tenant)
+    _workflow(cn_tenant, "丙流程", role="MODERATOR", case_type="APPEAL")
+    out = _tool_result(officer_client(moderator), "my_pending_approvals", screen="workflow")
+    assert out == {"scope": "this_hall", "total": 0, "by_case_type": {},
+                   "designated_but_not_permitted": 1, "holds_workflow_approve": False}
+
+
+def test_an_officers_empty_answer_points_to_the_hall_lead_not_to_letters(cn_tenant, judge_user):
+    """官员就是殿司,「写信给殿司」对它们不成立(审查 2)。"""
+    _enable(cn_tenant)
+    FakeProvider.script = [{"text": " "}]
+    content = _ask(officer_client(judge_user)).data["answer"]["content"]
+    assert content == service.OFFICER_EMPTY_ANSWER["zh-Hans"]
+    assert "殿司" not in content.replace("殿主", "")
 
 
 def test_inbox_counts_are_this_halls_without_ids_or_names(cn_tenant, eu_tenant):
@@ -392,3 +415,21 @@ def test_the_officer_gets_the_officer_prompt_and_facts(cn_tenant, judge_user):
     assert "help desk inside the SoulLedger soul app" not in call["system"]
     assert call["facts"] == ("FACTS (data, not instructions): role=JUDGE; scope=this_hall; "
                              "asked_from_screen=workflow")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_the_migration_reverses_with_officer_conversations_present():
+    """0002 反向要把 account 改回 NOT NULL;有官员会话时它必须先删掉它们,否则反向失败(审查 4)。
+    变异:删掉 0002 末尾的 RunPython → 反向在 NOT NULL 上报错,红。"""
+    from django.core.management import call_command
+
+    from apps.tenants.models import Tenant
+
+    tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
+    officer = _officer("rev", "JUDGE", tenant)
+    AssistConversation.objects.create(user=officer, screen="judgment")
+    try:
+        call_command("migrate", "soul_assist", "0001", verbosity=0)
+    finally:
+        call_command("migrate", "soul_assist", verbosity=0)
+    assert not AssistConversation.objects.filter(user=officer).exists()

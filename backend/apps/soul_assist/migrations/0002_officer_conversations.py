@@ -5,6 +5,13 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def _delete_officer_conversations(apps, schema_editor):
+    """Reverse only. Before 0002 every conversation had an account; reversing sets `account` back to
+    NOT NULL, which fails on PostgreSQL once any officer row (account NULL) exists. Those rows cannot
+    be represented before 0002, so they are deleted. Listed last, so it runs first on the way back."""
+    apps.get_model("soul_assist", "AssistConversation")._base_manager.filter(account__isnull=True).delete()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -100,4 +107,5 @@ class Migration(migrations.Migration):
                 name="assist_conversation_one_owner",
             ),
         ),
+        migrations.RunPython(migrations.RunPython.noop, _delete_officer_conversations),
     ]
