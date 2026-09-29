@@ -75,6 +75,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -281,7 +282,7 @@ class TestFromAWorktree:
         _, wt = checkouts
         py = _fake_python(tmp_path, 'echo "SEEN SECRET_KEY=${SECRET_KEY:-unset}"; exit 1\n')
         proc = _backend_gate(hook, wt, py)
-        assert "SEEN SECRET_KEY=ci-test-key-not-for-production" in proc.stdout, proc.stdout
+        assert "SEEN SECRET_KEY=ci-test-key-not-for-production-32-bytes-min" in proc.stdout, proc.stdout
 
     def test_a_checkout_with_backend_env_is_left_to_it(self, hook, checkouts, tmp_path):
         """The inverse: settings.py loads backend/.env itself, so nothing is exported."""
@@ -414,3 +415,151 @@ class TestTheProjectVenv:
         assert "backend/.venv" in proc.stdout
         assert "uv venv --python 3.11" in proc.stdout
         assert "requirements.lock" in proc.stdout
+
+
+# ── The migration round trips, and what pytest is actually invoked with ─────
+#
+# 2026-09-29: the 26 tests carrying the `migration` marker cost 813 s of a
+# 23-minute backend run. Pre-push now runs `-m "not migration"` unless the push
+# touches something those tests exercise, and `--no-cov` always (the coverage
+# floor is CI's). Mutation-checked when written: see the report of that change.
+
+
+def _classify_migration(hook, changed: list[str]) -> int:
+    env = {k: v for k, v in os.environ.items() if k not in ("SKIP_PREPUSH",)}
+    env["PREPUSH_CHANGED"] = "\n".join(changed)
+    env["PREPUSH_CLASSIFY_ONLY"] = "1"
+    proc = subprocess.run(
+        ["bash", str(hook)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^classify-migration: migration=(\d)$", proc.stdout, re.M)
+    assert m, f"no classify-migration line in hook output:\n{proc.stdout}"
+    return int(m.group(1))
+
+
+class TestMigrationRoundTripsRunOnlyWhenRelevant:
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/apps/realms/migrations/0018_split_greek_from_european.py"],
+            ["backend/tests/migration_roundtrip.py"],
+            ["backend/tests/conftest.py"],
+            ["conftest.py"],
+            ["pytest.ini"],
+            ["backend/requirements.lock"],
+            # A file holding a round-trip test, found by its content: the
+            # fixture user and the hand-marked module.
+            ["backend/tests/test_greek_civilization.py"],
+            ["backend/tests/test_migration_reverse_scope.py"],
+            # Fail closed on a root file nobody has classified.
+            ["tsconfig.base.json"],
+            # One relevant file among irrelevant ones still counts.
+            ["backend/apps/souls/views.py", "backend/apps/souls/migrations/0001_initial.py"],
+        ],
+    )
+    def test_a_change_the_round_trips_exercise_runs_them(self, hook, changed):
+        assert _classify_migration(hook, changed) == 1
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/apps/souls/views.py"],
+            ["backend/apps/souls/models.py"],
+            ["backend/tests/test_audit_assertions_are_not_vacuous.py"],
+            # No backend gate at all -> no migration tests either.
+            ["frontend/app/page.tsx"],
+            ["README.md"],
+        ],
+    )
+    def test_a_change_they_cannot_see_skips_them(self, hook, changed):
+        """The inverse: without it, a rule that always says 1 passes the test above."""
+        assert _classify_migration(hook, changed) == 0
+
+    def test_the_marker_names_the_tests_the_rule_is_about(self):
+        """The hook finds round-trip tests by `migration_round_trip` or
+        `mark.migration` in the file. If every such test were not actually
+        marked, `-m "not migration"` would keep running it and the rule above
+        would be about nothing; if the marker reached tests outside those
+        files, the grep would miss a file whose tests are being skipped."""
+        tests_dir = REPO_ROOT / "backend" / "tests"
+        holders = {
+            p.name for p in tests_dir.glob("test_*.py")
+            if re.search(r"migration_round_trip|mark\.migration", p.read_text(encoding="utf-8"))
+        }
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-qq", "--no-cov",
+             "-p", "no:cacheprovider", "-m", "migration",
+             "-c", str(REPO_ROOT / "pytest.ini"), str(tests_dir)],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=300,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "backend")},
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        marked = [line for line in proc.stdout.splitlines() if "::" in line]
+        marked_files = {line.split("::")[0].rsplit("/", 1)[-1] for line in marked}
+        assert len(marked) >= 26, f"only {len(marked)} tests carry the marker:\n{proc.stdout}"
+        assert marked_files <= holders, f"marked outside the files the hook greps: {marked_files - holders}"
+        assert "test_migration_roundtrip.py" in marked_files
+
+
+@pytest.fixture
+def fake_backend(tmp_path):
+    """PYTHON_BIN whose `-m pytest` prints its argv and SECRET_KEY and passes;
+    `manage.py` passes; anything else (the service probe, the port picker) is
+    the real python3, so the hook reaches its pytest line for real."""
+    py = tmp_path / "fake-python"
+    py.write_text(
+        "#!/bin/bash\n"
+        'case "$1" in\n'
+        "  manage.py) exit 0 ;;\n"
+        # One line: the hook keeps only pytest's last four.
+        '  -m) if [ "$2" = pytest ]; then shift 2; '
+        'echo "PYTEST SECRET_KEY=$SECRET_KEY ARGS=$(printf \'[%s]\' "$@")"; exit 0; fi ;;\n'
+        "esac\n"
+        'exec python3 "$@"\n'
+    )
+    py.chmod(0o755)
+    if not shutil.which("redis-server") and not os.environ.get("REDIS_URL"):
+        pytest.skip("the hook refuses without redis-server or a reachable REDIS_URL")
+    return str(py)
+
+
+def _pytest_line(hook, cwd, python, changed):
+    proc = _run(
+        hook, cwd, changed, PYTHON_BIN=python, RUFF_BIN=shutil.which("true"),
+        REDIS_URL=os.environ.get("REDIS_URL", ""),
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^PYTEST SECRET_KEY=(\S*) ARGS=(.*)$", proc.stdout, re.M)
+    assert m, f"pytest was never invoked:\n{proc.stdout}"
+    return re.findall(r"\[([^\]]*)\]", m.group(2)), m.group(1)
+
+
+class TestWhatPytestIsInvokedWith:
+    def test_an_ordinary_backend_change_skips_the_round_trips_and_coverage(
+        self, hook, checkouts, fake_backend
+    ):
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "--no-cov" in args
+        i = args.index("-m")
+        assert args[i + 1] == "not migration", args
+
+    def test_a_migration_change_runs_the_round_trips(self, hook, checkouts, fake_backend):
+        main, _ = checkouts
+        args, _ = _pytest_line(
+            hook, main, fake_backend, ["backend/apps/souls/migrations/0099_x.py"]
+        )
+        assert "-m" not in args and "not migration" not in args, args
+        assert "--no-cov" in args
+
+    def test_pytest_gets_the_long_test_key_even_over_backend_env(
+        self, hook, checkouts, fake_backend
+    ):
+        """backend/.env may hold a short key (the main checkout's was 20 bytes);
+        pytest.ini makes PyJWT's short-key warning an error."""
+        main, _ = checkouts
+        (main / "backend" / ".env").write_text("SECRET_KEY=short\n")
+        _, key = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert key == "ci-test-key-not-for-production-32-bytes-min"
+        assert len(key.encode()) >= 32

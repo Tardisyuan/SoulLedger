@@ -4,3 +4,8 @@
 # 0.12.0 until 2026-09-29, then 0.16.9 (no new findings under the same ruff.toml);
 # CI installed an unpinned latest until 2026-09-14.
 ruff==0.16.9
+# Parallel test runs for the local gates (pre-push and the full-suite scripts);
+# CI stays serial. The root conftest already gives every xdist worker its own
+# permission-cache and channel-layer prefix.
+pytest-xdist==3.8.0
+execnet==2.1.2

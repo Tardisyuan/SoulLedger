@@ -135,7 +135,12 @@ pip-audit 不装进 venv(CI 也是临时装):`cd backend && uvx pip-audit --stri
 `.claude/worktrees/*` 里没有它,`config/settings.py:14-16` 于是直接拒绝加载 ——
 每一条后端命令都先死在这里;只补 `SECRET_KEY` 还不够,`DEBUG=False` 时
 `ALLOWED_HOSTS` 也必填(2026-09-11 两个都实测撞到)。照 CI(`ci.yml:14-15`)
-在下面每条后端命令前加 `SECRET_KEY=ci-test-key-not-for-production DEBUG=true`。
+在下面每条后端命令前加 `SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true`。
+**key 至少 32 字节**(2026-09-29 起):simplejwt 用它签 HS256,短于 32 字节 PyJWT 每签/验一次
+就发一条 `InsecureKeyLengthWarning`(当时 4,519 条),而 `pytest.ini` 现在把它升成 error ——
+短 key 下每条 JWT 测试都红。旧值 `ci-test-key-not-for-production` 是 30 字节。
+**主 checkout 的 `backend/.env` 里那个 key 是 20 字节**(2026-09-29 实测长度),所以下面
+两条 pytest 命令在主 checkout 里也要显式带上这个 `SECRET_KEY`(环境变量优先于 `.env`)。
 **不要**把主 checkout 的 `backend/.env` 拷过来:它的 DATABASE_URL 与 REDIS_URL
 都指向 115。钩子在没有 `backend/.env` 时自己补这两个值,并打印一行说明。
 
@@ -149,10 +154,34 @@ worktree 里的 `.venv`:它是 gitignored 的,所以 worktree 里没有;直接�
 # suite write permission-cache keys into the real Redis — verified 2026-08-27.
 # Throwaway Redis first:
 #   redis-server --port 6399 --daemonize yes --save '' --appendonly no
-cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:6399/0" \
+cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
+  DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
   .venv/bin/python -m pytest --tb=short -q
+# ↑ 这是 CI 的形状:全部测试 + 覆盖率与 80% 下限。**pre-push 不是这条**,见下。
+#
+# pre-push 的后端 pytest(2026-09-29 起)与上面有三处不同,都是有意的:
+#   --no-cov            覆盖率与 `--cov-fail-under=80` **只在 CI 里查**。而 CI 只能手动
+#                       dispatch —— 所以覆盖率跌破下限,要等有人去 dispatch 才会被发现,
+#                       不再是推送时。这是为了每次推送省下几分钟而接受的代价,不是疏忽。
+#   -m "not migration"  26 条迁移往返测试(`migration` marker,pytest.ini 注册;用
+#                       `migration_round_trip` fixture 的自动带上,见 backend/tests/conftest.py)
+#                       每条 2–67 秒,合计 813 秒,约占 23 分钟全量的 13.5 分钟。推送
+#                       改到迁移、`tests/migration_roundtrip.py`、任一 conftest、`pytest.ini`、
+#                       `requirements.lock`、或含这类测试的文件(按内容 grep)时才跑它们。
+#                       CI 与下面的真 PostgreSQL 命令永远全跑。
+#   SECRET_KEY          钩子给 pytest 的永远是上面那个 ≥32 字节的测试 key,不读 .env 的。
+#   -n 4                装了 pytest-xdist(requirements-dev.txt)就用 4 进程。实测 4:21 对串行 5:43;
+#                       -n 6 不更快(每个 worker 先花约 36 秒建自己的测试库)。PYTEST_WORKERS=0 退回串行。
+#                       参数化里别放 uuid4() 这类每次不同的值而不给 ids —— 各 worker 收集到的用例名
+#                       不同,xdist 整个拒跑(2026-09-29 撞到三处)。
+# 钩子跑 pytest 时每 30 秒打一行进度(百分比 · 用时 · 已失败数),失败时保留完整日志。
+# 钩子开跑前先拿 `scripts/gate-lock.sh` 的锁(git common dir 里,所有 worktree 共用):
+# 同一时刻只跑一个重门禁,后来的每分钟打印一次在等谁。几个会话同时跑门禁时每个慢 2–3 倍
+# (2026-09-29:空闲 19 分钟的 SQLite 全量,负载 50 下 38 分钟才到 77%)。GATE_LOCK=0 跳过。
+# 自己跑的全量脚本也应先 `. scripts/gate-lock.sh; gate_lock "<说明>"`。
+# 手动复现钩子那条:在上面的命令后加 `--no-cov -m "not migration" -n 4`。
 cd backend && DATABASE_URL="sqlite:///:memory:" .venv/bin/python manage.py makemigrations --check --dry-run
 cd backend && .venv/bin/ruff check .
 cd backend && uvx pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
@@ -241,7 +270,8 @@ cd frontend && npx playwright test --project=mobile-chrome
 # 那里所有 `perm:*`。`28a374a` 给 pre-push 修的是同一件事,这条漏了。
 # 另:`test_invalidate_all_clears_its_own_prefix_and_only_its_own` 在 REDIS_URL
 # 不是本机时跳过(它不往共享 Redis 写)—— 不带下面三个变量跑,skip 会多一条。
-cd backend && REDIS_URL="redis://127.0.0.1:6399/0" \
+cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
+  REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
   .venv/bin/python -m pytest -q --no-cov --create-db
