@@ -237,6 +237,7 @@ const COLLECTED_FILES = [
   "workflowTemplateLore.test.ts",
   "wsClient.reconnect.test.ts",
   "wsClient.test.ts",
+  "zhuyinShell.test.tsx",
 ];
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves

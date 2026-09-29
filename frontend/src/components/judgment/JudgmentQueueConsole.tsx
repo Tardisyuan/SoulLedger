@@ -566,8 +566,11 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             /* 第三类 F 组 2.8:四列(393 宽时两列),高 44;每个是键号 + 字形 + 文字,
                字形取 `verdictGlyph`(与详情页同一张表),字色是各自的 `--color-verdict-*`。 */
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              {/* 落判即盖印:压实 60ms 放开缩放,减少动态效果时直接落定。首判之前没有印。 */}
-              {stamp > 0 && <Seal size={44} stampKey={stamp} className="max-sm:hidden" />}
+              {/* 落判即盖印:压实 60ms 放开缩放,减少动态效果时直接落定。首判之前印位空着
+                  (invisible 占位,不让第一次落判把四个按钮挤窄一格)。 */}
+              <span className={`max-sm:hidden ${stamp > 0 ? "" : "invisible"}`}>
+                <Seal size={44} stampKey={stamp} />
+              </span>
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
               {VERDICTS.map((verdict) => (
                 <button
