@@ -3844,7 +3844,8 @@
       "identities": "评测身份",
       "eval": "评测",
       "try": "试问",
-      "corpus": "帮助语料 · 只读"
+      "corpus": "帮助语料 · 只读",
+      "embedding": "向量模型"
     },
     "switch": {
       "master": "总开关",
@@ -3995,7 +3996,13 @@
       "passed": "通过",
       "not_passed": "未过",
       "missing": "缺要点「{{phrases}}」",
-      "all_hit": "要点全中"
+      "all_hit": "要点全中",
+      "retrieval_hit_rate": "检索命中率",
+      "retrieval": "检索",
+      "expected_entries": "期望命中的条目",
+      "retrieved_top": "实际检索到的前 {{k}} 条",
+      "entry_hit": "命中",
+      "entry_missed": "未检索到"
     },
     "try": {
       "as_soul": "以 问一问评测灵魂 身份提问",
@@ -4045,7 +4052,8 @@
       "rate_limited": "试问太频繁，请稍后再试。",
       "assistant_unavailable": "助手一时答不上来，请稍后重试。",
       "assistant_busy": "助手正忙，请稍后再问。",
-      "try_failed": "试问没有发出去，请重试。"
+      "try_failed": "试问没有发出去，请重试。",
+      "untested_embedding": "地址、模型或维度改过，测通后才能保存。"
     },
     "usage": {
       "month": "月份",
@@ -4078,7 +4086,42 @@
       "corpus_tokens": "帮助语料 token",
       "empty_share": "「答不了」占比",
       "reached": "已到阈值",
-      "not_reached": "未到阈值"
+      "not_reached": "未到阈值",
+      "rate_fallback": "检索降级",
+      "fallback_note": "检索降级：向量服务不可用、退回用全部帮助条目回答的提问。"
+    },
+    "embedding": {
+      "url": "地址",
+      "model": "模型名",
+      "dims": "截断维度",
+      "dims_native": "不截断",
+      "dims_hint": "改模型或维度后要重建向量。",
+      "k": "检索条数 k",
+      "k_hint": "整数，至少 1",
+      "floor": "相似度门槛",
+      "floor_hint": "最相关的一条低于它时，助手用全部帮助条目回答。",
+      "testing": "测试中…",
+      "test_ok": "连通 · 维度与设置一致",
+      "returned_dims": "返回维度",
+      "kind": {
+        "connection": "连不上",
+        "timeout": "超时",
+        "model_not_found": "模型不存在",
+        "dims_mismatch": "维度和设置不符"
+      },
+      "rebuild": "重建向量",
+      "rebuild_confirm": "重建全部向量？",
+      "rebuild_body": "全部生成完才替换，中途失败不影响现有向量；重建期间助手照常回答。",
+      "progress": "{{n}} / {{total}} 条已生成向量",
+      "none": "还没有向量",
+      "last_rebuild": "上次重建",
+      "rebuilding": "重建中…",
+      "rebuilt": "重建完成",
+      "rebuild_failed": "重建失败",
+      "retry_rebuild": "重试重建",
+      "needs_rebuild": "向量是用旧模型生成的，需要重建",
+      "until_rebuilt": "重建完成前，助手改用全部帮助条目回答。",
+      "fallback_note": "向量服务连不上时，助手会自动改用全部帮助条目回答，不会答不了。"
     }
   }
 }
