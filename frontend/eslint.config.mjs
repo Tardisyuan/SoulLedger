@@ -482,7 +482,7 @@ const eslintConfig = [
       },
       globals: SHARED_GLOBALS,
     },
-    plugins: { "react-hooks": reactHooks },
+    plugins: { "react-hooks": reactHooks, "@typescript-eslint": tsPlugin },
     rules: {
       "react-hooks/rules-of-hooks": "error",
       // `error`,不是 `warn`,也不是缺席。
@@ -513,9 +513,17 @@ const eslintConfig = [
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "react/react-in-jsx-scope": "off",
-      "@typescript-eslint/no-explicit-any": "off",
+      // 产品代码里 `any` 是 error:它关掉的正是 tsc 在这里唯一能做的检查。
+      // 测试文件(下面那一块)不受这条约束。
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "off",
     },
+  },
+  // E2E 规格与夹具是测试代码,落在上面那块的 `**/*.ts` 里;`any` 那条只管产品代码。
+  // (唯一一处是 e2e/fixtures.ts 的 `RecordedCall.body`:任意请求体,规格按字段读。)
+  {
+    files: ["e2e/**/*.ts"],
+    rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
 
   // ── 测试文件:只查「import 了却从不用」 ────────────────────────────────

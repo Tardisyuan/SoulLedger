@@ -23,5 +23,6 @@ export function useOpenSoulChat() {
 }
 
 export function useSoulConversations() {
-  return useQuery({ queryKey: soulChatKeys.conversations(), queryFn: soulChatApi.conversations });
+  // A live conversation list: new messages reorder it.
+  return useQuery({ queryKey: soulChatKeys.conversations(), queryFn: soulChatApi.conversations, staleTime: 0 });
 }

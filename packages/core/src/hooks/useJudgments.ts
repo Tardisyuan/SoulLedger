@@ -20,18 +20,6 @@ export function useJudgments(params?: Record<string, string>) {
   });
 }
 
-export function useJudgment(id: string) {
-  return useQuery({
-    queryKey: judgmentKeys.detail(id),
-    queryFn: async () => {
-      const res = await judgmentApi.get(id);
-      return res.data;
-    },
-    enabled: !!id,
-    staleTime: 30_000,
-  });
-}
-
 /** 「据 · 先例」 for one judgment — see `judgmentApi.precedents`. */
 export function useJudgmentPrecedents(id: string, limit?: number) {
   return useQuery({
@@ -67,6 +55,8 @@ export function useJudgmentPrevious(at: string | null | undefined, skip: string[
       return res.data;
     },
     enabled: !!at,
+    // Queue navigation: another officer may have taken the neighbour since.
+    staleTime: 0,
   });
 }
 
@@ -79,6 +69,7 @@ export function useJudgmentNextAfter(after: string | null | undefined, skip: str
       return res.data;
     },
     enabled: !!after,
+    staleTime: 0,
   });
 }
 

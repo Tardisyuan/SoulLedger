@@ -16,6 +16,8 @@ export function useInboxConversations(params: InboxListParams = {}) {
     queryKey: soulInboxKeys.list({ ...query }),
     queryFn: async () => (await soulInboxApi.list(query)).data,
     placeholderData: (previous) => previous,
+    // A live inbox: souls write in while the page is open.
+    staleTime: 0,
   });
 }
 
@@ -23,6 +25,7 @@ export function useInboxFolders() {
   return useQuery({
     queryKey: soulInboxKeys.folders(),
     queryFn: async () => (await soulInboxApi.folders()).data,
+    staleTime: 0,
   });
 }
 
@@ -31,6 +34,7 @@ export function useInboxMessages(id: string | null) {
     queryKey: soulInboxKeys.messages(id ?? ""),
     queryFn: async () => (await soulInboxApi.messages(id as string)).data,
     enabled: Boolean(id),
+    staleTime: 0,
   });
 }
 

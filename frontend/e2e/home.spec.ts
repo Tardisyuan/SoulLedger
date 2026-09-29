@@ -138,7 +138,7 @@ test.describe("Protected routes (unauthenticated)", () => {
       await mockApi(page);
       await page.goto(route);
 
-      // middleware.ts:44 stashes the original path as ?redirect= — asserting
+      // proxy.ts stashes the original path as ?redirect= — asserting
       // it means a redirect to a *generic* login page would fail.
       await expect(page).toHaveURL(`/login?redirect=${encodeURIComponent(route)}`);
       await expect(page.getByRole("heading", { name: "登录", level: 2 })).toBeVisible();

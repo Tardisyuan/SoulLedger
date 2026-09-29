@@ -83,6 +83,8 @@ export default function NotificationsPage() {
       return res.data.results;
     },
     refetchInterval: 30000, // Refresh every 30 seconds
+    // Polled and pushed; the global 30s default would skip the refetch on mount.
+    staleTime: 0,
   });
 
   // Both mutations below invalidate `unreadCount` explicitly, and that is not a
