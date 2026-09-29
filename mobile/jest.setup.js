@@ -122,3 +122,11 @@ VirtualizedList.prototype._scheduleCellsToRenderUpdate = function () {
     this._updateCellsToRender();
   }
 };
+
+// v2 motion libraries — native modules with no JS implementation under jest — get
+// their own published mocks, as their docs give them. Reanimated 4's mock still
+// imports react-native-worklets, whose real entry calls into the native module at
+// load, so worklets takes its own mock first.
+require("react-native-gesture-handler/jestSetup");
+jest.mock("react-native-worklets", () => require("react-native-worklets/src/mock"));
+jest.mock("react-native-reanimated", () => require("react-native-reanimated/mock"));
