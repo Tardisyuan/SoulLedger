@@ -282,7 +282,7 @@ class Reaction(AuditUserFields, models.Model):
                 name="unique_reaction_per_comment",
             ),
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(post__isnull=False, comment__isnull=True)
                     | models.Q(post__isnull=True, comment__isnull=False)
                 ),
@@ -353,7 +353,7 @@ class Follow(AuditUserFields, models.Model):
                 name="unique_follow_relationship",
             ),
             models.CheckConstraint(
-                check=~models.Q(follower=models.F("following")),
+                condition=~models.Q(follower=models.F("following")),
                 name="no_self_follow",
             ),
         ]

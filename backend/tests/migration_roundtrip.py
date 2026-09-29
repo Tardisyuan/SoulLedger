@@ -32,10 +32,18 @@ Cost
 ----
 Each round trip unapplies and reapplies a *slice* of the graph, not the whole
 of it: ``MigrationExecutor`` plans only the target migration and whatever
-depends on it. Measured on SQLite in memory the four tests in
-``test_migration_roundtrip.py`` cost a few seconds in total, most of it in the
-``disposition/0009`` case, whose dependents pull ``realms/0011..0013`` along
-with it.
+depends on it. That was cheap when this was written (four tests, "a few
+seconds in total"); it is not now. Measured 2026-09-29 on SQLite in memory,
+with coverage: the 26 tests that run migrations backwards cost 2-67 s each
+(call plus the fixture's re-migrate in teardown; 22 of them over 20 s),
+813 s together — about 13.5 of the suite's 23 minutes — because the graph
+behind every slice has grown.
+
+So they carry the ``migration`` marker (added automatically for users of the
+``migration_round_trip`` fixture — ``tests/conftest.py``), and pre-push runs
+``-m "not migration"`` unless the push touches a migration, this harness, a
+file holding one of these tests, ``requirements.lock`` or the pytest config.
+CI and the real-PostgreSQL command in CLAUDE.md run all of them.
 
 Usage
 -----
