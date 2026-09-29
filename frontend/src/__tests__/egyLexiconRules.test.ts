@@ -452,6 +452,9 @@ const ROOTS_TWELVE = [
   "Per Pen", //       本域;租户写 Per
   "Per Hena", //      参与方
   "Per Tepy Iri", //  发起方
+  // 助手管理页那一批(2026-09-29):Sip 新造,评测 / 查验(Smen Seth 按「X Seth = 已 X」读作「已设置」);
+  // Sia 同时作「模型」、Kat 同时作「工具」,Design 归为同一义项(领会的器、器)。
+  "Sip", //           评测 / 查验
 ];
 /**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
