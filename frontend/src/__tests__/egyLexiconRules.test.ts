@@ -26,6 +26,8 @@
  * 第十三节「Unemu 误用 · 42 键」给了逐键写法,并定 Hemsu 只作「系统」(判官 Sab Wedja);夹具无回填。
  * 第十四节给了逐键写法(法庭 Wesekhet、席 Sab、开始 / 执行审判 Tepy / Iri Wedja、租户 Per、功过格 Sesh Nefer Isfet、
  * 由 / 被 In,En 只作属格);夹具里 5 条随包回填,键数不变;旧账清单清空。
+ * 第十三节(助手管理页之后,2026-09-29):厂商名原样引用、Sedjem 作「通知」必带后置受者、「上限」写 Er Pehwy;
+ * 夹具里 2 条随包回填(soul_app.settings.push_unavailable / push_denied),键数不变。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -473,6 +475,8 @@ const PROPER_NAMES = [
   // 第十二节:成都(如:成都)。
   "Chengdu",
   "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
+  // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
+  "Anthropic", "OpenAI",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
