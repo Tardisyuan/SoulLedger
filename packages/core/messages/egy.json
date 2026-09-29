@@ -755,7 +755,7 @@
         "action": {
           "ESCALATE": "Hab Er It",
           "AUTO_REJECT": "Khesef Djes-Ef",
-          "NOTIFY": "Sedjem"
+          "NOTIFY": "Sedjem Sab"
         },
         "role": "Hab Er Netjer",
         "hint": "Unut Khetem: Baku Ahet Maa Djes-Ef; Nen Ahet, Nen Iri.",
@@ -3846,8 +3846,8 @@
     "switch": {
       "master": "Wen-Khetem Neb",
       "master_hint": "Khetem: Nen Hehy Medu Em Ba Hena Sab. Hesb Abed Pen Er Hesb Neb: Khetem Djes-Ef.",
-      "env_off": "Smen Tepy Khetem Hehy Medu: Wen-Khetem Pen Nen Iri. Wen Djer: Khemen Smen Tepy, Nen Em Per Pen.",
-      "env_off_short": "Smen Tepy Khetem: Nen Iri Em Per Pen"
+      "env_off": "Smen Hery Khetem Hehy Medu; Wen-Khetem Dy Nen Wenen.",
+      "env_off_short": "Smen Hery Khetem Seth; Nen Wenen Dy."
     },
     "halls": {
       "hall": "Wesekhet",
@@ -3887,7 +3887,7 @@
       "set": "Smen Seth",
       "not_set": "Nen Smen",
       "set_at": "Smen {{date}}",
-      "from_env": "Em Smen Tepy",
+      "from_env": "Em Smen Hery",
       "replace": "Khemen",
       "clear": "Khet",
       "new": "Sesh Menf Renpi",
@@ -3900,12 +3900,12 @@
       "soul_per_hour": "Ba · Aq Neb · Unut Neb",
       "officer_per_hour": "Sab · Aq Neb · Unut Neb",
       "monthly_cap": "Hesb Neb Em Abed",
-      "monthly_cap_hint": "Nen Sesh: Nen Hesb Neb. Er Hesb Neb: Khetem. 80%: Sedjem.",
-      "eval_spend_cap": "Hesb Neb Em Sip",
+      "monthly_cap_hint": "Nen Sesh: Nen Hesb Neb. Er Hesb Neb: Khetem. 80%: Sedjem Sab.",
+      "eval_spend_cap": "Hesb Sip Er Pehwy",
       "rollover": "Abed Renpi: Hru 1, Unut 8. Hesb Wehem."
     },
     "read_only": {
-      "max_concurrent": "Hehy Em Aq Wa",
+      "max_concurrent": "Hehy Em Iri Er Pehwy",
       "max_concurrent_value": "{{value}}",
       "max_concurrent_why": "Hemsu Wa: Khemen Em Hemsu.",
       "timeout_seconds": "Wah Menmen",
@@ -3956,7 +3956,7 @@
       "compare": "Sau Seth Hena Nen Sau",
       "compare_needs_draft": "Nen Khemen Djer.",
       "start": "Tepy…",
-      "confirm_title": "Tepy Sip?",
+      "confirm_title": "Wen Sip?",
       "confirm": "Tepy",
       "scope": "Neb",
       "requests": "Hehy",
@@ -3971,7 +3971,7 @@
         "no_eval_soul": "Ba Sip Nen Gem. Iri Er Tepy.",
         "no_eval_officer": "Sab Sip Nen Gem. Iri Er Tepy."
       },
-      "runs": "Sip Tepyu",
+      "runs": "Medew Sip",
       "no_runs": "Nen Sip Djer.",
       "status": {
         "queued": "Em Smen",
@@ -4028,7 +4028,7 @@
       "untested_connection": "Khemen Seth: Sip Er Tepy Sau.",
       "api_key_required": "Khemen Per Sia: Sesh Menf Renpi.",
       "unpriced_model": "Hesb Neb Em Abed: Sesh Hesb Em Sia.",
-      "read_only_field": "Ren Sip: Iri Em Wa.",
+      "read_only_field": "Maa Wa.",
       "invalid": "Hesb Nen Menkh.",
       "invalid_confirm_token": "Sesen Khetem: Wehem Iri.",
       "invalid_month": "Abed Nen Menkh.",
@@ -4048,8 +4048,8 @@
       "month": "Abed",
       "spent": "Hesb Abed Pen / Hesb Neb",
       "no_cap": "Nen Hesb Neb",
-      "alert_mark": "80% Sedjem",
-      "cap_note": "80%: Sedjem. Hesb Neb: Khetem, Sedjem. Abed Renpi: Hru 1, Unut 8 — Wen Djes-Ef, Nen Em Khetem Ek.",
+      "alert_mark": "Sedjem Sab 80%",
+      "cap_note": "80%: Sedjem Sab. Hesb Neb: Khetem, Sedjem Sab. Abed Renpi: Hru 1, Unut 8 — Wen Djes-Ef, Nen Em Khetem Ek.",
       "unpriced": "Nen Hesb: {{models}}",
       "quality": "Nefer · Abed Pen",
       "rate_unavailable": "Hehy Medu Nen Wenen",
@@ -4070,12 +4070,12 @@
       "by_hall": "Wesekhet · Abed Pen",
       "no_hall": "Nen Wesekhet",
       "empty": "Nen Sesh.",
-      "phase4": "Sedjem",
-      "phase4_note": "Sedjem Wa, Nen Iri",
+      "phase4": "Sedjem Sab",
+      "phase4_note": "Sedjem Sab Wa, Nen Iri",
       "corpus_tokens": "Medu Seth · Hesb",
       "empty_share": "Nen Medu",
-      "reached": "Kheper",
-      "not_reached": "Nen Sedjem Djer"
+      "reached": "Kheper Seth",
+      "not_reached": "Nen Kheper Djer"
     }
   }
 }
