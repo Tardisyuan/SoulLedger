@@ -269,3 +269,16 @@ export const permKeys = {
   roles: ["roles"] as const,
   rolePermissions: (roleName: string) => ["role-permissions", roleName] as const,
 };
+
+/**
+ * 助手管理 (ADMIN only). One root: saving the config changes what the usage page
+ * reads (`cap`) and what an eval preview prices; a hall toggle only its row list.
+ */
+export const assistAdminKeys = {
+  all: ["assist-admin"] as const,
+  config: ["assist-admin", "config"] as const,
+  halls: ["assist-admin", "halls"] as const,
+  runs: ["assist-admin", "eval-runs"] as const,
+  run: (id: number) => ["assist-admin", "eval-runs", id] as const,
+  usage: (month: string | undefined) => ["assist-admin", "usage", month ?? "current"] as const,
+};
