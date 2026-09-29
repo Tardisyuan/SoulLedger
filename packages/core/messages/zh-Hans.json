@@ -1961,7 +1961,7 @@
     "reference": "外部编号",
     "status": {
       "PENDING": "待验证",
-      "ACCEPTED": "处理中",
+      "ACCEPTED": "已受理",
       "PROCESSED": "已处理",
       "FAILED": "处理失败",
       "DUPLICATE": "重复",
