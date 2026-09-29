@@ -3,6 +3,40 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { prefersReducedMotion } from "@/lib/motion";
+import { HATCH, type ChartPattern } from "@/lib/chart-colors";
+
+/** One `<pattern>` per colour, id derived from the colour so two bars of one colour share it. */
+const hatchId = (colour: string) => `hatch-${colour.replace(/[^a-z0-9]/gi, "")}`;
+
+/**
+ * 规范 v2 A5 的斜线图案:45°、线宽 1.5、间距 5。放在 `<BarChart>` 里的 `<defs>`,每种颜色一个。
+ * 斜线条形另外描一道同色边(`HATCH.stroke`),即 A5 画的「空框斜线」。
+ */
+function HatchDefs({ colours }: { colours: string[] }) {
+  return (
+    <defs>
+      {[...new Set(colours)].map((c) => (
+        <pattern
+          key={c}
+          id={hatchId(c)}
+          width={HATCH.gap}
+          height={HATCH.gap}
+          patternUnits="userSpaceOnUse"
+          patternTransform={`rotate(${HATCH.angle})`}
+        >
+          <line x1="0" y1="0" x2="0" y2={HATCH.gap} stroke={c} strokeWidth={HATCH.stroke} />
+        </pattern>
+      ))}
+    </defs>
+  );
+}
+
+/** Cell props for one datum under a pattern: `hatch` / `outline` are hollow, the rest solid. */
+function patternFill(colour: string, pattern: ChartPattern | undefined) {
+  if (pattern === "hatch") return { fill: `url(#${hatchId(colour)})`, stroke: colour, strokeWidth: HATCH.stroke };
+  if (pattern === "outline") return { fill: "none", stroke: colour, strokeWidth: HATCH.stroke };
+  return { fill: colour };
+}
 
 /**
  * `isAnimationActive={animate}` on every series in this file, and `animate` is
@@ -53,8 +87,8 @@ const CHART_AXIS = {
 
 const CHART_TOOLTIP = {
   contentStyle: {
-    background: "oklch(var(--color-surface-2))",
-    border: "1px solid oklch(var(--color-hairline))",
+    background: "oklch(var(--color-surface-1))",
+    border: "1px solid oklch(var(--color-ink))",
     borderRadius: 0,
     color: "oklch(var(--color-ink))",
   },
@@ -67,6 +101,8 @@ interface ChartDataPoint {
   name?: string;
   value?: number;
   color?: string;
+  /** 规范 v2 A5 的四种图案之一(去向、功过);缺省 = 实底。 */
+  pattern?: ChartPattern;
   fill?: string;
   total?: number;
   [key: string]: unknown;
@@ -138,6 +174,7 @@ const LazyBarChart = dynamic(
         return (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data}>
+              <HatchDefs colours={data.filter((d) => d.pattern === "hatch").map((d) => d.color ?? fill)} />
               {showGrid && (
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -164,7 +201,7 @@ const LazyBarChart = dynamic(
               <Tooltip
                 contentStyle={{
                   background: "oklch(var(--color-surface-1))",
-                  border: "1px solid oklch(var(--color-hairline))",
+                  border: "1px solid oklch(var(--color-ink))",
                   borderRadius: 0,
                   fontSize: 12,
                 }}
@@ -177,7 +214,7 @@ const LazyBarChart = dynamic(
                 isAnimationActive={animate}
               >
                 {data.map((entry, i) => (
-                  <Cell key={i} fill={entry.color ?? fill} />
+                  <Cell key={i} {...patternFill(entry.color ?? fill, entry.pattern)} />
                 ))}
               </Bar>
             </BarChart>
@@ -251,8 +288,8 @@ const LazySoulLineChart = dynamic(
               />
               <Tooltip
                 contentStyle={{
-                  background: "oklch(var(--color-surface-2))",
-                  border: "1px solid oklch(var(--color-hairline))",
+                  background: "oklch(var(--color-surface-1))",
+                  border: "1px solid oklch(var(--color-ink))",
                   borderRadius: 0,
                   fontSize: 11,
                 }}
@@ -326,6 +363,7 @@ const LazyLifespanBarChart = dynamic(
           effective: number;
           decayedAway: number;
           color: string;
+          pattern?: ChartPattern;
         }[];
         height?: number;
         seriesNames: { effective: string; decayedAway: string };
@@ -334,6 +372,7 @@ const LazyLifespanBarChart = dynamic(
         return (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data}>
+              <HatchDefs colours={data.filter((d) => d.pattern === "hatch").map((d) => d.color)} />
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="oklch(var(--color-hairline))"
@@ -352,22 +391,23 @@ const LazyLifespanBarChart = dynamic(
               />
               <Tooltip
                 contentStyle={{
-                  background: "oklch(var(--color-surface-2))",
-                  border: "1px solid oklch(var(--color-hairline))",
+                  background: "oklch(var(--color-surface-1))",
+                  border: "1px solid oklch(var(--color-ink))",
                   borderRadius: 0,
                   fontSize: 11,
                 }}
                 labelStyle={{ color: "oklch(var(--color-ink-muted))" }}
               />
-              <ReferenceLine y={0} stroke="oklch(var(--color-hairline))" />
+              {/* A5:功过图的零线 2px ink。 */}
+              <ReferenceLine y={0} stroke="oklch(var(--color-ink))" strokeWidth={2} />
               <Bar dataKey="effective" name={seriesNames.effective} stackId="w" radius={0} isAnimationActive={animate}>
                 {data.map((d) => (
-                  <mod.Cell key={`eff-${d.key}`} fill={d.color} fillOpacity={0.85} />
+                  <mod.Cell key={`eff-${d.key}`} {...patternFill(d.color, d.pattern)} fillOpacity={0.85} />
                 ))}
               </Bar>
               <Bar dataKey="decayedAway" name={seriesNames.decayedAway} stackId="w" isAnimationActive={animate}>
                 {data.map((d) => (
-                  <mod.Cell key={`decay-${d.key}`} fill={d.color} fillOpacity={0.25} />
+                  <mod.Cell key={`decay-${d.key}`} {...patternFill(d.color, d.pattern)} fillOpacity={0.25} strokeOpacity={0.25} />
                 ))}
               </Bar>
             </BarChart>
