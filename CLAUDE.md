@@ -172,7 +172,16 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 #                       `requirements.lock`、或含这类测试的文件(按内容 grep)时才跑它们。
 #                       CI 与下面的真 PostgreSQL 命令永远全跑。
 #   SECRET_KEY          钩子给 pytest 的永远是上面那个 ≥32 字节的测试 key,不读 .env 的。
-# 手动复现钩子那条:在上面的命令后加 `--no-cov -m "not migration"`。
+#   -n 4                装了 pytest-xdist(requirements-dev.txt)就用 4 进程。实测 4:21 对串行 5:43;
+#                       -n 6 不更快(每个 worker 先花约 36 秒建自己的测试库)。PYTEST_WORKERS=0 退回串行。
+#                       参数化里别放 uuid4() 这类每次不同的值而不给 ids —— 各 worker 收集到的用例名
+#                       不同,xdist 整个拒跑(2026-09-29 撞到三处)。
+# 钩子跑 pytest 时每 30 秒打一行进度(百分比 · 用时 · 已失败数),失败时保留完整日志。
+# 钩子开跑前先拿 `scripts/gate-lock.sh` 的锁(git common dir 里,所有 worktree 共用):
+# 同一时刻只跑一个重门禁,后来的每分钟打印一次在等谁。几个会话同时跑门禁时每个慢 2–3 倍
+# (2026-09-29:空闲 19 分钟的 SQLite 全量,负载 50 下 38 分钟才到 77%)。GATE_LOCK=0 跳过。
+# 自己跑的全量脚本也应先 `. scripts/gate-lock.sh; gate_lock "<说明>"`。
+# 手动复现钩子那条:在上面的命令后加 `--no-cov -m "not migration" -n 4`。
 cd backend && DATABASE_URL="sqlite:///:memory:" .venv/bin/python manage.py makemigrations --check --dry-run
 cd backend && .venv/bin/ruff check .
 cd backend && uvx pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
