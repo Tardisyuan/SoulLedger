@@ -223,7 +223,7 @@ class MeSentencePlanSerializer(serializers.Serializer):
     """本人本世的受刑计划。没有计划时 `state=none`、`stations=[]`。"""
 
     state = serializers.ChoiceField(choices=SOUL_PLAN_STATES)
-    #: 原属文明有转生(与推送 `sentence_completed` 的 rebirth_open 同一条判据)。
+    #: 原属文明有转生、且没有永久刑期(与推送 `sentence_completed` 的 rebirth_open 同一条判据)。
     rebirth_open = serializers.BooleanField()
     stations = MeSentenceStationSerializer(many=True)
 
