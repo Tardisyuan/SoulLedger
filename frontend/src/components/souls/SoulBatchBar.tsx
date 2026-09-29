@@ -164,7 +164,7 @@ export function SoulBatchBar({
       <div
         role="region"
         aria-label={t("souls.batch.region")}
-        className="sticky bottom-0 z-10 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
+        className="sticky bottom-(--bottom-bar) z-10 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
       >
         <span className="font-mono text-xs text-[oklch(var(--color-ink))]" aria-live="polite">
           {t("souls.batch.selected", { n: String(count) })}

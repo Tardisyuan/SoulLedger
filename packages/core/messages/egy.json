@@ -14,7 +14,8 @@
     "language": "Medew Seth",
     "theme_light": "Khemen Er Hedj",
     "theme_dark": "Khemen Er Kem",
-    "mobile_menu": "Wat Medu"
+    "mobile_menu": "Wat Medu",
+    "more": "Ky"
   },
   "auth": {
     "login": "Aq",

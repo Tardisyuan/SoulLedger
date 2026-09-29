@@ -13,10 +13,6 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "settings.light": "Light",
         "settings.dark": "Dark",
         "settings.nav_mode": "Navigation Mode",
-        "settings.classic": "Classic",
-        "settings.compact": "Compact",
-        "settings.classic_desc": "Full sidebar with icons and labels",
-        "settings.compact_desc": "Icons only with tooltips on hover",
       };
       return map[key] || key;
     },
@@ -42,8 +38,6 @@ jest.mock("lucide-react", () => ({
 const defaultProps = {
   open: true,
   onClose: jest.fn(),
-  navMode: "classic" as const,
-  onNavModeChange: jest.fn(),
 };
 
 function renderDrawer(overrides = {}) {
@@ -95,37 +89,10 @@ describe("SettingsDrawer", () => {
     expect(screen.getByText("Dark")).toBeInTheDocument();
   });
 
-  it("renders navigation mode section", () => {
+  it("没有「导航模式」一节 —— 立柱只有一种宽度规则(规范 v2)", () => {
     renderDrawer();
-    expect(screen.getByText("Navigation Mode")).toBeInTheDocument();
-    expect(screen.getByText("Classic")).toBeInTheDocument();
-    expect(screen.getByText("Compact")).toBeInTheDocument();
+    expect(screen.queryByText("Navigation Mode")).not.toBeInTheDocument();
   });
-
-  it("shows classic description when navMode is classic", () => {
-    renderDrawer({ navMode: "classic" });
-    expect(screen.getByText("Full sidebar with icons and labels")).toBeInTheDocument();
-  });
-
-  it("shows compact description when navMode is compact", () => {
-    renderDrawer({ navMode: "compact" });
-    expect(screen.getByText("Icons only with tooltips on hover")).toBeInTheDocument();
-  });
-
-  it("calls onNavModeChange when classic button is clicked", () => {
-    const onNavModeChange = jest.fn();
-    renderDrawer({ onNavModeChange });
-    fireEvent.click(screen.getByText("Classic"));
-    expect(onNavModeChange).toHaveBeenCalledWith("classic");
-  });
-
-  it("calls onNavModeChange when compact button is clicked", () => {
-    const onNavModeChange = jest.fn();
-    renderDrawer({ onNavModeChange });
-    fireEvent.click(screen.getByText("Compact"));
-    expect(onNavModeChange).toHaveBeenCalledWith("compact");
-  });
-
 });
 
 /**

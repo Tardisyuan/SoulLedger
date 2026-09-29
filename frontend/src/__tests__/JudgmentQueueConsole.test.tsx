@@ -401,7 +401,7 @@ describe("JudgmentQueueConsole", () => {
  */
 describe("the decision bar", () => {
   const stickyBar = (container: HTMLElement) =>
-    container.querySelector<HTMLElement>(".sticky.bottom-0");
+    container.querySelector<HTMLElement>(".sticky.bottom-\\(--bottom-bar\\)");
 
   it("keeps every verdict control inside the sticky bar", async () => {
     const { container } = renderConsole();
