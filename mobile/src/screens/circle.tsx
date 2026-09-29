@@ -26,7 +26,7 @@ import {
 import { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -39,7 +39,6 @@ import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import {
   Button,
-  FadeIn,
   Interp,
   Notice,
   PageEmptyArt,
@@ -357,7 +356,7 @@ export function useFeed(query: { following?: boolean; author?: number }, enabled
  * so; while more remain, a button. A `FlatList`'s `onEndReached` does the same
  * for a scroll — the button is for a screen reader, or a reader who stopped short.
  */
-function PagedFooter({ list, testID, title }: { list: { more: (() => void) | null; loading: boolean }; testID: string; title: string }) {
+export function PagedFooter({ list, testID, title }: { list: { more: (() => void) | null; loading: boolean }; testID: string; title: string }) {
   const { gutter } = useLayout();
   if (!list.more) return null;
   if (list.loading) {
@@ -375,21 +374,60 @@ function PagedFooter({ list, testID, title }: { list: { more: (() => void) | nul
 }
 
 /**
- * Posts, and the "earlier posts" button while there are more — for a page that
- * already scrolls (a soul's profile, my page), where a FlatList would nest.
+ * One soul's posts under their page's head (a profile, my page). The head is the
+ * list's header, so the page is one FlatList and nothing nests; the next page is
+ * read on nearing the end, as in the feed.
  */
-export function PostList({ feed, onAuthor }: { feed: ReturnType<typeof useFeed>; onAuthor: (post: SoulPost) => void }) {
+export function PostList({
+  feed,
+  header,
+  footer,
+  refreshing,
+  onRefresh,
+  testID,
+}: {
+  feed: ReturnType<typeof useFeed>;
+  header: ReactElement;
+  /** Under the posts and their "earlier posts" foot. */
+  footer?: ReactElement | null;
+  refreshing: boolean;
+  onRefresh: () => void;
+  testID: string;
+}) {
   const { t: tr } = useI18n();
+  const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
+  const refreshControl = usePullRefresh(refreshing, onRefresh);
   return (
-    <FadeIn>
-      {(feed.posts ?? []).map((p) => (
-        <PostCard key={p.id} post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={() => onAuthor(p)} />
-      ))}
-      <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
-    </FadeIn>
+    <FlatList
+      testID={testID}
+      data={feed.posts ?? []}
+      keyExtractor={rowKey}
+      renderItem={({ item: p }) => <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />}
+      ListHeaderComponent={header}
+      ListEmptyComponent={
+        feed.posts ? null : (
+          <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+            <Skeleton lines={3} />
+          </View>
+        )
+      }
+      ListFooterComponent={
+        <>
+          <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
+          {footer}
+        </>
+      }
+      onEndReached={feed.more ?? undefined}
+      onEndReachedThreshold={0.5}
+      refreshControl={refreshControl}
+      keyboardShouldPersistTaps="handled"
+    />
   );
 }
+
+/** On a soul's own page, its name leads nowhere new. */
+const noop = () => {};
 
 /** A soul's page: mine is "my page", anyone else's is their profile. */
 export function useOpenSoul() {

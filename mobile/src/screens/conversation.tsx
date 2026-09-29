@@ -21,10 +21,10 @@ import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navig
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Animated,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -41,7 +41,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import type { CivKey } from "../theme";
-import { Button, Interp, Loader, Notice, Skeleton, Txt, useReducedMotion, useTheme } from "../ui";
+import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
@@ -50,6 +50,8 @@ type Line =
   | { kind: "day"; key: string; day: string }
   | { kind: "message"; key: string; m: ChatMessage; mine: boolean }
   | { kind: "pending"; key: string; o: Outgoing };
+
+const lineKey = (line: Line) => line.key;
 
 const Mono = ({ children, tone = "muted" }: { children: string; tone?: "muted" | "negInk" }) => (
   <Txt variant="value" tone={tone} style={styles.inlineMono}>
@@ -66,7 +68,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const [draft, setDraft] = useState("");
   const [mutedUntil, setMutedUntil] = useState<string | null>(null);
-  const scroller = useRef<ScrollView>(null);
+  const list = useRef<FlatList<Line>>(null);
   // `gone`: it left the list while open — the server closed it; still readable (1c ⑥).
   const c = chat.conversations?.find((row) => row.id === id) ?? chat.gone[id] ?? null;
   const room = c ? chat.timeline.rooms[c.room_id] : undefined;
@@ -82,15 +84,38 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       })
     : null;
 
-  // Older history once, when the room opens with only what sync brought.
-  const paged = useRef(false);
+  // Older history a page at a time: once when the room opens with only what sync
+  // brought, then each time the reader nears the top. One request at a time — the
+  // list's end-reached fires again and again while the reader lingers up there, and
+  // a ref, because two of those can land before the re-render.
   const roomId = c?.room_id;
+  const prevBatch = room?.prevBatch;
   const { loadOlder, markRead } = chat;
+  const olderBusy = useRef(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const older = useCallback(() => {
+    if (!roomId || !prevBatch || olderBusy.current) return;
+    olderBusy.current = true;
+    setLoadingOlder(true);
+    void loadOlder(roomId).finally(() => {
+      olderBusy.current = false;
+      setLoadingOlder(false);
+    });
+  }, [roomId, prevBatch, loadOlder]);
+  const paged = useRef(false);
   useEffect(() => {
-    if (!roomId || paged.current || !room?.prevBatch) return;
+    if (paged.current || !prevBatch) return;
     paged.current = true;
-    void loadOlder(roomId);
-  }, [roomId, room?.prevBatch, loadOlder]);
+    older();
+  }, [prevBatch, older]);
+
+  // A new newest letter (theirs, or a send of mine) brings the thread back down to it.
+  // Keyed on the newest only: a page of older history must not pull the reader down.
+  const newestId = messages.length ? messages[messages.length - 1].eventId : "";
+  const outboxCount = chat.outbox.length;
+  useEffect(() => {
+    list.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [newestId, outboxCount]);
 
   // Mark what the other side wrote as read while this screen is in front.
   const lastTheirs = [...messages].reverse().find((m) => m.sender !== chat.me);
@@ -207,47 +232,66 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         </View>
       ) : null}
       <Band mode={mode} mutedUntil={mutedUntil} hall={hallName} onHall={() => void goHall()} now={now} />
-      <ScrollView
-        ref={scroller}
-        style={styles.fill}
+      {/* Inverted: offset 0 is the newest letter, so the thread opens there and stays there as the
+          keyboard shrinks the view; older pages join at the far end (the top) without moving it.
+          Muted: the history stays fully legible — not dimmed, not blurred (1c ⑤). Only sealed rooms recede. */}
+      <FlatList
+        ref={list}
+        testID="thread"
+        inverted
+        data={[...lines].reverse()}
+        keyExtractor={lineKey}
+        style={[styles.fill, sealed && styles.sealed]}
         contentContainerStyle={styles.thread}
-        onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: false })}
-        // The keyboard shrinks the viewport, not the content: keep the newest letter in view then too.
-        onLayout={() => scroller.current?.scrollToEnd({ animated: false })}
         keyboardShouldPersistTaps="handled"
-      >
-        {/* Muted: the history stays fully legible — not dimmed, not blurred (1c ⑤). Only sealed rooms recede. */}
-        <View style={sealed ? { opacity: 0.88 } : undefined}>
-          {lines.map((line) =>
-            line.kind === "day" ? (
-              <Txt key={line.key} variant="value" tone="subtle" style={styles.day}>
-                {line.day}
-              </Txt>
-            ) : line.kind === "pending" ? (
-              <PendingBubble key={line.key} o={line.o} onResend={() => chat.resend(line.o.txnId)} now={now} />
-            ) : line.mine ? (
-              <Bubble key={line.key} mine m={line.m} now={now} read={!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m))} />
-            ) : inbox ? (
-              <OfficerBubble key={line.key} m={line.m} hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} now={now} />
-            ) : (
-              <Bubble key={line.key} m={line.m} now={now} landed={line.m.eventId === landedOn} />
-            )
-          )}
-          {/* Where the thread stops: the server's `closed_at` (the other soul's rebirth closed it). */}
-          {!inbox && c.closed_at ? (
-            <Txt testID="closed-marker" variant="value" tone="subtle" style={styles.day}>
-              {tr("soul_app.chat.closed.marker", { date: dayOf(Date.parse(c.closed_at)) })}
+        onEndReached={prevBatch ? older : undefined}
+        onEndReachedThreshold={0.5}
+        renderItem={({ item: line }) =>
+          line.kind === "day" ? (
+            <Txt variant="value" tone="subtle" style={styles.day}>
+              {line.day}
             </Txt>
-          ) : null}
-          {mode.kind === "outgoing_locked" && mode.rejected ? (
-            <View style={styles.rejected}>
-              <Notice tone="neg" testID="request-throttled">
-                <Interp text={tr("soul_app.chat.request.throttled")} parts={{ time: <Mono tone="negInk">{formatStamp(mode.nextAt) ?? ""}</Mono> }} variant="caption" tone="negInk" />
-              </Notice>
+          ) : line.kind === "pending" ? (
+            <PendingBubble o={line.o} onResend={() => chat.resend(line.o.txnId)} now={now} />
+          ) : line.mine ? (
+            <Bubble mine m={line.m} now={now} read={!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m))} />
+          ) : inbox ? (
+            <OfficerBubble m={line.m} hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} now={now} />
+          ) : (
+            <Bubble m={line.m} now={now} landed={line.m.eventId === landedOn} />
+          )
+        }
+        // Inverted, the header sits under the newest letter and the footer above the oldest.
+        ListHeaderComponent={
+          <>
+            {/* Where the thread stops: the server's `closed_at` (the other soul's rebirth closed it). */}
+            {!inbox && c.closed_at ? (
+              <Txt testID="closed-marker" variant="value" tone="subtle" style={styles.day}>
+                {tr("soul_app.chat.closed.marker", { date: dayOf(Date.parse(c.closed_at)) })}
+              </Txt>
+            ) : null}
+            {mode.kind === "outgoing_locked" && mode.rejected ? (
+              <View style={styles.rejected}>
+                <Notice tone="neg" testID="request-throttled">
+                  <Interp text={tr("soul_app.chat.request.throttled")} parts={{ time: <Mono tone="negInk">{formatStamp(mode.nextAt) ?? ""}</Mono> }} variant="caption" tone="negInk" />
+                </Notice>
+              </View>
+            ) : null}
+          </>
+        }
+        // Scrolling up reads the next page on its own; the button is for a screen reader, or a reader who stopped short.
+        ListFooterComponent={
+          !prevBatch ? null : loadingOlder ? (
+            <View style={styles.older}>
+              <Loader size={18} testID="chat-older-loading" />
             </View>
-          ) : null}
-        </View>
-      </ScrollView>
+          ) : (
+            <View style={styles.older}>
+              <SmallButton testID="chat-older" title={tr("soul_app.chat.older")} onPress={older} />
+            </View>
+          )
+        }
+      />
       <Dock
         mode={mode}
         draft={draft}
@@ -668,7 +712,10 @@ const styles = StyleSheet.create({
   bandRow: { flexDirection: "row", gap: 9, alignItems: "flex-start" },
   bandButton: { marginTop: 13 },
   nudge: { marginTop: 2 },
-  thread: { paddingHorizontal: 20, paddingVertical: 18, gap: 16, flexGrow: 1 },
+  // flex-end in the inverted list is the visual top: a short thread starts under the band, as before.
+  thread: { paddingHorizontal: 20, paddingVertical: 18, flexGrow: 1, justifyContent: "flex-end" },
+  sealed: { opacity: 0.88 },
+  older: { alignItems: "center", paddingBottom: 16 },
   day: { textAlign: "center", fontSize: 11, marginBottom: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
