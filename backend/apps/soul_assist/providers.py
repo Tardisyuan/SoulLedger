@@ -16,7 +16,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from django.conf import settings
 from django.utils.module_loading import import_string
 
 logger = logging.getLogger(__name__)
@@ -27,11 +26,35 @@ def _fail(exc):
     和对方宕机看起来一模一样。不记请求体:里面是灵魂的原文。"""
     logger.warning("assistant provider failed: %s status=%s body=%s", type(exc).__name__,
                    getattr(exc, "status_code", None), str(getattr(exc, "body", ""))[:500])
-    return ProviderError(type(exc).__name__)
+    return ProviderError(type(exc).__name__, _kind(exc))
+
+
+def _kind(exc):
+    """管理页连通测试要说出「为什么不通」(docs/ARCHITECTURE-assist-admin.md §3.1)。两家 SDK 的异常类同名。
+    「不支持工具调用」只在对方的 400 正文提到 tool 时才认得出,认不出就是 other。"""
+    name = type(exc).__name__
+    if name in ("AuthenticationError", "PermissionDeniedError"):
+        return "auth"
+    if name == "NotFoundError":
+        return "model_not_found"
+    if name == "APITimeoutError":
+        return "timeout"
+    if name == "RateLimitError":
+        return "rate_limited"
+    if name == "APIConnectionError":
+        return "connection"
+    if name in ("BadRequestError", "UnprocessableEntityError") and "tool" in str(getattr(exc, "body", "")).lower():
+        return "tools_unsupported"
+    return "other"
 
 
 class ProviderError(Exception):
-    """供应商不可用:超时、连不上、对方 4xx/5xx。服务层把它翻成 503 `assistant_unavailable`。"""
+    """供应商不可用:超时、连不上、对方 4xx/5xx。服务层把它翻成 503 `assistant_unavailable`。
+    `kind` 只给管理页用,灵魂与官员看到的仍是同一个 503。"""
+
+    def __init__(self, message, kind="other"):
+        super().__init__(message)
+        self.kind = kind
 
 
 @dataclass(frozen=True)
@@ -69,7 +92,7 @@ class Provider(Protocol):
 def _remaining(deadline):
     left = deadline - time.monotonic()
     if left <= 0:
-        raise ProviderError("timeout")
+        raise ProviderError("timeout", "timeout")
     return left
 
 
@@ -81,17 +104,25 @@ def _add_usage(total, **counts):
 class OpenAICompatibleProvider:
     """OpenAI Chat Completions 协议:OpenAI、Azure OpenAI、Ollama、DeepSeek 等只差 base_url。"""
 
-    def __init__(self, client=None):
+    def __init__(self, client=None, conn=None):
+        self.conn = conn
         if client is None:
             import openai
 
-            client = openai.OpenAI(api_key=settings.ASSISTANT_API_KEY or "unused",
-                                   base_url=settings.ASSISTANT_BASE_URL or None, max_retries=0)
+            c = self._conn()
+            client = openai.OpenAI(api_key=c.api_key or "unused", base_url=c.base_url or None, max_retries=0)
         self.client = client
+
+    def _conn(self):
+        """`get_provider` 传入生效配置;直接构造(测试)时读 env。"""
+        from apps.soul_assist.config import env_connection
+
+        return self.conn or env_connection()
 
     def answer(self, *, system, facts, history, tools, call_tool, max_rounds, deadline):
         import openai
 
+        model = self._conn().model
         messages = [{"role": "system", "content": system}, {"role": "system", "content": facts}]
         messages += [{"role": t.role, "content": t.text} for t in history]
         specs = [{"type": "function", "function": {"name": t.name, "description": t.description,
@@ -101,7 +132,7 @@ class OpenAICompatibleProvider:
             last = round_no == max_rounds
             try:
                 response = self.client.with_options(timeout=_remaining(deadline)).chat.completions.create(
-                    model=settings.ASSISTANT_MODEL, messages=messages, tools=specs,
+                    model=model, messages=messages, tools=specs,
                     tool_choice="none" if last else "auto",
                 )
             except openai.APIError as exc:
@@ -110,7 +141,7 @@ class OpenAICompatibleProvider:
             if usage is not None:
                 _add_usage(result.usage, input=usage.prompt_tokens, output=usage.completion_tokens)
             if not response.choices:
-                raise ProviderError("empty choices")
+                raise ProviderError("empty choices", "other")
             message = response.choices[0].message
             calls = message.tool_calls or []
             if not calls or last:
@@ -131,29 +162,32 @@ class AnthropicProvider:
 
     MAX_TOKENS = 4096
 
-    def __init__(self, client=None):
+    def __init__(self, client=None, conn=None):
+        self.conn = conn
         if client is None:
             import anthropic
 
-            client = anthropic.Anthropic(api_key=settings.ASSISTANT_API_KEY or None,
-                                         base_url=settings.ASSISTANT_BASE_URL or None, max_retries=0)
+            c = self._conn()
+            client = anthropic.Anthropic(api_key=c.api_key or None, base_url=c.base_url or None, max_retries=0)
         self.client = client
 
+    _conn = OpenAICompatibleProvider._conn
+
     @staticmethod
-    def _request(client, **params):
+    def _request(client, conn, **params):
         """带服务端拒答回退(`fallbacks`)时走 beta 端点;设成空串即关掉。"""
         extra = {}
-        if settings.ASSISTANT_EFFORT:
-            extra["output_config"] = {"effort": settings.ASSISTANT_EFFORT}
-        if settings.ASSISTANT_ANTHROPIC_FALLBACKS:
+        if conn.effort:
+            extra["output_config"] = {"effort": conn.effort}
+        if conn.fallbacks:
             return client.beta.messages.create(betas=["server-side-fallback-2026-07-01"],
-                                               fallbacks=settings.ASSISTANT_ANTHROPIC_FALLBACKS,
-                                               **extra, **params)
+                                               fallbacks=conn.fallbacks, **extra, **params)
         return client.messages.create(**extra, **params)
 
     def answer(self, *, system, facts, history, tools, call_tool, max_rounds, deadline):
         import anthropic
 
+        conn = self._conn()
         blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}},
                   {"type": "text", "text": facts}]
         messages = [{"role": t.role, "content": t.text} for t in history]
@@ -163,8 +197,8 @@ class AnthropicProvider:
             last = round_no == max_rounds
             try:
                 response = self._request(
-                    self.client.with_options(timeout=_remaining(deadline)),
-                    model=settings.ASSISTANT_MODEL, max_tokens=self.MAX_TOKENS, system=blocks,
+                    self.client.with_options(timeout=_remaining(deadline)), conn,
+                    model=conn.model, max_tokens=self.MAX_TOKENS, system=blocks,
                     messages=messages, tools=specs,
                     tool_choice={"type": "none"} if last else {"type": "auto"},
                 )
@@ -195,14 +229,18 @@ class FakeProvider:
     script: list = []
     calls: list = []  # 每次 answer() 收到的参数,供断言
 
+    def __init__(self, client=None, conn=None):
+        self.conn = conn
+
     def answer(self, *, system, facts, history, tools, call_tool, max_rounds, deadline):
         type(self).calls.append({"system": system, "facts": facts, "history": list(history),
-                                 "tools": [t.name for t in tools], "max_rounds": max_rounds})
+                                 "tools": [t.name for t in tools], "max_rounds": max_rounds,
+                                 "model": (self.conn.model if self.conn else None)})
         result = Answer(text="", usage={"input": 1, "output": 1})
         rounds = 0
         for step in type(self).script:
             if "raise" in step:
-                raise ProviderError(step["raise"])
+                raise ProviderError(step["raise"], step.get("kind", "other"))
             if "tools" in step and rounds < max_rounds:
                 rounds += 1
                 for name in step["tools"]:
@@ -215,11 +253,12 @@ class FakeProvider:
         return result
 
 
-def get_provider() -> Provider:
-    return _provider(settings.ASSISTANT_PROVIDER)
+def get_provider(conn) -> Provider:
+    """`conn` 是 `config.Connection`:正式提问传生效配置(库覆盖 env,`apps/soul_assist/config.py`),评测传候选配置。"""
+    return _provider(conn)
 
 
-@functools.cache
-def _provider(path):
-    """每个进程一个客户端:复用连接池,不必每问一次 TLS 握手。"""
-    return import_string(path)()
+@functools.lru_cache(maxsize=8)
+def _provider(conn):
+    """每套配置一个客户端:复用连接池,不必每问一次 TLS 握手。配置一变,键就变。"""
+    return import_string(conn.provider)(conn=conn)
