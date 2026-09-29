@@ -103,6 +103,115 @@ paths:
               schema:
                 $ref: '#/components/schemas/Actor'
           description: ''
+  /api/v1/assist/:
+    post:
+      operationId: officer_assist_ask
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerAssistAsk'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerAssistAsk'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerAssistAsk'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistAnswer'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist/conversations/:
+    get:
+      operationId: officer_assist_conversations_list
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OfficerAssistConversation'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist/conversations/{conversation_id}/:
+    delete:
+      operationId: officer_assist_conversation_delete
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
+      parameters:
+      - in: path
+        name: conversation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/audit-logs/:
     get:
       operationId: v1_audit_logs_list
@@ -5670,6 +5779,8 @@ paths:
   /api/v1/me/assist/:
     post:
       operationId: v1_me_assist_create
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
       tags:
       - v1
       requestBody:
@@ -5722,6 +5833,8 @@ paths:
   /api/v1/me/assist/conversations/:
     get:
       operationId: v1_me_assist_conversations_list
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
       tags:
       - v1
       security:
@@ -5744,6 +5857,8 @@ paths:
   /api/v1/me/assist/conversations/{conversation_id}/:
     delete:
       operationId: v1_me_assist_conversations_destroy
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
       parameters:
       - in: path
         name: conversation_id
@@ -16100,7 +16215,9 @@ components:
           format: uuid
           readOnly: true
         screen:
-          $ref: '#/components/schemas/ScreenEnum'
+          allOf:
+          - $ref: '#/components/schemas/ScreenEnum'
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -21247,6 +21364,55 @@ components:
     NullEnum:
       enum:
       - null
+    OfficerAssistAsk:
+      type: object
+      properties:
+        question:
+          type: string
+          maxLength: 1000
+        screen:
+          $ref: '#/components/schemas/OfficerScreenEnum'
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - question
+      - screen
+    OfficerAssistConversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        screen:
+          allOf:
+          - $ref: '#/components/schemas/OfficerScreenEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_active_at:
+          type: string
+          format: date-time
+          readOnly: true
+        first_question:
+          type: string
+          readOnly: true
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssistMessage'
+          readOnly: true
+      required:
+      - created_at
+      - first_question
+      - id
+      - last_active_at
+      - messages
+      - screen
     OfficerInbox:
       type: object
       properties:
@@ -21474,6 +21640,72 @@ components:
           maxLength: 4000
       required:
       - body
+    OfficerScreenEnum:
+      enum:
+      - actors
+      - admin
+      - audit
+      - corpus
+      - cross-judgments
+      - dashboard
+      - death-sync
+      - dispatch
+      - disposition
+      - judgment
+      - ledger
+      - menus
+      - moderation
+      - notifications
+      - organizations
+      - permissions
+      - profile
+      - realms
+      - rebirth-applications
+      - recycle-bin
+      - scheduler
+      - sentence-requests
+      - social
+      - soul-credentials
+      - soul-inbox
+      - souls
+      - tenants
+      - users
+      - welcome
+      - workflow
+      - other
+      type: string
+      description: |-
+        * `actors` - actors
+        * `admin` - admin
+        * `audit` - audit
+        * `corpus` - corpus
+        * `cross-judgments` - cross-judgments
+        * `dashboard` - dashboard
+        * `death-sync` - death-sync
+        * `dispatch` - dispatch
+        * `disposition` - disposition
+        * `judgment` - judgment
+        * `ledger` - ledger
+        * `menus` - menus
+        * `moderation` - moderation
+        * `notifications` - notifications
+        * `organizations` - organizations
+        * `permissions` - permissions
+        * `profile` - profile
+        * `realms` - realms
+        * `rebirth-applications` - rebirth-applications
+        * `recycle-bin` - recycle-bin
+        * `scheduler` - scheduler
+        * `sentence-requests` - sentence-requests
+        * `social` - social
+        * `soul-credentials` - soul-credentials
+        * `soul-inbox` - soul-inbox
+        * `souls` - souls
+        * `tenants` - tenants
+        * `users` - users
+        * `welcome` - welcome
+        * `workflow` - workflow
+        * `other` - other
     OperationEnum:
       enum:
       - claim
