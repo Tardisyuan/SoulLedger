@@ -49,6 +49,11 @@
 # the same command re-run (aarch64-manylinux_2_28 resolves identically).
 # Resolved: redis 8.1.0, sentry-sdk 2.71.0, psycopg2-binary 2.9.13,
 # pytest-django 4.14.0. No other line moved.
+#
+# 2026-09-30 RAG: pgvector added (requirements.txt). Constraints = `uv pip
+# freeze` of a Python 3.11 venv built from the previous lock (minus ruff); the
+# same command re-run. Two lines added, pgvector 0.4.2 and its one dependency
+# numpy 2.4.6; no existing line moved; aarch64 resolves identically.
 amqp==5.3.1
 annotated-types==0.8.0
 anthropic==1.8.0
@@ -106,10 +111,12 @@ jsonschema-specifications==2025.9.1
 kombu==5.6.2
 matplotlib-inline==0.2.1
 msgpack==1.2.1
+numpy==2.4.6
 openai==3.19.2
 packaging==26.0
 parso==0.8.6
 pexpect==4.9.0
+pgvector==0.4.2
 pillow==12.3.0
 pluggy==1.6.0
 prompt-toolkit==3.0.52
