@@ -54,6 +54,7 @@ interface BaseModalProps {
  * prop to Base UI's `data-starting-style` / `data-ending-style` attributes.
  */
 export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true }: BaseModalProps) {
+  const { t } = useI18n();
   return (
     <Dialog.Root
       open={isOpen}
@@ -92,7 +93,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
               <Dialog.Title className="text-[oklch(var(--color-ink))] text-md">{title}</Dialog.Title>
               <Dialog.Close
                 className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1.5 py-0.5"
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 Esc
               </Dialog.Close>
