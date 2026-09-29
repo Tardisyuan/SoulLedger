@@ -9,7 +9,8 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { Dimensions, Image, StyleSheet } from "react-native";
+import { Image } from "expo-image";
+import { AccessibilityInfo, Dimensions, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "../feedback";
@@ -127,6 +128,8 @@ describe("gridColumns", () => {
 });
 
 describe("feed and viewer", () => {
+  /** The props the viewer handed expo-image (the testID lands on its native child, whose props are already converted). */
+  const viewerImage = (i: number) => screen.UNSAFE_getAllByType(Image).find((n) => n.props.testID === `media-viewer-image-${i}`)!.props;
   const tileWidth = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).width as number;
 
   it("draws one square tile per image, in the server's order, from the API host", async () => {
@@ -141,6 +144,40 @@ describe("feed and viewer", () => {
     expect(style.borderRadius).toBe(0);
     const image = screen.getByTestId("media-a-tile-1").findByType(Image);
     expect(image.props.source.uri).toMatch(/^http:\/\/(localhost|10\.0\.2\.2):8000\/api\/v1\/social-media\/m2\/\?t=sig2$/);
+  });
+
+  // expo-image 在 jest 里渲染它自己的真组件(不是替身),所以这里读到的就是交给原生视图的 props。
+  it("caches each image by its id, not by the signed address that changes on every refresh", async () => {
+    stubApi({ "/me/social/feed/": page([post({ id: "a", media: media(2) })]) });
+    wrap(<CircleScreen />);
+    await screen.findByTestId("post-a");
+    const image = screen.getByTestId("media-a-tile-1").findByType(Image);
+    expect(image.props.source.cacheKey).toBe("post-media:m2");
+    expect(image.props.cachePolicy).toBe("memory-disk");
+    expect(image.props.contentFit).toBe("cover");
+    // Absence: the address is not the key (it carries the signature's timestamp).
+    expect(image.props.source.cacheKey).not.toContain("?t=");
+    // The viewer asks for the same key, so the picture the grid already has opens at once.
+    fireEvent.press(screen.getByTestId("media-a-tile-1"));
+    await screen.findByTestId("media-viewer-image-1");
+    const big = viewerImage(1);
+    expect([big.source.cacheKey, big.cachePolicy, big.contentFit]).toEqual(["post-media:m2", "memory-disk", "contain"]);
+  });
+
+  it.each([
+    [false, 120],
+    [true, 0],
+  ])("reduce motion %s: images fade in over %i ms", async (reduced, ms) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    stubApi({ "/me/social/feed/": page([post({ id: "a", media: media(1) })]) });
+    wrap(<CircleScreen />);
+    await screen.findByTestId("post-a");
+    await act(async () => {});
+    expect(screen.getByTestId("media-a-tile-0").findByType(Image).props.transition).toBe(ms);
+    fireEvent.press(screen.getByTestId("media-a-tile-0"));
+    await act(async () => {});
+    await screen.findByTestId("media-viewer-image-0");
+    expect(viewerImage(0).transition).toBe(ms);
   });
 
   it("a published post's grid reads its own image count, not the composer's 'out of 9'", async () => {
@@ -233,6 +270,9 @@ describe("composer", () => {
     expect(mockLaunch).toHaveBeenCalledWith(expect.objectContaining({ selectionLimit: 9, allowsMultipleSelection: true, mediaTypes: ["images"] }));
     expect(screen.getByTestId("upload-0-progress").props.children).toBe("上传中 30%");
     expect(screen.getByTestId("upload-1-progress").props.children).toBe("上传中 30%");
+    // A file just picked from the library: memory only — the disk cache would copy the album again.
+    const local = screen.getByTestId("upload-0").findByType(Image).props;
+    expect([local.source.uri, local.cachePolicy, local.contentFit]).toEqual(["file:///p1.jpg", "memory", "cover"]);
     expect(disabled()).toBe(true);
     expect(screen.getByTestId("post-submit-reason").props.children).toBe("图片传完后才能发出");
 
