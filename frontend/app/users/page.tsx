@@ -206,6 +206,11 @@ function UsersRoute() {
               )}
             >
               {user.username}
+              {user.is_eval_identity && (
+                <Badge glyph="◇" className="ml-2">
+                  {t("assist_admin.identities.tag")}
+                </Badge>
+              )}
             </td>
             <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.email}

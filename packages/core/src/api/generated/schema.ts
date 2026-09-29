@@ -11756,6 +11756,7 @@ export interface components {
             readonly life_index?: number;
             readonly inherited_merit?: number;
             readonly inherited_demerit?: number;
+            readonly is_eval_identity?: boolean;
         };
         /** @description 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。 */
         PatchedSoulDisplayNameRequest: {
@@ -13232,6 +13233,7 @@ export interface components {
             readonly life_index: number;
             readonly inherited_merit: number;
             readonly inherited_demerit: number;
+            readonly is_eval_identity: boolean;
         };
         SoulAccount: {
             /** Format: uuid */
@@ -13396,6 +13398,7 @@ export interface components {
             readonly date_problems: components["schemas"]["SoulDateProblem"][];
             readonly has_date_warning: boolean;
             readonly has_record_error: boolean;
+            readonly is_eval_identity: boolean;
         };
         SoulLoginRequest: {
             soul_code: string;
@@ -14028,6 +14031,7 @@ export interface components {
             readonly create_time: string;
             /** Format: uri */
             avatar?: string | null;
+            readonly is_eval_identity: boolean;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。

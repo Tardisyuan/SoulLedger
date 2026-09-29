@@ -12,9 +12,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulsPage from "@/app/souls/page";
 
 const souls = [
-  { id: "a1", name: "沈青梧", civilization: "CHINESE", current_state: "DISPOSED", karmic_balance: 347, birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false },
-  { id: "b2", name: "Marguerite Vey", civilization: "EUROPEAN", current_state: "JUDGING", birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false },
-  { id: "c3", name: "Nebet-Iunu", civilization: "EGYPTIAN", current_state: "ALIVE", birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false },
+  { id: "a1", name: "沈青梧", civilization: "CHINESE", current_state: "DISPOSED", karmic_balance: 347, birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false, is_eval_identity: false },
+  { id: "b2", name: "Marguerite Vey", civilization: "EUROPEAN", current_state: "JUDGING", birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false, is_eval_identity: false },
+  { id: "c3", name: "Nebet-Iunu", civilization: "EGYPTIAN", current_state: "ALIVE", birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false, is_eval_identity: true },
 ];
 
 type DetailState = { data?: unknown; isLoading: boolean; isError: boolean };
@@ -128,5 +128,12 @@ describe("souls list drawer", () => {
     expect(alert).toHaveTextContent("souls.preview.load_error");
     fireEvent.click(within(alert).getByRole("button", { name: "common.retry" }));
     expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("tags the assistant's eval soul, and only it (「评测专用 · 不能登录」)", () => {
+    renderPage();
+    const tags = screen.getAllByText("assist_admin.identities.tag");
+    expect(tags).toHaveLength(1);
+    expect(tags[0].closest("tr")).toHaveTextContent("Nebet-Iunu");
   });
 });

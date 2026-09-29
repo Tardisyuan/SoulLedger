@@ -3898,7 +3898,8 @@
       "creating": "创建中…",
       "failed": "创建失败。",
       "soul_missing": "缺少评测灵魂，先创建评测身份。",
-      "officer_missing": "缺少评测官员，先创建评测身份。"
+      "officer_missing": "缺少评测官员，先创建评测身份。",
+      "tag": "评测专用 · 不能登录"
     },
     "eval": {
       "side": "评测哪一端",

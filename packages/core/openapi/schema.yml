@@ -25375,6 +25375,9 @@ components:
         inherited_demerit:
           type: integer
           readOnly: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
     PatchedSoulDisplayNameRequest:
       type: object
       description: 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。
@@ -28486,6 +28489,9 @@ components:
         inherited_demerit:
           type: integer
           readOnly: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
       required:
       - civilization
       - create_time
@@ -28497,6 +28503,7 @@ components:
       - id
       - inherited_demerit
       - inherited_merit
+      - is_eval_identity
       - is_residing
       - karmic_balance
       - life_index
@@ -28902,6 +28909,9 @@ components:
         has_record_error:
           type: boolean
           readOnly: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
       required:
       - civilization
       - create_time
@@ -28909,6 +28919,7 @@ components:
       - has_date_warning
       - has_record_error
       - id
+      - is_eval_identity
       - karmic_balance
       - name
       - tenant_code
@@ -30281,9 +30292,13 @@ components:
           type: string
           format: uri
           nullable: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
       required:
       - create_time
       - id
+      - is_eval_identity
       - organization
       - tenant
       - username

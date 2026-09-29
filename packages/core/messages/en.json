@@ -3898,7 +3898,8 @@
       "creating": "Creating…",
       "failed": "Could not create them.",
       "soul_missing": "The eval soul is missing: create eval identities first.",
-      "officer_missing": "The eval officer is missing: create eval identities first."
+      "officer_missing": "The eval officer is missing: create eval identities first.",
+      "tag": "Eval only · cannot sign in"
     },
     "eval": {
       "side": "Which side to evaluate",
