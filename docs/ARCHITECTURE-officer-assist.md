@@ -1,6 +1,6 @@
 # 官员端助手 —— 阶段 3 计划
 
-> **状态:计划稿,待用户拍板(§6)。** 基于 `feat/soul-assist-app`。灵魂端助手的设计与决策记录见
+> **状态:§6 Q1–Q3 已由用户拍板(2026-09-29),均取推荐项;Q4 等 Design 出稿。** 基于 `feat/soul-assist-app`。灵魂端助手的设计与决策记录见
 > `docs/ARCHITECTURE-soul-assist.md`;本文只写官员端与它**不同**的地方。代码出处标文件:行;
 > 没有实跑过的推断标「未核实」。
 
@@ -50,6 +50,10 @@ MODERATOR 不持有 `workflow.approve` / `workflow.advance` / `user.manage`
 - 开关:沿用 `ASSISTANT_ENABLED` + `Tenant.settings["assistant_enabled"]`,官员读 `request.tenant`;
   是否要**分开**灵魂端与官员端的每殿开关,见 §6 Q3。
 - 节流:`assist_officer` 另设,默认同灵魂端 30/hour(官员一天问得更多,见 §6 Q3)。
+- **已落地(3a/3b)时的定法**:令牌不带殿的 ADMIN 只看全局开关(没有殿开关可读);带殿的 ADMIN
+  与别人一样读那个殿的开关。节流另一个 scope(`assist_officer`)只为分开计数键,速率读的是
+  `DEFAULT_THROTTLE_RATES["assist"]` 同一个设置。`inbox_counts` 的码名是 `soul_inbox.read`
+  (`soul_inbox` 不是码名;收件箱 `folders` 接口要的就是它)。另加无码名的 `my_permissions`。
 
 ## 4. Web 界面
 
@@ -67,7 +71,7 @@ MODERATOR 不持有 `workflow.approve` / `workflow.advance` / `user.manage`
 
 估时:3a 约 2 天,3b 约 2 天(语料从零写),3c 约 2–3 天(视设计稿)。
 
-## 6. 待用户决定
+## 6. 决定(2026-09-29 用户拍板:Q1 取 B、Q2 取推荐、Q3 取 A;Q4 待 Design)
 
 - **Q1 v1 要不要工具?** A. 只有帮助语料,不读任何数据(最简单,零隐私面);B. 三个计数工具(推荐:
   「我的队列」是官员最常问的,计数不含个人数据)。
