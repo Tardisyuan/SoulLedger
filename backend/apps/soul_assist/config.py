@@ -9,6 +9,8 @@ import hashlib
 import hmac
 import uuid
 from dataclasses import astuple, dataclass
+from dataclasses import field as dc_field
+from urllib.parse import urlsplit, urlunsplit
 
 from django.conf import settings
 from django.core.cache import cache
@@ -39,7 +41,7 @@ class Connection:
 
     provider: str  # 类路径
     base_url: str
-    api_key: str
+    api_key: str = dc_field(repr=False)  # 不进 repr:Sentry 的栈帧变量与日志里的 %r 都走 repr
     model: str
     effort: str
     fallbacks: str  # Anthropic 的 fallbacks 参数;"" 即关
@@ -121,8 +123,9 @@ def provider_name(path):
     return next((name for name, p in PROVIDERS.items() if p == path), path.rsplit(".", 1)[-1])
 
 
-def effective() -> Effective:
-    row = _row() or {"values": {}, "api_key": "", "api_key_set_at": None, "eval_soul_account_id": None,
+def effective(row=None) -> Effective:
+    """`row` 给了(已锁住的 `AssistConfig`)就按它算,不读进程快照 —— 锁里的判断要基于锁住的那一行。"""
+    row = (_snapshot(row) if row is not None else _row()) or {"values": {}, "api_key": "", "api_key_set_at": None, "eval_soul_account_id": None,
                      "eval_officer_id": None, "cap_closed_for": ""}
     v = row["values"]
     env = env_connection()
@@ -146,8 +149,19 @@ def effective() -> Effective:
     )
 
 
+class KeyRequiredError(Exception):
+    """换了供应商或地址却没给 key:已存的 key 不能发到一个新的端点去。"""
+
+
 def candidate(data, base: Connection) -> Connection:
-    """候选配置:请求里给了的键覆盖 `base`。`api_key` 不给就沿用 —— 页面上的 key 只写不读。"""
+    """候选配置:请求里给了的键覆盖 `base`。`api_key` 不给就沿用 —— 页面上的 key 只写不读。
+
+    **但换了 `provider` 或 `base_url` 就必须同时给 key**(`KeyRequiredError`):否则一个指向任意主机的
+    候选会带着已存的 key 出去(连通测试、评测、保存后的每次提问)。"""
+    moved = (("provider" in data and provider_path(data["provider"]) != base.provider)
+             or ("base_url" in data and data["base_url"] != base.base_url))
+    if moved and data.get("api_key") is None:
+        raise KeyRequiredError
     return Connection(
         provider=provider_path(data["provider"]) if "provider" in data else base.provider,
         base_url=data.get("base_url", base.base_url),
@@ -207,16 +221,18 @@ def save_changes(row, values=None, *, user, description="assistant config update
     """写 `values` 里的键、可选的 API key(`""` = 清除)与评测身份(`refs`:字段名 → id),再写一条审计。
 
     **审计里 API key 只记 "replaced" / "cleared",不记值**;其余键记 [旧值, 新值]。"""
-    before = effective()
+    before = effective(row)
     changes = {}
-    if user is not None and "enabled" in (values or {}):
-        # 管理员亲手动了总开关:不再有「上限关的、下月自动开」这回事(用户 2026-09-29 定)。
-        row.cap_closed_for = ""
     for key, new in (values or {}).items():
         old = current_value(before, key)
-        if old != new:
-            changes[key] = [old, new]
+        # 只写真的变了的键:页面整表提交时,没动的键继续跟 env,也不算「动了开关」。
+        if old == new:
+            continue
+        changes[key] = [redact_url(old), redact_url(new)] if key == "base_url" else [old, new]
         row.values = {**row.values, key: new}
+    if user is not None and "enabled" in changes:
+        # 管理员亲手改了总开关:不再有「上限关的、下月自动开」这回事(用户 2026-09-29 定)。
+        row.cap_closed_for = ""
     if api_key is not _UNSET:
         changes["api_key"] = "cleared" if api_key == "" else "replaced"
         row.api_key = api_key
@@ -230,6 +246,14 @@ def save_changes(row, values=None, *, user, description="assistant config update
     invalidate()
     audit(user, description, changes, request)
     return changes
+
+
+def redact_url(url):
+    """审计里的地址去掉 `user:pass@`:那是凭证,审计行比配置活得久。"""
+    parts = urlsplit(url or "")
+    if "@" not in parts.netloc:
+        return url
+    return urlunsplit(parts._replace(netloc=parts.netloc.rsplit("@", 1)[1]))
 
 
 def audit(user, description, changes, request=None, resource_id="config"):

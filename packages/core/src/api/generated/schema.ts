@@ -14582,6 +14582,14 @@ export interface operations {
                     "application/json": components["schemas"]["ConnectivityResult"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
         };
     };
     assist_admin_corpus: {
@@ -14768,6 +14776,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvalPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
                 };
             };
         };

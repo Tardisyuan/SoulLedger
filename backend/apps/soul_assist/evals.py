@@ -8,6 +8,7 @@
 import logging
 import time
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.cache import cache
@@ -24,6 +25,8 @@ logger = logging.getLogger(__name__)
 MAX_ASKS = 100
 PREVIEW_TTL_SECONDS = 10 * 60
 PREVIEW_KEY = "soul_assist:eval_preview:"
+#: 排队或运行超过这么久的评测视为死了(worker 崩了、任务丢了)。100 条 × 22 秒约 37 分钟,留足余量。
+STALE_AFTER = timedelta(hours=1)
 #: 预估用:每一轮在 system prompt 之外的输入(事实头、问题、工具结果)与每轮输出。宁高勿低。
 EXTRA_INPUT_PER_ROUND = 300
 OUTPUT_PER_ROUND = 400
@@ -35,9 +38,9 @@ OUTPUT_PER_ROUND = 400
 def probe(conn: config.Connection) -> dict:
     """用候选配置发一条最小请求(带一个工具,测得出「不支持工具调用」)。不走进程缓存的客户端:
     候选的 key 不该留在缓存里。"""
-    provider = import_string(conn.provider)(conn=conn)
     start = time.monotonic()
     try:
+        provider = import_string(conn.provider)(conn=conn)
         result = provider.answer(
             system="Connectivity check. Reply with the single word OK.", facts="FACTS: none",
             history=[Turn("user", "ping")], tools=[ToolSpec("ping", "Connectivity check. Returns {}.")],
@@ -135,10 +138,13 @@ def start(token, user):
     """凭预估时发的令牌开始(一次性)。令牌过期、被用过、或不是这个人拿的 → None。"""
     from apps.soul_assist.models import AssistEvalRun
 
-    held = cache.get(PREVIEW_KEY + (token or ""))
+    key = PREVIEW_KEY + (token or "")
+    held = cache.get(key)
     if held is None or held["user_id"] != user.pk:
         return None
-    cache.delete(PREVIEW_KEY + token)
+    if not cache.delete(key):  # 两次并发的开始:只有删掉令牌的那一次算数
+        return None
+    fail_stale()
     return AssistEvalRun.objects.create(created_by=user, candidates=held["candidates"], case_ids=held["case_ids"],
                                         estimated_cost=held["estimated_cost"],
                                         total=len(held["candidates"]) * len(held["case_ids"]))
@@ -215,10 +221,10 @@ def execute(run_id):
     """Celery 任务的本体(测试直接调)。实际花费到了单次上限就停,状态 `stopped_at_cap`。"""
     from apps.soul_assist.models import AssistEvalCase, AssistEvalRun
 
-    run = AssistEvalRun.objects.filter(pk=run_id, status="queued").first()
-    if run is None:
+    # 条件更新认领:同一个运行被投递两次(重试、重复 delay),只有一个 worker 跑。
+    if not AssistEvalRun.objects.filter(pk=run_id, status="queued").update(status="running"):
         return None
-    AssistEvalRun.objects.filter(pk=run.pk).update(status="running")
+    run = AssistEvalRun.objects.get(pk=run_id)
     eff = config.effective()
     by_id = AssistEvalCase.objects.in_bulk(run.case_ids)
     cases = [by_id[i] for i in run.case_ids if i in by_id]
@@ -230,14 +236,26 @@ def execute(run_id):
                 if spent >= eff.eval_spend_cap:
                     status = "stopped_at_cap"
                     break
-                spent += run_case(run, index, conn, case, eff).cost or 0
+                result = run_case(run, index, conn, case, eff)
+                # 答出来了却算不出花费(价目表里这个模型中途被删了):花费未知,按已到上限停,不按 0 继续花。
+                spent = float("inf") if result.cost is None and not result.error else spent + (result.cost or 0)
                 AssistEvalRun.objects.filter(pk=run.pk).update(done=run.results.count())
     except Exception:
         logger.exception("assistant eval run %s failed", run.pk)
         status = "failed"
-    AssistEvalRun.objects.filter(pk=run.pk).update(status=status, summary=summarize(run), finished_at=timezone.now(),
-                                                   done=run.results.count())
+    # 只在仍是 running 时收尾:被 fail_stale 判死的运行不再被改回来。
+    AssistEvalRun.objects.filter(pk=run.pk, status="running").update(
+        status=status, summary=summarize(run), finished_at=timezone.now(), done=run.results.count())
     return status
+
+
+def fail_stale():
+    """排队或运行超过 `STALE_AFTER` 的评测记为 failed(列表时、开始新运行时顺手做;beat 未部署)。"""
+    from apps.soul_assist.models import AssistEvalRun
+
+    now = timezone.now()
+    return AssistEvalRun.objects.filter(status__in=("queued", "running"), created_at__lt=now - STALE_AFTER).update(
+        status="failed", finished_at=now)
 
 
 def summarize(run):

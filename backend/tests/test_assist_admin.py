@@ -69,6 +69,17 @@ def _patch(api, **body):
     return api.patch(f"{BASE}config/", body, format="json")
 
 
+def _probe(api, **body):
+    return api.post(f"{BASE}config/test/", body, format="json")
+
+
+def _tested_patch(api, **body):
+    """先连通测试这套连接,再保存 —— 连接的任何一项变了都要这样(§3.1)。"""
+    connection = {k: v for k, v in body.items() if k in config.CONNECTION_KEYS}
+    assert _probe(api, **connection).data["ok"] is True
+    return _patch(api, **body)
+
+
 def _admin_routes():
     resolver = get_resolver()
     out = []
@@ -99,11 +110,6 @@ def test_every_route_refuses_every_non_admin_role(cn_tenant, role):
             assert response.status_code == 403, (method, url, response.status_code)
 
 
-def test_a_soul_token_is_refused(cn_tenant):
-    _, soul = ready_soul(cn_tenant)
-    assert soul.get(f"{BASE}config/").status_code == 403
-
-
 def test_the_admin_reads_the_config(api):
     body = api.get(f"{BASE}config/").data
     assert body["model"] == "env-model" and body["enabled"] is True and body["env_enabled"] is True
@@ -116,7 +122,7 @@ def test_the_admin_reads_the_config(api):
 
 
 def test_the_api_key_is_ciphertext_in_the_table_and_never_echoed(api):
-    response = _patch(api, api_key=KEY)
+    response = _tested_patch(api, api_key=KEY)
     assert response.status_code == 200, response.data
     assert KEY not in json.dumps(response.data)
     assert response.data["api_key"] == {"set": True, "last4": "1234", "set_at": response.data["api_key"]["set_at"],
@@ -130,8 +136,8 @@ def test_the_api_key_is_ciphertext_in_the_table_and_never_echoed(api):
 
 
 def test_the_audit_says_replaced_or_cleared_and_never_holds_the_key(api):
-    _patch(api, api_key=KEY)
-    _patch(api, api_key="")
+    _tested_patch(api, api_key=KEY)
+    assert _patch(api, api_key="").status_code == 200  # 只清除 key 不必先测:key 泄露时要能立刻清掉
     rows = list(AuditLog.objects.filter(resource="assistant_config").order_by("id"))
     assert [r.changes["api_key"] for r in rows] == ["replaced", "cleared"]
     assert all(KEY not in json.dumps(r.changes) and KEY not in r.description for r in rows)
@@ -139,7 +145,7 @@ def test_the_audit_says_replaced_or_cleared_and_never_holds_the_key(api):
 
 
 def test_a_save_records_changed_keys_with_old_and_new_values(api, admin):
-    _patch(api, soul_per_hour=5, effort="high")
+    _tested_patch(api, soul_per_hour=5, effort="high")
     row = AuditLog.objects.get(resource="assistant_config")
     assert row.user == admin and row.action == "UPDATE"
     assert row.changes == {"soul_per_hour": [30, 5], "effort": ["low", "high"]}
@@ -180,9 +186,9 @@ def test_a_saved_model_reaches_the_provider_and_the_audit(api, cn_tenant):
 
 
 def test_changing_the_model_needs_a_passing_test_of_that_exact_candidate(api):
-    assert _patch(api, model="m2").data["code"] == "untested_model"
+    assert _patch(api, model="m2").data["code"] == "untested_connection"
     api.post(f"{BASE}config/test/", {"model": "m2", "api_key": KEY}, format="json")
-    assert _patch(api, model="m2").data["code"] == "untested_model"  # 测的是另一把 key
+    assert _patch(api, model="m2").data["code"] == "untested_connection"  # 测的是另一把 key
     assert _patch(api, model="m2", api_key=KEY).status_code == 200
     assert config.effective().connection.model == "m2"
 
@@ -191,7 +197,7 @@ def test_a_failed_test_reports_its_kind_and_does_not_unlock_the_model(api):
     FakeProvider.script = [{"raise": "401", "kind": "auth"}]
     body = api.post(f"{BASE}config/test/", {"model": "m3"}, format="json").data
     assert body["ok"] is False and body["error_kind"] == "auth" and body["model"] == "m3"
-    assert _patch(api, model="m3").data["code"] == "untested_model"
+    assert _patch(api, model="m3").data["code"] == "untested_connection"
 
 
 def test_the_real_adapters_classify_sdk_errors():
@@ -363,8 +369,9 @@ def test_a_switch_the_admin_turned_off_never_reopens_by_itself(api, cn_tenant):
     _enable(cn_tenant)
     _, soul = ready_soul(cn_tenant)
     _close_by_cap(api, soul)
-    assert _patch(api, enabled=False).status_code == 200  # 管理员也确认关着
+    assert _patch(api, enabled=True).status_code == 200  # 管理员手动打开(真的改了开关)……
     assert AssistConfig.objects.get(pk=1).cap_closed_for == ""
+    assert _patch(api, enabled=False).status_code == 200  # ……又手动关上
     _pretend_it_is_a_later_month()
     assert usage.maybe_reopen() is False and config.effective().enabled is False
     assert _soul_ask(soul).data["code"] == "assistant_not_configured"
@@ -530,3 +537,318 @@ def test_service_answer_still_checks_the_switch_outside_evals(cn_tenant):
     account, _ = ready_soul(cn_tenant)
     with pytest.raises(service.AssistError):
         service.answer(account, "q", "life", locale="zh-Hans")
+
+
+# ── 评审修复(2026-09-29)─────────────────────────────────────────────────────
+
+
+class OtherFake(FakeProvider):
+    """「另一家供应商」:类路径不同于 FakeProvider,脚本与调用记录共用。测试里不许真的连外网。"""
+
+
+@pytest.fixture(autouse=True)
+def no_real_providers(monkeypatch):
+    """把页面上的两个供应商名都指向假实现:换供应商的测试若走到真 SDK,会真的发请求出去。"""
+    for name in config.PROVIDERS:
+        monkeypatch.setitem(config.PROVIDERS, name, f"{__name__}.OtherFake")
+
+
+def _save_key(api):
+    """存一把页面上的 key(测过的),之后的候选才有「已存的 key」可以被带走。"""
+    assert _tested_patch(api, api_key=KEY).status_code == 200
+    FakeProvider.calls = []
+
+
+@pytest.mark.parametrize("move", [{"base_url": "https://attacker.example/v1"}, {"provider": "openai_compatible"}])
+def test_a_new_endpoint_never_gets_the_saved_key(api, move):
+    """换了供应商或地址而没给 key → 400,且**没有任何请求发出去**(断言缺席)。
+    变异:删掉 `config.candidate` 里的 `KeyRequiredError` → 连通测试把已存的 key 发往新地址,红。"""
+    _save_key(api)
+    assert _probe(api, **move).data["code"] == "api_key_required"
+    preview = api.post(f"{BASE}eval/preview/", {"side": "soul", "candidates": [move]}, format="json")
+    assert preview.status_code == 400 and preview.data["code"] == "api_key_required"
+    assert _patch(api, **move).data["code"] == "api_key_required"
+    assert FakeProvider.calls == []
+    assert config.effective().connection.base_url == "" and config.effective().connection.api_key == KEY
+    # 同一个请求里给了 key(哪怕是空串)就可以:那把 key 是冲着这个地址给的
+    assert _probe(api, **move, api_key="other-key").data["ok"] is True
+    assert FakeProvider.calls != []
+
+
+def test_resending_the_current_endpoint_does_not_need_the_key(api):
+    """页面整表提交会把没改的地址原样带回来:那不是「换了地址」。"""
+    _save_key(api)
+    assert _patch(api, base_url="", soul_per_hour=9).status_code == 200
+    assert config.effective().connection.api_key == KEY
+
+
+@pytest.mark.parametrize("change", [{"api_key": "sk-another-key-9999"}, {"base_url": "https://other.example/v1",
+                                                                         "api_key": KEY},
+                                    {"provider": "anthropic", "api_key": KEY}, {"effort": "high"},
+                                    {"fallbacks": False}])
+def test_any_connection_change_needs_a_passing_test_of_that_candidate(api, change):
+    """不只是模型名:key、地址、供应商、effort、fallbacks 任何一项变了都要先测通。
+    变异:门禁改回只比 `model` → 这几条都能不测就存,红。"""
+    refused = _patch(api, **change)
+    assert refused.status_code == 400 and refused.data["code"] == "untested_connection"
+    assert config.effective().overridden == ()
+    assert _probe(api, **change).data["ok"] is True
+    assert _patch(api, **change).status_code == 200
+
+
+def test_the_gate_reads_the_locked_row_not_a_stale_snapshot(api):
+    """并发:另一个进程刚存了新模型,本进程的快照还是旧的。这时存一把「在旧模型上测过」的 key,
+    实际生效的是「新模型 + 新 key」这套没测过的组合 —— 必须拒。
+    变异:PATCH 里的 `config.effective(row)` 换回 `config.effective()` → 按旧快照判,放行,红。"""
+    from django.core.cache import cache
+
+    config.effective()
+    stale = (dict(config._local), cache.get(config.VERSION_KEY))
+    assert _tested_patch(api, model="m-new").status_code == 200  # 「另一个进程」存的
+    config._local.update(stale[0])
+    cache.set(config.VERSION_KEY, stale[1], None)  # 本进程还没看到版本号换过
+    assert config.effective().connection.model == "env-model"  # 确实是旧快照
+    assert _probe(api, model="env-model", api_key=KEY).data["ok"] is True  # 在旧模型上测的
+    assert _patch(api, api_key=KEY).data["code"] == "untested_connection"
+    config.invalidate()
+    assert config.effective().connection.api_key == ""
+
+
+def test_a_save_in_one_process_is_seen_by_another(api):
+    """各进程靠共享的版本号知道要重读。模拟另一个进程:它的进程快照停在保存之前。
+    变异:`_row` 不比版本号(`if _local["row"] is None`)→ 另一个进程永远读旧快照,红。"""
+    config.effective()
+    other_process = dict(config._local)
+    assert _patch(api, soul_per_hour=7).status_code == 200
+    config._local.update(other_process)
+    assert config.effective().soul_per_hour == 7
+
+
+def test_the_connection_repr_never_holds_the_key():
+    """Sentry 的栈帧变量与 `%r` 日志都走 repr。变异:去掉 `field(repr=False)` → 红。"""
+    conn = config.Connection("p", "https://x", KEY, "m", "", "")
+    assert KEY not in repr(conn) and KEY not in str(conn) and "m" in repr(conn)
+    assert KEY not in repr(config.effective())
+    assert conn.fingerprint() != config.Connection("p", "https://x", "other", "m", "", "").fingerprint()
+
+
+@pytest.mark.parametrize("marker", [
+    {"extra": {"celery-job": {"task_name": "soul_assist.run_eval"}}},
+    {"transaction": "soul_assist.run_eval"},
+    {"logger": "apps.soul_assist.evals"},
+    {"module": "apps.soul_assist.providers"},
+])
+def test_sentry_drops_frame_vars_for_assistant_events_without_a_request_url(marker):
+    """评测跑在 Celery 里,没有请求 URL,栈帧里有解密后的候选 key。
+    变异:`_ours` 只看 URL → 四条都红。"""
+    from apps.soul_assist.sentry import scrub_assist
+
+    def event(**extra):
+        frame = {"module": extra.pop("module", "apps.other.thing"), "vars": {"conn": KEY}}
+        return {"exception": {"values": [{"stacktrace": {"frames": [frame]}}]}, **extra}
+
+    scrubbed = scrub_assist(event(**marker), {})
+    assert KEY not in json.dumps(scrubbed)
+    unrelated = scrub_assist(event(logger="apps.other", extra={"celery-job": {"task_name": "other.task"}}), {})
+    assert unrelated["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"] == {"conn": KEY}
+
+
+def test_the_provider_error_log_redacts_the_key(caplog):
+    """对方的错误正文可能回显 key。变异:`_fail` 不抹 `secret` → 日志里有 key,红。"""
+    import httpx2
+    import openai
+
+    from apps.soul_assist.providers import _fail
+
+    request = httpx2.Request("POST", "http://example.invalid")
+    exc = openai.AuthenticationError("x", response=httpx2.Response(401, request=request),
+                                     body={"error": f"Incorrect API key provided: {KEY}"})
+    with caplog.at_level("WARNING", logger="apps.soul_assist.providers"):
+        assert _fail(exc, KEY).kind == "auth"
+    assert "[redacted]" in caplog.text and KEY not in caplog.text
+
+
+def test_the_audit_drops_credentials_from_a_base_url(api):
+    url = "https://user:hunter2-password@proxy.example/v1"
+    assert _tested_patch(api, base_url=url, api_key=KEY).status_code == 200
+    row = AuditLog.objects.filter(resource="assistant_config").latest("id")
+    assert row.changes["base_url"] == ["", "https://proxy.example/v1"]
+    assert "hunter2" not in json.dumps(row.changes)
+
+
+@pytest.fixture
+def anthropic_without_a_key(settings, monkeypatch):
+    """真的 Anthropic 适配器、没有 key;地址指向本机的关闭端口 —— 万一 SDK 找到了别处的 key,也发不出去。"""
+    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL"):
+        monkeypatch.delenv(name, raising=False)
+    settings.ASSISTANT_PROVIDER = "apps.soul_assist.providers.AnthropicProvider"
+    settings.ASSISTANT_BASE_URL = "http://127.0.0.1:9"
+    settings.ASSISTANT_API_KEY = ""
+
+
+def test_a_missing_key_is_a_recorded_503_not_a_500(anthropic_without_a_key, cn_tenant):
+    """Anthropic 的 SDK 没有 key 时在请求时抛 TypeError(不是 APIError)。
+    变异:适配器里删掉 `except Exception` 那一支 → 500、没有用量行,红。"""
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    response = _soul_ask(soul)
+    assert response.status_code == 503 and response.data["code"] == "assistant_unavailable"
+    assert list(AssistUsage.objects.values_list("status", flat=True)) == ["unavailable"]
+
+
+def test_the_connectivity_test_names_a_missing_key_as_auth(anthropic_without_a_key, api):
+    body = _probe(api).data
+    assert body["ok"] is False and body["error_kind"] == "auth"
+
+
+def test_a_failing_cap_check_never_turns_a_saved_answer_into_a_500(cn_tenant, caplog):
+    """变异:删掉 `ask` 里 `enforce_cap` 外面的 try → 500,红。"""
+    from unittest.mock import patch
+
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    with patch.object(usage, "enforce_cap", side_effect=RuntimeError("db down")), \
+            caplog.at_level("ERROR", logger="apps.soul_assist.service"):
+        response = _soul_ask(soul, question="独一无二的提问文本")
+    assert response.status_code == 200 and AssistUsage.objects.get().status == "ok"
+    assert "monthly cap check failed" in caplog.text and "独一无二的提问文本" not in caplog.text
+
+
+def test_a_failing_notification_still_closes_the_switch_and_is_logged(api, cn_tenant, caplog):
+    """变异:`_notify_admins` 里删掉 try → 异常冒到 `ask` 的兜底,但本条的「通知失败」日志消失,红。"""
+    from unittest.mock import patch
+
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    with patch("apps.notifications.models.notify_user", side_effect=RuntimeError("smtp")), \
+            caplog.at_level("ERROR", logger="apps.soul_assist.usage"):
+        _close_by_cap(api, soul)
+    assert "notification to admin" in caplog.text
+    assert AssistConfig.objects.get(pk=1).cap_closed_for != ""
+
+
+def test_saving_other_keys_after_a_cap_close_keeps_next_months_reopen(api, cn_tenant):
+    """页面整表提交会把 `enabled: false` 原样带回来;那不是管理员动了开关。
+    变异:`save_changes` 改回「送来即清」→ `cap_closed_for` 被清,次月不重开,红。"""
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    _close_by_cap(api, soul)
+    body = _patch(api, enabled=False, model="env-model", soul_per_hour=30,
+                  prices={"env-model": {"input": 1_000_000, "output": 1_000_000}}, monthly_cap=100)
+    assert body.status_code == 200
+    assert AssistConfig.objects.get(pk=1).cap_closed_for != ""
+    assert "model" not in body.data["overridden"] and "soul_per_hour" not in body.data["overridden"]
+    change = AuditLog.objects.filter(resource="assistant_config").latest("id").changes
+    assert change == {"monthly_cap": [1, 100]}
+    _pretend_it_is_a_later_month()
+    assert usage.maybe_reopen() is True and config.effective().enabled is True
+
+
+def test_the_env_ceiling_stops_the_monthly_reopen(api, admin, settings, cn_tenant):
+    """env 总开关关着时不重开:不翻开关、不写审计、不通知。变异:删掉 `maybe_reopen` 的 env 检查 → 红。"""
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    _close_by_cap(api, soul)
+    before = UserNotification.objects.filter(user=admin).count()
+    settings.ASSISTANT_ENABLED = False
+    _pretend_it_is_a_later_month()
+    assert usage.maybe_reopen() is False
+    assert AssistConfig.objects.get(pk=1).values["enabled"] is False
+    assert not AuditLog.objects.filter(description__startswith="reopened").exists()
+    assert UserNotification.objects.filter(user=admin).count() == before
+
+
+def test_a_confirm_token_starts_one_run_even_when_two_starts_race(api, cn_tenant, judge_user):
+    """两次并发的开始都 get 到了令牌:只有删掉它的那一次建运行。
+    变异:`start` 不看 `cache.delete` 的返回值 → 第二次也建了一个,红。"""
+    from unittest.mock import patch
+
+    from django.core.cache import cache
+
+    admin_user = User.objects.get(username="yama")
+    _eval_ready(api, cn_tenant, judge_user)
+    _only("soul")
+    token = api.post(f"{BASE}eval/preview/", {"side": "soul", "candidates": [{}]}, format="json").data["confirm_token"]
+    with patch.object(cache, "delete", side_effect=lambda key: False):  # 另一个请求先删了
+        assert evals.start(token, admin_user) is None
+    assert AssistEvalRun.objects.count() == 0
+    assert evals.start(token, admin_user) is not None
+    assert evals.start(token, admin_user) is None
+    assert AssistEvalRun.objects.count() == 1
+
+
+def test_a_run_delivered_twice_is_executed_once(api, cn_tenant, judge_user):
+    """变异:`execute` 改回先读后改(不看 update 的行数)→ 第二次投递在 running 上又跑一遍,红。"""
+    _eval_ready(api, cn_tenant, judge_user)
+    case = _only("soul")
+    run = AssistEvalRun.objects.create(candidates=[evals._stored(config.effective().connection)],
+                                       case_ids=[case.pk], total=1)
+    AssistEvalRun.objects.filter(pk=run.pk).update(status="running")  # 另一个 worker 已认领
+    assert evals.execute(run.pk) is None and run.results.count() == 0
+    AssistEvalRun.objects.filter(pk=run.pk).update(status="queued")
+    assert evals.execute(run.pk) == "done"
+    assert evals.execute(run.pk) is None and run.results.count() == 1
+
+
+def test_a_stale_run_is_marked_failed_when_the_list_is_read(api):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    old = AssistEvalRun.objects.create(status="running", total=1)
+    fresh = AssistEvalRun.objects.create(status="running", total=1)
+    AssistEvalRun.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=2))
+    statuses = {r["id"]: r["status"] for r in api.get(f"{BASE}eval/runs/").data}
+    assert statuses == {old.pk: "failed", fresh.pk: "running"}
+    assert evals.execute(old.pk) is None  # 判死的不会被捡回来
+
+
+def test_an_eval_stops_when_the_models_price_is_gone(api, cn_tenant, judge_user):
+    """价目表里这个模型中途没了:花费未知 → 按到上限停,不按 0 一直花。变异:改回 `cost or 0` → 三条全跑,红。"""
+    _eval_ready(api, cn_tenant, judge_user)
+    cases = [_only("soul")] + [AssistEvalCase.objects.create(side="soul", screen="life", question=f"Q{i}")
+                               for i in range(2)]
+    conn = config.Connection(config.effective().connection.provider, "", "", "no-longer-priced", "", "")
+    run = AssistEvalRun.objects.create(candidates=[evals._stored(conn)], case_ids=[c.pk for c in cases], total=3)
+    assert evals.execute(run.pk) == "stopped_at_cap"
+    assert run.results.count() == 1
+
+
+def test_every_outcome_including_busy_and_rate_limited_is_recorded(api, settings, cn_tenant):
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    settings.ASSISTANT_MAX_CONCURRENT = 0
+    assert _soul_ask(soul).status_code == 429
+    settings.ASSISTANT_MAX_CONCURRENT = 8
+    _patch(api, soul_per_hour=2)
+    _soul_ask(soul)
+    assert _soul_ask(soul).data["code"] == "rate_limited"
+    assert list(AssistUsage.objects.order_by("id").values_list("status", flat=True)) == [
+        "busy", "ok", "rate_limited"]
+
+
+@pytest.mark.parametrize("method", ["get", "post", "patch", "delete"])
+def test_a_soul_token_is_refused_on_every_route(cn_tenant, method):
+    _, soul = ready_soul(cn_tenant)
+    for url in _admin_routes():
+        response = getattr(soul, method)(url, {}, format="json")
+        assert response.status_code == 403, (method, url, response.status_code)
+
+
+class BrokenClient(FakeProvider):
+    """建客户端就失败的适配器(`_unexpected` 把 SDK 构造时的异常翻成 ProviderError)。"""
+
+    def __init__(self, client=None, conn=None):
+        from apps.soul_assist.providers import ProviderError
+
+        raise ProviderError("TypeError", "auth")
+
+
+def test_a_client_that_cannot_be_built_is_a_recorded_503(settings, cn_tenant, api):
+    """变异:`service._ask` 里把 `get_provider` 挪回 try 之外 → 500、没有用量行,红。"""
+    settings.ASSISTANT_PROVIDER = f"{__name__}.BrokenClient"
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    assert _soul_ask(soul).status_code == 503
+    assert list(AssistUsage.objects.values_list("status", flat=True)) == ["unavailable"]
+    assert _probe(api).data["error_kind"] == "auth"
