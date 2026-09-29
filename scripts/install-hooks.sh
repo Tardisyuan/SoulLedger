@@ -570,9 +570,27 @@ PROBE_PY
         SKIP_MIGRATION=1
         echo "    (-m 'not migration': nothing the 26 round-trip tests exercise changed)"
     fi
+    # Progress every 30 s instead of silence: the run takes minutes and `-q`
+    # piped through `tail` printed nothing until it ended. The full log is kept
+    # on failure, like the jest one above.
+    PYTEST_LOG=$(mktemp -t prepush-pytest)
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov \
-        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
-    PYTEST_STATUS="${PIPESTATUS[0]}"
+        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} >"$PYTEST_LOG" 2>&1 &
+    PYTEST_PID=$!
+    T0=$(date +%s); NEXT=30
+    while kill -0 "$PYTEST_PID" 2>/dev/null; do
+        sleep 2
+        EL=$(( $(date +%s) - T0 ))
+        if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
+            NEXT=$(( NEXT + 30 ))
+            PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
+            NBAD=$(grep -E '^[^ ]+\.py ' "$PYTEST_LOG" | sed 's/^[^ ]* //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
+            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
+        fi
+    done
+    wait "$PYTEST_PID"; PYTEST_STATUS=$?
+    tail -4 "$PYTEST_LOG"
+    if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
     [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
     [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"
