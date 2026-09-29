@@ -212,6 +212,52 @@ describe("Breadcrumb", () => {
     expect(screen.queryByText(/breadcrumb\./)).not.toBeInTheDocument();
   });
 
+  it("a path segment with no page of its own is shown but not linked", () => {
+    // /admin has no page.tsx: the crumb linked it, and Next prefetched
+    // /admin?_rsc=… into a 404 on every /admin/* page.
+    mockPathname = "/admin/stats";
+    render(<Breadcrumb menus={menus} />);
+    expect(screen.getByText("admin")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "admin" })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/admin"]')).toBeNull();
+  });
+
+  it("an intermediate segment that does have a page stays a link", () => {
+    mockPathname = "/audit/12";
+    render(<Breadcrumb menus={menus} />);
+    expect(document.querySelector('a[href="/audit"]')).not.toBeNull();
+  });
+
+  it("PAGELESS_PREFIXES is exactly the set of app/ prefixes without a page.tsx", () => {
+    const fs = jest.requireActual<typeof import("fs")>("fs");
+    const path = jest.requireActual<typeof import("path")>("path");
+    const appDir = path.join(__dirname, "../../app");
+    const pages = new Set<string>();
+    const walk = (dir: string, url: string[]) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.isDirectory()) {
+          // (group) folders do not appear in the URL.
+          const seg = /^\(.*\)$/.test(e.name) ? [] : [e.name];
+          walk(path.join(dir, e.name), [...url, ...seg]);
+        } else if (e.name === "page.tsx") {
+          pages.add("/" + url.join("/"));
+        }
+      }
+    };
+    walk(appDir, []);
+    const pageless = new Set<string>();
+    for (const page of pages) {
+      const parts = page.split("/").filter(Boolean);
+      for (let i = 1; i < parts.length; i++) {
+        const prefix = "/" + parts.slice(0, i).join("/");
+        if (!pages.has(prefix)) pageless.add(prefix);
+      }
+    }
+    expect(pages.has("/audit")).toBe(true); // the walk found the tree
+    const { PAGELESS_PREFIXES } = require("@/src/components/layout/Breadcrumb");
+    expect([...PAGELESS_PREFIXES].sort()).toEqual([...pageless].sort());
+  });
+
   it("shows only the Chinese name, with no separate gloss, under zh-Hans", () => {
     mockLocale = "zh-Hans";
     render(<Breadcrumb menus={menus} />);
