@@ -98,10 +98,16 @@ export type EventPayload =
 
 // ── Handler Type ───────────────────────────────────────────────────────
 
-export type EventHandler = (
-  payload: any,
-  context: EventContext,
-) => HandlerResult;
+/** The registry picks a handler by `domain` / `event`, so each handler receives
+ *  the payload variant its entry is registered under and is typed for that
+ *  variant (`(p: SoulEventPayload, ctx) => …`). Declaring the parameter in
+ *  method position makes it bivariant, which is what lets those narrower
+ *  handlers sit in one table typed over the whole `EventPayload` union — the
+ *  pattern React's own `EventHandler` types use. Was `payload: any`, which
+ *  also accepted handlers for payloads that are not in the union at all. */
+export type EventHandler = {
+  handle(payload: EventPayload, context: EventContext): HandlerResult;
+}["handle"];
 
 export interface EventContext {
   queryClient: QueryClient;
