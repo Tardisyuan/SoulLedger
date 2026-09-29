@@ -11,6 +11,6 @@ questions:
 ---
 - Term served, still here: this station's term has ended, but a judgment at home is still open; you move on once it concludes. Nothing for you to do.
 - Next station not started: you wait where you are (normally at home); nothing to do before you move.
-- Eternal: this station has no end and no further station follows; a soul with an eternal term does not apply for rebirth.
+- Eternal: this station has no end and no further station follows; an eternal term means there is no rebirth application.
 - Pardoned: the remaining term was pardoned; the remaining stations are not served and count as done.
 - New: a station was added to the plan.

@@ -458,6 +458,8 @@ const ROOTS_TWELVE = [
   // 助手管理页那一批(2026-09-29):Sip 新造,评测 / 查验(Smen Seth 按「X Seth = 已 X」读作「已设置」);
   // Sia 同时作「模型」、Kat 同时作「工具」,Design 归为同一义项(领会的器、器)。
   "Sip", //           评测 / 查验
+  // 警告推送那一批(2026-09-29,Design 语气审):Sebayt 新造,警告 / 训诫(本义「教诲」);不借 Sedjem(举报 / 通知)或 Khesef(驳回)。
+  "Sebayt", //        警告 / 训诫
 ];
 /**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
