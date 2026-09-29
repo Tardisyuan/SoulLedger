@@ -44,6 +44,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assist/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        post: operations["officer_assist_ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        get: operations["officer_assist_conversations_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist/conversations/{conversation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        delete: operations["officer_assist_conversation_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit-logs/": {
         parameters: {
             query?: never;
@@ -2613,6 +2664,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
         post: operations["v1_me_assist_create"];
         delete?: never;
         options?: never;
@@ -2627,6 +2679,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
         get: operations["v1_me_assist_conversations_list"];
         put?: never;
         post?: never;
@@ -2646,6 +2699,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
         delete: operations["v1_me_assist_conversations_destroy"];
         options?: never;
         head?: never;
@@ -7330,7 +7384,7 @@ export interface components {
         AssistConversation: {
             /** Format: uuid */
             readonly id: string;
-            screen: components["schemas"]["ScreenEnum"];
+            readonly screen: components["schemas"]["ScreenEnum"];
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -9650,6 +9704,23 @@ export interface components {
         NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED";
         /** @enum {unknown} */
         NullEnum: null;
+        OfficerAssistAsk: {
+            question: string;
+            screen: components["schemas"]["OfficerScreenEnum"];
+            /** Format: uuid */
+            conversation_id?: string | null;
+        };
+        OfficerAssistConversation: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly screen: components["schemas"]["OfficerScreenEnum"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly last_active_at: string;
+            readonly first_question: string;
+            readonly messages: components["schemas"]["AssistMessage"][];
+        };
         OfficerInbox: {
             /** Format: uuid */
             readonly id: string;
@@ -9732,6 +9803,41 @@ export interface components {
         OfficerReply: {
             body: string;
         };
+        /**
+         * @description * `actors` - actors
+         *     * `admin` - admin
+         *     * `audit` - audit
+         *     * `corpus` - corpus
+         *     * `cross-judgments` - cross-judgments
+         *     * `dashboard` - dashboard
+         *     * `death-sync` - death-sync
+         *     * `dispatch` - dispatch
+         *     * `disposition` - disposition
+         *     * `judgment` - judgment
+         *     * `ledger` - ledger
+         *     * `menus` - menus
+         *     * `moderation` - moderation
+         *     * `notifications` - notifications
+         *     * `organizations` - organizations
+         *     * `permissions` - permissions
+         *     * `profile` - profile
+         *     * `realms` - realms
+         *     * `rebirth-applications` - rebirth-applications
+         *     * `recycle-bin` - recycle-bin
+         *     * `scheduler` - scheduler
+         *     * `sentence-requests` - sentence-requests
+         *     * `social` - social
+         *     * `soul-credentials` - soul-credentials
+         *     * `soul-inbox` - soul-inbox
+         *     * `souls` - souls
+         *     * `tenants` - tenants
+         *     * `users` - users
+         *     * `welcome` - welcome
+         *     * `workflow` - workflow
+         *     * `other` - other
+         * @enum {string}
+         */
+        OfficerScreenEnum: "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
         /**
          * @description * `claim` - claim
          *     * `reassign` - reassign
@@ -13701,6 +13807,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Actor"];
+                };
+            };
+        };
+    };
+    officer_assist_ask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerAssistAsk"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerAssistAsk"];
+                "multipart/form-data": components["schemas"]["OfficerAssistAsk"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistAnswer"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    officer_assist_conversations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerAssistConversation"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    officer_assist_conversation_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
                 };
             };
         };

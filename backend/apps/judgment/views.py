@@ -132,6 +132,15 @@ def citing_judgments(statute_id):
     return JudgmentCitation.all_objects.filter(statute_id=statute_id, is_deleted=False).values("judgment_id")
 
 
+def queue_counts_of(queryset, user) -> dict:
+    """`total` 加四个组各几件,一条查询。`queryset` 已收窄到未结案件与调用者的范围。
+    `queue_counts` 与官员助手的 `judgment_queue_counts` 工具(apps/soul_assist/officer_tools.py)共用。"""
+    return queryset.aggregate(
+        total=Count("pk"),
+        **{group: Count("pk", filter=group_q(group, user)) for group, _label in QueueGroup.CHOICES},
+    )
+
+
 def visible_judgments(request):
     """The judgments this caller's judgment LIST would show — tenant scope,
     residence reads and row-level DataScope, by running the list's own
@@ -1031,15 +1040,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             raise translate_validation(filterset.errors)
         queryset = filterset.qs
         queryset = SearchFilter().filter_queryset(request, queryset, self)
-        user = request.user
-        counts = queryset.aggregate(
-            total=Count("pk"),
-            **{
-                group: Count("pk", filter=group_q(group, user))
-                for group, _label in QueueGroup.CHOICES
-            },
-        )
-        return Response(counts)
+        return Response(queue_counts_of(queryset, request.user))
 
     @extend_schema(responses=JudgmentCourtSerializer(many=True))
     # 不分页、不挂列表的过滤器:这是筛选条的选项,不随当前筛选收窄 —— 否则选了一个殿,
