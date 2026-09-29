@@ -9,7 +9,7 @@
 
 | # | 决定 |
 |---|---|
-| A1 | **v1 不做 RAG。** 帮助语料整份进 system prompt(配合 prompt cache);「我的申请到哪一步了」这类问题走**只读工具**读本人数据。向量检索在 §7 的触发条件满足时再做。 |
+| A1 | ~~v1 不做 RAG~~ **2026-09-29 改:上 RAG,不论数据量多小**(用户决定,见 §7)。帮助语料进 pgvector,按问题检索条目;「我的申请到哪一步了」这类问题仍走**只读工具**读本人数据 —— 个人数据不进向量库。 |
 | A2 | **供应商可插拔,两个适配器。** `OpenAICompatibleProvider`(官方 `openai` SDK)覆盖 OpenAI、Azure OpenAI、Ollama 等;`AnthropicProvider`(官方 `anthropic` SDK)。**两个 SDK 都进锁,整份重新生成 `requirements.lock`**(§6.1)。 |
 | A3 | **服务端存会话。** 提问与回答原文保存 **30 天**后删除。这是本仓库**第一处**把灵魂自由文本落库并发给第三方的地方(书信刻意不存正文,`tests/test_chat_policy.py:325`);用户知情后维持该决定。 |
 | A4 | **入口是各页右上角「问一问」**,挂在共用的 `AppHeader`(`mobile/src/chrome.tsx:68`)上;带上当前页面标识。同一页面 30 分钟内再点,续上次的会话,否则新开。 |
@@ -161,7 +161,7 @@ questions:
 - 正文里不许出现「数字 + 天 / 次 / 年」这类写死的规则。
 - 「App 里每个有『问一问』的页面至少对应一个条目」:页面清单在 `mobile/`,**这条测试放在 mobile 的 jest 里**,读后端的 markdown。
 
-### 5.4 以后上 RAG
+### 5.4 RAG(见 §7)
 
 条目即块,不做固定长度切分;向量用 `questions` + 正文生成;元数据直接当检索过滤条件(受众、文明、语言、页面);内容哈希决定是否重新嵌入;评测集是「问题 → 期望命中的条目 id」。
 
@@ -193,15 +193,82 @@ npm run schema:generate --workspace @soulledger/core
 
 两张新表,SQLite 与 PG 都能跑,不涉及 PG-only 名单。`makemigrations --check` 照常。
 
-## 7. 什么时候上向量检索
+## 7. 向量检索(RAG)—— 2026-09-29 定,待实施
 
-任一条件成立才做:
+**决定(用户):** 不等 §7 旧版的三个触发条件,现在就上;embedding 走用户自己的 Ollama;pgvector 用官方镜像;管理页加向量模型配置与测试按钮。
 
-1. 帮助语料合计超过 8 万 token(用供应商的 tokenizer 实测);
-2. 抽查 50 条真实提问,答不出或答非所问超过 15%,且原因是**缺条目**而不是缺工具;
-3. 至少 3 个殿需要**不同流程**的帮助文本(今天为 0)。
+### 7.1 已实测的事实(2026-09-29)
 
-做法见 §5.4。pgvector 另议:三份镜像都是 `postgres:16-alpine`,115 上能否 `CREATE EXTENSION` 未核实;SQLite 测试套件跑不了向量。
+- **Ollama** `http://192.168.2.2:11434`,版本 0.34.4。上面现成的向量模型是 `qwen3-embedding:4b-q4_K_M`(不是先前说的 bge-m3;中英都支持)。
+  - 默认输出 **2560 维**;`/api/embed` 的 `dimensions` 参数可截到 **1024 维**(MRL,实测返回 1024)。
+  - 一句中文首次调用约 3.8 秒(含加载模型);之后应在百毫秒级,**未实测**,实施时量。
+- **115 = Pi5**(ssh `tardis@pi`),PG 16.13,镜像 `postgres:16-alpine`(musl),**没有 pgvector 文件**;连接账号是超级用户。
+  库:`soulledger` / `postgres` / `audit_perm_scratch` 为 `en_US.utf8`,`synapse` 为 `C`。
+- 仓库里三处镜像都是 `postgres:16-alpine`:`docker-compose.yml:41`、`docker-compose.production.yml:140`、`ci.yml:40`。
+
+### 7.2 数据库:官方 `pgvector/pgvector:pg16`
+
+选它而不是自建 alpine + 编译 pgvector:pgvector 升级只换 tag;以后加别的扩展在 Debian 上多半 apt 即得。
+代价是一次性的:musl → glibc 后 `en_US.utf8` 排序结果变化,文本索引必须重建。
+
+115 的步骤(**每一步动手前先问用户**;等没有别的会话在跑真 PG 测试,即 `test_soulledger*` 不存在时再做):
+
+1. `pg_dumpall` 全量备份到 Pi 本地;
+2. 改 Pi 上 `~/Documents/跨文明灵魂管理系统/infrastructure/docker-compose.yml` 的镜像,`docker compose up -d postgres`;
+3. 三个 `en_US` 库各 `REINDEX DATABASE`,再 `ALTER DATABASE … REFRESH COLLATION VERSION`;`synapse`(`C`)不动;
+4. `CREATE EXTENSION vector`(迁移里也会写,见 7.3;这里是先验证能建);
+5. 只读核对:扩展版本、`pg_database` 里没有排序版本告警、synapse 健康。
+
+仓库三处镜像同步换;CI 的 service 容器同一个镜像。
+
+### 7.3 表与迁移
+
+- 新表 `soul_assist.HelpChunk`:`entry_id`、`locale`、`audience`、`screens`、`civilizations`、`content`(送给模型的正文)、`content_hash`、`model`(生成向量用的模型名)、`dims`、`embedding vector`(**不定维**)。
+- **条目即块**,不做固定长度切分(条目本身就短,一条一个主题);向量用 `questions` + 正文生成。
+- **列类型与索引按实际情况自动定,不写死**(用户 2026-09-29):
+  - 列用不带维数的 `vector`,任何维度都存得下;换模型、换维度不用迁移,`sync_help_vectors` 全量重嵌即可。检索只比同一 `model` 的行。
+  - 规模小时**不建索引**:几十到几千条,精确扫描在毫秒级,且结果精确(近似索引反而可能漏)。
+  - `sync_help_vectors` 在当前模型的行数超过阈值(默认 5000)时**自动**建 HNSW 表达式索引:维度 ≤2000 用 `(embedding::vector(N))`,2001–4000 用 `halfvec(N)`;换模型时删旧索引。索引名带模型与维度,可重复执行。
+  - 默认按模型原生维度存(qwen3-embedding 为 2560);管理页可选截断维度(Ollama 的 `dimensions` 参数),默认不截。
+- 迁移 `CREATE EXTENSION IF NOT EXISTS vector` **只在 PostgreSQL 上执行**;SQLite 上表照建,`embedding` 存成 JSON 文本,检索在 Python 里算余弦 —— 这样 SQLite 全量套件照常跑,但**真正的 pgvector 查询只能在 PG 上测**:相关测试进 PG-only 名单(`test_the_postgres_only_set_is_the_set_we_think_it_is`),名单长度 +N。
+- 依赖:`pgvector`(Python 包,Django 字段)进 `requirements.txt`,按 §6.1 的流程重算锁。
+
+### 7.4 同步:语料 → 向量
+
+- 管理命令 `manage.py sync_help_vectors`:遍历两种语言的全部条目,按 `content_hash + model` 判断要不要重新嵌入;删掉语料里已不存在的条目。幂等。
+- 部署与 CI 在 `migrate` 后跑它;管理页的「重建向量」按钮调同一个函数。
+- 换向量模型(名字或维度)= 全部重建。
+
+### 7.5 提问时怎么用
+
+1. 问题 + 当前页面 → 取问题向量;
+2. 按 `locale`、`audience`、文明(`civilizations` 为空或含本人文明)过滤,取余弦最近的 **k 条**(默认 5,管理页可调);
+3. 这 k 条替代现在「该受众全部条目」进 system prompt;规则段不变,仍放缓存前缀。
+4. **降级:** Ollama 不通、超时(给它 3 秒,在 22 秒总预算内)或库里没有向量 → 退回现在的「整份语料」做法,并记一条用量(`retrieval=fallback`)。助手不能因为向量服务挂了而答不了。
+
+注意:检索后每次 system prompt 随问题变化,prompt cache 命中会下降;语料很小,成本影响有限,用量页照常统计。
+
+### 7.6 管理页
+
+与「供应商」同一套交互(草稿 → 测试 → 保存):
+
+- **向量模型**区块:地址(默认 `http://192.168.2.2:11434`)、模型名(默认 `qwen3-embedding:4b-q4_K_M`)、截断维度(默认不截)、k;改模型或维度保存后提示「需要重建向量」;
+- **测试连接**:对一句固定问题取向量,显示延迟、返回维度;维度不符直接判失败;
+- **重建向量**:显示条目数、已嵌入数、上次重建时间与用的模型;
+- 评测:评测题加「期望命中的条目 id」,报告检索命中率(top-k 里有没有期望条目),与现有的工具正确率、要点命中率并列。
+- egy 文案照例送 Design。
+
+### 7.7 测试
+
+- 假的 embedding 服务(固定向量),测过滤、排序、降级路径、`content_hash` 不变时不重嵌;
+- 自动阻断真实网络的 fixture 同样挡住 Ollama 地址;
+- PG-only:pgvector 余弦查询与 SQLite 的 Python 余弦给同一个排序。
+
+### 7.8 未核实
+
+- 热模型下单次嵌入的延迟;并发时 Ollama 的排队表现;
+- 截断维度(如 1024)与原生 2560 的检索质量差别(用评测集量);
+- 生产环境能否访问 192.168.2.2(那是局域网地址;上线前要换成部署内可达的服务)。
 
 ## 8. 阶段
 
