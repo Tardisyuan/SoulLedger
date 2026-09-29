@@ -1000,4 +1000,25 @@ describe("the fourth tab", () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 6_000)));
     expect(calls.filter((c) => c.url === "/me/chat/session/")).toHaveLength(1);
   }, 20_000);
+
+  // What a real backend with MATRIX_ENABLED off answers: the list is a plain DB read (200), only the session
+  // is 503. And the body arrives as XHR delivers it, a JSON *string* that axios's transformResponse parses.
+  const sessionCallsAfter = async (session: Reply, ms: number) => {
+    jest.restoreAllMocks();
+    const calls = await signedIn({ "/me/chat/conversations/": { status: 200, data: "[]" }, "/me/chat/session/": session });
+    await act(() => new Promise((resolve) => setTimeout(resolve, ms)));
+    return calls.filter((c) => c.url === "/me/chat/session/").length;
+  };
+
+  it("not configured, as the real server says it: the list loads, the session 503 is a raw JSON body — asked once", async () => {
+    const body = JSON.stringify({ detail: "聊天未启用(MATRIX_ENABLED)。", code: "chat_not_configured" });
+    expect(await sessionCallsAfter({ status: 503, data: body }, 11_000)).toBe(1);
+    expect(screen.queryByTestId("tab-Letters")).not.toBeOnTheScreen();
+  }, 30_000);
+
+  it("chat_unavailable (Synapse configured but unreachable) is a fault, not a fact: asked again every 5 s", async () => {
+    const body = JSON.stringify({ detail: "Synapse 无法访问:ConnectionError", code: "chat_unavailable" });
+    expect(await sessionCallsAfter({ status: 503, data: body }, 11_000)).toBeGreaterThanOrEqual(3);
+    expect(screen.getByTestId("tab-Letters")).toBeOnTheScreen();
+  }, 30_000);
 });
