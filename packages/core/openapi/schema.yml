@@ -562,6 +562,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistError'
           description: ''
+  /api/v1/assist-admin/try/:
+    post:
+      operationId: assist_admin_try
+      description: |-
+        §3.3 试问:以配置里的评测身份问一句,看回答与工具调用(只给工具名)。走正式的 `service.ask`
+        —— 数据范围、审计(`"eval": true`)与正式提问相同;会话标 `is_eval`,不进本人列表;用量标 `is_eval`,
+        不计用量与月度上限。不查总开关与每殿开关:与评测一样,管理员要在打开之前先试。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TryRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TryResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/assist-admin/usage/:
     get:
       operationId: assist_admin_usage
@@ -25375,6 +25423,9 @@ components:
         inherited_demerit:
           type: integer
           readOnly: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
     PatchedSoulDisplayNameRequest:
       type: object
       description: 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。
@@ -28486,6 +28537,9 @@ components:
         inherited_demerit:
           type: integer
           readOnly: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
       required:
       - civilization
       - create_time
@@ -28497,6 +28551,7 @@ components:
       - id
       - inherited_demerit
       - inherited_merit
+      - is_eval_identity
       - is_residing
       - karmic_balance
       - life_index
@@ -28902,6 +28957,9 @@ components:
         has_record_error:
           type: boolean
           readOnly: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
       required:
       - civilization
       - create_time
@@ -28909,6 +28967,7 @@ components:
       - has_date_warning
       - has_record_error
       - id
+      - is_eval_identity
       - karmic_balance
       - name
       - tenant_code
@@ -29887,6 +29946,50 @@ components:
       description: |-
         * `SCHEDULE` - Schedule
         * `MANUAL` - Manual
+    TryRequest:
+      type: object
+      description: §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。
+      properties:
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+        question:
+          type: string
+          maxLength: 1000
+        candidate:
+          $ref: '#/components/schemas/Candidate'
+      required:
+      - question
+      - side
+    TryResult:
+      type: object
+      properties:
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+        answer:
+          type: string
+        tools_called:
+          type: array
+          items:
+            type: string
+          description: 按调用顺序的工具名,不含结果
+        latency_ms:
+          type: integer
+        tokens:
+          type: object
+          additionalProperties:
+            type: integer
+        provider:
+          type: string
+        model:
+          type: string
+      required:
+      - answer
+      - latency_ms
+      - model
+      - provider
+      - side
+      - tokens
+      - tools_called
     UnavailableReading:
       type: object
       description: |-
@@ -30281,9 +30384,13 @@ components:
           type: string
           format: uri
           nullable: true
+        is_eval_identity:
+          type: boolean
+          readOnly: true
       required:
       - create_time
       - id
+      - is_eval_identity
       - organization
       - tenant
       - username

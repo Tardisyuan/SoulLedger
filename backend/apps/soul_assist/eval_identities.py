@@ -32,6 +32,19 @@ def live_officer(user_id):
     return User.objects.select_related("tenant").filter(pk=user_id, is_active=True).exclude(role="SOUL").first()
 
 
+def tagged_ids(context=None):
+    """`(评测灵魂的 soul_id, 评测官员的 user_id)`,给灵魂列表与用户管理打「评测专用」标签(用户 2026-09-29 定:
+    显示,不隐藏)。按配置行判断,不看是否还在用。恰好一次查询(连表取 soul_id);传入序列化器的 `context`
+    就在一次请求里只查一次 —— 列表的每一行共用同一个 context。"""
+    if context is not None and "_eval_identity_ids" in context:
+        return context["_eval_identity_ids"]
+    ids = AssistConfig.objects.filter(pk=1).values_list("eval_soul_account__soul_id", "eval_officer_id").first()
+    ids = ids or (None, None)
+    if context is not None:
+        context["_eval_identity_ids"] = ids
+    return ids
+
+
 def _tenant():
     from apps.tenants.models import Tenant
 
