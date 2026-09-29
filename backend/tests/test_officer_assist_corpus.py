@@ -93,3 +93,11 @@ def test_the_corpora_never_leak_into_each_others_prompt(locale):
     assert not [i for i in soul_ids if f"### {i}\n" in officer_prompt]
     assert "help desk inside the SoulLedger soul app" not in officer_prompt
     assert "help desk inside the SoulLedger officer console" not in soul_prompt
+
+
+def test_every_screen_fits_the_column():
+    """`screen` 是 max_length=20;「rebirth-applications」正好 20。更长的新路由在 SQLite 上过、在 PG 上插入失败(审查 6)。"""
+    from apps.soul_assist.models import OFFICER_SCREENS, SCREENS, AssistConversation
+
+    limit = AssistConversation._meta.get_field("screen").max_length
+    assert max(len(s) for s in (*OFFICER_SCREENS, *SCREENS)) <= limit

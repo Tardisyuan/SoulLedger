@@ -34,6 +34,11 @@ EMPTY_ANSWER = {
     "zh-Hans": "这个问题我答不了。需要人来处理的事，请写信给殿司。",
     "en": "I can't answer that. For anything that needs a person, write to the hall office.",
 }
+#: 官员就是殿司,「写信给殿司」对它们不成立;按 OFFICER_RULES 引到本殿殿主或管理员(Design 1f)。
+OFFICER_EMPTY_ANSWER = {
+    "zh-Hans": "这个问题我答不了。这类问题请询问本殿殿主或管理员。",
+    "en": "I can't answer that. Please ask your hall's realm lead or the administrator.",
+}
 
 
 class AssistError(Exception):
@@ -119,6 +124,7 @@ class Asker:
     facts: str
     tools: list
     run_tool: Callable[[str], str]
+    empty_answer: dict = None  # 模型交回空文本时的固定回答,按回答语言;见 EMPTY_ANSWER / OFFICER_EMPTY_ANSWER
 
 
 def answer(account, question, screen, *, locale, conversation_id=None, request=None):
@@ -157,7 +163,8 @@ def officer_answer(request, question, screen, *, locale, conversation_id=None):
     user = request.user
     asker = Asker(owner={"user": user}, user=user, tenant=getattr(request, "tenant", None),
                   system=corpus.system_prompt(lang, "officer"), facts=corpus.officer_facts(request, screen),
-                  tools=officer_tools.offered(user), run_tool=lambda name: officer_tools.run(name, request))
+                  tools=officer_tools.offered(user), run_tool=lambda name: officer_tools.run(name, request),
+                  empty_answer=OFFICER_EMPTY_ANSWER)
     return ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request)
 
 
@@ -189,7 +196,7 @@ def ask(asker, question, screen, *, lang, conversation_id=None, request=None):
             )
         except ProviderError as exc:
             raise AssistError("助手一时答不上来,请稍后重试。", "assistant_unavailable", 503) from exc
-    text = result.text.strip() or EMPTY_ANSWER[lang]
+    text = result.text.strip() or (asker.empty_answer or EMPTY_ANSWER)[lang]
     with transaction.atomic():
         # 续的会话可能在模型答题的这 22 秒里被删(本人删、或留存清理删空):那就新开一个,不丢这条回答。
         if conversation is None or not AssistConversation.objects.filter(pk=conversation.pk).exists():

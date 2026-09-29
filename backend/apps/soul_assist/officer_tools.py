@@ -23,7 +23,8 @@ from apps.perm.checker import check_permission
 from apps.soul_assist.providers import ToolSpec
 
 #: `my_permissions` 报告的码名:「为什么我点不了批准」由 `check_permission` 回答,不由语料措辞回答。
-REPORTED_CODENAMES = ("workflow.approve", "workflow.advance", "user.manage", "dispatch.approve")
+REPORTED_CODENAMES = ("workflow.approve", "workflow.advance", "workflow.escalate", "user.manage",
+                      "dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.manage")
 
 
 def _scope(request):
@@ -58,8 +59,14 @@ def _my_pending_approvals(request):
         node = workflow.get_current_node()
         if node is not None and node.status == NodeStatus.PENDING and node.can_approve(user):
             by_type[workflow.case_type] += 1
-    return {"scope": _scope(request), "total": sum(by_type.values()), "by_case_type": dict(by_type),
-            "holds_workflow_approve": check_permission(user, "workflow.approve")}
+    # `approve_node` 还要 `workflow.approve`(workflow/views.py 的 approve_node);`can_approve` 只比角色。
+    # 没有这个权限时,被点名的步骤一件也办不了 —— 报 0,另给「点了名但无权」的数,不让模型去调和两个矛盾的事实。
+    holds = check_permission(user, "workflow.approve")
+    designated = sum(by_type.values())
+    return {"scope": _scope(request), "total": designated if holds else 0,
+            "by_case_type": dict(by_type) if holds else {},
+            "designated_but_not_permitted": 0 if holds else designated,
+            "holds_workflow_approve": holds}
 
 
 def _inbox_counts(request):
@@ -86,15 +93,16 @@ TOOLS = {
                               "deferred). Counts only."),
     "my_pending_approvals": ("workflow.read", _my_pending_approvals,
                              "How many workflows have a current step waiting for the asking officer's own "
-                             "decision, grouped by case type, and whether the officer holds workflow.approve. "
-                             "Counts only."),
+                             "decision, grouped by case type, and whether the officer holds workflow.approve. If it "
+                             "does not, total is 0 and designated_but_not_permitted counts the steps naming its "
+                             "role that it still cannot decide. Counts only."),
     "inbox_counts": ("soul_inbox.read", _inbox_counts,
                      "Counts of letters in the hall-office inbox per folder (all, awaiting_reply, replied, "
                      "drafts, assigned_to_me, archived), unread, open / closed, and per hall. Counts only."),
     "my_permissions": (None, _my_permissions,
                        "The asking officer's role, whether the data it sees covers all halls or only its "
-                       "own, and whether it holds workflow.approve, workflow.advance, user.manage and "
-                       "dispatch.approve. Use it for any 'why can't I click ...' question."),
+                       "own, and whether it holds workflow.approve / advance / escalate, user.manage and "
+                       "dispatch.approve / reject / execute / manage. Use it for any 'why can't I click ...' question."),
 }
 
 
