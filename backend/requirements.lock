@@ -36,6 +36,14 @@
 # Python 3.11 venv built from the previous lock, with gunicorn removed and
 # cryptography 50.0.0 -> 50.0.1, djangorestframework 3.17.2 -> 3.18.1; the
 # same command re-run. No other line moved.
+#
+# 2026-09-29 minor bumps: constraints = `uv pip freeze` of a Python 3.11 venv
+# built from the previous lock (minus ruff, which is requirements-dev.txt's),
+# with redis 8.0.1 -> >=8.1,<8.2, sentry-sdk 2.66.1 -> >=2.71,<2.72,
+# psycopg2-binary 2.9.12 -> 2.9.13, pytest-django 4.12.0 -> >=4.14,<4.15;
+# the same command re-run (aarch64-manylinux_2_28 resolves identically).
+# Resolved: redis 8.1.0, sentry-sdk 2.71.0, psycopg2-binary 2.9.13,
+# pytest-django 4.14.0. No other line moved.
 amqp==5.3.1
 asgiref==3.12.1
 asttokens==3.0.1
@@ -92,7 +100,7 @@ pillow==12.3.0
 pluggy==1.6.0
 prompt-toolkit==3.0.52
 psutil==7.2.2
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
 ptyprocess==0.7.0
 pure-eval==0.2.3
 pycparser==3.0
@@ -102,16 +110,16 @@ pyopenssl==26.4.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
-pytest-django==4.12.0
+pytest-django==4.14.0
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 pyyaml==6.0.3
-redis==8.0.1
+redis==8.1.0
 referencing==0.37.0
 requests==2.33.1
 rpds-py==0.30.0
-sentry-sdk==2.66.1
+sentry-sdk==2.71.0
 service-identity==26.1.0
 six==1.17.0
 sqlparse==0.6.0
