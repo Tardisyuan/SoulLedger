@@ -16,7 +16,7 @@ import { soulChatApi, soulChatErrorMessage, type SoulChatLookupResult, type Soul
 import { soulSocialApi, type SoulCard } from "@soulledger/core/api/soul-social";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useChat, type Chat } from "../chat";
 import { chatSections, isCompleteCode, listStamp, normalizeCode } from "../chatRules";
@@ -25,7 +25,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import type { Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, useLayout, useTheme } from "../ui";
+import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, useLayout, usePullRefresh, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
@@ -199,6 +199,7 @@ export function LettersScreen() {
     }
   };
   const lastTs = useCallback((roomId: string) => lastOf(chat, roomId)?.ts ?? 0, [chat]);
+  const refreshControl = usePullRefresh(false, () => void chat.reload());
 
   if (chat.availability === "not_configured") {
     return (
@@ -240,51 +241,62 @@ export function LettersScreen() {
 
   return (
     <View style={styles.fill}>
-      <Screen refreshing={false} onRefresh={() => void chat.reload()} edges={["left", "right"]} testID="letters">
-        <FadeIn>
-          {chat.availability === "unavailable" ? (
-            <View style={styles.pad}>
-              <Notice tone="neutral" onRetry={chat.reconnect} testID="chat-unavailable">
-                {tr("soul_app.chat.unavailable.list")}
-              </Notice>
-            </View>
-          ) : null}
-          <SectionLabel text={tr("soul_app.chat.section.hall")} tone="accent" />
-          <Row
-            testID="hall-row"
-            hall
-            onPress={() => void openHall(hall)}
-            glyph={<Glyph text={hallGlyph} tone="mark" />}
-            title={tr("soul_app.chat.hall.title", { hall: (hall && hallOf(hall, locale)) || hallName })}
-            hint={tr("soul_app.chat.hall.hint")}
-            {...(hall ? preview(hall) : {})}
-          />
-          {sealedHalls.map((c) => (
-            <Row
-              key={c.id}
-              testID={`hall-sealed-${c.id}`}
-              onPress={() => open(c)}
-              glyph={<Glyph text={hallGlyph} tone="subtle" dotted />}
-              title={tr("soul_app.chat.hall.title", { hall: hallOf(c, locale) })}
-              tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" />}
-              {...preview(c)}
-            />
-          ))}
-          <View testID="section-rule" style={{ height: 1, backgroundColor: t.hair2 }} />
-          <SectionLabel text={tr("soul_app.chat.section.souls")} tone="subtle" />
-          {souls.length === 0 ? (
-            <View testID="chat-empty" style={styles.empty}>
-              <PageEmptyArt />
-              <Txt variant="nav">{tr("soul_app.chat.empty.title")}</Txt>
-              <Txt variant="caption" tone="subtle" style={styles.center}>
-                {tr("soul_app.chat.empty.body")}
-              </Txt>
-              <Button testID="chat-empty-find" title={tr("soul_app.chat.new")} onPress={() => navigation.navigate("FindSoul")} style={styles.emptyButton} />
-            </View>
-          ) : (
-            souls.map((c) => (
+      {/* The halls are a handful and sit in the header; the souls are the list — a FlatList, since
+          every conversation a soul ever had stays in it. */}
+      <Screen scroll={false} edges={["left", "right"]} testID="letters">
+        <FadeIn style={styles.fill}>
+          <FlatList
+            testID="letters-list"
+            data={souls}
+            keyExtractor={conversationKey}
+            refreshControl={refreshControl}
+            keyboardShouldPersistTaps="handled"
+            ListHeaderComponent={
+              <>
+                {chat.availability === "unavailable" ? (
+                  <View style={styles.pad}>
+                    <Notice tone="neutral" onRetry={chat.reconnect} testID="chat-unavailable">
+                      {tr("soul_app.chat.unavailable.list")}
+                    </Notice>
+                  </View>
+                ) : null}
+                <SectionLabel text={tr("soul_app.chat.section.hall")} tone="accent" />
+                <Row
+                  testID="hall-row"
+                  hall
+                  onPress={() => void openHall(hall)}
+                  glyph={<Glyph text={hallGlyph} tone="mark" />}
+                  title={tr("soul_app.chat.hall.title", { hall: (hall && hallOf(hall, locale)) || hallName })}
+                  hint={tr("soul_app.chat.hall.hint")}
+                  {...(hall ? preview(hall) : {})}
+                />
+                {sealedHalls.map((c) => (
+                  <Row
+                    key={c.id}
+                    testID={`hall-sealed-${c.id}`}
+                    onPress={() => open(c)}
+                    glyph={<Glyph text={hallGlyph} tone="subtle" dotted />}
+                    title={tr("soul_app.chat.hall.title", { hall: hallOf(c, locale) })}
+                    tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" />}
+                    {...preview(c)}
+                  />
+                ))}
+                <View testID="section-rule" style={{ height: 1, backgroundColor: t.hair2 }} />
+                <SectionLabel text={tr("soul_app.chat.section.souls")} tone="subtle" />
+              </>
+            }
+            ListEmptyComponent={
+              <View testID="chat-empty" style={styles.empty}>
+                <PageEmptyArt />
+                <Txt variant="nav">{tr("soul_app.chat.empty.title")}</Txt>
+                <Txt variant="caption" tone="subtle" style={styles.center}>
+                  {tr("soul_app.chat.empty.body")}
+                </Txt>
+                <Button testID="chat-empty-find" title={tr("soul_app.chat.new")} onPress={() => navigation.navigate("FindSoul")} style={styles.emptyButton} />
+              </View>
+            }
+            renderItem={({ item: c }) => (
               <Row
-                key={c.id}
                 testID={`soul-row-${c.id}`}
                 onPress={() => open(c)}
                 glyph={<Glyph text={c.peer_name} tone={shut(c) ? "subtle" : "muted"} dotted={awaiting(c) || shut(c)} />}
@@ -299,15 +311,17 @@ export function LettersScreen() {
                 }
                 {...preview(c)}
               />
-            ))
-          )}
-          {ANDROID ? <View style={styles.fabSpace} /> : null}
+            )}
+            ListFooterComponent={ANDROID ? <View style={styles.fabSpace} /> : null}
+          />
         </FadeIn>
       </Screen>
       {ANDROID ? <Fab label={tr("soul_app.chat.new")} onPress={() => navigation.navigate("FindSoul")} /> : null}
     </View>
   );
 }
+
+const conversationKey = (c: SoulConversation) => c.id;
 
 // ── find ───────────────────────────────────────────────────────────────
 
