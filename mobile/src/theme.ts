@@ -102,8 +102,30 @@ export const GUTTER_PT = 20;
  * the element's shape, so it is square too.
  */
 export const radius = { none: 0, pill: 999 } as const;
-/** ms. The only motion is opacity; reduce-motion sets every duration to 0. */
-export const motion = { fade: 120, toast: 160, toastHold: 1900, breath: 1600, welcomeIn: 600, welcomeHold: 1200, welcomeOut: 240 } as const;
+/**
+ * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
+ * Opacity and translate only — the one scale is the seal's press (交互与动效 第 2 轮 §一
+ * 「属性」: 「压实」允许缩放 60ms,减少动态效果时不缩放).
+ *
+ *   stampDrop / stampPress   a seal falls in (ease.drop), then presses 1.04 → 0.98 → 1
+ *   coldStart*               补足 C18: JS takes over from the native splash; the home is
+ *                            usable from 480 and the splash layer is gone at 720
+ *   sheetIn                  a bottom sheet opens (dur.base; 第 2 轮 原型 06)
+ */
+export const motion = {
+  fade: 120,
+  toast: 160,
+  toastHold: 1900,
+  breath: 1600,
+  welcomeIn: 600,
+  welcomeHold: 1200,
+  welcomeOut: 240,
+  stampDrop: 120,
+  stampPress: 60,
+  coldStartInteractive: 480,
+  coldStart: 720,
+  sheetIn: 200,
+} as const;
 
 export interface Theme {
   scheme: ColorScheme;
