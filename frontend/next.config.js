@@ -12,7 +12,6 @@ const nextConfig = {
   // The symlink resolves to `<repo>/packages/core`, outside this app's
   // directory. Without this, webpack refuses to compile files from there.
   experimental: {
-    optimizeCss: true,
     externalDir: true,
   },
   reactStrictMode: true,
