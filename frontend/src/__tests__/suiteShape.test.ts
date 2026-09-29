@@ -179,6 +179,7 @@ const COLLECTED_FILES = [
   "proxyAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
   "MenuButtonsPage.editFailure.test.tsx",
+  "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",

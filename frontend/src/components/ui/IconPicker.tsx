@@ -66,6 +66,7 @@ import {
   History, Watch,
   type LucideIcon,
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 
@@ -225,17 +226,15 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   const [activeCategory, setActiveCategory] = useState("navigation");
   const [search, setSearch] = useState("");
 
-  // Find the selected icon component
-  let SelectedIcon: LucideIcon | null = null;
-  if (value) {
-    for (const cat of ICON_CATEGORIES) {
-      const found = cat.icons.find((icon) => icon.displayName === value);
-      if (found) {
-        SelectedIcon = found;
-        break;
-      }
-    }
-  }
+  // Resolve the stored name the same way MenuRowCells does — by export name,
+  // not by `displayName`. In lucide-react 1.x an alias export (e.g. the
+  // "BarChart" / "Building2" rows seeded by menus 0009) is the *same* component
+  // as its canonical icon, so its displayName is the canonical name
+  // ("ChartNoAxesColumnIncreasing"); a displayName match would lose the preview
+  // and the selected ring for every row stored under an older name.
+  const SelectedIcon: LucideIcon | null = value
+    ? ((LucideIcons as unknown as Record<string, LucideIcon | undefined>)[value] ?? null)
+    : null;
 
   // Search across all icons
   const searchResults = search
@@ -245,7 +244,9 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
     : [];
 
   const displayCategory = ICON_CATEGORIES.find((c) => c.label === activeCategory);
-  const displayIcons = search ? searchResults : (displayCategory?.icons ?? []);
+  // Aliases collapse to one component (Home/House, Layout/PanelsTopLeft,
+  // Trash/Trash2), so dedupe by identity — the grid is keyed by displayName.
+  const displayIcons = [...new Set(search ? searchResults : (displayCategory?.icons ?? []))];
 
   return (
     <>
@@ -309,7 +310,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
 
           <div className="grid grid-cols-8 gap-1 max-h-64 overflow-y-auto">
             {displayIcons.map((icon) => {
-              const isSelected = value === icon.displayName;
+              const isSelected = icon === SelectedIcon;
               return (
                 <button
                   key={icon.displayName}
