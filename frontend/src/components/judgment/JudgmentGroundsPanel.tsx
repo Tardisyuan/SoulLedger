@@ -245,7 +245,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
             confession is, and not in the sans the court writes its own notes
             in. The rule is stated once, on the page, and this is its second
             landing site. */}
-        <p className="font-serif text-quote text-[oklch(var(--color-ink))] mt-2">
+        <p className="font-serif text-md font-normal text-[oklch(var(--color-ink))] mt-2">
           <DomainText value={text} />
         </p>
 

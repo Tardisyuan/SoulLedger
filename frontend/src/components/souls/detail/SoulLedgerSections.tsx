@@ -117,7 +117,7 @@ export function SoulLedgerSections({
             {/* 全页唯一的衬线(规范 v1 §1.4:20/32 只给引文)。 */}
             <blockquote
               data-testid="soul-verdict-quote"
-              className="pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] text-pretty"
+              className="pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] text-pretty"
             >
               {quoted.notes}
             </blockquote>

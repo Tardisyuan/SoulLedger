@@ -78,10 +78,16 @@ const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
 const BASELINE_FILE = "eslint.design-guard-baseline.json";
 const LEGACY = JSON.parse(fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"));
 
-// 字号七档 = 规范 v1 §1.4:2xs / xs / sm / md / quote / lg / xl(@theme 里 `--text-*: initial`
-// 清掉了其余)。被禁的是 Tailwind 其余默认名与八档时代的 01…08 —— 后者已不生成任何 CSS,
+// 字号七档 = 规范 v2 补足 A3:2xs / xs / sm / md / lg / xl / display = 11/12/13/15/20/28/40
+// (@theme 里 `--text-*: initial` 清掉了其余)。被禁的是 Tailwind 其余默认名、八档时代的
+// 01…08,以及 v1 的 quote(A3 把它并进了 15 的 read 档)—— 这些都已不生成任何 CSS,
 // 写了等于没写字号。
-const LEGACY_TYPE = /^-?text-(?:base|[3-9]xl|2xl|0[1-8])$/;
+const LEGACY_TYPE = /^-?text-(?:base|[3-9]xl|2xl|0[1-8]|quote)$/;
+
+// `text-display`(40/48)只给匾题字和登录页(A3「其他地方禁用」)。按**路径前缀**放行:
+// 登录页一个文件;匾组件还没有(下一阶段),先把它要住的目录留在这里 —— 那个目录今天
+// 不存在,所以这一条今天什么也不放行,而匾落地时不必再改守卫。加一项是一个决定,要写理由。
+const DISPLAY_ALLOW = ["app/(auth)/login/", "src/components/plaque/"];
 
 // 八档字号的第二个绕道:**任意值**。`text-sm` 抓得到,`text-[11px]` 抓不到 ——
 // 后者绕开具名档位,直接把像素写进方括号,拿到的却是同一个「不在这套系统里的字号」。
@@ -105,7 +111,9 @@ const ARBITRARY_TYPE = /(?:^|:)!?-?text-\[[\d.]+(?:px|r?em|pt|ch|vh|vw|%)\]/;
 // 只管**节奏类**工具(padding / margin / gap / space),不管尺寸类
 // (w- / h- / max-w-):`w-64` 是一个盒子多宽,不是一次节奏决策。
 const RHYTHM = /^-?(?:p[xytrbl]?|m[xytrbl]?|gap(?:-[xy])?|space-[xy])-(.+)$/;
-const RHYTHM_OK = new Set(["0", "0.5", "1", "1.5", "2", "3", "4", "6", "8", "10", "14", "px", "auto"]);
+// 规范 v2 A2 改成 2/4/8/12/16/24/32/48 = 0.5/1/2/3/4/6/8/12:去掉 v1 的 1.5 / 10 / 14,
+// 加上 12。当时已有的 v1 用法(148 处)记进了 LEGACY 基线,逐页改版时还;新代码一处都不许。
+const RHYTHM_OK = new Set(["0", "0.5", "1", "2", "3", "4", "6", "8", "12", "px", "auto"]);
 
 // 按**类名**豁免:「哪个文件的哪一个类名」,不按文件、不按条数(条数额度会把
 // 同文件里别的违规一起吸收掉)。现在为空:唯一一条(Badge 的 py-0.5)在规范 v1
@@ -128,9 +136,14 @@ const ROUND_ALLOW = new Set([
   "src/components/judgment/ClaimAvatar.tsx",
 ]);
 
-// 规范 v1 §1.7:页面内零阴影,层级靠线。允许的只有:浮层那一档 shadow-overlay、shadow-none,
-// 以及用 inset 画的线(「当前」3 px 墨线、错误下划线、按下内阴影)——它们是线,不是高度。
-const PAGE_SHADOW = /^shadow(?:-(?!overlay$|none$)[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
+// 规范 v2 A2:全站不用阴影,**浮层也不用**(v1 放行的 shadow-overlay 撤掉,弹层改 1px ink 框)。
+// 允许的只有 shadow-none,以及用 inset 画的线(「当前」3 px 墨线、错误下划线)——它们是线,
+// 不是高度。
+const PAGE_SHADOW = /^shadow(?:-(?!none$)[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
+
+// 圆角任意值:A2 允许的值只有 0、9999px(胶囊)、50%(正圆),其余一律报错。
+// 具名的胶囊与正圆是 rounded-full / rounded-circle,它们归 ROUND_ALLOW 管。
+const ARBITRARY_RADIUS = /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|br|bl|ss|se|es|ee))?-\[(?!(?:0|0px|9999px|50%)\])[^\]]*\]$/;
 
 const DEAD_RADIUS =
   /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|br|bl|ss|se|es|ee))?(?:-(?:none|sm|md|lg|xl|[23]xl))?$/;
@@ -141,16 +154,15 @@ const RAW_PALETTE =
 
 const HEX = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b/g;
 
-// 真值颜色的合法例外。这三处不是疏忽,是这些库不吃 CSS 变量:
+// 真值颜色的合法例外。这几处不是疏忽,是这些库不吃 CSS 变量:
 //   - @xyflow/react 的 `markerEnd` / edge `style` 走 SVG <marker>,在一个
 //     独立的 defs 树里渲染,`oklch(var(--color-accent))` 在那里解析不到。
 //   - recharts 的 fill / stroke 是 prop 不是 class,同理。
-//   - SettingsDrawer 的强调色选择器里,十六进制**就是数据**:它被写进
-//     `--color-accent`(见该文件 hexToHsl 调用)。用 token 表达等于自指。
+//   (SettingsDrawer 的强调色选择器曾是第三处;规范 v2 撤掉了用户自选强调色,
+//    那一项随之删除。)
 const HEX_ALLOW = [
   "src/components/workflow/",
   "src/components/charts/",
-  "src/components/settings/SettingsDrawer.tsx",
   // `app/global-error.tsx` 替换的是**根布局本身** —— 它渲染在
   // `app/layout.tsx` 失败之后,而 `globals.css`(以及里面每一个
   // `--color-*` token)正是根布局 import 的。那里没有 token 可用:
@@ -299,12 +311,14 @@ const CSSTEXT_ALLOW = [];
 
 const designSystem = {
   rules: {
-    "type-scale": makeGuard("type", (raw, report) => {
+    "type-scale": makeGuard("type", (raw, report, file) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (LEGACY_TYPE.test(bare)) {
-          report(chunk, at, `\`${bare}\` 不在七档字号里。用 text-2xs / xs / sm / md / quote / lg / xl(11/12/13/16/20/22/28px,规范 v1 §1.4),见 app/globals.css 的 @theme`);
+          report(chunk, at, `\`${bare}\` 不在七档字号里。用 text-2xs / xs / sm / md / lg / xl / display(11/12/13/15/20/28/40px,规范 v2 A3),见 app/globals.css 的 @theme;v1 的 text-quote 写成 \`font-serif text-md font-normal\``);
         } else if (ARBITRARY_TYPE.test(chunk)) {
-          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-2xs…text-xl(11/12/13/16/20/22/28px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
+          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了七档。用 text-2xs…text-xl(11/12/13/15/20/28px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
+        } else if (bare === "text-display" && !DISPLAY_ALLOW.some((p) => file.startsWith(p))) {
+          report(chunk, at, `\`text-display\`(40px)只给匾题字和登录页(规范 v2 A3)。其他地方用 text-xl(28)或更小;真是匾组件,放进 src/components/plaque/`);
         }
       }
     }),
@@ -327,8 +341,10 @@ const designSystem = {
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (DEAD_RADIUS.test(bare) || bare === "rounded-focus") {
           report(chunk, at, `\`${bare}\` 是死类名:borderRadius 表里 none/sm/md/lg/xl/2xl/3xl 与 DEFAULT 全部是 0(焦点环也是方角),它不产生任何圆角,只让读代码的人以为这里是圆的。删掉它`);
-        } else if (/^rounded(?:-[a-z]+)?-full$/.test(bare) && !ROUND_ALLOW.has(file)) {
-          report(chunk, at, `\`${bare}\`:圆角只给头像(规范 v1 第 4 节表态 2)。状态点、进度条、徽章都用方角;真是头像就把文件加进 eslint.config.mjs 的 ROUND_ALLOW 并写理由`);
+        } else if (/^rounded(?:-[a-z]+)?-(?:full|circle)$/.test(bare) && !ROUND_ALLOW.has(file)) {
+          report(chunk, at, `\`${bare}\`:圆角只给胶囊(长明灯、抽屉把手)与正圆(单选钮、头像)—— 规范 v2 A2。状态点、进度条、徽章都用方角;真是这几样就把文件加进 eslint.config.mjs 的 ROUND_ALLOW 并写理由`);
+        } else if (ARBITRARY_RADIUS.test(bare)) {
+          report(chunk, at, `\`${bare}\`:圆角任意值只允许 0、9999px、50%(规范 v2 A2)。胶囊写 rounded-full,正圆写 rounded-circle`);
         }
       }
     }),
