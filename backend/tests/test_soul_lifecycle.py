@@ -75,6 +75,11 @@ class TestSoulLifecycle:
         assert not judgment.is_final
 
         # 4. Conclude judgment → PASSED
+        # DY_01_HEAVEN is eternal in the seed, and an eternal term means no
+        # rebirth (2026-09-29 owner decision; tests/test_eternal_no_rebirth.py):
+        # that soul ends SETTLED. This test is about the wheel, so its heaven
+        # is a finite term here.
+        Realm.all_objects.filter(realm_code="DY_01_HEAVEN").update(is_eternal=False)
         judgment.conclude(Verdict.PASSED, "Excellent karma, enter paradise")
         soul.refresh_from_db()
 
