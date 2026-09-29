@@ -71,6 +71,9 @@ def _config_body(eff: config.Effective):
 class ConfigView(AdminView):
     @extend_schema(operation_id="assist_admin_config_retrieve", responses={200: ConfigSerializer})
     def get(self, request):
+        from apps.soul_assist import usage
+
+        usage.maybe_reopen()  # 管理员打开页面时就看到「新月份已自动重开」,不必等第一次提问
         return Response(_config_body(config.effective()))
 
     @extend_schema(operation_id="assist_admin_config_update", request=ConfigUpdateSerializer,

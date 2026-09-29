@@ -226,13 +226,19 @@ def test_the_tool_agrees_with_the_queue_counts_endpoint(cn_tenant, judge_user):
     assert {k: v for k, v in tool.items() if k != "scope"} == dict(endpoint)
 
 
-def test_an_admin_sees_every_hall_and_is_told_so(cn_tenant, eu_tenant, admin_user):
+def test_an_admin_sees_only_halls_that_turned_the_assistant_on(cn_tenant, eu_tenant, admin_user):
+    """ADMIN 跨殿,但关了助手的殿不计入、不发给模型(用户 2026-09-29 定)。
+    变异:`_list_queryset` 不再按开关收窄 → 关着的欧洲殿也算进去,total 变 2,红。"""
     _enable(cn_tenant)
+    _enable(eu_tenant, False)
     _case(cn_tenant, "甲")
     _case(eu_tenant, "B")
-    out = _tool_result(officer_client(admin_user), "judgment_queue_counts")
-    assert out["scope"] == "all_halls" and out["total"] == 2
-    assert "scope=all_halls" in FakeProvider.calls[-1]["facts"]
+    client = officer_client(admin_user)
+    out = _tool_result(client, "judgment_queue_counts")
+    assert out["scope"] == "enabled_halls" and out["total"] == 1
+    assert "scope=enabled_halls" in FakeProvider.calls[-1]["facts"]
+    _enable(eu_tenant)
+    assert _tool_result(client, "judgment_queue_counts")["total"] == 2
 
 
 def test_pending_approvals_count_only_nodes_this_user_may_decide(cn_tenant, eu_tenant, judge_user):

@@ -20,7 +20,8 @@
 - 组请求时只把当前用户有权的工具放进 `tools`(模型看不见它不能用的工具);
 - 工具执行时再 `check_permission(request.user, codename)`(`apps/perm/checker.py:27`),
   查询一律经 `scope_to_tenant(qs, request)`(`apps/core/tenant.py:53-113`,无租户即 `qs.none()`)。
-  ADMIN 不受租户限制(同上),这一点要在答案里说明「这是全殿数据」。
+  ADMIN 跨殿,但**只统计开了助手的殿**(用户 2026-09-29 定;与灵魂端「X 殿的数据只在 X 殿开着时才出去」同一条),
+  工具结果标 `scope=enabled_halls`,答案里说明「这是所有开了助手的殿的合计」。
 
 **2.2 v1 工具只给计数,不给灵魂个人数据。** 官员能看的灵魂数据远多于灵魂自己,而这些会发给第三方模型。
 v1 候选(都已有现成的只读接口):
