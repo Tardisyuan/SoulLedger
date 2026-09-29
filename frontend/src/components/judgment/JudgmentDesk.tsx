@@ -52,6 +52,8 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
   const { data } = useQuery({
     queryKey: judgmentKeys.queue([], judgmentId),
     queryFn: () => judgmentApi.next({ at: judgmentId }).then((r) => r.data),
+    // The live worklist, same as useJudgmentQueue.
+    staleTime: 0,
   });
   const shown = !!data && data.judgment?.id === judgmentId && data.position !== null;
   useHotkeys({ s: () => setAsking(true) }, shown && canDefer && !asking);

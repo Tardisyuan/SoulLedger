@@ -51,7 +51,7 @@ export default function WelcomePage() {
   const { t, formatDate } = useI18n();
   const { user } = useTenant();
 
-  // No auth guard here on purpose. middleware.ts lists /welcome as a public
+  // No auth guard here on purpose. proxy.ts lists /welcome as a public
   // path, and route protection is its job everywhere else in the app. The
   // guard this replaced redirected on `!user`, which is also the state during
   // the first render — `user` hydrates from localStorage in an effect — so a
@@ -79,7 +79,7 @@ export default function WelcomePage() {
    * timestamp: new Date().toISOString() }, …])` — invented events, with
    * invented actors, timestamped off `Date.now()` so they always looked like
    * they had just happened. **And `/welcome` is on `PUBLIC_PATHS`
-   * (middleware.ts:11)**, so an unauthenticated visitor was shown fabricated
+   * (proxy.ts)**, so an unauthenticated visitor was shown fabricated
    * system activity as if it were the ledger's.
    *
    * The audit API was already there — this page links `/audit` directly

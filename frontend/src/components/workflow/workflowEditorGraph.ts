@@ -381,9 +381,14 @@ export function savedTemplateToFlow(rows: TemplateNode[]): { nodes: Node[]; edge
  * path does not, because a preset may legitimately omit them.
  */
 export function presetTemplateToFlow(
-  rows: Record<string, unknown>[]
+  // `object`, not a named node type: the three shapes above (preset, serializer,
+  // page preview) disagree on every field name, and each field is read
+  // defensively below, so any of them — or a malformed row — is legal input.
+  rows: object[]
 ): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = rows.map((n: Record<string, unknown>, idx: number) => ({
+  const nodes: Node[] = rows.map((row, idx: number) => {
+    const n = row as Record<string, unknown>;
+    return {
       id: (n.id as string) || `node-${idx}`,
       type: "editableNode",
       // Overwritten by `layoutNodes`, unconditionally: a preset carries no
@@ -397,7 +402,8 @@ export function presetTemplateToFlow(
         approverRole: n.approver_role || n.approverRole || "",
         approverType: n.approver_type || n.approverType || "ROLE",
       },
-  }));
+    };
+  });
   const edges = chain(rows);
   return { nodes: layoutNodes(nodes, edges), edges };
 }

@@ -33,32 +33,6 @@ export type SoulPostMediaUpload = Schemas["SoulPostMediaUpload"];
 
 export { SOUL_POST_MEDIA_MAX, mediaGridColumns, mediaUrl } from "../domain/postMedia";
 
-/**
- * The `code`s the circle's refusals carry, beyond the ones in `SOUL_ERROR_CODES`
- * (`not_found`, `account_retired`). `muted` also carries `muted_until`.
- */
-export const SOUL_SOCIAL_ERROR_CODES = [
-  "display_name_length",
-  "display_name_sensitive",
-  "display_name_taken",
-  "duplicate_media",
-  "empty_post",
-  "eternal_light_locked",
-  "file_required",
-  "media_not_found",
-  "muted",
-  "not_an_image",
-  "not_author",
-  "parent_not_found",
-  "post_sealed",
-  "report_limit",
-  "self_report",
-  "too_large",
-  "too_many_media",
-  "too_many_pending",
-  "too_many_pixels",
-] as const;
-
 const get = <T>(url: string, params?: object) => soulHttp.get<T>(url, { params }).then((r) => r.data);
 
 export const soulSocialApi = {

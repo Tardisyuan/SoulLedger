@@ -15,6 +15,8 @@ export function useDispatchRecord(id: string) {
     queryKey: dispatchKeys.detail(id),
     queryFn: async () => (await dispatchApi.get(id)).data,
     enabled: !!id,
+    // Pushed: dispatch events invalidate `dispatchKeys.all`.
+    staleTime: 0,
   });
 }
 

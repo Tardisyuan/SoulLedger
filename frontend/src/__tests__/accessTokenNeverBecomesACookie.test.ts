@@ -186,7 +186,7 @@ describe("源码里不再有把 access 写成 cookie 的那一行", () => {
     // 空清单是这个目录里反复警告的「什么都没扫到」的形状,所以下面先断文件数
     // 的地板;而未修的树上这条实跑是红的,点名的正是上面那两个文件。
     //
-    // `frontend/middleware.ts` 不在扫描范围内,理由具体:它在服务端读请求上的
+    // `frontend/proxy.ts` 不在扫描范围内,理由具体:它在服务端读请求上的
     // cookie,适配器在那里不存在。它读的是名字,不写。
     const { readdirSync } = jest.requireActual("node:fs") as typeof import("node:fs");
     const walk = (dir: string, out: string[] = []): string[] => {
