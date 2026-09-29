@@ -647,7 +647,7 @@
     }
   },
   "workflow": {
-    "title": "Wat Wedja",
+    "title": "Wat Hesy",
     "existing": "Wat Wedja Em Khet",
     "editor": {
       "civilization_select_label": "Taui",
@@ -3819,7 +3819,7 @@
     "page_other": "Ky",
     "delete_label": "Fekh Medew Pen",
     "delete_title": "Fekh Medew Pen?",
-    "delete_body": "Medew Pen Em {{page}}: Fekh Emu; Nen Ankh Wehem. Nen Khemen Wedja, Wat Wedja Er Sesh Neb.",
+    "delete_body": "Medew Pen Em {{page}}: Fekh Emu; Nen Ankh Wehem. Nen Khemen Wedja, Wat Hesy Er Sesh Neb.",
     "delete_confirm": "Fekh",
     "delete_failed": "Nen Fekh. Wehem Iri."
   }
