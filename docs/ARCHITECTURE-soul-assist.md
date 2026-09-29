@@ -193,7 +193,7 @@ npm run schema:generate --workspace @soulledger/core
 
 两张新表,SQLite 与 PG 都能跑,不涉及 PG-only 名单。`makemigrations --check` 照常。
 
-## 7. 向量检索(RAG)—— 2026-09-29 定,待实施
+## 7. 向量检索(RAG)—— 2026-09-29 定,后端 2026-09-30 实施(`feat/assist-rag`,见 §7.9)
 
 **决定(用户):** 不等 §7 旧版的三个触发条件,现在就上;embedding 走用户自己的 Ollama;pgvector 用官方镜像;管理页加向量模型配置与测试按钮。
 
@@ -201,7 +201,7 @@ npm run schema:generate --workspace @soulledger/core
 
 - **Ollama** `http://192.168.2.2:11434`,版本 0.34.4。上面现成的向量模型是 `qwen3-embedding:4b-q4_K_M`(不是先前说的 bge-m3;中英都支持)。
   - 默认输出 **2560 维**;`/api/embed` 的 `dimensions` 参数可截到 **1024 维**(MRL,实测返回 1024)。
-  - 一句中文首次调用约 3.8 秒(含加载模型);之后应在百毫秒级,**未实测**,实施时量。
+  - 一句中文首次调用约 3.8 秒(含加载模型);**热模型 48–76 ms**(2026-09-30 从本机连测 4 次:冷 7.9 s,之后 48 / 65 / 76 ms)。
 - **115 = Pi5**(ssh `tardis@pi`),PG 16.13,镜像 `postgres:16-alpine`(musl),**没有 pgvector 文件**;连接账号是超级用户。
   库:`soulledger` / `postgres` / `audit_perm_scratch` 为 `en_US.utf8`,`synapse` 为 `C`。
 - 仓库里三处镜像都是 `postgres:16-alpine`:`docker-compose.yml:41`、`docker-compose.production.yml:140`、`ci.yml:40`。
@@ -270,6 +270,56 @@ npm run schema:generate --workspace @soulledger/core
 - 截断维度(如 1024)与原生 2560 的检索质量差别(用评测集量);
 - 生产环境能否访问 192.168.2.2(那是局域网地址;上线前要换成部署内可达的服务)。
 
+### 7.9 实施记录(2026-09-30)与设计的不同
+
+代码:`apps/soul_assist/vectors.py`(Ollama 客户端、同步、检索、状态)、`HelpChunk`(迁移 0006)、
+`manage.py sync_help_vectors`、`/api/v1/assist-admin/embedding/`(GET/PATCH)、`embedding/test/`、`embedding/rebuild/`。
+
+- **相似度下限**(用户 2026-09-30 加):最近一条的余弦相似度低于下限 → 这一问退回整份语料,记
+  `retrieval=fallback_low_similarity`(与服务不通的 `fallback` 分开)。默认 **0.56**,管理页可改。依据是对真实语料
+  (灵魂端 15 条/语言,不含 codes)与 192.168.2.2 的一次实测,查询带 `vectors.QUERY_INSTRUCTION` 前缀:
+
+  | | zh-Hans | en |
+  |---|---|---|
+  | 切题 10 问的 top-1 相似度 | 0.677–0.859 | **0.586**–0.828 |
+  | 离题 8 问的 top-1 相似度 | 0.203–0.453 | 0.209–**0.541** |
+
+  20 个切题问题的 top-1 全部是对的条目。0.56 落在两簇之间;英文的间隔只有 0.045(最低的切题是「How do I turn off
+  notifications?」0.586,最高的离题是「What's the weather today?」0.541),所以这是一个**窄**的间隔,样本也小。
+  下限只看最近一条:过了线,top-k 全部进上下文(其余几条可能远低于下限)。
+- **`codes` 条目总在缓存前缀里**(`corpus.PINNED`),不参与检索:规则点名要它解释工具返回的原因代码,而问题的措辞
+  与代码无关。检索出的 k 条接在事实头之后(缓存断点之后),规则 + codes 仍是缓存前缀。注意:规则段本身可能短于
+  供应商的最小可缓存长度,那时前缀不会被缓存 —— **未核实**。
+- **查询向量只用问题,不带当前页面**(§7.5 第 1 条写的是问题 + 页面)。页面已在事实头里;把页面拼进查询会把结果
+  拉向该页的条目,即使问题问的是别处。下限是在不带页面的查询上量的。
+- **过滤用当前语料文件的元数据**(受众、文明),不查表里的 JSON 副本:SQLite 不支持 JSON 包含查询,而文件才是真相;
+  表里的 `screens` / `civilizations` 只供查看。进 prompt 的正文也取自文件(按条目 id)。
+- **`content_hash` 包含截断维度**:同一模型换截断维度也会全部重嵌;模型名另列一列。表里没有「截断维度」列。
+- **重建全有或全无**(Design):要嵌入的全部取到后,在一个事务里换进去;任一批失败则丢掉这一次,保留上一套,
+  失败原因与时间记在 `AssistConfig.vectors_error(_at)`,状态接口报出,下次成功清空。只嵌入哈希或模型变了的条目
+  (幂等),所以「全部」指这一次要换的全部。同一时间只跑一个(缓存锁,10 分钟 TTL),第二个答 409。
+- **测试通过不自动重建**(Design):换模型 / 维度保存后 `status.needs_rebuild` 为真;检索按 `model` 与问题向量的维度
+  过滤,重建完成前找不到行 → `fallback`,别的模型的向量永远不会被拿来比。
+- **超时**:提问时 3 秒(`ASSISTANT_EMBEDDING_TIMEOUT_SECONDS`,算在 22 秒总预算里:截止时刻在取向量之前定下);
+  管理页测试 10 秒(不在回答预算里,冷模型首次加载约 8 秒也测得通);重建每批 60 秒。都不重试。
+  **冷模型下第一问会超过 3 秒而退回整份语料**:Ollama 默认闲置 5 分钟卸载模型。
+- **HNSW**:PostgreSQL 上排序只按距离(加次序键索引就用不上 —— PG-only 测试用 `enable_seqscan=off` 看 EXPLAIN
+  钉住);并列时次序不定,SQLite 路径按 id 断开。索引是部分索引(`WHERE model = … AND dims = …`)。
+  **未核实**:过了阈值后 HNSW 先取 `ef_search`(默认 40)个近邻再按语言、受众、文明过滤,过滤后可能不足 k 条;
+  到那个规模时考虑 pgvector 0.8 的 `hnsw.iterative_scan`。
+- **迁移回滚不删扩展**:Django 的 `CreateExtension` 回滚时不分数据库地查 `pg_extension`(SQLite 上报错),
+  所以用 `RunPython`,只在 PostgreSQL 上 `CREATE EXTENSION IF NOT EXISTS vector`,回滚为空操作。
+- **部署与 CI 没有在 `migrate` 后跑 `sync_help_vectors`**(§7.4 写的是要跑):CI 与生产都连不到 192.168.2.2
+  (§7.8),命令失败会让容器起不来。向量由管理页「重建向量」或手动跑命令生成;在那之前检索退回整份语料。
+  部署内有了可达的向量服务之后再加。
+- **测试里的网络阻断**:仓库此前没有「阻断真实网络」的 fixture;新加的根 conftest autouse fixture 只挡
+  `vectors._post`(向量检索唯一出网的地方),不是全局的 socket 阻断。
+- 用量页多了 `by_retrieval`;评测用例多了可选的 `expected_entries`(全部进了上下文才算命中,`codes` 视为总在),
+  运行汇总多了 `retrieval_hit_rate` 与 `retrieval_fallbacks`;试问结果带 `retrieval` 与 `retrieved_entries`。
+  现有用例**没有**填期望条目(由主会话起草、用户审)。
+- PG-only 名单 +2:`test_pgvector_orders_exactly_like_the_python_cosine`(参数化 64 / 2560 维,即 vector / halfvec
+  两条路径)与 `test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_model`。
+
 ## 8. 阶段
 
 | 阶段 | 内容 | 门禁 | 估时 |
@@ -301,7 +351,8 @@ npm run schema:generate --workspace @soulledger/core
 
 ## 10. 明确不做
 
-写操作;流式输出;把其他灵魂写的内容(帖子、书信)放进上下文;考据文档进灵魂端;pgvector;官员端(阶段 3 另写计划)。
+写操作;流式输出;把其他灵魂写的内容(帖子、书信)放进上下文;考据文档进灵魂端;官员端(阶段 3 另写计划)。
+(pgvector 原在此列,2026-09-29 用户改为现在就上,见 §7。)
 
 ## 11. 未核实
 
