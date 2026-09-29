@@ -3844,7 +3844,8 @@
       "identities": "Ren Sip",
       "eval": "Sip",
       "try": "Hehy Sip",
-      "corpus": "Medu Seth · Maa Wa"
+      "corpus": "Medu Seth · Maa Wa",
+      "embedding": "Sia Khent"
     },
     "switch": {
       "master": "Wen-Khetem Neb",
@@ -3995,7 +3996,13 @@
       "passed": "Menkh",
       "not_passed": "Nen Menkh",
       "missing": "Nen Gem: {{phrases}}",
-      "all_hit": "Medu Neb Menkh"
+      "all_hit": "Medu Neb Menkh",
+      "retrieval_hit_rate": "Gem Wekha",
+      "retrieval": "Wekha",
+      "expected_entries": "Sep Mer",
+      "retrieved_top": "Wekha Tepy: Sep {{k}}",
+      "entry_hit": "Gem",
+      "entry_missed": "Nen Wekha"
     },
     "try": {
       "as_soul": "Hehy: Ba Sip",
@@ -4045,7 +4052,8 @@
       "rate_limited": "Hehy Menmen. Wehem Er Khet.",
       "assistant_unavailable": "Hehy Medu Nen Wenen. Wehem Iri.",
       "assistant_busy": "Em Iri Neb. Wehem Er Khet.",
-      "try_failed": "Nen Hehy. Wehem Iri."
+      "try_failed": "Nen Hehy. Wehem Iri.",
+      "untested_embedding": "Khemen Wat, Sia Er Aa: Sip Er Tepy, Er Sau."
     },
     "usage": {
       "month": "Abed",
@@ -4078,7 +4086,38 @@
       "corpus_tokens": "Medu Seth · Hesb",
       "empty_share": "Nen Medu",
       "reached": "Kheper Seth",
-      "not_reached": "Nen Kheper Djer"
+      "not_reached": "Nen Kheper Djer",
+      "rate_fallback": "Wekha Nen Wenen"
+    },
+    "embedding": {
+      "url": "Wat",
+      "model": "Ren Sia",
+      "dims": "Shad Aa",
+      "dims_native": "Nen Shad",
+      "dims_hint": "Khemen Sia Er Aa: Wehem Iri Khent.",
+      "k": "Aa Wekha",
+      "k_hint": "Aa, 1 Er Tepy",
+      "testing": "Em Sip…",
+      "test_ok": "Ini Medu · Aa Mi Smen",
+      "returned_dims": "Aa Ini",
+      "kind": {
+        "connection": "Nen Ini Medu",
+        "timeout": "Wah Menmen",
+        "model_not_found": "Nen Gem Sia",
+        "dims_mismatch": "Aa Nen Mi Smen"
+      },
+      "rebuild": "Wehem Iri Khent",
+      "rebuild_confirm": "Wehem Iri Khent Neb?",
+      "progress": "Khent Iri Seth: Sep {{n}} / {{total}}",
+      "none": "Nen Khent Djer",
+      "last_rebuild": "Wehem Iri Pehwy",
+      "rebuilding": "Em Wehem Iri…",
+      "rebuilt": "Wehem Iri Seth",
+      "rebuild_failed": "Nen Wehem Iri",
+      "retry_rebuild": "Wehem Iri",
+      "needs_rebuild": "Khent Em Sia Tepy: Wehem Iri Khent.",
+      "until_rebuilt": "Nen Wehem Iri Seth Djer: Hehy Medu Em Medu Seth Neb.",
+      "fallback_note": "Nen Ini Medu Khent: Hehy Medu Em Medu Seth Neb Djes-Ef; Wesheb Wenen."
     }
   }
 }

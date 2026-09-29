@@ -3844,7 +3844,8 @@
       "identities": "Eval identities",
       "eval": "Eval",
       "try": "Try a question",
-      "corpus": "Help corpus · read-only"
+      "corpus": "Help corpus · read-only",
+      "embedding": "Embedding model"
     },
     "switch": {
       "master": "Master switch",
@@ -3995,7 +3996,13 @@
       "passed": "pass",
       "not_passed": "fail",
       "missing": "missing “{{phrases}}”",
-      "all_hit": "all key points hit"
+      "all_hit": "all key points hit",
+      "retrieval_hit_rate": "Retrieval hit rate",
+      "retrieval": "Retrieval",
+      "expected_entries": "Entries expected",
+      "retrieved_top": "Top {{k}} actually retrieved",
+      "entry_hit": "Hit",
+      "entry_missed": "Not retrieved"
     },
     "try": {
       "as_soul": "Asking as the 问一问 eval soul",
@@ -4045,7 +4052,8 @@
       "rate_limited": "Too many tries this hour. Try again later.",
       "assistant_unavailable": "The assistant could not answer just now. Try again later.",
       "assistant_busy": "The assistant is busy. Ask again shortly.",
-      "try_failed": "The question could not be sent. Try again."
+      "try_failed": "The question could not be sent. Try again.",
+      "untested_embedding": "The address, model or dimensions changed: test them before saving."
     },
     "usage": {
       "month": "Month",
@@ -4078,7 +4086,42 @@
       "corpus_tokens": "Help corpus tokens",
       "empty_share": "“Can’t answer” share",
       "reached": "Threshold reached",
-      "not_reached": "Below threshold"
+      "not_reached": "Below threshold",
+      "rate_fallback": "Retrieval fallback",
+      "fallback_note": "Retrieval fallback: questions answered from all help entries because the embedding service was unavailable."
+    },
+    "embedding": {
+      "url": "Address",
+      "model": "Model name",
+      "dims": "Truncate dimensions",
+      "dims_native": "No truncation",
+      "dims_hint": "Changing the model or dimensions means rebuilding the vectors.",
+      "k": "Entries retrieved (k)",
+      "k_hint": "Whole number, at least 1",
+      "floor": "Similarity floor",
+      "floor_hint": "When even the closest entry scores below it, the assistant answers from all help entries.",
+      "testing": "Testing…",
+      "test_ok": "Connected · dimensions match the setting",
+      "returned_dims": "Returned dimensions",
+      "kind": {
+        "connection": "Can’t connect",
+        "timeout": "Timed out",
+        "model_not_found": "Model not found",
+        "dims_mismatch": "Dimensions don’t match the setting"
+      },
+      "rebuild": "Rebuild vectors",
+      "rebuild_confirm": "Rebuild all vectors?",
+      "rebuild_body": "The vectors are replaced only once all are generated; a failure part-way leaves the current ones in place. The assistant keeps answering meanwhile.",
+      "progress": "{{n}} / {{total}} entries have vectors",
+      "none": "No vectors yet",
+      "last_rebuild": "Last rebuilt",
+      "rebuilding": "Rebuilding…",
+      "rebuilt": "Rebuilt",
+      "rebuild_failed": "Rebuild failed",
+      "retry_rebuild": "Retry rebuild",
+      "needs_rebuild": "The vectors were made with the old model and need rebuilding",
+      "until_rebuilt": "Until the rebuild finishes, the assistant answers from all help entries.",
+      "fallback_note": "If the embedding service can’t be reached, the assistant answers from all help entries instead — it still answers."
     }
   }
 }

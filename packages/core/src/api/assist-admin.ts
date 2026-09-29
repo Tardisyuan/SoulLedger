@@ -31,6 +31,12 @@ export type AssistAdminTryRequest = Schemas["TryRequest"];
 export type AssistAdminTryResult = Schemas["TryResult"];
 export type AssistAdminCorpus = Schemas["Corpus"];
 export type AssistAdminCorpusEntry = Schemas["CorpusEntry"];
+export type AssistAdminEmbedding = Schemas["EmbeddingConfig"];
+export type AssistAdminEmbeddingUpdate = Schemas["PatchedEmbeddingUpdate"];
+export type AssistAdminEmbeddingCandidate = Schemas["EmbeddingCandidate"];
+export type AssistAdminEmbeddingTest = Schemas["EmbeddingTestResult"];
+export type AssistAdminEmbeddingRebuild = Schemas["EmbeddingRebuild"];
+export type AssistAdminEmbeddingErrorKind = Schemas["EmbeddingErrorKindEnum"];
 
 /** The `code`s the admin views answer 400/404 with (`_error` in admin_views.py). */
 export const ASSIST_ADMIN_ERROR_CODES = [
@@ -47,6 +53,11 @@ export const ASSIST_ADMIN_ERROR_CODES = [
   "rate_limited",
   "assistant_unavailable",
   "assistant_busy",
+  // 向量模型 (§7.6): PATCH embedding/ with a changed url / model / dims not tested in the last 15 min (400);
+  // POST embedding/rebuild/ while another runs (409), or the embedding service failed — nothing changed (503).
+  "untested_embedding",
+  "rebuild_running",
+  "embedding_unavailable",
   // Not a `code` in the body: DRF answers a PATCH carrying `eval_soul_account` /
   // `eval_officer` with a field error (ConfigUpdateSerializer.validate). Mapped below.
   "read_only_field",
@@ -86,6 +97,15 @@ export const assistAdminApi = {
   tryQuestion: (body: AssistAdminTryRequest) => api.post<AssistAdminTryResult>(`${BASE}/try/`, body).then((r) => r.data),
   /** The help corpus, read-only (plan §5): entries with their token estimates, and the largest prompt vs the threshold. */
   corpus: () => api.get<AssistAdminCorpus>(`${BASE}/corpus/`).then((r) => r.data),
+  /** 向量模型 settings + rebuild status. The URL comes back redacted, like `base_url`. */
+  embedding: () => api.get<AssistAdminEmbedding>(`${BASE}/embedding/`).then((r) => r.data),
+  updateEmbedding: (body: AssistAdminEmbeddingUpdate) =>
+    api.patch<AssistAdminEmbedding>(`${BASE}/embedding/`, body).then((r) => r.data),
+  /** One embed of a fixed question with the candidate; a pass is remembered for 15 min, like the provider test. */
+  testEmbedding: (body: AssistAdminEmbeddingCandidate) =>
+    api.post<AssistAdminEmbeddingTest>(`${BASE}/embedding/test/`, body).then((r) => r.data),
+  /** Synchronous and all-or-nothing: on 503 no vector changed. */
+  rebuildEmbedding: () => api.post<AssistAdminEmbeddingRebuild>(`${BASE}/embedding/rebuild/`).then((r) => r.data),
   usage: (month?: string) =>
     api.get<AssistAdminUsage>(`${BASE}/usage/`, { params: month ? { month } : undefined }).then((r) => r.data),
 };

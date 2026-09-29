@@ -285,6 +285,7 @@ export const assistAdminKeys = {
   all: ["assist-admin"] as const,
   config: ["assist-admin", "config"] as const,
   halls: ["assist-admin", "halls"] as const,
+  embedding: ["assist-admin", "embedding"] as const,
   runs: ["assist-admin", "eval-runs"] as const,
   run: (id: number) => ["assist-admin", "eval-runs", id] as const,
   usage: (month: string | undefined) => ["assist-admin", "usage", month ?? "current"] as const,

@@ -5,6 +5,9 @@ import {
   assistAdminApi,
   type AssistAdminCandidate,
   type AssistAdminConfigUpdate,
+  type AssistAdminEmbedding,
+  type AssistAdminEmbeddingCandidate,
+  type AssistAdminEmbeddingUpdate,
   type AssistAdminEvalSide,
   type AssistAdminHall,
   type AssistAdminTryRequest,
@@ -108,4 +111,32 @@ export function useAssistTry() {
 /** The corpus ships with the code, so it does not change under a running page. */
 export function useAssistCorpus(enabled = true) {
   return useQuery({ queryKey: [...assistAdminKeys.all, "corpus"], queryFn: assistAdminApi.corpus, enabled, staleTime: Infinity });
+}
+
+export function useAssistEmbedding(enabled = true) {
+  return useQuery({ queryKey: assistAdminKeys.embedding, queryFn: assistAdminApi.embedding, enabled });
+}
+
+/** Saving never rebuilds: a model / dims change comes back with `status.needs_rebuild` true. */
+export function useUpdateAssistEmbedding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AssistAdminEmbeddingUpdate) => assistAdminApi.updateEmbedding(body),
+    onSuccess: (embedding) => qc.setQueryData(assistAdminKeys.embedding, embedding),
+  });
+}
+
+export function useTestAssistEmbedding() {
+  return useMutation({ mutationFn: (body: AssistAdminEmbeddingCandidate) => assistAdminApi.testEmbedding(body) });
+}
+
+/** The rebuild answers with the new status; on 409 / 503 the status is re-read (running, or `last_error`). */
+export function useRebuildAssistEmbedding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: assistAdminApi.rebuildEmbedding,
+    onSuccess: (result) =>
+      qc.setQueryData<AssistAdminEmbedding>(assistAdminKeys.embedding, (e) => (e ? { ...e, status: result.status } : e)),
+    onError: () => void qc.invalidateQueries({ queryKey: assistAdminKeys.embedding }),
+  });
 }
