@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{ subject }}</title>
+</head>
+{# 中性皮 · v2 令牌:纸 #f4ede0 · 墨 #151312 · 中性匾 #2b2724 / onMain #fff4e8 · 行线 #dcd1bd · ink-muted #4a4441。 #}
+{# 表格布局 + 内联样式 + bgcolor 属性:Outlook 桌面版不认 div 宽度与 CSS 背景。圆角 0,无阴影,无图片。 #}
+<body style="margin:0;padding:0;background-color:#f4ede0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4ede0" style="background-color:#f4ede0;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border:1px solid #151312;border-collapse:collapse;">
+<tr><td bgcolor="#2b2724" style="background-color:#2b2724;color:#fff4e8;padding:14px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:22px;font-weight:600;letter-spacing:1px;">SoulLedger</td></tr>
+<tr><td bgcolor="#f4ede0" style="background-color:#f4ede0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',Roboto,Helvetica,Arial,sans-serif;color:#151312;">
+<h1 style="margin:0 0 16px 0;font-size:20px;line-height:28px;font-weight:600;color:#151312;">{{ heading }}</h1>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border-top:1px solid #dcd1bd;">
+{% for label, value in rows %}<tr>
+<td style="padding:10px 12px 10px 0;border-bottom:1px solid #dcd1bd;font-size:13px;line-height:20px;color:#4a4441;white-space:nowrap;vertical-align:top;">{{ label }}</td>
+<td style="padding:10px 0;border-bottom:1px solid #dcd1bd;font-family:'IBM Plex Mono',Menlo,Consolas,'Courier New',monospace;font-size:15px;line-height:22px;color:#151312;word-break:break-all;">{{ value }}</td>
+</tr>{% endfor %}
+</table>
+{% for note in notes %}<p style="margin:12px 0 0 0;font-size:13px;line-height:20px;color:#151312;">{{ note }}</p>{% endfor %}
+<p style="margin:20px 0 0 0;padding-top:8px;border-top:1px solid #dcd1bd;font-size:12px;line-height:18px;color:#4a4441;">这封信由系统发出，不接收回复。</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

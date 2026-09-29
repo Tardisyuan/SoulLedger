@@ -76,6 +76,16 @@
   "footer": {
     "version": "灵魂账本 v0.1"
   },
+  "about": {
+    "title": "关于与致谢",
+    "intro": "本应用用到的字体、纹样与图像,以及它们的授权。",
+    "fonts": "字体",
+    "ornament": "纹样",
+    "images": "印的残边",
+    "licence": "授权",
+    "public_domain": "公有领域",
+    "source": "来源"
+  },
   "souls": {
     "title": "灵魂",
     "create": "创建灵魂",

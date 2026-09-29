@@ -7,7 +7,6 @@ import secrets
 import time
 
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
@@ -27,6 +26,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+from apps.authentication.mail import send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.permissions import IsAdminPermission, TenantPermission
@@ -866,11 +866,13 @@ def reset_password_request(request):
         # like success: a 500 only for registered addresses would disclose
         # exactly what the identical responses above exist to hide.
         try:
-            send_mail(
+            send_neutral_mail(
                 "SoulLedger 密码重置验证码",
                 f"您的验证码: {code}\n5 分钟内有效。如非本人操作,请忽略本邮件。",
-                None,
-                [email],
+                heading="密码重置验证码",
+                rows=[("验证码", code)],
+                notes=["5 分钟内有效。如非本人操作,请忽略本邮件。"],
+                to=[email],
             )
         except Exception:
             logger.error("password reset mail could not be sent", exc_info=False)
