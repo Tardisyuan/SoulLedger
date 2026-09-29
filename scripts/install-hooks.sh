@@ -580,8 +580,18 @@ PROBE_PY
     # Progress every 30 s instead of silence: the run takes minutes and `-q`
     # piped through `tail` printed nothing until it ended. The full log is kept
     # on failure, like the jest one above.
+    #
+    # -n 4 (pytest-xdist, requirements-dev.txt) when it is installed: measured
+    # 2026-09-29 at 4:21 against 5:43 serial for this selection, and -n 6 was no
+    # faster (each worker spends ~36 s building its own test database).
+    # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
+    XDIST=""
+    if [ "${PYTEST_WORKERS:-4}" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
+        XDIST="-n ${PYTEST_WORKERS:-4}"
+        echo "    (pytest-xdist: $XDIST)"
+    fi
     PYTEST_LOG=$(mktemp -t prepush-pytest)
-    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov \
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
         ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     T0=$(date +%s); NEXT=30
@@ -591,7 +601,9 @@ PROBE_PY
         if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
             NEXT=$(( NEXT + 30 ))
             PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
-            NBAD=$(grep -E '^[^ ]+\.py ' "$PYTEST_LOG" | sed 's/^[^ ]* //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
+            # Progress lines are `path.py ..F. [ 12%]` serially and bare
+            # `..F. [ 12%]` under xdist: count F/E in the marks, never in a path.
+            NBAD=$(grep -E '\[ *[0-9]+%\]$' "$PYTEST_LOG" | sed -E 's/^[^ ]+\.py //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
             echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
         fi
     done

@@ -407,7 +407,7 @@ def test_previous_works_from_a_case_just_concluded(cn_judge, three, cn_realms):
     assert _id(_prev(cn_judge, c.id)) == str(b.id)
 
 
-@pytest.mark.parametrize("at", ["", "not-a-uuid", str(uuid.uuid4())])
+@pytest.mark.parametrize("at", ["", "not-a-uuid", str(uuid.uuid4())], ids=["empty", "not-a-uuid", "unknown-uuid"])
 def test_previous_without_a_usable_anchor_is_an_empty_200(cn_judge, three, at):
     response = cn_judge.get("/api/v1/judgment/previous/", {"at": at})
     assert response.status_code == 200
@@ -449,7 +449,7 @@ def test_after_excludes_deferred_unless_asked(cn_judge, three):
     assert _id(_next(cn_judge, after=str(a.id), include_deferred="true")) == str(b.id)
 
 
-@pytest.mark.parametrize("after", ["", "not-a-uuid", str(uuid.uuid4())])
+@pytest.mark.parametrize("after", ["", "not-a-uuid", str(uuid.uuid4())], ids=["empty", "not-a-uuid", "unknown-uuid"])
 def test_after_without_a_usable_anchor_is_an_empty_200(cn_judge, three, after):
     response = _next(cn_judge, after=after)
     assert response.status_code == 200
