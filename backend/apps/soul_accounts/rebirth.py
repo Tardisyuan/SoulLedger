@@ -51,6 +51,7 @@ APPEAL_NODES = [
     ("申诉终审", "FINAL", "ADMIN"),
 ]
 #: 受刑计划完成时灵魂进 REINCARNATING(可转世文明,§3.3);计划完成才开放申请(Q6),所以是它。
+#: 原属地永久刑期收尾的计划让灵魂进 SETTLED(永久 = 不转生,2026-09-29),于是这里答 `soul_state`。
 #: **只有它**(2026-09-19 用户改定,设计稿决策记录 D12):DISPOSED 不再放行 —— 「ADMIN 修过数据、
 #: 计划完成而灵魂没能转移」的形状也拒,要申请先把灵魂状态修对。
 SOUL_STATES_THAT_MAY_APPLY = ("REINCARNATING",)
