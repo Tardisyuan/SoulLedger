@@ -102,3 +102,23 @@ afterAll(failOnActWarnings);
 // what it could not find, instead of "Exceeded timeout of 5000 ms".
 const { configure } = require("@testing-library/react-native");
 configure({ asyncUtilTimeout: 5000 });
+
+// A FlatList re-windows its rows 50 ms after every update it sees
+// (VirtualizedList `_scheduleCellsToRenderUpdate`: a setTimeout, then setState).
+// Under jest there is no layout, so that timer is all that moves the window, and
+// it lands outside act() whenever a test runs on for 50 ms after the list last
+// changed: the guard above then fails whichever test that was (2026-09-29, the
+// circle feed's first FlatList: 3–4 of 28 circle tests per run, a different set
+// each time). Here the period is zero and the re-window runs at once, inside the
+// commit that asked for it — rows the list would add still appear, just before
+// the next assertion instead of after the test.
+const { VirtualizedList } = require("@react-native/virtualized-lists").default;
+const scheduleWindow = VirtualizedList.prototype._scheduleCellsToRenderUpdate;
+VirtualizedList.prototype._scheduleCellsToRenderUpdate = function () {
+  scheduleWindow.call(this);
+  if (this._updateCellsToRenderTimeoutID != null) {
+    clearTimeout(this._updateCellsToRenderTimeoutID);
+    this._updateCellsToRenderTimeoutID = null;
+    this._updateCellsToRender();
+  }
+};

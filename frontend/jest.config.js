@@ -99,7 +99,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/frontend/tsconfig.json' }],
   },
-  // `components/**` and `middleware.ts` were missing until 2026-09-14 (audit
+  // `components/**` and `middleware.ts` (now `proxy.ts`) were missing until 2026-09-14 (audit
   // FT-10) — both inside rootDir, so unlike packages/core (see below) nothing
   // stopped them being measured; they were simply never named. That is eleven
   // shared primitives, data-table and data-grid among them, and the route gate
@@ -111,7 +111,7 @@ module.exports = {
     '<rootDir>/frontend/src/**/*.{ts,tsx}',
     '<rootDir>/frontend/app/**/*.{ts,tsx}',
     '<rootDir>/frontend/components/**/*.{ts,tsx}',
-    '<rootDir>/frontend/middleware.ts',
+    '<rootDir>/frontend/proxy.ts',
     '!<rootDir>/frontend/src/**/*.d.ts',
     '!<rootDir>/frontend/src/__tests__/**',
     // Core's own source, added now that rootDir can see it (see the note

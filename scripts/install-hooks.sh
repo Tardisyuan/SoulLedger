@@ -287,6 +287,13 @@ fi
 
 fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
 
+# One heavy gate at a time across every worktree and session (scripts/gate-lock.sh).
+# A branch that predates the file simply runs without it.
+if [ -f "$ROOT/scripts/gate-lock.sh" ]; then
+    . "$ROOT/scripts/gate-lock.sh"
+    gate_lock "pre-push $(git rev-parse --abbrev-ref HEAD)"
+fi
+
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
 # Core first: it is the frontend's dependency, it is fast, and a boundary
@@ -570,9 +577,39 @@ PROBE_PY
         SKIP_MIGRATION=1
         echo "    (-m 'not migration': nothing the 26 round-trip tests exercise changed)"
     fi
-    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov \
-        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
-    PYTEST_STATUS="${PIPESTATUS[0]}"
+    # Progress every 30 s instead of silence: the run takes minutes and `-q`
+    # piped through `tail` printed nothing until it ended. The full log is kept
+    # on failure, like the jest one above.
+    #
+    # -n 4 (pytest-xdist, requirements-dev.txt) when it is installed: measured
+    # 2026-09-29 at 4:21 against 5:43 serial for this selection, and -n 6 was no
+    # faster (each worker spends ~36 s building its own test database).
+    # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
+    XDIST=""
+    if [ "${PYTEST_WORKERS:-4}" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
+        XDIST="-n ${PYTEST_WORKERS:-4}"
+        echo "    (pytest-xdist: $XDIST)"
+    fi
+    PYTEST_LOG=$(mktemp -t prepush-pytest)
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
+        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} >"$PYTEST_LOG" 2>&1 &
+    PYTEST_PID=$!
+    T0=$(date +%s); NEXT=30
+    while kill -0 "$PYTEST_PID" 2>/dev/null; do
+        sleep 2
+        EL=$(( $(date +%s) - T0 ))
+        if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
+            NEXT=$(( NEXT + 30 ))
+            PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
+            # Progress lines are `path.py ..F. [ 12%]` serially and bare
+            # `..F. [ 12%]` under xdist: count F/E in the marks, never in a path.
+            NBAD=$(grep -E '\[ *[0-9]+%\]$' "$PYTEST_LOG" | sed -E 's/^[^ ]+\.py //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
+            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
+        fi
+    done
+    wait "$PYTEST_PID"; PYTEST_STATUS=$?
+    tail -4 "$PYTEST_LOG"
+    if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
     [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
     [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"

@@ -94,7 +94,7 @@ global 的 67/58/57/67 互不影响。2026-09-14 实测:前端 global
 后者现在由这里的 jest 门禁量。
 
 **已失效的路径引用**（根 `AGENTS.md:149-150,317-323,343,359`）：`src/middleware.ts`
-（实为 `frontend/middleware.ts`）、`lib/api.ts`（已进 `packages/core/src/api/*`）、
+（实为 `frontend/proxy.ts`,2026-09-29 前叫 `frontend/middleware.ts`）、`lib/api.ts`（已进 `packages/core/src/api/*`）、
 `src/components/NavBar.tsx`（不存在）、`messages/{locale}.json`（实为 `packages/core/messages/`）。
 2026-09-26 这四处已在 `AGENTS.md` 里改正（行号随之变动，上面的行号是旧的）。
 

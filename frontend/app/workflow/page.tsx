@@ -58,6 +58,8 @@ export default function WorkflowPage() {
       const res = await workflowApi.list();
       return res.data;
     },
+    // Pushed: workflow events invalidate `workflowKeys.all` (["workflows"]).
+    staleTime: 0,
   });
 
   // Fetch templates from backend

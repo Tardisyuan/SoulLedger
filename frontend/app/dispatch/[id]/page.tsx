@@ -97,6 +97,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     queryKey: ["dispatch", "detail", id],
     queryFn: () => dispatchApi.get(id).then(r => r.data),
     enabled: !!user && !!id,
+    staleTime: 0,
   });
 
   /* THE CONFIRMATION STAYS UP UNTIL THE REQUEST COMES BACK.

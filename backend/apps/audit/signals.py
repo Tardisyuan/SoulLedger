@@ -24,9 +24,7 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
     Invalidate permission cache and create audit log when Role or RolePermission changes.
     """
     from apps.audit.models import AuditAction, AuditLog
-    from apps.core.request_local import get_current_request, get_current_user
     from apps.perm.cache import invalidate_role_permissions
-    from apps.tenants.managers import get_current_tenant
 
     # Get the role name based on the model type
     model_name = instance._meta.label.split('.')[-1]
@@ -153,23 +151,10 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
     # Create audit log if there are changes
     if changes and model_name in ('Role', 'RolePermission'):
         try:
-            user = None
-            try:
-                user = get_current_user()
-            except Exception:
-                pass
-
-            tenant = None
-            try:
-                tenant = get_current_tenant()
-            except Exception:
-                pass
-
-            request = None
+            user, tenant, request = _current_context()
             ip_address = ''
             user_agent = ''
             try:
-                request = get_current_request()
                 if request:
                     ip_address = _get_client_ip(request) or ''
                     user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
@@ -354,6 +339,32 @@ def _build_changes(instance, old_instance=None):
     return changes if changes else None
 
 
+def _current_context():
+    """(user, tenant, request) for the audit row being written.
+
+    Each read is guarded on its own: a contextvar lookup that raises (or an
+    import that fails during app loading) yields None for that one value and
+    never costs the row the other two.
+    """
+    user = tenant = request = None
+    try:
+        from apps.core.request_local import get_current_user
+        user = get_current_user()
+    except Exception:
+        pass
+    try:
+        from apps.tenants.managers import get_current_tenant
+        tenant = get_current_tenant()
+    except Exception:
+        pass
+    try:
+        from apps.core.request_local import get_current_request
+        request = get_current_request()
+    except Exception:
+        pass
+    return user, tenant, request
+
+
 def _get_trace_id(request=None):
     """Extract or generate trace_id from request for correlation."""
     if request is None:
@@ -392,26 +403,7 @@ def _create_audit_log(action, instance, changes=None):
     from apps.audit.models import AuditLog
 
     try:
-        user = None
-        try:
-            from apps.core.request_local import get_current_user
-            user = get_current_user()
-        except Exception:
-            pass
-
-        tenant = None
-        try:
-            from apps.tenants.managers import get_current_tenant
-            tenant = get_current_tenant()
-        except Exception:
-            pass
-
-        request = None
-        try:
-            from apps.core.request_local import get_current_request
-            request = get_current_request()
-        except Exception:
-            pass
+        user, tenant, request = _current_context()
 
         ip_address = ''
         user_agent = ''
@@ -537,26 +529,7 @@ def create_batch_audit_log(action, instances, changes=None):
     from apps.audit.models import AuditLog
 
     try:
-        user = None
-        try:
-            from apps.core.request_local import get_current_user
-            user = get_current_user()
-        except Exception:
-            pass
-
-        tenant = None
-        try:
-            from apps.tenants.managers import get_current_tenant
-            tenant = get_current_tenant()
-        except Exception:
-            pass
-
-        request = None
-        try:
-            from apps.core.request_local import get_current_request
-            request = get_current_request()
-        except Exception:
-            pass
+        user, tenant, request = _current_context()
 
         ip_address = ''
         user_agent = ''
