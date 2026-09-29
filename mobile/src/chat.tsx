@@ -94,7 +94,9 @@ export interface Chat {
 
 /** Codes that mean "the service did not answer", not "the service said no". */
 const UNAVAILABLE = new Set(["chat_unavailable"]);
+/** Retry waits after a failure: 5 → 10 → 20 → 30 → 30 … s, back to 5 s after a success or a retry press. */
 const RETRY_MS = 5_000;
+const RETRY_MAX_MS = 30_000;
 const POLL_MS = 30_000;
 
 const noop = () => {};
@@ -302,11 +304,18 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    const pause = (ms: number) =>
+    let retryMs = RETRY_MS;
+    // Waits out the current backoff and doubles it. `wake` (the retry button) ends the wait now and
+    // starts the backoff over: the soul asked, so the next failure waits 5 s again, not 30.
+    const backoff = () =>
       new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, ms);
+        const timer = setTimeout(() => {
+          retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
+          resolve();
+        }, retryMs);
         wake.current = () => {
           clearTimeout(timer);
+          retryMs = RETRY_MS;
           resolve();
         };
       });
@@ -341,7 +350,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
           const connected = await connect();
           if (!alive || connected === "stop") return;
           if (!connected) {
-            await pause(RETRY_MS);
+            await backoff();
             continue;
           }
         }
@@ -349,6 +358,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
           const response = await client.current!.sync(since.current, since.current ? POLL_MS : 0);
           if (!alive) return;
           since.current = response.next_batch;
+          retryMs = RETRY_MS; // connected and synced: the next failure waits 5 s again
           for (const room of Object.values(response.rooms?.join ?? {})) {
             for (const e of room.timeline?.events ?? []) {
               if (e.unsigned?.transaction_id) echoed.current.set(e.unsigned.transaction_id, e.event_id);
@@ -369,7 +379,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
             continue;
           }
           setAvailability("unavailable");
-          await pause(RETRY_MS);
+          await backoff();
         }
       }
     }
