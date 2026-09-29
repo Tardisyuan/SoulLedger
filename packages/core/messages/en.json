@@ -1113,7 +1113,9 @@
       "claimed_next": "Open the next case",
       "claimed_back": "Back to the queue",
       "session_deferred": "{{n}} set aside this sitting",
-      "restore_all": "Put all back in the queue"
+      "restore_all": "Put all back in the queue",
+      "key_claim": "Claim this case",
+      "reassigned": "Reassigned · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "Loading judgment...",
