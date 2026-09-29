@@ -29,11 +29,12 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 
 import { AppHeader } from "../chrome";
 import { useCommittedSend } from "../composing";
 import { Icon } from "../emblems";
-import { useToast } from "../feedback";
+import { Sheet, useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
@@ -735,34 +736,31 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
           </Txt>
         </View>
       ) : null}
-      <Modal visible={asking} transparent animationType="fade" onRequestClose={() => setAsking(false)}>
-        <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
-          <Pressable style={styles.fill} onPress={() => setAsking(false)} accessibilityLabel={tr("soul_app.circle.react.lamp_cancel")} />
-          <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.lamp, paddingBottom: 28 + insets.bottom }]}>
-            <View style={styles.line}>
-              <Icon name="lampLit" size={22} color={t.lamp} strokeWidth={1.2} />
-              <Txt variant="title" style={styles.sheetTitle}>
-                {tr("soul_app.circle.react.lamp_confirm_title", { name: post.author.display_name })}
-              </Txt>
-            </View>
-            <Txt variant="caption" tone="muted">
-              {tr("soul_app.circle.react.lamp_confirm_body")}
+      <Sheet open={asking} onClose={() => setAsking(false)} edge={t.lamp} closeLabel={tr("soul_app.circle.react.lamp_cancel")}>
+        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 28 + insets.bottom }]}>
+          <View style={styles.line}>
+            <Icon name="lampLit" size={22} color={t.lamp} strokeWidth={1.2} />
+            <Txt variant="title" style={styles.sheetTitle}>
+              {tr("soul_app.circle.react.lamp_confirm_title", { name: post.author.display_name })}
             </Txt>
-            <Pressable
-              testID="lamp-confirm"
-              accessibilityRole="button"
-              onPress={() => {
-                setAsking(false);
-                onReact("ETERNAL_LIGHT");
-              }}
-              style={({ pressed }) => [styles.lampButton, { backgroundColor: t.lamp, opacity: pressed ? 0.85 : 1 }]}
-            >
-              <Txt style={[styles.lampButtonText, { color: t.lampBg }]}>{tr("soul_app.circle.react.lamp_confirm")}</Txt>
-            </Pressable>
-            <Button testID="lamp-cancel" kind="secondary" title={tr("soul_app.circle.react.lamp_cancel")} onPress={() => setAsking(false)} />
           </View>
+          <Txt variant="caption" tone="muted">
+            {tr("soul_app.circle.react.lamp_confirm_body")}
+          </Txt>
+          <Pressable
+            testID="lamp-confirm"
+            accessibilityRole="button"
+            onPress={() => {
+              setAsking(false);
+              onReact("ETERNAL_LIGHT");
+            }}
+            style={({ pressed }) => [styles.lampButton, { backgroundColor: t.lamp, opacity: pressed ? 0.85 : 1 }]}
+          >
+            <Txt style={[styles.lampButtonText, { color: t.lampBg }]}>{tr("soul_app.circle.react.lamp_confirm")}</Txt>
+          </Pressable>
+          <Button testID="lamp-cancel" kind="secondary" title={tr("soul_app.circle.react.lamp_cancel")} onPress={() => setAsking(false)} />
         </View>
-      </Modal>
+      </Sheet>
     </View>
   );
 }
@@ -931,6 +929,8 @@ export function PostScreen({ id }: { id: string }) {
   const react = async (type: SoulReactionType) => {
     try {
       await soulSocialApi.react(id, type);
+      // 交互与动效 第 2 轮 §长明灯: lit is felt as well as seen — the lamp only, and only once the server holds it.
+      if (type === "ETERNAL_LIGHT") void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (e) {
       fail(e);
     }
@@ -1129,6 +1129,8 @@ const styles = StyleSheet.create({
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9 },
   scrim: { flex: 1 },
   sheet: { borderTopWidth: 1, paddingTop: 22, paddingHorizontal: 20, gap: 12 },
+  /** In a `Sheet`: the edge and the ground are the sheet's; its drag handle sits above. */
+  sheetBody: { paddingTop: 8, paddingHorizontal: 20, gap: 12 },
   sheetTitle: { flexShrink: 1 },
   lampButton: { minHeight: 46, alignItems: "center", justifyContent: "center", marginTop: 8 },
   lampButtonText: { fontSize: 15, letterSpacing: 0.6 },

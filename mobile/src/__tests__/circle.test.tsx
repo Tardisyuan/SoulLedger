@@ -18,6 +18,7 @@ import { CircleScreen, ComposePostScreen, PostScreen, usePaged } from "../screen
 import { themeFor, type ColorScheme } from "../theme";
 import { ThemeContext } from "../ui";
 import { heldReply, stubApi } from "./stubApi";
+import * as Haptics from "expo-haptics";
 
 const mockPopTo = jest.fn();
 const mockNavigate = jest.fn();
@@ -30,6 +31,8 @@ jest.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mockParams }),
   useFocusEffect: () => {},
 }));
+// The lamp is felt (交互与动效 第 2 轮 §长明灯): the real module, its one call recorded.
+jest.mock("expo-haptics", () => ({ ...jest.requireActual("expo-haptics"), notificationAsync: jest.fn(async () => {}) }));
 
 function wrap(children: ReactNode) {
   return render(
@@ -188,6 +191,8 @@ describe("reactions", () => {
   it("the four ordinary ones go at once; the lamp asks first", async () => {
     const calls = detail();
     await screen.findByTestId("reactions");
+    // Five, as they were; the lamp last (补足 C17, 2026-09-30).
+    expect(screen.getAllByTestId(/^react-/).map((e) => e.props.testID)).toEqual(["react-LIKE", "react-LOVE", "react-RESPECT", "react-SYMPATHY", "react-ETERNAL_LIGHT"]);
     await waitFor(() => expect(screen.getByTestId("react-LIKE").props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByTestId("react-LIKE"));
     await waitFor(() => expect(reacts(calls)).toHaveLength(1));
@@ -199,11 +204,17 @@ describe("reactions", () => {
     expect(reacts(calls)).toHaveLength(1);
     fireEvent.press(screen.getByTestId("lamp-cancel"));
     expect(reacts(calls)).toHaveLength(1);
+    expect(screen.queryByTestId("lamp-sheet")).toBeNull();
+    // An ordinary reaction is not felt; only the lamp, below.
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
 
     fireEvent.press(screen.getByTestId("react-ETERNAL_LIGHT"));
     fireEvent.press(await screen.findByTestId("lamp-confirm"));
     await waitFor(() => expect(reacts(calls)).toHaveLength(2));
     expect(reacts(calls)[1]).toMatchObject({ body: { reaction_type: "ETERNAL_LIGHT" } });
+    await waitFor(() => expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1));
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
+    expect(screen.queryByTestId("lamp-sheet")).toBeNull();
   });
 
   // Design 定稿:浅色下「点灯」反色 —— 深金底、米色字;深色下仍是亮金底、深色字。
