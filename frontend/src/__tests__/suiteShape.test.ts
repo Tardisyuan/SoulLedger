@@ -186,6 +186,7 @@ const COLLECTED_FILES = [
   "permissionFormCategoryStability.test.tsx",
   "platformPortsSecureAndResume.test.ts",
   "presetNodeTypes.test.tsx",
+  "QueryProviderDefaults.test.tsx",
   "proseLinkIsNotColourOnly.test.ts",
   "readingQuantityContract.test.tsx",
   "reducedMotionContract.test.ts",

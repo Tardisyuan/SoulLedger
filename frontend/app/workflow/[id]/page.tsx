@@ -111,6 +111,7 @@ export default function WorkflowDetailPage() {
   const { data: workflow, isLoading, error, refetch } = useQuery({
     queryKey: workflowKeys.detail(id),
     queryFn: () => workflowApi.get(id).then((res) => res.data),
+    staleTime: 0,
   });
 
   // Any node that was rejected makes the outcome a rejection, however many

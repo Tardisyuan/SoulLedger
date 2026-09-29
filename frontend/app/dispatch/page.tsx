@@ -62,6 +62,8 @@ function DispatchPageContent() {
     queryKey: ["dispatch", "proposed", proposedPage],
     queryFn: () => dispatchApi.proposed({ page: String(proposedPage) }).then(r => r.data),
     enabled: !!user,
+    // Pushed: dispatch events invalidate ["dispatch"].
+    staleTime: 0,
     placeholderData: (previous) => previous,
   });
   const proposed = proposedData?.results ?? [];
@@ -74,6 +76,7 @@ function DispatchPageContent() {
     queryKey: ["dispatch", "history", historyPage],
     queryFn: () => dispatchApi.history({ page: String(historyPage) }).then(r => r.data),
     enabled: !!user,
+    staleTime: 0,
     placeholderData: (previous) => previous,
   });
   const history = historyData?.results ?? [];

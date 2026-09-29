@@ -61,6 +61,8 @@ function DeathSyncRoute() {
     queryFn: async () =>
       (await deathSyncApi.registrations({ page: String(page), ...(status ? { status } : {}) })).data,
     enabled: !!user,
+    // Pushed: death-sync events invalidate ["death-sync"].
+    staleTime: 0,
     placeholderData: (previous) => previous,
   });
   const registrations = data?.results ?? [];
@@ -69,6 +71,7 @@ function DeathSyncRoute() {
     queryKey: ["death-sync", "summary"],
     queryFn: async () => (await deathSyncApi.summary()).data,
     enabled: !!user,
+    staleTime: 0,
   });
 
   const setStatus = (next: string) => {
