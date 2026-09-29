@@ -22,8 +22,11 @@ import * as Notifications from "expo-notifications";
 import { useEffect, useRef, useState } from "react";
 import { useColorScheme } from "react-native";
 
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+
 import { ChatProvider, useChat } from "./chat";
-import { AppHeader, TabBar } from "./chrome";
+import { ColdStart } from "./coldStart";
+import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
 import { useSession } from "./session";
@@ -84,6 +87,9 @@ function MainTabs() {
                 { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigation.navigate("MyCircle") },
               ]}
             />
+          ) : route.name === "Life" ? (
+            // v2 样板页: the life tab wears the plaque (本世页 is the App's specimen page).
+            <PlaqueHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
           ) : (
             <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
           ),
@@ -369,7 +375,12 @@ export function RootNavigator() {
   return (
     <ThemeContext.Provider value={theme}>
       <ToastProvider>
-        <LogoutProvider onConfirm={signOut}>{body}</LogoutProvider>
+        {/* Inside the theme: a sheet renders in this provider's host, so it sees only the contexts above it. */}
+        <BottomSheetModalProvider>
+          <LogoutProvider onConfirm={signOut}>{body}</LogoutProvider>
+        </BottomSheetModalProvider>
+        {/* 补足 C18: over everything, once per process. */}
+        <ColdStart session={state} scheme={scheme} />
       </ToastProvider>
     </ThemeContext.Provider>
   );
