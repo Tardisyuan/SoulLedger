@@ -9,10 +9,10 @@ questions:
   - "what does reincarnating mean"
 ---
 The tag under your name on the This life page is your current state in the register:
-- Alive: not yet entered for judgment.
+- Alive: you are still alive in the register.
 - Under judgment: a court is judging this life.
 - Disposed: judgment is over; you are serving or awaiting your disposition.
-- Reincarnating: your sentence is served and you have entered the cycle; if your home civilization has rebirth, you can apply now.
+- Reincarnating: your sentence is served and you have entered the cycle; if your home civilization has rebirth, you may be able to apply; whether you can depends on what the system returns (see the "codes" entry).
 - Settled: this life is closed in the register; there is no next step.
 - Lost: your record is suspended or unaccounted for; write to the hall office.
 States move with judgment and sentence; you cannot change them yourself. The page is authoritative.
