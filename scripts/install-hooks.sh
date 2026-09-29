@@ -116,9 +116,11 @@ fi
 # same two values CI does (.github/workflows/ci.yml, which has no .env either),
 # and say so. NOT the main checkout's backend/.env: that one points DATABASE_URL
 # and REDIS_URL at the shared box.
+# ≥32 bytes, or PyJWT's InsecureKeyLengthWarning — an error in pytest.ini.
+CI_SECRET_KEY="ci-test-key-not-for-production-32-bytes-min"
 if [ -z "${SECRET_KEY:-}" ] && [ ! -f "$ROOT/backend/.env" ]; then
     echo "pre-push: no backend/.env here — using CI's SECRET_KEY/DEBUG for the backend gates"
-    export SECRET_KEY="ci-test-key-not-for-production"
+    export SECRET_KEY="$CI_SECRET_KEY"
     export DEBUG="true"
 fi
 
@@ -245,6 +247,33 @@ if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_FRONTEND
 # TOUCHES_CORE already folds in the JS root files and unknown root files.
 if [ "$TOUCHES_MOBILE" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_MOBILE=1; fi
 
+# THE MIGRATION ROUND TRIPS RUN ONLY WHEN SOMETHING THEY TEST CHANGED.
+#
+# 26 tests (the `migration` marker — see pytest.ini and backend/tests/conftest.py)
+# unapply and reapply slices of the migration graph: 2-67 s each, 813 s together,
+# about 13.5 of the backend suite's 23 minutes (measured 2026-09-29). What they
+# test is the migrations, so a push that changes none of the following cannot
+# change their result:
+#   - a migration (backend/apps/*/migrations/),
+#   - the harness (backend/tests/migration_roundtrip.py) or a conftest,
+#   - a file holding one of those tests (found by content, not by a list, so a
+#     new round-trip test is covered the day it lands),
+#   - requirements.lock (a new Django changes how migrations run),
+#   - pytest.ini, or an unrecognised root file (fail closed, as above).
+# CI and the real-PostgreSQL command in CLAUDE.md still run all of them.
+MIGRATION_PATH_RE='^(backend/apps/[^/]+/migrations/|backend/tests/migration_roundtrip\.py$|backend/tests/conftest\.py$|backend/requirements\.lock$|conftest\.py$|pytest\.ini$)'
+TOUCHES_MIGRATION=$(echo "$CHANGED" | grep -cE "$MIGRATION_PATH_RE" || true)
+while IFS= read -r f; do
+    [ -n "$f" ] && [ -f "$ROOT/$f" ] \
+        && grep -qE 'migration_round_trip|mark\.migration' "$ROOT/$f" \
+        && TOUCHES_MIGRATION=$((TOUCHES_MIGRATION + 1))
+done <<MIGRATION_FILES
+$(echo "$CHANGED" | grep -E '^backend/.*\.py$' || true)
+MIGRATION_FILES
+[ -n "$UNKNOWN_ROOT" ] && TOUCHES_MIGRATION=$((TOUCHES_MIGRATION + 1))
+RUN_MIGRATION=0
+[ "$RUN_BACKEND" = 1 ] && [ "$TOUCHES_MIGRATION" -gt 0 ] && RUN_MIGRATION=1
+
 echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
 
 if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
@@ -252,6 +281,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     # A separate line so the existing `classify:` contract (parsed by
     # backend/tests/test_prepush_runs_the_gates_a_change_can_break.py) is unchanged.
     echo "classify-mobile: mobile=$RUN_MOBILE"
+    echo "classify-migration: migration=$RUN_MIGRATION"
     exit 0
 fi
 
@@ -523,7 +553,25 @@ PROBE_PY
         esac
     fi
 
-    "$PY" -m pytest -q --no-header ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
+    # --no-cov: the coverage floor (--cov-fail-under in pytest.ini) is checked
+    # in CI only — `ci.yml` runs the plain command. Accepted trade-off
+    # (2026-09-29): measuring coverage costs this gate minutes on every push,
+    # and CI is manual-dispatch only, so a drop below the floor is found when
+    # someone dispatches it, not when it is pushed.
+    #
+    # SECRET_KEY: always the ≥32-byte test key here. The suite needs *a* key,
+    # not the developer's: a checkout's backend/.env may hold a shorter one
+    # (the main checkout's was 20 bytes on 2026-09-29), and pytest.ini turns
+    # PyJWT's short-key warning into an error, so every JWT test would fail.
+    SKIP_MIGRATION=""
+    if [ "$RUN_MIGRATION" = 1 ]; then
+        echo "    (with the migration round trips: the push touches migrations or their tests)"
+    else
+        SKIP_MIGRATION=1
+        echo "    (-m 'not migration': nothing the 26 round-trip tests exercise changed)"
+    fi
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov \
+        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
     PYTEST_STATUS="${PIPESTATUS[0]}"
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
     [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
