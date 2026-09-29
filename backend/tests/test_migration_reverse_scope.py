@@ -155,6 +155,7 @@ def test_auth_0010_round_trip(migration_round_trip):
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.migration
 def test_auth_0010_forward_runs_with_perm_already_past_0012():
     """The forward itself, on the graph order a real ``migrate`` can produce.
 
@@ -363,6 +364,7 @@ HAND_WRITTEN_SCOPE = (
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.migration
 def test_perm_0008_forward_actually_inserts_through_a_real_migrate():
     """The forward's ``bulk_create``, run by ``migrate`` at 0008's own state.
 
@@ -418,6 +420,7 @@ def test_perm_0008_forward_actually_inserts_through_a_real_migrate():
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.migration
 def test_perm_0008_reverse_stops_at_a_hand_written_scope():
     """Driven through real ``migrate``, but not through ``run_round_trip``.
 

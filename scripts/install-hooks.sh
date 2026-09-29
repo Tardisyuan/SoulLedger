@@ -116,9 +116,11 @@ fi
 # same two values CI does (.github/workflows/ci.yml, which has no .env either),
 # and say so. NOT the main checkout's backend/.env: that one points DATABASE_URL
 # and REDIS_URL at the shared box.
+# ≥32 bytes, or PyJWT's InsecureKeyLengthWarning — an error in pytest.ini.
+CI_SECRET_KEY="ci-test-key-not-for-production-32-bytes-min"
 if [ -z "${SECRET_KEY:-}" ] && [ ! -f "$ROOT/backend/.env" ]; then
     echo "pre-push: no backend/.env here — using CI's SECRET_KEY/DEBUG for the backend gates"
-    export SECRET_KEY="ci-test-key-not-for-production"
+    export SECRET_KEY="$CI_SECRET_KEY"
     export DEBUG="true"
 fi
 
@@ -245,6 +247,33 @@ if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_FRONTEND
 # TOUCHES_CORE already folds in the JS root files and unknown root files.
 if [ "$TOUCHES_MOBILE" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_MOBILE=1; fi
 
+# THE MIGRATION ROUND TRIPS RUN ONLY WHEN SOMETHING THEY TEST CHANGED.
+#
+# 26 tests (the `migration` marker — see pytest.ini and backend/tests/conftest.py)
+# unapply and reapply slices of the migration graph: 2-67 s each, 813 s together,
+# about 13.5 of the backend suite's 23 minutes (measured 2026-09-29). What they
+# test is the migrations, so a push that changes none of the following cannot
+# change their result:
+#   - a migration (backend/apps/*/migrations/),
+#   - the harness (backend/tests/migration_roundtrip.py) or a conftest,
+#   - a file holding one of those tests (found by content, not by a list, so a
+#     new round-trip test is covered the day it lands),
+#   - requirements.lock (a new Django changes how migrations run),
+#   - pytest.ini, or an unrecognised root file (fail closed, as above).
+# CI and the real-PostgreSQL command in CLAUDE.md still run all of them.
+MIGRATION_PATH_RE='^(backend/apps/[^/]+/migrations/|backend/tests/migration_roundtrip\.py$|backend/tests/conftest\.py$|backend/requirements\.lock$|conftest\.py$|pytest\.ini$)'
+TOUCHES_MIGRATION=$(echo "$CHANGED" | grep -cE "$MIGRATION_PATH_RE" || true)
+while IFS= read -r f; do
+    [ -n "$f" ] && [ -f "$ROOT/$f" ] \
+        && grep -qE 'migration_round_trip|mark\.migration' "$ROOT/$f" \
+        && TOUCHES_MIGRATION=$((TOUCHES_MIGRATION + 1))
+done <<MIGRATION_FILES
+$(echo "$CHANGED" | grep -E '^backend/.*\.py$' || true)
+MIGRATION_FILES
+[ -n "$UNKNOWN_ROOT" ] && TOUCHES_MIGRATION=$((TOUCHES_MIGRATION + 1))
+RUN_MIGRATION=0
+[ "$RUN_BACKEND" = 1 ] && [ "$TOUCHES_MIGRATION" -gt 0 ] && RUN_MIGRATION=1
+
 echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
 
 if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
@@ -252,10 +281,18 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     # A separate line so the existing `classify:` contract (parsed by
     # backend/tests/test_prepush_runs_the_gates_a_change_can_break.py) is unchanged.
     echo "classify-mobile: mobile=$RUN_MOBILE"
+    echo "classify-migration: migration=$RUN_MIGRATION"
     exit 0
 fi
 
 fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
+
+# One heavy gate at a time across every worktree and session (scripts/gate-lock.sh).
+# A branch that predates the file simply runs without it.
+if [ -f "$ROOT/scripts/gate-lock.sh" ]; then
+    . "$ROOT/scripts/gate-lock.sh"
+    gate_lock "pre-push $(git rev-parse --abbrev-ref HEAD)"
+fi
 
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
@@ -523,8 +560,56 @@ PROBE_PY
         esac
     fi
 
-    "$PY" -m pytest -q --no-header ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
-    PYTEST_STATUS="${PIPESTATUS[0]}"
+    # --no-cov: the coverage floor (--cov-fail-under in pytest.ini) is checked
+    # in CI only — `ci.yml` runs the plain command. Accepted trade-off
+    # (2026-09-29): measuring coverage costs this gate minutes on every push,
+    # and CI is manual-dispatch only, so a drop below the floor is found when
+    # someone dispatches it, not when it is pushed.
+    #
+    # SECRET_KEY: always the ≥32-byte test key here. The suite needs *a* key,
+    # not the developer's: a checkout's backend/.env may hold a shorter one
+    # (the main checkout's was 20 bytes on 2026-09-29), and pytest.ini turns
+    # PyJWT's short-key warning into an error, so every JWT test would fail.
+    SKIP_MIGRATION=""
+    if [ "$RUN_MIGRATION" = 1 ]; then
+        echo "    (with the migration round trips: the push touches migrations or their tests)"
+    else
+        SKIP_MIGRATION=1
+        echo "    (-m 'not migration': nothing the 26 round-trip tests exercise changed)"
+    fi
+    # Progress every 30 s instead of silence: the run takes minutes and `-q`
+    # piped through `tail` printed nothing until it ended. The full log is kept
+    # on failure, like the jest one above.
+    #
+    # -n 4 (pytest-xdist, requirements-dev.txt) when it is installed: measured
+    # 2026-09-29 at 4:21 against 5:43 serial for this selection, and -n 6 was no
+    # faster (each worker spends ~36 s building its own test database).
+    # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
+    XDIST=""
+    if [ "${PYTEST_WORKERS:-4}" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
+        XDIST="-n ${PYTEST_WORKERS:-4}"
+        echo "    (pytest-xdist: $XDIST)"
+    fi
+    PYTEST_LOG=$(mktemp -t prepush-pytest)
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
+        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} >"$PYTEST_LOG" 2>&1 &
+    PYTEST_PID=$!
+    T0=$(date +%s); NEXT=30
+    while kill -0 "$PYTEST_PID" 2>/dev/null; do
+        sleep 2
+        EL=$(( $(date +%s) - T0 ))
+        if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
+            NEXT=$(( NEXT + 30 ))
+            PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
+            # Progress lines are `path.py ..F. [ 12%]` serially and bare
+            # `..F. [ 12%]` under xdist: count F/E in the marks, never in a path.
+            NBAD=$(grep -E '\[ *[0-9]+%\]$' "$PYTEST_LOG" | sed -E 's/^[^ ]+\.py //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
+            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
+        fi
+    done
+    wait "$PYTEST_PID"; PYTEST_STATUS=$?
+    tail -4 "$PYTEST_LOG"
+    if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
     [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
     [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"

@@ -120,7 +120,10 @@ def test_rotating_forwarded_for_does_not_reset_the_anonymous_limit(api_client, m
     # class attribute does not exist until then. Set on DRF's class, which the
     # project's subclass inherits, so the test means the same thing on both.
     monkeypatch.setattr(drf_throttling.AnonRateThrottle, "rate", "2/minute", raising=False)
-    idents = [REMOTE] + [x for x in ROTATING_XFF if x]
+    # DRF strips whitespace from an X-Forwarded-For ident (`''.join(xff.split())`),
+    # so that is the key it would have written — and a key with a space in it
+    # raises CacheKeyWarning (an error under pytest.ini's filterwarnings).
+    idents = [REMOTE] + ["".join(x.split()) for x in ROTATING_XFF if x]
     stale = [f"throttle_anon_{i}" for i in idents]
     cache.delete_many(stale)
     try:
