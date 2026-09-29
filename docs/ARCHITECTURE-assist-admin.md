@@ -79,3 +79,53 @@
 - **Q2 月度花费上限 → 要。** 到上限自动关总开关并通知管理员;另有实际用量页(§4)。原选项: A. 要,到上限自动关总开关并通知(推荐,防止跑飞);B. 不要,只显示用量。
 - **Q3 开关 → 不拆,共用**(维持官员端计划的原决定,不再重议)。原选项: A. 拆(推荐:官员端可以先内部试用,不影响灵魂端);B. 共用(官员端计划 Q3 的原决定)。
 - **Q4 管理页的界面请 Design 出稿**(提示词随汇报给出)。
+
+## 8. 实现记录(后端,2026-09-29,`feat/assist-admin`)
+
+**已建(只有后端;Web 页面等 Design 稿,§7 Q4):**
+
+| 部件 | 位置 |
+|---|---|
+| 生效配置(库覆盖 env,进程内缓存,保存即失效) | `backend/apps/soul_assist/config.py` |
+| 表:`AssistConfig`(单行)、`AssistUsage`、`AssistEvalCase` / `AssistEvalRun` / `AssistEvalResult`;会话加 `is_eval` | `models.py`,迁移 `0003`;评测集初稿迁移 `0004` |
+| 接口(官员令牌,`role == "ADMIN"`) | `admin_views.py` / `admin_serializers.py`,挂在 `/api/v1/assist-admin/` |
+| 用量、花费、月度上限 | `usage.py` |
+| 连通测试、评测的预估 / 确认 / 执行 | `evals.py`,Celery 任务 `soul_assist.run_eval` |
+| 测试 | `backend/tests/test_assist_admin.py` |
+
+接口:`config/`(GET / PATCH)、`config/test/`(POST 候选配置)、`halls/`、`halls/<id>/`(PATCH 每殿开关)、
+`eval/cases/`(增删改查)、`eval/preview/`、`eval/runs/`(GET 列表 / POST 凭确认令牌开始)、`eval/runs/<id>/`、
+`usage/?month=YYYY-MM`、`corpus/`。
+
+**与计划不同之处,以及为什么:**
+
+- **「env 是初始值」按键实现,不是建行时拷一份。** `AssistConfig.values` 只存页面改过的键,没改过的键每次读 env。
+  这样没人保存过时行为与只有 env 时完全相同,已有的灵魂端 / 官员端测试一条不用改;响应里的 `overridden` 列出页面改过的键。
+  API key 同理:`api_key_set_at` 为空 = 用 env 的 key;不为空而值为空串 = 管理员清除了。
+- **缓存是「进程内快照 + 共享版本号」。** 快照里有解密后的 key,所以只放进程内存,不进 Redis;
+  各进程每次读一次缓存里的版本号(保存时换),不一致才重读库。提交前后各换一次,不会读到提交前的旧行。
+- **失败不再「什么都不落库」**:新增 `AssistUsage`,每次提问一行 —— ok / empty / unavailable(503)/ busy(并发满,429)/
+  rate_limited(429)/ not_configured —— 只有端、殿、模型、token 数,**没有任何原文字段**(测试断言这张表没有文本列)。
+  用量页与月度上限只读这张表,不读 `AssistMessage` 与审计行。
+- **花费的单位由管理员定**:价目表(每百万 token 的输入 / 输出 / 可选缓存读取价)在配置里,代码里没有任何供应商价格。
+  缓存读取没填价时按输入价算(宁高勿低,上限才不会晚到)。**不在价目表里的模型算不出花费**,用量页列在 `unpriced_models`,
+  不当 0;所以「设了月度上限而当前模型没填价」在保存时就拒(`unpriced_model`),否则上限永远不会触发。
+- **月度上限的检查点在每次非评测回答之后**:本月估算花费 ≥ 上限 → 锁配置行复查 → 关页面总开关、写审计(user 为空,描述写花费与上限)、
+  给所有在职 ADMIN 发站内通知(类型 `SYSTEM`,不新增通知类型 —— 新类型要进三份语言包与 egy 词表,本轮不值)。
+  管理员重新打开而不调高上限,下一次回答会再关一次、再通知一次。
+- **模型名改动的「先测通」按整套连接判断**:连通测试成功后记下候选的 HMAC 指纹(提供方、地址、key、模型、effort、fallbacks),15 分钟;
+  PATCH 改了模型名时,保存后的那套连接必须有这个指纹。测的是 key A、存的是 key B 也会被拒。
+- **评测不查总开关与每殿开关**(管理员正是要在打开之前先试),但走正式的 `service.ask`:同一个工具循环、工具、落库、审计、
+  数据范围(评测官员的请求带它自己的殿,工具经各视图集的 `get_queryset`)。与正式提问只差:候选配置、每条开新会话(`is_eval`,
+  不续、不进本人的会话列表,留存与清理照常)、`AssistUsage.is_eval`(不计用量与月度上限)、审计行多一个 `"eval": true`。
+- **评测身份在页面上配**(`eval_soul_account`、`eval_officer`,是配置行的两个外键),不是 env。预估时缺哪个就在 `problems` 里说。
+- **评测上限**:单次最多 100 条请求(候选数 × 用例数,代码常量);预估花费不得超过 `eval_spend_cap`(页面可改,默认 5);
+  运行中实际花费到上限就停(`stopped_at_cap`)。预估用粗估的 token(非 ASCII 字符 1 个、ASCII 每 4 个字符 1 个;期望调工具的用例按两轮)。
+  确认令牌一次性、10 分钟、只认发它的那位管理员。候选配置里的 key 落库是 Fernet 密文,响应里没有。
+- **语料 token 数取「最大的一份 system prompt」**(语言 × 受众),即一次请求实际带上的那份,与阶段 4 的 8 万阈值比。
+- **§3.3 试问没有做**:不在本轮的任务单里。评测已能用测试身份单问一条(评测集里只留一条用例)。
+- **每殿开关的审计**也写 `resource="assistant_config"`,`resource_id="tenant:<殿代码>"`。
+
+**未核实:** 真 PostgreSQL 上没有跑(本轮只跑 SQLite;另一个 worktree 正占着 PG)。`select_for_update` 在 SQLite 上是空操作,
+所以「并发的两次回答同时越线只关一次、只通知一次」只在 PG 上才真正被检验。连通测试对真实供应商没有跑过
+(错误分类用两家 SDK 的真异常类测过,「不支持工具调用」只在对方 400 正文里出现 tool 时认得出)。
