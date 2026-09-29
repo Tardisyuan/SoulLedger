@@ -10,6 +10,7 @@
  * copied into the wrong civilization, is red here.
  */
 import {
+  ON_PLAQUE,
   civ,
   ink,
   oklchToHex,
@@ -45,10 +46,7 @@ const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string
   { path: (s) => civ.gr[s].accent, triples: ["0.722 0.138 130", "0.443 0.091 130"] },
   { path: (s) => civ.gr[s].mark, triples: ["0.722 0.138 130", "0.526 0.111 131"] },
   { path: (s) => semantic[s].pos, triples: ["0.780 0.110 150", "0.480 0.120 150"] },
-  { path: (s) => semantic[s].neg, triples: ["0.760 0.120 25", "0.500 0.160 25"] },
-  { path: (s) => semantic[s].negStrong, triples: ["0.600 0.130 25", "0.550 0.170 25"] },
-  { path: (s) => semantic[s].negInk, triples: ["0.900 0.050 25", "0.430 0.160 25"] },
-  { path: (s) => semantic[s].negBg, triples: ["0.240 0.040 25", "0.960 0.020 25"] },
+  // neg / negStrong / negInk / negBg left this table in v2: 规范 v2 §二 gives them as hex (below).
   // 朋友圈 handoff 1e draws the lamp dark only. Light lamp: 文明气质 1i gives #6A3E00 (confirmed 2026-09-27) —
   // the triple is that hex's OKLCH; lampBg light is still ours.
   { path: (s) => semantic[s].lamp, triples: ["0.860 0.110 85", "0.408 0.091 66"] },
@@ -86,7 +84,93 @@ describe("tokens are the design's OKLCH table, converted", () => {
   });
 
   it("the transcription covers every row of the table (a short list checks nothing)", () => {
-    expect(DESIGN_OKLCH).toHaveLength(26); // 24 from 灵魂簿 App 1h, 2 lamp rows from 朋友圈 1e
+    expect(DESIGN_OKLCH).toHaveLength(22); // 20 from 灵魂簿 App 1h (its 4 neg rows replaced by v2), 2 lamp rows from 朋友圈 1e
+  });
+});
+
+/**
+ * v2「朱印」, 规范 v2 定稿 (design-cache/v2/spec-final.dc.html, not in the repo):
+ * §二 status colours, global — the page prints them as hex, so they are compared
+ * as hex; §三 the plaque (匾色) per civilization; §一 onMain. Transcribed as printed.
+ */
+describe("v2 tokens are the spec's (规范 v2 §一–§三)", () => {
+  const STATUS = {
+    dark: "pos #82CB92 · neg #FF7A93 · negStrong #C21D4D · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · lamp #F2CC7A · lampBg #241B0C",
+    light: "pos #197037 · neg #A8103E · negStrong #A8103E · negBg #FFECEF · negInk #8A0C33 · warn #A65000 · lamp #6A3E00 · lampBg #FBF1DC",
+  };
+  const PLAQUE = "neutral #2b2724 #6e665e · cn #9a2f1f #b3402c · eu #4a2a6a #7a52a6 · eg #1f3f8a #3e62b8 · gr #1f3b3e #3f7076";
+  const APP_INK = { dark: ["#F4F5F6", "#C4CBD4", "#89909A"], light: ["#16181D", "#505662", "#636874"] };
+  const APP_GROUNDS = {
+    dark: "neutral #0B0B0E #101014 #14141A · cn #100704 #1A0D09 #1F120E · eu #040611 #090C1A #0E111F · eg #120F05 #1A1609 #1F1B0E · gr #0B1205 #121A09 #181F0E",
+    light: "neutral #FDFDFF #F9F9FB #F3F3F6 · cn #FFFDFA #FFF8F3 #FDF1E7 · eu #FDFDFF #F5F6FF #ECEEFB · eg #FFFDF9 #FFFCF5 #FBF7EC · gr #FCFEFA #FAFFF5 #F4FBEC",
+  };
+  const pairs = (line: string) => line.split(" · ").map((p) => p.split(" "));
+
+  it.each(SCHEMES)("%s: the eight status colours", (scheme) => {
+    const printed = Object.fromEntries(pairs(STATUS[scheme]));
+    const { scrim: _scrim, ...ours } = semantic[scheme];
+    expect(ours).toEqual(printed);
+  });
+
+  it.each(SCHEMES)("%s: the plaque of each civilization, and one onPlaque for all", (scheme) => {
+    for (const [key, light, dark] of pairs(PLAQUE)) {
+      const t = themeFor({ neutral: null, cn: "CHINESE", eu: "EUROPEAN", eg: "EGYPTIAN", gr: "GREEK" }[key as CivKey], scheme);
+      expect([key, t.plaque.toLowerCase(), t.onPlaque]).toEqual([key, scheme === "light" ? light : dark, ON_PLAQUE]);
+    }
+    expect(ON_PLAQUE).toBe("#FFF4E8");
+  });
+
+  it.each(SCHEMES)("%s: App ink and the per-civilization grounds are kept as §一 lists them", (scheme) => {
+    expect([ink[scheme].ink, ink[scheme].inkMuted, ink[scheme].inkSubtle]).toEqual(APP_INK[scheme]);
+    for (const [key, s0, s1, s2] of pairs(APP_GROUNDS[scheme])) {
+      const g = civ[key as CivKey][scheme];
+      expect([key, g.s0, g.s1, g.s2]).toEqual([key, s0, s1, s2]);
+    }
+  });
+
+  it("the neg and warn hues are not the plaque's: none of them equals any plaque", () => {
+    const plaques = new Set(KEYS.flatMap((k) => SCHEMES.map((s) => civ[k][s].plaque)));
+    const status = SCHEMES.flatMap((s) => [semantic[s].neg, semantic[s].negStrong, semantic[s].warn]);
+    expect(status.filter((c) => plaques.has(c))).toEqual([]);
+  });
+});
+
+/**
+ * 规范 v2 §一/§二 thresholds, each taken at the WORST of the fifteen App grounds
+ * of the scheme (five skins × s0/s1/s2): text 4.5 (AA), the plaque against s0 3
+ * (a large fill), the lamp 3 (a solid block, "appLamp").
+ */
+describe("v2 contrast, at the worst App ground", () => {
+  const grounds = (scheme: ColorScheme) => KEYS.flatMap((k) => [civ[k][scheme].s0, civ[k][scheme].s1, civ[k][scheme].s2]);
+  const worst = (fg: string, scheme: ColorScheme) => Math.min(...grounds(scheme).map((g) => contrast(fg, g)));
+
+  it.each(SCHEMES)("%s: pos, neg, warn ≥ 4.5 and lamp ≥ 3 on every ground", (scheme) => {
+    const s = semantic[scheme];
+    const low = [
+      ["pos", worst(s.pos, scheme), 4.5],
+      ["neg", worst(s.neg, scheme), 4.5],
+      ["warn", worst(s.warn, scheme), 4.5],
+      ["lamp", worst(s.lamp, scheme), 3],
+    ].filter(([, ratio, min]) => (ratio as number) < (min as number));
+    expect(low).toEqual([]);
+  });
+
+  it.each(SCHEMES)("%s: white on negStrong, negInk on negBg ≥ 4.5", (scheme) => {
+    const s = semantic[scheme];
+    expect(contrast("#FFFFFF", s.negStrong)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(s.negInk, s.negBg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(KEYS.flatMap((k) => SCHEMES.map((s) => [k, s] as const)))("%s / %s: onPlaque on the plaque ≥ 4.5; the plaque on s0 ≥ 3", (key, scheme) => {
+    const g = civ[key][scheme];
+    expect(contrast(ON_PLAQUE, g.plaque)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(g.plaque, g.s0)).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(KEYS.flatMap((k) => SCHEMES.map((s) => [k, s] as const)))("%s / %s: ink on s1, ink2 and ink3 on s2 ≥ 4.5 (§一's App columns)", (key, scheme) => {
+    const g = civ[key][scheme];
+    const i = ink[scheme];
+    expect([contrast(i.ink, g.s1), contrast(i.inkMuted, g.s2), contrast(i.inkSubtle, g.s2)].every((r) => r >= 4.5)).toBe(true);
   });
 });
 
@@ -163,14 +247,17 @@ describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
     expect(parchment[scheme]).toEqual(parse(CANVAS[scheme]));
   });
 
-  it.each(SCHEMES)("%s: ink fills the primary button and draws focus; red is only in the error slots", (scheme) => {
+  it.each(SCHEMES)("%s: parchment grounds and ink; the neutral plaque; the global status colours (v2 §二), not the canvas's red", (scheme) => {
     const p = parchment[scheme];
     const t = preLoginTheme(scheme);
     expect([t.s0, t.accent, t.onAccent, t.mark]).toEqual([p.bg, p.ink, p.bg, p.ink]);
     expect([t.ink, t.inkMuted, t.inkSubtle, t.hair, t.hair2, t.s2]).toEqual([p.ink, p.ink2, p.ink3, p.line, p.line2, p.bg2]);
-    const red = new Set<string>([p.acc, p.demerit]);
-    const redSlots = (Object.keys(t) as (keyof Theme)[]).filter((k) => red.has(t[k] as string)).sort();
-    expect(redSlots).toEqual(["neg", "negInk", "negStrong"]);
+    expect([t.plaque, t.onPlaque]).toEqual([civ.neutral[scheme].plaque, ON_PLAQUE]);
+    const { pos, neg, negStrong, negInk, negBg, warn, lamp, lampBg, scrim } = t;
+    expect({ pos, neg, negStrong, negInk, negBg, warn, lamp, lampBg, scrim }).toEqual(semantic[scheme]);
+    // …and the canvas's own red / merit / warnBg reach no slot at all.
+    const canvasOnly = new Set<string>([p.acc, p.demerit, p.merit, p.warnBg]);
+    expect((Object.keys(t) as (keyof Theme)[]).filter((k) => canvasOnly.has(t[k] as string))).toEqual([]);
   });
 
   it.each(SCHEMES)("%s: every text token reaches AA on both grounds", (scheme) => {

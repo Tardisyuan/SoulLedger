@@ -32,6 +32,7 @@ import {
   Notice,
   PageEmptyArt,
   Quote,
+  RadioMark,
   Screen,
   ScreenError,
   Skeleton,
@@ -249,8 +250,8 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.dot, { borderColor: selected ? theme.mark : theme.hair2 }]}>
-        {selected ? <View style={[styles.dotFill, { backgroundColor: theme.mark }]} /> : null}
+      <View style={styles.dot}>
+        <RadioMark on={selected} />
       </View>
       <View style={styles.fill}>
         {/* 320pt: the enum member moves under the name (handoff 2c). */}
@@ -636,9 +637,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   pressed: { opacity: 0.8 },
   gap4: { marginTop: 4 },
-  gap10: { marginTop: 10 },
+  gap10: { marginTop: 12 },
   cooldown: { marginTop: 6, marginLeft: 22 },
-  appRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: GUTTER, paddingVertical: 18, borderBottomWidth: 1 },
+  appRow: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: GUTTER, paddingVertical: 18, borderBottomWidth: 1 },
   stack: { gap: 22 },
   note: { borderLeftWidth: 2, paddingLeft: 12 },
   heading: { marginBottom: 12 },
@@ -646,24 +647,23 @@ const styles = StyleSheet.create({
   headingRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 8, marginBottom: 12 },
   meta: { fontSize: 11 },
   forms: { gap: 1 },
-  formCard: { flexDirection: "row", alignItems: "flex-start", gap: 13, paddingVertical: 15, paddingHorizontal: 14, borderLeftWidth: 2 },
-  dot: { width: 16, height: 16, marginTop: 4, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  dotFill: { width: 8, height: 8, borderRadius: 999 },
+  formCard: { flexDirection: "row", alignItems: "flex-start", gap: 13, paddingVertical: 15, paddingHorizontal: 16, borderLeftWidth: 2 },
+  dot: { marginTop: 4 },
   formName: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 8 },
   formCode: { fontSize: 11, letterSpacing: 1.1 },
   statement: { marginTop: 4 },
-  formTitle: { marginTop: 14 },
+  formTitle: { marginTop: 16 },
   landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
-  landingTagText: { fontSize: 10.5, letterSpacing: 0.4 },
+  landingTagText: { fontSize: 11, letterSpacing: 0.4 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   badgeItem: { flexShrink: 0, maxWidth: "100%" },
-  handler: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 3 },
   handlerText: { letterSpacing: 0.4 },
-  residenceNote: { flexDirection: "row", gap: 9, paddingVertical: 14, borderBottomWidth: 1 },
+  residenceNote: { flexDirection: "row", gap: 9, paddingVertical: 16, borderBottomWidth: 1 },
   nudge: { marginTop: 3 },
   facts: { marginTop: 16 },
-  step: { flexDirection: "row", columnGap: 14 },
+  step: { flexDirection: "row", columnGap: 16 },
   rail: { width: 22, alignItems: "center" },
   stepDot: { width: 11, height: 11, marginTop: 5 },
   stepLine: { flex: 1, width: 1, marginVertical: 4 },
@@ -673,8 +673,8 @@ const styles = StyleSheet.create({
   terminal: { alignItems: "center", gap: 12, paddingHorizontal: 28, paddingVertical: 40 },
   center: { textAlign: "center" },
   stepGap: { paddingBottom: 22 },
-  stepName: { fontSize: 14, lineHeight: 21 },
+  stepName: { fontSize: 15, lineHeight: 21 },
   stepWhen: { fontSize: 12, marginTop: 3 },
   hint: { marginTop: 8 },
-  appealBlock: { gap: 14, paddingBottom: 34 },
+  appealBlock: { gap: 16, paddingBottom: 32 },
 });

@@ -23,7 +23,19 @@ import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations"
 export type ColorScheme = "dark" | "light";
 export type CivKey = "neutral" | "cn" | "eu" | "eg" | "gr";
 
-type Ground = { s0: string; s1: string; s2: string; accent: string; mark: string; hair: string; hair2: string };
+/**
+ * `plaque` is v2「朱印」's 匾色 (规范 v2 定稿 §三, 2026-09-29): the one colour a
+ * civilization owns, and it goes to five places only — the plaque, the pillar's
+ * current item, the seal, the "mine to handle" row mark and the primary button.
+ * Never to an error or a refusal (those are `neg`). Text on it is `onPlaque`.
+ * `accent` / `mark` are v1 and stay until the pages that use them are redrawn.
+ * The grounds s0–s2 are the App's own per-civilization grounds, kept by product
+ * decision (v2 memory: "App 保留各文明底色微调"); §一 lists them unchanged.
+ */
+type Ground = { s0: string; s1: string; s2: string; accent: string; mark: string; hair: string; hair2: string; plaque: string };
+
+/** 匾上题字 · 元数据 (§一 onMain): one warm white for all ten plaques. */
+export const ON_PLAQUE = "#FFF4E8";
 
 export const ink = {
   dark: { ink: "#F4F5F6", inkMuted: "#C4CBD4", inkSubtle: "#89909A" },
@@ -32,24 +44,24 @@ export const ink = {
 
 export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
   neutral: {
-    dark: { s0: "#0B0B0E", s1: "#101014", s2: "#14141A", accent: "#89909A", mark: "#89909A", hair: "#26262E", hair2: "#33333D" },
-    light: { s0: "#FDFDFF", s1: "#F9F9FB", s2: "#F3F3F6", accent: "#656C76", mark: "#656C76", hair: "#E4E4EA", hair2: "#CFCFD8" },
+    dark: { s0: "#0B0B0E", s1: "#101014", s2: "#14141A", accent: "#89909A", mark: "#89909A", hair: "#26262E", hair2: "#33333D", plaque: "#6E665E" },
+    light: { s0: "#FDFDFF", s1: "#F9F9FB", s2: "#F3F3F6", accent: "#656C76", mark: "#656C76", hair: "#E4E4EA", hair2: "#CFCFD8", plaque: "#2B2724" },
   },
   cn: {
-    dark: { s0: "#100704", s1: "#1A0D09", s2: "#1F120E", accent: "#D88C79", mark: "#CF715A", hair: "#362B27", hair2: "#4B3F3C" },
-    light: { s0: "#FFFDFA", s1: "#FFF8F3", s2: "#FDF1E7", accent: "#854423", mark: "#994E29", hair: "#DED6D0", hair2: "#C6BCB4" },
+    dark: { s0: "#100704", s1: "#1A0D09", s2: "#1F120E", accent: "#D88C79", mark: "#CF715A", hair: "#362B27", hair2: "#4B3F3C", plaque: "#B3402C" },
+    light: { s0: "#FFFDFA", s1: "#FFF8F3", s2: "#FDF1E7", accent: "#854423", mark: "#994E29", hair: "#DED6D0", hair2: "#C6BCB4", plaque: "#9A2F1F" },
   },
   eu: {
-    dark: { s0: "#040611", s1: "#090C1A", s2: "#0E111F", accent: "#969ED4", mark: "#7D87CA", hair: "#242838", hair2: "#333952" },
-    light: { s0: "#FDFDFF", s1: "#F5F6FF", s2: "#ECEEFB", accent: "#3E4BA3", mark: "#3E4BA3", hair: "#DCDFF0", hair2: "#C3C7E0" },
+    dark: { s0: "#040611", s1: "#090C1A", s2: "#0E111F", accent: "#969ED4", mark: "#7D87CA", hair: "#242838", hair2: "#333952", plaque: "#7A52A6" },
+    light: { s0: "#FDFDFF", s1: "#F5F6FF", s2: "#ECEEFB", accent: "#3E4BA3", mark: "#3E4BA3", hair: "#DCDFF0", hair2: "#C3C7E0", plaque: "#4A2A6A" },
   },
   eg: {
-    dark: { s0: "#120F05", s1: "#1A1609", s2: "#1F1B0E", accent: "#C1A65C", mark: "#C0A459", hair: "#312B1B", hair2: "#453D28" },
-    light: { s0: "#FFFDF9", s1: "#FFFCF5", s2: "#FBF7EC", accent: "#695621", mark: "#846C2A", hair: "#E6DFCC", hair2: "#CFC5AC" },
+    dark: { s0: "#120F05", s1: "#1A1609", s2: "#1F1B0E", accent: "#C1A65C", mark: "#C0A459", hair: "#312B1B", hair2: "#453D28", plaque: "#3E62B8" },
+    light: { s0: "#FFFDF9", s1: "#FFFCF5", s2: "#FBF7EC", accent: "#695621", mark: "#846C2A", hair: "#E6DFCC", hair2: "#CFC5AC", plaque: "#1F3F8A" },
   },
   gr: {
-    dark: { s0: "#0B1205", s1: "#121A09", s2: "#181F0E", accent: "#88B654", mark: "#88B654", hair: "#242E1A", hair2: "#374426" },
-    light: { s0: "#FCFEFA", s1: "#FAFFF5", s2: "#F4FBEC", accent: "#425D22", mark: "#53772D", hair: "#DBE6CC", hair2: "#C0D1AC" },
+    dark: { s0: "#0B1205", s1: "#121A09", s2: "#181F0E", accent: "#88B654", mark: "#88B654", hair: "#242E1A", hair2: "#374426", plaque: "#3F7076" },
+    light: { s0: "#FCFEFA", s1: "#FAFFF5", s2: "#F4FBEC", accent: "#425D22", mark: "#53772D", hair: "#DBE6CC", hair2: "#C0D1AC", plaque: "#1F3B3E" },
   },
 };
 
@@ -63,15 +75,33 @@ export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
  * so the two are told apart by form: the lamp's gold only ever appears on a solid
  * lampBg chip (the lit lamp, circle.tsx reactions); the accent only on a hollow
  * chip outlined in it (a reaction I made).
+ *
+ * v2 (规范 v2 定稿 §二, global — not per civilization): `neg` is 冷玫红 and every
+ * neg* slot moved with it (strong = the solid danger fill under white text, bg /
+ * negInk = a notice's ground and the text on it); `warn` is new, 橙, the same value
+ * as the web. `pos`, `lamp` and `lampBg` are unchanged. neg is always drawn with ✕
+ * and words, never by colour alone: its hue is close to 地府's plaque.
  */
 export const semantic = {
-  dark: { pos: "#82CB92", neg: "#F4928A", negStrong: "#C25D58", negInk: "#FED2CD", negBg: "#301715", lamp: "#F2CC7A", lampBg: "#241B0C" },
-  light: { pos: "#197037", neg: "#AC3031", negStrong: "#C13C3B", negInk: "#94151D", negBg: "#FFEDEB", lamp: "#6A3E00", lampBg: "#FBF1DC" },
+  dark: { pos: "#82CB92", neg: "#FF7A93", negStrong: "#C21D4D", negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
+  light: { pos: "#197037", neg: "#A8103E", negStrong: "#A8103E", negInk: "#8A0C33", negBg: "#FFECEF", warn: "#A65000", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
 } as const;
+// `scrim` rides along here because it is global too (补足 A2 阴影与遮罩): one use —
+// under a dialog or a sheet — and one value per scheme, 0.42 light / 0.62 dark.
 
-/** pt. `space[5]` (20) is the screen gutter. */
-export const space = [2, 4, 7, 10, 14, 20, 26, 34] as const;
-export const radius = { none: 0, pill: 999, focus: 2 } as const;
+/**
+ * pt. v2 补足 A2: multiples of 4. The v1 steps merged to the nearest — 7→8,
+ * 10→12, 14→16, 26→24, 34→32 — so `space[0..4]` keep their index. 20 is not a
+ * step but stays the screen gutter (A2: "20 不变"; `layoutFor` narrows it to 16).
+ */
+export const space = [2, 4, 8, 12, 16, 24, 32, 48] as const;
+export const GUTTER_PT = 20;
+/**
+ * A2: corners are 0. The exceptions are the pill (the lamp, a drawer handle) and
+ * the circle (a radio, an avatar) — both drawn with `pill`. The focus ring follows
+ * the element's shape, so it is square too.
+ */
+export const radius = { none: 0, pill: 999 } as const;
 /** ms. The only motion is opacity; reduce-motion sets every duration to 0. */
 export const motion = { fade: 120, toast: 160, toastHold: 1900, breath: 1600, welcomeIn: 600, welcomeHold: 1200, welcomeOut: 240 } as const;
 
@@ -85,6 +115,9 @@ export interface Theme {
   mark: string;
   hair: string;
   hair2: string;
+  /** 匾色: see `Ground`. The primary button's fill. */
+  plaque: string;
+  onPlaque: string;
   /** Text on an accent fill: the screen ground, as in the prototype. */
   onAccent: string;
   ink: string;
@@ -95,6 +128,8 @@ export interface Theme {
   negStrong: string;
   negInk: string;
   negBg: string;
+  warn: string;
+  scrim: string;
   lamp: string;
   lampBg: string;
 }
@@ -112,7 +147,7 @@ export function civKeyOf(civilization: string | null | undefined): CivKey {
 export function themeFor(civilization: string | null | undefined, scheme: ColorScheme): Theme {
   const key = civKeyOf(civilization);
   const ground = civ[key][scheme];
-  return { scheme, civ: key, ...ground, onAccent: ground.s0, ...ink[scheme], ...semantic[scheme] };
+  return { scheme, civ: key, ...ground, onPlaque: ON_PLAQUE, onAccent: ground.s0, ...ink[scheme], ...semantic[scheme] };
 }
 
 /**
@@ -133,10 +168,17 @@ export const parchment = {
  * rings and radios ink — the App's accent is the seal red, the same value as
  * the error colour — so here `accent` is ink, and red (`acc` / `demerit`)
  * reaches only the error slots.
+ *
+ * v2: the status colours are global (规范 v2 §二), so pos / neg* / warn / lamp come
+ * from `semantic`, not the canvas's merit / demerit / warnBg; the plaque is the
+ * neutral one (a soul not yet signed in has no civilization).
  */
 export function preLoginTheme(scheme: ColorScheme): Theme {
   const p = parchment[scheme];
   return {
+    ...semantic[scheme],
+    plaque: civ.neutral[scheme].plaque,
+    onPlaque: ON_PLAQUE,
     scheme,
     civ: "neutral",
     s0: p.bg,
@@ -150,13 +192,6 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
     ink: p.ink,
     inkMuted: p.ink2,
     inkSubtle: p.ink3,
-    pos: p.merit,
-    neg: p.demerit,
-    negStrong: p.acc,
-    negInk: p.demerit,
-    negBg: p.warnBg,
-    lamp: semantic[scheme].lamp,
-    lampBg: semantic[scheme].lampBg,
   };
 }
 
