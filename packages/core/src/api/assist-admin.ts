@@ -27,6 +27,10 @@ export type AssistAdminEvalRunDetail = Schemas["EvalRunDetail"];
 export type AssistAdminEvalResult = Schemas["EvalResult"];
 export type AssistAdminUsage = Schemas["Usage"];
 export type AssistAdminEvalCase = Schemas["EvalCase"];
+export type AssistAdminTryRequest = Schemas["TryRequest"];
+export type AssistAdminTryResult = Schemas["TryResult"];
+export type AssistAdminCorpus = Schemas["Corpus"];
+export type AssistAdminCorpusEntry = Schemas["CorpusEntry"];
 
 /** The `code`s the admin views answer 400/404 with (`_error` in admin_views.py). */
 export const ASSIST_ADMIN_ERROR_CODES = [
@@ -36,6 +40,13 @@ export const ASSIST_ADMIN_ERROR_CODES = [
   "invalid_confirm_token",
   "invalid_month",
   "not_found",
+  // 试问 (POST try/): the eval identity for that side is missing or deactivated; too many tries this hour;
+  // and the two `service.ask` failures it passes through (503 / 429).
+  "no_eval_soul",
+  "no_eval_officer",
+  "rate_limited",
+  "assistant_unavailable",
+  "assistant_busy",
   // Not a `code` in the body: DRF answers a PATCH carrying `eval_soul_account` /
   // `eval_officer` with a field error (ConfigUpdateSerializer.validate). Mapped below.
   "read_only_field",
@@ -71,6 +82,10 @@ export const assistAdminApi = {
     api.post<AssistAdminEvalRun>(`${BASE}/eval/runs/`, { confirm_token }).then((r) => r.data),
   evalRuns: () => api.get<AssistAdminEvalRun[]>(`${BASE}/eval/runs/`).then((r) => r.data),
   evalRun: (id: number) => api.get<AssistAdminEvalRunDetail>(`${BASE}/eval/runs/${id}/`).then((r) => r.data),
+  /** 试问 (plan §3.3): one real, paid question as the eval identity; not counted in usage. Tool names only. */
+  tryQuestion: (body: AssistAdminTryRequest) => api.post<AssistAdminTryResult>(`${BASE}/try/`, body).then((r) => r.data),
+  /** The help corpus, read-only (plan §5): entries with their token estimates, and the largest prompt vs the threshold. */
+  corpus: () => api.get<AssistAdminCorpus>(`${BASE}/corpus/`).then((r) => r.data),
   usage: (month?: string) =>
     api.get<AssistAdminUsage>(`${BASE}/usage/`, { params: month ? { month } : undefined }).then((r) => r.data),
 };

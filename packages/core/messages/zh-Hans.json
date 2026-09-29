@@ -3793,7 +3793,9 @@
       "read_only": "只读项",
       "connectivity": "连通测试",
       "identities": "评测身份",
-      "eval": "评测"
+      "eval": "评测",
+      "try": "试问",
+      "corpus": "帮助语料 · 只读"
     },
     "switch": {
       "master": "总开关",
@@ -3946,6 +3948,30 @@
       "missing": "缺要点「{{phrases}}」",
       "all_hit": "要点全中"
     },
+    "try": {
+      "as_soul": "以 问一问评测灵魂 身份提问",
+      "as_officer": "以 assist-eval-officer 身份提问",
+      "question": "问题",
+      "ask": "问",
+      "answer": "答",
+      "meta": "{{latency}} ms · {{tokens}} tok",
+      "tools": "工具调用 · {{count}}",
+      "no_tools": "没有调用工具",
+      "uses_draft": "用未保存的连接草稿提问。",
+      "not_counted": "真实请求，会花钱；不计入本月用量与月度上限。"
+    },
+    "corpus": {
+      "summary": "{{count}} 条 · 共 {{tokens}} token",
+      "threshold": "最大一份提示约 {{tokens}} / {{threshold}} token（阶段 4 阈值）",
+      "note": "语料随代码发布，此处只读；筛选后条数与 token 随之变化。",
+      "entry": "条目",
+      "audience": "受众",
+      "screen": "页面",
+      "civilization": "文明",
+      "locale": "语言",
+      "tokens": "token",
+      "empty": "没有符合筛选的条目。"
+    },
     "footer": {
       "unsaved": "未保存 {{count}} 项",
       "clean": "没有未保存的改动",
@@ -3964,7 +3990,13 @@
       "save_failed": "保存失败，请重试。",
       "test_failed": "连通测试没有发出去，请重试。",
       "preview_failed": "报价失败，请重试。",
-      "start_failed": "开跑失败，请重试。"
+      "start_failed": "开跑失败，请重试。",
+      "no_eval_soul": "缺少评测灵魂，先创建评测身份。",
+      "no_eval_officer": "缺少评测官员，先创建评测身份。",
+      "rate_limited": "试问太频繁，请稍后再试。",
+      "assistant_unavailable": "助手一时答不上来，请稍后重试。",
+      "assistant_busy": "助手正忙，请稍后再问。",
+      "try_failed": "试问没有发出去，请重试。"
     },
     "usage": {
       "month": "月份",

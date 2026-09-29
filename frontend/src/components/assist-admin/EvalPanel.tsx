@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type {
   AssistAdminCandidate,
   AssistAdminConfig,
@@ -32,8 +32,17 @@ const LABELS = ["A", "B"];
  * Eval identities, then the eval itself (canvas 1b/1c, 1d ⑤⑥). Money actions
  * preview first: 「开跑…」 asks the backend for a quote; the confirm dialog
  * shows it; only the confirm button spends, by sending the quote's token.
+ * `afterIdentities` sits between the two — the canvas puts 试问 there.
  */
-export function EvalPanel({ config, draftConnection }: { config: AssistAdminConfig; draftConnection: AssistAdminCandidate }) {
+export function EvalPanel({
+  config,
+  draftConnection,
+  afterIdentities,
+}: {
+  config: AssistAdminConfig;
+  draftConnection: AssistAdminCandidate;
+  afterIdentities?: ReactNode;
+}) {
   const { t, formatDateTime } = useI18n();
   const ensure = useEnsureEvalIdentities();
   const preview = useEvalPreview();
@@ -122,6 +131,8 @@ export function EvalPanel({ config, draftConnection }: { config: AssistAdminConf
         )}
         {ensure.data && <p className={`mt-2 ${SUBTLE}`}>{ensure.data.description}</p>}
       </Section>
+
+      {afterIdentities}
 
       <Section title={t("assist_admin.sections.eval")} id="aa-eval">
         <div role="group" aria-label={t("assist_admin.eval.side")} className="flex gap-2">

@@ -3793,7 +3793,9 @@
       "read_only": "Maa Wa",
       "connectivity": "Smen Seth Senb",
       "identities": "Ren Smen Seth",
-      "eval": "Smen Seth"
+      "eval": "Smen Seth",
+      "try": "Hehy Medu · Smen Seth",
+      "corpus": "Medu Seth · Maa Wa"
     },
     "switch": {
       "master": "Wen-Khetem Neb",
@@ -3946,6 +3948,30 @@
       "missing": "Imen: {{phrases}}",
       "all_hit": "Medu Neb Menkh"
     },
+    "try": {
+      "as_soul": "Hehy: Ba Smen Seth",
+      "as_officer": "Hehy: Sab Smen Seth",
+      "question": "Hehy",
+      "ask": "Hehy",
+      "answer": "Medu",
+      "meta": "Unut {{latency}} · Hesb {{tokens}}",
+      "tools": "Kat · {{count}}",
+      "no_tools": "Nen Kat",
+      "uses_draft": "Nen Sau",
+      "not_counted": "Nen Hesb Em Abed."
+    },
+    "corpus": {
+      "summary": "{{count}} · Hesb {{tokens}}",
+      "threshold": "Hesb {{tokens}} / {{threshold}}",
+      "note": "Medu Seth: Maa Wa.",
+      "entry": "Sep",
+      "audience": "Iru",
+      "screen": "Dy",
+      "civilization": "Taui",
+      "locale": "Medu Ta",
+      "tokens": "Hesb",
+      "empty": "Nen Sesh Em Setep Pen"
+    },
     "footer": {
       "unsaved": "Nen Sau {{count}}",
       "clean": "Nen Khemen",
@@ -3964,7 +3990,13 @@
       "save_failed": "Nen Sau. Wehem Iri.",
       "test_failed": "Nen Smen Seth. Wehem Iri.",
       "preview_failed": "Nen Hesb. Wehem Iri.",
-      "start_failed": "Nen Tepy. Wehem Iri."
+      "start_failed": "Nen Tepy. Wehem Iri.",
+      "no_eval_soul": "Ba Smen Seth Imen: Iri Er Tepy.",
+      "no_eval_officer": "Sab Smen Seth Imen: Iri Er Tepy.",
+      "rate_limited": "Dbh Menmen.",
+      "assistant_unavailable": "Nen Medu. Wehem Iri.",
+      "assistant_busy": "Wah Menmen: Wehem Iri.",
+      "try_failed": "Nen Hehy. Wehem Iri."
     },
     "usage": {
       "month": "Abed",
