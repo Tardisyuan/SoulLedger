@@ -462,7 +462,6 @@ if not DEBUG:
     SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^api/v1/chat/hooks/new-message/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
