@@ -2,7 +2,7 @@
  * The ports this package needs from whatever client embeds it.
  *
  * WHY THESE AND NOT "A COOKIE JAR". The web build stores the refresh token in
- * a cookie because `frontend/middleware.ts` — which runs on the server, before
+ * a cookie because `frontend/proxy.ts` — which runs on the server, before
  * any of this code — reads `soulledger_refresh` off the request to decide
  * whether to admit a route. A React Native client has no middleware and no
  * cookies. So the port cannot be "cookies"; it has to be the properties the

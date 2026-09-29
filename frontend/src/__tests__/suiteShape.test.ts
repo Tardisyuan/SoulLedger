@@ -176,7 +176,7 @@ const COLLECTED_FILES = [
   "jestRunsNextVendoredReact.test.ts",
   "ledgerQuantityContract.render.test.tsx",
   "messageValuesAreNotTheirOwnKeys.test.ts",
-  "middlewareAuthGate.test.ts",
+  "proxyAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
   "MenuButtonsPage.editFailure.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",

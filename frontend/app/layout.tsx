@@ -64,7 +64,7 @@ export default async function RootLayout({
   // 读屏软件会用中文发音去念英文,`:lang()` 选择器和浏览器翻译提示也全错,而且不会
   // 自愈。这与主题不同:主题错的是首帧,语言错的是全程。
   //
-  // 代价:读 cookie 让整棵树退出静态渲染。这里本来就不是静态的 —— middleware.ts
+  // 代价:读 cookie 让整棵树退出静态渲染。这里本来就不是静态的 —— proxy.ts
   // 每个请求都在读写同一个 cookie,且全站页面都要认证。
   const cookieLocale = (await cookies()).get(LOCALE_COOKIE)?.value;
   const locale = isLocale(cookieLocale) ? cookieLocale : undefined;

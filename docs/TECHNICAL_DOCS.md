@@ -73,7 +73,7 @@ CI and the image install) and `frontend/package.json`; those files are the autho
 - `RequirePermission` — gates children by permission codename
 - `RequireButton` — gates by menu button code
 - ~~`RouteGuard`~~ — no such component (2026-09-26). Page-level gates wrap the page in
-  `RequirePermission` with a `PermissionDenied` fallback; `frontend/middleware.ts` only
+  `RequirePermission` with a `PermissionDenied` fallback; `frontend/proxy.ts` only
   separates public paths from authenticated ones
 - `usePermissions()` — hook with ADMIN bypass
 

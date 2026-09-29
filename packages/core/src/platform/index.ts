@@ -187,7 +187,7 @@ export function setRefreshToken(value: string): void {
  * name everywhere the API supplied one.
  *
  * It reads the same cookie `I18nContext` writes, through `persistent` rather
- * than `secure`: a locale is a preference, not a credential, and `middleware.ts`
+ * than `secure`: a locale is a preference, not a credential, and `proxy.ts`
  * already reads this cookie on the server for `<html lang>`.
  *
  * NOT `INTL_LOCALE`, and the difference matters. That table maps `egy` to `en`
