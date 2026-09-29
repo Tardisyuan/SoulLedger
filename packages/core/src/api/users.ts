@@ -30,6 +30,9 @@ export interface User {
   position?: string;
   avatar?: string;
   create_time?: string;
+  /** The assistant admin's eval officer (apps/soul_assist/eval_identities.py). List / retrieve only: the create and
+   *  update serializers do not carry it, so it is absent on their responses. */
+  is_eval_identity?: boolean;
 }
 
 export interface CreateUserInput {

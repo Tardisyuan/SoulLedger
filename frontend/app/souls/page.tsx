@@ -320,6 +320,7 @@ export default function SoulsPage() {
                 <Link href={`/souls/${soul.id}`} className={ROW_LINK}>
                   {soul.name}
                 </Link>
+                {soul.is_eval_identity && <Badge glyph="◇">{t("assist_admin.identities.tag")}</Badge>}
                 {/* The drawer's trigger. The row stays one link to the full
                     record (click, middle-click, screen readers — unchanged);
                     this is a separate, visible control lifted above the row
