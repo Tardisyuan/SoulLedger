@@ -28,12 +28,24 @@ REPORTED_CODENAMES = ("workflow.approve", "workflow.advance", "workflow.escalate
 
 
 def _scope(request):
-    return "all_halls" if is_tenant_exempt(request.user) else "this_hall"
+    return "enabled_halls" if is_tenant_exempt(request.user) else "this_hall"
+
+
+def enabled_hall_ids():
+    """开了助手的殿。ADMIN 跨殿,但**关了助手的殿的数据不发给模型**(用户 2026-09-29 定):
+    与灵魂端「X 殿的数据只在 X 殿开着时才出去」同一条。"""
+    from apps.tenants.models import Tenant
+
+    return [t.pk for t in Tenant.objects.all() if (t.settings or {}).get("assistant_enabled") is True]
 
 
 def _list_queryset(viewset_class, request, action="list"):
-    """那个页面的列表会给这个调用者看的行 —— 跑视图集自己的 `get_queryset`,不重述它。"""
-    return viewset_class(request=request, action=action, kwargs={}, format_kwarg=None).get_queryset()
+    """那个页面的列表会给这个调用者看的行 —— 跑视图集自己的 `get_queryset`,不重述它;
+    ADMIN 再收窄到开了助手的殿。非 ADMIN 的视图集本来就只给本殿(本殿开着,才问得到这里)。"""
+    qs = viewset_class(request=request, action=action, kwargs={}, format_kwarg=None).get_queryset()
+    if is_tenant_exempt(request.user):
+        qs = qs.filter(tenant_id__in=enabled_hall_ids())
+    return qs
 
 
 def _judgment_queue_counts(request):

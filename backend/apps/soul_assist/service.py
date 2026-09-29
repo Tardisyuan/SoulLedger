@@ -51,6 +51,7 @@ class AssistError(Exception):
 def enabled_for(account) -> bool:
     """全局开关 + 原属殿的开关(决策 A6:读 home_tenant,与冷却天数同一处)。两个都默认关。
     全局开关是生效配置(管理页覆盖 env,env 为假时恒关,`config.Effective.enabled`)。"""
+    usage.maybe_reopen()
     if not config.effective().enabled:
         return False
     home = account.soul.home_tenant or account.soul.tenant
@@ -158,6 +159,7 @@ def officer_enabled_for(request) -> bool:
     (`TenantPermission` 先拒),万一到了也答关。"""
     from apps.core.tenant import is_tenant_exempt
 
+    usage.maybe_reopen()
     if not config.effective().enabled:
         return False
     tenant = getattr(request, "tenant", None)

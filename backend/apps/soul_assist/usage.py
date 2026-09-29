@@ -64,10 +64,20 @@ def month_spend(prices, month=None):
     return {"cost": round(total, 6), "unpriced_models": sorted(unpriced)}
 
 
-def enforce_cap():
-    """本月估算花费到上限 → 关总开关、写审计、通知管理员。返回是否这一次关掉的。
+#: 本月花费到上限的这个比例时提醒一次管理员(用户 2026-09-29 定)。
+ALERT_SHARE = 0.8
 
-    锁住配置行再复查:并发的几次回答同时越线,只有一个会关、只发一次通知。"""
+
+def _month_key(moment=None):
+    return timezone.localtime(moment).strftime("%Y-%m")
+
+
+def enforce_cap():
+    """每次非评测回答之后调。本月估算花费:
+    - 到上限的 80% → 本月第一次时提醒管理员;
+    - 到上限 → 关总开关、记下「上限关于本月」、写审计、通知管理员。返回是否这一次关掉的。
+
+    都锁住配置行再复查:并发的几次回答同时越线,只关一次、每种通知只发一次。"""
     from apps.soul_assist import config
     from apps.soul_assist.models import AssistConfig
 
@@ -75,27 +85,65 @@ def enforce_cap():
     if not cfg.enabled or cfg.monthly_cap is None:
         return False
     spent = month_spend(cfg.prices)["cost"]
-    if spent < cfg.monthly_cap:
+    if spent < cfg.monthly_cap * ALERT_SHARE:
         return False
+    month = _month_key()
+    closed = alerted = False
     with transaction.atomic():
         AssistConfig.objects.get_or_create(pk=1)
         row = AssistConfig.objects.select_for_update().get(pk=1)
-        if row.values.get("enabled", cfg.env_enabled) is False:
+        if spent < cfg.monthly_cap:
+            if row.cap_alert_sent_for != month:
+                row.cap_alert_sent_for = month
+                row.save(update_fields=["cap_alert_sent_for"])
+                alerted = True
+        elif row.values.get("enabled", cfg.env_enabled) is not False:
+            row.cap_closed_for = month
+            row.cap_alert_sent_for = month  # 直接越过 80% 到了上限:不再补发那条提醒
+            config.save_changes(row, {"enabled": False}, user=None,
+                                description=f"monthly cap reached: spent {spent:.4f} >= cap {cfg.monthly_cap}")
+            closed = True
+    if alerted:
+        _notify_admins("助手本月花费已到上限的 80%",
+                       f"本月估算花费 {spent:.2f},上限 {cfg.monthly_cap:.2f}。到上限时助手会自动关闭。")
+    if closed:
+        _notify_admins("助手已自动关闭:本月花费到达上限",
+                       f"本月估算花费 {spent:.2f} 已到上限 {cfg.monthly_cap:.2f},助手总开关已自动关闭。"
+                       f"次月 1 日会自动重开;也可以到「助手管理」页调高上限后手动打开。")
+    return closed
+
+
+def maybe_reopen():
+    """总开关是**因月度上限**关的,而现在已是之后的月份 → 重开、写审计、通知管理员。返回是否这一次重开的。
+
+    管理员手动关的不开(手动改开关会清空 `cap_closed_for`,见 config.save_changes)。
+    celery beat 未部署,所以不靠定时任务:每次读开关时顺手查一次(快照里就有这一格,平时不碰库)。"""
+    from apps.soul_assist import config
+    from apps.soul_assist.models import AssistConfig
+
+    cfg = config.effective()
+    if cfg.switch or not cfg.cap_closed_for or cfg.cap_closed_for == _month_key():
+        return False
+    with transaction.atomic():
+        row = AssistConfig.objects.select_for_update().filter(pk=1).first()
+        if row is None or not row.cap_closed_for or row.cap_closed_for == _month_key():
             return False
-        config.save_changes(row, {"enabled": False}, user=None,
-                            description=f"monthly cap reached: spent {spent:.4f} >= cap {cfg.monthly_cap}")
-    _notify_admins(spent, cfg.monthly_cap)
+        if row.values.get("enabled", cfg.env_enabled) is not False:
+            return False
+        row.cap_closed_for = ""
+        config.save_changes(row, {"enabled": True}, user=None,
+                            description="reopened: a new month after the monthly-cap close")
+    _notify_admins("助手已自动重开:新的一个月",
+                   "上个月助手因花费到达上限被自动关闭,本月已自动重开。")
     return True
 
 
-def _notify_admins(spent, cap):
+def _notify_admins(title, message):
     from apps.authentication.models import User
     from apps.notifications.models import NotificationType, notify_user
 
     for admin in User.objects.filter(role="ADMIN", is_active=True).order_by("pk"):
-        notify_user(admin, title="助手已自动关闭:本月花费到达上限",
-                    message=f"本月估算花费 {spent:.2f} 已到上限 {cap:.2f},助手总开关已自动关闭。"
-                            f"到「助手管理」页查看用量,调高上限后可重新打开。",
+        notify_user(admin, title=title, message=message,
                     notification_type=NotificationType.SYSTEM, related_resource="assistant_config")
 
 

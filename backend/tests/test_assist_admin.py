@@ -16,6 +16,7 @@ from apps.authentication.models import User
 from apps.notifications.models import UserNotification
 from apps.soul_assist import config, evals, service, usage
 from apps.soul_assist.models import (
+    AssistConfig,
     AssistConversation,
     AssistEvalCase,
     AssistEvalResult,
@@ -309,6 +310,64 @@ def test_reaching_the_monthly_cap_turns_the_switch_off_audits_and_notifies(api, 
     assert _soul_ask(soul).data["code"] == "assistant_not_configured"
     assert usage.enforce_cap() is False  # 已经关了:不再关、不再通知
     assert UserNotification.objects.filter(user=admin).count() == 1
+
+
+def test_the_admin_is_warned_once_at_80_percent_before_the_cap_closes_it(api, admin, cn_tenant):
+    """80% 提醒线(用户 2026-09-29 定):每月只提醒一次;越过上限才关。
+    变异:`ALERT_SHARE` 的判断删掉 → 第二问后没有提醒,红;提醒不记月份 → 第三问又提醒一次,红。"""
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    _patch(api, prices={"env-model": {"input": 1_000_000, "output": 1_000_000}}, monthly_cap=5)
+    titles = lambda: list(UserNotification.objects.filter(user=admin).order_by("pk").values_list("title", flat=True))  # noqa: E731
+    assert _soul_ask(soul).status_code == 200  # 花了 2,不到 4(80%)
+    assert titles() == []
+    assert _soul_ask(soul).status_code == 200  # 花了 4 = 80%
+    assert config.effective().enabled is True
+    assert titles() == ["助手本月花费已到上限的 80%"]
+    assert usage.enforce_cap() is False and len(titles()) == 1  # 本月不再重复提醒
+    assert _soul_ask(soul).status_code == 200  # 花了 6 ≥ 5
+    assert config.effective().enabled is False
+    assert titles() == ["助手本月花费已到上限的 80%", "助手已自动关闭:本月花费到达上限"]
+
+
+def _close_by_cap(api, soul):
+    _patch(api, prices={"env-model": {"input": 1_000_000, "output": 1_000_000}}, monthly_cap=1)
+    assert _soul_ask(soul).status_code == 200
+    assert config.effective().enabled is False
+
+
+def _pretend_it_is_a_later_month():
+    AssistConfig.objects.filter(pk=1).exclude(cap_closed_for="").update(cap_closed_for="2000-01")
+    config.invalidate()
+
+
+def test_a_switch_the_cap_closed_reopens_in_the_next_month(api, admin, cn_tenant):
+    """次月 1 日起自动重开,仅限因超额被关(用户 2026-09-29 定)。beat 未部署:读开关时顺手查。
+    变异:`maybe_reopen` 里的月份比较恒真 → 同月就重开,第一个断言红。"""
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    _close_by_cap(api, soul)
+    assert usage.maybe_reopen() is False  # 同一个月:不开
+    _pretend_it_is_a_later_month()
+    assert api.get(f"{BASE}config/").data["enabled"] is True  # 管理员打开页面时就已重开
+    assert config.effective().enabled is True and AssistConfig.objects.get(pk=1).cap_closed_for == ""
+    reopen = AuditLog.objects.filter(resource="assistant_config", user=None, description__startswith="reopened").get()
+    assert reopen.changes == {"enabled": [False, True]}
+    assert UserNotification.objects.filter(user=admin, title="助手已自动重开:新的一个月").count() == 1
+    assert usage.maybe_reopen() is False  # 只开一次
+
+
+def test_a_switch_the_admin_turned_off_never_reopens_by_itself(api, cn_tenant):
+    """管理员手动关的不自动开,哪怕它先前是被上限关的(手动改开关即清掉「上限关的」标记)。
+    变异:`save_changes` 不清 `cap_closed_for` → 次月被重开,红。"""
+    _enable(cn_tenant)
+    _, soul = ready_soul(cn_tenant)
+    _close_by_cap(api, soul)
+    assert _patch(api, enabled=False).status_code == 200  # 管理员也确认关着
+    assert AssistConfig.objects.get(pk=1).cap_closed_for == ""
+    _pretend_it_is_a_later_month()
+    assert usage.maybe_reopen() is False and config.effective().enabled is False
+    assert _soul_ask(soul).data["code"] == "assistant_not_configured"
 
 
 def test_eval_spend_does_not_count_toward_the_cap(api, cn_tenant):

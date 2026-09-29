@@ -68,6 +68,7 @@ class Effective:
     eval_soul_account_id: object
     eval_officer_id: object
     overridden: tuple  # 页面改过的键
+    cap_closed_for: str = ""  # 非空 = 总开关因月度上限被关于该月("YYYY-MM"),见 usage.maybe_reopen
 
     @property
     def enabled(self) -> bool:
@@ -85,7 +86,8 @@ def _snapshot(row):
     if row is None:
         return None
     return {"values": dict(row.values or {}), "api_key": row.api_key, "api_key_set_at": row.api_key_set_at,
-            "eval_soul_account_id": row.eval_soul_account_id, "eval_officer_id": row.eval_officer_id}
+            "eval_soul_account_id": row.eval_soul_account_id, "eval_officer_id": row.eval_officer_id,
+            "cap_closed_for": row.cap_closed_for}
 
 
 def _row():
@@ -121,7 +123,7 @@ def provider_name(path):
 
 def effective() -> Effective:
     row = _row() or {"values": {}, "api_key": "", "api_key_set_at": None, "eval_soul_account_id": None,
-                     "eval_officer_id": None}
+                     "eval_officer_id": None, "cap_closed_for": ""}
     v = row["values"]
     env = env_connection()
     fallbacks = env.fallbacks if "fallbacks" not in v else ("default" if v["fallbacks"] else "")
@@ -140,6 +142,7 @@ def effective() -> Effective:
         eval_spend_cap=v.get("eval_spend_cap", DEFAULT_EVAL_SPEND_CAP), api_key_set_at=row["api_key_set_at"],
         eval_soul_account_id=row["eval_soul_account_id"], eval_officer_id=row["eval_officer_id"],
         overridden=tuple(sorted(v)) + (("api_key",) if row["api_key_set_at"] else ()),
+        cap_closed_for=row.get("cap_closed_for", ""),
     )
 
 
@@ -206,6 +209,9 @@ def save_changes(row, values=None, *, user, description="assistant config update
     **审计里 API key 只记 "replaced" / "cleared",不记值**;其余键记 [旧值, 新值]。"""
     before = effective()
     changes = {}
+    if user is not None and "enabled" in (values or {}):
+        # 管理员亲手动了总开关:不再有「上限关的、下月自动开」这回事(用户 2026-09-29 定)。
+        row.cap_closed_for = ""
     for key, new in (values or {}).items():
         old = current_value(before, key)
         if old != new:

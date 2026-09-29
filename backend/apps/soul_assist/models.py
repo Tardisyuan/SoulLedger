@@ -83,6 +83,10 @@ class AssistConfig(models.Model):
                                           blank=True, related_name="+")
     eval_officer = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, blank=True,
                                      related_name="+")
+    #: 月度上限的状态(用户 2026-09-29 定):本月已发过 80% 提醒的月份("YYYY-MM"),以及因超额被关掉的月份。
+    #: 后者非空 = 总开关是**上限**关的,次月 1 日起首次读开关时自动重开;管理员手动改过开关就清空,不再自动开。
+    cap_alert_sent_for = models.CharField(max_length=7, blank=True, default="")
+    cap_closed_for = models.CharField(max_length=7, blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
 
 
