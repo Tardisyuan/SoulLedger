@@ -137,7 +137,7 @@ services:
   # media), and the healthcheck requires both to be fresh too. Before chat is
   # initialized both are skipped and not required.
   backup:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     volumes:
       - ./scripts:/scripts:ro
       - ./backups:/backups
