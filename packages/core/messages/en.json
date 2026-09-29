@@ -3814,7 +3814,7 @@
     "retention": "Conversations are deleted automatically after 30 days.",
     "history_end": "Older conversations have been deleted on schedule.",
     "history_empty": "No questions yet.",
-    "history_failed": "Past conversations could not be loaded.",
+    "history_failed": "Past conversations could not be loaded. Please try again.",
     "today": "Today",
     "page_other": "Other pages",
     "delete_label": "Delete this conversation",

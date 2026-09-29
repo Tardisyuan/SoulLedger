@@ -3814,7 +3814,7 @@
     "retention": "会话保存 30 天后自动删除。",
     "history_end": "更早的会话已按期删除。",
     "history_empty": "还没有问过问题。",
-    "history_failed": "历史会话加载失败。",
+    "history_failed": "历史会话加载失败，请重试。",
     "today": "今天",
     "page_other": "其他页",
     "delete_label": "删除这段会话",
