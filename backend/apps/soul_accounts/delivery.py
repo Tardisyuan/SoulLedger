@@ -8,8 +8,9 @@ password, expires_at)` 的对象。`send` 失败就抛异常 —— 调用方(se
 短信在后。换服务商 = 换列表里的一项。
 """
 from django.conf import settings
-from django.core.mail import send_mail
 from django.utils.module_loading import import_string
+
+from apps.authentication.mail import send_neutral_mail
 
 DEFAULT_DELIVERIES = [
     "apps.soul_accounts.delivery.EmailCredentialDelivery",
@@ -34,7 +35,14 @@ class EmailCredentialDelivery:
         return bool(soul.contact_email)
 
     def send(self, soul, soul_code, password, expires_at):
-        send_mail("SoulLedger 灵魂账号", _message(soul_code, password, expires_at), None, [soul.contact_email])
+        send_neutral_mail(
+            "SoulLedger 灵魂账号",
+            _message(soul_code, password, expires_at),
+            heading="灵魂账号",
+            rows=[("灵魂编号", soul_code), ("初始密码", password), ("有效期至", f"{expires_at:%Y-%m-%d %H:%M} (UTC)")],
+            notes=["首次登录后须修改密码。", "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"],
+            to=[soul.contact_email],
+        )
 
 
 class SmsCredentialDelivery:
