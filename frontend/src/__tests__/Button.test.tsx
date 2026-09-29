@@ -69,12 +69,12 @@ describe("the class merge does not eat the eight-step type scale", () => {
     );
   });
 
-  it("`text-quote` — the one step not shaped like a t-shirt size — is a font size too", () => {
+  it("`text-display` — the one step not shaped like a t-shirt size — is a font size too", () => {
     // tailwind-merge's own table recognises 2xs/xs/sm/md/lg/xl by shape;
-    // `quote` is only a size because lib/utils.ts registers it.
-    expect(cn("text-quote", "text-md")).toBe("text-md");
-    expect(cn("text-quote text-black").split(/\s+/)).toEqual(
-      expect.arrayContaining(["text-quote", "text-black"])
+    // `display` (规范 v2 A3, 40px) is only a size because lib/utils.ts registers it.
+    expect(cn("text-display", "text-md")).toBe("text-md");
+    expect(cn("text-display text-black").split(/\s+/)).toEqual(
+      expect.arrayContaining(["text-display", "text-black"])
     );
   });
 
@@ -175,22 +175,32 @@ describe("interaction states are on every variant and every size", () => {
   });
 });
 
-describe("规范 v1 §2 按钮:主 = 墨色实底,危险 = 次按钮 + 危险色", () => {
-  it.each(BUTTON_SIZES)("primary/%s is canvas text on an ink fill", (size) => {
+describe("规范 v2 A1 按钮:主 = 匾色实底,危险 = neg.strong 实底白字", () => {
+  it.each(BUTTON_SIZES)("primary/%s is onMain text on the plaque colour", (size) => {
     const classes = classesOf("primary", size);
-    expect(classes).toContain("bg-[oklch(var(--color-ink))]");
-    expect(classes).toContain("text-[oklch(var(--color-canvas))]");
-    // Absence too: the accent fill is what the spec retired (琥珀曾同时是按钮、地府、审判中).
-    expect(classes.join(" ")).not.toMatch(/bg-\[oklch\(var\(--color-accent/);
+    expect(classes).toContain("bg-[oklch(var(--color-main))]");
+    expect(classes).toContain("text-[oklch(var(--color-on-main))]");
+    // Hover / press darken the same fill by 12% / 24% black (A1), not a second colour.
+    expect(classes).toContain("hover:bg-[color-mix(in_oklab,oklch(var(--color-main))_88%,black)]");
+    expect(classes).toContain("active:bg-[color-mix(in_oklab,oklch(var(--color-main))_76%,black)]");
+    // Absence too: no ink fill (v1), no accent fill (retired).
+    expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(ink|accent)/);
   });
 
-  it("danger is never a solid red fill", () => {
+  it("danger is a solid neg.strong fill with white text, darkened the same way", () => {
     for (const size of BUTTON_SIZES) {
       const classes = classesOf("danger", size);
-      expect(classes).toContain("text-[oklch(var(--color-danger))]");
-      expect(classes).toContain("border-[oklch(var(--color-danger))]");
-      expect(classes).toContain("bg-transparent");
-      expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(danger|status-error)\)/);
+      expect(classes).toContain("bg-[oklch(var(--color-danger-strong))]");
+      expect(classes).toContain("text-white");
+      expect(classes).toContain("hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,black)]");
+      // Not the text-strength danger hue as a fill: that one is for ✕ + words, not for white on it.
+      expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(danger|status-error)\)\)\]/);
+    }
+  });
+
+  it("the plaque colour appears on the primary button and on no other variant", () => {
+    for (const variant of BUTTON_VARIANTS.filter((v) => v !== "primary")) {
+      expect(classesOf(variant, "md").join(" ")).not.toContain("--color-main");
     }
   });
 
@@ -248,7 +258,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-block))]", "h-8", "px-3", "text-sm"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-line-strong))]", "h-8", "px-3", "text-sm"]));
   });
 
   it("disables and marks itself busy while loading", () => {

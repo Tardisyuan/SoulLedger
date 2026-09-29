@@ -98,7 +98,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           ref={listRef}
           role="listbox"
           aria-label={config.label}
-          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))] shadow-overlay py-1"
+          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] py-1"
         >
           {config.options.map((option, index) => (
             <button

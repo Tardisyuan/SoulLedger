@@ -11,7 +11,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
-import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
+import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionBanner } from "@/src/components/connection-status";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
@@ -61,9 +61,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       setMobileMenuOpen(false);
     }
   }, [pathname, prevPathname]);
-
-  // The accent picker's stored choice (default ink blue), applied on mount.
-  useAccentColor();
 
   useEffect(() => {
     try {
@@ -227,7 +224,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
-                    <Popover.Popup className="w-80 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay focus:outline-hidden">
+                    <Popover.Popup className="w-80 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] focus:outline-hidden">
                       <div className="flex items-center justify-between border-b border-[oklch(var(--color-block))] px-4 py-2">
                         <h3 className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
                         <Link href="/notifications" className="text-xs text-[oklch(var(--color-accent))] hover:underline">
@@ -266,7 +263,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
-                    <Popover.Popup className="w-60 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay focus:outline-hidden">
+                    <Popover.Popup className="w-60 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] focus:outline-hidden">
                       <Link
                         href="/profile"
                         className="block border-b border-[oklch(var(--color-block))] px-3 py-2 hover:bg-[oklch(var(--color-surface-2))]"

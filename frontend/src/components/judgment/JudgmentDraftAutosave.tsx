@@ -177,7 +177,7 @@ export function DraftConflictBanner({
           <DomainEnum namespace="judgment.verdicts" value={current.draft_verdict} />
         </p>
       )}
-      <blockquote className="mt-1 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] whitespace-pre-wrap">
+      <blockquote className="mt-1 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] whitespace-pre-wrap">
         {current.notes || t("judgment.draft.empty_text")}
       </blockquote>
       <div className="mt-2 flex flex-wrap justify-end gap-2">

@@ -46,14 +46,17 @@
  */
 
 /** Geometry and type, identical in both states. */
-export const TAB_BASE = "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px";
+export const TAB_BASE = "px-4 py-2 text-sm transition-colors duration-fast border-b-2 -mb-px";
 
 /**
  * The selected tab. `--color-accent-ink`, NOT `--color-accent`: this is text,
  * and in light mode the bare accent (`38 92% 50%`) measures 2.13:1 on canvas.
  * The 2px rule underneath is a non-text mark and keeps the fill token.
  */
-export const TAB_ON = "text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent))]";
+/** 规范 v2 A1「标签页 · 当前」:ink 字、600、2px ink 下划线。v2 没有强调色,选中就是墨。 */
+export const TAB_ON = "text-[oklch(var(--color-ink))] font-semibold border-[oklch(var(--color-ink))]";
 
 /** The unselected tabs: muted ink, no rule, hovering up to full ink. */
-export const TAB_OFF = "text-[oklch(var(--color-ink-muted))] border-transparent hover:text-[oklch(var(--color-ink))]";
+/** A1「常态 / 悬停 / 禁用」:ink2 字;悬停 ink 字 + ink3 下划线;禁用 ink3、不可点。 */
+export const TAB_OFF =
+  "text-[oklch(var(--color-ink-muted))] border-transparent hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-line-strong))] disabled:cursor-not-allowed disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:border-transparent";

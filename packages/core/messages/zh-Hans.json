@@ -187,7 +187,7 @@
       "render_judgment": "执行审判",
       "start_judgment": "开始审判",
       "verdict_passed": "善行通过",
-      "verdict_failed": "恶行失败",
+      "verdict_failed": "恶行不过",
       "verdict_purgatory": "待定",
       "verdict_retry": "重审",
       "reincarnate": "轮回 →",
@@ -866,7 +866,7 @@
     },
     "verdicts": {
       "passed": "通过",
-      "failed": "失败",
+      "failed": "不过",
       "confirmed": "确认",
       "rejected": "拒绝",
       "skipped": "跳过"
@@ -1044,7 +1044,7 @@
     "view": "查看",
     "verdicts": {
       "passed": "通过",
-      "failed": "失败",
+      "failed": "不过",
       "purgatory": "待定",
       "retry": "重审"
     },
@@ -1358,6 +1358,9 @@
       "draft": "草稿 · 未提交",
       "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
       "not_applicable": "不适用于{{verdict}}"
+    },
+    "row_mark": {
+      "mine": "待我处理"
     }
   },
   "audit": {
@@ -1825,24 +1828,11 @@
     "theme": "主题",
     "light": "浅色",
     "dark": "深色",
-    "accent_color": "强调色",
-    "apply": "应用",
     "nav_mode": "导航模式",
     "classic": "经典",
     "compact": "紧凑",
     "classic_desc": "带图标和标签的完整侧边栏",
-    "compact_desc": "仅图标，悬停时显示工具提示",
-    "colors": {
-      "ink": "墨蓝（默认）",
-      "amber": "琥珀",
-      "blue": "蓝色",
-      "green": "绿色",
-      "purple": "紫色",
-      "red": "红色",
-      "rose": "玫瑰"
-    },
-    "accent_hex_invalid": "请输入 6 位十六进制颜色，例如 #ff5500",
-    "accent_hex_too_dark": "这个颜色太深，主按钮上的黑色文字会看不清"
+    "compact_desc": "仅图标，悬停时显示工具提示"
   },
   "admin": {
     "ledger_stats": "功德统计",
@@ -3731,5 +3721,8 @@
       "title": "结案时对受刑计划的改动",
       "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原审判官批准；不带改动则不生成请求。"
     }
+  },
+  "seal": {
+    "aria": "{{court}}之印"
   }
 }

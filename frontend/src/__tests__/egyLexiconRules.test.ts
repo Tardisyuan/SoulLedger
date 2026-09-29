@@ -18,6 +18,8 @@
  * 定稿同时把后定的值**回填**到早先各节的行里,所以全表十节 824 行、779 个键,每个键全表只有一个值。
  * 夹具现为 778 个键:`judgment.queue.skew_discarded` 随审判队列撤回窗口一起删除(2026-09-25),
  * 包里已无此键,夹具同步删去那一行;定稿全表本身未改。
+ * 2026-09-30 再减 4 个到 774:规范 v2 撤掉用户自选强调色,settings.accent_color / apply /
+ * accent_hex_invalid / accent_hex_too_dark 连同 settings.colors 一起从三份包里删除。
  * 第十节「egy 旧词审定 · 277 个」没有逐键修订表,只给了义项与替换规则(ROOTS_TEN / PROPER_NAMES / ABOLISHED_TEN_WORDS);
  * 按规则改包时有 38 个夹具键的旧值含被换掉的旧词,夹具里这 38 条随包回填为新值,键数不变。
  * 第十一节「第二轮复核」同样只给义项(ROOTS_ELEVEN、En 与 -I 进小词、Asura 进专名、Per Aa 废止、功德写 Nefer);
@@ -31,7 +33,7 @@
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
  * (生成时断言同键各行值相同),`JSON.stringify(table, null, 2)` 落盘。改定稿就整份重生成。这里钉住:
  *
- * - 修订表 778 个键与包里逐字一致(键 → 修订后 egy);
+ * - 修订表 774 个键与包里逐字一致(键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
@@ -138,7 +140,7 @@ const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
 const maatOutsideEvidence = (v: string) => /\bMaat\b/.test(prose(v).replace(/〔[^〕]*〕/g, "").replace(/\bMedu Maat\b/g, ""));
 
 /**
- * 第十三节:Unemu 只剩「色」一个义项(强调色 Unemu Tepy)。它曾担的裁决 / 判(Wedja)、功过(Nefer Isfet)、
+ * 第十三节:Unemu 只剩「色」一个义项(当时是强调色 Unemu Tepy;规范 v2 撤掉强调色后,剩「配色」一处)。它曾担的裁决 / 判(Wedja)、功过(Nefer Isfet)、
  * 余额(Sepy)、称重(Dens)等 42 键已逐键改写;第十四节把最后一键 souls.balance_withheld 改写 Sepy Imen,放行清单随之删除。
  */
 const hasUnemu = (v: string) => /\bUnemu\b/.test(prose(v));
@@ -223,7 +225,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 778 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 774 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -243,7 +245,6 @@ const TECHNICAL: Record<string, string[]> = {
   "welcome.minutes_ago": ["m"],
   "welcome.hours_ago": ["h"],
   "footer.version": ["v0.1"],
-  "settings.accent_hex_invalid": ["#ff5500"],
   "ledger.copy_resource_id": ["{resource}"],
   "menus.gate_visible_nonadmin": ["menu.manage"],
   "menus.gate_permission_nonadmin": ["menu.manage"],
@@ -441,7 +442,7 @@ const ROOTS_ELEVEN = [
 ];
 /**
  * 第十二节「36 词逐键审定」的新登记:新词根 Hem、Imy-Ra;Sia 已在第十节表里,这里正式登记「解读 / 领会」义项;
- * 其余是组合写法。Iwen(颜色)没有登记:第十节已把它换成 Unemu,accent_hex_too_dark 写 Unemu(待 Design 确认)。
+ * 其余是组合写法。Iwen(颜色)没有登记:第十节已把它换成 Unemu(当时写在 accent_hex_too_dark 里;规范 v2 连键一起删了)。
  */
 const ROOTS_TWELVE = [
   "Sia", //           解读 / 领会
@@ -512,9 +513,10 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 778 个键与包里逐字一致", () => {
+  it("修订表 774 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(778);
+    // 778 → 774:规范 v2 撤掉强调色,settings 里四个键连同修订一起删除。
+    expect(Object.keys(table)).toHaveLength(774);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -586,8 +588,9 @@ describe("egy 词表规则", () => {
 
   it("Unemu 只表「色」:中文不含「色」的键不出现 Unemu", () => {
     expect(offenders(KEYS, (v, k) => hasUnemu(v) && !isColourZh(ZH[k] ?? ""))).toEqual([]);
-    // 空扫保护:「色」义的 Unemu 仍在(强调色)。
-    expect(hasUnemu(EGY["settings.accent_color"] ?? "")).toBe(true);
+    // 空扫保护:「色」义的 Unemu 仍在。规范 v2 撤掉了强调色(settings.accent_color 连同键一起删了),
+    // 剩下的那一处是 App 暂居结束时的「配色」。
+    expect(hasUnemu(EGY["soul_app.homecoming.body"] ?? "")).toBe(true);
   });
 
   it("Hemsu 只表系统:中文含「判官」的键不出现 Hemsu(判官 Sab Wedja)", () => {

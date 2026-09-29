@@ -112,26 +112,23 @@ describe("the five strips read it from there", () => {
   });
 });
 
-describe("the selected tab is painted in the ink token, not the fill token", () => {
-  /**
-   * Presence AND absence. `toContain("--color-accent-ink")` alone stays green
-   * on `text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent-ink))]`
-   * — the two tokens swapped, which is the defect wearing the right substring.
-   */
-  it("TAB_ON draws its text in --color-accent-ink", () => {
-    expect(TAB_ON).toContain("text-[oklch(var(--color-accent-ink))]");
-    expect(TAB_ON).not.toContain("text-[oklch(var(--color-accent))]");
+describe("the selected tab is painted in ink (规范 v2 A1: no accent colour exists any more)", () => {
+  it("TAB_ON draws its text and its 2px rule in --color-ink, weight 600", () => {
+    expect(TAB_ON).toContain("text-[oklch(var(--color-ink))]");
+    expect(TAB_ON).toContain("border-[oklch(var(--color-ink))]");
+    expect(TAB_ON).toContain("font-semibold");
   });
 
-  it("TAB_ON draws its 2px rule in --color-accent", () => {
-    // The rule is a non-text mark on the container's hairline, not text; it
-    // keeps the fill token, and swapping the pair has to be visible here.
-    expect(TAB_ON).toContain("border-[oklch(var(--color-accent))]");
-    expect(TAB_ON).not.toContain("border-[oklch(var(--color-accent-ink))]");
+  it("no tab class reaches for the retired accent or the plaque colour", () => {
+    for (const cls of [TAB_BASE, TAB_ON, TAB_OFF]) {
+      expect(cls).not.toContain("--color-accent");
+      expect(cls).not.toContain("--color-main");
+    }
   });
 
-  it("TAB_OFF carries no accent at all", () => {
-    expect(TAB_OFF).not.toContain("--color-accent");
+  it("TAB_OFF hovers to an ink3 underline and has a disabled state", () => {
+    expect(TAB_OFF).toContain("hover:border-[oklch(var(--color-line-strong))]");
+    expect(TAB_OFF).toContain("disabled:text-[oklch(var(--color-ink-subtle))]");
   });
 
   it("TAB_BASE carries the geometry and no colour", () => {

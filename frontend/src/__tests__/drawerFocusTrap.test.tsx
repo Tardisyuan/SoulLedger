@@ -290,7 +290,7 @@ describe("SettingsDrawer says what it is, and lets go", () => {
     render(<SettingsHost />);
     fireEvent.click(screen.getByText("gear"));
 
-    const scrim = document.querySelector(".fixed.inset-0.bg-black\\/50");
+    const scrim = document.querySelector("button.fixed.inset-0");
     expect(scrim).toBeTruthy();
     expect(scrim!.tagName).toBe("BUTTON");
   });

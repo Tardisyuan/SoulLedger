@@ -274,7 +274,9 @@ describe("SoulLedgerSections — 丙 · 审判", () => {
     );
     const quote = screen.getByTestId("soul-verdict-quote");
     expect(quote).toHaveTextContent("功过相抵，暂入救濟門。");
-    expect(quote.className).toContain("text-quote");
+    // 规范 v2 A3: quoted words are the 15/24 serif read step (v1 text-quote retired).
+    expect(quote.className).toContain("font-serif");
+    expect(quote.className).toContain("text-md");
     expect(container).toHaveTextContent("— 第五殿 阎罗王");
     // 缺席:旧判词与未结案的草稿都不进引文。
     expect(container).not.toHaveTextContent("旧判词");
