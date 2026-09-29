@@ -67,6 +67,10 @@ def month_spend(prices, month=None):
 #: 本月花费到上限的这个比例时提醒一次管理员(用户 2026-09-29 定)。
 ALERT_SHARE = 0.8
 
+#: 月份按 `settings.TIME_ZONE`(UTC)滚动 —— 用户 2026-09-29 定:不改,只说清楚。北京时间比 UTC 早 8 小时,
+#: 所以每月 1 日北京时间 08:00 才换月、才重开。改这句话前先看 `_month_key` 用的时区。
+ROLLOVER_TEXT = "每月 1 日 08:00(北京时间)"
+
 
 def _month_key(moment=None):
     return timezone.localtime(moment).strftime("%Y-%m")
@@ -105,11 +109,11 @@ def enforce_cap():
             closed = True
     if alerted:
         _notify_admins("助手本月花费已到上限的 80%",
-                       f"本月估算花费 {spent:.2f},上限 {cfg.monthly_cap:.2f}。到上限时助手会自动关闭。")
+                       f"本月估算花费 {spent:.2f},上限 {cfg.monthly_cap:.2f}。到上限时助手会自动关闭;每月 1 日早上 8 点(北京时间)换月。")
     if closed:
         _notify_admins("助手已自动关闭:本月花费到达上限",
                        f"本月估算花费 {spent:.2f} 已到上限 {cfg.monthly_cap:.2f},助手总开关已自动关闭。"
-                       f"次月 1 日会自动重开;也可以到「助手管理」页调高上限后手动打开。")
+                       f"次月 1 日早上 8 点(北京时间)会自动重开;也可以到「助手管理」页调高上限后手动打开。")
     return closed
 
 
@@ -135,7 +139,7 @@ def maybe_reopen():
         config.save_changes(row, {"enabled": True}, user=None,
                             description="reopened: a new month after the monthly-cap close")
     _notify_admins("助手已自动重开:新的一个月",
-                   "上个月助手因花费到达上限被自动关闭,本月已自动重开。")
+                   "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。")
     return True
 
 
