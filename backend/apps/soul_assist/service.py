@@ -8,6 +8,7 @@
 """
 import hashlib
 import hmac
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ from django.utils import timezone
 from apps.soul_assist import config, corpus, tools, usage
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.providers import ProviderError, Turn, get_provider
+
+logger = logging.getLogger(__name__)
 
 MAX_ROUNDS = 3
 #: 同一页面多久之内再点「问一问」续上次的会话(决策 A4)。
@@ -221,9 +224,9 @@ def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_ev
             finally:
                 _release_db()
 
-        provider = get_provider(conn)
         _release_db()
         try:
+            provider = get_provider(conn)  # 建客户端也可能失败(ProviderError):同样是 503、记用量
             result = provider.answer(
                 system=asker.system, facts=asker.facts, history=history, tools=asker.tools,
                 call_tool=call_tool, max_rounds=MAX_ROUNDS,
@@ -248,7 +251,11 @@ def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_ev
         usage.record(asker.side, asker.tenant, "ok" if result.text.strip() else "empty", conn.model, result.usage,
                      is_eval=is_eval)
     if not is_eval:
-        usage.enforce_cap()
+        # 回答已经落库:上限检查坏了也不能让提问的人拿到 500(他会重问,再花一次钱)。只记异常,不记原文。
+        try:
+            usage.enforce_cap()
+        except Exception:
+            logger.exception("assistant monthly cap check failed")
     return conversation, reply
 
 

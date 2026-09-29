@@ -4,6 +4,8 @@
 误授给别人。MODERATOR 与其余一律 403。官员令牌(`OfficerJWTAuthentication`)。
 每次保存(配置、每殿开关)写一条 `resource="assistant_config"` 的审计;API key 只记「已更换 / 已清除」。
 """
+from dataclasses import replace
+
 from django.db import transaction
 from django.db.models import Count
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -49,6 +51,10 @@ def _error(detail, code, http=status.HTTP_400_BAD_REQUEST):
     return Response({"detail": detail, "code": code}, status=http)
 
 
+def _key_required():
+    return _error("换了供应商或地址,要同时填 API key:已存的 key 不会发往新的地址。", "api_key_required")
+
+
 def _config_body(eff: config.Effective):
     from django.conf import settings
 
@@ -82,32 +88,41 @@ class ConfigView(AdminView):
         body = ConfigUpdateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = dict(body.validated_data)
-        eff = config.effective()
-        after = config.candidate(data, eff.connection)
-        # 模型名改动必须先测通**同一套**候选(连同 key、地址),15 分钟内(§3.1)。
-        if after.model != eff.connection.model and not config.was_tested(after):
-            return _error("换模型之前,先用这套配置通过连通测试。", "untested_model")
-        prices = data.get("prices", eff.prices)
-        cap = data.get("monthly_cap", eff.monthly_cap)
-        if cap is not None and after.model not in prices:
-            return _error("设了月度上限,就要给当前模型填价格:否则花费算不出来,上限永远不会触发。",
-                          "unpriced_model")
-        refs = {f"{name}_id": data.pop(name) for name in ("eval_soul_account", "eval_officer") if name in data}
-        api_key = data.pop("api_key", config._UNSET)
         with transaction.atomic():
             AssistConfig.objects.get_or_create(pk=1)
             row = AssistConfig.objects.select_for_update().get(pk=1)
+            # 「之前」与「之后」都按锁住的这一行算:两次并发的 PATCH 不能各自测过一半、合起来存下没测过的组合。
+            eff = config.effective(row)
+            try:
+                after = config.candidate(data, eff.connection)
+            except config.KeyRequiredError:
+                return _key_required()
+            # 连接的任何一项(供应商、地址、key、模型、effort、fallbacks)变了,都要先测通**同一套**候选,
+            # 15 分钟内(§3.1)。唯一例外是只清除 key:key 泄露时要能立刻清掉,而没有 key 的配置测不通。
+            only_clears_key = after == replace(eff.connection, api_key="")
+            if after != eff.connection and not only_clears_key and not config.was_tested(after):
+                return _error("连接配置变了:先用这套配置通过连通测试再保存。", "untested_connection")
+            prices = data.get("prices", eff.prices)
+            cap = data.get("monthly_cap", eff.monthly_cap)
+            if cap is not None and after.model not in prices:
+                return _error("设了月度上限,就要给当前模型填价格:否则花费算不出来,上限永远不会触发。",
+                              "unpriced_model")
+            refs = {f"{name}_id": data.pop(name) for name in ("eval_soul_account", "eval_officer") if name in data}
+            api_key = data.pop("api_key", config._UNSET)
             config.save_changes(row, data, user=request.user, request=request, api_key=api_key, refs=refs)
         return Response(_config_body(config.effective()))
 
 
 class ConfigTestView(AdminView):
     @extend_schema(operation_id="assist_admin_config_test", request=CandidateSerializer,
-                   responses={200: ConnectivityResultSerializer})
+                   responses={200: ConnectivityResultSerializer, 400: AssistErrorSerializer})
     def post(self, request):
         body = CandidateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        conn = config.candidate(body.validated_data, config.effective().connection)
+        try:
+            conn = config.candidate(body.validated_data, config.effective().connection)
+        except config.KeyRequiredError:
+            return _key_required()
         result = evals.probe(conn)
         return Response(ConnectivityResultSerializer({
             **result, "provider": config.provider_name(conn.provider), "model": conn.model}).data)
@@ -168,18 +183,22 @@ def _cases(side):
 
 class EvalPreviewView(AdminView):
     @extend_schema(operation_id="assist_admin_eval_preview", request=EvalPreviewRequestSerializer,
-                   responses={200: EvalPreviewSerializer})
+                   responses={200: EvalPreviewSerializer, 400: AssistErrorSerializer})
     def post(self, request):
         body = EvalPreviewRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        return Response(EvalPreviewSerializer(
-            evals.preview(data["candidates"], _cases(data["side"]), request.user)).data)
+        try:
+            preview = evals.preview(data["candidates"], _cases(data["side"]), request.user)
+        except config.KeyRequiredError:
+            return _key_required()
+        return Response(EvalPreviewSerializer(preview).data)
 
 
 class EvalRunListView(AdminView):
     @extend_schema(operation_id="assist_admin_eval_runs_list", responses={200: EvalRunSerializer(many=True)})
     def get(self, request):
+        evals.fail_stale()
         return Response(EvalRunSerializer(AssistEvalRun.objects.all()[:50], many=True).data)
 
     @extend_schema(operation_id="assist_admin_eval_run_start", request=EvalStartSerializer,

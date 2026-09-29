@@ -21,12 +21,23 @@ from django.utils.module_loading import import_string
 logger = logging.getLogger(__name__)
 
 
-def _fail(exc):
+def _fail(exc, secret=""):
     """供应商的 4xx 与宕机对灵魂都是 503;日志里分开,否则配置错误(模型不支持 effort 等)
-    和对方宕机看起来一模一样。不记请求体:里面是灵魂的原文。"""
+    和对方宕机看起来一模一样。不记请求体:里面是灵魂的原文。对方的错误正文可能回显 key(`secret`),
+    先抹掉再截断 —— 先截断会留下 key 的前半截。"""
+    body = str(getattr(exc, "body", ""))
+    if secret:
+        body = body.replace(secret, "[redacted]")
     logger.warning("assistant provider failed: %s status=%s body=%s", type(exc).__name__,
-                   getattr(exc, "status_code", None), str(getattr(exc, "body", ""))[:500])
+                   getattr(exc, "status_code", None), body[:500])
     return ProviderError(type(exc).__name__, _kind(exc))
+
+
+def _unexpected(exc, conn):
+    """SDK 异常类之外的失败也是「不可用」(503、记一行用量),不是 500:没配 key 时 Anthropic 的 SDK
+    在**请求时**抛 TypeError。没有 key 就归为 auth,好让连通测试说出原因。只记异常类名。"""
+    logger.warning("assistant provider failed: %s (not an SDK API error)", type(exc).__name__)
+    return ProviderError(type(exc).__name__, "other" if conn.api_key else "auth")
 
 
 def _kind(exc):
@@ -110,7 +121,10 @@ class OpenAICompatibleProvider:
             import openai
 
             c = self._conn()
-            client = openai.OpenAI(api_key=c.api_key or "unused", base_url=c.base_url or None, max_retries=0)
+            try:
+                client = openai.OpenAI(api_key=c.api_key or "unused", base_url=c.base_url or None, max_retries=0)
+            except Exception as exc:
+                raise _unexpected(exc, c) from exc
         self.client = client
 
     def _conn(self):
@@ -122,7 +136,8 @@ class OpenAICompatibleProvider:
     def answer(self, *, system, facts, history, tools, call_tool, max_rounds, deadline):
         import openai
 
-        model = self._conn().model
+        conn = self._conn()
+        model = conn.model
         messages = [{"role": "system", "content": system}, {"role": "system", "content": facts}]
         messages += [{"role": t.role, "content": t.text} for t in history]
         specs = [{"type": "function", "function": {"name": t.name, "description": t.description,
@@ -135,8 +150,12 @@ class OpenAICompatibleProvider:
                     model=model, messages=messages, tools=specs,
                     tool_choice="none" if last else "auto",
                 )
+            except ProviderError:
+                raise
             except openai.APIError as exc:
-                raise _fail(exc) from exc
+                raise _fail(exc, conn.api_key) from exc
+            except Exception as exc:
+                raise _unexpected(exc, conn) from exc
             usage = getattr(response, "usage", None)
             if usage is not None:
                 _add_usage(result.usage, input=usage.prompt_tokens, output=usage.completion_tokens)
@@ -168,7 +187,10 @@ class AnthropicProvider:
             import anthropic
 
             c = self._conn()
-            client = anthropic.Anthropic(api_key=c.api_key or None, base_url=c.base_url or None, max_retries=0)
+            try:
+                client = anthropic.Anthropic(api_key=c.api_key or None, base_url=c.base_url or None, max_retries=0)
+            except Exception as exc:
+                raise _unexpected(exc, c) from exc
         self.client = client
 
     _conn = OpenAICompatibleProvider._conn
@@ -202,8 +224,12 @@ class AnthropicProvider:
                     messages=messages, tools=specs,
                     tool_choice={"type": "none"} if last else {"type": "auto"},
                 )
+            except ProviderError:
+                raise
             except anthropic.APIError as exc:
-                raise _fail(exc) from exc
+                raise _fail(exc, conn.api_key) from exc
+            except Exception as exc:
+                raise _unexpected(exc, conn) from exc
             usage = response.usage
             _add_usage(result.usage, input=usage.input_tokens, output=usage.output_tokens,
                        cache_read=getattr(usage, "cache_read_input_tokens", 0))

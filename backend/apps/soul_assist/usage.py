@@ -122,7 +122,8 @@ def maybe_reopen():
     from apps.soul_assist.models import AssistConfig
 
     cfg = config.effective()
-    if cfg.switch or not cfg.cap_closed_for or cfg.cap_closed_for == _month_key():
+    # env 总开关关着:部署方一票否决,重开了也不生效 —— 不翻开关、不写审计、不发「已重开」的通知。
+    if not cfg.env_enabled or cfg.switch or not cfg.cap_closed_for or cfg.cap_closed_for == _month_key():
         return False
     with transaction.atomic():
         row = AssistConfig.objects.select_for_update().filter(pk=1).first()
@@ -143,8 +144,11 @@ def _notify_admins(title, message):
     from apps.notifications.models import NotificationType, notify_user
 
     for admin in User.objects.filter(role="ADMIN", is_active=True).order_by("pk"):
-        notify_user(admin, title=title, message=message,
-                    notification_type=NotificationType.SYSTEM, related_resource="assistant_config")
+        try:
+            notify_user(admin, title=title, message=message,
+                        notification_type=NotificationType.SYSTEM, related_resource="assistant_config")
+        except Exception:  # 开关已经关了(或开了):通知发不出去要留下痕迹,不能无声地丢
+            logger.exception("assistant config notification to admin %s failed: %s", admin.pk, title)
 
 
 _ANSWERED = Q(status__in=("ok", "empty"))
