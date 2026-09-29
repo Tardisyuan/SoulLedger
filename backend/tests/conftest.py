@@ -169,3 +169,18 @@ def migration_round_trip(transactional_db):
         yield run_round_trip
     finally:
         migrate_to_latest()
+
+
+def pytest_collection_modifyitems(items):
+    """Every test that uses ``migration_round_trip`` gets the ``migration``
+    marker, so a new round-trip test is marked without anyone remembering to.
+
+    The pre-push hook runs ``-m "not migration"`` unless the push touches a
+    migration, the harness, or a file containing one of these tests (it greps
+    for ``migration_round_trip`` / ``mark.migration``) — see
+    ``scripts/install-hooks.sh``. Tests that run migrate without the fixture
+    carry ``@pytest.mark.migration`` by hand (``test_migration_reverse_scope.py``).
+    """
+    for item in items:
+        if "migration_round_trip" in getattr(item, "fixturenames", ()):
+            item.add_marker(pytest.mark.migration)
