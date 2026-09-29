@@ -18,7 +18,7 @@ import { test as base, type Locator, type Page, type Request } from "@playwright
  * ── Why the old fixture never authenticated anything ──────────────────────
  * The previous version wrote `access_token` / `refresh_token` / `user` into
  * localStorage. Not one of those three keys exists anywhere in the app:
- *   - middleware.ts:41 gates every non-public route on the COOKIE
+ *   - proxy.ts gates every non-public route on the COOKIE
  *     `soulledger_refresh`; localStorage is invisible to middleware, which
  *     runs on the server before any script executes.
  *   - packages/core/src/api/client.ts:42 reads the access token from the cookie
@@ -1795,7 +1795,7 @@ export async function mockApi(page: Page, mock: ApiMock = new ApiMock().register
 
 /**
  * Puts the browser in the exact state a real login leaves behind:
- *   - `soulledger_refresh` cookie — the only thing middleware.ts inspects,
+ *   - `soulledger_refresh` cookie — the only thing proxy.ts inspects,
  *     and it must be a real cookie (not localStorage) or the very first
  *     server-side navigation redirects to /login.
  *   - `soulledger_access` in sessionStorage — where packages/core/src/api/client.ts's

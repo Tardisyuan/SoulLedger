@@ -16,7 +16,9 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+// Next 16 renamed the `middleware` file convention to `proxy` (same contract,
+// same `config.matcher`; the old name only printed a deprecation warning).
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Locale handling
@@ -56,9 +58,9 @@ export function middleware(request: NextRequest) {
   // reads as authoritative.
   //
   // The real gates: `<RequireAdmin>` / `<RequirePermission>` on each page
-  // (pinned by src/__tests__/middlewareAuthGate.test.ts and
+  // (pinned by src/__tests__/proxyAuthGate.test.ts and
   // backend/tests/test_page_gates_match_the_backend.py), and
-  // `CodenamePermission` on every API the pages call. Middleware cannot
+  // `CodenamePermission` on every API the pages call. Proxy cannot
   // verify a role without decoding and trusting a JWT it has no key for, and
   // a guard that only hides links is not one.
 
