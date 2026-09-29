@@ -34,22 +34,14 @@ class ConfigUpdateSerializer(CandidateSerializer):
     monthly_cap = serializers.FloatField(min_value=0, allow_null=True, required=False)
     eval_spend_cap = serializers.FloatField(min_value=0, required=False)
     prices = serializers.DictField(child=PriceSerializer(), required=False)
-    eval_soul_account = serializers.UUIDField(allow_null=True, required=False)
-    eval_officer = serializers.IntegerField(allow_null=True, required=False)
 
-    def validate_eval_soul_account(self, value):
-        from apps.soul_accounts.models import SoulAccount
-
-        if value is not None and not SoulAccount.objects.filter(pk=value).exists():
-            raise serializers.ValidationError("没有这个灵魂账号。")
-        return value
-
-    def validate_eval_officer(self, value):
-        from apps.authentication.models import User
-
-        if value is not None and not User.objects.filter(pk=value, is_active=True).exclude(role="SOUL").exists():
-            raise serializers.ValidationError("没有这位在职官员。")
-        return value
+    def validate(self, attrs):
+        # 评测身份只由 POST eval/identities/ 设置(用户 2026-09-29 定);PATCH 里带了就明说,不静默忽略。
+        locked = sorted({"eval_soul_account", "eval_officer"} & set(self.initial_data))
+        if locked:
+            raise serializers.ValidationError({name: "只读:评测身份由「创建评测身份」接口设置。" for name in locked},
+                                              code="read_only_field")
+        return attrs
 
 
 class ApiKeyStateSerializer(serializers.Serializer):
@@ -81,10 +73,19 @@ class ConfigSerializer(serializers.Serializer):
     eval_spend_cap = serializers.FloatField()
     prices = serializers.DictField(child=PriceSerializer())
     api_key = ApiKeyStateSerializer()
-    eval_soul_account = serializers.UUIDField(allow_null=True)
-    eval_officer = serializers.IntegerField(allow_null=True)
+    eval_soul_account = serializers.UUIDField(allow_null=True, help_text="只读;由 POST eval/identities/ 设置")
+    eval_officer = serializers.IntegerField(allow_null=True, help_text="只读;由 POST eval/identities/ 设置")
+    month_rolls_over_at = serializers.CharField(help_text="月度上限按 UTC 月份滚动,写成北京时间给管理员看")
     overridden = serializers.ListField(child=serializers.CharField(), help_text="页面改过(不再跟 env)的键")
     read_only = ReadOnlySettingsSerializer()
+
+
+class EvalIdentitiesSerializer(serializers.Serializer):
+    eval_soul_account = serializers.UUIDField()
+    eval_officer = serializers.IntegerField()
+    officer_username = serializers.CharField()
+    officer_role = serializers.CharField()
+    description = serializers.CharField()
 
 
 class ConnectivityResultSerializer(serializers.Serializer):

@@ -141,6 +141,22 @@ export interface paths {
         patch: operations["v1_assist_admin_eval_cases_partial_update"];
         trace?: never;
     };
+    "/api/v1/assist-admin/eval/identities/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assist_admin_eval_identities_ensure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist-admin/eval/preview/": {
         parameters: {
             query?: never;
@@ -7892,9 +7908,15 @@ export interface components {
                 [key: string]: components["schemas"]["Price"];
             };
             api_key: components["schemas"]["ApiKeyState"];
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description 只读;由 POST eval/identities/ 设置
+             */
             eval_soul_account: string | null;
+            /** @description 只读;由 POST eval/identities/ 设置 */
             eval_officer: number | null;
+            /** @description 月度上限按 UTC 月份滚动,写成北京时间给管理员看 */
+            month_rolls_over_at: string;
             /** @description 页面改过(不再跟 env)的键 */
             overridden: string[];
             read_only: components["schemas"]["ReadOnlySettings"];
@@ -8503,6 +8525,14 @@ export interface components {
          * @enum {string}
          */
         EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalIdentities: {
+            /** Format: uuid */
+            eval_soul_account: string;
+            eval_officer: number;
+            officer_username: string;
+            officer_role: string;
+            description: string;
+        };
         EvalPreview: {
             asks: number;
             max_asks: number;
@@ -11216,9 +11246,6 @@ export interface components {
             prices?: {
                 [key: string]: components["schemas"]["Price"];
             };
-            /** Format: uuid */
-            eval_soul_account?: string | null;
-            eval_officer?: number | null;
         };
         /**
          * @description Serializer for CrossTenantJudgment.
@@ -14751,6 +14778,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    assist_admin_eval_identities_ensure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalIdentities"];
                 };
             };
         };
