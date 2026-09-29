@@ -6373,7 +6373,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Tenant management API — read-only. Non-ADMIN users see only their own tenant. */
+        /**
+         * @description Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+         *     Non-ADMIN users see only their own tenant.
+         */
         get: operations["v1_tenants_list"];
         put?: never;
         post?: never;
@@ -6390,7 +6393,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Tenant management API — read-only. Non-ADMIN users see only their own tenant. */
+        /**
+         * @description Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+         *     Non-ADMIN users see only their own tenant.
+         */
         get: operations["v1_tenants_retrieve"];
         put?: never;
         post?: never;
@@ -6398,6 +6404,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{code}/seal-glyphs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 匾上的印字。只收这一个字段,其余租户字段仍然只读。 */
+        patch: operations["v1_tenants_seal_glyphs_partial_update"];
         trace?: never;
     };
     "/api/v1/users/": {
@@ -9008,12 +9031,17 @@ export interface components {
             user: components["schemas"]["UserWithTenant"];
         };
         /**
-         * @description Schema-only: the two keys `UserWithTenantSerializer.get_tenant` returns
+         * @description The user's tenant in the login payload and on `GET /auth/profile/`
          *     (no `id`, unlike `UserTenantRefSerializer`).
+         *
+         *     `civilization` picks the Web's 匾 skin; `seal_glyphs` are the 1–2 admin-set
+         *     seal characters, empty meaning "use the civilization default".
          */
         LoginTenantRef: {
             code: string;
             display_name: string;
+            civilization: string;
+            seal_glyphs: string[];
         };
         /**
          * @description Body of POST /auth/logout/.
@@ -9314,6 +9342,8 @@ export interface components {
             readonly hall_names: {
                 [key: string]: string;
             };
+            /** @description 匾上的印字(1–2 个);空 = 用文明默认字。 */
+            readonly seal_glyphs: string[];
         };
         MeWelcomed: {
             welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
@@ -11018,6 +11048,10 @@ export interface components {
         PatchedSoulDisplayNameRequest: {
             display_name?: string;
         };
+        /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
+        PatchedTenantSealGlyphs: {
+            seal_glyphs?: string[];
+        };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
          *     about themselves.
@@ -11042,6 +11076,7 @@ export interface components {
             /** Email address */
             email?: string;
             readonly role?: string;
+            readonly tenant?: components["schemas"]["LoginTenantRef"] | null;
             first_name?: string;
             last_name?: string;
             /**
@@ -12990,6 +13025,8 @@ export interface components {
             dispatch_enabled?: boolean;
             api_endpoint?: string;
             settings?: unknown;
+            readonly civilization: string;
+            readonly seal_glyphs: string[];
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -13071,6 +13108,7 @@ export interface components {
             /** Email address */
             email?: string;
             readonly role: string;
+            readonly tenant: components["schemas"]["LoginTenantRef"] | null;
             first_name?: string;
             last_name?: string;
             /**
@@ -24606,6 +24644,33 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_seal_glyphs_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTenantSealGlyphs"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSealGlyphs"];
+                "multipart/form-data": components["schemas"]["PatchedTenantSealGlyphs"];
+            };
+        };
         responses: {
             200: {
                 headers: {
