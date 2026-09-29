@@ -64,6 +64,8 @@ const ALLOWED: Record<string, string> = {
   "src/components/layout/AppLayout.tsx": "navigation drawer scrim, keyboard handled by useDrawerA11y",
   "src/components/settings/SettingsDrawer.tsx": "settings drawer scrim, keyboard handled by useDrawerA11y",
   "src/components/scheduler/TaskRunsDrawer.tsx": "run-history drawer scrim, keyboard handled by useDrawerA11y (same pattern as SettingsDrawer)",
+  "src/components/assist/OfficerAssist.tsx":
+    "问一问 below 1024 px: a right drawer on the Base UI Dialog (as Drawer.tsx) — focus trap, Escape and focus return come from the primitive",
   "src/components/souls/detail/SoulHeaderActions.tsx":
     "transparent aria-hidden click-catcher behind a role=menu with Escape and focus return — a menu, not a dialog",
 };

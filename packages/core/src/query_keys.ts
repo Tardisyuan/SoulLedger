@@ -269,3 +269,10 @@ export const permKeys = {
   roles: ["roles"] as const,
   rolePermissions: (roleName: string) => ["role-permissions", roleName] as const,
 };
+
+/** The officer console's 「问一问」 history (`/assist/conversations/`), one list per signed-in officer. */
+export const officerAssistKeys = {
+  all: ["officer-assist"] as const,
+  /** Keyed by user so a second sign-in in the same tab never reads the first one's list. */
+  conversations: (userId: number) => ["officer-assist", "conversations", userId] as const,
+};

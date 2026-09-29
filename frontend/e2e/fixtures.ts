@@ -1694,6 +1694,16 @@ export class ApiMock {
     );
     this.on("POST", "/sentence-plans/:id/requests/:id/decide/", SENTENCE_PLAN_DECIDED);
 
+    // ── 问一问 (backend/apps/soul_assist/views.py Officer*) ──
+    this.on("GET", "/assist/conversations/", []);
+    this.on("POST", "/assist/", (call) => ({
+      body: {
+        conversation_id: "11111111-1111-1111-1111-111111111111",
+        answer: { id: 2, role: "assistant", content: `答：${(call.body as { question?: string })?.question ?? ""}`, created_at: "2026-09-29T02:12:00Z" },
+      },
+    }));
+    this.on("DELETE", "/assist/conversations/:id/", () => ({ status: 204, body: null }));
+
     // ── Hall inbox (backend/apps/chat/views.py OfficerInboxViewSet) ──
     this.on("GET", "/chat/inbox/", paginated(INBOX_CONVERSATIONS));
     this.on("GET", "/chat/inbox/:id/messages/", INBOX_MESSAGES);
