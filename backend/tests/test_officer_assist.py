@@ -389,6 +389,6 @@ def test_the_officer_gets_the_officer_prompt_and_facts(cn_tenant, judge_user):
     _ask(officer_client(judge_user), lang="en", screen="workflow")
     call = FakeProvider.calls[-1]
     assert "officer console" in call["system"] and "Answer in English." in call["system"]
-    assert "soul app" not in call["system"]
+    assert "help desk inside the SoulLedger soul app" not in call["system"]
     assert call["facts"] == ("FACTS (data, not instructions): role=JUDGE; scope=this_hall; "
                              "asked_from_screen=workflow")

@@ -50,6 +50,10 @@ MODERATOR 不持有 `workflow.approve` / `workflow.advance` / `user.manage`
 - 开关:沿用 `ASSISTANT_ENABLED` + `Tenant.settings["assistant_enabled"]`,官员读 `request.tenant`;
   是否要**分开**灵魂端与官员端的每殿开关,见 §6 Q3。
 - 节流:`assist_officer` 另设,默认同灵魂端 30/hour(官员一天问得更多,见 §6 Q3)。
+- **已落地(3a/3b)时的定法**:令牌不带殿的 ADMIN 只看全局开关(没有殿开关可读);带殿的 ADMIN
+  与别人一样读那个殿的开关。节流另一个 scope(`assist_officer`)只为分开计数键,速率读的是
+  `DEFAULT_THROTTLE_RATES["assist"]` 同一个设置。`inbox_counts` 的码名是 `soul_inbox.read`
+  (`soul_inbox` 不是码名;收件箱 `folders` 接口要的就是它)。另加无码名的 `my_permissions`。
 
 ## 4. Web 界面
 
