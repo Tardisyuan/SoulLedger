@@ -2289,7 +2289,8 @@
       "soul_credentials": "Initial Passwords Awaiting Delivery",
       "rebirth_applications": "Rebirth Applications",
       "soul_inbox": "Hall Inbox",
-      "sentence_requests": "Sentence Requests"
+      "sentence_requests": "Sentence Requests",
+      "assistant_admin": "Assistant Admin"
     }
   },
   "tenant": {
