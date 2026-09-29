@@ -13,8 +13,8 @@
  * nowhere — the app simply opens.
  */
 import { soulApi, type PushPlatform } from "@soulledger/core/api/soul";
-import { isLocale } from "@soulledger/core/config/locale";
-import { getLocale, platform } from "@soulledger/core/platform";
+import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
+import { platform } from "@soulledger/core/platform";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -120,7 +120,9 @@ export async function unregisterDevice(): Promise<void> {
  * changes. Never throws.
  */
 export async function syncPushLocale(): Promise<void> {
-  const locale = getLocale();
+  // Only a language this device was told about: with none stored, the account's
+  // is adopted at sign-in (session.tsx) and writing the default here would erase it.
+  const locale = platform().persistent.get(LOCALE_COOKIE);
   if (!isLocale(locale)) return;
   try {
     const settings = await soulApi.notificationSettings();
