@@ -182,6 +182,7 @@ const COLLECTED_FILES = [
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",
+  "officerAssist.test.tsx",
   "oneRealtimeSocketPerSession.test.ts",
   "permissionFormCategoryStability.test.tsx",
   "platformPortsSecureAndResume.test.ts",
