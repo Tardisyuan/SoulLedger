@@ -132,6 +132,40 @@ def answer(account, question, screen, *, locale, conversation_id=None, request=N
     return ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request)
 
 
+def officer_enabled_for(request) -> bool:
+    """全局开关 + 请求所在殿的开关(Q3 = A:与灵魂端共用同一个每殿开关)。
+
+    **没有殿的 ADMIN 只看全局开关** —— ADMIN 是唯一跨殿的角色(`apps/core/tenant.py`),
+    令牌里可以不带殿;带了殿的 ADMIN 与别人一样读那个殿的开关。没有殿的非 ADMIN 到不了这里
+    (`TenantPermission` 先拒),万一到了也答关。"""
+    from apps.core.tenant import is_tenant_exempt
+
+    if not settings.ASSISTANT_ENABLED:
+        return False
+    tenant = getattr(request, "tenant", None)
+    if tenant is None:
+        return is_tenant_exempt(request.user)
+    return (tenant.settings or {}).get("assistant_enabled") is True
+
+
+def officer_answer(request, question, screen, *, locale, conversation_id=None):
+    from apps.soul_assist import officer_tools
+
+    if not officer_enabled_for(request):
+        raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
+    lang = corpus.corpus_locale(locale)
+    user = request.user
+    asker = Asker(owner={"user": user}, user=user, tenant=getattr(request, "tenant", None),
+                  system=corpus.system_prompt(lang, "officer"), facts=corpus.officer_facts(request, screen),
+                  tools=officer_tools.offered(user), run_tool=lambda name: officer_tools.run(name, request))
+    return ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request)
+
+
+def officer_delete_conversation(request, conversation_id):
+    _delete({"user": request.user}, request.user, getattr(request, "tenant", None), conversation_id,
+            "assistant conversation deleted by the officer", request)
+
+
 def ask(asker, question, screen, *, lang, conversation_id=None, request=None):
     with _Slot():
         conversation = conversation_for(asker.owner, screen, conversation_id)
@@ -201,16 +235,17 @@ def _audit(user, tenant, conversation, action, description, request, changes):
 
 
 def purge_history(now=None) -> dict:
-    """真删:超过留存期的消息、灵魂已删除的会话、已停用账号(转世后的前世账号)的会话,
-    以及删空了的会话。登记在 apps/scheduler/registry.py;beat 未部署前用
+    """真删:超过留存期的消息(两端同一个留存期)、本人已删除的会话、已停用账号(转世后的前世账号)
+    与已停用官员的会话,以及删空了的会话。登记在 apps/scheduler/registry.py;beat 未部署前用
     `manage.py purge_assist_history`(§4.2)。"""
     now = now or timezone.now()
     cutoff = now - timedelta(days=RETENTION_DAYS)
     old = AssistMessage.objects.filter(created_at__lt=cutoff).delete()[0]
     gone = AssistConversation.all_objects.filter(is_deleted=True)
     retired = AssistConversation.all_objects.filter(account__retired_at__isnull=False)
+    deactivated = AssistConversation.all_objects.filter(user__is_active=False)
     empty = AssistConversation.all_objects.filter(messages__isnull=True)
     conversations = 0
-    for qs in (gone, retired, empty):
+    for qs in (gone, retired, deactivated, empty):
         conversations += qs.delete()[1].get("soul_assist.AssistConversation", 0)
     return {"messages": old, "conversations": conversations}

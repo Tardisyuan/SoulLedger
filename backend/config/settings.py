@@ -279,7 +279,8 @@ REST_FRAMEWORK = {
         # 朋友圈帖子图片的文件出口(apps/social/media_views.py),按签名里的查看者计。
         # 一屏动态流 20 条 × 9 张 = 180 张图;匿名的 60/minute 会把它掐断。
         "post_media": "600/minute",
-        # 助手提问(apps/soul_assist/views.py::MeAssistView),按灵魂账号计。
+        # 助手提问(apps/soul_assist/views.py::MeAssistView 按灵魂账号计;OfficerAssistView 按官员计,
+        # 读的也是这一个速率 —— docs/ARCHITECTURE-officer-assist.md §6 Q3 = A)。
         "assist": "30/hour",
     },
 }
@@ -427,7 +428,8 @@ MATRIX_CLIENT = os.getenv("MATRIX_CLIENT", "apps.chat.matrix.SynapseClient")
 
 # apps.soul_assist — 灵魂端助手(docs/ARCHITECTURE-soul-assist.md)。
 # 默认关:关着时 /me/assist/ 一律 503 `assistant_not_configured`,不访问任何供应商。
-# 打开之后还要每殿打开:Tenant.settings["assistant_enabled"] = true(读原属殿)。
+# 打开之后还要每殿打开:Tenant.settings["assistant_enabled"] = true(灵魂读原属殿;官员读请求所在殿,
+# 与灵魂端共用这一个开关;令牌不带殿的 ADMIN 只看全局开关)。
 ASSISTANT_ENABLED = _env_bool("ASSISTANT_ENABLED", "False")
 # 供应商的类路径:apps.soul_assist.providers.OpenAICompatibleProvider(OpenAI / Azure /
 # Ollama / DeepSeek 等,配 BASE_URL)或 ...AnthropicProvider。测试换成 FakeProvider。
@@ -569,6 +571,10 @@ SPECTACULAR_SETTINGS = {
         # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
+        # apps.soul_assist:两端各有一个 `screen` 选项集。灵魂端的保留原名(mobile 与 core 引用
+        # `ScreenEnum`),官员端另起名 —— 不钉住就两个都变成带前缀的名字。
+        "ScreenEnum": "apps.soul_assist.models.SCREENS",
+        "OfficerScreenEnum": "apps.soul_assist.models.OFFICER_SCREENS",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
         # `welcomed_civilizations`(App 欢迎过场)用的是灵魂的 Civilization 选项集;钉在既有的
         # `CivilizationEnum` 上,否则多出一个同值的 `WelcomedCivilizationsEnum` 并报 warning。
