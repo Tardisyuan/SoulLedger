@@ -23,6 +23,12 @@
     // src/__tests__/jest-dom.d.ts importing @testing-library/jest-dom. Named
     // here so neither depends on a file that happens to reference it.
     "types": ["node", "jest"],
+    // tsc and next never emit (noEmit), but ts-jest does, and under TS 6 an
+    // emitting program whose inferred common source directory is not the
+    // tsconfig's own directory is error TS5011. Without this line every jest
+    // suite (194/194) failed to run with "common source directory ... is
+    // './lib/platform'".
+    "rootDir": ".",
     "plugins": [
       {
         "name": "next"
