@@ -81,6 +81,14 @@
   **次月 1 日起自动重开** —— 仅限上限关的,管理员手动关的不自动开(手动改开关即清掉「上限关的」标记)。
   beat 未部署,所以不靠定时任务:每次读开关(每次提问、`/me/`、打开管理页)时顺手查,快照里有这一格,平时不碰库。
   状态存在配置行的 `cap_alert_sent_for` / `cap_closed_for`(迁移 0005)。
+- **2026-09-29 再追加(用户拍板):月份保持按 UTC 滚动,不改逻辑。** `settings.TIME_ZONE` 是 UTC,所以「次月 1 日」对北京时间是
+  **每月 1 日 08:00** 才到:提醒、关闭、重开的通知文字都写明「早上 8 点(北京时间)」,配置响应带只读的 `month_rolls_over_at`。
+- **2026-09-29 追加(用户拍板):评测身份「灵魂一个,测评官员一个」,由系统创建。** `POST /assist-admin/eval/identities/`(仅 ADMIN,幂等):
+  评测灵魂 = CN_DIYU 殿(没有就退到第一个在用的殿,响应里 `description` 说明)的「问一问评测灵魂」,有灵魂账号、不可用密码、不必改密、
+  受刑计划已完成、状态轮回中;评测官员 = 用户名 `assist-eval-officer`、角色 **MODERATOR**(有收件箱与派发权限,四个官员工具都能演练)、
+  不可用密码,绝不是 ADMIN。两个 FK 只有这个接口会写:`PATCH config/` 带 `eval_soul_account` / `eval_officer` 得 400
+  (`read_only_field`)。被删 / 停用 / 退役的评测身份在预估里报 `no_eval_soul` / `no_eval_officer`,再调该接口即补建(同名官员复活)。
+  代码:`apps/soul_assist/eval_identities.py`。
 - **Q3 开关 → 不拆,共用**(维持官员端计划的原决定,不再重议)。原选项: A. 拆(推荐:官员端可以先内部试用,不影响灵魂端);B. 共用(官员端计划 Q3 的原决定)。
 - **Q4 管理页的界面请 Design 出稿**(提示词随汇报给出)。
 
@@ -99,7 +107,7 @@
 
 接口:`config/`(GET / PATCH)、`config/test/`(POST 候选配置)、`halls/`、`halls/<id>/`(PATCH 每殿开关)、
 `eval/cases/`(增删改查)、`eval/preview/`、`eval/runs/`(GET 列表 / POST 凭确认令牌开始)、`eval/runs/<id>/`、
-`usage/?month=YYYY-MM`、`corpus/`。
+`usage/?month=YYYY-MM`、`corpus/`、`eval/identities/`(POST,§7)。
 
 **与计划不同之处,以及为什么:**
 
