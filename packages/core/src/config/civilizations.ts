@@ -1,6 +1,6 @@
 // Civilization and tenant code mappings
 //
-// These four maps are the frontend's copy of `TENANT_CIVILIZATION` /
+// These maps are the frontend's copy of `TENANT_CIVILIZATION` /
 // `CIVILIZATION_TENANT` in backend/apps/souls/models.py. GREEK is the fourth
 // member: `Civilization.GREEK`, tenant `GR_HADES`, holding Plato's fork
 // (EU_PLATO_MEADOW, whose code still records where it was written), the Isles
@@ -90,13 +90,6 @@ export const CIVILIZATION_LABELS: Record<string, string> = {
   EUROPEAN: "欧洲天堂地狱",
   EGYPTIAN: "埃及冥界",
   GREEK: "希腊冥界",
-};
-
-export const CIVILIZATION_DISPLAY_NAMES: Record<string, string> = {
-  CN_DIYU: "Chinese",
-  EU_HEAVEN_HELL: "European",
-  EG_DUAT: "Egyptian",
-  GR_HADES: "Greek",
 };
 
 export function getCivilizationFromTenantCode(code: string): string {
