@@ -213,9 +213,12 @@ class TestDockerConfiguration:
     def test_nginx_has_security_headers(self):
         """nginx.conf should have security headers"""
         content = _read(NGINX_CONF)
-        required_headers = ['X-Frame-Options', 'X-Content-Type-Options', 'X-XSS-Protection']
+        required_headers = ['X-Frame-Options', 'X-Content-Type-Options']
         for header in required_headers:
             assert header in content, f"Missing security header: {header}"
+        # X-XSS-Protection is obsolete: modern browsers ignore it and the old
+        # auditor it switched on could itself be abused. CSP covers it.
+        assert 'X-XSS-Protection' not in content
 
     def test_nginx_proxies_the_websocket_route(self):
         """channels serves /ws/ only through an Upgrade handshake; a proxy
