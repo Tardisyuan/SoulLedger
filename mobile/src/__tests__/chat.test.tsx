@@ -708,6 +708,7 @@ class FakeSynapse {
   /** The device each event was sent from: `unsigned.transaction_id` is echoed to that device only. */
   eventDevice = new Map<string, string>();
   sends: string[] = [];
+  syncs = 0;
   logins: Record<string, unknown>[] = [];
   private devices = 0;
   private waiters: (() => void)[] = [];
@@ -722,6 +723,7 @@ class FakeSynapse {
       const method = (config.method ?? "get").toUpperCase();
       const body = config.data ? JSON.parse(config.data as string) : undefined;
       const ok = (data: unknown) => ({ status: 200, data, headers: {}, config, statusText: "" }) as AxiosResponse;
+      if (method === "GET" && url === "/_matrix/client/v3/sync") this.syncs += 1; // offline ones too
       if (this.offline) throw new AxiosError("Network Error", "ERR_NETWORK", config);
       if (method === "POST" && url === "/_matrix/client/v3/login") {
         this.logins.push(body);
@@ -933,6 +935,80 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
 
 // ── the tab bar, through the real navigator ───────────────────────────
 
+describe("retrying the session: 5 → 10 → 20 → 30 → 30 s (fake timers)", () => {
+  let probe: Chat;
+  function Probe() {
+    probe = useChat();
+    return null;
+  }
+  const unavailable: Reply = { status: 503, data: { code: "chat_unavailable" } };
+  const grant: Reply = { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } };
+  const advance = (ms: number) => act(() => jest.advanceTimersByTimeAsync(ms));
+  const sessions = (calls: { url: string }[]) => calls.filter((c) => c.url === "/me/chat/session/").length;
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  /** `count()` stays put until `wait` has passed, then goes up by exactly one. */
+  async function expectNextAfter(wait: number, count: () => number) {
+    const before = count();
+    await advance(wait - 1);
+    expect(count()).toBe(before);
+    await advance(1);
+    expect(count()).toBe(before + 1);
+  }
+
+  function start(session: Reply | Reply[]) {
+    const calls = stubApi({ "/me/chat/conversations/": { status: 200, data: [] }, "/me/chat/session/": session });
+    const view = render(
+      <ChatProvider account="SL-CN-000042">
+        <Probe />
+      </ChatProvider>
+    );
+    return { calls, view };
+  }
+
+  it("chat_unavailable: each wait doubles and stops growing at 30 s; the retry button asks now and starts over at 5 s", async () => {
+    const { calls, view } = start(unavailable);
+    await advance(0);
+    expect(sessions(calls)).toBe(1);
+    for (const wait of [5_000, 10_000, 20_000, 30_000, 30_000, 30_000]) await expectNextAfter(wait, () => sessions(calls));
+    expect(probe.availability).toBe("unavailable");
+    await act(async () => probe.reconnect());
+    await advance(0);
+    expect(sessions(calls)).toBe(8);
+    await expectNextAfter(5_000, () => sessions(calls));
+    view.unmount();
+  });
+
+  it("a successful connect resets it: the next failure waits 5 s, not where the backoff had got to", async () => {
+    const synapse = new FakeSynapse();
+    synapse.install();
+    const { calls, view } = start([unavailable, unavailable, unavailable, grant]);
+    await advance(0);
+    await expectNextAfter(5_000, () => sessions(calls));
+    await expectNextAfter(10_000, () => sessions(calls)); // the 3rd failure: the next wait would be 20 s
+    await expectNextAfter(20_000, () => sessions(calls)); // the grant: logged in, synced
+    expect(probe.availability).toBe("ready");
+    const syncs = synapse.syncs;
+    synapse.offline = true;
+    await act(async () => synapse.release()); // the long-poll fails
+    expect(synapse.syncs).toBe(syncs);
+    expect(probe.availability).toBe("unavailable");
+    await expectNextAfter(5_000, () => synapse.syncs);
+    await expectNextAfter(10_000, () => synapse.syncs);
+    view.unmount();
+  });
+
+  it("chat_not_configured still stops: one request in two minutes", async () => {
+    const { calls, view } = start({ status: 503, data: { code: "chat_not_configured" } });
+    await advance(120_000);
+    expect(sessions(calls)).toBe(1);
+    expect(probe.availability).toBe("not_configured");
+    view.unmount();
+  });
+});
+
 describe("the fourth tab", () => {
   // The whole app boots here (session, profile, navigator); under a full parallel run that alone passed 5 s once.
   jest.setTimeout(20_000);
@@ -1016,9 +1092,9 @@ describe("the fourth tab", () => {
     expect(screen.queryByTestId("tab-Letters")).not.toBeOnTheScreen();
   }, 30_000);
 
-  it("chat_unavailable (Synapse configured but unreachable) is a fault, not a fact: asked again every 5 s", async () => {
+  it("chat_unavailable (Synapse configured but unreachable) is a fault, not a fact: asked again, at 5 s then 15 s", async () => {
     const body = JSON.stringify({ detail: "Synapse 无法访问:ConnectionError", code: "chat_unavailable" });
-    expect(await sessionCallsAfter({ status: 503, data: body }, 11_000)).toBeGreaterThanOrEqual(3);
+    expect(await sessionCallsAfter({ status: 503, data: body }, 11_000)).toBe(2);
     expect(screen.getByTestId("tab-Letters")).toBeOnTheScreen();
   }, 30_000);
 });
