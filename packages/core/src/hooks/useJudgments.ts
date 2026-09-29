@@ -67,6 +67,8 @@ export function useJudgmentPrevious(at: string | null | undefined, skip: string[
       return res.data;
     },
     enabled: !!at,
+    // Queue navigation: another officer may have taken the neighbour since.
+    staleTime: 0,
   });
 }
 
@@ -79,6 +81,7 @@ export function useJudgmentNextAfter(after: string | null | undefined, skip: str
       return res.data;
     },
     enabled: !!after,
+    staleTime: 0,
   });
 }
 

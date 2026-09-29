@@ -40,6 +40,8 @@ export function useScheduledJobs({ realtimeConnected, enabled = true }: LiveOpti
     queryKey: schedulerKeys.jobs,
     queryFn: async () => (await schedulerApi.jobs()).data,
     enabled,
+    // Polled and pushed (scheduler events); a mount should not show a 30s-old run state.
+    staleTime: 0,
     refetchInterval: (query) =>
       schedulerPollInterval(realtimeConnected, (query.state.data ?? []).map((job) => job.last_run?.status)),
     refetchIntervalInBackground: false,
@@ -51,6 +53,7 @@ export function useTaskRuns(filters: TaskRunFilters, { realtimeConnected, enable
     queryKey: schedulerKeys.runs.list({ ...filters }),
     queryFn: async () => (await schedulerApi.runs(filters)).data,
     enabled,
+    staleTime: 0,
     // A page turn or a status filter keeps the old page on screen until the new one lands.
     placeholderData: (previous) => previous,
     refetchInterval: (query) =>
