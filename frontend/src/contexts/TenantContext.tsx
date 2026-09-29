@@ -16,6 +16,15 @@ import {
   REFRESH_TOKEN_KEY,
   platform,
 } from "@soulledger/core/platform";
+import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
+
+const CIV_SKINS = new Set(Object.values(CIVILIZATION_SHORT_CODES));
+
+/** `CN_DIYU` → `cn`;不认得的代码与未登录 → `neutral`。 */
+export function civSkinOf(tenantCode: string | null): string {
+  const prefix = tenantCode?.split("_")[0].toLowerCase();
+  return prefix && CIV_SKINS.has(prefix) ? prefix : "neutral";
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -108,6 +117,14 @@ const TenantContext = createContext<TenantContextValue>({
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const tenantCode = user?.tenant?.code ?? null;
+
+  // 文明皮(规范 v2 §三):<html data-civ="cn|eu|eg|gr|neutral">,globals.css 据此只换
+  // 匾色 `--color-main`。前缀取自 CIVILIZATION_SHORT_CODES(由租户代码推出,不另写一份);
+  // 没登录、或租户代码不属于四个文明时是 neutral(登录前的中性皮)。
+  const civ = civSkinOf(tenantCode);
+  useEffect(() => {
+    document.documentElement.dataset.civ = civ;
+  }, [civ]);
 
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server

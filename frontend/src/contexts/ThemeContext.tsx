@@ -27,8 +27,25 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 const STORAGE_KEY = "soulledger_theme";
 
-/** 160ms of `--transition-duration-state` plus one frame of slack. */
+/** 120ms of `--transition-duration-state` (规范 v2 fast) plus slack. */
 const THEME_SWAP_MS = 200;
+
+/** Asked as "light?" so that "no preference" lands on dark — the same question
+ *  and the same fallback as THEME_BOOTSTRAP in app/layout.tsx. */
+const LIGHT_QUERY = "(prefers-color-scheme: light)";
+
+/** 规范 v2:没选过就跟随系统。matchMedia 缺席(jsdom、极旧浏览器)时退回深色,
+ *  与 v1 的默认一致。 */
+function systemTheme(): Theme {
+  try {
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      return window.matchMedia(LIGHT_QUERY).matches ? "light" : "dark";
+    }
+  } catch {
+    // matchMedia 抛了:按没有它处理
+  }
+  return "dark";
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
@@ -45,20 +62,37 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Hydrate from localStorage on mount, and keep DOM in sync with state
+  // Hydrate on mount. An explicit choice in localStorage wins; with none, the
+  // theme follows the OS (规范 v2「跟随系统」) and keeps following it while the
+  // page is open — a listener, because the OS flips at dusk without a reload.
+  // The listener is attached only while nothing is saved: once the user picks,
+  // `setTheme` stores it and the next change event finds a saved value and
+  // leaves the choice alone.
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      if (saved === "light" || saved === "dark") {
-        setThemeState(saved);
-      } else {
-        // Default: dark, ensure DOM matches
-        document.documentElement.classList.add("dark");
-        document.documentElement.classList.remove("light");
-      }
+      saved = localStorage.getItem(STORAGE_KEY);
     } catch {
-      document.documentElement.classList.add("dark");
+      // localStorage unavailable: behave as if nothing was chosen
     }
+    if (saved === "light" || saved === "dark") {
+      setThemeState(saved);
+      return;
+    }
+    setThemeState(systemTheme());
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia(LIGHT_QUERY);
+    const follow = (e: MediaQueryListEvent) => {
+      try {
+        const now = localStorage.getItem(STORAGE_KEY);
+        if (now === "light" || now === "dark") return;
+      } catch {
+        // unavailable: keep following
+      }
+      setThemeState(e.matches ? "light" : "dark");
+    };
+    mql.addEventListener?.("change", follow);
+    return () => mql.removeEventListener?.("change", follow);
   }, []);
 
   // Sync DOM classes whenever theme changes
@@ -83,7 +117,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
    * events for one interaction, and it does not fire at all for elements whose
    * colours happen not to differ between the two themes.
    *
-   * The timer matches `--transition-duration-state` (160ms) plus a frame of
+   * The timer matches `--transition-duration-state` (120ms) plus a frame of
    * slack. If the two ever disagree, the visible symptom is a swap that stops
    * halfway and jumps — so the number is written next to its reason rather
    * than left as a bare 200.
@@ -98,7 +132,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }, THEME_SWAP_MS);
 
     setThemeState(t);
-    localStorage.setItem(STORAGE_KEY, t);
+    try {
+      localStorage.setItem(STORAGE_KEY, t);
+    } catch {
+      // unavailable: the choice lasts for this page only
+    }
     root.classList.remove("dark", "light");
     root.classList.add(t);
   }, []);
