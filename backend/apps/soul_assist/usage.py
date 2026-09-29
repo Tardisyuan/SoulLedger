@@ -20,11 +20,12 @@ _TOKENS = {"input_tokens": Sum("input_tokens"), "output_tokens": Sum("output_tok
            "cache_read_tokens": Sum("cache_read_tokens")}
 
 
-def record(side, tenant, status, model="", tokens=None, *, is_eval=False):
+def record(side, tenant, status, model="", tokens=None, *, is_eval=False, retrieval=""):
     from apps.soul_assist.models import AssistUsage
 
     tokens = tokens or {}
     AssistUsage.objects.create(side=side, tenant=tenant, status=status, model=model or "", is_eval=is_eval,
+                               retrieval=retrieval,
                                input_tokens=tokens.get("input", 0), output_tokens=tokens.get("output", 0),
                                cache_read_tokens=tokens.get("cache_read", 0))
 
@@ -181,6 +182,7 @@ def report(prices, month=None):
     start, end = month_bounds(month)
     rows = _rows(start, end)
     statuses = dict(rows.order_by().values_list("status").annotate(n=Count("id")))
+    retrievals = dict(rows.order_by().values_list("retrieval").annotate(n=Count("id")))
     total = sum(statuses.values())
     empty = statuses.get("empty", 0)
     answered = statuses.get("ok", 0) + empty
@@ -203,6 +205,7 @@ def report(prices, month=None):
         "failure_rates": {"unavailable": share(statuses.get("unavailable", 0)),
                           "rate_limited": share(statuses.get("rate_limited", 0) + statuses.get("busy", 0)),
                           "empty": empty_share},
+        "by_retrieval": {r: retrievals.get(r, 0) for r in ("vector", "fallback", "fallback_low_similarity")},
         "by_day": [{"date": day, **v} for day, v in sorted(days.items())],
         "by_side": [{"side": side, **v} for side, v in sorted(_grouped(rows, "side", prices).items())],
         "by_hall": [{"tenant_id": k, "code": codes.get(k), **v} for k, v in halls.items()],

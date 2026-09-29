@@ -193,6 +193,14 @@ def judge(case, text, tools_called):
     return tools_ok, included, excluded, tools_ok and all(included.values()) and not any(excluded.values())
 
 
+def retrieval_hit(case, retrieved):
+    """用例写了期望条目:它们**都**进了上下文才算命中(`PINNED` 总在上下文里);没写 = None,不计。
+    退回整份语料(`fallback*`)时 `retrieved` 为空,算未命中 —— 检索没有找到它。"""
+    if not case.expected_entries:
+        return None
+    return all(e in retrieved or e in corpus.PINNED for e in case.expected_entries)
+
+
 def run_case(run, index, conn, case, eff):
     from apps.soul_assist.models import AssistEvalResult
 
@@ -214,6 +222,9 @@ def run_case(run, index, conn, case, eff):
         result.answer, result.tools_called, result.tokens = reply.content, reply.tool_calls, reply.tokens
         result.tools_ok, result.included, result.excluded, result.passed = judge(case, reply.content,
                                                                                  reply.tool_calls)
+        found = reply.retrieval
+        result.retrieval, result.retrieved = found.mode, list(found.entries)
+        result.retrieval_hit = retrieval_hit(case, found.entries)
         result.cost = config.cost(eff.prices, conn.model, reply.tokens.get("input", 0),
                                   reply.tokens.get("output", 0), reply.tokens.get("cache_read", 0))
     result.latency_ms = _ms(begin)
@@ -272,6 +283,7 @@ def try_question(side, question, conn, lang, request=None) -> dict:
     begin = time.monotonic()
     reply = _ask_as(asker, question, "other", lang, conn, request)
     return {"side": side, "answer": reply.content, "tools_called": list(reply.tool_calls),
+            "retrieval": reply.retrieval.mode, "retrieved_entries": list(reply.retrieval.entries),
             "latency_ms": _ms(begin), "tokens": reply.tokens, "provider": config.provider_name(conn.provider),
             "model": conn.model}
 
@@ -294,11 +306,14 @@ def summarize(run):
         checks = [v for r in answered for v in r.included.values()] + \
                  [not v for r in answered for v in r.excluded.values()]
         costs = [r.cost for r in answered]
+        labelled = [r.retrieval_hit for r in answered if r.retrieval_hit is not None]
         out.append({
             "candidate": index, "provider": config.provider_name(stored["provider"]), "model": stored["model"],
             "cases": len(rows), "passed": sum(r.passed for r in rows), "errors": len(rows) - len(answered),
             "tool_accuracy": sum(r.tools_ok for r in answered) / len(answered) if answered else None,
             "phrase_hit_rate": sum(checks) / len(checks) if checks else None,
+            "retrieval_hit_rate": sum(labelled) / len(labelled) if labelled else None,
+            "retrieval_fallbacks": sum(r.retrieval != "vector" for r in answered),
             "mean_latency_ms": sum(r.latency_ms for r in answered) / len(answered) if answered else None,
             "cost": None if any(c is None for c in costs) else round(sum(costs), 6),
             "input_tokens": sum(r.tokens.get("input", 0) for r in answered),

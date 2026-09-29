@@ -1196,6 +1196,12 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # tests/test_conclude_destination.py 的 realm_full 测试每个引擎都跑。
         here + "TestConcludeDestinationCapacityHoldsTheRealmLock::"
         "test_two_officers_filling_the_last_seat_at_once_exactly_one_wins",
+        # 2026-09-30 助手向量检索(docs/ARCHITECTURE-soul-assist.md §7.7):pgvector 的 `<=>`、
+        # vector(N) / halfvec(N) 表达式与 HNSW 索引只在 PostgreSQL 上存在。SQLite 路径的同一组断言
+        # (Python 余弦的排序、过滤、降级)在同文件里每个引擎都跑;第一条参数化为两个维度,算一个名字。
+        "tests/test_assist_rag.py::test_pgvector_orders_exactly_like_the_python_cosine",
+        "tests/test_assist_rag.py::"
+        "test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_model",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

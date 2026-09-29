@@ -33,4 +33,7 @@ admin_urlpatterns = [
     path("try/", admin_views.TryView.as_view(), name="assist-admin-try"),
     path("usage/", admin_views.UsageView.as_view(), name="assist-admin-usage"),
     path("corpus/", admin_views.CorpusView.as_view(), name="assist-admin-corpus"),
+    path("embedding/", admin_views.EmbeddingView.as_view(), name="assist-admin-embedding"),
+    path("embedding/test/", admin_views.EmbeddingTestView.as_view(), name="assist-admin-embedding-test"),
+    path("embedding/rebuild/", admin_views.EmbeddingRebuildView.as_view(), name="assist-admin-embedding-rebuild"),
 ]

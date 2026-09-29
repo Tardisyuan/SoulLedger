@@ -32,6 +32,9 @@ DEFAULT_EVAL_SPEND_CAP = 5.0
 TESTED_TTL_SECONDS = 15 * 60
 VERSION_KEY = "soul_assist:config_version"
 TESTED_KEY = "soul_assist:tested:"
+#: 向量检索的键(docs/ARCHITECTURE-soul-assist.md §7.6),由 `embedding/` 接口改。前三个是「连接」:改了要先测通。
+EMBEDDING_KEYS = ("embedding_url", "embedding_model", "embedding_dims", "retrieval_k", "retrieval_min_similarity")
+EMBEDDING_CONNECTION_KEYS = ("embedding_url", "embedding_model", "embedding_dims")
 AUDIT_RESOURCE = "assistant_config"
 
 
@@ -56,6 +59,19 @@ def env_connection() -> Connection:
                       settings.ASSISTANT_MODEL, settings.ASSISTANT_EFFORT, settings.ASSISTANT_ANTHROPIC_FALLBACKS)
 
 
+@dataclass(frozen=True)
+class Embedding:
+    """取向量要的全部。`dims` 为 None = 模型原生维度(不传 Ollama 的 `dimensions`)。"""
+
+    url: str
+    model: str
+    dims: int | None
+
+    def fingerprint(self) -> str:
+        return hmac.new(settings.SECRET_KEY.encode(), repr(("embedding",) + astuple(self)).encode(),
+                        hashlib.sha256).hexdigest()
+
+
 @dataclass(frozen=True, eq=False)
 class Effective:
     connection: Connection
@@ -71,6 +87,9 @@ class Effective:
     eval_officer_id: object
     overridden: tuple  # 页面改过的键
     cap_closed_for: str = ""  # 非空 = 总开关因月度上限被关于该月("YYYY-MM"),见 usage.maybe_reopen
+    embedding: Embedding = None
+    retrieval_k: int = 5
+    retrieval_min_similarity: float = 0.0
 
     @property
     def enabled(self) -> bool:
@@ -146,6 +165,11 @@ def effective(row=None) -> Effective:
         eval_soul_account_id=row["eval_soul_account_id"], eval_officer_id=row["eval_officer_id"],
         overridden=tuple(sorted(v)) + (("api_key",) if row["api_key_set_at"] else ()),
         cap_closed_for=row.get("cap_closed_for", ""),
+        embedding=Embedding(v.get("embedding_url", settings.ASSISTANT_EMBEDDING_URL),
+                            v.get("embedding_model", settings.ASSISTANT_EMBEDDING_MODEL),
+                            v.get("embedding_dims", settings.ASSISTANT_EMBEDDING_DIMS)),
+        retrieval_k=v.get("retrieval_k", settings.ASSISTANT_RETRIEVAL_K),
+        retrieval_min_similarity=v.get("retrieval_min_similarity", settings.ASSISTANT_RETRIEVAL_MIN_SIMILARITY),
     )
 
 
@@ -197,11 +221,16 @@ def cost(prices, model, input_tokens=0, output_tokens=0, cache_read_tokens=0):
 # ── 连通测试的凭证 ─────────────────────────────────────────────────────────
 
 
-def remember_tested(conn: Connection):
+def embedding_candidate(data, base: Embedding) -> Embedding:
+    return Embedding(data.get("embedding_url", base.url), data.get("embedding_model", base.model),
+                     data["embedding_dims"] if "embedding_dims" in data else base.dims)
+
+
+def remember_tested(conn):  # Connection 或 Embedding:两者的 fingerprint 带不同前缀,互不冒充
     cache.set(TESTED_KEY + conn.fingerprint(), timezone.now().isoformat(), TESTED_TTL_SECONDS)
 
 
-def was_tested(conn: Connection) -> bool:
+def was_tested(conn) -> bool:
     return cache.get(TESTED_KEY + conn.fingerprint()) is not None
 
 
@@ -218,6 +247,9 @@ def current_value(eff: Effective, key):
         "effort": c.effort, "fallbacks": bool(c.fallbacks), "soul_per_hour": per_hour(eff, "soul"),
         "officer_per_hour": per_hour(eff, "officer"), "monthly_cap": eff.monthly_cap, "prices": eff.prices,
         "eval_spend_cap": eff.eval_spend_cap,
+        "embedding_url": eff.embedding.url, "embedding_model": eff.embedding.model,
+        "embedding_dims": eff.embedding.dims, "retrieval_k": eff.retrieval_k,
+        "retrieval_min_similarity": eff.retrieval_min_similarity,
     }[key]
 
 
@@ -237,7 +269,7 @@ def save_changes(row, values=None, *, user, description="assistant config update
         # 只写真的变了的键:页面整表提交时,没动的键继续跟 env,也不算「动了开关」。
         if old == new:
             continue
-        changes[key] = [redact_url(old), redact_url(new)] if key == "base_url" else [old, new]
+        changes[key] = [redact_url(old), redact_url(new)] if key in ("base_url", "embedding_url") else [old, new]
         row.values = {**row.values, key: new}
     if user is not None and "enabled" in changes:
         # 管理员亲手改了总开关:不再有「上限关的、下月自动开」这回事(用户 2026-09-29 定)。

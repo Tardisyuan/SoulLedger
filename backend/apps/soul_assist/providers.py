@@ -265,7 +265,7 @@ class FakeProvider:
     def answer(self, *, system, facts, history, tools, call_tool, max_rounds, deadline):
         type(self).calls.append({"system": system, "facts": facts, "history": list(history),
                                  "tools": [t.name for t in tools], "max_rounds": max_rounds,
-                                 "model": (self.conn.model if self.conn else None)})
+                                 "model": (self.conn.model if self.conn else None), "deadline": deadline})
         result = Answer(text="", usage={"input": 1, "output": 1})
         rounds = 0
         for step in type(self).script:

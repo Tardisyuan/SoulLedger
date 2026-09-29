@@ -447,6 +447,17 @@ ASSISTANT_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_TIMEOUT_SECONDS", "22"))
 ASSISTANT_MAX_CONCURRENT = int(os.getenv("ASSISTANT_MAX_CONCURRENT", "8"))
 # 每次送给模型的历史条数(user + assistant 各算一条)。
 ASSISTANT_HISTORY_TURNS = int(os.getenv("ASSISTANT_HISTORY_TURNS", "20"))
+# 向量检索(docs/ARCHITECTURE-soul-assist.md §7)。管理页可覆盖这几项(库优先,env 是初始值)。
+# 地址是局域网里的 Ollama;上线前要换成部署内可达的服务(§7.8)。
+ASSISTANT_EMBEDDING_URL = os.getenv("ASSISTANT_EMBEDDING_URL", "http://192.168.2.2:11434")
+ASSISTANT_EMBEDDING_MODEL = os.getenv("ASSISTANT_EMBEDDING_MODEL", "qwen3-embedding:4b-q4_K_M")
+# 截断维度(Ollama 的 `dimensions`);空 = 模型原生维度(qwen3-embedding 为 2560)。
+ASSISTANT_EMBEDDING_DIMS = int(os.getenv("ASSISTANT_EMBEDDING_DIMS") or 0) or None
+ASSISTANT_RETRIEVAL_K = int(os.getenv("ASSISTANT_RETRIEVAL_K", "5"))
+# 最近一条的余弦相似度低于它 → 这一问退回整份语料(retrieval=fallback_low_similarity)。取值依据见 docs/ARCHITECTURE-soul-assist.md §7.9。
+ASSISTANT_RETRIEVAL_MIN_SIMILARITY = float(os.getenv("ASSISTANT_RETRIEVAL_MIN_SIMILARITY", "0.56"))
+# 提问时取问题向量的超时(在 ASSISTANT_TIMEOUT_SECONDS 之内,不重试);重建向量用更长的超时。
+ASSISTANT_EMBEDDING_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_EMBEDDING_TIMEOUT_SECONDS", "3"))
 
 # Logging
 LOGGING = {
@@ -577,6 +588,10 @@ SPECTACULAR_SETTINGS = {
         # 助手管理页:`side` / `status` 都是别处已占的字段名。
         "AssistSideEnum": "apps.soul_assist.models.AssistUsage.SIDES",
         "AssistEvalRunStatusEnum": "apps.soul_assist.models.AssistEvalRun.STATUSES",
+        # 向量检索(§7.6):`error_kind` 在连通测试里已是供应商的那套;向量服务的另起名,供应商的保留原名。
+        "ErrorKindEnum": "apps.soul_assist.admin_serializers.ERROR_KINDS",
+        "EmbeddingErrorKindEnum": "apps.soul_assist.vectors.ERROR_KINDS",
+        "AssistRetrievalEnum": "apps.soul_assist.admin_serializers.RETRIEVALS",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
         # `welcomed_civilizations`(App 欢迎过场)用的是灵魂的 Civilization 选项集;钉在既有的
         # `CivilizationEnum` 上,否则多出一个同值的 `WelcomedCivilizationsEnum` 并报 warning。
