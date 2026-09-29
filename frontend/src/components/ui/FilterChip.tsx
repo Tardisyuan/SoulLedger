@@ -4,20 +4,19 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * 筛选签(规范 v1 §2「核心原语」). A 28 px chip with a 1 px structure line.
- * Hover surface-2, pressed surface-3; **in effect** = block line + surface-2 +
- * a 2 px accent underline, plus a × that clears it — the underline and the ×
- * together, so "this filter is on" never rests on colour alone.
+ * 筛选签 · 规范 v2 补足 A1「筛选条」:选中 / 常态 / 悬停 / 焦点 / 禁用。
+ * 常态:透明底、1px ink3 框、ink 字;悬停 s2;**选中 = ink 实底、纸色字、前面一个 ✓**
+ * (A1:「✓ 第五殿 · 12」)—— 选中不只靠颜色,✓ 与清除用的 × 一起说「这条筛选生效了」。
+ * 选中不用匾色:匾色只有五处用法,筛选不在其中。
  *
- * Badges are never clickable (§2 徽章); anything a user clicks to narrow a list
- * is one of these.
+ * Badges are never clickable; anything a user clicks to narrow a list is one of these.
  */
 const base =
-  "inline-flex h-7 max-sm:min-h-11 shrink-0 items-center gap-1 border px-2 text-xs whitespace-nowrap transition-colors duration-150 ease-out";
+  "inline-flex h-7 max-sm:min-h-11 shrink-0 items-center gap-1 border px-2 text-xs whitespace-nowrap transition-colors duration-fast ease-standard";
 const idle =
-  "border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-surface-3))]";
+  "border-[oklch(var(--color-line-strong))] bg-transparent text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]";
 const on =
-  "border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] shadow-[inset_0_-2px_0_oklch(var(--color-accent))] active:bg-[oklch(var(--color-surface-3))]";
+  "border-[oklch(var(--color-ink))] bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]";
 
 export function filterChipClass(active: boolean) {
   return cn(base, active ? on : idle);
@@ -47,8 +46,9 @@ interface FilterChipSelectProps {
 export function FilterChipSelect({ label, value, options, onChange, clearLabel, disabled }: FilterChipSelectProps) {
   const active = value !== "";
   return (
-    <span data-filter-chip="" data-active={active || undefined} className={cn(filterChipClass(active), disabled && "text-[oklch(var(--color-disabled-ink))]")}>
-      <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">{label} ·</span>
+    <span data-filter-chip="" data-active={active || undefined} className={cn(filterChipClass(active), disabled && "text-[oklch(var(--color-disabled-ink))] border-[oklch(var(--color-line))]")}>
+      {active && <span aria-hidden="true">✓</span>}
+      <span aria-hidden="true" className={active ? undefined : "text-[oklch(var(--color-ink-subtle))]"}>{label} ·</span>
       <select
         aria-label={label}
         value={value}
@@ -65,7 +65,7 @@ export function FilterChipSelect({ label, value, options, onChange, clearLabel, 
           type="button"
           aria-label={clearLabel}
           onClick={() => onChange("")}
-          className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
+          className="text-inherit"
         >
           ×
         </button>
@@ -93,10 +93,11 @@ export function FilterChipToggle({ pressed, onPressedChange, children, disabled 
       aria-pressed={pressed}
       disabled={disabled}
       onClick={() => onPressedChange(!pressed)}
-      className={cn(filterChipClass(pressed), "disabled:text-[oklch(var(--color-disabled-ink))] disabled:cursor-not-allowed")}
+      className={cn(filterChipClass(pressed), "disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed")}
     >
+      {pressed && <span aria-hidden="true">✓</span>}
       {children}
-      {pressed && <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">×</span>}
+      {pressed && <span aria-hidden="true">×</span>}
     </button>
   );
 }

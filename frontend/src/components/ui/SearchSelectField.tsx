@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Combobox } from "@base-ui/react/combobox";
 
-import { Field, type SelectOption } from "@/src/components/ui/Field";
+import { Field, fieldControl, type SelectOption } from "@/src/components/ui/Field";
 
 /**
  * A picker for a list too long to put in a `<select>`.
@@ -207,12 +207,12 @@ export function SearchSelectField({
             onFocus={() => {
               if (searchText !== "" && !selected) setOpen(true);
             }}
-            className="w-full bg-[oklch(var(--color-surface-1))] border px-3 py-2 text-sm text-[oklch(var(--color-ink))] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--color-accent))] disabled:opacity-50 border-[oklch(var(--color-hairline))] focus-visible:border-[oklch(var(--color-accent))] aria-[invalid=true]:border-[oklch(var(--color-status-error))]"
+            className={fieldControl({ size: "md", invalid: Boolean(error) })}
           />
 
           <Combobox.Portal>
-            <Combobox.Positioner sideOffset={4} className="z-dialog w-[var(--anchor-width)]">
-              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] py-1 transition duration-state ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
+            <Combobox.Positioner sideOffset={2} className="z-dialog w-[var(--anchor-width)]">
+              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] py-1 transition duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
                 {loading ? (
                   <p className="px-3 py-2 text-xs text-[oklch(var(--color-ink-subtle))]" role="status">
                     {loadingText}
@@ -243,8 +243,9 @@ export function SearchSelectField({
                         <Combobox.Item
                           key={option.value}
                           value={option}
-                          className="px-3 py-2 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-3))] data-selected:text-[oklch(var(--color-accent-ink))]"
+                          className="flex min-h-8 items-center gap-2 px-3 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-2))] data-selected:font-semibold"
                         >
+                          <Combobox.ItemIndicator className="w-3 shrink-0" aria-hidden="true">✓</Combobox.ItemIndicator>
                           {option.label}
                         </Combobox.Item>
                       )}

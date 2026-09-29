@@ -121,7 +121,7 @@ import { cn } from "@/lib/utils";
  *        删掉,不要在 token 已经给了 weight 的档位上重复声明 —— 留着会让人以为
  *        「不写就不粗」,于是下一个人在 `text-2xs` 上也补一个。
  *      - `--text-md` **没有**伴生 weight,而它的其余用处全是正文:
- *        `font-serif text-quote` 的法条与供词、hero 副标题、PageError 的说明句、
+ *        `font-serif text-md font-normal` 的法条与供词、hero 副标题、PageError 的说明句、
  *        welcome 的三个值。它是**引文档不是标题档**,所以补一个
  *        `--text-md--font-weight` 会把那些正文一起加粗 —— 三处用 `text-md` 的
  *        `<h2>` 改成 `text-md`,而不是给 `text-md` 补 weight。

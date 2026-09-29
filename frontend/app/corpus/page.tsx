@@ -396,7 +396,7 @@ function Reading({
   const translation = transcribedInOriginal
     ? (locale === "egy" && s.text_egy) || s.text_en || null
     : s.display_text || null;
-  const serif = "font-serif text-quote mt-3 text-[oklch(var(--color-ink))]";
+  const serif = "font-serif text-md font-normal mt-3 text-[oklch(var(--color-ink))]";
 
   return (
     <article data-testid="corpus-reading" className="px-4 md:px-10 py-6 min-w-0">

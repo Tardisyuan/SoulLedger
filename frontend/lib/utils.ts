@@ -42,9 +42,9 @@ const twMerge = extendTailwindMerge({
       // Registering these as font sizes does two things: it stops them
       // colliding with text colours, and it makes them collide with each
       // other, so `cn("text-xs", "text-md")` still resolves to `text-md`.
-      // 规范 v1 的七档里,tailwind-merge 自带表认得 xs / sm / md / lg / xl / 2xs(t-shirt 名),
-      // 不认得 `quote`;七个全登记,不依赖它的内置表恰好覆盖哪些。
-      text: ["2xs", "xs", "sm", "md", "quote", "lg", "xl"],
+      // 规范 v2 的七档里,tailwind-merge 自带表认得 xs / sm / md / lg / xl / 2xs(t-shirt 名),
+      // 不认得 `display`;七个全登记,不依赖它的内置表恰好覆盖哪些。
+      text: ["2xs", "xs", "sm", "md", "lg", "xl", "display"],
     },
   },
 })

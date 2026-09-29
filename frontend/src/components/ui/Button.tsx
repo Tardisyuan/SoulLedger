@@ -6,20 +6,21 @@ import { cn } from "@/lib/utils";
 import { Spinner } from "./Spinner";
 
 /**
- * The one button — 规范 v1「账簿 × 卷宗」§2 的四档:
+ * The one button — 规范 v2「朱印」补足 A1 的按钮行(Web 高 32、字 13 / 600):
  *
- * - **主**:墨色实底、canvas 字,每屏至多一个;悬停 ink-muted,按下内阴影 + 下移 1 px。
- * - **次**(默认):无底色、区块边界线描边;悬停 surface-2,按下 surface-3。
- * - **幽**:行内、弹层里的「取消」;无边框。
- * - **危险**:次按钮的形状换成危险色 —— 规范明令「破坏性动作用次按钮 + 危险色,不用实心红」。
- *   警示同理。
+ * - **主**:匾色实底(`--color-main`,按 <html data-civ> 换文明)、onMain 字、无边框。
+ *   主按钮是匾色的五处用法之一,只给落判这一类决定。悬停 / 按下 = 底色叠黑 12% / 24%
+ *   (`color-mix(… 88% / 76%, black)`),对比只升不降。
+ * - **次**(默认)= A1 的「幽灵」:无底色、1px ink3 描边、ink 字;悬停 s2,按下 line。
+ * - **幽**:行内、弹层里的「取消」;同上但无边框。
+ * - **危险**:neg.strong 实底、白字,悬停 / 按下同样叠黑。A1:永远带 ✕ 和动作文字,
+ *   只出现在「输入名称以确认」的对话框里 —— 放在哪是调用点的事,这里只管长相。
+ * - **警示**:次按钮的形状换成警示色(A1 没画这一档,保留 v1 的做法)。
  *
- * 高度固定三档:28(表格行内)、32(控件高,§1.7)、40;393 px 下一律 ≥ 44 px 点击区。
- * 禁用用 disabled-surface / disabled-ink 这一对(按设计故意低对比,WCAG 豁免),不是把
- * 活按钮调透明。焦点环交给全局 `:focus-visible`(方角 2 px 墨蓝),这里不写环。
+ * 禁用:底 s2、字 ink3、边框透明,不透明度不变(对比豁免,但仍可辨认)。加载:aria-busy、
+ * 不可再按、前面加转圈,宽度不变。焦点环交给全局 `:focus-visible`(2px ink 外扩 2)。
  *
- * 历史:这个组件收拢了 190 个手写 `<button>`、141 种 className;上一版主按钮是
- * 琥珀底黑字(9.82:1),规范 v1 把强调色从按钮上撤下,只留给链接、焦点、选中。
+ * 叠黑的类名必须整串写出来:Tailwind 扫源码里的完整类名,拼出来的它看不见。
  *
  * `type` 不默认成 "button":被替换的调用点里有真正的提交按钮,改默认会让表单静默失效。
  */
@@ -27,54 +28,51 @@ import { Spinner } from "./Spinner";
 const button = cva(
   [
     "inline-flex items-center justify-center gap-2",
-    "font-medium whitespace-nowrap select-none border",
-    "transition-[color,background-color,border-color,transform] duration-150 ease-out",
-    // Pressed: down 1 px (规范 v1 §2 按钮 · 主「下移 1 px」), off under reduced motion.
-    "active:translate-y-px motion-reduce:active:translate-y-0",
-    // 393 px: every control is a ≥ 44 px target (§1.7).
+    "font-semibold whitespace-nowrap select-none border",
+    "transition-[color,background-color,border-color] duration-fast ease-standard",
+    // 393 px: every control is a ≥ 44 px target.
     "max-sm:min-h-11",
-    // Disabled is its own colour pair (disabled-surface / disabled-ink, WCAG-exempt by
-    // design), not a faded copy of the live button; hover and press are dead.
-    "disabled:pointer-events-none disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-[oklch(var(--color-line))]",
+    // Disabled (A1): s2 fill, ink3 text, no border, same opacity; hover and press are dead.
+    "disabled:pointer-events-none disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-transparent",
   ],
   {
     variants: {
       variant: {
-        /** One per screen. Ink fill, canvas text; hover steps to ink-muted. */
+        /** One per screen. The civilization's plaque colour, onMain text. */
         primary: [
-          "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] border-[oklch(var(--color-ink))]",
-          "hover:bg-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-ink-muted))]",
-          "active:shadow-[inset_0_2px_0_rgb(0_0_0/0.35)]",
+          "bg-[oklch(var(--color-main))] text-[oklch(var(--color-on-main))] border-transparent",
+          "hover:bg-[color-mix(in_oklab,oklch(var(--color-main))_88%,black)]",
+          "active:bg-[color-mix(in_oklab,oklch(var(--color-main))_76%,black)]",
         ],
-        /** The default. No fill, block-line border; surface-2 on hover, surface-3 pressed. */
+        /** The default (A1 幽灵). No fill, ink3 border; s2 on hover, line pressed. */
         secondary: [
-          "bg-transparent text-[oklch(var(--color-ink))] border-[oklch(var(--color-block))]",
+          "bg-transparent text-[oklch(var(--color-ink))] border-[oklch(var(--color-line-strong))]",
           "hover:bg-[oklch(var(--color-surface-2))]",
-          "active:bg-[oklch(var(--color-surface-3))]",
+          "active:bg-[oklch(var(--color-line))]",
         ],
         /** Inline and dialog "cancel": no border at rest. */
         ghost: [
-          "bg-transparent text-[oklch(var(--color-ink-muted))] border-transparent",
-          "hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]",
-          "active:bg-[oklch(var(--color-surface-3))]",
-        ],
-        /** Destructive = the secondary button in the danger colour — never a solid red (§3.3). */
-        danger: [
-          "bg-transparent text-[oklch(var(--color-danger))] border-[oklch(var(--color-danger))]",
+          "bg-transparent text-[oklch(var(--color-ink))] border-transparent",
           "hover:bg-[oklch(var(--color-surface-2))]",
-          "active:bg-[oklch(var(--color-surface-3))]",
+          "active:bg-[oklch(var(--color-line))]",
         ],
-        /** Hard to take back but not destructive: the same shape in the warning colour. */
+        /** Destructive (A1 危险): solid neg.strong, white text. */
+        danger: [
+          "bg-[oklch(var(--color-danger-strong))] text-white border-transparent",
+          "hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,black)]",
+          "active:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_76%,black)]",
+        ],
+        /** Hard to take back but not destructive: the secondary shape in the warning colour. */
         warning: [
           "bg-transparent text-[oklch(var(--color-warning))] border-[oklch(var(--color-warning))]",
           "hover:bg-[oklch(var(--color-surface-2))]",
-          "active:bg-[oklch(var(--color-surface-3))]",
+          "active:bg-[oklch(var(--color-line))]",
         ],
       },
       size: {
         /** 28 px: inside table rows. */
         sm: "h-7 px-2 text-xs",
-        /** 32 px: the control height (§1.7). */
+        /** 32 px: the control height (A1). */
         md: "h-8 px-3 text-sm",
         lg: "h-10 px-4 text-sm",
       },

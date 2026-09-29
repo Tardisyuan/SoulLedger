@@ -43,7 +43,23 @@ test.describe("Home page", () => {
     await expect(page.getByText("万古轮回皆有录")).toHaveCount(0);
   });
 
+  test("with no saved choice the theme follows the system (规范 v2)", async ({ page }) => {
+    const html = page.locator("html");
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/");
+    await expect(html).toHaveClass(/light/);
+    await expect(html).not.toHaveClass(/dark/);
+
+    // And keeps following it while the page is open.
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(html).toHaveClass(/dark/);
+    await expect(html).not.toHaveClass(/light/);
+  });
+
   test("theme toggle flips the root theme class", async ({ page }) => {
+    // v1 defaulted to dark; v2 follows the system, so pin the system to dark
+    // to start from the same place the toggle sequence below assumes.
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/");
 
     const html = page.locator("html");

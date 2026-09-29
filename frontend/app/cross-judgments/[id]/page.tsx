@@ -199,7 +199,7 @@ export default function CrossJudgmentDetailPage() {
       {loading ? (
         <Skeleton className="h-4 w-full mb-6" />
       ) : judgment?.description && (
-        <blockquote className="max-w-[72ch] mb-2 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] text-pretty">
+        <blockquote className="max-w-[72ch] mb-2 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] text-pretty">
           {judgment.description}
         </blockquote>
       )}

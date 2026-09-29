@@ -35,3 +35,26 @@ export function prefersReducedMotion(): boolean {
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
 }
+
+/**
+ * 规范 v2 动效令牌的 JS 镜像,给 motion(`motion/react`)用 —— 它的 transition 吃秒数与
+ * 贝塞尔数组,读不了 CSS 变量。与 `app/globals.css` @theme 里的
+ * `--transition-duration-*` / `--ease-*` 是同一张表,`motionTokens.test.ts` 逐项对账。
+ * 取用走 `src/hooks/useReducedMotionDurations.ts`,那里处理减少动态效果。
+ */
+export const MOTION_DURATIONS = {
+  instant: 0,
+  fast: 0.12,
+  base: 0.2,
+  slow: 0.32,
+  ritual: 0.6,
+} as const;
+
+export type MotionDurations = { readonly [K in keyof typeof MOTION_DURATIONS]: number };
+
+export const MOTION_EASINGS = {
+  standard: [0.2, 0, 0, 1],
+  enter: [0, 0, 0.2, 1],
+  exit: [0.4, 0, 1, 1],
+  drop: [0.55, 0, 1, 0.45],
+} as const;

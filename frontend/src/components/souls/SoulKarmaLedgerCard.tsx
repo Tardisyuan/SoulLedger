@@ -2,6 +2,8 @@
 
 import { useI18n } from "@/src/contexts/I18nContext";
 import { LazyLifespanBarChart } from "@/src/components/charts/LazyDashboardCharts";
+import { useChartColors } from "@/src/hooks/useChartColors";
+import { KARMA_PATTERNS, type ChartColors } from "@/lib/chart-colors";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@soulledger/core/api/ledger";
@@ -65,7 +67,8 @@ function sortKey(r: LedgerRecord): number {
   return new Date(r.recorded_at).getTime() / 86_400_000 + 10_000_000; // days, biased above any plausible year*372
 }
 
-function getLifespanChartData(records: LedgerRecord[]) {
+/** 规范 v2 A5:功过不用状态色,用图案分 —— 功 = 实底,过 = 空框斜线,同一个梯度色。 */
+function getLifespanChartData(records: LedgerRecord[], series: Pick<ChartColors["CHART_SERIES"], "merit" | "demerit">) {
   return [...records]
     .sort((a, b) => sortKey(a) - sortKey(b))
     .map((r) => {
@@ -77,7 +80,8 @@ function getLifespanChartData(records: LedgerRecord[]) {
         label: yearLabel(r.event_date, r.recorded_at),
         effective,
         decayedAway: original - effective,
-        color: r.type === "MERIT" ? "oklch(var(--color-karma-merit))" : "oklch(var(--color-karma-demerit))",
+        color: r.type === "MERIT" ? series.merit : series.demerit,
+        pattern: r.type === "MERIT" ? KARMA_PATTERNS.merit : KARMA_PATTERNS.demerit,
       };
     });
 }
@@ -110,6 +114,7 @@ export function SoulKarmaLedgerCard({
   // which is why it cannot be the `t(k) || "fallback"` shape; see
   // `makeTranslateWithFallback` in I18nContext for the whole argument.
   const { t, tf } = useI18n();
+  const { CHART_SERIES } = useChartColors();
 
   const rawMerit = records.filter((r) => r.type === "MERIT").reduce((s, r) => s + r.original_weight, 0);
   const rawDemerit = records.filter((r) => r.type === "DEMERIT").reduce((s, r) => s + r.original_weight, 0);
@@ -295,7 +300,7 @@ export function SoulKarmaLedgerCard({
           <div className="mt-4">
             <p className="text-xs text-[oklch(var(--color-ink-muted))] mb-2">{t("ledger.timeline")}</p>
             <LazyLifespanBarChart
-              data={getLifespanChartData(records)}
+              data={getLifespanChartData(records, CHART_SERIES)}
               seriesNames={{
                 effective: t("ledger.series_effective"),
                 decayedAway: t("ledger.series_decayed"),
@@ -321,6 +326,18 @@ export function SoulKarmaLedgerCard({
                   style={{ opacity: 0.35 }}
                 />
                 {t("ledger.series_decayed")}
+              </span>
+              {/* 规范 v2 A5:功 = 实底,过 = 空框斜线。图例只作补充,色块与条形同一个梯度色。 */}
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden="true" className="w-2.5 h-2.5 bg-[oklch(var(--color-chart-1))]" />
+                {t("souls.detail.merit")}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="w-2.5 h-2.5 border border-[oklch(var(--color-chart-1))] bg-[repeating-linear-gradient(45deg,oklch(var(--color-chart-1))_0_1.5px,transparent_1.5px_5px)]"
+                />
+                {t("souls.detail.demerit")}
               </span>
             </div>
           </div>

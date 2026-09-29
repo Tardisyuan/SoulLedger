@@ -22,13 +22,15 @@ describe("FilterChipSelect", () => {
     expect(chip).toHaveTextContent("▾");
   });
 
-  it("in effect: underline + × together, and × clears to the empty option", () => {
+  it("in effect: ink fill + ✓ + × together (规范 v2 A1), and × clears to the empty option", () => {
     const onChange = jest.fn();
     const { container } = render(
       <FilterChipSelect label="状态" value="JUDGING" options={options} onChange={onChange} clearLabel="清除状态" />
     );
     const chip = container.firstChild as HTMLElement;
-    expect(chip.className).toContain("shadow-[inset_0_-2px_0_oklch(var(--color-accent))]");
+    expect(chip.className).toContain("bg-[oklch(var(--color-ink))]");
+    expect(chip.className).not.toContain("--color-accent");
+    expect(chip).toHaveTextContent("✓");
     expect(chip).toHaveAttribute("data-active", "true");
     expect(chip).not.toHaveTextContent("▾");
     fireEvent.click(screen.getByRole("button", { name: "清除状态" }));
@@ -51,11 +53,14 @@ describe("FilterChipToggle", () => {
     );
     const btn = screen.getByRole("button", { name: "仅看有问题的" });
     expect(btn).toHaveAttribute("aria-pressed", "false");
-    expect(btn.className).not.toContain("--color-accent");
+    expect(btn.className).not.toContain("bg-[oklch(var(--color-ink))]");
+    expect(btn).not.toHaveTextContent("✓");
     fireEvent.click(btn);
     expect(onPressedChange).toHaveBeenCalledWith(true);
 
     rerender(<FilterChipToggle pressed onPressedChange={onPressedChange}>仅看有问题的</FilterChipToggle>);
-    expect(screen.getByRole("button", { pressed: true })).toHaveClass("shadow-[inset_0_-2px_0_oklch(var(--color-accent))]");
+    const on = screen.getByRole("button", { pressed: true });
+    expect(on).toHaveClass("bg-[oklch(var(--color-ink))]");
+    expect(on).toHaveTextContent("✓");
   });
 });

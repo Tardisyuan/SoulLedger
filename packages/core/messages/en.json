@@ -1358,6 +1358,9 @@
       "draft": "Draft · not submitted",
       "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
       "not_applicable": "not for {{verdict}}"
+    },
+    "row_mark": {
+      "mine": "Awaiting me"
     }
   },
   "audit": {
@@ -1825,24 +1828,11 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "accent_color": "Accent Color",
-    "apply": "Apply",
     "nav_mode": "Navigation Mode",
     "classic": "Classic",
     "compact": "Compact",
     "classic_desc": "Full sidebar with icons and labels",
-    "compact_desc": "Icons only with tooltips on hover",
-    "colors": {
-      "ink": "Ink blue (default)",
-      "amber": "Amber",
-      "blue": "Blue",
-      "green": "Green",
-      "purple": "Purple",
-      "red": "Red",
-      "rose": "Rose"
-    },
-    "accent_hex_invalid": "Enter a 6-digit hex colour, e.g. #ff5500",
-    "accent_hex_too_dark": "Too dark — the black label on primary buttons would be unreadable"
+    "compact_desc": "Icons only with tooltips on hover"
   },
   "admin": {
     "ledger_stats": "Deed Statistics",
@@ -3731,5 +3721,8 @@
       "title": "Changes to the sentence plan",
       "hint": "This is an amendment judgment. Concluding it creates no disposition; the changes go to the original judge as one request, and with no changes no request is filed."
     }
+  },
+  "seal": {
+    "aria": "Seal of {{court}}"
   }
 }
