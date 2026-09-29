@@ -5,6 +5,11 @@
  *   (theme.ts `radius.none`)——与审核后台 C-08 的 MediaTile 同一个样子。
  * - 地址是服务器签给当前灵魂的短时路径(约一小时),经 `mediaUrl` 接到 API 的主机上;
  *   过期或帖子被隐藏后取不到,格子里写「图片加载失败」,不留一个空白。
+ * - 画图用 expo-image(原生模块:加它之后 dev client 要重建,`expo start --clear` 不够)。
+ *   缓存按图的 id 记(`postImageSource`),不按地址:签名里带时间戳(TimestampSigner),
+ *   同一张图每次刷新动态流都换一个地址,按地址缓存等于每次都重新下载、磁盘里堆一份份副本。
+ *   图的 id 是 UUID、文件上传后不再改,所以 id 足以代表内容。已缓存的图地址过期后照样显示;
+ *   从没取到过的才落到「图片加载失败」。
  * - 上传(`ComposeMediaTray`):一张一个请求,各自的进度与失败;失败的可重试或移除。
  *   传之前先在本机压缩(`compressForUpload`:长边 2048、JPEG 0.85)。expo-image-manipulator 是
  *   原生模块:加它之后 dev client 要重新构建(`npx expo run:ios` / `run:android`),旧的 dev client 里没有它。
@@ -12,17 +17,25 @@
  */
 import { mediaGridColumns, mediaUrl, SOUL_POST_MEDIA_MAX, type PostMedia } from "@soulledger/core/api/soul-social";
 import type { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads";
+import { Image, type ImageSource } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
-import { Txt, useLayout, useTheme } from "../ui";
+import { Txt, useLayout, useReducedMotion, useTheme } from "../ui";
 
 const GAP = 3;
+/** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
+const FADE_MS = 120;
+
+/** 帖子图的来源:签名地址取图,缓存按图的 id(见文件头)。 */
+export function postImageSource(m: PostMedia): ImageSource {
+  return { uri: mediaUrl(m.url), cacheKey: `post-media:${m.id}` };
+}
 
 /** 列数:1 张一大格,2–4 张两列,5–9 张三列(与审核后台同一条规则,定义在 core)。 */
 export const gridColumns = mediaGridColumns;
@@ -34,7 +47,7 @@ function useContentWidth(): number {
   return Math.max(0, width - 2 * gutter);
 }
 
-function Tile({ uri, size, label, testID, onPress }: { uri: string; size: number; label: string; testID: string; onPress?: () => void }) {
+function Tile({ source, size, label, testID, fade, onPress }: { source: ImageSource; size: number; label: string; testID: string; fade: number; onPress?: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const [broken, setBroken] = useState(false);
@@ -52,7 +65,7 @@ function Tile({ uri, size, label, testID, onPress }: { uri: string; size: number
           {tr("soul_app.circle.media.load_failed")}
         </Txt>
       ) : (
-        <Image source={{ uri }} style={styles.fill} resizeMode="cover" onError={() => setBroken(true)} />
+        <Image source={source} style={styles.fill} contentFit="cover" cachePolicy="memory-disk" transition={fade} onError={() => setBroken(true)} />
       )}
     </Pressable>
   );
@@ -62,6 +75,7 @@ function Tile({ uri, size, label, testID, onPress }: { uri: string; size: number
 export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: PostMedia[]; onOpen: (index: number) => void; testID?: string }) {
   const { t: tr } = useI18n();
   const width = useContentWidth();
+  const fade = useReducedMotion() ? 0 : FADE_MS;
   if (!media.length) return null;
   const cols = gridColumns(media.length);
   const size = cols === 1 ? Math.round((width * 2) / 3) : Math.floor((width - GAP * (cols - 1)) / cols);
@@ -72,8 +86,9 @@ export function MediaGrid({ media, onOpen, testID = "media-grid" }: { media: Pos
         <Tile
           key={m.id}
           testID={`${testID}-tile-${i}`}
-          uri={mediaUrl(m.url)}
+          source={postImageSource(m)}
           size={size}
+          fade={fade}
           label={tr("soul_app.circle.media.image", { i: String(i + 1) })}
           onPress={() => onOpen(i)}
         />
@@ -98,6 +113,7 @@ function ViewerPages({ media, start, onClose }: { media: PostMedia[]; start: num
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState(start);
+  const fade = useReducedMotion() ? 0 : FADE_MS;
   return (
     <View testID="media-viewer" style={[styles.viewer, { backgroundColor: t.s0, paddingTop: insets.top }]}>
       <View style={[styles.viewerBar, { borderBottomColor: t.hair }]}>
@@ -121,8 +137,10 @@ function ViewerPages({ media, start, onClose }: { media: PostMedia[]; start: num
             key={m.id}
             testID={`media-viewer-image-${i}`}
             accessibilityLabel={tr("soul_app.circle.media.viewer", { i: String(i + 1), n: String(media.length) })}
-            source={{ uri: mediaUrl(m.url) }}
-            resizeMode="contain"
+            source={postImageSource(m)}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={fade}
             style={{ width, height: height - insets.top - insets.bottom - 48 }}
           />
         ))}
@@ -229,7 +247,8 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
               accessibilityState={{ busy: uploading }}
               style={[styles.tile, { width: size, height: size, borderColor: failed ? t.negStrong : t.hair, backgroundColor: t.s2 }]}
             >
-              <Image source={{ uri: it.source.uri }} style={[styles.fill, (uploading || failed) && styles.dim]} resizeMode="cover" />
+              {/* 本机刚选的图:不进磁盘缓存(那只是把相册再抄一份),也不淡入。 */}
+              <Image source={{ uri: it.source.uri }} style={[styles.fill, (uploading || failed) && styles.dim]} contentFit="cover" cachePolicy="memory" />
               {uploading ? (
                 <View style={styles.overlay}>
                   <Txt testID={`upload-${i}-progress`} variant="value" tone="ink" style={styles.mono}>
