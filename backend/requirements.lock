@@ -30,6 +30,11 @@
 # constraints because 26.3.0 requires cryptography<50; it resolves to 26.4.0.
 # No other line moved. The suite was run in a Python 3.11 venv built from
 # this file, not in the environment above, which still has the old versions.
+#
+# 2026-09-29 tidy: gunicorn dropped from requirements.txt (the runtime is
+# daphne; nothing imports gunicorn). Constraints = `uv pip freeze` of a
+# Python 3.11 venv built from the previous lock, with gunicorn removed; the
+# same command re-run. No other line moved.
 amqp==5.3.1
 asgiref==3.12.1
 asttokens==3.0.1
@@ -66,7 +71,6 @@ drf-spectacular==0.30.0
 executing==2.2.1
 factory-boy==3.3.3
 faker==40.36.0
-gunicorn==26.0.0
 hyperlink==21.0.0
 idna==3.15
 incremental==24.11.0
