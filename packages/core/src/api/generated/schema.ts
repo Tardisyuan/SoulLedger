@@ -61,6 +61,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assist-admin/config/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_config_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["assist_admin_config_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/config/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assist_admin_config_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/corpus/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_corpus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/cases/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_assist_admin_eval_cases_list"];
+        put?: never;
+        post: operations["v1_assist_admin_eval_cases_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/cases/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_assist_admin_eval_cases_retrieve"];
+        put: operations["v1_assist_admin_eval_cases_update"];
+        post?: never;
+        delete: operations["v1_assist_admin_eval_cases_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["v1_assist_admin_eval_cases_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assist_admin_eval_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/runs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_eval_runs_list"];
+        put?: never;
+        post: operations["assist_admin_eval_run_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/runs/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_assist_admin_eval_runs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/halls/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_halls_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/halls/{tenant_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["assist_admin_hall_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/usage/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist/conversations/": {
         parameters: {
             query?: never;
@@ -7111,6 +7287,13 @@ export interface components {
             per_minute: number | null;
             per_hour: number | null;
         };
+        ApiKeyState: {
+            set: boolean;
+            last4: string | null;
+            /** Format: date-time */
+            set_at: string | null;
+            source: components["schemas"]["SourceEnum"];
+        };
         /**
          * @description Serializer for ApprovalNode.
          *
@@ -7398,6 +7581,15 @@ export interface components {
             /** Format: date-time */
             retry_at?: string;
         };
+        /**
+         * @description * `queued` - queued
+         *     * `running` - running
+         *     * `done` - done
+         *     * `stopped_at_cap` - stopped_at_cap
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        AssistEvalRunStatusEnum: "queued" | "running" | "done" | "stopped_at_cap" | "failed";
         AssistMessage: {
             readonly id: number;
             role: components["schemas"]["AssistMessageRoleEnum"];
@@ -7411,6 +7603,12 @@ export interface components {
          * @enum {string}
          */
         AssistMessageRoleEnum: "user" | "assistant";
+        /**
+         * @description * `soul` - soul
+         *     * `officer` - officer
+         * @enum {string}
+         */
+        AssistSideEnum: "soul" | "officer";
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -7533,6 +7731,15 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
+        /** @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。 */
+        Candidate: {
+            provider?: components["schemas"]["ProviderEnum"];
+            base_url?: string;
+            api_key?: string;
+            model?: string;
+            effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
+            fallbacks?: boolean;
+        };
         /**
          * @description * `ROUTINE` - 常规审判
          *     * `APPEAL` - 申诉审判
@@ -7663,6 +7870,45 @@ export interface components {
             op: string;
             value: unknown;
         };
+        Config: {
+            /** @description 实际生效:env 允许且页面开关为开 */
+            enabled: boolean;
+            /** @description 页面上的总开关 */
+            switch: boolean;
+            /** @description 部署的 ASSISTANT_ENABLED;为假时页面开关无效 */
+            env_enabled: boolean;
+            provider: string;
+            base_url: string;
+            model: string;
+            effort: string;
+            fallbacks: boolean;
+            soul_per_hour: number;
+            officer_per_hour: number;
+            /** Format: double */
+            monthly_cap: number | null;
+            /** Format: double */
+            eval_spend_cap: number;
+            prices: {
+                [key: string]: components["schemas"]["Price"];
+            };
+            api_key: components["schemas"]["ApiKeyState"];
+            /** Format: uuid */
+            eval_soul_account: string | null;
+            eval_officer: number | null;
+            /** @description 页面改过(不再跟 env)的键 */
+            overridden: string[];
+            read_only: components["schemas"]["ReadOnlySettings"];
+        };
+        ConnectivityResult: {
+            ok: boolean;
+            error_kind: (components["schemas"]["ErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            latency_ms: number;
+            tokens: {
+                [key: string]: number;
+            };
+            provider: string;
+            model: string;
+        };
         Conversation: {
             /** Format: uuid */
             readonly id: string;
@@ -7716,6 +7962,21 @@ export interface components {
          * @enum {string}
          */
         ConversationKindEnum: "DIRECT" | "OFFICER_INBOX";
+        Corpus: {
+            entries: components["schemas"]["CorpusEntry"][];
+            prompts: components["schemas"]["CorpusPrompt"][];
+            /** @description 最大的一份 system prompt(一次请求实际带上的)的估计 */
+            total_tokens: number;
+            threshold: number;
+        };
+        CorpusEntry: {
+            id: string;
+            locale: string;
+            audience: string;
+            screens: string[];
+            civilizations: string[];
+            tokens: number;
+        };
         /**
          * @description * `HELL_LAW` - 冥律 — Hell Law (Chinese)
          *     * `GONGGUOGE` - 功過格 — Ledger of Merit and Demerit (Chinese)
@@ -7727,6 +7988,11 @@ export interface components {
          * @enum {string}
          */
         CorpusEnum: "HELL_LAW" | "GONGGUOGE" | "NEGATIVE_CONFESSION" | "DEADLY_SIN" | "INFERNO" | "GORGIAS" | "REPUBLIC_ER";
+        CorpusPrompt: {
+            locale: string;
+            audience: string;
+            tokens: number;
+        };
         CrossCivilizationDecision: {
             cross_civilization: boolean;
         };
@@ -8136,10 +8402,29 @@ export interface components {
          */
         DispositionSectionEnum: "pending" | "executing" | "expired";
         /**
+         * @description * `` -
+         *     * `low` - low
+         *     * `medium` - medium
+         *     * `high` - high
+         * @enum {string}
+         */
+        EffortEnum: "low" | "medium" | "high";
+        /**
          * @description * `taken` - taken
          * @enum {string}
          */
         EmailNotSyncedEnum: "taken";
+        /**
+         * @description * `auth` - auth
+         *     * `model_not_found` - model_not_found
+         *     * `timeout` - timeout
+         *     * `rate_limited` - rate_limited
+         *     * `connection` - connection
+         *     * `tools_unsupported` - tools_unsupported
+         *     * `other` - other
+         * @enum {string}
+         */
+        ErrorKindEnum: "auth" | "model_not_found" | "timeout" | "rate_limited" | "connection" | "tools_unsupported" | "other";
         /**
          * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
          *
@@ -8149,6 +8434,178 @@ export interface components {
          */
         ErrorResponse: {
             error: string;
+        };
+        /** @description 落库的候选配置,**不含 key**。 */
+        EvalCandidateOut: {
+            readonly provider: string;
+            base_url: string;
+            model: string;
+            effort: string;
+            readonly fallbacks: boolean;
+        };
+        EvalCase: {
+            readonly id: number;
+            side: components["schemas"]["AssistSideEnum"];
+            locale?: components["schemas"]["EvalCaseLocaleEnum"];
+            screen: components["schemas"]["EvalCaseScreenEnum"];
+            question: string;
+            expected_tools?: string[];
+            must_include?: string[];
+            must_not_include?: string[];
+            active?: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `zh-Hans` - zh-Hans
+         *     * `en` - en
+         * @enum {string}
+         */
+        EvalCaseLocaleEnum: "zh-Hans" | "en";
+        /**
+         * @description * `applications` - applications
+         *     * `sentence` - sentence
+         *     * `life` - life
+         *     * `letters` - letters
+         *     * `circle` - circle
+         *     * `settings` - settings
+         *     * `other` - other
+         *     * `actors` - actors
+         *     * `admin` - admin
+         *     * `audit` - audit
+         *     * `corpus` - corpus
+         *     * `cross-judgments` - cross-judgments
+         *     * `dashboard` - dashboard
+         *     * `death-sync` - death-sync
+         *     * `dispatch` - dispatch
+         *     * `disposition` - disposition
+         *     * `judgment` - judgment
+         *     * `ledger` - ledger
+         *     * `menus` - menus
+         *     * `moderation` - moderation
+         *     * `notifications` - notifications
+         *     * `organizations` - organizations
+         *     * `permissions` - permissions
+         *     * `profile` - profile
+         *     * `realms` - realms
+         *     * `rebirth-applications` - rebirth-applications
+         *     * `recycle-bin` - recycle-bin
+         *     * `scheduler` - scheduler
+         *     * `sentence-requests` - sentence-requests
+         *     * `social` - social
+         *     * `soul-credentials` - soul-credentials
+         *     * `soul-inbox` - soul-inbox
+         *     * `souls` - souls
+         *     * `tenants` - tenants
+         *     * `users` - users
+         *     * `welcome` - welcome
+         *     * `workflow` - workflow
+         * @enum {string}
+         */
+        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalPreview: {
+            asks: number;
+            max_asks: number;
+            /** Format: double */
+            estimated_cost: number;
+            /** Format: double */
+            spend_cap: number;
+            candidates: components["schemas"]["EvalPreviewCandidate"][];
+            problems: components["schemas"]["ProblemsEnum"][];
+            /** @description problems 为空时才有;开始运行要带它 */
+            confirm_token: string | null;
+        };
+        EvalPreviewCandidate: {
+            candidate: number;
+            provider: string;
+            model: string;
+            asks: number;
+            input_tokens: number;
+            output_tokens: number;
+            /**
+             * Format: double
+             * @description 模型不在价目表里时为 null
+             */
+            estimated_cost: number | null;
+        };
+        EvalPreviewRequest: {
+            side: components["schemas"]["EvalPreviewRequestSideEnum"];
+            candidates: components["schemas"]["Candidate"][];
+        };
+        /**
+         * @description * `soul` - soul
+         *     * `officer` - officer
+         *     * `both` - both
+         * @enum {string}
+         */
+        EvalPreviewRequestSideEnum: "soul" | "officer" | "both";
+        EvalResult: {
+            readonly id: number;
+            candidate: number;
+            case?: number | null;
+            side: components["schemas"]["AssistSideEnum"];
+            question: string;
+            tools_called?: unknown;
+            answer?: string;
+            error?: string;
+            tools_ok?: boolean;
+            included?: unknown;
+            excluded?: unknown;
+            passed?: boolean;
+            latency_ms?: number;
+            tokens?: unknown;
+            /** Format: double */
+            cost?: number | null;
+        };
+        EvalRun: {
+            readonly id: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            status?: components["schemas"]["AssistEvalRunStatusEnum"];
+            readonly candidates: components["schemas"]["EvalCandidateOut"][];
+            /** Format: double */
+            estimated_cost?: number;
+            total?: number;
+            done?: number;
+            readonly summary: components["schemas"]["EvalSummary"][];
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        EvalRunDetail: {
+            readonly id: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            status?: components["schemas"]["AssistEvalRunStatusEnum"];
+            readonly candidates: components["schemas"]["EvalCandidateOut"][];
+            /** Format: double */
+            estimated_cost?: number;
+            total?: number;
+            done?: number;
+            readonly summary: components["schemas"]["EvalSummary"][];
+            /** Format: date-time */
+            finished_at?: string | null;
+            readonly results: components["schemas"]["EvalResult"][];
+        };
+        EvalStart: {
+            confirm_token: string;
+        };
+        EvalSummary: {
+            candidate: number;
+            provider: string;
+            model: string;
+            cases: number;
+            passed: number;
+            errors: number;
+            /** Format: double */
+            tool_accuracy: number | null;
+            /** Format: double */
+            phrase_hit_rate: number | null;
+            /** Format: double */
+            mean_latency_ms: number | null;
+            /** Format: double */
+            cost: number | null;
+            input_tokens: number;
+            output_tokens: number;
         };
         /**
          * @description * `SOUL_CREATED` - Soul Created
@@ -8290,6 +8747,23 @@ export interface components {
             /** raw key */
             readonly _raw_key: string;
         };
+        FailureRates: {
+            /**
+             * Format: double
+             * @description 503 不可用 / 全部请求
+             */
+            unavailable: number;
+            /**
+             * Format: double
+             * @description 429(限流 + 忙) / 全部请求
+             */
+            rate_limited: number;
+            /**
+             * Format: double
+             * @description 「答不了」 / 答出的请求
+             */
+            empty: number;
+        };
         Follow: {
             /** Format: uuid */
             readonly id: string;
@@ -8355,6 +8829,14 @@ export interface components {
             culpa_record_count: number;
             poena: number | null;
             poena_missing: string[];
+        };
+        Hall: {
+            id: number;
+            code: string;
+            display_name: string;
+            /** @description 原属该殿的灵魂数 */
+            souls_homed: number;
+            assistant_enabled: boolean;
         };
         /**
          * @description 「已处理」的一行,帖子与评论同一形状(见 moderation_views.HandledContentViewSet)。
@@ -10716,6 +11198,28 @@ export interface components {
             /** Format: date-time */
             readonly update_time?: string;
         };
+        /** @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。 */
+        PatchedConfigUpdate: {
+            provider?: components["schemas"]["ProviderEnum"];
+            base_url?: string;
+            api_key?: string;
+            model?: string;
+            effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
+            fallbacks?: boolean;
+            enabled?: boolean;
+            soul_per_hour?: number;
+            officer_per_hour?: number;
+            /** Format: double */
+            monthly_cap?: number | null;
+            /** Format: double */
+            eval_spend_cap?: number;
+            prices?: {
+                [key: string]: components["schemas"]["Price"];
+            };
+            /** Format: uuid */
+            eval_soul_account?: string | null;
+            eval_officer?: number | null;
+        };
         /**
          * @description Serializer for CrossTenantJudgment.
          *
@@ -10887,6 +11391,19 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
         };
+        PatchedEvalCase: {
+            readonly id?: number;
+            side?: components["schemas"]["AssistSideEnum"];
+            locale?: components["schemas"]["EvalCaseLocaleEnum"];
+            screen?: components["schemas"]["EvalCaseScreenEnum"];
+            question?: string;
+            expected_tools?: string[];
+            must_include?: string[];
+            must_not_include?: string[];
+            active?: boolean;
+            /** Format: date-time */
+            readonly created_at?: string;
+        };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         PatchedExternalApiKey: {
             /** Format: uuid */
@@ -10911,6 +11428,9 @@ export interface components {
             readonly usage_count?: number;
             /** raw key */
             readonly _raw_key?: string;
+        };
+        PatchedHallUpdate: {
+            assistant_enabled?: boolean;
         };
         PatchedInboxReplyTemplate: {
             /** Format: uuid */
@@ -11436,6 +11956,16 @@ export interface components {
             field_permissions: number;
             data_scopes: number;
         };
+        Phase4: {
+            corpus_tokens: number;
+            corpus_threshold: number;
+            corpus_reached: boolean;
+            /** Format: double */
+            empty_share: number;
+            /** Format: double */
+            empty_threshold: number;
+            empty_reached: boolean;
+        };
         /**
          * @description * `OFFENCE` - Offence — counts against the soul
          *     * `MERIT` - Merit — counts for the soul
@@ -11495,6 +12025,31 @@ export interface components {
             width: number;
             height: number;
         };
+        /** @description 每百万 token 的价格,单位由管理员自定(与月度上限同一单位)。`cache_read` 不填按 `input` 算。 */
+        Price: {
+            /** Format: double */
+            input: number;
+            /** Format: double */
+            output: number;
+            /** Format: double */
+            cache_read?: number;
+        };
+        /**
+         * @description * `unpriced_model` - unpriced_model
+         *     * `no_cases` - no_cases
+         *     * `too_many_asks` - too_many_asks
+         *     * `over_spend_cap` - over_spend_cap
+         *     * `no_eval_soul` - no_eval_soul
+         *     * `no_eval_officer` - no_eval_officer
+         * @enum {string}
+         */
+        ProblemsEnum: "unpriced_model" | "no_cases" | "too_many_asks" | "over_spend_cap" | "no_eval_soul" | "no_eval_officer";
+        /**
+         * @description * `anthropic` - anthropic
+         *     * `openai_compatible` - openai_compatible
+         * @enum {string}
+         */
+        ProviderEnum: "anthropic" | "openai_compatible";
         ProvisionRequest: {
             /** Format: uuid */
             soul_id: string;
@@ -11579,6 +12134,13 @@ export interface components {
          * @enum {string}
          */
         ReactionTypeEnum: "LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT";
+        ReadOnlySettings: {
+            max_concurrent: number;
+            /** Format: double */
+            timeout_seconds: number;
+            history_turns: number;
+            retention_days: number;
+        };
         /**
          * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
          *
@@ -13069,6 +13631,12 @@ export interface components {
             count: number;
         };
         /**
+         * @description * `page` - page
+         *     * `env` - env
+         * @enum {string}
+         */
+        SourceEnum: "page" | "env";
+        /**
          * @description One citable article.
          *
          *     `display_text` is where a *derived* article becomes readable: for the
@@ -13253,6 +13821,70 @@ export interface components {
             kind: "UNAVAILABLE";
             civilization: string;
             reason_code: string;
+        };
+        Usage: {
+            month: string;
+            /** Format: double */
+            spent: number;
+            /** Format: double */
+            cap: number | null;
+            unpriced_models: string[];
+            requests: number;
+            by_status: components["schemas"]["UsageStatus"];
+            failure_rates: components["schemas"]["FailureRates"];
+            by_day: components["schemas"]["UsageDay"][];
+            by_side: components["schemas"]["UsageSide"][];
+            by_hall: components["schemas"]["UsageHall"][];
+            phase4: components["schemas"]["Phase4"];
+        };
+        UsageDay: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            /** Format: date */
+            date: string;
+        };
+        UsageHall: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            tenant_id: number | null;
+            code: string | null;
+        };
+        UsageSide: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            side: components["schemas"]["AssistSideEnum"];
+        };
+        UsageStatus: {
+            ok: number;
+            empty: number;
+            unavailable: number;
+            busy: number;
+            rate_limited: number;
+            not_configured: number;
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -13866,6 +14498,428 @@ export interface operations {
                 };
             };
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_config_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Config"];
+                };
+            };
+        };
+    };
+    assist_admin_config_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedConfigUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedConfigUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedConfigUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Config"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_config_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Candidate"];
+                "application/x-www-form-urlencoded": components["schemas"]["Candidate"];
+                "multipart/form-data": components["schemas"]["Candidate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectivityResult"];
+                };
+            };
+        };
+    };
+    assist_admin_corpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Corpus"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"][];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalCase"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalCase"];
+                "multipart/form-data": components["schemas"]["EvalCase"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalCase"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalCase"];
+                "multipart/form-data": components["schemas"]["EvalCase"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEvalCase"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEvalCase"];
+                "multipart/form-data": components["schemas"]["PatchedEvalCase"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    assist_admin_eval_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalPreviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalPreviewRequest"];
+                "multipart/form-data": components["schemas"]["EvalPreviewRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalPreview"];
+                };
+            };
+        };
+    };
+    assist_admin_eval_runs_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRun"][];
+                };
+            };
+        };
+    };
+    assist_admin_eval_run_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalStart"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalStart"];
+                "multipart/form-data": components["schemas"]["EvalStart"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRun"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_runs_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRunDetail"];
+                };
+            };
+        };
+    };
+    assist_admin_halls_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hall"][];
+                };
+            };
+        };
+    };
+    assist_admin_hall_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedHallUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedHallUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedHallUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hall"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_usage: {
+        parameters: {
+            query?: {
+                /** @description YYYY-MM,缺省本月 */
+                month?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Usage"];
+                };
+            };
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
