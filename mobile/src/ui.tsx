@@ -176,6 +176,28 @@ export function Interp({ text, parts, ...props }: Parameters<typeof Txt>[0] & { 
 
 export const GUTTER = space[5];
 
+/**
+ * Pull-to-refresh for a scroller: `Screen`'s own, or a list's that owns its
+ * scrolling (a `FlatList` inside `<Screen scroll={false}>`).
+ * The spinner belongs to a pull. A reload the app starts itself (tab refocus)
+ * would otherwise open an empty band above the content on iOS (seen on the iPhone run).
+ */
+export function usePullRefresh(refreshing: boolean | undefined, onRefresh: (() => void) | undefined) {
+  const t = useTheme();
+  const [pulled, setPulled] = useState(false);
+  if (pulled && !refreshing) setPulled(false);
+  return onRefresh ? (
+    <RefreshControl
+      refreshing={pulled && !!refreshing}
+      onRefresh={() => {
+        setPulled(true);
+        onRefresh();
+      }}
+      tintColor={t.accent}
+    />
+  ) : undefined;
+}
+
 export function Screen({
   children,
   refreshing,
@@ -195,10 +217,7 @@ export function Screen({
   scrollRef?: Ref<ScrollView>;
 }) {
   const t = useTheme();
-  // The spinner belongs to a pull. A reload the app starts itself (tab refocus)
-  // would otherwise open an empty band above the content on iOS (seen on the iPhone run).
-  const [pulled, setPulled] = useState(false);
-  if (pulled && !refreshing) setPulled(false);
+  const refreshControl = usePullRefresh(refreshing, onRefresh);
   // When the system text size changes while a screen is open, iOS re-sizes the
   // glyphs but Yoga keeps the old line boxes, and text is clipped (seen on the
   // iPhone run). Remounting the content at a new scale re-measures every line.
@@ -215,18 +234,7 @@ export function Screen({
           ref={scrollRef}
           contentContainerStyle={styles.grow}
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl
-                refreshing={pulled && !!refreshing}
-                onRefresh={() => {
-                  setPulled(true);
-                  onRefresh();
-                }}
-                tintColor={t.accent}
-              />
-            ) : undefined
-          }
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>
