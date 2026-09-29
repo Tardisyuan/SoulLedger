@@ -141,6 +141,7 @@ const COLLECTED_FILES = [
   "accessTokenNeverBecomesACookie.test.ts",
   "api.test.ts",
   "arrowNotDoubled.test.ts",
+  "assistAdmin.test.tsx",
   "auditGrouping.test.ts",
   "chartColourContract.test.ts",
   "civilizationCopyCoverage.test.ts",
