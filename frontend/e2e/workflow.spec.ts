@@ -19,7 +19,7 @@ const heading = (page: Page, name: string) =>
 /**
  * /workflow — the approval-template screen.
  *
- * Every test in this file used to run unauthenticated, so middleware.ts
+ * Every test in this file used to run unauthenticated, so proxy.ts
  * redirected each one to /login and they all asserted against the login
  * page's <body>. They now authenticate first (see fixtures.ts) and assert on
  * the template list, the preview pane and the instances tab.

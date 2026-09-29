@@ -69,6 +69,25 @@ describe("the class merge does not eat the eight-step type scale", () => {
     );
   });
 
+  it("`text-quote` — the one step not shaped like a t-shirt size — is a font size too", () => {
+    // tailwind-merge's own table recognises 2xs/xs/sm/md/lg/xl by shape;
+    // `quote` is only a size because lib/utils.ts registers it.
+    expect(cn("text-quote", "text-md")).toBe("text-md");
+    expect(cn("text-quote text-black").split(/\s+/)).toEqual(
+      expect.arrayContaining(["text-quote", "text-black"])
+    );
+  });
+
+  it("knows the Tailwind v4 utilities (tailwind-merge 3)", () => {
+    // tailwind-merge 2 carried the v3 table: `outline-hidden` (v4, used across
+    // this app) was unknown to it and survived next to `outline-dashed`, and
+    // `text-shadow-*` fell into text-COLOR and deleted `text-black`.
+    expect(cn("outline-hidden", "outline-dashed")).toBe("outline-dashed");
+    expect(cn("text-black text-shadow-sm").split(/\s+/)).toEqual(
+      expect.arrayContaining(["text-black", "text-shadow-sm"])
+    );
+  });
+
   it("still collapses two font sizes against each other", () => {
     // The other half of the fix, and the half a careless patch drops: telling
     // tailwind-merge these are font sizes has to make them conflict with each

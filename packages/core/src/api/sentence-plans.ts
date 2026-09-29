@@ -17,7 +17,6 @@ export type SentencePlan = Schemas["SentencePlan"];
 export type SentenceNode = Schemas["SentenceNode"];
 export type SentencePlanRequest = Schemas["SentencePlanRequest"];
 export type SentencePlanStatus = Schemas["SentencePlanStatusEnum"];
-export type SentenceNodeStatus = Schemas["SentenceNodeStatusEnum"];
 
 /**
  * `changes` is a free JSON column on the wire (`unknown` in the schema). This

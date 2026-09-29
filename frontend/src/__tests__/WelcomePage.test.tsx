@@ -1,7 +1,7 @@
 /**
  * Tests for app/welcome/page.tsx.
  *
- * The page is deliberately unguarded — middleware.ts treats /welcome as
+ * The page is deliberately unguarded — proxy.ts treats /welcome as
  * public and `user` is null during the first render, so an auth guard here
  * used to bounce signed-in visitors to /login. That regression is pinned
  * below ("renders for an anonymous visitor"). The rest covers the two bits

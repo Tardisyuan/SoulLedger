@@ -46,6 +46,3 @@ export function isTyping(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
-/** A table header cell in the ledger style (mono 11 px, block rule under the row). */
-export const TH = "px-3 py-2 text-left font-normal";
-export const TD = "px-3 py-2 align-middle";
