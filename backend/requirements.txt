@@ -42,6 +42,10 @@ openai>=3.19,<4
 httpx2>=2.12.0
 httpcore2>=2.10.0
 
+# Vector retrieval (apps/soul_assist; docs/ARCHITECTURE-soul-assist.md §7).
+# Pulls in numpy (its only dependency).
+pgvector>=0.4,<0.5
+
 # API Docs
 drf-spectacular>=0.27
 
