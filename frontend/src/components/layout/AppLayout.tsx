@@ -22,6 +22,8 @@ import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 // ≥ 1024 px shows the 200 px sidebar; below it (and in compact mode) the 56 px number rail.
 import { useWideViewport } from "@/src/hooks/useWideViewport";
+import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
+import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
@@ -53,6 +55,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [prevPathname, setPrevPathname] = useState(pathname);
   const wide = useWideViewport();
   const rail = navMode === "compact" || !wide;
+  const assist = useOfficerAssist(wide);
 
   // Close the mobile drawer on navigation (RouteProgress owns the progress bar).
   useEffect(() => {
@@ -213,6 +216,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <Breadcrumb menus={menus} />
 
           <div className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+            {/* 问一问 (canvas 1b): the connection state left the masthead, so it leads the group. */}
+            <OfficerAssistEntry assist={assist} />
             {user ? (
               <Popover.Root>
                 <Popover.Trigger
@@ -333,8 +338,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div data-testid="app-content" className="min-h-[calc(100vh-2.5rem)]">{children}</div>
+        {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
+            40 px side padding drops to 24 (canvas 1a 一). The padding rule reaches into
+            PageShell's `md:px-10` by attribute, so no page has to know about the panel. */}
+        <div
+          ref={assist.mainRef}
+          tabIndex={-1}
+          data-testid="app-content"
+          data-assist-pushed={assist.pushed ? "" : undefined}
+          className={`min-h-[calc(100vh-2.5rem)] outline-none ${
+            assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-10']]:px-6" : ""
+          }`}
+        >
+          {children}
+        </div>
       </main>
+
+      <OfficerAssistPanel assist={assist} />
 
       <SettingsDrawer
         open={settingsOpen}

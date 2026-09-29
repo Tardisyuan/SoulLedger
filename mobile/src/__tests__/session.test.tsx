@@ -3,6 +3,7 @@
  * soul client, the mobile platform ports — only the network and the two native
  * stores are doubles.
  */
+import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
@@ -285,5 +286,44 @@ describe("a stored session", () => {
     await screen.findByTestId("login-submit");
     expect(persistentStore.get(OUTBOX_KEY)).toBeNull();
     expect(await AsyncStorage.getItem(OUTBOX_KEY)).toBeNull();
+  });
+});
+
+describe("the interface language follows the account", () => {
+  const login = {
+    status: 200,
+    data: { access: "A", refresh: "R", soul_code: "SL-CN-000042", account: PROFILE.account },
+  };
+  const settings = (locale: string) => ({ status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale } });
+
+  beforeEach(() => persistentStore.remove(LOCALE_COOKIE));
+
+  it("a new device signing in adopts the account's locale and keeps it on the device", async () => {
+    stubApi({ "/soul-auth/login/": login, "/me/": { status: 200, data: PROFILE }, "/me/notification-settings/": settings("en") });
+    renderApp();
+    await signIn(false);
+    await waitFor(() => expect(persistentStore.get(LOCALE_COOKIE)).toBe("en"));
+  });
+
+  it("a language already chosen on the device is kept, and written to the account instead", async () => {
+    persistentStore.set(LOCALE_COOKIE, "egy");
+    const calls = stubApi({
+      "/soul-auth/login/": login,
+      "/me/": { status: 200, data: PROFILE },
+      "/me/notification-settings/": settings("en"),
+    });
+    renderApp();
+    await signIn(false);
+    await waitFor(() => expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ locale: "egy" }]));
+    expect(persistentStore.get(LOCALE_COOKIE)).toBe("egy");
+  });
+
+  it("a locale this App does not have is ignored", async () => {
+    const calls = stubApi({ "/soul-auth/login/": login, "/me/": { status: 200, data: PROFILE }, "/me/notification-settings/": settings("fr") });
+    renderApp();
+    await signIn(false);
+    await waitFor(() => expect(calls.some((c) => c.url === "/me/notification-settings/")).toBe(true));
+    await act(async () => {});
+    expect(persistentStore.get(LOCALE_COOKIE)).toBeFalsy();
   });
 });

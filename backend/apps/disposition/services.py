@@ -785,7 +785,8 @@ class DispositionService:
             # 原属文明,不是管辖文明:暂居不改变灵魂有没有下一世。暂居中的灵魂走
             # 上面那条分支,到这里的灵魂 home 与 tenant 相同 —— 除非是迁移 0036
             # 之前被单程调拨过的存量灵魂,那时两者已经被回填成同一个。
-            if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
+            # 永久刑期 = 不转生(2026-09-29 用户决定;与 `SentencePlanService._complete` 同一条)。
+            if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and not disposition.is_eternal:
                 moved = soul.transition_to(
                     SoulState.REINCARNATING, "Disposition executed"
                 )

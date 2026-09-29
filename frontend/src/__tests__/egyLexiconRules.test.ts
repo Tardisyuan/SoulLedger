@@ -26,6 +26,8 @@
  * 第十三节「Unemu 误用 · 42 键」给了逐键写法,并定 Hemsu 只作「系统」(判官 Sab Wedja);夹具无回填。
  * 第十四节给了逐键写法(法庭 Wesekhet、席 Sab、开始 / 执行审判 Tepy / Iri Wedja、租户 Per、功过格 Sesh Nefer Isfet、
  * 由 / 被 In,En 只作属格);夹具里 5 条随包回填,键数不变;旧账清单清空。
+ * 第十三节(助手管理页之后,2026-09-29):厂商名原样引用、Sedjem 作「通知」必带后置受者、「上限」写 Er Pehwy;
+ * 夹具里 2 条随包回填(soul_app.settings.push_unavailable / push_denied),键数不变。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -36,7 +38,7 @@
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
  * - Sethet 只表技术错误、Seshem 只表推进、Pert 只在调度键里出现(第六节);
- * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单两键(第七节);
+ * - 失败一律 Nen + 具体动词,Nen Kheper 只留白名单三键(第七节、第十二节);
  * - 服务器写 Per Hemsu(Per Aa 废止)、中文含「功」的键里 Maat 只作 Medu Maat(第十一、十二、十四节);
  * - Unemu 只表「色」、中文含「判官」的键不出现 Hemsu(第十三节);Hemsu 只在系统 / 服务器 / 队列 / 连接义的键里(第十四节);
  * - Dbh 政策:推送 / 申请类页面副题 / 点名键写全 Dbh Wehem Mesut,点名的页内键只写 Dbh(第四节);
@@ -181,8 +183,9 @@ const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
  * 第七节:失败一律 Nen + 具体动词(登录 Nen Aq、更新 Nen Khemen、判决未通过 Nen Menkh、任务没跑成 Nen Iri……)。
  * Nen Kheper(「未成」)只留给确无具体动词可指的两处 —— 泛指的「失败」与「若持续失败」。
  * 不是失败义的也不用它:未结案 Nen Khetem、未了结 Nen Wetep。
+ * 第三处(词表第十二节,2026-09-29):「未到阈值」—— 「到」同样找不到具体动词,Design 按本节定为 Nen Kheper Djer。
  */
-const NEN_KHEPER_ALLOWED = new Set(["souls.detail.failed", "judgment.queue.error_body"]);
+const NEN_KHEPER_ALLOWED = new Set(["souls.detail.failed", "judgment.queue.error_body", "assist_admin.usage.not_reached"]);
 const hasNenKheper = (v: string) => /\bNen Kheper\b/.test(prose(v));
 
 /**
@@ -452,6 +455,11 @@ const ROOTS_TWELVE = [
   "Per Pen", //       本域;租户写 Per
   "Per Hena", //      参与方
   "Per Tepy Iri", //  发起方
+  // 助手管理页那一批(2026-09-29):Sip 新造,评测 / 查验(Smen Seth 按「X Seth = 已 X」读作「已设置」);
+  // Sia 同时作「模型」、Kat 同时作「工具」,Design 归为同一义项(领会的器、器)。
+  "Sip", //           评测 / 查验
+  // 警告推送那一批(2026-09-29,Design 语气审):Sebayt 新造,警告 / 训诫(本义「教诲」);不借 Sedjem(举报 / 通知)或 Khesef(驳回)。
+  "Sebayt", //        警告 / 训诫
 ];
 /**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
@@ -469,6 +477,8 @@ const PROPER_NAMES = [
   // 第十二节:成都(如:成都)。
   "Chengdu",
   "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
+  // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
+  "Anthropic", "OpenAI",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
@@ -612,7 +622,7 @@ describe("egy 词表规则", () => {
     expect(offenders(KEYS, (v, k) => /\bMODERATOR\b/.test(prose(v)) && k !== "permissions.role_name_placeholder")).toEqual([]);
   });
 
-  it("失败一律 Nen + 动词:Nen Kheper 只在白名单两键里出现", () => {
+  it("失败一律 Nen + 动词:Nen Kheper 只在白名单三键里出现", () => {
     expect(offenders(KEYS, (v, k) => hasNenKheper(v) && !NEN_KHEPER_ALLOWED.has(k))).toEqual([]);
     // 白名单里的键若已不存在或不再含 Nen Kheper,就该删掉 —— 留着会替将来的「未成」背书。
     const stale = [...NEN_KHEPER_ALLOWED].filter((k) => !hasNenKheper(EGY[k] ?? ""));
