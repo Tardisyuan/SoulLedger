@@ -575,6 +575,9 @@ SPECTACULAR_SETTINGS = {
         # `ScreenEnum`),官员端另起名 —— 不钉住就两个都变成带前缀的名字。
         "ScreenEnum": "apps.soul_assist.models.SCREENS",
         "OfficerScreenEnum": "apps.soul_assist.models.OFFICER_SCREENS",
+        # 助手管理页:`side` / `status` 都是别处已占的字段名。
+        "AssistSideEnum": "apps.soul_assist.models.AssistUsage.SIDES",
+        "AssistEvalRunStatusEnum": "apps.soul_assist.models.AssistEvalRun.STATUSES",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
         # `welcomed_civilizations`(App 欢迎过场)用的是灵魂的 Civilization 选项集;钉在既有的
         # `CivilizationEnum` 上,否则多出一个同值的 `WelcomedCivilizationsEnum` 并报 warning。

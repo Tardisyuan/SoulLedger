@@ -87,6 +87,8 @@ urlpatterns = [
     path("api/v1/me/", include("apps.soul_assist.urls")),
     # 官员端助手:同一个服务层,另一段前缀、另一种令牌(docs/ARCHITECTURE-officer-assist.md §3)。
     path("api/v1/assist/", include(soul_assist_urls.officer_urlpatterns)),
+    # 助手管理页(只许 ADMIN;docs/ARCHITECTURE-assist-admin.md)。
+    path("api/v1/assist-admin/", include(soul_assist_urls.admin_urlpatterns)),
     # 灵魂朋友圈(2026-09-17)。灵魂侧在 /me/ 之下,与上面两段同一条认证分界;
     # 官员审核后台是另一段前缀、另一套码名(social.moderate),两者不共用路由。
     path("api/v1/me/social/", include(social_urls.me_social_urlpatterns)),
