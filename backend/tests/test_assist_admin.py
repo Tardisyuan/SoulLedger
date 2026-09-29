@@ -852,3 +852,31 @@ def test_a_client_that_cannot_be_built_is_a_recorded_503(settings, cn_tenant, ap
     assert _soul_ask(soul).status_code == 503
     assert list(AssistUsage.objects.values_list("status", flat=True)) == ["unavailable"]
     assert _probe(api).data["error_kind"] == "auth"
+
+
+def test_credentials_in_the_base_url_are_never_echoed_and_a_resent_form_keeps_them(api):
+    """地址里的 `user:pass@` 与 key 一样只写不读;页面整表回传的是去敏形式,那不算「换了地址」。
+    变异:`_config_body` 不去敏 → 响应里有 `u:p@`,红;`unredact` 不还原 → 回传被当成换地址、要求重填 key,红。"""
+    secret_url = "https://u:p@proxy.example/v1"
+    assert _tested_patch(api, base_url=secret_url, api_key=KEY).status_code == 200
+    shown = api.get(f"{BASE}config/").data["base_url"]
+    assert shown == "https://proxy.example/v1" and "u:p" not in json.dumps(api.get(f"{BASE}config/").data)
+    resent = _patch(api, base_url=shown, soul_per_hour=9)
+    assert resent.status_code == 200, resent.data
+    conn = config.effective().connection
+    assert conn.base_url == secret_url and conn.api_key == KEY
+    assert _probe(api, base_url=shown).data["ok"] is True  # 不要求重填 key:没换地址
+
+
+def test_a_cleared_key_does_not_fall_back_to_the_process_environment(monkeypatch):
+    """管理员清掉 key 之后,Anthropic 的 SDK 不能回退去读 ANTHROPIC_API_KEY。
+    变异:构造客户端时交 `api_key or None` → SDK 读到环境变量里的 key,红。"""
+    from apps.soul_assist.config import Connection
+    from apps.soul_assist.providers import AnthropicProvider, ProviderError
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-from-the-environment")
+    conn = Connection(provider="apps.soul_assist.providers.AnthropicProvider", base_url="", api_key="",
+                      model="m", effort="", fallbacks="")
+    with pytest.raises(ProviderError) as refused:
+        AnthropicProvider(conn=conn)
+    assert refused.value.kind == "auth"

@@ -61,6 +61,8 @@ def _config_body(eff: config.Effective):
     key = eff.connection.api_key
     return ConfigSerializer({
         **{k: config.current_value(eff, k) for k in config.EDITABLE if k != "enabled"},
+        # 地址里的 `user:pass@` 是凭证,与 key 一样只写不读;回传去敏形式时按「没改」处理(config.unredact)。
+        "base_url": config.redact_url(eff.connection.base_url),
         "enabled": eff.enabled, "switch": eff.switch, "env_enabled": eff.env_enabled,
         # 末 4 位只在 key 足够长时给:短 key 的末 4 位就是它的一大半。
         "api_key": {"set": bool(key), "last4": key[-4:] if len(key) >= 12 else None,
@@ -93,6 +95,7 @@ class ConfigView(AdminView):
             row = AssistConfig.objects.select_for_update().get(pk=1)
             # 「之前」与「之后」都按锁住的这一行算:两次并发的 PATCH 不能各自测过一半、合起来存下没测过的组合。
             eff = config.effective(row)
+            data = config.unredact(data, eff.connection)
             try:
                 after = config.candidate(data, eff.connection)
             except config.KeyRequiredError:
