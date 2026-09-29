@@ -286,7 +286,7 @@ class SentencePlanService:
             # 外地的永久刑期:灵魂留在那里,计划 HELD(今天「永久刑期不自动回归」)。
             # 原属地的永久刑期:后面不会有节点 —— 原审判结案(`create_from_conclusion`)与重开审判结案
             # (`requests._assert_eternal_last`)都按 Q5 拒绝「永久之后还有节点」(2026-09-19 用户决定),
-            # 所以灵魂本来就在家,计划照常完成(终局文明 → SETTLED)。
+            # 所以灵魂本来就在家,计划照常完成 → SETTLED(永久 = 不转生,任何文明;见 `_complete`)。
             if not node.is_home and plan.status in (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL):
                 plan.status = SentencePlanStatus.HELD
                 _save(plan, "status")
@@ -497,7 +497,8 @@ class SentencePlanService:
     @staticmethod
     def _complete(soul, plan, nodes, *, pardoned=False):
         """计划完成:今天原属处置执行做的那次转移(`DispositionService.execute` 原属分支),挪到这里。
-        可转世 → REINCARNATING(并记 REINCARNATION_TRIGGERED,原来在 `disposition/views.py`);否则 → SETTLED。
+        可转世且没有永久刑期 → REINCARNATING(并记 REINCARNATION_TRIGGERED,原来在 `disposition/views.py`);
+        否则 → SETTLED。
 
         `pardoned=True`:撤销计划(2026-09-19 用户决定:撤销 = 赦免剩余刑期,视为完成)走**同一条路径**,
         只是终态记 CANCELLED、事件 SENTENCE_PLAN_CANCELLED、通知 / 推送用「撤销」的文案。
@@ -514,7 +515,10 @@ class SentencePlanService:
         home_disposition = (
             Disposition.all_objects.filter(pk=home_disposition_id).first() if home_disposition_id else None
         )
-        rebirth = soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS
+        # 永久刑期 = 不转生,原属地的永久刑期同样(2026-09-29 用户决定):还挂着 ETERNAL 节点的计划
+        # 只可能是原属地永久收尾(外地永久 HELD 不到这里;撤销把 ETERNAL 改成 ABORTED = 赦免)→ SETTLED。
+        eternal = any(n.status == SentenceNodeStatus.ETERNAL for n in nodes)
+        rebirth = soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and not eternal
         if rebirth and home_disposition is not None:
             moved = ReincarnationService.execute(home_disposition)
         elif rebirth:

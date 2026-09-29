@@ -431,6 +431,14 @@ class SoulHomeTenantSerializer(serializers.Serializer):
     display_name = serializers.CharField()
 
 
+def _is_eval_soul(serializer, obj) -> bool:
+    """助手管理造的评测灵魂(apps/soul_assist/eval_identities.py)。列表里显示、打「评测专用 · 不能登录」标签
+    (用户 2026-09-29 定)。一次请求只查一次:id 缓存在共用的序列化器 context 里。"""
+    from apps.soul_assist.eval_identities import tagged_ids
+
+    return obj.pk == tagged_ids(serializer.context)[0]
+
+
 class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     """Soul detail. Field access is enforced in two layers, deliberately.
 
@@ -486,6 +494,7 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # A client rendering "everything wrong with this soul's dates" needs
     # both lists.
     date_problems = serializers.SerializerMethodField()
+    is_eval_identity = serializers.SerializerMethodField()
 
     class Meta:
         model = Soul
@@ -495,7 +504,7 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
-            "date_problems", "life_index", "inherited_merit", "inherited_demerit",
+            "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
         ]
         read_only_fields = [
             "id", "current_state", "merit_score", "demerit_score", "create_time", "update_time",
@@ -552,6 +561,9 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     def get_date_problems(self, obj):
         return _soul_level_date_problems(obj)
 
+    def get_is_eval_identity(self, obj) -> bool:
+        return _is_eval_soul(self, obj)
+
     def to_representation(self, instance):
         # Remove karmic_balance from output for VIEWER (use the computed field name)
         data = super().to_representation(instance)
@@ -591,6 +603,7 @@ class SoulListSerializer(serializers.ModelSerializer):
     # marker should not silently miss it just because the common case
     # doesn't produce it.
     has_record_error = serializers.SerializerMethodField()
+    is_eval_identity = serializers.SerializerMethodField()
 
     class Meta:
         model = Soul
@@ -598,7 +611,7 @@ class SoulListSerializer(serializers.ModelSerializer):
             "id", "name", "current_state", "tenant_code", "civilization",
             "birth_date", "death_date", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "date_problems", "has_date_warning",
-            "has_record_error",
+            "has_record_error", "is_eval_identity",
         ]
 
     def get_karmic_balance(self, obj) -> int | None:
@@ -609,6 +622,9 @@ class SoulListSerializer(serializers.ModelSerializer):
     @extend_schema_field(SoulDateProblemSerializer(many=True))
     def get_date_problems(self, obj):
         return _soul_level_date_problems(obj)
+
+    def get_is_eval_identity(self, obj) -> bool:
+        return _is_eval_soul(self, obj)
 
     def get_has_date_warning(self, obj) -> bool:
         birth = (obj.birth_year, obj.birth_month, obj.birth_day)

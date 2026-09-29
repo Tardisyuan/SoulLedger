@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     "apps.soul_push",
     "apps.chat",
     "apps.sentence_plan",
+    "apps.soul_assist",
 ]
 
 MIDDLEWARE = [
@@ -278,6 +279,9 @@ REST_FRAMEWORK = {
         # 朋友圈帖子图片的文件出口(apps/social/media_views.py),按签名里的查看者计。
         # 一屏动态流 20 条 × 9 张 = 180 张图;匿名的 60/minute 会把它掐断。
         "post_media": "600/minute",
+        # 助手提问(apps/soul_assist/views.py::MeAssistView 按灵魂账号计;OfficerAssistView 按官员计,
+        # 读的也是这一个速率 —— docs/ARCHITECTURE-officer-assist.md §6 Q3 = A)。
+        "assist": "30/hour",
     },
 }
 
@@ -422,6 +426,28 @@ CHAT_REQUEST_INTERVAL_SECONDS = int(os.getenv("CHAT_REQUEST_INTERVAL_SECONDS", s
 # 客户端的类路径。测试换成假实现(tests/chat_support.py),于是单元测试一条 HTTP 都不发。
 MATRIX_CLIENT = os.getenv("MATRIX_CLIENT", "apps.chat.matrix.SynapseClient")
 
+# apps.soul_assist — 灵魂端助手(docs/ARCHITECTURE-soul-assist.md)。
+# 默认关:关着时 /me/assist/ 一律 503 `assistant_not_configured`,不访问任何供应商。
+# 打开之后还要每殿打开:Tenant.settings["assistant_enabled"] = true(灵魂读原属殿;官员读请求所在殿,
+# 与灵魂端共用这一个开关;令牌不带殿的 ADMIN 只看全局开关)。
+ASSISTANT_ENABLED = _env_bool("ASSISTANT_ENABLED", "False")
+# 供应商的类路径:apps.soul_assist.providers.OpenAICompatibleProvider(OpenAI / Azure /
+# Ollama / DeepSeek 等,配 BASE_URL)或 ...AnthropicProvider。测试换成 FakeProvider。
+ASSISTANT_PROVIDER = os.getenv("ASSISTANT_PROVIDER", "apps.soul_assist.providers.AnthropicProvider")
+ASSISTANT_BASE_URL = os.getenv("ASSISTANT_BASE_URL", "")
+ASSISTANT_API_KEY = os.getenv("ASSISTANT_API_KEY", "")
+ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-opus-5")
+# Anthropic 的 output_config.effort;帮助台不需要深推理。模型不支持 effort 时设成空串。
+ASSISTANT_EFFORT = os.getenv("ASSISTANT_EFFORT", "low")
+# Anthropic 服务端拒答回退(beta server-side-fallback-2026-07-01);空串即关。
+ASSISTANT_ANTHROPIC_FALLBACKS = os.getenv("ASSISTANT_ANTHROPIC_FALLBACKS", "default")
+# 整次回答的上限。App 在 25 秒时按超时处理(设计稿「问一问」1e),服务端必须先放弃。
+ASSISTANT_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_TIMEOUT_SECONDS", "22"))
+# 全局同时进行的问答数。一次回答最长占一个线程约 22 秒;真正的上限是 PG 连接。
+ASSISTANT_MAX_CONCURRENT = int(os.getenv("ASSISTANT_MAX_CONCURRENT", "8"))
+# 每次送给模型的历史条数(user + assistant 各算一条)。
+ASSISTANT_HISTORY_TURNS = int(os.getenv("ASSISTANT_HISTORY_TURNS", "20"))
+
 # Logging
 LOGGING = {
     "version": 1,
@@ -544,6 +570,13 @@ SPECTACULAR_SETTINGS = {
         # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
+        # apps.soul_assist:两端各有一个 `screen` 选项集。灵魂端的保留原名(mobile 与 core 引用
+        # `ScreenEnum`),官员端另起名 —— 不钉住就两个都变成带前缀的名字。
+        "ScreenEnum": "apps.soul_assist.models.SCREENS",
+        "OfficerScreenEnum": "apps.soul_assist.models.OFFICER_SCREENS",
+        # 助手管理页:`side` / `status` 都是别处已占的字段名。
+        "AssistSideEnum": "apps.soul_assist.models.AssistUsage.SIDES",
+        "AssistEvalRunStatusEnum": "apps.soul_assist.models.AssistEvalRun.STATUSES",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
         # `welcomed_civilizations`(App 欢迎过场)用的是灵魂的 Civilization 选项集;钉在既有的
         # `CivilizationEnum` 上,否则多出一个同值的 `WelcomedCivilizationsEnum` 并报 warning。
@@ -690,6 +723,8 @@ if not SENTRY_DSN and not DEBUG:
         stacklevel=2,
     )
 if SENTRY_DSN:
+    from apps.soul_assist.sentry import scrub_assist
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
@@ -705,4 +740,6 @@ if SENTRY_DSN:
         ],
         traces_sample_rate=0.1,
         send_default_pii=False,
+        # 助手接口的请求体与栈帧局部变量是灵魂的原文(apps/soul_assist/sentry.py)。
+        before_send=scrub_assist,
     )

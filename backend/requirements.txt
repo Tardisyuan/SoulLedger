@@ -34,6 +34,14 @@ pytest-cov>=4.1
 pytest-asyncio>=0.21
 factory-boy>=3.3
 
+# LLM providers (apps/soul_assist; docs/ARCHITECTURE-soul-assist.md §3)
+anthropic>=1.8,<2
+openai>=3.19,<4
+# Both SDKs sit on httpx2. Floor = the fix version for PYSEC-2026-3846/3848/3849
+# (httpx2) and PYSEC-2026-3844 (httpcore2); the resolver otherwise picks 2.3.0.
+httpx2>=2.12.0
+httpcore2>=2.10.0
+
 # API Docs
 drf-spectacular>=0.27
 
