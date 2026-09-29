@@ -49,7 +49,9 @@ def test_every_reason_code_is_explained(locale):
     codes_entry = next(e for e in corpus.entries(locale) if e["id"] == "codes")
     assert set(codes_entry["codes"]) == set(REFUSALS)
     for code in REFUSALS:
-        assert f"{code}:" in codes_entry["body"], (locale, code)
+        # zh-Hans 用全角冒号(Design 语气审第 7 条),en 用半角。
+        colon = "：" if locale == "zh-Hans" else ":"
+        assert f"{code}{colon}" in codes_entry["body"], (locale, code)
 
 
 def test_no_hard_coded_rule_numbers(locale):

@@ -9,8 +9,8 @@ questions:
   - "why did a job not run"
   - "what is death sync"
 ---
-Scheduled Tasks (sidebar, administrators): tabs Jobs and Run history. Filters: all, disabled only, overdue, failing. Jobs are grouped as global or per hall; officers who are not administrators see only their own hall's jobs.
-- Run now, Edit schedule (cron and time zone) and enable / disable need scheduler manage. Run now is refused while another run of the same job holds its lock.
-- Rebuild schedules needs an administrator holding scheduler manage.
+"Scheduled Tasks" (sidebar, administrators): tabs "Jobs" and "Run history". Filters: all, disabled only, overdue, failing. Jobs are grouped as global or per hall; officers who are not administrators see only their own hall's jobs.
+- "Run now", "Edit schedule" (cron and time zone) and enable / disable need the scheduler manage permission. "Run now" is refused while another run of the same job holds its lock.
+- "Rebuild schedules" needs an administrator holding the scheduler manage permission.
 - A job's run records are read-only.
-Death Sync lists incoming death registrations by status (Pending, Accepted, Processed, Failed, Duplicate, Partial). Its data is for administrators only.
+"Death Sync" lists incoming death registrations by status ("Pending", "Accepted", "Processed", "Failed", "Duplicate", "Partial"). Its data is for administrators only.
