@@ -42,10 +42,9 @@ import { cn } from "@/lib/utils";
  *    and that is the correct behaviour in both cases.
  *
  *    Note this is only the *border*. The focus RING comes from the global
- *    `:focus-visible` rule at `app/globals.css:459` (with its companion
- *    `input,textarea,select:focus-visible { outline-offset: 0 }` immediately
- *    below, which exists so the ring and the accent border do not read as a
- *    double outline). Nothing here writes `outline-hidden`, so nothing here has
+ *    `:focus-visible` rule in `app/globals.css` (2px ink, offset 2 — v2 A1 keeps
+ *    the ring AND the ink border on purpose; v1's `outline-offset: 0` companion
+ *    rule is gone). Nothing here writes `outline-hidden`, so nothing here has
  *    to fight it.
  *
  * ── THE PLACEHOLDER SPELLING, WRITTEN DOWN ONCE ────────────────────────────
@@ -75,38 +74,45 @@ import { cn } from "@/lib/utils";
 
 /**
  * The control skin, shared by input / select / textarea so the three cannot
- * drift apart the way the 42 signatures did.
+ * drift apart the way the 42 signatures did. 规范 v2 补足 A1「输入框」:
  *
- * Heights match `Button` (28 / 32 / 40, 规范 v1 §1.7), so a field and the button
- * beside it line up; `min-h` rather than `h` so a <textarea> can grow.
+ * - 常态:s1 底、1px ink3 边框(对 s1 的非文字对比 ≥ 3;v1 的 line 过不了),占位字 ink3。
+ * - 焦点:边框改 ink,外加全局 2px ink 焦点环(外扩 2)。
+ * - 出错:边框 2px neg,下方「✕ 原因」11px neg;不抖动。焦点时也保持出错的样子。
+ * - 禁用:底 s2、边框 line、字 ink3,不可聚焦(原生 disabled 本来就不可聚焦)。
+ * - 只读:无框,只有 1px 虚下划线;可选中、可复制、可聚焦。按 `[readonly]` 属性匹配,
+ *   **不是** `:read-only` 伪类 —— 后者对 `<select>` 恒为真(select 不是可编辑元素),
+ *   v1 用它,于是每一个 SelectField 都被画成了禁用底色。
+ * - 密码显示后改等宽字:调用点在明文时给 input 加 `data-revealed`(登录页那样)。
+ *
+ * Heights match `Button` (28 / 32 / 40), so a field and the button beside it
+ * line up; `min-h` rather than `h` so a <textarea> can grow.
  */
 export const fieldControl = cva(
   [
-    "block w-full border bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
+    "block w-full bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
     "placeholder:text-[oklch(var(--color-ink-subtle))]",
-    "transition-[border-color,box-shadow] duration-150 ease-out",
-    // 393 px: a ≥ 44 px target (§1.7).
+    "transition-[border-color] duration-fast ease-standard",
+    // 393 px: a ≥ 44 px target.
     "max-sm:min-h-11",
-    // Disabled / read-only: the disabled pair, not a faded copy (规范 v1 §2 输入框「只读同此」).
-    "disabled:cursor-not-allowed disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))]",
-    "read-only:bg-[oklch(var(--color-disabled-surface))]",
+    "disabled:cursor-not-allowed disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-[oklch(var(--color-line))]",
+    "[&[readonly]]:border-0 [&[readonly]]:border-b [&[readonly]]:border-dashed [&[readonly]]:border-[oklch(var(--color-line-strong))] [&[readonly]]:bg-transparent [&[readonly]]:px-0",
+    "data-revealed:font-mono",
   ],
   {
     variants: {
       // min-h, not h: the same recipe serves <textarea>.
       size: {
         sm: "min-h-7 px-2 py-1 text-xs",
-        md: "min-h-8 px-3 py-1.5 text-sm",
+        md: "min-h-8 px-3 py-1 text-sm",
         lg: "min-h-10 px-3 py-2 text-sm",
       },
       invalid: {
-        // Rest: structure line; hover: ink-subtle; focus: block line (the ring is
-        // the global square :focus-visible, flush on inputs).
         false:
-          "border-[oklch(var(--color-line))] hover:border-[oklch(var(--color-ink-subtle))] focus-visible:border-[oklch(var(--color-block))]",
-        // Error: danger border plus a 2 px danger underline, and it keeps them
-        // through focus — the field must not stop looking wrong as the user fixes it.
-        true: "border-[oklch(var(--color-danger))] shadow-[inset_0_-2px_0_oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",
+          "border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
+        // 2 px neg border that stays through focus — the field must not stop
+        // looking wrong as the user fixes it.
+        true: "border-2 border-[oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",
       },
     },
     defaultVariants: { size: "md", invalid: false },
@@ -175,7 +181,7 @@ export function Field({
     <div className={cn("flex flex-col gap-1", className)}>
       <label
         htmlFor={controlId}
-        className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]"
+        className="text-xs text-[oklch(var(--color-ink-muted))]"
       >
         {label}
         {required ? (
@@ -228,7 +234,7 @@ export function Field({
       })}
 
       {description ? (
-        <span id={descriptionId} className="text-xs text-[oklch(var(--color-ink-tertiary))]">
+        <span id={descriptionId} className="text-2xs tracking-normal text-[oklch(var(--color-ink-subtle))]">
           {description}
         </span>
       ) : null}
@@ -237,9 +243,9 @@ export function Field({
         // `role="alert"` and not a plain span: this text appears after a
         // submit, i.e. after focus has already moved on, so it has to announce
         // itself rather than wait to be navigated to.
-        <span id={errorId} role="alert" className="text-xs text-[oklch(var(--color-danger))]">
-          {/* 规范 v1: an error starts with "!" — not colour alone. */}
-          <span aria-hidden="true">! </span>
+        <span id={errorId} role="alert" className="text-2xs tracking-normal text-[oklch(var(--color-danger))]">
+          {/* 规范 v2: an error starts with ✕ — never colour alone. */}
+          <span aria-hidden="true">✕ </span>
           {error}
         </span>
       ) : null}
