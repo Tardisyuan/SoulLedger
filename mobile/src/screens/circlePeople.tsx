@@ -19,7 +19,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useContext, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useChat } from "../chat";
@@ -30,9 +30,9 @@ import { useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
-import { Button, Empty, Notice, Screen, Skeleton, SmallButton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
-import { PostList, useFailure, useFeed } from "./circle";
+import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
 import { Glyph, Tag } from "./letters";
 
 type Nav = NativeStackNavigationProp<AppStackParams>;
@@ -138,6 +138,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
   const [menu, setMenu] = useState(false);
   const p: SoulProfile | null = profile.data;
   const reborn = p ? !p.is_active : false;
+  const refresh = () => void Promise.all([profile.reload(), feed.reload()]);
 
   const letter = async () => {
     setMenu(false);
@@ -157,7 +158,8 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
         onBack={navigation.goBack}
         action={p && !reborn && !p.is_self ? { icon: "more", label: tr("soul_app.circle.post.more"), testID: "profile-more", onPress: () => setMenu(true) } : undefined}
       />
-      <Screen edges={["left", "right"]} testID="soul-profile" refreshing={profile.loading && !!p} onRefresh={() => void Promise.all([profile.reload(), feed.reload()])}>
+      {/* Once the profile is here the page is one FlatList: the head is its header, the posts its rows. */}
+      <Screen edges={["left", "right"]} testID="soul-profile" scroll={!p} refreshing={false} onRefresh={refresh}>
         {profile.error && !p ? (
           <View style={[styles.pad, { paddingHorizontal: gutter }]}>
             {/* Another civilization, an officer, nobody: one answer (the server's 404). */}
@@ -168,44 +170,51 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
             <Skeleton lines={4} testID="profile-loading" />
           </View>
         ) : (
-          <>
-            <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-              <View style={styles.row}>
-                <Glyph text={p.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={60} />
-                <View style={styles.fill}>
-                  <Txt variant="title" tone={reborn ? "muted" : "ink"}>
-                    {p.display_name}
-                  </Txt>
-                  <CivMark />
+          <PostList
+            testID="profile-posts"
+            feed={feed}
+            refreshing={profile.loading}
+            onRefresh={refresh}
+            header={
+              <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+                <View style={styles.row}>
+                  <Glyph text={p.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={60} />
+                  <View style={styles.fill}>
+                    <Txt variant="title" tone={reborn ? "muted" : "ink"}>
+                      {p.display_name}
+                    </Txt>
+                    <CivMark />
+                  </View>
                 </View>
+                <View style={styles.counts}>
+                  <Count testID="count-following" n={p.following_count} label={tr("soul_app.circle.profile.following")} />
+                  <Count testID="count-followers" n={p.followers_count} label={tr("soul_app.circle.profile.followers")} />
+                </View>
+                {p.is_followed_by && !p.is_following && !reborn ? (
+                  <Txt testID="follows-you" variant="caption" tone="subtle">
+                    {tr("soul_app.circle.profile.follows_you")}
+                  </Txt>
+                ) : null}
+                {reborn ? (
+                  <View testID="profile-reborn" style={[styles.reborn, { borderColor: t.hair2, backgroundColor: t.s1 }]}>
+                    <Tag text={tr("soul_app.circle.profile.reborn")} tone="quiet" />
+                    <Txt variant="caption" tone="muted" style={styles.fill}>
+                      {tr("soul_app.circle.profile.reborn_body")}
+                    </Txt>
+                  </View>
+                ) : (
+                  <FollowButton following={p.is_following} followedBy={p.is_followed_by} busy={follow.busy === userId} onPress={() => void follow.toggle(userId, p.is_following)} />
+                )}
               </View>
-              <View style={styles.counts}>
-                <Count testID="count-following" n={p.following_count} label={tr("soul_app.circle.profile.following")} />
-                <Count testID="count-followers" n={p.followers_count} label={tr("soul_app.circle.profile.followers")} />
-              </View>
-              {p.is_followed_by && !p.is_following && !reborn ? (
-                <Txt testID="follows-you" variant="caption" tone="subtle">
-                  {tr("soul_app.circle.profile.follows_you")}
+            }
+            footer={
+              !reborn && !p.is_following ? (
+                <Txt testID="more-hint" variant="caption" tone="subtle" style={[styles.pad, { paddingHorizontal: gutter }]}>
+                  {tr("soul_app.circle.profile.more_hint")}
                 </Txt>
-              ) : null}
-              {reborn ? (
-                <View testID="profile-reborn" style={[styles.reborn, { borderColor: t.hair2, backgroundColor: t.s1 }]}>
-                  <Tag text={tr("soul_app.circle.profile.reborn")} tone="quiet" />
-                  <Txt variant="caption" tone="muted" style={styles.fill}>
-                    {tr("soul_app.circle.profile.reborn_body")}
-                  </Txt>
-                </View>
-              ) : (
-                <FollowButton following={p.is_following} followedBy={p.is_followed_by} busy={follow.busy === userId} onPress={() => void follow.toggle(userId, p.is_following)} />
-              )}
-            </View>
-            {feed.posts ? <PostList feed={feed} onAuthor={() => {}} /> : <View style={[styles.pad, { paddingHorizontal: gutter }]}><Skeleton lines={3} /></View>}
-            {!reborn && !p.is_following ? (
-              <Txt testID="more-hint" variant="caption" tone="subtle" style={[styles.pad, { paddingHorizontal: gutter }]}>
-                {tr("soul_app.circle.profile.more_hint")}
-              </Txt>
-            ) : null}
-          </>
+              ) : null
+            }
+          />
         )}
       </Screen>
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
@@ -329,14 +338,14 @@ export function MyCircleScreen() {
   // My user id is the circle status's; my page is my profile as others would ask for it.
   const me = useRemote(useCallback(async () => soulSocialApi.profile((await soulSocialApi.status()).user_id), []));
   const feed = useFeed({ author: me.data?.user_id ?? 0 }, !!me.data);
-  const mine = me.data ? feed : null;
   // A post deleted from its own page comes back here.
   useReloadOnRefocus(feed.reload);
   /** The name being edited; null when not editing. */
   const [name, setName] = useState<string | null>(null);
 
   return (
-    <Screen edges={["left", "right"]} testID="my-circle" refreshing={me.loading && !!me.data} onRefresh={() => void Promise.all([me.reload(), feed.reload()])}>
+    // Once my profile is here the page is one FlatList: the head is its header, my posts its rows.
+    <Screen edges={["left", "right"]} testID="my-circle" scroll={!me.data}>
       {me.error && !me.data ? (
         <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           <Notice tone="neg" onRetry={() => void me.reload()}>
@@ -348,33 +357,38 @@ export function MyCircleScreen() {
           <Skeleton lines={4} testID="me-loading" />
         </View>
       ) : (
-        <>
-          <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-            <View style={styles.row}>
-              <Glyph text={me.data.display_name} tone="muted" size={60} />
-              <Pressable
-                testID="edit-name"
-                accessibilityRole="button"
-                accessibilityLabel={`${tr("soul_app.circle.me.display_name")} · ${tr("soul_app.circle.me.edit_name")}`}
-                disabled={name !== null}
-                onPress={() => setName(me.data?.display_name ?? "")}
-                style={styles.fill}
-              >
-                <Txt variant="title">{me.data.display_name}</Txt>
-                <Txt variant="caption" tone="subtle">
-                  {tr("soul_app.circle.me.display_name")}
-                  {name === null ? ` · ${tr("soul_app.circle.me.edit_name")}` : ""}
-                </Txt>
-              </Pressable>
+        <PostList
+          testID="my-posts"
+          feed={feed}
+          refreshing={me.loading}
+          onRefresh={() => void Promise.all([me.reload(), feed.reload()])}
+          header={
+            <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+              <View style={styles.row}>
+                <Glyph text={me.data.display_name} tone="muted" size={60} />
+                <Pressable
+                  testID="edit-name"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${tr("soul_app.circle.me.display_name")} · ${tr("soul_app.circle.me.edit_name")}`}
+                  disabled={name !== null}
+                  onPress={() => setName(me.data?.display_name ?? "")}
+                  style={styles.fill}
+                >
+                  <Txt variant="title">{me.data.display_name}</Txt>
+                  <Txt variant="caption" tone="subtle">
+                    {tr("soul_app.circle.me.display_name")}
+                    {name === null ? ` · ${tr("soul_app.circle.me.edit_name")}` : ""}
+                  </Txt>
+                </Pressable>
+              </View>
+              {name !== null ? <RenameField value={name} onChange={setName} onDone={() => { setName(null); void me.reload(); }} onCancel={() => setName(null)} /> : null}
+              <View style={[styles.countBox, { borderColor: t.hair }]}>
+                <Count testID="my-following" n={me.data.following_count} label={tr("soul_app.circle.profile.following")} onPress={() => navigation.navigate("CircleFollows", { relation: "following" })} />
+                <Count testID="my-followers" n={me.data.followers_count} label={tr("soul_app.circle.profile.followers")} onPress={() => navigation.navigate("CircleFollows", { relation: "followers" })} />
+              </View>
             </View>
-            {name !== null ? <RenameField value={name} onChange={setName} onDone={() => { setName(null); void me.reload(); }} onCancel={() => setName(null)} /> : null}
-            <View style={[styles.countBox, { borderColor: t.hair }]}>
-              <Count testID="my-following" n={me.data.following_count} label={tr("soul_app.circle.profile.following")} onPress={() => navigation.navigate("CircleFollows", { relation: "following" })} />
-              <Count testID="my-followers" n={me.data.followers_count} label={tr("soul_app.circle.profile.followers")} onPress={() => navigation.navigate("CircleFollows", { relation: "followers" })} />
-            </View>
-          </View>
-          {mine?.posts ? <PostList feed={mine} onAuthor={() => {}} /> : <View style={[styles.pad, { paddingHorizontal: gutter }]}><Skeleton lines={3} /></View>}
-        </>
+          }
+        />
       )}
     </Screen>
   );
@@ -387,29 +401,25 @@ export function FollowListScreen({ relation }: { relation: "following" | "follow
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
-  const [rows, setRows] = useState<SoulRelationCard[] | null>(null);
   const [count, setCount] = useState(0);
-  const [next, setNext] = useState<number | null>(null);
-  const load = useCallback(
-    async (page = 1) => {
-      const res = await (relation === "following" ? soulSocialApi.following(page) : soulSocialApi.followers(page));
-      setRows((prev) => (page === 1 ? res.results : [...(prev ?? []), ...res.results]));
-      setCount(res.count);
-      setNext(res.next ? page + 1 : null);
-    },
-    [relation]
-  );
-  const first = useRemote(load);
-  const follow = useFollow(() => load(1));
+  // A page at a time, one request at a time (usePaged). A card has no string id; its user id becomes one.
+  const list = usePaged<SoulRelationCard & { id: string }>(relation, async (page) => {
+    const res = await (relation === "following" ? soulSocialApi.following(page) : soulSocialApi.followers(page));
+    setCount(res.count);
+    return { next: res.next, results: res.results.map((r) => ({ ...r, id: String(r.user_id) })) };
+  });
+  const rows = list.rows;
+  // A follow changes the rows' buttons: every page held is read again, not folded back to the first.
+  const follow = useFollow(list.reload);
   const title = tr(relation === "following" ? "soul_app.circle.list.following_title" : "soul_app.circle.list.followers_title", { n: String(count) });
 
   return (
     <View style={[styles.fill, { backgroundColor: t.s0 }]}>
       <AppHeader title={title} onBack={navigation.goBack} />
-      <Screen edges={["left", "right", "bottom"]} testID={`follows-${relation}`}>
-        {first.error && !rows ? (
+      <Screen edges={["left", "right", "bottom"]} testID={`follows-${relation}`} scroll={false}>
+        {list.error && !rows ? (
           <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-            <Notice tone="neg" onRetry={() => void first.reload()}>
+            <Notice tone="neg" onRetry={() => void list.reload()}>
               {tr("soul_app.circle.feed.error")}
             </Notice>
           </View>
@@ -418,10 +428,12 @@ export function FollowListScreen({ relation }: { relation: "following" | "follow
             <Skeleton lines={4} />
           </View>
         ) : (
-          <>
-            {rows.map((r) => (
+          <FlatList
+            testID="follows-list"
+            data={rows}
+            keyExtractor={cardKey}
+            renderItem={({ item: r }) => (
               <Pressable
-                key={r.user_id}
                 testID={`soul-${r.user_id}`}
                 accessibilityRole="button"
                 onPress={() => navigation.navigate("SoulProfile", { userId: r.user_id })}
@@ -442,23 +454,27 @@ export function FollowListScreen({ relation }: { relation: "following" | "follow
                   <FollowButton compact following={r.is_following} followedBy={r.is_followed_by} busy={follow.busy === r.user_id} onPress={() => void follow.toggle(r.user_id, r.is_following)} />
                 ) : null}
               </Pressable>
-            ))}
-            {next ? (
-              <View style={styles.more}>
-                <SmallButton testID="follows-more" title={tr("soul_app.circle.feed.more")} onPress={() => void load(next)} />
-              </View>
-            ) : null}
-            {rows.some((r) => !r.is_active) ? (
-              <Txt variant="caption" tone="subtle" style={[styles.pad, { paddingHorizontal: gutter }]}>
-                {tr("soul_app.circle.list.reborn_note")}
-              </Txt>
-            ) : null}
-          </>
+            )}
+            onEndReached={list.more ?? undefined}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              <>
+                <PagedFooter list={list} testID="follows-more" title={tr("soul_app.circle.feed.more")} />
+                {rows.some((r) => !r.is_active) ? (
+                  <Txt variant="caption" tone="subtle" style={[styles.pad, { paddingHorizontal: gutter }]}>
+                    {tr("soul_app.circle.list.reborn_note")}
+                  </Txt>
+                ) : null}
+              </>
+            }
+          />
         )}
       </Screen>
     </View>
   );
 }
+
+const cardKey = (r: { id: string }) => r.id;
 
 // ── search ─────────────────────────────────────────────────────────────
 
@@ -688,7 +704,6 @@ const styles = StyleSheet.create({
   smallFollow: { minHeight: 34, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   smallFollowText: { fontSize: 12, letterSpacing: 0.4 },
   listRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, paddingVertical: 10 },
-  more: { alignItems: "center", paddingVertical: 20 },
   scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
   sheet: { borderTopWidth: 1 },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },

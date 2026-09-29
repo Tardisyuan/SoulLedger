@@ -7,13 +7,14 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { FlatList, ScrollView } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { SessionContext } from "../session";
 import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, SoulProfileScreen } from "../screens/circlePeople";
-import { PROFILE, stubApi } from "./stubApi";
+import { PROFILE, heldReply, stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
@@ -162,6 +163,113 @@ describe("my page and the lists", () => {
     expect(screen.getByText("回关")).toBeTruthy();
     expect(screen.getAllByTestId("follow")).toHaveLength(2);
     expect(screen.getByText("已转世的灵魂留在列表里但不再有按钮。")).toBeTruthy();
+  });
+});
+
+describe("paged pages are one FlatList each, read to their end one page at a time", () => {
+  const ZERO = { LIKE: 0, LOVE: 0, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 };
+  const post = (id: string) => ({
+    id,
+    author: { user_id: 7, display_name: "林照微", avatar: null, is_active: true },
+    content: `帖子 ${id}`,
+    visibility: "PUBLIC",
+    moderation_status: "PUBLISHED",
+    comment_count: 0,
+    reaction_count: 0,
+    reaction_counts: ZERO,
+    my_reaction: null,
+    media: [],
+    is_mine: false,
+    create_time: "2026-09-17T08:12:00Z",
+  });
+  const card = (user_id: number, over: Record<string, unknown> = {}) => ({
+    user_id,
+    display_name: `灵魂${user_id}`,
+    avatar: null,
+    is_active: true,
+    is_following: false,
+    is_followed_by: true,
+    ...over,
+  });
+  const pageOf = (results: unknown[], next: string | null) => ({ status: 200, data: { count: 5, next, previous: null, results } });
+  const pagesAsked = (calls: { url: string; params?: Record<string, unknown> }[], url: string) =>
+    calls.filter((c) => c.url === url).map((c) => c.params?.page ?? 1);
+  const endReached = () => act(async () => screen.UNSAFE_getByType(FlatList).props.onEndReached?.({ distanceFromEnd: 0 }));
+  // Nothing nests: the FlatList's own scroller is the only one on the page.
+  const oneScroller = () => expect(screen.UNSAFE_getAllByType(ScrollView)).toHaveLength(1);
+
+  it("a soul's page: the head is the list's header, and the next page of posts is read once while on its way", async () => {
+    const held = heldReply();
+    const calls = stubApi({
+      "GET /me/social/users/7/": { status: 200, data: profile() },
+      "/me/social/feed/": [pageOf([post("p1"), post("p2")], "?page=2"), held.reply],
+    });
+    wrap(<SoulProfileScreen userId={7} />);
+    await screen.findByTestId("post-p2");
+    oneScroller();
+    expect(screen.getByTestId("follow")).toBeTruthy();
+    await endReached();
+    await endReached();
+    expect(pagesAsked(calls, "/me/social/feed/")).toEqual([1, 2]);
+    expect(screen.getByTestId("circle-more-loading").props.accessibilityLabel).toBe("加载中…");
+    await act(async () => held.answer(pageOf([post("p2"), post("p3")], null)));
+    // p2 came again (the list moved under the pages): held once.
+    expect(screen.getAllByTestId("post-p2")).toHaveLength(1);
+    expect(screen.getByTestId("post-p3")).toBeTruthy();
+    await endReached();
+    expect(pagesAsked(calls, "/me/social/feed/")).toEqual([1, 2]);
+    expect(screen.queryByTestId("circle-more")).toBeNull();
+    // Under the last post, still: the hint that more may show after a follow.
+    expect(screen.getByTestId("more-hint")).toBeTruthy();
+  });
+
+  it("my page with no posts: the head, no skeleton, no foot", async () => {
+    stubApi({
+      "/me/social/status/": { status: 200, data: { user_id: 1, can_write: true, muted_until: null, reports_remaining: 10 } },
+      "GET /me/social/users/1/": { status: 200, data: profile({ user_id: 1, display_name: "陈砚舟", is_self: true }) },
+      "/me/social/feed/": pageOf([], null),
+    });
+    wrap(<MyCircleScreen />);
+    await screen.findByTestId("edit-name");
+    await waitFor(() => expect(screen.UNSAFE_getByType(FlatList).props.data).toEqual([]));
+    oneScroller();
+    expect(screen.queryByLabelText("加载中…")).toBeNull();
+    expect(screen.queryByTestId("circle-more")).toBeNull();
+  });
+
+  it("the follow list: the next page once while on its way, nothing past the last; a follow re-reads every page held", async () => {
+    const held = heldReply();
+    const calls = stubApi({
+      "/me/social/followers/": [pageOf([card(2), card(3)], "?page=2"), held.reply, pageOf([card(2, { is_following: true }), card(3)], "?page=2"), pageOf([card(4)], null)],
+      "POST /me/social/users/2/follow/": { status: 200, data: { following: true } },
+    });
+    wrap(<FollowListScreen relation="followers" />);
+    await screen.findByTestId("soul-3");
+    oneScroller();
+    const list = screen.UNSAFE_getByType(FlatList);
+    expect(list.props.data.map(list.props.keyExtractor)).toEqual(["2", "3"]);
+    await endReached();
+    await endReached();
+    expect(pagesAsked(calls, "/me/social/followers/")).toEqual([1, 2]);
+    expect(screen.getByTestId("follows-more-loading")).toBeTruthy();
+    expect(screen.queryByTestId("follows-more")).toBeNull();
+    await act(async () => held.answer(pageOf([card(4)], null)));
+    expect(screen.getByTestId("soul-4")).toBeTruthy();
+    await endReached();
+    expect(pagesAsked(calls, "/me/social/followers/")).toEqual([1, 2]);
+    expect(screen.queryByTestId("follows-more")).toBeNull();
+    // Following one soul reads both pages again — the list is not folded back to its first page.
+    fireEvent.press(within(screen.getByTestId("soul-2")).getByTestId("follow"));
+    await waitFor(() => expect(pagesAsked(calls, "/me/social/followers/")).toEqual([1, 2, 1, 2]));
+    expect(await screen.findByTestId("soul-4")).toBeTruthy();
+  });
+
+  it("the follow list's foot button reads the next page too (for a screen reader)", async () => {
+    const calls = stubApi({ "/me/social/following/": [pageOf([card(2)], "?page=2"), pageOf([card(3)], null)] });
+    wrap(<FollowListScreen relation="following" />);
+    fireEvent.press(await screen.findByTestId("follows-more"));
+    expect(await screen.findByTestId("soul-3")).toBeTruthy();
+    expect(pagesAsked(calls, "/me/social/following/")).toEqual([1, 2]);
   });
 });
 
