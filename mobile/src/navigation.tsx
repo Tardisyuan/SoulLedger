@@ -38,6 +38,7 @@ import {
 } from "./screens/applications";
 import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/auth";
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
+import { AboutScreen } from "./screens/about";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen } from "./screens/life";
@@ -293,6 +294,13 @@ export function RootNavigator() {
               component={SettingsScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.settings.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="About"
+              component={AboutScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("about.title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen name="NotificationPrimer" component={NotificationPrimerScreen} options={{ headerShown: false }} />

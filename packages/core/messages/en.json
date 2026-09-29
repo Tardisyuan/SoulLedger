@@ -76,6 +76,16 @@
   "footer": {
     "version": "SoulLedger v0.1"
   },
+  "about": {
+    "title": "About & credits",
+    "intro": "The typefaces, ornament and images this app uses, and their licences.",
+    "fonts": "Typefaces",
+    "ornament": "Ornament",
+    "images": "Seal edges",
+    "licence": "Licence",
+    "public_domain": "Public domain",
+    "source": "Source"
+  },
   "souls": {
     "title": "Souls",
     "create": "Create Soul",

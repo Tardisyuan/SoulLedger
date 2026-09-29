@@ -62,6 +62,8 @@ export type AppStackParams = {
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
   Settings: undefined;
+  /** 关于 / 致谢(补足 C16),从设置页进。 */
+  About: undefined;
   NotificationPrimer: undefined;
   /** `landed`: opened from a tapped notification — the newest letter from the other side is highlighted once. */
   Conversation: { id: string; landed?: boolean };

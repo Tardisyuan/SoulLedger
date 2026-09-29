@@ -76,6 +76,16 @@
   "footer": {
     "version": "Medjat Ba v0.1"
   },
+  "about": {
+    "title": "Tepy · Sesen",
+    "intro": "Sesh Medu, Tut Sesh, Tut Khetem: Tepy Mi Sesen.",
+    "fonts": "Sesh Medu",
+    "ornament": "Tut Sesh",
+    "images": "Tut Khetem",
+    "licence": "Sesen",
+    "public_domain": "Sesen Neb",
+    "source": "Tepy"
+  },
   "souls": {
     "title": "Ba",
     "create": "Iri Ba",
