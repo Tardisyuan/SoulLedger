@@ -35,9 +35,11 @@ import {
   Hairline,
   Loader,
   Notice,
+  RadioMark,
   Screen,
   SectionError,
   Skeleton,
+  SwitchMark,
   Txt,
   useLayout,
   useRemote,
@@ -79,10 +81,8 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
         pressed && styles.pressed,
       ]}
     >
-      {/* 单选(第三类 F 组):方框,选中时放墨色小方块 —— 墨色,不是强调色。 */}
-      <View style={[styles.radio, { borderColor: selected ? theme.ink : theme.hair2 }]}>
-        {selected ? <View style={[styles.radioDot, { backgroundColor: theme.ink }]} /> : null}
-      </View>
+      {/* 单选:墨色,不是强调色(第三类 F 组);v2 起是圆的(补足 A2),不再和复选框同形。 */}
+      <RadioMark on={selected} />
       <View style={styles.fill}>
         <Txt variant="bodyLg">{selfName(l)}</Txt>
         <Txt variant="caption" tone="subtle">
@@ -215,16 +215,8 @@ function Toggle({
           {note}
         </Txt>
       </View>
-      {/* Handoff 3c: square, like everything else — the knob's side and the accent fill say "on". */}
-      <View
-        style={[
-          stack ? styles.trackLarge : styles.track,
-          { borderColor: value ? theme.accent : theme.hair2, backgroundColor: value ? theme.accent : theme.s2 },
-          value ? styles.trackOn : null,
-        ]}
-      >
-        <View style={[stack ? styles.knobLarge : styles.knob, { backgroundColor: value ? theme.s0 : theme.inkSubtle }]} />
-      </View>
+      {/* Handoff 3c: square, like everything else — the knob's side and the ink fill (补足 A1) say "on". */}
+      <SwitchMark on={value} large={stack} />
     </Pressable>
   );
 }
@@ -450,39 +442,32 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { textAlign: "center" },
   pressed: { opacity: 0.8 },
-  heading: { paddingTop: 22, paddingBottom: 10 },
+  heading: { paddingTop: 22, paddingBottom: 12 },
   identity: { paddingVertical: GUTTER, borderBottomWidth: 1, gap: 6 },
-  nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 10 },
+  nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 12 },
   code: { letterSpacing: 1.6 },
   civRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   group: { borderBottomWidth: 1 },
   row: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderLeftWidth: 2 },
-  toggleStacked: { gap: 10, paddingVertical: 14, borderBottomWidth: 1 },
-  radio: { width: 16, height: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  radioDot: { width: 8, height: 8 },
+  toggleStacked: { gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   current: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
-  currentText: { fontSize: 10.5, letterSpacing: 0.4 },
-  saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 10 },
-  saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 14, gap: 12 },
+  currentText: { fontSize: 11, letterSpacing: 0.4 },
+  saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 12 },
+  saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
   saveRow: { flexDirection: "row", gap: 8 },
-  saveActions: { flexDirection: "row", gap: 10 },
+  saveActions: { flexDirection: "row", gap: 12 },
   foot: { paddingTop: 12, paddingBottom: 18 },
-  track: { width: 44, height: 26, borderWidth: 1, padding: 2, justifyContent: "center" },
-  trackLarge: { width: 58, height: 34, borderWidth: 1, padding: 3, justifyContent: "center" },
-  trackOn: { alignItems: "flex-end" },
-  knob: { width: 20, height: 20 },
-  knobLarge: { width: 26, height: 26 },
   dimmed: { opacity: 0.55 },
   notice: { paddingBottom: 12 },
-  denied: { borderWidth: 1, borderLeftWidth: 3, padding: 14, gap: 12 },
-  end: { paddingTop: 26, paddingBottom: 34, gap: 16, alignItems: "stretch" },
+  denied: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },
   logout: { alignSelf: "center", minWidth: 160 },
   version: { textAlign: "center", fontSize: 11 },
-  primerHead: { alignItems: "center", gap: 12, paddingTop: 34, paddingBottom: 26, borderBottomWidth: 1 },
-  primerList: { paddingBottom: 18, borderBottomWidth: 1, gap: 14 },
+  primerHead: { alignItems: "center", gap: 12, paddingTop: 32, paddingBottom: 24, borderBottomWidth: 1 },
+  primerList: { paddingBottom: 18, borderBottomWidth: 1, gap: 16 },
   primerItem: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   primerRule: { marginVertical: 2 },
   glyph: { width: 18, height: 18, marginTop: 3, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   never: { fontSize: 11, lineHeight: 14, letterSpacing: 0 },
-  primerButtons: { gap: 10 },
+  primerButtons: { gap: 12 },
 });

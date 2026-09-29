@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   title: { flex: 1, paddingHorizontal: 4 },
   /** 16 from the edge, as 1e draws it: the bar's 6 plus this. */
-  titleStart: { paddingLeft: 10 },
+  titleStart: { paddingLeft: 12 },
   tabs: { flexDirection: "row", borderTopWidth: 1 },
   tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 5, paddingVertical: 6 },
   tabsStacked: { flexDirection: "column", borderTopWidth: 1 },

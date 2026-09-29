@@ -42,6 +42,7 @@ import {
   Interp,
   Notice,
   PageEmptyArt,
+  RadioMark,
   Screen,
   Skeleton,
   SmallButton,
@@ -645,8 +646,8 @@ export function ComposePostScreen() {
                 onPress={() => setVisibility(o.value)}
                 style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.mark : "transparent" }]}
               >
-                <View style={[styles.dot, { borderColor: on ? t.mark : t.hair2, backgroundColor: on ? t.mark : "transparent" }]}>
-                  {on ? <View style={[styles.dotInner, { backgroundColor: t.s0 }]} /> : null}
+                <View style={styles.dot}>
+                  <RadioMark on={on} />
                 </View>
                 <View style={styles.fill}>
                   <Txt variant="bodyLg">{tr(o.label)}</Txt>
@@ -735,7 +736,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         </View>
       ) : null}
       <Modal visible={asking} transparent animationType="fade" onRequestClose={() => setAsking(false)}>
-        <View style={styles.scrim}>
+        <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} onPress={() => setAsking(false)} accessibilityLabel={tr("soul_app.circle.react.lamp_cancel")} />
           <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.lamp, paddingBottom: 28 + insets.bottom }]}>
             <View style={styles.line}>
@@ -854,7 +855,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
   };
   return (
     <Modal visible={!!target} transparent animationType="fade" onRequestClose={close}>
-      <View style={styles.scrim}>
+      <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
           <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 28 + insets.bottom }]}>
@@ -1035,7 +1036,7 @@ export function PostScreen({ id }: { id: string }) {
         />
       </Screen>
       {open ? (
-        <View style={[styles.dock, { paddingHorizontal: 12, paddingBottom: 10 + insets.bottom, borderTopColor: t.hair, backgroundColor: t.s1 }]}>
+        <View style={[styles.dock, { paddingHorizontal: 12, paddingBottom: 12 + insets.bottom, borderTopColor: t.hair, backgroundColor: t.s1 }]}>
           {muted ? (
             <MutedLock until={status.data?.muted_until ?? null} />
           ) : (
@@ -1089,63 +1090,62 @@ const styles = StyleSheet.create({
   center: { textAlign: "center" },
   noSpacing: { letterSpacing: 0 },
   pad: { paddingVertical: 22 },
-  mono: { fontSize: 11.5, lineHeight: 16 },
+  mono: { fontSize: 11, lineHeight: 16 },
   line: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   meta: { marginTop: 5 },
-  name: { fontSize: 14, lineHeight: 19, flexShrink: 1 },
+  name: { fontSize: 15, lineHeight: 20, flexShrink: 1 },
   card: { paddingVertical: 16, borderBottomWidth: 1 },
   cardHead: { flexDirection: "row", gap: 11, alignItems: "flex-start" },
-  body: { marginTop: 12, fontSize: 15.5, lineHeight: 27 },
-  note: { marginTop: 10, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 11, paddingVertical: 9 },
+  body: { marginTop: 12, fontSize: 15, lineHeight: 27 },
+  note: { marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 11, paddingVertical: 9 },
   cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 13, flexWrap: "wrap" },
   summary: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1 },
-  chipCount: { fontSize: 11.5, lineHeight: 15 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  chipCount: { fontSize: 11, lineHeight: 15 },
   tagNeg: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
-  tagNegText: { fontSize: 10.5, lineHeight: 14, letterSpacing: 0.8 },
+  tagNegText: { fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
   subTabs: { flexDirection: "row", borderBottomWidth: 1 },
   subTab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderBottomWidth: 2 },
   subTabText: { fontSize: 13, letterSpacing: 0.4 },
   entry: { paddingVertical: 12, borderBottomWidth: 1 },
   entryBox: { minHeight: 40, borderWidth: 1, justifyContent: "center", paddingHorizontal: 12 },
-  entryText: { fontSize: 14 },
-  banner: { paddingVertical: 14, borderBottomWidth: 1, borderLeftWidth: 3, gap: 5 },
-  empty: { paddingVertical: 48, paddingHorizontal: 34, alignItems: "stretch", gap: 4 },
+  entryText: { fontSize: 15 },
+  banner: { paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 5 },
+  empty: { paddingVertical: 48, paddingHorizontal: 32, alignItems: "stretch", gap: 4 },
   more: { alignItems: "center", paddingVertical: 20 },
   form: { paddingVertical: 18 },
-  postInput: { minHeight: 150, borderWidth: 1, padding: 13, fontSize: 15.5, lineHeight: 27, textAlignVertical: "top" },
+  postInput: { minHeight: 150, borderWidth: 1, padding: 13, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
   counter: { alignItems: "flex-end", marginTop: 6 },
-  formLabel: { marginTop: 20, marginBottom: 10 },
+  formLabel: { marginTop: 20, marginBottom: 12 },
   radios: { gap: 1, borderWidth: 1 },
-  radio: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 14, paddingVertical: 13, borderLeftWidth: 2 },
-  dot: { width: 16, height: 16, marginTop: 4, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  dotInner: { width: 8, height: 8, borderRadius: 999 },
-  scope: { marginTop: 10, marginBottom: 20 },
+  radio: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 13, borderLeftWidth: 2 },
+  dot: { marginTop: 4 },
+  scope: { marginTop: 12, marginBottom: 20 },
   lock: { flexDirection: "row", gap: 9, alignItems: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 13, paddingVertical: 12 },
   nudge: { marginTop: 3 },
   lockUntil: { marginTop: 6 },
   bar: { paddingVertical: 12, borderBottomWidth: 1 },
-  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1 },
-  lampNote: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 9 },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
-  sheet: { borderTopWidth: 1, paddingTop: 22, paddingHorizontal: 20, gap: 10 },
-  sheetTitle: { fontSize: 16, flexShrink: 1 },
+  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1 },
+  lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9 },
+  scrim: { flex: 1 },
+  sheet: { borderTopWidth: 1, paddingTop: 22, paddingHorizontal: 20, gap: 12 },
+  sheetTitle: { flexShrink: 1 },
   lampButton: { minHeight: 46, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  lampButtonText: { fontSize: 14, letterSpacing: 0.6 },
-  commentsHead: { paddingTop: 14, paddingBottom: 8 },
-  comment: { flexDirection: "row", gap: 10, paddingVertical: 13, borderBottomWidth: 1 },
+  lampButtonText: { fontSize: 15, letterSpacing: 0.6 },
+  commentsHead: { paddingTop: 16, paddingBottom: 8 },
+  comment: { flexDirection: "row", gap: 12, paddingVertical: 13, borderBottomWidth: 1 },
   commentName: { fontSize: 13, lineHeight: 18 },
-  commentBody: { marginTop: 5, fontSize: 14.5, lineHeight: 24 },
+  commentBody: { marginTop: 5, fontSize: 15, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   replyTo: { marginTop: 3 },
   replyButton: { marginTop: 6, alignSelf: "flex-start", paddingVertical: 4 },
-  replying: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 2, paddingBottom: 8 },
+  replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
   menu: { borderTopWidth: 1 },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
-  dock: { borderTopWidth: 1, paddingTop: 10 },
+  dock: { borderTopWidth: 1, paddingTop: 12 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
-  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
-  send: { minHeight: 42, minWidth: 56, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
+  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
+  send: { minHeight: 42, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontSize: 13, letterSpacing: 0.6 },
 });

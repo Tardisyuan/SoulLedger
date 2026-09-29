@@ -557,7 +557,7 @@ describe("the title bar per platform (handoff 1e): Android sets the title left a
   it("Android: the 书信 title at the left edge, no empty back slot before it", () => {
     jest.replaceProperty(Platform, "OS", "android");
     wrap(chatState(), <AppHeader title="书信" />);
-    expect(titleStyle()).toMatchObject({ textAlign: "left", paddingLeft: 10 });
+    expect(titleStyle()).toMatchObject({ textAlign: "left", paddingLeft: 12 }); // v2 A2: 10 → 12
     // The title is the bar's first child: nothing is held open where iOS keeps the back key's place.
     expect(firstInBar()).toBe(screen.getByRole("header"));
   });
