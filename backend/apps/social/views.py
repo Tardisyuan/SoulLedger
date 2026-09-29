@@ -404,7 +404,11 @@ class UserProfileViewSet(
     permission_classes = [TenantPermission, IsProfileOwnerOrReadOnly]
     # EXEMPT — see the module note at the top of this file.
     permission_codename = None
-    queryset = UserProfile.objects.select_related("user").all()
+    # Ordered: PageNumberPagination over an unordered queryset may repeat or
+    # skip rows between pages (the database owes no stable order). Username is
+    # unique, so the order is total. In the view rather than Meta.ordering,
+    # which would change every other UserProfile query and need a migration.
+    queryset = UserProfile.objects.select_related("user").order_by("user__username")
     http_method_names = ["get", "post", "put", "patch", "head", "options"]
 
     def get_serializer_class(self):
