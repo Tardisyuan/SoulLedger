@@ -3084,6 +3084,8 @@
         "close": "Close",
         "load_failed": "Could not load the image",
         "permission": "Photo access is needed to pick images",
+        "unreadable": "The selected images could not be opened; nothing was added",
+        "unreadable_some": "{{n}} of the selected images could not be opened and were skipped",
         "expired": "An image has expired; add it again",
         "errors": {
           "not_an_image": "Only PNG, JPEG or WebP images",

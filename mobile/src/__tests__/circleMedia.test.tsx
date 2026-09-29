@@ -110,7 +110,10 @@ function post(over: Record<string, unknown> = {}) {
 const page = (results: unknown[]) => ({ status: 200, data: { count: results.length, next: null, previous: null, results } });
 const STATUS = { status: 200, data: { user_id: 1, can_write: true, muted_until: null, reports_remaining: 5 } };
 const uploaded = (id: string) => ({ status: 201, data: { id, url: `/api/v1/social-media/${id}/?t=x`, width: 64, height: 48, byte_size: 900, content_type: "image/png" } });
-const picked = (n: number) => ({ canceled: false, assets: Array.from({ length: n }, (_, i) => ({ uri: `file:///p${i + 1}.jpg`, fileName: `p${i + 1}.jpg`, mimeType: "image/jpeg" })) });
+/** As expo-image-picker 57 answers: a readable image has `type: "image"` (MediaHandler.handleImage). */
+const picked = (n: number) => ({ canceled: false, assets: Array.from({ length: n }, (_, i) => ({ type: "image", uri: `file:///p${i + 1}.jpg`, fileName: `p${i + 1}.jpg`, mimeType: "image/jpeg" })) });
+/** An item Android's MediaProvider could not open: returned, but with no type and no file data (MediaHandler.readExtras). */
+const stale = (i: number) => ({ type: null, uri: `content://media/picker/0/stale${i}` });
 
 beforeEach(() => {
   installMobilePlatform();
@@ -349,10 +352,57 @@ describe("composer", () => {
 
   it("no photo access: says so, adds nothing", async () => {
     await openWith({});
-    mockLaunch.mockRejectedValueOnce(new Error("permission denied"));
+    // The code expo-modules-core infers from UserRejectedPermissionsException.
+    mockLaunch.mockRejectedValueOnce(Object.assign(new Error("User rejected permissions"), { code: "ERR_USER_REJECTED_PERMISSIONS" }));
     await act(async () => fireEvent.press(screen.getByTestId("media-add")));
     expect(await screen.findByText("需要相册权限才能选图")).toBeTruthy();
     expect(screen.queryByTestId("upload-0")).toBeNull();
+  });
+
+  describe("picked images the device cannot open (stale media: 'Picker file open failed')", () => {
+    const press = () => act(async () => fireEvent.press(screen.getByTestId("media-add")));
+
+    it("all of them: a notice, nothing added, nothing uploaded", async () => {
+      const calls = await openWith({});
+      mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [stale(1), stale(2)] });
+      await press();
+      expect(screen.getByTestId("toast").props.children).toBe("选的图片打不开，没有添加");
+      expect(screen.queryByTestId("upload-0")).toBeNull();
+      expect(calls.filter((c) => c.url === "/me/social/media/")).toEqual([]);
+      expect(screen.getByTestId("media-count").props.children).toBe("图片 0 / 9");
+    });
+
+    it("the picker returns nothing, or throws while reading them: the same notice, not the permission one", async () => {
+      await openWith({});
+      mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [] });
+      await press();
+      expect(screen.getByTestId("toast").props.children).toBe("选的图片打不开，没有添加");
+      mockLaunch.mockRejectedValueOnce(Object.assign(new Error("Failed to read a file"), { code: "ERR_FAILED_TO_READ_FILE" }));
+      await press();
+      expect(screen.getByTestId("toast").props.children).toBe("选的图片打不开，没有添加");
+      expect(screen.queryByText("需要相册权限才能选图")).toBeNull();
+      expect(screen.queryByTestId("upload-0")).toBeNull();
+    });
+
+    it("some of them: the good ones are added and upload; the notice counts the ones skipped", async () => {
+      const calls = await openWith({ "POST /me/social/media/": [uploaded("u1"), uploaded("u2")] });
+      const good = picked(2).assets;
+      mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [good[0], stale(1), good[1], stale(2), stale(3)] });
+      await press();
+      expect(screen.getByTestId("toast").props.children).toBe("有 3 张图片打不开，已跳过");
+      await waitFor(() => expect(screen.queryByTestId("upload-1-progress")).toBeNull());
+      expect(screen.getAllByTestId(/^upload-\d$/)).toHaveLength(2);
+      expect(screen.getByTestId("upload-1").findByType(Image).props.source.uri).toBe("file:///p2.jpg");
+      expect(calls.filter((c) => c.url === "/me/social/media/")).toHaveLength(2);
+    });
+
+    it("closing the picker says nothing and adds nothing", async () => {
+      await openWith({});
+      mockLaunch.mockResolvedValueOnce({ canceled: true, assets: null });
+      await press();
+      expect(screen.queryByTestId("toast")).toBeNull();
+      expect(screen.queryByTestId("upload-0")).toBeNull();
+    });
   });
 
   /**
@@ -390,7 +440,7 @@ describe("composer", () => {
   it("a picture already within 2048 is not scaled, only re-encoded; a PNG comes out as JPEG", async () => {
     mockDims["file:///p1.jpg"] = [2048, 1000];
     const calls = await openWith({ "POST /me/social/media/": uploaded("u1") });
-    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: "file:///p1.jpg", fileName: "shot.png", mimeType: "image/png" }] });
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ type: "image", uri: "file:///p1.jpg", fileName: "shot.png", mimeType: "image/png" }] });
     await act(async () => fireEvent.press(screen.getByTestId("media-add")));
     await waitFor(() => expect(calls.some((c) => c.url === "/me/social/media/")).toBe(true));
     expect(mockManip.resize).toEqual([]);

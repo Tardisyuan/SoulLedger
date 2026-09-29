@@ -3084,6 +3084,8 @@
         "close": "关闭",
         "load_failed": "图片加载失败",
         "permission": "需要相册权限才能选图",
+        "unreadable": "选的图片打不开，没有添加",
+        "unreadable_some": "有 {{n}} 张图片打不开，已跳过",
         "expired": "有图片已失效，请重新添加",
         "errors": {
           "not_an_image": "只能上传 PNG、JPEG 或 WebP 图片",
