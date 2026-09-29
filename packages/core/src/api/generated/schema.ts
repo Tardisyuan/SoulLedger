@@ -109,6 +109,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assist-admin/embedding/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_embedding_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description 地址、模型、截断维度任一变了,要先在 15 分钟内测通**同一套**(与供应商连接同一规则);k 与相似度下限不用。
+         *     换模型或维度保存后 `status.needs_rebuild` 为真:检索在重建前退回整份语料,不会拿旧向量去比。
+         */
+        patch: operations["assist_admin_embedding_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/embedding/rebuild/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 与 `manage.py sync_help_vectors` 同一个函数,同步执行(语料几十条,热模型约一两秒)。失败什么都不改。 */
+        post: operations["assist_admin_embedding_rebuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/embedding/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 对一句固定问题取向量:报延迟与返回维度。要了截断维度而返回的不是它 → `dims_mismatch`,判失败。 */
+        post: operations["assist_admin_embedding_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist-admin/eval/cases/": {
         parameters: {
             query?: never;
@@ -7641,6 +7695,13 @@ export interface components {
          */
         AssistMessageRoleEnum: "user" | "assistant";
         /**
+         * @description * `vector` - vector
+         *     * `fallback` - fallback
+         *     * `fallback_low_similarity` - fallback_low_similarity
+         * @enum {string}
+         */
+        AssistRetrievalEnum: "vector" | "fallback" | "fallback_low_similarity";
+        /**
          * @description * `soul` - soul
          *     * `officer` - officer
          * @enum {string}
@@ -8457,6 +8518,98 @@ export interface components {
          * @enum {string}
          */
         EmailNotSyncedEnum: "taken";
+        /** @description 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。 */
+        EmbeddingCandidate: {
+            /** Format: uri */
+            embedding_url?: string;
+            embedding_model?: string;
+            embedding_dims?: number | null;
+        };
+        EmbeddingConfig: {
+            embedding_url: string;
+            embedding_model: string;
+            /** @description null = 模型原生维度 */
+            embedding_dims: number | null;
+            retrieval_k: number;
+            /**
+             * Format: double
+             * @description 最近一条的余弦相似度低于它,这一问退回整份语料(fallback_low_similarity)
+             */
+            retrieval_min_similarity: number;
+            /** @description 页面改过(不再跟 env)的键 */
+            overridden: string[];
+            status: components["schemas"]["EmbeddingStatus"];
+        };
+        EmbeddingError: {
+            detail: string;
+            code: string;
+            /** Format: date-time */
+            retry_at?: string;
+            error_kind: components["schemas"]["EmbeddingErrorKindEnum"];
+        };
+        /**
+         * @description * `timeout` - timeout
+         *     * `connection` - connection
+         *     * `model_not_found` - model_not_found
+         *     * `dims_mismatch` - dims_mismatch
+         *     * `bad_response` - bad_response
+         *     * `other` - other
+         * @enum {string}
+         */
+        EmbeddingErrorKindEnum: "timeout" | "connection" | "model_not_found" | "dims_mismatch" | "bad_response" | "other";
+        EmbeddingRebuild: {
+            /** @description 这次新嵌入或重嵌的条数 */
+            embedded: number;
+            unchanged: number;
+            /** @description 语料里已不存在而删掉的行 */
+            deleted: number;
+            model: string;
+            dims: number | null;
+            /** @description PostgreSQL 上现有的 HNSW 索引名;行数未到阈值为 null */
+            index: string | null;
+            /** @description 删掉的旧模型 / 旧维度索引 */
+            dropped: string[];
+            status: components["schemas"]["EmbeddingStatus"];
+        };
+        EmbeddingStatus: {
+            /** @description 两种语言、两端的语料条目总数 */
+            entries: number;
+            /** @description 按当前模型与维度、当前正文已嵌入的条数 */
+            embedded: number;
+            /** @description 当前模型 / 维度 / 正文下有条目没有向量。测试通过不会自动重建;重建完成前检索退回整份语料 */
+            needs_rebuild: boolean;
+            /** @description 当前配置:模型,截断时为「模型@维度」 */
+            model: string;
+            /** Format: date-time */
+            last_rebuild_at: string | null;
+            last_rebuild_model: string | null;
+            /**
+             * @description 上次重建失败的原因;那次没有换进任何向量。成功一次即清空
+             *
+             *     * `timeout` - timeout
+             *     * `connection` - connection
+             *     * `model_not_found` - model_not_found
+             *     * `dims_mismatch` - dims_mismatch
+             *     * `bad_response` - bad_response
+             *     * `other` - other
+             */
+            last_error: (components["schemas"]["EmbeddingErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: date-time */
+            last_error_at: string | null;
+            /** @description 正在重建;此时再点重建答 409 rebuild_running */
+            rebuild_running: boolean;
+        };
+        EmbeddingTestResult: {
+            ok: boolean;
+            error_kind: (components["schemas"]["EmbeddingErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            latency_ms: number;
+            /** @description 返回的维度;失败时为 null */
+            dims: number | null;
+            embedding_url: string;
+            embedding_model: string;
+            /** @description 要求的截断维度;null = 原生 */
+            embedding_dims: number | null;
+        };
         /**
          * @description * `auth` - auth
          *     * `model_not_found` - model_not_found
@@ -8495,6 +8648,8 @@ export interface components {
             expected_tools?: string[];
             must_include?: string[];
             must_not_include?: string[];
+            /** @description 期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率 */
+            expected_entries?: string[];
             active?: boolean;
             /** Format: date-time */
             readonly created_at: string;
@@ -8603,6 +8758,9 @@ export interface components {
             included?: unknown;
             excluded?: unknown;
             passed?: boolean;
+            retrieval?: string;
+            retrieved?: unknown;
+            retrieval_hit?: boolean | null;
             latency_ms?: number;
             tokens?: unknown;
             /** Format: double */
@@ -8651,6 +8809,13 @@ export interface components {
             tool_accuracy: number | null;
             /** Format: double */
             phrase_hit_rate: number | null;
+            /**
+             * Format: double
+             * @description 写了期望条目的已答用例里,期望条目进了检索 top-k 的比例;没有这样的用例为 null
+             */
+            retrieval_hit_rate: number | null;
+            /** @description 已答用例里退回整份语料的条数;早于检索的运行为 null */
+            retrieval_fallbacks: number | null;
             /** Format: double */
             mean_latency_ms: number | null;
             /** Format: double */
@@ -11439,6 +11604,16 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
         };
+        /** @description 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。 */
+        PatchedEmbeddingUpdate: {
+            /** Format: uri */
+            embedding_url?: string;
+            embedding_model?: string;
+            embedding_dims?: number | null;
+            retrieval_k?: number;
+            /** Format: double */
+            retrieval_min_similarity?: number;
+        };
         PatchedEvalCase: {
             readonly id?: number;
             side?: components["schemas"]["AssistSideEnum"];
@@ -11448,6 +11623,8 @@ export interface components {
             expected_tools?: string[];
             must_include?: string[];
             must_not_include?: string[];
+            /** @description 期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率 */
+            expected_entries?: string[];
             active?: boolean;
             /** Format: date-time */
             readonly created_at?: string;
@@ -13870,6 +14047,9 @@ export interface components {
             answer: string;
             /** @description 按调用顺序的工具名,不含结果 */
             tools_called: string[];
+            retrieval: components["schemas"]["AssistRetrievalEnum"];
+            /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
+            retrieved_entries: string[];
             latency_ms: number;
             tokens: {
                 [key: string]: number;
@@ -13901,6 +14081,8 @@ export interface components {
             requests: number;
             by_status: components["schemas"]["UsageStatus"];
             failure_rates: components["schemas"]["FailureRates"];
+            /** @description 已答的请求按帮助条目的来源分(§7.5) */
+            by_retrieval: components["schemas"]["UsageRetrieval"];
             by_day: components["schemas"]["UsageDay"][];
             by_side: components["schemas"]["UsageSide"][];
             by_hall: components["schemas"]["UsageHall"][];
@@ -13933,6 +14115,13 @@ export interface components {
             cost: number;
             tenant_id: number | null;
             code: string | null;
+        };
+        UsageRetrieval: {
+            vector: number;
+            /** @description 向量服务不通、超时,或库里没有向量 */
+            fallback: number;
+            /** @description 最近一条也低于相似度下限 */
+            fallback_low_similarity: number;
         };
         UsageSide: {
             requests: number;
@@ -14677,6 +14866,126 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Corpus"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingConfig"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEmbeddingUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEmbeddingUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedEmbeddingUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingConfig"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_rebuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingRebuild"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingError"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EmbeddingCandidate"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmbeddingCandidate"];
+                "multipart/form-data": components["schemas"]["EmbeddingCandidate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingTestResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
                 };
             };
         };
