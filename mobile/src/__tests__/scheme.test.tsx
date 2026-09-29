@@ -58,13 +58,15 @@ it("app.json asks the OS to follow the system setting", () => {
   expect(appJson.expo.userInterfaceStyle).toBe("automatic");
 });
 
-it.each(["dark", "light"] as const)("system %s → the parchment of that scheme, primary button in ink", async (scheme) => {
+// v2: the primary button is one of the plaque's five places; before sign-in that is
+// the neutral plaque (补足 C 组 login: 中性皮), no longer the canvas's ink fill.
+it.each(["dark", "light"] as const)("system %s → the parchment of that scheme, primary button in the neutral plaque", async (scheme) => {
   mockScheme = scheme;
   renderApp();
   await screen.findByTestId("login-submit");
   expect(loginGround()).toBe(parchment[scheme].bg);
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
-    backgroundColor: parchment[scheme].ink,
+    backgroundColor: civ.neutral[scheme].plaque,
   });
   expect(loginGround()).not.toBe(civ.neutral[scheme].s1);
 });

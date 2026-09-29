@@ -9,8 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
-import { motion } from "./theme";
-import { Button, GUTTER, Txt, useReducedMotion, useTheme } from "./ui";
+import { Button, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "failure";
 type Show = (message: string, kind?: ToastKind) => void;
@@ -21,7 +20,7 @@ export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const t = useTheme();
-  const reduced = useReducedMotion();
+  const durations = useReducedMotionDurations();
   const [toast, setToast] = useState<{ message: string; kind: ToastKind; id: number } | null>(null);
   const [opacity] = useState(() => new Animated.Value(0));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,15 +29,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!toast) return;
-    const duration = reduced ? 0 : motion.toast;
+    const duration = durations.toast;
     Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }).start();
     timer.current = setTimeout(() => {
       Animated.timing(opacity, { toValue: 0, duration, useNativeDriver: true }).start(() => setToast(null));
-    }, motion.toastHold);
+    }, durations.toastHold);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [toast, opacity, reduced]);
+  }, [toast, opacity, durations]);
 
   return (
     <ToastContext.Provider value={show}>
@@ -83,14 +82,14 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
     <LogoutContext.Provider value={ask}>
       {children}
       <Modal visible={visible} transparent animationType={reduced ? "none" : "fade"} onRequestClose={cancel}>
-        <View style={styles.scrim}>
+        <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} onPress={cancel} accessibilityLabel={tr("soul_app.logout.cancel")} />
           <View
             testID="confirm-sheet"
             accessibilityViewIsModal
             style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 30 + insets.bottom }]}
           >
-            <Txt variant="title" style={styles.sheetTitle}>
+            <Txt variant="title">
               {tr("soul_app.logout.title")}
             </Txt>
             <Txt variant="caption" tone="muted">
@@ -124,14 +123,13 @@ const styles = StyleSheet.create({
     bottom: 110,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderWidth: 1,
   },
-  toastText: { flex: 1, fontSize: 13.5 },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  toastText: { flex: 1, fontSize: 13 },
+  scrim: { flex: 1 },
   sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
-  sheetTitle: { fontSize: 17 },
-  sheetButtons: { marginTop: 12, gap: 10 },
+  sheetButtons: { marginTop: 12, gap: 12 },
 });
