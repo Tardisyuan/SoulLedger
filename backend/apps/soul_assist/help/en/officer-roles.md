@@ -9,9 +9,9 @@ questions:
   - "what is the difference between a judge and a realm lead"
 ---
 The console has five officer roles. What each holds by default:
-- ADMIN (King Yama): everything, in every hall. The only role that sees across halls; the only one that manages users, menus, the permission matrix, tenants, the scheduler rebuild, and restores or permanently deletes from the recycle bin.
-- MODERATOR (realm lead): runs its own hall. Designs workflows and may escalate them, but may never approve or advance a workflow step and may never manage users; these three are refused by the server whatever the matrix says. Rules on judgments and may reassign them; full dispatch; sentence-plan cancellation; audit log; soul accounts, the hall-office inbox and circle moderation.
-- JUDGE: reads souls, declares death, opens and rules on judgments (cannot reassign), approves and advances workflow steps, reviews rebirth applications, creates cross-realm judgments. No dispatch.
-- GUARDIAN: edits souls and moves them between states, manages reincarnation, and proposes dispatches (cannot approve, reject or execute them).
-- VIEWER: read-only.
-An administrator can change the defaults in Permissions (except the three refusals above). For what this officer actually holds, use the my_permissions tool.
+- ADMIN (Administrator): everything, in every hall. The only role that sees across halls. Always ADMIN-only: managing users, editing the permission matrix, the scheduler rebuild, and restoring or permanently deleting from the recycle bin; nothing can be taken away from ADMIN. By default ADMIN-only (the matrix can change it): managing menus.
+- MODERATOR (realm lead): runs its own hall. Designs workflows and may escalate them, but may never approve or advance a workflow step and may never manage users; these three are always refused by the server, whatever the matrix says. Rules on judgments and may reassign them; full dispatch; sentence-plan cancellation; audit log; soul accounts, the hall-office inbox and circle moderation.
+- JUDGE (Judge): reads souls, declares death, moves souls between states, manages reincarnation, opens and rules on judgments (cannot reassign), approves and advances workflow steps, reviews rebirth applications, creates cross-realm judgments. No dispatch.
+- GUARDIAN (Guardian): edits souls and moves them between states, manages reincarnation, and proposes dispatches (cannot approve, reject or execute them).
+- VIEWER (Viewer): read-only.
+An administrator can change the defaults in Permissions & Roles, except the always-rules above: the realm lead's three refusals, the recycle-bin restore and permanent-delete permissions staying with ADMIN, and nothing being removable from ADMIN. The my_permissions tool reports only workflow approve, advance and escalate, user management, and dispatch approve, reject, execute and manage; for any other permission, say it cannot check that one.
