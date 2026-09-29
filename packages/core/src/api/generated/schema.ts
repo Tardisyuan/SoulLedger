@@ -237,6 +237,27 @@ export interface paths {
         patch: operations["assist_admin_hall_update"];
         trace?: never;
     };
+    "/api/v1/assist-admin/try/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description §3.3 试问:以配置里的评测身份问一句,看回答与工具调用(只给工具名)。走正式的 `service.ask`
+         *     —— 数据范围、审计(`"eval": true`)与正式提问相同;会话标 `is_eval`,不进本人列表;用量标 `is_eval`,
+         *     不计用量与月度上限。不查总开关与每殿开关:与评测一样,管理员要在打开之前先试。
+         */
+        post: operations["assist_admin_try"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist-admin/usage/": {
         parameters: {
             query?: never;
@@ -13838,6 +13859,24 @@ export interface components {
          * @enum {string}
          */
         TriggerEnum: "SCHEDULE" | "MANUAL";
+        /** @description §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。 */
+        TryRequest: {
+            side: components["schemas"]["AssistSideEnum"];
+            question: string;
+            candidate?: components["schemas"]["Candidate"];
+        };
+        TryResult: {
+            side: components["schemas"]["AssistSideEnum"];
+            answer: string;
+            /** @description 按调用顺序的工具名,不含结果 */
+            tools_called: string[];
+            latency_ms: number;
+            tokens: {
+                [key: string]: number;
+            };
+            provider: string;
+            model: string;
+        };
         /**
          * @description kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
          *     ledger gets no reading rather than a guessed one. `reason_code` is a
@@ -14956,6 +14995,55 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_try: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TryRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TryRequest"];
+                "multipart/form-data": components["schemas"]["TryRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TryResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
