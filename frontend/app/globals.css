@@ -501,6 +501,149 @@
   [data-civ="gr"] {
     --color-main: var(--color-civ-gr);
   }
+
+  /* 文明皮的其余三样 —— 匾纹、印形、两款字体(规范 v2 §三、§四;素材在 public/v2/)。
+     与匾色同一个开关:<html data-civ> 给整页,印组件在自己的根元素上也写 data-civ,所以
+     一枚别的文明的印放在本页也拿到它自己的形与色。素材全是单色 currentColor 的 SVG,
+     这里一律当 CSS 遮罩用,颜色由遮罩下面的底色给,所以换主题不用换文件。
+     字体变量来自 src/components/plaque/fonts.ts(next/font,按需加载)。
+     中性皮(登录前、不认得的租户)没有印,匾纹只留上下两道细线(见 .plaque-band)。 */
+  :root,
+  [data-civ="neutral"] {
+    --band: none;
+    --band-compact: none;
+    --font-plaque: var(--font-serif);
+    --font-seal: var(--font-serif);
+  }
+  [data-civ="cn"] {
+    --band: url("/v2/svg/band-cn.svg");
+    --band-compact: url("/v2/svg/band-cn-compact.svg");
+    --seal-body: url("/v2/svg/seal-cn-body.svg");
+    --seal-ring: url("/v2/svg/seal-cn-ring.svg");
+    --seal-line: url("/v2/svg/seal-cn-line.svg");
+    --seal-line-small: url("/v2/svg/seal-cn-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-cnseal-1x.png") 1x, url("/v2/textures/scan-cnseal-2x.png") 2x);
+    --section: url("/v2/svg/section-cn.svg");
+    --font-plaque: var(--font-ma-shan-zheng), var(--font-serif);
+    --font-seal: var(--font-lxgw-seal), var(--font-serif);
+  }
+  [data-civ="eu"] {
+    --band: url("/v2/svg/band-eu.svg");
+    --band-compact: url("/v2/svg/band-eu-compact.svg");
+    --seal-body: url("/v2/svg/seal-eu-body.svg");
+    --seal-ring: url("/v2/svg/seal-eu-ring.svg");
+    --seal-line: url("/v2/svg/seal-eu-line.svg");
+    --seal-line-small: url("/v2/svg/seal-eu-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-wax-1x.png") 1x, url("/v2/textures/scan-wax-2x.png") 2x);
+    --section: url("/v2/svg/section-eu.svg");
+    --font-plaque: var(--font-unifraktur), var(--font-serif);
+    --font-seal: var(--font-unifraktur), var(--font-serif);
+  }
+  [data-civ="eg"] {
+    --band: url("/v2/svg/band-eg.svg");
+    --band-compact: url("/v2/svg/band-eg-compact.svg");
+    --seal-body: url("/v2/svg/seal-eg-body.svg");
+    --seal-ring: url("/v2/svg/seal-eg-ring.svg");
+    --seal-line: url("/v2/svg/seal-eg-line.svg");
+    --seal-line-small: url("/v2/svg/seal-eg-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-clay-1x.png") 1x, url("/v2/textures/scan-clay-2x.png") 2x);
+    --section: url("/v2/svg/section-eg.svg");
+    --font-plaque: var(--font-josefin-slab), var(--font-serif);
+    --font-seal: var(--font-hieroglyphs), var(--font-serif);
+  }
+  [data-civ="gr"] {
+    --band: url("/v2/svg/band-gr.svg");
+    --band-compact: url("/v2/svg/band-gr-compact.svg");
+    --seal-body: url("/v2/svg/seal-gr-body.svg");
+    --seal-ring: url("/v2/svg/seal-gr-ring.svg");
+    --seal-line: url("/v2/svg/seal-gr-line.svg");
+    --seal-line-small: url("/v2/svg/seal-gr-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-cyl-1x.png") 1x, url("/v2/textures/scan-cyl-2x.png") 2x);
+    --section: url("/v2/svg/section-gr.svg");
+    --font-plaque: var(--font-cinzel), var(--font-serif);
+    --font-seal: var(--font-gfs-didot), var(--font-serif);
+  }
+
+  /* 宽度 < 768 时立柱收成固定在底部的 56px 底栏(AppLayout 的 BottomBar)。页面里吸底的
+     操作条(审判队列的裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
+  html {
+    --bottom-bar: 0px;
+  }
+  @media (max-width: 767.98px) {
+    html {
+      --bottom-bar: 56px;
+    }
+  }
+
+  /* 匾纹样带 · 480×22,横向平铺;≤ 393 用 compact(去点缀,埃及再去莲花扇形)。 */
+  .plaque-band {
+    height: 22px;
+    background: oklch(var(--color-on-main));
+    mask: var(--band) left center / 480px 22px repeat-x;
+  }
+  @media (max-width: 393px) {
+    .plaque-band {
+      mask-image: var(--band-compact);
+    }
+  }
+  /* 中性皮:无匾纹,只留上下两道细线。 */
+  :root:not([data-civ]) .plaque-band,
+  [data-civ="neutral"] .plaque-band {
+    background: none;
+    mask: none;
+    border-block: 1px solid oklch(var(--color-on-main));
+    height: 6px;
+    margin-block: 8px;
+  }
+
+  /* 页面级分节纹 · 48×12,线色 ink3,只用在页面级分节上(表内小分组仍是细线)。
+     中性皮没有分节纹,退成一道细线。 */
+  .section-rule {
+    width: 48px;
+    height: 12px;
+    flex: none;
+    background: oklch(var(--color-ink-subtle));
+    mask: var(--section, linear-gradient(transparent 11px, black 11px)) center / 48px 12px no-repeat;
+  }
+
+  /* 印 · 叠放 body → ring(扫描遮罩)→ line(≤ 32 用 line-small)→ 印文。 */
+  .seal {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    color: oklch(var(--color-on-main));
+  }
+  .seal-layer {
+    position: absolute;
+    inset: 0;
+    mask: var(--seal-mask) center / 100% 100% no-repeat;
+  }
+  .seal-body {
+    --seal-mask: var(--seal-body);
+    background: oklch(var(--color-main));
+  }
+  .seal-ring {
+    --seal-mask: var(--seal-ring);
+    background: var(--seal-scan) center / 100% 100%;
+    opacity: 0.8;
+  }
+  .seal-line {
+    --seal-mask: var(--seal-line);
+    background: oklch(var(--color-on-main));
+  }
+  .seal[data-small] .seal-line {
+    --seal-mask: var(--seal-line-small);
+  }
+  .seal-glyphs {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: var(--font-seal);
+    line-height: 1;
+  }
 }
 
 /* THE THEME SWAP, and it is deliberately not a permanent rule.
