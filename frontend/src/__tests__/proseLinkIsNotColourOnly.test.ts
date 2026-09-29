@@ -182,7 +182,9 @@ describe("段落里的链接不是只靠颜色", () => {
         // **不静默放过** —— 判不了和判过了是两件事。
         offenders.push(
           `${link.file}: 链接没有静息态可辨性,而它(${link.linkClass})或它所在段落` +
-            `(${link.paragraphClass})的文字色不是 text-[oklch(var(--color-*))] 的形式,` +
+            // 别把完整类名写回这里:Tailwind 连测试源码也扫,`*` 会被生成成一条非法 CSS,
+            // `next build` 因此报「Found 1 warning while optimizing generated CSS」。
+            `(${link.paragraphClass})的文字色不是「text- 加 oklch(var(--color-<token>)) 任意值」的形式,` +
             `这条守卫量不了它们的对比度`
         );
         continue;
