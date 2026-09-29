@@ -586,8 +586,13 @@ export function ComposePostScreen() {
 
   const addImages = async () => {
     const picked = await pickImages(uploads.room);
-    if (picked === null) toast(tr("soul_app.circle.media.permission"), "failure");
-    else if (picked.length) uploads.add(picked);
+    if (picked === null) return toast(tr("soul_app.circle.media.permission"), "failure");
+    // Closing the picker is { images: [], unreadable: 0 }: nothing to add, nothing to say.
+    if (picked.images.length) uploads.add(picked.images);
+    if (picked.unreadable) {
+      const key = picked.images.length ? "soul_app.circle.media.unreadable_some" : "soul_app.circle.media.unreadable";
+      toast(tr(key, { n: String(picked.unreadable) }), "failure");
+    }
   };
 
   const submit = async (text: string) => {

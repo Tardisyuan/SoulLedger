@@ -3084,6 +3084,8 @@
         "close": "Khetem",
         "load_failed": "Nen Ini Tut",
         "permission": "Was Tut: Sesen",
+        "unreadable": "Nen Wen Tut",
+        "unreadable_some": "Tut {{n}} Nen Wen: Fekh",
         "expired": "Tut Nen Wenen: Wehem Ini Tut",
         "errors": {
           "not_an_image": "PNG, JPEG Er WebP Wa",
