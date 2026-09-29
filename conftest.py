@@ -113,6 +113,20 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
 
 
 @pytest.fixture(scope="session")
+def django_db_modify_db_settings(django_db_modify_db_settings):
+    """Give each run its own PostgreSQL test database (`test_soulledger_<hex>`),
+    so two concurrent `--create-db` runs on 115 no longer collide. Requests
+    pytest-django's fixture first, so the xdist `_gwN` suffix is already on the
+    name. SQLite untouched. See backend/config/testdb.py.
+    """
+    from django.conf import settings
+
+    from config.testdb import run_suffix, suffix_postgres_test_databases
+
+    suffix_postgres_test_databases(settings.DATABASES, run_suffix())
+
+
+@pytest.fixture(scope="session")
 def django_db_setup(django_db_setup):
     """Close the database connection that `database_sync_to_async` left open,
     before pytest-django drops the test database.

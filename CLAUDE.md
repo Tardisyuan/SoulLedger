@@ -226,9 +226,13 @@ cd frontend && npx playwright test --project=firefox
 cd frontend && npx playwright test --project=mobile-chrome
 
 # 真 PostgreSQL 上跑一遍 —— 上面那条 SQLite 命令跑不到的东西在这里
-# 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建 test_soulledger
+# 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建测试库
 # 再删掉,不碰真库。`--create-db` 是必需的:陈旧的 test_soulledger 会造成上千条
 # 「环境错误」,那正是这条路径当初被判成不可用的原因。
+# 2026-09-29 起库名是每次运行一个:`test_soulledger_<8 位 hex>`(根 conftest +
+# `backend/config/testdb.py`),两个会话同时 `--create-db` 不再撞同一个库
+# (此前第二个全部 `DuplicateDatabase` / `ObjectInUse`)。要固定名字(找库、
+# `--reuse-db`)就设 `SOULLEDGER_TEST_DB_SUFFIX=<[a-z0-9_]{1,20}>`。
 #
 # **只放开数据库,Redis 仍然用一次性的那台(见最上面)。** 这条命令此前什么都
 # 不覆盖,于是 REDIS_URL 也读 `.env` 指向 115 —— 最上面那段 2026-08-27 验证过的
@@ -276,7 +280,9 @@ mobile 300,E2E chromium 155 / firefox 155 / mobile-chrome 151,egyLexiconRules 28
 **「7 skipped」不是噪音,是 5 条从没在这条路径上跑过的测试。**
 
 跑完记得看 115 上有没有留下 `test_soulledger*`:pytest-django 正常会删掉它,
-中断或 xdist 会留下。2026-08-31 清理时那里躺着 **8 个**(最老的是 2026-06-06 的),
+中断或 xdist 会留下。库名现在带每次运行的后缀(`test_soulledger_3f9a0c1e`),
+下面的 `like 'test_soulledger%'` 照样匹配;**别在另一个会话还在跑时删**,
+后缀不同的那个可能正在用。2026-08-31 清理时那里躺着 **8 个**(最老的是 2026-06-06 的),
 每一个都是空库,而**陈旧的 test_soulledger 正是那上千条「环境错误」的成因**。
 
     psql -U soulledger -d postgres -Atc \
