@@ -245,6 +245,20 @@ describe("the list", () => {
     expect(within(screen.getByTestId("hall-row")).getByText("第五殿 · 殿司")).toBeTruthy();
   });
 
+  it("the souls are a FlatList keyed by conversation id: a long list mounts only its first screens", () => {
+    const souls = Array.from({ length: 60 }, (_, i) => conv({ id: `s${i}`, room_id: `!s${i}`, peer_name: `灵魂${i}` }));
+    wrap(chatState({ conversations: souls }), <LettersScreen />);
+    const list = screen.UNSAFE_getByType(FlatList);
+    const keys = (list.props.data as SoulConversation[]).map((c) => list.props.keyExtractor(c));
+    expect(new Set(keys)).toEqual(new Set(souls.map((c) => c.id)));
+    const shown = order().filter((id) => /^soul-row-s\d+$/.test(id));
+    expect(shown.length).toBeGreaterThan(0);
+    expect(shown.length).toBeLessThan(60);
+    // The header (hall, rule) is still above the first soul, and the empty state is not there.
+    expect(order().indexOf("section-rule")).toBeLessThan(order().indexOf(shown[0]));
+    expect(screen.queryByTestId("chat-empty")).toBeNull();
+  });
+
   it("a request whose other soul is gone reads 已闭, not 待回复", () => {
     const gone = conv({ id: "g", room_id: "!g", throttled: true, initiated_by_me: true, mutual: false, refusal: "peer_retired" });
     wrap(chatState({ conversations: [gone] }), <LettersScreen />);
