@@ -9,7 +9,7 @@ from dataclasses import replace
 from django.db import transaction
 from django.db.models import Count
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import generics, permissions, status
+from rest_framework import exceptions, generics, permissions, status, throttling
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -31,6 +31,8 @@ from apps.soul_assist.admin_serializers import (
     EvalStartSerializer,
     HallSerializer,
     HallUpdateSerializer,
+    TryRequestSerializer,
+    TryResultSerializer,
     UsageSerializer,
 )
 from apps.soul_assist.models import AssistConfig, AssistEvalCase, AssistEvalRun
@@ -234,6 +236,50 @@ class EvalRunListView(AdminView):
 class EvalRunDetailView(AdminView, generics.RetrieveAPIView):
     serializer_class = EvalRunDetailSerializer
     queryset = AssistEvalRun.objects.prefetch_related("results")
+
+
+class TryThrottle(throttling.UserRateThrottle):
+    """试问每次都真花钱,而且不计用量、不受月度上限:按管理员计,每小时最多这么多次。
+    (评测由单次条数上限与花费上限挡着;试问一次一条,挡的是连点。)"""
+
+    scope = "assist_admin_try"
+    rate = "60/hour"
+
+
+class TryView(AdminView):
+    """§3.3 试问:以配置里的评测身份问一句,看回答与工具调用(只给工具名)。走正式的 `service.ask`
+    —— 数据范围、审计(`"eval": true`)与正式提问相同;会话标 `is_eval`,不进本人列表;用量标 `is_eval`,
+    不计用量与月度上限。不查总开关与每殿开关:与评测一样,管理员要在打开之前先试。"""
+
+    throttle_classes = [TryThrottle]
+
+    def handle_exception(self, exc):
+        if isinstance(exc, exceptions.Throttled):
+            return _error("试问太频繁,请稍后再试。", "rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
+        if isinstance(exc, service.AssistError):
+            return _error(str(exc), exc.code, exc.status)
+        return super().handle_exception(exc)
+
+    @extend_schema(operation_id="assist_admin_try", request=TryRequestSerializer,
+                   responses={200: TryResultSerializer, 400: AssistErrorSerializer, 429: AssistErrorSerializer,
+                              503: AssistErrorSerializer})
+    def post(self, request):
+        from apps.core.locale import locale_from_request
+
+        body = TryRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        base = config.effective().connection
+        try:
+            conn = config.candidate(data["candidate"], base) if "candidate" in data else base
+        except config.KeyRequiredError:
+            return _key_required()
+        try:
+            result = evals.try_question(data["side"], data["question"], conn,
+                                        corpus.corpus_locale(locale_from_request(request)), request)
+        except evals.NoEvalIdentityError as missing:
+            return _error("缺少评测身份,先创建评测身份。", missing.code)
+        return Response(TryResultSerializer(result).data)
 
 
 class UsageView(AdminView):

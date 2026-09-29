@@ -22,6 +22,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
+import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -356,6 +357,7 @@ export default function SoulsPage() {
               >
                 {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
               </Badge>
+              {soul.is_eval_identity && <EvalIdentityTag />}
             </td>
             {/* §4.6: this column was `+0` on every row. A sign is only ever
                 attached to a value that has one, so a zero balance now

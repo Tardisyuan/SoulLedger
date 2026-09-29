@@ -166,12 +166,23 @@ def _officer_request(user):
     return request
 
 
-def _asker(case, eff):
-    if case.side == "soul":
+def _asker(side, screen, locale, eff):
+    if side == "soul":
         account = eval_identities.live_account(eff.eval_soul_account_id)
-        return None if account is None else service.soul_asker(account, case.screen, case.locale)
+        return None if account is None else service.soul_asker(account, screen, locale)
     user = eval_identities.live_officer(eff.eval_officer_id)
-    return None if user is None else service.officer_asker(_officer_request(user), case.screen, case.locale)
+    return None if user is None else service.officer_asker(_officer_request(user), screen, locale)
+
+
+def _ask_as(asker, question, screen, lang, conn, request=None):
+    """以评测身份走正式的 `service.ask`(`is_eval`:开新会话、不计用量与月度上限)。租户上下文按提问者设。"""
+    from apps.tenants.managers import clear_current_tenant, set_current_tenant
+
+    set_current_tenant(asker.tenant)
+    try:
+        return service.ask(asker, question, screen, lang=lang, conn=conn, is_eval=True, request=request)[1]
+    finally:
+        clear_current_tenant()
 
 
 def judge(case, text, tools_called):
@@ -184,18 +195,16 @@ def judge(case, text, tools_called):
 
 def run_case(run, index, conn, case, eff):
     from apps.soul_assist.models import AssistEvalResult
-    from apps.tenants.managers import clear_current_tenant, set_current_tenant
 
     result = AssistEvalResult(run=run, candidate=index, case=case, question=case.question, side=case.side)
-    asker = _asker(case, eff)
+    asker = _asker(case.side, case.screen, case.locale, eff)
     if asker is None:
         result.error = "no_eval_identity"
         result.save()
         return result
     begin = time.monotonic()
-    set_current_tenant(asker.tenant)
     try:
-        _, reply = service.ask(asker, case.question, case.screen, lang=case.locale, conn=conn, is_eval=True)
+        reply = _ask_as(asker, case.question, case.screen, case.locale, conn)
     except service.AssistError as exc:
         result.error = exc.code
     except Exception:  # 一条用例坏了不拖垮整次运行;原因进日志,结果里只记 internal
@@ -207,8 +216,6 @@ def run_case(run, index, conn, case, eff):
                                                                                  reply.tool_calls)
         result.cost = config.cost(eff.prices, conn.model, reply.tokens.get("input", 0),
                                   reply.tokens.get("output", 0), reply.tokens.get("cache_read", 0))
-    finally:
-        clear_current_tenant()
     result.latency_ms = _ms(begin)
     result.save()
     return result
@@ -244,6 +251,29 @@ def execute(run_id):
     AssistEvalRun.objects.filter(pk=run.pk, status="running").update(
         status=status, summary=summarize(run), finished_at=timezone.now(), done=run.results.count())
     return status
+
+
+# ── 试问(§3.3)───────────────────────────────────────────────────────────────
+
+
+class NoEvalIdentityError(Exception):
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+def try_question(side, question, conn, lang, request=None) -> dict:
+    """以配置里的评测身份问一句,看回答与工具调用。与评测同一条路(`service.ask`,正式的数据范围与审计,
+    `is_eval` 不计用量);身份缺了 → `NoEvalIdentityError("no_eval_soul" / "no_eval_officer")`。
+    `service.AssistError`(503 / 429)原样抛给调用方。"""
+    asker = _asker(side, "other", lang, config.effective())
+    if asker is None:
+        raise NoEvalIdentityError(f"no_eval_{side}")
+    begin = time.monotonic()
+    reply = _ask_as(asker, question, "other", lang, conn, request)
+    return {"side": side, "answer": reply.content, "tools_called": list(reply.tool_calls),
+            "latency_ms": _ms(begin), "tokens": reply.tokens, "provider": config.provider_name(conn.provider),
+            "model": conn.model}
 
 
 def fail_stale():

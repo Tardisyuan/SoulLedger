@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.soul_assist import config
 from apps.soul_assist.models import OFFICER_SCREENS, SCREENS, AssistEvalCase, AssistEvalResult, AssistEvalRun
+from apps.soul_assist.serializers import MAX_QUESTION_LENGTH
 
 ERROR_KINDS = ("auth", "model_not_found", "timeout", "rate_limited", "connection", "tools_unsupported", "other")
 
@@ -161,6 +162,24 @@ class EvalPreviewSerializer(serializers.Serializer):
     problems = serializers.ListField(child=serializers.ChoiceField(choices=(
         "unpriced_model", "no_cases", "too_many_asks", "over_spend_cap", "no_eval_soul", "no_eval_officer")))
     confirm_token = serializers.CharField(allow_null=True, help_text="problems 为空时才有;开始运行要带它")
+
+
+class TryRequestSerializer(serializers.Serializer):
+    """§3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。"""
+
+    side = serializers.ChoiceField(choices=("soul", "officer"))
+    question = serializers.CharField(max_length=MAX_QUESTION_LENGTH, trim_whitespace=True)
+    candidate = CandidateSerializer(required=False)
+
+
+class TryResultSerializer(serializers.Serializer):
+    side = serializers.ChoiceField(choices=("soul", "officer"))
+    answer = serializers.CharField()
+    tools_called = serializers.ListField(child=serializers.CharField(), help_text="按调用顺序的工具名,不含结果")
+    latency_ms = serializers.IntegerField()
+    tokens = serializers.DictField(child=serializers.IntegerField())
+    provider = serializers.CharField()
+    model = serializers.CharField()
 
 
 class EvalStartSerializer(serializers.Serializer):

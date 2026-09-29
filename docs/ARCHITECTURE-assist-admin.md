@@ -107,7 +107,7 @@
 
 接口:`config/`(GET / PATCH)、`config/test/`(POST 候选配置)、`halls/`、`halls/<id>/`(PATCH 每殿开关)、
 `eval/cases/`(增删改查)、`eval/preview/`、`eval/runs/`(GET 列表 / POST 凭确认令牌开始)、`eval/runs/<id>/`、
-`usage/?month=YYYY-MM`、`corpus/`、`eval/identities/`(POST,§7)。
+`usage/?month=YYYY-MM`、`corpus/`、`eval/identities/`(POST,§7)、`try/`(POST,§3.3)。
 
 **与计划不同之处,以及为什么:**
 
@@ -137,7 +137,12 @@
   运行中实际花费到上限就停(`stopped_at_cap`)。预估用粗估的 token(非 ASCII 字符 1 个、ASCII 每 4 个字符 1 个;期望调工具的用例按两轮)。
   确认令牌一次性、10 分钟、只认发它的那位管理员。候选配置里的 key 落库是 Fernet 密文,响应里没有。
 - **语料 token 数取「最大的一份 system prompt」**(语言 × 受众),即一次请求实际带上的那份,与阶段 4 的 8 万阈值比。
-- **§3.3 试问没有做**:不在本轮的任务单里。评测已能用测试身份单问一条(评测集里只留一条用例)。
+- **§3.3 试问(2026-09-29 补上)**:`POST try/` `{side, question, candidate?}`,以配置里的评测身份走 `service.ask`
+  (数据范围、审计同评测;会话与用量标 `is_eval`,不计用量与月度上限;不查开关)。候选配置同连通测试的 key 规则;
+  只回工具名、不回工具结果;缺身份 400 `no_eval_soul` / `no_eval_officer`;按管理员每小时 60 次(`TryThrottle`,429 `rate_limited`)。
+  测试 `backend/tests/test_assist_admin_try.py`。
+- **评测身份在列表里显示**(用户 2026-09-29 定):灵魂列表 / 详情与用户管理的 `is_eval_identity`,每请求一次连表查询;
+  Web 上是虚线中性色标签「评测专用 · 不能登录」,跟在行的状态标签之后。侧边栏入口:menus 迁移 `0020`(「系统设置」下,只给 ADMIN,无权限码)。
 - **每殿开关的审计**也写 `resource="assistant_config"`,`resource_id="tenant:<殿代码>"`。
 
 **未核实:** 真 PostgreSQL 上没有跑(本轮只跑 SQLite;另一个 worktree 正占着 PG)。`select_for_update` 在 SQLite 上是空操作,

@@ -30,6 +30,7 @@ admin_urlpatterns = [
     path("eval/preview/", admin_views.EvalPreviewView.as_view(), name="assist-admin-eval-preview"),
     path("eval/runs/", admin_views.EvalRunListView.as_view(), name="assist-admin-eval-runs"),
     path("eval/runs/<int:pk>/", admin_views.EvalRunDetailView.as_view(), name="assist-admin-eval-run"),
+    path("try/", admin_views.TryView.as_view(), name="assist-admin-try"),
     path("usage/", admin_views.UsageView.as_view(), name="assist-admin-usage"),
     path("corpus/", admin_views.CorpusView.as_view(), name="assist-admin-corpus"),
 ]
