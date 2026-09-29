@@ -2283,7 +2283,8 @@
       "rebirth_applications": "Rebirth Applications",
       "soul_inbox": "Hall Inbox",
       "sentence_requests": "Sentence Requests"
-    }
+    },
+    "queue": "Triage queue"
   },
   "tenant": {
     "civilizations": {

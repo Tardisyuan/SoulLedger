@@ -134,13 +134,13 @@ function PillarItem({
   }, [current]);
 
   const className = `${PILLAR_ITEM} ${wide ? HORIZONTAL : VERTICAL} ${current ? "font-semibold" : ""}`;
+  const title = label.gloss ? `${label.primary} ${label.gloss}` : label.primary;
   const body = (
     <>
       {current ? <CurrentBlock id="pillar-current" /> : null}
-      <span className={`relative ${wide ? "line-clamp-2" : ""}`}>{label.primary}</span>
+      <span title={title} className={`relative ${wide ? "line-clamp-2" : ""}`}>{label.primary}</span>
     </>
   );
-  const title = label.gloss ? `${label.primary} ${label.gloss}` : label.primary;
 
   if (!menu.children?.length && !isDirectory(menu)) {
     return (
@@ -150,7 +150,6 @@ function PillarItem({
         }}
         href={menu.path}
         prefetch={true}
-        title={title}
         aria-current={current ? "page" : undefined}
         className={className}
       >
@@ -164,7 +163,6 @@ function PillarItem({
         ref.current = el;
       }}
       type="button"
-      title={title}
       aria-expanded={open}
       aria-current={current ? "true" : undefined}
       onClick={onToggle}
@@ -203,14 +201,13 @@ function SecondaryLink({ menu, active, onNavigate }: { menu: SidebarMenu; active
       prefetch={true}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      title={gloss ? `${primary} ${gloss}` : primary}
       className={`flex min-h-8 items-center border-b border-[oklch(var(--color-line))] px-3 text-sm ${
         active
           ? "bg-[oklch(var(--color-surface-2))] font-semibold text-[oklch(var(--color-ink))] shadow-[inset_3px_0_0_oklch(var(--color-main))]"
           : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
       }`}
     >
-      <span className="truncate">{primary}</span>
+      <span title={gloss ? `${primary} ${gloss}` : primary} className="truncate">{primary}</span>
     </Link>
   );
 }
@@ -313,18 +310,17 @@ export function BottomBar({
           const body = (
             <>
               {current ? <CurrentBlock id="bar-current" /> : null}
-              <span className={`relative line-clamp-2 break-words ${current ? "font-semibold" : ""}`}>{primary}</span>
+              <span title={primary} className={`relative line-clamp-2 break-words ${current ? "font-semibold" : ""}`}>{primary}</span>
             </>
           );
           return !menu.children?.length && !isDirectory(menu) ? (
-            <Link key={menu.id} href={menu.path} aria-current={current ? "page" : undefined} title={primary} className={cell}>
+            <Link key={menu.id} href={menu.path} aria-current={current ? "page" : undefined} className={cell}>
               {body}
             </Link>
           ) : (
             <button
               key={menu.id}
               type="button"
-              title={primary}
               aria-expanded={sheet === menu.id}
               aria-current={current ? "true" : undefined}
               onClick={() => setSheet((s) => (s === menu.id ? null : menu.id))}

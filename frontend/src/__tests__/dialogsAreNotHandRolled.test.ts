@@ -61,7 +61,7 @@ const ALLOWED: Record<string, string> = {
   "src/components/ui/Modal.tsx": "the primitive; `fixed inset-0` belongs here",
   "src/components/ui/Drawer.tsx":
     "the right-drawer primitive (规范 v1 抽屉), on the same Base UI Dialog as Modal — focus trap, Escape and focus return come from the primitive",
-  "src/components/layout/AppLayout.tsx": "navigation drawer scrim, keyboard handled by useDrawerA11y",
+  "src/components/layout/Pillar.tsx": "393 底栏的「更多」底部抽屉与它的遮罩(规范 v2 取代 AppLayout 的 ☰ 抽屉),keyboard handled by useDrawerA11y",
   "src/components/settings/SettingsDrawer.tsx": "settings drawer scrim, keyboard handled by useDrawerA11y",
   "src/components/scheduler/TaskRunsDrawer.tsx": "run-history drawer scrim, keyboard handled by useDrawerA11y (same pattern as SettingsDrawer)",
   "src/components/souls/detail/SoulHeaderActions.tsx":

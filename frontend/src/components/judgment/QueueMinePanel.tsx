@@ -9,6 +9,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
 import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { MOTION_EASINGS } from "@/lib/motion";
 
 /**
@@ -99,12 +100,13 @@ export function QueueMinePanel({
                       title={j.soul_name || undefined}
                       className={`min-w-0 flex-1 truncate text-left text-[oklch(var(--color-ink))] hover:underline ${j.id === currentId ? "font-semibold" : ""}`}
                     >
-                      {j.soul_name || j.id.slice(0, 8)}
+                      {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
                     </button>
-                    <span className="truncate font-mono text-2xs text-[oklch(var(--color-ink-subtle))] max-sm:hidden" title={j.court || undefined}>
-                      {j.id.slice(0, 8)}
-                      {j.court ? ` · ${j.court}` : ""}
-                    </span>
+                    {j.court ? (
+                      <span className="truncate text-xs text-[oklch(var(--color-ink-subtle))] max-sm:hidden" title={j.court}>
+                        {j.court}
+                      </span>
+                    ) : null}
                     {canAssign && (
                       <button
                         type="button"
