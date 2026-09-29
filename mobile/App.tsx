@@ -1,6 +1,8 @@
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
+import { StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { FONT_ASSETS } from "./src/fonts";
@@ -22,14 +24,19 @@ export default function App() {
     hydratePersistentStore().finally(() => setHydrated(true));
   }, []);
   if (!hydrated || !(fontsLoaded || fontError)) return null;
+  // Gesture Handler and @gorhom/bottom-sheet (v2 motion) need this root; on its own it changes nothing.
   return (
-    <SafeAreaProvider>
-      <I18nProvider>
-        <SessionProvider>
-          <StatusBar style="auto" />
-          <RootNavigator />
-        </SessionProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <I18nProvider>
+          <SessionProvider>
+            <StatusBar style="auto" />
+            <RootNavigator />
+          </SessionProvider>
+        </I18nProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({ root: { flex: 1 } });

@@ -26,6 +26,6 @@ module.exports = {
   // jest-expo transforms only an allow-list of node_modules; @soulledger/core is
   // TypeScript source reached through a symlink, and axios ships ESM.
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@soulledger/.*|axios))",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@soulledger/.*|@gorhom/.*|axios))",
   ],
 };
