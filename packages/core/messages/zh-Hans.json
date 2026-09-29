@@ -14,7 +14,8 @@
     "language": "界面语言",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
-    "mobile_menu": "导航菜单"
+    "mobile_menu": "导航菜单",
+    "more": "更多"
   },
   "auth": {
     "login": "登录",

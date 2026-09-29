@@ -19,11 +19,14 @@ const MOUNT_LINGER_MS = 200;
 interface SettingsDrawerProps {
   open: boolean;
   onClose: () => void;
-  navMode: "classic" | "compact";
-  onNavModeChange: (mode: "classic" | "compact") => void;
 }
 
-export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: SettingsDrawerProps) {
+/*
+ * 「导航模式 · 经典 / 紧凑」也撤掉了(规范 v2):v1 的 200px 侧栏与 56px 编号栏换成了立柱,
+ * 立柱的宽度由标签长度决定(竖排 60 / 横排 88,`src/lib/pillar.ts`),没有可选的第二种。
+ * localStorage 里旧的 `soulledger_nav_mode` 从此没有代码读。
+ */
+export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
 
@@ -156,38 +159,6 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 </span>
               </button>
             </div>
-          </div>
-
-          {/* Navigation Mode Section */}
-          <div className="mb-6">
-            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onNavModeChange("classic")}
-                className={`flex-1 py-2 px-3 text-sm transition-colors ${
-                  navMode === "classic"
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
-                }`}
-              >
-                {t("settings.classic") || "Classic"}
-              </button>
-              <button
-                onClick={() => onNavModeChange("compact")}
-                className={`flex-1 py-2 px-3 text-sm transition-colors ${
-                  navMode === "compact"
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
-                }`}
-              >
-                {t("settings.compact") || "Compact"}
-              </button>
-            </div>
-            <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">
-              {navMode === "compact"
-                ? (t("settings.compact_desc") || "Icons only with tooltips on hover")
-                : (t("settings.classic_desc") || "Full sidebar with icons and labels")}
-            </p>
           </div>
         </div>
       </div>

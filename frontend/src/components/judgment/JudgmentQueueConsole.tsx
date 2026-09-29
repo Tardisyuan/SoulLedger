@@ -437,7 +437,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           workflow" stay in the scroll: they are optional, and `N` reaches the
           notes field from anywhere. */}
       {judgment && cursor.soul && cursor.ledger && (
-        <div className="sticky bottom-0 border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
+        <div className="sticky bottom-(--bottom-bar) border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
             {/* The verdict row stays hand-rolled, deliberately, while the four
                 plain buttons on this screen moved to `Button`. Each verdict
