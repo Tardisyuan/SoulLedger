@@ -20,6 +20,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
 /** The row `?username=` located. */
 const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
@@ -206,11 +207,6 @@ function UsersRoute() {
               )}
             >
               {user.username}
-              {user.is_eval_identity && (
-                <Badge glyph="◇" className="ml-2">
-                  {t("assist_admin.identities.tag")}
-                </Badge>
-              )}
             </td>
             <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.email}
@@ -232,6 +228,7 @@ function UsersRoute() {
               <Badge tone={user.is_active ? "success" : "neutral"} glyph={user.is_active ? "✓" : "○"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
               </Badge>
+              {user.is_eval_identity && <EvalIdentityTag />}
             </td>
             <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
               <div className="flex items-center justify-end gap-1">

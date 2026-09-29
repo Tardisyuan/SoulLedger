@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
+import { Badge } from "@/src/components/ui/Badge";
 
 export const CONFIG_PATH = "/admin/assistant";
 export const USAGE_PATH = "/admin/assistant/usage";
@@ -89,5 +90,19 @@ export function Switch({
         className={`inline-block h-4 w-4 bg-[oklch(var(--color-ink))] transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`}
       />
     </button>
+  );
+}
+
+/**
+ * 「评测专用 · 不能登录」 after the row's status tag in the souls and users lists (user 2026-09-29: the two
+ * eval identities are shown, not hidden). Design's version: the status tag's size and padding, a dashed
+ * border in the neutral subtle ink — not a feedback colour, it is not a state.
+ */
+export function EvalIdentityTag() {
+  const { t } = useI18n();
+  return (
+    <Badge data-eval-identity="" className="ml-1.5 border-dashed text-[oklch(var(--color-ink-subtle))] border-[oklch(var(--color-ink-subtle))]">
+      {t("assist_admin.identities.tag")}
+    </Badge>
   );
 }
