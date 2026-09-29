@@ -27,7 +27,11 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     env:
-      SECRET_KEY: ci-test-key-not-for-production
+      # At least 32 bytes: simplejwt signs HS256 with SECRET_KEY, and PyJWT
+      # warns (InsecureKeyLengthWarning) on every encode/decode below that —
+      # 4,519 of the suite's 11,786 warnings on 2026-09-29, now an error in
+      # pytest.ini. The hook (scripts/install-hooks.sh) supplies the same value.
+      SECRET_KEY: ci-test-key-not-for-production-32-bytes-min
       DEBUG: 'true'
       DATABASE_URL: postgres://soulledger:soulledger@localhost:5432/soulledger_test
       REDIS_URL: redis://localhost:6379/0

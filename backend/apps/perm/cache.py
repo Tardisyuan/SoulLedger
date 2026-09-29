@@ -123,11 +123,7 @@ class PermissionCache:
         if self._redis_client is not None:
             try:
                 key = self._make_key(role, codename)
-                self._redis_client.setex(
-                    key,
-                    self._ttl,
-                    '1' if has_permission else '0'
-                )
+                self._redis_client.set(key, '1' if has_permission else '0', ex=self._ttl)
                 return
             except Exception as e:
                 logger.warning(f"PermissionCache: Redis set failed, falling back: {e}")
