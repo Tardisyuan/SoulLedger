@@ -8,8 +8,10 @@ import {
 } from "@soulledger/core/api/assist-admin";
 import {
   useAssistAdminConfig,
+  useAssistEmbedding,
   useTestAssistConnection,
   useUpdateAssistAdminConfig,
+  useUpdateAssistEmbedding,
 } from "@soulledger/core/hooks/useAssistAdmin";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -23,7 +25,18 @@ import { HallSwitches } from "./HallSwitches";
 import { EvalPanel } from "./EvalPanel";
 import { TryPanel } from "./TryPanel";
 import { CorpusSection } from "./CorpusSection";
-import { connectionDraft, fingerprint, saveBlock, setDraft, type Draft, type DraftKey } from "./draft";
+import { EmbeddingSection, RebuildNotice } from "./EmbeddingSection";
+import {
+  connectionDraft,
+  embeddingSaveBlock,
+  fingerprint,
+  saveBlock,
+  setDraft,
+  setEmbeddingDraft,
+  type Draft,
+  type DraftKey,
+  type EmbeddingDraft,
+} from "./draft";
 
 const READ_ONLY = ["max_concurrent", "timeout_seconds", "history_turns", "retention_days"] as const;
 
@@ -61,6 +74,11 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const save = useUpdateAssistAdminConfig();
   const probe = useTestAssistConnection();
+  // 向量模型 (1a 六): a second draft behind the same footer, saved through its own PATCH.
+  const embedding = useAssistEmbedding();
+  const saveEmbedding = useUpdateAssistEmbedding();
+  const [edraft, setEdraft] = useState<EmbeddingDraft>({});
+  const [eTestedFp, setETestedFp] = useState<string | null>(null);
 
   const set = (key: DraftKey, value: unknown) => {
     setSaveError(null);
@@ -69,26 +87,40 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
   const value = <K extends DraftKey>(key: K) =>
     (key in draft ? draft[key] : (config as unknown as Record<string, unknown>)[key === "enabled" ? "switch" : key]) as Draft[K];
 
-  const n = Object.keys(draft).length;
+  const nConfig = Object.keys(draft).length;
+  const nEmbedding = Object.keys(edraft).length;
+  const n = nConfig + nEmbedding;
   const testedFp = tested?.result.ok ? tested.fp : null;
-  const block = saveBlock(draft, testedFp, invalidDraft(draft));
-  const canSave = n > 0 && block === null && !save.isPending;
+  const block = saveBlock(draft, testedFp, invalidDraft(draft)) ?? embeddingSaveBlock(edraft, eTestedFp);
+  const saving = save.isPending || saveEmbedding.isPending;
+  const canSave = n > 0 && block === null && !saving;
   const reason = saveError ?? (n > 0 && block ? t(`assist_admin.errors.${block}`) : null);
 
   const discard = () => {
     setDraftState({});
+    setEdraft({});
     setReplacingKey(false);
     setSaveError(null);
   };
-  const doSave = () => {
+  // Two PATCHes, config first; each clears its own draft on success, so a refused second one keeps
+  // only its own keys unsaved. Saving the embedding never rebuilds (the block shows 「需要重建」).
+  const doSave = async () => {
     if (!canSave) return;
-    save.mutate(draft, {
-      onSuccess: () => discard(),
-      onError: (err) => {
-        const code = assistAdminErrorCode(err);
-        setSaveError(t(code ? `assist_admin.errors.${code}` : "assist_admin.errors.save_failed"));
-      },
-    });
+    try {
+      if (nConfig > 0) {
+        await save.mutateAsync(draft);
+        setDraftState({});
+        setReplacingKey(false);
+      }
+      if (nEmbedding > 0) {
+        await saveEmbedding.mutateAsync(edraft);
+        setEdraft({});
+      }
+      setSaveError(null);
+    } catch (err) {
+      const code = assistAdminErrorCode(err);
+      setSaveError(t(code ? `assist_admin.errors.${code}` : "assist_admin.errors.save_failed"));
+    }
   };
   // ⌘/Ctrl + S saves the draft (canvas 1a 五).
   const saveRef = useRef(doSave);
@@ -97,7 +129,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        saveRef.current();
+        void saveRef.current();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -142,6 +174,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
           {t("assist_admin.switch.env_off")}
         </p>
       )}
+      {embedding.data && <RebuildNotice embedding={embedding.data} />}
 
       <div className="grid gap-x-10 lg:grid-cols-2">
         <div>
@@ -263,6 +296,18 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
             </div>
           </Section>
 
+          {embedding.data && (
+            <EmbeddingSection
+              embedding={embedding.data}
+              draft={edraft}
+              set={(key, v) => {
+                setSaveError(null);
+                setEdraft((d) => setEmbeddingDraft(d, embedding.data!, key, v));
+              }}
+              onTested={setETestedFp}
+            />
+          )}
+
           <Section title={t("assist_admin.sections.limits")} id="aa-limits">
             <div className="grid grid-cols-2 gap-3">
               <TextField id="aa-soul-hour" type="number" min={1} label={t("assist_admin.limits.soul_per_hour")} value={shown(value("soul_per_hour"))} onChange={(e) => numberInput("soul_per_hour", e.target.value)} />
@@ -344,7 +389,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
           <Button type="button" variant="ghost" disabled={n === 0} onClick={discard}>
             {t("assist_admin.footer.discard")}
           </Button>
-          <Button type="button" variant="primary" disabled={!canSave} loading={save.isPending} aria-describedby={reason ? "aa-save-reason" : undefined} onClick={doSave}>
+          <Button type="button" variant="primary" disabled={!canSave} loading={saving} aria-describedby={reason ? "aa-save-reason" : undefined} onClick={() => void doSave()}>
             {t("assist_admin.footer.save")}
           </Button>
         </div>

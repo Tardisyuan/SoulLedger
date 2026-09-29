@@ -8,7 +8,13 @@
  * the admin actually edited it). `api_key` is present only when the admin typed
  * a replacement ("" = clear); it is never read from the server.
  */
-import type { AssistAdminConfig, AssistAdminConfigUpdate } from "@soulledger/core/api/assist-admin";
+import type {
+  AssistAdminConfig,
+  AssistAdminConfigUpdate,
+  AssistAdminEmbedding,
+  AssistAdminEmbeddingCandidate,
+  AssistAdminEmbeddingUpdate,
+} from "@soulledger/core/api/assist-admin";
 
 export type Draft = AssistAdminConfigUpdate;
 export type DraftKey = keyof Draft;
@@ -59,5 +65,46 @@ export function saveBlock(draft: Draft, testedFingerprint: string | null, invali
   if (invalid) return "invalid";
   if (keyRequired(draft)) return "api_key_required";
   if (needsTest(draft) && testedFingerprint !== fingerprint(draft)) return "untested_connection";
+  return null;
+}
+
+/**
+ * 向量模型 (canvas 1a 六): its own draft, saved by the same footer through its own PATCH (embedding/).
+ * Same shape as the config draft — only changed keys, the redacted URL goes back only if edited.
+ * URL / model / dims need a passed test of that exact combination; k and the floor do not.
+ */
+export type EmbeddingDraft = AssistAdminEmbeddingUpdate;
+export type EmbeddingDraftKey = keyof EmbeddingDraft;
+export const EMBEDDING_CONNECTION_KEYS = ["embedding_url", "embedding_model", "embedding_dims"] as const;
+
+export function setEmbeddingDraft(draft: EmbeddingDraft, saved: AssistAdminEmbedding, key: EmbeddingDraftKey, value: unknown): EmbeddingDraft {
+  const next = { ...draft } as Record<string, unknown>;
+  if (value === undefined || same(value, saved[key])) delete next[key];
+  else next[key] = value;
+  return next as EmbeddingDraft;
+}
+
+/** What the test sends: the changed connection keys; the backend fills the rest from the saved settings. */
+export function embeddingCandidate(draft: EmbeddingDraft): AssistAdminEmbeddingCandidate {
+  return Object.fromEntries(EMBEDDING_CONNECTION_KEYS.filter((k) => k in draft).map((k) => [k, draft[k]]));
+}
+
+export const embeddingFingerprint = (draft: EmbeddingDraft) =>
+  JSON.stringify(EMBEDDING_CONNECTION_KEYS.filter((k) => k in draft).map((k) => [k, draft[k]]));
+
+export function invalidEmbedding(d: EmbeddingDraft): boolean {
+  const k = d.retrieval_k;
+  const floor = d.retrieval_min_similarity;
+  return (
+    (k !== undefined && !(Number.isInteger(k) && k >= 1 && k <= 20)) ||
+    (floor !== undefined && !(Number.isFinite(floor) && floor >= -1 && floor <= 1)) ||
+    (d.embedding_model !== undefined && d.embedding_model.trim() === "") ||
+    (d.embedding_url !== undefined && d.embedding_url.trim() === "")
+  );
+}
+
+export function embeddingSaveBlock(draft: EmbeddingDraft, testedFingerprint: string | null): "untested_embedding" | "invalid" | null {
+  if (invalidEmbedding(draft)) return "invalid";
+  if (Object.keys(embeddingCandidate(draft)).length > 0 && testedFingerprint !== embeddingFingerprint(draft)) return "untested_embedding";
   return null;
 }

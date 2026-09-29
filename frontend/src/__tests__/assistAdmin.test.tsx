@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { AxiosError, AxiosHeaders } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { api } from "@soulledger/core/api/client";
-import type { AssistAdminConfig, AssistAdminUsage } from "@soulledger/core/api/assist-admin";
+import type { AssistAdminConfig, AssistAdminEmbedding, AssistAdminUsage } from "@soulledger/core/api/assist-admin";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 
 jest.mock("@/src/contexts/ThemeContext", () => ({
@@ -60,6 +60,7 @@ const USAGE: AssistAdminUsage = {
   month: "2026-09", spent: 184.2, cap: 300, unpriced_models: ["mystery-model"], requests: 16742,
   by_status: { ok: 15000, empty: 1500, unavailable: 100, busy: 42, rate_limited: 100, not_configured: 0 },
   failure_rates: { unavailable: 0.006, rate_limited: 0.0085, empty: 0.118 },
+  by_retrieval: { vector: 14000, fallback: 100, fallback_low_similarity: 400 },
   by_day: [{ date: "2026-09-01", requests: 500, answered: 480, input_tokens: 1000, output_tokens: 200, cache_read_tokens: 0, cost: 6.1 }],
   by_side: [{ side: "soul", requests: 12000, answered: 11000, input_tokens: 9, output_tokens: 1, cache_read_tokens: 0, cost: 120 }],
   by_hall: [{ tenant_id: 3, code: "CN_DIYU", requests: 9000, answered: 8800, input_tokens: 5, output_tokens: 5, cache_read_tokens: 0, cost: 99 }],
@@ -80,6 +81,20 @@ const CORPUS = {
 
 let config = makeConfig();
 
+function makeEmbedding(status: Partial<AssistAdminEmbedding["status"]> = {}, over: Partial<AssistAdminEmbedding> = {}): AssistAdminEmbedding {
+  return {
+    embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
+    retrieval_k: 5, retrieval_min_similarity: 0.56, overridden: [],
+    status: {
+      entries: 60, embedded: 60, needs_rebuild: false, model: "qwen3-embedding:4b-q4_K_M",
+      last_rebuild_at: "2026-09-28T08:02:00Z", last_rebuild_model: "qwen3-embedding:4b-q4_K_M",
+      last_error: null, last_error_at: null, rebuild_running: false, ...status,
+    },
+    ...over,
+  };
+}
+let embedding = makeEmbedding();
+
 function refusal(status: number, data: Record<string, unknown>) {
   const response = { status, data, statusText: "", headers: {}, config: { headers: new AxiosHeaders() } };
   return new AxiosError("refused", "ERR_BAD_REQUEST", undefined, undefined, response as never);
@@ -98,9 +113,14 @@ function renderRoute(Route: () => ReactNode) {
 
 async function renderConfig() {
   const view = renderRoute(ConfigRoute);
-  await screen.findByLabelText("模型名");
+  await screen.findAllByLabelText("模型名");
   return view;
 }
+
+// 「模型名」 and 「测试连接」 now appear in 供应商 / 连通测试 and again in 向量模型: scope each by its region.
+const region = (name: string) => screen.getByRole("region", { name });
+const providerModel = () => within(region("供应商")).getByLabelText("模型名");
+const providerTest = () => within(region("连通测试")).getByRole("button", { name: "测试连接" });
 
 const saveButton = () => screen.getByRole("button", { name: "保存" });
 const draftCount = () => screen.getByTestId("aa-draft-count").textContent;
@@ -110,11 +130,13 @@ beforeEach(() => {
   mockTenant.user.role = "ADMIN";
   mockPath = "/admin/assistant";
   config = makeConfig();
+  embedding = makeEmbedding();
   get.mockReset().mockImplementation(async (url: string) => {
     if (url === "/assist-admin/config/") return { data: config };
     if (url === "/assist-admin/halls/") return { data: HALLS };
     if (url === "/assist-admin/usage/") return { data: USAGE };
     if (url === "/assist-admin/corpus/") return { data: CORPUS };
+    if (url === "/assist-admin/embedding/") return { data: embedding };
     return { data: [] };
   });
   post.mockReset();
@@ -138,7 +160,7 @@ describe("the config draft", () => {
   it("counts changed keys, forgets a key set back to its saved value, and discards", async () => {
     await renderConfig();
     expect(draftCount()).toBe("没有未保存的改动");
-    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-large" } });
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
     expect(draftCount()).toBe("未保存 1 项");
     fireEvent.change(screen.getByLabelText("灵魂端 · 每账号每小时"), { target: { value: "40" } });
     expect(draftCount()).toBe("未保存 2 项");
@@ -146,29 +168,29 @@ describe("the config draft", () => {
     expect(draftCount()).toBe("未保存 1 项");
     fireEvent.click(screen.getByRole("button", { name: "放弃" }));
     expect(draftCount()).toBe("没有未保存的改动");
-    expect(screen.getByLabelText("模型名")).toHaveValue("assist-medium");
+    expect(providerModel()).toHaveValue("assist-medium");
     expect(saveButton()).toBeDisabled();
   });
 
   it("keeps Save disabled, with the reason under it, until this exact draft passed the test", async () => {
     await renderConfig();
     const reason = "连接配置改过，先在「连通测试」测通这份草稿才能保存。";
-    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-large" } });
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
     expect(saveButton()).toBeDisabled();
     expect(screen.getByText(reason)).toBeInTheDocument();
 
     post.mockResolvedValueOnce({ data: { ok: true, error_kind: null, latency_ms: 1840, tokens: { input: 2310, output: 186 }, provider: "openai_compatible", model: "assist-large" } });
-    fireEvent.click(screen.getByRole("button", { name: "测试连接" }));
+    fireEvent.click(providerTest());
     await screen.findByText("连通 · 可以保存");
     expect(post).toHaveBeenCalledWith("/assist-admin/config/test/", { model: "assist-large" });
     expect(saveButton()).toBeEnabled();
     expect(screen.queryByText(reason)).not.toBeInTheDocument();
 
     // A different draft is a different connection: the old pass no longer counts.
-    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-xl" } });
+    fireEvent.change(providerModel(), { target: { value: "assist-xl" } });
     expect(saveButton()).toBeDisabled();
     expect(screen.getByText(reason)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-large" } });
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
     expect(saveButton()).toBeEnabled();
 
     patch.mockResolvedValueOnce({ data: makeConfig({ model: "assist-large" }) });
@@ -229,7 +251,7 @@ describe("the API key is write-only", () => {
     expect(screen.getByText("连接配置改过，先在「连通测试」测通这份草稿才能保存。")).toBeInTheDocument();
 
     post.mockResolvedValueOnce({ data: { ok: true, error_kind: null, latency_ms: 900, tokens: {}, provider: "openai_compatible", model: "assist-medium" } });
-    fireEvent.click(screen.getByRole("button", { name: "测试连接" }));
+    fireEvent.click(providerTest());
     await screen.findByText("连通 · 可以保存");
     expect(post).toHaveBeenCalledWith("/assist-admin/config/test/", { api_key: SECRET });
 
@@ -317,7 +339,7 @@ describe("eval: preview first, spend only on confirm", () => {
 
   it("A/B sends the saved config and the draft connection side by side", async () => {
     await renderConfig();
-    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-large" } });
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
     fireEvent.click(screen.getByLabelText("对比：A 已保存 · B 草稿"));
     post.mockResolvedValueOnce({ data: { asks: 48, max_asks: 100, estimated_cost: 1, spend_cap: 5, problems: [], confirm_token: "t", candidates: [] } });
     fireEvent.click(screen.getByRole("button", { name: "开跑…" }));
@@ -421,7 +443,7 @@ describe("试问 (plan §3.3)", () => {
 
   it("sends the unsaved connection draft as the candidate, and the officer side when chosen", async () => {
     await renderConfig();
-    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-large" } });
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
     post.mockResolvedValueOnce({ data: { ...ANSWER, side: "officer", tools_called: [], model: "assist-large" } });
     const region = tryRegion();
     fireEvent.click(within(region).getByRole("button", { name: "官员端" }));
@@ -492,3 +514,281 @@ describe("help corpus · read-only (plan §5)", () => {
   });
 });
 
+
+describe("向量模型 (canvas 1a 六, 1h/1i)", () => {
+  const emb = () => region("向量模型");
+  // The block waits for its own GET (embedding/), after the config form is up.
+  const renderBlock = async () => {
+    await renderConfig();
+    await screen.findByRole("region", { name: "向量模型" });
+  };
+  const embField = (label: string) => within(emb()).getByLabelText(label);
+  const UNTESTED = "地址、模型或维度改过，测通后才能保存。";
+  const OLD_MODEL = "向量是用旧模型生成的，需要重建";
+  const testOk = { ok: true, error_kind: null, latency_ms: 86, dims: 2560, embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:8b", embedding_dims: null };
+
+  it("shows the saved settings, the count from the status API, and the fallback line; no rebuild notice when current", async () => {
+    await renderBlock();
+    expect(embField("地址")).toHaveValue("http://192.168.2.2:11434");
+    expect(embField("模型名")).toHaveValue("qwen3-embedding:4b-q4_K_M");
+    expect(embField("截断维度")).toHaveValue("");
+    expect(embField("检索条数 k")).toHaveValue(5);
+    expect(embField("相似度门槛")).toHaveValue(0.56);
+    expect(within(emb()).getByText("最相关的一条低于它时，助手用全部帮助条目回答。")).toBeInTheDocument();
+    expect(screen.getByTestId("aa-emb-progress")).toHaveTextContent("60 / 60 条已生成向量");
+    expect(screen.getByTestId("aa-emb-fallback")).toHaveTextContent("向量服务连不上时，助手会自动改用全部帮助条目回答，不会答不了。");
+    expect(screen.queryByText(OLD_MODEL)).toBeNull();
+    expect(screen.queryByTestId("aa-rebuild-notice")).toBeNull();
+    expect(screen.queryByText("还没有向量")).toBeNull();
+  });
+
+  it("a model change joins the footer draft and cannot be saved until that exact candidate passed", async () => {
+    await renderBlock();
+    fireEvent.change(embField("模型名"), { target: { value: "qwen3-embedding:8b" } });
+    expect(draftCount()).toBe("未保存 1 项");
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText(UNTESTED)).toBeInTheDocument();
+
+    post.mockResolvedValueOnce({ data: testOk });
+    fireEvent.click(within(emb()).getByRole("button", { name: "测试连接" }));
+    expect(await within(emb()).findByTestId("aa-emb-test")).toHaveTextContent("连通 · 维度与设置一致");
+    expect(screen.getByTestId("aa-emb-test")).toHaveTextContent("86 ms · 返回维度 2560");
+    expect(post).toHaveBeenCalledWith("/assist-admin/embedding/test/", { embedding_model: "qwen3-embedding:8b" });
+    expect(calls(post, "/assist-admin/config/test/")).toHaveLength(0);
+    expect(saveButton()).toBeEnabled();
+    expect(screen.queryByText(UNTESTED)).toBeNull();
+
+    // Another candidate: the pass no longer counts.
+    fireEvent.change(embField("截断维度"), { target: { value: "1024" } });
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText("之后又改了连接配置，此结果作废：请再测一次。")).toBeInTheDocument();
+    fireEvent.change(embField("截断维度"), { target: { value: "" } });
+    expect(saveButton()).toBeEnabled();
+
+    // Saving answers needs_rebuild; the page says so, top and block — and nothing rebuilt.
+    embedding = makeEmbedding(
+      { needs_rebuild: true, embedded: 0, model: "qwen3-embedding:8b" },
+      { embedding_model: "qwen3-embedding:8b", overridden: ["embedding_model"] }
+    );
+    patch.mockResolvedValueOnce({ data: embedding });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(draftCount()).toBe("没有未保存的改动"));
+    expect(patch.mock.calls).toEqual([["/assist-admin/embedding/", { embedding_model: "qwen3-embedding:8b" }]]);
+    expect(calls(post, "/assist-admin/embedding/rebuild/")).toHaveLength(0);
+    expect(screen.getByTestId("aa-rebuild-notice")).toHaveTextContent(OLD_MODEL);
+    expect(screen.getByTestId("aa-embedding-old-model")).toHaveTextContent("qwen3-embedding:4b-q4_K_M → qwen3-embedding:8b");
+    expect(screen.getByTestId("aa-emb-progress")).toHaveTextContent("0 / 60 条已生成向量");
+  });
+
+  it("the backend's untested_embedding refusal is named, and the embedding keys stay unsaved", async () => {
+    await renderBlock();
+    fireEvent.change(embField("地址"), { target: { value: "http://192.168.2.9:11434" } });
+    post.mockResolvedValueOnce({ data: { ...testOk, embedding_url: "http://192.168.2.9:11434" } });
+    fireEvent.click(within(emb()).getByRole("button", { name: "测试连接" }));
+    await within(emb()).findByTestId("aa-emb-test");
+    patch.mockRejectedValueOnce(refusal(400, { detail: "x", code: "untested_embedding" }));
+    fireEvent.click(saveButton());
+    expect(await screen.findByRole("alert")).toHaveTextContent(UNTESTED);
+    expect(draftCount()).toBe("未保存 1 项");
+  });
+
+  it("k and the similarity floor save without a test; out-of-range values block the save", async () => {
+    await renderBlock();
+    fireEvent.change(embField("检索条数 k"), { target: { value: "6" } });
+    fireEvent.change(embField("相似度门槛"), { target: { value: "0.6" } });
+    expect(draftCount()).toBe("未保存 2 项");
+    expect(saveButton()).toBeEnabled();
+    expect(screen.queryByText(UNTESTED)).toBeNull();
+
+    fireEvent.change(embField("检索条数 k"), { target: { value: "0" } });
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText(/有数值填得不对/)).toBeInTheDocument();
+    fireEvent.change(embField("检索条数 k"), { target: { value: "6" } });
+
+    patch.mockResolvedValueOnce({ data: makeEmbedding({}, { retrieval_k: 6, retrieval_min_similarity: 0.6 }) });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(draftCount()).toBe("没有未保存的改动"));
+    expect(patch.mock.calls).toEqual([["/assist-admin/embedding/", { retrieval_k: 6, retrieval_min_similarity: 0.6 }]]);
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("one footer counts and saves both drafts: config first, then the embedding", async () => {
+    await renderBlock();
+    fireEvent.change(screen.getByLabelText("灵魂端 · 每账号每小时"), { target: { value: "40" } });
+    fireEvent.change(embField("检索条数 k"), { target: { value: "6" } });
+    expect(draftCount()).toBe("未保存 2 项");
+    patch.mockResolvedValueOnce({ data: makeConfig({ soul_per_hour: 40 }) });
+    patch.mockResolvedValueOnce({ data: makeEmbedding({}, { retrieval_k: 6 }) });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(draftCount()).toBe("没有未保存的改动"));
+    expect(patch.mock.calls).toEqual([
+      ["/assist-admin/config/", { soul_per_hour: 40 }],
+      ["/assist-admin/embedding/", { retrieval_k: 6 }],
+    ]);
+  });
+
+  it.each([
+    ["connection", "连不上"],
+    ["timeout", "超时"],
+    ["model_not_found", "模型不存在"],
+  ])("a %s failure is named, and Save stays disabled", async (kind, copy) => {
+    await renderBlock();
+    fireEvent.change(embField("模型名"), { target: { value: "nope" } });
+    post.mockResolvedValueOnce({ data: { ...testOk, ok: false, error_kind: kind, dims: null, latency_ms: 4 } });
+    fireEvent.click(within(emb()).getByRole("button", { name: "测试连接" }));
+    const box = await within(emb()).findByTestId("aa-emb-test");
+    expect(box).toHaveTextContent("未连通 · 不能保存");
+    expect(box).toHaveTextContent(`${copy} ${kind}`);
+    expect(box).not.toHaveTextContent("连通 · 维度与设置一致");
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText(UNTESTED)).toBeInTheDocument();
+  });
+
+  it("dims_mismatch shows what came back against what was asked; an unnamed kind shows only its code", async () => {
+    await renderBlock();
+    fireEvent.change(embField("截断维度"), { target: { value: "1024" } });
+    post.mockResolvedValueOnce({ data: { ...testOk, ok: false, error_kind: "dims_mismatch", dims: 2560, embedding_dims: 1024, latency_ms: 91 } });
+    fireEvent.click(within(emb()).getByRole("button", { name: "测试连接" }));
+    const box = await within(emb()).findByTestId("aa-emb-test");
+    expect(box).toHaveTextContent("维度和设置不符 dims_mismatch");
+    expect(box).toHaveTextContent("91 ms · 返回维度 2560 ≠ 1024");
+
+    post.mockResolvedValueOnce({ data: { ...testOk, ok: false, error_kind: "bad_response", dims: null } });
+    fireEvent.click(within(emb()).getByRole("button", { name: "再测一次" }));
+    await waitFor(() => expect(screen.getByTestId("aa-emb-test")).toHaveTextContent("bad_response"));
+    const after = screen.getByTestId("aa-emb-test");
+    for (const named of ["连不上", "超时", "模型不存在", "维度和设置不符", "返回维度"]) expect(after).not.toHaveTextContent(named);
+  });
+
+  it("rebuild is a confirmed action: nothing is sent until the confirm, and cancel sends nothing", async () => {
+    await renderBlock();
+    fireEvent.click(within(emb()).getByRole("button", { name: "重建向量" }));
+    let dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("重建全部向量？");
+    expect(dialog).toHaveTextContent("全部生成完才替换，中途失败不影响现有向量");
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(post).not.toHaveBeenCalled();
+
+    fireEvent.click(within(emb()).getByRole("button", { name: "重建向量" }));
+    dialog = await screen.findByRole("alertdialog");
+    post.mockResolvedValueOnce({
+      data: { embedded: 60, unchanged: 0, deleted: 0, model: "qwen3-embedding:4b-q4_K_M", dims: null, index: null, dropped: [],
+        status: makeEmbedding({ last_rebuild_at: "2026-09-30T06:31:00Z" }).status },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "重建向量" }));
+    expect(await within(emb()).findByText("重建完成")).toBeInTheDocument();
+    expect(calls(post, "/assist-admin/embedding/rebuild/")).toEqual([["/assist-admin/embedding/rebuild/"]]);
+    expect(screen.queryByText("重建失败")).toBeNull();
+  });
+
+  it("409 rebuild_running reads as rebuilding; the status API's running flag disables the button", async () => {
+    await renderBlock();
+    fireEvent.click(within(emb()).getByRole("button", { name: "重建向量" }));
+    post.mockRejectedValueOnce(refusal(409, { detail: "x", code: "rebuild_running" }));
+    embedding = makeEmbedding({ rebuild_running: true });
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "重建向量" }));
+    expect(await within(emb()).findByText("重建中…")).toBeInTheDocument();
+    await waitFor(() => expect(within(emb()).getByRole("button", { name: "重建向量" })).toBeDisabled());
+    expect(within(emb()).queryByText("重建失败")).toBeNull();
+  });
+
+  it("503 embedding_unavailable reads as a failed rebuild with its kind, offering a retry", async () => {
+    await renderBlock();
+    fireEvent.click(within(emb()).getByRole("button", { name: "重建向量" }));
+    post.mockRejectedValueOnce(refusal(503, { detail: "x", code: "embedding_unavailable", error_kind: "timeout" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "重建向量" }));
+    const state = await within(emb()).findByTestId("aa-emb-rebuild-state");
+    await waitFor(() => expect(state).toHaveTextContent("重建失败"));
+    expect(state).toHaveTextContent("超时 timeout");
+    expect(state).not.toHaveTextContent("重建完成");
+    expect(within(emb()).getByRole("button", { name: "重试重建" })).toBeEnabled();
+    // The previous vectors still count.
+    expect(screen.getByTestId("aa-emb-progress")).toHaveTextContent("60 / 60 条已生成向量");
+  });
+
+  it("never built: says there are no vectors yet, and no last-rebuild line", async () => {
+    embedding = makeEmbedding({ embedded: 0, needs_rebuild: true, last_rebuild_at: null, last_rebuild_model: null });
+    await renderBlock();
+    expect(screen.getByTestId("aa-emb-progress")).toHaveTextContent("还没有向量");
+    expect(within(emb()).queryByText(/上次重建/)).toBeNull();
+    expect(screen.queryByText(OLD_MODEL)).toBeNull();
+  });
+
+  it("stale vectors under the same model: fall-back line, but not the old-model notice", async () => {
+    embedding = makeEmbedding({ embedded: 58, needs_rebuild: true });
+    await renderBlock();
+    expect(screen.getByTestId("aa-emb-progress")).toHaveTextContent("58 / 60 条已生成向量");
+    expect(within(emb()).getByText("重建完成前，助手改用全部帮助条目回答。")).toBeInTheDocument();
+    expect(screen.queryByText(OLD_MODEL)).toBeNull();
+    expect(screen.queryByTestId("aa-rebuild-notice")).toBeNull();
+  });
+});
+
+describe("eval: retrieval (canvas 1b eval results)", () => {
+  const RUN = {
+    id: 7, created_at: "2026-09-29T06:30:00Z", status: "done", total: 6, done: 6, finished_at: "2026-09-29T06:35:00Z",
+    candidates: [{ provider: "openai_compatible", base_url: "https://llm.example/v1", model: "assist-medium", effort: "", fallbacks: false }],
+    summary: [{ candidate: 0, provider: "openai_compatible", model: "assist-medium", cases: 3, passed: 2, errors: 0, tool_accuracy: 0.875,
+      phrase_hit_rate: 0.792, retrieval_hit_rate: 0.913, retrieval_fallbacks: 0, mean_latency_ms: 2900, cost: 0.21, input_tokens: 1, output_tokens: 1 }],
+  };
+  const result = (id: number, c: number, q: string, retrieved: string[], hit: boolean | null) => ({
+    id, candidate: 0, case: c, side: "soul", question: q, tools_called: ["rebirth"], answer: "答", passed: true, included: {},
+    retrieval: "vector", retrieved, retrieval_hit: hit, latency_ms: 2100, tokens: { input: 2000, output: 100 },
+  });
+  const CASES = [
+    { id: 1, side: "soul", locale: "zh-Hans", question: "被驳回了还能申诉吗？", expected_tools: ["rebirth"], expected_entries: ["rebirth.appeal", "rebirth.cooldown"] },
+    { id: 2, side: "soul", locale: "zh-Hans", question: "下一站什么时候开始？", expected_tools: ["sentence_plan"], expected_entries: ["sentence.plan", "sentence.station"] },
+    { id: 3, side: "soul", locale: "zh-Hans", question: "朋友圈谁能看到？", expected_tools: [], expected_entries: [] },
+  ];
+  const DETAIL = {
+    ...RUN,
+    results: [
+      result(1, 1, "被驳回了还能申诉吗？", ["rebirth.appeal", "rebirth.cooldown", "rebirth.apply"], true),
+      result(2, 2, "下一站什么时候开始？", ["sentence.plan", "dispatch.flow", "sentence.amend"], false),
+      result(3, 3, "朋友圈谁能看到？", ["social.visibility"], null),
+    ],
+  };
+
+  it("shows the hit rate, a hits/expected cell per question, and expected vs actual when a row opens", async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === "/assist-admin/config/") return { data: config };
+      if (url === "/assist-admin/embedding/") return { data: embedding };
+      if (url === "/assist-admin/corpus/") return { data: CORPUS };
+      if (url === "/assist-admin/eval/runs/") return { data: [RUN] };
+      if (url === "/assist-admin/eval/runs/7/") return { data: DETAIL };
+      if (url === "/assist-admin/eval/cases/") return { data: CASES };
+      return { data: [] };
+    });
+    await renderConfig();
+    fireEvent.click(await within(region("评测")).findByRole("button", { name: /assist-medium/ }));
+    expect(await screen.findByTestId("aa-retrieval-hit-rate")).toHaveTextContent("91.3%");
+    expect(screen.getByRole("columnheader", { name: "检索" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByTestId("aa-retrieval-cell").map((c) => c.textContent)).toEqual(["2/2", "1/2", expect.not.stringContaining("/")]));
+
+    expect(screen.queryByTestId("aa-retrieval-detail")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "下一站什么时候开始？" }));
+    const detail = await screen.findByTestId("aa-retrieval-detail");
+    expect(detail).toHaveTextContent("期望命中的条目");
+    expect(detail).toHaveTextContent("sentence.plan 命中 · 1");
+    expect(detail).toHaveTextContent("sentence.station 未检索到");
+    expect(detail).toHaveTextContent("实际检索到的前 3 条");
+    expect(detail).toHaveTextContent("2 dispatch.flow");
+    expect(detail).not.toHaveTextContent("sentence.station 命中");
+  });
+});
+
+describe("usage: 检索降级", () => {
+  beforeEach(() => {
+    mockPath = "/admin/assistant/usage";
+  });
+
+  it("is the service-down fallback share of all questions, not the low-similarity one", async () => {
+    renderRoute(UsageRoute);
+    // 100 / 16,742 = 0.6%; counting the 400 low-similarity fallbacks too would read 3.0%.
+    expect(await screen.findByTestId("aa-rate-fallback")).toHaveTextContent("0.6%");
+    expect(screen.getByTestId("aa-rate-fallback")).not.toHaveTextContent("3.0%");
+    expect(screen.getByText("检索降级")).toBeInTheDocument();
+    expect(screen.getByText("检索降级：向量服务不可用、退回用全部帮助条目回答的提问。")).toBeInTheDocument();
+  });
+});
