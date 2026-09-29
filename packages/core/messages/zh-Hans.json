@@ -2925,6 +2925,7 @@
         "profile": "看他的主页"
       },
       "new_marker": "新",
+      "older": "更早的书信",
       "errors": {
         "request_throttled": "一日一封，明日请早。",
         "muted": "你在禁言中，不能与灵魂通信。仍可写信给殿司。",
