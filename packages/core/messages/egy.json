@@ -1358,6 +1358,9 @@
       "draft": "Sesh · Nen Hab",
       "filtered_by": "Setep Em «{{verdict}}»; Nen Aq Hena Nen Er: Maa Wa.",
       "not_applicable": "Nen Er {{verdict}}"
+    },
+    "row_mark": {
+      "mine": "Shesep Ek · Nen Iri Djer"
     }
   },
   "audit": {
@@ -1825,24 +1828,11 @@
     "theme": "Hetep",
     "light": "Hedj",
     "dark": "Kem",
-    "accent_color": "Unemu Tepy",
-    "apply": "Iri",
     "nav_mode": "Kheperu Wat",
     "classic": "Em Tepy",
     "compact": "Em Khet",
     "classic_desc": "Gesu Menu Neb: Tut Hena Ren",
-    "compact_desc": "Tut Wa; Medu Iyi Er Sekhet Tut",
-    "colors": {
-      "ink": "Khesbedj (Tepy)",
-      "amber": "Nub",
-      "blue": "Khesbedj",
-      "green": "Wadj",
-      "purple": "Desher Khesbedj",
-      "red": "Desher",
-      "rose": "Desher Nedjes"
-    },
-    "accent_hex_invalid": "Sesh Medu-Sesu 6, Mi #ff5500",
-    "accent_hex_too_dark": "Unemu Pen Kem Dens — Medu Kem Em Aha Tepy Nen Maa"
+    "compact_desc": "Tut Wa; Medu Iyi Er Sekhet Tut"
   },
   "menu_buttons": {
     "title": "Aha Menu",
@@ -3731,5 +3721,8 @@
       "title": "Khemen Wetep",
       "hint": "Wedja Khemen Sekhet: Khetem Hab Dbh Er Sab Wedja Tepy. Nen Khemen, Nen Dbh."
     }
+  },
+  "seal": {
+    "aria": "Khetem En {{court}}"
   }
 }
