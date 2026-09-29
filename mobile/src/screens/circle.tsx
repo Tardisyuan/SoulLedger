@@ -27,7 +27,7 @@ import { useSoulMediaUploads } from "@soulledger/core/hooks/useSoulMediaUploads"
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../chrome";
@@ -48,6 +48,7 @@ import {
   SmallButton,
   Txt,
   useLayout,
+  usePullRefresh,
   useReloadOnRefocus,
   useRemote,
   useTheme,
@@ -264,7 +265,9 @@ type Page<T> = { results: T[]; next?: string | null };
  * stale; a late answer (another query, or overtaken by a newer request) is
  * dropped; a row already held is not added twice (the list moved under the
  * pages between two requests). `reload` re-reads every page held so far, so a
- * refresh does not fold the list back to its first page.
+ * refresh does not fold the list back to its first page. `more` does nothing
+ * while any read is in flight or once the last page is held — a list's
+ * `onEndReached` fires again and again while the reader lingers at the bottom.
  */
 export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page: number) => Promise<Page<T>>, enabled = true) {
   const [held, setHeld] = useState<{ tag: string; rows: T[] | null; pages: number; next: number | null; error: unknown }>({
@@ -280,10 +283,14 @@ export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page
   fetchRef.current = fetchPage;
   const pagesRef = useRef(0);
   pagesRef.current = held.tag === tag ? held.pages : 0;
+  // Refs, not rendered state: two end-reached events can land before the re-render.
+  const busy = useRef(false);
+  const nextRef = useRef<{ tag: string; next: number | null }>({ tag, next: null });
   /** Read pages `from`..`to`; from 1 replaces what is held, otherwise appends. */
   const run = useCallback(
     async (from: number, to: number) => {
       const mine = ++ticket.current;
+      busy.current = true;
       setLoading(true);
       try {
         const got: T[] = [];
@@ -295,6 +302,7 @@ export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page
           if (!res.next || last === to) break;
         }
         if (mine !== ticket.current) return;
+        nextRef.current = { tag, next: res.next ? last + 1 : null };
         setHeld((prev) => {
           const base = from === 1 || prev.tag !== tag ? [] : (prev.rows ?? []);
           const seen = new Set(base.map((r) => r.id));
@@ -309,7 +317,10 @@ export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page
       } catch (e) {
         if (mine === ticket.current) setHeld((prev) => (prev.tag === tag ? { ...prev, error: e } : { tag, rows: null, pages: 0, next: null, error: e }));
       } finally {
-        if (mine === ticket.current) setLoading(false);
+        if (mine === ticket.current) {
+          busy.current = false;
+          setLoading(false);
+        }
       }
     },
     [tag]
@@ -318,6 +329,11 @@ export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page
     if (enabled) void run(1, 1);
   }, [run, enabled]);
   const reload = useCallback(() => run(1, Math.max(1, pagesRef.current)), [run]);
+  const loadMore = useCallback(() => {
+    const n = nextRef.current;
+    if (busy.current || n.tag !== tag || !n.next) return;
+    void run(n.next, n.next);
+  }, [run, tag]);
   const current = held.tag === tag;
   const next = current ? held.next : null;
   return {
@@ -325,7 +341,7 @@ export function usePaged<T extends { id: string }>(tag: string, fetchPage: (page
     error: current ? held.error : null,
     loading,
     reload,
-    more: next ? () => void run(next, next) : null,
+    more: next ? loadMore : null,
   };
 }
 
@@ -336,7 +352,32 @@ export function useFeed(query: { following?: boolean; author?: number }, enabled
   return { posts: rows, ...rest };
 }
 
-/** Posts, and the "earlier posts" button while there are more. */
+/**
+ * The foot of a paged list. While a page is on its way, a placeholder that says
+ * so; while more remain, a button. A `FlatList`'s `onEndReached` does the same
+ * for a scroll — the button is for a screen reader, or a reader who stopped short.
+ */
+function PagedFooter({ list, testID, title }: { list: { more: (() => void) | null; loading: boolean }; testID: string; title: string }) {
+  const { gutter } = useLayout();
+  if (!list.more) return null;
+  if (list.loading) {
+    return (
+      <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+        <Skeleton lines={2} testID={`${testID}-loading`} />
+      </View>
+    );
+  }
+  return (
+    <View style={styles.more}>
+      <SmallButton testID={testID} title={title} onPress={list.more} />
+    </View>
+  );
+}
+
+/**
+ * Posts, and the "earlier posts" button while there are more — for a page that
+ * already scrolls (a soul's profile, my page), where a FlatList would nest.
+ */
 export function PostList({ feed, onAuthor }: { feed: ReturnType<typeof useFeed>; onAuthor: (post: SoulPost) => void }) {
   const { t: tr } = useI18n();
   const navigation = useNavigation<Nav>();
@@ -345,11 +386,7 @@ export function PostList({ feed, onAuthor }: { feed: ReturnType<typeof useFeed>;
       {(feed.posts ?? []).map((p) => (
         <PostCard key={p.id} post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={() => onAuthor(p)} />
       ))}
-      {feed.more ? (
-        <View style={styles.more}>
-          <SmallButton testID="circle-more" title={tr("soul_app.circle.feed.more")} onPress={feed.more} />
-        </View>
-      ) : null}
+      <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
     </FadeIn>
   );
 }
@@ -374,9 +411,10 @@ export function CircleScreen() {
   const pendingId = route.params?.pendingId;
   const justPending = feed.posts?.some((p) => p.id === pendingId && p.moderation_status === "PENDING");
   const write = () => navigation.navigate("ComposePost");
+  const refreshControl = usePullRefresh(feed.loading && !!feed.posts, feed.reload);
 
-  return (
-    <Screen refreshing={feed.loading && !!feed.posts} onRefresh={feed.reload} edges={["left", "right"]} testID="circle">
+  const header = (
+    <>
       <View style={[styles.subTabs, { borderBottomColor: t.hair }]}>
         {([true, false] as const).map((f) => {
           const on = f === following;
@@ -416,33 +454,57 @@ export function CircleScreen() {
           </Txt>
         </View>
       ) : null}
-      {feed.error && !feed.posts ? (
-        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-          <Notice tone="neg" onRetry={() => void feed.reload()} testID="circle-error">
-            {tr("soul_app.circle.feed.error")}
-          </Notice>
-        </View>
-      ) : !feed.posts ? (
-        <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-          <Skeleton lines={6} testID="circle-loading" />
-        </View>
-      ) : feed.posts.length === 0 ? (
-        <View testID="circle-empty" style={styles.empty}>
-          <PageEmptyArt />
-          <Txt variant="bodyLg" tone="muted" style={styles.center}>
-            {tr("soul_app.circle.feed.empty_title")}
-          </Txt>
-          <Txt variant="caption" tone="subtle" style={styles.center}>
-            {tr("soul_app.circle.feed.empty_body")}
-          </Txt>
-          <Button testID="circle-write" title={tr("soul_app.circle.feed.write")} onPress={write} />
-        </View>
-      ) : (
-        <PostList feed={feed} onAuthor={(p) => openSoul(p.author, p.is_mine)} />
-      )}
+    </>
+  );
+  // Shown only while there are no rows: failed, still coming, or none.
+  const empty =
+    feed.error && !feed.posts ? (
+      <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+        <Notice tone="neg" onRetry={() => void feed.reload()} testID="circle-error">
+          {tr("soul_app.circle.feed.error")}
+        </Notice>
+      </View>
+    ) : !feed.posts ? (
+      <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+        <Skeleton lines={6} testID="circle-loading" />
+      </View>
+    ) : (
+      <View testID="circle-empty" style={styles.empty}>
+        <PageEmptyArt />
+        <Txt variant="bodyLg" tone="muted" style={styles.center}>
+          {tr("soul_app.circle.feed.empty_title")}
+        </Txt>
+        <Txt variant="caption" tone="subtle" style={styles.center}>
+          {tr("soul_app.circle.feed.empty_body")}
+        </Txt>
+        <Button testID="circle-write" title={tr("soul_app.circle.feed.write")} onPress={write} />
+      </View>
+    );
+
+  // A FlatList, not Screen's ScrollView + map: the feed has no end, and every
+  // page read used to stay mounted. The next page is read on nearing the end.
+  return (
+    <Screen scroll={false} edges={["left", "right"]} testID="circle">
+      <FlatList
+        testID="circle-list"
+        data={feed.posts ?? []}
+        keyExtractor={rowKey}
+        renderItem={({ item: p }) => (
+          <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={() => openSoul(p.author, p.is_mine)} />
+        )}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        ListFooterComponent={<PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />}
+        onEndReached={feed.more ?? undefined}
+        onEndReachedThreshold={0.5}
+        refreshControl={refreshControl}
+        keyboardShouldPersistTaps="handled"
+      />
     </Screen>
   );
 }
+
+const rowKey = (p: { id: string }) => p.id;
 
 // ── compose ────────────────────────────────────────────────────────────
 
@@ -855,6 +917,8 @@ export function PostScreen({ id }: { id: string }) {
     void post.reload();
   };
 
+  const refreshControl = usePullRefresh(post.loading && !!p, () => void Promise.all([post.reload(), comments.reload()]));
+
   if (post.error && !post.data) {
     return (
       <Screen scroll={false} edges={["left", "right"]}>
@@ -874,52 +938,58 @@ export function PostScreen({ id }: { id: string }) {
 
   return (
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: t.s0 }]} behavior="padding" keyboardVerticalOffset={-insets.bottom}>
-      <Screen edges={["left", "right"]} testID="circle-post" refreshing={post.loading && !!p} onRefresh={() => void Promise.all([post.reload(), comments.reload()])}>
-        {!p ? (
-          <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-            <Skeleton lines={5} testID="post-loading" />
-          </View>
-        ) : (
-          <>
-            <PostCard post={p} full onAuthor={() => openSoul(p.author, p.is_mine)} />
-            {open ? <ReactionBar post={p} status={status.data} onReact={(type) => void react(type)} /> : null}
-            <Txt variant="section" style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
-              {tr("soul_app.circle.post.comments", { n: String(p.comment_count) })}
-            </Txt>
-            {comments.rows ? (
-              <>
-                {comments.rows.map((c) => (
-                  <CommentRow
-                    key={c.id}
-                    c={c}
-                    parent={c.parent ? byId.get(c.parent) : undefined}
-                    onAuthor={() => openSoul(c.author, c.is_mine)}
-                    onMore={() =>
-                      c.is_mine ? setDeleting({ kind: "comment", id: c.id }) : navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })
+      {/* The comments are one more unbounded, paged list, so they are the FlatList and the post is its header. */}
+      <Screen scroll={false} edges={["left", "right"]} testID="circle-post">
+        <FlatList
+          testID="comments-list"
+          data={p ? (comments.rows ?? []) : []}
+          keyExtractor={rowKey}
+          renderItem={({ item: c }) => (
+            <CommentRow
+              c={c}
+              parent={c.parent ? byId.get(c.parent) : undefined}
+              onAuthor={() => openSoul(c.author, c.is_mine)}
+              onMore={() =>
+                c.is_mine ? setDeleting({ kind: "comment", id: c.id }) : navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })
+              }
+              onReply={
+                canWrite && c.moderation_status === "PUBLISHED"
+                  ? () => {
+                      setReplyTo(c);
+                      input.current?.focus();
                     }
-                    onReply={
-                      canWrite && c.moderation_status === "PUBLISHED"
-                        ? () => {
-                            setReplyTo(c);
-                            input.current?.focus();
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-                {comments.more ? (
-                  <View style={styles.more}>
-                    <SmallButton testID="comments-more" title={tr("soul_app.circle.comment.more")} onPress={comments.more} />
-                  </View>
-                ) : null}
-              </>
+                  : undefined
+              }
+            />
+          )}
+          ListHeaderComponent={
+            !p ? (
+              <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+                <Skeleton lines={5} testID="post-loading" />
+              </View>
             ) : (
+              <>
+                <PostCard post={p} full onAuthor={() => openSoul(p.author, p.is_mine)} />
+                {open ? <ReactionBar post={p} status={status.data} onReact={(type) => void react(type)} /> : null}
+                <Txt variant="section" style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
+                  {tr("soul_app.circle.post.comments", { n: String(p.comment_count) })}
+                </Txt>
+              </>
+            )
+          }
+          ListEmptyComponent={
+            p && !comments.rows ? (
               <View style={[styles.pad, { paddingHorizontal: gutter }]}>
                 <Skeleton lines={2} />
               </View>
-            )}
-          </>
-        )}
+            ) : null
+          }
+          ListFooterComponent={p ? <PagedFooter list={comments} testID="comments-more" title={tr("soul_app.circle.comment.more")} /> : null}
+          onEndReached={comments.more ?? undefined}
+          onEndReachedThreshold={0.5}
+          refreshControl={refreshControl}
+          keyboardShouldPersistTaps="handled"
+        />
       </Screen>
       {open ? (
         <View style={[styles.dock, { paddingHorizontal: 12, paddingBottom: 10 + insets.bottom, borderTopColor: t.hair, backgroundColor: t.s1 }]}>
