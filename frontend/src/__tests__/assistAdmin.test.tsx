@@ -66,6 +66,18 @@ const USAGE: AssistAdminUsage = {
   phase4: { corpus_tokens: 61480, corpus_threshold: 80000, corpus_reached: false, empty_share: 0.118, empty_threshold: 0.15, empty_reached: false },
 };
 
+const CORPUS = {
+  entries: [
+    { id: "rebirth-apply", locale: "zh-Hans", audience: "soul", screens: ["applications"], civilizations: [], tokens: 400 },
+    { id: "past-lives", locale: "zh-Hans", audience: "soul", screens: ["life"], civilizations: ["CHINESE", "GREEK"], tokens: 300 },
+    { id: "duat-scales", locale: "en", audience: "soul", screens: ["sentence"], civilizations: ["EGYPTIAN"], tokens: 200 },
+    { id: "officer-roles", locale: "zh-Hans", audience: "officer", screens: ["users", "permissions"], civilizations: [], tokens: 1000 },
+  ],
+  prompts: [{ locale: "zh-Hans", audience: "officer", tokens: 61480 }],
+  total_tokens: 61480,
+  threshold: 80000,
+};
+
 let config = makeConfig();
 
 function refusal(status: number, data: Record<string, unknown>) {
@@ -102,6 +114,7 @@ beforeEach(() => {
     if (url === "/assist-admin/config/") return { data: config };
     if (url === "/assist-admin/halls/") return { data: HALLS };
     if (url === "/assist-admin/usage/") return { data: USAGE };
+    if (url === "/assist-admin/corpus/") return { data: CORPUS };
     return { data: [] };
   });
   post.mockReset();
@@ -319,12 +332,14 @@ describe("eval identities", () => {
     await renderConfig();
     expect(screen.getByTestId("aa-identity-soul")).toHaveTextContent("缺少");
     expect(screen.getByTestId("aa-identity-officer")).toHaveTextContent("就绪");
-    expect(screen.getByRole("button", { name: "开跑…" })).toBeDisabled();
-    expect(screen.getByText("缺少评测灵魂，先创建评测身份。")).toBeInTheDocument();
+    // Scoped: 试问 above carries the same side buttons and the same reason line.
+    const evalRegion = screen.getByRole("region", { name: "评测" });
+    expect(within(evalRegion).getByRole("button", { name: "开跑…" })).toBeDisabled();
+    expect(within(evalRegion).getByText("缺少评测灵魂，先创建评测身份。")).toBeInTheDocument();
 
     // The officer side is not blocked by the soul's absence.
-    fireEvent.click(screen.getByRole("button", { name: "官员端" }));
-    expect(screen.getByRole("button", { name: "开跑…" })).toBeEnabled();
+    fireEvent.click(within(evalRegion).getByRole("button", { name: "官员端" }));
+    expect(within(evalRegion).getByRole("button", { name: "开跑…" })).toBeEnabled();
 
     post.mockReturnValueOnce(new Promise(() => {}));
     fireEvent.click(screen.getByRole("button", { name: "创建评测身份" }));
@@ -377,3 +392,103 @@ describe("usage page", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
+
+describe("试问 (plan §3.3)", () => {
+  const tryRegion = () => screen.getByRole("region", { name: "试问" });
+  const ANSWER = {
+    side: "soul", answer: "你已有一份转生申请正在审批。", tools_called: ["me", "rebirth"], latency_ms: 2410,
+    tokens: { input: 2700, output: 205 }, provider: "openai_compatible", model: "assist-medium",
+  };
+
+  it("asks as the eval soul with the saved config and shows the answer and tool names", async () => {
+    await renderConfig();
+    post.mockResolvedValueOnce({ data: ANSWER });
+    const region = tryRegion();
+    expect(within(region).getByText("以 问一问评测灵魂 身份提问")).toBeInTheDocument();
+    fireEvent.change(within(region).getByLabelText("问题"), { target: { value: "  我为什么不能申请？ " } });
+    fireEvent.click(within(region).getByRole("button", { name: "问" }));
+    const result = await within(region).findByTestId("aa-try-result");
+    expect(calls(post, "/assist-admin/try/")).toEqual([["/assist-admin/try/", { side: "soul", question: "我为什么不能申请？" }]]);
+    expect(result).toHaveTextContent("你已有一份转生申请正在审批。");
+    expect(result).toHaveTextContent("工具调用 · 2");
+    expect(within(result).getByText("me()")).toBeInTheDocument();
+    expect(within(result).getByText("rebirth()")).toBeInTheDocument();
+    expect(result).toHaveTextContent("2,410 ms · 2,905 tok");
+    expect(result.textContent).not.toContain("8f3c");
+    // Absence: no draft, so no candidate and no draft note.
+    expect(within(region).queryByText(/用未保存的连接草稿提问/)).toBeNull();
+  });
+
+  it("sends the unsaved connection draft as the candidate, and the officer side when chosen", async () => {
+    await renderConfig();
+    fireEvent.change(screen.getByLabelText("模型名"), { target: { value: "assist-large" } });
+    post.mockResolvedValueOnce({ data: { ...ANSWER, side: "officer", tools_called: [], model: "assist-large" } });
+    const region = tryRegion();
+    fireEvent.click(within(region).getByRole("button", { name: "官员端" }));
+    expect(within(region).getByText("以 assist-eval-officer 身份提问")).toBeInTheDocument();
+    expect(within(region).getByText(/用未保存的连接草稿提问/)).toBeInTheDocument();
+    fireEvent.change(within(region).getByLabelText("问题"), { target: { value: "队列里有几件？" } });
+    fireEvent.click(within(region).getByRole("button", { name: "问" }));
+    const result = await within(region).findByTestId("aa-try-result");
+    expect(calls(post, "/assist-admin/try/")[0][1]).toEqual({ side: "officer", question: "队列里有几件？", candidate: { model: "assist-large" } });
+    expect(result).toHaveTextContent("没有调用工具");
+  });
+
+  it("is disabled with the reason when that side's eval identity is missing, and sends nothing", async () => {
+    config = makeConfig({ eval_officer: null });
+    await renderConfig();
+    const region = tryRegion();
+    expect(within(region).getByLabelText("问题")).not.toBeDisabled();
+    fireEvent.click(within(region).getByRole("button", { name: "官员端" }));
+    expect(within(region).getByLabelText("问题")).toBeDisabled();
+    const ask = within(region).getByRole("button", { name: "问" });
+    expect(ask).toBeDisabled();
+    expect(ask).toHaveAttribute("aria-describedby", "aa-try-missing");
+    expect(within(region).getByText("缺少评测官员，先创建评测身份。")).toBeInTheDocument();
+    expect(calls(post, "/assist-admin/try/")).toEqual([]);
+  });
+
+  it("names a refusal by its code", async () => {
+    await renderConfig();
+    post.mockRejectedValueOnce(refusal(429, { detail: "x", code: "rate_limited" }));
+    const region = tryRegion();
+    fireEvent.change(within(region).getByLabelText("问题"), { target: { value: "Q" } });
+    fireEvent.click(within(region).getByRole("button", { name: "问" }));
+    expect(await within(region).findByRole("alert")).toHaveTextContent("试问太频繁，请稍后再试。");
+    expect(within(region).queryByTestId("aa-try-result")).toBeNull();
+  });
+});
+
+describe("help corpus · read-only (plan §5)", () => {
+  const corpusRegion = () => screen.getByRole("region", { name: "帮助语料 · 只读" });
+  // The key column is an inline IdentifierChip (§4.6 registry): the whole key is its title and clipboard value.
+  const ids = () => within(corpusRegion()).getAllByRole("row").slice(1).map((r) => r.querySelector("td button")?.getAttribute("title"));
+
+  it("shows the prompt estimate against the 80k threshold and every entry", async () => {
+    await renderConfig();
+    const region = await waitFor(corpusRegion);
+    expect(within(region).getByTestId("aa-corpus-threshold")).toHaveTextContent("最大一份提示约 61,480 / 80,000 token（阶段 4 阈值） 未到阈值");
+    expect(within(region).getByTestId("aa-corpus-summary")).toHaveTextContent("4 条 · 共 1,900 token");
+    expect(ids()).toEqual(["rebirth-apply", "past-lives", "duat-scales", "officer-roles"]);
+    // Read-only: the only buttons are the four copy-the-key chips; nothing on the section writes.
+    expect(within(region).getAllByRole("button").map((b) => b.getAttribute("data-identifier-variant"))).toEqual(["inline", "inline", "inline", "inline"]);
+  });
+
+  it("filters by audience, screen, civilization and locale; counts follow the filter", async () => {
+    await renderConfig();
+    await waitFor(corpusRegion);
+    fireEvent.change(screen.getByLabelText("受众"), { target: { value: "officer" } });
+    expect(ids()).toEqual(["officer-roles"]);
+    expect(screen.getByTestId("aa-corpus-summary")).toHaveTextContent("1 条 · 共 1,000 token");
+    fireEvent.change(screen.getByLabelText("受众"), { target: { value: "" } });
+    // An entry with no civilizations applies to all of them, so it stays under any civilization.
+    fireEvent.change(screen.getByLabelText("文明"), { target: { value: "EGYPTIAN" } });
+    expect(ids()).toEqual(["rebirth-apply", "duat-scales", "officer-roles"]);
+    fireEvent.change(screen.getByLabelText("语言"), { target: { value: "en" } });
+    expect(ids()).toEqual(["duat-scales"]);
+    fireEvent.change(screen.getByLabelText("页面"), { target: { value: "life" } });
+    expect(within(corpusRegion()).queryByRole("table")).toBeNull();
+    expect(screen.getByText("没有符合筛选的条目。")).toBeInTheDocument();
+  });
+});
+

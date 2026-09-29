@@ -21,6 +21,8 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, Switch, count } from "./parts";
 import { HallSwitches } from "./HallSwitches";
 import { EvalPanel } from "./EvalPanel";
+import { TryPanel } from "./TryPanel";
+import { CorpusSection } from "./CorpusSection";
 import { connectionDraft, fingerprint, saveBlock, setDraft, type Draft, type DraftKey } from "./draft";
 
 const READ_ONLY = ["max_concurrent", "timeout_seconds", "history_turns", "retention_days"] as const;
@@ -324,9 +326,15 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
             )}
           </Section>
 
-          <EvalPanel config={config} draftConnection={connectionDraft(draft)} />
+          <EvalPanel
+            config={config}
+            draftConnection={connectionDraft(draft)}
+            afterIdentities={<TryPanel config={config} draftConnection={connectionDraft(draft)} />}
+          />
         </div>
       </div>
+
+      <CorpusSection />
 
       <div className="sticky bottom-0 z-filters -mx-4 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-3">
         <div className="flex flex-wrap items-center justify-end gap-3">

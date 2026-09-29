@@ -3793,7 +3793,9 @@
       "read_only": "Read-only settings",
       "connectivity": "Connectivity test",
       "identities": "Eval identities",
-      "eval": "Eval"
+      "eval": "Eval",
+      "try": "Try a question",
+      "corpus": "Help corpus · read-only"
     },
     "switch": {
       "master": "Master switch",
@@ -3946,6 +3948,30 @@
       "missing": "missing “{{phrases}}”",
       "all_hit": "all key points hit"
     },
+    "try": {
+      "as_soul": "Asking as the 问一问 eval soul",
+      "as_officer": "Asking as assist-eval-officer",
+      "question": "Question",
+      "ask": "Ask",
+      "answer": "Answer",
+      "meta": "{{latency}} ms · {{tokens}} tokens",
+      "tools": "Tool calls · {{count}}",
+      "no_tools": "No tool calls",
+      "uses_draft": "Asks with the unsaved connection draft.",
+      "not_counted": "A real, paid request; not counted in this month’s usage or cap."
+    },
+    "corpus": {
+      "summary": "{{count}} entries · {{tokens}} tokens",
+      "threshold": "Largest prompt ≈ {{tokens}} / {{threshold}} tokens (phase 4 threshold)",
+      "note": "The corpus ships with the code and is read-only here; counts and tokens follow the filters.",
+      "entry": "Entry",
+      "audience": "Audience",
+      "screen": "Screen",
+      "civilization": "Civilization",
+      "locale": "Language",
+      "tokens": "Tokens",
+      "empty": "No entries match the filters."
+    },
     "footer": {
       "unsaved": "{{count}} unsaved",
       "clean": "No unsaved changes",
@@ -3964,7 +3990,13 @@
       "save_failed": "Could not save. Try again.",
       "test_failed": "The connectivity test could not be sent. Try again.",
       "preview_failed": "Could not get a quote. Try again.",
-      "start_failed": "Could not start the run. Try again."
+      "start_failed": "Could not start the run. Try again.",
+      "no_eval_soul": "The eval soul is missing: create eval identities first.",
+      "no_eval_officer": "The eval officer is missing: create eval identities first.",
+      "rate_limited": "Too many tries this hour. Try again later.",
+      "assistant_unavailable": "The assistant could not answer just now. Try again later.",
+      "assistant_busy": "The assistant is busy. Ask again shortly.",
+      "try_failed": "The question could not be sent. Try again."
     },
     "usage": {
       "month": "Month",
