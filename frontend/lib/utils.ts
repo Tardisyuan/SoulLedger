@@ -35,13 +35,16 @@ import { extendTailwindMerge } from "tailwind-merge"
  */
 const twMerge = extendTailwindMerge({
   extend: {
-    classGroups: {
+    // tailwind-merge 3 (the Tailwind v4 table) reads font sizes from the `text`
+    // theme scale — the same name as the `--text-*` tokens in globals.css —
+    // instead of a hand-extended `font-size` class group (the v2 shape here).
+    theme: {
       // Registering these as font sizes does two things: it stops them
       // colliding with text colours, and it makes them collide with each
       // other, so `cn("text-xs", "text-md")` still resolves to `text-md`.
       // 规范 v1 的七档里,tailwind-merge 自带表认得 xs / sm / md / lg / xl / 2xs(t-shirt 名),
       // 不认得 `quote`;七个全登记,不依赖它的内置表恰好覆盖哪些。
-      "font-size": [{ text: ["2xs", "xs", "sm", "md", "quote", "lg", "xl"] }],
+      text: ["2xs", "xs", "sm", "md", "quote", "lg", "xl"],
     },
   },
 })

@@ -96,7 +96,7 @@ function readJwtClaims(token: string): Record<string, unknown> | null {
 /**
  * The persistent half: a cookie, plus `localStorage` on the read path.
  *
- * WHY A COOKIE AND NOT `localStorage`. `frontend/middleware.ts` runs on the
+ * WHY A COOKIE AND NOT `localStorage`. `frontend/proxy.ts` runs on the
  * server, before any of this, and reads `soulledger_refresh` off the request to
  * decide whether to admit a route. `localStorage` is invisible to it. That is
  * the whole reason the refresh token is a cookie, and it is why this port could
@@ -195,7 +195,7 @@ export const webPlatform: PlatformAdapter = {
   // and "is a bearer credential" are different properties, and a React Native
   // adapter that conflates them puts a 7- or 30-day refresh token into AsyncStorage
   // plaintext. A browser has no such choice to make: the refresh token has to be
-  // a cookie so `frontend/middleware.ts` can read it (see the note over
+  // a cookie so `frontend/proxy.ts` can read it (see the note over
   // `persistent` above), and a cookie is the most protected store this platform
   // offers for a value JS must also be able to read. So both ports point here.
   //

@@ -65,7 +65,6 @@ export type MeReincarnation = Schemas["MeReincarnation"];
 /** 「我的受刑」:本人本世的计划,节点状态已按画布 1a 合并成灵魂看的几档(REMOVED 不出现)。 */
 export type MeSentencePlan = Schemas["MeSentencePlan"];
 export type MeSentenceStation = Schemas["MeSentenceStation"];
-export type SentencePlanState = Schemas["SoulSentencePlanStateEnum"];
 export type SentenceStationStatus = Schemas["SoulSentenceStationStatusEnum"];
 export type MeRebirthApplication = Schemas["MeRebirthApplication"];
 export type MeRebirthApplicationList = Schemas["MeRebirthApplicationList"];
@@ -73,7 +72,6 @@ export type DesiredRebirthForm = Schemas["DesiredRebirthFormEnum"];
 export type RebirthApplicationStatus = Schemas["RebirthApplicationStatusEnum"];
 export type PushDevice = Schemas["PushDevice"];
 export type PushPlatform = Schemas["PushPlatformEnum"];
-export type PushLocale = Schemas["PushLocaleEnum"];
 export type NotificationSettings = Schemas["NotificationSettings"];
 export type NotificationSettingsPatch = Schemas["PatchedNotificationSettings"];
 export type Civilization = Schemas["CivilizationEnum"];
@@ -275,7 +273,6 @@ export const SOUL_ERROR_CODES = [
   "validation",
 ] as const;
 
-export type SoulErrorCode = (typeof SOUL_ERROR_CODES)[number];
 
 export interface SoulErrorMessage {
   key: string;

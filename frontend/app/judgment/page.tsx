@@ -47,6 +47,8 @@ function JudgmentQueuePageContent() {
       const res = await judgmentApi.list(params);
       return res.data;
     },
+    // The pending tab is a shared worklist other officers are taking cases from.
+    staleTime: 0,
   });
   // Params live in the queryKey, so tab/page/ordering changes refetch on their own.
   const { data: judgmentData, isLoading, isError, refetch } = useQuery(listQuery(tab, page));

@@ -86,6 +86,7 @@ import {
   type NodeEditData,
 } from "@/src/components/workflow/NodeEditModal";
 import { useToast } from "@/src/contexts/ToastContext";
+import type { TemplatePreviewData } from "@/src/components/workflow/page/types";
 import { QueryError } from "@/src/components/ui/PageError";
 import { prefersReducedMotion } from "@/lib/motion";
 import {
@@ -260,6 +261,15 @@ export interface WorkflowTemplateInput {
   nodes: TemplateNode[];
 }
 
+/** A template opened from the gallery. The header fields are the page's
+ *  `TemplatePreviewData`; the node rows are not narrowed, because presets,
+ *  saved templates and the page preview each spell them differently and
+ *  `presetTemplateToFlow` reads every field defensively. */
+type PresetTemplate = Omit<TemplatePreviewData, "nodes_json" | "nodes"> & {
+  nodes_json?: object[];
+  nodes?: object[];
+};
+
 export default function WorkflowEditor({
   templateId,
   initialTemplateData,
@@ -267,7 +277,7 @@ export default function WorkflowEditor({
   onSave,
 }: {
   templateId?: string;
-  initialTemplateData?: any;
+  initialTemplateData?: PresetTemplate | null;
   onClose?: () => void;
   onSave?: (template: WorkflowTemplateInput) => void;
 }) {
@@ -466,8 +476,8 @@ export default function WorkflowEditor({
     if (!initRef.current && initialTemplateData && !templateId) {
       initRef.current = true;
       const civ = initialTemplateData.civilization;
-      setTemplateName(initialTemplateData.name || initialTemplateData.templateName || "");
-      setTemplateDescription(initialTemplateData.description || initialTemplateData.templateDescription || "");
+      setTemplateName(initialTemplateData.name || "");
+      setTemplateDescription(initialTemplateData.description || "");
       if (isCivilizationOption(civ)) {
         setTemplateCiv(civ);
       }

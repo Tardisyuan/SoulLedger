@@ -109,7 +109,8 @@ def test_without_soul_read_it_is_refused(world):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("ids", ["", "not-a-uuid", ",".join(str(uuid.uuid4()) for _ in range(101))])
+@pytest.mark.parametrize("ids", ["", "not-a-uuid", ",".join(str(uuid.uuid4()) for _ in range(101))],
+                         ids=["empty", "not-a-uuid", "101-uuids"])
 def test_bad_ids_are_a_400_not_a_file(world, ids):
     response = world["reader"].get(URL, {"ids": ids})
     assert response.status_code == 400

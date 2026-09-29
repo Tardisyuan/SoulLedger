@@ -366,7 +366,7 @@ SoulLedger/
 │   │   └── __tests__/     ← 契约测试(它们才是真正的规范)
 │   ├── components/ui/     ← 第三个源根:data-table / data-grid / page-section / skeleton
 │   ├── lib/platform/web.ts ← 平台端口的 web 实现
-│   ├── middleware.ts      ← 路由守卫(在 frontend/ 根,不在 src/)
+│   ├── proxy.ts           ← 路由守卫 + CSP(在 frontend/ 根,不在 src/;Next 16 前叫 middleware.ts)
 │   └── eslint.config.mjs  ← 七条 design-system 规则
 ├── mobile/                ← 灵魂端 App(Expo);门禁见 CLAUDE.md 的 Build & Test
 └── scripts/
