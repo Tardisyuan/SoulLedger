@@ -241,6 +241,9 @@ describe("history (1f)", () => {
       fireEvent.press(screen.getByTestId("assist-history"));
     });
     fireEvent.press(await screen.findByTestId("assist-delete-c1"));
+    // The list footer states the retention rule (Design), not that something was already deleted.
+    expect(screen.getByText("会话保存 30 天，期满自动删除。")).toBeTruthy();
+    expect(screen.queryByText("更早的会话已按期删除。")).toBeNull();
     expect(screen.getByTestId("assist-delete-sheet")).toBeTruthy();
     expect(calls.some((c) => c.method === "DELETE")).toBe(false);
     await act(async () => {

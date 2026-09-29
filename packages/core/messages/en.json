@@ -3184,7 +3184,7 @@
       "letters_note": "This conversation is not carried over; you write the letter yourself.",
       "new": "New conversation",
       "retention": "Conversations are deleted automatically after 30 days.",
-      "history_end": "Older conversations have been deleted on schedule.",
+      "history_end": "Conversations are kept 30 days, then deleted automatically.",
       "history_empty": "No questions yet.",
       "today": "Today",
       "screen_other": "Other",
