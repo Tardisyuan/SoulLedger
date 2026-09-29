@@ -14,6 +14,7 @@ from django.urls import get_resolver
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
 from apps.notifications.models import UserNotification
+from apps.soul_accounts.models import SoulAccount
 from apps.soul_assist import config, evals, service, usage
 from apps.soul_assist.models import (
     AssistConfig,
@@ -96,7 +97,7 @@ def _admin_routes():
 
 def test_the_route_list_is_not_empty():
     """下面那条 403 测试的主体清单来自 URLconf;清单空了它就恒绿。"""
-    assert len(_admin_routes()) == 11
+    assert len(_admin_routes()) == 12
 
 
 @pytest.mark.parametrize("role", ["MODERATOR", "JUDGE", "GUARDIAN", "VIEWER"])
@@ -334,6 +335,8 @@ def test_the_admin_is_warned_once_at_80_percent_before_the_cap_closes_it(api, ad
     assert _soul_ask(soul).status_code == 200  # 花了 6 ≥ 5
     assert config.effective().enabled is False
     assert titles() == ["助手本月花费已到上限的 80%", "助手已自动关闭:本月花费到达上限"]
+    messages = " ".join(UserNotification.objects.filter(user=admin).values_list("message", flat=True))
+    assert messages.count("早上 8 点(北京时间)") == 2  # 提醒与关闭都说清楚何时换月
 
 
 def _close_by_cap(api, soul):
@@ -423,10 +426,9 @@ def test_the_preview_names_what_blocks_a_run(api):
 
 
 def _eval_ready(api, cn_tenant, judge_user):
-    account, _ = ready_soul(cn_tenant)
-    _patch(api, prices={"env-model": {"input": 1, "output": 1}, "cand-b": {"input": 2, "output": 2}},
-           eval_soul_account=str(account.pk), eval_officer=judge_user.pk)
-    return account
+    ids = api.post(f"{BASE}eval/identities/").data
+    _patch(api, prices={"env-model": {"input": 1, "output": 1}, "cand-b": {"input": 2, "output": 2}})
+    return SoulAccount.objects.get(pk=ids["eval_soul_account"])
 
 
 def test_a_run_needs_the_previews_token_once_and_from_the_same_admin(api, cn_tenant, judge_user):
@@ -880,3 +882,66 @@ def test_a_cleared_key_does_not_fall_back_to_the_process_environment(monkeypatch
     with pytest.raises(ProviderError) as refused:
         AnthropicProvider(conn=conn)
     assert refused.value.kind == "auth"
+
+
+# ── 评测身份:灵魂一个、官员一个,只由系统创建(用户 2026-09-29 定)──────────────
+
+
+def test_the_eval_identities_are_made_once_and_are_the_ones_the_run_uses(api, cn_tenant, admin):
+    """变异:`ensure` 每次都新建 → 第二次 id 不同,红;官员建成 ADMIN → 角色断言红;
+    忘了 `set_unusable_password` → 密码断言红。"""
+    from django.contrib.auth.hashers import is_password_usable
+
+    first = api.post(f"{BASE}eval/identities/")
+    assert first.status_code == 200
+    second = api.post(f"{BASE}eval/identities/")
+    assert (second.data["eval_soul_account"], second.data["eval_officer"]) == (
+        first.data["eval_soul_account"], first.data["eval_officer"])
+    assert User.objects.filter(username="assist-eval-officer").count() == 1
+    account = SoulAccount.objects.select_related("user", "soul").get(pk=first.data["eval_soul_account"])
+    officer = User.objects.get(pk=first.data["eval_officer"])
+    assert officer.role == "MODERATOR" and officer.role != "ADMIN" and officer.tenant == cn_tenant
+    assert not is_password_usable(officer.password) and not is_password_usable(account.user.password)
+    assert account.must_change_password is False and account.soul.tenant == cn_tenant
+    assert account.soul.current_state == "REINCARNATING"
+    from apps.soul_accounts.models import InitialCredential
+
+    assert not InitialCredential.objects.filter(account=account).exists()
+    body = api.get(f"{BASE}config/").data
+    assert body["eval_soul_account"] == str(account.pk) and body["eval_officer"] == officer.pk
+    assert body["month_rolls_over_at"] == usage.ROLLOVER_TEXT
+    created = AuditLog.objects.filter(resource="assistant_config", description="assistant eval identities created")
+    assert created.count() == 1 and created.get().user == admin  # 第二次没缺什么,不再写审计
+
+
+def test_only_an_admin_can_make_eval_identities(cn_tenant, judge_user):
+    _, soul = ready_soul(cn_tenant)
+    assert officer_client(judge_user).post(f"{BASE}eval/identities/").status_code == 403
+    assert soul.post(f"{BASE}eval/identities/").status_code == 403
+    assert not User.objects.filter(username="assist-eval-officer").exists()
+
+
+def test_patch_cannot_set_the_eval_identities(api, judge_user):
+    """变异:序列化器里的 `validate` 删掉 → 200 且被忽略,红。"""
+    for body in ({"eval_officer": judge_user.pk}, {"eval_soul_account": None}):
+        res = api.patch(f"{BASE}config/", body, format="json")
+        assert res.status_code == 400 and set(res.data) == set(body)
+    assert AssistConfig.objects.filter(pk=1, eval_officer__isnull=False).count() == 0
+
+
+def test_a_deleted_or_deactivated_eval_identity_blocks_the_preview_and_is_recreated(api, cn_tenant):
+    """变异:`live_*` 只看 id 不看是否在用 → 停用后预估不报缺,红。"""
+    ids = api.post(f"{BASE}eval/identities/").data
+    _patch(api, prices={"env-model": {"input": 1, "output": 1}})
+    AssistEvalCase.objects.all().delete()
+    AssistEvalCase.objects.create(side="soul", screen="applications", question="Q")
+    AssistEvalCase.objects.create(side="officer", screen="judgment", question="Q")
+    ask = lambda: api.post(f"{BASE}eval/preview/", {"side": "both", "candidates": [{}]}, format="json").data  # noqa: E731
+    assert ask()["problems"] == []
+    User.objects.filter(pk=ids["eval_officer"]).update(is_active=False)
+    SoulAccount.objects.filter(pk=ids["eval_soul_account"]).update(retired_at="2026-01-01T00:00:00Z")
+    assert ask()["problems"] == ["no_eval_officer", "no_eval_soul"]
+    again = api.post(f"{BASE}eval/identities/").data
+    assert again["eval_officer"] == ids["eval_officer"]  # 同名官员复活,不是撞用户名
+    assert again["eval_soul_account"] != ids["eval_soul_account"]
+    assert User.objects.get(pk=again["eval_officer"]).is_active and ask()["problems"] == []

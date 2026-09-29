@@ -396,6 +396,20 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/assist-admin/eval/identities/:
+    post:
+      operationId: assist_admin_eval_identities_ensure
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalIdentities'
+          description: ''
   /api/v1/assist-admin/eval/preview/:
     post:
       operationId: assist_admin_eval_preview
@@ -17361,9 +17375,14 @@ components:
           type: string
           format: uuid
           nullable: true
+          description: 只读;由 POST eval/identities/ 设置
         eval_officer:
           type: integer
           nullable: true
+          description: 只读;由 POST eval/identities/ 设置
+        month_rolls_over_at:
+          type: string
+          description: 月度上限按 UTC 月份滚动,写成北京时间给管理员看
         overridden:
           type: array
           items:
@@ -17382,6 +17401,7 @@ components:
       - eval_spend_cap
       - fallbacks
       - model
+      - month_rolls_over_at
       - monthly_cap
       - officer_per_hour
       - overridden
@@ -18683,6 +18703,26 @@ components:
         * `users` - users
         * `welcome` - welcome
         * `workflow` - workflow
+    EvalIdentities:
+      type: object
+      properties:
+        eval_soul_account:
+          type: string
+          format: uuid
+        eval_officer:
+          type: integer
+        officer_username:
+          type: string
+        officer_role:
+          type: string
+        description:
+          type: string
+      required:
+      - description
+      - eval_officer
+      - eval_soul_account
+      - officer_role
+      - officer_username
     EvalPreview:
       type: object
       properties:
@@ -24318,13 +24358,6 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/Price'
-        eval_soul_account:
-          type: string
-          format: uuid
-          nullable: true
-        eval_officer:
-          type: integer
-          nullable: true
     PatchedCrossTenantJudgment:
       type: object
       description: |-

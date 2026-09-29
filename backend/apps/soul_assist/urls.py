@@ -26,6 +26,7 @@ admin_urlpatterns = [
     path("halls/<int:tenant_id>/", admin_views.HallDetailView.as_view(), name="assist-admin-hall"),
     path("eval/cases/", admin_views.EvalCaseListView.as_view(), name="assist-admin-eval-cases"),
     path("eval/cases/<int:pk>/", admin_views.EvalCaseDetailView.as_view(), name="assist-admin-eval-case"),
+    path("eval/identities/", admin_views.EvalIdentitiesView.as_view(), name="assist-admin-eval-identities"),
     path("eval/preview/", admin_views.EvalPreviewView.as_view(), name="assist-admin-eval-preview"),
     path("eval/runs/", admin_views.EvalRunListView.as_view(), name="assist-admin-eval-runs"),
     path("eval/runs/<int:pk>/", admin_views.EvalRunDetailView.as_view(), name="assist-admin-eval-run"),

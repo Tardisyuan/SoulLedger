@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from apps.core.tenant import ADMIN_ROLE
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
-from apps.soul_assist import config, corpus, evals, service, usage
+from apps.soul_assist import config, corpus, eval_identities, evals, service, usage
 from apps.soul_assist.admin_serializers import (
     CandidateSerializer,
     ConfigSerializer,
@@ -23,6 +23,7 @@ from apps.soul_assist.admin_serializers import (
     ConnectivityResultSerializer,
     CorpusSerializer,
     EvalCaseSerializer,
+    EvalIdentitiesSerializer,
     EvalPreviewRequestSerializer,
     EvalPreviewSerializer,
     EvalRunDetailSerializer,
@@ -68,6 +69,7 @@ def _config_body(eff: config.Effective):
         "api_key": {"set": bool(key), "last4": key[-4:] if len(key) >= 12 else None,
                     "set_at": eff.api_key_set_at, "source": "page" if eff.api_key_set_at else "env"},
         "eval_soul_account": eff.eval_soul_account_id, "eval_officer": eff.eval_officer_id,
+        "month_rolls_over_at": usage.ROLLOVER_TEXT,
         "overridden": list(eff.overridden),
         "read_only": {"max_concurrent": settings.ASSISTANT_MAX_CONCURRENT,
                       "timeout_seconds": settings.ASSISTANT_TIMEOUT_SECONDS,
@@ -110,9 +112,8 @@ class ConfigView(AdminView):
             if cap is not None and after.model not in prices:
                 return _error("设了月度上限,就要给当前模型填价格:否则花费算不出来,上限永远不会触发。",
                               "unpriced_model")
-            refs = {f"{name}_id": data.pop(name) for name in ("eval_soul_account", "eval_officer") if name in data}
             api_key = data.pop("api_key", config._UNSET)
-            config.save_changes(row, data, user=request.user, request=request, api_key=api_key, refs=refs)
+            config.save_changes(row, data, user=request.user, request=request, api_key=api_key)
         return Response(_config_body(config.effective()))
 
 
@@ -166,6 +167,18 @@ class HallDetailView(AdminView):
             config.audit(request.user, f"hall assistant switch {tenant.code}",
                          {"assistant_enabled": [old, on]}, request, resource_id=f"tenant:{tenant.code}")
         return Response(HallSerializer(next(h for h in _halls() if h["id"] == tenant.pk)).data)
+
+
+class EvalIdentitiesView(AdminView):
+    @extend_schema(operation_id="assist_admin_eval_identities_ensure", request=None,
+                   responses={200: EvalIdentitiesSerializer})
+    def post(self, request):
+        account, officer, note = eval_identities.ensure(request.user, request)
+        desc = (f"评测灵魂「{account.soul.name}」与评测官员 {officer.username}(角色 {officer.role},均不可登录)"
+                f"在 {account.soul.tenant.code} 殿。{note}").strip()
+        return Response(EvalIdentitiesSerializer({
+            "eval_soul_account": account.pk, "eval_officer": officer.pk, "officer_username": officer.username,
+            "officer_role": officer.role, "description": desc}).data)
 
 
 class EvalCaseListView(AdminView, generics.ListCreateAPIView):

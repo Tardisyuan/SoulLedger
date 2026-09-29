@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from django.utils.module_loading import import_string
 
-from apps.soul_assist import config, corpus, service
+from apps.soul_assist import config, corpus, eval_identities, service
 from apps.soul_assist.providers import ProviderError, ToolSpec, Turn
 from apps.soul_assist.usage import estimate_tokens
 
@@ -97,9 +97,9 @@ def preview(candidates, cases, user) -> dict:
         problems.append("too_many_asks")
     if "unpriced_model" not in problems and total_cost > eff.eval_spend_cap:
         problems.append("over_spend_cap")
-    if "soul" in sides and eff.eval_soul_account_id is None:
+    if "soul" in sides and eval_identities.live_account(eff.eval_soul_account_id) is None:
         problems.append("no_eval_soul")
-    if "officer" in sides and eff.eval_officer_id is None:
+    if "officer" in sides and eval_identities.live_officer(eff.eval_officer_id) is None:
         problems.append("no_eval_officer")
     token = None
     if not problems:
@@ -167,13 +167,10 @@ def _officer_request(user):
 
 
 def _asker(case, eff):
-    from apps.authentication.models import User
-    from apps.soul_accounts.models import SoulAccount
-
     if case.side == "soul":
-        account = SoulAccount.objects.select_related("soul", "user").filter(pk=eff.eval_soul_account_id).first()
+        account = eval_identities.live_account(eff.eval_soul_account_id)
         return None if account is None else service.soul_asker(account, case.screen, case.locale)
-    user = User.objects.select_related("tenant").filter(pk=eff.eval_officer_id, is_active=True).first()
+    user = eval_identities.live_officer(eff.eval_officer_id)
     return None if user is None else service.officer_asker(_officer_request(user), case.screen, case.locale)
 
 
