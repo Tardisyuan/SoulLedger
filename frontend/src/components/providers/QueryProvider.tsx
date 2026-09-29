@@ -11,6 +11,12 @@ export function QueryProvider({ children }: { children: ReactNode }) {
           queries: {
             retry: 1,
             refetchOnWindowFocus: false,
+            // Remounting a page within 30s reuses the cache instead of refetching.
+            // Real-time queries (judgment queue and its navigation, notifications,
+            // scheduler, soul inbox / chat, dispatch, death-sync, workflows) set
+            // `staleTime: 0` themselves. WebSocket invalidation refetches active
+            // queries whatever their staleTime.
+            staleTime: 30_000,
           },
         },
       })

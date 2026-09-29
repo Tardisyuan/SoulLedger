@@ -9,7 +9,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { StyleSheet } from "react-native";
+import { FlatList, RefreshControl, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -17,7 +17,7 @@ import { installMobilePlatform } from "../platform";
 import { CircleScreen, ComposePostScreen, PostScreen, usePaged } from "../screens/circle";
 import { themeFor, type ColorScheme } from "../theme";
 import { ThemeContext } from "../ui";
-import { stubApi } from "./stubApi";
+import { heldReply, stubApi } from "./stubApi";
 
 const mockPopTo = jest.fn();
 const mockNavigate = jest.fn();
@@ -122,6 +122,52 @@ describe("feed", () => {
     stubApi({ "/me/social/feed/": page([post({ author: { user_id: 3, display_name: "顾衡", avatar: null, is_active: false } })]) });
     wrap(<CircleScreen />);
     expect(await screen.findByTestId("reborn-p1")).toBeTruthy();
+  });
+});
+
+describe("feed paging (a FlatList read to its end)", () => {
+  const feedPage = (results: unknown[], next: string | null) => ({ status: 200, data: { count: 3, next, previous: null, results } });
+  const feedPages = (calls: { url: string; params?: Record<string, unknown> }[]) =>
+    calls.filter((c) => c.url === "/me/social/feed/").map((c) => c.params?.page);
+
+  it("nearing the end reads the next page once while it is on its way, and nothing past the last page", async () => {
+    const held = heldReply();
+    const calls = stubApi({ "/me/social/feed/": [feedPage([post({ id: "p1" }), post({ id: "p2" })], "?page=2"), held.reply] });
+    wrap(<CircleScreen />);
+    await screen.findByTestId("post-p2");
+    // What the list calls on nearing its end, read fresh each time (it changes with the page held).
+    const endReached = () => act(async () => screen.UNSAFE_getByType(FlatList).props.onEndReached?.({ distanceFromEnd: 0 }));
+    await endReached();
+    await endReached();
+    await endReached();
+    expect(feedPages(calls)).toEqual([1, 2]);
+    // While it is on its way the foot says so, and offers no second press.
+    expect(screen.getByTestId("circle-more-loading")).toBeTruthy();
+    expect(screen.queryByTestId("circle-more")).toBeNull();
+
+    await act(async () => held.answer(feedPage([post({ id: "p3" })], null)));
+    expect(screen.getByTestId("post-p3")).toBeTruthy();
+    await endReached();
+    expect(feedPages(calls)).toEqual([1, 2]);
+    expect(screen.queryByTestId("circle-more")).toBeNull();
+    expect(screen.queryByTestId("circle-more-loading")).toBeNull();
+  });
+
+  it("the foot's button reads the next page too (for a screen reader)", async () => {
+    const calls = stubApi({ "/me/social/feed/": [feedPage([post({ id: "p1" })], "?page=2"), feedPage([post({ id: "p2" })], null)] });
+    wrap(<CircleScreen />);
+    fireEvent.press(await screen.findByTestId("circle-more"));
+    expect(await screen.findByTestId("post-p2")).toBeTruthy();
+    expect(feedPages(calls)).toEqual([1, 2]);
+  });
+
+  it("rows are keyed by post, so a refresh that puts a new post on top keeps the rows already drawn", async () => {
+    stubApi({ "/me/social/feed/": [page([post({ id: "p1" })]), page([post({ id: "p0" }), post({ id: "p1" })])] });
+    wrap(<CircleScreen />);
+    const before = await screen.findByTestId("post-p1");
+    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+    await screen.findByTestId("post-p0");
+    expect(screen.getByTestId("post-p1")).toBe(before);
   });
 });
 
@@ -438,5 +484,22 @@ describe("usePaged", () => {
     await act(async () => answers[2]({ results: [{ id: "a2" }], next: null }));
     await act(async () => answers[1]({ results: [{ id: "late" }], next: null }));
     expect(result.current.rows).toEqual([{ id: "a2" }]);
+  });
+
+  it("`more` twice before a re-render asks once", async () => {
+    const answers: ((a: Answer) => void)[] = [];
+    const fetchPage = () => new Promise<Answer>((resolve) => answers.push(resolve));
+    const { result } = renderHook(() => usePaged<Row>("t", fetchPage));
+    await act(async () => answers[0]({ results: [{ id: "a" }], next: "?page=2" }));
+    const more = result.current.more;
+    act(() => {
+      more?.();
+      more?.();
+    });
+    expect(answers).toHaveLength(2);
+    await act(async () => answers[1]({ results: [{ id: "b" }], next: null }));
+    act(() => more?.()); // the stale closure still sees no next page
+    expect(answers).toHaveLength(2);
+    expect(result.current.more).toBeNull();
   });
 });

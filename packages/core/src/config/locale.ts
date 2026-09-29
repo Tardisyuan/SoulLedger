@@ -12,7 +12,7 @@
  * `"use client"` 的边界是运行时语义,不是类型;类型检查看不见它,构建也不求值
  * layout,而 jest 里没有服务端渲染。只有真的把页面打开才会知道。
  *
- * `middleware.ts` 同样从这里取值 —— 它此前把 cookie 名和支持的 locale 列表各自
+ * `proxy.ts` 同样从这里取值 —— 它此前把 cookie 名和支持的 locale 列表各自
  * 抄了一份字面量,与 I18nContext 里的两份并存。三份同源常量没有任何东西保证一致。 */
 
 export type Locale = "zh-Hans" | "en" | "egy";
@@ -23,7 +23,7 @@ export type Locale = "zh-Hans" | "en" | "egy";
  * 与当初触发整轮审计的 `NEXT_PUBLIC_API_URL` 是同一类形状。所以它被审过一遍,
  * 结论是**留下**,理由写在这里,免得下次再审一遍得出相反结论。
  *
- * 一、这里没有机制,只有一个字符串。读写全在宿主:`frontend/middleware.ts`
+ * 一、这里没有机制,只有一个字符串。读写全在宿主:`frontend/proxy.ts`
  * (edge,`request.cookies`)、`frontend/app/layout.tsx`(server component,
  * `await cookies()`)、`frontend/src/contexts/I18nContext.tsx`(`document.cookie`)。
  * 常量本身不假设任何存储机制,它只是个键。`platform/index.ts` 里的
@@ -31,7 +31,7 @@ export type Locale = "zh-Hans" | "en" | "egy";
  *
  * 二、**搬到 persistent 端口后面会真的坏掉,不是保守而是不能。** 端口是模块级
  * 单例(`platform/index.ts` 的 `adapter`),由 `PlatformProvider` 这个
- * `"use client"` 模块安装。上面两个宿主读取点跑在服务端:middleware 在 edge,
+ * `"use client"` 模块安装。上面两个宿主读取点跑在服务端:proxy(Next 16 起跑在 Node.js 运行时)在请求进来时,
  * layout 是 async server component,两者都是**按请求**读各自的 cookie jar。
  * 服务端拿到的是 `nullAdapter`,`get` 恒返回 `null` —— `<html lang>` 会永久停在
  * 默认语言,而这正是这个文件头记着的那次 500 的同一类故障:四个绿灯,首页错。
@@ -41,7 +41,7 @@ export type Locale = "zh-Hans" | "en" | "egy";
  * 现在写的是一年。走端口意味着语言偏好从一年悄悄变成别的寿命,没有任何东西会报出来。
  *
  * 需要改的时候要改的是**名字**(`LOCALE_STORAGE_KEY` 之类),不是位置;那要同时
- * 动 `middleware.ts`、`I18nContext.tsx` 和 `middlewareAuthGate.test.ts`。 */
+ * 动 `proxy.ts`、`I18nContext.tsx` 和 `proxyAuthGate.test.ts`。 */
 export const LOCALE_COOKIE = "soulledger-locale";
 
 export const SUPPORTED_LOCALES: readonly Locale[] = ["zh-Hans", "en", "egy"];

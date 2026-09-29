@@ -18,11 +18,11 @@ import {
  * (`egy → en`, so a screen reader is not asked to pronounce an interface it
  * has no rules for) is platform-independent and maps straight onto React
  * Native's `accessibilityLanguage`. Moving a thing is the moment to notice it
- * had no test at all: this module is imported by `middleware.ts`,
+ * had no test at all: this module is imported by `proxy.ts`,
  * `app/layout.tsx` and `I18nContext.tsx`, and everything asserted below was
  * previously held by nothing but the reading of it.
  *
- * `frontend/src/__tests__/middlewareAuthGate.test.ts` covers what the
+ * `frontend/src/__tests__/proxyAuthGate.test.ts` covers what the
  * *middleware* does with these values. This covers the values.
  */
 
@@ -70,7 +70,7 @@ describe("isLocale", () => {
    * `isLocale` is a hand-written disjunction of three string literals and
    * `SUPPORTED_LOCALES` is a hand-written array of the same three. Two lists,
    * with nothing between them: adding a fourth civilisation's locale to one and
-   * not the other type-checks, lints and builds. The guard is what `middleware.ts`
+   * not the other type-checks, lints and builds. The guard is what `proxy.ts`
    * uses to decide whether a cookie value is safe to write back, so the half
    * that matters is the second assertion.
    */

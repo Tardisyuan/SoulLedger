@@ -78,11 +78,6 @@ export const CIVILIZATION_SHORT_CODES: Record<string, string> = Object.fromEntri
   ])
 );
 
-/** The same four prefixes as a set, for "is this a civilization we paint?". */
-export const CIVILIZATION_SHORT_CODE_SET: ReadonlySet<string> = new Set(
-  Object.values(CIVILIZATION_SHORT_CODES)
-);
-
 export const TENANT_CODE_TO_CIVILIZATION: Record<string, string> = {
   CN_DIYU: "CHINESE",
   EU_HEAVEN_HELL: "EUROPEAN",
@@ -106,10 +101,6 @@ export const CIVILIZATION_DISPLAY_NAMES: Record<string, string> = {
 
 export function getCivilizationFromTenantCode(code: string): string {
   return TENANT_CODE_TO_CIVILIZATION[code] || code;
-}
-
-export function getDisplayNameForTenant(tenantCode: string): string {
-  return CIVILIZATION_DISPLAY_NAMES[tenantCode] || tenantCode;
 }
 
 /**
