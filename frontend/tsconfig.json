@@ -17,6 +17,12 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    // TS 6 defaults `types` to [] (5.x auto-included every @types/*). Without
+    // this list the jest globals and Node types still arrive, but only
+    // transitively — `node` via next/dist/types.d.ts, `jest` via
+    // src/__tests__/jest-dom.d.ts importing @testing-library/jest-dom. Named
+    // here so neither depends on a file that happens to reference it.
+    "types": ["node", "jest"],
     "plugins": [
       {
         "name": "next"
