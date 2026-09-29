@@ -317,8 +317,8 @@ npm run schema:generate --workspace @soulledger/core
 - 用量页多了 `by_retrieval`;评测用例多了可选的 `expected_entries`(全部进了上下文才算命中,`codes` 视为总在),
   运行汇总多了 `retrieval_hit_rate` 与 `retrieval_fallbacks`;试问结果带 `retrieval` 与 `retrieved_entries`。
   现有用例**没有**填期望条目(由主会话起草、用户审)。
-- PG-only 名单 +2:`test_pgvector_orders_exactly_like_the_python_cosine`(参数化 64 / 2560 维,即 vector / halfvec
-  两条路径)与 `test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_model`。
+- PG-only 名单 +2:`test_pgvector_orders_exactly_like_the_python_cosine`(64 / 2560 维,即 vector / halfvec
+  两条路径,同一条测试里;不参数化,skip 数之差才等于名单长度)与 `test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_model`。
 
 ## 8. 阶段
 

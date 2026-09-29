@@ -526,15 +526,18 @@ def _load(dims):
 
 
 @pytest.mark.skipif(connection.vendor == "sqlite", reason="pgvector 的 <=> 只在 PostgreSQL 上")
-@pytest.mark.parametrize("dims", [64, 2560])  # vector(N) 转型 / halfvec(N) 转型两条路径
-def test_pgvector_orders_exactly_like_the_python_cosine(dims):
-    query = _load(dims)
-    in_db = vectors.nearest(HelpChunk.objects.filter(model="m"), query, 20)
-    by_hand = sorted(((vectors.cosine(r.embedding, query), r.entry_id) for r in HelpChunk.objects.all()),
-                     key=lambda t: (-t[0], t[1]))
-    assert [e for _, e in in_db] == [e for _, e in by_hand]
-    for (a, _), (b, _) in zip(in_db, by_hand, strict=True):
-        assert a == pytest.approx(b, abs=1e-3)  # halfvec 是半精度
+def test_pgvector_orders_exactly_like_the_python_cosine():
+    """vector(N) 转型(64 维)与 halfvec(N) 转型(2560 维)两条路径。不用参数化:PG-only 名单按名字数,
+    参数化会让 SQLite 与 PG 的 skip 数之差比名单长度多一。"""
+    for dims in (64, 2560):
+        HelpChunk.objects.all().delete()
+        query = _load(dims)
+        in_db = vectors.nearest(HelpChunk.objects.filter(model="m"), query, 20)
+        by_hand = sorted(((vectors.cosine(r.embedding, query), r.entry_id) for r in HelpChunk.objects.all()),
+                         key=lambda t: (-t[0], t[1]))
+        assert [e for _, e in in_db] == [e for _, e in by_hand], dims
+        for (a, _), (b, _) in zip(in_db, by_hand, strict=True):
+            assert a == pytest.approx(b, abs=1e-3)  # halfvec 是半精度
 
 
 @pytest.mark.skipif(connection.vendor == "sqlite", reason="HNSW 索引只在 PostgreSQL 上")
