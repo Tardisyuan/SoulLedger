@@ -6,28 +6,46 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#14121c"
-    },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.soulledger.soul"
+      "bundleIdentifier": "com.soulledger.soul",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-mono.png"
+      }
     },
     "android": {
       "package": "com.soulledger.soul",
       "adaptiveIcon": {
-        "backgroundColor": "#14121c",
+        "backgroundColor": "#f4ede0",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-frame.png",
+          "imageWidth": 112,
+          "resizeMode": "contain",
+          "backgroundColor": "#f4ede0",
+          "dark": {
+            "image": "./assets/splash-frame-dark.png",
+            "backgroundColor": "#100e0d"
+          }
+        }
+      ],
       "expo-secure-store",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2b2724"
+        }
+      ],
       [
         "expo-image-picker",
         {
