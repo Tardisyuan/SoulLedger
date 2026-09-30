@@ -1,0 +1,82 @@
+[
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "title": "《太微仙君功過格》",
+    "details": ["又玄子序", "金大定十一年（1171）", "《正統道藏》洞真部戒律類雨字號"],
+    "url": "https://ctext.org/wiki.pl?if=en&chapter=199527"
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《抱朴子·微旨》",
+    "details": ["紀＝三百日、算＝三日"]
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《太上感應篇》",
+    "details": ["三百善地仙／一千三百善天仙"]
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《十戒功過格》",
+    "details": ["清", "三十文為一功"]
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《文昌帝君功過格·凡例》",
+    "details": ["倍率規則"]
+  },
+  {
+    "civilization": "EUROPEAN",
+    "corpus": "DEADLY_SIN",
+    "title": "Purgatorio X-XXVII",
+    "details": ["Dante"]
+  },
+  {
+    "civilization": "EUROPEAN",
+    "corpus": "INFERNO",
+    "title": "Inferno IV-XXXIV",
+    "details": ["Dante", "Longfellow 1867 translation", "Project Gutenberg #1001"],
+    "url": "https://www.gutenberg.org/ebooks/1001"
+  },
+  {
+    "civilization": "EGYPTIAN",
+    "corpus": "ASSESSORS",
+    "title": "The Book of the Dead",
+    "details": ["Budge 1901", "the Theban Recension II", "ch. CXXV", "Nebseni (BM EA 9900, sheet 30)"]
+  },
+  {
+    "civilization": "EGYPTIAN",
+    "corpus": "ASSESSORS",
+    "title": "The Gods of the Egyptians",
+    "details": ["Budge 1904"]
+  },
+  {
+    "civilization": "EGYPTIAN",
+    "corpus": "ASSESSORS",
+    "title": "Papyrus of Maiherperi",
+    "details": ["UCL Digital Egypt", "Quirke 2002"]
+  },
+  {
+    "civilization": "GREEK",
+    "corpus": "GORGIAS",
+    "title": "Gorgias 523a-526d",
+    "details": ["Plato", "Benjamin Jowett's translation", "Project Gutenberg #1672"],
+    "url": "https://www.gutenberg.org/ebooks/1672"
+  },
+  {
+    "civilization": "GREEK",
+    "corpus": "REPUBLIC_ER",
+    "title": "Republic X 614b-621b",
+    "details": ["Plato", "Benjamin Jowett's translation", "Project Gutenberg #1497"],
+    "url": "https://www.gutenberg.org/ebooks/1497"
+  }
+]

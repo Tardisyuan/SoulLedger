@@ -79,13 +79,25 @@
   },
   "about": {
     "title": "Tepy Hena Sesen",
-    "intro": "Sesh Medu, Tut Sesh, Tut Khetem: Tepy Hena Sesen.",
+    "intro": "Kat Wen, Sesh Djedu, Sia Hena Per Ky, Iri Tut: Wedj Hena Tepy Neb.",
     "fonts": "Sesh Medu",
     "ornament": "Tut Sesh",
     "images": "Tut Khetem",
-    "licence": "Sesen",
+    "licence": "Wedj",
     "public_domain": "Sesen En Neb",
-    "source": "Tepy"
+    "source": "Tepy",
+    "software": "Kat Wen",
+    "literature": "Sesh Djedu",
+    "services": "Sia Hena Per Ky",
+    "design": "Iri Tut, Iri Hena",
+    "group_server": "Per Hemsu",
+    "group_web": "Medjat Sab",
+    "group_app": "Medjat Ba",
+    "group_shared": "Medjat Sen",
+    "undeclared": "Nen Sesh",
+    "by_deployment": "Neb Mi Smen Hery",
+    "default": "Smen Tepy",
+    "reference": "Mi Djedu"
   },
   "souls": {
     "title": "Ba",
