@@ -111,7 +111,8 @@ export function QueueMinePanel({
                       <button
                         type="button"
                         onClick={() => onReassign(j)}
-                        className="shrink-0 text-xs text-[oklch(var(--color-ink-muted))] underline hover:text-[oklch(var(--color-ink))] max-sm:min-h-11"
+                        /* B9 行内动作:1px ink3 框、11 字。 */
+                        className="inline-flex h-6 shrink-0 items-center px-2 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] max-sm:min-h-11"
                       >
                         {t("judgment.claim.reassign")}
                       </button>
