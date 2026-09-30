@@ -194,9 +194,7 @@ function ThresholdReading({
           field="ratio"
           quantity="ratio"
           t={t}
-          className={`text-lg tabular-nums ${
-            failed ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-ink))]"
-          }`}
+          className="text-lg tabular-nums text-[oklch(var(--color-ink))]"
         >
           {ratioText}
         </Figure>
@@ -219,13 +217,13 @@ function ThresholdReading({
         </span>
       </div>
       <div className="flex justify-center">
+        {/* 判决结果,不是操作失败(Design E 组):ink 字 + 1px ink3 框,「未过」前加 ✕,
+            和判决徽标同一条规则 —— 冷玫红只留给操作失败与系统失败。 */}
         <span
-          className={`px-2 py-0.5 text-xs font-bold ${
-            failed
-              ? "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]"
-              : "bg-[oklch(var(--color-ink)/0.1)] text-[oklch(var(--color-ink))]"
-          }`}
+          data-testid="reading-threshold"
+          className="px-2 py-0.5 text-xs font-bold border border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink))]"
         >
+          {failed ? <span aria-hidden="true">✕ </span> : null}
           {failed ? t("souls.detail.reading.threshold_fail") : t("souls.detail.reading.threshold_pass")}
         </span>
       </div>
