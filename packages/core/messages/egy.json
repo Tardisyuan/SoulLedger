@@ -37,16 +37,16 @@
     "statute_fixed_note": "Djedu: Aq Tepy. Djedu Pen Em Sesh Wa, Nen Khemen.",
     "numbering": "Ren Djedu Em Taui Neb",
     "civilization": "Taui",
-    "civilization_note": "Taui Em Aq: Aq, Er Taui Ek Djes-Ef. Sesh Dy: Taui Aq Pehwy.",
+    "civilization_note": "Taui Em Aq: Aq, Iyi Djes-Ef Er Taui-Ek. Sesh Dy: Taui Aq Pehwy.",
     "remember_me": "Aq Wenen: Hru {{days}}",
     "forgot_password": "Nen Rekh Sekhem",
-    "forgot_desc": "Aq Iri Em Sab Heri-Tep Per Ahet Pen. Sesh Ren Aq: Sab Hery Sedjem, Wehem Sekhem Ek.",
+    "forgot_desc": "Aq Iri In Heri-Tep Per Ahet Pen. Sesh Ren Aq: Sedjem Sab Iyi Er Sab Hery, Wehem Sekhem-Ek.",
     "forgot_submit": "Hab Er Sab Hery",
     "forgot_sent": "Hab Seth Er Sab Hery",
     "forgot_failed": "Nen Hab. Wehem Iri Er Khet",
     "rate_limited": "Dbh Menmen. Wehem Iri Er Khet",
     "back_to_login": "Wehem Er Aq",
-    "forgot_sent_body": "Aq Wenen: Sab Hery Maa Ek, Wehem Sekhem Ek. Nen Hab Wat."
+    "forgot_sent_body": "Aq Wenen: Sab Hery Maa Djes-Ek, Wehem Sekhem-Ek. Hemsu Nen Hab Wat."
   },
   "home": {
     "console": "Wetep Khet",
@@ -72,7 +72,7 @@
       "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Aaru",
       "GREEK": "Wedja 3, Sesh Er, Mu Lethe"
     },
-    "your_realm": "Per Ahet Ek"
+    "your_realm": "Per Ahet-Ek"
   },
   "footer": {
     "version": "Medjat Ba v0.1"
@@ -469,7 +469,7 @@
   "recycle_bin": {
     "title": "Per Wehem Seth",
     "intro": "Fekh Seth Neb Em Aat Wa — It Neb Sesh Wa, Hena Hesb Khet Senb; Nen Sesh Khet Senb Wa Wa.",
-    "no_access": "Nen Was Ek Er Maa Per Wehem.",
+    "no_access": "Nen Was-Ek Er Maa Per Wehem.",
     "col_type": "Kher Seth",
     "col_item": "Seth",
     "col_dependents": "Khet Senb",
@@ -1253,7 +1253,7 @@
     },
     "claim": {
       "groups": {
-        "mine": "Shesep Ek",
+        "mine": "Shesep-I",
         "unclaimed": "Nen Shesep Djer",
         "others": "Shesep Ky",
         "deferred": "Sedjer"
@@ -1278,7 +1278,7 @@
       "key_move": "Khemen ↑↓",
       "key_open": "Wen Wedja",
       "claimed_by": "Shesep Em {{name}}",
-      "claimed_by_me": "Shesep Ek Seth",
+      "claimed_by_me": "Shesep-Ek Seth",
       "reason": "Khet",
       "reason_required": "Khet: Sesen",
       "defer_title": "Sedjer Wedja: Sep {{n}}",
@@ -1311,7 +1311,7 @@
       "reassign_count": "Hab Ky Er {{n}}",
       "in_hand": "Shesep",
       "in_hand_n": "{{n}}",
-      "reassign_you": "Ek",
+      "reassign_you": "Djes-Ek",
       "reassign_empty_title": "Nen Wenen · Nen Sab Ky",
       "reassign_empty_body": "Nen Sab Ky Em Per Pen.",
       "request_admin": "Dbh Sab Hery Er Hab Ky",
@@ -1339,10 +1339,10 @@
       "saving": "Em Sau…",
       "save_failed": "Nen Sau Djes-Ef; Wehem Iri Er Khemen Em Khet",
       "conflict_title": "Sau Seth Em Ky ({{time}})",
-      "conflict_body": "Khemen Ek Nen Sau Djer; Nen Sau Djes-Ef Er Ky. Hemet-Sesh Ky Dy. Setep Wa:",
+      "conflict_body": "Khemen-Ek Nen Sau Djer; Nen Sau Djes-Ef Er Ky. Hemet-Sesh Ky Dy. Setep Wa:",
       "server_version": "Hemet-Sesh Ky",
       "use_server": "Shesep Hemet-Sesh Ky",
-      "keep_mine": "Sau Ek (Khemen Ky)",
+      "keep_mine": "Sau Hemet-Sesh-I (Khemen Ky)",
       "concluded": "Wedja Khetem Seth; Sesh Tepy Nen Sau",
       "empty_text": "(Nen Khet)"
     },
@@ -1377,7 +1377,7 @@
       "not_applicable": "Nen Er {{verdict}}"
     },
     "row_mark": {
-      "mine": "Shesep Ek · Nen Iri Djer"
+      "mine": "Shesep-I · Nen Iri Djer"
     }
   },
   "audit": {
@@ -1911,7 +1911,7 @@
     "realm": "Ahet"
   },
   "permission": {
-    "denied_message": "Nen Was Ek Er Per Pen, Nen Er Iri Aha Pen.",
+    "denied_message": "Nen Was-Ek Er Aat Pen, Nen Er Iri Aha Pen.",
     "ask_admin": "Dbh Er Sab Hery En Per Pen",
     "denied_title": "Nen Was"
   },
@@ -2533,7 +2533,7 @@
     },
     "change_password": {
       "title": "Khemen Sekhem Tepy",
-      "intro": "Sesh Sekhem Ek Er Tepy. Sekhem Tepy Wenen Unut 72.",
+      "intro": "Sesh Sekhem-Ek Em Aq Tepy. Sekhem Tepy Wenen Unut 72.",
       "old_password": "Sekhem Tepy",
       "new_password": "Sekhem Renpi",
       "confirm_password": "Wehem Sesh Sekhem Renpi",
@@ -2552,7 +2552,7 @@
     },
     "forgot_password": {
       "link": "Nen Rekh Sekhem",
-      "email_intro": "Sesh Wat Sesh Em Aq Ba Ek. Hesb Maa Sesh 6 Hab Er Wat Sesh Pen.",
+      "email_intro": "Sesh Wat Sesh Em Aq En Ba-Ek. Hesb Maa Sesh 6 Hab Er Wat Sesh Pen.",
       "email": "Wat Sesh",
       "email_invalid": "Wat Sesh Nen Maat",
       "send": "Hab Hesb Maa",
@@ -2561,7 +2561,7 @@
       "code": "Hesb Maa",
       "code_format": "Hesb Maa: Sesh 6",
       "resend": "Wehem Hab",
-      "ask_hall": "Wat Sesh Pen: Nen Wehem Sekhem. Dbh Er Wesekhet Ek: Wehem Sekhem",
+      "ask_hall": "Wat Sesh Pen: Nen Wehem Sekhem. Dbh Er Wesekhet-Ek: Wehem Sekhem",
       "submit": "Wehem Sekhem",
       "step1_kicker": "Wehem Sekhem · 1 / 2",
       "step1_title": "Sesh Wat Sesh",
@@ -2578,9 +2578,9 @@
       "no_email_kicker": "Wehem Sekhem",
       "no_email_title": "Dbh Er Wesekhet",
       "no_email_body": "Nen Wat Sesh Em Aq Ba: Nen Wehem Sekhem Em Pen.",
-      "no_email_step_1": "Sesh Er Wesekhet Ek: Ren Ek Hena Ren Hesb Ba.",
-      "no_email_step_2": "Wesekhet Maa Ek, Wehem Sekhem; Hab Er Ek Sekhem Tepy.",
-      "no_email_note": "Nen Aq: Nen Sesh Em Pen. Dbh Ba Ky En Wesekhet Ek.",
+      "no_email_step_1": "Sesh Er Wesekhet-Ek: Ren-Ek Hena Ren Hesb Ba-Ek.",
+      "no_email_step_2": "Wesekhet Maa Djes-Ek, Wehem Sekhem-Ek; Hab Sekhem Tepy Er-Ek.",
+      "no_email_note": "Nen Aq: Nen Sesh Em Medjat Ba. Dbh Ba Ky En Wesekhet-Ek; Ky: Djed Em Wesekhet-Ek.",
       "back_to_login": "Wehem Er Aq",
       "err_expired_title": "Hesb Maa Mut",
       "err_expired_body": "Wehem Hab. Sekhem Renpi Wenen.",
@@ -2594,7 +2594,7 @@
       "err_rate_body": "Wehem Er Khet {{n}}.",
       "err_rate_later": "Wehem Er Khet.",
       "err_offline_title": "Nen Aq Er Per Hemsu",
-      "err_offline_body": "Sesh Ek Wenen. Wehem Iri.",
+      "err_offline_body": "Sesh-Ek Wenen. Er Em Senb: Wehem Iri.",
       "err_mismatch_title": "Sekhem Renpi Sen Nen Wa",
       "success_title": "Sekhem Khemen Seth",
       "success_body": "Aq Em Sekhem Renpi."
@@ -2606,7 +2606,7 @@
       "rebirth": "Wehem Mesut"
     },
     "life": {
-      "title": "Sesh Ek",
+      "title": "Sesh-I",
       "cycle": "Ankh {{cycle}}",
       "soul_code": "Ren Hesb Ba",
       "civilization": "Taui",
@@ -2647,7 +2647,7 @@
       "code_copy_failed": "Nen Senn",
       "residing": "Hemes Em {{current}} · Taui Tepy {{home}}",
       "record_count_short": "Sesh {{count}}",
-      "residing_note": "Hemes Er Nut Ek. Sesh Em Medu Nut Ek."
+      "residing_note": "Er Khet Hemes: Iyi Er Nut-Ek. Sesh Em Medu Nut-Ek."
     },
     "past_lives": {
       "title": "Ankh Tepyu",
@@ -2675,8 +2675,8 @@
       "view": "Maa",
       "expectation": "Medu Pen {{hope}}. Sab Wedja Wat; Sab Tepy Wedja Taui Ky.",
       "expectation_word": "Mer",
-      "statement_hint": "Medu Ek, Er Sab Mi Sesh.",
-      "residing_note": "Hemes Ek Em {{current}}; Wehem Mesut Er {{home}}. Hep {{home}}."
+      "statement_hint": "Medu Djes-Ek, Er Sab Wedja Mi Sesh.",
+      "residing_note": "Hemes-Ek Em {{current}}; Wehem Mesut Er {{home}}. Hep {{home}}."
     },
     "status": {
       "UNDER_REVIEW": "Em Wedja",
@@ -2724,8 +2724,8 @@
       "account_retired": "Aq Khetem",
       "application_open": "Dbh Wehem Mesut Wa Em Wedja",
       "cooldown": "Er Khet Khesef: Nen Dbh Em Ahet Qebeh",
-      "terminal_cosmology": "Nen Wehem Mesut Em Taui Ek. Wat Dy Pehwy.",
-      "soul_state": "Kheperu Ek Nen Dbh Wehem Mesut",
+      "terminal_cosmology": "Nen Wehem Mesut Em Taui-Ek. Wat Dy Pehwy.",
+      "soul_state": "Kheperu-Ek Nen Dbh Wehem Mesut",
       "application_approved": "Dbh Wehem Mesut Ankh Pen Hesy Seth",
       "appeal_used": "Dbh Pen Nehet Seth",
       "not_appealable": "Dbh Pen Nen Nehet Emu",
@@ -2735,10 +2735,10 @@
       "validation": "Sesh Nen Maat",
       "unknown": "Sethet ({{code}})",
       "screen_title": "Nen Aq Er Medjat",
-      "screen_body": "Sesh Ek Wenen. Nen Gem Emu.",
+      "screen_body": "Sesh-Ek Wenen. Nen Gem Emu.",
       "section": "Aat Pen Nen Gem. Ky Wenen.",
       "offline": "Nen Em Senb",
-      "sentence_in_progress": "Wetep Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep"
+      "sentence_in_progress": "Wetep-Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep"
     },
     "lexicon": {
       "eg": {
@@ -2753,22 +2753,22 @@
         "past_read_only": "Ankh Tepyu Maa Wa. Duat Nen Dbh, Nen Nehet.",
         "no_past_lives": "Nen Ankh Tepyu Em Duat. Ankh Wa Pen; Er Khet Nen Sesh.",
         "no_rebirth_title": "Nen Wehem Mesut Em Duat",
-        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Er Khet Wedja Ib, Wat Ek Pehwy; Nen Er Per Pen."
+        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Er Khet Dens Ib, Wat-Ek Pehwy; Nen Er Aat Pen."
       },
       "default": {
-        "no_rebirth_title": "Nen Wehem Mesut Em Taui Ek",
+        "no_rebirth_title": "Nen Wehem Mesut Em Taui-Ek",
         "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Wat Dy Pehwy; Nen Er Per Pen."
       },
       "eu": {
         "past_read_only": "Ankh Tepyu Maa Wa. Pet Hena Duat Nen Dbh, Nen Nehet.",
         "no_past_lives": "Nen Ankh Tepyu Em Pet Hena Duat. Ankh Wa Pen; Er Khet Nen Sesh.",
         "no_rebirth_title": "Nen Wehem Mesut Em Pet Hena Duat",
-        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Er Khet Wedja, Wat Ek Pehwy; Nen Er Per Pen."
+        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Er Khet Wedja, Wat-Ek Pehwy; Nen Er Aat Pen."
       }
     },
     "logout": {
       "title": "Per Aq?",
-      "body": "Aq Djer: Ren Hesb Ba Hena Sekhem Ek. Sekhem Tepy Mut.",
+      "body": "Wehem Aq: Ren Hesb Ba-Ek Hena Sekhem Renpi-Ek. Sekhem Tepy Wenen Khetem Seth.",
       "cancel": "Wenen Em Medjat"
     },
     "form_notes": {
@@ -2799,7 +2799,7 @@
       "SETTLED": "Khetem Seth"
     },
     "homecoming": {
-      "title": "Iyi Ek Er {{home}}",
+      "title": "Iyi-Ek Seth Er {{home}}",
       "body": "Hemes Em {{from}} Djer. Sesh Hena Unemu Er {{home}}.",
       "ok": "Rekh"
     },
@@ -2822,29 +2822,29 @@
       "language_hint": "Wetep Em At. Sesh Ba Em Medu Tepy.",
       "saving": "Sesh…",
       "saved": "Sau Seth",
-      "save_failed": "Nen Sesh Er Ren Ek. {{current}} Em At; Ky Khet {{previous}}.",
+      "save_failed": "Nen Sau Er Aq-Ek. {{current}} Emu; Ky Khet {{previous}}.",
       "revert": "Ankh Er {{previous}}",
-      "notifications": "Sedjem Ek",
+      "notifications": "Sedjem Ba",
       "rebirth": "Wehem Mesut Wedja",
       "rebirth_note": "Hesy / Khesef / Nehet Wedja",
       "judgment": "Wedja Pehwy",
       "judgment_note": "Wedja Pehwy, Wetep Iri",
       "residence": "Hemes Hena Ankh",
       "residence_note": "Hemes Hesy, Hemes Em Taui Ky, Ankh Er Taui",
-      "lock_screen": "Sedjem Ek Wa: Wedja Iri. Nen Khet, Nen Medu Maat. Sebayt Er Medu, Wesheb, Aq Ek: Sedjem Hena Khet Sesh Sab; Nen Wen-Khetem.",
-      "push_unavailable": "Sedjem Ek Nen Wenen Djer: Hemet-Sesh Pen Nen Aq Er Per Sedjem Ba. Wen-Khetem Em Khery Sau Er Aq Ek.",
-      "push_denied": "Sedjem Ek Khetem Em Hemsu. Wen-Khetem Em Khery Sau Setep Ek; Nen Iyi Er Wen Em Hemsu.",
+      "lock_screen": "Sedjem Ba Wa: Wedja Iri. Nen Khet, Nen Medu Maat. Sebayt Er Medu, Wesheb, Aq-Ek: Sedjem Ba Hena Khet Sesh In Sab; Nen Wen-Khetem.",
+      "push_unavailable": "Sedjem Ba Nen Wenen Djer: Hemet-Sesh Pen Nen Aq Er Per Sedjem Ba. Wen-Khetem Em Khery Sau Er Aq-Ek.",
+      "push_denied": "Sedjem Ba Khetem Em Hemsu. Wen-Khetem Em Khery Sau Setep-Ek; Nen Iyi Er Wen Em Hemsu.",
       "open_system_settings": "Wen Smen Ta",
-      "enable_push": "Wen Sedjem Ek",
+      "enable_push": "Wen Sedjem Ba",
       "toggle_failed": "Nen Sau Smen Pen. Wehem Er Tepy.",
       "version": "Medjat Ba {{version}}",
       "chat": "Shemes",
       "chat_note": "Shemes Renpi, Weshed Wesekhet"
     },
     "push": {
-      "primer_title": "Sedjem Ek Em Wedja?",
-      "primer_body": "Sesh Ba Wah. Sedjem Ek Wen, Nen Ankh Er Maa.",
-      "will_notify": "Sedjem Ek",
+      "primer_title": "Sedjem Ba Er-Ek Em Wedja?",
+      "primer_body": "Sesh Ba Wah. Sedjem Ba Wen: Nen Iyi Menmen Er Maa.",
+      "will_notify": "Sedjem Ba Er-Ek",
       "primer_rebirth": "Wehem Mesut Wedja",
       "primer_rebirth_note": "Hesy Hena Khesef; Nen Khet.",
       "primer_judgment": "Wedja Pehwy",
@@ -2898,7 +2898,7 @@
         "code_hint": "Sesh 10 Neb. Ren Hesb Ba Em Taui Neb; Gem Ba Neb.",
         "not_found": "Nen Gem.",
         "from_circle": "Em Shemsu",
-        "circle_hint": "Ba Taui Pen, Em Nehes Ek Er Nehes Ek.",
+        "circle_hint": "Ba Taui Pen Wa: Nehes-Ek, Ky Nehes Er-Ek.",
         "write": "Sesh"
       },
       "compose": {
@@ -2920,7 +2920,7 @@
         "incoming_hint": "Medu Tepy. Weshed, Medu Wa; Er Nen Weshed, Nen Khet.",
         "locked": "Em Weshed",
         "next_at": "Medu Wa Hab Seth. Er {{time}}: Hab Wa Djer.",
-        "throttled": "Ates Hru: Medu Wa Hab Seth. Er {{time}}: Hab Djer. Sesh Ek Wenen."
+        "throttled": "Ates Hru: Medu Wa Hab Seth. Er {{time}}: Hab Djer. Sesh-Ek Wenen."
       },
       "muted": {
         "banner": "Gerh Hru {{days}}. Er {{time}}: Shemes Ba Djer. Maa Wenen; Sesh Er Wesekhet Wenen.",
@@ -2953,7 +2953,7 @@
         "chat_not_configured": "Nen Shemes Dy.",
         "not_found": "Nen Gem.",
         "invalid_code": "Ren Hesb Ba: Sesh 10.",
-        "self": "Nen Sesh Er Ek Djes-Ef."
+        "self": "Nen Sesh Er Djes-Ek."
       }
     },
     "circle": {
@@ -2965,7 +2965,7 @@
         "empty_title": "Nen Medu Djer",
         "empty_body": "Nehes Ba Em Taui Pen: Medu Maa Dy. Sesh Medu Tepy.",
         "write": "Sesh Medu",
-        "error": "Nen Ini Shemsu. Medu Ek Wenen; Nen Ini Djer Pen.",
+        "error": "Nen Ini Shemsu. Medu-Ek Wenen; Nen Ini Djer Pen.",
         "more": "Medu Tepyu"
       },
       "compose": {
@@ -2977,20 +2977,20 @@
           "tenant": "Taui Pen",
           "tenant_hint": "Ba Em Aq, Em Taui Pen.",
           "followers": "Nehesu Wa",
-          "followers_hint": "Ba Nehes Ek.",
+          "followers_hint": "Ba Nehes Er-Ek.",
           "private": "Wa-Ek",
           "private_hint": "Wa-Ek."
         },
         "scope_note": "Shemsu Em Taui Emu Wa. Em Hemes: Taui Hemes.",
         "submit": "Hab",
         "pending_title": "Hab Seth; Nen Menkh Djer",
-        "pending_body": "Wa-Ek Maa Er Menkh. Er Khet Menkh: Maa Em Aat Maa Ek."
+        "pending_body": "Maa-Ek Wa Er Menkh. Er Khet Menkh: Maa Em Aat Setep-Ek."
       },
       "post": {
         "title": "Medu",
         "reborn": "Wehem Mesut Seth",
         "pending": "Nen Menkh Djer · Wa-Ek",
-        "pending_note": "Medu Djeseru Em. Ky Maa Er Khet Menkh. Nen Iri Ek.",
+        "pending_note": "Medu Djeseru Em. Ky Maa Er Khet Menkh. Nen Iri Khet.",
         "hidden": "Imen Seth · Ky Nen Maa",
         "hidden_note": "Wesekhet Imen Seth; Wa-Ek Maa.",
         "comments": "Wesheb {{n}}",
@@ -3005,7 +3005,7 @@
         "more": "Wesheb Ky"
       },
       "muted": {
-        "body": "Gerh Ek: Nen Medu, Nen Wesheb. Sesh Er Wesekhet Wenen.",
+        "body": "Gerh Er-Ek: Nen Medu, Nen Wesheb. Sesh Er Wesekhet Wenen.",
         "until": "Er {{time}}"
       },
       "react": {
@@ -3027,7 +3027,7 @@
         "follow_back": "Nehes Wehem",
         "followed": "Nehes Seth",
         "mutual": "Senb",
-        "follows_you": "Nehes Ek",
+        "follows_you": "Nehes Er-Ek",
         "more_hint": "Er Khet Nehes: Maa Ky. Medu Ky Nehesu Wa.",
         "reborn": "Wehem Mesut Seth",
         "reborn_body": "Ankh Pen Khetem Seth. Medu Khetem; Nen Nehes, Nen Sehed, Nen Wesheb.",
@@ -3040,7 +3040,7 @@
         }
       },
       "me": {
-        "title": "Per Ba Ek",
+        "title": "Per Ba-I",
         "display_name": "Ren Shemsu",
         "edit_name": "Khemen Ren",
         "name_save": "Sau",
@@ -3064,7 +3064,7 @@
         "detail_hint": "Djed Iri",
         "submit": "Hab Sedjem",
         "done_title": "Sedjem Ini Seth",
-        "done_body": "Wesekhet Maa. Nen Sedjem Ek Er Ky.",
+        "done_body": "Wesekhet Maa. Nen Sedjem Ba Er-Ek; Ba Ky Nen Rekh Ren-Ek.",
         "limit": "Sedjem Em Unut 24 Neb Seth; Wehem Iri Er Khet."
       },
       "search": {
@@ -3156,7 +3156,7 @@
       "push": {
         "completed": {
           "title": "Shepet Wetep-Neb Seth",
-          "body": "Shepet Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."
+          "body": "Shepet-Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."
         },
         "waiting": {
           "title": "Renpet Khetem; Ahau",
@@ -3164,11 +3164,11 @@
         },
         "amended": {
           "title": "Khemen-Shepet",
-          "body": "Shepet Ek Khemen Seth. Wen Medjat Ba Er Maa."
+          "body": "Shepet-Ek Khemen Seth. Wen Medjat Ba Er Maa."
         },
         "pardoned": {
           "title": "Renpet Sepy Nedj Seth",
-          "body": "Renpet Ek Nedj Seth. Wen Medjat Ba Er Maa."
+          "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."
         }
       }
     },
@@ -3184,22 +3184,22 @@
       "placeholder": "Hehy Medu Em Medjat Ba",
       "send": "Hehy",
       "sent": "Hab Seth",
-      "waiting": "Em Hehy Medu Hena Medjat Ek",
+      "waiting": "Em Hehy Medu Hena Medjat-Ek",
       "waiting_long": "Em Hehy Djer. Nen Menmen.",
       "wait_lock": "Wah Medu Pen",
       "answered": "Medu Seth",
       "unanswered_mark": "Nen Medu",
-      "unanswered": "Nen Medu. Hehy Ek Wenen.",
-      "unanswered_timeout": "Wah Menmen: Nen Medu. Hehy Ek Wenen.",
+      "unanswered": "Nen Medu. Hehy-Ek Wenen.",
+      "unanswered_timeout": "Wah Menmen: Nen Medu. Hehy-Ek Wenen.",
       "edit": "Khemen Er Hehy Djer",
       "limited_title": "Nen Hehy Djer",
       "limited_body": "Hehy Menmen Em Unut Pen. Er {{time}}: Hehy Djer.",
       "limited_later": "Hehy Menmen Em Unut Pen. Hehy Er Khet.",
       "not_configured_title": "Nen Hehy Medu Em Wesekhet Pen Djer",
-      "not_configured_body": "Sesh Er Wesekhet Ek; Sab Weshed.",
+      "not_configured_body": "Sesh Er Wesekhet-Ek; Sab Weshed.",
       "to_letters": "Shemes · Wesekhet",
       "letters_card": "Sesh Er {{hall}} · Sab Weshed Em Ren Wesekhet",
-      "letters_note": "Medew Pen Nen Hab. Sesh Ek Djes-Ef.",
+      "letters_note": "Medew Pen Nen Hab. Sesh Djes-Ek.",
       "new": "Medew Renpi",
       "history_end": "Medew Sau Hru 30; Er Khet Fekh Djes-Ef.",
       "history_empty": "Nen Medew.",
@@ -3213,7 +3213,7 @@
       "intro_ai_title": "Medu Djes-Ef",
       "intro_ai_body": "Nen Maat Neb. Kheperu, Hru, Wedja: Djedu Em Medjat.",
       "intro_keep_title": "Hehy Sau Hru 30",
-      "intro_keep_body": "Er Khet: Fekh. Ek Fekh Em Medew Tepy.",
+      "intro_keep_body": "Er Khet: Fekh Djes-Ef. Fekh-Ek Em Medew Tepy.",
       "intro_ro_title": "Maa Wa",
       "intro_ro_body": "Nen Hab Dbh, Nehet, Shemes Er Medu. Nen Sab.",
       "intro_ok": "Rekh"
@@ -3222,39 +3222,39 @@
   "soul_push": {
     "rebirth_approved": {
       "title": "Dbh Wehem Mesut Hesy Seth",
-      "body": "Dbh Wehem Mesut Ek Hesy Seth. Wen Medjat Ba Er Maa."
+      "body": "Dbh Wehem Mesut-Ek Hesy Seth. Wen Medjat Ba Er Maa."
     },
     "rebirth_rejected": {
       "title": "Dbh Wehem Mesut Khesef Seth",
-      "body": "Dbh Wehem Mesut Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
+      "body": "Dbh Wehem Mesut-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "rebirth_appeal_rejected": {
       "title": "Nehet Khesef Seth",
-      "body": "Nehet Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."
+      "body": "Nehet-Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "judgment_result": {
       "title": "Wedja Khetem",
-      "body": "Wedja Ek Khetem. Wen Medjat Ba Er Maa."
+      "body": "Wedja-Ek Khetem Seth. Wen Medjat Ba Er Maa."
     },
     "disposition_executed": {
       "title": "Wetep Iri Seth",
-      "body": "Wetep Ek Iri Seth. Wen Medjat Ba Er Maa."
+      "body": "Wetep-Ek Iri Seth. Wen Medjat Ba Er Maa."
     },
     "residence_approved": {
       "title": "Hemes Taui Ky Hesy",
-      "body": "Ek Er Hemes Em Taui Ky. Wen Medjat Ba Er Maa."
+      "body": "Hemes-Ek Em Taui Ky Hesy Seth. Wen Medjat Ba Er Maa."
     },
     "residence_started": {
       "title": "Hemes Tepy",
-      "body": "Ek Hemes Em Taui Ky. Wen Medjat Ba Er Maa."
+      "body": "Hemes-Ek Em Taui Ky Tepy Seth. Wen Medjat Ba Er Maa."
     },
     "residence_returned": {
       "title": "Hemes Khetem",
-      "body": "Ek Wehem Er Taui Tepy Ek. Wen Medjat Ba Er Maa."
+      "body": "Iyi-Ek Seth Er Nut-Ek. Wen Medjat Ba Er Maa."
     },
     "sentence_completed": {
       "title": "Shepet Wetep-Neb Seth",
-      "body": "Shepet Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."
+      "body": "Shepet-Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."
     },
     "sentence_waiting": {
       "title": "Renpet Khetem; Ahau",
@@ -3262,27 +3262,27 @@
     },
     "sentence_amended": {
       "title": "Khemen-Shepet",
-      "body": "Shepet Ek Khemen Seth. Wen Medjat Ba Er Maa."
+      "body": "Shepet-Ek Khemen Seth. Wen Medjat Ba Er Maa."
     },
     "sentence_pardoned": {
       "title": "Renpet Sepy Nedj Seth",
-      "body": "Renpet Ek Nedj Seth. Wen Medjat Ba Er Maa."
+      "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."
     },
     "chat_message": {
       "title": "Shemes Renpi",
-      "body": "{{name}}: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."
+      "body": "{{name}}: Shemes Renpi Er-Ek. Wen Medjat Ba Er Maa."
     },
     "social_warned_post": {
       "title": "Hab Er Medu",
-      "body": "Hab Er Medu Ek: {{reason}}"
+      "body": "Sebayt Er Medu-Ek: {{reason}}"
     },
     "social_warned_comment": {
       "title": "Hab Er Wesheb",
-      "body": "Hab Er Wesheb Ek: {{reason}}"
+      "body": "Sebayt Er Wesheb-Ek: {{reason}}"
     },
     "social_warned_user": {
       "title": "Hab Er Aq",
-      "body": "Hab Er Aq Ek: {{reason}}"
+      "body": "Sebayt Er Aq-Ek: {{reason}}"
     }
   },
   "official_notify": {
@@ -3332,15 +3332,15 @@
     },
     "sentence_request_decided": {
       "title": "Dbh Wetep Wedja Seth",
-      "body": "{{soul}}: Dbh Ek Wedja Seth Em Sab Wedja Tepy."
+      "body": "{{soul}}: Dbh-Ek Wedja Seth In Sab Wedja Tepy."
     },
     "sentence_plan_cancelled": {
       "title": "Wetep Sehen Seth",
       "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."
     },
     "soul_inbox_assigned": {
-      "title": "Sesh Hab Er Ek",
-      "body": "{{soul}}: Sesh Hab Ky Er Ek ({{by}})."
+      "title": "Sesh Hab Er-Ek",
+      "body": "{{soul}}: Sesh Hab In {{by}} Er-Ek."
     },
     "judgment_reassign_requested": {
       "title": "Dbh Hab Ky",
@@ -3566,7 +3566,7 @@
     "no_messages": "Nen Medu",
     "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "Wesheb Em Wesekhet",
-    "reply_hint": "Ba Maa Wesheb Wesekhet; Ren Ek Em Sesh.",
+    "reply_hint": "Ba Maa Wesheb Wesekhet; Ren-Ek Em Sesh.",
     "send": "Hab",
     "sent": "Wesheb Seth",
     "failed": "Nen Iri. Wehem Iri.",
@@ -3586,7 +3586,7 @@
       "replied": "Wesheb Seth",
       "drafts": "Sesh Tepy",
       "archived": "Per Sesh",
-      "assigned_to_me": "Hab Er Ek"
+      "assigned_to_me": "Hab Er-I"
     },
     "by_hall": "Wesekhet",
     "folder_empty": "Nen Sesh Dy",
@@ -3683,7 +3683,7 @@
     "request_add": "Redi Sekhet:",
     "request_remove": "Fekh Sekhet {{order}}",
     "decision_reason_shown": "Wedja: {{reason}}",
-    "awaiting_you": "Em Smen Er Wedja Ek",
+    "awaiting_you": "Em Smen Er Wedja-Ek",
     "accept": "Sesen",
     "reject": "Khesef",
     "withdraw": "Khet",
@@ -3707,7 +3707,7 @@
     "inbox_title": "Dbh Wetep",
     "inbox_subtitle": "Dbh Khemen Sekhet Hena Wedja Wehem; Sab Wedja Tepy Wedja",
     "inbox_empty": "Nen Dbh Em Smen",
-    "inbox_empty_reason": "Dbh Em Wetep Ek Hena Dbh Ek",
+    "inbox_empty_reason": "Dbh Er Wetep (Nut: Taui Pen), Hena Dbh Iri In Taui Pen",
     "errors": {
       "open_judgment": "Wedja Em Iri; Wedja Pehwy Er Wedja",
       "plan_closed": "Wetep Pehwy",
@@ -3725,19 +3725,19 @@
       "failed": "Nen Iri",
       "invalid_changes": "Khemen Isfet",
       "empty_changes": "Redi Er Fekh Sekhet",
-      "foreign_node": "Redi Sekhet Em Taui Ek Wa",
-      "foreign_realm": "Ta Nen Em Taui Ek",
+      "foreign_node": "Redi Sekhet Em Taui Pen Wa",
+      "foreign_realm": "Ta Nen Em Taui Pen",
       "unknown_node": "Nen Sekhet Pen Em Wetep",
-      "soul_is_here": "Ba Em Taui Ek; Shesep Wedja Khemen Sekhet"
+      "soul_is_here": "Ba Em Taui Pen; Wen Wedja Khemen Sekhet"
     },
     "cross": {
       "title": "Sekhet Wetep",
-      "hint": "Per Tepy Sekhet Tepy. Ky Ta Wa Sekhet, Sesh Em Ta Ek; Sab Sia Nen Sekhet. Wetep Djet Em Pehwy.",
+      "hint": "Nut Em Sekhet 1 Neheh. Taui Ky Neb: Sekhet Wa, Sesh In Sab Wedja En Taui-Ef; Sab Sia Nen Sekhet. Wetep Djet Em Pehwy.",
       "home_stop": "Wedja Tepy Iri",
       "not_submitted": "Nen Sesh",
-      "fill_title": "Sesh Sekhet Ek",
+      "fill_title": "Sesh Sekhet En Taui Pen",
       "realm": "Ta",
-      "realm_placeholder": "Setep Ta Ek",
+      "realm_placeholder": "Setep Ta En Taui Pen",
       "eternal_hint": "Ta Djet; Sekhet Em Pehwy",
       "years": "Renpet",
       "years_hint": "Shut: Nen Sesh",
@@ -3779,7 +3779,7 @@
       "open": "Hab Dbh",
       "title": "Hab Dbh Er Sab Wedja Tepy: {{soul}}",
       "kind": "Kher Seth",
-      "add_title": "Redi Sekhet (Taui Ek Wa)",
+      "add_title": "Redi Sekhet (Taui Pen Wa)",
       "add_stop": "Redi Sekhet",
       "remove_row": "Fekh",
       "remove_title": "Fekh Sekhet (Sekhet Nen Tepy Djer Wa)",
@@ -3789,7 +3789,7 @@
       "reopen_hint": "Sesen: Wedja Wehem Em Per Tepy; Wedja Iri Khemen Wetep.",
       "submit": "Hab Dbh",
       "submitted": "Dbh Hab Seth; Em Smen Er Sab Wedja Tepy",
-      "soul_is_here": "Ba Em Taui Ek: Shesep Wedja Khemen Sekhet."
+      "soul_is_here": "Ba Em Taui Pen: Wen Wedja Khemen Sekhet."
     },
     "amend": {
       "title": "Khemen Wetep",
@@ -3834,14 +3834,14 @@
     "send": "Hehy",
     "input_hint": "{{enter}}: Hehy · {{shift_enter}}: Wat Renpi · {{esc}}: Khetem",
     "sent": "Hab Seth",
-    "waiting": "Em Hehy Medu Hena Medjat Ek",
+    "waiting": "Em Hehy Medu Hena Sepu Wedja-Ek",
     "waiting_long": "Em Hehy Djer. Nen Menmen.",
     "cancel": "Sehen",
     "wait_lock": "Wah Medu Pen",
     "answered": "Medu Seth",
     "unanswered_mark": "Nen Medu",
-    "unanswered": "Nen Medu. Hehy Ek Wenen.",
-    "unanswered_timeout": "Wah Menmen: Nen Medu. Hehy Ek Wenen.",
+    "unanswered": "Nen Medu. Hehy-Ek Wenen.",
+    "unanswered_timeout": "Wah Menmen: Nen Medu. Hehy-Ek Wenen.",
     "retry": "Wehem Iri",
     "edit": "Khemen Er Hehy Djer",
     "limited_title": "Nen Hehy Djer",
@@ -3919,7 +3919,7 @@
       "price": "Hesb · {{model}}",
       "price_input": "Hesb · Shesep",
       "price_output": "Hesb · Hab",
-      "price_hint": "Sesh Ek: Nen Hesb Tepy Em Per Pen. Hesb Neb Em Pen.",
+      "price_hint": "Sesh-Ek: Nen Hesb Tepy Em Aat Pen. Hesb Neb Em Pen.",
       "unpriced": "Nen Hesb Em Sia Pen: Nen Hesb Abed."
     },
     "key": {
@@ -4096,7 +4096,7 @@
       "spent": "Hesb Seth / Er Pehwy",
       "no_cap": "Nen Smen Er Pehwy",
       "alert_mark": "Sedjem Sab 80%",
-      "cap_note": "80%: Sedjem Sab. Hesb Er Pehwy: Khetem, Sedjem Sab. Abed Renpi: Hru 1, Unut 8 — Wen Djes-Ef, Nen Em Khetem Ek.",
+      "cap_note": "80%: Sedjem Sab Er-Ek. Hesb Er Pehwy: Khetem, Sedjem Sab Er-Ek. Abed Renpi: Hru 1, Unut 8 — Wen Djes-Ef; Khetem-Ek: Nen Wen Djes-Ef.",
       "unpriced": "Nen Hesb: {{models}}",
       "quality": "Nefer · Abed Pen",
       "rate_unavailable": "Hehy Medu Nen Wenen",
