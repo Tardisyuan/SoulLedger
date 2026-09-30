@@ -6,6 +6,7 @@ import type { Statute, StatuteCorpus } from "@soulledger/core/api";
 import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
 import { citationOf, resolveCitation, statuteSigil } from "@soulledger/core/config/statuteCitation";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -211,7 +212,7 @@ export default function CorpusPage() {
             onChoose={choose}
           />
         ) : (
-          <p className="px-10 py-6 text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.corpus.select_prompt")}</p>
+          <p className="px-8 py-6 text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.corpus.select_prompt")}</p>
         )}
         {selected && (
           <aside
@@ -287,7 +288,7 @@ export default function CorpusPage() {
       subtitle={t("judgment.corpus.subtitle", { n: String(articles.length) })}
       filters={searchBar}
     >
-      <div className="space-y-10">{body}</div>
+      <div className="space-y-12">{body}</div>
     </PageShell>
   );
 }
@@ -399,7 +400,7 @@ function Reading({
   const serif = "font-serif text-md font-normal mt-3 text-[oklch(var(--color-ink))]";
 
   return (
-    <article data-testid="corpus-reading" className="px-4 md:px-10 py-6 min-w-0">
+    <article data-testid="corpus-reading" className="px-4 md:px-8 py-6 min-w-0">
       <div className="max-w-[72ch]">
         <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
           {corpusName(s.corpus)}
@@ -417,7 +418,7 @@ function Reading({
           <DomainEnum namespace="judgment.statute_polarity" value={s.polarity} />
         </p>
 
-        <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.original")}</h2>
+        <div className="pt-6"><SectionTitle>{t("judgment.corpus.original")}</SectionTitle></div>
         {original ? (
           <p data-testid="corpus-original" className={serif}>
             <MarkHits text={original} query={highlight} />
@@ -429,7 +430,7 @@ function Reading({
           </p>
         )}
 
-        <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.translation")}</h2>
+        <div className="pt-6"><SectionTitle>{t("judgment.corpus.translation")}</SectionTitle></div>
         {translation ? (
           <p data-testid="corpus-translation" className={serif}>
             <MarkHits text={translation} query={highlight} />
@@ -442,7 +443,7 @@ function Reading({
 
         {s.source_notes?.length > 0 && (
           <>
-            <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.notes")}</h2>
+            <div className="pt-6"><SectionTitle>{t("judgment.corpus.notes")}</SectionTitle></div>
             <ul className="mt-3 space-y-2 text-sm text-[oklch(var(--color-ink-muted))]">
               {s.source_notes.map((note, i) => (
                 <li key={i}>{note}</li>
@@ -452,7 +453,7 @@ function Reading({
         )}
         {s.source && (
           <>
-            <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))]">{t("judgment.corpus.source")}</h2>
+            <div className="pt-6"><SectionTitle>{t("judgment.corpus.source")}</SectionTitle></div>
             <p className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">{s.source}</p>
           </>
         )}
