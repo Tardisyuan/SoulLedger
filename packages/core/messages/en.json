@@ -3185,7 +3185,6 @@
       "send": "Ask",
       "sent": "Sent",
       "waiting": "Checking the help and your ledger",
-      "waiting_long": "Still checking — usually no more than 20 seconds",
       "wait_lock": "Wait for this answer before asking again",
       "answered": "Answered",
       "unanswered_mark": "Not answered",
@@ -3216,7 +3215,14 @@
       "intro_keep_body": "Then they are deleted automatically. You can also delete them from History at any time.",
       "intro_ro_title": "It looks; it does not act",
       "intro_ro_body": "It will not submit applications or appeals, write letters or post for you. It is not an officer either.",
-      "intro_ok": "Got it"
+      "intro_ok": "Got it",
+      "still_searching": "Still checking…",
+      "stop": "Stop",
+      "stop_aria": "Stop the answer",
+      "stopped": "Stopped",
+      "interrupted": "Answer interrupted",
+      "answering_aria": "Answering",
+      "jump_latest": "↓ Latest"
     }
   },
   "soul_push": {
@@ -3835,8 +3841,6 @@
     "input_hint": "{{enter}} to send · {{shift_enter}} for a new line · {{esc}} to close",
     "sent": "Sent",
     "waiting": "Checking the help and your queue",
-    "waiting_long": "Still checking — usually no more than 20 seconds",
-    "cancel": "Cancel",
     "wait_lock": "Wait for this answer before asking again",
     "answered": "Answered",
     "unanswered_mark": "Not answered",
@@ -3861,7 +3865,15 @@
     "delete_title": "Delete this conversation?",
     "delete_body": "This conversation, started on {{page}}, is deleted at once and cannot be brought back. It does not touch any judgment, workflow or record.",
     "delete_confirm": "Delete",
-    "delete_failed": "Could not delete. Please try again."
+    "delete_failed": "Could not delete. Please try again.",
+    "still_searching": "Still checking…",
+    "stop": "Stop",
+    "stop_aria": "Stop the answer",
+    "stopped": "Stopped",
+    "interrupted": "Answer interrupted",
+    "answering_aria": "Answering",
+    "jump_latest": "↓ Latest",
+    "stop_hint": "Esc to stop"
   },
   "assist_admin": {
     "title": "Assistant admin",
@@ -3876,7 +3888,6 @@
       "provider": "Provider",
       "limits": "Limits",
       "read_only": "Read-only settings",
-      "connectivity": "Connectivity test",
       "identities": "Eval identities",
       "eval": "Eval",
       "try": "Try a question",
@@ -3919,8 +3930,6 @@
       "price": "Price · {{model}}",
       "price_input": "Per million tokens · input",
       "price_output": "Per million tokens · output",
-      "price_hint": "You fill this in from your contract; the page has no provider prices built in. Spend, the cap and eval quotes all use it.",
-      "unpriced": "This model has no price yet: spend can't be computed and the monthly cap can never trip.",
       "platform": "Platform",
       "platforms": {
         "deepseek": "DeepSeek",
@@ -3959,7 +3968,17 @@
       "test_probe": "Testing · sending a short message and trying one tool call.",
       "test_ok_tool_yes": "Connected · Tools ✓",
       "test_ok_tool_no": "Connected · Tools ✕",
-      "test_no_tool": "This model does not support tool calls: the assistant can only answer general questions, not look up personal data. You can save, but a different model is recommended."
+      "test_no_tool": "This model does not support tool calls: the assistant can only answer general questions, not look up personal data. You can save, but a different model is recommended.",
+      "primary": "Primary provider",
+      "backup": "Backup provider (optional)",
+      "backup_none": "No backup provider",
+      "backup_explain": "When the primary can't be reached, times out, is rate-limited, out of credit or has a server error, the backup answers instead, once.",
+      "backup_add": "Add a backup",
+      "backup_remove": "Remove backup",
+      "backup_same_platform": "Same platform as the primary. If this platform fails, both stop working together. Saving is not affected.",
+      "price_period_hint": "For platforms priced by time of day, enter the price for the hours you use most.",
+      "in_effect": "In effect · {{model}}",
+      "in_effect_backup": "backup {{model}}"
     },
     "key": {
       "title": "API key",
@@ -3998,10 +4017,8 @@
       "retention_days_why": "Published to souls (first-run notice, help entries); changing it means changing those too."
     },
     "test": {
-      "hint": "Sends 1 request with the current unsaved configuration; not counted as usage.",
       "run": "Test connection",
       "again": "Test again",
-      "ok": "Connected · can be saved",
       "failed": "Not connected · cannot be saved",
       "detail": "{{provider}} · {{model}} · latency {{latency}} · tokens in {{input}} · out {{output}} · tested {{at}}",
       "stale": "The connection changed since: this result no longer counts. Test again.",
@@ -4089,7 +4106,14 @@
       "tools": "Tool calls · {{count}}",
       "no_tools": "No tool calls",
       "uses_draft": "Asks with the unsaved connection draft.",
-      "not_counted": "A real, paid request; not counted in this month’s usage or cap."
+      "not_counted": "A real, paid request; not counted in this month’s usage or cap.",
+      "first_text": "first text {{t}} s",
+      "stopped_at": "stopped at {{t}} s",
+      "interrupted_at": "interrupted at {{t}} s",
+      "role_primary": "primary",
+      "role_backup": "backup",
+      "switched": "no text from the primary in {{t}} s — switched to the backup",
+      "no_switch": "text already sent — no switch to the backup"
     },
     "corpus": {
       "summary": "{{count}} entries · {{tokens}} tokens",
@@ -4128,7 +4152,10 @@
       "assistant_unavailable": "The assistant could not answer just now. Try again later.",
       "assistant_busy": "The assistant is busy. Ask again shortly.",
       "try_failed": "The question could not be sent. Try again.",
-      "untested_embedding": "The address, model or dimensions changed: test them before saving."
+      "untested_embedding": "The address, model or dimensions changed: test them before saving.",
+      "backup_untested": "The backup has not passed its test. Save once both the primary and the backup pass.",
+      "backup_failed": "The backup failed its test. Fix or remove the backup before saving.",
+      "unpriced_backup_model": "With a monthly cap set, the backup's model needs a price too."
     },
     "usage": {
       "month": "Month",
@@ -4163,7 +4190,19 @@
       "reached": "Threshold reached",
       "not_reached": "Below threshold",
       "rate_fallback": "Retrieval fallback",
-      "fallback_note": "Retrieval fallback: questions answered from all help entries because the embedding service was unavailable."
+      "fallback_note": "Retrieval fallback: questions answered from all help entries because the embedding service was unavailable.",
+      "fallback": "Switched to backup",
+      "fallback_value": "{{n}} · {{pct}}",
+      "reason": {
+        "connection": "unreachable {{n}}",
+        "timeout": "timed out {{n}}",
+        "rate_limited": "429 rate-limited {{n}}",
+        "server_error": "5xx error {{n}}",
+        "quota": "out of credit {{n}}",
+        "circuit_open": "circuit breaker {{n}}"
+      },
+      "legend_primary": "Primary",
+      "legend_backup": "Backup"
     },
     "embedding": {
       "url": "Address",
