@@ -32,6 +32,7 @@
  * 由 / 被 In,En 只作属格);夹具里 5 条随包回填,键数不变;旧账清单清空。
  * 第十三节(助手管理页之后,2026-09-29):厂商名原样引用、Sedjem 作「通知」必带后置受者、「上限」写 Er Pehwy;
  * 夹具里 2 条随包回填(soul_app.settings.push_unavailable / push_denied),键数不变。
+ * 第十七节「单写的 Ek · 96 键」给了逐键写法;夹具里 21 条随包回填,键数不变。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
@@ -132,6 +133,9 @@ const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")
  * (第十二节:ID 写 Ren Hesb,Aa 的其余写法全部作废,包里已无 Aa)。
  */
 const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
+
+/** 第十六、十七节:Ek 只作后缀(Sesh-Ek 你的、Er-Ek 给你、Shesep-Ek 你已);单独的「你」写 Djes-Ek。 */
+const BARE_EK = /(?<![A-Za-z-])Ek(?![A-Za-z])/;
 
 /**
  * 第十一节:功 = Nefer、过 = Isfet,Maat 只作「真 / 实」与女神名。第十四节把功过格、功过台账也改写 Sesh Nefer Isfet,
@@ -284,7 +288,7 @@ const PHRASE_RE = new RegExp(
  * 第十节:后置小词 -Ef(其 / 它的)接在任何词后都合规,所以 Iri-Ef 拆成 Iri 与 -Ef 两个词。
  * 第十一节:-I(我的)同理,Sedjem-I 拆成 Sedjem 与 -I。
  * 第十五节(Design E 组):-Ek(你的)必须接在词后 —— Hesb Maa-Ek、Ren Hesb Ba-Ek、Per-Ek —— 同样拆开。
- * 独立的 Ek(你)仍在小词表里。
+ * 第十七节:独立的 Ek 废止(「你」写 Djes-Ek、「我」写 -I),Ek 从小词表删除;连字符形(Djes-Ek、Er-Ek)照拆。
  */
 const words = (k: string) => {
   const text = prose(EGY[k]);
@@ -491,7 +495,7 @@ const PROPER_NAMES = [
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
-  "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
+  "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
   // 第十节:如 / 同(例如 Mi)、是(与 Nen 相对)、后置的「其 / 它的」(Iri-Ef;-Es 换成 -Ef,界面不分性别)。
   "Mi", "Iu", "-Ef",
   // 第十一节:属格 En(只用在两个名词之间,Sesh En Ba;形容词尾的「的」不写);后置 -I(我的,Sedjem-I)。
@@ -701,6 +705,16 @@ describe("egy 词表规则", () => {
   it("否定一律 Nen:单词 Ma 不出现", () => {
     // 第十四节改写了最后一个非否定的 Ma(escalate_reason_placeholder),白名单随之删除。
     expect(offenders(KEYS, (v) => /\b[Mm]a\b/.test(prose(v)))).toEqual([]);
+  });
+
+  it("Ek 只作后缀:前面没有连字符的 Ek 一律拦下(第十六、十七节)", () => {
+    // 整词匹配:-Ek 后缀、Djes-Ek、Er-Ek 合法;Ekh 之类的长词不误中。
+    expect(BARE_EK.test("Sesh Ek Wenen.")).toBe(true);
+    expect(BARE_EK.test("Ek Hemes Em Taui Ky.")).toBe(true);
+    expect(BARE_EK.test("Djes-Ek, Er-Ek, Sesh-Ek.")).toBe(false);
+    expect(offenders(KEYS, (v) => BARE_EK.test(prose(v)))).toEqual([]);
+    // 空扫保护:-Ek 后缀确实在包里。
+    expect(KEYS.some((k) => /[A-Za-z]-Ek\b/.test(EGY[k]))).toBe(true);
   });
 
   it("加载一律 Ini:中文含「加载 / 载入」的键必含 Ini", () => {
