@@ -437,7 +437,10 @@ describe("举报 · the C-08 review layout", () => {
     fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.delete") }));
     expect(apiMock.resolveReport).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.delete") }));
+    const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.actions.delete") });
+    // 官员删除进回收站(可撤回)→ 警示按钮(橙),不是次按钮、也不是实底红。
+    expect(confirm.className).toContain("--color-warning");
+    fireEvent.click(confirm);
     await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DELETE", undefined, undefined));
   });
 
@@ -514,8 +517,12 @@ describe("敏感词 · E-08b", () => {
     fireEvent.click(within(row).getByRole("checkbox", { name: tZh("social_moderation.words.select_row", { word: "还阳" }) }));
     fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
     expect(apiMock.removeWords).not.toHaveBeenCalled();
-    const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
+    // 敏感词硬删、不进回收站 → 输入名称以确认;只选一个时输的是那个词本身。
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByTestId("name-confirm-action");
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "还阳" } });
+    fireEvent.click(confirm);
     await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(["w1"]));
     expect(apiMock.removeWord).not.toHaveBeenCalled();
   });
