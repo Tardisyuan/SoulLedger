@@ -14580,6 +14580,19 @@ export interface components {
             cost: number;
             /** Format: date */
             date: string;
+            /**
+             * Format: double
+             * @description 主用答的(含主用失败前已花的)花费;primary_cost + backup_cost = cost
+             */
+            primary_cost: number;
+            /**
+             * Format: double
+             * @description 备用答的花费,按备用的价目表
+             */
+            backup_cost: number;
+            /** @description 这一天由备用答出的提问数(备用也失败的不计) */
+            fallbacks: number;
+            fallback_reasons: components["schemas"]["UsageFallbackReasons"];
         };
         UsageFallbackReasons: {
             connection: number;
@@ -14593,7 +14606,7 @@ export interface components {
             circuit_open: number;
         };
         UsageFallbacks: {
-            /** @description 改用备用的请求数 */
+            /** @description 由备用答出的提问数;备用也失败的算作失败,不计入 */
             count: number;
             by_reason: components["schemas"]["UsageFallbackReasons"];
         };

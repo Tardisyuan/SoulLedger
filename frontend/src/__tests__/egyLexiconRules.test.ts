@@ -275,6 +275,8 @@ const TECHNICAL: Record<string, string[]> = {
   "assist_admin.try.stopped_at": ["s"],
   "assist_admin.try.interrupted_at": ["s"],
   "assist_admin.try.switched": ["s"],
+  "assist_admin.try.waited": ["s"],
+  "assist_admin.usage.reason.server_error": ["5xx"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -486,9 +488,10 @@ const ROOTS_TWELVE = [
   // (「你的」,同 Wa-Ek 的构词)。待 Design 在词表里正式确认。
   "Djes-Ek", //       你自己(手填模型名 / 手动填写)
   "Setep-Ek", //      你所选的(模型)
-  // 流式输出与备用供应商那一批(2026-10-01,画布「问一问 · 流式输出」与「助手管理 · 供应商」第二轮):
-  // Design 给的唯一新词根。主 / 备成对:主用 Heri-Tep(首领,第十节已登),备用 Idenu(本义「副手、代理人」)。
-  "Idenu", //         备用(供应商)
+  // 流式输出与备用供应商那一批(2026-10-01):Heri-Tep 锁定为「殿主」,主 / 备供应商写 Per Sia Wa / Per Sia Sen
+  // (Wa = 一,Design 在词表新登的义项;Sen = 二,第十节已登)。「两者」写 Wa Hena Sen(主与备)。
+  // 起初登记过的 Idenu(备用)已整批换掉、不再使用,随之删除。
+  "Wa", //            一(主供应商 Per Sia Wa)
 ];
 /**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
@@ -718,6 +721,17 @@ describe("egy 词表规则", () => {
       (k) => !hasSekhem(EGY[k] ?? "") || (ZH[k] ?? "").includes("密码")
     );
     expect(stale).toEqual([]);
+  });
+
+  it("助手管理不用 Heri-Tep(殿主)与 Idenu:主 / 备供应商写 Per Sia Wa / Per Sia Sen(Design 2026-10-01)", () => {
+    const admin = KEYS.filter((k) => k.startsWith("assist_admin."));
+    // 空扫保护:扫到了整个命名空间。
+    expect(admin.length).toBeGreaterThan(100);
+    expect(admin.filter((k) => /\b(Heri-Tep|Idenu)\b/.test(EGY[k]))).toEqual([]);
+    const primary = ["assist_admin.provider.primary", "assist_admin.usage.legend_primary", "assist_admin.try.role_primary"];
+    const backup = ["assist_admin.try.role_backup", "assist_admin.usage.legend_backup"];
+    expect(primary.filter((k) => EGY[k] !== "Per Sia Wa")).toEqual([]);
+    expect(backup.filter((k) => EGY[k] !== "Per Sia Sen")).toEqual([]);
   });
 
   it("否定一律 Nen:单词 Ma 不出现", () => {

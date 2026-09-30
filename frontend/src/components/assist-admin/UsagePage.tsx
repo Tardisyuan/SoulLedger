@@ -4,8 +4,6 @@ import { useState } from "react";
 import type { AssistAdminUsage } from "@soulledger/core/api/assist-admin";
 import { useAssistUsage } from "@soulledger/core/hooks/useAssistAdmin";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useChartColors } from "@/src/hooks/useChartColors";
-import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -17,6 +15,7 @@ const ALERT_SHARE = 0.8;
 /** 改用备用's reasons (frame 7a): the first four always, the last two only when they happened. */
 const ALWAYS_REASONS = ["connection", "timeout", "rate_limited", "server_error"] as const;
 const RARE_REASONS = ["quota", "circuit_open"] as const;
+const REASONS = [...ALWAYS_REASONS, ...RARE_REASONS];
 /** Frame 7a's backup swatch: ink diagonal hatching, no hue — the backup is not a status. */
 const HATCH =
   "bg-[repeating-linear-gradient(135deg,oklch(var(--color-ink))_0_1.5px,transparent_1.5px_4px)] shadow-[inset_0_0_0_1px_oklch(var(--color-ink))]";
@@ -53,10 +52,8 @@ export function AssistAdminUsagePage() {
 
 function UsageBody({ usage }: { usage: AssistAdminUsage }) {
   const { t } = useI18n();
-  const { CHART_SERIES } = useChartColors();
   const [asTable, setAsTable] = useState(false);
   const share = usage.cap ? usage.spent / usage.cap : null;
-  const days = usage.by_day.map((d) => ({ ...d, name: d.date.slice(5) }));
   const p4 = usage.phase4;
   const roleCost = (role: "primary" | "backup") => usage.by_provider.find((r) => r.role === role)?.cost ?? null;
   const primaryCost = roleCost("primary") ?? 0;
@@ -146,19 +143,25 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
           }
         >
           {asTable ? (
+            // The non-visual equivalent of the bars: the cost split into 主 and 备 (frame 7a).
             <Table
-              head={[t("assist_admin.usage.date"), t("assist_admin.usage.requests"), t("assist_admin.usage.tokens"), t("assist_admin.usage.cost")]}
-              rows={usage.by_day.map((d) => [d.date, count(d.requests), count(d.input_tokens + d.output_tokens), money(d.cost)])}
+              head={[
+                t("assist_admin.usage.date"),
+                t("assist_admin.usage.requests"),
+                t("assist_admin.usage.tokens"),
+                t("assist_admin.usage.legend_primary"),
+                t("assist_admin.usage.legend_backup"),
+              ]}
+              rows={usage.by_day.map((d) => [d.date, count(d.requests), count(d.input_tokens + d.output_tokens), money(d.primary_cost), money(d.backup_cost)])}
               monoFirst
             />
-          ) : days.length ? (
-            <LazyBarChart data={days} dataKey="cost" fill={CHART_SERIES.realm} height={180} name={t("assist_admin.usage.cost")} />
+          ) : usage.by_day.length ? (
+            <DayBars days={usage.by_day} />
           ) : (
             <p className={SUBTLE}>{t("assist_admin.usage.no_days")}</p>
           )}
           {backupCost !== null && (
-            // Month totals per role. The per-day split (stacked bars, day detail, 主 / 备 columns) needs
-            // `by_day` broken down by role, which the usage API does not return yet.
+            // Month totals per role; the bars above split each day the same way.
             <p className={`mt-2 flex flex-wrap gap-x-4 ${SUBTLE}`} data-testid="aa-cost-legend">
               <span className="flex items-center gap-1">
                 <span aria-hidden="true" className="inline-block h-2 w-3 bg-[oklch(var(--color-ink-muted))]" />
@@ -203,6 +206,63 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
           </dl>
         </Section>
       </div>
+    </div>
+  );
+}
+
+type Day = AssistAdminUsage["by_day"][number];
+type T = ReturnType<typeof useI18n>["t"];
+
+/** "2026-09-17" → "9/17". */
+const shortDate = (iso: string) => iso.slice(5).split("-").map(Number).join("/");
+
+/** 「9/17 主 x · 备 y · 改用备用 n 次 · 连不上」: the day's most frequent reason, only when there was a switch. */
+function dayDetail(t: T, d: Day) {
+  const main = REASONS.reduce<(typeof REASONS)[number] | null>(
+    (best, r) => (d.fallback_reasons[r] > (best ? d.fallback_reasons[best] : 0) ? r : best),
+    null
+  );
+  const line = `${shortDate(d.date)} ${t("assist_admin.usage.day_detail", { a: money(d.primary_cost), b: money(d.backup_cost), n: count(d.fallbacks) })}`;
+  // The reason labels end in their count ({{n}}); the detail names the reason alone.
+  return main ? `${line} · ${t(`assist_admin.usage.reason.${main}`, { n: "" }).trim()}` : line;
+}
+
+/**
+ * Frame 7a's daily cost: primary solid ink2, the backup hatched and stacked on top — no hue, the backup is
+ * not a status. Each bar is a button labelled with its whole detail line; the table view is the full
+ * non-visual equivalent. Plain CSS rather than the chart library, which cannot draw the hatching.
+ */
+function DayBars({ days }: { days: Day[] }) {
+  const { t } = useI18n();
+  const [picked, setPicked] = useState<string | null>(null);
+  const top = Math.max(...days.map((d) => d.cost)) || 1;
+  const day = days.find((d) => d.date === picked);
+  const h = (cost: number) => ({ height: `${(cost / top) * 100}%` });
+  return (
+    <div>
+      <div role="group" aria-label={t("assist_admin.usage.by_day")} className="flex h-40 items-end gap-px" data-testid="aa-day-bars">
+        {days.map((d) => (
+          <button
+            key={d.date}
+            type="button"
+            aria-label={dayDetail(t, d)}
+            aria-pressed={d.date === picked}
+            onClick={() => setPicked(d.date === picked ? null : d.date)}
+            data-testid="aa-day"
+            className={`flex h-full min-w-0 flex-1 flex-col-reverse ${d.date === picked ? "bg-[oklch(var(--color-surface-2))]" : ""}`}
+          >
+            <span data-testid="aa-day-primary" className="w-full bg-[oklch(var(--color-ink-muted))]" style={h(d.primary_cost)} />
+            {d.backup_cost > 0 && <span data-testid="aa-day-backup" className={`w-full ${HATCH}`} style={h(d.backup_cost)} />}
+          </button>
+        ))}
+      </div>
+      <div aria-hidden="true" className={`mt-1 flex justify-between ${SUBTLE} ${MONO}`}>
+        <span>{shortDate(days[0].date)}</span>
+        {days.length > 1 && <span>{shortDate(days[days.length - 1].date)}</span>}
+      </div>
+      <p aria-live="polite" data-testid="aa-day-detail" className={`mt-2 min-h-5 text-sm ${MONO}`}>
+        {day && dayDetail(t, day)}
+      </p>
     </div>
   );
 }

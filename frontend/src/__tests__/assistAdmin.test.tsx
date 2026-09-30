@@ -26,10 +26,6 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
 }));
 
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyBarChart: ({ data }: { data: unknown[] }) => <div data-testid="bar-chart">{data.length}</div>,
-}));
-
 import ConfigRoute from "@/app/admin/assistant/page";
 import UsageRoute from "@/app/admin/assistant/usage/page";
 
@@ -71,6 +67,7 @@ const HALLS = [
   { id: 4, code: "EG_DUAT", display_name: "真理大厅", souls_homed: 88, assistant_enabled: false },
 ];
 
+const NO_REASONS = { connection: 0, timeout: 0, rate_limited: 0, server_error: 0, quota: 0, circuit_open: 0 };
 const USAGE: AssistAdminUsage = {
   month: "2026-09", spent: 184.2, cap: 300, unpriced_models: ["mystery-model"], requests: 16742,
   by_status: { ok: 15000, empty: 1500, unavailable: 100, busy: 42, rate_limited: 100, not_configured: 0, stopped: 0,
@@ -79,7 +76,8 @@ const USAGE: AssistAdminUsage = {
   by_provider: [],
   failure_rates: { unavailable: 0.006, rate_limited: 0.0085, empty: 0.118 },
   by_retrieval: { vector: 14000, fallback: 100, fallback_low_similarity: 400 },
-  by_day: [{ date: "2026-09-01", requests: 500, answered: 480, input_tokens: 1000, output_tokens: 200, cache_read_tokens: 0, cost: 6.1 }],
+  by_day: [{ date: "2026-09-01", requests: 500, answered: 480, input_tokens: 1000, output_tokens: 200, cache_read_tokens: 0, cost: 6.1,
+    primary_cost: 6.1, backup_cost: 0, fallbacks: 0, fallback_reasons: NO_REASONS }],
   by_side: [{ side: "soul", requests: 12000, answered: 11000, input_tokens: 9, output_tokens: 1, cache_read_tokens: 0, cost: 120 }],
   by_hall: [{ tenant_id: 3, code: "CN_DIYU", requests: 9000, answered: 8800, input_tokens: 5, output_tokens: 5, cache_read_tokens: 0, cost: 99 }],
   phase4: { corpus_tokens: 61480, corpus_threshold: 80000, corpus_reached: false, empty_share: 0.118, empty_threshold: 0.15, empty_reached: false },
@@ -311,7 +309,7 @@ describe("the API key is write-only", () => {
     fireEvent.change(within(region("供应商")).getByLabelText("Base URL"), { target: { value: "https://other.example/v1" } });
     expect(saveButton()).toBeDisabled();
     expect(screen.getByText(/换了供应商或地址，要同时填新的 API key/)).toBeInTheDocument();
-    expect(screen.getByTestId("aa-key-state")).toHaveTextContent("未设置");
+    expect(screen.getByTestId("aa-key-state")).toHaveTextContent("尚未填写");
   });
 
   it("keys are per platform: the key row follows the selected platform's slot, and a saved one needs no re-paste", async () => {
@@ -325,13 +323,13 @@ describe("the API key is write-only", () => {
     const keyState = () => screen.getByTestId("aa-key-state");
     expect(keyState()).toHaveTextContent("•••• 8f3c");
     fireEvent.change(within(region("供应商")).getByLabelText("平台"), { target: { value: "deepseek" } });
-    expect(keyState()).toHaveTextContent("已设置•••• d5e6");
+    expect(keyState()).toHaveTextContent("已保存•••• d5e6");
     expect(keyState()).not.toHaveTextContent("8f3c");
     expect(screen.queryByText(/换了供应商或地址，要同时填新的 API key/)).toBeNull();
     expect(within(region("供应商")).getByRole("button", { name: "获取模型" })).toBeEnabled();
     // A platform with nothing saved says so, and asks for a key.
     fireEvent.change(within(region("供应商")).getByLabelText("平台"), { target: { value: "anthropic" } });
-    expect(keyState()).toHaveTextContent("未设置");
+    expect(keyState()).toHaveTextContent("尚未填写");
     expect(keyState()).not.toHaveTextContent("••••");
     expect(screen.getByText(/换了供应商或地址，要同时填新的 API key/)).toBeInTheDocument();
   });
@@ -455,10 +453,10 @@ describe("usage page", () => {
     expect(screen.getByText("80% 提醒")).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("mystery-model");
     expect(screen.getByText("11.8% / 15.0%")).toBeInTheDocument();
-    expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("aa-day-bars")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "以表格查看" }));
     expect(screen.getByText("2026-09-01")).toBeInTheDocument();
-    expect(screen.queryByTestId("bar-chart")).toBeNull();
+    expect(screen.queryByTestId("aa-day-bars")).toBeNull();
     expect(screen.getByRole("link", { name: "实际用量" })).toHaveAttribute("aria-current", "page");
   });
 
@@ -496,8 +494,12 @@ describe("试问 (plan §3.3), streamed", () => {
     const a = await ask("  我为什么不能申请？ ");
     expect(a.url).toMatch(/\/assist-admin\/try\/$/);
     expect(a.body).toEqual({ side: "soul", question: "我为什么不能申请？", stream: true });
-    await act(async () => a.send({ event: "meta", conversation_id: "x" }, { event: "delta", text: "你已有一份" }));
-    expect(within(region).getByTestId("aa-try-tech")).toHaveTextContent(/^首字 \d+\.\d s$/);
+    // Waiting: 「已等 x s」, and nothing about text yet.
+    await act(async () => a.send({ event: "meta", conversation_id: "x" }));
+    expect(within(region).getByTestId("aa-try-tech")).toHaveTextContent(/^已等 \d+\.\d s$/);
+    await act(async () => a.send({ event: "delta", text: "你已有一份" }));
+    // Streaming: first text and 「已出 n 字」; 已等 is gone.
+    expect(within(region).getByTestId("aa-try-tech")).toHaveTextContent(/^首字 \d+\.\d s · 已出 5 字$/);
     expect(within(region).getByRole("button", { name: "停止回答" })).toBeInTheDocument();
     await act(async () => a.send(DONE));
     const result = await within(region).findByTestId("aa-try-result");
@@ -1180,7 +1182,7 @@ describe("usage: 改用备用 and the primary / backup split (frame 7a)", () => 
     const reasons = screen.getByTestId("aa-fallback-reasons");
     expect(reasons).toHaveTextContent("连不上 5 · 超时 3 · 429 限流 3 · 5xx 出错 1");
     expect(reasons).not.toHaveTextContent("余额不足");
-    expect(reasons).not.toHaveTextContent("断路器");
+    expect(reasons).not.toHaveTextContent("连续失败");
   });
 
   it("quota and the circuit breaker are named when they happened", async () => {
@@ -1188,7 +1190,7 @@ describe("usage: 改用备用 and the primary / backup split (frame 7a)", () => 
       data: { ...USAGE, fallbacks: { count: 3, by_reason: { connection: 0, timeout: 0, rate_limited: 0, server_error: 0, quota: 1, circuit_open: 2 } } },
     }));
     renderRoute(UsageRoute);
-    expect(await screen.findByTestId("aa-fallback-reasons")).toHaveTextContent("· 余额不足 1 · 断路器 2");
+    expect(await screen.findByTestId("aa-fallback-reasons")).toHaveTextContent("· 余额不足 1 · 主供应商连续失败 · 暂用备用 2");
   });
 
   it("the cost legend gives each role's month total, only once a backup has cost anything", async () => {
@@ -1204,5 +1206,52 @@ describe("usage: 改用备用 and the primary / backup split (frame 7a)", () => 
     renderRoute(UsageRoute);
     await screen.findByTestId("aa-fallbacks");
     expect(screen.queryByTestId("aa-cost-legend")).toBeNull();
+  });
+
+  const SPLIT_DAYS = [
+    { ...USAGE.by_day[0], date: "2026-09-16", cost: 2, primary_cost: 2, backup_cost: 0 },
+    { ...USAGE.by_day[0], date: "2026-09-17", cost: 5, primary_cost: 3, backup_cost: 2, fallbacks: 5,
+      fallback_reasons: { ...NO_REASONS, connection: 4, timeout: 1 } },
+  ];
+
+  it("stacks each day: primary solid, the backup hatched on top — and a day without the backup has no backup segment", async () => {
+    get.mockImplementation(async () => ({ data: { ...USAGE, by_day: SPLIT_DAYS } }));
+    renderRoute(UsageRoute);
+    const [quiet, busy] = await screen.findAllByTestId("aa-day");
+    expect(within(quiet).getByTestId("aa-day-primary")).toHaveStyle({ height: "40%" });
+    expect(within(quiet).queryByTestId("aa-day-backup")).toBeNull();
+    expect(within(busy).getByTestId("aa-day-primary")).toHaveStyle({ height: "60%" });
+    const hatch = within(busy).getByTestId("aa-day-backup");
+    expect(hatch).toHaveStyle({ height: "40%" });
+    expect(hatch.className).toContain("repeating-linear-gradient(135deg");
+    // Ink only: no vermilion, no status colour on the bars.
+    for (const bar of screen.getAllByTestId(/aa-day-(primary|backup)/))
+      expect(bar.className).not.toMatch(/accent|danger|warning|success|status|vermilion/);
+    // Each bar is labelled with its whole detail line.
+    expect(busy).toHaveAccessibleName("9/17 主 3.00 · 备 2.00 · 改用备用 5 次 · 连不上");
+  });
+
+  it("clicking a day shows its detail bar with the day's main reason; a day without switches names none", async () => {
+    get.mockImplementation(async () => ({ data: { ...USAGE, by_day: SPLIT_DAYS } }));
+    renderRoute(UsageRoute);
+    const [quiet, busy] = await screen.findAllByTestId("aa-day");
+    const detail = screen.getByTestId("aa-day-detail");
+    expect(detail).toBeEmptyDOMElement();
+    fireEvent.click(busy);
+    expect(busy).toHaveAttribute("aria-pressed", "true");
+    expect(detail).toHaveTextContent(/^9\/17 主 3\.00 · 备 2\.00 · 改用备用 5 次 · 连不上$/);
+    expect(detail).not.toHaveTextContent("超时");
+    fireEvent.click(quiet);
+    expect(detail).toHaveTextContent(/^9\/16 主 2\.00 · 备 0\.0000 · 改用备用 0 次$/);
+  });
+
+  it("the table splits the cost into 主 and 备 columns", async () => {
+    get.mockImplementation(async () => ({ data: { ...USAGE, by_day: SPLIT_DAYS } }));
+    renderRoute(UsageRoute);
+    fireEvent.click(await screen.findByRole("button", { name: "以表格查看" }));
+    const table = within(screen.getByRole("region", { name: "按天 · 花费" })).getByRole("table");
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["日期", "问答", "token", "主供应商", "备用"]);
+    expect(within(table).getByRole("row", { name: /2026-09-17/ })).toHaveTextContent(/3\.00\s*2\.00$/);
+    expect(within(table).queryByRole("columnheader", { name: "花费" })).toBeNull();
   });
 });

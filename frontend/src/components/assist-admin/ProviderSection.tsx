@@ -450,7 +450,7 @@ export function Segment({
 
 /**
  * The key row (§13.6, user 2026-10-01): the status of the **selected platform's** slot, so switching back
- * to a platform with a saved key shows 「已设置 · •••• last4」 with nothing to paste. Write-only: the key
+ * to a platform with a saved key shows 「已保存 · •••• last4」 with nothing to paste. Write-only: the key
  * itself never comes back. `onClear` (primary only) asks first; the backup shares the slots and only adds.
  */
 export function KeyRow({
@@ -477,13 +477,13 @@ export function KeyRow({
       <p className="text-sm" data-testid={`${id}-state`}>
         {state?.set ? (
           <>
-            {t("assist_admin.key.set")}
+            {t("assist_admin.key.slot_saved")}
             {state.last4 && <span className={`${MONO} ml-2`}>•••• {state.last4}</span>}
             {state.set_at && <span className={`${MONO} ${SUBTLE} ml-2`}>{t("assist_admin.key.set_at", { date: formatDate(state.set_at) })}</span>}
             {state.source === "env" && <span className={`${SUBTLE} ml-2`}>{t("assist_admin.key.from_env")}</span>}
           </>
         ) : (
-          t("assist_admin.key.not_set")
+          t("assist_admin.key.slot_empty")
         )}
       </p>
       {draftKey === "" && <p className="text-sm text-[oklch(var(--color-warning))]">{t("assist_admin.key.will_clear")}</p>}

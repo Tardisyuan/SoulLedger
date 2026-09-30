@@ -31367,13 +31367,30 @@ components:
         date:
           type: string
           format: date
+        primary_cost:
+          type: number
+          format: double
+          description: 主用答的(含主用失败前已花的)花费;primary_cost + backup_cost = cost
+        backup_cost:
+          type: number
+          format: double
+          description: 备用答的花费,按备用的价目表
+        fallbacks:
+          type: integer
+          description: 这一天由备用答出的提问数(备用也失败的不计)
+        fallback_reasons:
+          $ref: '#/components/schemas/UsageFallbackReasons'
       required:
       - answered
+      - backup_cost
       - cache_read_tokens
       - cost
       - date
+      - fallback_reasons
+      - fallbacks
       - input_tokens
       - output_tokens
+      - primary_cost
       - requests
     UsageFallbackReasons:
       type: object
@@ -31405,7 +31422,7 @@ components:
       properties:
         count:
           type: integer
-          description: 改用备用的请求数
+          description: 由备用答出的提问数;备用也失败的算作失败,不计入
         by_reason:
           $ref: '#/components/schemas/UsageFallbackReasons'
       required:

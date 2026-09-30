@@ -458,7 +458,7 @@ contextvars 里跑(中间件在视图返回后就清掉了当前殿)。
   键带主用连接的指纹,换了主用配置就是新的断路器。ponytail:「连续」而非滑动窗口,并发的成功会把计数清零。
 - **记账**:`AssistUsage` 多了 `provider_role`(primary / backup)与 `fallback_reason`;备用的花费按备用的价目表算,计入月度上限。
   主用失败前已经花了 token(工具轮成功、下一轮才 5xx)→ 另记一行 `failed_over`(只记账,不算一次请求)。
-  用量页多了 `fallbacks {count, by_reason}` 与 `by_provider [{role, requests, answered, tokens…, cost}]`,`by_status` 多了
+  用量页多了 `fallbacks {count, by_reason}`(只数备用答出的,见 `ARCHITECTURE-assist-admin.md` §4)与 `by_provider [{role, requests, answered, tokens…, cost}]`,`by_status` 多了
   `stopped` / `interrupted`。试问结果多了 `provider_role`、`fallback_reason`(没给候选时走生效配置,含备用与断路器)。
   评测只测它的候选,不切换。
 

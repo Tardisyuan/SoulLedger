@@ -3992,7 +3992,9 @@
       "new_hint": "保存后只保留末 4 位与设置日期，任何人（包括你）都无法再读出完整 key。换 key 也算连接改动，须先测通。",
       "will_clear": "保存后清除 key。",
       "clear_title": "清除 key？",
-      "clear_body": "清除后助手立即不可用（两端显示「暂时不可用」），直到设置新 key。清除在保存后生效。"
+      "clear_body": "清除后助手立即不可用（两端显示「暂时不可用」），直到设置新 key。清除在保存后生效。",
+      "slot_empty": "尚未填写",
+      "slot_saved": "已保存"
     },
     "limits": {
       "soul_per_hour": "灵魂端 · 每账号每小时",
@@ -4113,7 +4115,9 @@
       "role_primary": "主供应商",
       "role_backup": "备用",
       "switched": "主供应商 {{t}} s 无首字，已改用备用",
-      "no_switch": "已出字，不换备用"
+      "no_switch": "已出字，不换备用",
+      "chars_out": "已出 {{n}} 字",
+      "waited": "已等 {{x}} s"
     },
     "corpus": {
       "summary": "{{count}} 条 · 共 {{tokens}} token",
@@ -4199,10 +4203,11 @@
         "rate_limited": "429 限流 {{n}}",
         "server_error": "5xx 出错 {{n}}",
         "quota": "余额不足 {{n}}",
-        "circuit_open": "断路器 {{n}}"
+        "circuit_open": "主供应商连续失败 · 暂用备用 {{n}}"
       },
       "legend_primary": "主供应商",
-      "legend_backup": "备用"
+      "legend_backup": "备用",
+      "day_detail": "主 {{a}} · 备 {{b}} · 改用备用 {{n}} 次"
     },
     "embedding": {
       "url": "地址",

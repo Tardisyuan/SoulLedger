@@ -342,10 +342,6 @@ class UsageBucketSerializer(serializers.Serializer):
     cost = serializers.FloatField(help_text="只含已定价模型")
 
 
-class UsageDaySerializer(UsageBucketSerializer):
-    date = serializers.DateField()
-
-
 class UsageSideSerializer(UsageBucketSerializer):
     side = serializers.ChoiceField(choices=("soul", "officer"))
 
@@ -375,8 +371,16 @@ class UsageFallbackReasonsSerializer(serializers.Serializer):
     circuit_open = serializers.IntegerField(help_text="主用连续失败、断路器开着,没试主用")
 
 
+class UsageDaySerializer(UsageBucketSerializer):
+    date = serializers.DateField()
+    primary_cost = serializers.FloatField(help_text="主用答的(含主用失败前已花的)花费;primary_cost + backup_cost = cost")
+    backup_cost = serializers.FloatField(help_text="备用答的花费,按备用的价目表")
+    fallbacks = serializers.IntegerField(help_text="这一天由备用答出的提问数(备用也失败的不计)")
+    fallback_reasons = UsageFallbackReasonsSerializer()
+
+
 class UsageFallbacksSerializer(serializers.Serializer):
-    count = serializers.IntegerField(help_text="改用备用的请求数")
+    count = serializers.IntegerField(help_text="由备用答出的提问数;备用也失败的算作失败,不计入")
     by_reason = UsageFallbackReasonsSerializer()
 
 
