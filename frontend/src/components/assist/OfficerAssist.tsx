@@ -85,10 +85,16 @@ export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
   );
 }
 
-export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
+/**
+ * Design E 组: the panel starts below the connection bar (global state at the top of the
+ * viewport, 28 px, see ConnectionBanner) rather than under it — `belowBanner` moves its top
+ * edge down by exactly that bar. Pushed or overlaid, same rule.
+ */
+export function OfficerAssistPanel({ assist, belowBanner = false }: { assist: OfficerAssist; belowBanner?: boolean }) {
   const { t } = useI18n();
   if (!assist.open) return null;
   const label = t("officer_assist.title");
+  const top = belowBanner ? "top-7" : "top-0";
 
   if (assist.pushed) {
     return (
@@ -96,7 +102,8 @@ export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
         ref={assist.panelRef}
         aria-label={label}
         data-testid="officer-assist-panel"
-        className="fixed inset-y-0 right-0 z-masthead flex w-[420px] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]"
+        data-assist-mode="pushed"
+        className={`fixed ${top} bottom-0 right-0 z-masthead flex w-[420px] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]`}
       >
         <PanelBody assist={assist} />
       </aside>
@@ -116,7 +123,8 @@ export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
           data-testid="officer-assist-panel"
           initialFocus={assist.inputRef}
           finalFocus={assist.entryRef}
-          className="fixed inset-y-0 right-0 z-dialog flex w-[min(420px,100vw)] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]"
+          data-assist-mode="overlay"
+          className={`fixed ${top} bottom-0 right-0 z-dialog flex w-[min(420px,100vw)] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]`}
         >
           <PanelBody assist={assist} />
         </Dialog.Popup>
@@ -165,7 +173,9 @@ function PanelBody({ assist }: { assist: OfficerAssist }) {
   const hasThread = assist.thread.messages.length > 0 || assist.pending !== null;
   return (
     <>
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-block))] px-3">
+      {/* Design E 组: a fixed 48 px head on a 1px ink rule, no pattern band — the band belongs
+          to the plaque alone, so this head does not follow the plaque's height. */}
+      <div data-testid="officer-assist-head" className="flex h-12 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-ink))] px-3">
         {history ? (
           <HeadButton onClick={() => assist.setView("chat")} label={t("officer_assist.back_label")}>←</HeadButton>
         ) : (

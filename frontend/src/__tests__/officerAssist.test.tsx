@@ -43,7 +43,9 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/components/connection-status", () => ({
   ConnectionStatus: () => null,
   ConnectionBanner: () => null,
+  useConnectionBannerShown: () => mockBannerShown,
 }));
+let mockBannerShown = false;
 
 jest.mock("@/src/hooks/useSidebarMenus", () => ({
   ...jest.requireActual("@/src/hooks/useSidebarMenus"),
@@ -182,6 +184,84 @@ describe("pushed beside the page, or a drawer (1a 一, 1g)", () => {
     expect(drawer).toHaveAttribute("aria-modal", "true");
     expect(screen.queryByRole("complementary", { name: "问一问" })).not.toBeInTheDocument();
     expect(screen.getByTestId("app-content").className).not.toContain("pr-[420px]");
+  });
+});
+
+/**
+ * Design E 组. The main column is measured (ResizeObserver on <main>), so these stub one
+ * that reports a fixed width: jsdom has none, and without it the hook reads as roomy.
+ */
+function setMainWidth(width: number) {
+  class FixedWidthObserver {
+    private readonly cb: ResizeObserverCallback;
+    constructor(callback: ResizeObserverCallback) {
+      this.cb = callback;
+    }
+    observe() {
+      this.cb([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver);
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(window, "ResizeObserver", { configurable: true, writable: true, value: FixedWidthObserver });
+}
+
+describe("Design E 组: the panel's head, its room, and the connection bar", () => {
+  afterEach(() => {
+    delete (window as { ResizeObserver?: unknown }).ResizeObserver;
+    mockBannerShown = false;
+  });
+
+  it("the head is a fixed 48 px on a 1px ink rule, with no pattern band", async () => {
+    renderLayout();
+    fireEvent.click(entry());
+    const panel = await screen.findByRole("complementary", { name: "问一问" });
+    const head = within(panel).getByTestId("officer-assist-head");
+    expect(head.className).toMatch(/(^|\s)h-12(\s|$)/);
+    expect(head.className).toContain("border-b border-[oklch(var(--color-ink))]");
+    // Absence: not the old 40 px / block rule, and no plaque band anywhere in the panel.
+    expect(head.className).not.toMatch(/(^|\s)h-10(\s|$)/);
+    expect(head.className).not.toContain("--color-block");
+    expect(panel.querySelector(".plaque-band, .plaque-tex, [data-testid='plaque-band']")).toBeNull();
+  });
+
+  it("main column 1140 (720 left beside 420): pushed", async () => {
+    setMainWidth(1140);
+    renderLayout();
+    fireEvent.click(entry());
+    const panel = await screen.findByRole("complementary", { name: "问一问" });
+    expect(panel).toHaveAttribute("data-assist-mode", "pushed");
+    expect(screen.getByTestId("app-content")).toHaveAttribute("data-assist-pushed");
+  });
+
+  it("main column 1139 on a wide viewport: the panel covers the page over a scrim instead of pushing it", async () => {
+    setMainWidth(1139);
+    renderLayout();
+    fireEvent.click(entry());
+    const drawer = await screen.findByRole("dialog", { name: "问一问" });
+    expect(drawer).toHaveAttribute("data-assist-mode", "overlay");
+    expect(screen.queryByRole("complementary", { name: "问一问" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("app-content")).not.toHaveAttribute("data-assist-pushed");
+    expect(screen.getByTestId("app-content").className).not.toContain("pr-[420px]");
+    // The scrim token, not a hand-mixed black.
+    expect(document.querySelector("[class*='--color-scrim']")).not.toBeNull();
+  });
+
+  it("with the connection bar up, the panel starts below it (top-7), pushed or overlaid", async () => {
+    mockBannerShown = true;
+    renderLayout();
+    fireEvent.click(entry());
+    const panel = await screen.findByRole("complementary", { name: "问一问" });
+    expect(panel.className).toMatch(/(^|\s)top-7(\s|$)/);
+    expect(panel.className).not.toMatch(/(^|\s)(top-0|inset-y-0)(\s|$)/);
+  });
+
+  it("with no connection bar, the panel runs from the very top", async () => {
+    renderLayout();
+    fireEvent.click(entry());
+    const panel = await screen.findByRole("complementary", { name: "问一问" });
+    expect(panel.className).toMatch(/(^|\s)top-0(\s|$)/);
+    expect(panel.className).not.toMatch(/(^|\s)top-7(\s|$)/);
   });
 });
 

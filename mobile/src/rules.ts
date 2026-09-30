@@ -45,10 +45,11 @@ export const SOUL_STATE_BADGES: Record<string, BadgeSpec> = {
   /** Not yet dead, so nothing entered: an EMPTY circle. */
   ALIVE: { glyph: "○", border: "solid" },
   /**
-   * The record has lost track of the soul: a slashed circle (absent) on a DASHED border —
-   * an anomaly, said by its shape, not by a colour. Dashed, not dotted: dotted is the unknown value.
+   * The record has lost track of the soul: a dotted circle (◌, Design E 组 — the web's glyph too;
+   * it was ⊘) on a DASHED border — an anomaly, said by its shape, not by a colour. Dashed, not
+   * dotted: dotted is the unknown value.
    */
-  LOST: { glyph: "⊘", border: "dashed" },
+  LOST: { glyph: "◌", border: "dashed" },
   /** The account is closed: triple bar, the ledger ruled off beneath its last line. */
   SETTLED: { glyph: "≡", border: "solid" },
 };

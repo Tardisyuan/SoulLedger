@@ -273,7 +273,7 @@ export function SoulLifecycleTimeline({
                   dotClassName={row.type === "MERIT" ? TONE_DOT.merit : TONE_DOT.demerit}
                   right={
                     <div>
-                      <div className={`text-sm font-semibold ${positive ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"}`}>
+                      <div className="text-sm font-semibold text-[oklch(var(--color-ink))]">
                         {positive ? "+" : ""}
                         {row.effectiveSigned}
                       </div>

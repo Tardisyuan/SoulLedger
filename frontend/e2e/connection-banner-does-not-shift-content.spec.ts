@@ -5,9 +5,10 @@
  * this suite: nothing serves /ws). While it sat in the flow it pushed the
  * page down ~28 px at that moment, and a click aimed just before landed on
  * empty space: `avatar-upload.spec.ts` clicked 编辑资料, missed, and timed out
- * waiting for the dialog, 1 run in 16. It now floats in a zero-height sticky
- * anchor over the page's top padding (AppLayout). This pins that: the page
- * title's position is the same before and after the banner appears.
+ * waiting for the dialog, 1 run in 16. It now floats: `position: fixed` at the
+ * very top of the viewport, across the pillar and the 问一问 panel (Design E 组 —
+ * global state, not part of the plaque). This pins that: the page title's
+ * position is the same before and after the banner appears.
  */
 import { expect, test, setupAuthenticatedPage } from "./fixtures";
 

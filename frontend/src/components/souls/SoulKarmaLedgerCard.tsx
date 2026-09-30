@@ -143,7 +143,7 @@ export function SoulKarmaLedgerCard({
                   field="carried_merit"
                   quantity={INHERITANCE_QUANTITIES.inherited_merit}
                   t={t}
-                  className="tabular-nums text-[oklch(var(--color-karma-merit))]"
+                  className="tabular-nums text-[oklch(var(--color-ink))]"
                 >
                   +{life.inheritedMerit}
                 </Figure>
@@ -151,7 +151,7 @@ export function SoulKarmaLedgerCard({
                   field="carried_demerit"
                   quantity={INHERITANCE_QUANTITIES.inherited_demerit}
                   t={t}
-                  className="tabular-nums text-[oklch(var(--color-karma-demerit))]"
+                  className="tabular-nums text-[oklch(var(--color-ink))]"
                 >
                   -{life.inheritedDemerit}
                 </Figure>
@@ -188,7 +188,7 @@ export function SoulKarmaLedgerCard({
               field="raw_merit"
               quantity={RECORD_QUANTITIES.original_weight}
               t={t}
-              className="tabular-nums text-[oklch(var(--color-karma-merit))]"
+              className="tabular-nums text-[oklch(var(--color-ink))]"
             >
               +{rawMerit}
             </Figure>
@@ -199,7 +199,7 @@ export function SoulKarmaLedgerCard({
               field="raw_demerit"
               quantity={RECORD_QUANTITIES.original_weight}
               t={t}
-              className="tabular-nums text-[oklch(var(--color-karma-demerit))]"
+              className="tabular-nums text-[oklch(var(--color-ink))]"
             >
               -{rawDemerit}
             </Figure>
@@ -210,7 +210,7 @@ export function SoulKarmaLedgerCard({
               field="merit_score"
               quantity={SUMMARY_QUANTITIES.merit_score}
               t={t}
-              className="tabular-nums text-[oklch(var(--color-karma-merit))]"
+              className="tabular-nums text-[oklch(var(--color-ink))]"
             >
               +{meritScore}
             </Figure>
@@ -221,7 +221,7 @@ export function SoulKarmaLedgerCard({
               field="demerit_score"
               quantity={SUMMARY_QUANTITIES.demerit_score}
               t={t}
-              className="tabular-nums text-[oklch(var(--color-karma-demerit))]"
+              className="tabular-nums text-[oklch(var(--color-ink))]"
             >
               -{demeritScore}
             </Figure>
@@ -265,9 +265,7 @@ export function SoulKarmaLedgerCard({
                   field="karmic_balance"
                   quantity={SUMMARY_QUANTITIES.karmic_balance}
                   t={t}
-                  className={`text-md tabular-nums ${
-                    karmicBalance >= 0 ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"
-                  }`}
+                  className="text-md tabular-nums text-[oklch(var(--color-ink))]"
                 >
                   {karmicBalance >= 0 ? "+" : ""}
                   {karmicBalance}
@@ -387,25 +385,25 @@ export function SoulKarmaLedgerCard({
           {reading.civilization === "CHINESE" && (
             <div data-inheritance-bars="" className="space-y-3 mb-3">
               <div>
-                <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-karma-merit))] mb-1">
+                <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-ink))] mb-1">
                   <span>{t("souls.detail.merit")} {meritScore}</span>
                   <span>→ {inheritance.inherited_merit}</span>
                 </div>
-                <div className="h-2 bg-[oklch(var(--color-karma-merit)/0.18)] overflow-hidden">
+                <div className="h-2 bg-[oklch(var(--color-ink)/0.18)] overflow-hidden">
                   <span
-                    className="block h-full bg-[oklch(var(--color-karma-merit))]"
+                    className="block h-full bg-[oklch(var(--color-ink))]"
                     style={{ width: `${ratePct(inheritance.inheritance_merit_rate)}%` }}
                   />
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-karma-demerit))] mb-1">
+                <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-ink))] mb-1">
                   <span>{t("souls.detail.demerit")} {demeritScore}</span>
                   <span>→ {inheritance.inherited_demerit}</span>
                 </div>
-                <div className="h-2 bg-[oklch(var(--color-karma-demerit)/0.18)] overflow-hidden">
+                <div className="h-2 bg-[oklch(var(--color-ink)/0.18)] overflow-hidden">
                   <span
-                    className="block h-full bg-[oklch(var(--color-karma-demerit))]"
+                    className="block h-full bg-[oklch(var(--color-ink))]"
                     style={{ width: `${ratePct(inheritance.inheritance_demerit_rate)}%` }}
                   />
                 </div>
@@ -421,24 +419,24 @@ export function SoulKarmaLedgerCard({
               demerit, which is why this row exists only where a next life
               does. */}
           <div className="flex justify-between text-xs">
-            <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-karma-merit))]">
+            <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-ink))]">
               <span>{t("souls.detail.merit")}:</span>
               <Figure
                 field="inherited_merit"
                 quantity={INHERITANCE_QUANTITIES.inherited_merit}
                 t={t}
-                className="tabular-nums text-[oklch(var(--color-karma-merit))]"
+                className="tabular-nums text-[oklch(var(--color-ink))]"
               >
                 +{inheritance.inherited_merit}
               </Figure>
             </span>
-            <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-karma-demerit))]">
+            <span className="inline-flex items-baseline gap-1 text-[oklch(var(--color-ink))]">
               <span>{t("souls.detail.demerit")}:</span>
               <Figure
                 field="inherited_demerit"
                 quantity={INHERITANCE_QUANTITIES.inherited_demerit}
                 t={t}
-                className="tabular-nums text-[oklch(var(--color-karma-demerit))]"
+                className="tabular-nums text-[oklch(var(--color-ink))]"
               >
                 -{inheritance.inherited_demerit}
               </Figure>
@@ -450,11 +448,7 @@ export function SoulKarmaLedgerCard({
               field="inherited_balance"
               quantity={INHERITANCE_QUANTITIES.inherited_merit}
               t={t}
-              className={`tabular-nums ${
-                inheritance.inherited_merit - inheritance.inherited_demerit >= 0
-                  ? "text-[oklch(var(--color-karma-merit))]"
-                  : "text-[oklch(var(--color-karma-demerit))]"
-              }`}
+              className="tabular-nums text-[oklch(var(--color-ink))]"
             >
               {inheritance.inherited_merit - inheritance.inherited_demerit >= 0 ? "+" : ""}
               {inheritance.inherited_merit - inheritance.inherited_demerit}

@@ -48,6 +48,7 @@ src/__tests__/reducedMotionContract.test.ts
 src/__tests__/roleForbiddenCodenamesMatchBackend.test.ts
 src/__tests__/soulLifecycleEventCopy.test.tsx
 src/__tests__/soulStateBadgeContract.test.ts
+src/__tests__/statusGlyphFont.test.ts
 src/__tests__/statusTokenLayering.test.ts
 src/__tests__/suiteShape.test.ts
 src/__tests__/tabClassContract.test.ts

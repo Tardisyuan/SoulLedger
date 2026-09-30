@@ -128,7 +128,7 @@ function BalanceReading({
           field="merit"
           quantity={q.merit}
           t={t}
-          className="font-mono tabular-nums text-[oklch(var(--color-karma-merit))]"
+          className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
           +{reading.merit}
         </Figure>
@@ -143,7 +143,7 @@ function BalanceReading({
           field="demerit"
           quantity={q.demerit}
           t={t}
-          className="font-mono tabular-nums text-[oklch(var(--color-karma-demerit))]"
+          className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
           -{reading.demerit}
         </Figure>
@@ -158,9 +158,7 @@ function BalanceReading({
           field="balance"
           quantity={q.balance}
           t={t}
-          className={`text-md font-mono tabular-nums ${
-            reading.balance >= 0 ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"
-          }`}
+          className="text-md font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
           {reading.balance >= 0 ? "+" : ""}
           {reading.balance}
@@ -197,7 +195,7 @@ function ThresholdReading({
           quantity="ratio"
           t={t}
           className={`text-lg tabular-nums ${
-            failed ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-karma-merit))]"
+            failed ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-ink))]"
           }`}
         >
           {ratioText}
@@ -225,7 +223,7 @@ function ThresholdReading({
           className={`px-2 py-0.5 text-xs font-bold ${
             failed
               ? "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]"
-              : "bg-[oklch(var(--color-karma-merit)/0.1)] text-[oklch(var(--color-karma-merit))]"
+              : "bg-[oklch(var(--color-ink)/0.1)] text-[oklch(var(--color-ink))]"
           }`}
         >
           {failed ? t("souls.detail.reading.threshold_fail") : t("souls.detail.reading.threshold_pass")}
@@ -252,12 +250,12 @@ function GuiltAndPenaltyReading({
             numeral borrowed the caption's grammar and read as "22 of
             something". It names its scale now; the caption keeps its noun. */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
+          <span className="text-sm text-[oklch(var(--color-ink))]">{t("souls.detail.reading.culpa_label")}</span>
           <Figure
             field="culpa"
             quantity={READING_QUANTITIES.GUILT_AND_PENALTY.culpa}
             t={t}
-            className="text-md tabular-nums text-[oklch(var(--color-karma-demerit))]"
+            className="text-md tabular-nums text-[oklch(var(--color-ink))]"
           >
             {reading.culpa}
           </Figure>
