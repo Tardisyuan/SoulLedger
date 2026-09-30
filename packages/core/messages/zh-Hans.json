@@ -3201,7 +3201,6 @@
       "letters_card": "写信给{{hall}} · 官员会以殿司名义回复",
       "letters_note": "不会把这段问答带过去，信要你自己写。",
       "new": "新会话",
-      "retention": "会话保存 30 天后自动删除。",
       "history_end": "会话保存 30 天，期满自动删除。",
       "history_empty": "还没有问过问题。",
       "today": "今天",

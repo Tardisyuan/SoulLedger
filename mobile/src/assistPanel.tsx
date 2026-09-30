@@ -476,9 +476,6 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
   return (
     <View style={styles.fill}>
       <ScrollView style={styles.fill} contentContainerStyle={styles.body}>
-        <Txt variant="caption" tone="subtle">
-          {tr("soul_app.assist.retention")}
-        </Txt>
         {!list ? <Skeleton lines={3} /> : null}
         {list?.length === 0 ? (
           <Txt testID="assist-history-empty" variant="body" tone="muted">
