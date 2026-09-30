@@ -584,6 +584,8 @@ SPECTACULAR_SETTINGS = {
         # generated TypeScript identifier unchanged.
         "TaskRunStatusEnum": "apps.scheduler.models.RunStatus.choices",
         "ScheduledJobScopeEnum": "apps.scheduler.models.JobScope.choices",
+        # 助手管理「供应商」区块的平台(2026-09-30):`platform` 另有别的选项集用着。
+        "AssistPlatformEnum": "apps.soul_assist.platforms.PLATFORM_IDS",
         "ScopeEnum": "apps.perm.models.Role.SCOPE_CHOICES",
         # apps.soul_accounts:`status` 与 `desired_form` 两个字段名在别处已有别的选项集。
         # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。

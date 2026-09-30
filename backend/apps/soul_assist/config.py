@@ -23,7 +23,7 @@ PROVIDERS = {
 }
 EFFORTS = ("", "low", "medium", "high")
 #: 页面可改的键(API key、评测身份另有字段)。
-EDITABLE = ("enabled", "provider", "base_url", "model", "effort", "fallbacks", "soul_per_hour", "officer_per_hour",
+EDITABLE = ("enabled", "platform", "provider", "base_url", "model", "effort", "fallbacks", "soul_per_hour", "officer_per_hour",
             "monthly_cap", "prices", "eval_spend_cap")
 #: 连接相关的键:改了它们,供应商客户端就要换。
 CONNECTION_KEYS = ("provider", "base_url", "api_key", "model", "effort", "fallbacks")
@@ -90,6 +90,7 @@ class Effective:
     embedding: Embedding = None
     retrieval_k: int = 5
     retrieval_min_similarity: float = 0.0
+    stored_platform: str = ""  # 页面存的平台 id;显示用 `platforms.current`(对不上连接就按连接认)
 
     @property
     def enabled(self) -> bool:
@@ -170,6 +171,7 @@ def effective(row=None) -> Effective:
                             v.get("embedding_dims", settings.ASSISTANT_EMBEDDING_DIMS)),
         retrieval_k=v.get("retrieval_k", settings.ASSISTANT_RETRIEVAL_K),
         retrieval_min_similarity=v.get("retrieval_min_similarity", settings.ASSISTANT_RETRIEVAL_MIN_SIMILARITY),
+        stored_platform=v.get("platform", ""),
     )
 
 
@@ -242,6 +244,10 @@ _UNSET = object()
 def current_value(eff: Effective, key):
     """页面上显示的、某个键现在生效的值(审计里的「旧值」)。"""
     c = eff.connection
+    if key == "platform":
+        from apps.soul_assist import platforms
+
+        return platforms.current(eff.stored_platform, c)
     return {
         "enabled": eff.switch, "provider": provider_name(c.provider), "base_url": c.base_url, "model": c.model,
         "effort": c.effort, "fallbacks": bool(c.fallbacks), "soul_per_hour": per_hour(eff, "soul"),

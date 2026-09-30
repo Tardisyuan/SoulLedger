@@ -201,3 +201,20 @@ def test_openai_validation_errors_and_empty_choices_become_provider_errors():
     empty = SimpleNamespace(choices=[], usage=None)
     with pytest.raises(ProviderError):
         _run(OpenAICompatibleProvider(FakeClient([empty])), [])
+
+
+def test_without_tools_neither_adapter_sends_tools_or_tool_choice(settings):
+    """连通测试在平台拒收工具时不带工具再发一次:OpenAI 拒收空的 `tools` 数组,Anthropic 不许只给
+    `tool_choice`。变异:任一适配器改回无条件带 `tools=specs` → 红。"""
+    settings.ASSISTANT_ANTHROPIC_FALLBACKS = ""
+
+    def plain(provider):
+        return provider.answer(system="S", facts="F", history=HISTORY, tools=[], call_tool=lambda n: "{}",
+                               max_rounds=1, deadline=time.monotonic() + 20)
+
+    oa = FakeClient([_oa(content="OK")])
+    assert plain(OpenAICompatibleProvider(oa)).text == "OK"
+    an = FakeClient([_an("end_turn", _text("OK"))])
+    assert plain(AnthropicProvider(an)).text == "OK"
+    for request in oa.requests + an.requests:
+        assert "tools" not in request and "tool_choice" not in request

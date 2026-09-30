@@ -201,6 +201,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistError'
           description: ''
+  /api/v1/assist-admin/config/models/:
+    post:
+      operationId: assist_admin_config_models
+      description: |-
+        「获取模型」:用候选连接列平台上的模型。key 不给就用已存的 —— 在服务器上用,不回给浏览器;
+        换了平台 / 地址而不给 key 同样 400 `api_key_required`(已存的 key 不发往新地址)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist-admin/config/price/:
+    get:
+      operationId: assist_admin_config_price
+      description: 参考价:LiteLLM 公开价目表,美元 / 百万 token,服务器取、缓存 24 小时。查不到 `found=false`,不拦保存。
+      parameters:
+      - in: query
+        name: model
+        schema:
+          type: string
+          maxLength: 200
+          minLength: 1
+        required: true
+      - in: query
+        name: platform
+        schema:
+          enum:
+          - deepseek
+          - openai
+          - anthropic
+          - qwen
+          - kimi
+          - glm
+          - doubao
+          - gemini
+          - siliconflow
+          - openrouter
+          - ollama
+          - custom
+          type: string
+          minLength: 1
+        description: |-
+          * `deepseek` - deepseek
+          * `openai` - openai
+          * `anthropic` - anthropic
+          * `qwen` - qwen
+          * `kimi` - kimi
+          * `glm` - glm
+          * `doubao` - doubao
+          * `gemini` - gemini
+          * `siliconflow` - siliconflow
+          * `openrouter` - openrouter
+          * `ollama` - ollama
+          * `custom` - custom
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceReference'
+          description: ''
   /api/v1/assist-admin/config/test/:
     post:
       operationId: assist_admin_config_test
@@ -16257,12 +16346,20 @@ components:
           format: date-time
           nullable: true
         source:
-          $ref: '#/components/schemas/SourceEnum'
+          $ref: '#/components/schemas/ApiKeyStateSourceEnum'
       required:
       - last4
       - set
       - set_at
       - source
+    ApiKeyStateSourceEnum:
+      enum:
+      - page
+      - env
+      type: string
+      description: |-
+        * `page` - page
+        * `env` - env
     ApprovalNode:
       type: object
       description: |-
@@ -16899,6 +16996,34 @@ components:
       description: |-
         * `user` - user
         * `assistant` - assistant
+    AssistPlatformEnum:
+      enum:
+      - deepseek
+      - openai
+      - anthropic
+      - qwen
+      - kimi
+      - glm
+      - doubao
+      - gemini
+      - siliconflow
+      - openrouter
+      - ollama
+      - custom
+      type: string
+      description: |-
+        * `deepseek` - deepseek
+        * `openai` - openai
+        * `anthropic` - anthropic
+        * `qwen` - qwen
+        * `kimi` - kimi
+        * `glm` - glm
+        * `doubao` - doubao
+        * `gemini` - gemini
+        * `siliconflow` - siliconflow
+        * `openrouter` - openrouter
+        * `ollama` - ollama
+        * `custom` - custom
     AssistRetrievalEnum:
       enum:
       - vector
@@ -17195,8 +17320,12 @@ components:
       - ''
     Candidate:
       type: object
-      description: 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+      description: |-
+        一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+        `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。
       properties:
+        platform:
+          $ref: '#/components/schemas/AssistPlatformEnum'
         provider:
           $ref: '#/components/schemas/ProviderEnum'
         base_url:
@@ -17508,6 +17637,29 @@ components:
         env_enabled:
           type: boolean
           description: 部署的 ASSISTANT_ENABLED;为假时页面开关无效
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/AssistPlatformEnum'
+          description: |-
+            存的平台;与当前连接对不上时按适配器 + 地址认,认不出是 custom
+
+            * `deepseek` - deepseek
+            * `openai` - openai
+            * `anthropic` - anthropic
+            * `qwen` - qwen
+            * `kimi` - kimi
+            * `glm` - glm
+            * `doubao` - doubao
+            * `gemini` - gemini
+            * `siliconflow` - siliconflow
+            * `openrouter` - openrouter
+            * `ollama` - ollama
+            * `custom` - custom
+        platforms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Platform'
+          description: 下拉里的预设(只读)
         provider:
           type: string
         base_url:
@@ -17569,6 +17721,8 @@ components:
       - monthly_cap
       - officer_per_hour
       - overridden
+      - platform
+      - platforms
       - prices
       - provider
       - read_only
@@ -17590,6 +17744,10 @@ components:
           type: object
           additionalProperties:
             type: integer
+        tools:
+          type: boolean
+          nullable: true
+          description: 连通时:模型真的调了一次测试工具为 true;没调或平台拒收工具为 false。未连通为 null
         provider:
           type: string
         model:
@@ -17601,6 +17759,7 @@ components:
       - ok
       - provider
       - tokens
+      - tools
     Conversation:
       type: object
       properties:
@@ -22654,6 +22813,53 @@ components:
           type: string
       required:
       - event_id
+    ModelEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        context:
+          type: integer
+          nullable: true
+          description: 平台给了上下文长度才有
+      required:
+      - context
+      - id
+    ModelList:
+      type: object
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ModelListStatusEnum'
+          description: |-
+            no_list = 平台不提供模型列表(404/405),不算出错
+
+            * `ok` - ok
+            * `no_list` - no_list
+            * `failed` - failed
+        error_kind:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ErrorKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelEntry'
+      required:
+      - error_kind
+      - models
+      - status
+    ModelListStatusEnum:
+      enum:
+      - ok
+      - no_list
+      - failed
+      type: string
+      description: |-
+        * `ok` - ok
+        * `no_list` - no_list
+        * `failed` - failed
     ModeratedComment:
       type: object
       description: 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。
@@ -24701,8 +24907,12 @@ components:
           readOnly: true
     PatchedConfigUpdate:
       type: object
-      description: 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+      description: |-
+        一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+        `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。
       properties:
+        platform:
+          $ref: '#/components/schemas/AssistPlatformEnum'
         provider:
           $ref: '#/components/schemas/ProviderEnum'
         base_url:
@@ -26242,6 +26452,42 @@ components:
       - empty_reached
       - empty_share
       - empty_threshold
+    Platform:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/AssistPlatformEnum'
+        provider:
+          nullable: true
+          description: |-
+            custom 为 null
+
+            * `anthropic` - anthropic
+            * `openai_compatible` - openai_compatible
+          oneOf:
+          - $ref: '#/components/schemas/ProviderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        base_url:
+          type: string
+          nullable: true
+          description: custom 为 null
+        tools:
+          allOf:
+          - $ref: '#/components/schemas/ToolsEnum'
+          description: |-
+            文档写明支持函数调用 = yes;model = 看模型
+
+            * `yes` - yes
+            * `no` - no
+            * `model` - model
+        needs_key:
+          type: boolean
+      required:
+      - base_url
+      - id
+      - needs_key
+      - provider
+      - tools
     PolarityEnum:
       enum:
       - OFFENCE
@@ -26393,9 +26639,59 @@ components:
           type: number
           format: double
           minimum: 0
+        source:
+          allOf:
+          - $ref: '#/components/schemas/PriceSourceEnum'
+          description: |-
+            litellm = 预填的参考价(未改过);manual = 手填或改过。缺省按 manual
+
+            * `litellm` - litellm
+            * `manual` - manual
+        as_of:
+          type: string
+          format: date
+          nullable: true
+          description: 参考价取自 LiteLLM 价目表的日期
       required:
       - input
       - output
+    PriceReference:
+      type: object
+      properties:
+        found:
+          type: boolean
+        input:
+          type: number
+          format: double
+          nullable: true
+          description: 美元 / 百万 token
+        output:
+          type: number
+          format: double
+          nullable: true
+        cache_read:
+          type: number
+          format: double
+          nullable: true
+        as_of:
+          type: string
+          format: date
+          nullable: true
+          description: 价目表的取得日期;表取不到时为 null
+      required:
+      - as_of
+      - cache_read
+      - found
+      - input
+      - output
+    PriceSourceEnum:
+      enum:
+      - litellm
+      - manual
+      type: string
+      description: |-
+        * `litellm` - litellm
+        * `manual` - manual
     ProblemsEnum:
       enum:
       - unpriced_model
@@ -29933,14 +30229,6 @@ components:
       - count
       - realm_code
       - realm_name
-    SourceEnum:
-      enum:
-      - page
-      - env
-      type: string
-      description: |-
-        * `page` - page
-        * `env` - env
     Statute:
       type: object
       description: |-
@@ -30314,6 +30602,16 @@ components:
       required:
       - access
       - refresh
+    ToolsEnum:
+      enum:
+      - 'yes'
+      - 'no'
+      - model
+      type: string
+      description: |-
+        * `yes` - yes
+        * `no` - no
+        * `model` - model
     TriggerEnum:
       enum:
       - SCHEDULE
