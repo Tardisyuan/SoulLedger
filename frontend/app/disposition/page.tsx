@@ -211,7 +211,6 @@ export default function DispositionPage() {
         title={t("disposition.confirm_execute")}
         message={t("disposition.execute_warning")}
         confirmText={t("disposition.confirm_execute")}
-        variant="danger"
         confirmLoading={executeMutation.isPending}
         onCancel={() => setShowExecuteModal(null)}
         onConfirm={() => showExecuteModal && executeMutation.mutate(showExecuteModal)}

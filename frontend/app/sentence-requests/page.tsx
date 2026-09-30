@@ -92,7 +92,7 @@ function SentenceRequestsContent() {
 
 export default function SentenceRequestsPage() {
   return (
-    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied />}>
+    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
       <SentenceRequestsContent />
     </RequirePermission>
   );

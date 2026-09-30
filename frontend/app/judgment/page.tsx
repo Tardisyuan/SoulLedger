@@ -188,7 +188,7 @@ function JudgmentQueuePageContent() {
    `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
 export default function JudgmentQueuePage() {
   return (
-    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied />}>
+    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
       <JudgmentQueuePageContent />
     </RequirePermission>
   );

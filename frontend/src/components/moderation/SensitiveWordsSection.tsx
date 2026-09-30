@@ -291,7 +291,7 @@ export function SensitiveWordsSection() {
           <Button type="button" variant="secondary" size="sm" onClick={() => setBatchAction("REVIEW")}>
             {t("social_moderation.words.change_action")}
           </Button>
-          <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
             {t("social_moderation.words.delete_selected")}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
