@@ -779,6 +779,18 @@ html.theme-switching *::after {
   }
 }
 
+/* 问一问 waiting (canvas「流式输出」A1): three dots brighten one after another, 400 ms each.
+   Opacity only; used under `motion-safe:`, so reduced motion leaves them still. */
+@keyframes assist-dot {
+  0% {
+    opacity: 1;
+  }
+  33.33%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
 @layer base {
   body {
     @apply bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))];

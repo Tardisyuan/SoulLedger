@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import type { AssistStreamEnd, AssistStreamEvent } from "@soulledger/core/api/assist-stream";
 import {
-  ASSIST_TIMEOUT_MS,
   officerAssistApi,
   officerAssistErrorCode,
   officerAssistRetryAt,
@@ -16,6 +16,7 @@ import {
 import { officerAssistKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { webStreamFetch } from "./StreamingText";
 
 /**
  * 「问一问」 on the officer console (canvas 「灵魂簿 官员端 · 问一问」). The state
@@ -33,17 +34,27 @@ import { useTenant } from "@/src/contexts/TenantContext";
 
 /** Decision A4: the same page within 30 minutes continues the last conversation. */
 export const ASSIST_CONTINUE_MS = 30 * 60 * 1000;
-/** 1d: past this the waiting line adds 「还在查」 and a cancel. */
-export const ASSIST_SLOW_MS = 6_000;
+/** 流式输出 A1: past this with no text yet, the waiting line reads 「还在查……」 (never a count of seconds). */
+export const ASSIST_SLOW_MS = 20_000;
 
 const OPEN_KEY = (userId: number) => `soulledger.officer_assist.open.${userId}`;
 const OFF_KEY = (userId: number) => `soulledger.officer_assist.off.${userId}`;
-const TIMEOUT = "officer-assist-timeout";
 
 export type OfficerAssistFailure =
   | { kind: "not_configured" }
   | { kind: "limited"; retryAt: string | null }
   | { kind: "unanswered"; question: string; at: string; timeout: boolean };
+
+/**
+ * The question being answered: the text streams into `text`; `slow` is A1's 20 s with nothing yet.
+ * Stop is available the whole time (A5), including before the first text.
+ */
+export interface OfficerAssistPending {
+  question: string;
+  at: string;
+  slow: boolean;
+  text: string;
+}
 
 export interface OfficerAssistThread {
   id: string | null;
@@ -79,7 +90,9 @@ export function useOfficerAssist(wide: boolean) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"chat" | "history">("chat");
   const [thread, setThread] = useState<OfficerAssistThread>(EMPTY);
-  const [pending, setPending] = useState<{ question: string; at: string; slow: boolean } | null>(null);
+  const [pending, setPending] = useState<OfficerAssistPending | null>(null);
+  /** A9: 「重试」 only on the latest answer, and only one interrupted here — never on history. */
+  const [retryable, setRetryable] = useState<number | null>(null);
   const [failure, setFailure] = useState<OfficerAssistFailure | null>(null);
   const [draft, setDraft] = useState("");
   const [unseen, setUnseen] = useState(false);
@@ -175,50 +188,74 @@ export function useOfficerAssist(wide: boolean) {
       const controller = new AbortController();
       waiting.current = controller;
       const at = new Date().toISOString();
-      setPending({ question, at, slow: false });
+      let text = "";
+      let conversationId = thread.id;
+      let ended: Extract<AssistStreamEvent, { event: "done" | "error" }> | null = null;
+      setPending({ question, at, slow: false, text: "" });
       setFailure(null);
+      setRetryable(null);
       setDraft("");
       setAnnounce("");
-      const slow = setTimeout(() => setPending((p) => (p ? { ...p, slow: true } : p)), ASSIST_SLOW_MS);
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(TIMEOUT)), ASSIST_TIMEOUT_MS);
-      });
-      Promise.race([
-        officerAssistApi.ask({ question, screen, conversation_id: thread.id ?? undefined }, controller.signal),
-        timeout,
-      ])
-        .then(
-          (res) => {
-            if (waiting.current !== controller) return;
-            const mine: OfficerAssistMessage = { id: -Date.now(), role: "user", content: question, interruption: "", created_at: at };
-            setThread((th) => ({ id: res.conversation_id, messages: [...th.messages, mine, res.answer] }));
-            setAnnounce(t("officer_assist.answered"));
-            if (!openRef.current) setUnseen(true);
-            void queryClient.invalidateQueries({ queryKey: officerAssistKeys.all });
-          },
-          (error: unknown) => {
-            if (waiting.current !== controller) return;
-            controller.abort();
-            const code = officerAssistErrorCode(error);
-            if (code === "assistant_not_configured") {
-              setFailure({ kind: "not_configured" });
-              return;
-            }
-            // Every refusal the officer can wait out keeps the question in the box.
-            setDraft(question);
-            if (code === "rate_limited") {
-              setFailure({ kind: "limited", retryAt: officerAssistRetryAt(error) });
-              return;
-            }
-            // The conversation was deleted meanwhile: the retry starts a new one.
-            if (code === "not_found") setThread((th) => ({ ...th, id: null }));
-            setFailure({ kind: "unanswered", question, at, timeout: error instanceof Error && error.message === TIMEOUT });
+      const slow = setTimeout(() => setPending((p) => (p && !p.text ? { ...p, slow: true } : p)), ASSIST_SLOW_MS);
+      const mine: OfficerAssistMessage = { id: -Date.now(), role: "user", content: question, interruption: "", created_at: at };
+      /** The answer as far as it got, kept in the thread with its marker (A6 / A7). */
+      const keep = (interruption: "stopped" | "interrupted", id?: number) => {
+        const answer: OfficerAssistMessage = { id: id ?? -Date.now() - 1, role: "assistant", content: text, interruption, created_at: new Date().toISOString() };
+        setThread((th) => ({ id: conversationId, messages: [...th.messages, mine, answer] }));
+        setAnnounce(`${t(`officer_assist.${interruption}`)} ${text}`.trim());
+        if (interruption === "interrupted") setRetryable(answer.id);
+      };
+      const onEvent = (event: AssistStreamEvent) => {
+        if (waiting.current !== controller) return;
+        if (event.event === "meta") conversationId = event.conversation_id;
+        if (event.event === "delta") {
+          if (!text) setAnnounce(t("officer_assist.answering_aria"));
+          text += event.text;
+          setPending((p) => (p ? { ...p, slow: false, text } : p));
+        }
+        if (event.event === "done" || event.event === "error") ended = event;
+      };
+      const finish = (how: AssistStreamEnd) => {
+        if (waiting.current !== controller) return;
+        const end = ended;
+        if (end?.event === "done") {
+          setThread((th) => ({ id: end.conversation_id, messages: [...th.messages, mine, end.answer] }));
+          setAnnounce(end.answer.content);
+          if (!openRef.current) setUnseen(true);
+        } else if (how === "stopped") {
+          keep("stopped");
+        } else if (text) {
+          // Broke after text: the server kept what was sent (A7). `interrupted` event or a lost connection alike.
+          if (end?.event === "error" && end.conversation_id) conversationId = end.conversation_id;
+          keep("interrupted", end?.event === "error" ? end.message_id : undefined);
+        } else {
+          // Nothing arrived: the backend already tried the backup (A8) — the old 「没有答上来」.
+          setDraft(question);
+          setFailure({ kind: "unanswered", question, at, timeout: how === "timeout" });
+        }
+        void queryClient.invalidateQueries({ queryKey: officerAssistKeys.all });
+      };
+      officerAssistApi
+        .stream(webStreamFetch, { question, screen, conversation_id: thread.id ?? undefined }, controller, onEvent)
+        .then(finish, (error: unknown) => {
+          if (waiting.current !== controller) return;
+          const code = officerAssistErrorCode(error);
+          if (code === "assistant_not_configured") {
+            setFailure({ kind: "not_configured" });
+            return;
           }
-        )
+          // Every refusal the officer can wait out keeps the question in the box.
+          setDraft(question);
+          if (code === "rate_limited") {
+            setFailure({ kind: "limited", retryAt: officerAssistRetryAt(error) });
+            return;
+          }
+          // The conversation was deleted meanwhile: the retry starts a new one.
+          if (code === "not_found") setThread((th) => ({ ...th, id: null }));
+          setFailure({ kind: "unanswered", question, at, timeout: false });
+        })
         .finally(() => {
           clearTimeout(slow);
-          clearTimeout(timer);
           if (waiting.current === controller) {
             waiting.current = null;
             setPending(null);
@@ -228,12 +265,8 @@ export function useOfficerAssist(wide: boolean) {
     [screen, thread.id, t, queryClient]
   );
 
-  /** Stop waiting. The server still answers and stores it; it shows up in 历史. */
-  const cancel = useCallback(() => {
-    waiting.current?.abort();
-    waiting.current = null;
-    setPending(null);
-  }, []);
+  /** A5 stop: close the connection. The server stores what was written (`stopped`); `finish` keeps it here too. */
+  const stop = useCallback(() => waiting.current?.abort(), []);
 
   // ⌘/Ctrl+J anywhere; F6 between the page and the pushed panel (1a 三).
   useEffect(() => {
@@ -242,6 +275,13 @@ export function useOfficerAssist(wide: boolean) {
       if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "j") {
         e.preventDefault();
         toggle();
+        return;
+      }
+      // A5: Esc stops an answer being written, before it would close anything (focus anywhere in the panel).
+      if (e.key === "Escape" && waiting.current && !e.defaultPrevented &&
+          panelRef.current?.contains(document.activeElement)) {
+        e.preventDefault();
+        stop();
         return;
       }
       // Esc from inside the pushed panel (the drawer's own Dialog handles it there). A
@@ -260,7 +300,7 @@ export function useOfficerAssist(wide: boolean) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [userId, hidden, toggle, close, wide]);
+  }, [userId, hidden, toggle, close, wide, stop]);
 
   return {
     /** The header entry is rendered at all. */
@@ -286,8 +326,17 @@ export function useOfficerAssist(wide: boolean) {
     close,
     toggle,
     ask,
-    cancel,
+    stop,
+    retryable,
     retry: () => failure?.kind === "unanswered" && ask(failure.question),
+    /** A7: re-ask an interrupted answer's question; the new answer replaces it (it may come from the backup). */
+    retryInterrupted: () => {
+      const at = thread.messages.findIndex((m) => m.id === retryable);
+      const question = at > 0 ? thread.messages[at - 1].content : null;
+      if (question === null) return;
+      setThread((th) => ({ ...th, messages: th.messages.slice(0, at - 1) }));
+      ask(question);
+    },
     edit: () => {
       if (failure?.kind === "unanswered") setDraft(failure.question);
       setFailure(null);
@@ -295,11 +344,13 @@ export function useOfficerAssist(wide: boolean) {
     },
     startNew: () => {
       setFailure((f) => (f?.kind === "not_configured" ? f : null));
+      setRetryable(null);
       setThread(EMPTY);
       setView("chat");
     },
     openConversation: (c: OfficerAssistConversation) => {
       setFailure(null);
+      setRetryable(null);
       setThread({ id: c.id, messages: c.messages });
       setView("chat");
     },
