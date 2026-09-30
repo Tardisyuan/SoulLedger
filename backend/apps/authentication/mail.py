@@ -75,24 +75,24 @@ MESSAGES = {
         },
     },
     "egy": {
-        "footer": "Shemes Pen Hab In Hemsu. Nen Wesheb.",
+        "footer": "Shemes Pen Hab In Hemsu. Nen Shesep Wesheb.",
         "reset_code": {
-            "title": "Ren Maa Wehem Sekhem",
-            "code_label": "Ren Maa",
-            "note": "Wenen At 5. Nen Ek: Imen.",
-            "text": "Ren Maa Ek: {{code}}\nWenen At 5. Nen Ek: Imen.",
+            "title": "Hesb Maa Wehem Sekhem",
+            "code_label": "Hesb Maa",
+            "note": "Wenen At 5. Nen Djes: Imen.",
+            "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Imen.",
         },
         "credential": {
             "title": "Aq Ba",
-            "soul_code_label": "Ren Ba",
+            "soul_code_label": "Ren Hesb Ba",
             "password_label": "Sekhem Tepy",
             "expires_label": "Wenen Er",
             "note_change": "Khemen Sekhem Em Aq Tepy.",
-            "note_once": "Sekhem Pen Hab Wa Djer. Mut Er Nen Gem: Sab Wehem Sekhem.",
+            "note_once": "Sekhem Pen Hab Wa Djer. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.",
             "text": (
-                "Ren Ba Ek: {{soul_code}}\nSekhem Tepy: {{password}}\n"
+                "Ren Hesb Ba-Ek: {{soul_code}}\nSekhem Tepy: {{password}}\n"
                 "Wenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.\n"
-                "Sekhem Pen Hab Wa Djer. Mut Er Nen Gem: Sab Wehem Sekhem."
+                "Sekhem Pen Hab Wa Djer. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
             ),
         },
     },

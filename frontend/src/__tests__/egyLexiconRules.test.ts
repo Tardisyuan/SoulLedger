@@ -124,7 +124,6 @@ const ABOLISHED_TEN_WORDS = [
 ];
 /** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
 const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
-
 /**
  * 第十一节:Per Aa 是「法老」(大房子),不能表示服务器 —— 服务器一律 Per Hemsu;第十二节把宫殿义的
  * workflow.editor.court_code 改写 Wesekhet,Per Aa 于是整个废止。按两词词组查:Aa 单独出现由封闭词汇拦下
@@ -282,6 +281,8 @@ const PHRASE_RE = new RegExp(
  * 一条文案里的词:去占位符、去该键的技术词,取字母串;连字符复合词(Wa-Ek)算一个词。
  * 第十节:后置小词 -Ef(其 / 它的)接在任何词后都合规,所以 Iri-Ef 拆成 Iri 与 -Ef 两个词。
  * 第十一节:-I(我的)同理,Sedjem-I 拆成 Sedjem 与 -I。
+ * 第十五节(Design E 组):-Ek(你的)必须接在词后 —— Hesb Maa-Ek、Ren Hesb Ba-Ek、Per-Ek —— 同样拆开。
+ * 独立的 Ek(你)仍在小词表里。
  */
 const words = (k: string) => {
   const text = prose(EGY[k]);
@@ -292,7 +293,7 @@ const words = (k: string) => {
     .filter((t) => !(TECHNICAL[k] ?? []).includes(bare(t)))
     .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? [])
     .flatMap((w) => {
-      const m = /^(.+)(-Ef|-I)$/.exec(w);
+      const m = /^(.+)(-Ef|-I|-Ek)$/.exec(w);
       return m ? [m[1], m[2]] : [w];
     });
   return [...phrases, ...rest];
@@ -495,6 +496,8 @@ const PARTICLES = [
   "En", "-I",
   // 第十四节:In 表「由 / 被」(触发人 Iri In);En 从此只作属格。
   "In",
+  // 第十五节(Design E 组):后置 -Ek(你的),接在词后(Hesb Maa-Ek)。
+  "-Ek",
 ];
 const LEXICON = new Set([
   ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
@@ -620,6 +623,18 @@ describe("egy 词表规则", () => {
     expect(hasHemsu(EGY["welcome.system_version"] ?? "")).toBe(true);
     expect(hasHemsu(EGY["error.description"] ?? "")).toBe(true);
     expect(hasHemsu(EGY["scheduler.run.enqueue_failed"] ?? "")).toBe(true);
+  });
+
+  it("废止名单按整词匹配:废止的 Shems 不误拦 Shemes(书信)、Shemsu(随从)(第十五节门禁提醒)", () => {
+    // 两个合规词与废止词只差一个字母 / 一个后缀;子串匹配会把它们一起拦下。
+    expect(ABOLISHED_TEN.test("Shems")).toBe(true);
+    expect(ABOLISHED_TEN.test("Shems Pen")).toBe(true);
+    expect(ABOLISHED_TEN.test("Shemes Pen Hab In Hemsu.")).toBe(false);
+    expect(ABOLISHED_TEN.test("Nen Ini Shemsu.")).toBe(false);
+    // 空扫保护:两个合规词确实在包里,名单里也确实还有 Shems。
+    expect(ABOLISHED_TEN_WORDS).toContain("Shems");
+    expect(KEYS.some((k) => /\bShemes\b/.test(EGY[k]))).toBe(true);
+    expect(KEYS.some((k) => /\bShemsu\b/.test(EGY[k]))).toBe(true);
   });
 
   it("第十节「换掉」清单与旧账清单不重叠:换净了才能进废止名单", () => {

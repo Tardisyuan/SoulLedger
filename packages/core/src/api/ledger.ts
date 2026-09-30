@@ -1,3 +1,4 @@
+import axios from "axios";
 import { api } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 
@@ -311,6 +312,16 @@ export interface LedgerJournalParams {
   civilization?: string;
   category?: string;
   search?: string;
+}
+
+/**
+ * The whole-month journal (`journalMonth`) refused because the month is over
+ * `WHOLE_MONTH_MAX` rows: 400 `{"error": "MONTH_TOO_LARGE", "field": "all"}`
+ * (apps/ledger/views.py). Retrying cannot help — the filters have to narrow.
+ */
+export function isMonthTooLarge(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 400) return false;
+  return (error.response.data as { error?: unknown } | undefined)?.error === "MONTH_TOO_LARGE";
 }
 
 export const ledgerApi = {
