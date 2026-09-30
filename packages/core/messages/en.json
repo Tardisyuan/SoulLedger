@@ -14,7 +14,8 @@
     "language": "Interface language",
     "theme_light": "Switch to light mode",
     "theme_dark": "Switch to dark mode",
-    "mobile_menu": "Navigation menu"
+    "mobile_menu": "Navigation menu",
+    "more": "More"
   },
   "auth": {
     "login": "Login",
@@ -75,6 +76,16 @@
   },
   "footer": {
     "version": "SoulLedger v0.1"
+  },
+  "about": {
+    "title": "About & credits",
+    "intro": "The typefaces, ornament and images this app uses, and their licences.",
+    "fonts": "Typefaces",
+    "ornament": "Ornament",
+    "images": "Seal edges",
+    "licence": "Licence",
+    "public_domain": "Public domain",
+    "source": "Source"
   },
   "souls": {
     "title": "Souls",
@@ -378,7 +389,8 @@
       "copied": "Copied ✓"
     },
     "field_required": "This field is required",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "type_name_to_confirm": "Type “{{name}}” to confirm"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)",
@@ -1018,12 +1030,15 @@
       "col_entry": "Entry",
       "col_basis": "Basis",
       "subtotal": "Subtotal",
+      "col_balance": "Balance",
+      "all_shown": "{{n}} entries this month · all shown",
       "page_total": "Page total · {{n}} entries",
       "categories": "By category",
       "category": "Category",
       "empty_title": "No entries this period",
       "empty_reason": "Nothing was recorded in {{month}}; opening = closing = {{opening}}.",
       "load_failed": "The journal failed to load",
+      "month_too_large": "Too many entries this month. Narrow the filters.",
       "row_hint": "Click a row for that soul's merit & demerit",
       "search": "Soul name or ID",
       "export": "Export",
@@ -1112,7 +1127,9 @@
       "claimed_next": "Open the next case",
       "claimed_back": "Back to the queue",
       "session_deferred": "{{n}} set aside this sitting",
-      "restore_all": "Put all back in the queue"
+      "restore_all": "Put all back in the queue",
+      "key_claim": "Claim this case",
+      "reassigned": "Reassigned · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "Loading judgment...",
@@ -1358,6 +1375,9 @@
       "draft": "Draft · not submitted",
       "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
       "not_applicable": "not for {{verdict}}"
+    },
+    "row_mark": {
+      "mine": "Awaiting me"
     }
   },
   "audit": {
@@ -1378,7 +1398,6 @@
     "date_all": "All time",
     "date_7d": "Last 7 days",
     "date_30d": "Last 30 days",
-    "compact": "Compact",
     "events_from_writes": "{{count}} writes in this event",
     "actions": {
       "CREATE": "Created",
@@ -1824,25 +1843,7 @@
     "title": "Settings",
     "theme": "Theme",
     "light": "Light",
-    "dark": "Dark",
-    "accent_color": "Accent Color",
-    "apply": "Apply",
-    "nav_mode": "Navigation Mode",
-    "classic": "Classic",
-    "compact": "Compact",
-    "classic_desc": "Full sidebar with icons and labels",
-    "compact_desc": "Icons only with tooltips on hover",
-    "colors": {
-      "ink": "Ink blue (default)",
-      "amber": "Amber",
-      "blue": "Blue",
-      "green": "Green",
-      "purple": "Purple",
-      "red": "Red",
-      "rose": "Rose"
-    },
-    "accent_hex_invalid": "Enter a 6-digit hex colour, e.g. #ff5500",
-    "accent_hex_too_dark": "Too dark — the black label on primary buttons would be unreadable"
+    "dark": "Dark"
   },
   "admin": {
     "ledger_stats": "Deed Statistics",
@@ -1886,7 +1887,8 @@
   },
   "permission": {
     "denied_title": "Permission Denied",
-    "denied_message": "You don't have permission to access this page or perform this action."
+    "denied_message": "You don't have permission to access this page or perform this action.",
+    "ask_admin": "Ask your hall's administrator."
   },
   "icon_picker": {
     "select": "Select Icon",
@@ -2247,7 +2249,18 @@
     "subtitle": "Tenant configuration per civilization",
     "list": "Tenant list",
     "no_tenants": "No tenants",
-    "code": "Code"
+    "code": "Code",
+    "seal": {
+      "column": "Seal glyphs",
+      "default": "Default “{{glyph}}”",
+      "edit": "Edit seal glyphs",
+      "title": "{{name}} · seal glyphs",
+      "hint_one": "One glyph; leave empty for the civilization default “{{glyph}}”. Seal glyphs are not translated.",
+      "hint_two": "Up to two glyphs, stacked; leave empty for the civilization default “{{glyph}}”. Seal glyphs are not translated.",
+      "preview": "Preview",
+      "saved": "Seal glyphs saved",
+      "save_failed": "Could not save the seal glyphs"
+    }
   },
   "table": {
     "empty": "No data",
@@ -2291,7 +2304,8 @@
       "soul_inbox": "Hall Inbox",
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin"
-    }
+    },
+    "queue": "Triage queue"
   },
   "tenant": {
     "civilizations": {
@@ -2723,6 +2737,7 @@
       "screen_title": "Could not reach the ledger",
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
+      "offline": "Offline",
       "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete"
     },
     "lexicon": {
@@ -3606,6 +3621,7 @@
       "placeholders": "Filled in with the soul's and the hall's name before sending:",
       "saved": "Template saved",
       "deleted": "Template deleted",
+      "delete_confirm": "Deleting the template “{{title}}” cannot be undone.",
       "empty_manage": "This hall has no templates yet. Save a reply you write often, then insert it with one click."
     },
     "assign": {
@@ -3778,6 +3794,27 @@
     "amend": {
       "title": "Changes to the sentence plan",
       "hint": "This is an amendment judgment. Concluding it creates no disposition; the changes go to the original judge as one request, and with no changes no request is filed."
+    }
+  },
+  "seal": {
+    "aria": "Seal of {{court}}"
+  },
+  "soul_mail": {
+    "footer": "This message was sent by the system; replies are not received.",
+    "reset_code": {
+      "title": "Password reset code",
+      "code_label": "Code",
+      "note": "Valid for 5 minutes. If you did not ask for this, ignore this email.",
+      "text": "Your code: {{code}}\nValid for 5 minutes. If you did not ask for this, ignore this email."
+    },
+    "credential": {
+      "title": "Soul account",
+      "soul_code_label": "Soul code",
+      "password_label": "Initial password",
+      "expires_label": "Valid until",
+      "note_change": "You must change the password at first sign-in.",
+      "note_once": "This password is sent only once; if it expires or is lost, ask an officer of your civilization to reset it.",
+      "text": "Your soul code: {{soul_code}}\nInitial password: {{password}}\nValid until {{expires_at}}. You must change the password at first sign-in.\nThis password is sent only once; if it expires or is lost, ask an officer of your civilization to reset it."
     }
   },
   "officer_assist": {

@@ -9,7 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
  *
  * The same Base UI `Dialog` the Modal is built on, so focus trapping, Escape,
  * scroll lock and focus return come from the primitive rather than from code
- * here. What this adds is the shape (a 480 px right panel, `shadow-overlay`,
+ * here. What this adds is the shape (a 480 px right panel, a 1px ink edge and no shadow (规范 v2),
  * block line under the header) and the J / K step between list rows.
  *
  * Focus return: Base UI returns focus to the element that had it on open. With
@@ -43,7 +43,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <Dialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup
           finalFocus={finalFocus}
           onKeyDown={(e) => {
@@ -52,14 +52,14 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             if (key === "j" && onNext) { e.preventDefault(); onNext(); }
             else if (key === "k" && onPrev) { e.preventDefault(); onPrev(); }
           }}
-          className="fixed inset-y-0 right-0 z-dialog flex w-full sm:w-[480px] flex-col bg-[oklch(var(--color-canvas))] border-l border-[oklch(var(--color-block))] shadow-overlay transition-transform duration-200 ease-out data-ending-style:translate-x-full data-starting-style:translate-x-full"
+          className="fixed inset-y-0 right-0 z-dialog flex w-full sm:w-[480px] flex-col bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] transition-transform duration-base ease-standard data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:translate-x-full data-starting-style:translate-x-full"
         >
           <div className="flex shrink-0 items-baseline justify-between gap-3 px-4 py-3 border-b border-[oklch(var(--color-block))]">
-            <Dialog.Title className="min-w-0 break-words text-md text-[oklch(var(--color-ink))]">{title}</Dialog.Title>
+            <Dialog.Title className="min-w-0 break-words text-lg text-[oklch(var(--color-ink))]">{title}</Dialog.Title>
             <span className="flex items-baseline gap-3 shrink-0">
               {hint && <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{hint}</span>}
               <Dialog.Close
-                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1.5 py-0.5"
+                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1 py-0.5"
                 aria-label={t("common.close")}
               >
                 Esc
@@ -69,8 +69,9 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
           {error && (
             <div
               role="alert"
-              className="shrink-0 px-4 py-2 text-sm bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))] border-b border-[oklch(var(--color-danger))]"
+              className="shrink-0 px-4 py-2 text-sm bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger-on-tint))] border-b border-[oklch(var(--color-danger))]"
             >
+              <span aria-hidden="true">✕ </span>
               {error}
             </div>
           )}

@@ -4,6 +4,7 @@ import { Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
+import { TextField } from "@/src/components/ui/Field";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { RoleDiff } from "./matrixDiff";
 
@@ -56,6 +57,7 @@ export function MatrixSaveConfirmModal({
             disabled={isSaving || !canConfirmSave}
             className="flex-1"
           >
+            <span aria-hidden="true">✕</span>
             {isSaving ? t("permissions.matrix.confirm_submitting") : t("permissions.matrix.confirm_submit")}
           </Button>
         </div>
@@ -97,16 +99,14 @@ export function MatrixSaveConfirmModal({
                 {diff.removesMenuRead && (
                   <p className="text-xs text-[oklch(var(--color-status-error))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
                 )}
-                <label htmlFor={`type-confirm-${diff.role}`} className="block text-xs text-[oklch(var(--color-ink-muted))]">
-                  {t("permissions.matrix.confirm_type_role_label", { role: diff.role })}
-                </label>
-                <input
+                <TextField
                   id={`type-confirm-${diff.role}`}
-                  type="text"
+                  label={t("permissions.matrix.confirm_type_role_label", { role: diff.role })}
                   value={typedRoleNames[diff.role] ?? ""}
                   onChange={(e) => onTypedRoleNameChange(diff.role, e.target.value)}
                   placeholder={diff.role}
-                  className="w-full px-2 py-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm font-mono text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+                  autoComplete="off"
+                  spellCheck={false}
                 />
               </div>
             )}

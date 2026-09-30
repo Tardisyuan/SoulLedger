@@ -91,13 +91,18 @@ describe("the five strips read it from there", () => {
    */
   const EXPECTED_IMPORTERS = [
     "app/dashboard/page.tsx",
-    // app/judgment/page.tsx 于 2026-09-25 离开:审判队列的「待审 / 已结案」改成规范 v1 的
-    // 分段切换 Segmented(墨底为当前),不再是下划线页签条。
+    // app/judgment/page.tsx 于 2026-09-25 离开(v1 分段切换),2026-09-30 回来:规范 v2 补足 B9
+    // 把「待审 / 已结案」重新画成下划线标签(ink 600 + 2px ink,计数 11 等宽)。
+    "app/judgment/page.tsx",
     // app/moderation/page.tsx 于 2026-09-25 离开:朋友圈审核四区(举报 / 敏感词 / 禁言 / 已处理)
     // 改成 E 组页头的分段切换(墨底为当前),与审判队列同一种写法。
     "app/notifications/page.tsx",
     // 2026-09-20:定时任务的「任务 / 运行历史」两个页签,第八条。
     "app/scheduler/page.tsx",
+    // 2026-09-30(v2 第三批):动态与关注两页的页签此前各写一份强调色下划线,v2 没有强调色,
+    // 改读这里的 A1 类名。
+    "app/social/follows/page.tsx",
+    "app/social/page.tsx",
     "app/workflow/[id]/page.tsx",
     "app/workflow/page.tsx",
     // 2026-09-29:助手管理的「配置与测试 / 实际用量」两个页签(两条路由,Link 而非 button)。
@@ -114,26 +119,23 @@ describe("the five strips read it from there", () => {
   });
 });
 
-describe("the selected tab is painted in the ink token, not the fill token", () => {
-  /**
-   * Presence AND absence. `toContain("--color-accent-ink")` alone stays green
-   * on `text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent-ink))]`
-   * — the two tokens swapped, which is the defect wearing the right substring.
-   */
-  it("TAB_ON draws its text in --color-accent-ink", () => {
-    expect(TAB_ON).toContain("text-[oklch(var(--color-accent-ink))]");
-    expect(TAB_ON).not.toContain("text-[oklch(var(--color-accent))]");
+describe("the selected tab is painted in ink (规范 v2 A1: no accent colour exists any more)", () => {
+  it("TAB_ON draws its text and its 2px rule in --color-ink, weight 600", () => {
+    expect(TAB_ON).toContain("text-[oklch(var(--color-ink))]");
+    expect(TAB_ON).toContain("border-[oklch(var(--color-ink))]");
+    expect(TAB_ON).toContain("font-semibold");
   });
 
-  it("TAB_ON draws its 2px rule in --color-accent", () => {
-    // The rule is a non-text mark on the container's hairline, not text; it
-    // keeps the fill token, and swapping the pair has to be visible here.
-    expect(TAB_ON).toContain("border-[oklch(var(--color-accent))]");
-    expect(TAB_ON).not.toContain("border-[oklch(var(--color-accent-ink))]");
+  it("no tab class reaches for the retired accent or the plaque colour", () => {
+    for (const cls of [TAB_BASE, TAB_ON, TAB_OFF]) {
+      expect(cls).not.toContain("--color-accent");
+      expect(cls).not.toContain("--color-main");
+    }
   });
 
-  it("TAB_OFF carries no accent at all", () => {
-    expect(TAB_OFF).not.toContain("--color-accent");
+  it("TAB_OFF hovers to an ink3 underline and has a disabled state", () => {
+    expect(TAB_OFF).toContain("hover:border-[oklch(var(--color-line-strong))]");
+    expect(TAB_OFF).toContain("disabled:text-[oklch(var(--color-ink-subtle))]");
   });
 
   it("TAB_BASE carries the geometry and no colour", () => {

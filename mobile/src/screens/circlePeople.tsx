@@ -30,7 +30,7 @@ import { useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
-import { Button, Empty, Notice, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, RadioMark, Screen, Skeleton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
 import { Glyph, Tag } from "./letters";
@@ -47,8 +47,8 @@ function CivMark() {
   const name = session?.state.status === "signedIn" ? session.state.profile.tenant.display_name : "";
   return (
     <View style={styles.civ}>
-      <Emblem civ={t.civ} size={12} stroke={t.mark} strokeWidth={2.4} />
-      <Txt style={[styles.civText, { color: t.mark }]}>{name}</Txt>
+      <Emblem civ={t.civ} size={12} stroke={t.inkMuted} strokeWidth={2.4} />
+      <Txt style={[styles.civText, { color: t.inkMuted }]}>{name}</Txt>
     </View>
   );
 }
@@ -96,10 +96,10 @@ function FollowButton({ following, followedBy, onPress, busy, compact }: { follo
       onPress={onPress}
       style={({ pressed }) => [
         styles.smallFollow,
-        following ? { borderWidth: 1, borderColor: t.hair2 } : { backgroundColor: pressed ? t.mark : t.accent },
+        following ? { borderWidth: 1, borderColor: t.hair2 } : { backgroundColor: pressed ? shade(t.plaque) : t.plaque },
       ]}
     >
-      <Txt style={[styles.smallFollowText, { color: following ? t.inkMuted : t.onAccent }]}>{label}</Txt>
+      <Txt style={[styles.smallFollowText, { color: following ? t.inkMuted : t.onPlaque }]}>{label}</Txt>
     </Pressable>
   );
 }
@@ -218,7 +218,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
         )}
       </Screen>
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
-        <View style={styles.scrim}>
+        <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} onPress={() => setMenu(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="profile-menu" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
             {chat.availability !== "not_configured" && p ? (
@@ -512,7 +512,7 @@ export function CircleSearchScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]} testID="circle-search">
       <View style={[styles.searchBar, { paddingHorizontal: 16, borderBottomColor: t.hair }]}>
-        <View style={[styles.searchBox, { borderColor: asked ? t.accent : t.hair2, backgroundColor: t.s1 }]}>
+        <View style={[styles.searchBox, { borderColor: asked ? t.ink : t.hair2, backgroundColor: t.s1 }]}>
           <Icon name="search" size={15} color={t.inkSubtle} />
           <TextInput
             testID="search-input"
@@ -651,11 +651,9 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
                     accessibilityRole="radio"
                     accessibilityState={{ checked: on }}
                     onPress={() => setReason(r)}
-                    style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.mark : "transparent" }]}
+                    style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.ink : "transparent" }]}
                   >
-                    <View style={[styles.dot, { borderColor: on ? t.mark : t.hair2, backgroundColor: on ? t.mark : "transparent" }]}>
-                      {on ? <View style={[styles.dotInner, { backgroundColor: t.s0 }]} /> : null}
-                    </View>
+                    <RadioMark on={on} />
                     <Txt variant="bodyLg">{tr(`social_moderation.reason.${r}`)}</Txt>
                   </Pressable>
                 );
@@ -689,40 +687,38 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { textAlign: "center" },
   stretch: { alignSelf: "stretch", marginTop: 12 },
-  pad: { paddingVertical: 18 },
-  row: { flexDirection: "row", alignItems: "center", gap: 14 },
-  head: { paddingTop: 22, paddingBottom: 18, gap: 14, borderBottomWidth: 1 },
-  civ: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
-  civText: { fontSize: 10.5, lineHeight: 14, letterSpacing: 1.4 },
-  counts: { flexDirection: "row", gap: 22 },
+  pad: { paddingVertical: 16 },
+  row: { flexDirection: "row", alignItems: "center", gap: 16 },
+  head: { paddingTop: 24, paddingBottom: 16, gap: 16, borderBottomWidth: 1 },
+  civ: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+  civText: { fontSize: 11, lineHeight: 14, letterSpacing: 1.4 },
+  counts: { flexDirection: "row", gap: 24 },
   countBox: { flexDirection: "row", borderWidth: 1 },
-  countCell: { flex: 1, minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingHorizontal: 14, borderLeftWidth: 0 },
-  countLabel: { fontSize: 12.5, lineHeight: 18 },
-  countValue: { flexDirection: "row", alignItems: "center", gap: 6 },
+  countCell: { flex: 1, minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingHorizontal: 16, borderLeftWidth: 0 },
+  countLabel: { fontSize: 12, lineHeight: 18 },
+  countValue: { flexDirection: "row", alignItems: "center", gap: 8 },
   countN: { fontSize: 15, lineHeight: 20 },
-  reborn: { flexDirection: "row", gap: 10, alignItems: "flex-start", borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
+  reborn: { flexDirection: "row", gap: 12, alignItems: "flex-start", borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   smallFollow: { minHeight: 34, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   smallFollowText: { fontSize: 12, letterSpacing: 0.4 },
-  listRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, paddingVertical: 10 },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  listRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, paddingVertical: 12 },
+  scrim: { flex: 1 },
   sheet: { borderTopWidth: 1 },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
-  menuNote: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderBottomWidth: 1 },
+  menuNote: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   searchBar: { paddingVertical: 12, borderBottomWidth: 1 },
   searchBox: { minHeight: 44, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
-  searchInput: { flex: 1, minHeight: 42, fontSize: 14.5 },
-  resultsHead: { paddingTop: 10, paddingBottom: 6 },
-  done: { flex: 1, alignItems: "center", gap: 12, paddingTop: 40 },
-  form: { paddingVertical: 18 },
-  preview: { borderLeftWidth: 2, paddingLeft: 12, fontSize: 14, lineHeight: 24 },
-  formLabel: { marginTop: 20, marginBottom: 10 },
-  radios: { gap: 1, borderWidth: 1 },
-  radio: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, borderLeftWidth: 2 },
-  dot: { width: 16, height: 16, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  dotInner: { width: 8, height: 8, borderRadius: 999 },
-  detail: { minHeight: 86, borderWidth: 1, padding: 12, fontSize: 13.5, lineHeight: 21, textAlignVertical: "top" },
-  submit: { marginTop: 18 },
+  searchInput: { flex: 1, minHeight: 42, fontSize: 15 },
+  resultsHead: { paddingTop: 12, paddingBottom: 8 },
+  done: { flex: 1, alignItems: "center", gap: 12, paddingTop: 32 },
+  form: { paddingVertical: 16 },
+  preview: { borderLeftWidth: 2, paddingLeft: 12, fontSize: 15, lineHeight: 24 },
+  formLabel: { marginTop: 20, marginBottom: 12 },
+  radios: { gap: 2, borderWidth: 1 },
+  radio: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderLeftWidth: 2 },
+  detail: { minHeight: 86, borderWidth: 1, padding: 12, fontSize: 13, lineHeight: 21, textAlignVertical: "top" },
+  submit: { marginTop: 16 },
   rename: { gap: 8 },
-  nameInput: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 16 },
+  nameInput: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 15 },
 });

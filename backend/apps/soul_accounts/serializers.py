@@ -61,6 +61,8 @@ class MeTenantSerializer(serializers.Serializer):
     display_name = serializers.CharField()
     hall_names = serializers.DictField(child=serializers.CharField(), read_only=True,
                                        help_text="殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。")
+    seal_glyphs = serializers.ListField(child=serializers.CharField(), read_only=True,
+                                        help_text="匾上的印字(1–2 个);空 = 用文明默认字。")
 
 
 class MeProfileSerializer(serializers.Serializer):

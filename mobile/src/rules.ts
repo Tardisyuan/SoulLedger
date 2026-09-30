@@ -9,54 +9,52 @@ import { civKeyOf, type CivKey } from "./theme";
 
 // ── badges ──────────────────────────────────────────────────────────────
 
-export type BadgeTone = "accent" | "neg" | "pos" | "muted" | "unknown";
-/** A badge is told apart by glyph and border as well as colour. */
+/**
+ * 补足 C15「状态徽章 · 领域枚举」: a badge is a domain value, never a status colour — ink
+ * words in a 1px ink3 frame, told apart by glyph and border. The ones still waiting on
+ * someone (`pending`: 待审 / 申诉中) sit on s2. A ✕ is ink too: 冷玫红 is for the system
+ * failing, not for a decision (B8). `unknown` is the value the app cannot name.
+ */
 export interface BadgeSpec {
-  tone: BadgeTone;
   glyph: string;
   border: "solid" | "dashed" | "dotted";
+  pending?: boolean;
+  unknown?: boolean;
 }
 
 export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
-  UNDER_REVIEW: { tone: "accent", glyph: "◷", border: "solid" },
-  REJECTED: { tone: "neg", glyph: "×", border: "solid" },
-  APPEALING: { tone: "accent", glyph: "↺", border: "solid" },
-  APPEAL_REJECTED: { tone: "neg", glyph: "×", border: "dashed" },
-  APPROVED: { tone: "pos", glyph: "✓", border: "solid" },
+  UNDER_REVIEW: { glyph: "◇", border: "solid", pending: true },
+  REJECTED: { glyph: "✕", border: "solid" },
+  APPEALING: { glyph: "↺", border: "solid", pending: true },
+  APPEAL_REJECTED: { glyph: "✕", border: "dashed" },
+  APPROVED: { glyph: "✓", border: "solid" },
 };
 
 /**
- * All six `Soul.current_state` members. The design drew the first three; the
- * other three follow the same system — a pill told apart by glyph (and, for
- * LOST, border), never by colour alone. The unknown badge (`?`, dotted) stays
- * reserved for a value the app cannot name.
+ * All six `Soul.current_state` members, per C15's drawing where it names them (○ 在世,
+ * ◇ 待审 on s2, ↻ 轮回) and the same system for the rest. The unknown badge (`?`,
+ * dotted) stays reserved for a value the app cannot name.
  */
 export const SOUL_STATE_BADGES: Record<string, BadgeSpec> = {
-  /** In progress: a clock face, in accent like every in-progress state. */
-  JUDGING: { tone: "accent", glyph: "◷", border: "solid" },
+  /** Still to be decided: the open diamond, on s2 — C15's 待审. */
+  JUDGING: { glyph: "◇", border: "solid", pending: true },
   /** A disposition is on record: a filled box within the frame. */
-  DISPOSED: { tone: "muted", glyph: "▣", border: "solid" },
+  DISPOSED: { glyph: "▣", border: "solid" },
   /** Moving on: the cycle arrow. */
-  REINCARNATING: { tone: "muted", glyph: "↻", border: "solid" },
+  REINCARNATING: { glyph: "↻", border: "solid" },
+  /** Not yet dead, so nothing entered: an EMPTY circle. */
+  ALIVE: { glyph: "○", border: "solid" },
   /**
-   * Not yet dead, so nothing entered: an EMPTY circle. Round, so it cannot be
-   * read as a square state, and hollow, so it is not the clock (◷).
+   * The record has lost track of the soul: a dotted circle (◌, Design E 组 — the web's glyph too;
+   * it was ⊘) on a DASHED border — an anomaly, said by its shape, not by a colour. Dashed, not
+   * dotted: dotted is the unknown value.
    */
-  ALIVE: { tone: "muted", glyph: "○", border: "solid" },
-  /**
-   * The record has lost track of the soul: a slashed circle (absent) on a
-   * DASHED border, in the refusal colour — an anomaly an officer must resolve.
-   * Dashed, not dotted: dotted belongs to the unknown value.
-   */
-  LOST: { tone: "neg", glyph: "⊘", border: "dashed" },
-  /**
-   * The account is closed: triple bar, the ledger ruled off beneath its last
-   * line. Flat lines, so it is neither a box (▣) nor a circle (○ ◷ ⊘).
-   */
-  SETTLED: { tone: "muted", glyph: "≡", border: "solid" },
+  LOST: { glyph: "◌", border: "dashed" },
+  /** The account is closed: triple bar, the ledger ruled off beneath its last line. */
+  SETTLED: { glyph: "≡", border: "solid" },
 };
 
-export const UNKNOWN_BADGE: BadgeSpec = { tone: "unknown", glyph: "?", border: "dotted" };
+export const UNKNOWN_BADGE: BadgeSpec = { glyph: "?", border: "dotted", unknown: true };
 
 /**
  * The shape for a member. `recognized` is whether the copy layer could name it;
@@ -179,6 +177,72 @@ export function residenceOf(
 ): Residence {
   const home = me?.is_residing ? civKeyOf(me.home_civilization) : "neutral";
   return home !== "neutral" ? { current, home, residing: true } : { current, home: current, residing: false };
+}
+
+// ── the life page (补足 B11) ───────────────────────────────────────────
+
+/** A sentence plan the soul is still inside: serving, between two stations, held, or there for good. */
+const UNDER_SENTENCE = new Set(["serving", "between", "waiting", "eternal"]);
+
+/** The six folding sections, in B11's order. */
+export const LIFE_SECTIONS = ["records", "judgments", "dispositions", "applications", "sentence", "past_lives"] as const;
+export type LifeSectionKey = (typeof LIFE_SECTIONS)[number];
+
+/**
+ * B11: exactly one section opens by default — 「受刑」 while the soul is under sentence,
+ * else 「功过记录」. Until the plan has loaded the soul is not known to be, so: records.
+ */
+export function defaultLifeSection(planState: string | null | undefined): LifeSectionKey {
+  return planState && UNDER_SENTENCE.has(planState) ? "sentence" : "records";
+}
+
+/** A section the soul opened or closed by hand wins over the default; the rest follow it. */
+export function lifeSectionsOpen(touched: Partial<Record<LifeSectionKey, boolean>>, planState: string | null | undefined) {
+  const first = defaultLifeSection(planState);
+  return Object.fromEntries(LIFE_SECTIONS.map((k) => [k, touched[k] ?? k === first])) as Record<LifeSectionKey, boolean>;
+}
+
+/**
+ * B11's 行程缩略: where this life has got to, as steps of the one road every soul walks.
+ * Read from `current_state` (and, once disposed, whether a sentence plan exists) — the
+ * App has no route of stops (`/me/` does not serve the officers' `path`), so this is the
+ * life's stage, not a map. LOST, SETTLED and an unknown state have no place on it: null,
+ * and nothing is drawn rather than a guess.
+ */
+export const LIFE_PATH = ["ALIVE", "JUDGING", "DISPOSED", "SENTENCE", "REINCARNATING"] as const;
+export type LifePathStep = (typeof LIFE_PATH)[number];
+
+export function lifePathIndex(state: string | null | undefined, planState: string | null | undefined): number | null {
+  switch (state) {
+    case "ALIVE":
+      return 0;
+    case "JUDGING":
+      return 1;
+    case "DISPOSED":
+      return planState && planState !== "none" ? 3 : 2;
+    case "REINCARNATING":
+      return 4;
+    default:
+      return null;
+  }
+}
+
+/** The balance as B11 prints it: signed, the minus a real minus (U+2212), zero bare. */
+export function signedBalance(merit: number, demerit: number): string {
+  const b = merit - demerit;
+  return b > 0 ? `+${b}` : b < 0 ? `\u2212${-b}` : "0";
+}
+
+/**
+ * The share of the current station's term already served, 0–1, for B11's one status-coloured
+ * bar. Null when there is nothing to measure: no start or end date, or a term for good.
+ */
+export function termServed(startedOn: string | null | undefined, endsOn: string | null | undefined, now: number): number | null {
+  if (!startedOn || !endsOn) return null;
+  const a = Date.parse(startedOn);
+  const b = Date.parse(endsOn);
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return null;
+  return Math.min(1, Math.max(0, (now - a) / (b - a)));
 }
 
 // ── layout ─────────────────────────────────────────────────────────────

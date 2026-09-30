@@ -650,24 +650,24 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
 }
 
 const styles = StyleSheet.create({
-  page: { gap: 18, paddingHorizontal: GUTTER, paddingTop: 22, paddingBottom: 34 },
-  head: { gap: 6, paddingBottom: 14, borderBottomWidth: 3 },
+  page: { gap: 16, paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: 32 },
+  head: { gap: 8, paddingBottom: 16, borderBottomWidth: 3 },
   kicker: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 1.5 },
   h1: { fontFamily: family.ui[600], fontSize: 28, lineHeight: 36 },
-  strong: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
-  banner: { gap: 6, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 10, paddingHorizontal: 12 },
-  bannerTitle: { fontFamily: family.ui[600], fontSize: 14, lineHeight: 20 },
-  action: { alignSelf: "flex-start", minHeight: 44, borderWidth: 1, justifyContent: "center", paddingHorizontal: 14, marginTop: 4 },
-  actionText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 19 },
+  strong: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 20 },
+  banner: { gap: 8, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
+  bannerTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 20 },
+  action: { alignSelf: "flex-start", minHeight: 44, borderWidth: 1, justifyContent: "center", paddingHorizontal: 16, marginTop: 4 },
+  actionText: { fontFamily: family.ui[500], fontSize: 15, lineHeight: 20 },
   pressed: { opacity: 0.8 },
   fieldProblem: { marginLeft: 2, gap: 2 },
-  status: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 10, paddingHorizontal: 12 },
-  field: { gap: 7 },
-  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  status: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
+  field: { gap: 8 },
+  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   countdown: { fontSize: 12, fontVariant: ["tabular-nums"] },
-  cells: { flexDirection: "row", gap: 6 },
+  cells: { flexDirection: "row", gap: 8 },
   cell: { flex: 1, height: 52, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  cellText: { fontFamily: family.mono[500], fontSize: 22, lineHeight: 28, fontVariant: ["tabular-nums"] },
+  cellText: { fontFamily: family.mono[500], fontSize: 20, lineHeight: 28, fontVariant: ["tabular-nums"] },
   // Covers the cells, so a tap anywhere focuses it and the one-time-code autofill
   // (iOS keyboard bar, Android SMS/autofill) still has a real, focusable field.
   // Not opacity 0 and not zero-size: either can stop a platform from offering
@@ -675,14 +675,14 @@ const styles = StyleSheet.create({
   // behind the first cell even where a platform does not honour a transparent
   // text colour (the Android "ghost digits").
   hiddenInput: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: "transparent", fontSize: 1 },
-  strength: { gap: 6 },
+  strength: { gap: 8 },
   segments: { flexDirection: "row", gap: 4 },
   segment: { flex: 1, height: 4 },
   primary: { marginTop: 4 },
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   underline: { textDecorationLine: "underline" },
   list: { borderTopWidth: 1 },
-  listRow: { flexDirection: "row", gap: 0, paddingVertical: 10, borderBottomWidth: 1 },
+  listRow: { flexDirection: "row", gap: 0, paddingVertical: 12, borderBottomWidth: 1 },
   listNo: { width: 28 },
   shrink: { flexShrink: 1 },
 });

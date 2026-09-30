@@ -25,13 +25,13 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import type { Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, useLayout, usePullRefresh, useTheme } from "../ui";
+import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
 export const ANDROID = Platform.OS === "android";
-/** The accent, faintly: my bubbles, the Android selected tab. Hex alpha, so it follows every civilization's accent. */
-export const wash = (t: Theme) => `${t.accent}1F`;
+/** The ground of my own letter: s2, a step off the page — not a colour. */
+export const wash = (t: Theme) => t.s2;
 
 /** A hall's name in the interface language (`hall_names`); the server's simplified-Chinese `hall` otherwise. */
 export function hallOf(c: SoulConversation, locale: string): string {
@@ -54,14 +54,14 @@ export function lastOf(chat: Chat, roomId: string) {
 }
 
 /** A 30pt square with one character: a soul's initial, or the hall's glyph. */
-export function Glyph({ text, tone, dotted, size = 30 }: { text: string; tone: "mark" | "muted" | "subtle"; dotted?: boolean; size?: number }) {
+export function Glyph({ text, tone, dotted, size = 30 }: { text: string; tone: "ink" | "muted" | "subtle"; dotted?: boolean; size?: number }) {
   const t = useTheme();
-  const color = tone === "mark" ? t.mark : tone === "muted" ? t.inkMuted : t.inkSubtle;
+  const color = tone === "ink" ? t.ink : tone === "muted" ? t.inkMuted : t.inkSubtle;
   return (
     <View
       style={[
         styles.glyph,
-        { width: size, height: size, borderColor: tone === "mark" ? t.mark : t.hair2, borderStyle: dotted ? "dotted" : "solid" },
+        { width: size, height: size, borderColor: tone === "ink" ? t.ink : t.hair2, borderStyle: dotted ? "dotted" : "solid" },
       ]}
     >
       <Txt style={[styles.glyphText, { color, fontSize: size < 20 ? 9.5 : 13 }]}>{text.slice(0, 1)}</Txt>
@@ -69,23 +69,24 @@ export function Glyph({ text, tone, dotted, size = 30 }: { text: string; tone: "
   );
 }
 
-/** A small square-cornered label: 待回复 (dotted accent), 已闭 / 封存 (hairline), 互关 (mark). */
-export function Tag({ text, tone, testID }: { text: string; tone: "accent" | "mark" | "quiet"; testID?: string }) {
+/** A small square-cornered label: 待回复 (dotted ink), 已闭 / 封存 (hairline), 互关 (solid ink). */
+/** `waiting` (dotted: not settled yet) and `marked` (solid) are both ink; `quiet` is ink3 on a hairline. */
+export function Tag({ text, tone, testID }: { text: string; tone: "waiting" | "marked" | "quiet"; testID?: string }) {
   const t = useTheme();
-  const color = tone === "accent" ? t.accent : tone === "mark" ? t.mark : t.inkSubtle;
+  const color = tone === "quiet" ? t.inkSubtle : t.ink;
   return (
-    <View testID={testID} style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "accent" ? "dotted" : "solid" }]}>
+    <View testID={testID} style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "waiting" ? "dotted" : "solid" }]}>
       <Txt style={[styles.tagText, { color }]}>{text}</Txt>
     </View>
   );
 }
 
-function SectionLabel({ text, tone }: { text: string; tone: "accent" | "subtle" }) {
+function SectionLabel({ text, tone }: { text: string; tone: "ink" | "subtle" }) {
   const t = useTheme();
   const { gutter } = useLayout();
   return (
     <View style={[styles.sectionLabel, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Txt style={[styles.sectionText, { color: tone === "accent" ? t.accent : t.inkSubtle }]}>{text}</Txt>
+      <Txt style={[styles.sectionText, { color: tone === "ink" ? t.ink : t.inkSubtle }]}>{text}</Txt>
     </View>
   );
 }
@@ -127,7 +128,7 @@ function Row({
       style={({ pressed }) => [
         styles.row,
         { paddingHorizontal: gutter, borderBottomColor: hall ? t.hair2 : t.hair },
-        hall && { backgroundColor: t.s1, borderLeftWidth: 3, borderLeftColor: t.mark, paddingLeft: gutter - 3 },
+        hall && { backgroundColor: t.s1, borderLeftWidth: 3, borderLeftColor: t.ink, paddingLeft: gutter - 3 },
         dim && { opacity: 0.82 },
         pressed && { backgroundColor: t.s2 },
       ]}
@@ -156,12 +157,12 @@ function Row({
           </Txt>
         ) : null}
       </View>
-      {unread ? <View testID={`${testID}-unread`} style={[styles.dot, { backgroundColor: t.mark }]} /> : null}
+      {unread ? <View testID={`${testID}-unread`} style={[styles.dot, { backgroundColor: t.ink }]} /> : null}
     </Pressable>
   );
 }
 
-/** Android's "new": a 56dp square, accent, bottom right. No elevation, no ripple (1e). */
+/** Android's "new": a 56dp square in 匾色 (the primary action), bottom right. No elevation, no ripple (1e). */
 export function Fab({ onPress, label }: { onPress: () => void; label: string }) {
   const t = useTheme();
   return (
@@ -170,9 +171,9 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? t.mark : t.accent }]}
+      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
     >
-      <Icon name="plus" size={22} color={t.onAccent} strokeWidth={1.5} />
+      <Icon name="plus" size={22} color={t.onPlaque} strokeWidth={1.5} />
     </Pressable>
   );
 }
@@ -200,6 +201,11 @@ export function LettersScreen() {
   };
   const lastTs = useCallback((roomId: string) => lastOf(chat, roomId)?.ts ?? 0, [chat]);
   const refreshControl = usePullRefresh(false, () => void chat.reload());
+  // 书信不在切回时重载(会话开销大),但断网恢复时重载一次;没配 Matrix 时不重试,那是设计如此。
+  const reloadOnReconnect = useCallback(() => {
+    if (chat.availability !== "not_configured") void chat.reload();
+  }, [chat]);
+  useReloadOnReconnect(reloadOnReconnect);
 
   if (chat.availability === "not_configured") {
     return (
@@ -260,12 +266,12 @@ export function LettersScreen() {
                     </Notice>
                   </View>
                 ) : null}
-                <SectionLabel text={tr("soul_app.chat.section.hall")} tone="accent" />
+                <SectionLabel text={tr("soul_app.chat.section.hall")} tone="ink" />
                 <Row
                   testID="hall-row"
                   hall
                   onPress={() => void openHall(hall)}
-                  glyph={<Glyph text={hallGlyph} tone="mark" />}
+                  glyph={<Glyph text={hallGlyph} tone="ink" />}
                   title={tr("soul_app.chat.hall.title", { hall: (hall && hallOf(hall, locale)) || hallName })}
                   hint={tr("soul_app.chat.hall.hint")}
                   {...(hall ? preview(hall) : {})}
@@ -306,7 +312,7 @@ export function LettersScreen() {
                   shut(c) ? (
                     <Tag testID={`closed-${c.id}`} text={tr("soul_app.chat.badge.closed")} tone="quiet" />
                   ) : awaiting(c) ? (
-                    <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="accent" />
+                    <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="waiting" />
                   ) : undefined
                 }
                 {...preview(c)}
@@ -386,7 +392,7 @@ export function FindSoulScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]} testID="find-soul">
       <View style={[styles.findBlock, { borderBottomColor: t.hair }]}>
-        <Txt style={[styles.sectionText, { color: t.accent }]}>{tr("soul_app.chat.find.by_code")}</Txt>
+        <Txt style={[styles.sectionText, { color: t.ink }]}>{tr("soul_app.chat.find.by_code")}</Txt>
         <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.hair }]}>
           <TextInput
             testID="find-code"
@@ -421,9 +427,9 @@ export function FindSoulScreen() {
               testID="find-write"
               accessibilityRole="button"
               onPress={() => void write(lookup.card.user_id)}
-              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? t.mark : t.accent }]}
+              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
             >
-              <Txt style={[styles.writeText, { color: t.onAccent }]}>{tr("soul_app.chat.find.write")}</Txt>
+              <Txt style={[styles.writeText, { color: t.onPlaque }]}>{tr("soul_app.chat.find.write")}</Txt>
             </Pressable>
           </View>
         ) : lookup.state === "not_found" ? (
@@ -435,7 +441,7 @@ export function FindSoulScreen() {
         ) : null}
       </View>
       <View style={styles.findBlock}>
-        <Txt style={[styles.sectionText, { color: t.accent }]}>{tr("soul_app.chat.find.from_circle")}</Txt>
+        <Txt style={[styles.sectionText, { color: t.ink }]}>{tr("soul_app.chat.find.from_circle")}</Txt>
         <Txt variant="label" tone="subtle" style={styles.noSpacing}>
           {tr("soul_app.chat.find.circle_hint")}
         </Txt>
@@ -454,7 +460,7 @@ export function FindSoulScreen() {
                 <Txt variant="body" style={styles.fill}>
                   {card.display_name}
                 </Txt>
-                <Tag text={tr(mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.following")} tone={mutual ? "mark" : "quiet"} />
+                <Tag text={tr(mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.following")} tone={mutual ? "marked" : "quiet"} />
               </Pressable>
             ))}
           </View>
@@ -469,29 +475,29 @@ const styles = StyleSheet.create({
   center: { textAlign: "center" },
   noSpacing: { letterSpacing: 0 },
   pad: { padding: 20 },
-  sectionLabel: { paddingTop: 13, paddingBottom: 9, borderBottomWidth: 1 },
+  sectionLabel: { paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
   sectionText: { fontFamily: family.ui[600], fontSize: 11, lineHeight: 15, letterSpacing: 1.5 },
-  row: { flexDirection: "row", gap: 13, alignItems: "flex-start", paddingVertical: 15, borderBottomWidth: 1, minHeight: 64 },
+  row: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, minHeight: 64 },
   rowHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  rowTitle: { fontSize: 14, lineHeight: 20 },
+  rowTitle: { fontSize: 15, lineHeight: 20 },
   stamp: { fontSize: 11, lineHeight: 16 },
-  preview: { fontSize: 14.5, lineHeight: 24, marginTop: 4 },
-  hint: { marginTop: 5 },
-  dot: { width: 8, height: 8, marginTop: 9 },
+  preview: { fontSize: 15, lineHeight: 24, marginTop: 4 },
+  hint: { marginTop: 4 },
+  dot: { width: 8, height: 8, marginTop: 8 },
   glyph: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   glyphText: { fontFamily: family.ui[500] },
-  tag: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
-  tagText: { fontFamily: family.ui[500], fontSize: 10, lineHeight: 14, letterSpacing: 0.8 },
-  empty: { alignItems: "center", gap: 12, paddingHorizontal: 28, paddingTop: 50, paddingBottom: 46 },
+  tag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  tagText: { fontFamily: family.ui[500], fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
+  empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48 },
   emptyButton: { alignSelf: "stretch", marginTop: 4 },
   fab: { position: "absolute", right: 16, bottom: 16, width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   fabSpace: { height: 88 },
-  findBlock: { paddingHorizontal: 20, paddingVertical: 18, gap: 11, borderBottomWidth: 1, borderBottomColor: "transparent" },
+  findBlock: { paddingHorizontal: 20, paddingVertical: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: "transparent" },
   codeBox: { minHeight: 48, borderWidth: 1, justifyContent: "center" },
-  codeInput: { minHeight: 46, paddingHorizontal: 13, fontFamily: family.mono[500], fontSize: 16, letterSpacing: 2.2 },
-  card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 14 },
-  write: { minHeight: ANDROID ? 48 : 38, paddingHorizontal: 13, alignItems: "center", justifyContent: "center" },
-  writeText: { fontFamily: family.ui[600], fontSize: 12.5, lineHeight: 17 },
-  circle: { gap: 1 },
-  circleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, paddingHorizontal: 2, minHeight: ANDROID ? 48 : 44 },
+  codeInput: { minHeight: 46, paddingHorizontal: 12, fontFamily: family.mono[500], fontSize: 15, letterSpacing: 2.2 },
+  card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
+  write: { minHeight: ANDROID ? 48 : 38, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  writeText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 17 },
+  circle: { gap: 2 },
+  circleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 2, minHeight: ANDROID ? 48 : 44 },
 });

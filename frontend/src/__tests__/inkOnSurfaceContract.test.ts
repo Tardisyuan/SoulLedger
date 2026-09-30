@@ -43,15 +43,30 @@ const ratio = (theme: ThemeName, fg: string, bg: string) =>
     oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], bg))
   );
 
-const MATRIX = THEMES.flatMap((theme) => [
+/**
+ * 已知不过 AA 的格子。曾有一格:浅色警示 #A65000 在 s2 上 4.29:1;Design D3 把浅色警示改成
+ * #9F4A00(s2 上 4.69),例外随之删除。下面那条「例外仍低于 AA」的测试保证例外不会在色值
+ * 修好后还留着。
+ */
+const KNOWN_BELOW_AA: ReadonlyArray<readonly [ThemeName, string, string]> = [];
+const isKnown = (theme: ThemeName, fg: string, bg: string) =>
+  KNOWN_BELOW_AA.some(([t, f, b]) => t === theme && f === fg && b === bg);
+
+const FULL_MATRIX = THEMES.flatMap((theme) => [
   ...TEXT_GROUNDS.flatMap((bg) => [...INK_TOKENS, ...SEMANTIC_TEXT].map((fg) => [theme, fg, bg] as const)),
   ...TINTS.flatMap(([bg, own]) => ["--color-ink", "--color-ink-muted", own].map((fg) => [theme, fg, bg] as const)),
 ]);
+const MATRIX = FULL_MATRIX.filter(([theme, fg, bg]) => !isKnown(theme, fg, bg));
 
 describe("ink on surface", () => {
   it("the matrix is the size it should be (derived lists that go empty pass everything)", () => {
     expect(INK_TOKENS).toEqual(expect.arrayContaining(["--color-ink", "--color-ink-muted", "--color-ink-subtle"]));
-    expect(MATRIX).toHaveLength(THEMES.length * (TEXT_GROUNDS.length * (INK_TOKENS.length + SEMANTIC_TEXT.length) + TINTS.length * 3));
+    expect(FULL_MATRIX).toHaveLength(THEMES.length * (TEXT_GROUNDS.length * (INK_TOKENS.length + SEMANTIC_TEXT.length) + TINTS.length * 3));
+    expect(MATRIX).toHaveLength(FULL_MATRIX.length - KNOWN_BELOW_AA.length);
+  });
+
+  it("every known exception is still below AA (else delete it)", () => {
+    for (const [theme, fg, bg] of KNOWN_BELOW_AA) expect({ theme, fg, bg, below: ratio(theme, fg, bg) < AA_NORMAL_TEXT }).toEqual({ theme, fg, bg, below: true });
   });
 
   it.each(MATRIX)("%s: %s on %s ≥ 4.5:1", (theme, fg, bg) => {

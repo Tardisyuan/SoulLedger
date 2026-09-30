@@ -1,16 +1,26 @@
 /**
  * Transient feedback: the toast (bottom, 110pt up, 1.9s, success / failure)
  * and the sign-out confirmation sheet. Both only fade — 160ms / 120ms, or 0
- * under reduce-motion.
+ * under reduce-motion. And `Sheet`, v2's bottom sheet, at the end.
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Modal, Pressable, StyleSheet, View } from "react-native";
+import {
+  ANIMATION_SOURCE,
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+  useBottomSheetInternal,
+  useBottomSheetTimingConfigs,
+  useGestureEventsHandlersDefault,
+  type BottomSheetBackdropProps,
+} from "@gorhom/bottom-sheet";
+import { Animated, BackHandler, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
-import { motion } from "./theme";
-import { Button, GUTTER, Txt, useReducedMotion, useTheme } from "./ui";
+import { Button, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "failure";
 type Show = (message: string, kind?: ToastKind) => void;
@@ -21,7 +31,7 @@ export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const t = useTheme();
-  const reduced = useReducedMotion();
+  const durations = useReducedMotionDurations();
   const [toast, setToast] = useState<{ message: string; kind: ToastKind; id: number } | null>(null);
   const [opacity] = useState(() => new Animated.Value(0));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,15 +40,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!toast) return;
-    const duration = reduced ? 0 : motion.toast;
+    const duration = durations.toast;
     Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }).start();
     timer.current = setTimeout(() => {
       Animated.timing(opacity, { toValue: 0, duration, useNativeDriver: true }).start(() => setToast(null));
-    }, motion.toastHold);
+    }, durations.toastHold);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [toast, opacity, reduced]);
+  }, [toast, opacity, durations]);
 
   return (
     <ToastContext.Provider value={show}>
@@ -83,14 +93,14 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
     <LogoutContext.Provider value={ask}>
       {children}
       <Modal visible={visible} transparent animationType={reduced ? "none" : "fade"} onRequestClose={cancel}>
-        <View style={styles.scrim}>
+        <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
           <Pressable style={styles.fill} onPress={cancel} accessibilityLabel={tr("soul_app.logout.cancel")} />
           <View
             testID="confirm-sheet"
             accessibilityViewIsModal
-            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 30 + insets.bottom }]}
+            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 32 + insets.bottom }]}
           >
-            <Txt variant="title" style={styles.sheetTitle}>
+            <Txt variant="title">
               {tr("soul_app.logout.title")}
             </Txt>
             <Txt variant="caption" tone="muted">
@@ -124,14 +134,109 @@ const styles = StyleSheet.create({
     bottom: 110,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderWidth: 1,
   },
-  toastText: { flex: 1, fontSize: 13.5 },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  toastText: { flex: 1, fontSize: 13 },
+  scrim: { flex: 1 },
   sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
-  sheetTitle: { fontSize: 17 },
-  sheetButtons: { marginTop: 12, gap: 10 },
+  sheetButtons: { marginTop: 12, gap: 12 },
 });
+
+/**
+ * A bottom sheet (v2 动效, 交互与动效 第 2 轮 原型 06) on @gorhom/bottom-sheet: it opens
+ * over 200ms (`motion.sheetIn`), closes over 120 (`motion.sheetOut`; both 0 under
+ * reduce-motion), drags down to close past 90pt or 0.6pt/ms (`useSheetGestures`), and also
+ * closes on the scrim, on Android's back key, and from whatever button the caller puts
+ * in it. Controlled — `open` in, `onClose` out, whichever way it was closed — so a
+ * caller holds one boolean, as it did with the `Modal` this replaces. Square, no
+ * shadow, a 1px top edge in `edge` (补足 A2). Needs `BottomSheetModalProvider` above
+ * (navigation.tsx); the sheet renders in that provider, so it sees only its contexts.
+ */
+/** 交互与动效 第 2 轮 原型 06: a release past 90pt, or faster than 0.6pt/ms downward, closes. */
+export const SHEET_CLOSE_DRAG_PT = 90;
+export const SHEET_CLOSE_SPEED_PT_PER_MS = 0.6;
+
+/** 第 2 轮 §一 ease.exit / ease.standard. */
+const EASE_EXIT = Easing.bezier(0.4, 0, 1, 1);
+const EASE_STANDARD = Easing.bezier(0.2, 0, 0, 1);
+
+/** `velocityY` is Gesture Handler's, in pt per SECOND. */
+export function sheetReleaseCloses(translationY: number, velocityY: number): boolean {
+  "worklet";
+  return translationY > SHEET_CLOSE_DRAG_PT || velocityY / 1000 > SHEET_CLOSE_SPEED_PT_PER_MS;
+}
+
+/**
+ * The library's own drag handling, with its release swapped for the prototype's: it
+ * decides by snap-point projection, which has no distance or speed to name. Closing
+ * runs `sheetOut` (fast 120), springing back `sheetIn` (base 200); both 0 under
+ * reduce-motion. The upward pull keeps the library's resistance (√d × 2.5: ≈16pt at 40).
+ */
+export function useSheetGestures() {
+  const handlers = useGestureEventsHandlersDefault();
+  const { animatedDetentsState, animateToPosition } = useBottomSheetInternal();
+  const { sheetIn, sheetOut } = useReducedMotionDurations();
+  const handleOnEnd: typeof handlers.handleOnEnd = useCallback(
+    (source, payload) => {
+      "worklet";
+      const { closedDetentPosition, highestDetentPosition } = animatedDetentsState.get();
+      if (closedDetentPosition === undefined || highestDetentPosition === undefined) return handlers.handleOnEnd(source, payload);
+      const close = sheetReleaseCloses(payload.translationY, payload.velocityY);
+      animateToPosition(close ? closedDetentPosition : highestDetentPosition, ANIMATION_SOURCE.GESTURE, 0, {
+        duration: close ? sheetOut : sheetIn,
+        easing: close ? EASE_EXIT : EASE_STANDARD,
+      });
+    },
+    [handlers, animatedDetentsState, animateToPosition, sheetIn, sheetOut]
+  );
+  return { ...handlers, handleOnEnd };
+}
+
+export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boolean; onClose: () => void; edge: string; closeLabel: string; children: ReactNode }) {
+  const t = useTheme();
+  const ref = useRef<BottomSheetModal>(null);
+  const { sheetIn, sheetOut } = useReducedMotionDurations();
+  const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: Easing.bezier(0, 0, 0.2, 1) });
+  useEffect(() => {
+    if (open) ref.current?.present();
+    else ref.current?.dismiss({ duration: sheetOut, easing: EASE_EXIT });
+  }, [open, sheetOut]);
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open, onClose]);
+  const backdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={1}
+        pressBehavior="close"
+        accessibilityLabel={closeLabel}
+        style={[props.style, { backgroundColor: t.scrim }]}
+      />
+    ),
+    [t.scrim, closeLabel]
+  );
+  return (
+    <BottomSheetModal
+      ref={ref}
+      onDismiss={onClose}
+      animationConfigs={timing}
+      gestureEventsHandlersHook={useSheetGestures}
+      backdropComponent={backdrop}
+      backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopWidth: 1, borderTopColor: edge }}
+      handleIndicatorStyle={{ backgroundColor: t.hair2 }}
+    >
+      <BottomSheetView>{children}</BottomSheetView>
+    </BottomSheetModal>
+  );
+}

@@ -17,6 +17,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/drfErrors";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
@@ -356,11 +357,11 @@ function ProposeDispatchForm() {
           {t("dispatch.draft_load_error")}
         </p>
       ) : null}
-      <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
       <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
         {carriedSoul ? (
           // Read-only, in the disabled pair (规范 v1 输入框「只读同此」).
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-[oklch(var(--color-ink))]">{t("dispatch.target_soul")}</span>
             <div
               aria-readonly="true"
@@ -431,9 +432,9 @@ function ProposeDispatchForm() {
         <fieldset
           aria-describedby={tenantError ? "target_tenant_code-error" : undefined}
           aria-busy={tenantsLoading || undefined}
-          className="flex flex-col gap-1.5"
+          className="flex flex-col gap-2"
         >
-          <legend className="mb-1.5 text-xs font-medium text-[oklch(var(--color-ink))]">
+          <legend className="mb-2 text-xs font-medium text-[oklch(var(--color-ink))]">
             {t("dispatch.target_tenant")}
             <span aria-hidden="true" className="ml-1 text-[oklch(var(--color-status-error))]">*</span>
           </legend>
@@ -544,13 +545,11 @@ function ProposeDispatchForm() {
           in backend/apps/dispatch/models.py: PROPOSED → the target approves
           (views.py: "Only target tenant can approve") → the target executes. */}
       <aside aria-labelledby="dispatch-flow-title">
-        <h2
-          id="dispatch-flow-title"
-          className="border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]"
-        >
-          {t("dispatch.flow.title")}
-        </h2>
-        <ol className="text-sm">
+        {/* 页面级分节标题(规范 v2 §四,SectionTitle),不是 v1 的 11px 等宽栏目标签。 */}
+        <div className="mb-3">
+          <SectionTitle id="dispatch-flow-title">{t("dispatch.flow.title")}</SectionTitle>
+        </div>
+        <ol className="text-sm border-t border-[oklch(var(--color-block))]">
           {[
             [t("dispatch.flow.step_propose", { tenant: sourceTenantRow ? tenantName(sourceTenantRow) : sourceCode ?? "" }), t("dispatch.flow.pending_submit")],
             [t("dispatch.flow.step_approve", { tenant: targetTenantRow ? tenantName(targetTenantRow) : t("dispatch.flow.target_unchosen") }), t("dispatch.flow.not_yet")],

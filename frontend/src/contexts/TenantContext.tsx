@@ -16,6 +16,9 @@ import {
   REFRESH_TOKEN_KEY,
   platform,
 } from "@soulledger/core/platform";
+import { civSkinOf } from "@/src/lib/civSkin";
+
+export { civSkinOf };
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -30,6 +33,10 @@ export interface TenantInfo {
   id?: number;
   code: string;
   display_name: string;
+  /** `LoginTenantRefSerializer`(登录与 `/auth/profile/`):匾的文明与 1–2 个印文,空 = 文明默认。
+   *  可选:24 小时内缓存的旧用户信封里没有这两项。 */
+  civilization?: string;
+  seal_glyphs?: string[];
 }
 
 // Permissions stored separately in memory only (not localStorage) for security
@@ -108,6 +115,14 @@ const TenantContext = createContext<TenantContextValue>({
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const tenantCode = user?.tenant?.code ?? null;
+
+  // 文明皮(规范 v2 §三):<html data-civ="cn|eu|eg|gr|neutral">,globals.css 据此只换
+  // 匾色 `--color-main`。前缀取自 CIVILIZATION_SHORT_CODES(由租户代码推出,不另写一份);
+  // 没登录、或租户代码不属于四个文明时是 neutral(登录前的中性皮)。
+  const civ = civSkinOf(tenantCode);
+  useEffect(() => {
+    document.documentElement.dataset.civ = civ;
+  }, [civ]);
 
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server

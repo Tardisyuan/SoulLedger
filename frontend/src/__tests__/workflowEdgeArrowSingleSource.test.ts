@@ -10,11 +10,12 @@ import { FRONTEND_ROOT, THEMES, TOKENS_BY_THEME, type ThemeName } from "./suppor
  *
  * `workflowEditorGraph.ts` 的 `edgeArrow()` 是四处边颜色收拢成的一处(曾经有一份
  * 拷贝漂了两年,见那边的注释)。这里断言**计数**与**取值**:编辑器里不再有手写的
- * markerEnd / stroke / 十六进制,边画成 `--color-block`,1 px,不带箭头。
+ * markerEnd / stroke / 十六进制,边画成 `--color-ink-subtle`(ink3,补足 C15),1 px,不带箭头。
  *
  * 此前这里钉的是 `CHART_CHROME.accent` 字面值 + `markerEnd`:箭头进 SVG `<marker>`
- * 的 defs 树,var() 在那里画不出来,只能按主题取字面值、建边时读一次。设计稿去掉了
- * 箭头(方向由上入下出的端口表达),于是颜色可以直接是 token,随主题实时切换。
+ * 的 defs 树,var() 在那里画不出来,只能按主题取字面值、建边时读一次。
+ * 现在的箭头是 route 边里内联的 `<polygon>`(EditableNode.tsx,填充取边的 stroke),
+ * 不经 marker —— 所以这里仍断言「没有 markerEnd」,箭头本身由 workflowRouteEdgeArrow.test.tsx 钉。
  */
 
 const GRAPH = path.join(FRONTEND_ROOT, "src", "components", "workflow", "workflowEditorGraph.ts");
@@ -44,17 +45,17 @@ describe("the workflow edge arrow has one source", () => {
     expect(stripComments(graphSrc).match(/#[0-9a-fA-F]{6}/g) ?? []).toEqual([]);
   });
 
-  it("draws every edge as a 1 px line in the block token, through the route edge, with no arrowhead", () => {
+  it("draws every edge as a 1 px line in the ink3 token, through the route edge, with no marker arrowhead", () => {
     const arrow: Record<string, unknown> & { style: { stroke: string; strokeWidth: number } } = edgeArrow();
-    expect(arrow.style.stroke).toBe("oklch(var(--color-block))");
+    expect(arrow.style.stroke).toBe("oklch(var(--color-ink-subtle))");
     expect(arrow.style.strokeWidth).toBe(1);
     expect(arrow.type).toBe("route");
-    // Absence: an arrowhead would put the colour back into a <marker> defs tree.
+    // Absence: a markerEnd arrowhead would put the colour back into a <marker> defs tree.
     expect(arrow).not.toHaveProperty("markerEnd");
   });
 
-  it.each(THEMES)("the block token the edge reads is declared for the %s theme", (theme: ThemeName) => {
-    expect(TOKENS_BY_THEME[theme]["--color-block"]).toMatch(/^[\d.]+ [\d.]+ [\d.]+$/);
+  it.each(THEMES)("the ink3 token the edge reads is declared for the %s theme", (theme: ThemeName) => {
+    expect(TOKENS_BY_THEME[theme]["--color-ink-subtle"]).toMatch(/^[\d.]+ [\d.]+ [\d.]+$/);
   });
 
   it("has no file but the source carrying a `markerEnd` written by hand", () => {

@@ -160,7 +160,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                 // is a fact about the current tree, not an invariant; if the
                 // menu ever has to outrank the sidebar by rule rather than by
                 // accident, it needs its own step, not a bigger literal.
-                className="z-sidebar min-w-[168px] border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))] shadow-overlay py-1"
+                className="z-sidebar min-w-[168px] border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] py-1"
               >
                 {items.map((item, index) => (
                   <button

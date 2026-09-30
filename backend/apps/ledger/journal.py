@@ -29,6 +29,10 @@ from apps.souls.record_models import RecordCategory, RecordType, SoulRecord
 
 MONTH_RE = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 PAGE_SIZE = 20
+#: 整月不分页(`all=1`)一次最多给这么多行。超了就 400 `MONTH_TOO_LARGE`,不截断 ——
+#: 截断的整月会让「结余」列从一个不是期末的数倒推,账看起来平而实际缺行。
+#: ponytail: 固定上限;真有月份超过它时,前端要换虚拟滚动 + 游标分页,而不是调大这个数。
+WHOLE_MONTH_MAX = 5000
 
 
 class JournalParamError(ValueError):
@@ -94,8 +98,19 @@ def journal_records(request, *, month: str, civilization: str = "", category: st
 
 
 def build_journal(
-    request, *, month: str, page: int, civilization: str = "", category: str = "", search: str = ""
+    request,
+    *,
+    month: str,
+    page: int,
+    civilization: str = "",
+    category: str = "",
+    search: str = "",
+    whole_month: bool = False,
 ) -> dict:
+    """`whole_month`:本月全部行一次给出(`page` 被忽略、恒为 1,`page_size == count`);
+    超过 `WHOLE_MONTH_MAX` 行时抛 `JournalParamError("all", …)`,不截断。"""
+    if whole_month:
+        page = 1
     if page < 1:
         raise JournalParamError("page", "page must be >= 1")
     before, period = journal_records(
@@ -119,10 +134,15 @@ def build_journal(
     ]
 
     total = counts["records"]
-    offset = (page - 1) * PAGE_SIZE
+    if whole_month and total > WHOLE_MONTH_MAX:
+        raise JournalParamError(
+            "all", f"{total} rows in {month} exceed the whole-month limit of {WHOLE_MONTH_MAX}; narrow the filters"
+        )
+    page_size = max(total, 1) if whole_month else PAGE_SIZE
+    offset = (page - 1) * page_size
     rows = (
         period.select_related("soul")
-        .order_by("-recorded_at", "-id")[offset: offset + PAGE_SIZE]
+        .order_by("-recorded_at", "-id")[offset: offset + page_size]
     )
     results = [
         {
@@ -150,7 +170,7 @@ def build_journal(
         "record_count": total,
         "categories": categories,
         "page": page,
-        "page_size": PAGE_SIZE,
+        "page_size": page_size,
         "count": total,
         "results": results,
     }

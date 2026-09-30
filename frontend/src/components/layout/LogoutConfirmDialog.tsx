@@ -41,7 +41,6 @@ export function LogoutConfirmDialog({
       onConfirm={onConfirm}
       onCancel={onClose}
       confirmText={t("auth.confirm_logout_btn")}
-      variant="danger"
     />
   );
 }

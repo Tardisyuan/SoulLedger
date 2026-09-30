@@ -31,6 +31,7 @@ import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/componen
 import { ROW_LINK } from "@/components/ui/data-table";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
+import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 
 /**
@@ -247,7 +248,7 @@ export function JudgmentClaimQueue() {
       {canExecute && chosen.length > 0 && (
         <div
           data-testid="batch-bar"
-          className="flex flex-wrap items-center gap-2 px-3 py-1.5 mb-2 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-2))] text-sm"
+          className="flex flex-wrap items-center gap-2 px-3 py-2 mb-2 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-2))] text-sm"
         >
           <span className="font-mono text-xs tabular-nums">{t("judgment.claim.selected", { n: String(chosen.length) })}</span>
           <Button type="button" size="sm" variant="secondary" loading={batch.isPending} onClick={() => runBatch("claim")}>
@@ -274,7 +275,8 @@ export function JudgmentClaimQueue() {
 
       <table ref={tableRef} className="w-full text-sm border-t border-[oklch(var(--color-block))]" aria-label={t("judgment.pending")}>
         <thead>
-          <tr className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))]">
+          {/* 补足 B9 表头:高 28、11 等宽 ink3、下沿 2px ink。 */}
+          <tr className="h-7 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))]">
             {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
             <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.soul_name")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.civilization")}</th>
@@ -326,15 +328,17 @@ export function JudgmentClaimQueue() {
                   const isFocus = focused === j.id;
                   const days = waitingDays(j);
                   const mine = j.claimed_by != null && j.claimed_by === user?.id;
+                  const marked = isMinePending(j, user?.id);
                   return (
                     <tr
                       key={j.id}
                       data-testid="queue-row"
                       data-focused={isFocus ? "true" : undefined}
                       onFocus={() => setFocused(j.id)}
-                      className={`relative h-7 max-sm:h-11 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] ${
-                        isSel || isFocus ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-accent))]" : ""
-                      }`}
+                      /* 延后的行(B12):不加色标、不变灰,只把透明度降到 0.56;放回后色标重新出现。 */
+                      className={`relative h-7 max-sm:h-11 border-b border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] ${
+                        isSel || isFocus ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]" : marked ? ROW_MARK_ROW : ""
+                      } ${group === "deferred" ? "opacity-[0.56]" : ""}`}
                     >
                       {canExecute && (
                         <td className="w-6 px-1 relative z-10">
@@ -348,6 +352,7 @@ export function JudgmentClaimQueue() {
                         </td>
                       )}
                       <td className="px-2 font-medium text-[oklch(var(--color-ink))] whitespace-nowrap max-w-56 truncate" title={j.soul_name || undefined}>
+                        {marked && <RowMark />}
                         <Link href={`/judgment/${j.id}`} data-row-link={j.id} className={ROW_LINK}>
                           {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
                         </Link>
@@ -378,10 +383,11 @@ export function JudgmentClaimQueue() {
                           {j.claimed_by != null ? (
                             <ClaimAvatar name={j.claimed_by_name ?? ""} mine={mine} />
                           ) : canExecute && group !== "deferred" ? (
+                            /* B9 行内动作:1px ink3 框、11 字,不是下划线链接。 */
                             <button
                               type="button"
                               onClick={() => claimOne(j.id)}
-                              className="text-xs underline text-[oklch(var(--color-accent-ink))] max-sm:min-h-11"
+                              className="inline-flex h-6 items-center px-2 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] max-sm:min-h-11"
                             >
                               {t("judgment.claim.claim")}
                             </button>

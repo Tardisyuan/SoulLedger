@@ -69,6 +69,7 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/components/connection-status", () => ({
   ConnectionStatus: () => <span data-testid="connection-status" />,
   ConnectionBanner: () => null,
+  useConnectionBannerShown: () => false,
 }));
 
 jest.mock("@/src/hooks/useSidebarMenus", () => ({
@@ -77,8 +78,21 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
   // two — the wordmark link and that page's link (the drawer has no collapse
   // button since 规范 v1; the rail is a viewport state) — so "first" and "last"
   // below mean something fixed rather than whatever a menu fixture rendered.
+  // 六个一级项:底栏放前 4 个,「更多」抽屉里是其余 2 个 —— 抽屉里至少要有两个可聚焦的
+  // 东西(关闭 + 链接),Tab 圈的断言才不是一站式的平凡成立。
   useSidebarMenus: () => ({
-    data: [{ id: 1, name: "概览", path: "/dashboard", icon: null, order: 0, component: null, roles: [], is_active: true, parent: null, children: [] }],
+    data: ["概览", "灵魂", "审判", "总账", "界域", "审计"].map((name, i) => ({
+      id: i + 1,
+      name,
+      path: i === 0 ? "/dashboard" : `/p${i}`,
+      icon: null,
+      order: i,
+      component: null,
+      roles: [],
+      is_active: true,
+      parent: null,
+      children: [],
+    })),
   }),
 }));
 
@@ -96,12 +110,11 @@ function renderLayout() {
   return render(<AppLayout>page body</AppLayout>, { wrapper: Wrapper });
 }
 
-/** The `md:hidden` hamburger, found by the state it reports rather than by copy. */
+/** 底栏的「更多」—— 规范 v2 里它取代了 v1 的 ☰,打开的是同一种模态抽屉。按它报告的状态找,不按文案。 */
 function hamburger(): HTMLElement {
-  const found = screen
-    .getAllByRole("button")
-    .find((el) => el.hasAttribute("aria-expanded") && el.className.includes("md:hidden"));
-  if (!found) throw new Error("no hamburger button rendered");
+  const bar = screen.getByTestId("bottom-bar");
+  const found = Array.from(bar.querySelectorAll<HTMLElement>("button[aria-expanded]")).pop();
+  if (!found) throw new Error("no 更多 button rendered");
   return found;
 }
 
@@ -109,7 +122,7 @@ beforeEach(() => {
   for (const key of Object.keys(MESSAGES)) delete MESSAGES[key];
 });
 
-describe("AppLayout's phone drawer has a keyboard way in, round and out", () => {
+describe("AppLayout's phone sheet (底栏「更多」) has a keyboard way in, round and out", () => {
   it("is not a dialog while it is the desktop sidebar", () => {
     // Absence, asserted. The same <aside> is the permanent md+ sidebar; a
     // sidebar that is always on screen claiming aria-modal would tell a screen
@@ -118,7 +131,7 @@ describe("AppLayout's phone drawer has a keyboard way in, round and out", () => 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("becomes a named dialog when the hamburger opens it", () => {
+  it("becomes a named dialog when 更多 opens it", () => {
     MESSAGES["nav.mobile_menu"] = "导航菜单";
     renderLayout();
     fireEvent.click(hamburger());
@@ -161,7 +174,7 @@ describe("AppLayout's phone drawer has a keyboard way in, round and out", () => 
     expect(hamburger()).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("hands focus back to the hamburger that opened it", () => {
+  it("hands focus back to the 更多 cell that opened it", () => {
     renderLayout();
     const trigger = hamburger();
     trigger.focus();
@@ -215,12 +228,7 @@ function SettingsHost() {
       <button type="button" onClick={() => setOpen(true)}>
         gear
       </button>
-      <SettingsDrawer
-        open={open}
-        onClose={() => setOpen(false)}
-        navMode="classic"
-        onNavModeChange={jest.fn()}
-      />
+      <SettingsDrawer open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
@@ -290,7 +298,7 @@ describe("SettingsDrawer says what it is, and lets go", () => {
     render(<SettingsHost />);
     fireEvent.click(screen.getByText("gear"));
 
-    const scrim = document.querySelector(".fixed.inset-0.bg-black\\/50");
+    const scrim = document.querySelector("button.fixed.inset-0");
     expect(scrim).toBeTruthy();
     expect(scrim!.tagName).toBe("BUTTON");
   });

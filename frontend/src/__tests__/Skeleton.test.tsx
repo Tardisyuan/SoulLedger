@@ -20,7 +20,7 @@ describe("Skeleton 400 ms delay (规范 v1 §1.7:骨架屏不闪烁)", () => {
 
     act(() => { jest.advanceTimersByTime(1); });
     expect(el.className).not.toContain("invisible");
-    expect(el.className).toContain("animate-pulse");
+    expect(el.className).not.toContain("animate-pulse"); // v2:静态
   });
 
   it("exports the spec's number", () => {
@@ -49,16 +49,16 @@ describe("Skeleton components", () => {
   // caller's `className`, passed just as well as a correct one. Each case now
   // asserts the one thing its prop is supposed to control.
 
-  it("renders Skeleton with the default pulse class and no extra class", () => {
+  it("renders Skeleton with no pulse (v2 static) and no extra class", () => {
     const { container } = render(<Skeleton />);
     const el = container.firstChild as HTMLElement;
-    expect(el.className).toContain("animate-pulse");
+    expect(el.className).not.toContain("animate-pulse"); // v2:静态
   });
 
   it("renders Skeleton with the caller's className appended, not replacing the default", () => {
     const { container } = render(<Skeleton className="w-10 h-10" />);
     const el = container.firstChild as HTMLElement;
-    expect(el.className).toContain("animate-pulse");
+    expect(el.className).not.toContain("animate-pulse"); // v2:静态
     expect(el.className).toContain("w-10");
     expect(el.className).toContain("h-10");
   });
@@ -95,16 +95,16 @@ describe("Skeleton components", () => {
 
   it("renders CardSkeleton with its three placeholder bars", () => {
     const { container } = render(<CardSkeleton />);
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
+    expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(3);
   });
 
   it("renders ListSkeleton with the default 3 cards (9 bars: 3 per card)", () => {
     const { container } = render(<ListSkeleton />);
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3 * 3);
+    expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(3 * 3);
   });
 
   it("renders ListSkeleton with a custom count, not the default", () => {
     const { container } = render(<ListSkeleton count={5} />);
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(5 * 3);
+    expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(5 * 3);
   });
 });

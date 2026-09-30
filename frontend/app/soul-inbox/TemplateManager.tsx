@@ -8,6 +8,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField, TextField } from "@/src/components/ui/Field";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 
 /*
  * 殿司的回复模板(backend `InboxReplyTemplateViewSet`,每个动作要 `soul_inbox.reply`)。
@@ -32,6 +33,8 @@ export function TemplateManager({ isOpen, onClose }: { isOpen: boolean; onClose:
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // 模板是硬删(InboxReplyTemplate 无软删、不进回收站)—— 不可撤回,输入模板标题以确认。
+  const [deleting, setDeleting] = useState<InboxReplyTemplate | null>(null);
 
   const start = (target: InboxReplyTemplate | "new") => {
     setEditing(target);
@@ -100,14 +103,9 @@ export function TemplateManager({ isOpen, onClose }: { isOpen: boolean; onClose:
                     aria-label={`${t("common.edit")} ${tpl.title}`}>
                     {t("common.edit")}
                   </Button>
-                  <Button type="button" size="sm" variant="danger" loading={remove.isPending && remove.variables === tpl.id}
+                  <Button type="button" size="sm" variant="secondary" loading={remove.isPending && remove.variables === tpl.id}
                     aria-label={`${t("common.delete")} ${tpl.title}`}
-                    onClick={() =>
-                      remove.mutate(tpl.id, {
-                        onSuccess: () => showToast(t("soul_inbox.template.deleted"), "success"),
-                        onError: () => showToast(t("soul_inbox.failed"), "error"),
-                      })
-                    }>
+                    onClick={() => setDeleting(tpl)}>
                     {t("common.delete")}
                   </Button>
                 </li>
@@ -119,6 +117,23 @@ export function TemplateManager({ isOpen, onClose }: { isOpen: boolean; onClose:
           </div>
         </div>
       )}
+      <NameConfirmDialog
+        isOpen={deleting !== null}
+        title={t("common.confirm_delete")}
+        message={t("soul_inbox.template.delete_confirm", { title: deleting?.title ?? "" })}
+        name={deleting?.title ?? ""}
+        actionLabel={t("common.delete")}
+        isPending={remove.isPending}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => {
+          if (!deleting) return;
+          remove.mutate(deleting.id, {
+            onSuccess: () => showToast(t("soul_inbox.template.deleted"), "success"),
+            onError: () => showToast(t("soul_inbox.failed"), "error"),
+            onSettled: () => setDeleting(null),
+          });
+        }}
+      />
     </Modal>
   );
 }

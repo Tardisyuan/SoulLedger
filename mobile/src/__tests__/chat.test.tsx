@@ -310,8 +310,9 @@ describe("the conversation's eight states", () => {
     expect(screen.queryByTestId("landing-highlight")).toBeNull();
     // 文明气质 1f: letter paper is for the hall's officers only; a soul's letter has no corners.
     expect(screen.queryAllByTestId(/^letter-corner-/)).toEqual([]);
-    // 1c: the conversation's own title bar carries the band in place of its rule.
-    expect(screen.getByTestId("header-band-neutral")).toBeTruthy();
+    // v2 补足 C15: the conversation's own title bar is the simplified plaque.
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBeTruthy();
+    expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
   });
 
   it("② my request, waiting: a dotted line and the mono time it opens — never a disabled box", () => {
@@ -426,11 +427,12 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
     // The byline: the hall's display name, the officer's position, the officer — as the backend stamped them.
     expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿 · 判官 崔珏")).toBeTruthy();
-    // 文明气质 1f: the officer's letter is paper — four corners, 4 in, mirrored; the body padded 22.
+    // 文明气质 1f: the officer's letter is paper — four corners, 4 in, mirrored; the body padded 24
+    // (1f drew 22; 补足 A2 puts it on the scale, still clear of the corners).
     const bubble = screen.getByTestId("officer-bubble");
     expect(["tl", "tr", "bl", "br"].map((k) => within(bubble).getByTestId(`letter-corner-${k}`))).toHaveLength(4);
     expect(StyleSheet.flatten(within(bubble).getByTestId("letter-corner-br").props.style)).toMatchObject({ right: 4, bottom: 4 });
-    expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 22 });
+    expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 24 });
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
   });
 
@@ -557,7 +559,7 @@ describe("the title bar per platform (handoff 1e): Android sets the title left a
   it("Android: the 书信 title at the left edge, no empty back slot before it", () => {
     jest.replaceProperty(Platform, "OS", "android");
     wrap(chatState(), <AppHeader title="书信" />);
-    expect(titleStyle()).toMatchObject({ textAlign: "left", paddingLeft: 10 });
+    expect(titleStyle()).toMatchObject({ textAlign: "left", paddingLeft: 12 }); // v2 A2: 10 → 12
     // The title is the bar's first child: nothing is held open where iOS keeps the back key's place.
     expect(firstInBar()).toBe(screen.getByRole("header"));
   });
@@ -1097,4 +1099,49 @@ describe("the fourth tab", () => {
     expect(await sessionCallsAfter({ status: 503, data: body }, 11_000)).toBe(2);
     expect(screen.getByTestId("tab-Letters")).toBeOnTheScreen();
   }, 30_000);
+});
+
+// 断网恢复(用户拍板 2026-09-30,只提示「已离线」):书信不在切回时重载,但网络回来时重载一次;
+// 没配 Matrix(not_configured)是设计如此,网络回来也不去重试。
+describe("letters after the network comes back", () => {
+  const net = jest.requireMock("expo-network") as { __set: (s: object) => void; __reset: () => void };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { NetworkProvider } = require("../network") as typeof import("../network");
+  // The provider's first `getNetworkStateAsync` answers after mount; let it land before the
+  // test changes the network, or its stale "connected" reads as a return.
+  const online = async (chat: Chat) => {
+    render(
+      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
+        <I18nProvider>
+          <NetworkProvider>
+            <ChatContext.Provider value={chat}>
+              <NavigationContainer>
+                <LettersScreen />
+              </NavigationContainer>
+            </ChatContext.Provider>
+          </NetworkProvider>
+        </I18nProvider>
+      </SafeAreaProvider>
+    );
+    await act(async () => {});
+  };
+
+  beforeEach(() => net.__reset());
+
+  it("reloads once when the network returns, not while it stays down", async () => {
+    const chat = chatState();
+    await online(chat);
+    await act(async () => net.__set({ isConnected: false }));
+    expect(chat.reload).not.toHaveBeenCalled();
+    await act(async () => net.__set({ isConnected: true }));
+    expect(chat.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("chat not configured: the return of the network does not retry it", async () => {
+    const chat = chatState({ availability: "not_configured" });
+    await online(chat);
+    await act(async () => net.__set({ isConnected: false }));
+    await act(async () => net.__set({ isConnected: true }));
+    expect(chat.reload).not.toHaveBeenCalled();
+  });
 });

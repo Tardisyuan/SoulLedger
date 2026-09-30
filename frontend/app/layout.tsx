@@ -7,6 +7,7 @@ import "@fontsource-variable/noto-sans-sc";
 import "@fontsource-variable/noto-serif-sc";
 import "./globals.css";
 import { fontVariables } from "./fonts";
+import { plaqueFontVariables } from "@/src/components/plaque/fonts";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { BCP47_FOR_LOCALE, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
@@ -51,8 +52,9 @@ export const metadata: Metadata = {
  * cookie 里,所以语言可以在服务端定(见下),主题不行。
  *
  * try/catch 不是装饰:localStorage 在隐私模式、或站点数据被禁用时会直接抛异常,
- * 而这段脚本一旦抛出就会中断解析。默认 dark 与 ThemeProvider 的默认值一致。 */
-const THEME_BOOTSTRAP = `(function(){try{var t=localStorage.getItem("soulledger_theme");var d=t!=="light";document.documentElement.classList.toggle("dark",d);document.documentElement.classList.toggle("light",!d);}catch(e){document.documentElement.classList.add("dark");}})();`;
+ * 而这段脚本一旦抛出就会中断解析。没存过选择就跟随系统(规范 v2);读不到系统偏好
+ * 时是 dark,与 ThemeProvider 的退路一致。 */
+const THEME_BOOTSTRAP = `(function(){var r=document.documentElement,t=null;try{t=localStorage.getItem("soulledger_theme");}catch(e){}var d=t==="dark"||(t!=="light"&&!(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches));r.classList.toggle("dark",d);r.classList.toggle("light",!d);})();`;
 
 export default async function RootLayout({
   children,
@@ -81,7 +83,7 @@ export default async function RootLayout({
     // 实测过:不加这一行,首页在 dev overlay 里稳定报一条 "1 Issue"。
     <html
       lang={locale ? BCP47_FOR_LOCALE[locale] : BCP47_FOR_LOCALE["zh-Hans"]}
-      className={fontVariables}
+      className={`${fontVariables} ${plaqueFontVariables}`}
       suppressHydrationWarning
     >
       <head>

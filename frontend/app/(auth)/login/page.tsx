@@ -16,6 +16,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
+import { Plaque } from "@/src/components/plaque/Plaque";
 import { CIVILIZATION_MARK, NUMBERING_SAMPLE } from "@/src/lib/civilizationIdentity";
 import { LOGIN_STATUTES } from "@/src/lib/loginStatutes";
 import { defaultViewRoute } from "@/src/lib/defaultView";
@@ -268,20 +269,20 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[oklch(var(--color-canvas))]">
-      {/* 壳外页的页头:没有侧栏、没有面包屑,只有品牌、语言、主题。 */}
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[oklch(var(--color-block))] px-4 md:px-6 font-mono text-xs">
-        <span aria-hidden="true" className="font-semibold tracking-[var(--tracking-meta)] text-[oklch(var(--color-ink))]">SOULLEDGER</span>
-        <h1 className="text-xs font-normal text-[oklch(var(--color-ink-muted))]">{t("nav.title")}</h1>
-        <span className="ml-auto flex items-center gap-3">
-          <LanguageSwitcher />
-          <ThemeToggle />
-        </span>
-      </header>
+      {/* 壳外页的匾(补足 C15「Web 登录」):中性皮 —— 登录前不知道文明,所以没有印、没有
+          纹样与题字字体,纹样带只剩两道细线(globals.css 中性皮)。题字是产品名,40 档;
+          这一页没有 PageShell,匾题字就是全页唯一的 <h1>。语言与主题在表单栏顶上,
+          不放在匾上:两个控件的配色是给纸底画的。 */}
+      <Plaque
+        heading
+        title={t("nav.title")}
+        meta={<span className="font-mono text-2xs tracking-[var(--tracking-meta)]">SOULLEDGER</span>}
+      />
 
       <main className="grid flex-1 grid-cols-1 content-start md:grid-cols-2 md:content-normal">
         <section
           aria-label={t("auth.statute_of_day")}
-          className="flex flex-col gap-4 md:gap-6 bg-[oklch(var(--color-surface-1))] px-4 py-6 md:px-14 md:py-14 md:border-r md:border-[oklch(var(--color-line))]"
+          className="flex flex-col gap-4 md:gap-6 bg-[oklch(var(--color-surface-1))] px-4 py-6 md:px-12 md:py-12 md:border-r md:border-[oklch(var(--color-line))]"
         >
           <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]">
             {t("auth.statute_of_day")}
@@ -289,7 +290,7 @@ export default function LoginPage() {
           <figure className="m-0 flex flex-col gap-3">
             <blockquote
               data-testid="login-statute"
-              className="m-0 max-w-[28ch] border-l-2 border-[oklch(var(--color-ink))] pl-4 font-serif text-quote md:text-xl text-pretty text-[oklch(var(--color-ink))]"
+              className="m-0 max-w-[28ch] border-l-2 border-[oklch(var(--color-ink))] pl-4 font-serif text-md font-normal md:text-xl text-pretty text-[oklch(var(--color-ink))]"
             >
               {statute.text}
             </blockquote>
@@ -319,8 +320,12 @@ export default function LoginPage() {
           </dl>
         </section>
 
-        <div className="flex justify-center px-4 py-6 md:px-14 md:py-14">
+        <div className="flex justify-center px-4 py-6 md:px-12 md:py-12">
           <div className="flex w-full max-w-[360px] flex-col gap-4">
+            <div className="flex items-center justify-end gap-3">
+              <LanguageSwitcher />
+              <ThemeToggle />
+            </div>
             {helpOpen ? (
               <PasswordHelp initialUsername={form.username} onClose={() => setHelpOpen(false)} />
             ) : (
@@ -328,7 +333,7 @@ export default function LoginPage() {
                 <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.login")}</h2>
 
                 {civilizations.length > 0 && (
-                  <section aria-labelledby="login-civilization-label" className="flex flex-col gap-1.5">
+                  <section aria-labelledby="login-civilization-label" className="flex flex-col gap-2">
                     <p id="login-civilization-label" className="text-xs text-[oklch(var(--color-ink-muted))]">
                       {t("auth.civilization")}
                     </p>
@@ -340,12 +345,14 @@ export default function LoginPage() {
                             key={row.code}
                             aria-current={marked ? "true" : undefined}
                             className={
-                              "flex items-center gap-2 border-b border-[oklch(var(--color-rule))] px-2 py-1.5 text-sm " +
+                              "flex items-center gap-2 border-b border-l-3 border-[oklch(var(--color-rule))] px-2 py-2 text-sm " +
                               // An ink bar, not a ●/○ glyph: ● is already the
-                              // European shape mark right beside it.
+                              // European shape mark right beside it. A 3px left
+                              // border rather than an inset shadow — v2 has no
+                              // shadows (补足 A2) — and ink, not 匾色: 登录前是中性皮.
                               (marked
-                                ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
-                                : "text-[oklch(var(--color-ink-muted))]")
+                                ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] border-l-[oklch(var(--color-ink))]"
+                                : "border-l-transparent text-[oklch(var(--color-ink-muted))]")
                             }
                           >
                             <span aria-hidden="true">{CIVILIZATION_MARK[row.civilization] ?? ""}</span>
@@ -387,6 +394,7 @@ export default function LoginPage() {
                     }}
                     error={getError("password")}
                     placeholder="••••••••"
+                    data-revealed={showPassword || undefined}
                     required
                   />
                   {/* In the label row rather than inside the input: the input's
@@ -398,7 +406,7 @@ export default function LoginPage() {
                     aria-controls="login-password"
                     aria-pressed={showPassword}
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-0 top-0 text-xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
+                    className="absolute right-0 top-0 text-xs text-[oklch(var(--color-ink-muted))] underline underline-offset-2 hover:text-[oklch(var(--color-ink))]"
                   >
                     {showPassword ? t("soul_app.common.hide") : t("soul_app.common.show")}
                   </button>
@@ -429,7 +437,7 @@ export default function LoginPage() {
                     data-testid="login-error"
                     className="border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] px-4 py-3 text-sm font-medium text-[oklch(var(--color-danger))]"
                   >
-                    <span aria-hidden="true">! </span>
+                    <span aria-hidden="true">✕ </span>
                     {loginError}
                   </div>
                 )}

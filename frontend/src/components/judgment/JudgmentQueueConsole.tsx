@@ -6,10 +6,17 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
+import { useClaimJudgment, useReassignJudgment } from "@soulledger/core/hooks/useJudgments";
+import type { Judgment } from "@soulledger/core/api";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import { ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { QueueMinePanel } from "@/src/components/judgment/QueueMinePanel";
+import { Seal } from "@/src/components/plaque/Seal";
 import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
-import { verdictGlyph } from "@/src/lib/verdictGlyph";
+import { VERDICT_KEY_CLASS, VerdictKeyContent } from "@/src/components/judgment/JudgmentDesk";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -33,6 +40,9 @@ import {
  * shortcut layer over it:
  *
  *   1 / 2 / 3 / 4   render PASSED / FAILED / PURGATORY / RETRY, send it, advance
+ *   C               claim the case on screen (2026-09-30, v2: one of the three
+ *                   queue features the user decided on — with 改派 and the
+ *                   「我认领的」group, `QueueMinePanel`)
  *   S               defer this case for the rest of this sitting
  *   W               toggle "also open an approval workflow"
  *   R               bring deferred cases back to the queue
@@ -45,12 +55,13 @@ import {
  * there, and blurs first.
  */
 
-const VERDICTS: { code: VerdictCode; key: string; token: string }[] = [
-  { code: "PASSED", key: "1", token: "--color-verdict-passed" },
-  { code: "FAILED", key: "2", token: "--color-verdict-failed" },
-  { code: "PURGATORY", key: "3", token: "--color-verdict-purgatory" },
-  { code: "RETRY", key: "4", token: "--color-verdict-retry" },
+const VERDICTS: { code: VerdictCode; key: string }[] = [
+  { code: "PASSED", key: "1" },
+  { code: "FAILED", key: "2" },
+  { code: "PURGATORY", key: "3" },
+  { code: "RETRY", key: "4" },
 ];
+
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -67,7 +78,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const [createWorkflow, setCreateWorkflow] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
 
-  const { cursor, progress, submitVerdict, defer, restoreDeferred, claimRefusal, dismissClaimRefusal } = queue;
+  const { cursor, progress, submitVerdict, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
 
   // Notes belong to the case in front of the operator, never to the next one.
@@ -87,9 +98,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     setCreateWorkflow(false);
   }, [judgment?.id]);
 
+  /** 每落一次判盖一次印(交互与动效第 2 轮 §三 1:点击或按键即盖印,不按住)。 */
+  const [stamp, setStamp] = useState(0);
+
   const rule = useCallback(
     (verdict: VerdictCode) => {
       if (!judgment) return;
+      setStamp((n) => n + 1);
       void submitVerdict({ verdict, notes, createWorkflow });
     },
     [judgment, submitVerdict, notes, createWorkflow]
@@ -114,6 +129,49 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   // the console rather than a new one.
   const { hasPermission } = usePermissions();
   const canRule = hasPermission("judgment.execute");
+  const canAssign = hasPermission("judgment.assign");
+
+  // ── 认领 · 改派 · 「我认领的」 ────────────────────────────────────────
+  // 认领与改派都是真请求(apps/judgment/claims.py),成功后 `judgmentKeys.all` 失效,
+  // 队列卡片与「我认领的」一起刷新。改派走的那一件本次会话不再出现(`setAside`),
+  // 也不算「延后」—— R 不会把它放回来。
+  const { user } = useTenant();
+  const { showToast } = useToast();
+  const claim = useClaimJudgment();
+  const reassign = useReassignJudgment();
+  const [recentClaims, setRecentClaims] = useState<string[]>([]);
+  const [handedOff, setHandedOff] = useState<string[]>([]);
+  const [reassignFor, setReassignFor] = useState<Pick<Judgment, "id" | "soul_name"> | null>(null);
+  const claimedBy = judgment?.claimed_by ?? null;
+
+  const claimCurrent = useCallback(() => {
+    if (!judgment || !canRule || claimedBy != null || claim.isPending) return;
+    const id = judgment.id;
+    claim.mutate(id, {
+      onSuccess: () => {
+        setRecentClaims((prev) => [id, ...prev.filter((x) => x !== id)]);
+        showToast(t("judgment.claim.done_claim", { n: "1" }), "success");
+      },
+      onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+    });
+  }, [judgment, canRule, claimedBy, claim, showToast, t]);
+
+  const confirmReassign = (to: number, toName: string) => {
+    if (!reassignFor) return;
+    const { id, soul_name } = reassignFor;
+    reassign.mutate(
+      { id, to },
+      {
+        onSuccess: () => {
+          setHandedOff((prev) => [...prev, id]);
+          setAside(id);
+          setReassignFor(null);
+          showToast(t("judgment.queue.reassigned", { name: soul_name || id.slice(0, 8), to: toName }), "success");
+        },
+        onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+      }
+    );
+  };
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -181,7 +239,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         rule(verdict.code);
         return;
       }
-      if (!canRule && ["w", "n"].includes(event.key.toLowerCase())) return;
+      if (!canRule && ["w", "n", "c"].includes(event.key.toLowerCase())) return;
       switch (event.key.toLowerCase()) {
         case "s":
           event.preventDefault();
@@ -190,6 +248,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         case "w":
           event.preventDefault();
           setCreateWorkflow((prev) => !prev);
+          break;
+        case "c":
+          event.preventDefault();
+          claimCurrent();
           break;
         case "r":
           event.preventDefault();
@@ -218,7 +280,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [rule, defer, restoreDeferred, leave, canRule, showKeys]);
+  }, [rule, defer, restoreDeferred, leave, canRule, showKeys, claimCurrent]);
 
   // `progressText`, not `progressLabel`: "N of M" is a formatted count, not a
   // domain enum, and src/__tests__/domainDisplayContract.test.tsx reads any
@@ -287,6 +349,19 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         </div>
 
         {/* R(第三类 F 组 2.8):本次暂缓的件数一条横条,右侧边框按钮「全部放回队列」+ 键帽。 */}
+        {canRule && (
+          <div className="max-h-56 overflow-y-auto">
+            <QueueMinePanel
+              currentId={judgment?.id ?? null}
+              recent={recentClaims}
+              gone={handedOff}
+              canAssign={canAssign}
+              onOpen={(id) => router.push(`/judgment/queue?at=${id}`)}
+              onReassign={(j) => setReassignFor(j)}
+            />
+          </div>
+        )}
+
         {progress.deferred > 0 && (
           <div
             data-testid="session-deferred"
@@ -382,6 +457,28 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             {/* The handover: the just-ruled case stays rendered (placeholderData)
                 until the next arrives, dimmed so it does not read as current.
                 `isPlaceholderData`, not `isFetching` — see the hook. */}
+            {/* 这一件在谁手里:你 / 某人 / 无人(可认领,C)。有改派权限就能把它交给别人。 */}
+            <div data-testid="queue-claim" className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-[oklch(var(--color-ink-muted))]">
+                {claimedBy == null
+                  ? null
+                  : claimedBy === user?.id
+                    ? t("judgment.claim.claimed_by_me")
+                    : t("judgment.claim.claimed_by", { name: judgment.claimed_by_name ?? "" })}
+              </span>
+              {claimedBy == null && canRule && (
+                <Button type="button" variant="secondary" size="sm" loading={claim.isPending} onClick={claimCurrent} aria-keyshortcuts="C">
+                  {t("judgment.claim.claim")}
+                  <Keycap>C</Keycap>
+                </Button>
+              )}
+              {canAssign && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setReassignFor(judgment)}>
+                  {t("judgment.claim.reassign")}
+                </Button>
+              )}
+            </div>
+
             <div
               aria-busy={queue.isPlaceholderData || undefined}
               className={`grid gap-4 lg:grid-cols-2 transition-opacity duration-settle ${
@@ -436,8 +533,17 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           long the confession or the ledger above them is. Notes and "create
           workflow" stay in the scroll: they are optional, and `N` reaches the
           notes field from anywhere. */}
+      <ReassignDialog
+        isOpen={reassignFor !== null}
+        ids={reassignFor ? [reassignFor.id] : []}
+        count={1}
+        pending={reassign.isPending}
+        onCancel={() => setReassignFor(null)}
+        onConfirm={confirmReassign}
+      />
+
       {judgment && cursor.soul && cursor.ledger && (
-        <div className="sticky bottom-0 border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
+        <div className="sticky bottom-(--bottom-bar) border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
             {/* The verdict row stays hand-rolled, deliberately, while the four
                 plain buttons on this screen moved to `Button`. Each verdict
@@ -458,49 +564,36 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               </p>
             )}
             {canRule && (
-            /* 第三类 F 组 2.8:四列(393 宽时两列),高 44;每个是键号 + 字形 + 文字,
-               字形取 `verdictGlyph`(与详情页同一张表),字色是各自的 `--color-verdict-*`。 */
-            <div className="flex flex-col gap-2 sm:flex-row">
+            /* 补足 B8:四列(393 宽时两列),同一个幽灵样式;字形取 `verdictGlyph`(与详情页同一张表)。 */
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {/* 落判即盖印:压实 60ms 放开缩放,减少动态效果时直接落定。首判之前印位空着
+                  (invisible 占位,不让第一次落判把四个按钮挤窄一格)。 */}
+              <span className={`max-sm:hidden ${stamp > 0 ? "" : "invisible"}`}>
+                <Seal size={40} stampKey={stamp} />
+              </span>
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
               {VERDICTS.map((verdict) => (
                 <button
                   key={verdict.code}
                   type="button"
                   data-verdict={verdict.code}
+                  aria-keyshortcuts={verdict.key}
                   onClick={() => rule(verdict.code)}
-                  /* `active:translate-y-px` and the motion tokens, matching
-                     `Button`'s base — see its comment on the pressed nudge:
-                     "shared by all four variants so 'pressed' is one gesture
-                     in this UI rather than four". These four stayed
-                     hand-rolled for a good reason (each carries its own status
-                     colour), and the cost of that was shipping the most
-                     important buttons in the product with no pressed state at
-                     all — the exact defect `Button`'s header records as "0 of 190".
-
-                     NO overshoot, per globals.css — a bounce on a verdict
-                     button would be the app being pleased with itself while
-                     someone sentences a soul. */
-                  className={`flex h-11 items-center justify-center gap-2 px-3 border text-sm font-semibold transition-[color,background-color,border-color,transform] duration-state border-[oklch(var(--color-hairline-strong))] hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0`}
-                  style={{ color: `oklch(var(${verdict.token}))` }}
+                  /* 按下只换底色(line),不位移、不回弹:落判时界面不该显得得意。 */
+                  className={VERDICT_KEY_CLASS}
                 >
-                  <Keycap>{verdict.key}</Keycap>
-                  <span aria-hidden="true">{verdictGlyph(verdict.code)}</span>
-                  {/* A JSX position, so the component rather than the string
-                      helper: <DomainEnum> renders one span, carries the raw
-                      member in `title` itself, and shows translated
-                      "unrecognized" copy instead of a dotted key when a
-                      verdict is missing from the bundle. */}
-                  <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
+                  <VerdictKeyContent code={verdict.code} keyHint={verdict.key} />
                 </button>
               ))}
               </div>
               <button
                 type="button"
                 onClick={defer}
-                className="flex h-11 items-center justify-center gap-2 px-4 border border-[oklch(var(--color-hairline-strong))] text-sm font-medium text-[oklch(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
+                aria-keyshortcuts="S"
+                className="flex h-10 items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))] max-sm:min-h-11"
               >
-                <Keycap>S</Keycap>
                 {t("judgment.queue.defer")}
+                <Keycap>S</Keycap>
               </button>
             </div>
             )}
@@ -570,7 +663,7 @@ function ConsoleNotice({ title, body, action }: { title: string; body: string; a
 /** 键帽:等宽、1px 当前色边。视觉提示,不进按钮的可访问名。 */
 function Keycap({ children }: { children: React.ReactNode }) {
   return (
-    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-1.5 opacity-70">
+    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-2 opacity-70">
       {children}
     </kbd>
   );

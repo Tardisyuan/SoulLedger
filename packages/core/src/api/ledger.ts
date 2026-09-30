@@ -1,3 +1,4 @@
+import axios from "axios";
 import { api } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 
@@ -25,6 +26,8 @@ export interface LedgerStatsOverview {
     realm_code: string;
     realm_name: string;
     civilization?: string;
+    /** `Realm.realm_type` —— 仪表盘按它选图案(web `REALM_PATTERNS`)。 */
+    realm_type: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL";
     count: number;
   }[];
 }
@@ -311,6 +314,16 @@ export interface LedgerJournalParams {
   search?: string;
 }
 
+/**
+ * The whole-month journal (`journalMonth`) refused because the month is over
+ * `WHOLE_MONTH_MAX` rows: 400 `{"error": "MONTH_TOO_LARGE", "field": "all"}`
+ * (apps/ledger/views.py). Retrying cannot help — the filters have to narrow.
+ */
+export function isMonthTooLarge(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 400) return false;
+  return (error.response.data as { error?: unknown } | undefined)?.error === "MONTH_TOO_LARGE";
+}
+
 export const ledgerApi = {
   // soulId is a UUID: both routes are `<uuid:soul_id>` in
   // backend/apps/ledger/urls.py. These took `number`, which cannot address
@@ -320,6 +333,12 @@ export const ledgerApi = {
   // Note the ordering: inheritance/ comes before the soul id in the URLconf.
   inheritance: (soulId: string) => api.get<LedgerInheritance>(`/ledger/inheritance/${soulId}/`),
   journal: (params: LedgerJournalParams & { page?: number }) => api.get<LedgerJournal>("/ledger/journal/", { params }),
+  /**
+   * 本月全部行,一次请求(`all=1`,B10 不分页)。超过后端上限(`WHOLE_MONTH_MAX`)时是
+   * 400 `MONTH_TOO_LARGE`,不截断 —— 调用方要把它当成「筛选再窄一点」,不是空账。
+   */
+  journalMonth: (params: LedgerJournalParams) =>
+    api.get<LedgerJournal>("/ledger/journal/", { params: { ...params, all: 1 } }),
   /** 同一组筛选下本月的全部流水,CSV(`LedgerJournalExportView`)。 */
   exportJournal: (params: LedgerJournalParams) =>
     api.get<Blob>("/ledger/journal/export/", { params, responseType: "blob" }),

@@ -6,7 +6,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { deathSyncApi, PAGE_SIZE, type DeathRegistration } from "@soulledger/core/api";
 import { DataTable } from "@/components/ui/data-table";
-import { PageSection } from "@/components/ui/page-section";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -90,7 +90,11 @@ function DeathSyncRoute() {
       }
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
     >
-      <PageSection title={t("death_sync.registrations") || "Registrations"}>
+      {/* 页面级分节标题(规范 v2 §四,SectionTitle);v1 的 PageSection 框与 11px 栏目标签撤掉。 */}
+      <section aria-labelledby="death-sync-registrations">
+        <div className="mb-3">
+          <SectionTitle id="death-sync-registrations">{t("death_sync.registrations")}</SectionTitle>
+        </div>
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <FilterChipSelect
             label={t("death_sync.status_label")}
@@ -128,7 +132,10 @@ function DeathSyncRoute() {
           isLoading={isLoading}
           isError={isError}
           onRetry={() => refetch()}
-          emptyMessage={t("death_sync.no_registrations") || "No death registrations found."}
+          emptyMessage={t("death_sync.no_registrations")}
+          /* 空状态给一条出路(补足 C15):按状态筛空了,就给「清除筛选」。 */
+          isFiltered={Boolean(status)}
+          onClearFilters={() => setStatus("")}
           keyExtractor={(reg) => String(reg.id)}
           renderRow={(reg) => (
             <>
@@ -149,7 +156,8 @@ function DeathSyncRoute() {
                 </p>
                 {reg.error_message && (
                   <p className="text-xs text-[oklch(var(--color-danger))]">
-                    <span aria-hidden="true">! </span>
+                    {/* 补足 C15:出错是冷玫红「✕ 原因」。 */}
+                    <span aria-hidden="true">✕ </span>
                     {reg.error_message}
                   </p>
                 )}
@@ -172,7 +180,7 @@ function DeathSyncRoute() {
           totalCount={data?.count ?? 0}
           onPageChange={setPage}
         />
-      </PageSection>
+      </section>
     </PageShell>
   );
 }

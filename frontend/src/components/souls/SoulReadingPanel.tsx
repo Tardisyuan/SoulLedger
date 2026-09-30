@@ -112,8 +112,8 @@ function BalanceReading({
   // 规范 v1「乙 · 功过」:收 / 支 / 结 三列账。功德记在收列、罪业记在支列,
   // 余额落在结列、压在 3 px 双线上 —— 双线在账簿里就是「到此结清」。
   // 收、支是账行,正文字号;只有结是头条数字(text-md)。
-  const cell = "py-1.5 border-b border-[oklch(var(--color-rule))]";
-  const last = "py-1.5 border-b border-[oklch(var(--color-block))]";
+  const cell = "py-2 border-b border-[oklch(var(--color-rule))]";
+  const last = "py-2 border-b border-[oklch(var(--color-block))]";
   const total = "py-2 border-b-[3px] border-double border-[oklch(var(--color-block))]";
   return (
     <div data-testid="balance-ledger" className="grid grid-cols-[1fr_auto_auto_auto] text-sm [&>*:not(:nth-child(4n+1))]:pl-4">
@@ -128,7 +128,7 @@ function BalanceReading({
           field="merit"
           quantity={q.merit}
           t={t}
-          className="font-mono tabular-nums text-[oklch(var(--color-karma-merit))]"
+          className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
           +{reading.merit}
         </Figure>
@@ -143,7 +143,7 @@ function BalanceReading({
           field="demerit"
           quantity={q.demerit}
           t={t}
-          className="font-mono tabular-nums text-[oklch(var(--color-karma-demerit))]"
+          className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
           -{reading.demerit}
         </Figure>
@@ -158,9 +158,7 @@ function BalanceReading({
           field="balance"
           quantity={q.balance}
           t={t}
-          className={`text-md font-mono tabular-nums ${
-            reading.balance >= 0 ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"
-          }`}
+          className="text-md font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
           {reading.balance >= 0 ? "+" : ""}
           {reading.balance}
@@ -196,9 +194,7 @@ function ThresholdReading({
           field="ratio"
           quantity="ratio"
           t={t}
-          className={`text-lg tabular-nums ${
-            failed ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-karma-merit))]"
-          }`}
+          className="text-lg tabular-nums text-[oklch(var(--color-ink))]"
         >
           {ratioText}
         </Figure>
@@ -221,13 +217,13 @@ function ThresholdReading({
         </span>
       </div>
       <div className="flex justify-center">
+        {/* 判决结果,不是操作失败(Design E 组):ink 字 + 1px ink3 框,「未过」前加 ✕,
+            和判决徽标同一条规则 —— 冷玫红只留给操作失败与系统失败。 */}
         <span
-          className={`px-2 py-0.5 text-xs font-bold ${
-            failed
-              ? "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]"
-              : "bg-[oklch(var(--color-karma-merit)/0.1)] text-[oklch(var(--color-karma-merit))]"
-          }`}
+          data-testid="reading-threshold"
+          className="px-2 py-0.5 text-xs font-bold border border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink))]"
         >
+          {failed ? <span aria-hidden="true">✕ </span> : null}
           {failed ? t("souls.detail.reading.threshold_fail") : t("souls.detail.reading.threshold_pass")}
         </span>
       </div>
@@ -252,12 +248,12 @@ function GuiltAndPenaltyReading({
             numeral borrowed the caption's grammar and read as "22 of
             something". It names its scale now; the caption keeps its noun. */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-[oklch(var(--color-karma-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
+          <span className="text-sm text-[oklch(var(--color-ink))]">{t("souls.detail.reading.culpa_label")}</span>
           <Figure
             field="culpa"
             quantity={READING_QUANTITIES.GUILT_AND_PENALTY.culpa}
             t={t}
-            className="text-md tabular-nums text-[oklch(var(--color-karma-demerit))]"
+            className="text-md tabular-nums text-[oklch(var(--color-ink))]"
           >
             {reading.culpa}
           </Figure>
@@ -381,7 +377,7 @@ function UnavailableReading({
           from "these are not weights". A reader who scrolls from a Greek soul's
           road count to this box is making exactly the comparison the review
           caught, and the box is the place it is least defended against. */}
-      <div className="border border-dashed border-[oklch(var(--color-hairline))] p-3 space-y-1.5">
+      <div className="border border-dashed border-[oklch(var(--color-hairline))] p-3 space-y-2">
         <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>

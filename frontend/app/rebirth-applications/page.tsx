@@ -165,7 +165,7 @@ function RebirthApplicationsContent() {
 
 export default function RebirthApplicationsPage() {
   return (
-    <RequirePermission permissions="workflow.read" fallback={<PermissionDenied />}>
+    <RequirePermission permissions="workflow.read" fallback={<PermissionDenied permission="workflow.read" />}>
       <RebirthApplicationsContent />
     </RequirePermission>
   );

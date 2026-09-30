@@ -23,12 +23,16 @@ import type { MeProfile } from "@soulledger/core/api/soul";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useColorScheme } from "react-native";
 
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+
 import { AssistProvider } from "./assist";
 import { AssistPanel } from "./assistPanel";
 import { ChatProvider, useChat } from "./chat";
-import { AppHeader, TabBar } from "./chrome";
+import { ColdStart } from "./coldStart";
+import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
+import { NetworkProvider } from "./network";
 import { useSession } from "./session";
 import { preLoginTheme, themeFor } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
@@ -41,6 +45,7 @@ import {
 } from "./screens/applications";
 import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/auth";
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
+import { AboutScreen } from "./screens/about";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { MyLifeScreen } from "./screens/life";
@@ -65,10 +70,11 @@ function MainTabs() {
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={({ route, navigation }) => ({
+        // v2 补足 B11 / C15: every tab's root wears the full plaque; its actions sit where the account icon was.
         header: () =>
           route.name === "Letters" ? (
             // Chat handoff 1e: iOS "new" is a framed plus in the bar; Android has the FAB, and search here.
-            <AppHeader
+            <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
               assist="letters"
               action={{
@@ -81,7 +87,7 @@ function MainTabs() {
             />
           ) : route.name === "Circle" ? (
             // 1a: find people and my page; settings stay on the life tab.
-            <AppHeader
+            <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
               assist="circle"
               action={[
@@ -90,7 +96,7 @@ function MainTabs() {
               ]}
             />
           ) : (
-            <AppHeader
+            <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
               assist={route.name === "Applications" ? "applications" : "life"}
               onAccount={() => navigation.navigate("Settings")}
@@ -254,7 +260,7 @@ export function RootNavigator() {
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
   const navTheme: NavTheme = {
     ...base,
-    colors: { ...base.colors, primary: theme.accent, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
+    colors: { ...base.colors, primary: theme.ink, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
   };
 
   let body;
@@ -314,6 +320,13 @@ export function RootNavigator() {
               component={SettingsScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.settings.title")} onBack={navigation.goBack} assist="settings" />,
+              })}
+            />
+            <Stack.Screen
+              name="About"
+              component={AboutScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("about.title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen name="NotificationPrimer" component={NotificationPrimerScreen} options={{ headerShown: false }} />
@@ -392,7 +405,15 @@ export function RootNavigator() {
   return (
     <ThemeContext.Provider value={theme}>
       <ToastProvider>
-        <LogoutProvider onConfirm={signOut}>{body}</LogoutProvider>
+        {/* Inside the theme: a sheet renders in this provider's host, so it sees only the contexts above it. */}
+        <BottomSheetModalProvider>
+          <LogoutProvider onConfirm={signOut}>
+            {/* Offline: a bar above every screen, pushing it down; gone when the network is back. */}
+            <NetworkProvider>{body}</NetworkProvider>
+          </LogoutProvider>
+        </BottomSheetModalProvider>
+        {/* 补足 C18: over everything, once per process. */}
+        <ColdStart session={state} scheme={scheme} />
       </ToastProvider>
     </ThemeContext.Provider>
   );

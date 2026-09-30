@@ -276,3 +276,22 @@ describe("SoulReadingPanel — the absent value is not announced twice", () => {
     expect(container.textContent).toContain(heading);
   });
 });
+
+// Design E 组:称心的「重于羽」是判决结果,不是操作失败 —— ink 字 + ✕,冷玫红只留给操作 / 系统失败。
+describe("SoulReadingPanel — the weighing verdict is ink, not the failure colour", () => {
+  const weigh = (heavier: boolean) =>
+    renderPanel({ ...SAMPLES.THRESHOLD, heavier_than_feather: heavier } as LedgerReading);
+
+  it("heavier than the feather: ✕ before the words, ink, no failure colour anywhere in the panel", () => {
+    const { container } = weigh(true);
+    const badge = screen.getByTestId("reading-threshold");
+    expect(badge.textContent?.startsWith("✕ ")).toBe(true);
+    expect(badge.className).toContain("--color-ink");
+    expect(container.innerHTML).not.toMatch(/--color-(status-error|danger)/);
+  });
+
+  it("not heavier: no ✕", () => {
+    weigh(false);
+    expect(screen.getByTestId("reading-threshold").textContent).not.toContain("✕");
+  });
+});

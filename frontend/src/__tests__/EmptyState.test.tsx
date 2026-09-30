@@ -63,7 +63,7 @@ describe("EmptyState · 居左", () => {
     );
     const root = container.querySelector<HTMLElement>("[data-empty-state]")!;
     expect(root.className).toContain("border-[oklch(var(--color-hairline))]");
-    expect(root.className).toMatch(/\bpy-10\b/);
+    expect(root.className).toMatch(/\bpy-8\b/);
   });
 });
 
@@ -95,14 +95,15 @@ describe("EmptyState · 那条短线", () => {
 });
 
 describe("EmptyState · 排版", () => {
-  it("标题 text-2xs，原因 text-sm + text-[oklch(var(--color-ink-subtle))]", () => {
+  it("标题 15 / 600,原因 12 + text-[oklch(var(--color-ink-subtle))](补足 C15)", () => {
     const { container } = render(
       <EmptyState title="尚无判决" reason="这一卷还没有任何灵魂被登记。" />
     );
     const title = container.querySelector<HTMLElement>("[data-empty-state-title]")!;
     const reason = container.querySelector<HTMLElement>("[data-empty-state-reason]")!;
-    expect(title.className).toMatch(/\btext-2xs\b/);
-    expect(reason.className).toMatch(/\btext-sm\b/);
+    expect(title.className).toMatch(/\btext-md\b/);
+    expect(title.className).toMatch(/\bfont-semibold\b/);
+    expect(reason.className).toMatch(/\btext-xs\b/);
     expect(reason.className).toContain("text-[oklch(var(--color-ink-subtle))]");
   });
 

@@ -69,24 +69,40 @@ export function ConnectionStatus() {
   );
 }
 
+/** Whether the link-down bar is showing. The shell reads it to start the 问一问 panel below the bar. */
+export function useConnectionBannerShown(): boolean {
+  const { status } = useWebSocket();
+  const { user } = useTenant();
+  return !!user && status !== "connected" && status !== "connecting";
+}
+
 /**
  * 规范 v1: the connection state is not a standing masthead control any more.
- * It appears only when the link is down — a warning bar under the masthead,
- * with the reason and a retry. Connected or still connecting: nothing.
+ * It appears only when the link is down — a warning bar with the reason and a
+ * retry. Connected or still connecting: nothing.
+ *
+ * Design E 组: the bar is global state, not part of the plaque — it sits at the
+ * very top of the viewport and spans all of it, pillar and 问一问 panel included
+ * (`fixed inset-x-0 top-0`). It floats: appearing a while after load, it must not
+ * move anything from under the pointer (the E2E avatar click that missed 1 in 16).
+ * Its height is fixed at 28 px (`h-7`) so the panel can start exactly below it
+ * (`top-7`, see OfficerAssistPanel) instead of being covered by it.
  */
 export function ConnectionBanner() {
   const { status, reconnect } = useWebSocket();
-  const { user } = useTenant();
   const { t } = useI18n();
-  if (!user || status === "connected" || status === "connecting") return null;
+  const shown = useConnectionBannerShown();
+  if (!shown) return null;
   const canRetry = status === "failed" || status === "disconnected";
   return (
     <div
       role="status"
-      className="flex items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 py-1 text-xs text-[oklch(var(--color-warning))] md:px-10"
+      data-testid="connection-banner"
+      className="fixed inset-x-0 top-0 z-drawer flex h-7 items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
     >
       <span aria-hidden="true">!</span>
-      <span className="flex-1">{t(`connection.${status}`)}</span>
+      {/* Fixed 28 px: a long egy / en reason is cut, and readable in full on hover. */}
+      <span className="flex-1 truncate" title={t(`connection.${status}`)}>{t(`connection.${status}`)}</span>
       {canRetry ? (
         <button type="button" onClick={reconnect} className="underline underline-offset-2">
           {t("connection.retry")}

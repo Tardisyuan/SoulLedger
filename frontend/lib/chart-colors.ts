@@ -1,14 +1,19 @@
 /**
- * Chart colours, in both themes — 规范 v1 §1.3.
+ * Chart colours, in both themes — 规范 v2「朱印」补足 A5。
  *
- * Recharts props (`fill`, `stroke`, `tick.fill`, …) take concrete colours and
- * cannot read CSS custom properties, so the tokens in app/globals.css are
- * mirrored here as `oklch()` literals, one table per theme. `CHART_TOKENS` names
- * the token each entry mirrors; src/__tests__/chartColourContract.test.ts holds
- * every literal to that token's value in both themes, so this file cannot drift.
+ * 图表不用彩色分类:四种匾色和四种状态色已经把色相占满,再加分类色必然撞上其中一个。
+ * 所以——
+ * - 六种灵魂状态是**一条冷灰蓝(OKLCH 色相 250)的明度梯度**,按先后排:浅色从暗到亮、
+ *   深色从亮到暗(`--color-chart-1…6`);
+ * - 去向没有先后,用**四种图案**分:实底 / 半色(梯度第 4 档实底)/ 斜线 / 空框;
+ * - 功过用**实底与空框斜线**分,不用状态色(反馈色不进领域枚举);
+ * - 提示框 s1 底 + 1px ink 框;图形对 bg ≥ 3:1,数字直接标在图上,图例只作补充。
  *
- * Series are not bound to civilizations (§1.8): a chart that separates
- * civilizations does it with shape marks and direct labels, all in ink.
+ * Recharts props (`fill`, `stroke`, …) take concrete colours and cannot read CSS
+ * custom properties, so the tokens in app/globals.css are mirrored here as
+ * `oklch()` literals, one table per theme. `CHART_TOKENS` names the token each
+ * entry mirrors; src/__tests__/chartColourContract.test.ts holds every literal
+ * to that token's value in both themes, so this file cannot drift.
  * `src/hooks/useChartColors.ts` picks the table for the current theme.
  */
 
@@ -16,113 +21,147 @@
 export type ChartTheme = "dark" | "light";
 
 export type ChartSeriesKey = "balance" | "realm" | "neutral" | "merit" | "demerit";
-export type ChartChromeKey = "accent" | "grid" | "axis" | "tick" | "tooltipBg" | "tooltipBorder";
+export type ChartChromeKey = "grid" | "axis" | "tick" | "tooltipBg" | "tooltipBorder";
+
+/** A5 的四种图案。`half` 是梯度第 4 档的实底,另外三种都用第 1 档。 */
+export type ChartPattern = "solid" | "half" | "hatch" | "outline";
 
 export interface ChartColors {
-  /** Soul lifecycle states (`Soul.current_state`) — the domain state colours. */
+  /** Soul lifecycle states (`Soul.current_state`) — the ordered gray-blue ramp. */
   STATE_COLORS: Record<string, string>;
-  /** Realm types (`realms.types`). */
+  /** Realm types (`realms.types`) — colour of each realm's pattern (see REALM_PATTERNS). */
   REALM_COLORS: Record<string, string>;
-  /** Series: series-1 ink, series-2 accent, series-4 ink-subtle; merit / demerit. */
+  /** Series: all on the ramp; merit / demerit differ by pattern, not hue. */
   CHART_SERIES: Record<ChartSeriesKey, string>;
-  /** Axis, grid (the ledger's rule), ticks, tooltip. */
+  /** Axis, grid, ticks, tooltip. */
   CHART_CHROME: Record<ChartChromeKey, string>;
 }
 
 /** Which token each entry mirrors. The contract test reads this; nothing renders it. */
 export const CHART_TOKENS: { [K in keyof ChartColors]: Record<string, string> } = {
   STATE_COLORS: {
-    ALIVE: "--color-success",
-    JUDGING: "--color-warning",
-    DISPOSED: "--color-ink",
-    REINCARNATING: "--color-accent",
-    LOST: "--color-ink-subtle",
-    SETTLED: "--color-ink-muted",
+    ALIVE: "--color-chart-1",
+    JUDGING: "--color-chart-2",
+    DISPOSED: "--color-chart-3",
+    REINCARNATING: "--color-chart-4",
+    SETTLED: "--color-chart-5",
+    LOST: "--color-chart-1",
   },
   REALM_COLORS: {
-    HELL: "--color-danger",
-    PURGATORY: "--color-warning",
-    BLISS: "--color-success",
-    NEUTRAL: "--color-ink-subtle",
+    PURGATORY: "--color-chart-1",
+    BLISS: "--color-chart-4",
+    HELL: "--color-chart-1",
+    NEUTRAL: "--color-chart-1",
   },
   CHART_SERIES: {
-    balance: "--color-ink",
-    realm: "--color-accent",
-    neutral: "--color-ink-subtle",
-    merit: "--color-success",
-    demerit: "--color-danger",
+    balance: "--color-chart-1",
+    realm: "--color-chart-1",
+    neutral: "--color-chart-4",
+    merit: "--color-chart-1",
+    demerit: "--color-chart-1",
   },
   CHART_CHROME: {
-    accent: "--color-accent",
-    grid: "--color-rule",
+    grid: "--color-line",
     axis: "--color-block",
     tick: "--color-ink-subtle",
     tooltipBg: "--color-surface-1",
-    tooltipBorder: "--color-line",
+    tooltipBorder: "--color-ink",
   },
 };
 
+/**
+ * 去向(realm type)→ 图案。A5 画的是「实底 / 半色 / 斜线 / 空框」四种,彼此没有先后,
+ * 所以四个界各取一种、互不重复(contract test 钉住)。
+ */
+export const REALM_PATTERNS: Record<string, ChartPattern> = {
+  PURGATORY: "solid",
+  BLISS: "half",
+  HELL: "hatch",
+  NEUTRAL: "outline",
+};
+
+/**
+ * 状态 → 图案(Design D5)。在世→审判中→已处置→轮回中→已终结占梯度第 1–5 档、实底;
+ * 「迷失」不进梯度 —— 它是偏离流程的异常,放在梯度中间会被读成介于两个状态之间 ——
+ * 用第 1 档色的空框,排在最后。
+ */
+export const STATE_PATTERNS: Record<string, ChartPattern> = {
+  ALIVE: "solid",
+  JUDGING: "solid",
+  DISPOSED: "solid",
+  REINCARNATING: "solid",
+  SETTLED: "solid",
+  LOST: "outline",
+};
+
+/** 功 = 实底,过 = 空框斜线(A5「功 / 过 · 实底与空框斜线 · 零线 2px ink」)。 */
+export const KARMA_PATTERNS: Record<"merit" | "demerit", ChartPattern> = {
+  merit: "solid",
+  demerit: "hatch",
+};
+
+/** 斜线图案的几何:45°,线宽 1.5,间距 5(A5 的 `repeating-linear-gradient(45deg, c 0 1.5px, transparent 1.5px 5px)`)。 */
+export const HATCH = { angle: 45, stroke: 1.5, gap: 5 } as const;
+
 const DARK: ChartColors = {
   STATE_COLORS: {
-    ALIVE: "oklch(0.765836 0.131731 152.8502)",
-    JUDGING: "oklch(0.806698 0.138580 78.5222)",
-    DISPOSED: "oklch(0.934113 0.004173 271.3676)",
-    REINCARNATING: "oklch(0.766991 0.118326 264.1625)",
-    LOST: "oklch(0.649150 0.015962 264.4570)",
-    SETTLED: "oklch(0.778696 0.012177 264.4963)",
+    ALIVE: "oklch(0.946168 0.032488 229.2456)",
+    JUDGING: "oklch(0.869674 0.044412 250.4438)",
+    DISPOSED: "oklch(0.800399 0.044801 248.3861)",
+    REINCARNATING: "oklch(0.740999 0.045000 249.5047)",
+    SETTLED: "oklch(0.690172 0.045147 250.6443)",
+    LOST: "oklch(0.946168 0.032488 229.2456)",
   },
   REALM_COLORS: {
-    HELL: "oklch(0.727654 0.139960 28.8863)",
-    PURGATORY: "oklch(0.806698 0.138580 78.5222)",
-    BLISS: "oklch(0.765836 0.131731 152.8502)",
-    NEUTRAL: "oklch(0.649150 0.015962 264.4570)",
+    PURGATORY: "oklch(0.946168 0.032488 229.2456)",
+    BLISS: "oklch(0.740999 0.045000 249.5047)",
+    HELL: "oklch(0.946168 0.032488 229.2456)",
+    NEUTRAL: "oklch(0.946168 0.032488 229.2456)",
   },
   CHART_SERIES: {
-    balance: "oklch(0.934113 0.004173 271.3676)",
-    realm: "oklch(0.766991 0.118326 264.1625)",
-    neutral: "oklch(0.649150 0.015962 264.4570)",
-    merit: "oklch(0.765836 0.131731 152.8502)",
-    demerit: "oklch(0.727654 0.139960 28.8863)",
+    balance: "oklch(0.946168 0.032488 229.2456)",
+    realm: "oklch(0.946168 0.032488 229.2456)",
+    neutral: "oklch(0.740999 0.045000 249.5047)",
+    merit: "oklch(0.946168 0.032488 229.2456)",
+    demerit: "oklch(0.946168 0.032488 229.2456)",
   },
   CHART_CHROME: {
-    accent: "oklch(0.766991 0.118326 264.1625)",
-    grid: "oklch(0.296939 0.015156 4.5359)",
-    axis: "oklch(0.844951 0.010232 267.3470)",
-    tick: "oklch(0.649150 0.015962 264.4570)",
-    tooltipBg: "oklch(0.191373 0.010618 268.1287)",
-    tooltipBorder: "oklch(0.301015 0.017256 266.3777)",
+    grid: "oklch(0.301893 0.012433 62.1505)",
+    axis: "oklch(0.937570 0.019894 77.3138)",
+    tick: "oklch(0.680983 0.023181 65.1622)",
+    tooltipBg: "oklch(0.207357 0.006191 56.0227)",
+    tooltipBorder: "oklch(0.937570 0.019894 77.3138)",
   },
 };
 
 const LIGHT: ChartColors = {
   STATE_COLORS: {
-    ALIVE: "oklch(0.455753 0.098259 151.6573)",
-    JUDGING: "oklch(0.466535 0.098749 74.2741)",
-    DISPOSED: "oklch(0.208789 0.004235 264.4766)",
-    REINCARNATING: "oklch(0.438650 0.140636 259.8917)",
-    LOST: "oklch(0.516707 0.010128 264.4796)",
-    SETTLED: "oklch(0.397873 0.008784 268.4341)",
+    ALIVE: "oklch(0.259075 0.045425 251.0858)",
+    JUDGING: "oklch(0.360350 0.044648 250.3338)",
+    DISPOSED: "oklch(0.440635 0.045391 248.8937)",
+    REINCARNATING: "oklch(0.509215 0.044595 251.0144)",
+    SETTLED: "oklch(0.570530 0.044052 249.7496)",
+    LOST: "oklch(0.259075 0.045425 251.0858)",
   },
   REALM_COLORS: {
-    HELL: "oklch(0.501282 0.178318 28.7047)",
-    PURGATORY: "oklch(0.466535 0.098749 74.2741)",
-    BLISS: "oklch(0.455753 0.098259 151.6573)",
-    NEUTRAL: "oklch(0.516707 0.010128 264.4796)",
+    PURGATORY: "oklch(0.259075 0.045425 251.0858)",
+    BLISS: "oklch(0.509215 0.044595 251.0144)",
+    HELL: "oklch(0.259075 0.045425 251.0858)",
+    NEUTRAL: "oklch(0.259075 0.045425 251.0858)",
   },
   CHART_SERIES: {
-    balance: "oklch(0.208789 0.004235 264.4766)",
-    realm: "oklch(0.438650 0.140636 259.8917)",
-    neutral: "oklch(0.516707 0.010128 264.4796)",
-    merit: "oklch(0.455753 0.098259 151.6573)",
-    demerit: "oklch(0.501282 0.178318 28.7047)",
+    balance: "oklch(0.259075 0.045425 251.0858)",
+    realm: "oklch(0.259075 0.045425 251.0858)",
+    neutral: "oklch(0.509215 0.044595 251.0144)",
+    merit: "oklch(0.259075 0.045425 251.0858)",
+    demerit: "oklch(0.259075 0.045425 251.0858)",
   },
   CHART_CHROME: {
-    accent: "oklch(0.438650 0.140636 259.8917)",
-    grid: "oklch(0.843587 0.036004 35.3407)",
-    axis: "oklch(0.208789 0.004235 264.4766)",
-    tick: "oklch(0.516707 0.010128 264.4796)",
-    tooltipBg: "oklch(0.988238 0.006936 88.6415)",
-    tooltipBorder: "oklch(0.845691 0.026923 90.1212)",
+    grid: "oklch(0.864197 0.029618 82.5881)",
+    axis: "oklch(0.188704 0.003838 48.5100)",
+    tick: "oklch(0.480553 0.018306 67.3691)",
+    tooltipBg: "oklch(0.986497 0.013019 82.4021)",
+    tooltipBorder: "oklch(0.188704 0.003838 48.5100)",
   },
 };
 

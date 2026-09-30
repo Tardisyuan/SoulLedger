@@ -10,7 +10,7 @@ import Link from "next/link";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 import { deathSyncApi, dispatchApi, judgmentApi } from "@soulledger/core/api";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { LegendLedger, sharePercent } from "@/src/components/dashboard/LegendLedger";
+import { LegendLedger, STATE_SWATCH, orderLifecycle, sharePercent } from "@/src/components/dashboard/LegendLedger";
 import { BalanceHistogram } from "@/src/components/dashboard/BalanceHistogram";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
@@ -20,6 +20,7 @@ import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useChartColors } from "@/src/hooks/useChartColors";
+import { REALM_PATTERNS } from "@/lib/chart-colors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -41,23 +42,6 @@ function bucketMidpoint(label: string): number {
   return 0;
 }
 
-/** Glyph ink and legend fill per lifecycle state — the soul-lifecycle tokens, not the chart literals. */
-const STATE_INK: Record<string, string> = {
-  ALIVE: "text-[oklch(var(--color-status-alive))]",
-  JUDGING: "text-[oklch(var(--color-status-judging))]",
-  DISPOSED: "text-[oklch(var(--color-status-disposed))]",
-  REINCARNATING: "text-[oklch(var(--color-status-reincarnating))]",
-  SETTLED: "text-[oklch(var(--color-status-settled))]",
-  LOST: "text-[oklch(var(--color-status-lost))]",
-};
-const STATE_FILL: Record<string, string> = {
-  ALIVE: "bg-[oklch(var(--color-status-alive))]",
-  JUDGING: "bg-[oklch(var(--color-status-judging))]",
-  DISPOSED: "bg-[oklch(var(--color-status-disposed))]",
-  REINCARNATING: "bg-[oklch(var(--color-status-reincarnating))]",
-  SETTLED: "bg-[oklch(var(--color-status-settled))]",
-  LOST: "bg-[oklch(var(--color-status-lost))]",
-};
 
 /** Section label (规范 v1): 11 px mono, block line beneath. */
 function SectionLabel({ children, className = "", columns = "" }: { children: React.ReactNode; className?: string; columns?: string }) {
@@ -199,10 +183,10 @@ function DashboardContent() {
   const { showToast } = useToast();
   const router = useRouter();
   // Recharts fills are literals and do not follow the `.light` cascade, so the
-  // theme has to pick the table. `REALM_COLORS` used to be imported here and
-  // never read — the realm histogram is single-series and fills with
-  // CHART_SERIES.realm — so it is not destructured.
-  const { CHART_SERIES } = useChartColors();
+  // theme has to pick the table. The realm histogram colours and patterns each
+  // bar by its realm type (规范 v2 A5 `REALM_PATTERNS`); CHART_SERIES.realm is
+  // only the fallback for a row the server sent without one.
+  const { CHART_SERIES, REALM_COLORS } = useChartColors();
   const searchParams = useSearchParams();
   const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 
@@ -349,10 +333,7 @@ function DashboardContent() {
    * one this build does not know) so nothing it counted is dropped.
    */
   const LIFECYCLE = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"];
-  const lifecycleStates = [
-    ...LIFECYCLE,
-    ...(stats?.state_distribution ?? []).map((s) => s.state).filter((st) => !LIFECYCLE.includes(st)),
-  ];
+  const lifecycleStates = orderLifecycle(LIFECYCLE, (stats?.state_distribution ?? []).map((s) => s.state));
   const stateCount = (state: string) =>
     stats?.state_distribution?.find((s) => s.state === state)?.count ?? 0;
 
@@ -382,6 +363,8 @@ function DashboardContent() {
       name: r.realm_name,
       count: r.count,
       civilization: r.civilization,
+      color: REALM_COLORS[r.realm_type],
+      pattern: REALM_PATTERNS[r.realm_type],
     }));
 
   const formatTimestamp = (ts: string) => formatDateTime(ts);
@@ -413,7 +396,7 @@ function DashboardContent() {
                   key={state}
                   label={
                     <>
-                      <span className={`font-mono ${STATE_INK[state] ?? ""}`}>{soulStateGlyph(state)}</span>{" "}
+                      <span className="font-mono">{soulStateGlyph(state)}</span>{" "}
                       <span title={state}>{stateLabel(state)}</span>
                     </>
                   }
@@ -427,12 +410,12 @@ function DashboardContent() {
 
             {error && (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-                <span aria-hidden="true">! </span>
+                <span aria-hidden="true">✕ </span>
                 {error}
               </p>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
               <section>
                 {/* 各文明 — ledger rows, all four civilizations. A civilization
                     with no souls is a row saying so, with a way in, not an
@@ -450,7 +433,7 @@ function DashboardContent() {
                       data-civ-row={civ}
                       className="grid min-h-9 grid-cols-[1.3fr_56px_1.4fr] items-center border-b border-[oklch(var(--color-rule))] text-sm"
                     >
-                      <span className="flex items-baseline gap-1.5 text-[oklch(var(--color-ink))]">
+                      <span className="flex items-baseline gap-2 text-[oklch(var(--color-ink))]">
                         <span aria-hidden="true" className="font-mono text-[oklch(var(--color-ink-subtle))]">{CIVILIZATION_MARK[civ]}</span>
                         <DomainEnum namespace="souls.civilizations" value={civ} />
                       </span>
@@ -495,7 +478,7 @@ function DashboardContent() {
                         </>
                       ),
                       count: stateCount(state),
-                      swatchClass: STATE_FILL[state] ?? "bg-[oklch(var(--color-ink-subtle))]",
+                      swatchClass: STATE_SWATCH[state] ?? "border-2 border-[oklch(var(--color-ink-subtle))]",
                     }))}
                   />
                 )}
@@ -538,16 +521,6 @@ function DashboardContent() {
                     grouped[action].push(log);
                   });
 
-                  const actionColors: Record<string, string> = {
-                    CREATE: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.3)]",
-                    UPDATE: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info)/0.3)]",
-                    DELETE: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
-                    LOGIN: "bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry)/0.3)]",
-                    LOGOUT: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost)/0.3)]",
-                    TRANSFER: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.3)]",
-                    JUDGMENT: "bg-[oklch(var(--color-accent)/0.2)] text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent)/0.3)]",
-                    OTHER: "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline))]",
-                  };
 
                   return (
                     <div className="space-y-4">
@@ -560,7 +533,8 @@ function DashboardContent() {
                             <DomainEnum
                               namespace="audit.actions"
                               value={action === "OTHER" ? null : action}
-                              className={`text-xs px-2 py-1 border font-medium ${actionColors[action] || actionColors.OTHER}`}
+                              // 审计动作是领域枚举:1px ink3 框、ink 字,不借状态色(补足 C15「状态徽章」)。
+                              className="text-xs px-2 py-1 border border-[oklch(var(--color-ink-subtle))] font-medium text-[oklch(var(--color-ink))]"
                             />
                             <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.activity_count", { count: String(logs.length) })}</span>
                           </div>

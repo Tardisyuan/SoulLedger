@@ -1,6 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -31,6 +31,12 @@ beforeEach(() => {
   mockNavigate.mockReset();
 });
 
+/** The section as the life page holds it: closed until toggled (the page owns which sections are open). */
+function PastLives() {
+  const [open, setOpen] = useState(false);
+  return <PastLivesSection lex="cn" reloadKey={0} open={open} onToggle={() => setOpen((v) => !v)} />;
+}
+
 describe("past lives", () => {
   it("renders a past application with NO action at all — not even when the payload says it could be appealed", async () => {
     const calls = stubApi({
@@ -44,7 +50,7 @@ describe("past lives", () => {
         ],
       },
     });
-    wrap(<PastLivesSection lex="cn" reloadKey={0} />);
+    wrap(<PastLives />);
     fireEvent.press(screen.getByTestId("section-past_lives-toggle"));
     await screen.findByTestId("past-life-0");
     fireEvent.press(screen.getByTestId("past-life-0-toggle"));
@@ -60,7 +66,7 @@ describe("past lives", () => {
 
   it("the 已封存 stamp is a row of its own above the sections — never an absolute corner over 功过", async () => {
     stubApi({ "/me/past-lives/": { status: 200, data: [life(0)] } });
-    wrap(<PastLivesSection lex="cn" reloadKey={0} />);
+    wrap(<PastLives />);
     fireEvent.press(screen.getByTestId("section-past_lives-toggle"));
     await screen.findByTestId("past-life-0");
     fireEvent.press(screen.getByTestId("past-life-0-toggle"));

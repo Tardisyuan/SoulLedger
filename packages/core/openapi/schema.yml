@@ -6187,12 +6187,19 @@ paths:
     get:
       operationId: v1_ledger_journal_retrieve
       description: |-
-        GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
+        GET /ledger/journal/?month=YYYY-MM&page=N[&all=1][&civilization=][&category=][&search=]
 
         功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
         只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
         不给 `month` 时取当前月。
       parameters:
+      - in: query
+        name: all
+        schema:
+          type: boolean
+        description: '1/true: the whole month in one response (page ignored, page_size
+          == count). Over apps.ledger.journal.WHOLE_MONTH_MAX rows it is a 400 MONTH_TOO_LARGE,
+          never truncated.'
       - in: query
         name: category
         schema:
@@ -14817,8 +14824,9 @@ paths:
   /api/v1/tenants/:
     get:
       operationId: v1_tenants_list
-      description: Tenant management API — read-only. Non-ADMIN users see only their
-        own tenant.
+      description: |-
+        Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+        Non-ADMIN users see only their own tenant.
       parameters:
       - name: ordering
         required: false
@@ -14852,8 +14860,9 @@ paths:
   /api/v1/tenants/{code}/:
     get:
       operationId: v1_tenants_retrieve
-      description: Tenant management API — read-only. Non-ADMIN users see only their
-        own tenant.
+      description: |-
+        Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+        Non-ADMIN users see only their own tenant.
       parameters:
       - in: path
         name: code
@@ -14862,6 +14871,38 @@ paths:
         required: true
       tags:
       - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{code}/seal-glyphs/:
+    patch:
+      operationId: v1_tenants_seal_glyphs_partial_update
+      description: 匾上的印字。只收这一个字段,其余租户字段仍然只读。
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSealGlyphs'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSealGlyphs'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSealGlyphs'
       security:
       - jwtAuth: []
       responses:
@@ -19007,6 +19048,7 @@ components:
       - circle
       - settings
       - other
+      - about
       - actors
       - admin
       - audit
@@ -19046,6 +19088,7 @@ components:
         * `circle` - circle
         * `settings` - settings
         * `other` - other
+        * `about` - about
         * `actors` - actors
         * `admin` - admin
         * `audit` - audit
@@ -21590,16 +21633,27 @@ components:
     LoginTenantRef:
       type: object
       description: |-
-        Schema-only: the two keys `UserWithTenantSerializer.get_tenant` returns
+        The user's tenant in the login payload and on `GET /auth/profile/`
         (no `id`, unlike `UserTenantRefSerializer`).
+
+        `civilization` picks the Web's 匾 skin; `seal_glyphs` are the 1–2 admin-set
+        seal characters, empty meaning "use the civilization default".
       properties:
         code:
           type: string
         display_name:
           type: string
+        civilization:
+          type: string
+        seal_glyphs:
+          type: array
+          items:
+            type: string
       required:
+      - civilization
       - code
       - display_name
+      - seal_glyphs
     LogoutRequest:
       type: object
       description: |-
@@ -22376,10 +22430,17 @@ components:
             type: string
           readOnly: true
           description: 殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。
+        seal_glyphs:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: 匾上的印字(1–2 个);空 = 用文明默认字。
       required:
       - code
       - display_name
       - hall_names
+      - seal_glyphs
     MeWelcomed:
       type: object
       properties:
@@ -23201,6 +23262,7 @@ components:
       - body
     OfficerScreenEnum:
       enum:
+      - about
       - actors
       - admin
       - audit
@@ -23234,6 +23296,7 @@ components:
       - other
       type: string
       description: |-
+        * `about` - about
         * `actors` - actors
         * `admin` - admin
         * `audit` - audit
@@ -25809,6 +25872,15 @@ components:
         display_name:
           type: string
           maxLength: 100
+    PatchedTenantSealGlyphs:
+      type: object
+      description: '`PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。'
+      properties:
+        seal_glyphs:
+          type: array
+          items:
+            type: string
+          maxItems: 2
     PatchedUser:
       type: object
       description: |-
@@ -25846,6 +25918,11 @@ components:
             maxLength: 0
         role:
           type: string
+          readOnly: true
+        tenant:
+          allOf:
+          - $ref: '#/components/schemas/LoginTenantRef'
+          nullable: true
           readOnly: true
         first_name:
           type: string
@@ -29926,6 +30003,8 @@ components:
           type: string
         civilization:
           type: string
+        realm_type:
+          $ref: '#/components/schemas/RealmTypeEnum'
         count:
           type: integer
       required:
@@ -29933,6 +30012,7 @@ components:
       - count
       - realm_code
       - realm_name
+      - realm_type
     SourceEnum:
       enum:
       - page
@@ -30246,15 +30326,25 @@ components:
           - type: string
             maxLength: 0
         settings: {}
+        civilization:
+          type: string
+          readOnly: true
+        seal_glyphs:
+          type: array
+          items:
+            type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
           readOnly: true
       required:
+      - civilization
       - code
       - created_at
       - display_name
       - id
+      - seal_glyphs
     TenantSoulStats:
       type: object
       properties:
@@ -30607,6 +30697,11 @@ components:
         role:
           type: string
           readOnly: true
+        tenant:
+          allOf:
+          - $ref: '#/components/schemas/LoginTenantRef'
+          nullable: true
+          readOnly: true
         first_name:
           type: string
           maxLength: 150
@@ -30635,6 +30730,7 @@ components:
       - id
       - is_active
       - role
+      - tenant
       - username
     UserBatchUpdateResult:
       type: object

@@ -192,7 +192,7 @@ function Composer({
 
   return (
     <div className="mt-4 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))]">
-      <div className={`flex flex-wrap items-center gap-3 px-3 py-1.5 border-b ${LINE} text-xs text-[oklch(var(--color-ink-muted))]`}>
+      <div className={`flex flex-wrap items-center gap-3 px-3 py-2 border-b ${LINE} text-xs text-[oklch(var(--color-ink-muted))]`}>
         <label htmlFor={id} className="font-medium text-[oklch(var(--color-ink))]">
           {label}
         </label>
@@ -219,10 +219,10 @@ function Composer({
             setSlashAt(null);
             onBlur?.();
           }}
-          className="block w-full min-h-[84px] px-3 py-2 bg-transparent font-serif text-quote text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] resize-y"
+          className="block w-full min-h-[84px] px-3 py-2 bg-transparent font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] resize-y"
         />
         {open && (
-          <div className={`absolute left-3 right-3 top-full z-10 border ${LINE} bg-[oklch(var(--color-canvas))] shadow-overlay`}>
+          <div className={`absolute left-3 right-3 top-full z-10 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))]`}>
             <p role="status" className="sr-only">
               {results.length > 0 ? t("soul_inbox.cite_results", { n: String(results.length) }) : ""}
             </p>
@@ -242,7 +242,7 @@ function Composer({
                       e.preventDefault();
                       insert(s);
                     }}
-                    className={`px-3 py-1.5 border-b ${RULE} cursor-pointer aria-selected:bg-[oklch(var(--color-surface-2))]`}
+                    className={`px-3 py-2 border-b ${RULE} cursor-pointer aria-selected:bg-[oklch(var(--color-surface-2))]`}
                   >
                     <span className="font-mono text-xs">{s.code}</span>
                     {s.display_title && <span className="ml-2 text-sm">{s.display_title}</span>}
@@ -281,7 +281,7 @@ function Letter({ m, conversation, latest, previous }: { m: InboxMessage; conver
       </p>
       <p
         className={`mt-2 max-w-[60ch] font-serif whitespace-pre-wrap break-words ${
-          latest ? "text-quote text-[oklch(var(--color-ink))]" : "text-md font-normal text-[oklch(var(--color-ink-muted))]"
+          latest ? "text-md font-normal text-[oklch(var(--color-ink))]" : "text-md font-normal text-[oklch(var(--color-ink-muted))]"
         }`}
       >
         {m.body}

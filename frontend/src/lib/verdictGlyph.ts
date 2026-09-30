@@ -1,4 +1,5 @@
 import type { Judgment } from "@soulledger/core/api";
+import { DOMAIN_BADGE, DOMAIN_BADGE_PENDING, UNKNOWN_SOUL_STATE_BADGE_CLASS } from "@/src/lib/soulStateBadge";
 
 export type Verdict = NonNullable<Judgment["verdict"]>;
 
@@ -7,7 +8,7 @@ export type Verdict = NonNullable<Judgment["verdict"]>;
  * 「丙 · 审判」是第一个读者。`Record<Verdict, …>` 让 API 多出第五种判决时在这里
  * 编译不过,而不是悄悄落到「?」。
  *
- * 字形与 `SOUL_STATE_GLYPH`(○ ◐ ■ ↻ × □)不相交 —— 两者画在同一页上,
+ * 字形与 `SOUL_STATE_GLYPH` 只共用 ◇(待审 / 待定,都是「还要处理」,都带 s2 底),
  * soulStateBadgeContract.test.ts 守着这一点。
  */
 export const VERDICT_GLYPH: Record<Verdict, string> = {
@@ -17,20 +18,23 @@ export const VERDICT_GLYPH: Record<Verdict, string> = {
   RETRY: "↺",
 };
 
-/** 判决的字色。与字形同表,理由同 `SOUL_STATE_BADGE_CLASSES`:两份拷贝无法互相比对。 */
-export const VERDICT_INK: Record<Verdict, string> = {
-  PASSED: "text-[oklch(var(--color-success))]",
-  FAILED: "text-[oklch(var(--color-danger))]",
-  PURGATORY: "text-[oklch(var(--color-warning))]",
-  RETRY: "text-[oklch(var(--color-accent))]",
+/**
+ * 判决徽章(补足 B8 / C15):领域枚举,1px ink3 框、ink 字、无底;只有「待定」
+ * 加 s2 底(还要继续处理)。「不过」的 ✕ 是 ink,不是冷玫红 —— 冷玫红只给系统出错。
+ */
+export const VERDICT_BADGE_CLASSES: Record<Verdict, string> = {
+  PASSED: DOMAIN_BADGE,
+  FAILED: DOMAIN_BADGE,
+  PURGATORY: DOMAIN_BADGE_PENDING,
+  RETRY: DOMAIN_BADGE,
 };
 
 export function verdictGlyph(verdict: string | null | undefined): string {
   return verdict && verdict in VERDICT_GLYPH ? VERDICT_GLYPH[verdict as Verdict] : "?";
 }
 
-export function verdictInk(verdict: string | null | undefined): string {
-  return verdict && verdict in VERDICT_INK
-    ? VERDICT_INK[verdict as Verdict]
-    : "text-[oklch(var(--color-ink-muted))]";
+export function verdictBadgeClass(verdict: string | null | undefined): string {
+  return verdict && verdict in VERDICT_BADGE_CLASSES
+    ? VERDICT_BADGE_CLASSES[verdict as Verdict]
+    : UNKNOWN_SOUL_STATE_BADGE_CLASS;
 }

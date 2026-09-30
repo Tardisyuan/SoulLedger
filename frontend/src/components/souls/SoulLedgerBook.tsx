@@ -140,15 +140,15 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               <HeadCell first>{t("ledger.book.col_n")}</HeadCell>
               <HeadCell>{t("ledger.book.col_date")}</HeadCell>
               <HeadCell>{t("ledger.book.col_item")}</HeadCell>
-              {/* 朱墨: the two column heads carry the polarity, which is what
-                  lets the numerals below stay a single colour decision each.
-                  The scale word rides the header ONCE per column — `Figure`
+              {/* The two column heads and the +/− signs carry the polarity; every
+                  numeral is ink, as on /ledger (Design E 组:冷玫红只表「失败」,
+                  拿来标罪业就和失败状态撞了). The scale word rides the header ONCE per column — `Figure`
                   prints it beside every figure, which is right for a panel of
                   three numbers and wrong for a table of thirty. */}
-              <HeadCell numeric scale className="text-[oklch(var(--color-karma-merit))]">
+              <HeadCell numeric scale className="text-[oklch(var(--color-ink))]">
                 {t("ledger.book.col_merit")}
               </HeadCell>
-              <HeadCell numeric scale className="text-[oklch(var(--color-karma-demerit))]">
+              <HeadCell numeric scale className="text-[oklch(var(--color-ink))]">
                 {t("ledger.book.col_demerit")}
               </HeadCell>
               <HeadCell numeric scale>{t("ledger.book.col_balance")}</HeadCell>
@@ -193,7 +193,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                         field="original_weight"
                         sign="+"
                         value={weight}
-                        className="text-[oklch(var(--color-karma-merit))]"
+                        className="text-[oklch(var(--color-ink))]"
                       />
                     ) : null}
                   </BodyCell>
@@ -203,7 +203,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                         field="original_weight"
                         sign="-"
                         value={weight}
-                        className="text-[oklch(var(--color-karma-demerit))]"
+                        className="text-[oklch(var(--color-ink))]"
                       />
                     )}
                   </BodyCell>
@@ -213,11 +213,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                       field="running_balance"
                       sign={runningBalance < 0 ? "-" : "+"}
                       value={Math.abs(runningBalance)}
-                      className={
-                        runningBalance < 0
-                          ? "text-[oklch(var(--color-karma-demerit))]"
-                          : "text-[oklch(var(--color-karma-merit))]"
-                      }
+                      className="text-[oklch(var(--color-ink))]"
                     />
                   </BodyCell>
                 </tr>
@@ -241,7 +237,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                   field="merit_total"
                   sign="+"
                   value={meritTotal}
-                  className="text-[oklch(var(--color-karma-merit))]"
+                  className="text-[oklch(var(--color-ink))]"
                 />
               </FootCell>
               <FootCell numeric>
@@ -249,7 +245,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                   field="demerit_total"
                   sign="-"
                   value={demeritTotal}
-                  className="text-[oklch(var(--color-karma-demerit))]"
+                  className="text-[oklch(var(--color-ink))]"
                 />
               </FootCell>
               <FootCell numeric>
@@ -257,11 +253,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                   field="net_total"
                   sign={netTotal < 0 ? "-" : "+"}
                   value={Math.abs(netTotal)}
-                  className={
-                    netTotal < 0
-                      ? "text-[oklch(var(--color-karma-demerit))]"
-                      : "text-[oklch(var(--color-karma-merit))]"
-                  }
+                  className="text-[oklch(var(--color-ink))]"
                 />
               </FootCell>
             </tr>

@@ -462,8 +462,9 @@ describe("WelcomePage first-run checklist", () => {
       expect(found.length).toBeGreaterThan(0);
       return found;
     });
-    // Design's six (F group reply, 2026-09-26): W and R present, U gone with the undo window.
-    expect(keys).toEqual(["1–4", "S", "W", "R", "N", "?"]);
+    // Design's six (F group reply, 2026-09-26) plus C (v2 claim, 2026-09-30): W and R present,
+    // U gone with the undo window.
+    expect(keys).toEqual(["1–4", "C", "S", "W", "R", "N", "?"]);
     // The design's ⌘K / Q / ⌘⏎ / ⌘Z have no handler anywhere in the app; U was withdrawn.
     for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z", "U"]) expect(keys).not.toContain(invented);
   });
