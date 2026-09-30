@@ -20,7 +20,7 @@ function Rows({ credits }: { credits: Credit[] }) {
         const licence = c.licence === "PD" ? null : LICENCE_LABELS[c.licence];
         return (
           <li
-            key={c.name}
+            key={`${c.name} · ${c.detail ?? ""}`}
             className="grid grid-cols-[1fr_auto] gap-x-4 border-b border-[oklch(var(--color-rule))] py-2"
           >
             <span className="min-w-0">

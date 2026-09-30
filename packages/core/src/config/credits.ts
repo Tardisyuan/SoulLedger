@@ -37,7 +37,7 @@ export const FONT_CREDITS: Credit[] = [
 ].map((name) => ({ name, licence: "OFL-1.1" as const }));
 
 export const ORNAMENT_CREDITS: Credit[] = [
-  { name: "Owen Jones", detail: "The Grammar of Ornament, 1856", licence: "PD" },
+  { name: "Owen Jones", detail: "The Grammar of Ornament, 1856 · Pl. LXII / LXVIII / VI / XXII", licence: "PD" },
 ];
 
 /**
@@ -47,7 +47,8 @@ export const ORNAMENT_CREDITS: Credit[] = [
  * 2026-09-30 核对 Commons 文件页:模板是 `{{Cc-zero}}`,API 的 extmetadata 为
  * LicenseShortName「CC0」、AttributionRequired「false」、Credit「Museo Egizio」——
  * 所以是 CC0 1.0,不是 CC BY 2.0。按 A7「以文件页为准」写 CC0;署名不是义务,照样写上馆名。
- * 另外三张:素材包说明写「CC0 馆藏」,具体出处素材包没有给。
+ * 另外三张的出处由 Design 在素材包 README 与补足 A7 补齐(2026-09-30),都是 CC0 1.0,
+ * 都在 Commons 上。四张法律上都不需要署名,致谢页仍逐条列出。
  */
 export const IMAGE_CREDITS: Credit[] = [
   {
@@ -56,5 +57,22 @@ export const IMAGE_CREDITS: Credit[] = [
     licence: "CC0-1.0",
     url: "https://commons.wikimedia.org/wiki/File:Stamped_clay_sealing_(bulla)_showing_St._Menas_-_Museo_Egizio,_Turin_S_2312_p01.jpg",
   },
-  { name: "scan-cnseal · scan-wax · scan-cyl", licence: "CC0-1.0" },
+  {
+    name: "The Metropolitan Museum of Art",
+    detail: "韓幹《照夜白圖》卷 · 1977.78 · DP153679",
+    licence: "CC0-1.0",
+    url: "https://commons.wikimedia.org/wiki/File:唐_韓幹_照夜白圖_卷-Night-Shining_White_MET_DP153679.jpg",
+  },
+  {
+    name: "The Metropolitan Museum of Art",
+    detail: "Seal Impression, Municipal Seal of Middelburg · 227192",
+    licence: "CC0-1.0",
+    url: "https://commons.wikimedia.org/wiki/File:Seal_Impression,_Municipal_Seal_of_Middelburg_MET_227192.jpg",
+  },
+  {
+    name: "The Metropolitan Museum of Art",
+    detail: "Cylinder seal and modern impression: ritual scene before a temple facade · DP270679",
+    licence: "CC0-1.0",
+    url: "https://commons.wikimedia.org/wiki/File:Cylinder_seal_and_modern_impression-_ritual_scene_before_a_temple_facade_MET_DP270679.jpg",
+  },
 ];
