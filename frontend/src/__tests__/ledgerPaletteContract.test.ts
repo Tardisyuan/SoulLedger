@@ -145,7 +145,7 @@ describe("civilization enters only the plaque colour (规范 v2 §1.8 收窄)", 
   // 文明皮是「匾色 + 匾纹 + 印形 + 题字 / 印文字体」(§三),所以 [data-civ] 块里除了匾色还有
   // 素材与字体的变量(第二阶段,见 zhuyinShell.test)。这条守的仍是 §1.8 收窄那句话:**颜色**
   // 里只有 --color-main 随文明变;非颜色的声明只能是那几类皮肤素材,别的一概不许。
-  const SKIN_ASSETS = /^--(band|band-compact|seal-body|seal-ring|seal-line|seal-line-small|seal-scan|section|font-plaque|font-seal)$/;
+  const SKIN_ASSETS = /^--(band|band-compact|band-tex|band-tex-w|seal-body|seal-ring|seal-line|seal-line-small|seal-scan|section|font-plaque|font-seal)$/;
 
   it("a [data-civ] block sets no colour but --color-main, and nothing but skin assets besides", () => {
     const blocks = [...CSS.matchAll(/\[data-civ="(\w+)"\]\s*\{([^}]*)\}/g)];
