@@ -200,7 +200,7 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
               </div>
               {cronErrors.length > 0 && (
                 <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-danger))] break-words">
-                  <span aria-hidden="true">! </span>
+                  <span aria-hidden="true">✕ </span>
                   {cronErrors.join(" ")}
                 </p>
               )}
@@ -222,7 +222,11 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
             {t("scheduler.editor.preview")} · {timezone}
           </h3>
           {preview.runs === null ? (
-            <p className="text-sm text-[oklch(var(--color-status-warning))]">{t("scheduler.editor.preview_invalid")}</p>
+            // 补足 C15:cron 写错用冷玫红 ✕ 说明,不是警示橙 —— 这一行是「这样存不进去」。
+            <p className="text-sm text-[oklch(var(--color-danger))]">
+              <span aria-hidden="true">✕ </span>
+              {t("scheduler.editor.preview_invalid")}
+            </p>
           ) : preview.runs.length === 0 ? (
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("scheduler.editor.preview_none")}</p>
           ) : (
