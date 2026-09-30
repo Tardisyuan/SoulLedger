@@ -15,25 +15,16 @@
  * without the soul pulling each one.
  */
 import * as Network from "expo-network";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useI18n } from "./i18n";
+import { OnlineContext, type Online } from "./online";
 import { space } from "./theme";
 import { GUTTER, SmallButton, Txt, useTheme } from "./ui";
 
-interface Online {
-  offline: boolean;
-  /** Counts returns to the network; 0 until the first. */
-  back: number;
-}
-
-const OnlineContext = createContext<Online>({ offline: false, back: 0 });
-
-export function useOnline(): Online {
-  return useContext(OnlineContext);
-}
+export { useOnline } from "./online";
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState<Online>({ offline: false, back: 0 });
@@ -80,7 +71,7 @@ function OfflineBar({ onRetry }: { onRetry: () => void }) {
         testID="offline-bar"
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
-        // GUTTER at render, not in StyleSheet.create: ui.tsx imports this module (useOnline).
+        // GUTTER at render, not in StyleSheet.create (kept from when ui.tsx imported this module).
         style={[styles.bar, { borderColor: t.inkSubtle, marginHorizontal: GUTTER }]}
       >
         <Txt testID="offline-text" variant="body" style={styles.fill}>
