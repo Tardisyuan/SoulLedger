@@ -53,6 +53,7 @@ import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
+import { useOnline } from "./network";
 import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./rules";
 import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme";
 
@@ -1035,6 +1036,14 @@ export function useReloadOnRefocus(reload: () => unknown) {
       void reload();
     }, [reload])
   );
+  // Back online (network.tsx): whatever failed while offline loads again, focused or not.
+  const { back } = useOnline();
+  const seen = useRef(back);
+  useEffect(() => {
+    if (back === seen.current) return; // a new `reload` alone is not a return to the network
+    seen.current = back;
+    void reload();
+  }, [back, reload]);
 }
 
 export const styles = StyleSheet.create({

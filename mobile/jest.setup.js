@@ -131,6 +131,28 @@ require("react-native-gesture-handler/jestSetup");
 jest.mock("react-native-worklets", () => require("react-native-worklets/src/mock"));
 jest.mock("react-native-reanimated", () => require("react-native-reanimated/mock"));
 
+// expo-network: the OS's view of the network. `__set` changes it and tells the listeners,
+// as the OS does; `getNetworkStateAsync` answers from the same state. Connected by default.
+jest.mock("expo-network", () => {
+  const listeners = new Set();
+  const state = { current: { type: "WIFI", isConnected: true, isInternetReachable: true } };
+  return {
+    __set: (next) => {
+      state.current = { ...state.current, ...next };
+      listeners.forEach((fn) => fn(state.current));
+    },
+    __reset: () => {
+      listeners.clear();
+      state.current = { type: "WIFI", isConnected: true, isInternetReachable: true };
+    },
+    getNetworkStateAsync: jest.fn(async () => state.current),
+    addNetworkStateListener: (fn) => {
+      listeners.add(fn);
+      return { remove: () => listeners.delete(fn) };
+    },
+  };
+});
+
 // expo-splash-screen: a native module with no JS side under jest. A double that records
 // what was asked (jest.fn) and does nothing else.
 jest.mock("expo-splash-screen", () => ({ preventAutoHideAsync: jest.fn(async () => true), hideAsync: jest.fn(async () => true) }));

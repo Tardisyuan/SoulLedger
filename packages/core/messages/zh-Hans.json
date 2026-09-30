@@ -2739,6 +2739,7 @@
       "screen_title": "簿册未能连上",
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
+      "offline": "已离线",
       "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生"
     },
     "lexicon": {

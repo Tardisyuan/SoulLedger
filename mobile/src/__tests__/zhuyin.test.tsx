@@ -3,6 +3,8 @@
  */
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, StyleSheet } from "react-native";
@@ -10,15 +12,15 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { RING_D, SVG } from "../art";
 import { AppHeader, PlaqueHeader, TabBar } from "../chrome";
-import { PLAQUE_CN } from "../fonts";
+import { PLAQUE_CN, PLAQUE_CN_KEY, bootPlaqueFace, preloadPlaqueFace } from "../fonts";
 import { ColdStart, coldStart } from "../coldStart";
 import { I18nProvider } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform, persistentStore } from "../platform";
 import { DEFAULT_GLYPHS, Seal, sealGlyphs } from "../seal";
-import { SessionContext, type SessionState } from "../session";
+import { SessionContext, SessionProvider, useSession, type Session, type SessionState } from "../session";
 import { motion, themeFor } from "../theme";
 import { ThemeContext } from "../ui";
-import { PROFILE } from "./stubApi";
+import { PROFILE, stubApi } from "./stubApi";
 
 // Every other suite gets jest.setup's inert double; this one tests the real thing.
 jest.unmock("../coldStart");
@@ -207,6 +209,80 @@ describe("Ma Shan Zheng, on demand (user decision 2026-09-30)", () => {
   });
 });
 
+describe("Ma Shan Zheng, before the first plaque (user decision 2026-09-30: 地府登录后预加载)", () => {
+  const Font = jest.requireMock("expo-font") as { loadAsync: jest.Mock; __loaded: Set<string>; __state: { fail: boolean } };
+  const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  let session: Session;
+  function Probe() {
+    session = useSession();
+    return null; // no plaque anywhere: whatever loads the face here, it is not usePlaqueFace
+  }
+  beforeEach(async () => {
+    Font.__loaded.clear();
+    Font.__state.fail = false;
+    Font.loadAsync.mockClear();
+    secure.clear();
+    await AsyncStorage.clear();
+    persistentStore.remove(PLAQUE_CN_KEY);
+  });
+  const signInAs = async (civilization: string) => {
+    stubApi({
+      "/soul-auth/login/": { status: 200, data: { access: "A", refresh: "R", soul_code: PROFILE.soul_code, account: PROFILE.account } },
+      "/me/": { status: 200, data: { ...PROFILE, civilization } },
+    });
+    render(
+      <SessionProvider>
+        <Probe />
+      </SessionProvider>
+    );
+    await act(async () => session.signIn(PROFILE.soul_code, "pw"));
+    expect(session.state.status).toBe("signedIn");
+  };
+
+  it("地府 sign-in: the load starts at once, and the next cold start is told to load it too", async () => {
+    await signInAs("CHINESE");
+    expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+    expect(Font.loadAsync).toHaveBeenCalledWith({ [PLAQUE_CN]: expect.anything() });
+    expect(persistentStore.get(PLAQUE_CN_KEY)).toBe("1");
+    expect(await AsyncStorage.getItem(PLAQUE_CN_KEY)).toBe("1");
+  });
+
+  it.each(["EUROPEAN", "EGYPTIAN", "GREEK"])("%s sign-in: nothing loads, and a 地府 soul's mark from before is taken off", async (civilization) => {
+    persistentStore.set(PLAQUE_CN_KEY, "1");
+    await signInAs(civilization);
+    expect(Font.loadAsync).not.toHaveBeenCalled();
+    expect(persistentStore.get(PLAQUE_CN_KEY)).toBeNull();
+  });
+
+  it("sign-out takes the mark off: the login screen's cold start loads nothing", async () => {
+    await signInAs("CHINESE");
+    act(() => session.signOut());
+    expect(persistentStore.get(PLAQUE_CN_KEY)).toBeNull();
+  });
+
+  it("cold start with the mark: loaded under the splash, so the first plaque frame is already Ma Shan Zheng", async () => {
+    persistentStore.set(PLAQUE_CN_KEY, "1");
+    await bootPlaqueFace();
+    expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+    wrap(<PlaqueHeader title="本世" onAccount={() => {}} />, signedIn());
+    // No act() first: this is the first commit — no Noto Serif SC frame to swap out.
+    expect(flat(screen.getByTestId("plaque-title")).fontFamily).toBe(PLAQUE_CN);
+  });
+
+  it("cold start without it: nothing loads", async () => {
+    await bootPlaqueFace();
+    expect(Font.loadAsync).not.toHaveBeenCalled();
+  });
+
+  it("asked twice while loading (session and plaque at once): one request", async () => {
+    await act(async () => {
+      await Promise.all([preloadPlaqueFace(), preloadPlaqueFace()]);
+    });
+    expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+    expect(Font.__loaded.has(PLAQUE_CN)).toBe(true);
+  });
+});
+
 describe("the tab bar (补足 B11 / C14)", () => {
   const bar = (titles: string[], index = 0) => {
     const routes = ["Life", "Applications", "Letters", "Circle"].map((name) => ({ key: `${name}-k`, name }));
@@ -271,6 +347,36 @@ describe("the cold start (补足 C18)", () => {
     await act(async () => {});
     expect(screen.getByTestId("cold-start-seal-glyph", H).props.children).toBe("冥");
     expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe("#100e0d");
+  });
+
+  it("印泥 120–320: the civilization seal's edge scan soaks in to 0.8; the neutral seal has no scan to show", async () => {
+    // Reanimated's jest mock settles a timing at once and never re-renders a style, so the curve is
+    // read off the calls that build it; the first frame is read off the tree.
+    const R = jest.requireMock("react-native-reanimated") as Record<string, (...a: unknown[]) => unknown>;
+    const timing = jest.spyOn(R, "withTiming");
+    const delay = jest.spyOn(R, "withDelay");
+    render(<ColdStart session={signedIn()} scheme="light" />);
+    await act(async () => {});
+    // Frame 0: the scan is not there yet — the seal lands on paper, then the ink soaks in.
+    expect(flat(screen.getByTestId("cold-start-seal-ring-layer", H)).opacity).toBe(0);
+    const soak = motion.stampBloom / 2;
+    expect(timing.mock.calls).toEqual(expect.arrayContaining([[0.95, { duration: soak }], [0.8, { duration: soak }]]));
+    // It starts at the press (120) and is done by 320.
+    expect(motion.stampDrop + motion.stampBloom).toBe(320);
+    expect(delay.mock.calls.filter(([ms]) => ms === motion.stampDrop).length).toBeGreaterThanOrEqual(2); // press and 印泥
+    timing.mockRestore();
+    delay.mockRestore();
+    screen.unmount();
+    // Before sign-in: the neutral seal, and no scan layer at all (C18: 中性皮没有印泥层).
+    coldStart.played = false;
+    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
+    await act(async () => {});
+    expect(screen.getByTestId("cold-start-seal", H)).toBeTruthy();
+    expect(screen.queryByTestId("cold-start-seal-ring-layer", H)).toBeNull();
+    screen.unmount();
+    // A seal outside the cold start has no such layer style: its scan is simply there.
+    render(<Seal testID="still" civ="cn" size={52} theme={themeFor("CHINESE", "light")} />);
+    expect(flat(screen.getByTestId("still-ring-layer", H)).opacity).toBeUndefined();
   });
 
   it("a tap skips to the end", async () => {
