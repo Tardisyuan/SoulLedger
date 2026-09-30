@@ -79,15 +79,20 @@ export function Switch({
       aria-disabled={disabled || undefined}
       aria-describedby={describedBy}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center border transition-colors ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${
-        checked
-          ? "bg-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]"
-          : "bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline))]"
-      }`}
+      // 规范 v2 A1「开关」,与 SchedulerJobRow 同一套:开 = ink 实底、纸色滑块在右;关 = 空底、ink3 框与
+      // 滑块在左;禁用 = s2 底、line 框(不调透明度)。v2 撤掉了强调色,accent 指向 ink —— 这里原先开 = accent
+      // 底 + ink 滑块,两者同色,打开时整块一片(2026-09-30 用户截图)。
+      className={`relative inline-flex h-[18px] w-8 shrink-0 items-center border-[1.5px] p-0.5 transition-colors duration-instant ${
+        disabled
+          ? "cursor-not-allowed border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))]"
+          : checked
+            ? "bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
+            : "bg-transparent border-[oklch(var(--color-line-strong))]"
+      } ${checked ? "justify-end" : "justify-start"}`}
     >
       <span
         aria-hidden="true"
-        className={`inline-block h-4 w-4 bg-[oklch(var(--color-ink))] transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`}
+        className={`block size-[11px] ${checked && !disabled ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`}
       />
     </button>
   );
