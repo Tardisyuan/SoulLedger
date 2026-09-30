@@ -116,19 +116,45 @@
    * 旧的三个名字(press / state / settle)是 v1 按「做什么」起的,调用点有一百多处,
    * 保留为 v2 档位的别名:press、state 都是 fast(悬停与行内状态),settle 是 base
    * (进出场)。新代码写 v2 的名字。 */
+  /* 规范 v3 的动效令牌是四档时长加三条缓动。**名字一个都不改** —— 111 处调用点
+   * (63 处 duration-、48 处 ease-,git grep 数的)写的都是 v2 的名字,而 v3 的四档
+   * 恰好能落进 v2 已有的四个名字里,所以这一轮只改值:
+   *
+   *   v3 instant  80ms  焦点、按下反馈   → press   (v2 原本 120,与 state 同值)
+   *   v3 local   160ms  选中、Toast、标签 → fast / state
+   *   v3 layout  240ms  弹层、抽屉、分节  → base / settle
+   *   v3 page    320ms  全案转场、盖印    → slow    (v2 本来就是 320,不动)
+   *
+   * 两个名字**不进 v3 的表**,继续按 v2 的语义用:
+   *   instant 0ms   「不动画」。开关与勾选写的是这个(assist-admin/parts.tsx、
+   *                 SchedulerJobRow.tsx 的 `transition-colors duration-instant`)。
+   *                 v3 的 instant 是 80ms 的另一件事,已经给了 press,别把这两个
+   *                 混起来 —— 把它改成 80ms 会让所有开关无声地动起来。
+   *   ritual 600ms  按住确认。v3 没有这一档,交互本身还在,所以留着。
+   *
+   * 缓动:
+   *   exit      v2 (0.4,0,1,1) 与 v3 逐位相同,不动。
+   *   enter     (0,0,0.2,1) → (0.2,0.8,0.2,1)。v3 的进场曲线起步更快、尾巴更长。
+   *   drop      (0.55,0,1,0.45) → (0.2,0.8,0.3,1)。v3 管这条叫 emphasis,用途同样
+   *             只有盖印,所以沿用 drop 这个名字而不是再造一个。
+   *   standard  v3 没有定义「同一元素 A→B」这一条,而这里有 6 处在用,原样保留。
+   *
+   * **v3 的「减少动态效果用 80ms 防闪淡入」这一条没有采纳。** 这里的做法是全部归 0
+   * (下面的 @media prefers-reduced-motion 把一切压到 1ms,`useReducedMotionDurations`
+   * 把 JS 侧五档全给 0),那是 v2 明确定下来的。改成 80ms 是另一个决定,不在令牌这一轮。 */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --ease-drop: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-drop: cubic-bezier(0.2, 0.8, 0.3, 1);
 
   --transition-duration-instant: 0ms;
-  --transition-duration-fast: 120ms;
-  --transition-duration-base: 200ms;
+  --transition-duration-fast: 160ms;
+  --transition-duration-base: 240ms;
   --transition-duration-slow: 320ms;
   --transition-duration-ritual: 600ms;
-  --transition-duration-press: 120ms;
-  --transition-duration-state: 120ms;
-  --transition-duration-settle: 200ms;
+  --transition-duration-press: 80ms;
+  --transition-duration-state: 160ms;
+  --transition-duration-settle: 240ms;
 
   /* THE TABLE ROWS, and the one of the three that is not decoration.
    *
