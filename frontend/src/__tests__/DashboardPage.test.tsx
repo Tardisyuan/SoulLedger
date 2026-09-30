@@ -198,7 +198,7 @@ describe("DashboardPage overview", () => {
     expect(container.querySelectorAll("[data-civ-row]")).toHaveLength(4);
   });
 
-  it("colours histogram bars by the sign of their bucket, with the count above each", async () => {
+  it("draws histogram bars by the sign of their bucket — 功 solid, 过 hatched, never a status colour (v2 A5)", async () => {
     const { container } = renderPage();
     await found(container, "[data-histogram-bar]");
     // Looked up by attribute value in JS: jsdom's selector engine mis-reads a
@@ -207,10 +207,32 @@ describe("DashboardPage overview", () => {
       Array.from(container.querySelectorAll<HTMLElement>("[data-histogram-bar]")).find(
         (el) => el.getAttribute("data-histogram-bar") === label
       ) as HTMLElement;
+    const fill = (label: string) => bar(label).querySelector("[aria-hidden]")?.className ?? "";
     expect(bar("< -50")).toHaveTextContent("2");
-    expect(bar("< -50").querySelector("[aria-hidden]")?.className).toContain("--color-danger");
-    expect(bar("> 50").querySelector("[aria-hidden]")?.className).toContain("--color-success");
-    expect(bar("-5 to 5").querySelector("[aria-hidden]")?.className).toContain("--color-ink-subtle");
+    expect(fill("< -50")).toContain("repeating-linear-gradient(45deg,oklch(var(--color-chart-1))_0_1.5px");
+    expect(fill("> 50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-1\)\)\]$/);
+    expect(fill("-5 to 5")).not.toContain("bg-");
+    // Absence: no feedback colour anywhere in the histogram.
+    expect(container.querySelector("[data-histogram]")?.innerHTML).not.toMatch(/--color-(danger|success)/);
+  });
+
+  it("图例账:生命周期占梯度第 1–5 档,迷失是第 1 档空框、排在最后(v2 A5 / D 组)", async () => {
+    mockedStats.mockResolvedValue({
+      ...baseStats,
+      data: { ...baseStats, state_distribution: [{ state: "LOST", label: "LOST", count: 1 }, ...baseStats.state_distribution] },
+    });
+    const { container } = renderPage();
+    const ledger = await found(container, "[data-legend-ledger]");
+    await waitFor(() => expect(ledger.querySelector('[data-legend-row="LOST"]')).not.toBeNull());
+    const rows = Array.from(ledger.querySelectorAll<HTMLElement>("[data-legend-row]")).map((r) => r.dataset.legendRow);
+    expect(rows).toEqual(["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED", "LOST"]);
+    const swatch = (state: string) => ledger.querySelector(`[data-legend-row="${state}"] > span`)?.className ?? "";
+    ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"].forEach((state, i) =>
+      expect(swatch(state)).toContain(`bg-[oklch(var(--color-chart-${i + 1}))]`)
+    );
+    expect(swatch("LOST")).toContain("border-[oklch(var(--color-chart-1))]");
+    expect(swatch("LOST")).not.toContain("bg-");
+    expect(ledger.innerHTML).not.toContain("--color-status-");
   });
 
   describe("待办 row", () => {

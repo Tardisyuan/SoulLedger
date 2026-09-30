@@ -5,12 +5,6 @@
   "app/cross-judgments/[id]/page.tsx": {
     "space": 2
   },
-  "app/dashboard/loading.tsx": {
-    "space": 1
-  },
-  "app/dashboard/page.tsx": {
-    "space": 2
-  },
   "app/dispatch/[id]/page.tsx": {
     "space": 3
   },
@@ -75,9 +69,6 @@
     "space": 1
   },
   "src/components/cross-judgments/CrossJudgmentStops.tsx": {
-    "space": 2
-  },
-  "src/components/dashboard/BalanceHistogram.tsx": {
     "space": 2
   },
   "src/components/judgment/CorpusCitedBy.tsx": {
