@@ -249,9 +249,9 @@ describe("SoulLedgerProgress", () => {
     const fail = topo.querySelector('[data-fork="FAIL"]')!;
     const li = fail.querySelector("li")!;
     expect(li.getAttribute("data-station-state")).toBe("current");
-    // The segment into the second death: walked, so solid (3px) — and not the dashed "ahead" line.
+    // The segment into the second death: walked, so solid (2px ink, 补足 C15) — and not the dashed "ahead" line.
     const into = li.querySelector('[aria-hidden="true"] > span')!;
-    expect(into.className).toContain("border-t-[3px]");
+    expect(into.className).toContain("border-t-2");
     expect(into.className).not.toContain("border-dashed");
     // The end is still a dashed square: not a place.
     expect(li.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();

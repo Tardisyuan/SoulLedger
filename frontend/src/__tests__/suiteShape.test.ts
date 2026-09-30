@@ -92,6 +92,9 @@ const COLLECTED_FILES = [
   "RequirePermission.test.tsx",
   "SchedulerPage.test.tsx",
   "RoleFormModal.test.tsx",
+  // 2026-09-30 v2 管理页(v2-web-p3b):租户印字编辑、审批流节点框。
+  "SealGlyphsDialog.test.tsx",
+  "EditableNodeFrame.test.tsx",
   "selectionIsNotColourOnly.test.tsx",
   "SettingsDrawer.test.tsx",
   "Skeleton.test.tsx",
