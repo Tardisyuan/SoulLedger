@@ -18,7 +18,7 @@
     "android": {
       "package": "com.soulledger.soul",
       "adaptiveIcon": {
-        "backgroundColor": "#f4ede0",
+        "backgroundColor": "#131211",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -43,7 +43,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#2b2724"
+          "color": "#131211"
         }
       ],
       [
