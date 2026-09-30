@@ -3,7 +3,7 @@
 import { type ApprovalWorkflow } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 /**
  * /workflow/[id] 左栏的「甲 · 审批流信息」(原是一张卡)。原先长在 app/workflow/[id]/page.tsx 的
@@ -30,7 +30,7 @@ export function WorkflowInfoCard({
   return (
     <section>
       {/* 甲 · 区块标压线,dt / dd 行线分隔(规范 v1 详情页原型,与灵魂详情「甲 · 身份」同一写法)。 */}
-      <LedgerHeading mark="甲" title={t("workflow.detail.info")} />
+      <div className="pt-8 pb-3"><SectionTitle>{t("workflow.detail.info")}</SectionTitle></div>
       <dl className="grid grid-cols-[7rem_1fr] text-sm">
         <dt className={DT}>{t("workflow.detail.soul")}</dt>
         <dd className={`${DD} font-medium`}>{workflow.soul_name || workflow.soul}</dd>

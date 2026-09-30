@@ -28,7 +28,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
 import { WorkflowLinearPreview } from "@/src/components/workflow/detail/WorkflowLinearPreview";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -321,7 +321,7 @@ export default function WorkflowDetailPage() {
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
           <section>
-            <LedgerHeading mark="乙" title={t("workflow.detail.current_node")} />
+            <div className="pt-8 pb-3"><SectionTitle>{t("workflow.detail.current_node")}</SectionTitle></div>
             <div className="mb-4 py-2 border-b border-[oklch(var(--color-rule))] border-l-[3px] border-l-[oklch(var(--color-ink))] pl-3">
               <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{currentNode.node_name}</div>
               <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
