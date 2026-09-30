@@ -7,6 +7,7 @@ import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@soulledger
 import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -111,7 +112,7 @@ function SealGlyphsCell({ tenant }: { tenant: Tenant }) {
   const fallback = skin in DEFAULT_SEAL_GLYPHS ? DEFAULT_SEAL_GLYPHS[skin as SealCiv].join("") : null;
   return (
     <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
-      {fallback ? t("tenants.seal.default", { glyph: fallback }) : "—"}
+      {fallback ? t("tenants.seal.default", { glyph: fallback }) : <MissingValue kind="inapplicable" />}
     </span>
   );
 }
