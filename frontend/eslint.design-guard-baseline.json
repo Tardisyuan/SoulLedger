@@ -1,7 +1,4 @@
 {
-  "app/corpus/page.tsx": {
-    "space": 3
-  },
   "app/cross-judgments/[id]/page.tsx": {
     "space": 2
   },
