@@ -84,6 +84,13 @@ MODEL_UNRESOLVABLE: dict[str, str] = {
 
 
 EXEMPT: dict[str, str] = {
+    "EvalRunDetailView": (
+        "ADMIN-only by role (apps/soul_assist/admin_views.py::IsAdminRole, pinned by "
+        "test_assist_admin.py::test_every_route_refuses_every_non_admin_role), and ADMIN is the "
+        "one tenant-exempt role, so scope_to_tenant would be the identity here. An eval run is not "
+        "a hall's record: it belongs to the single global assistant config. The path the contract "
+        "finds (created_by__tenant) is only who pressed start."
+    ),
     "DispatchRecordViewSet": (
         "Inherently cross-tenant by design: a dispatch record is a transfer "
         "*between* two tenants, so single-tenant scoping would hide every row "

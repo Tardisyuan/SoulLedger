@@ -12,8 +12,10 @@ import { pillarIsWide } from "@soulledger/core/domain/pillar";
 import { Platform, Pressable, StyleSheet, View, type TextLayoutEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import type { AssistScreen } from "@soulledger/core/api/soul-assist";
 import { useContext, useState, type ReactNode } from "react";
 
+import { AssistEntry, useAssist } from "./assist";
 import { Emblem, Icon, type IconName } from "./emblems";
 import { family, plaqueFamily, quoteFamily, usePlaqueFace } from "./fonts";
 import { useI18n } from "./i18n";
@@ -61,13 +63,18 @@ export interface HeaderAction {
   framed?: boolean;
 }
 
-/** The right end of a bar: its actions, else the account icon, else an empty 44pt slot. Drawn on the plaque. */
-function BarEnd({ action, onAccount }: { action?: HeaderAction | HeaderAction[]; onAccount?: () => void }) {
+/**
+ * The right end of a bar: 「问一问」 when the page has one, then its actions, else the account
+ * icon, else an empty 44pt slot. Drawn on the plaque.
+ */
+function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderAction[]; onAccount?: () => void; assist?: AssistScreen }) {
   const t = useTheme();
   const { t: tr } = useI18n();
+  const entry = assist ? <AssistEntry screen={assist} /> : null;
   if (action)
     return (
       <>
+        {entry}
         {(Array.isArray(action) ? action : [action]).map((a) => (
           <Pressable
             key={a.testID}
@@ -84,21 +91,31 @@ function BarEnd({ action, onAccount }: { action?: HeaderAction | HeaderAction[];
     );
   if (onAccount)
     return (
-      <Pressable
-        testID="header-account"
-        accessibilityRole="button"
-        accessibilityLabel={tr("soul_app.settings.title")}
-        onPress={onAccount}
-        style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.s2 }]}
-      >
-        <Icon name="person" size={18} color={t.ink} strokeWidth={1.2} />
-      </Pressable>
+      <>
+        {entry}
+        <Pressable
+          testID="header-account"
+          accessibilityRole="button"
+          accessibilityLabel={tr("soul_app.settings.title")}
+          onPress={onAccount}
+          style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.s2 }]}
+        >
+          <Icon name="person" size={18} color={t.ink} strokeWidth={1.2} />
+        </Pressable>
+      </>
     );
-  return <View style={styles.icon} />;
+  return (
+    <>
+      {entry}
+      <View style={styles.icon} />
+    </>
+  );
 }
 
 interface BarProps {
   title: string;
+  /** 「问一问」 (canvas 1b): this page's id for the assistant; the entry sits left of the account icon or the actions. */
+  assist?: AssistScreen;
   /** The app name on the pre-login bar, set in the serif (product decision 2026-09-26). */
   serif?: boolean;
   onBack?: () => void;
@@ -112,13 +129,15 @@ interface BarProps {
 }
 
 /** The bar row, drawn inside a PlaqueFrame (so its theme is `onPlaqueTheme`). */
-function Bar({ title, serif, onBack, action, onAccount, civ, cnFace }: BarProps & { civ: Theme["civ"]; cnFace: boolean }) {
+function Bar({ title, serif, onBack, action, onAccount, assist, civ, cnFace }: BarProps & { civ: Theme["civ"]; cnFace: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { compact } = useLayout();
   // Chat handoff 1e (Material): on Android the title sits at the left, with nothing held
   // open for a back key it does not have, and back is an arrow. iOS: centred, chevron.
   const android = Platform.OS === "android";
+  const assistant = useAssist();
+  const rightCount = (Array.isArray(action) ? action.length : 1) + (assist && assistant?.visible ? 1 : 0);
   return (
     <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
       {onBack ? (
@@ -127,7 +146,7 @@ function Bar({ title, serif, onBack, action, onAccount, civ, cnFace }: BarProps 
         </Pressable>
       ) : android ? null : (
         // iOS centres the title: as wide on the left as the actions are on the right.
-        <View style={[styles.icon, { width: 44 * (Array.isArray(action) ? action.length : 1) }]} />
+        <View style={[styles.icon, { width: 44 * rightCount }]} />
       )}
       <Txt
         accessibilityRole="header"
@@ -143,7 +162,7 @@ function Bar({ title, serif, onBack, action, onAccount, civ, cnFace }: BarProps 
       >
         {title}
       </Txt>
-      <BarEnd action={action} onAccount={onAccount} />
+      <BarEnd action={action} onAccount={onAccount} assist={assist} />
     </View>
   );
 }
@@ -166,7 +185,17 @@ export function AppHeader(props: BarProps) {
  * face at 20, two lines — judged by the laid-out lines, not by counting characters.
  * Neutral (an unrecognised civilization) or no session: the simplified plaque.
  */
-export function PlaqueHeader({ title, onAccount, action }: { title: string; onAccount?: () => void; action?: HeaderAction | HeaderAction[] }) {
+export function PlaqueHeader({
+  title,
+  onAccount,
+  action,
+  assist,
+}: {
+  title: string;
+  onAccount?: () => void;
+  action?: HeaderAction | HeaderAction[];
+  assist?: AssistScreen;
+}) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const hall = useCurrentHall();
@@ -174,7 +203,7 @@ export function PlaqueHeader({ title, onAccount, action }: { title: string; onAc
   const me = session?.state.status === "signedIn" ? session.state.profile : null;
   const cnFace = usePlaqueFace(t.civ);
   const [fits, setFits] = useState<{ title: string; one: boolean } | null>(null);
-  if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} action={action} />;
+  if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} action={action} assist={assist} />;
   const meta = [tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall].filter(Boolean).join(" · ");
   const stepDown = fits?.title === title && !fits.one;
   const measure = (e: TextLayoutEvent) => {
@@ -203,7 +232,7 @@ export function PlaqueHeader({ title, onAccount, action }: { title: string; onAc
           </Txt>
         </View>
         <ThemeContext.Provider value={onPlaqueTheme(t)}>
-          <BarEnd action={action} onAccount={onAccount} />
+          <BarEnd action={action} onAccount={onAccount} assist={assist} />
         </ThemeContext.Provider>
       </View>
     </PlaqueFrame>

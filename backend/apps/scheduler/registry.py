@@ -110,6 +110,9 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 用同一个服务账号,它不可达是全局的事,按租户拆只会把一次故障告警 N 遍;写的是 `.update()`,
     # 不经审计信号,不需要租户 contextvar。聊天没配置时什么也不做,记 SUCCESS。
     JobSpec("chat.reconcile_inbox", GLOBAL, "45 3 * * *", max_runtime=1800),
+    # 助手会话留存(apps/soul_assist/service.py::purge_history):超过 30 天的消息、灵魂删掉的会话、
+    # 前世账号的会话真删。GLOBAL:会话挂在账号上,账号没有租户列。每天一次,留存以天计。
+    JobSpec("soul_assist.purge_history", GLOBAL, "30 4 * * *", max_runtime=1800),
     # ---- this app's own maintenance --------------------------------------------
     # Every 5 minutes: the finest-grained job above is 5-minutely, so a stuck
     # run is noticed within one period of its own max_runtime; two indexed

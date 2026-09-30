@@ -120,7 +120,8 @@ def rule_for(event_type, payload, account):
 #: * `disposition_executed` 改挂节点结束(COMPLETED / ETERNAL;手动结束的 ABORTED 没有处置执行,不推)。
 #:   它以前挂「灵魂进入 REINCARNATING / SETTLED」,而计划期间处置执行不再改灵魂状态;
 #:   dedupe_key 用节点 id,一站一条。
-#: * `sentence_completed` 只推给**开放了转生申请**的(文案说「可以申请转生」,终局文明的灵魂不收)。
+#: * `sentence_completed` 只推给**开放了转生申请**的(文案说「可以申请转生」,终局文明的灵魂、
+#:   原属地永久刑期收尾的灵魂不收 —— 永久 = 不转生,2026-09-29 用户决定)。
 #: * `sentence_waiting`:刑满暂留(Q7)。
 #: * `sentence_pardoned`:计划被撤销 = 赦免剩余刑期、视为完成(2026-09-19 用户决定)。**推给所有灵魂**
 #:   (2026-09-27 用户决定):文案不提转生,不再按 rebirth_open 门控。
