@@ -3992,7 +3992,9 @@
       "new_hint": "After saving only the last 4 characters and the date are kept; nobody, you included, can read the full key again. A new key is a connection change: test it first.",
       "will_clear": "The key will be cleared on save.",
       "clear_title": "Clear the key?",
-      "clear_body": "Once cleared the assistant stops working at once (both sides show it as unavailable) until a new key is set. Takes effect on save."
+      "clear_body": "Once cleared the assistant stops working at once (both sides show it as unavailable) until a new key is set. Takes effect on save.",
+      "slot_empty": "Not entered yet",
+      "slot_saved": "Saved"
     },
     "limits": {
       "soul_per_hour": "Soul side · per account per hour",
@@ -4113,7 +4115,9 @@
       "role_primary": "primary",
       "role_backup": "backup",
       "switched": "no text from the primary in {{t}} s — switched to the backup",
-      "no_switch": "text already sent — no switch to the backup"
+      "no_switch": "text already sent — no switch to the backup",
+      "chars_out": "{{n}} characters out",
+      "waited": "waited {{x}} s"
     },
     "corpus": {
       "summary": "{{count}} entries · {{tokens}} tokens",
@@ -4199,10 +4203,11 @@
         "rate_limited": "429 rate-limited {{n}}",
         "server_error": "5xx error {{n}}",
         "quota": "out of credit {{n}}",
-        "circuit_open": "circuit breaker {{n}}"
+        "circuit_open": "primary failing repeatedly · using backup {{n}}"
       },
       "legend_primary": "Primary",
-      "legend_backup": "Backup"
+      "legend_backup": "Backup",
+      "day_detail": "primary {{a}} · backup {{b}} · switched to backup {{n}} times"
     },
     "embedding": {
       "url": "Address",

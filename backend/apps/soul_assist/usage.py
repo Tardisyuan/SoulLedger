@@ -173,14 +173,17 @@ def _notify_admins(title, message):
 
 
 _ANSWERED = Q(status__in=("ok", "empty"))
+#: 「改用备用」只数备用**答出**的提问(Design 7a):备用也失败(503、中断)算作失败,不计入这一行。
+_BACKUP_ANSWERED = _ANSWERED & Q(provider_role="backup") & ~Q(fallback_reason="")
 #: 「主用失败前花掉的 token」那一行只记账,不是一次请求(AssistUsage.STATUSES)。
 _REQUEST = ~Q(status="failed_over")
 _COUNTS = ("requests", "answered", "input_tokens", "output_tokens", "cache_read_tokens")
 FALLBACK_REASONS = ("connection", "timeout", "rate_limited", "server_error", "quota", "circuit_open")
 
 
-def _grouped(rows, key, prices):
-    """按 `key` 分组的请求数、token 与花费(花费要按哪一家 × 模型求,所以先这样分组再合)。"""
+def _grouped(rows, key, prices, split=False):
+    """按 `key` 分组的请求数、token 与花费(花费要按哪一家 × 模型求,所以先这样分组再合)。
+    `split`:再给主用 / 备用各自的花费(`primary_cost` + `backup_cost` = `cost`;没走到供应商的行算主用,它们是 0)。"""
     out = {}
     for g in rows.order_by().values(*dict.fromkeys((key, "provider_role", "model"))).annotate(
             requests=Count("id", filter=_REQUEST), answered=Count("id", filter=_ANSWERED), **_TOKENS):
@@ -189,7 +192,12 @@ def _grouped(rows, key, prices):
             item[k] += g[k] or 0
         item["_groups"].append(g)
     for item in out.values():
-        item["cost"] = round(_priced(prices, item.pop("_groups"))[0], 6)
+        groups = item.pop("_groups")
+        item["cost"] = round(_priced(prices, groups)[0], 6)
+        if split:
+            backup = [g for g in groups if g["provider_role"] == "backup"]
+            item["backup_cost"] = round(_priced(prices, backup)[0], 6)
+            item["primary_cost"] = round(_priced(prices, [g for g in groups if g not in backup])[0], 6)
     return out
 
 
@@ -203,15 +211,19 @@ def report(prices, month=None):
     rows = _rows(start, end)
     statuses = dict(rows.filter(_REQUEST).order_by().values_list("status").annotate(n=Count("id")))
     retrievals = dict(rows.order_by().values_list("retrieval").annotate(n=Count("id")))
-    reasons = dict(rows.filter(provider_role="backup").exclude(fallback_reason="").order_by()
-                   .values_list("fallback_reason").annotate(n=Count("id")))
+    reasons = dict(rows.filter(_BACKUP_ANSWERED).order_by().values_list("fallback_reason").annotate(n=Count("id")))
     roles = _grouped(rows.exclude(provider_role=""), "provider_role", prices)
     total = sum(statuses.values())
     empty = statuses.get("empty", 0)
     answered = statuses.get("ok", 0) + empty
     empty_share = empty / answered if answered else 0.0
     prompt_tokens = max(p["tokens"] for p in corpus_prompts(corpus))
-    days = _grouped(rows.annotate(day=TruncDate("created_at")), "day", prices)
+    dated = rows.annotate(day=TruncDate("created_at"))
+    days = _grouped(dated, "day", prices, split=True)
+    day_reasons = {}
+    for day, reason, n in (dated.filter(_BACKUP_ANSWERED).order_by().values_list("day", "fallback_reason")
+                           .annotate(n=Count("id"))):
+        day_reasons.setdefault(day, {})[reason] = n
     halls = _grouped(rows, "tenant", prices)
     codes = dict(Tenant.objects.filter(pk__in=[k for k in halls if k is not None]).values_list("pk", "code"))
     spend = month_spend(prices, month)
@@ -225,7 +237,7 @@ def report(prices, month=None):
         "requests": total,
         "by_status": {s: statuses.get(s, 0) for s in ("ok", "empty", "unavailable", "busy", "rate_limited",
                                                        "not_configured", "stopped", "interrupted")},
-        # 「改用备用」:备用答的(或试过备用的)请求数与理由分布;花费按主用 / 备用分开(§13)。
+        # 「改用备用」:备用**答出**的提问数与理由分布(备用也失败的是失败,不在这里);花费按主用 / 备用分开(§13)。
         "fallbacks": {"count": sum(reasons.values()),
                       "by_reason": {r: reasons.get(r, 0) for r in FALLBACK_REASONS}},
         "by_provider": [{"role": role, **v} for role, v in sorted(roles.items())],
@@ -233,7 +245,9 @@ def report(prices, month=None):
                           "rate_limited": share(statuses.get("rate_limited", 0) + statuses.get("busy", 0)),
                           "empty": empty_share},
         "by_retrieval": {r: retrievals.get(r, 0) for r in ("vector", "fallback", "fallback_low_similarity")},
-        "by_day": [{"date": day, **v} for day, v in sorted(days.items())],
+        "by_day": [{"date": day, **v, "fallbacks": sum(day_reasons.get(day, {}).values()),
+                    "fallback_reasons": {r: day_reasons.get(day, {}).get(r, 0) for r in FALLBACK_REASONS}}
+                   for day, v in sorted(days.items())],
         "by_side": [{"side": side, **v} for side, v in sorted(_grouped(rows, "side", prices).items())],
         "by_hall": [{"tenant_id": k, "code": codes.get(k), **v} for k, v in halls.items()],
         "phase4": {"corpus_tokens": prompt_tokens, "corpus_threshold": CORPUS_TOKEN_THRESHOLD,

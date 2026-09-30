@@ -3969,16 +3969,16 @@
       "test_ok_tool_yes": "Senb Seth · Iri Aha ✓",
       "test_ok_tool_no": "Senb Seth · Iri Aha ✕",
       "test_no_tool": "Sia Pen Nen Iri Aha: Medu Neb Wa, Nen Hehy Sesh Ba. Sau Wenen; Setep Sia Ky Nefer.",
-      "primary": "Per Sia Heri-Tep",
-      "backup": "Per Sia Idenu (Nen Sesen)",
-      "backup_none": "Nen Per Sia Idenu Djer",
-      "backup_explain": "Heri-Tep Nen Senb, Wah Menmen, Dbh Menmen, Nen Sepy, Ky Sethet: Khemen Djes-Ef Er Idenu, Weshed Sep 1.",
-      "backup_add": "Redi Idenu",
-      "backup_remove": "Fekh Idenu",
-      "backup_same_platform": "Per Sia Wa Mi Heri-Tep. Em Sethet, Sen Nen Weshed. Sau Wenen.",
+      "primary": "Per Sia Wa",
+      "backup": "Per Sia Sen (Nen Sesen)",
+      "backup_none": "Nen Per Sia Sen Djer",
+      "backup_explain": "Per Sia Wa Nen Senb, Wah Menmen, Dbh Menmen, Nen Sepy, Ky Sethet: Khemen Djes-Ef Er Per Sia Sen, Weshed Sep 1.",
+      "backup_add": "Redi Per Sia Sen",
+      "backup_remove": "Fekh Per Sia Sen",
+      "backup_same_platform": "Per Pen Mi Per Sia Wa. Em Sethet Per: Wa Hena Sen Nen Weshed. Sau Wenen.",
       "price_period_hint": "Hesb Ky Em Unut Ky: Sesh Hesb En Unut Menmen.",
-      "in_effect": "Heri-Tep · {{model}}",
-      "in_effect_backup": "Idenu {{model}}"
+      "in_effect": "Wenen Emu · {{model}}",
+      "in_effect_backup": "Sen {{model}}"
     },
     "key": {
       "title": "Menf",
@@ -3992,7 +3992,9 @@
       "new_hint": "Sau: Nen Maa Menf Neb Djer. Khemen Menf: Sip Er Tepy.",
       "will_clear": "Sau: Khet Menf.",
       "clear_title": "Khet Menf?",
-      "clear_body": "Khet: Nen Hehy Medu Emu, Er Menf Renpi. Iri Er Sau."
+      "clear_body": "Khet: Nen Hehy Medu Emu, Er Menf Renpi. Iri Er Sau.",
+      "slot_empty": "Nen Sesh Djer",
+      "slot_saved": "Sau Seth"
     },
     "limits": {
       "soul_per_hour": "Ba · Aq Neb · Unut Neb",
@@ -4110,10 +4112,12 @@
       "first_text": "Medu Tepy {{t}} s",
       "stopped_at": "Khetem-Ek {{t}} s",
       "interrupted_at": "Medu Nen Neb {{t}} s",
-      "role_primary": "Heri-Tep",
-      "role_backup": "Idenu",
-      "switched": "Heri-Tep: Nen Medu {{t}} s. Khemen Er Idenu Seth.",
-      "no_switch": "Medu Iyi Seth: Nen Khemen Er Idenu."
+      "role_primary": "Per Sia Wa",
+      "role_backup": "Per Sia Sen",
+      "switched": "Per Sia Wa: Wah {{t}} s, Nen Sesh Tepy; Per Sia Sen Emu.",
+      "no_switch": "Medu Iyi Seth: Nen Khemen Er Per Sia Sen.",
+      "chars_out": "Sesh Seth: {{n}}",
+      "waited": "Wah: {{x}} s"
     },
     "corpus": {
       "summary": "Sep {{count}} · Hesb {{tokens}}",
@@ -4153,8 +4157,8 @@
       "assistant_busy": "Em Iri Neb. Wehem Er Khet.",
       "try_failed": "Nen Hehy. Wehem Iri.",
       "untested_embedding": "Khemen Wat, Sia Er Aa: Sip Er Tepy, Er Sau.",
-      "backup_untested": "Idenu Nen Senb Seth Djer. Sau Er Khet Sen Senb Seth.",
-      "backup_failed": "Idenu Nen Senb Seth. Renpi Ky Fekh Idenu, Er Sau.",
+      "backup_untested": "Per Sia Sen Nen Senb Seth Djer. Sau Er Khet Wa Hena Sen Senb Seth.",
+      "backup_failed": "Per Sia Sen Nen Senb Seth. Renpi Ky Fekh Per Sia Sen, Er Sau.",
       "unpriced_backup_model": "Hesb Neb Em Abed: Sesh Hesb Em Sia."
     },
     "usage": {
@@ -4191,18 +4195,19 @@
       "not_reached": "Nen Kheper Djer",
       "rate_fallback": "Wekha Nen Wenen",
       "fallback_note": "Wekha Nen Wenen: Nen Ini Medu Khent, Hehy Medu Em Medu Seth Neb.",
-      "fallback": "Khemen Er Idenu",
+      "fallback": "Khemen Er Per Sia Sen",
       "fallback_value": "Sep {{n}} · {{pct}}",
       "reason": {
         "connection": "Nen Senb Seth {{n}}",
         "timeout": "Wah Menmen {{n}}",
         "rate_limited": "Dbh Menmen {{n}}",
-        "server_error": "Sethet {{n}}",
+        "server_error": "5xx Sethet {{n}}",
         "quota": "Nen Sepy {{n}}",
-        "circuit_open": "Heri-Tep Nen Senb {{n}}"
+        "circuit_open": "Menmen Nen Iri · Per Sia Sen {{n}}"
       },
-      "legend_primary": "Heri-Tep",
-      "legend_backup": "Idenu"
+      "legend_primary": "Per Sia Wa",
+      "legend_backup": "Per Sia Sen",
+      "day_detail": "Per Sia Wa {{a}} · Per Sia Sen {{b}} · Khemen Er Per Sia Sen Sep {{n}}"
     },
     "embedding": {
       "url": "Wat",

@@ -369,6 +369,56 @@ def test_the_backup_is_priced_with_its_own_prices_and_counts_toward_the_cap(soul
     assert usage.month_spend(eff.prices)["unpriced_models"] == [BACKUP]
 
 
+def test_fallbacks_count_only_what_the_backup_answered_and_by_day_splits_the_roles(soul, fake_adapters):
+    """Design 7a:「只统计由备用成功答出的提问。备用也失败的算作失败,不计入这一行。」"""
+    from apps.soul_assist import usage
+
+    _, client = soul
+    _backup(prices={BACKUP: {"input": 1_000_000, "output": 0}})
+    row = AssistConfig.objects.get(pk=1)
+    row.values = {**row.values, "prices": {PRIMARY: {"input": 3_000_000, "output": 0}}}
+    row.save()
+    config.invalidate()
+    _events(_stream(client))  # 主用答:3
+    FakeProvider.script = [{"raise": "x", "kind": "rate_limited", "status": 429}]
+    FakeProvider.scripts = {BACKUP: [{"deltas": ["备"]}]}
+    _events(_stream(client))  # 备用答:1
+    FakeProvider.script = [{"raise": "x", "kind": "connection"}]
+    FakeProvider.scripts = {BACKUP: [{"raise": "y", "kind": "connection"}]}
+    assert _events(_stream(client))[-1][1]["kind"] == "unavailable"  # 主、备都失败
+    assert AssistUsage.objects.filter(provider_role="backup", status="unavailable", fallback_reason="connection").exists()
+
+    eff = config.effective()
+    report = usage.report(usage.Prices(eff.prices, eff.backup_prices))
+    assert report["fallbacks"]["count"] == 1
+    assert report["fallbacks"]["by_reason"]["rate_limited"] == 1 and report["fallbacks"]["by_reason"]["connection"] == 0
+    [day] = report["by_day"]
+    assert (day["primary_cost"], day["backup_cost"], day["cost"]) == (3.0, 1.0, 4.0)
+    assert day["fallbacks"] == 1 and day["fallback_reasons"]["rate_limited"] == 1
+    assert day["fallback_reasons"]["connection"] == 0
+
+
+def test_a_day_without_the_backup_has_no_backup_cost(db):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.soul_assist import usage
+
+    usage.record("soul", None, "ok", PRIMARY, {"input": 1}, provider_role="primary")
+    usage.record("soul", None, "ok", BACKUP, {"input": 1}, provider_role="backup", fallback_reason="timeout")
+    now = timezone.localtime()
+    other = now - timedelta(days=1) if now.day > 1 else now + timedelta(days=1)
+    AssistUsage.objects.filter(provider_role="primary").update(created_at=other)
+    prices = usage.Prices({PRIMARY: {"input": 1_000_000, "output": 0}}, {BACKUP: {"input": 2_000_000, "output": 0}})
+    days = {d["date"]: d for d in usage.report(prices)["by_day"]}
+    quiet, busy = days[other.date()], days[now.date()]
+    assert (quiet["primary_cost"], quiet["backup_cost"], quiet["fallbacks"]) == (1.0, 0.0, 0)
+    assert not any(quiet["fallback_reasons"].values())
+    assert (busy["primary_cost"], busy["backup_cost"], busy["fallbacks"]) == (0.0, 2.0, 1)
+    assert busy["fallback_reasons"]["timeout"] == 1
+
+
 # ── 名额 ─────────────────────────────────────────────────────────────────
 
 

@@ -22,6 +22,7 @@ type TryDone = Extract<AssistTryStreamEvent, { event: "done" }>;
 interface Run {
   side: Side;
   text: string;
+  sent: number;
   first: number | null;
   slow: boolean;
   end:
@@ -66,6 +67,14 @@ export function TryPanel({
   const missing = side === "soul" ? config.eval_soul_account == null : config.eval_officer == null;
   const reason = missing ? t(side === "soul" ? "assist_admin.identities.soul_missing" : "assist_admin.identities.officer_missing") : null;
   const busy = run !== null && run.end === null;
+  // 「已等 x s」 counts up while there is no text yet (M frames); the tick stops at the first text.
+  const waiting = run !== null && run.end === null && run.first === null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!waiting) return;
+    const tick = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(tick);
+  }, [waiting]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -78,7 +87,7 @@ export function TryPanel({
     let text = "";
     let first: number | null = null;
     let last: AssistTryStreamEvent | null = null;
-    setRun({ side, text: "", first: null, slow: false, end: null });
+    setRun({ side, text: "", sent, first: null, slow: false, end: null });
     const slow = setTimeout(() => setRun((r) => (r && !r.text ? { ...r, slow: true } : r)), SLOW_MS);
     const onEvent = (event: AssistTryStreamEvent) => {
       if (controller.current !== mine) return;
@@ -118,9 +127,11 @@ export function TryPanel({
 
   /** The technical line (M frames). Only this page names primary / backup and the switch. */
   const techLine = (() => {
-    if (!run || run.first === null) return null;
+    if (!run) return null;
+    if (run.first === null) return waiting ? t("assist_admin.try.waited", { x: secs(Math.max(0, now - run.sent)) }) : null;
     const parts = [t("assist_admin.try.first_text", { t: secs(run.first) })];
     const end = run.end;
+    if (!end) parts.push(t("assist_admin.try.chars_out", { n: count([...run.text].length) }));
     if (end?.kind === "stopped") parts.push(t("assist_admin.try.stopped_at", { t: secs(end.at) }));
     if (end?.kind === "interrupted") {
       parts.push(t("assist_admin.try.interrupted_at", { t: secs(end.at) }));
