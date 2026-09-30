@@ -276,7 +276,6 @@ export default function SoulsPage() {
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
       <DataTable<SoulListItem>
-        density="compact"
         linkedRows
         caption={t("souls.title")}
         columns={[

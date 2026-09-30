@@ -110,7 +110,6 @@ function JudgmentQueuePageContent() {
         <JudgmentClaimQueue />
       ) : (
       <DataTable<Judgment>
-        density="compact"
         linkedRows
         caption={t("judgment.title")}
         columns={[

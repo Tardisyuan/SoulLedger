@@ -1843,12 +1843,7 @@
     "title": "Settings",
     "theme": "Theme",
     "light": "Light",
-    "dark": "Dark",
-    "nav_mode": "Navigation Mode",
-    "classic": "Classic",
-    "compact": "Compact",
-    "classic_desc": "Full sidebar with icons and labels",
-    "compact_desc": "Icons only with tooltips on hover"
+    "dark": "Dark"
   },
   "admin": {
     "ledger_stats": "Deed Statistics",

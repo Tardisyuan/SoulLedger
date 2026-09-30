@@ -217,7 +217,6 @@ export function SensitiveWordsSection() {
 
       <DataTable<SensitiveWord>
         caption={t("social_moderation.tabs.words")}
-        density="compact"
         linkedRows
         columns={[
           { key: "word", header: t("social_moderation.words.col_word") },

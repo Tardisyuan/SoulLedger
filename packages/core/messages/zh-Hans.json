@@ -1843,12 +1843,7 @@
     "title": "设置",
     "theme": "主题",
     "light": "浅色",
-    "dark": "深色",
-    "nav_mode": "导航模式",
-    "classic": "经典",
-    "compact": "紧凑",
-    "classic_desc": "带图标和标签的完整侧边栏",
-    "compact_desc": "仅图标，悬停时显示工具提示"
+    "dark": "深色"
   },
   "admin": {
     "ledger_stats": "功德统计",

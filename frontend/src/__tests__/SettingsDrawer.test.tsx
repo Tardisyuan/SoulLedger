@@ -12,7 +12,6 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "settings.theme": "Theme",
         "settings.light": "Light",
         "settings.dark": "Dark",
-        "settings.nav_mode": "Navigation Mode",
       };
       return map[key] || key;
     },
