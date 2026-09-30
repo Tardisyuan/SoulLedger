@@ -25,7 +25,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import type { Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, shade, useLayout, usePullRefresh, useTheme } from "../ui";
+import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
@@ -201,6 +201,11 @@ export function LettersScreen() {
   };
   const lastTs = useCallback((roomId: string) => lastOf(chat, roomId)?.ts ?? 0, [chat]);
   const refreshControl = usePullRefresh(false, () => void chat.reload());
+  // 书信不在切回时重载(会话开销大),但断网恢复时重载一次;没配 Matrix 时不重试,那是设计如此。
+  const reloadOnReconnect = useCallback(() => {
+    if (chat.availability !== "not_configured") void chat.reload();
+  }, [chat]);
+  useReloadOnReconnect(reloadOnReconnect);
 
   if (chat.availability === "not_configured") {
     return (

@@ -1036,7 +1036,11 @@ export function useReloadOnRefocus(reload: () => unknown) {
       void reload();
     }, [reload])
   );
-  // Back online (network.tsx): whatever failed while offline loads again, focused or not.
+  useReloadOnReconnect(reload);
+}
+
+/** Back online (network.tsx): whatever failed while offline loads again, focused or not. */
+export function useReloadOnReconnect(reload: () => unknown) {
   const { back } = useOnline();
   const seen = useRef(back);
   useEffect(() => {
