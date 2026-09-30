@@ -8,7 +8,7 @@ import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AccessibilityInfo, StyleSheet, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -67,6 +67,43 @@ describe("the bottom sheet's release (交互与动效 第 2 轮 原型 06)", () 
     );
     await act(async () => {});
     expect(screen.UNSAFE_getByType(BottomSheetModal).props.gestureEventsHandlersHook).toBe(useSheetGestures);
+    expect(screen.getByText("内容")).toBeTruthy();
+  });
+
+  // Emulator, 2026-10-01: the long-lamp confirm did not open on a post's first tap and never
+  // again after a drag-close — the Sheet called dismiss() on a modal that was not up, which
+  // leaves @gorhom's status stuck. The jest double keeps that trap (jest.setup.js).
+  it("opens on the first try, and again after the sheet closed itself (drag / scrim) or was closed by its caller", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Text testID="open" onPress={() => setOpen(true)}>open</Text>
+          <Text testID="close" onPress={() => setOpen(false)}>close</Text>
+          <Sheet open={open} onClose={() => setOpen(false)} edge="#000" closeLabel="关闭">
+            <Text>内容</Text>
+          </Sheet>
+        </>
+      );
+    }
+    wrap(<Harness />);
+    await act(async () => {});
+    expect(screen.queryByText("内容")).toBeNull();
+    fireEvent.press(screen.getByTestId("open"));
+    await act(async () => {});
+    expect(screen.getByText("内容")).toBeTruthy();
+    // The sheet closes itself (a drag past 90pt, the scrim), then opens again.
+    await act(async () => (global as unknown as { __sheetSelfClose: () => void }).__sheetSelfClose());
+    expect(screen.queryByText("内容")).toBeNull();
+    fireEvent.press(screen.getByTestId("open"));
+    await act(async () => {});
+    expect(screen.getByText("内容")).toBeTruthy();
+    // The caller closes it (a button in it), then opens again.
+    fireEvent.press(screen.getByTestId("close"));
+    await act(async () => {});
+    expect(screen.queryByText("内容")).toBeNull();
+    fireEvent.press(screen.getByTestId("open"));
+    await act(async () => {});
     expect(screen.getByText("内容")).toBeTruthy();
   });
 });

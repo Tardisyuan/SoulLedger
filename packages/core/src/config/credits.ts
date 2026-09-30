@@ -5,6 +5,9 @@
  * 它们在三种语言里写法相同,而 egy 包是封闭词表,专名进去只会逼着词表为它们开口子。
  * 要翻译的只有分节标题,在各语言包的 `about.*`。
  */
+import LITERATURE from "./creditsLiterature.json";
+import OSS from "./creditsOss.json";
+
 export type CreditLicence = "OFL-1.1" | "CC0-1.0" | "PD";
 
 export interface Credit {
@@ -75,4 +78,77 @@ export const IMAGE_CREDITS: Credit[] = [
     licence: "CC0-1.0",
     url: "https://commons.wikimedia.org/wiki/File:Cylinder_seal_and_modern_impression-_ritual_scene_before_a_temple_facade_MET_DP270679.jpg",
   },
+];
+
+// ── 2026-10-01 扩充:开源软件、文献出处、模型与服务、设计与协作 ──────────────
+
+/**
+ * 开源软件:各平台的**直接**依赖,由 `scripts/gen-credits-oss.py` 从已安装包的元数据生成,
+ * 不手改。`licence` 是包自己声明的字符串(多数是 SPDX,少数如 "BSD" 是原样的声明);
+ * 读不到时是 null,页面写「未声明」。依赖增删而没重生成,`creditsOssDrift.test.ts` 红。
+ */
+export interface OssCredit {
+  name: string;
+  licence: string | null;
+  url: string;
+}
+export const OSS_GROUPS = ["server", "web", "app", "shared"] as const;
+export type OssGroup = (typeof OSS_GROUPS)[number];
+export const OSS_CREDITS: Record<OssGroup, OssCredit[]> = OSS;
+
+/**
+ * 文献出处:律条语料的出处串(后端 `apps/actors/mythology` 各 `*_SOURCE`,埃及取判官行的
+ * `ASSESSOR_PAPYRUS` / `ASSESSOR_SOURCE_EDITION`)拆成的书名与细节。手拆,但每个字段都逐字
+ * 出自那些串 —— `backend/tests/test_credits_literature_quotes_the_corpus.py` 守着,
+ * 并要求种子命令写入的每个语料至少有一条。
+ * `kind: "reference"`:语料逐条注记里为对照提到的书(用户 2026-10-01 定:要列,标「参照」,
+ * 与底本分开)。字段逐字出自注记原文;注记里出现的每个《书名》都得记上;同一文明下底本在前。
+ */
+export interface LiteratureCredit {
+  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "GREEK";
+  corpus: string;
+  kind?: "reference";
+  title: string;
+  details: string[];
+  url?: string;
+}
+export const LITERATURE_CREDITS = LITERATURE as LiteratureCredit[];
+export const LITERATURE_CIVILIZATIONS = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"] as const;
+
+/**
+ * 模型与服务:助手(`apps/soul_assist`)与书信(`apps/chat`)代码里支持的提供方。全部按部署
+ * 配置 —— 这里只写代码的默认值与支持的协议,不写地址与密钥。`isDefault` 对应
+ * `backend/config/settings.py` 的默认值,`creditsServices.test.ts` 对着那份文件核。
+ */
+export interface ServiceCredit {
+  name: string;
+  detail: string;
+  url: string;
+  isDefault?: boolean;
+}
+export const SERVICE_CREDITS: ServiceCredit[] = [
+  { name: "Anthropic Claude", detail: "claude-opus-5 · Messages API", url: "https://www.anthropic.com/", isDefault: true },
+  {
+    name: "OpenAI Chat Completions",
+    detail: "OpenAI · Azure OpenAI · Ollama · DeepSeek",
+    url: "https://platform.openai.com/docs/api-reference/chat",
+  },
+  {
+    name: "Ollama",
+    detail: "qwen3-embedding:4b-q4_K_M · /api/embed",
+    url: "https://ollama.com/library/qwen3-embedding",
+    isDefault: true,
+  },
+  { name: "pgvector", detail: "pgvector/pgvector:pg16", url: "https://github.com/pgvector/pgvector" },
+  { name: "Matrix · Synapse", detail: "matrixdotorg/synapse", url: "https://github.com/element-hq/synapse", isDefault: true },
+];
+
+/**
+ * 设计与协作。素材包 README(`~/Downloads/SoulLedger-deliver`,不入库)分 svg / textures /
+ * fonts / icons 四个目录:svg 与 icons 是 Design 画的,textures 里的扫描见 IMAGE_CREDITS,
+ * 字体见 FONT_CREDITS。README 没写纸 / 莎草纸 / 大理石纹理的出处,所以这里不列它们。
+ */
+export const DESIGN_CREDITS: { name: string; detail: string }[] = [
+  // 纹样带质感(paper / papyrus / marble 及深色 *-w)在规范 v2 定稿的授权表里标「本项目自有」:Design 自制,非馆藏。
+  { name: "Claude Design", detail: "Anthropic · SoulLedger v2 · 朱印 · svg / icons / textures (paper · papyrus · marble)" },
 ];

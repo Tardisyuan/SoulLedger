@@ -79,13 +79,25 @@
   },
   "about": {
     "title": "关于与致谢",
-    "intro": "本应用用到的字体、纹样与图像,以及它们的授权。",
+    "intro": "本应用用到的字体、纹样、图像、开源软件、典籍与服务,以及它们的授权与出处。",
     "fonts": "字体",
     "ornament": "纹样",
     "images": "印的残边",
     "licence": "授权",
     "public_domain": "公有领域",
-    "source": "来源"
+    "source": "来源",
+    "software": "开源软件",
+    "literature": "文献出处",
+    "services": "模型与服务",
+    "design": "设计与协作",
+    "group_server": "服务器",
+    "group_web": "网页端",
+    "group_app": "App",
+    "group_shared": "两端共用",
+    "undeclared": "未声明",
+    "by_deployment": "均按部署配置",
+    "default": "默认",
+    "reference": "参照"
   },
   "souls": {
     "title": "灵魂",

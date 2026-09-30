@@ -79,13 +79,25 @@
   },
   "about": {
     "title": "About & credits",
-    "intro": "The typefaces, ornament and images this app uses, and their licences.",
+    "intro": "The typefaces, ornament, images, open-source software, texts and services this app uses, with their licences and sources.",
     "fonts": "Typefaces",
     "ornament": "Ornament",
     "images": "Seal edges",
     "licence": "Licence",
     "public_domain": "Public domain",
-    "source": "Source"
+    "source": "Source",
+    "software": "Open-source software",
+    "literature": "Texts and sources",
+    "services": "Models and services",
+    "design": "Design and collaboration",
+    "group_server": "Server",
+    "group_web": "Web",
+    "group_app": "App",
+    "group_shared": "Shared",
+    "undeclared": "Not declared",
+    "by_deployment": "All configured per deployment",
+    "default": "Default",
+    "reference": "Cited for comparison"
   },
   "souls": {
     "title": "Souls",
