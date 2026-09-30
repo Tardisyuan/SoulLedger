@@ -115,7 +115,8 @@ describe("the Han serif", () => {
     const fs = jest.requireActual<typeof import("fs")>("fs");
     const path = jest.requireActual<typeof import("path")>("path");
     const dir = path.join(__dirname, "..", "..", "assets", "fonts");
-    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["NotoSerifSC-Subset-400.ttf"]);
+    // Beside it only the v2 seal face 霞鹜篆书 (scripts/import-v2-art.mjs), which is not a serif for quotes.
+    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["LXGWSeal-Regular.ttf", "NotoSerifSC-Subset-400.ttf"]);
     expect(fs.statSync(path.join(dir, "NotoSerifSC-Subset-400.ttf")).size <= 1_500_000).toBe(true);
     // what App.tsx hands to useFonts must resolve — a require of a deleted file fails the import above
     expect(FONT_ASSETS.NotoSerifSC_400).toBeTruthy();
@@ -323,7 +324,7 @@ describe("useReducedMotionDurations", () => {
   });
 });
 
-describe("the v2 motion libraries load under jest (their published mocks)", () => {
+describe("the v2 motion libraries load under jest (published mocks; the bottom sheet is jest.setup's own double)", () => {
   it("reanimated, gesture handler, bottom sheet and haptics import; the gesture root renders", () => {
     expect(typeof useSharedValue).toBe("function");
     expect(BottomSheet).toBeTruthy();

@@ -9,9 +9,14 @@ import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "reac
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { G, Path } from "react-native-svg";
 
+import { useContext } from "react";
+
 import { BAND, Emblem, Icon, type IconName } from "./emblems";
-import { quoteFamily } from "./fonts";
+import { family, plaqueFamily, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
+import { useCurrentHall } from "./screens/letters";
+import { PlaqueBand, Seal } from "./seal";
+import { SessionContext } from "./session";
 import { Txt, useFlavorCompact, useLayout, useTheme } from "./ui";
 
 /** The band's unit (文明气质 1c): 12 wide, 6 high. */
@@ -142,6 +147,45 @@ export function AppHeader({
   );
 }
 
+/**
+ * v2「朱印」's plaque (规范 v2 §匾, 补足 C18), in the life tab's title bar place: the
+ * civilization's 匾色 ground, its seal (52, the App header's size), the title in the
+ * civilization's display face with the life and hall under it in mono, and the 22pt
+ * ornament band at the foot. The App keeps its own per-civilization grounds below it
+ * (user decision). Neutral — an unrecognised civilization — has no plaque: the plain bar.
+ */
+export function PlaqueHeader({ title, onAccount }: { title: string; onAccount: () => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const insets = useSafeAreaInsets();
+  const hall = useCurrentHall();
+  const session = useContext(SessionContext);
+  const me = session?.state.status === "signedIn" ? session.state.profile : null;
+  if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} />;
+  const meta = [tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall].filter(Boolean).join(" · ");
+  return (
+    <View testID="plaque" style={{ backgroundColor: t.plaque, paddingTop: insets.top }}>
+      {/* §匾 深色高光: the top edge, onPlaque at 20%, dark only. */}
+      {t.scheme === "dark" ? <View style={[styles.highlight, { backgroundColor: `${t.onPlaque}33` }]} /> : null}
+      <View style={styles.plaqueRow}>
+        <Seal civ={t.civ} size={52} theme={t} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+        <View style={styles.plaqueText}>
+          <Txt accessibilityRole="header" numberOfLines={2} style={[styles.plaqueTitle, { color: t.onPlaque, fontFamily: plaqueFamily(t.civ, title) }]}>
+            {title}
+          </Txt>
+          <Txt numberOfLines={1} style={[styles.plaqueMeta, { color: t.onPlaque }]}>
+            {meta}
+          </Txt>
+        </View>
+        <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.settings.title")} onPress={onAccount} style={styles.icon}>
+          <Icon name="person" size={18} color={t.onPlaque} strokeWidth={1.2} />
+        </Pressable>
+      </View>
+      <PlaqueBand civ={t.civ} theme={t} />
+    </View>
+  );
+}
+
 const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cycle", Letters: "letter", Circle: "circle" };
 
 /**
@@ -225,4 +269,10 @@ const styles = StyleSheet.create({
   tabIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
   tabBadge: { position: "absolute", top: -4, right: -5, width: 7, height: 7 },
   tabLabel: { fontSize: 11, letterSpacing: 0.6, textAlign: "center" },
+  highlight: { position: "absolute", top: 0, left: 0, right: 0, height: 1 },
+  plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 16, paddingRight: 6, paddingVertical: 12 },
+  plaqueText: { flex: 1, minWidth: 0 },
+  /** 补足 A3: 28 / 36 — the plaque is one of the two places above 20. */
+  plaqueTitle: { fontSize: 28, lineHeight: 36 },
+  plaqueMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16 },
 });
