@@ -306,13 +306,13 @@ export default function PermissionsPage() {
       actions={
         segment === "roles" ? (
           <RequirePermission permissions="system.settings">
-            <Button type="button" variant="primary" onClick={() => setIsRoleCreateOpen(true)}>
+            <Button type="button" variant="secondary" onClick={() => setIsRoleCreateOpen(true)}>
               + {t("permissions.create_role")}
             </Button>
           </RequirePermission>
         ) : segment === "definitions" && !permsQuery.isLoading ? (
           <RequirePermission permissions="system.settings">
-            <Button type="button" variant="primary" onClick={() => setIsCreateOpen(true)}>
+            <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(true)}>
               + {t("permissions.create")}
             </Button>
           </RequirePermission>

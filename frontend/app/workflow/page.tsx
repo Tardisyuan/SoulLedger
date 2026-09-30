@@ -165,7 +165,7 @@ export default function WorkflowPage() {
               <RequirePermission permissions="workflow.create">
                 <Button
                   type="button"
-                  variant="primary"
+                  variant="secondary"
                   className="shrink-0"
                   onClick={() => {
                     setEditingTemplateId(null);
@@ -361,7 +361,7 @@ export default function WorkflowPage() {
                             <RequirePermission permissions="workflow.update">
                               <Button
                                 type="button"
-                                variant="primary"
+                                variant="secondary"
                                 onClick={() => {
                                   setEditingTemplateData({
                                     name: currentTemplate.name,

@@ -195,7 +195,7 @@ export default function MenusPage() {
             {t("menu_buttons.title")}
           </Link>
           <RequirePermission permissions="menu.manage">
-            <Button type="button" variant="primary" onClick={openCreate}>
+            <Button type="button" variant="secondary" onClick={openCreate}>
               + {t("menus.create")}
             </Button>
           </RequirePermission>
