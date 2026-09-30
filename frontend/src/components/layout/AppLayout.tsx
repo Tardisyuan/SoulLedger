@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
 import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
-import { ConnectionBanner } from "@/src/components/connection-status";
+import { ConnectionBanner, useConnectionBannerShown } from "@/src/components/connection-status";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, Pillar, groupOfPath } from "@/src/components/layout/Pillar";
@@ -21,8 +21,9 @@ import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog
 import { Plaque } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-// 「问一问」的推开只在 ≥ 1024 px(canvas 1a);窄屏它是覆盖层。
+// 「问一问」的推开只在 ≥ 1024 px(canvas 1a),且主内容区让出 420 后仍有 720(Design E 组);否则它是覆盖层。
 import { useWideViewport } from "@/src/hooks/useWideViewport";
+import { useRoomBeside } from "@/src/hooks/useRoomBeside";
 import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
 import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 
@@ -32,10 +33,14 @@ import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
  *
  * - < 768 px 立柱收成底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。v1 的 ☰ 抽屉
  *   与 56px 编号栏(以及设置里的「经典 / 紧凑」)一并撤掉 —— 立柱只有一种宽度规则。
- * - 连接状态只在断开时出现,是匾下方的一条警示条(`ConnectionBanner`),浮在内容上,
- *   不推动内容。
+ * - 连接状态只在断开时出现,是视口最顶上横跨整个视口(含立柱与问一问面板)的一条警示条
+ *   (`ConnectionBanner`,Design E 组:它是全局状态,不属于匾),浮在内容上,不推动内容。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
  */
+/** 问一问 pushed panel (canvas 1a) and the room the page keeps beside it (Design E 组). */
+export const ASSIST_PANEL_WIDTH = 420;
+export const ASSIST_MIN_MAIN_WIDTH = 720;
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t, formatDateTime } = useI18n();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -46,8 +51,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
-  const wide = useWideViewport();
+  // The main column (everything right of the pillar) must keep 720 px beside the pushed
+  // 420 px panel — Design E 组. Measured, not a media query: the pillar is 60 or 88 wide
+  // and its 二级栏 adds 200, so no single viewport width says how much room there is.
+  const mainBoxRef = useRef<HTMLElement>(null);
+  const roomy = useRoomBeside(mainBoxRef, ASSIST_PANEL_WIDTH + ASSIST_MIN_MAIN_WIDTH);
+  const wide = useWideViewport() && roomy;
   const assist = useOfficerAssist(wide);
+  const bannerShown = useConnectionBannerShown();
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
@@ -111,10 +122,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         />
       </aside>
 
-      <main className="min-w-0 max-md:pb-14">
-        {/* 匾吸顶;连接警示条挂在匾的下沿、浮在内容上,不推动内容 —— 它在加载后一会儿
-            才出现,在文档流里那 28px 的位移曾把按钮从指针下挪走(E2E 头像测试 16 次里
-            1 次点空)。挂在匾里而不是另设一个吸顶锚点,匾的高度随题字档位变,锚点不用跟着算。 */}
+      <main ref={mainBoxRef} className="min-w-0 max-md:pb-14">
         {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏,和左边的立柱一样;匾让出它的 420px,
             不压在匾上,也不用去量匾的高度(它随题字档位变)。 */}
         <header className={`sticky top-0 z-masthead ${assist.pushed ? "pr-[420px]" : ""}`}>
@@ -238,9 +246,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           </Plaque>
-          <div className="absolute inset-x-0 top-full z-filters">
-            <ConnectionBanner />
-          </div>
         </header>
 
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
@@ -262,7 +267,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
 
-      <OfficerAssistPanel assist={assist} />
+      <OfficerAssistPanel assist={assist} belowBanner={bannerShown} />
+
+      {/* 视口最顶、横跨立柱与面板;fixed,浮在内容上 —— 它在加载后一会儿才出现,在文档流里
+          那 28px 的位移曾把按钮从指针下挪走(E2E 头像测试 16 次里 1 次点空)。 */}
+      <ConnectionBanner />
 
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <LogoutConfirmDialog

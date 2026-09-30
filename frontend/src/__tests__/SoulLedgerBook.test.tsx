@@ -37,6 +37,13 @@ import { render } from "@testing-library/react";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
+import { BALANCE_READING, INHERITANCE } from "./support/ledgerQuantityFixtures";
+import { renderCard } from "./support/ledgerQuantityRender";
+
+jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
+  ...jest.requireActual("@/src/components/charts/LazyDashboardCharts"),
+  LazyLifespanBarChart: () => null,
+}));
 
 function record(
   over: Partial<LedgerRecord> & Pick<LedgerRecord, "id" | "type" | "original_weight" | "recorded_at">
@@ -210,5 +217,36 @@ describe("the scale is named once per column, not once per figure", () => {
 
     expect(container.querySelectorAll("thead [data-quantity-scale]")).toHaveLength(3);
     expect(container.querySelectorAll("tbody [data-quantity-scale]")).toHaveLength(0);
+  });
+});
+
+/**
+ * Design E 组:功过账簿撤成 ink。冷玫红只表「失败」,拿它标罪业就和失败状态撞了;
+ * 功、过靠列头与 +/− 区分,和总账(/ledger)一致。断言的是**颜色缺席**:任何一个
+ * 元素的 class 都不许引用成败色或已删掉的 karma 令牌 —— 只断「数字是 ink」的话,
+ * 一个绿色的列头站在旁边也照样绿。
+ */
+const POLARITY_COLOUR = /--color-(success|danger|karma-merit|karma-demerit|status-success|status-error)\b/;
+function colouredElements(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll<HTMLElement>("*"))
+    .filter((el) => POLARITY_COLOUR.test(el.getAttribute("class") ?? ""))
+    .map((el) => `${el.tagName}: ${el.textContent?.slice(0, 20)}`);
+}
+
+describe("功 and 过 carry no colour — the heads and the signs tell them apart", () => {
+  it("draws the book in ink: heads, entries, running balance and totals", () => {
+    const { container } = renderBook();
+    expect(colouredElements(container)).toEqual([]);
+    // The signs are what is left to tell them apart, so they must be there.
+    expect(bodyRows(container)[0][3]).toMatch(/^\+/);
+    expect(bodyRows(container)[1][4]).toMatch(/^-/);
+  });
+
+  it("draws the karma card's merit and demerit figures in ink too", () => {
+    const { container } = renderCard(BALANCE_READING, INHERITANCE);
+    // Empty-scan guard: the figures this is about were rendered.
+    expect(container.querySelector('[data-quantity-field="raw_merit"]')).not.toBeNull();
+    expect(container.querySelector('[data-quantity-field="raw_demerit"]')).not.toBeNull();
+    expect(colouredElements(container)).toEqual([]);
   });
 });
