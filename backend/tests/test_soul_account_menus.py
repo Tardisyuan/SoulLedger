@@ -6,11 +6,17 @@ from django.apps import apps as django_apps
 
 from apps.authentication.models import User
 from apps.menus.models import Menu
+from tests.perm_support import seeded_menus
 from tests.soul_account_support import officer_client
 
 migration = importlib.import_module("apps.menus.migrations.0016_add_soul_account_menus")
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _menus():
+    seeded_menus()
 
 
 def _names(payload):

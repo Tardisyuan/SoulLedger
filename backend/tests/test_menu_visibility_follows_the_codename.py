@@ -15,7 +15,8 @@ import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.menus.models import Menu
-from apps.perm.models import Permission, Role, RolePermission
+from apps.perm.models import RolePermission
+from tests.perm_support import seeded_menus, seeded_permission, seeded_role
 
 MENU_EXITS = ("/api/v1/menus/", "/api/v1/menus/tree/", "/api/v1/menus/list-public/")
 
@@ -60,8 +61,8 @@ def system_settings(db):
 def grant_viewer_scheduler_read(db):
     def grant():
         return RolePermission.objects.create(
-            role=Role.objects.get(name="VIEWER"),
-            permission=Permission.objects.get(codename="scheduler.read"),
+            role=seeded_role("VIEWER"),
+            permission=seeded_permission("scheduler.read"),
         )
 
     return grant
@@ -136,6 +137,7 @@ def test_the_seeded_rows_are_unchanged_by_the_new_doors(viewer_user, judge_user)
     from apps.core.permissions import user_has_permission
     from apps.menus.access import menu_is_visible_to
 
+    seeded_menus()
     for menu in Menu.objects.exclude(permission="").exclude(menu_type="DIRECTORY"):
         for user in (viewer_user, judge_user):
             by_roles = not menu.roles or user.role in menu.roles
