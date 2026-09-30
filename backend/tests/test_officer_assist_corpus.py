@@ -35,18 +35,15 @@ def _web_segments():
             if not p.relative_to(FRONTEND_APP).parts[0].startswith("(")}
 
 
-#: 有页面、但刻意不设助手页面 id 的段:前端 `officerAssistScreen` 把它们归到 "other"。
-#: `about`:v2 的静态「关于 / 授权清单」页(与 main 的「问一问」合并时出现),没有业务上下文可讲;
-#: 加进 OFFICER_SCREENS 要改 `screen` 的 choices(一条迁移)和三语语料,等有需要再加。
-NO_SCREEN = {"about"}
 
 
 def test_officer_screens_are_the_web_route_segments():
     """加一个页面而不加 OFFICER_SCREENS(或反过来)→ 红。"""
     segments = _web_segments()
     assert len(segments) >= 25  # 目录找错了会得到空集,而空集与空集相等
-    assert segments >= NO_SCREEN, f"{NO_SCREEN - segments} 已没有页面,从 NO_SCREEN 删掉"
-    assert set(OFFICER_SCREENS) - {"other"} == segments - NO_SCREEN
+    # 曾有具名例外 NO_SCREEN = {"about"}:关于页归到 "other"。2026-09-30 用户拍板给它一个页面 id,
+    # 例外随之删掉 —— 现在每个有页面的段都有助手页面 id,没有例外。
+    assert set(OFFICER_SCREENS) - {"other"} == segments
 
 
 def test_every_screen_has_an_officer_entry(locale):
