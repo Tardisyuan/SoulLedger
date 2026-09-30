@@ -5,6 +5,13 @@
 # reached only 77% after 38 minutes at load 50). Queuing costs the same total
 # CPU and gets the first result much sooner.
 #
+# Only CPU-bound gates take it: SQLite pytest, jest, playwright, builds, tsc.
+# A real-PostgreSQL run against 115 does NOT: it waits on the network, leaves
+# this machine nearly idle (2026-09-30: load 2.7 during a PG run that held the
+# lock for two hours while other sessions queued), and a SQLite run beside it
+# costs neither side anything. Take the lock around the CPU part of a script,
+# not around the whole script.
+#
 # Usage: `. scripts/gate-lock.sh; gate_lock "<label>"`. The lock is released
 # when the shell exits. A lock whose pid is gone is taken over. GATE_LOCK=0
 # skips it. It lives in the git common dir, so every worktree shares it.
