@@ -126,3 +126,20 @@ describe("the offline bar", () => {
     expect(lifeCalls()).toBe(loaded + 1);
   });
 });
+
+// ui.tsx reads the network state from online.ts, never from network.tsx: network.tsx draws the
+// bar with ui.tsx's components, so the other direction was a require cycle Metro warned about.
+describe("no require cycle between ui.tsx and network.tsx", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { readFileSync } = require("fs") as typeof import("fs");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { join } = require("path") as typeof import("path");
+  const src = (f: string) => readFileSync(join(__dirname, "..", f), "utf8");
+  const imports = (f: string) => [...src(f).matchAll(/from "\.\/([\w-]+)"/g)].map((m) => m[1]);
+
+  it("ui.tsx does not import network.tsx, and online.ts imports neither", () => {
+    expect(imports("ui.tsx")).not.toContain("network");
+    expect(imports("ui.tsx")).toContain("online");
+    expect(imports("online.ts")).toEqual([]);
+  });
+});

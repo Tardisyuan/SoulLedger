@@ -172,6 +172,14 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     expect(screen.getAllByTestId(/^path-.*-done$/)).toHaveLength(3);
     expect(screen.getByTestId("path-SENTENCE-here")).toBeTruthy();
     expect(screen.getByTestId("path-REINCARNATING-ahead")).toBeTruthy();
+    // Walked segments are plain ink bars, never SVG (a percentage-width SVG line sat a pixel
+    // low at the end of the walked run on some screens); the one ahead stays a dashed SVG line.
+    for (const i of [0, 1, 2]) {
+      const seg = screen.getByTestId(`path-seg-${i}`);
+      expect([themeFor("CHINESE", "light").ink, themeFor("CHINESE", "dark").ink]).toContain(flat(seg).backgroundColor);
+      expect(seg.props.children).toBeUndefined();
+    }
+    expect(screen.getByTestId("path-seg-3").props.children).toBeTruthy();
   });
 
   it("not under sentence: 功过记录 open and only it; the balance in ink, never a status colour", async () => {
