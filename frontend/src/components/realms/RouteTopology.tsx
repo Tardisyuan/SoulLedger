@@ -86,7 +86,7 @@ export function RouteTopology({
               {mark(s)}
               <span className={`flex-1 w-0 ${out === null ? "" : out ? `border-l-[3px] ${WALKED}` : `border-l ${AHEAD}`}`} />
             </span>
-            <span className={`flex items-center gap-2 min-w-0 pl-1.5 ${compact ? "text-2xs" : "text-sm"} ${textTone(s.state)}`}>
+            <span className={`flex items-center gap-2 min-w-0 pl-2 ${compact ? "text-2xs" : "text-sm"} ${textTone(s.state)}`}>
               <span className="truncate" title={tip(s)}>{label(s)}</span>
               {stateText(s)}
               {occ(s)}

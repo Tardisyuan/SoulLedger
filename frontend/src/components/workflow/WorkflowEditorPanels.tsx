@@ -266,7 +266,7 @@ export function WorkflowInspector({
       <section id={validationId} tabIndex={-1} aria-label={t("workflow.editor.issues", { n: String(issues.length) })}>
         <div className={SECTION_HEAD}>{t("workflow.editor.issues", { n: String(issues.length) })}</div>
         {issues.length === 0 ? (
-          <p className="py-1.5 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_none")}</p>
+          <p className="py-2 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_none")}</p>
         ) : (
           <ul>
             {issues.map((issue) => (
@@ -274,7 +274,7 @@ export function WorkflowInspector({
                 <button
                   type="button"
                   onClick={() => issue.nodeId && onSelect(issue.nodeId)}
-                  className="w-full py-1.5 text-left text-sm text-[oklch(var(--color-danger))] hover:underline"
+                  className="w-full py-2 text-left text-sm text-[oklch(var(--color-danger))] hover:underline"
                 >
                   <span aria-hidden="true">! </span>
                   {issueText(issue, nodes, t)}
@@ -340,14 +340,14 @@ export function WorkflowLinearPreview({
     <section aria-label={t("workflow.editor.preview")} className="px-4 pt-2 pb-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))]">
       <div className="font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.preview")}</div>
       {nodes.length === 0 ? (
-        <p className="mt-1.5 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</p>
+        <p className="mt-2 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</p>
       ) : (
-        <ol className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm">
+        <ol className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           {nodes.map((n, i) => {
             const role = roles.get(n.id) ?? "step";
             const bad = issueNodes.has(n.id);
             return (
-              <li key={n.id} className="flex items-center gap-1.5">
+              <li key={n.id} className="flex items-center gap-2">
                 <button
                   type="button"
                   aria-pressed={n.id === selectedId}

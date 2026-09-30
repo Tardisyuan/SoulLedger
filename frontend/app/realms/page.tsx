@@ -165,7 +165,7 @@ function RealmsPageContent() {
       ) : own.length === 0 ? (
         <EmptyState title={t(`realms.civilizations.${civilization}`)} reason={t("realms.table.empty_civ")} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-x-10 gap-y-6 pt-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-x-8 gap-y-6 pt-2">
           <section data-testid="realm-topology">
             <RouteTopology
               mode="map"
@@ -391,7 +391,7 @@ function CapacityEditor({
 /** 拓扑与树表同时出骨架;文明切换先渲染(它在 filters 槽里,不等数据)。 */
 function RealmsSkeleton() {
   return (
-    <div aria-busy="true" data-testid="realms-skeleton" className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-10 pt-2">
+    <div aria-busy="true" data-testid="realms-skeleton" className="grid grid-cols-1 lg:grid-cols-[420px_minmax(0,1fr)] gap-8 pt-2">
       <div className="space-y-3">
         {Array.from({ length: 10 }).map((_, i) => (
           <Skeleton key={i} className="h-5 w-3/4" />

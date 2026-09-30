@@ -329,7 +329,7 @@ export default function PermissionsPage() {
                 aria-pressed={on}
                 onClick={() => setSegment(s.value)}
                 className={cn(
-                  "flex min-h-8 items-center gap-1.5 px-3 text-sm max-sm:min-h-11",
+                  "flex min-h-8 items-center gap-2 px-3 text-sm max-sm:min-h-11",
                   on
                     ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"

@@ -32,11 +32,11 @@ export function WorkflowLinearPreview({
   return (
     <div className="pt-3">
       <p className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</p>
-      <ol aria-label={label} className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm">
+      <ol aria-label={label} className="mt-2 flex flex-wrap items-center gap-2 text-sm">
         {nodes.map((node) => {
           const current = node.id === currentNodeId;
           return (
-            <li key={node.id} className="flex items-center gap-1.5">
+            <li key={node.id} className="flex items-center gap-2">
               <span
                 data-preview-chip={node.node_order}
                 data-current={current || undefined}

@@ -422,7 +422,7 @@ export function PermLegend() {
   return (
     <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
       {items.map(([state, key]) => (
-        <li key={state} className="flex items-center gap-1.5">
+        <li key={state} className="flex items-center gap-2">
           <PermGlyph state={state} />
           {state === "grant" && <PermGlyph state="revoke" />}
           {t(key)}
