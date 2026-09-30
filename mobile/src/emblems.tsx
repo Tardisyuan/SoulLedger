@@ -78,19 +78,6 @@ export function Emblem({
 // (the civilization's mark); the neutral theme uses only circles and rules.
 
 /**
- * The title bar's band (1c): one 12×6 unit, baseline at y 5.5 (the Greek key adds
- * a top line at 0.5), the motif inside x ∈ [1, 11] so units meet without seams.
- * `d` is the full unit; `dc` is what a unit keeps when compact drops its motif.
- */
-export const BAND: Record<CivKey, { d: string; dc: string }> = {
-  neutral: { d: "M0 5.5H12", dc: "M0 5.5H12" },
-  cn: { d: "M0 5.5H12M2 5.5V1H9V4H5V2.5H7", dc: "M0 5.5H12" },
-  eu: { d: "M0 5.5H12M1 5.5V3.5A2.5 2.5 0 0 1 6 3.5V5.5M6 3.5A2.5 2.5 0 0 1 11 3.5V5.5", dc: "M0 5.5H12" },
-  eg: { d: "M0 5.5H12M6 5.5C6 3.5 4 2.5 3 1C5 1.5 6 2.5 6 3.5C6 2.5 7 1.5 9 1C8 2.5 6 3.5 6 5.5", dc: "M0 5.5H12" },
-  gr: { d: "M0 0.5H12M0 5.5H12M2 5.5V2H8V4H5", dc: "M0 0.5H12M0 5.5H12" },
-};
-
-/**
  * The one illustration per civilization (1e), viewBox 48: `f` at 72 for the
  * whole-page empty states and the welcome, `c` (outline and base only) at 24–28.
  */

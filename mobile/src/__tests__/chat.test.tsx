@@ -310,8 +310,9 @@ describe("the conversation's eight states", () => {
     expect(screen.queryByTestId("landing-highlight")).toBeNull();
     // 文明气质 1f: letter paper is for the hall's officers only; a soul's letter has no corners.
     expect(screen.queryAllByTestId(/^letter-corner-/)).toEqual([]);
-    // 1c: the conversation's own title bar carries the band in place of its rule.
-    expect(screen.getByTestId("header-band-neutral")).toBeTruthy();
+    // v2 补足 C15: the conversation's own title bar is the simplified plaque.
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBeTruthy();
+    expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
   });
 
   it("② my request, waiting: a dotted line and the mono time it opens — never a disabled box", () => {
