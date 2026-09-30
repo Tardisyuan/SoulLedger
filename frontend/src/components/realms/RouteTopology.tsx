@@ -10,9 +10,9 @@ import { segmentWalked, type Station, type StationState, type Topology } from "@
  * 行程拓扑的画法 —— 界域页(`mode="map"`)与灵魂详情行程条(`mode="route"`)共用。
  * 布局规则在 `src/lib/routeTopology.ts`,这里只管画:
  *
- *   ━ 已行   3 px 墨线(两端都是有记录的站)
- *   ┅ 待行   1 px 虚线
- *   ▪ 现在   强调色方块
+ *   ━ 已行   2 px 墨实线(两端都是有记录的站)
+ *   ┅ 待行   2 px ink3 虚线(规范 v2 补足 C15:实虚规则不变,线宽统一 2)
+ *   ▪ 现在   匾色方块 —— 全图唯一用匾色的节点(C15)
  *   □ 站     空心方块;map 模式里有在押的站填墨
  *   ⬚ 终点   虚线方块 + 虚线路:杜阿特「不过」那条路的尽头(第二次死亡不是地方)
  *
@@ -82,9 +82,9 @@ export function RouteTopology({
             className={`grid grid-cols-[20px_1fr] ${compact ? "min-h-6" : "min-h-8"}`}
           >
             <span aria-hidden="true" className="flex flex-col items-center">
-              <span className={`flex-1 w-0 ${into === null ? "" : into ? `border-l-[3px] ${WALKED}` : `border-l ${AHEAD}`}`} />
+              <span className={`flex-1 w-0 ${into === null ? "" : into ? `border-l-2 ${WALKED}` : `border-l-2 ${AHEAD}`}`} />
               {mark(s)}
-              <span className={`flex-1 w-0 ${out === null ? "" : out ? `border-l-[3px] ${WALKED}` : `border-l ${AHEAD}`}`} />
+              <span className={`flex-1 w-0 ${out === null ? "" : out ? `border-l-2 ${WALKED}` : `border-l-2 ${AHEAD}`}`} />
             </span>
             <span className={`flex items-center gap-2 min-w-0 pl-2 ${compact ? "text-2xs" : "text-sm"} ${textTone(s.state)}`}>
               <span className="truncate" title={tip(s)}>{label(s)}</span>
@@ -113,9 +113,9 @@ export function RouteTopology({
           className="min-w-16 flex-1 pr-1"
         >
           <span aria-hidden="true" className="flex items-center h-3">
-            <span className={`flex-1 h-0 ${into === null ? "" : into ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
+            <span className={`flex-1 h-0 ${into === null ? "" : into ? `border-t-2 ${WALKED}` : `border-t-2 ${AHEAD}`}`} />
             {mark(s, bold?.(s), terminal)}
-            <span className={`flex-1 h-0 ${i === stations.length - 1 ? "" : segmentWalked(stations, i + 1) ? `border-t-[3px] ${WALKED}` : `border-t ${AHEAD}`}`} />
+            <span className={`flex-1 h-0 ${i === stations.length - 1 ? "" : segmentWalked(stations, i + 1) ? `border-t-2 ${WALKED}` : `border-t-2 ${AHEAD}`}`} />
           </span>
           <span
             title={tip(s)}
@@ -180,7 +180,7 @@ export function RouteTopology({
                         <span
                           style={{ width: `${width}%` }}
                           className={`flex items-center gap-2 px-1 ${compact ? "min-h-5 text-2xs" : "min-h-7 text-sm"} ${
-                            s.state === "pending" ? `border-t ${AHEAD}` : `border-t-[3px] ${WALKED}`
+                            s.state === "pending" ? `border-t-2 ${AHEAD}` : `border-t-2 ${WALKED}`
                           } ${textTone(s.state)}`}
                         >
                           {mark(s)}
@@ -271,10 +271,10 @@ function textTone(state: StationState): string {
 function StationMark({ state, filled, emphasis, terminal }: { state: StationState; filled: boolean; emphasis?: boolean; terminal?: boolean }) {
   const ring = emphasis ? "border-2" : "border";
   const cls = terminal
-    ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-accent))]" : "bg-[oklch(var(--color-canvas))]"}`
+    ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-main))]" : "bg-[oklch(var(--color-canvas))]"}`
     :
     state === "current"
-      ? "size-2.5 bg-[oklch(var(--color-accent))]"
+      ? "size-3 bg-[oklch(var(--color-main))]"
       : state === "travelled" || filled
         ? `size-2 bg-[oklch(var(--color-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-ink))]" : ""}`
         : `size-2 bg-[oklch(var(--color-canvas))] ${ring} border-[oklch(var(--color-ink-subtle))]`;
