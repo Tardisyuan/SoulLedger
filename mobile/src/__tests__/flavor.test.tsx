@@ -8,11 +8,11 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { AccessibilityInfo, ActivityIndicator, StyleSheet, processColor } from "react-native";
+import { AccessibilityInfo, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AppHeader, bandUnits } from "../chrome";
-import { BAND, HERO } from "../emblems";
+import { AppHeader } from "../chrome";
+import { HERO } from "../emblems";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { LifeSections } from "../screens/life";
@@ -34,8 +34,6 @@ type Node = { type: unknown; props: Record<string, unknown> };
 /** Every path drawn under `root` (host nodes only), as its `d`. */
 const paths = (root: { findAll: (p: (n: Node) => boolean) => Node[] }) =>
   root.findAll((n) => typeof n.type === "string" && typeof n.props.d === "string").map((n) => n.props.d as string);
-/** A host Svg node carries its stroke as a processed colour. */
-const strokeOf = (testID: string) => (screen.getByTestId(testID).props.stroke as { payload: unknown }).payload;
 
 function wrap(children: ReactNode, civ: CivKey = "cn") {
   return render(
@@ -56,52 +54,29 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-describe("the title-bar band (1c / 1d)", () => {
-  it("offset = (W mod 12) / 2: 236 cuts 4 off each end; 240 divides and starts at 0", () => {
-    const at236 = bandUnits(236, false).map((u) => u.x);
-    expect(at236[0]).toBe(-8); // the left unit's cut half: its visible part starts at 0
-    expect(at236[1]).toBe(4);
-    expect(at236[at236.length - 1]).toBe(232); // 232 + 12 = 244: 8 of it past the edge
-    expect(bandUnits(240, false).map((u) => u.x)).toEqual(Array.from({ length: 20 }, (_, i) => i * 12));
+/**
+ * v2 补足 C15 supersedes 1c / 1d: a sub-page's title bar is the simplified plaque — the
+ * 匾色 ground and the civilization's 22pt band at its foot, in place of v1's 6pt band.
+ */
+describe("the simplified plaque on every other title bar (补足 C15)", () => {
+  it.each(CIVS.filter((c) => c !== "neutral"))("%s: 匾色 ground, its own band only, the title in its face at 20", async (civ) => {
+    wrap(<AppHeader title="设置" onBack={jest.fn()} />, civ);
+    const theme = themeFor(CIVILIZATION[civ], "dark");
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(theme.plaque);
+    expect(screen.getByTestId(`plaque-band-${civ}`)).toBeTruthy();
+    for (const other of CIVS.filter((c) => c !== civ && c !== "neutral")) expect(screen.queryByTestId(`plaque-band-${other}`)).toBeNull();
+    const title = StyleSheet.flatten(screen.getByRole("header").props.style);
+    expect(title).toMatchObject({ fontSize: 20, color: theme.onPlaque });
+    // v1's 6pt band is gone, not doubled under the plaque's.
+    expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
+    await act(async () => {});
   });
 
-  it("compact keeps the motif on one unit in three", () => {
-    const units = bandUnits(240, true);
-    expect(units.filter((u) => u.motif)).toHaveLength(Math.ceil((units.length - 1) / 3));
-    expect(units.slice(0, 6).map((u) => u.motif)).toEqual([false, true, false, false, true, false]);
-  });
-
-  it.each(CIVS.filter((c) => c !== "neutral"))("%s: its motif across the bar and a mark baseline, in place of the 1px rule", (civ) => {
-    wrap(<AppHeader title="本世" />, civ);
-    const band = screen.getByTestId(`header-band-${civ}`);
-    const drawn = paths(band);
-    expect(drawn.filter((d) => d === BAND[civ].d)).toHaveLength(bandUnits(390, false).length);
-    expect(StyleSheet.flatten(band.props.style)).toMatchObject({ position: "absolute", left: 0, right: 0, bottom: 0 });
-    expect(strokeOf("header-band-baseline")).toBe(processColor(themeFor(CIVILIZATION[civ], "dark").mark));
-    // Only its own civilization's motif.
-    for (const other of CIVS.filter((c) => c !== civ && c !== "neutral")) expect(drawn).not.toContain(BAND[other].d);
-    // The rule is replaced, not doubled: the bar's container has no border of its own.
-    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).borderBottomWidth).toBeUndefined();
-  });
-
-  it("neutral: the baseline alone, in hair — the rule exactly as it was", () => {
+  it("neutral (before sign-in): the neutral plaque, no band, the title in the interface face", () => {
     wrap(<AppHeader title="灵魂簿" />, "neutral");
-    const drawn = paths(screen.getByTestId("header-band-neutral"));
-    expect(drawn).toEqual(["M0 5.5H390"]);
-    expect(strokeOf("header-band-baseline")).toBe(processColor(themeFor(null, "dark").hair));
-  });
-
-  it("compact (< 340pt, or ≥ 1.7× text): the rules on every unit, the motif on one in three", () => {
-    Object.assign(mockWindow, { width: 320 });
-    const { unmount } = wrap(<AppHeader title="本世" />, "gr");
-    let drawn = paths(screen.getByTestId("header-band-gr"));
-    expect(drawn.filter((d) => d === BAND.gr.d)).toHaveLength(bandUnits(320, true).filter((u) => u.motif).length);
-    expect(drawn.filter((d) => d === BAND.gr.dc)).toHaveLength(bandUnits(320, true).filter((u) => !u.motif).length);
-    unmount();
-    Object.assign(mockWindow, { width: 390, fontScale: 1.7 });
-    wrap(<AppHeader title="本世" />, "gr");
-    drawn = paths(screen.getByTestId("header-band-gr"));
-    expect(drawn.filter((d) => d === BAND.gr.dc).length).toBeGreaterThan(0);
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(themeFor(null, "dark").plaque);
+    expect(screen.queryAllByTestId(/^plaque-band-/)).toEqual([]);
+    expect(StyleSheet.flatten(screen.getByRole("header").props.style).fontSize).toBe(15);
   });
 });
 

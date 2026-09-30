@@ -1,62 +1,53 @@
 /**
- * The navigator's chrome, drawn by the app instead of the platform: a 52pt
- * title bar with the civilization's band under it (a plain hairline in the
- * neutral theme), and a three-item tab bar whose selected item is the
- * civilization's emblem in its mark colour with a 2px rule on top.
+ * The navigator's chrome, drawn by the app instead of the platform — v2「朱印」:
+ * every title bar is a plaque (规范 v2 §匾). A tab's root wears the full one (the seal,
+ * a 28pt title in the civilization's face, the life and hall under it); every other
+ * bar the simplified one (补足 C15): the same 匾色 ground and 22pt band under an
+ * ordinary bar row. Before sign-in, or for a civilization the app does not know, the
+ * plaque is the neutral one — ink ground, no band. The tab bar marks its current item
+ * with a 2px rule in 匾色, one of the plaque colour's five places.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { pillarIsWide } from "@soulledger/core/domain/pillar";
+import { Platform, Pressable, StyleSheet, View, type TextLayoutEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { G, Path } from "react-native-svg";
 
-import { useContext } from "react";
+import { useContext, useState, type ReactNode } from "react";
 
-import { BAND, Emblem, Icon, type IconName } from "./emblems";
-import { family, plaqueFamily, quoteFamily } from "./fonts";
+import { Emblem, Icon, type IconName } from "./emblems";
+import { family, plaqueFamily, quoteFamily, usePlaqueFace } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
 import { PlaqueBand, Seal } from "./seal";
 import { SessionContext } from "./session";
-import { Txt, useFlavorCompact, useLayout, useTheme } from "./ui";
-
-/** The band's unit (文明气质 1c): 12 wide, 6 high. */
-const UNIT = 12;
+import type { Theme } from "./theme";
+import { ThemeContext, Txt, shade, useLayout, useTheme } from "./ui";
 
 /**
- * Where the band's units go across a bar `width` wide. The pattern starts at
- * (width mod 12) / 2, so what does not divide is cut equally at both ends; a
- * unit that starts before 0 is the cut half on the left. Compact keeps the
- * motif on one unit in three and only the rules on the others.
+ * The theme for what sits ON a plaque: every ink is onPlaque (>= 4.5 on every 匾色,
+ * theme.test), the grounds are the plaque, hairlines are onPlaque at low alpha. So a
+ * bar's own parts — a back chevron in `inkMuted`, a title in `ink` — need no second
+ * code path to be read on it.
  */
-export function bandUnits(width: number, compact: boolean): { x: number; motif: boolean }[] {
-  const offset = (width % UNIT) / 2;
-  const units = [];
-  for (let x = offset > 0 ? offset - UNIT : 0, i = 0; x < width; x += UNIT, i++) units.push({ x, motif: !compact || i % 3 === 1 });
-  return units;
+export function onPlaqueTheme(t: Theme): Theme {
+  const on = t.onPlaque;
+  return { ...t, s0: t.plaque, s1: t.plaque, s2: shade(t.plaque, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
 }
 
 /**
- * 1c / 1d: a 6pt band in place of the bar's 1px bottom rule — absolutely placed
- * at the bottom, so no screen changes height. Its baseline (y 5.5) runs the full
- * width where the rule was; in the neutral theme that baseline, in `hair`, is
- * all there is — the rule exactly as before. Compact: screen < 340 or text ≥ 1.7×.
+ * The plaque's ground: 匾色 from the status bar down, the dark scheme's 1px top highlight
+ * (onPlaque 20%), whatever row the caller puts on it, and — for a known civilization —
+ * the 22pt ornament band at the foot.
  */
-export function HeaderBand() {
+export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNode; testID?: string }) {
   const t = useTheme();
-  const { width } = useWindowDimensions();
-  const compact = useFlavorCompact();
-  const neutral = t.civ === "neutral";
+  const insets = useSafeAreaInsets();
   return (
-    <Svg testID={`header-band-${t.civ}`} width={width} height={6} style={styles.band} fill="none" strokeWidth={1} strokeLinecap="square">
-      {neutral
-        ? null
-        : bandUnits(width, compact).map((u) => (
-            <G key={u.x} transform={`translate(${u.x} 0)`}>
-              <Path d={u.motif ? BAND[t.civ].d : BAND[t.civ].dc} stroke={t.mark} />
-            </G>
-          ))}
-      <Path testID="header-band-baseline" d={`M0 5.5H${width}`} stroke={neutral ? t.hair : t.mark} />
-    </Svg>
+    <View testID={testID} style={{ backgroundColor: t.plaque, paddingTop: insets.top }}>
+      {t.scheme === "dark" ? <View style={[styles.highlight, { backgroundColor: `${t.onPlaque}33` }]} /> : null}
+      <ThemeContext.Provider value={onPlaqueTheme(t)}>{children}</ThemeContext.Provider>
+      {t.civ === "neutral" ? null : <PlaqueBand civ={t.civ} theme={t} />}
+    </View>
   );
 }
 
@@ -66,17 +57,47 @@ export interface HeaderAction {
   label: string;
   onPress: () => void;
   testID: string;
-  /** iOS "new": a 44pt square framed in the accent. */
+  /** iOS "new": a 44pt square framed in onPlaque. */
   framed?: boolean;
 }
 
-export function AppHeader({
-  title,
-  onBack,
-  onAccount,
-  action,
-  serif,
-}: {
+/** The right end of a bar: its actions, else the account icon, else an empty 44pt slot. Drawn on the plaque. */
+function BarEnd({ action, onAccount }: { action?: HeaderAction | HeaderAction[]; onAccount?: () => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  if (action)
+    return (
+      <>
+        {(Array.isArray(action) ? action : [action]).map((a) => (
+          <Pressable
+            key={a.testID}
+            testID={a.testID}
+            accessibilityRole="button"
+            accessibilityLabel={a.label}
+            onPress={a.onPress}
+            style={({ pressed }) => [styles.icon, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
+          >
+            <Icon name={a.icon} size={18} color={t.ink} strokeWidth={1.4} />
+          </Pressable>
+        ))}
+      </>
+    );
+  if (onAccount)
+    return (
+      <Pressable
+        testID="header-account"
+        accessibilityRole="button"
+        accessibilityLabel={tr("soul_app.settings.title")}
+        onPress={onAccount}
+        style={({ pressed }) => [styles.icon, pressed && { backgroundColor: t.s2 }]}
+      >
+        <Icon name="person" size={18} color={t.ink} strokeWidth={1.2} />
+      </Pressable>
+    );
+  return <View style={styles.icon} />;
+}
+
+interface BarProps {
   title: string;
   /** The app name on the pre-login bar, set in the serif (product decision 2026-09-26). */
   serif?: boolean;
@@ -84,124 +105,130 @@ export function AppHeader({
   /** One, or several side by side (朋友圈 1a: find people, my page). */
   action?: HeaderAction | HeaderAction[];
   /**
-   * The person icon, top right, on all three tabs. Round 1 had it open the
-   * sign-out sheet; since round 4 it opens the settings page (language,
-   * notifications, sign out) — same place, a destination instead of an action.
+   * The person icon, top right, on the tabs. Round 1 had it open the sign-out sheet;
+   * since round 4 it opens the settings page (language, notifications, sign out).
    */
   onAccount?: () => void;
-}) {
+}
+
+/** The bar row, drawn inside a PlaqueFrame (so its theme is `onPlaqueTheme`). */
+function Bar({ title, serif, onBack, action, onAccount, civ, cnFace }: BarProps & { civ: Theme["civ"]; cnFace: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const insets = useSafeAreaInsets();
   const { compact } = useLayout();
   // Chat handoff 1e (Material): on Android the title sits at the left, with nothing held
   // open for a back key it does not have, and back is an arrow. iOS: centred, chevron.
   const android = Platform.OS === "android";
   return (
-    <View testID="header" style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
-      <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
-        {onBack ? (
-          <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
-            <Icon name={android ? "arrow" : "back"} size={android ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
-          </Pressable>
-        ) : android ? null : (
-          // iOS centres the title: as wide on the left as the actions are on the right.
-          <View style={[styles.icon, { width: 44 * (Array.isArray(action) ? action.length : 1) }]} />
-        )}
-        <Txt
-          accessibilityRole="header"
-          variant="nav"
-          numberOfLines={2}
-          style={[
-            styles.title,
-            android && !onBack && styles.titleStart,
-            { textAlign: onBack || android ? "left" : "center" },
-            serif && { fontFamily: quoteFamily(title) },
-          ]}
-        >
-          {title}
-        </Txt>
-        {action ? (
-          (Array.isArray(action) ? action : [action]).map((a) => (
-            <Pressable
-              key={a.testID}
-              testID={a.testID}
-              accessibilityRole="button"
-              accessibilityLabel={a.label}
-              onPress={a.onPress}
-              style={({ pressed }) => [styles.icon, a.framed && { borderWidth: 1, borderColor: t.accent }, pressed && { backgroundColor: t.s1 }]}
-            >
-              <Icon name={a.icon} size={18} color={a.framed ? t.accent : t.inkMuted} strokeWidth={1.4} />
-            </Pressable>
-          ))
-        ) : onAccount ? (
-          <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.settings.title")} onPress={onAccount} style={styles.icon}>
-            <Icon name="person" size={18} color={t.inkSubtle} strokeWidth={1.2} />
-          </Pressable>
-        ) : (
-          <View style={styles.icon} />
-        )}
-      </View>
-      <HeaderBand />
+    <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
+      {onBack ? (
+        <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
+          <Icon name={android ? "arrow" : "back"} size={android ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
+        </Pressable>
+      ) : android ? null : (
+        // iOS centres the title: as wide on the left as the actions are on the right.
+        <View style={[styles.icon, { width: 44 * (Array.isArray(action) ? action.length : 1) }]} />
+      )}
+      <Txt
+        accessibilityRole="header"
+        variant="nav"
+        numberOfLines={2}
+        style={[
+          styles.title,
+          android && !onBack && styles.titleStart,
+          { textAlign: onBack || android ? "left" : "center" },
+          // The simplified plaque's title: the civilization's face at 20 (补足 A3), never the 28 of a tab's root.
+          civ !== "neutral" ? [styles.barTitle, { fontFamily: plaqueFamily(civ, title, cnFace) }] : serif && { fontFamily: quoteFamily(title) },
+        ]}
+      >
+        {title}
+      </Txt>
+      <BarEnd action={action} onAccount={onAccount} />
     </View>
   );
 }
 
+/** Every title bar that is not a tab's root: the simplified plaque. */
+export function AppHeader(props: BarProps) {
+  const t = useTheme();
+  const cnFace = usePlaqueFace(t.civ);
+  return (
+    <PlaqueFrame testID="header">
+      <Bar {...props} civ={t.civ} cnFace={cnFace} />
+    </PlaqueFrame>
+  );
+}
+
 /**
- * v2「朱印」's plaque (规范 v2 §匾, 补足 C18), in the life tab's title bar place: the
- * civilization's 匾色 ground, its seal (52, the App header's size), the title in the
- * civilization's display face with the life and hall under it in mono, and the 22pt
- * ornament band at the foot. The App keeps its own per-civilization grounds below it
- * (user decision). Neutral — an unrecognised civilization — has no plaque: the plain bar.
+ * v2「朱印」's plaque (规范 v2 §匾, 补足 B11 / C18) on a tab's root: the seal (52), the title
+ * in the civilization's face at 28 with the life and hall under it in mono, and the band.
+ * 补足 C14: a title that does not fit one line at 28 in its face is set in the interface
+ * face at 20, two lines — judged by the laid-out lines, not by counting characters.
+ * Neutral (an unrecognised civilization) or no session: the simplified plaque.
  */
-export function PlaqueHeader({ title, onAccount }: { title: string; onAccount: () => void }) {
+export function PlaqueHeader({ title, onAccount, action }: { title: string; onAccount?: () => void; action?: HeaderAction | HeaderAction[] }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const insets = useSafeAreaInsets();
   const hall = useCurrentHall();
   const session = useContext(SessionContext);
   const me = session?.state.status === "signedIn" ? session.state.profile : null;
-  if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} />;
+  const cnFace = usePlaqueFace(t.civ);
+  const [fits, setFits] = useState<{ title: string; one: boolean } | null>(null);
+  if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} action={action} />;
   const meta = [tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall].filter(Boolean).join(" · ");
+  const stepDown = fits?.title === title && !fits.one;
+  const measure = (e: TextLayoutEvent) => {
+    const one = e.nativeEvent.lines.length <= 1;
+    if (!stepDown && (fits?.title !== title || fits.one !== one)) setFits({ title, one });
+  };
   return (
-    <View testID="plaque" style={{ backgroundColor: t.plaque, paddingTop: insets.top }}>
-      {/* §匾 深色高光: the top edge, onPlaque at 20%, dark only. */}
-      {t.scheme === "dark" ? <View style={[styles.highlight, { backgroundColor: `${t.onPlaque}33` }]} /> : null}
+    <PlaqueFrame>
       <View style={styles.plaqueRow}>
         <Seal civ={t.civ} size={52} theme={t} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
         <View style={styles.plaqueText}>
-          <Txt accessibilityRole="header" numberOfLines={2} style={[styles.plaqueTitle, { color: t.onPlaque, fontFamily: plaqueFamily(t.civ, title) }]}>
+          <Txt
+            testID="plaque-title"
+            accessibilityRole="header"
+            numberOfLines={stepDown ? 2 : undefined}
+            onTextLayout={measure}
+            style={[
+              stepDown ? styles.plaqueTitleSmall : styles.plaqueTitle,
+              { color: t.onPlaque, fontFamily: stepDown ? family.ui[600] : plaqueFamily(t.civ, title, cnFace) },
+            ]}
+          >
             {title}
           </Txt>
           <Txt numberOfLines={1} style={[styles.plaqueMeta, { color: t.onPlaque }]}>
             {meta}
           </Txt>
         </View>
-        <Pressable testID="header-account" accessibilityRole="button" accessibilityLabel={tr("soul_app.settings.title")} onPress={onAccount} style={styles.icon}>
-          <Icon name="person" size={18} color={t.onPlaque} strokeWidth={1.2} />
-        </Pressable>
+        <ThemeContext.Provider value={onPlaqueTheme(t)}>
+          <BarEnd action={action} onAccount={onAccount} />
+        </ThemeContext.Provider>
       </View>
-      <PlaqueBand civ={t.civ} theme={t} />
-    </View>
+    </PlaqueFrame>
   );
 }
 
 const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cycle", Letters: "letter", Circle: "circle" };
 
 /**
- * Chat handoff 1e: the selected tab is a 2px mark rule on top on iOS, and the
- * whole cell tinted with the accent on Android — no pill, no corner either way.
+ * 补足 B11: the current tab is a 2px 匾色 rule on top and its label in ink 600; the others
+ * ink3. C14: the same width rule as the web's pillar (`pillarIsWide`, from core) — when
+ * any label is too long for one line, all four labels go to two lines at 11, with 4pt
+ * sides; a label that still does not fit is cut, and read whole by its accessibility label.
  */
-const ANDROID_TABS = Platform.OS === "android";
-
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  // Handoff 2d (supersedes 1g rule 五): at ≥ 1.7× text the three items become three
-  // rows — same component, same selected state — instead of dropping their labels.
+  // Handoff 2d (supersedes 1g rule 五): at >= 1.7x text the items become rows — same
+  // component, same selected state — instead of dropping their labels.
   const { stack } = useLayout();
+  const labels = state.routes.map((route) => descriptors[route.key].options.title ?? route.name);
+  const wide = pillarIsWide(labels);
   return (
     <View
+      testID="tab-bar"
       style={[
         stack ? styles.tabsStacked : styles.tabs,
         { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: Math.max(insets.bottom, 8) },
@@ -209,9 +236,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     >
       {state.routes.map((route, index) => {
         const selected = state.index === index;
-        const { title, tabBarBadge } = descriptors[route.key].options;
-        const label = title ?? route.name;
-        const color = selected ? t.mark : t.inkSubtle;
+        const { tabBarBadge } = descriptors[route.key].options;
+        const label = labels[index];
+        const color = selected ? t.ink : t.inkSubtle;
         return (
           <Pressable
             key={route.key}
@@ -223,26 +250,29 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!selected && !event.defaultPrevented) navigation.navigate(route.name, route.params);
             }}
-            style={[
-              stack ? [styles.tabRow, { borderBottomColor: t.hair }] : styles.tab,
-              ANDROID_TABS && selected && { backgroundColor: `${t.accent}1F` },
+            style={({ pressed }) => [
+              stack ? [styles.tabRow, { borderBottomColor: t.hair }] : [styles.tab, wide && styles.tabWide],
+              pressed && { backgroundColor: t.s2 },
             ]}
           >
             <View
-              style={[
-                stack ? styles.tabRuleSide : styles.tabRule,
-                { backgroundColor: selected && !ANDROID_TABS ? t.mark : "transparent" },
-              ]}
+              testID={selected ? "tab-current-rule" : undefined}
+              style={[stack ? styles.tabRuleSide : styles.tabRule, { backgroundColor: selected ? t.plaque : "transparent" }]}
             />
             <View style={styles.tabIcon}>
-              {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.mark }]} /> : null}
+              {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.plaque }]} /> : null}
               {selected ? (
-                <Emblem civ={t.civ} size={24} stroke={t.mark} strokeWidth={2.2} />
+                <Emblem civ={t.civ} size={24} stroke={t.ink} strokeWidth={2.2} />
               ) : (
                 <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={18} color={t.inkSubtle} strokeWidth={1.2} />
               )}
             </View>
-            <Txt variant="label" numberOfLines={2} style={[styles.tabLabel, { color }]}>
+            <Txt
+              testID={`tab-${route.name}-label`}
+              variant="label"
+              numberOfLines={2}
+              style={[styles.tabLabel, wide && styles.tabLabelWide, { color, fontFamily: family.ui[selected ? 600 : 400] }]}
+            >
               {label}
             </Txt>
           </Pressable>
@@ -253,26 +283,32 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
-  band: { position: "absolute", left: 0, right: 0, bottom: 0 },
-  bar: { minHeight: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: 6 },
-  barCompact: { minHeight: 46, paddingHorizontal: 2 },
+  bar: { minHeight: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: 4 },
+  barCompact: { minHeight: 48, paddingHorizontal: 2 },
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   title: { flex: 1, paddingHorizontal: 4 },
-  /** 16 from the edge, as 1e draws it: the bar's 6 plus this. */
+  /** 补足 A3: 20 / 28 — the simplified plaque's title. */
+  barTitle: { fontSize: 20, lineHeight: 28, letterSpacing: 0 },
+  /** 16 from the edge, as 1e draws it: the bar's 4 plus this. */
   titleStart: { paddingLeft: 12 },
   tabs: { flexDirection: "row", borderTopWidth: 1 },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 5, paddingVertical: 6 },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 4, paddingVertical: 8 },
+  tabWide: { justifyContent: "flex-start" },
   tabsStacked: { flexDirection: "column", borderTopWidth: 1 },
   tabRow: { minHeight: 80, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
   tabRuleSide: { position: "absolute", top: 0, bottom: 0, left: 0, width: 2 },
-  tabRule: { position: "absolute", top: -1, left: 0, right: 0, height: 2 },
+  tabRule: { position: "absolute", top: -1, left: "25%", right: "25%", height: 2 },
   tabIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
-  tabBadge: { position: "absolute", top: -4, right: -5, width: 7, height: 7 },
-  tabLabel: { fontSize: 11, letterSpacing: 0.6, textAlign: "center" },
+  tabBadge: { position: "absolute", top: -4, right: -4, width: 8, height: 8 },
+  /** B11: 12; C14 wide: 11, two lines. */
+  tabLabel: { fontSize: 12, lineHeight: 16, letterSpacing: 0, textAlign: "center" },
+  tabLabelWide: { fontSize: 11, lineHeight: 16 },
   highlight: { position: "absolute", top: 0, left: 0, right: 0, height: 1 },
-  plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 16, paddingRight: 6, paddingVertical: 12 },
+  plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 16, paddingRight: 4, paddingVertical: 12 },
   plaqueText: { flex: 1, minWidth: 0 },
   /** 补足 A3: 28 / 36 — the plaque is one of the two places above 20. */
   plaqueTitle: { fontSize: 28, lineHeight: 36 },
+  /** C14's last step: the interface face at 20, two lines. */
+  plaqueTitleSmall: { fontSize: 20, lineHeight: 28 },
   plaqueMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16 },
 });

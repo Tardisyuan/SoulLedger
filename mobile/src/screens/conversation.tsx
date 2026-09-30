@@ -35,7 +35,7 @@ import Svg, { Path } from "react-native-svg";
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
 import { bubbleStamp, chatMode, dayOf, daysLeft, type ChatMode } from "../chatRules";
-import { HeaderBand } from "../chrome";
+import { PlaqueFrame } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
@@ -150,8 +150,10 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
 
   if (!c || !mode) {
     return (
-      <View style={[styles.fill, { backgroundColor: t.s0, paddingTop: insets.top }]}>
-        <Header onBack={navigation.goBack} title="" />
+      <View style={[styles.fill, { backgroundColor: t.s0 }]}>
+        <PlaqueFrame testID="header">
+          <Header onBack={navigation.goBack} title="" />
+        </PlaqueFrame>
         <View style={styles.pad}>
           {chat.availability === "not_configured" ? (
             <Notice tone="neutral" testID="chat-not-configured">
@@ -205,7 +207,8 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       keyboardVerticalOffset={-insets.bottom}
       testID={`conversation-${mode.kind}`}
     >
-      <View style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
+      {/* v2 补足 C15: a sub-page's title bar is the simplified plaque. */}
+      <PlaqueFrame testID="header">
         {inbox ? (
           <HallHeader hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} onBack={navigation.goBack} />
         ) : (
@@ -217,7 +220,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" /> : null}
           />
         )}
-      </View>
+      </PlaqueFrame>
       {unavailable ? (
         <View testID="chat-unavailable" style={[styles.unavailable, { backgroundColor: t.s1, borderBottomColor: t.hair }]}>
           <View style={[styles.square, { backgroundColor: t.neg }]} />
@@ -335,21 +338,15 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
         ) : null}
       </View>
       {right ?? (ANDROID ? null : <View style={styles.icon} />)}
-      <HeaderBand />
     </View>
   );
 }
 
 function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; onBack: () => void }) {
-  const t = useTheme();
   const { t: tr } = useI18n();
   return (
     <View
-      style={[
-        styles.hallHeader,
-        { borderBottomColor: sealed ? t.hair : t.hair2, backgroundColor: t.s1 },
-        !sealed && { borderLeftWidth: 3, borderLeftColor: t.mark },
-      ]}
+      style={styles.hallHeader}
     >
       <BackButton onBack={onBack} />
       <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "mark"} dotted={sealed} />
@@ -703,7 +700,7 @@ const styles = StyleSheet.create({
   header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 6 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
   subtitle: { fontSize: 11, lineHeight: 15 },
-  hallHeader: { flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 12, paddingRight: 16, borderBottomWidth: 1 },
+  hallHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 16 },
   hallSub: { fontSize: 11, lineHeight: 17, marginTop: 2 },
   unavailable: { flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 16, paddingVertical: 9, borderBottomWidth: 1 },
   square: { width: 9, height: 9 },
