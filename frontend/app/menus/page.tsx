@@ -195,7 +195,7 @@ export default function MenusPage() {
             {t("menu_buttons.title")}
           </Link>
           <RequirePermission permissions="menu.manage">
-            <Button type="button" variant="primary" onClick={openCreate}>
+            <Button type="button" variant="secondary" onClick={openCreate}>
               + {t("menus.create")}
             </Button>
           </RequirePermission>
@@ -271,7 +271,7 @@ export default function MenusPage() {
         })}
         confirmText={t("menus.delete_confirm_action")}
         cancelText={t("common.cancel")}
-        variant="danger"
+        variant="warning"
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
       />

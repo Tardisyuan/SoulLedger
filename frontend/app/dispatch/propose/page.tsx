@@ -356,11 +356,11 @@ function ProposeDispatchForm() {
           {t("dispatch.draft_load_error")}
         </p>
       ) : null}
-      <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
       <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
         {carriedSoul ? (
           // Read-only, in the disabled pair (规范 v1 输入框「只读同此」).
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-[oklch(var(--color-ink))]">{t("dispatch.target_soul")}</span>
             <div
               aria-readonly="true"
@@ -431,9 +431,9 @@ function ProposeDispatchForm() {
         <fieldset
           aria-describedby={tenantError ? "target_tenant_code-error" : undefined}
           aria-busy={tenantsLoading || undefined}
-          className="flex flex-col gap-1.5"
+          className="flex flex-col gap-2"
         >
-          <legend className="mb-1.5 text-xs font-medium text-[oklch(var(--color-ink))]">
+          <legend className="mb-2 text-xs font-medium text-[oklch(var(--color-ink))]">
             {t("dispatch.target_tenant")}
             <span aria-hidden="true" className="ml-1 text-[oklch(var(--color-status-error))]">*</span>
           </legend>

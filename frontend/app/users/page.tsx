@@ -133,7 +133,7 @@ function UsersRoute() {
       }
       actions={
         <RequirePermission permissions="user.manage">
-          <Button type="button" variant="primary" onClick={() => setIsModalOpen(true)}>
+          <Button type="button" variant="secondary" onClick={() => setIsModalOpen(true)}>
             + {t("users.create_user")}
           </Button>
         </RequirePermission>
